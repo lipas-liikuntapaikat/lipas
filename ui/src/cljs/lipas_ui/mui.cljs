@@ -20,9 +20,16 @@
        js/MaterialUIStyles.withStyles))
 
 (comment (get-color "blue"))
-(comment (get-color "blue" "300"))
-(defn get-color [& args]
-  (apply gobj/getValueByKeys (into [js/MaterialUI "colors"] args)))
+(comment (get-color :blue "300"))
+(defn get-color
+  "Args can be strings or keywords.
+
+  (get-color \"blue\")
+  (get-color :blue \"300\")"
+  [& args]
+  (->> args
+       (mapv name)
+       (apply (partial gobj/getValueByKeys js/MaterialUI "colors"))))
 
 (def jyu-styles {:typography
                  {:font-family "Aleo, serif"}
