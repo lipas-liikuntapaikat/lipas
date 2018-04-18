@@ -70,17 +70,22 @@
 ;; Nav
 
 (defn nav [menu-anchor drawer-open? active-panel]
-  [mui/app-bar {:position "static" :color "primary"}
-   [mui/tool-bar {:disable-gutters false}
+  [mui/app-bar {:position "static" :color "primary"
+                :style {:border-box "1px solid black"}}
+   [mui/tool-bar {:disable-gutters true}
     [mui/icon-button {:on-click toggle-drawer}
      [mui-icons/menu {:style {:color "#f1563f"}}]]
     (when menu-anchor
       (create-menu menu-anchor))
     (when drawer-open?
       (create-drawer))
+    [mui/svg-icon {:view-box "0 0 132.54 301.95"
+                   :style {:height "2em"
+                           :margin "0.45em"}}
+     svg/jyu-logo]
     [mui/typography {:variant "title"
                      ;;:on-click #(navigate! "/#/")
-                     :style {:flex 1 :font-size "1em"}}
+                     :style {:flex 1 :font-size "1em" :font-weight "bold"}}
      [mui/typography {:component "a" :variant "title" :href "/#/"
                       :style {:text-decoration "none" :display "inline"
                               :font-weight "bold" :font-size "1em"}}
@@ -93,9 +98,9 @@
                          :swim-panel "Uimahalliportaali"
                          :interfaces-panel "Rajapinnat"
                          :help-panel "Ohjeet"
-                         ":)")))]
+                         "")))]
     [mui-icons/search]
-    [mui/text-field {:placeholder "Haku"}]
+    ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
      [mui-icons/account-circle]]]])
 
