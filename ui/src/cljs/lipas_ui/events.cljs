@@ -21,8 +21,3 @@
  ::toggle-drawer
  (fn [db [_ _]]
    (update db :drawer-open? not)))
-
-(re-frame/reg-event-db
- ::set-active-ice-panel-tab
- (fn [db [_ active-tab]]
-   (assoc-in db [:ice-panel :active-tab] active-tab)))

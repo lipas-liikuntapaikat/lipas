@@ -5,8 +5,10 @@
             [goog.events :as gevents]
             [goog.history.EventType :as EventType]
             [re-frame.core :as re-frame]
-            [lipas-ui.events :as events]
-            ))
+            [lipas-ui.events :as events]))
+
+(defn navigate! [path]
+  (set! (.-location js/window) path))
 
 (defn hook-browser-navigation! []
   (doto (History.)
@@ -32,8 +34,8 @@
   (defroute "/uimahalliportaali" []
     (re-frame/dispatch [::events/set-active-panel :swim-panel]))
 
-  (defroute "/rajapinnat" []
-    (re-frame/dispatch [::events/set-active-panel :interfaces-panel]))
+  (defroute "/avoin-data" []
+    (re-frame/dispatch [::events/set-active-panel :open-data-panel]))
 
   (defroute "/ohjeet" []
     (re-frame/dispatch [::events/set-active-panel :help-panel]))

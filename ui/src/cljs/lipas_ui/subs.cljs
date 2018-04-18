@@ -20,8 +20,3 @@
  ::drawer-open?
  (fn [db _]
    (:drawer-open? db)))
-
-(re-frame/reg-sub
- ::active-ice-panel-tab
- (fn [db _]
-   (-> db :ice-panel :active-tab)))
