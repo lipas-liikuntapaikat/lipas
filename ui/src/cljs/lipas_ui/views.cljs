@@ -73,16 +73,15 @@
   [mui/app-bar {:position "static" :color "primary"
                 :style {:border-box "1px solid black"}}
    [mui/tool-bar {:disable-gutters true}
-    [mui/icon-button {:on-click toggle-drawer}
-     [mui-icons/menu {:style {:color "#f1563f"}}]]
     (when menu-anchor
       (create-menu menu-anchor))
     (when drawer-open?
       (create-drawer))
-    [mui/svg-icon {:view-box "0 0 132.54 301.95"
-                   :style {:height "2em"
-                           :margin "0.45em"}}
-     svg/jyu-logo]
+    [:a {:href "/#/"}
+     [mui/svg-icon {:view-box "0 0 132.54 301.95"
+                    :style {:height "2em"
+                            :margin "0.45em"}}
+      svg/jyu-logo]]
     [mui/typography {:variant "title"
                      ;;:on-click #(navigate! "/#/")
                      :style {:flex 1 :font-size "1em" :font-weight "bold"}}
@@ -93,16 +92,18 @@
      [:span {:style {:color "#f1563f" :margin "0.5em"}} "|"]
      (let [prefix "Lipas"]
        (str prefix " " (case active-panel
-                         :sports-panel "Liikuntapaikat"
-                         :ice-panel "Jäähalliportaali"
-                         :swim-panel "Uimahalliportaali"
-                         :interfaces-panel "Rajapinnat"
-                         :help-panel "Ohjeet"
+                         :sports-panel "liikuntapaikat"
+                         :ice-panel "jäähalliportaali"
+                         :swim-panel "uimahalliportaali"
+                         :interfaces-panel "rajapinnat"
+                         :help-panel "ohjeet"
                          "")))]
     [mui-icons/search]
     ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
-     [mui-icons/account-circle]]]])
+     [mui-icons/account-circle]]
+    [mui/icon-button {:on-click toggle-drawer}
+     [mui-icons/menu {:style {:color "#f1563f"}}]]]])
 
 ;; home
 
@@ -217,10 +218,11 @@
     ]])
 
 (defn portal-panel [{:keys [title url]}]
-  (let [active-tab (re-frame/subscribe [::subs/active-ice-panel-tab])]
+  (let [active-tab (re-frame/subscribe [::subs/active-ice-panel-tab])
+        card-props {:square true}]
     [mui/grid {:container true}
      [mui/grid {:xs 12}
-      [mui/card
+      [mui/card card-props
        [mui/card-content
         [mui/tabs {:scrollable true
                    :full-width false
@@ -233,7 +235,7 @@
          [mui/tab {:label "Ilmoita kulutustiedot"
                    :icon (r/as-element [mui-icons/add])}]]]]]
      [mui/grid {:item true :xs 12}
-      [mui/card
+      [mui/card card-props
        [mui/card-content
         (case @active-tab
           0 (info-tab url)
