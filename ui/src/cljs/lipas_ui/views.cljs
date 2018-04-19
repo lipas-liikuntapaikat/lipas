@@ -74,7 +74,8 @@
 ;; Nav
 
 (defn nav [menu-anchor drawer-open? active-panel]
-  [mui/app-bar {:position "static" :color "primary"
+  [mui/app-bar {:position "static"
+                :color "primary"
                 :style {:border-box "1px solid black"}}
    [mui/tool-bar {:disable-gutters true}
     (when menu-anchor
@@ -88,13 +89,25 @@
       svg/jyu-logo]]
     [mui/typography {:variant "title"
                      ;;:on-click #(navigate! "/#/")
-                     :style {:flex 1 :font-size "1em" :font-weight "bold"}}
+                     :style {:flex 1
+                             :font-size "1em"
+                             :font-weight "bold"}}
      [mui/hidden {:sm-down true}
-      [mui/typography {:component "a" :variant "title" :href "/#/"
-                       :style {:text-decoration "none" :display "inline"
-                               :font-weight "bold" :font-size "1em"}}
+      [mui/typography {:component "a"
+                       :variant "title"
+                       :href "/#/"
+                       :style {:display "inline"
+                               :font-weight "bold"
+                               :font-size "1em"
+                               :text-decoration "none"}}
        "Jyväskylän yliopisto"]
-      [:span {:style {:color "#f1563f" :margin "0.5em"}} "|"]]
+      [mui/typography {:component "span"
+                       :color "secondary"
+                       :variant "title"
+                       :style {:display "inline"
+                               :font-weight "bold"
+                               :font-size "1em"
+                               :margin "0.5em"}} "|"]]
      (let [prefix "Lipas"]
        (str prefix " " (case active-panel
                          :sports-panel "liikuntapaikat"
