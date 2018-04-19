@@ -50,7 +50,7 @@
                      {:end-adornment
                       (r/as-element
                        [mui/input-adornment "m³"])}}]
-    [mui/button {:color "primary" :size "large"} "Tallenna"]]])
+    [mui/button {:color "secondary" :size "large"} "Tallenna"]]])
 
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))
@@ -64,6 +64,7 @@
        [mui/card-content
         [mui/tabs {:scrollable true
                    :full-width false
+                   :text-color "secondary"
                    :on-change change-tab
                    :value @active-tab}
          [mui/tab {:label "Hallien tiedot"

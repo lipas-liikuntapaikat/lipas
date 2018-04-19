@@ -22,8 +22,9 @@
 (comment (get-color "blue"))
 (comment (get-color :blue "300"))
 (defn get-color
-  "Args can be strings or keywords.
+  "Args can be strings or keywords. Returns all colors if no args are given.
 
+  (get-color)
   (get-color \"blue\")
   (get-color :blue \"300\")"
   [& args]
