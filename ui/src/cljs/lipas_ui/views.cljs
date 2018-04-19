@@ -143,6 +143,5 @@
         drawer-open? (re-frame/subscribe [::subs/drawer-open?])]
     [mui/css-baseline
      [mui/mui-theme-provider {:theme mui/jyu-theme}
-      [:div
-       [nav @menu-anchor @drawer-open? @active-panel]
-       [show-panel @active-panel]]]]))
+      [nav @menu-anchor @drawer-open? @active-panel]
+      [show-panel @active-panel]]]))
