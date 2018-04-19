@@ -1,7 +1,7 @@
 (ns lipas-ui.ice-stadiums.views
   (:require [lipas-ui.mui :as mui]
-            [lipas-ui.swimming-pools.subs :as subs]
-            [lipas-ui.swimming-pools.events :as events]
+            [lipas-ui.ice-stadiums.subs :as subs]
+            [lipas-ui.ice-stadiums.events :as events]
             [lipas-ui.mui-icons :as mui-icons]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
@@ -50,7 +50,7 @@
                      {:end-adornment
                       (r/as-element
                        [mui/input-adornment "m³"])}}]
-    [mui/button {:color "primary" :size "large"} "Tallenna"]]])
+    [mui/button {:color "secondary" :size "large"} "Tallenna"]]])
 
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))
@@ -64,6 +64,7 @@
        [mui/card-content
         [mui/tabs {:scrollable true
                    :full-width false
+                   :text-color "secondary"
                    :on-change change-tab
                    :value @active-tab}
          [mui/tab {:label "Hallien tiedot"

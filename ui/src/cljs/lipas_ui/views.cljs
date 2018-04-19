@@ -39,36 +39,37 @@
 
 (defn create-drawer []
   (let [hide-and-navigate! (comp toggle-drawer navigate!)]
-       [mui/swipeable-drawer {:open true
-                              :on-open #(println "Drawer opened")
-                              :on-close toggle-drawer}
-        [mui/list
-         [mui/list-item {:button true
-                         :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
-          [mui/list-item-icon
-           [mui-icons/place]]
-          [mui/list-item-text {:primary "Liikuntapaikat"}]]
-         [mui/list-item {:button true
-                         :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
-          [mui/list-item-icon
-           [mui-icons/ac-unit]]
-          [mui/list-item-text {:primary "Jäähalliportaali"}]]
-         [mui/list-item {:button true
-                         :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
-          [mui/list-item-icon
-           [mui-icons/pool]]
-          [mui/list-item-text {:primary "Uimahalliportaali"}]]
-         [mui/divider]
-         [mui/list-item {:button true
-                         :on-click #(hide-and-navigate! "/#/avoin-data")}
-          [mui/list-item-icon
-           [mui-icons/build]]
-          [mui/list-item-text {:primary "Avoin data"}]]
-         [mui/list-item {:button true
-                         :on-click #(hide-and-navigate! "/#/ohjeet")}
-          [mui/list-item-icon
-           [mui-icons/help]]
-          [mui/list-item-text {:primary "Ohjeet"}]]]]))
+    [mui/swipeable-drawer {:open true
+                           :on-open #(println "Drawer opened")
+                           :on-close toggle-drawer
+                           :Paper-props {}}
+     [mui/list
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
+       [mui/list-item-icon
+        [mui-icons/place]]
+       [mui/list-item-text {:primary "Liikuntapaikat"}]]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
+       [mui/list-item-icon
+        [mui-icons/ac-unit]]
+       [mui/list-item-text {:primary "Jäähalliportaali"}]]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
+       [mui/list-item-icon
+        [mui-icons/pool]]
+       [mui/list-item-text {:primary "Uimahalliportaali"}]]
+      [mui/divider]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/avoin-data")}
+       [mui/list-item-icon
+        [mui-icons/build]]
+       [mui/list-item-text {:primary "Avoin data"}]]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/ohjeet")}
+       [mui/list-item-icon
+        [mui-icons/help]]
+       [mui/list-item-text {:primary "Ohjeet"}]]]]))
 
 ;; Nav
 
@@ -88,11 +89,12 @@
     [mui/typography {:variant "title"
                      ;;:on-click #(navigate! "/#/")
                      :style {:flex 1 :font-size "1em" :font-weight "bold"}}
-     [mui/typography {:component "a" :variant "title" :href "/#/"
-                      :style {:text-decoration "none" :display "inline"
-                              :font-weight "bold" :font-size "1em"}}
-      "Jyväskylän yliopisto"]
-     [:span {:style {:color "#f1563f" :margin "0.5em"}} "|"]
+     [mui/hidden {:sm-down true}
+      [mui/typography {:component "a" :variant "title" :href "/#/"
+                       :style {:text-decoration "none" :display "inline"
+                               :font-weight "bold" :font-size "1em"}}
+       "Jyväskylän yliopisto"]
+      [:span {:style {:color "#f1563f" :margin "0.5em"}} "|"]]
      (let [prefix "Lipas"]
        (str prefix " " (case active-panel
                          :sports-panel "liikuntapaikat"
@@ -101,12 +103,13 @@
                          :open-data-panel "avoin data"
                          :help-panel "ohjeet"
                          "")))]
-    [mui-icons/search]
+    [mui/icon-button
+     [mui-icons/search]]
     ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
      [mui-icons/account-circle]]
     [mui/icon-button {:on-click toggle-drawer}
-     [mui-icons/menu {:style {:color "#f1563f"}}]]]])
+     [mui-icons/menu {:color "secondary"}]]]])
 
 (defn- panels [panel-name]
   (case panel-name
