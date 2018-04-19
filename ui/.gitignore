@@ -1,3 +1,4 @@
+/.nrepl-port
 /*.log
 /target
 /*-init.clj
