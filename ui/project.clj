@@ -6,7 +6,6 @@
                  [reagent "0.8.0"]
                  [re-frame "0.10.5"]
                  [secretary "1.2.3"]
-                 [garden "1.3.2"]
                  [ns-tracker "0.3.0"]
                  [cljsjs/material-ui "1.0.0-beta.40-0"]
                  [camel-snake-kebab "0.4.0"]]
@@ -23,12 +22,6 @@
                                     "resources/public/css"]
 
   :figwheel {:css-dirs ["resources/public/css"]}
-
-  :garden {:builds [{:id           "screen"
-                     :source-paths ["src/clj"]
-                     :stylesheet   lipas-ui.css/screen
-                     :compiler     {:output-to     "resources/public/css/screen.css"
-                                    :pretty-print? true}}]}
 
   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
