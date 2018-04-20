@@ -2,10 +2,18 @@ version: '2'
 services:
   postgres:
     image: mdillon/postgis:10
+    environment:
+      DB_HOST:
+      DB_PORT:
+      DB_NAME:
+      DB_USER:
+      DB_PASSWORD:
+      DB_SUPERUSER:
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
