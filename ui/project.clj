@@ -3,7 +3,7 @@
                  [org.clojure/clojurescript "1.9.908"]
                  [cljsjs/react "16.3.0-1"]
                  [cljsjs/react-dom "16.3.0-1"]
-                 [reagent "0.8.0-alpha2"]
+                 [reagent "0.8.0"]
                  [re-frame "0.10.5"]
                  [secretary "1.2.3"]
                  [garden "1.3.2"]
