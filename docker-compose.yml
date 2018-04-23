@@ -1,5 +1,22 @@
 version: '3'
 services:
+  auth_service:
+    image: clojure:lein
+    working_dir: /usr/src/app
+    command: ./script/start.sh
+    environment:
+      DATABASE_URL: ${AUTH_DB_URL}
+      USER_EMAIL: ${AUTH_EMAIL_USER}
+      USER_PASS_KEY: ${AUTH_EMAIL_PASSWORD}
+      AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
+    ports:
+      - "8090:3000"
+    links:
+      - postgres
+    volumes:
+      - './auth-service/:/usr/src/app'
+      - 'mvn_cache:/root/.m2'
+
   postgres:
     image: mdillon/postgis:10
     environment:
@@ -11,6 +28,10 @@ services:
       DB_SUPERUSER:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
+      # For auth_service db init script
+      AUTH_DB_NAME:
+      AUTH_DB_USER:
+      AUTH_DB_PASSWORD:
     ports:
       - "5432:5432"
     volumes:
@@ -34,3 +55,4 @@ services:
 volumes:
     pgdata: {}
     esdata: {}
+    mvn_cache: {}
