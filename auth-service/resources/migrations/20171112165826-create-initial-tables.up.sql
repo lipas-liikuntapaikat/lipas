@@ -3,9 +3,6 @@ CREATE TABLE IF NOT EXISTS permission (
     , permission TEXT UNIQUE NOT NULL
 );
 
-INSERT INTO permission (permission) VALUES ('basic');
-INSERT INTO permission (permission) VALUES ('admin');
-
 --;;
 CREATE TABLE IF NOT EXISTS registered_user (
    id              UUID PRIMARY KEY DEFAULT UUID_GENERATE_V4()
