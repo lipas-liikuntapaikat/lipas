@@ -40,6 +40,7 @@
                        :aot :all}
 
              :dev        [{:dependencies [[ring/ring-mock "0.3.2"]]}]
+             :test       {}
              :production {:ring {:open-browser? false
                                  :stacktraces?  false
                                  :auto-reload?  false}}}

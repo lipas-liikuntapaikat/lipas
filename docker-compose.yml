@@ -1,6 +1,7 @@
-version: '3'
+version: '2'
 services:
-  auth_service:
+
+  auth_service_base:
     image: clojure:lein
     working_dir: /usr/src/app
     command: ./script/start.sh
@@ -11,11 +12,24 @@ services:
       AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
     ports:
       - "8090:3000"
-    links:
-      - postgres
     volumes:
       - './auth-service/:/usr/src/app'
       - 'mvn_cache:/root/.m2'
+
+  auth_service:
+    extends:
+      service: auth_service_base
+    links:
+      - postgres
+
+  auth_service_test:
+    extends:
+      service: auth_service_base
+    links:
+      - postgres
+    environment:
+      DATABASE_URL: ${AUTH_TEST_DB_URL}
+    command: ./script/test.sh
 
   postgres:
     image: mdillon/postgis:10
@@ -32,6 +46,8 @@ services:
       AUTH_DB_NAME:
       AUTH_DB_USER:
       AUTH_DB_PASSWORD:
+      AUTH_TEST_DB_NAME:
+      AUTH_TEST_DB_URL:
     ports:
       - "5432:5432"
     volumes:
