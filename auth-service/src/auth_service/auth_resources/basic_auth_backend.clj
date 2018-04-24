@@ -1,7 +1,8 @@
 (ns auth-service.auth-resources.basic-auth-backend
   (:require [auth-service.query-defs :as query]
             [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
-            [buddy.hashers :as hashers]))
+            [buddy.hashers :as hashers]
+            [clojure.edn :as edn]))
 
 (defn get-user-info
   "The username and email values are stored in citext fields in Postgres thus
@@ -16,6 +17,7 @@
       {:user-data (-> registered-user
                       (assoc-in [:username] (str (:username registered-user)))
                       (assoc-in [:email]    (str (:email registered-user)))
+                      (update   :permission_data edn/read-string )
                       (dissoc   :created_on)
                       (dissoc   :password))
        :password  (:password registered-user)})))
@@ -39,4 +41,3 @@
   "Use the basic-auth function defined in this file as the authentication
    function for the http-basic-backend"
   (http-basic-backend {:authfn basic-auth}))
-
