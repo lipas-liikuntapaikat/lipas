@@ -7,9 +7,15 @@
   "Create a signed json web token. The token contents are; username, email, id,
    permissions and token expiration time. Tokens are valid for 15 minutes."
   [user]
-  (let [stringify-user (-> user
-                           (update-in [:username] str)
-                           (update-in [:email] str)
-                           (assoc     :exp (time/plus (time/now) (time/seconds 900))))
-        token-contents (select-keys stringify-user [:permissions :username :email :id :exp])]
-    (jwt/sign token-contents (env :auth-key) {:alg :hs512})))
+  (let [user    (-> user
+                    (update :username str)
+                    (update :email str)
+                    (assoc     :exp (time/plus (time/now) (time/seconds 900))))
+        payload (-> user
+                    (select-keys [:permissions
+                                  :permission_data
+                                  :username
+                                  :email
+                                  :id
+                                  :exp]))]
+    (jwt/sign payload (env :auth-key) {:alg :hs512})))

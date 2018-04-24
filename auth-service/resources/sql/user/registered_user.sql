@@ -51,10 +51,13 @@ SELECT   reg_user.id
          , reg_user.username
          , reg_user.password
          , reg_user.refresh_token
+         , '[' || STRING_AGG(perm.permission_data, ',') || ']' AS permission_data
          , STRING_AGG(perm.permission, ',') AS permissions
 FROM     registered_user                    AS reg_user
-         JOIN user_permission               AS perm
-           ON (reg_user.id = perm.user_id)
+         JOIN user_permission               AS user_perm
+           ON (reg_user.id = user_perm.user_id)
+         JOIN permission                    AS perm
+           ON (perm.permission = user_perm.permission)
 WHERE    reg_user.username = :username
 GROUP BY reg_user.id;
 
@@ -67,10 +70,13 @@ SELECT   reg_user.id
          , reg_user.username
          , reg_user.password
          , reg_user.refresh_token
+         , '[' || STRING_AGG(perm.permission_data, ',') || ']' AS permission_data
          , STRING_AGG(perm.permission, ',') AS permissions
 FROM     registered_user                    AS reg_user
-         JOIN user_permission               AS perm
-           ON (reg_user.id = perm.user_id)
+         JOIN user_permission               AS user_perm
+           ON (reg_user.id = user_perm.user_id)
+         JOIN permission                    AS perm
+           ON (perm.permission = user_perm.permission)
 WHERE    reg_user.email = :email
 GROUP BY reg_user.id;
 
