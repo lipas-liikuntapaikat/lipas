@@ -10,8 +10,6 @@ services:
       USER_EMAIL: ${AUTH_EMAIL_USER}
       USER_PASS_KEY: ${AUTH_EMAIL_PASSWORD}
       AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
-    ports:
-      - "8090:3000"
     volumes:
       - './auth-service/:/usr/src/app'
       - 'mvn_cache:/root/.m2'
@@ -19,6 +17,8 @@ services:
   auth_service:
     extends:
       service: auth_service_base
+    ports:
+      - "8090:3000"
     links:
       - postgres
 
