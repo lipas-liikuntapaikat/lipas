@@ -1,12 +1,17 @@
 (ns lipas-ui.sports-places.views
-  (:require [lipas-ui.mui :as mui]))
+  (:require [lipas-ui.i18n :as i18n]
+            [lipas-ui.mui :as mui]
+            [lipas-ui.subs :as global-subs]
+            [re-frame.core :as re-frame]))
 
-(defn create-panel []
-  [mui/grid {:container true}
-   [mui/grid {:item true :xs 12}
-    [mui/card
-     [mui/card-content
-      [mui/typography {:variant "headline"} "Liikuntapaikat"]]]]])
+(defn create-panel [tr]
+  (let [card-props {:square true}]
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
+      [mui/card card-props
+       [mui/card-content
+        [mui/typography {:variant "headline"} (tr :sport/headline)]]]]]))
 
 (defn main []
-  (create-panel))
+  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
+    (create-panel tr)))

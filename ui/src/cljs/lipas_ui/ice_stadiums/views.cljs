@@ -1,8 +1,10 @@
 (ns lipas-ui.ice-stadiums.views
-  (:require [lipas-ui.mui :as mui]
-            [lipas-ui.ice-stadiums.subs :as subs]
+  (:require [lipas-ui.i18n :as i18n]
             [lipas-ui.ice-stadiums.events :as events]
+            [lipas-ui.ice-stadiums.subs :as subs]
+            [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
+            [lipas-ui.subs :as global-subs]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -32,7 +34,7 @@
                       :width-m 5}]
              :renovations [{:year 2013
                             :comment "Asennettiin uusi ilmanvaihto."}]
-             :envelope-structure {;;Onko ulkoseinä lämpöeristetty
+             :envelope-structure {;; Onko ulkoseinä lämpöeristetty
                                   :insulated-exterior? true
                                   ;; Onko yläpohja lämpöeristetty
                                   :insulated-ceiling? true
@@ -103,52 +105,54 @@
     [:iframe {:src url
               :style {:min-height "800px" :width "100%"}}]]])
 
-(defn energy-tab []
+(defn energy-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [mui/typography "Tänne .pdf dokumentti"]]])
+    [mui/typography (tr :ice-energy/description)]]])
 
-(defn form-tab []
+(defn form-tab [tr]
   [mui/form-control
-   [mui/form-label {:component "legend"} "Kulutustiedot"]
+   [mui/form-label {:component "legend"} (tr :energy/consumption-info)]
    [mui/form-group
     [mui/text-field {:select true
-                     :label "Valitse halli"
+                     :label (tr :ice-form/select-rink)
                      :value "Halli 1"}
      (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
        [mui/menu-item {:key hall :value hall} hall])]
-    [mui/text-field {:label "Vuosi"
+    [mui/text-field {:label (tr :time/year)
                      :type "number"
                      :select true
                      :value 2018}
      (for [year (range 2000 2019)]
        [mui/menu-item {:key year :value year} year])]
-    [mui/text-field {:label "Sähkö"
+    [mui/text-field {:label (tr :energy/electricity)
                      :type "number"
                      :Input-props
                      {:end-adornment
                       (r/as-element
-                       [mui/input-adornment "MWh"])}}]
-    [mui/text-field {:label "Lämpö (ostettu)"
+                       [mui/input-adornment (tr :physical-units/mwh)])}}]
+    [mui/text-field {:label (tr :energy/heat)
                      :type "number"
                      :Input-props
                      {:end-adornment
                       (r/as-element
-                       [mui/input-adornment "MWh"])}}]
-    [mui/text-field {:label "Vesi"
+                       [mui/input-adornment (tr :physical-units/mwh)])}}]
+    [mui/text-field {:label (tr :energy/water)
                      :type "number"
                      :Input-props
                      {:end-adornment
                       (r/as-element
-                       [mui/input-adornment "m³"])}}]
-    [mui/button {:color "secondary" :size "large"} "Tallenna"]]])
+                       [mui/input-adornment (tr :physical-units/m3)])}}]
+    [mui/button {:color "secondary" :size "large"}
+     (tr :actions/save)]]])
 
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))
 
 (defn create-panel [{:keys [url]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
-        card-props {:square true}]
+        card-props {:square true}
+        tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card card-props
@@ -158,19 +162,19 @@
                    :text-color "secondary"
                    :on-change change-tab
                    :value @active-tab}
-         [mui/tab {:label "Hallien tiedot"
+         [mui/tab {:label (tr :ice-rinks/headline)
                    :icon (r/as-element [mui-icons/info])}]
-         [mui/tab {:label "Vinkkejä energiatehokkuuteen"
+         [mui/tab {:label (tr :ice-energy/headline)
                    :icon (r/as-element [mui-icons/flash-on])}]
-         [mui/tab {:label "Ilmoita kulutustiedot"
+         [mui/tab {:label (tr :ice-form/headline)
                    :icon (r/as-element [mui-icons/add])}]]]]]
      [mui/grid {:item true :xs 12}
       [mui/card card-props
        [mui/card-content
         (case @active-tab
           0 (info-tab url)
-          1 (energy-tab)
-          2 (form-tab))]]]]))
+          1 (energy-tab tr)
+          2 (form-tab tr))]]]]))
 
 (defn main []
   (create-panel {:url "https://liikuntaportaalit.sportvenue.net/Jaahalli"}))

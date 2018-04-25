@@ -1,36 +1,39 @@
 (ns lipas-ui.front-page.views
-  (:require [lipas-ui.mui :as mui]))
+  (:require [lipas-ui.i18n :as i18n]
+            [lipas-ui.mui :as mui]
+            [lipas-ui.subs :as global-subs]
+            [re-frame.core :as re-frame]))
 
-(defn create-panel []
-  (let [card-props {:square true}]
+(defn create-panel [tr]
+  (let [card-props {:square true
+                    :style {:height "100%"}}]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Liikuntapaikat"]
-        [mui/typography "LIPAS on suomalaisten liikuntapaikkojen tietokanta."]]]]
+        [mui/typography {:variant "headline"} (tr :sport/headline)]
+        [mui/typography (tr :sport/description)]]]]
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Jäähalliportaali"]
-        [mui/typography (str "Jäähalliportaali sisältää hallien perus- ja "
-                             "energiankulutustietoja, sekä ohjeita "
-                             "energiatehokkuuden parantamiseen")]]]]
+        [mui/typography {:variant "headline"} (tr :ice/headline)]
+        [mui/typography (tr :ice/description)]]]]
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Uimahalliportaali"]
-        [mui/typography "Hieno on myös tämä toinen portaali."]]]]
+        [mui/typography {:variant "headline"} (tr :swim/headline)]
+        [mui/typography (tr :swim/description)]]]]
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Avoin data"]
-        [mui/typography "Kaikki data on avointa blabalba."]]]]
+        [mui/typography {:variant "headline"} (tr :open-data/headline)]
+        [mui/typography (tr :open-data/description)]]]]
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Ohjeet"]
-        [mui/typography "Täältä löytyvät ohjeet"]]]]]))
+        [mui/typography {:variant "headline"} (tr :help/headline)]
+        [mui/typography (tr :help/description)]]]]]))
 
 (defn main []
-  (create-panel))
+  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
+    (create-panel tr)))

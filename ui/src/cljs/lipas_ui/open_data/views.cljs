@@ -1,20 +1,23 @@
 (ns lipas-ui.open-data.views
-  (:require [lipas-ui.mui :as mui]
+  (:require [lipas-ui.i18n :as i18n]
+            [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
             [lipas-ui.routes :refer [navigate!]]
-            [lipas-ui.svg :as svg]))
+            [lipas-ui.subs :as global-subs]
+            [lipas-ui.svg :as svg]
+            [re-frame.core :as re-frame]))
 
 (def links {:github "https://github.com/lipas-liikuntapaikat/lipas-api"
             :lipas "http://lipas.cc.jyu.fi/api/index.html"})
 
-(defn create-panel []
+(defn create-panel [tr]
   (let [card-props {:square true}]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card card-props
        [mui/card-content
-        [mui/typography {:variant "headline"} "Rajapinnat"]
-        [mui/typography "Kaikki data on avointa blabalba."]]]]
+        [mui/typography {:variant "headline"} (tr :open-data/headline)]
+        [mui/typography (tr :open-data/description)]]]]
      [mui/grid {:item true :xs 12 :md 6 :lg 4}
       [mui/card card-props
        [mui/card-content
@@ -41,4 +44,5 @@
         [mui/typography {:variant "headline"} "WFS"]]]]]))
 
 (defn main []
-  (create-panel))
+  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
+    (create-panel tr)))
