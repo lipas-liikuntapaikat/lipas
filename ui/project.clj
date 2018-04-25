@@ -8,7 +8,8 @@
                  [secretary "1.2.3"]
                  [ns-tracker "0.3.0"]
                  [cljsjs/material-ui "1.0.0-beta.40-0"]
-                 [camel-snake-kebab "0.4.0"]]
+                 [camel-snake-kebab "0.4.0"]
+                 [tongue "0.2.4"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-garden "0.2.8"]]
