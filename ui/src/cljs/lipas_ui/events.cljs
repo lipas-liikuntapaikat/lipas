@@ -21,3 +21,8 @@
  ::toggle-drawer
  (fn [db [_ _]]
    (update db :drawer-open? not)))
+
+(re-frame/reg-event-db
+ ::set-locale
+ (fn [db [_ locale]]
+   (assoc db :locale locale)))

@@ -20,3 +20,8 @@
  ::drawer-open?
  (fn [db _]
    (:drawer-open? db)))
+
+(re-frame/reg-sub
+ ::locale
+ (fn [db _]
+   (:locale db)))
