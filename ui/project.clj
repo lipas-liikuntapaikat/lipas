@@ -9,7 +9,8 @@
                  [ns-tracker "0.3.0"]
                  [cljsjs/material-ui "1.0.0-beta.40-0"]
                  [camel-snake-kebab "0.4.0"]
-                 [tongue "0.2.4"]]
+                 [tongue "0.2.4"]
+                 [day8.re-frame/http-fx "0.1.6"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-garden "0.2.8"]]
