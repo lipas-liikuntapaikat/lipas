@@ -1,10 +1,11 @@
 (ns lipas-ui.core
-  (:require [reagent.core :as reagent]
-            [re-frame.core :as re-frame]
+  (:require [day8.re-frame.http-fx]
+            [lipas-ui.config :as config]
             [lipas-ui.events :as events]
             [lipas-ui.routes :as routes]
             [lipas-ui.views :as views]
-            [lipas-ui.config :as config]))
+            [re-frame.core :as re-frame]
+            [reagent.core :as reagent]))
 
 
 (defn dev-setup []
