@@ -12,6 +12,7 @@
             [lipas-ui.subs :as subs]
             [lipas-ui.svg :as svg]
             [lipas-ui.swimming-pools.views :as swimming-pools]
+            [lipas-ui.user.views :as user]
             [re-frame.core :as re-frame]))
 
 ;; Menu
@@ -27,7 +28,8 @@
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/group-add]]
-      [mui/list-item-text {:primary (tr :menu/register)}]]
+      [mui/list-item-text {:primary (tr :menu/register)
+                           :on-click (comp close #(navigate! "/#/profiili"))}]]
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/help]]
@@ -138,6 +140,7 @@
                          :swim-panel (tr :swim/headline :lower-case)
                          :open-data-panel (tr :open-data/headline :lower-case)
                          :help-panel (tr :help/headline :lower-case)
+                         :user-panel (tr :user/headline :lower-case)
                          "")))]
     lang-selector
     [mui/icon-button
@@ -156,6 +159,7 @@
     :swim-panel [swimming-pools/main]
     :open-data-panel [open-data/main]
     :help-panel [help/main]
+    :user-panel [user/main]
     [:div "Unknown page :/"]))
 
 (defn show-panel [panel-name]

@@ -40,5 +40,8 @@
   (defroute "/ohjeet" []
     (re-frame/dispatch [::events/set-active-panel :help-panel]))
 
+  (defroute "/profiili" []
+    (re-frame/dispatch [::events/set-active-panel :user-panel]))
+
   ;; --------------------
   (hook-browser-navigation!))
