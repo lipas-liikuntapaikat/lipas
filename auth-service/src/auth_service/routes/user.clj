@@ -16,9 +16,12 @@
     (POST "/"           {:as request}
            :return      {:username String}
            :middleware  [cors-mw]
-           :body-params [email :- String username :- String password :- String]
+           :body        [user {:username String
+                               :email String
+                               :password String
+                               (s/optional-key :user-data) s/Any}]
            :summary     "Create a new user with provided username, email and password."
-           (create-user-response email username password))
+           (create-user-response user))
 
     (DELETE "/:id"          {:as request}
              :path-params   [id :- s/Uuid]
