@@ -17,20 +17,22 @@
 ;; Menu
 
 (defn create-menu [tr anchor]
-  [mui/menu {:anchor-el anchor :open true
-             :on-close #(re-frame/dispatch [::events/set-menu-anchor nil])}
-   [mui/menu-item
-    [mui/list-item-icon
-     [mui-icons/lock]]
-    [mui/list-item-text {:primary (tr :menu/login)}]]
-   [mui/menu-item
-    [mui/list-item-icon
-     [mui-icons/group-add]]
-    [mui/list-item-text {:primary (tr :menu/register)}]]
-   [mui/menu-item
-    [mui/list-item-icon
-     [mui-icons/help]]
-    [mui/list-item-text {:primary (tr :help/headline)}]]])
+  (let [close #(re-frame/dispatch [::events/set-menu-anchor nil])]
+    [mui/menu {:anchor-el anchor :open true
+               :on-close close}
+     [mui/menu-item
+      [mui/list-item-icon
+       [mui-icons/lock]]
+      [mui/list-item-text {:primary (tr :menu/login)}]]
+     [mui/menu-item
+      [mui/list-item-icon
+       [mui-icons/group-add]]
+      [mui/list-item-text {:primary (tr :menu/register)}]]
+     [mui/menu-item
+      [mui/list-item-icon
+       [mui-icons/help]]
+      [mui/list-item-text {:primary (tr :help/headline)
+                           :on-click (comp close #(navigate! "/#/ohjeet"))}]]]))
 
 (def separator
   [mui/typography {:component "span"
@@ -39,11 +41,11 @@
                    :style {:display "inline"
                            :font-weight "bold"
                            :font-size "1em"
-                           :margin "0.5em"}} "|"])
+                           :margin "0.5em"}}
+   "|"])
 
 (defn ->lang-btn [locale]
   [mui/button {:style {:min-width "0px"
-                       :margin 0
                        :padding 0
                        :font-size "1em"}
                :on-click #(re-frame/dispatch [::events/set-locale locale])}
@@ -51,7 +53,11 @@
 
 (def lang-selector
   [mui/grid {:item true :style {:margin "1em"}}
-   (interpose separator (map ->lang-btn [:fi :sv :en]))])
+   [->lang-btn :fi]
+   separator
+   [->lang-btn :sv]
+   separator
+   [->lang-btn :en]])
 
 (defn show-menu [event]
   (re-frame/dispatch [::events/set-menu-anchor (.-currentTarget event)]))
