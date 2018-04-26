@@ -36,6 +36,18 @@
          :help
          {:headline "Ohjeet"
           :description "Täältä löytyvät ohjeet"}
+         :user
+         {:headline "Oma sivu"
+          :registrate "Rekisteröidy"
+          :email "Sähköposti"
+          :email-example "email@example.com"
+          :username "Käyttäjänimi"
+          :username-example "tane12"
+          :firstname "Etunimi"
+          :lastname "Sukunimi"
+          :password "Salasana"
+          :permissions "Käyttöoikeudet"
+          :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."}
          :physical-units
          {:mwh "MWh"
           :m3 "m³"}
