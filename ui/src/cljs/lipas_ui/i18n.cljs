@@ -7,7 +7,7 @@
           :login "Kirjaudu"
           :register "Rekisteröidy"}
          :sport
-         {:headline "Liikuntapikat"
+         {:headline "Liikuntapaikat"
           :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."}
          :ice
          {:headline "Jäähalliportaali"
