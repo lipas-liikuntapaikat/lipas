@@ -96,18 +96,22 @@ FROM     registered_user                    AS reg_user
 WHERE    reg_user.refresh_token = :refresh_token
 GROUP BY reg_user.id;
 
+
 -- :name insert-registered-user!
 -- :command :insert
 -- :result :raw
 -- :doc Inserts a single user
 INSERT INTO registered_user (
-    email
-    , username
-    , password)
+email
+, username
+, password
+, user_data)
 VALUES (
-    :email
-    , :username
-    , :password);
+:email
+, :username
+, :password
+, :user_data);
+
 
 -- :name update-registered-user!
 -- :command :execute
