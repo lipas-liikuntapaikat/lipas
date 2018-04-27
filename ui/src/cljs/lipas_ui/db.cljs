@@ -6,6 +6,9 @@
    :swimming-pools {:active-tab 0}
    :user
    {:logged-in? false
+    :login-form
+    {:username ""
+     :password ""}
     :registration-form
     {:email ""
      :password ""
