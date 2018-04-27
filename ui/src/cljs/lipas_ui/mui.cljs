@@ -2,22 +2,24 @@
   (:refer-clojure :exclude [list])
   (:require [cljsjs.material-ui]
             [goog.object :as gobj]
+            [clojure.string :as s]
             [reagent.core :as r]
-            [camel-snake-kebab.core :refer [->camelCase]]
+            [camel-snake-kebab.core :refer [convert-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]))
+
+(comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
+(comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
+(defn keyword->PasCamelCase
+  "Converts keywords to PascalCase or camelCase
+  respecting case of the first character."
+  [kw & rest]
+  (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
 (defn ->mui-theme [opts]
   (->> opts
-       (transform-keys ->camelCase)
+       (transform-keys keyword->PasCamelCase)
        clj->js
        js/MaterialUIStyles.createMuiTheme))
-
-(comment (with-styles {:button {:background "red"}}))
-(defn with-styles [styles]
-  (->> styles
-       (transform-keys ->camelCase)
-       clj->js
-       js/MaterialUIStyles.withStyles))
 
 (comment (get-color "blue"))
 (comment (get-color :blue "300"))
@@ -32,12 +34,18 @@
        (mapv name)
        (apply (partial gobj/getValueByKeys js/MaterialUI "colors"))))
 
+(def primary "#002957")
+(def secondary "#f1563f")
+
 (def jyu-styles-dark {:typography
                       {:font-family "Aleo, serif"}
                       :palette
                       {:type "dark"
-                       :primary {:main "#002957"}
-                       :secondary {:main "#f1563f"}}})
+                       :primary {:main primary}
+                       :secondary {:main secondary}}
+                      :overrides
+                      {:Mui-card-header
+                       {:title {:color secondary}}}})
 
 (def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
 
