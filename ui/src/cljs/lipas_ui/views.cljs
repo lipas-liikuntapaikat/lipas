@@ -142,7 +142,8 @@
                          :help-panel (tr :help/headline :lower-case)
                          :user-panel (tr :user/headline :lower-case)
                          "")))]
-    lang-selector
+    [mui/hidden {:sm-down true}
+     lang-selector]
     [mui/icon-button
      [mui-icons/search]]
     ;;[mui/text-field {:placeholder "Haku"}]
@@ -171,6 +172,7 @@
         drawer-open? (re-frame/subscribe [::subs/drawer-open?])
         tr (i18n/->tr-fn @(re-frame/subscribe [::subs/locale]))]
     [mui/css-baseline
-     [mui/mui-theme-provider {:theme mui/jyu-theme}
-      [nav tr @menu-anchor @drawer-open? @active-panel]
+     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+      [nav tr @menu-anchor @drawer-open? @active-panel]]
+     [mui/mui-theme-provider {:theme mui/jyu-theme-light}
       [show-panel @active-panel]]]))
