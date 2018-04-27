@@ -40,6 +40,12 @@
   (defroute "/ohjeet" []
     (re-frame/dispatch [::events/set-active-panel :help-panel]))
 
+  (defroute "/kirjaudu" []
+    (re-frame/dispatch [::events/set-active-panel :login-panel]))
+
+  (defroute "/rekisteroidy" []
+    (re-frame/dispatch [::events/set-active-panel :register-panel]))
+
   (defroute "/profiili" []
     (re-frame/dispatch [::events/set-active-panel :user-panel]))
 

@@ -4,9 +4,11 @@
             [lipas-ui.help.views :as help]
             [lipas-ui.i18n :as i18n]
             [lipas-ui.ice-stadiums.views :as ice-stadiums]
+            [lipas-ui.login.views :as login]
             [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
             [lipas-ui.open-data.views :as open-data]
+            [lipas-ui.register.views :as register]
             [lipas-ui.routes :refer [navigate!]]
             [lipas-ui.sports-places.views :as sports-places]
             [lipas-ui.subs :as subs]
@@ -24,12 +26,13 @@
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/lock]]
-      [mui/list-item-text {:primary (tr :menu/login)}]]
+      [mui/list-item-text {:primary (tr :login/headline)
+                           :on-click (comp close #(navigate! "/#/kirjaudu"))}]]
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/group-add]]
-      [mui/list-item-text {:primary (tr :menu/register)
-                           :on-click (comp close #(navigate! "/#/profiili"))}]]
+      [mui/list-item-text {:primary (tr :register/headline)
+                           :on-click (comp close #(navigate! "/#/rekisteroidy"))}]]
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/help]]
@@ -140,6 +143,7 @@
                          :swim-panel (tr :swim/headline :lower-case)
                          :open-data-panel (tr :open-data/headline :lower-case)
                          :help-panel (tr :help/headline :lower-case)
+                         :register-panel (tr :register/headline :lower-case)
                          :user-panel (tr :user/headline :lower-case)
                          "")))]
     [mui/hidden {:sm-down true}
@@ -160,6 +164,8 @@
     :swim-panel [swimming-pools/main]
     :open-data-panel [open-data/main]
     :help-panel [help/main]
+    :login-panel [login/main]
+    :register-panel [register/main]
     :user-panel [user/main]
     [:div "Unknown page :/"]))
 
