@@ -20,40 +20,39 @@
     [mui/typography (tr :ice-energy/description)]]])
 
 (defn form-tab [tr]
-  [mui/form-control
-   [mui/form-label {:component "legend"} (tr :energy/consumption-info)]
-   [mui/form-group
-    [mui/text-field {:select true
-                     :label (tr :ice-form/select-rink)
-                     :value "Halli 1"}
-     (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
-       [mui/menu-item {:key hall :value hall} hall])]
-    [mui/text-field {:label (tr :time/year)
-                     :type "number"
-                     :select true
-                     :value 2018}
-     (for [year (range 2000 2019)]
-       [mui/menu-item {:key year :value year} year])]
-    [mui/text-field {:label (tr :energy/electricity)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [mui/text-field {:label (tr :energy/heat)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [mui/text-field {:label (tr :energy/water)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/m3)])}}]
-    [mui/button {:color "secondary" :size "large"}
-     (tr :actions/save)]]])
+  [mui/form-label {:component "legend"} (tr :energy/consumption-info)]
+  [mui/form-group
+   [mui/text-field {:select true
+                    :label (tr :ice-form/select-rink)
+                    :value "Halli 1"}
+    (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
+      [mui/menu-item {:key hall :value hall} hall])]
+   [mui/text-field {:label (tr :time/year)
+                    :type "number"
+                    :select true
+                    :value 2018}
+    (for [year (range 2000 2019)]
+      [mui/menu-item {:key year :value year} year])]
+   [mui/text-field {:label (tr :energy/electricity)
+                    :type "number"
+                    :Input-props
+                    {:end-adornment
+                     (r/as-element
+                      [mui/input-adornment (tr :physical-units/mwh)])}}]
+   [mui/text-field {:label (tr :energy/heat)
+                    :type "number"
+                    :Input-props
+                    {:end-adornment
+                     (r/as-element
+                      [mui/input-adornment (tr :physical-units/mwh)])}}]
+   [mui/text-field {:label (tr :energy/water)
+                    :type "number"
+                    :Input-props
+                    {:end-adornment
+                     (r/as-element
+                      [mui/input-adornment (tr :physical-units/m3)])}}]
+   [mui/button {:color "secondary" :size "large"}
+    (tr :actions/save)]])
 
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))

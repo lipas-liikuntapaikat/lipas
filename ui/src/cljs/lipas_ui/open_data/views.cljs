@@ -10,38 +10,35 @@
 (def links {:github "https://github.com/lipas-liikuntapaikat/lipas-api"
             :lipas "http://lipas.cc.jyu.fi/api/index.html"})
 
+(defn ->grid-card [title content]
+  [mui/grid {:item true :xs 12 :md 6 :lg 4}
+   [mui/card {:square true
+              :style {:height "100%"}}
+    [mui/card-header {:title title}]
+    [mui/card-content
+     content]]])
+
 (defn create-panel [tr]
-  (let [card-props {:square true}]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/card card-props
-       [mui/card-content
-        [mui/typography {:variant "headline"} (tr :open-data/headline)]
-        [mui/typography (tr :open-data/description)]]]]
-     [mui/grid {:item true :xs 12 :md 6 :lg 4}
-      [mui/card card-props
-       [mui/card-content
-        [mui/typography {:variant "headline"} "REST"]
-        [mui/list
-         [mui/list-item {:button true
-                         :on-click #(navigate! {:lipas links})}
-          [mui/list-item-icon
-           [mui-icons/build]]
-          [mui/list-item-text {:primary "Swagger"}]]
-         [mui/list-item {:button true
-                         :on-click #(navigate! (:github links))}
-          [mui/list-item-icon
-           [mui/svg-icon
-            svg/github-icon]]
-          [mui/list-item-text {:primary "GitHub"}]]]]]]
-     [mui/grid {:item true :xs 12 :md 6 :lg 4}
-      [mui/card card-props
-       [mui/card-content
-        [mui/typography {:variant "headline"} "WMS"]]]]
-     [mui/grid {:item true :xs 12 :md 6 :lg 4}
-      [mui/card card-props
-       [mui/card-content
-        [mui/typography {:variant "headline"} "WFS"]]]]]))
+  [:div {:style {:padding "1em"}}
+   [mui/grid {:container true
+              :spacing 16}
+    (->grid-card (tr :open-data/headline)
+                 [mui/typography (tr :open-data/description)])
+    (->grid-card (tr :open-data/rest)
+                 [mui/list
+                  [mui/list-item {:button true
+                                  :on-click #(navigate! {:lipas links})}
+                   [mui/list-item-icon
+                    [mui-icons/build]]
+                   [mui/list-item-text {:primary "Swagger"}]]
+                  [mui/list-item {:button true
+                                  :on-click #(navigate! (:github links))}
+                   [mui/list-item-icon
+                    [mui/svg-icon
+                     svg/github-icon]]
+                   [mui/list-item-text {:primary "GitHub"}]]])
+    (->grid-card (tr :open-data/wms-wfs)
+                 [mui/typography (tr :open-data/wms-wfs-description)])]])
 
 (defn main []
   (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
