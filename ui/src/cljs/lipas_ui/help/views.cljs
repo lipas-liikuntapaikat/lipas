@@ -5,13 +5,14 @@
             [re-frame.core :as re-frame]))
 
 (defn create-panel [tr]
-  (let [card-props {:square true}]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/card card-props
-       [mui/card-content
-        [mui/typography {:variant "headline"} (tr :help/headline)]
-        [mui/typography (tr :help/description)]]]]]))
+  [:div {:style {:padding "1em"}}
+   [mui/grid {:container true
+              :spacing 16}
+    [mui/grid {:item true :xs 12}
+     [mui/card {:square true}
+      [mui/card-header {:title (tr :help/headline)}]
+      [mui/card-content
+       [mui/typography (tr :help/description)]]]]]])
 
 (defn main []
   (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
