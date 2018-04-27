@@ -3,9 +3,7 @@
             [clojure.string :as s]))
 
 (def fi {:menu
-         {:jyu "Jyväskylän yliopisto"
-          :login "Kirjaudu"
-          :register "Rekisteröidy"}
+         {:jyu "Jyväskylän yliopisto"}
          :sport
          {:headline "Liikuntapaikat"
           :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."}
@@ -29,10 +27,15 @@
           :water "Vesi"}
          :swim
          {:headline "Uimahalliportaali"
-          :description "Hieno on myös tämä toinen portaali."}
+          :description "Uimahalliportaali sisältää hallien perus- ja
+          energiankulutustietoja, sekä ohjeita energiatehokkuuden
+          parantamiseen."}
          :open-data
          {:headline "Avoin data"
-          :description "Kaikki data on avointa blabalba."}
+          :description "Kaikki data on avointa."
+          :rest "REST"
+          :wms-wfs "WMS & WFS"
+          :wms-wfs-description "Tämmöisetkin löytyy Geoserveriltä"}
          :help
          {:headline "Ohjeet"
           :description "Täältä löytyvät ohjeet"}
@@ -47,7 +50,12 @@
           :lastname "Sukunimi"
           :password "Salasana"
           :permissions "Käyttöoikeudet"
-          :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."}
+          :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."
+          :permissions-help "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
+         :register
+         {:headline "Rekisteröidy"}
+         :login
+         {:headline "Kirjaudu"}
          :physical-units
          {:mwh "MWh"
           :m3 "m³"}
@@ -58,8 +66,7 @@
 
 (def sv {:menu
          {:jyu "Jyväskylä universitet"
-          :login "Logga in"
-          :register "Registera"}
+          :login "Logga in"}
          :sport
          {:headline "Sport platsen"
           :description "LIPAS är jättebra."}
@@ -77,6 +84,10 @@
          :help
          {:headline "Hjälpa"
           :description "Här har du hjälpa."}
+         :register
+         {:headline "Registera"}
+         :login
+         {:headline "Logga in"}
          :time
          {:year "År"}})
 
@@ -99,7 +110,11 @@
           :description "All data is free for use"}
          :help
          {:headline "Help"
-          :description "Help help help"}})
+          :description "Help help help"}
+         :register
+         {:headline "Register"}
+         :login
+         {:headline "Login"}})
 
 (def dicts {:fi fi
             :sv sv
