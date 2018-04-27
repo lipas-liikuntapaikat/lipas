@@ -1,5 +1,10 @@
-(ns lipas-ui.user.subs
+(ns lipas-ui.register.subs
   (:require [re-frame.core :as re-frame]))
+
+(re-frame/reg-sub
+ ::registration-form
+ (fn [db _]
+   (-> db :user :registration-form)))
 
 (re-frame/reg-sub
  ::logged-in?
