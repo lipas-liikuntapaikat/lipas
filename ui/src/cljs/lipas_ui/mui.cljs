@@ -32,14 +32,18 @@
        (mapv name)
        (apply (partial gobj/getValueByKeys js/MaterialUI "colors"))))
 
-(def jyu-styles {:typography
-                 {:font-family "Aleo, serif"}
-                 :palette
-                 {:type "dark"
-                  :primary {:main "#002957"}
-                  :secondary {:main "#f1563f"}}})
+(def jyu-styles-dark {:typography
+                      {:font-family "Aleo, serif"}
+                      :palette
+                      {:type "dark"
+                       :primary {:main "#002957"}
+                       :secondary {:main "#f1563f"}}})
 
-(def jyu-theme (->mui-theme jyu-styles))
+(def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
+
+(def jyu-theme-dark (->mui-theme jyu-styles-dark))
+(def jyu-theme-light (->mui-theme jyu-styles-light))
+
 
 (defn mui->reagent [mui-name]
   (r/adapt-react-class (gobj/get js/MaterialUI mui-name)))
