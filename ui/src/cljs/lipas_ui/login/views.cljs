@@ -1,9 +1,7 @@
 (ns lipas-ui.login.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.mui :as mui]
+  (:require [lipas-ui.mui :as mui]
             [lipas-ui.login.events :as events]
             [lipas-ui.login.subs :as subs]
-            [lipas-ui.subs :as global-subs]
             [lipas-ui.routes :refer [navigate!]]
             [re-frame.core :as re-frame]))
 
@@ -16,14 +14,14 @@
 
 (defn create-login-form [tr form-data]
   [mui/form-group
-   [mui/text-field {:label (tr :user/username)
+   [mui/text-field {:label (tr :login/username)
                     :auto-focus true
                     :type "text"
                     :value (:username form-data)
                     :on-change #(set-form-field :username %)
                     :required true
-                    :placeholder (tr :user/username-example)}]
-   [mui/text-field {:label (tr :user/password)
+                    :placeholder (tr :login/username-example)}]
+   [mui/text-field {:label (tr :login/password)
                     :type "password"
                     :value (:password form-data)
                     :on-change #(set-form-field :password %)
@@ -32,7 +30,7 @@
                 :size "large"
                 :on-click #(re-frame/dispatch
                             [::events/submit-login-form form-data])}
-    (tr :login/headline)]])
+    (tr :login/login)]])
 
 (defn create-login-panel [tr form-data]
   (let [card-props {:square true
@@ -46,9 +44,8 @@
        [mui/card-content
         (create-login-form tr form-data)]]]]))
 
-(defn main []
-  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))
-        logged-in? (re-frame/subscribe [::subs/logged-in?])
+(defn main [tr]
+  (let [logged-in? (re-frame/subscribe [::subs/logged-in?])
         form-data (re-frame/subscribe [::subs/login-form])]
     (if @logged-in?
       (navigate! "/#/profiili")

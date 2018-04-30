@@ -1,9 +1,7 @@
 (ns lipas-ui.register.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.mui :as mui]
+  (:require [lipas-ui.mui :as mui]
             [lipas-ui.register.events :as events]
             [lipas-ui.register.subs :as subs]
-            [lipas-ui.subs :as global-subs]
             [lipas-ui.routes :refer [navigate!]]
             [re-frame.core :as re-frame]))
 
@@ -25,39 +23,39 @@
 
 (defn create-registration-form [tr form-data]
   [mui/form-group
-   [mui/text-field {:label (tr :user/email)
+   [mui/text-field {:label (tr :register/email)
                     :type "email"
                     :error (invalid? (validate-email (:email form-data)))
                     :value (:email form-data)
                     :on-change #(set-form-field :email %)
                     :required true
-                    :placeholder (tr :user/email-example)}]
-   [mui/text-field {:label (tr :user/username)
+                    :placeholder (tr :register/email-example)}]
+   [mui/text-field {:label (tr :register/username)
                     :type "text"
                     :value (:username form-data)
                     :on-change #(set-form-field :username %)
                     :required true
-                    :placeholder (tr :user/username-example)}]
-   [mui/text-field {:label (tr :user/password)
+                    :placeholder (tr :register/username-example)}]
+   [mui/text-field {:label (tr :register/password)
                     :type "password"
                     :value (:password form-data)
                     :on-change #(set-form-field :password %)
                     :required true}]
-   [mui/text-field {:label (tr :user/firstname)
+   [mui/text-field {:label (tr :register/firstname)
                     :required true
                     :value (-> form-data :user-data :firstname)
                     :on-change #(set-form-field [:user-data :firstname] %)}]
-   [mui/text-field {:label (tr :user/lastname)
+   [mui/text-field {:label (tr :register/lastname)
                     :required true
                     :value (-> form-data :user-data :lastname)
                     :on-change #(set-form-field [:user-data :lastname] %)}]
-   [mui/text-field {:label (tr :user/permissions)
+   [mui/text-field {:label (tr :register/permissions)
                     :multiline true
                     :value (-> form-data :user-data :permissions)
                     :on-change #(set-form-field [:user-data :permissions] %)
                     :rows 3
-                    :placeholder (tr :user/permissions-example)
-                    :helper-text (tr :user/permissions-help)}]
+                    :placeholder (tr :register/permissions-example)
+                    :helper-text (tr :register/permissions-help)}]
    [mui/button {:color "primary"
                 :size "large"
                 :on-click #(re-frame/dispatch
@@ -72,13 +70,12 @@
                :style {:padding "1em"}}
      [mui/grid {:item true :xs 12 :md 8 :lg 6}
       [mui/card card-props
-       [mui/card-header {:title (tr :user/registrate)}]
+       [mui/card-header {:title (tr :register/headline)}]
        [mui/card-content
         (create-registration-form tr form-data)]]]]))
 
-(defn main []
-  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))
-        logged-in? (re-frame/subscribe [::subs/logged-in?])
+(defn main [tr]
+  (let [logged-in? (re-frame/subscribe [::subs/logged-in?])
         form-data (re-frame/subscribe [::subs/registration-form])]
     (if @logged-in?
       (navigate! "/#/profiili")

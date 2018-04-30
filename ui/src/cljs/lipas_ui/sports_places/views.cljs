@@ -1,8 +1,5 @@
 (ns lipas-ui.sports-places.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.mui :as mui]
-            [lipas-ui.subs :as global-subs]
-            [re-frame.core :as re-frame]))
+  (:require [lipas-ui.mui :as mui]))
 
 (defn create-panel [tr]
   [:div {:style {:padding "1em"}}
@@ -14,6 +11,5 @@
       [mui/card-content
        [mui/typography (tr :sport/description)]]]]]])
 
-(defn main []
-  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
-    (create-panel tr)))
+(defn main [tr]
+  (create-panel tr))

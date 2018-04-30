@@ -22,6 +22,6 @@
    (:drawer-open? db)))
 
 (re-frame/reg-sub
- ::locale
+ ::translator
  (fn [db _]
-   (:locale db)))
+   (:translator db)))

@@ -1,8 +1,6 @@
 (ns lipas-ui.swimming-pools.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.mui :as mui]
+  (:require [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
-            [lipas-ui.subs :as global-subs]
             [lipas-ui.swimming-pools.events :as events]
             [lipas-ui.swimming-pools.subs :as subs]
             [re-frame.core :as re-frame]
@@ -57,10 +55,9 @@
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))
 
-(defn create-panel [{:keys [url]}]
+(defn create-panel [{:keys [url tr]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
-        card-props {:square true}
-        tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
+        card-props {:square true}]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card card-props
@@ -84,5 +81,6 @@
           1 (energy-tab tr)
           2 (form-tab tr))]]]]))
 
-(defn main []
-  (create-panel {:url "https://liikuntaportaalit.sportvenue.net/Uimahalli"}))
+(defn main [tr]
+  (create-panel {:tr tr
+                 :url "https://liikuntaportaalit.sportvenue.net/Uimahalli"}))

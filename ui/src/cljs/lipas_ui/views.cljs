@@ -49,11 +49,15 @@
                            :margin "0.5em"}}
    "|"])
 
+(defn set-translator [locale]
+  (let [translator (i18n/->tr-fn locale)]
+    (re-frame/dispatch [::events/set-translator translator])))
+
 (defn ->lang-btn [locale]
   [mui/button {:style {:min-width "0px"
                        :padding 0
                        :font-size "1em"}
-               :on-click #(re-frame/dispatch [::events/set-locale locale])}
+               :on-click #(set-translator locale)}
    (name locale)])
 
 (def lang-selector
@@ -103,7 +107,18 @@
                       :on-click #(hide-and-navigate! "/#/ohjeet")}
        [mui/list-item-icon
         [mui-icons/help]]
-       [mui/list-item-text {:primary (tr :help/headline)}]]]]))
+       [mui/list-item-text {:primary (tr :help/headline)}]]
+      [mui/divider]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/kirjaudu")}
+       [mui/list-item-icon
+        [mui-icons/lock]]
+       [mui/list-item-text {:primary (tr :login/headline)}]]
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/rekisteroidy")}
+       [mui/list-item-icon
+        [mui-icons/group-add]]
+       [mui/list-item-text {:primary (tr :register/headline)}]]]]))
 
 ;; Nav
 
@@ -143,7 +158,8 @@
                          :swim-panel (tr :swim/headline :lower-case)
                          :open-data-panel (tr :open-data/headline :lower-case)
                          :help-panel (tr :help/headline :lower-case)
-                         :register-panel (tr :register/headline :lower-case)
+                         :login-panel ""
+                         :register-panel ""
                          :user-panel (tr :user/headline :lower-case)
                          "")))]
     [mui/hidden {:sm-down true}
@@ -156,29 +172,29 @@
     [mui/icon-button {:on-click toggle-drawer}
      [mui-icons/menu {:color "secondary"}]]]])
 
-(defn- panels [panel-name]
+(defn- panels [panel-name tr]
   (case panel-name
-    :home-panel [front-page/main]
-    :sports-panel [sports-places/main]
-    :ice-panel [ice-stadiums/main]
-    :swim-panel [swimming-pools/main]
-    :open-data-panel [open-data/main]
-    :help-panel [help/main]
-    :login-panel [login/main]
-    :register-panel [register/main]
-    :user-panel [user/main]
+    :home-panel [front-page/main tr]
+    :sports-panel [sports-places/main tr]
+    :ice-panel [ice-stadiums/main tr]
+    :swim-panel [swimming-pools/main tr]
+    :open-data-panel [open-data/main tr]
+    :help-panel [help/main tr]
+    :login-panel [login/main tr]
+    :register-panel [register/main tr]
+    :user-panel [user/main tr]
     [:div "Unknown page :/"]))
 
-(defn show-panel [panel-name]
-  [panels panel-name])
+(defn show-panel [panel-name tr]
+  [panels panel-name tr])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])
-        menu-anchor (re-frame/subscribe [::subs/menu-anchor])
+        menu-anchor  (re-frame/subscribe [::subs/menu-anchor])
         drawer-open? (re-frame/subscribe [::subs/drawer-open?])
-        tr (i18n/->tr-fn @(re-frame/subscribe [::subs/locale]))]
+        tr           (re-frame/subscribe [::subs/translator])]
     [mui/css-baseline
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-      [nav tr @menu-anchor @drawer-open? @active-panel]]
+      [nav @tr @menu-anchor @drawer-open? @active-panel]]
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
-      [show-panel @active-panel]]]))
+      [show-panel @active-panel @tr]]]))
