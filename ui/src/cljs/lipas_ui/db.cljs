@@ -2,8 +2,7 @@
   (:require [lipas-ui.i18n :as i18n]))
 
 (def default-db
-  {:locale :fi
-   :translator (i18n/->tr-fn :fi)
+  {:translator (i18n/->tr-fn :fi)
    :ice-stadiums {:active-tab 0}
    :swimming-pools {:active-tab 0}
    :user
