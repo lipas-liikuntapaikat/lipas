@@ -23,6 +23,6 @@
    (update db :drawer-open? not)))
 
 (re-frame/reg-event-db
- ::set-locale
- (fn [db [_ locale]]
-   (assoc db :locale locale)))
+ ::set-translator
+ (fn [db [_ translator]]
+   (assoc db :translator translator)))

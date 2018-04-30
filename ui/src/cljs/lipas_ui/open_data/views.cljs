@@ -1,11 +1,8 @@
 (ns lipas-ui.open-data.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.mui :as mui]
+  (:require [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
             [lipas-ui.routes :refer [navigate!]]
-            [lipas-ui.subs :as global-subs]
-            [lipas-ui.svg :as svg]
-            [re-frame.core :as re-frame]))
+            [lipas-ui.svg :as svg]))
 
 (def links {:github "https://github.com/lipas-liikuntapaikat/lipas-api"
             :lipas "http://lipas.cc.jyu.fi/api/index.html"})
@@ -40,6 +37,5 @@
     (->grid-card (tr :open-data/wms-wfs)
                  [mui/typography (tr :open-data/wms-wfs-description)])]])
 
-(defn main []
-  (let [tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
-    (create-panel tr)))
+(defn main [tr]
+  (create-panel tr))

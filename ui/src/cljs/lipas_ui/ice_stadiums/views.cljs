@@ -1,10 +1,8 @@
 (ns lipas-ui.ice-stadiums.views
-  (:require [lipas-ui.i18n :as i18n]
-            [lipas-ui.ice-stadiums.events :as events]
+  (:require [lipas-ui.ice-stadiums.events :as events]
             [lipas-ui.ice-stadiums.subs :as subs]
             [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
-            [lipas-ui.subs :as global-subs]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -148,10 +146,9 @@
 (defn change-tab [_ value]
   (re-frame/dispatch [::events/set-active-tab value]))
 
-(defn create-panel [{:keys [url]}]
+(defn create-panel [{:keys [tr url]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
-        card-props {:square true}
-        tr (i18n/->tr-fn @(re-frame/subscribe [::global-subs/locale]))]
+        card-props {:square true}]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card card-props
@@ -175,5 +172,6 @@
           1 (energy-tab tr)
           2 (form-tab tr))]]]]))
 
-(defn main []
-  (create-panel {:url "https://liikuntaportaalit.sportvenue.net/Jaahalli"}))
+(defn main [tr]
+  (create-panel {:tr tr
+                 :url "https://liikuntaportaalit.sportvenue.net/Jaahalli"}))
