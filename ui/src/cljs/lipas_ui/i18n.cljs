@@ -40,8 +40,9 @@
          {:headline "Ohjeet"
           :description "Täältä löytyvät ohjeet"}
          :user
-         {:headline "Oma sivu"
-          :registrate "Rekisteröidy"
+         {:headline "Oma sivu"}
+         :register
+         {:headline "Rekisteröidy"
           :email "Sähköposti"
           :email-example "email@example.com"
           :username "Käyttäjänimi"
@@ -52,10 +53,12 @@
           :permissions "Käyttöoikeudet"
           :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."
           :permissions-help "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
-         :register
-         {:headline "Rekisteröidy"}
          :login
-         {:headline "Kirjaudu"}
+         {:headline "Kirjaudu"
+          :username "Käyttäjänimi"
+          :username-example "tane12"
+          :password "Salasana"
+          :login "Kirjaudu"}
          :physical-units
          {:mwh "MWh"
           :m3 "m³"}
