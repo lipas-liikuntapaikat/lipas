@@ -22,6 +22,7 @@
 (def info (mui-icon->reagent "Info"))
 (def flash-on (mui-icon->reagent "FlashOn"))
 (def add (mui-icon->reagent "Add"))
+(def exit-to-app (mui-icon->reagent "ExitToApp"))
 
 (def icon-names
   ["FilterHdr"
