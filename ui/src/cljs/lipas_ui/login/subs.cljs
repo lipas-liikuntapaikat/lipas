@@ -9,4 +9,4 @@
 (re-frame/reg-sub
  ::logged-in?
  (fn [db _]
-   (-> db :user :logged-in?)))
+   (:logged-in? db)))

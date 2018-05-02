@@ -26,3 +26,10 @@
  ::set-translator
  (fn [db [_ translator]]
    (assoc db :translator translator)))
+
+(re-frame/reg-event-db
+ ::logout
+ (fn [db [_ _]]
+   (-> db
+       (assoc :logged-in? false)
+       (assoc :user (:user db/default-db)))))
