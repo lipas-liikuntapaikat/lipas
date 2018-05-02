@@ -30,3 +30,10 @@
  ::logged-in?
  (fn [db _]
    (:logged-in? db)))
+
+(re-frame/reg-sub
+ ::user-initials
+ (fn [db _]
+   (let [fname (-> db :user :login :user-data :firstname)
+         lname (-> db :user :login :user-data :lastname)]
+     (str (or (first fname) "?") (or (first lname) "?")))))

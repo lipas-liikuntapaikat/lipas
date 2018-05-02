@@ -3,7 +3,8 @@
             [clojure.string :as s]))
 
 (def fi {:menu
-         {:jyu "Jyväskylän yliopisto"}
+         {:jyu "Jyväskylän yliopisto"
+          :frontpage "Etusivu"}
          :sport
          {:headline "Liikuntapaikat"
           :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."}
