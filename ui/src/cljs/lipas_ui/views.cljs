@@ -19,25 +19,47 @@
 
 ;; Menu
 
-(defn create-menu [tr anchor]
+(defn logout! []
+  (re-frame/dispatch [::events/logout])
+  (navigate! "/#/kirjaudu"))
+
+(defn create-menu [tr anchor logged-in?]
   (let [close #(re-frame/dispatch [::events/set-menu-anchor nil])]
     [mui/menu {:anchor-el anchor :open true
                :on-close close}
-     [mui/menu-item
-      [mui/list-item-icon
-       [mui-icons/lock]]
-      [mui/list-item-text {:primary (tr :login/headline)
-                           :on-click (comp close #(navigate! "/#/kirjaudu"))}]]
-     [mui/menu-item
-      [mui/list-item-icon
-       [mui-icons/group-add]]
-      [mui/list-item-text {:primary (tr :register/headline)
-                           :on-click (comp close #(navigate! "/#/rekisteroidy"))}]]
+
+     (when (not logged-in?)
+       [mui/menu-item
+        [mui/list-item-icon
+         [mui-icons/lock]]
+        [mui/list-item-text {:primary (tr :login/headline)
+                             :on-click (comp close #(navigate! "/#/kirjaudu"))}]])
+     (when (not logged-in?)
+       [mui/menu-item
+        [mui/list-item-icon
+         [mui-icons/group-add]]
+        [mui/list-item-text {:primary (tr :register/headline)
+                             :on-click (comp close #(navigate! "/#/rekisteroidy"))}]])
+
+     (when logged-in?
+       [mui/menu-item
+        [mui/list-item-icon
+         [mui-icons/account-circle]]
+        [mui/list-item-text {:primary (tr :user/headline)
+                             :on-click (comp close #(navigate! "/#/profiili"))}]])
+
      [mui/menu-item
       [mui/list-item-icon
        [mui-icons/help]]
       [mui/list-item-text {:primary (tr :help/headline)
-                           :on-click (comp close #(navigate! "/#/ohjeet"))}]]]))
+                           :on-click (comp close #(navigate! "/#/ohjeet"))}]]
+
+     (when logged-in?
+       [mui/menu-item
+        [mui/list-item-icon
+         [mui-icons/exit-to-app]]
+        [mui/list-item-text {:primary (tr :login/logout)
+                             :on-click (comp close logout!)}]])]))
 
 (def separator
   [mui/typography {:component "span"
@@ -74,12 +96,11 @@
 (defn toggle-drawer [_]
   (re-frame/dispatch [::events/toggle-drawer]))
 
-(defn create-drawer [tr]
+(defn create-drawer [tr logged-in?]
   (let [hide-and-navigate! (comp toggle-drawer navigate!)]
     [mui/swipeable-drawer {:open true
                            :on-open #()
-                           :on-close toggle-drawer
-                           :Paper-props {}}
+                           :on-close toggle-drawer}
      lang-selector
      [mui/list
       [mui/list-item {:button true
@@ -109,28 +130,46 @@
         [mui-icons/help]]
        [mui/list-item-text {:primary (tr :help/headline)}]]
       [mui/divider]
-      [mui/list-item {:button true
-                      :on-click #(hide-and-navigate! "/#/kirjaudu")}
-       [mui/list-item-icon
-        [mui-icons/lock]]
-       [mui/list-item-text {:primary (tr :login/headline)}]]
-      [mui/list-item {:button true
-                      :on-click #(hide-and-navigate! "/#/rekisteroidy")}
-       [mui/list-item-icon
-        [mui-icons/group-add]]
-       [mui/list-item-text {:primary (tr :register/headline)}]]]]))
+
+      (when logged-in?
+        [mui/list-item {:button true
+                        :on-click #(hide-and-navigate! "/#/profiili")}
+         [mui/list-item-icon
+          [mui-icons/account-circle]]
+         [mui/list-item-text {:primary (tr :user/headline)}]])
+
+      (when logged-in?
+        [mui/list-item {:button true
+                        :on-click logout!}
+         [mui/list-item-icon
+          [mui-icons/exit-to-app]]
+         [mui/list-item-text {:primary (tr :login/logout)}]])
+
+      (when (not logged-in?)
+        [mui/list-item {:button true
+                        :on-click #(hide-and-navigate! "/#/kirjaudu")}
+         [mui/list-item-icon
+          [mui-icons/lock]]
+         [mui/list-item-text {:primary (tr :login/headline)}]])
+
+      (when (not logged-in?)
+        [mui/list-item {:button true
+                        :on-click #(hide-and-navigate! "/#/rekisteroidy")}
+         [mui/list-item-icon
+          [mui-icons/group-add]]
+         [mui/list-item-text {:primary (tr :register/headline)}]])]]))
 
 ;; Nav
 
-(defn nav [tr menu-anchor drawer-open? active-panel]
+(defn nav [tr menu-anchor drawer-open? active-panel logged-in?]
   [mui/app-bar {:position "static"
                 :color "primary"
                 :style {:border-box "1px solid black"}}
    [mui/tool-bar {:disable-gutters true}
     (when menu-anchor
-      (create-menu tr menu-anchor))
+      (create-menu tr menu-anchor logged-in?))
     (when drawer-open?
-      (create-drawer tr))
+      (create-drawer tr logged-in?))
     [:a {:href "/#/"}
      [mui/svg-icon {:view-box "0 0 132.54 301.95"
                     :style {:height "2em"
@@ -168,7 +207,11 @@
      [mui-icons/search]]
     ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
-     [mui-icons/account-circle]]
+     (if logged-in?
+       [mui/avatar {:style {:font-size "0.65em"
+                            :color "#fff"}}
+        "TK"]
+       [mui-icons/account-circle])]
     [mui/icon-button {:on-click toggle-drawer}
      [mui-icons/menu {:color "secondary"}]]]])
 
@@ -192,9 +235,10 @@
   (let [active-panel (re-frame/subscribe [::subs/active-panel])
         menu-anchor  (re-frame/subscribe [::subs/menu-anchor])
         drawer-open? (re-frame/subscribe [::subs/drawer-open?])
+        logged-in?   (re-frame/subscribe [::subs/logged-in?])
         tr           (re-frame/subscribe [::subs/translator])]
     [mui/css-baseline
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-      [nav @tr @menu-anchor @drawer-open? @active-panel]]
+      [nav @tr @menu-anchor @drawer-open? @active-panel @logged-in?]]
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
       [show-panel @active-panel @tr]]]))

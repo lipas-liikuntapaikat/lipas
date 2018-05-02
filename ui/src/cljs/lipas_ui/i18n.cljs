@@ -58,7 +58,8 @@
           :username "Käyttäjänimi"
           :username-example "tane12"
           :password "Salasana"
-          :login "Kirjaudu"}
+          :login "Kirjaudu"
+          :logout "Kirjaudu ulos"}
          :physical-units
          {:mwh "MWh"
           :m3 "m³"}

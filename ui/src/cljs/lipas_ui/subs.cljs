@@ -25,3 +25,8 @@
  ::translator
  (fn [db _]
    (:translator db)))
+
+(re-frame/reg-sub
+ ::logged-in?
+ (fn [db _]
+   (:logged-in? db)))
