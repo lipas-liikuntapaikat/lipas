@@ -51,6 +51,7 @@ SELECT   reg_user.id
          , reg_user.username
          , reg_user.password
          , reg_user.refresh_token
+         , reg_user.user_data
          , '[' || STRING_AGG(perm.permission_data, ',') || ']' AS permission_data
          , STRING_AGG(perm.permission, ',') AS permissions
 FROM     registered_user                    AS reg_user
@@ -70,6 +71,7 @@ SELECT   reg_user.id
          , reg_user.username
          , reg_user.password
          , reg_user.refresh_token
+         , reg_user.user_data
          , '[' || STRING_AGG(perm.permission_data, ',') || ']' AS permission_data
          , STRING_AGG(perm.permission, ',') AS permissions
 FROM     registered_user                    AS reg_user
