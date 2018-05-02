@@ -1,5 +1,6 @@
 (ns lipas-ui.navbar
   (:require [lipas-ui.events :as events]
+            [lipas-ui.subs :as subs]
             [lipas-ui.i18n :as i18n]
             [lipas-ui.mui :as mui]
             [lipas-ui.mui-icons :as mui-icons]
@@ -10,6 +11,15 @@
 (defn logout! []
   (re-frame/dispatch [::events/logout])
   (navigate! "/#/kirjaudu"))
+
+(defn ->avatar [initials]
+  [mui/avatar {:style {:font-size "0.65em"
+                       :color "#fff"}}
+   initials])
+
+(defn avatar []
+  (let [initials (re-frame/subscribe [::subs/user-initials])]
+    (->avatar @initials)))
 
 (defn create-menu [tr anchor logged-in?]
   (let [close #(re-frame/dispatch [::events/set-menu-anchor nil])]
@@ -90,28 +100,42 @@
                            :on-open #()
                            :on-close toggle-drawer}
      lang-selector
+
      [mui/list
+
+      [mui/list-item {:button true
+                      :on-click #(hide-and-navigate! "/#/")}
+       [mui/list-item-icon
+        [mui-icons/home]]
+       [mui/list-item-text {:primary (tr :menu/frontpage)}]]
+
+      [mui/divider]
+
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
        [mui/list-item-icon
         [mui-icons/place]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
+
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
        [mui/list-item-icon
         [mui-icons/ac-unit]]
        [mui/list-item-text {:primary (tr :ice/headline)}]]
+
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
        [mui/list-item-icon
         [mui-icons/pool]]
        [mui/list-item-text {:primary (tr :swim/headline)}]]
       [mui/divider]
+
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/avoin-data")}
        [mui/list-item-icon
         [mui-icons/build]]
        [mui/list-item-text {:primary (tr :open-data/headline)}]]
+
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/ohjeet")}
        [mui/list-item-icon
@@ -146,8 +170,6 @@
          [mui/list-item-icon
           [mui-icons/group-add]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
-
-;; Nav
 
 (defn nav [tr menu-anchor drawer-open? active-panel logged-in?]
   [mui/app-bar {:position "static"
@@ -196,9 +218,7 @@
     ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
      (if logged-in?
-       [mui/avatar {:style {:font-size "0.65em"
-                            :color "#fff"}}
-        "TK"]
+       [avatar]
        [mui-icons/account-circle])]
     [mui/icon-button {:on-click toggle-drawer}
      [mui-icons/menu {:color "secondary"}]]]])
