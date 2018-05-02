@@ -2,12 +2,12 @@
   (:require [lipas-ui.i18n :as i18n]))
 
 (def default-db
-  {:translator (i18n/->tr-fn :fi)
+  {:logged-in? false
+   :translator (i18n/->tr-fn :fi)
    :ice-stadiums {:active-tab 0}
    :swimming-pools {:active-tab 0}
    :user
-   {:logged-in? false
-    :login-form
+   {:login-form
     {:username ""
      :password ""}
     :registration-form

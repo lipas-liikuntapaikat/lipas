@@ -1,7 +1,7 @@
 (ns lipas-ui.login.events
-  (:require [re-frame.core :as re-frame]
-            [ajax.core :as ajax]
-            [goog.crypt.base64 :as b64]))
+  (:require [ajax.core :as ajax]
+            [goog.crypt.base64 :as b64]
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
  ::set-login-form-field
@@ -12,7 +12,9 @@
 (re-frame/reg-event-db
  ::login-success
  (fn [db [_ result]]
-   (assoc-in db [:user :login] result)))
+   (-> db
+       (assoc-in [:logged-in?] true)
+       (assoc-in [:user :login] result))))
 
 (re-frame/reg-event-db
  ::login-failure
