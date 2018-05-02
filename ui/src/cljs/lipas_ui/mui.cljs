@@ -90,3 +90,5 @@
 (def form-group (mui->reagent "FormGroup"))
 (def button (mui->reagent "Button"))
 (def hidden (mui->reagent "Hidden"))
+(def tooltip (mui->reagent "Tooltip"))
+(def avatar (mui->reagent "Avatar"))
