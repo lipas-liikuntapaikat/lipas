@@ -1,6 +1,8 @@
 (ns lipas-ui.login.events
   (:require [ajax.core :as ajax]
             [goog.crypt.base64 :as b64]
+            [camel-snake-kebab.core :refer [->kebab-case]]
+            [camel-snake-kebab.extras :refer [transform-keys]]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -12,9 +14,10 @@
 (re-frame/reg-event-db
  ::login-success
  (fn [db [_ result]]
-   (-> db
-       (assoc-in [:logged-in?] true)
-       (assoc-in [:user :login] result))))
+   (let [result (transform-keys ->kebab-case result)]
+     (-> db
+         (assoc-in [:logged-in?] true)
+         (assoc-in [:user :login] result)))))
 
 (re-frame/reg-event-db
  ::login-failure
