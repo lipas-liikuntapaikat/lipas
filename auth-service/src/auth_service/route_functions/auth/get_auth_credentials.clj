@@ -14,5 +14,6 @@
                  :username       (:username user)
                  :permissions    (:permissions user)
                  :permissionData (:permission_data user)
+                 :userData       (:user_data user)
                  :token          (create-token user)
                  :refreshToken   refresh-token})))
