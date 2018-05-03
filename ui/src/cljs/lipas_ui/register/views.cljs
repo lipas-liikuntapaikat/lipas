@@ -51,8 +51,8 @@
                     :on-change #(set-form-field [:user-data :lastname] %)}]
    [mui/text-field {:label (tr :register/permissions)
                     :multiline true
-                    :value (-> form-data :user-data :permissions)
-                    :on-change #(set-form-field [:user-data :permissions] %)
+                    :value (-> form-data :user-data :permissions-request)
+                    :on-change #(set-form-field [:user-data :permissions-request] %)
                     :rows 3
                     :placeholder (tr :register/permissions-example)
                     :helper-text (tr :register/permissions-help)}]

@@ -17,4 +17,4 @@
      :user-data
      {:firstname ""
       :lastname ""
-      :permissions ""}}}})
+      :permissions-request ""}}}})
