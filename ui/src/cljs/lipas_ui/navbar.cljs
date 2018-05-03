@@ -27,37 +27,33 @@
                :on-close close}
 
      (when (not logged-in?)
-       [mui/menu-item
+       [mui/menu-item {:on-click (comp close #(navigate! "/#/kirjaudu"))}
         [mui/list-item-icon
          [mui-icons/lock]]
-        [mui/list-item-text {:primary (tr :login/headline)
-                             :on-click (comp close #(navigate! "/#/kirjaudu"))}]])
+        [mui/list-item-text {:primary (tr :login/headline)}]])
+
      (when (not logged-in?)
-       [mui/menu-item
+       [mui/menu-item {:on-click (comp close #(navigate! "/#/rekisteroidy"))}
         [mui/list-item-icon
          [mui-icons/group-add]]
-        [mui/list-item-text {:primary (tr :register/headline)
-                             :on-click (comp close #(navigate! "/#/rekisteroidy"))}]])
+        [mui/list-item-text {:primary (tr :register/headline)}]])
 
      (when logged-in?
-       [mui/menu-item
+       [mui/menu-item {:on-click (comp close #(navigate! "/#/profiili"))}
         [mui/list-item-icon
          [mui-icons/account-circle]]
-        [mui/list-item-text {:primary (tr :user/headline)
-                             :on-click (comp close #(navigate! "/#/profiili"))}]])
+        [mui/list-item-text {:primary (tr :user/headline)}]])
 
-     [mui/menu-item
+     [mui/menu-item {:on-click (comp close #(navigate! "/#/ohjeet"))}
       [mui/list-item-icon
        [mui-icons/help]]
-      [mui/list-item-text {:primary (tr :help/headline)
-                           :on-click (comp close #(navigate! "/#/ohjeet"))}]]
+      [mui/list-item-text {:primary (tr :help/headline)}]]
 
      (when logged-in?
-       [mui/menu-item
+       [mui/menu-item {:on-click (comp close logout!)}
         [mui/list-item-icon
          [mui-icons/exit-to-app]]
-        [mui/list-item-text {:primary (tr :login/logout)
-                             :on-click (comp close logout!)}]])]))
+        [mui/list-item-text {:primary (tr :login/logout)}]])]))
 
 (def separator
   [mui/typography {:component "span"
@@ -186,7 +182,6 @@
                             :margin "0.45em"}}
       svg/jyu-logo]]
     [mui/typography {:variant "title"
-                     ;;:on-click #(navigate! "/#/")
                      :style {:flex 1
                              :font-size "1em"
                              :font-weight "bold"}}
