@@ -46,7 +46,7 @@
          {:headline "Rekisteröidy"
           :email "Sähköposti"
           :email-example "email@example.com"
-          :username "Käyttäjänimi"
+          :username "Käyttäjätunnus"
           :username-example "tane12"
           :firstname "Etunimi"
           :lastname "Sukunimi"
@@ -56,18 +56,21 @@
           :permissions-help "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
          :login
          {:headline "Kirjaudu"
-          :username "Käyttäjänimi"
+          :username "Käyttäjätunnus"
           :username-example "tane12"
           :password "Salasana"
           :login "Kirjaudu"
-          :logout "Kirjaudu ulos"}
+          :logout "Kirjaudu ulos"
+          :bad-credentials "Käyttäjätunnus tai salasana ei kelpaa"}
          :physical-units
          {:mwh "MWh"
           :m3 "m³"}
          :time
          {:year "Vuosi"}
          :actions
-         {:save "Tallenna"}})
+         {:save "Tallenna"}
+         :error
+         {:unknown "Tuntematon virhe tapahtui. :/"}})
 
 (def sv {:menu
          {:jyu "Jyväskylä universitet"
