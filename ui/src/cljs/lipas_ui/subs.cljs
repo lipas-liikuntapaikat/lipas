@@ -40,5 +40,5 @@
  ::user-initials
  :<- [::user-data]
  (fn [{:keys [firstname lastname]} _ _]
-   (let [initial (comp upper-case first)]
+   (let [initial (comp upper-case #(or (first %) "?"))]
      (str (initial firstname) (initial lastname)))))
