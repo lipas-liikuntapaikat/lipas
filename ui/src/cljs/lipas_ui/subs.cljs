@@ -1,10 +1,8 @@
 (ns lipas-ui.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as re-frame]
+            [clojure.string :refer [upper-case]]))
 
-(re-frame/reg-sub
- ::name
- (fn [db]
-   (:name db)))
+;; Level 2
 
 (re-frame/reg-sub
  ::active-panel
@@ -32,8 +30,15 @@
    (:logged-in? db)))
 
 (re-frame/reg-sub
- ::user-initials
+ ::user-data
  (fn [db _]
-   (let [fname (-> db :user :login :user-data :firstname)
-         lname (-> db :user :login :user-data :lastname)]
-     (str (or (first fname) "?") (or (first lname) "?")))))
+   (-> db :user :login :user-data)))
+
+;; Level 3
+
+(re-frame/reg-sub
+ ::user-initials
+ :<- [::user-data]
+ (fn [{:keys [firstname lastname]} _ _]
+   (let [initial (comp upper-case first)]
+     (str (initial firstname) (initial lastname)))))
