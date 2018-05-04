@@ -3,6 +3,7 @@
             [goog.crypt.base64 :as b64]
             [camel-snake-kebab.core :refer [->kebab-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]
+            [lipas-ui.local-storage :refer [ls-set ls-get]]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -11,13 +12,23 @@
    (let [path (into [:user :login-form] path)]
      (assoc-in db path value))))
 
-(re-frame/reg-event-db
+(def body->kebab-case
+  (re-frame/->interceptor
+   :id :kebab-case-interceptor
+   :before (fn [context]
+               (let [transform-fn (partial transform-keys ->kebab-case)]
+                 (update-in context [:coeffects :event] transform-fn)))))
+
+(re-frame/reg-event-fx
  ::login-success
- (fn [db [_ result]]
-   (let [result (transform-keys ->kebab-case result)]
-     (-> db
-         (assoc-in [:logged-in?] true)
-         (assoc-in [:user :login] result)))))
+ [(re-frame/after (fn [db _]
+                    (ls-set :login-data (-> db :user :login))))
+  body->kebab-case]
+ (fn [{:keys [db]} [_ body]]
+   (let [body body]
+     {:db (-> db
+              (assoc-in [:logged-in?] true)
+              (assoc-in [:user :login] body))})))
 
 (re-frame/reg-event-db
  ::login-failure

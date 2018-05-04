@@ -2,10 +2,15 @@
   (:require [re-frame.core :as re-frame]
             [lipas-ui.db :as db]))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::initialize-db
- (fn  [_ _]
-   db/default-db))
+ [(re-frame/inject-cofx :get-local-storage-value :login-data)]
+ (fn  [{login-data :local-storage-value} _]
+   (if login-data
+     {:db (-> db/default-db
+              (assoc-in [:user :login] login-data)
+              (assoc :logged-in? true))}
+     {:db db/default-db})))
 
 (re-frame/reg-event-db
  ::set-active-panel
@@ -27,9 +32,10 @@
  (fn [db [_ translator]]
    (assoc db :translator translator)))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::logout
- (fn [db [_ _]]
-   (-> db
-       (assoc :logged-in? false)
-       (assoc :user (:user db/default-db)))))
+ [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
+ (fn [{:keys [db]} _]
+   {:db (-> db
+            (assoc :logged-in? false)
+            (assoc :user (:user db/default-db)))}))
