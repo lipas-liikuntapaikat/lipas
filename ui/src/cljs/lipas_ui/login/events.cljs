@@ -30,15 +30,19 @@
   [{:keys [username password]}]
   (str "Basic " (b64/encodeString (str username ":" password))))
 
+(re-frame/reg-event-db
+ ::clear-errors
+ (fn [db [_ _]]
+   (update-in db [:user] dissoc :login-error)))
+
 (re-frame/reg-event-fx
  ::submit-login-form
- (fn [{:keys [db]} [_ form-data]]
+ (fn [_ [_ form-data]]
    {:http-xhrio {:method          :get
                  :uri             "http://localhost:8090/api/v1/auth"
                  :headers         {:Authorization (->basic-auth form-data)}
-                 ;;:format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      [::login-success]
                  :on-failure      [::login-failure]}
 
-    :db         (assoc db :spinner true)}))
+    :dispatch    [::clear-errors]}))
