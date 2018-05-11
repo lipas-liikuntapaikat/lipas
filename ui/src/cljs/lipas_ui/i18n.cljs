@@ -8,6 +8,23 @@
          :sport
          {:headline "Liikuntapaikat"
           :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."}
+         :sports-place
+         {:headline "Liikuntapaikka"
+          :name-fi "Nimi"
+          :name-se "Nimi ruotsiksi"
+          :name-en "Nimi englanniksi"
+          :owner "Omistaja"
+          :admin "Ylläpitäjä"
+          :phone-number "Puhelinnumero"
+          :www "Web-sivu"
+          :email-public "Sähköposti (julkinen)"}
+         :location
+         {:headline "Sijainti"
+          :address "Katuosoite"
+          :postal-code "Postinumero"
+          :postal-office "Postitoimipaikka"
+          :city "Kunta"
+          :city-code "Kuntanumero"}
          :ice
          {:headline "Jäähalliportaali"
           :description "Jäähalliportaali sisältää
@@ -21,6 +38,8 @@
          :ice-form
          {:headline "Ilmoita kulutustiedot"
           :select-rink "Valitse halli"}
+         :ice-basic-data
+         {:headline "Päivitä perustiedot"}
          :energy
          {:consumption-info "Kulutustiedot"
           :electricity "Sähkö"
@@ -62,13 +81,66 @@
           :login "Kirjaudu"
           :logout "Kirjaudu ulos"
           :bad-credentials "Käyttäjätunnus tai salasana ei kelpaa"}
+         :building
+         {:headline "Rakennus"
+          :construction-year "Rakennusvuosi"
+          :main-designers "Pääsuunnittelijat"
+          :total-surface-area-m2 "Bruttopinta-ala m²"
+          :total-volume-m3 "Bruttotilavuus m³"
+          :pool-room-total-area-m2 "Allashuoneen pinta-ala m²"
+          :total-water-area-m2 "Vesipinta-ala m²"
+          :water-slides-total-length-m "Vesiliukumäet yht. (m)"
+          :heat-sections? "Allastila on jaettu lämpötilaosioihin"
+          :piled? "Paalutettu"
+          :main-construction-materials "Päärakennusmateriaalit"
+          :supporting-structures "Kantavat rakenteet"
+          :ceiling-material "Yläpohjan rakenne"}
+         :renovations
+         {:headline "Peruskorjaukset"}
+         :water-treatment
+         {:headline "Vedenkäsittely"
+          :ozonation? "Otsonointi"
+          :uv-treatment? "UV-käsittely"
+          :activated-carbon? "Aktiivihiili"
+          :filtering-method "Suodatustapa"}
+         :pools
+         {:headline "Altaat"
+          :structure "Rakenne"}
+         :slides
+         {:headline "Liukumäet"}
+         :saunas
+         {:headline "Saunat"
+          :women "Naiset"
+          :men "Miehet"}
+         :facilities
+         {:headline "Suihkut ja pukukaapit"
+          :showers-men-count "Miesten suihkut lkm"
+          :showers-women-count "Naisten suihkut lkm"
+          :lockers-men-count "Miesten pukukaapit lkm"
+          :lockers-women-count "Naisten pukukaapit lkm"}
+         :dimensions
+         {:volume-m3 "Tilavuus m²"
+          :surface-area-m2 "Pinta-ala m²"
+          :length-m "Pituus m"
+          :width-m "Leveys m"
+          :depth-min-m "Syvyys min m"
+          :depth-max-m "Syvyys max m"}
          :physical-units
-         {:mwh "MWh"
-          :m3 "m³"}
+         {:temperature-c "Lämpötila C°"
+          :mwh "MWh"
+          :m2 "m²"
+          :m3 "m³"
+          :celsius "C°"}
          :time
          {:year "Vuosi"}
          :actions
          {:save "Tallenna"}
+         :general
+         {:name "Nimi"
+          :type "Tyyppi"
+          :description "Kuvaus"
+          :general-info "Yleiset tiedot"
+          :comment "Kommentti"}
          :error
          {:unknown "Tuntematon virhe tapahtui. :/"}})
 

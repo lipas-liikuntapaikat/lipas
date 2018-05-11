@@ -35,10 +35,11 @@
    (-> db :user :login :user-data)))
 
 ;; Level 3
-
+(comment ((comp (fnil upper-case "?") first) ""))
+(comment ((comp (fnil upper-case "?") first) "kis"))
 (re-frame/reg-sub
  ::user-initials
  :<- [::user-data]
  (fn [{:keys [firstname lastname]} _ _]
-   (let [initial (comp upper-case #(or (first %) "?"))]
+   (let [initial (comp (fnil upper-case "?") first)]
      (str (initial firstname) (initial lastname)))))
