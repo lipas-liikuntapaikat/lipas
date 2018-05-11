@@ -5,3 +5,8 @@
  ::active-tab
  (fn [db _]
    (-> db :swimming-pools :active-tab)))
+
+(re-frame/reg-sub
+ ::editing
+ (fn [db _]
+   (-> db :swimming-pools :editing)))

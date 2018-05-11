@@ -22,8 +22,12 @@
 (def info (mui-icon->reagent "Info"))
 (def flash-on (mui-icon->reagent "FlashOn"))
 (def add (mui-icon->reagent "Add"))
+(def add-circle (mui-icon->reagent "AddCircle"))
+(def add-circle-outline (mui-icon->reagent "AddCircleOutline"))
 (def exit-to-app (mui-icon->reagent "ExitToApp"))
 (def home (mui-icon->reagent "Home"))
+(def edit (mui-icon->reagent "Edit"))
+(def delete (mui-icon->reagent "Delete"))
 
 (def icon-names
   ["FilterHdr"
