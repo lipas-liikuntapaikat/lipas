@@ -1,6 +1,16 @@
 version: '2'
 services:
 
+  proxy:
+    image: nginx
+    ports:
+      - "8080:80"
+    links:
+      - auth_service
+    volumes:
+      - './nginx/:/etc/nginx/conf.d'
+      - './ui/resources/public/:/usr/share/nginx/html'
+
   auth_service_base:
     image: clojure:lein
     working_dir: /usr/src/app
