@@ -74,7 +74,10 @@
          ^{:key idx} [mui/table-row
                       (for [k (keys headers)]
                         ^{:key k} [mui/table-cell {:padding "dense"}
-                                   (get item k)])
+                                   (let [v (get item k)]
+                                     (cond
+                                       (true? v) "✓"
+                                       :else v))])
                       [mui/table-cell {:numeric true
                                        :padding "none"}
                        [mui/tooltip {:title (or delete-tooltip "")
