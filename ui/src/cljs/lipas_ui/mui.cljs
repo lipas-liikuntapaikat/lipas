@@ -66,7 +66,7 @@
 (def icon (mui->reagent "Icon"))
 (def svg-icon (mui->reagent "SvgIcon"))
 (def icon-button (mui->reagent "IconButton"))
-(def text-field (mui->reagent "TextField"))
+(def text-field* (mui->reagent "TextField"))
 (def grid (mui->reagent "Grid"))
 (def paper (mui->reagent "Paper"))
 (def card (mui->reagent "Card"))
@@ -100,3 +100,12 @@
 (def table-body (mui->reagent "TableBody"))
 (def table-row (mui->reagent "TableRow"))
 (def table-cell (mui->reagent "TableCell"))
+(def dialog (mui->reagent "Dialog"))
+(def dialog-title (mui->reagent "DialogTitle"))
+(def dialog-content (mui->reagent "DialogContent"))
+(def dialog-actions (mui->reagent "DialogActions"))
+
+(defn text-field [props & children]
+  (let [v (:value props)]
+    [text-field* (assoc props :value (or v ""))
+     children]))

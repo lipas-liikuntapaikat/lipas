@@ -121,12 +121,43 @@
      :city-code 992}},
    :owner "Kunta"})
 
+(defn ->indexed-map [coll]
+  (into {} (map-indexed (fn [idx item]
+                          [idx
+                           (if (map? item)
+                             (assoc item :id idx)
+                             item)])
+                        coll)))
+
 (def default-db
   {:logged-in? false
    :translator (i18n/->tr-fn :fi)
    :ice-stadiums {:active-tab 0}
-   :swimming-pools {:active-tab 0
-                    :editing vesivelho}
+   :swimming-pools
+   {:active-tab 0
+    :editing (-> vesivelho
+                 (update-in [:pools] ->indexed-map)
+                 (update-in [:renovations] ->indexed-map)
+                 (update-in [:saunas] ->indexed-map)
+                 (update-in [:slides] ->indexed-map))
+    :dialogs
+    {:add-renovation
+     {:open? false
+      :data {:year (.getFullYear (js/Date.))
+             :comment ""
+             :designer ""}}
+     :add-pool
+     {:open? false
+      :data {:name ""
+             :temperature-c 0
+             :volume-m3 0
+             :area-m2 0
+             :length-m 0
+             :width-m 0
+             :depth-min-m 0
+             :depth-max-m 0}}
+     :add-slide {:open? false}
+     :add-sauna {:open? false}}}
    :user
    {:login-form
     {:username ""

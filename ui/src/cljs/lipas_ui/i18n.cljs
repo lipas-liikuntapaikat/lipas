@@ -60,7 +60,8 @@
          {:headline "Ohjeet"
           :description "Täältä löytyvät ohjeet"}
          :user
-         {:headline "Oma sivu"}
+         {:headline "Oma sivu"
+          :requested-permissions "Pyydetyt oikeudet"}
          :register
          {:headline "Rekisteröidy"
           :email "Sähköposti"
@@ -96,7 +97,10 @@
           :supporting-structures "Kantavat rakenteet"
           :ceiling-material "Yläpohjan rakenne"}
          :renovations
-         {:headline "Peruskorjaukset"}
+         {:headline "Peruskorjaukset"
+          :add-renovation "Lisää peruskorjaus"
+          :end-year "Valmistumisvuosi"
+          :designers "Suunnittelijat"}
          :water-treatment
          {:headline "Vedenkäsittely"
           :ozonation? "Otsonointi"
@@ -120,6 +124,7 @@
           :lockers-women-count "Naisten pukukaapit lkm"}
          :dimensions
          {:volume-m3 "Tilavuus m²"
+          :area-m2 "Pinta-ala m²"
           :surface-area-m2 "Pinta-ala m²"
           :length-m "Pituus m"
           :width-m "Leveys m"
@@ -134,7 +139,10 @@
          :time
          {:year "Vuosi"}
          :actions
-         {:save "Tallenna"}
+         {:add "Lisää"
+          :save "Tallenna"
+          :delete "Poista"
+          :cancel "Peruuta"}
          :general
          {:name "Nimi"
           :type "Tyyppi"

@@ -6,6 +6,22 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
+(def <== (comp deref re-frame/subscribe))
+(def ==> re-frame/dispatch)
+
+(defn set-field
+  ":k1 :k2 ... :kn event
+
+  Event is always the last argument."
+  [& args]
+  (let [path (butlast args)
+        path (into [] (flatten [path]))
+        event (last args)
+        value (-> event
+                  .-target
+                  .-value)]
+    (re-frame/dispatch [::events/set-field path value])))
+
 (defn info-tab [url]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
@@ -26,6 +42,17 @@
                      :value hall}
       hall])])
 
+(defn year-selector [{:keys [label value on-change]}]
+  [mui/text-field {:label label
+                   :type "number"
+                   :select true
+                   :on-change on-change
+                   :value value}
+   (for [year (range 2000 (inc (.getFullYear (js/Date.))))]
+     [mui/menu-item {:key year
+                     :value year}
+      year])])
+
 (defn form-card [{:keys [title]} content]
   [mui/grid {:item true
              :xs 12
@@ -39,7 +66,7 @@
   [mui/form-control-label
    {:label label
     :control (r/as-element
-              [mui/checkbox {:value value
+              [mui/checkbox {:value (str value)
                              :checked value
                              :on-change on-change}])}])
 
@@ -47,7 +74,7 @@
   [mui/text-field {:label label
                    :type "number"
                    :value value
-                   :on-change-fn on-change
+                   :on-change on-change
                    :Input-props
                    {:end-adornment
                     (r/as-element
@@ -57,9 +84,10 @@
                           items
                           add-tooltip
                           delete-tooltip
-                          on-add-fn
-                          on-delete-fn]}]
-  [mui/grid {:container true :spacing 8
+                          on-add
+                          on-delete]}]
+  [mui/grid {:container true
+             :spacing 8
              :justify "flex-end"}
    [mui/grid {:item true :xs 12}
     [:div {:style {:overflow-x "auto"}}
@@ -82,7 +110,7 @@
                                        :padding "none"}
                        [mui/tooltip {:title (or delete-tooltip "")
                                      :placement "left"}
-                        [mui/icon-button {:on-click on-delete-fn}
+                        [mui/icon-button {:on-click #(on-delete item)}
                          [mui-icons/delete]]]]])]]]]
    [mui/grid {:item true
               :xs 2
@@ -90,26 +118,49 @@
     [mui/tooltip {:title (or add-tooltip "")
                   :placement "left"}
      [mui/button {:style {:margin-top "0.5em"}
-                  :on-click on-add-fn
+                  :on-click on-add
                   :variant "fab"
                   :color "secondary"}
       [mui-icons/add]]]]])
 
+(defn toggle-dialog [dialog]
+  (==> [::events/toggle-dialog dialog]))
+
+(defn add-dialog [{:keys [dialog title on-add add-label cancel-label]} content]
+  [mui/dialog {:open true
+               :full-width true
+               :on-close #(toggle-dialog dialog)}
+   [mui/dialog-title title]
+   [mui/dialog-content content]
+   [mui/dialog-actions
+    [mui/button {:on-click #(toggle-dialog dialog)}
+     cancel-label]
+    [mui/button {:on-click on-add}
+     add-label]]])
+
+(defn temp-fn [&]
+  (js/alert "FIXME"))
+
 (defn basic-data-tab [tr]
-  (let [data @(re-frame/subscribe [::subs/editing])]
+  (let [data (<== [::subs/editing])
+        dialogs (<== [::subs/dialogs])]
    [mui/grid {:container true}
 
     ;; General info
     [form-card {:title (tr :general/general-info)}
      [mui/form-group
       [mui/text-field {:label (tr :sports-place/name-fi)
-                       :value (-> data :name :fi)}]
+                       :value (-> data :name :fi)
+                       :on-change temp-fn}]
       [mui/text-field {:label (tr :sports-place/name-se)
-                       :value (-> data :name :se)}]
+                       :value (-> data :name :se)
+                       :on-change temp-fn}]
       [mui/text-field {:label (tr :sports-place/name-en)
-                       :value (-> data :name :en)}]
+                       :value (-> data :name :en)
+                       :on-change temp-fn}]
       [mui/text-field {:label (tr :sports-place/owner)
-                       :value (-> data :owner)}]
+                       :value (-> data :owner)
+                       :on-change temp-fn}]
       [mui/text-field {:label (tr :sports-place/admin)
                        :value (-> data :admin)}]
       [mui/text-field {:label (tr :sports-place/phone-number)
@@ -165,12 +216,40 @@
                        :value (-> data :building :ceiling-material)}]]]
 
     ;; Renovations
+    (when (-> dialogs :add-renovation :open?)
+      (let [data (<== [::subs/add-renovation-form])
+            set-field (partial set-field :dialogs :add-renovation :data)
+            reset #(==> [::events/reset-dialog :add-renovation])
+            close #(toggle-dialog :add-renovation)]
+        [add-dialog {:dialog :add-renovation
+                     :title (tr :renovations/add-renovation)
+                     :add-label (tr :actions/add)
+                     :cancel-label (tr :actions/cancel)
+                     :on-add (comp reset
+                                   close
+                                   #(==> [::events/add-renovation data]))}
+         [mui/form-group
+          [year-selector {:label (tr :renovations/end-year)
+                          :value (:year data)
+                          :on-change #(set-field :year %)}]
+          [mui/text-field {:label (tr :renovations/designers)
+                           :value (:designer data)
+                           :on-change #(set-field :designer %)}]
+          [mui/text-field {:label (tr :general/description)
+                           :value (:comment data)
+                           :on-change #(set-field :comment %)
+                           :multiline true
+                           :rows 5}]]]))
+
     [form-card {:title (tr :renovations/headline)}
      [form-table {:headers {:year (tr :time/year)
-                            :comment (tr :general/description)}
-                  :items (:renovations data)
-                  :add-tooltip "Lisää peruskorjaus"
-                  :delete-tooltip "Poista"}]]
+                            :comment (tr :general/description)
+                            :designer (tr :renovations/designers)}
+                  :items (-> data :renovations vals)
+                  :add-tooltip (tr :renovations/add-renovation)
+                  :on-add #(toggle-dialog :add-renovation)
+                  :on-delete #(==> [::events/remove-renovation %])
+                  :delete-tooltip (tr :actions/delete)}]]
 
     ;; Water treatment
     [form-card {:title (tr :water-treatment/headline)}
@@ -187,6 +266,53 @@
                        :value (-> data :water-treatment :comment)}]]]
 
     ;; Pools
+    (when (-> dialogs :add-pool :open?)
+      (let [data (<== [::subs/add-pool-form])
+            set-field (partial set-field :dialogs :add-pool :data)
+            reset #(==> [::events/reset-dialog :add-pool])
+            close #(toggle-dialog :add-pool)]
+        [add-dialog {:dialog :add-pool
+                     :title (tr :pools/pool)
+                     :add-label (tr :actions/add)
+                     :cancel-label (tr :actions/cancel)
+                     :on-add (comp reset
+                                   close
+                                   #(==> [::events/add-pool data]))}
+         [mui/form-group
+          [mui/text-field {:required true
+                           :label (tr :general/name)
+                           :value (:name data)
+                           :on-change #(set-field :name %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :physical-units/temperature-c)
+                           :value (:temperature-c data)
+                           :on-change #(set-field :temperature-c %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/volume-m3)
+                           :value (:volume-m3 data)
+                           :on-change #(set-field :volume-m3 %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/area-m2)
+                           :value (:area-m2 data)
+                           :on-change #(set-field :area-m2 %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/length-m)
+                           :value (:length-m data)
+                           :on-change #(set-field :length-m %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/width-m)
+                           :value (:width-m data)
+                           :on-change #(set-field :width-m %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/depth-min-m)
+                           :value (:depth-min-m data)
+                           :on-change #(set-field :depth-min-m %)}]
+          [mui/text-field {:type "number"
+                           :label (tr :dimensions/depth-max-m)
+                           :value (:depth-max-m data)
+                           :on-change #(set-field :depth-max-m %)}]
+          ]]))
+
     [form-card {:title (tr :pools/headline)}
      [form-table {:headers [[:name (tr :general/name)]
                             [:temperature-c (tr :physical-units/temperature-c)]
@@ -197,21 +323,25 @@
                             [:depth-min-m (tr :dimensions/depth-min-m)]
                             [:depth-max-m (tr :dimensions/depth-max-m)]
                             [:structure (tr :pools/structure)]]
-                  :items (:pools data)}]]
+                  :items (-> data :pools vals)
+                  :add-tooltip (tr :renovations/add-pool)
+                  :on-add #(toggle-dialog :add-pool)
+                  :on-delete #(==> [::events/remove-pool %])
+                  :delete-tooltip (tr :actions/delete)}]]
 
     ;; Slides
     [form-card {:title (tr :slides/headline)}
      [mui/form-group
       [form-table {:headers {:name (tr :general/name)
                              :length-m (tr :dimensions/length-m)}
-                   :items (:slides data)}]]]
+                   :items (-> data :slides vals)}]]]
 
     ;; Saunas
     [form-card {:title (tr :saunas/headline)}
      [form-table {:headers {:type (tr :general/type)
                             :women (tr :saunas/women)
                             :men (tr :saunas/men)}
-                  :items (:saunas data)}]]
+                  :items (-> data :saunas vals)}]]
 
     ;; Showers and lockers
     [form-card {:title (tr :facilities/headline)}
@@ -223,22 +353,15 @@
       [mui/text-field {:label (tr :facilities/lockers-men-count)
                        :value (-> data :facilities :lockers-men-count)}]
       [mui/text-field {:label (tr :facilities/lockers-women-count)
-                       :value (-> data :facilities :lockers-women-count)}]]]
-
-    ]))
+                       :value (-> data :facilities :lockers-women-count)}]]]]))
 
 (defn form-tab [tr]
   [form-card (tr :energy/consumption-info)
    [mui/form-group
     [hall-selector tr]
-    [mui/text-field {:label (tr :time/year)
-                     :type "number"
-                     :select true
-                     :value 2018}
-     (for [year (range 2000 2019)]
-       [mui/menu-item {:key year
-                       :value year}
-        year])]
+    [year-selector {:label (tr :time/year)
+                    :value 2018
+                    :on-change #(js/console.log "FIXME")}]
     [mui/text-field {:label (tr :energy/electricity)
                      :type "number"
                      :Input-props

@@ -10,3 +10,18 @@
  ::editing
  (fn [db _]
    (-> db :swimming-pools :editing)))
+
+(re-frame/reg-sub
+ ::dialogs
+ (fn [db _]
+   (-> db :swimming-pools :dialogs)))
+
+(re-frame/reg-sub
+ ::add-renovation-form
+ (fn [db _]
+   (-> db :swimming-pools :dialogs :add-renovation :data)))
+
+(re-frame/reg-sub
+ ::add-pool-form
+ (fn [db _]
+   (-> db :swimming-pools :dialogs :add-pool :data)))
