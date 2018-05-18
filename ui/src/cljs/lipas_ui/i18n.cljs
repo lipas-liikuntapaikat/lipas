@@ -159,6 +159,8 @@
           :general-info "Yleiset tiedot"
           :comment "Kommentti"
           :structure "Rakenne"}
+         :notification
+         {:save-success "Tallennus onnistui"}
          :error
          {:unknown "Tuntematon virhe tapahtui. :/"}})
 

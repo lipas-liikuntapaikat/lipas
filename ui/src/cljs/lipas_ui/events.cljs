@@ -39,3 +39,8 @@
    {:db (-> db
             (assoc :logged-in? false)
             (assoc :user (:user db/default-db)))}))
+
+(re-frame/reg-event-db
+ ::set-active-notification
+ (fn [db [_ notification]]
+   (assoc db :active-notification notification)))

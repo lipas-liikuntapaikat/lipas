@@ -104,6 +104,8 @@
 (def dialog-title (mui->reagent "DialogTitle"))
 (def dialog-content (mui->reagent "DialogContent"))
 (def dialog-actions (mui->reagent "DialogActions"))
+(def snackbar (mui->reagent "Snackbar"))
+(def snackbar-content (mui->reagent "SnackbarContent"))
 
 (defn text-field [props & children]
   (let [v (:value props)]

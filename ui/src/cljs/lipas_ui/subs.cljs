@@ -25,6 +25,11 @@
    (:translator db)))
 
 (re-frame/reg-sub
+ ::active-notification
+ (fn [db _]
+   (:active-notification db)))
+
+(re-frame/reg-sub
  ::logged-in?
  (fn [db _]
    (:logged-in? db)))
