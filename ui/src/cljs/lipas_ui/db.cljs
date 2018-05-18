@@ -28,7 +28,7 @@
    :heat-source "Kaukolämpö"
    :ventilation-units-count 2
    :pools
-   [{:name "Pääallas"
+   [{:type "Pääallas"
      :temperature-c 27
      :volume-m3 490
      :area-m2 313
@@ -36,7 +36,7 @@
      :width-m 12
      :depth-min-m 1.2
      :depth-max-m 2}
-    {:name "Opetusallas"
+    {:type "Opetusallas"
      :temperature-c 30
      :volume-m3 43
      :area-m2 43
@@ -44,7 +44,7 @@
      :width-m nil
      :depth-min-m 0.6
      :depth-max-m 1}
-    {:name "Lastenallas"
+    {:type "Lastenallas"
      :temperature-c 32
      :volume-m3 2
      :area-m2 7
@@ -52,7 +52,7 @@
      :width-m nil
      :depth-min-m 0.2
      :depth-max-m 0.2}
-    {:name "Monitoimiallas"
+    {:type "Monitoimiallas"
      :temperature-c 30
      :volume-m3 67
      :area-m2 77
@@ -60,7 +60,7 @@
      :width-m 7
      :depth-min-m 1
      :depth-max-m 1.4}
-    {:name "Kylmäallas"
+    {:type "Kylmäallas"
      :temperature-c 7
      :volume-m3 1
      :area-m2 0
@@ -69,8 +69,8 @@
      :depth-min-m 1.4
      :depth-max-m 1.4}]
    :slides
-   [{:name "Liukumäki 1"
-     :length-m 23}]
+   [{:length-m 23
+     :structure "Lujitemuovi"}]
    :saunas-total-count 5
    :saunas
    [{:type "Höyrysauna" :men true :women true}
@@ -141,23 +141,30 @@
                  (update-in [:saunas] ->indexed-map)
                  (update-in [:slides] ->indexed-map))
     :dialogs
-    {:add-renovation
+    {:renovation
      {:open? false
       :data {:year (.getFullYear (js/Date.))
              :comment ""
              :designer ""}}
-     :add-pool
+     :pool
      {:open? false
       :data {:name ""
-             :temperature-c 0
-             :volume-m3 0
-             :area-m2 0
-             :length-m 0
-             :width-m 0
-             :depth-min-m 0
-             :depth-max-m 0}}
-     :add-slide {:open? false}
-     :add-sauna {:open? false}}}
+             :temperature-c nil
+             :volume-m3 nil
+             :area-m2 nil
+             :length-m nil
+             :width-m nil
+             :depth-min-m nil
+             :depth-max-m nil
+             :structure ""}}
+     :slide
+     {:open? false}
+     :sauna
+     {:open? false
+      :data
+      {:name ""
+       :women false
+       :men false}}}}
    :user
    {:login-form
     {:username ""
