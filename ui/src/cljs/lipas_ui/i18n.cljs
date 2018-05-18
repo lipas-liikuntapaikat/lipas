@@ -99,6 +99,7 @@
          :renovations
          {:headline "Peruskorjaukset"
           :add-renovation "Lisää peruskorjaus"
+          :edit-renovation "Muokkaa peruskorjausta"
           :end-year "Valmistumisvuosi"
           :designers "Suunnittelijat"}
          :water-treatment
@@ -109,11 +110,17 @@
           :filtering-method "Suodatustapa"}
          :pools
          {:headline "Altaat"
+          :add-pool "Lisää allas"
+          :edit-pool "Muokkaa allasta"
           :structure "Rakenne"}
          :slides
-         {:headline "Liukumäet"}
+         {:headline "Liukumäet"
+          :add-slide "Lisää liukumäki"
+          :edit-slide "Muokkaa liukumäkeä"}
          :saunas
          {:headline "Saunat"
+          :add-sauna "Lisää sauna"
+          :edit-sauna "Muokkaa saunaa"
           :women "Naiset"
           :men "Miehet"}
          :facilities
@@ -140,15 +147,18 @@
          {:year "Vuosi"}
          :actions
          {:add "Lisää"
+          :edit "Muokkaa"
           :save "Tallenna"
           :delete "Poista"
-          :cancel "Peruuta"}
+          :cancel "Peruuta"
+          :select-hall "Valitse halli"}
          :general
          {:name "Nimi"
           :type "Tyyppi"
           :description "Kuvaus"
           :general-info "Yleiset tiedot"
-          :comment "Kommentti"}
+          :comment "Kommentti"
+          :structure "Rakenne"}
          :error
          {:unknown "Tuntematon virhe tapahtui. :/"}})
 

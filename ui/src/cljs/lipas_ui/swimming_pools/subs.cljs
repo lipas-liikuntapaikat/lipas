@@ -17,11 +17,21 @@
    (-> db :swimming-pools :dialogs)))
 
 (re-frame/reg-sub
- ::add-renovation-form
+ ::renovation-form
  (fn [db _]
-   (-> db :swimming-pools :dialogs :add-renovation :data)))
+   (-> db :swimming-pools :dialogs :renovation :data)))
 
 (re-frame/reg-sub
- ::add-pool-form
+ ::pool-form
  (fn [db _]
-   (-> db :swimming-pools :dialogs :add-pool :data)))
+   (-> db :swimming-pools :dialogs :pool :data)))
+
+(re-frame/reg-sub
+ ::sauna-form
+ (fn [db _]
+   (-> db :swimming-pools :dialogs :sauna :data)))
+
+(re-frame/reg-sub
+ ::slide-form
+ (fn [db _]
+   (-> db :swimming-pools :dialogs :slide :data)))
