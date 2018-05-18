@@ -28,6 +28,9 @@
 (def home (mui-icon->reagent "Home"))
 (def edit (mui-icon->reagent "Edit"))
 (def delete (mui-icon->reagent "Delete"))
+(def save (mui-icon->reagent "Save"))
+(def done (mui-icon->reagent "Done"))
+(def error (mui-icon->reagent "Error"))
 
 (def icon-names
   ["FilterHdr"
