@@ -5,41 +5,41 @@ services:
     image: nginx
     ports:
       - "8080:80"
-    links:
-      - auth_service
     volumes:
       - './nginx/:/etc/nginx/conf.d'
-      - './ui/resources/public/:/usr/share/nginx/html'
+      - './webapp/resources/public/:/usr/share/nginx/html'
 
-  auth_service_base:
+  webapp-base:
     image: clojure:lein
     working_dir: /usr/src/app
-    command: ./script/start.sh
     environment:
-      DATABASE_URL: ${AUTH_DB_URL}
-      USER_EMAIL: ${AUTH_EMAIL_USER}
-      USER_PASS_KEY: ${AUTH_EMAIL_PASSWORD}
+      DB_URL:
+      DB_HOST:
+      DB_PORT:
+      DB_NAME:
+      DB_USER:
+      DB_PASSWORD:
       AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
     volumes:
-      - './auth-service/:/usr/src/app'
+      - './webapp/:/usr/src/app'
       - 'mvn_cache:/root/.m2'
 
-  auth_service:
+  webapp-dev:
     extends:
-      service: auth_service_base
+      service: webapp-base
+    command: lein ring server-headless
     ports:
-      - "8090:3000"
+      - "8091:8091"
     links:
       - postgres
+      - elasticsearch
 
-  auth_service_test:
+  webapp-migrate:
     extends:
-      service: auth_service_base
+      service: webapp-base
+    command: lein migratus migrate
     links:
       - postgres
-    environment:
-      DATABASE_URL: ${AUTH_TEST_DB_URL}
-    command: ./script/test.sh
 
   postgres:
     image: mdillon/postgis:10
@@ -52,12 +52,6 @@ services:
       DB_SUPERUSER:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
-      # For auth_service db init script
-      AUTH_DB_NAME:
-      AUTH_DB_USER:
-      AUTH_DB_PASSWORD:
-      AUTH_TEST_DB_NAME:
-      AUTH_TEST_DB_URL:
     ports:
       - "5432:5432"
     volumes:

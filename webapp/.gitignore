@@ -1,0 +1,9 @@
+/.nrepl-port
+/*.log
+/target
+/*-init.clj
+/resources/public/js/compiled
+/.cljs_rhino_repl
+/.lein-env
+/.lein-failures
+out
