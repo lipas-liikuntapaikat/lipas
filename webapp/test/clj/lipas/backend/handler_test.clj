@@ -55,7 +55,6 @@
                       (mock/content-type "application/json")
                       (mock/body (->json user))))
         body (<-json (:body resp))]
-    (prn body)
     (is (= 409 (:status resp)))
     (is (= "username-conflict" (:type body)))))
 
