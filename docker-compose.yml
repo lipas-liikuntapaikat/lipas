@@ -13,7 +13,6 @@ services:
     image: clojure:lein
     working_dir: /usr/src/app
     environment:
-      DB_URL:
       DB_HOST:
       DB_PORT:
       DB_NAME:
