@@ -4,7 +4,7 @@ services:
   proxy:
     image: nginx
     ports:
-      - "8080:80"
+      - '8080:80'
     volumes:
       - './nginx/:/etc/nginx/conf.d'
       - './webapp/resources/public/:/usr/share/nginx/html'
@@ -28,7 +28,7 @@ services:
       service: backend-base
     command: lein ring server-headless
     ports:
-      - "8091:8091"
+      - '8091:8091'
     links:
       - postgres
       - elasticsearch
@@ -60,7 +60,7 @@ services:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
     ports:
-      - "55432:5432"
+      - '55432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
@@ -68,7 +68,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
     ports:
-      - "9200:9200"
+      - '9200:9200'
     environment:
       - transport.host=127.0.0.1
       - xpack.security.enabled=false
