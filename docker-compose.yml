@@ -61,7 +61,7 @@ services:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
