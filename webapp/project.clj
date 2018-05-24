@@ -56,7 +56,12 @@
 
   :migratus {:store         :database
              :migration-dir "migrations"
-             :db            ~(get (System/getenv) "DB_URL")}
+             :db            {:dbtype "postgresql"
+                             :dbname ~(get (System/getenv) "DB_NAME")
+                             :host ~(get (System/getenv) "DB_HOST")
+                             :user ~(get (System/getenv) "DB_USER")
+                             :port ~(get (System/getenv) "DB_PORT")
+                             :password ~(get (System/getenv) "DB_PASSWORD")}}
 
   :profiles
   {:dev
