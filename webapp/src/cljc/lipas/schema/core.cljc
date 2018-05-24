@@ -7,10 +7,9 @@
 
 (s/def ::relevant-year (s/int-in 1800 (inc this-year)))
 
-(def non-empty-string-alphanumeric
-  "Generator for non-empty alphanumeric strings"
-  (gen/such-that #(not= "" %)
-                 (gen/string-alphanumeric)))
+(defn gen-str [min max]
+  (gen/fmap #(apply str %)
+            (gen/vector (gen/char-alpha) (+ min (rand-int max)))))
 
 (def email-gen
   "Generator for email addresses"
@@ -18,12 +17,15 @@
    (fn [[name host tld]]
      (str name "@" host "." tld))
    (gen/tuple
-    non-empty-string-alphanumeric
-    non-empty-string-alphanumeric
-    non-empty-string-alphanumeric)))
+    (gen-str 1 15)
+    (gen-str 1 15)
+    (gen-str 2 63))))
 
 (def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
 
+(comment (gen/generate (s/gen ::email)))
+(comment (gen/generate (gen/vector (gen/char-alpha 10))))
+(comment (gen/generate (gen-str 1 5)))
 (comment (s/conform ::email-type "kissa@koira.fi"))
 (s/def ::email-type (s/and string? #(re-matches email-regex %)))
 (s/def ::email (s/with-gen
@@ -93,7 +95,8 @@
                                    ::heat-source
                                    ::ventilation-units-count]))
 
-(comment (s/valid? ::building {:construction-year 1995 :main-designer "Tipokatti"}))
+(comment (s/valid? ::building {:construction-year 1995
+                               :main-designer "Tipokatti"}))
 
 ;;; Renovations ;;;
 
@@ -133,3 +136,5 @@
                 :whirlpool-bath    ; Poreallas
                 :therapy-pool      ; Terapia-allas
                 })
+
+;;; Ice Rinks ;;;
