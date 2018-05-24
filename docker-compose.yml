@@ -9,7 +9,7 @@ services:
       - './nginx/:/etc/nginx/conf.d'
       - './webapp/resources/public/:/usr/share/nginx/html'
 
-  webapp-base:
+  backend-base:
     image: clojure:lein
     working_dir: /usr/src/app
     environment:
@@ -24,9 +24,9 @@ services:
       - './webapp/:/usr/src/app'
       - 'mvn_cache:/root/.m2'
 
-  webapp-dev:
+  backend-dev:
     extends:
-      service: webapp-base
+      service: backend-base
     command: lein ring server-headless
     ports:
       - "8091:8091"
@@ -34,12 +34,20 @@ services:
       - postgres
       - elasticsearch
 
-  webapp-migrate:
+  backend-migrate:
     extends:
-      service: webapp-base
+      service: backend-base
     command: lein migratus migrate
     links:
       - postgres
+
+  backend-test:
+    extends:
+      service: backend-base
+    command: lein test
+    links:
+      - postgres
+      - elasticsearch
 
   postgres:
     image: mdillon/postgis:10
