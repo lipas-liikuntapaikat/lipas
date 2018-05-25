@@ -1,3 +1,4 @@
 sudo: required
 services: docker
 script: bash ci.sh
+after_failure: docker-compose logs
