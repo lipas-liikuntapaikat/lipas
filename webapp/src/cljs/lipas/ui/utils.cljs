@@ -14,8 +14,6 @@
     (prn "Setting " path value)
     [path value]))
 
-(defn set-value [])
-
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
 

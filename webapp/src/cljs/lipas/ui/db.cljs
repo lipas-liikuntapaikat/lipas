@@ -1,6 +1,133 @@
 (ns lipas.ui.db
   (:require [lipas.ui.i18n :as i18n]))
 
+(def jaahalli
+
+  ;;; Yleiset ;;;
+  {:sports-place-id 89839
+   :last-modified "2016-11-14 10:13:20.103"
+
+   :name
+   {:fi "Jyväskylän kilpajäähalli"
+    :se nil
+    :en nil}
+
+   :www "www.jyvaskyla.fi"
+   :email nil
+   :phone-number nil
+   :admin "Kunta / liikuntatoimi"
+   :owner "Kunta"
+   :info-fi ""
+
+   ;;; Sijainti ;;;
+   :location
+   {:address "Rautpohjankatu 10"
+    :geometries
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature"
+       :geometry
+       {:coordinates
+        [25.7221976798387 62.2373183577408]
+        :type "Point"}
+       :properties {:point-id 61503}}]}
+    :location-id 8979
+    :postal-code "40700"
+    :postal-office "Jyväskylä"
+    :city
+    {:name "Jyväskylä"
+     :city-code 179}}
+
+   ;;; Tyyppiluokitus ;;;
+   :type
+   {:type-code 2520,
+    :name "Kilpajäähalli"
+    :size-category :competition}
+
+         ; PORTAALI                      LIPAS
+         ; kilpahallit < 3000            --> 2520 kilpajäählli
+         ; pienet kilpahallit < 500      --> 2520 kilpajäähalli
+         ; harjoitushallit               --> 2510 harjoitusjäähalli
+         ; suurhallit > 3000             --> 2520 kilpajäähalli
+         ; katetut tekojäähallit (pois?) --> 2510 harjoistusjäähalli
+
+   ;;; Rakennus ;;;
+   :building
+   {:construction-year 2008          ; Rakennusvuosi
+    :total-volume-m3 2000            ; Hallin koko tilavuus (m3)
+    :total-surface-area-m2 1500      ; Hallin koko pinta-ala (m2)
+    :total-ice-surface-area-m2 800   ; Jään pinta-ala yhteensä (m2)
+    :seating-capacity 300            ; Katsomopaikat (kpl)
+    }
+
+   ;;; Vaipan rakenne ;;;
+   :envelope-structure
+   {:base-floor-structure "concrete" ; betoni / asfaltti / hiekka
+    :insulated-exterior? true        ; Onko ulkoseinä lämpöeristetty
+    :insulated-ceiling? true         ; Onko yläpohja lämpöeristetty
+    :low-emissivity-coating? false}  ; Yläpohjassa matalaemissiiviteettipinnote
+
+   ;;; Kentät ;;;
+   :rinks
+   [{:length-m 56
+     :width-m 26}
+    {:length-m 44
+     :width-m 5}]
+
+   ;;; Peruskorjaukset ;;;
+   :renovations
+   [{:year 2013                            ; Peruskorjausvuosi
+     :comment "Asennettiin uusi ilmanvaihto."
+     :main-designers "?"}]                 ; varmistetaan Erjalta
+
+   ;; Kylmätekniikka
+   :refrigeration
+   {:original? true                        ; Alkuperäinen
+    :individual-metering? true             ; Alamittaroitu
+    :power-kw 212                          ; Kylmäkoneen teho (kW)
+    :condensate-energy-recycling? true     ; Lauhde-energia hyötykäytetty
+    :condensate-energy-main-target         ; Lauhdelämmön pääkäyttökohde
+    "Jäänhoito/käyttöveden lämmitys"
+    :refrigerant "R404A"                   ; Kylmäaine
+    :refrigerant-amount-kg 100             ; Kylmäaineen määrä
+    :refrigerant-solution "Vesi-glykoli"   ; Kylmäliuos
+    :refrigerant-solution-amount-l 7000 }  ; Kylmäliuos 0-30000
+
+   ;; Olosuhteet
+   :conditions
+   {:air-humidity                         ; Ilman suhteellisen kosteuden
+    {:min 50                              ;  vaihteluväli  50-70
+     :max 60}
+    :ice-surface-temperature-c -3         ; Jään pinnan lämpötila -3 -6
+    :skating-area-temperature-c 5         ; Luistelualueen lämpötila 1m kork.
+                                          ;  harjoitushalleissa  +5 +9
+                                          ;  kilpahalleissa +9 +12
+    :stand-temperature-c 10}              ; Katsomon lämpötila (0-50)
+                                          ;  ottelun aikana tavoiteltu
+                                          ;  keskilämpötila
+
+   ;; Jäänhoito (vuosittain muuttuvat)
+   :ice-maintenance
+   {:daily-maintenance-count-week-days 8  ; Jäähoitokerrat arkipäivinä
+    :daily-maintenance-count-weekends 12  ; Jäähoitokerrat viikonlppuina
+    :average-water-consumption-l 300      ; Keskimääräinen jäänhoitoon käytetty
+                                          ;  vesimäärä/jäänajo (ltr)
+    :maintenance-water-temperature-c 35   ; Jäähoitoveden lämpötila (tavoite +40)
+    :ice-average-thickness-mm 20          ; Jään keskipaksuus mm
+
+    ;; --> energiankulutukseen liittyvää lisätietoa kerätään vuositasolla
+    :daily-open-hours 15                  ; Aukiolo päivässä (tuntia/pv) ???
+    :open-months 12}                      ; Aukiolo vuodessa (kk:a/vuosi) ???
+
+   ;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
+   :ventilation
+   {:heat-recovery-type "Levysiirrin"             ; LTO_tyyppi
+    :heat-recovery-thermal-efficiency-percent 10  ; LTO_hyötysuhde
+    :dryer-type "Jäähdytyspatteri"                ; Ilmankuivaustapa
+    :dryer-duty-type "??"                         ; Ilm.kuiv.käyttötapa
+    :heat-pump-type "None"}                       ; Lämpöpumpputyyppi
+   })
+
 (def vesivelho
   {:building
    {:construction-year 1995
@@ -133,7 +260,25 @@
 (def default-db
   {:logged-in? false
    :translator (i18n/->tr-fn :fi)
-   :ice-stadiums {:active-tab 0}
+
+   ;; Ice stadiums
+   :ice-stadiums
+   {:active-tab 0
+    :editing (-> jaahalli
+                 (update-in [:renovations] ->indexed-map)
+                 (update-in [:rinks] ->indexed-map))
+    :dialogs
+    {:renovation
+     {:open? false
+      :data {:year (.getFullYear (js/Date.))
+             :comment ""
+             :designer ""}}
+     :rink
+     {:open? false
+      :data {:width-m ""
+             :length-m ""}}}}
+
+   ;; Swimming pools
    :swimming-pools
    {:active-tab 0
     :editing (-> vesivelho
@@ -166,6 +311,8 @@
       {:name ""
        :women false
        :men false}}}}
+
+   ;; User
    :user
    {:login-form
     {:username ""

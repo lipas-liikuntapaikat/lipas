@@ -10,10 +10,10 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :dialogs :slide :data)]
     [mui/form-group
-     [mui/text-field {:label (tr :general/structure)
+     [lui/text-field {:label (tr :general/structure)
                       :value (:structure data)
                       :on-change #(set-field :structure %)}]
-     [mui/text-field {:label (tr :dimensions/length-m)
+     [lui/text-field {:label (tr :dimensions/length-m)
                       :value (:length-m data)
                       :on-change #(set-field :length-m %)}]]))
 

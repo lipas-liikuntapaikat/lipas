@@ -10,7 +10,7 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :dialogs :sauna :data)]
     [mui/form-group
-     [mui/text-field {:label (tr :general/type)
+     [lui/text-field {:label (tr :general/type)
                       :value (:type data)
                       :on-change #(set-field :type %)}]
      [lui/checkbox {:label (tr :saunas/women)
