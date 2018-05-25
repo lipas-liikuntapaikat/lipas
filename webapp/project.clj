@@ -81,7 +81,7 @@
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/cljs"]
+     :source-paths ["src/cljs" "src/cljc"]
      :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
      :compiler     {:main                 lipas.ui.core
                     :output-to            "resources/public/js/compiled/app.js"
@@ -95,7 +95,7 @@
                     }}
 
     {:id           "min"
-     :source-paths ["src/cljs"]
+     :source-paths ["src/cljs" "src/cljc"]
      :compiler     {:main            lipas.ui.core
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
@@ -103,7 +103,7 @@
                     :pretty-print    false}}
 
     {:id           "test"
-     :source-paths ["src/cljs" "test/cljs"]
+     :source-paths ["src/cljs" "src/cljc" "test/cljs"]
      :compiler     {:main          lipas.ui.runner
                     :output-to     "resources/public/js/compiled/test.js"
                     :output-dir    "resources/public/js/compiled/test/out"
