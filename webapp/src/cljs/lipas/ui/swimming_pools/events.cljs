@@ -1,7 +1,8 @@
 (ns lipas.ui.swimming-pools.events
   (:require [ajax.core :as ajax]
             [re-frame.core :as re-frame]
-            [lipas.ui.db :refer [default-db]]))
+            [lipas.ui.db :refer [default-db]]
+            [lipas.ui.utils :refer [save-entity]]))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -20,15 +21,6 @@
      (-> db
          (update-in [:swimming-pools :dialogs dialog :open?] not)
          (assoc-in [:swimming-pools :dialogs dialog :data] data)))))
-
-(def maxc (partial apply max))
-
-(defn next-id [db path]
-  (-> db (get-in path) keys maxc inc))
-
-(defn save-entity [db path entity]
-  (let [id (or (:id entity) (next-id db path))]
-    (assoc-in db (conj path id) (assoc entity :id id))))
 
 (re-frame/reg-event-db
  ::save-renovation

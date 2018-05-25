@@ -1,14 +1,15 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.ui.mui :as mui]
-            [lipas.ui.swimming-pools.utils :refer [<== ==> set-field]]
-            [lipas.ui.components :as lui]
-            [lipas.ui.swimming-pools.pools :as pools]
-            [lipas.ui.swimming-pools.saunas :as saunas]
-            [lipas.ui.swimming-pools.slides :as slides]
-            [lipas.ui.swimming-pools.renovations :as renovations]
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
             [lipas.ui.mui-icons :as mui-icons]
             [lipas.ui.swimming-pools.events :as events]
+            [lipas.ui.swimming-pools.pools :as pools]
+            [lipas.ui.swimming-pools.renovations :as renovations]
+            [lipas.ui.swimming-pools.saunas :as saunas]
+            [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.swimming-pools.utils :refer [set-field]]
+            [lipas.ui.utils :refer [<== ==>]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 

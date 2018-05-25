@@ -33,6 +33,7 @@
 (def db (:db system))
 (def app (:app system))
 
+(comment (gen/generate (s/gen ::lipas/email)))
 (defn gen-user
   ([]
    (gen-user {:db? false}))
