@@ -51,7 +51,6 @@ services:
   postgres:
     image: mdillon/postgis:10
     environment:
-      DB_HOST: localhost
       DB_PORT: 5432
       DB_NAME:
       DB_USER:
@@ -59,6 +58,7 @@ services:
       DB_SUPERUSER:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
+      POSTGRES_INITDB_ARGS: '-A trust'
     ports:
       - '55432:5432'
     volumes:
