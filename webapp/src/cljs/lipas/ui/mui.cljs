@@ -52,7 +52,6 @@
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))
 
-
 (defn mui->reagent [mui-name]
   (r/adapt-react-class (gobj/get js/MaterialUI mui-name)))
 
@@ -64,7 +63,7 @@
 (def icon (mui->reagent "Icon"))
 (def svg-icon (mui->reagent "SvgIcon"))
 (def icon-button (mui->reagent "IconButton"))
-(def text-field* (mui->reagent "TextField"))
+(def text-field (mui->reagent "TextField"))
 (def grid (mui->reagent "Grid"))
 (def paper (mui->reagent "Paper"))
 (def card (mui->reagent "Card"))
@@ -104,8 +103,3 @@
 (def dialog-actions (mui->reagent "DialogActions"))
 (def snackbar (mui->reagent "Snackbar"))
 (def snackbar-content (mui->reagent "SnackbarContent"))
-
-(defn text-field [props & children]
-  (let [v (:value props)]
-    (into [text-field* (assoc props :value (or v ""))
-           children])))

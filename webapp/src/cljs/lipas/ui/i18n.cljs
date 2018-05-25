@@ -98,12 +98,58 @@
           :ceiling-description "Yläpohjan rakenne"
           :staff-count "Henkilökunnan lukumäärä"
           :seating-capacity "Katsomokapasiteetti"}
+         :envelope-structure
+         {:headline "Vaipan rakenne"
+          :base-floor-structure "Alapohjan laatan rakenne"
+          :insulated-exterior? "Ulkoseinä lämpöeristetty"
+          :insulated-ceiling? "Yläpohja lämpöeristetty"
+          :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnote"}
          :renovations
          {:headline "Peruskorjaukset"
           :add-renovation "Lisää peruskorjaus"
           :edit-renovation "Muokkaa peruskorjausta"
           :end-year "Valmistumisvuosi"
           :designers "Suunnittelijat"}
+         :rinks
+         {:headline "Radat"
+          :edit-rink "Muokkaa rataa"
+          :add-rink "Lisää rata"}
+         :refrigeration
+         {:headline "Kylmätekniikka"
+          :original? "Alkuperäinen"
+          :individual-metering? "Alamittaroitu"
+          :power-kw "Kylmäkoneen teho (kW)"
+          :condensate-energy-recycling? "Lauhde-energia hyötykäytetty"
+          :condensate-energy-main-target "Lauhdelämmön pääkäyttökohde"
+          :refrigerant "Kylmäaine"
+          :refrigerant-amount-kg "Kylmäaineen määrä (kg)"
+          :refrigerant-solution "Kylmäliuos"
+          :refrigerant-solution-amount-l "Kylmäliuoksen määrä (l)"}
+         :conditions
+         {:headline "Olosuhteet"
+          :air-humidity-min "Ilman suhteellinen kosteus % min"
+          :air-humidity-max "Ilman suhteellinen kosteus % max"
+          :ice-surface-temperature-c "Jään pinnan lämpötila"
+          :skating-area-temperature-c "Luistelualueen lämpötila 1m korkeudella"
+          :stand-temperature-c "Katsomon tavoiteltu keskilämpötila
+          ottelun aikana"}
+         :ice-maintenance
+         {:headline "Jäänhoito"
+          :daily-maintenance-count-week-days "Jäähoitokerrat arkipäivinä"
+          :daily-maintenance-count-weekends "Jäähoitokerrat viikonlppuina"
+          :average-water-consumption-l "Keskimääräinen jäänhoitoon
+          käytetty veden määrä"
+          :maintenance-water-temperature-c "Jäähoitoveden
+          lämpötila (tavoite +40)"
+          :ice-average-thickness-mm "Jään keskipaksuus mm"}
+         :ventilation
+         {:headline "Hallin ilmanvaihto"
+          :heat-recovery-type "Lämmöntalteenoton tyyppi"
+          :heat-recovery-thermal-efficiency-percent "Lämmöntalteenoton
+          hyötysuhde %"
+          :dryer-type "Ilmankuivaustapa"
+          :dryer-duty-type "Ilmankuivauksen käyttötapa"
+          :heat-pump-type "Lämpöpumpputyyppi"}
          :water-treatment
          {:headline "Vedenkäsittely"
           :ozonation? "Otsonointi"
