@@ -10,5 +10,4 @@
 
 (defn set-field
   [& args]
-  (let [[path value] (apply ->path&value args)]
-    (==> [::events/set-field path value])))
+  (==> [::events/set-field (butlast args) (last args)]))

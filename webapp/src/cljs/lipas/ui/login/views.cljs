@@ -1,41 +1,37 @@
 (ns lipas.ui.login.views
   (:require [lipas.ui.mui :as mui]
+            [lipas.ui.components :as lui]
+            [lipas.ui.utils :refer [<== ==>]]
             [lipas.ui.login.events :as events]
             [lipas.ui.login.subs :as subs]
-            [lipas.ui.routes :refer [navigate!]]
-            [re-frame.core :as re-frame]))
+            [lipas.ui.routes :refer [navigate!]]))
 
-(defn set-form-field [path event]
-  (let [path (into [] (flatten [path]))
-        value (-> event
-                  .-target
-                  .-value)]
-    (re-frame/dispatch [::events/set-login-form-field path value])))
+(defn set-field [& args]
+  (==> [::events/set-login-form-field (butlast args) (last args)]))
 
 (defn clear-errors []
-  (re-frame/dispatch [::events/clear-errors]))
+  (==> [::events/clear-errors]))
 
 (defn create-login-form [tr {:keys [username password] :as form-data} error]
   [mui/form-group
-   [mui/text-field {:label (tr :login/username)
+   [lui/text-field {:label (tr :login/username)
                     :auto-focus true
                     :type "text"
                     :value username
-                    :on-change (comp clear-errors #(set-form-field :username %))
+                    :on-change (comp clear-errors #(set-field :username %))
                     :required true
                     :placeholder (tr :login/username-example)}]
-   [mui/text-field {:label (tr :login/password)
+   [lui/text-field {:label (tr :login/password)
                     :type "password"
                     :value password
-                    :on-change (comp clear-errors #(set-form-field :password %))
+                    :on-change (comp clear-errors #(set-field :password %))
                     :required true}]
    [mui/button {:color "primary"
                 :disabled (or (empty? username)
                               (empty? password)
                               (some? error))
                 :size "large"
-                :on-click #(re-frame/dispatch
-                            [::events/submit-login-form form-data])}
+                :on-click #(==> [::events/submit-login-form form-data])}
     (tr :login/login)]
    (when error
      [mui/typography {:color "error"}
@@ -56,9 +52,9 @@
         (create-login-form tr form-data error)]]]]))
 
 (defn main [tr]
-  (let [logged-in? (re-frame/subscribe [::subs/logged-in?])
-        form-data (re-frame/subscribe [::subs/login-form])
-        error (re-frame/subscribe [::subs/login-error])]
-    (if @logged-in?
+  (let [logged-in? (<== [::subs/logged-in?])
+        form-data  (<== [::subs/login-form])
+        error      (<== [::subs/login-error])]
+    (if logged-in?
       (navigate! "/#/profiili")
-      (create-login-panel tr @form-data @error))))
+      (create-login-panel tr form-data error))))

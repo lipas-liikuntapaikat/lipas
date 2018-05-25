@@ -13,10 +13,10 @@
      [lui/year-selector {:label (tr :renovations/end-year)
                          :value (:year data)
                          :on-change #(set-field :year %)}]
-     [mui/text-field {:label (tr :building/main-designers)
+     [lui/text-field {:label (tr :building/main-designers)
                       :value (:main-designers data)
                       :on-change #(set-field :main-designers %)}]
-     [mui/text-field {:label (tr :general/description)
+     [lui/text-field {:label (tr :general/description)
                       :value (:comment data)
                       :on-change #(set-field :comment %)
                       :multiline true

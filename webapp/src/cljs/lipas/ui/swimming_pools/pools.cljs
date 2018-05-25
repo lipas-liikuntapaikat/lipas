@@ -10,39 +10,39 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :dialogs :pool :data)]
     [mui/form-group
-     [mui/text-field {:required true
+     [lui/text-field {:required true
                       :label (tr :general/type)
                       :value (:type data)
                       :on-change #(set-field :type %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :physical-units/temperature-c)
                       :value (:temperature-c data)
                       :on-change #(set-field :temperature-c %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/volume-m3)
                       :value (:volume-m3 data)
                       :on-change #(set-field :volume-m3 %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/area-m2)
                       :value (:area-m2 data)
                       :on-change #(set-field :area-m2 %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/length-m)
                       :value (:length-m data)
                       :on-change #(set-field :length-m %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/width-m)
                       :value (:width-m data)
                       :on-change #(set-field :width-m %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/depth-min-m)
                       :value (:depth-min-m data)
                       :on-change #(set-field :depth-min-m %)}]
-     [mui/text-field {:type "number"
+     [lui/text-field {:type "number"
                       :label (tr :dimensions/depth-max-m)
                       :value (:depth-max-m data)
                       :on-change #(set-field :depth-max-m %)}]
-     [mui/text-field {:label (tr :pools/structure)
+     [lui/text-field {:label (tr :pools/structure)
                       :value (:structure data)
                       :on-change #(set-field :structure %)
                       :multiline true

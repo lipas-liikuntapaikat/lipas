@@ -3,17 +3,6 @@
             [lipas.ui.mui-icons :as mui-icons]
             [reagent.core :as r]))
 
-(defn year-selector [{:keys [label value on-change]}]
-  [mui/text-field {:label label
-                   :type "number"
-                   :select true
-                   :on-change on-change
-                   :value value}
-   (for [year (range 2000 (inc (.getFullYear (js/Date.))))]
-     [mui/menu-item {:key year
-                     :value year}
-      year])])
-
 (defn checkbox [{:keys [label value on-change]}]
   [mui/form-control-label
    {:label label
@@ -21,18 +10,7 @@
               [mui/checkbox
                {:value (or (str value) "-")
                 :checked value
-                :on-change #(on-change (clj->js {:target
-                                                 {:value %2}}))}])}])
-
-(defn text-field-unit [{:keys [label value unit on-change]}]
-  [mui/text-field {:label label
-                   :type "number"
-                   :value value
-                   :on-change on-change
-                   :Input-props
-                   {:end-adornment
-                    (r/as-element
-                     [mui/input-adornment unit])}}])
+                :on-change #(on-change %2)}])}])
 
 (defn form-table [{:keys [headers
                           items
@@ -113,10 +91,9 @@
                    :label label
                    :value value
                    :on-change on-change}
-   (for [i items]
-     [mui/menu-item {:key i
-                     :value i}
-      i])])
+   (for [{:keys [label value]} items]
+     [mui/menu-item {:key value :value value}
+      label])])
 
 (defn notification [{:keys [notification on-close]}]
   [mui/snackbar {:key (gensym)
@@ -133,3 +110,30 @@
                                     (if (:success? notification)
                                       [mui-icons/done]
                                       [mui-icons/warning])])}]])
+
+(defn text-field [{:keys [value on-change] :as props} & children]
+  (let [props (-> props
+                  (assoc :value (or value ""))
+                  (assoc :on-change #(-> % .-target .-value js->clj on-change)))]
+    (into [mui/text-field props] children)))
+
+(defn text-field-unit [{:keys [label value unit on-change]}]
+  [text-field {:label label
+               :type "number"
+               :value value
+               :on-change on-change
+               :Input-props
+               {:end-adornment
+                (r/as-element
+                 [mui/input-adornment unit])}}])
+
+(defn year-selector [{:keys [label value on-change]}]
+  [text-field {:label label
+               :type "number"
+               :select true
+               :on-change on-change
+               :value value}
+   (for [year (range 2000 (inc (.getFullYear (js/Date.))))]
+     [mui/menu-item {:key year
+                     :value year}
+      year])])

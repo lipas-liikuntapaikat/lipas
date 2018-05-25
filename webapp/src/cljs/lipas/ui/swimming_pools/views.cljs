@@ -34,35 +34,35 @@
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
       [mui/form-group
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/name-fi)
          :value (-> data :name :fi)
          :on-change #(set-field :name :fi %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/name-se)
          :value (-> data :name :se)
          :on-change #(set-field :name :se %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/name-en)
          :value (-> data :name :en)
          :on-change #(set-field :name :en %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/owner)
          :value (-> data :owner)
          :on-change #(set-field :owner %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/admin)
          :value (-> data :admin)
          :on-change #(set-field :admin %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/phone-number)
          :value (-> data :phone-number)
          :on-change #(set-field :phone-number %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/www)
          :value (-> data :www)
          :on-change #(set-field :www %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :sports-place/email-public)
          :value (-> data :email)
          :on-change #(set-field :email %)}]]]
@@ -70,19 +70,19 @@
      ;; Location
      [lui/form-card {:title (tr :location/headline)}
       [mui/form-group
-       [mui/text-field
+       [lui/text-field
         {:label (tr :location/address)
          :value (-> data :location :address)
          :on-change #(set-field :location :address %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :location/postal-code)
          :value (-> data :location :postal-code)
          :on-change #(set-field :location :postal-code %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :location/postal-office)
          :value (-> data :location :postal-office)
          :on-change #(set-field :location :postal-office %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :location/city)
          :value (-> data :location :city :name)
          :on-change #(set-field :location :city :name %)}]]]
@@ -90,12 +90,12 @@
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
       [mui/form-group
-       [mui/text-field
+       [lui/text-field
         {:label (tr :building/construction-year)
          :type "number"
          :value (-> data :building :construction-year)
          :on-change #(set-field :building :construction-year %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :building/main-designers)
          :value (-> data :building :main-designers)
          :on-change #(set-field :building :main-designers %)}]
@@ -127,15 +127,15 @@
         {:label (tr :building/piled?)
          :value (-> data :building :piled?)
          :on-change #(set-field :building :piled? %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :building/main-construction-materials)
          :value (-> data :building :main-construction-materials)
          :on-change #(set-field :building :main-construction-materials %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :building/supporting-structures-description)
          :value (-> data :building :supporting-structures-description)
          :on-change #(set-field :building :supporting-structures-description %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :building/ceiling-description)
          :value (-> data :building :ceiling-description)
          :on-change #(set-field :building :ceiling-description %)}]
@@ -172,11 +172,11 @@
         {:label (tr :water-treatment/activated-carbon?)
          :value (-> data :water-treatment :activated-carbon?)
          :on-change #(set-field :water-treatment :activated-carbon? %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :water-treatment/filtering-method)
          :value (-> data :water-treatment :filtering-method)
          :on-change #(set-field :water-treatment :filtering-method %)}]
-       [mui/text-field
+       [lui/text-field
         {:label (tr :general/comment)
          :value (-> data :water-treatment :comment)
          :on-change #(set-field :water-treatment :comment %)}]]]
@@ -284,25 +284,27 @@
   [lui/form-card (tr :energy/consumption-info)
    [mui/form-group
     [lui/select {:label (tr :actions/select-hall)
-                 :value "Halli 1"
-                 :items ["Halli 1" "Halli 2" "Halli 3"]
+                 :value "h2"
+                 :items [{:value "h1" :label "Halli 1"}
+                         {:value "h2" :label "Halli 2"}
+                         {:value "h3" :label "Halli 3"}]
                  :on-change #(js/alert "FIXME")}]
     [lui/year-selector {:label (tr :time/year)
                         :value 2018
                         :on-change #(js/alert "FIXME")}]
-    [mui/text-field {:label (tr :energy/electricity)
+    [lui/text-field {:label (tr :energy/electricity)
                      :type "number"
                      :Input-props
                      {:end-adornment
                       (r/as-element
                        [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [mui/text-field {:label (tr :energy/heat)
+    [lui/text-field {:label (tr :energy/heat)
                      :type "number"
                      :Input-props
                      {:end-adornment
                       (r/as-element
                        [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [mui/text-field {:label (tr :energy/water)
+    [lui/text-field {:label (tr :energy/water)
                      :type "number"
                      :Input-props
                      {:end-adornment
