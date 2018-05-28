@@ -197,7 +197,8 @@
           :depth-max-m "Syvyys max m"}
          :units
          {:person "Hlö"
-          :pcs "Kpl"}
+          :pcs "Kpl"
+          :percent "%"}
          :physical-units
          {:temperature-c "Lämpötila C°"
           :mwh "MWh"
