@@ -97,19 +97,19 @@
         {:label     (tr :building/main-designers)
          :value     (-> data :building :main-designers)
          :on-change #(set-field :building :main-designers %)}]
-       [lui/text-field-unit
+       [lui/text-field
         {:label     (tr :building/total-surface-area-m2)
          :value     (-> data :building :total-surface-area-m2)
-         :unit      (tr :physical-units/m2)
+         :adornment (tr :physical-units/m2)
          :on-change #(set-field :building :total-surface-area-m2 %)}]
-       [lui/text-field-unit
+       [lui/text-field
         {:label     (tr :building/total-volume-m3)
          :value     (-> data :building :total-volume-m3)
-         :unit      (tr :physical-units/m3)
+         :adornment (tr :physical-units/m3)
          :on-change #(set-field :building :total-volume-m3 %)}]
-       [lui/text-field-unit
+       [lui/text-field
         {:label     (tr :building/seating-capacity)
-         :unit      (tr :units/person)
+         :adornment (tr :units/person)
          :value     (-> data :building :seating-capacity)
          :on-change #(set-field :building :seating-capacity %)}]]]
 
@@ -117,23 +117,23 @@
      [lui/form-card {:title (tr :envelope-structure/headline)}
       [mui/form-group
        [lui/select
-        {:label (tr :envelope-structure/base-floor-structure)
-         :value (-> data :envelope-structure :base-floor-structure)
+        {:label     (tr :envelope-structure/base-floor-structure)
+         :value     (-> data :envelope-structure :base-floor-structure)
          :on-change #(set-field :envelope-structure :base-floor-structure %)
-         :items [{:value "concrete" :label "Betoni"}
-                 {:value "asphalt" :label "Asfaltti"}
-                 {:value "sand" :label "Hiekka"}]}]
+         :items     [{:value "concrete" :label "Betoni"}
+                     {:value "asphalt" :label "Asfaltti"}
+                     {:value "sand" :label "Hiekka"}]}]
        [lui/checkbox
-        {:label (tr :envelope-structure/insulated-exterior?)
-         :value (-> data :envelope-structure :insulated-exterior?)
+        {:label     (tr :envelope-structure/insulated-exterior?)
+         :value     (-> data :envelope-structure :insulated-exterior?)
          :on-change #(set-field :envelope-structure :insulated-exterior? %)}]
        [lui/checkbox
-        {:label (tr :envelope-structure/insulated-ceiling?)
-         :value (-> data :envelope-structure :insulated-ceiling?)
+        {:label     (tr :envelope-structure/insulated-ceiling?)
+         :value     (-> data :envelope-structure :insulated-ceiling?)
          :on-change #(set-field :envelope-structure :insulated-ceiling? %)}]
        [lui/checkbox
-        {:label (tr :envelope-structure/low-emissivity-coating?)
-         :value (-> data :envelope-structure :low-emissivity-coating?)
+        {:label     (tr :envelope-structure/low-emissivity-coating?)
+         :value     (-> data :envelope-structure :low-emissivity-coating?)
          :on-change #(set-field :envelope-structure :low-emissivity-coating? %)}]]]
 
      ;; Renovations
@@ -154,16 +154,16 @@
      [lui/form-card {:title (tr :refrigeration/headline)}
       [mui/form-group
        [lui/checkbox
-        {:label (tr :refrigeration/original?)
-         :value (-> data :refrigeration :original?)
+        {:label     (tr :refrigeration/original?)
+         :value     (-> data :refrigeration :original?)
          :on-change #(set-field :refrigeration :original? %)}]
        [lui/checkbox
-        {:label (tr :refrigeration/individual-metering?)
-         :value (-> data :refrigeration :individual-metering?)
+        {:label     (tr :refrigeration/individual-metering?)
+         :value     (-> data :refrigeration :individual-metering?)
          :on-change #(set-field :refrigeration :individual-metering? %)}]
        [lui/checkbox
-        {:label (tr :refrigeration/condensate-energy-recycling?)
-         :value (-> data :refrigeration :condensate-energy-recycling?)
+        {:label     (tr :refrigeration/condensate-energy-recycling?)
+         :value     (-> data :refrigeration :condensate-energy-recycling?)
          :on-change #(set-field :refrigeration :condensate-energy-recycling? %)}]
        [lui/text-field
         {:label     (tr :refrigeration/condensate-energy-main-target)
@@ -256,6 +256,7 @@
        [lui/text-field
         {:label     (tr :ventilation/heat-recovery-thermal-efficiency-percent)
          :type      "number"
+         :adornment (tr :units/percent)
          :value     (-> data :ventilation :heat-recovery-thermal-efficiency-percent)
          :on-change #(set-field :ventilation :heat-recovery-thermal-efficiency-percent %)}]
        [lui/text-field
@@ -287,12 +288,9 @@
                     :value "Halli 1"}
     (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
       [mui/menu-item {:key hall :value hall} hall])]
-   [lui/text-field {:label (tr :time/year)
-                    :type "number"
-                    :select true
-                    :value 2018}
-    (for [year (range 2000 2019)]
-      [mui/menu-item {:key year :value year} year])]
+   [lui/year-selector {:label (tr :time/year)
+                       :on-change #(js/alert "kiskis")
+                       :value 2018}]
    [lui/text-field {:label (tr :energy/electricity)
                     :type "number"
                     :Input-props

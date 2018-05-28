@@ -10,7 +10,7 @@
               [mui/checkbox
                {:value (or (str value) "-")
                 :checked value
-                :on-change #(on-change %2)}])}])
+                :on-change #(on-change %2)}])}]) ; %2 = checked?
 
 (defn form-table [{:keys [headers
                           items
@@ -86,15 +86,6 @@
     [mui/card-header {:title title}]
     [mui/card-content content]]])
 
-(defn select [{:keys [label value items on-change]}]
-  [mui/text-field {:select true
-                   :label label
-                   :value value
-                   :on-change on-change}
-   (for [{:keys [label value]} items]
-     [mui/menu-item {:key value :value value}
-      label])])
-
 (defn notification [{:keys [notification on-close]}]
   [mui/snackbar {:key (gensym)
                  :auto-hide-duration 5000
@@ -111,29 +102,28 @@
                                       [mui-icons/done]
                                       [mui-icons/warning])])}]])
 
-(defn text-field [{:keys [value on-change] :as props} & children]
+(defn text-field [{:keys [value adornment on-change] :as props} & children]
   (let [props (-> props
                   (assoc :value (or value ""))
+                  (assoc :Input-props (when adornment
+                                        {:end-adornment
+                                         (r/as-element
+                                          [mui/input-adornment adornment])}))
                   (assoc :on-change #(-> % .-target .-value js->clj on-change)))]
     (into [mui/text-field props] children)))
 
-(defn text-field-unit [{:keys [label value unit on-change]}]
-  [text-field {:label label
-               :type "number"
+(defn select [{:keys [label value items on-change]}]
+  [text-field {:select true
+               :label label
                :value value
-               :on-change on-change
-               :Input-props
-               {:end-adornment
-                (r/as-element
-                 [mui/input-adornment unit])}}])
+               :on-change on-change}
+   (for [{:keys [label value]} items]
+     [mui/menu-item {:key value :value value}
+      label])])
 
 (defn year-selector [{:keys [label value on-change]}]
-  [text-field {:label label
-               :type "number"
-               :select true
-               :on-change on-change
-               :value value}
-   (for [year (range 2000 (inc (.getFullYear (js/Date.))))]
-     [mui/menu-item {:key year
-                     :value year}
-      year])])
+  (let [years (range 2000 (inc (.getFullYear (js/Date.))))]
+    [select {:label label
+             :items (map #(hash-map :label % :value %) years)
+             :on-change on-change
+             :value value}]))
