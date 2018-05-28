@@ -47,6 +47,7 @@
                       {:Mui-card-header
                        {:title {:color secondary}}}})
 
+
 (def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
@@ -103,3 +104,17 @@
 (def dialog-actions (mui->reagent "DialogActions"))
 (def snackbar (mui->reagent "Snackbar"))
 (def snackbar-content (mui->reagent "SnackbarContent"))
+
+(defn with-styles [styles]
+  (->> styles
+       (transform-keys keyword->PasCamelCase)
+       clj->js
+       js/MaterialUIStyles.withStyles))
+
+;; (def red-bg {:root {:background-color "red"}})
+;; (def red-btn (->styled red-bg "Button"))
+(defn ->styled [styles component-name]
+  (let [style-fn (with-styles styles)]
+    (-> (gobj/get js/MaterialUI component-name)
+        style-fn
+        r/adapt-react-class)))
