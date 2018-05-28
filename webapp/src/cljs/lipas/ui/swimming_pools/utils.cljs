@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.utils
   (:require [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.utils :refer [==> ->path&value]]))
+            [lipas.ui.utils :refer [==>]]))
 
 (defn toggle-dialog
   ([dialog]
