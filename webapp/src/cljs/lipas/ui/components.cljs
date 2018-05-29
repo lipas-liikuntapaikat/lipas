@@ -1,5 +1,8 @@
 (ns lipas.ui.components
-  (:require [lipas.ui.mui :as mui]
+  (:require [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :refer [trim]]
+            [lipas.ui.mui :as mui]
             [lipas.ui.mui-icons :as mui-icons]
             [reagent.core :as r]))
 
@@ -102,23 +105,32 @@
                                       [mui-icons/done]
                                       [mui-icons/warning])])}]])
 
-(defn text-field [{:keys [value adornment on-change] :as props} & children]
-  (let [props (-> props
+
+(defn text-field [{:keys [value type adornment
+                          on-change spec required] :as props} & children]
+  (let [coercer (if (= type "number")
+                  read-string
+                  not-empty)
+        props (-> props
                   (assoc :value (or value ""))
+                  (assoc :error (if (and spec (or value required))
+                                  ((complement s/valid?) spec value)
+                                  false))
                   (assoc :Input-props (when adornment
                                         {:end-adornment
                                          (r/as-element
                                           [mui/input-adornment adornment])}))
-                  (assoc :on-change #(-> % .-target .-value js->clj on-change)))]
+                  (assoc :on-change #(-> % .-target .-value coercer on-change))
+                  (assoc :on-blur #(when (string? value) (on-change (trim value)))))]
     (into [mui/text-field props] children)))
 
 (defn select [{:keys [label value items on-change]}]
   [text-field {:select true
                :label label
-               :value value
-               :on-change on-change}
-   (for [{:keys [label value]} items]
-     [mui/menu-item {:key value :value value}
+               :value (pr-str value)
+               :on-change #(on-change (read-string %))}
+   (for [{:keys [label value]} (sort-by :label items)]
+     [mui/menu-item {:key value :value (pr-str value)}
       label])])
 
 (defn year-selector [{:keys [label value on-change]}]
