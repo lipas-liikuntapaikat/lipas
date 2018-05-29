@@ -18,6 +18,26 @@
           :phone-number "Puhelinnumero"
           :www "Web-sivu"
           :email-public "Sähköposti (julkinen)"}
+         :admin
+         {:city-sports "Kunta / liikuntatoimi"
+          :city-education "Kunta / opetustoimi"
+          :city-technical-services "Kunta / tekninen toimi"
+          :city-other "Kunta / muu"
+          :private-association "Yksityinen / yhdistys"
+          :private-company "Yksityinen / yritys"
+          :private-foundation "Yksityinen / säätiö"
+          :state "Valtio"
+          :other "Muu"
+          :unknown "Ei tietoa"}
+         :owner
+         {:city "Kunta"
+          :registered-association "Rekisteröity yhdistys"
+          :company-ltd "Yritys"
+          :city-main-owner "Kuntaenemmistöinen yritys"
+          :foundation "Säätiö"
+          :state "Valtio"
+          :other "Muu"
+          :unkonwn "Ei tietoa"}
          :location
          {:headline "Sijainti"
           :address "Katuosoite"
