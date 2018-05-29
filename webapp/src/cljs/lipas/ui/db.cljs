@@ -15,8 +15,8 @@
    :www "www.jyvaskyla.fi"
    :email nil
    :phone-number nil
-   :admin "Kunta / liikuntatoimi"
-   :owner "Kunta"
+   :admin :city-sports
+   :owner :city
    :info-fi ""
 
    ;;; Sijainti ;;;
@@ -62,7 +62,7 @@
 
    ;;; Vaipan rakenne ;;;
    :envelope-structure
-   {:base-floor-structure "concrete" ; betoni / asfaltti / hiekka
+   {:base-floor-structure :concrete  ; betoni / asfaltti / hiekka
     :insulated-exterior? true        ; Onko ulkoseinä lämpöeristetty
     :insulated-ceiling? true         ; Onko yläpohja lämpöeristetty
     :low-emissivity-coating? false}  ; Yläpohjassa matalaemissiiviteettipinnote
