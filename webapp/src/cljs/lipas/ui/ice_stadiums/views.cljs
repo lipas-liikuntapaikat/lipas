@@ -1,5 +1,6 @@
 (ns lipas.ui.ice-stadiums.views
   (:require [lipas.ui.components :as lui]
+            [lipas.schema.core :as schema]
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.renovations :as renovations]
@@ -22,6 +23,10 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
+(defn- ->select-entry [tr prefix enum]
+  {:value enum
+   :label (tr (keyword prefix enum))})
+
 (defn basic-data-tab [tr]
   (let [data      (<== [::subs/editing])
         dialogs   (<== [::subs/dialogs])
@@ -35,34 +40,43 @@
        [lui/text-field
         {:label     (tr :sports-place/name-fi)
          :value     (-> data :name :fi)
+         :spec      ::schema/name
+         :required  true
          :on-change #(set-field :name :fi %)}]
        [lui/text-field
         {:label     (tr :sports-place/name-se)
+         :spec      ::schema/name
          :value     (-> data :name :se)
          :on-change #(set-field :name :se %)}]
        [lui/text-field
         {:label     (tr :sports-place/name-en)
+         :spec      ::schema/name
          :value     (-> data :name :en)
          :on-change #(set-field :name :en %)}]
-       [lui/text-field
+       [lui/select
         {:label     (tr :sports-place/owner)
          :value     (-> data :owner)
+         :items     (map (partial ->select-entry tr :owner) schema/owners)
          :on-change #(set-field :owner %)}]
-       [lui/text-field
+       [lui/select
         {:label     (tr :sports-place/admin)
          :value     (-> data :admin)
+         :items     (map (partial ->select-entry tr :admin) schema/admins)
          :on-change #(set-field :admin %)}]
        [lui/text-field
         {:label     (tr :sports-place/phone-number)
          :value     (-> data :phone-number)
+         :spec      ::schema/phone-number
          :on-change #(set-field :phone-number %)}]
        [lui/text-field
         {:label     (tr :sports-place/www)
          :value     (-> data :www)
+         :spec      ::schema/www
          :on-change #(set-field :www %)}]
        [lui/text-field
         {:label     (tr :sports-place/email-public)
          :value     (-> data :email)
+         :spec      ::schema/email
          :on-change #(set-field :email %)}]]]
 
      ;; Location
@@ -71,46 +85,56 @@
        [lui/text-field
         {:label     (tr :location/address)
          :value     (-> data :location :address)
+         :spec      ::schema/address
          :on-change #(set-field :location :address %)}]
        [lui/text-field
         {:label     (tr :location/postal-code)
          :value     (-> data :location :postal-code)
+         :spec      ::schema/postal-code
          :on-change #(set-field :location :postal-code %)}]
        [lui/text-field
         {:label     (tr :location/postal-office)
          :value     (-> data :location :postal-office)
+         :spec      ::schema/postal-office
          :on-change #(set-field :location :postal-office %)}]
        [lui/text-field
         {:label     (tr :location/city)
-         :value     (-> data :location :city :name)
-         :on-change #(set-field :location :city :name %)}]]]
+         :value     (-> data :location :city-code)
+         :spec      ::schema/city-code
+         :on-change #(set-field :location :city-code %)}]]]
 
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
       [mui/form-group
-       [lui/text-field
+       [lui/year-selector
         {:label     (tr :building/construction-year)
-         :type      "number"
          :value     (-> data :building :construction-year)
          :on-change #(set-field :building :construction-year %)}]
        [lui/text-field
         {:label     (tr :building/main-designers)
          :value     (-> data :building :main-designers)
+         :spec      ::schema/main-designers
          :on-change #(set-field :building :main-designers %)}]
        [lui/text-field
         {:label     (tr :building/total-surface-area-m2)
+         :type      "number"
          :value     (-> data :building :total-surface-area-m2)
+         :spec      ::schema/total-surface-area-m2
          :adornment (tr :physical-units/m2)
          :on-change #(set-field :building :total-surface-area-m2 %)}]
        [lui/text-field
         {:label     (tr :building/total-volume-m3)
+         :type      "number"
          :value     (-> data :building :total-volume-m3)
+         :spec      ::schema/total-volume-m3
          :adornment (tr :physical-units/m3)
          :on-change #(set-field :building :total-volume-m3 %)}]
        [lui/text-field
         {:label     (tr :building/seating-capacity)
-         :adornment (tr :units/person)
+         :type      "number"
          :value     (-> data :building :seating-capacity)
+         :spec      ::schema/seating-capacity
+         :adornment (tr :units/person)
          :on-change #(set-field :building :seating-capacity %)}]]]
 
      ;; Envelope structure
@@ -120,9 +144,9 @@
         {:label     (tr :envelope-structure/base-floor-structure)
          :value     (-> data :envelope-structure :base-floor-structure)
          :on-change #(set-field :envelope-structure :base-floor-structure %)
-         :items     [{:value "concrete" :label "Betoni"}
-                     {:value "asphalt" :label "Asfaltti"}
-                     {:value "sand" :label "Hiekka"}]}]
+         :items     [{:value :concrete :label "Betoni"}
+                     {:value :asphalt :label "Asfaltti"}
+                     {:value :sand :label "Hiekka"}]}]
        [lui/checkbox
         {:label     (tr :envelope-structure/insulated-exterior?)
          :value     (-> data :envelope-structure :insulated-exterior?)
@@ -284,32 +308,24 @@
   [mui/form-label {:component "legend"} (tr :energy/consumption-info)]
   [mui/form-group
    [lui/text-field {:select true
-                    :label (tr :ice-form/select-rink)
-                    :value "Halli 1"}
+                    :label  (tr :ice-form/select-rink)
+                    :value  "Halli 1"}
     (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
       [mui/menu-item {:key hall :value hall} hall])]
-   [lui/year-selector {:label (tr :time/year)
-                       :on-change #(js/alert "kiskis")
-                       :value 2018}]
-   [lui/text-field {:label (tr :energy/electricity)
-                    :type "number"
-                    :Input-props
-                    {:end-adornment
-                     (r/as-element
-                      [mui/input-adornment (tr :physical-units/mwh)])}}]
-   [lui/text-field {:label (tr :energy/heat)
-                    :type "number"
-                    :Input-props
-                    {:end-adornment
-                     (r/as-element
-                      [mui/input-adornment (tr :physical-units/mwh)])}}]
-   [lui/text-field {:label (tr :energy/water)
-                    :type "number"
-                    :Input-props
-                    {:end-adornment
-                     (r/as-element
-                      [mui/input-adornment (tr :physical-units/m3)])}}]
-   [mui/button {:color "secondary" :size "large"}
+   [lui/year-selector {:label     (tr :time/year)
+                       :on-change #(js/alert "FIXME")
+                       :value     2018}]
+   [lui/text-field {:label     (tr :energy/electricity)
+                    :type      "number"
+                    :adornment (tr :physical-units/mwh)}]
+   [lui/text-field {:label     (tr :energy/heat)
+                    :type      "number"
+                    :adornment (tr :physical-units/mwh)}]
+   [lui/text-field {:label     (tr :energy/water)
+                    :type      "number"
+                    :adornment (tr :physical-units/m3)}]
+   [mui/button {:color "secondary"
+                :size  "large"}
     (tr :actions/save)]])
 
 (defn change-tab [_ value]
