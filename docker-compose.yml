@@ -9,6 +9,16 @@ services:
       - './nginx/:/etc/nginx/conf.d'
       - './webapp/resources/public/:/usr/share/nginx/html'
 
+  mapproxy:
+    image: kartoza/mapproxy
+    hostname: mapproxy
+    environment:
+     - TZ=Europe/Helsinki
+    volumes:
+      - ./mapproxy:/mapproxy
+    ports:
+      - '8089:8080'
+
   backend-base:
     image: clojure:lein
     working_dir: /usr/src/app
