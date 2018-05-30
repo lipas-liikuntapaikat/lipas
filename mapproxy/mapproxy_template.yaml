@@ -1,0 +1,52 @@
+services:
+  demo:
+  wmts:
+    restful: true
+    restful_template: '/{Layer}/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.{Format}'
+    kvp: true
+    md:
+      title: Lipas MML WMTS Proxy
+      abstract: This is the fantastic MapProxy.
+      online_resource: http://mapproxy.org/
+      contact:
+        person: Your Name Here
+        position: Technical Director
+        organization:
+        address: Fakestreet 123
+        city: Somewhere
+        postcode: 12345
+        country: Finland
+        phone: '+49(0)000-000000-0'
+        fax: '+49(0)000-000000-0'
+        email: lipasinfo@jyu.fi
+      access_constraints: Insert license and copyright information for this service.
+      fees: 'None'
+
+grids:
+  mml_grid:
+    tile_size: [256, 256]
+    srs: 'EPSG:3067'
+    origin: nw
+    bbox: [-548576, 6291456, 1548576, 8388608]
+    bbox_srs: 'EPSG:3067'
+    res: [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25]
+
+sources:
+  mml:
+    type: tile
+    grid: mml_grid
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/maastokartta/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
+
+caches:
+  mml_cache:
+    grids: [mml_grid]
+    sources: [mml]
+
+layers:
+  - name: mml_maastokartta
+    title: MML Maastokartta
+    sources: [mml_cache]

@@ -13,7 +13,9 @@ services:
     image: kartoza/mapproxy
     hostname: mapproxy
     environment:
-     - TZ=Europe/Helsinki
+      TZ: Europe/Helsinki
+      MML_AUTH:
+    command: /mapproxy/start.sh dev
     volumes:
       - ./mapproxy:/mapproxy
     ports:
