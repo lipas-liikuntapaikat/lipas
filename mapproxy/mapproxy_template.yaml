@@ -1,26 +1,33 @@
 services:
   demo:
+  wms:
+    srs: ['EPSG:3067']
+    bbox_srs: ['EPSG:3067']
+    image_formats: ['image/jpeg', 'image/png']
+    attribution:
+      text: '(c) maanmittauslaitos.fi'
+    md:
+      title: LIPAS MML Proxy
+      abstract: This service is a proxy for MML WMTS map service used by JYU LIPAS
+      online_resource: http://lipas.fi/
+      contact:
+        person: Valtteri Harmainen
+        position: Development manager
+        organization: University of Jyväskylä
+        address: Pl 35
+        city: Jyväskylä
+        postcode: 40014
+        country: Finland
+        phone: +358142601211
+        fax:
+        email: lipasinfo@jyu.fi
+      access_constraints:
+        See license and copyright information from MML https://www.maanmittauslaitos.fi/avoindata-lisenssi-cc40.
+      fees: 'None'
   wmts:
     restful: true
     restful_template: '/{Layer}/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.{Format}'
     kvp: true
-    md:
-      title: Lipas MML WMTS Proxy
-      abstract: This is the fantastic MapProxy.
-      online_resource: http://mapproxy.org/
-      contact:
-        person: Your Name Here
-        position: Technical Director
-        organization:
-        address: Fakestreet 123
-        city: Somewhere
-        postcode: 12345
-        country: Finland
-        phone: '+49(0)000-000000-0'
-        fax: '+49(0)000-000000-0'
-        email: lipasinfo@jyu.fi
-      access_constraints: Insert license and copyright information for this service.
-      fees: 'None'
 
 grids:
   mml_grid:
@@ -32,7 +39,7 @@ grids:
     res: [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25]
 
 sources:
-  mml:
+  mml_maastokartta:
     type: tile
     grid: mml_grid
     http:
@@ -40,13 +47,41 @@ sources:
       headers:
         Authorization: Basic {MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/maastokartta/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
+  mml_taustakartta:
+    type: tile
+    grid: mml_grid
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/taustakartta/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
+  mml_ortokuva:
+    type: tile
+    grid: mml_grid
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/ortokuva/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.jpg
 
 caches:
-  mml_cache:
+  mml_maastokartta_cache:
     grids: [mml_grid]
-    sources: [mml]
+    sources: [mml_maastokartta]
+  mml_taustakartta_cache:
+    grids: [mml_grid]
+    sources: [mml_taustakartta]
+  mml_ortokuva_cache:
+    grids: [mml_grid]
+    sources: [mml_ortokuva]
 
 layers:
   - name: mml_maastokartta
     title: MML Maastokartta
-    sources: [mml_cache]
+    sources: [mml_maastokartta_cache]
+  - name: mml_taustakartta
+    title: MML Taustakartta
+    sources: [mml_taustakartta_cache]
+  - name: mml_ortokuva
+    title: MML Ortokuva
+    sources: [mml_ortokuva_cache]
