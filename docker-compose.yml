@@ -4,10 +4,12 @@ services:
   proxy:
     image: nginx
     ports:
-      - '8080:80'
+      - '80:80'
     volumes:
       - './nginx/:/etc/nginx/conf.d'
       - './webapp/resources/public/:/usr/share/nginx/html'
+    links:
+      - mapproxy
 
   mapproxy:
     image: kartoza/mapproxy
@@ -15,7 +17,7 @@ services:
     environment:
       TZ: Europe/Helsinki
       MML_AUTH:
-    command: /mapproxy/start.sh dev
+    command: /mapproxy/start.sh
     volumes:
       - ./mapproxy:/mapproxy
     ports:
