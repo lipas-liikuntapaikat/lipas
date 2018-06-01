@@ -12,14 +12,15 @@ services:
       - mapproxy
 
   mapproxy:
-    image: yagajs/mapproxy
+    image: kartoza/mapproxy
     hostname: mapproxy
     environment:
       TZ: Europe/Helsinki
       MML_AUTH:
+    command: /mapproxy/start.sh
     volumes:
-      - './mapproxy/mapproxy_template.yaml:/tmp/mapproxy_template.yaml'
-      - './mapproxy/compile.sh:/docker-entrypoint-initmapproxy.d/01.sh'
+      - './mapproxy:/mapproxy'
+      - 'mapproxy_cache:/mapproxy/cache_data'
     ports:
       - '8089:8080'
 
@@ -96,5 +97,5 @@ services:
 volumes:
     pgdata: {}
     esdata: {}
-    mpdata: {}
     mvn_cache: {}
+    mapproxy_cache: {}
