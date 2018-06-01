@@ -19,7 +19,8 @@ services:
       MML_AUTH:
     command: /mapproxy/start.sh
     volumes:
-      - ./mapproxy:/mapproxy
+      - './mapproxy:/mapproxy'
+      - 'mapproxy_cache:/mapproxy/cache_data'
     ports:
       - '8089:8080'
 
@@ -97,3 +98,4 @@ volumes:
     pgdata: {}
     esdata: {}
     mvn_cache: {}
+    mapproxy_cache: {}
