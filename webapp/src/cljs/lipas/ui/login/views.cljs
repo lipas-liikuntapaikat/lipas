@@ -7,7 +7,7 @@
             [lipas.ui.routes :refer [navigate!]]))
 
 (defn set-field [& args]
-  (==> [::events/set-login-form-field (butlast args) (last args)]))
+  (==> [::events/set-field (butlast args) (last args)]))
 
 (defn clear-errors []
   (==> [::events/clear-errors]))

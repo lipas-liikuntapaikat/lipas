@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.schema.core :as schema]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.mui-icons :as mui-icons]
             [lipas.ui.swimming-pools.events :as events]
@@ -24,98 +25,89 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
+(defn ->select-value [tr prefix k]
+  {:value k
+   :label (tr (keyword (prefix k)))})
+
 (defn basic-data-tab [tr]
-  (let [data      (<== [::subs/editing])
-        dialogs   (<== [::subs/dialogs])
-        set-field (partial set-field :editing)]
+  (let [data               (<== [::subs/editing])
+        dialogs            (<== [::subs/dialogs])
+        types              (<== [::subs/types])
+        cities             (<== [::subs/cities])
+        owners             (<== [::subs/owners])
+        admins             (<== [::subs/admins])
+        filtering-methods  (<== [::subs/filtering-methods])
+        building-materials (<== [::subs/building-materials])
+        set-field          (partial set-field :editing)]
 
     [mui/grid {:container true}
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :sports-place/name-fi)
-         :value     (-> data :name :fi)
-         :on-change #(set-field :name :fi %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/name-se)
-         :value     (-> data :name :se)
-         :on-change #(set-field :name :se %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/name-en)
-         :value     (-> data :name :en)
-         :on-change #(set-field :name :en %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/owner)
-         :value     (-> data :owner)
-         :on-change #(set-field :owner %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/admin)
-         :value     (-> data :admin)
-         :on-change #(set-field :admin %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/phone-number)
-         :value     (-> data :phone-number)
-         :on-change #(set-field :phone-number %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/www)
-         :value     (-> data :www)
-         :on-change #(set-field :www %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/email-public)
-         :value     (-> data :email)
-         :on-change #(set-field :email %)}]]]
+      [lui/sports-place-form
+       {:tr        tr
+        :data      data
+        :types     types
+        :owners    owners
+        :admins    admins
+        :on-change set-field}]]
 
      ;; Location
      [lui/form-card {:title (tr :location/headline)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :location/address)
-         :value     (-> data :location :address)
-         :on-change #(set-field :location :address %)}]
-       [lui/text-field
-        {:label     (tr :location/postal-code)
-         :value     (-> data :location :postal-code)
-         :on-change #(set-field :location :postal-code %)}]
-       [lui/text-field
-        {:label     (tr :location/postal-office)
-         :value     (-> data :location :postal-office)
-         :on-change #(set-field :location :postal-office %)}]
-       [lui/text-field
-        {:label     (tr :location/city)
-         :value     (-> data :location :city :name)
-         :on-change #(set-field :location :city :name %)}]]]
+      [lui/location-form
+       {:tr        tr
+        :data      data
+        :cities    cities
+        :on-change set-field}]]
 
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
       [mui/form-group
-       [lui/text-field
+       [lui/year-selector
         {:label     (tr :building/construction-year)
-         :type      "number"
          :value     (-> data :building :construction-year)
          :on-change #(set-field :building :construction-year %)}]
        [lui/text-field
         {:label     (tr :building/main-designers)
          :value     (-> data :building :main-designers)
+         :spec      ::schema/main-designers
          :on-change #(set-field :building :main-designers %)}]
        [lui/text-field
         {:label     (tr :building/total-surface-area-m2)
+         :type      "number"
          :value     (-> data :building :total-surface-area-m2)
+         :spec      ::schema/total-surface-area-m2
          :adornment (tr :physical-units/m2)
          :on-change #(set-field :building :total-surface-area-m2 %)}]
        [lui/text-field
         {:label     (tr :building/total-volume-m3)
+         :type      "number"
          :value     (-> data :building :total-volume-m3)
+         :spec      ::schema/total-volume-m3
          :adornment (tr :physical-units/m3)
          :on-change #(set-field :building :total-volume-m3 %)}]
        [lui/text-field
+        {:label     (tr :building/seating-capacity)
+         :type      "number"
+         :value     (-> data :building :seating-capacity)
+         :spec      ::schema/seating-capacity
+         :adornment (tr :units/person)
+         :on-change #(set-field :building :seating-capacity %)}]
+       [lui/text-field
+        {:label     (tr :building/staff-count)
+         :type      "number"
+         :value     (-> data :building :staff-count)
+         :adornment (tr :units/person)
+         :on-change #(set-field :building :staff-count %)}]
+       [lui/text-field
         {:label     (tr :building/pool-room-total-area-m2)
+         :type      "number"
          :adornment (tr :physical-units/m2)
          :value     (-> data :building :pool-room-total-area-m2)
          :on-change #(set-field :building :pool-room-total-area-m2 %)}]
        [lui/text-field
         {:label     (tr :building/total-water-area-m2)
+         :type      "number"
          :adornment (tr :physical-units/m2)
          :value     (-> data :building :total-water-area-m2)
          :on-change #(set-field :building :total-water-area-m2 %)}]
@@ -127,9 +119,12 @@
         {:label     (tr :building/piled?)
          :value     (-> data :building :piled?)
          :on-change #(set-field :building :piled? %)}]
-       [lui/text-field
+       [lui/multi-select
         {:label     (tr :building/main-construction-materials)
          :value     (-> data :building :main-construction-materials)
+         :items     (map #(hash-map :value %
+                                    :label (tr (keyword :building-materials %)))
+                         (keys building-materials))
          :on-change #(set-field :building :main-construction-materials %)}]
        [lui/text-field
         {:label     (tr :building/supporting-structures-description)
@@ -138,17 +133,7 @@
        [lui/text-field
         {:label     (tr :building/ceiling-description)
          :value     (-> data :building :ceiling-description)
-         :on-change #(set-field :building :ceiling-description %)}]
-       [lui/text-field
-        {:label     (tr :building/staff-count)
-         :value     (-> data :building :staff-count)
-         :adornment (tr :units/person)
-         :on-change #(set-field :building :staff-count %)}]
-       [lui/text-field
-        {:label     (tr :building/seating-capacity)
-         :adornment (tr :units/person)
-         :value     (-> data :building :seating-capacity)
-         :on-change #(set-field :building :seating-capacity %)}]]]
+         :on-change #(set-field :building :ceiling-description %)}]]]
 
      ;; Renovations
      (when (-> dialogs :renovation :open?)
@@ -172,9 +157,12 @@
         {:label     (tr :water-treatment/activated-carbon?)
          :value     (-> data :water-treatment :activated-carbon?)
          :on-change #(set-field :water-treatment :activated-carbon? %)}]
-       [lui/text-field
+       [lui/multi-select
         {:label     (tr :water-treatment/filtering-method)
          :value     (-> data :water-treatment :filtering-method)
+         :items     (map #(hash-map :value %
+                                    :label (tr (keyword :filtering-methods %)))
+                         (keys filtering-methods))
          :on-change #(set-field :water-treatment :filtering-method %)}]
        [lui/text-field
         {:label     (tr :general/comment)
@@ -187,7 +175,15 @@
 
      [lui/form-card {:title (tr :pools/headline)}
       [pools/table {:tr    tr
-                    :items (-> data :pools vals)}]]
+                    :items (-> data :pools)}]]
+
+     ;; Saunas
+     (when (-> dialogs :sauna :open?)
+       [saunas/dialog {:tr tr}])
+
+     [lui/form-card {:title (tr :saunas/headline)}
+      [saunas/table {:tr    tr
+                     :items (-> data :saunas)}]]
 
      ;; Slides
      (when (-> dialogs :slide :open?)
@@ -239,14 +235,6 @@
         {:label     (tr :other-services/kiosk?)
          :value     (-> data :other-services :kiosk?)
          :on-change #(set-field :other-services :kiosk? %)}]]]
-
-     ;; Saunas
-     (when (-> dialogs :sauna :open?)
-       [saunas/dialog {:tr tr}])
-
-     [lui/form-card {:title (tr :saunas/headline)}
-      [saunas/table {:tr    tr
-                     :items (-> data :saunas vals)}]]
 
      ;; Showers and lockers
      [lui/form-card {:title (tr :facilities/headline)}

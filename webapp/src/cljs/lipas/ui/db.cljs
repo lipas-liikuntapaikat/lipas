@@ -1,5 +1,11 @@
 (ns lipas.ui.db
-  (:require [lipas.ui.i18n :as i18n]))
+  (:require [lipas.ui.i18n :as i18n]
+            [lipas.data.cities :as cities]
+            [lipas.data.admins :as admins]
+            [lipas.data.owners :as owners]
+            [lipas.data.types :as types]
+            [lipas.data.materials :as materials]
+            [lipas.data.swimming-pools :as swimming-pools]))
 
 (def jaahalli
 
@@ -35,13 +41,11 @@
     :postal-code "40700"
     :postal-office "Jyväskylä"
     :city
-    {:name "Jyväskylä"
-     :city-code 179}}
+    {:city-code 179}}
 
    ;;; Tyyppiluokitus ;;;
    :type
-   {:type-code 2520,
-    :name "Kilpajäähalli"
+   {:type-code 2520
     :size-category :competition}
 
          ; PORTAALI                      LIPAS
@@ -137,7 +141,7 @@
     :pool-room-total-area-m2 702
     :total-water-area-m2 439
     :heat-sections? false
-    :main-construction-materials "Betoni/tiili/laatta"
+    :main-construction-materials [:concrete :brick :tile]
     :piled? true
     :supporting-structures-description "Betoni"
     :ceiling-description "Ontelolaatta"
@@ -153,10 +157,10 @@
    {:ozonation? false
     :uv-treatment? true
     :activated-carbon? true
-    :filtering-method "Painehiekka"
+    :filtering-method [:pressure-sand]
     :comment "-"}
    :pools
-   [{:type "Pääallas"
+   [{:type :main-pool
      :temperature-c 27
      :volume-m3 490
      :area-m2 313
@@ -164,7 +168,7 @@
      :width-m 12
      :depth-min-m 1.2
      :depth-max-m 2}
-    {:type "Opetusallas"
+    {:type :teaching-pool
      :temperature-c 30
      :volume-m3 43
      :area-m2 43
@@ -172,7 +176,7 @@
      :width-m nil
      :depth-min-m 0.6
      :depth-max-m 1}
-    {:type "Lastenallas"
+    {:type :childrens-pool
      :temperature-c 32
      :volume-m3 2
      :area-m2 7
@@ -180,7 +184,7 @@
      :width-m nil
      :depth-min-m 0.2
      :depth-max-m 0.2}
-    {:type "Monitoimiallas"
+    {:type :multipurpose-pool
      :temperature-c 30
      :volume-m3 67
      :area-m2 77
@@ -188,7 +192,7 @@
      :width-m 7
      :depth-min-m 1
      :depth-max-m 1.4}
-    {:type "Kylmäallas"
+    {:type :cold-pool
      :temperature-c 7
      :volume-m3 1
      :area-m2 0
@@ -200,10 +204,10 @@
    [{:length-m 23
      :structure "Lujitemuovi"}]
    :saunas
-   [{:type "Höyrysauna" :men true :women true}
-    {:type "Sauna" :men false :women true}
-    {:type "Sauna" :men true :women false}
-    {:type "Infrapunasauna" :men nil :women nil}]
+   [{:type :steam-sauna :men true :women true}
+    {:type :sauna :men false :women true}
+    {:type :sauna :men true :women false}
+    {:type :infrared-sauna :men nil :women nil}]
    :other-services
    {:hydro-massage-spots-count 7
     :hydro-neck-massage-spots-count 0
@@ -220,12 +224,12 @@
     :lockers-women-count 100}
    :info-fi "1=kunto- ja kilpauintiallas, 2=lämminvesiallas,
    3=monitoimiallas, 4=lastenallas. Monitoimialtaissa porealtaat."
-   :email "uima[at]aanekoski.fi"
-   :admin "Kunta / liikuntatoimi"
+   :email "uima@aanekoski.fi"
+   :admin :city-sports
    :www "www.aanekoski.fi"
    :name {:fi "Äänekosken uimahalli VesiVelho"}
    :type
-   {:typeCode 3110,
+   {:type-code 3110,
     :name "Uimahalli"}
    :last-modified "2016-11-14 10:13:20.103"
    :sports-place-id 506032
@@ -247,7 +251,7 @@
     :city
     {:name "Äänekoski"
      :city-code 992}},
-   :owner "Kunta"})
+   :owner :city})
 
 (defn ->indexed-map [coll]
   (into {} (map-indexed (fn [idx item]
@@ -280,7 +284,10 @@
 
    ;; Swimming pools
    :swimming-pools
-   {:active-tab 0
+   {:active-tab 2
+    :pool-types swimming-pools/pool-types
+    :sauna-types swimming-pools/sauna-types
+    :filtering-methods swimming-pools/filtering-methods
     :editing (-> vesivelho
                  (update-in [:pools] ->indexed-map)
                  (update-in [:renovations] ->indexed-map)
@@ -324,4 +331,10 @@
      :user-data
      {:firstname ""
       :lastname ""
-      :permissions-request ""}}}})
+      :permissions-request ""}}}
+
+   :admins admins/all
+   :owners owners/all
+   :cities cities/active
+   :types types/all
+   :building-materials materials/building})
