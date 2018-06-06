@@ -1,5 +1,6 @@
 (ns lipas.ui.user.views
   (:require [lipas.ui.mui :as mui]
+            [lipas.ui.components :as lui]
             [cljs.pprint :as pp]
             ;; [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
@@ -19,15 +20,15 @@
        [mui/card-header {:title (str "Hei " firstname " " lastname "!")}]
        [mui/card-content
         [mui/form-group
-         [mui/text-field {:label (tr :register/username)
+         [lui/text-field {:label (tr :register/username)
                           :value (:username data)}]
-         [mui/text-field {:label (tr :register/firstname)
+         [lui/text-field {:label (tr :register/firstname)
                           :value firstname}]
-         [mui/text-field {:label (tr :register/lastname)
+         [lui/text-field {:label (tr :register/lastname)
                           :value lastname}]
-         [mui/text-field {:label (tr :register/permissions)
-                          :value (:permissions data)}]
-         [mui/text-field {:label (tr :user/requested-permissions)
+         [lui/text-field {:label (tr :register/permissions)
+                          :value (pr-str (:permissions data))}]
+         [lui/text-field {:label (tr :user/requested-permissions)
                           :value (-> data :user-data :permissions-request)}]]
         ;;[:pre (with-out-str (pp/pprint data))]
         ]]]]))

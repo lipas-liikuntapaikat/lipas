@@ -4,15 +4,21 @@
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.swimming-pools.utils :refer [set-field
-                                                   toggle-dialog]]
+                                                   toggle-dialog
+                                                   localize]]
             [lipas.ui.utils :refer [<== ==>]]))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field (partial set-field :dialogs :sauna :data)]
+  (let [sauna-types (<== [::subs/sauna-types])
+        set-field   (partial set-field :dialogs :sauna :data)]
     [mui/form-group
-     [lui/text-field {:label (tr :general/type)
-                      :value (:type data)
-                      :on-change #(set-field :type %)}]
+     [lui/select {:required true
+                  :label (tr :general/type)
+                  :value (:type data)
+                  :items (map #(hash-map :value %
+                                         :label (tr (keyword :sauna-types %)))
+                              (keys sauna-types))
+                  :on-change #(set-field :type %)}]
      [lui/checkbox {:label (tr :saunas/women)
                     :on-change #(set-field :women %)
                     :value (:women data)}]
@@ -39,10 +45,11 @@
   [lui/form-table {:headers [[:type (tr :general/type)]
                              [:women (tr :saunas/women)]
                              [:men (tr :saunas/men)]]
-                   :items items
+                   :items (map (partial localize tr :type :sauna-types)
+                               (vals items))
                    :add-tooltip (tr :saunas/add-sauna)
                    :edit-tooltip (tr :actions/edit)
                    :delete-tooltip (tr :actions/delete)
                    :on-add #(toggle-dialog :sauna)
-                   :on-edit #(toggle-dialog :sauna %)
+                   :on-edit #(toggle-dialog :sauna (get items (:id %)))
                    :on-delete #(==> [::events/remove-sauna %])}])

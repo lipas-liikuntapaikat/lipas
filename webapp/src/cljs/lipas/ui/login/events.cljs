@@ -7,7 +7,7 @@
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
- ::set-login-form-field
+ ::set-field
  (fn [db [_ path value]]
    (let [path (into [:user :login-form] path)]
      (assoc-in db path value))))

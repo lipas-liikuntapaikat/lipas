@@ -4,49 +4,55 @@
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.swimming-pools.utils :refer [set-field
-                                                   toggle-dialog]]
+                                                   toggle-dialog
+                                                   localize]]
             [lipas.ui.utils :refer [<== ==>]]))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field (partial set-field :dialogs :pool :data)]
+  (let [set-field  (partial set-field :dialogs :pool :data)
+        pool-types (<== [::subs/pool-types])]
     [mui/form-group
-     [lui/text-field {:required true
-                      :label (tr :general/type)
-                      :value (:type data)
-                      :on-change #(set-field :type %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :physical-units/temperature-c)
-                      :value (:temperature-c data)
+     [lui/select
+      {:required  true
+       :label     (tr :general/type)
+       :value     (:type data)
+       :items     (map #(hash-map :value %
+                                  :label (tr (keyword :pool-types %)))
+                       (keys pool-types))
+       :on-change #(set-field :type %)}]
+     [lui/text-field {:type      "number"
+                      :label     (tr :physical-units/temperature-c)
+                      :value     (:temperature-c data)
                       :on-change #(set-field :temperature-c %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/volume-m3)
-                      :value (:volume-m3 data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/volume-m3)
+                      :value     (:volume-m3 data)
                       :on-change #(set-field :volume-m3 %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/area-m2)
-                      :value (:area-m2 data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/area-m2)
+                      :value     (:area-m2 data)
                       :on-change #(set-field :area-m2 %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/length-m)
-                      :value (:length-m data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/length-m)
+                      :value     (:length-m data)
                       :on-change #(set-field :length-m %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/width-m)
-                      :value (:width-m data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/width-m)
+                      :value     (:width-m data)
                       :on-change #(set-field :width-m %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/depth-min-m)
-                      :value (:depth-min-m data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/depth-min-m)
+                      :value     (:depth-min-m data)
                       :on-change #(set-field :depth-min-m %)}]
-     [lui/text-field {:type "number"
-                      :label (tr :dimensions/depth-max-m)
-                      :value (:depth-max-m data)
+     [lui/text-field {:type      "number"
+                      :label     (tr :dimensions/depth-max-m)
+                      :value     (:depth-max-m data)
                       :on-change #(set-field :depth-max-m %)}]
-     [lui/text-field {:label (tr :pools/structure)
-                      :value (:structure data)
+     [lui/text-field {:label     (tr :pools/structure)
+                      :value     (:structure data)
                       :on-change #(set-field :structure %)
                       :multiline true
-                      :rows 5}]]))
+                      :rows      5}]]))
 
 (defn dialog [{:keys [tr]}]
   (let [data (<== [::subs/pool-form])
@@ -73,10 +79,11 @@
                              [:depth-min-m (tr :dimensions/depth-min-m)]
                              [:depth-max-m (tr :dimensions/depth-max-m)]
                              [:structure (tr :pools/structure)]]
-                   :items items
+                   :items (map (partial localize tr :type :pool-types)
+                               (vals items))
                    :add-tooltip (tr :pools/add-pool)
                    :edit-tooltip (tr :actions/edit)
                    :delete-tooltip (tr :actions/delete)
                    :on-add #(toggle-dialog :pool)
-                   :on-edit #(toggle-dialog :pool %)
+                   :on-edit #(toggle-dialog :pool (get items (:id %)))
                    :on-delete #(==> [::events/remove-pool %])}])

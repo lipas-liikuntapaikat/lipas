@@ -47,7 +47,6 @@
                       {:Mui-card-header
                        {:title {:color secondary}}}})
 
-
 (def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))

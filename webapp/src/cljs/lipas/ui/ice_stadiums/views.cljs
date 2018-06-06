@@ -1,9 +1,9 @@
 (ns lipas.ui.ice-stadiums.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.schema.core :as schema]
+  (:require [lipas.schema.core :as schema]
+            [lipas.ui.components :as lui]
             [lipas.ui.ice-stadiums.events :as events]
-            [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.renovations :as renovations]
+            [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.ice-stadiums.utils :refer [set-field]]
             [lipas.ui.mui :as mui]
@@ -23,85 +23,34 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn- ->select-entry [tr prefix enum]
-  {:value enum
-   :label (tr (keyword prefix enum))})
-
 (defn basic-data-tab [tr]
   (let [data      (<== [::subs/editing])
         dialogs   (<== [::subs/dialogs])
+        types     (<== [::subs/types])
+        cities    (<== [::subs/cities])
+        owners    (<== [::subs/owners])
+        admins    (<== [::subs/admins])
         set-field (partial set-field :editing)]
 
     [mui/grid {:container true}
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :sports-place/name-fi)
-         :value     (-> data :name :fi)
-         :spec      ::schema/name
-         :required  true
-         :on-change #(set-field :name :fi %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/name-se)
-         :spec      ::schema/name
-         :value     (-> data :name :se)
-         :on-change #(set-field :name :se %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/name-en)
-         :spec      ::schema/name
-         :value     (-> data :name :en)
-         :on-change #(set-field :name :en %)}]
-       [lui/select
-        {:label     (tr :sports-place/owner)
-         :value     (-> data :owner)
-         :items     (map (partial ->select-entry tr :owner) schema/owners)
-         :on-change #(set-field :owner %)}]
-       [lui/select
-        {:label     (tr :sports-place/admin)
-         :value     (-> data :admin)
-         :items     (map (partial ->select-entry tr :admin) schema/admins)
-         :on-change #(set-field :admin %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/phone-number)
-         :value     (-> data :phone-number)
-         :spec      ::schema/phone-number
-         :on-change #(set-field :phone-number %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/www)
-         :value     (-> data :www)
-         :spec      ::schema/www
-         :on-change #(set-field :www %)}]
-       [lui/text-field
-        {:label     (tr :sports-place/email-public)
-         :value     (-> data :email)
-         :spec      ::schema/email
-         :on-change #(set-field :email %)}]]]
+      [lui/sports-place-form
+       {:tr        tr
+        :data      data
+        :types     types
+        :owners    owners
+        :admins    admins
+        :on-change set-field}]]
 
      ;; Location
      [lui/form-card {:title (tr :location/headline)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :location/address)
-         :value     (-> data :location :address)
-         :spec      ::schema/address
-         :on-change #(set-field :location :address %)}]
-       [lui/text-field
-        {:label     (tr :location/postal-code)
-         :value     (-> data :location :postal-code)
-         :spec      ::schema/postal-code
-         :on-change #(set-field :location :postal-code %)}]
-       [lui/text-field
-        {:label     (tr :location/postal-office)
-         :value     (-> data :location :postal-office)
-         :spec      ::schema/postal-office
-         :on-change #(set-field :location :postal-office %)}]
-       [lui/text-field
-        {:label     (tr :location/city)
-         :value     (-> data :location :city-code)
-         :spec      ::schema/city-code
-         :on-change #(set-field :location :city-code %)}]]]
+      [lui/location-form
+       {:tr        tr
+        :data      data
+        :cities    cities
+        :on-change set-field}]]
 
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
@@ -313,8 +262,8 @@
     (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
       [mui/menu-item {:key hall :value hall} hall])]
    [lui/year-selector {:label     (tr :time/year)
-                       :on-change #(js/alert "FIXME")
-                       :value     2018}]
+                       :value     2018
+                       :on-change #(js/alert "FIXME")}]
    [lui/text-field {:label     (tr :energy/electricity)
                     :type      "number"
                     :adornment (tr :physical-units/mwh)}]

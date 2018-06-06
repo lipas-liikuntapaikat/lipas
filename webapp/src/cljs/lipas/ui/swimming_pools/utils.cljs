@@ -11,3 +11,6 @@
 (defn set-field
   [& args]
   (==> [::events/set-field (butlast args) (last args)]))
+
+(defn localize [tr k prefix m]
+  (update m k #(tr (keyword prefix %))))

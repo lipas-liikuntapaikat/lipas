@@ -1,6 +1,12 @@
 (ns lipas.ui.i18n
   (:require [tongue.core :as tongue]
-            [clojure.string :as s]))
+            [clojure.string :as s]
+            [lipas.data.swimming-pools :as pools]
+            [lipas.data.materials :as materials]))
+
+(defn ->translation-map [locale m]
+  (reduce-kv (fn [res k v]
+               (assoc res k (-> v locale))) {} m))
 
 (def fi {:menu
          {:jyu "Jyväskylän yliopisto"
@@ -18,6 +24,8 @@
           :phone-number "Puhelinnumero"
           :www "Web-sivu"
           :email-public "Sähköposti (julkinen)"}
+         :type
+         {:type-code "Liikuntapaikkatyyppi"}
          :admin
          {:city-sports "Kunta / liikuntatoimi"
           :city-education "Kunta / opetustoimi"
@@ -49,7 +57,11 @@
          {:headline "Jäähalliportaali"
           :description "Jäähalliportaali sisältää
               hallien perus- ja energiankulutustietoja sekä ohjeita
-              energiatehokkuuden parantamiseen"}
+              energiatehokkuuden parantamiseen"
+          :size-category "Kokoluokitus"
+          :small "Pieni kilpahalli > 500 hlö"
+          :competition "Kilpahalli < 3000 hlö"
+          :large "Suurhalli > 3000 hlö"}
          :ice-rinks
          {:headline "Hallien tiedot"}
          :ice-energy
@@ -76,6 +88,10 @@
           :rest "REST"
           :wms-wfs "WMS & WFS"
           :wms-wfs-description "Tämmöisetkin löytyy Geoserveriltä"}
+         :pool-types (->translation-map :fi pools/pool-types)
+         :sauna-types (->translation-map :fi pools/sauna-types)
+         :filtering-methods (->translation-map :fi pools/filtering-methods)
+         :building-materials (->translation-map :fi materials/building)
          :help
          {:headline "Ohjeet"
           :description "Täältä löytyvät ohjeet"}
@@ -325,12 +341,18 @@
 (comment ((->tr-fn :fi) :menu/sports-panel))
 (comment ((->tr-fn :fi) :menu/sports-panel :lower))
 (defn ->tr-fn
-  "Creates translator fn with support for optional formatter.
-  See `lipas.ui.i18n/fmt`
+  "Creates translator fn with support for optional formatter. See
+  `lipas.ui.i18n/fmt`
+
+  Translator fn Returns current locale (:fi :sv :en) when called with
+  no args.
 
   Function usage: ((->tr-fn :fi) :menu/sports-panel :lower)
   => \"liikuntapaikat\""
   [locale]
-  (fn [kw & args]
-    (-> (translate locale kw)
-        (fmt args))))
+  (fn
+    ([]
+     locale)
+    ([kw & args]
+     (-> (translate locale kw)
+         (fmt args)))))

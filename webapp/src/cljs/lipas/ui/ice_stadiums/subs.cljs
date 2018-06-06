@@ -25,3 +25,29 @@
  ::rink-form
  (fn [db _]
    (-> db :ice-stadiums :dialogs :rink :data)))
+
+(re-frame/reg-sub
+ ::cities
+ (fn [db _]
+   (-> db :cities)))
+
+(re-frame/reg-sub
+ ::admins
+ (fn [db _]
+   (-> db :admins)))
+
+(re-frame/reg-sub
+ ::owners
+ (fn [db _]
+   (-> db :owners)))
+
+(re-frame/reg-sub
+ ::all-types
+ (fn [db _]
+   (-> db :types)))
+
+(re-frame/reg-sub
+ ::types
+ :<- [::all-types]
+ (fn [types _ _]
+   (filter (comp #{2510 2520} :type-code) types)))
