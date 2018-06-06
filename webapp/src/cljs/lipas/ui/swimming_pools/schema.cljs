@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.schema
   (:require [clojure.spec.alpha :as s]
-            [lipas.ui.schemas :as lipas]))
+            [lipas.schema.core :as lipas]))
 
 (def this-year (.getFullYear (js/Date.)))
 
@@ -27,14 +27,17 @@
 (s/def ::pool-room-total-area-m2 (s/int-in 100 (inc 10000)))
 (s/def ::total-water-area-m2 (s/int-in 100 (inc 10000)))
 (s/def ::heat-sections boolean?)
+
 (comment (s/valid? ::main-construction-materials [:concrete :brick]))
 (s/def ::main-construction-materials (s/coll-of ::material))
+
 (s/def ::piled? boolean?)
 (s/def ::supporting-structures-description string?)
 (s/def ::ceiling-description string?)
 (s/def ::staff-count (s/int-in 0 (inc 1000)))
 (s/def ::seating-capacity (s/int-in 0 (inc 1000)))
 (s/def ::heat-source #{:private-power-station :district-heating})
+
 (comment (s/valid? ::ventilation-units-count 100))
 (s/def ::ventilation-units-count (s/int-in 0 (inc 100)))
 
