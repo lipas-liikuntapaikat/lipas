@@ -45,14 +45,14 @@
 
 (deftest register-user-test
   (let [user (gen-user)
-        resp (app (-> (mock/request :post "/actions/register")
+        resp (app (-> (mock/request :post "/api/actions/register")
                       (mock/content-type "application/json")
                       (mock/body (->json user))))]
     (is (= 201 (:status resp)))))
 
 (deftest register-user-conflict-test
   (let [user (gen-user {:db? true})
-        resp (app (-> (mock/request :post "/actions/register")
+        resp (app (-> (mock/request :post "/api/actions/register")
                       (mock/content-type "application/json")
                       (mock/body (->json user))))
         body (<-json (:body resp))]
@@ -60,14 +60,14 @@
     (is (= "username-conflict" (:type body)))))
 
 (deftest login-failure-test
-  (let [resp (app (-> (mock/request :post "/actions/login")
+  (let [resp (app (-> (mock/request :post "/api/actions/login")
                       (mock/content-type "application/json")
                       (auth-header "this" "fails")))]
     (is (= (:status resp) 401))))
 
 (deftest login-test
   (let [user (gen-user {:db? true})
-        resp (app (-> (mock/request :post "/actions/login")
+        resp (app (-> (mock/request :post "/api/actions/login")
                       (mock/content-type "application/json")
                       (auth-header (:username user) (:password user))))
         body (<-json (:body resp))]
