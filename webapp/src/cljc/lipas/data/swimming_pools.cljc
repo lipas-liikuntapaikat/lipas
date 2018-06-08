@@ -68,3 +68,11 @@
    :infrared-sauna {:fi "Infrapunasauna"
                     :se nil
                     :en nil}})
+
+(def heat-sources
+  {:private-power-station {:fi "Oma voimalaitos"
+                           :se nil
+                           :en nil}
+   :district-heating      {:fi "Kaukolämpö"
+                           :se nil
+                           :en nil}})

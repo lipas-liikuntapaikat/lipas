@@ -4,6 +4,8 @@
             [lipas.data.cities :as cities]
             [lipas.data.admins :as admins]
             [lipas.data.owners :as owners]
+            [lipas.data.materials :as materials]
+            [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as sports-place-types]))
 
 (def this-year #?(:cljs (.getFullYear (js/Date.))
@@ -83,7 +85,7 @@
 
 (comment (s/valid? ::material :concrete))
 (comment (s/valid? ::material :kebab))
-(s/def ::material #{:concrete :brick :tile :steel :wood :glass})
+(s/def ::material (into #{} (keys materials/all)))
 
 ;;; Building ;;;
 
@@ -99,7 +101,7 @@
 (s/def ::ceiling-description string?)
 (s/def ::staff-count (s/int-in 0 (inc 1000)))
 (s/def ::seating-capacity (s/int-in 0 (inc 10000)))
-(s/def ::heat-source #{:private-power-station :district-heating})
+(s/def ::heat-source (into #{} (keys swimming-pools/heat-sources)))
 (s/def ::ventilation-units-count (s/int-in 0 (inc 100)))
 
 (comment (s/valid? ::main-construction-materials [:concrete :brick]))
@@ -168,3 +170,17 @@
 (s/def ::ice-rink-category #{:small
                              :competition
                              :large})
+
+;;; Energy consumption ;;;
+
+;; Note: in cljs (type 1e7) => Number (implicitly int)
+;;       in clj  (type 1e7) => Double
+;;
+;; So `int-in` can't be used because it would yield non-deterministic
+;; results between platforms.
+(comment (s/valid? ::electricity-mwh 1e4))
+(comment (s/valid? ::electricity-mwh 0))
+(comment (s/valid? ::electricity-mwh (inc 1e4)))
+(s/def ::electricity-mwh #(<= 0 % (dec 1e4)))
+(s/def ::heat-mwh #(<= 0 % (dec 1e4)))
+(s/def ::water-m3 #(<= 0 % (dec 1e5)))
