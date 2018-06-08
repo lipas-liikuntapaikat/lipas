@@ -47,7 +47,7 @@ services:
       - '8091:8091'
     links:
       - postgres
-      - elasticsearch
+      # - elasticsearch
 
   backend-migrate:
     extends:
