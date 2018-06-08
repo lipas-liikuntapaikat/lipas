@@ -1,6 +1,8 @@
 (ns lipas.ui.swimming-pools.utils
   (:require [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.utils :refer [==>]]))
+            [lipas.ui.utils :refer [==> ->indexed-map] :as utils]))
+
+;;; TODO refactor events away from here
 
 (defn toggle-dialog
   ([dialog]
@@ -12,5 +14,4 @@
   [& args]
   (==> [::events/set-field (butlast args) (last args)]))
 
-(defn localize [tr k prefix m]
-  (update m k #(tr (keyword prefix %))))
+(def localize-field utils/localize-field)

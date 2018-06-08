@@ -4,6 +4,7 @@
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.renovations :as renovations]
             [lipas.ui.ice-stadiums.rinks :as rinks]
+            [lipas.ui.ice-stadiums.energy :as energy]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.ice-stadiums.utils :refer [set-field]]
             [lipas.ui.mui :as mui]
@@ -23,7 +24,7 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn basic-data-tab [tr]
+(defn ice-stadium-form [tr data]
   (let [data      (<== [::subs/editing])
         dialogs   (<== [::subs/dialogs])
         types     (<== [::subs/types])
@@ -33,6 +34,14 @@
         set-field (partial set-field :editing)]
 
     [mui/grid {:container true}
+
+     ;; Energy consumption
+     (when (-> dialogs :energy :open?)
+       [energy/dialog {:tr tr}])
+
+     [lui/form-card {:title (tr :energy/headline)}
+      [energy/table {:tr tr :items (-> data :energy-consumption)}]]
+
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
@@ -48,9 +57,9 @@
      [lui/form-card {:title (tr :location/headline)}
       [lui/location-form
        {:tr        tr
-        :data      data
+        :data      (:location data)
         :cities    cities
-        :on-change set-field}]]
+        :on-change (partial set-field :location)}]]
 
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
@@ -253,34 +262,27 @@
                    :on-click   #(==> [::events/submit data])}
        (tr :actions/save)]]]))
 
-(defn form-tab [tr]
-  [mui/form-label {:component "legend"} (tr :energy/consumption-info)]
-  [mui/form-group
-   [lui/text-field {:select true
-                    :label  (tr :ice-form/select-rink)
-                    :value  "Halli 1"}
-    (for [hall ["Halli 1" "Halli 2" "Halli 3"]]
-      [mui/menu-item {:key hall :value hall} hall])]
-   [lui/year-selector {:label     (tr :time/year)
-                       :value     2018
-                       :on-change #(js/alert "FIXME")}]
-   [lui/text-field {:label     (tr :energy/electricity)
-                    :type      "number"
-                    :adornment (tr :physical-units/mwh)}]
-   [lui/text-field {:label     (tr :energy/heat)
-                    :type      "number"
-                    :adornment (tr :physical-units/mwh)}]
-   [lui/text-field {:label     (tr :energy/water)
-                    :type      "number"
-                    :adornment (tr :physical-units/m3)}]
-   [mui/button {:color "secondary"
-                :size  "large"}
-    (tr :actions/save)]])
+(defn edit-tab [tr]
+  (let [data    (<== [::subs/sites-to-edit])
+        editing (<== [::subs/editing])
+        locale  (tr)]
+    [:div
+     [mui/grid {:container true}
+      (if data
+        [lui/form-card {:title (tr :actions/select-hall)}
+         [mui/form-group
+          [lui/select {:label     (tr :actions/select-hall)
+                       :value     (:lipas-id editing)
+                       :items     (map #(hash-map :label (-> % :name locale)
+                                                  :value (-> % :lipas-id))
+                                       (vals data))
+                       :on-change #(when-let [pool (get data %)]
+                                     (==> [::events/edit pool]))}]]]
+        [mui/typography "Sinulla ei ole oikeuksia yhteenkään jäähalliin. :/"])]
+     (when editing
+       [ice-stadium-form tr editing])]))
 
-(defn change-tab [_ value]
-  (re-frame/dispatch [::events/set-active-tab value]))
-
-(defn create-panel [{:keys [tr url]}]
+(defn create-panel [{:keys [tr url logged-in?]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
         card-props {:square true}]
     [mui/grid {:container true}
@@ -290,25 +292,31 @@
         [mui/tabs {:scrollable true
                    :full-width false
                    :text-color "secondary"
-                   :on-change change-tab
+                   :on-change #(==> [::events/set-active-tab %2])
                    :value @active-tab}
+
+         ;; Info tab
          [mui/tab {:label (tr :ice-rinks/headline)
                    :icon (r/as-element [mui-icons/info])}]
+
+         ;; Edit tab
+         (when logged-in?
+           [mui/tab {:label (tr :ice-basic-data/headline)
+                     :icon (r/as-element [mui-icons/edit])}])
+
+         ;; Energy tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui-icons/flash-on])}]
-         [mui/tab {:label (tr :ice-basic-data/headline)
-                   :icon (r/as-element [mui-icons/edit])}]
-         [mui/tab {:label (tr :ice-form/headline)
-                   :icon (r/as-element [mui-icons/add])}]]]]]
+                   :icon (r/as-element [mui-icons/flash-on])}]]]]]
+
      [mui/grid {:item true :xs 12}
       [mui/card card-props
        [mui/card-content
         (case @active-tab
           0 (info-tab url)
-          1 (energy-tab tr)
-          2 (basic-data-tab tr)
-          3 (form-tab tr))]]]]))
+          1 (edit-tab tr)
+          2 (energy-tab tr))]]]]))
 
-(defn main [tr]
+(defn main [tr logged-in?]
   (create-panel {:tr tr
-                 :url "https://liikuntaportaalit.sportvenue.net/Jaahalli"}))
+                 :url "https://liikuntaportaalit.sportvenue.net/Jaahalli"
+                 :logged-in? logged-in?}))

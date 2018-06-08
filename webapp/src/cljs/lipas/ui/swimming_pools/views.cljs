@@ -3,6 +3,7 @@
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.mui-icons :as mui-icons]
+            [lipas.ui.swimming-pools.energy :as energy]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.renovations :as renovations]
@@ -10,7 +11,7 @@
             [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.swimming-pools.utils :refer [set-field]]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :refer [<== ==> ->select-entries]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -25,22 +26,26 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn ->select-value [tr prefix k]
-  {:value k
-   :label (tr (keyword (prefix k)))})
-
-(defn basic-data-tab [tr]
-  (let [data               (<== [::subs/editing])
-        dialogs            (<== [::subs/dialogs])
-        types              (<== [::subs/types])
-        cities             (<== [::subs/cities])
-        owners             (<== [::subs/owners])
-        admins             (<== [::subs/admins])
-        filtering-methods  (<== [::subs/filtering-methods])
-        building-materials (<== [::subs/building-materials])
-        set-field          (partial set-field :editing)]
+(defn swimming-pool-form [tr data]
+  (let [dialogs               (<== [::subs/dialogs])
+        types                 (<== [::subs/types])
+        cities                (<== [::subs/cities])
+        owners                (<== [::subs/owners])
+        admins                (<== [::subs/admins])
+        filtering-methods     (<== [::subs/filtering-methods])
+        building-materials    (<== [::subs/building-materials])
+        supporting-structures (<== [::subs/supporting-structures])
+        ceiling-structures    (<== [::subs/ceiling-structures])
+        set-field             (partial set-field :editing)]
 
     [mui/grid {:container true}
+
+     ;; Energy consumption
+     (when (-> dialogs :energy :open?)
+       [energy/dialog {:tr tr}])
+
+     [lui/form-card {:title (tr :energy/headline)}
+      [energy/table {:tr tr :items (-> data :energy-consumption)}]]
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
@@ -56,9 +61,9 @@
      [lui/form-card {:title (tr :location/headline)}
       [lui/location-form
        {:tr        tr
-        :data      data
+        :data      (:location data)
         :cities    cities
-        :on-change set-field}]]
+        :on-change (partial set-field :location)}]]
 
      ;; Building
      [lui/form-card {:title (tr :building/headline)}
@@ -122,18 +127,20 @@
        [lui/multi-select
         {:label     (tr :building/main-construction-materials)
          :value     (-> data :building :main-construction-materials)
-         :items     (map #(hash-map :value %
-                                    :label (tr (keyword :building-materials %)))
-                         (keys building-materials))
+         :items     (->select-entries tr :building-materials building-materials)
          :on-change #(set-field :building :main-construction-materials %)}]
-       [lui/text-field
-        {:label     (tr :building/supporting-structures-description)
-         :value     (-> data :building :supporting-structures-description)
-         :on-change #(set-field :building :supporting-structures-description %)}]
-       [lui/text-field
-        {:label     (tr :building/ceiling-description)
-         :value     (-> data :building :ceiling-description)
-         :on-change #(set-field :building :ceiling-description %)}]]]
+       [lui/multi-select
+        {:label     (tr :building/supporting-structures)
+         :value     (-> data :building :supporting-structures)
+         :items     (->select-entries tr
+                                      :supporting-structures
+                                      supporting-structures)
+         :on-change #(set-field :building :supporting-structures %)}]
+       [lui/multi-select
+        {:label     (tr :building/ceiling-structures)
+         :value     (-> data :building :ceiling-structures)
+         :items     (->select-entries tr :ceiling-structures ceiling-structures)
+         :on-change #(set-field :building :ceiling-structures %)}]]]
 
      ;; Renovations
      (when (-> dialogs :renovation :open?)
@@ -191,7 +198,7 @@
 
      [lui/form-card {:title (tr :slides/headline)}
       [slides/table {:tr    tr
-                     :items (-> data :slides vals)}]]
+                     :items (-> data :slides)}]]
 
      ;; Other services
      [lui/form-card {:title (tr :other-services/headline)}
@@ -268,45 +275,31 @@
                    :on-click   #(==> [::events/submit data])}
        (tr :actions/save)]]]))
 
-(defn form-tab [tr]
-  [lui/form-card (tr :energy/consumption-info)
-   [mui/form-group
-    [lui/select {:label (tr :actions/select-hall)
-                 :value "h2"
-                 :items [{:value "h1" :label "Halli 1"}
-                         {:value "h2" :label "Halli 2"}
-                         {:value "h3" :label "Halli 3"}]
-                 :on-change #(js/alert "FIXME")}]
-    [lui/year-selector {:label (tr :time/year)
-                        :value 2018
-                        :on-change #(js/alert "FIXME")}]
-    [lui/text-field {:label (tr :energy/electricity)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [lui/text-field {:label (tr :energy/heat)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/mwh)])}}]
-    [lui/text-field {:label (tr :energy/water)
-                     :type "number"
-                     :Input-props
-                     {:end-adornment
-                      (r/as-element
-                       [mui/input-adornment (tr :physical-units/m3)])}}]
-    [mui/button {:color "secondary"
-                 :size "large"}
-     (tr :actions/save)]]])
+(defn edit-tab [tr]
+  (let [pools   (<== [::subs/sites-to-edit])
+        editing (<== [::subs/editing])
+        locale  (tr)]
+    [:div
+     [mui/grid {:container true}
+      (if pools
+        [lui/form-card {:title (tr :actions/select-hall)}
+         [mui/form-group
+          [lui/select {:label (tr :actions/select-hall)
+                       :value (:lipas-id editing)
+                       :items (map #(hash-map :label (-> % :name locale)
+                                              :value (-> % :lipas-id))
+                                   (vals pools))
+                       :on-change #(when-let [pool (get pools %)]
+                                     (==> [::events/edit pool]))}]]]
+        [mui/typography "Sinulla ei ole oikeuksia yhteenkään uimahalliin. :/"])]
+     (when editing
+       [swimming-pool-form tr editing])]))
 
-(defn create-panel [tr url]
+(defn create-panel [tr logged-in? url]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]
     [mui/grid {:container true}
-     [mui/grid {:item true
-                :xs 12}
+
+     [mui/grid {:item true :xs 12}
       [mui/card
        [mui/card-content
         [mui/tabs {:scrollable true
@@ -314,22 +307,26 @@
                    :text-color "secondary"
                    :on-change #(==> [::events/set-active-tab %2])
                    :value @active-tab}
+
+         ;; 0 Info tab
          [mui/tab {:label (tr :ice-rinks/headline)
                    :icon (r/as-element [mui-icons/info])}]
+
+         ;; 1 Edit tab
+         (when logged-in?
+           [mui/tab {:label (tr :swim/edit)
+                     :icon (r/as-element [mui-icons/edit])}])
+
+         ;; 2 Energy tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui-icons/flash-on])}]
-         [mui/tab {:label (tr :ice-basic-data/headline)
-                   :icon (r/as-element [mui-icons/edit])}]
-         [mui/tab {:label (tr :ice-form/headline)
-                   :icon (r/as-element [mui-icons/add])}]]]]]
-     [mui/grid {:item true
-                :xs 12}
+                   :icon (r/as-element [mui-icons/flash-on])}]]]]]
+
+     [mui/grid {:item true :xs 12}
       (case @active-tab
         0 (info-tab url)
-        1 (energy-tab tr)
-        2 (basic-data-tab tr)
-        3 (form-tab tr))]]))
+        1 (edit-tab tr)
+        2 (energy-tab tr))]]))
 
-(defn main [tr]
+(defn main [tr logged-in?]
   (let [url "https://liikuntaportaalit.sportvenue.net/Uimahalli"]
-    (create-panel tr url)))
+    (create-panel tr logged-in? url)))

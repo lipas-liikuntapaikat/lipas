@@ -3,16 +3,18 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.swimming-pools.utils :refer [set-field
-                                                   toggle-dialog]]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.swimming-pools.utils :refer [set-field toggle-dialog]]
+            [lipas.ui.utils :refer [<== ==> localize-field ->select-entries]]))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field (partial set-field :dialogs :slide :data)]
+  (let [structures (<== [::subs/slide-structures])
+        set-field  (partial set-field :dialogs :slide :data)]
     [mui/form-group
-     [lui/text-field {:label (tr :general/structure)
-                      :value (:structure data)
-                      :on-change #(set-field :structure %)}]
+     [lui/select {:required true
+                  :label (tr :general/structure)
+                  :value (:structure data)
+                  :items (->select-entries tr :slide-structures structures)
+                  :on-change #(set-field :structure %)}]
      [lui/text-field {:label (tr :dimensions/length-m)
                       :value (:length-m data)
                       :on-change #(set-field :length-m %)}]]))
@@ -21,8 +23,7 @@
 
 (defn dialog [{:keys [tr]}]
   (let [data (<== [::subs/slide-form])
-        close #(toggle-dialog :slide)
-        _ (prn data)]
+        close #(toggle-dialog :slide)]
     [lui/dialog {:title (if (:id data)
                           (tr :slides/edit-slide)
                           (tr :slides/add-slide))
@@ -35,12 +36,13 @@
      [form {:tr tr :data data}]]))
 
 (defn table [{:keys [tr items]}]
-  [lui/form-table {:headers [[:structure (tr :general/structure)]
-                             [:length-m (tr :dimensions/length-m)]]
-                   :items items
-                   :add-tooltip (tr :slides/add-slide)
-                   :edit-tooltip (tr :actions/edit)
-                   :delete-tooltip (tr :actions/delete)
-                   :on-add (comp #(toggle-dialog :slide) reset)
-                   :on-edit #(toggle-dialog :slide %)
-                   :on-delete #(==> [::events/remove-slide %])}])
+  (let [localize (partial localize-field tr :structure :slide-structures)]
+    [lui/form-table {:headers [[:structure (tr :general/structure)]
+                               [:length-m (tr :dimensions/length-m)]]
+                     :items (map localize (vals items))
+                     :add-tooltip (tr :slides/add-slide)
+                     :edit-tooltip (tr :actions/edit)
+                     :delete-tooltip (tr :actions/delete)
+                     :on-add (comp #(toggle-dialog :slide) reset)
+                     :on-edit #(toggle-dialog :slide (get items (:id %)))
+                     :on-delete #(==> [::events/remove-slide %])}]))
