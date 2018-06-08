@@ -48,9 +48,9 @@
 
 (re-frame/reg-event-fx
  ::submit-login-form
- (fn [_ [_ form-data]]
+ (fn [{:keys [db]} [_ form-data]]
    {:http-xhrio {:method          :post
-                 :uri             "http://localhost:8091/actions/login"
+                 :uri             (str (:backend-url db) "/actions/login")
                  :headers         {:Authorization (->basic-auth form-data)}
                  :format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})

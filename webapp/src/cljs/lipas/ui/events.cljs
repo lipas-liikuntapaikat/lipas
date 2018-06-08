@@ -13,6 +13,11 @@
      {:db db/default-db})))
 
 (re-frame/reg-event-db
+ ::set-backend-url
+ (fn [db [_ url]]
+   (assoc db :backend-url url)))
+
+(re-frame/reg-event-db
  ::set-active-panel
  (fn [db [_ active-panel]]
    (assoc db :active-panel active-panel)))
