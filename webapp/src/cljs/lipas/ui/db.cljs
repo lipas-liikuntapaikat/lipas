@@ -335,7 +335,8 @@
   (into {} (map (juxt idx-fn identity)) coll))
 
 (def default-db
-  {:logged-in? false
+  {:backend-url "/api"
+   :logged-in? false
    :translator (i18n/->tr-fn :fi)
 
    ;; Sports sites

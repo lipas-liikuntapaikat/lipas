@@ -29,9 +29,9 @@
 
 (re-frame/reg-event-fx
  ::submit-registration-form
- (fn [_ [_ form-data]]
+ (fn [{:keys [db]} [_ form-data]]
    {:http-xhrio {:method          :post
-                 :uri             "http://localhost:8091/actions/register"
+                 :uri             (str (:backend-url db) "/actions/register")
                  :params          form-data
                  :format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})
