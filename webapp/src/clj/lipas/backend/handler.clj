@@ -19,17 +19,19 @@
     {:exceptions
      {:handlers exception-handlers}}
 
-    (OPTIONS "*" []
+    (OPTIONS "/api/*" []
       :middleware [mw/cors]
       (ok  {}))
 
-    (GET "/" [] (resource-response "index.html" {:root "public"}))
+    (GET "/api/" [] (resource-response "index.html" {:root "public"}))
 
-    (POST "/actions/register" req
+    (GET "/api/health" [] (ok {:status "OK"}))
+
+    (POST "/api/actions/register" req
       :middleware [mw/cors]
       (let [_ (core/add-user db (:body-params req))]
         (created "/fixme" {:status "OK"})))
 
-    (POST "/actions/login" req
+    (POST "/api/actions/login" req
       :middleware [(mw/basic-auth db) mw/cors mw/auth]
       (ok (:identity req)))))
