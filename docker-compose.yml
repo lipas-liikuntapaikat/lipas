@@ -7,9 +7,10 @@ services:
       - '80:80'
     volumes:
       - './nginx/:/etc/nginx/conf.d'
-      - './webapp/resources/public/:/usr/share/nginx/html'
+      - './webapp/resources/public/:/usr/share/nginx/html:ro'
     links:
       - mapproxy
+      - backend-dev
 
   mapproxy:
     image: kartoza/mapproxy
