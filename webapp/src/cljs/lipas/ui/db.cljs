@@ -10,7 +10,7 @@
 (def jaahalli
 
   ;;; Yleiset ;;;
-  {:sports-place-id 89839
+  {:lipas-id 89839
    :last-modified "2016-11-14 10:13:20.103"
 
    :name
@@ -18,11 +18,12 @@
     :se nil
     :en nil}
 
+   :admin :city-sports
+   :owner :city
+
    :www "www.jyvaskyla.fi"
    :email nil
    :phone-number nil
-   :admin :city-sports
-   :owner :city
    :info-fi ""
 
    ;;; Sijainti ;;;
@@ -37,11 +38,12 @@
         [25.7221976798387 62.2373183577408]
         :type "Point"}
        :properties {:point-id 61503}}]}
-    :location-id 8979
+    :location-id 89839
     :postal-code "40700"
     :postal-office "Jyväskylä"
     :city
-    {:city-code 179}}
+    {:city-code 179
+     :neighborhood "Hippos"}}
 
    ;;; Tyyppiluokitus ;;;
    :type
@@ -130,10 +132,66 @@
     :dryer-type "Jäähdytyspatteri"                ; Ilmankuivaustapa
     :dryer-duty-type "??"                         ; Ilm.kuiv.käyttötapa
     :heat-pump-type "None"}                       ; Lämpöpumpputyyppi
+
+   ;; Energiankulutus
+   :energy-consumption
+   [{:start "2015-01-01"
+     :end   "2015-12-31"
+     :electricity-mwh 1795
+     :heat-mwh 1159
+     :water-m3 8338}
+    {:start "2014-01-01"
+     :end   "2014-12-31"
+     :electricity-mwh 1820
+     :heat-mwh 125
+     :water-m3 7796}]
    })
 
 (def vesivelho
-  {:building
+  {
+   ;;; Yleiset ;;;
+   :lipas-id 506032
+   :last-modified "2016-11-14 10:13:20.103"
+
+   :name {:fi "Äänekosken uimahalli VesiVelho"
+          :se nil
+          :en nil}
+
+   :admin :city-sports
+   :owner :city
+
+   :www "www.aanekoski.fi"
+   :email "uima@aanekoski.fi"
+   :phone-number "020 632 3212"
+   :info-fi "1=kunto- ja kilpauintiallas, 2=lämminvesiallas,
+   3=monitoimiallas, 4=lastenallas. Monitoimialtaissa porealtaat."
+
+   ;;; Sijainti ;;;
+   :location
+   {:address "Koulumäenkatu 2"
+    :geometries
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature"
+       :geometry
+       {:coordinates
+        [25.7237585961864 62.6078965384038]
+        :type "Point"}
+       :properties {:point-id 61503}}]}
+    :location-id 8979
+    :postal-code "44100"
+    :postal-office "ÄÄNEKOSKI"
+    :city
+    {:city-code 992
+     :neighborhood nil}}
+
+   ;;; Tyyppiluokitus ;;;
+   :type
+   {:type-code 3110,
+    :name "Uimahalli"}
+
+   ;;; Rakennus ;;;
+   :building
    {:construction-year 1995
     :main-designers "Ark. Marjatta Hara-Pietilä"
     :total-surface-area-m2 6000
@@ -143,22 +201,28 @@
     :heat-sections? false
     :main-construction-materials [:concrete :brick :tile]
     :piled? true
-    :supporting-structures-description "Betoni"
-    :ceiling-description "Ontelolaatta"
+    :supporting-structures [:concrete]
+    :ceiling-structures [:hollow-core-slab]
     :staff-count 0
     :seating-capacity 0
-    :heat-source "Kaukolämpö"
+    :heat-source :district-heating
     :ventilation-units-count 2}
+
+   ;;; Peruskorjaukset ;;;
    :renovations
    [{:year 2016
      :comment "Remontti 2015/06-2016/11"
      :main-designers "?"}]
+
+   ;;; Vedekäsittely ;;;
    :water-treatment
    {:ozonation? false
     :uv-treatment? true
     :activated-carbon? true
     :filtering-method [:pressure-sand]
     :comment "-"}
+
+   ;;; Altaat ;;;
    :pools
    [{:type :main-pool
      :temperature-c 27
@@ -193,6 +257,7 @@
      :depth-min-m 1
      :depth-max-m 1.4}
     {:type :cold-pool
+     :structure :hardened-plastic
      :temperature-c 7
      :volume-m3 1
      :area-m2 0
@@ -200,14 +265,20 @@
      :width-m 1.12
      :depth-min-m 1.4
      :depth-max-m 1.4}]
+
+   ;;; Liukumäet ;;;
    :slides
    [{:length-m 23
-     :structure "Lujitemuovi"}]
+     :structure :hardened-plastic}]
+
+   ;;; Saunat ;;;
    :saunas
    [{:type :steam-sauna :men true :women true}
     {:type :sauna :men false :women true}
     {:type :sauna :men true :women false}
     {:type :infrared-sauna :men nil :women nil}]
+
+   ;;; Muut palvelut ;;;
    :other-services
    {:hydro-massage-spots-count 7
     :hydro-neck-massage-spots-count 0
@@ -217,60 +288,64 @@
     :platforms-7.5m-count 0
     :platforms-10m-count 0
     :kiosk? true}
+
+   ;;; Suihkut ja pukukaapit ;;;
    :facilities
    {:showers-men-count 12
     :showers-women-count 12
     :lockers-men-count 94
     :lockers-women-count 100}
-   :info-fi "1=kunto- ja kilpauintiallas, 2=lämminvesiallas,
-   3=monitoimiallas, 4=lastenallas. Monitoimialtaissa porealtaat."
-   :email "uima@aanekoski.fi"
-   :admin :city-sports
-   :www "www.aanekoski.fi"
-   :name {:fi "Äänekosken uimahalli VesiVelho"}
-   :type
-   {:type-code 3110,
-    :name "Uimahalli"}
-   :last-modified "2016-11-14 10:13:20.103"
-   :sports-place-id 506032
-   :phone-number "020 632 3212"
-   :location
-   {:address "Koulumäenkatu 2"
-    :geometries
-    {:type "FeatureCollection",
-     :features
-     [{:type "Feature"
-       :geometry
-       {:coordinates
-        [25.7237585961864 62.6078965384038]
-        :type "Point"}
-       :properties {:point-id 61503}}]}
-    :location-id 8979
-    :postal-code "44100"
-    :postal-office "ÄÄNEKOSKI"
-    :city
-    {:name "Äänekoski"
-     :city-code 992}},
-   :owner :city})
 
-(defn ->indexed-map [coll]
-  (into {} (map-indexed (fn [idx item]
-                          [idx
-                           (if (map? item)
-                             (assoc item :id idx)
-                             item)])
-                        coll)))
+   ;; Energiankulutus
+   :energy-consumption
+   [{:start "2017-01-01"
+     :end   "2017-12-31"
+     :electricity-mwh 818
+     :heat-mwh 0
+     :water-m3 8573}
+    {:start "2016-01-01"
+     :end   "2016-12-31"
+     :electricity-mwh 0
+     :heat-mwh 0
+     :water-m3 0}
+    {:start "2015-01-01"
+     :end   "2015-12-31"
+     :electricity-mwh 0
+     :heat-mwh 0
+     :water-m3 0}
+    {:start "2014-01-01"
+     :end   "2014-12-31"
+     :electricity-mwh 0
+     :heat-mwh 0
+     :water-m3 0}
+    {:start "2013-01-01"
+     :end   "2013-12-31"
+     :electricity-mwh 664
+     :heat-mwh 0
+     :water-m3 0}
+    {:start "2012-01-01"
+     :end   "2012-12-31"
+     :electricity-mwh 643
+     :heat-mwh 1298
+     :water-m3 9221}]})
+
+(comment (index-by :id [{:id 1 :name "kissa"}
+                        {:id 2 :name "koira"}]))
+(defn index-by [idx-fn coll]
+  (into {} (map (juxt idx-fn identity)) coll))
 
 (def default-db
   {:logged-in? false
    :translator (i18n/->tr-fn :fi)
 
+   ;; Sports sites
+   :sports-sites
+   (index-by :lipas-id [jaahalli vesivelho]) ; For demo
+
    ;; Ice stadiums
    :ice-stadiums
    {:active-tab 0
-    :editing (-> jaahalli
-                 (update-in [:renovations] ->indexed-map)
-                 (update-in [:rinks] ->indexed-map))
+    :editing nil
     :dialogs
     {:renovation
      {:open? false
@@ -284,15 +359,13 @@
 
    ;; Swimming pools
    :swimming-pools
-   {:active-tab 2
+   {:active-tab 0
     :pool-types swimming-pools/pool-types
     :sauna-types swimming-pools/sauna-types
     :filtering-methods swimming-pools/filtering-methods
-    :editing (-> vesivelho
-                 (update-in [:pools] ->indexed-map)
-                 (update-in [:renovations] ->indexed-map)
-                 (update-in [:saunas] ->indexed-map)
-                 (update-in [:slides] ->indexed-map))
+    :slide-structures materials/slide-structures
+    :pool-structures materials/pool-structures
+    :editing nil
     :dialogs
     {:renovation
      {:open? false
@@ -311,6 +384,8 @@
              :depth-max-m nil
              :structure ""}}
      :slide
+     {:open? false}
+     :energy
      {:open? false}
      :sauna
      {:open? false
@@ -337,4 +412,6 @@
    :owners owners/all
    :cities cities/active
    :types types/all
-   :building-materials materials/building})
+   :building-materials materials/building-materials
+   :supporting-structures materials/supporting-structures
+   :ceiling-structures materials/ceiling-structures})
