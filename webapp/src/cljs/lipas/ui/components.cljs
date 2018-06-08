@@ -39,7 +39,7 @@
       [mui/table-body
        (for [[idx item] (map-indexed vector items)]
          ^{:key idx} [mui/table-row
-                      (for [k (keys headers)]
+                      (for [[k _] headers]
                         ^{:key k} [mui/table-cell {:padding "dense"}
                                    (let [v (get item k)]
                                      (cond
