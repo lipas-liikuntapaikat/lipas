@@ -6,8 +6,8 @@ services:
     ports:
       - '80:80'
     volumes:
-      - './nginx/:/etc/nginx/conf.d'
-      - './webapp/resources/public/:/usr/share/nginx/html:ro'
+      - './nginx/:/etc/nginx/conf.d:z'
+      - './webapp/resources/public/:/usr/share/nginx/html:z'
     links:
       - mapproxy
       - backend-dev
@@ -20,7 +20,7 @@ services:
       MML_AUTH:
     command: /mapproxy/start.sh
     volumes:
-      - './mapproxy:/mapproxy'
+      - './mapproxy:/mapproxy:z'
       - 'mapproxy_cache:/mapproxy/cache_data'
     ports:
       - '8089:8080'
@@ -36,7 +36,7 @@ services:
       DB_PASSWORD:
       AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
     volumes:
-      - './webapp/:/usr/src/app'
+      - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
 
   backend-dev:
@@ -84,7 +84,7 @@ services:
       - '55432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
+      - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
