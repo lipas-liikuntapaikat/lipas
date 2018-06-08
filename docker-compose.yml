@@ -64,6 +64,11 @@ services:
       - postgres
       - elasticsearch
 
+  frontend-build:
+    extends:
+      service: backend-base
+    command: lein cljsbuild once min
+
   postgres:
     image: mdillon/postgis:10
     environment:
