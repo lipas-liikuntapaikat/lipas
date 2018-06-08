@@ -1,10 +1,10 @@
 (ns lipas.ui.front-page.views
   (:require [lipas.ui.mui :as mui]))
 
-(defn grid-card [{:keys [title]} & children]
+(defn grid-card [{:keys [title style]} & children]
   [mui/grid {:item true :xs 12 :md 6 :lg 4}
    [mui/card {:square true
-              :style {:height "100%"}}
+              :style (merge style {:height "100%"})}
     [mui/card-header {:title title}]
     (into [mui/card-content]
           children)]])
@@ -13,6 +13,9 @@
   [:div {:style {:padding "1em"}}
    [mui/grid {:container true
               :spacing 16}
+    [grid-card {:style {:background-color "#f7ed33"}
+                :title (tr :disclaimer/headline)}
+     [mui/typography (tr :disclaimer/test-version)]]
     [grid-card {:title (tr :sport/headline)}
      [mui/typography (tr :sport/description)]
      ;; http://lipas.cc.jyu.fi/lipas/VAADIN/themes/lipas/img/lipaskuva.jpg

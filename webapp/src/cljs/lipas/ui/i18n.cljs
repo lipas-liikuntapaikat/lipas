@@ -312,6 +312,12 @@
    {:save-success "Tallennus onnistui"
     :save-failed "Tallennus epäonnistui"}
 
+   :disclaimer
+   {:headline "HUOMIO!"
+    :test-version "Tämä on LIPAS-sovelluksen testiversio ja
+    tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan
+    Lipakseen."}
+
    :error
    {:unknown "Tuntematon virhe tapahtui. :/"}})
 
