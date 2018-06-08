@@ -35,10 +35,8 @@
 (re-frame/reg-event-fx
  ::logout
  [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
- (fn [{:keys [db]} _]
-   {:db (-> db
-            (assoc :logged-in? false)
-            (assoc :user (:user db/default-db)))}))
+ (fn [_  _]
+   {:db db/default-db}))
 
 (re-frame/reg-event-db
  ::set-active-notification
