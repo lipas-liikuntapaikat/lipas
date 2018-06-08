@@ -3,10 +3,8 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.swimming-pools.utils :refer [set-field
-                                                   toggle-dialog
-                                                   localize]]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.swimming-pools.utils :refer [set-field toggle-dialog]]
+            [lipas.ui.utils :refer [<== ==> localize-field]]))
 
 (defn form [{:keys [tr data]}]
   (let [sauna-types (<== [::subs/sauna-types])
@@ -42,14 +40,14 @@
      [form {:tr tr :data data}]]))
 
 (defn table [{:keys [tr items]}]
-  [lui/form-table {:headers [[:type (tr :general/type)]
-                             [:women (tr :saunas/women)]
-                             [:men (tr :saunas/men)]]
-                   :items (map (partial localize tr :type :sauna-types)
-                               (vals items))
-                   :add-tooltip (tr :saunas/add-sauna)
-                   :edit-tooltip (tr :actions/edit)
-                   :delete-tooltip (tr :actions/delete)
-                   :on-add #(toggle-dialog :sauna)
-                   :on-edit #(toggle-dialog :sauna (get items (:id %)))
-                   :on-delete #(==> [::events/remove-sauna %])}])
+  (let [localize (partial localize-field tr :type :sauna-types)]
+    [lui/form-table {:headers [[:type (tr :general/type)]
+                               [:women (tr :saunas/women)]
+                               [:men (tr :saunas/men)]]
+                     :items (map localize (vals items))
+                     :add-tooltip (tr :saunas/add-sauna)
+                     :edit-tooltip (tr :actions/edit)
+                     :delete-tooltip (tr :actions/delete)
+                     :on-add #(toggle-dialog :sauna)
+                     :on-edit #(toggle-dialog :sauna (get items (:id %)))
+                     :on-delete #(==> [::events/remove-sauna %])}]))

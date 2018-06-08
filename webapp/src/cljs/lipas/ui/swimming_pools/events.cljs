@@ -2,12 +2,25 @@
   (:require [ajax.core :as ajax]
             [re-frame.core :as re-frame]
             [lipas.ui.db :refer [default-db]]
-            [lipas.ui.utils :refer [save-entity]]))
+            [lipas.ui.utils :refer [save-entity ->indexed-map]]))
+
+(defn make-editable [swimming-pool]
+  (-> swimming-pool
+      (update-in [:pools] ->indexed-map)
+      (update-in [:renovations] ->indexed-map)
+      (update-in [:saunas] ->indexed-map)
+      (update-in [:slides] ->indexed-map)
+      (update-in [:energy-consumption] ->indexed-map)))
 
 (re-frame/reg-event-db
  ::set-active-tab
  (fn [db [_ active-tab]]
    (assoc-in db [:swimming-pools :active-tab] active-tab)))
+
+(re-frame/reg-event-db
+ ::edit
+ (fn [db [_ swimming-pool]]
+   (assoc-in db [:swimming-pools :editing] (make-editable swimming-pool))))
 
 (re-frame/reg-event-db
  ::set-field
@@ -47,6 +60,12 @@
      (save-entity db path value))))
 
 (re-frame/reg-event-db
+ ::save-energy
+ (fn [db [_ value]]
+   (let [path [:swimming-pools :editing :energy-consumption]]
+     (save-entity db path value))))
+
+(re-frame/reg-event-db
  ::remove-renovation
  (fn [db [_ {:keys [id]}]]
    (update-in db [:swimming-pools :editing :renovations] dissoc id)))
@@ -65,6 +84,11 @@
  ::remove-slide
  (fn [db [_ {:keys [id]}]]
    (update-in db [:swimming-pools :editing :slides] dissoc id)))
+
+(re-frame/reg-event-db
+ ::remove-energy
+ (fn [db [_ {:keys [id]}]]
+   (update-in db [:swimming-pools :editing :energy-consumption] dissoc id)))
 
 (re-frame/reg-event-db
  ::reset-dialog

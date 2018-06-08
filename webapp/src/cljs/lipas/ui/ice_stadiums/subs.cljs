@@ -12,6 +12,26 @@
    (-> db :ice-stadiums :editing)))
 
 (re-frame/reg-sub
+ ::access-to-sports-sites
+ (fn [db _]
+   (-> db :user :login :permissions :sports-sites)))
+
+(re-frame/reg-sub
+ ::sports-sites
+ (fn [db _]
+   (-> db :sports-sites)))
+
+(re-frame/reg-sub
+ ::sites-to-edit
+ :<- [::access-to-sports-sites]
+ :<- [::sports-sites]
+ (fn [[ids sites] _]
+   (as-> sites $
+     (select-keys $ ids)
+     (into {} (filter (comp #{2510 2520} :type-code :type second)) $)
+     (not-empty $))))
+
+(re-frame/reg-sub
  ::dialogs
  (fn [db _]
    (-> db :ice-stadiums :dialogs)))

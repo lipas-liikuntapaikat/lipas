@@ -15,12 +15,12 @@
             [lipas.ui.user.views :as user]
             [re-frame.core :as re-frame]))
 
-(defn- panels [panel-name tr]
+(defn- panels [panel-name tr logged-in?]
   (case panel-name
     :home-panel [front-page/main tr]
     :sports-panel [sports-places/main tr]
-    :ice-panel [ice-stadiums/main tr]
-    :swim-panel [swimming-pools/main tr]
+    :ice-panel [ice-stadiums/main tr logged-in?]
+    :swim-panel [swimming-pools/main tr logged-in?]
     :open-data-panel [open-data/main tr]
     :help-panel [help/main tr]
     :login-panel [login/main tr]
@@ -28,8 +28,8 @@
     :user-panel [user/main tr]
     [:div "Unknown page :/"]))
 
-(defn show-panel [panel-name tr]
-  [panels panel-name tr])
+(defn show-panel [panel-name tr logged-in?]
+  [panels panel-name tr logged-in?])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])
@@ -42,7 +42,7 @@
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
       [nav/nav @tr @menu-anchor @drawer-open? @active-panel @logged-in?]]
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
-      [show-panel @active-panel @tr]
+      [show-panel @active-panel @tr @logged-in?]
       (when @notification
         [lui/notification {:notification @notification
                            :on-close #(re-frame/dispatch
