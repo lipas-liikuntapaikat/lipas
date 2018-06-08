@@ -206,16 +206,26 @@
         :on-blur #(on-change (extract-values @state))
         :options (map (partial str-field :value) items)}}}]))
 
-(defn year-selector [{:keys [label value on-change]}]
-  (let [years (range 2000 (inc (.getFullYear (js/Date.))))]
+(defn year-selector [{:keys [label value on-change required]}]
+  (let [years (range 1900 (inc (.getFullYear (js/Date.))))]
     [select {:label label
              :items (map #(hash-map :label % :value %) years)
              :on-change on-change
-             :value value}]))
+             :value value
+             :required required}]))
 
-(defn- ->select-entry [tr prefix enum]
+(defn ->select-entry [tr prefix enum]
   {:value enum
    :label (tr (keyword prefix enum))})
+
+(defn date-picker [{:keys [label value on-change]}]
+  [mui/text-field
+   {:type "date"
+    :label label
+    :value value
+    :Input-label-props
+    {:shrink true} ; This makes the label show actually
+    :on-change #(on-change (-> % .-target .-value))}])
 
 (defn sports-place-form [{:keys [tr data types admins owners on-change]}]
   [mui/form-group
@@ -279,25 +289,26 @@
      :on-change #(on-change :email %)}]])
 
 (defn location-form [{:keys [tr data cities on-change]}]
-  [mui/form-group
-   [text-field
-    {:label     (tr :location/address)
-     :value     (-> data :location :address)
-     :spec      ::schema/address
-     :on-change #(on-change :location :address %)}]
-   [text-field
-    {:label     (tr :location/postal-code)
-     :value     (-> data :location :postal-code)
-     :spec      ::schema/postal-code
-     :on-change #(on-change :location :postal-code %)}]
-   [text-field
-    {:label     (tr :location/postal-office)
-     :value     (-> data :location :postal-office)
-     :spec      ::schema/postal-office
-     :on-change #(on-change :location :postal-office %)}]
-   [select
-    {:label     (tr :location/city)
-     :value     (-> data :location :city :city-code)
-     :items     (map #(hash-map :label (-> % :name :fi)
-                                :value (-> % :city-code)) cities)
-     :on-change #(on-change :location :city :city-code %)}]])
+  (let [locale (tr)]
+    [mui/form-group
+     [text-field
+      {:label     (tr :location/address)
+       :value     (-> data :address)
+       :spec      ::schema/address
+       :on-change #(on-change :address %)}]
+     [text-field
+      {:label     (tr :location/postal-code)
+       :value     (-> data :postal-code)
+       :spec      ::schema/postal-code
+       :on-change #(on-change :postal-code %)}]
+     [text-field
+      {:label     (tr :location/postal-office)
+       :value     (-> data :postal-office)
+       :spec      ::schema/postal-office
+       :on-change #(on-change :postal-office %)}]
+     [select
+      {:label     (tr :location/city)
+       :value     (-> data :city :city-code)
+       :items     (map #(hash-map :label (-> % :name locale)
+                                  :value (-> % :city-code)) cities)
+       :on-change #(on-change :city :city-code %)}]]))
