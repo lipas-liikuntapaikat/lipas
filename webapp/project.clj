@@ -100,7 +100,7 @@
      :source-paths ["src/cljs" "src/cljc"]
      :compiler     {:main            lipas.ui.core
                     :output-to       "resources/public/js/compiled/app.js"
-                    :optimizations   :simple
+                    :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
                     :pretty-print    false}}
 

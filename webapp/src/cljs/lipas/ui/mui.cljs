@@ -7,6 +7,7 @@
             [camel-snake-kebab.core :refer [convert-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]))
 
+
 (comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
 (comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
 (defn keyword->PasCamelCase
@@ -15,11 +16,13 @@
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
+(def create-mui-theme (gobj/get js/MaterialUIStyles "createMuiTheme"))
+
 (defn ->mui-theme [opts]
   (->> opts
        (transform-keys keyword->PasCamelCase)
        clj->js
-       js/MaterialUIStyles.createMuiTheme))
+       create-mui-theme))
 
 (comment (get-color "blue"))
 (comment (get-color :blue "300"))
@@ -104,11 +107,13 @@
 (def snackbar (mui->reagent "Snackbar"))
 (def snackbar-content (mui->reagent "SnackbarContent"))
 
+(def with-styles* (gobj/get js/MaterialUIStyles "withStyles"))
+
 (defn with-styles [styles]
   (->> styles
        (transform-keys keyword->PasCamelCase)
        clj->js
-       js/MaterialUIStyles.withStyles))
+       with-styles*))
 
 ;; (def red-bg {:root {:background-color "red"}})
 ;; (def red-btn (->styled red-bg "Button"))
