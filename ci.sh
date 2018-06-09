@@ -4,13 +4,13 @@ set -e
 
 ### Backend ###
 
-echo "\n *** Running backend migrations *** \n"
+printf "\n *** Running backend migrations *** \n\n"
 docker-compose run backend-migrate
 
-echo "\n *** Running backend tests *** \n"
+printf "\n *** Running backend tests *** \n\n"
 docker-compose run backend-test
 
 ### Frontend ###
 
-echo "\n *** Compiling frontend *** \n"
+printf "\n *** Compiling frontend *** \n\n"
 docker-compose run frontend-build
