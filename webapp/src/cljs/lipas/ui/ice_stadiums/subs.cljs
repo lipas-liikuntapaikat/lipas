@@ -47,6 +47,11 @@
    (-> db :ice-stadiums :dialogs :rink :data)))
 
 (re-frame/reg-sub
+ ::energy-form
+ (fn [db _]
+   (-> db :ice-stadiums :dialogs :energy :data)))
+
+(re-frame/reg-sub
  ::cities
  (fn [db _]
    (-> db :cities)))
