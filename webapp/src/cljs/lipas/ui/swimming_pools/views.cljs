@@ -248,21 +248,25 @@
       [mui/form-group
        [lui/text-field
         {:label     (tr :facilities/showers-men-count)
+         :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :showers-men-count)
          :on-change #(set-field :facilities :showers-men-count %)}]
        [lui/text-field
         {:label     (tr :facilities/showers-women-count)
+         :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :showers-women-count)
          :on-change #(set-field :facilities :showers-women-count %)}]
        [lui/text-field
         {:label     (tr :facilities/lockers-men-count)
+         :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :lockers-men-count)
          :on-change #(set-field :facilities :lockers-men-count %)}]
        [lui/text-field
         {:label     (tr :facilities/lockers-women-count)
+         :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :lockers-women-count)
          :on-change #(set-field :facilities :lockers-women-count %)}]]]
