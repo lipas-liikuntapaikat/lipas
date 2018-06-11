@@ -17,6 +17,7 @@
                 :checked value
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
+
 (defn form-table [{:keys [headers
                           items
                           add-tooltip
@@ -25,46 +26,58 @@
                           on-add
                           on-edit
                           on-delete]}]
-  [mui/grid {:container true
-             :spacing 8
-             :justify "flex-end"}
-   [mui/grid {:item true :xs 12}
-    [:div {:style {:overflow-x "auto"}}
-     [mui/table
-      [mui/table-head
-       [mui/table-row
-        (for [[idx [_ header]] (map-indexed vector headers)]
-          ^{:key idx} [mui/table-cell header])
-        [mui/table-cell ""]]]
-      [mui/table-body
-       (for [[idx item] (map-indexed vector items)]
-         ^{:key idx} [mui/table-row
-                      (for [[k _] headers]
-                        ^{:key k} [mui/table-cell {:padding "dense"}
-                                   (let [v (get item k)]
-                                     (cond
-                                       (true? v) "✓"
-                                       :else v))])
-                      [mui/table-cell {:numeric true
-                                       :padding "none"}
-                       [mui/tooltip {:title (or edit-tooltip "")
-                                     :placement "top"}
-                        [mui/icon-button {:on-click #(on-edit item)}
-                         [mui-icons/edit]]]
-                       [mui/tooltip {:title (or delete-tooltip "")
-                                     :placement "top"}
-                        [mui/icon-button {:on-click #(on-delete item)}
-                         [mui-icons/delete]]]]])]]]]
-   [mui/grid {:item true
-              :xs 2
-              :style {:text-align "right"} }
-    [mui/tooltip {:title (or add-tooltip "")
-                  :placement "left"}
-     [mui/button {:style {:margin-top "0.5em"}
-                  :on-click on-add
-                  :variant "fab"
-                  :color "secondary"}
-      [mui-icons/add]]]]])
+  (r/with-let [selected-item (r/atom nil)]
+    [mui/grid {:container true
+               :spacing 8
+               :justify "flex-end"
+               :align-items "center"}
+     [mui/grid {:item true :xs 12}
+      [:div {:style {:overflow-x "auto"}}
+       [mui/table
+        [mui/table-head
+         (into [mui/table-row {:hover true}
+                [mui/table-cell ""]]
+               (for [[_ header] headers]
+                 [mui/table-cell header]))]
+        [mui/table-body
+         (doall
+          (for [item items
+                :let [id (:id item)]]
+            [mui/table-row {:key id
+                            :hover true}
+             [mui/table-cell {:padding "checkbox"}
+              [mui/checkbox {:checked (= item @selected-item)
+                             :on-change (fn [_ checked?]
+                                          (let [v (when checked? item)]
+                                            (reset! selected-item v)))}]]
+             (for [[k _] headers
+                   :let [v (get item k)]]
+               [mui/table-cell {:key (str id k)
+                                :padding "dense"}
+                (cond
+                  (true? v) "✓"
+                  :else v)])
+             ]))]]]]
+     [mui/grid {:item true :xs 10}
+      (when @selected-item
+        [:span
+         [mui/tooltip {:title (or edit-tooltip "")
+                       :placement "top"}
+          [mui/icon-button {:on-click #(on-edit @selected-item)}
+           [mui-icons/edit]]]
+         [mui/tooltip {:title (or delete-tooltip "")
+                       :placement "top"}
+          [mui/icon-button {:on-click #(on-delete @selected-item)}
+           [mui-icons/delete]]]])]
+     [mui/grid {:item true :xs 2
+                :style {:text-align "right"}}
+      [mui/tooltip {:title (or add-tooltip "")
+                    :placement "left"}
+       [mui/button {:style {:margin-top "0.5em"}
+                    :on-click on-add
+                    :variant "fab"
+                    :color "secondary"}
+        [mui-icons/add]]]]]))
 
 (defn dialog [{:keys [title
                       on-save
@@ -82,14 +95,14 @@
     [mui/button {:on-click on-save}
      save-label]]])
 
-(defn form-card [{:keys [title]} content]
+(defn form-card [{:keys [title]} & content]
   [mui/grid {:item true
              :xs 12
              :md 12}
    [mui/card {:square true
               :style {:height "100%"}}
     [mui/card-header {:title title}]
-    [mui/card-content content]]])
+    (into [mui/card-content] content)]])
 
 (defn notification [{:keys [notification on-close]}]
   [mui/snackbar {:key (gensym)
