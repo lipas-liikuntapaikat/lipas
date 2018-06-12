@@ -32,6 +32,8 @@
 (def done (mui-icon->reagent "Done"))
 (def error (mui-icon->reagent "Error"))
 (def warning (mui-icon->reagent "Warning"))
+(def arrow-forward (mui-icon->reagent "ArrowForward"))
+(def chevron-right (mui-icon->reagent "ChevronRight"))
 
 (def icon-names
   ["FilterHdr"
