@@ -9,7 +9,11 @@
      [mui/card {:square true}
       [mui/card-header {:title (tr :sport/headline)}]
       [mui/card-content
-       [mui/typography (tr :sport/description)]]]]]])
+       [mui/typography (tr :sport/legacy-disclaimer)]]
+      [mui/card-actions
+       [mui/button {:color "secondary"
+                    :href "http://www.lipas.fi/"}
+        "> lipas.fi"]]]]]])
 
 (defn main [tr]
   (create-panel tr))
