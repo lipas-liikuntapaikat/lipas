@@ -171,6 +171,33 @@
                              :competition
                              :large})
 
+;;; Refrigeration ;;;
+
+(s/def ::power-kw (s/int-in 0 (inc 10000)))
+(s/def ::refrigerant-amount-kg (s/int-in 0 (inc 10000)))
+(s/def ::refrigerant-solution-amount-l (s/int-in 0 (inc 30000)))
+
+;;; Conditions ;;;
+
+(s/def ::air-humidity-percent (s/int-in 50 (inc 70)))
+(s/def ::ice-surface-temperature-c (s/int-in -6 (inc -3)))
+(s/def ::skating-area-temperature-c (s/int-in 5 (inc 12)))
+(s/def ::stand-temperature-c (s/int-in 0 (inc 50)))
+(s/def ::daily-open-hours (s/int-in 0 (inc 24)))
+(s/def ::open-months (s/int-in 0 (inc 12)))
+
+;;; Ventilation ;;;
+
+(s/def ::heat-recovery-thermal-efficiency-percent (s/int-in 0 (inc 100)))
+
+;;; Ice maintenance ;;;
+
+(s/def ::daily-maintenance-count-week-days (s/int-in 0 (inc 50)))
+(s/def ::daily-maintenance-count-weekends (s/int-in 0 (inc 50)))
+(s/def ::average-water-consumption-l (s/int-in 0 (inc 1000)))
+(s/def ::maintenance-water-temperature-c (s/int-in 0 100))
+(s/def ::ice-average-thickness-mm (s/int-in 0 (inc 150)))
+
 ;;; Energy consumption ;;;
 
 ;; Note: in cljs (type 1e7) => Number (implicitly int)
