@@ -154,6 +154,7 @@
        [lui/text-field
         {:label     (tr :refrigeration/power-kw)
          :type      "number"
+         :spec      ::schema/power-kw
          :value     (-> data :refrigeration :power-kw)
          :on-change #(set-field :refrigeration :power-kw %)}]
        [lui/text-field
@@ -163,6 +164,7 @@
        [lui/text-field
         {:label     (tr :refrigeration/refrigerant-amount-kg)
          :type      "number"
+         :spec      ::schema/refrigerant-amount-kg
          :value     (-> data :refrigeration :refrigerant-amount-kg)
          :on-change #(set-field :refrigeration :refrigerant-amount-kg %)}]
        [lui/text-field
@@ -172,6 +174,7 @@
        [lui/text-field
         {:label     (tr :refrigeration/refrigerant-solution-amount-l)
          :type      "number"
+         :spec      ::schema/refrigerant-solution-amount-l
          :value     (-> data :refrigeration :refrigerant-solution-amount-l)
          :on-change #(set-field :refrigeration :refrigerant-solution-amount-l %)}]]]
 
@@ -179,28 +182,47 @@
      [lui/form-card {:title (tr :conditions/headline)}
       [mui/form-group
        [lui/text-field
+        {:label     (tr :conditions/open-months)
+         :type      "number"
+         :spec      ::schema/open-months
+         :adornment (tr :time/month)
+         :value     (-> data :conditions :open-months)
+         :on-change #(set-field :conditions :open-months %)}]
+       [lui/text-field
+        {:label     (tr :conditions/daily-open-hours)
+         :type      "number"
+         :spec      ::schema/daily-open-hours
+         :adornment (tr :time/hour)
+         :value     (-> data :conditions :daily-open-hours)
+         :on-change #(set-field :conditions :daily-open-hours %)}]
+       [lui/text-field
         {:label     (tr :conditions/air-humidity-min)
          :type      "number"
+         :spec      ::schema/air-humidity-percent
          :value     (-> data :conditions :air-humidity :min)
          :on-change #(set-field :conditions :air-humidity :min %)}]
        [lui/text-field
         {:label     (tr :conditions/air-humidity-max)
          :type      "number"
+         :spec      ::schema/air-humidity-percent
          :value     (-> data :conditions :air-humidity :max)
          :on-change #(set-field :conditions :air-humidity :max %)}]
        [lui/text-field
         {:label     (tr :conditions/ice-surface-temperature-c)
          :type      "number"
+         :spec      ::schema/ice-surface-temperature-c
          :value     (-> data :conditions :ice-surface-temperature-c)
          :on-change #(set-field :conditions :ice-surface-temperature-c %)}]
        [lui/text-field
         {:label     (tr :conditions/skating-area-temperature-c)
          :type      "number"
+         :spec      ::schema/skating-area-temperature-c
          :value     (-> data :conditions :skating-area-temperature-c)
          :on-change #(set-field :conditions :skating-area-temperature-c %)}]
        [lui/text-field
         {:label     (tr :conditions/stand-temperature-c)
          :type      "number"
+         :spec      ::schema/stand-temperature-c
          :value     (-> data :conditions :stand-temperature-c)
          :on-change #(set-field :conditions :stand-temperature-c %)}]]]
 
@@ -210,21 +232,25 @@
        [lui/text-field
         {:label     (tr :ice-maintenance/daily-maintenance-count-week-days)
          :type      "number"
+         :spec      ::schema/daily-maintenance-count-week-days
          :value     (-> data :ice-maintenance :daily-maintenance-count-week-days)
          :on-change #(set-field :ice-maintenance :daily-maintenance-count-week-days %)}]
        [lui/text-field
         {:label     (tr :ice-maintenance/daily-maintenance-count-weekends)
          :type      "number"
+         :spec      ::schema/daily-maintenance-count-weekends
          :value     (-> data :ice-maintenance :daily-maintenance-count-weekends)
          :on-change #(set-field :ice-maintenance :daily-maintenance-count-weekends %)}]
        [lui/text-field
         {:label     (tr :ice-maintenance/average-water-consumption-l)
          :type      "number"
+         :spec      ::schema/average-water-consumption-l
          :value     (-> data :ice-maintenance :average-water-consumption-l)
          :on-change #(set-field :ice-maintenance :average-water-consumption-l %)}]
        [lui/text-field
         {:label     (tr :ice-maintenance/ice-average-thickness-mm)
          :type      "number"
+         :spec      ::schema/ice-average-thickness-mm
          :value     (-> data :ice-maintenance :ice-average-thickness-mm)
          :on-change #(set-field :ice-maintenance :ice-average-thickness-mm %)}]]]
 
@@ -238,6 +264,7 @@
        [lui/text-field
         {:label     (tr :ventilation/heat-recovery-thermal-efficiency-percent)
          :type      "number"
+         :spec      ::schema/heat-recovery-thermal-efficiency-percent
          :adornment (tr :units/percent)
          :value     (-> data :ventilation :heat-recovery-thermal-efficiency-percent)
          :on-change #(set-field :ventilation :heat-recovery-thermal-efficiency-percent %)}]

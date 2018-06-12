@@ -101,7 +101,10 @@
 
    ;; Olosuhteet
    :conditions
-   {:air-humidity                         ; Ilman suhteellisen kosteuden
+   {;; --> energiankulutukseen liittyvää lisätietoa kerätään vuositasolla
+    :daily-open-hours 15                  ; Aukiolo päivässä (tuntia/pv) ???
+    :open-months 12                       ; Aukiolo vuodessa (kk/vuosi) ???
+    :air-humidity                         ; Ilman suhteellisen kosteuden
     {:min 50                              ;  vaihteluväli  50-70
      :max 60}
     :ice-surface-temperature-c -3         ; Jään pinnan lämpötila -3 -6
@@ -120,10 +123,7 @@
                                           ;  vesimäärä/jäänajo (ltr)
     :maintenance-water-temperature-c 35   ; Jäähoitoveden lämpötila (tavoite +40)
     :ice-average-thickness-mm 20          ; Jään keskipaksuus mm
-
-    ;; --> energiankulutukseen liittyvää lisätietoa kerätään vuositasolla
-    :daily-open-hours 15                  ; Aukiolo päivässä (tuntia/pv) ???
-    :open-months 12}                      ; Aukiolo vuodessa (kk:a/vuosi) ???
+    }
 
    ;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
    :ventilation
@@ -335,7 +335,8 @@
   (into {} (map (juxt idx-fn identity)) coll))
 
 (def default-db
-  {:backend-url "/api"
+  {;:backend-url "/api"
+   :backend-url "http://localhost:8091/api"
    :logged-in? false
    :translator (i18n/->tr-fn :fi)
 
