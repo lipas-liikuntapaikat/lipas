@@ -15,7 +15,9 @@
 
    :sport
    {:headline "Liikuntapaikat"
-    :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."}
+    :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
+    :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi vielä
+    nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
    :sports-place
    {:headline "Liikuntapaikka"
