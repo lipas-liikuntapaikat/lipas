@@ -24,7 +24,7 @@
    :www "www.jyvaskyla.fi"
    :email nil
    :phone-number nil
-   :info-fi ""
+   :info-fi nil
 
    ;;; Sijainti ;;;
    :location
@@ -84,7 +84,7 @@
    :renovations
    [{:year 2013                            ; Peruskorjausvuosi
      :comment "Asennettiin uusi ilmanvaihto."
-     :main-designers "?"}]                 ; varmistetaan Erjalta
+     :main-designers nil}]                 ; varmistetaan Erjalta
 
    ;; Kylmätekniikka
    :refrigeration
@@ -130,8 +130,8 @@
    {:heat-recovery-type "Levysiirrin"             ; LTO_tyyppi
     :heat-recovery-thermal-efficiency-percent 10  ; LTO_hyötysuhde
     :dryer-type "Jäähdytyspatteri"                ; Ilmankuivaustapa
-    :dryer-duty-type "??"                         ; Ilm.kuiv.käyttötapa
-    :heat-pump-type "None"}                       ; Lämpöpumpputyyppi
+    :dryer-duty-type nil                          ; Ilm.kuiv.käyttötapa
+    :heat-pump-type nil}                          ; Lämpöpumpputyyppi
 
    ;; Energiankulutus
    :energy-consumption
