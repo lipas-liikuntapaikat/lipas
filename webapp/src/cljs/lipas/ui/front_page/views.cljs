@@ -43,7 +43,9 @@
     [grid-card {:title (tr :data-users/headline)}
      [mui/typography (tr :data-users/description)]]
     [grid-card {:title (tr :partners/headline)}
-     [mui/typography (tr :partners/description)]]]])
+     [mui/typography (tr :partners/description)]]
+    [grid-card {:title (tr :team/headline)}
+     [mui/typography (tr :team/description)]]]])
 
 (defn main [tr]
   (create-panel tr))

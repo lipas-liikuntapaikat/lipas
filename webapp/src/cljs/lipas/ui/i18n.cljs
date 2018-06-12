@@ -117,7 +117,12 @@
 
    :partners
    {:headline "Kumppanit"
-    :description "Yhteistyökumppaneille voisi olla myös oma osio."}
+    :description "Yhteistyökumppaneille voisi olla myös oma osio. Tai
+    ainakin listaus logoineen."}
+
+   :team
+   {:headline "Tiimi"
+    :description "Tekijöille voisi olla myös esittely?"}
 
    :pool-types (->translation-map :fi pools/pool-types)
    :pool-structures (->translation-map :fi materials/pool-structures)
