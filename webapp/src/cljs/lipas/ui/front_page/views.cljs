@@ -10,10 +10,11 @@
               :style (merge style {:height "100%"})}
     [mui/card-header {:title title
                       :action (when link
-                                (r/as-element [mui/icon-button
-                                               {:on-click #(navigate! link)
-                                                :color "secondary"}
-                                               [mui-icons/arrow-forward]]))}]
+                                (r/as-element
+                                 [mui/icon-button
+                                  {:on-click #(navigate! link)
+                                   :color "secondary"}
+                                  [mui/icon "arrow_forward"]]))}]
     (into [mui/card-content] children)
     [mui/card-actions]]])
 
@@ -38,7 +39,11 @@
      [mui/typography (tr :open-data/description)]]
     [grid-card {:title (tr :help/headline)
                 :link "/#/ohjeet"}
-     [mui/typography (tr :help/description)]]]])
+     [mui/typography (tr :help/description)]]
+    [grid-card {:title (tr :data-users/headline)}
+     [mui/typography (tr :data-users/description)]]
+    [grid-card {:title (tr :partners/headline)}
+     [mui/typography (tr :partners/description)]]]])
 
 (defn main [tr]
   (create-panel tr))

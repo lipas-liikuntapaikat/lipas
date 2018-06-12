@@ -105,10 +105,19 @@
 
    :open-data
    {:headline "Avoin data"
-    :description "Kaikki data on avointa."
+    :description "Linkit ja ohjeet rajapintojen käyttöön."
     :rest "REST"
     :wms-wfs "WMS & WFS"
     :wms-wfs-description "Tämmöisetkin löytyy Geoserveriltä"}
+
+   :data-users
+   {:headline "Käyttäjät"
+    :description "Olisiko tähän hyvä laittaa lista Lipaksen datan
+    hyödyntäjistä ja muista käyttäjistä?"}
+
+   :partners
+   {:headline "Kumppanit"
+    :description "Yhteistyökumppaneille voisi olla myös oma osio."}
 
    :pool-types (->translation-map :fi pools/pool-types)
    :pool-structures (->translation-map :fi materials/pool-structures)
@@ -121,7 +130,7 @@
 
    :help
    {:headline "Ohjeet"
-    :description "Täältä löytyvät ohjeet"}
+    :description "Lipaksen käyttöohjeet, videot yms."}
 
    :user
    {:headline "Oma sivu"
