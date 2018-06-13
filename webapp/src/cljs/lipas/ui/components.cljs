@@ -219,8 +219,9 @@
         :on-blur #(on-change (extract-values @state))
         :options (map (partial str-field :value) items)}}}]))
 
-(defn year-selector [{:keys [label value on-change required]}]
-  (let [years (range 1900 (inc (.getFullYear (js/Date.))))]
+(defn year-selector [{:keys [label value on-change required years]}]
+  (let [years (or years
+                  (range 1900 (inc (.getFullYear (js/Date.)))))]
     [select {:label label
              :items (map #(hash-map :label % :value %) years)
              :on-change on-change
