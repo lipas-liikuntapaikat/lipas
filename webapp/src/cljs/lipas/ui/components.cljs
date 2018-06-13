@@ -236,7 +236,7 @@
   [mui/text-field
    {:type "date"
     :label label
-    :value value
+    :value (or value "")
     :Input-label-props
     {:shrink true} ; This makes the label show actually
     :on-change #(on-change (-> % .-target .-value))}])
