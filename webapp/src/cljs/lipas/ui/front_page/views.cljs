@@ -14,7 +14,7 @@
                                  [mui/icon-button
                                   {:on-click #(navigate! link)
                                    :color "secondary"}
-                                  [mui/icon "arrow_forward"]]))}]
+                                  [mui/icon "arrow_forward_ios"]]))}]
     (into [mui/card-content] children)
     [mui/card-actions]]])
 
