@@ -375,3 +375,13 @@
        :items     (map #(hash-map :label (-> % :name locale)
                                   :value (-> % :city-code)) cities)
        :on-change #(on-change :city :city-code %)}]]))
+
+(defn expansion-panel [{:keys [label]} & children]
+  [mui/expansion-panel {:style {:margin-top "1em"}}
+   [mui/expansion-panel-summary {:expand-icon (r/as-element
+                                               [mui/icon "expand_more"])}
+    [mui/typography {:color "primary"
+                     :variant "button"}
+     label]]
+   (into [mui/expansion-panel-details]
+         children)])

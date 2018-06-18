@@ -48,16 +48,10 @@
       [energy/form {:tr tr
                     :data (:energy-consumption data)
                     :on-change (partial set-field :energy-consumption)}]
-      [mui/expansion-panel {:style {:margin-top "1em"}}
-       [mui/expansion-panel-summary {:expand-icon (r/as-element
-                                                   [mui/icon "expand_more"])}
-        [mui/typography {:color "primary"
-                         :variant "button"}
-         (tr :actions/show-all-years)]]
-       [mui/expansion-panel-details
-        [energy/table {:tr tr
-                       :read-only? true
-                       :items energy}]]]]
+      [lui/expansion-panel {:label (tr :actions/show-all-years)}
+       [energy/table {:tr tr
+                      :read-only? true
+                      :items energy}]]]
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
