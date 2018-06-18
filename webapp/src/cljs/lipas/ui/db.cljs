@@ -348,8 +348,7 @@
                vesivelho-2015 vesivelho-2016 vesivelho-2017])
 
 (def default-db
-  {;:backend-url "/api"
-   :backend-url "http://localhost:8091/api"
+  {:backend-url "/api"
    :logged-in? false
    :translator (i18n/->tr-fn :fi)
 
