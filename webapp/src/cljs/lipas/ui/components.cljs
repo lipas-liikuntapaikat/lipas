@@ -2,11 +2,13 @@
   (:require [cljsjs.react-select]
             [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
-            [lipas.schema.core :as schema]
             [clojure.string :refer [trim]]
+            [lipas.schema.core :as schema]
             [lipas.ui.mui :as mui]
-            [lipas.ui.mui-icons :as mui-icons]
+            [lipas.ui.utils :refer [resolve-year this-year index-by ->timestamp]]
             [reagent.core :as r]))
+
+(def CHECK_MARK "✓")
 
 (defn checkbox [{:keys [label value on-change]}]
   [mui/form-control-label
@@ -18,66 +20,90 @@
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
 
+(defn table [{:keys [headers items]}]
+  [mui/grid {:container true}
+   [mui/grid {:item true :xs 12}
+    [:div {:style {:overflow-x "auto"}}
+     [mui/table
+      [mui/table-head
+       (into [mui/table-row]
+             (for [[_ header] headers]
+               [mui/table-cell header]))]
+      [mui/table-body
+       (for [item items
+             :let [id (or (:id item) (gensym))]]
+         [mui/table-row {:key id
+                         :hover true}
+          (for [[k _] headers
+                :let [v (get item k)]]
+            [mui/table-cell {:key (str id k)}
+             (cond
+               (true? v) CHECK_MARK
+               :else v)])])]]]]])
+
 (defn form-table [{:keys [headers
                           items
                           add-tooltip
                           edit-tooltip
                           delete-tooltip
+                          read-only?
                           on-add
                           on-edit
-                          on-delete]}]
-  (r/with-let [selected-item (r/atom nil)]
-    [mui/grid {:container true
-               :spacing 8
-               :justify "flex-end"
-               :align-items "center"}
-     [mui/grid {:item true :xs 12}
-      [:div {:style {:overflow-x "auto"}}
-       [mui/table
-        [mui/table-head
-         (into [mui/table-row {:hover true}
-                [mui/table-cell ""]]
-               (for [[_ header] headers]
-                 [mui/table-cell header]))]
-        [mui/table-body
-         (doall
-          (for [item items
-                :let [id (:id item)]]
-            [mui/table-row {:key id
-                            :hover true}
-             [mui/table-cell {:padding "checkbox"}
-              [mui/checkbox {:checked (= item @selected-item)
-                             :on-change (fn [_ checked?]
-                                          (let [v (when checked? item)]
-                                            (reset! selected-item v)))}]]
-             (for [[k _] headers
-                   :let [v (get item k)]]
-               [mui/table-cell {:key (str id k)
-                                :padding "dense"}
-                (cond
-                  (true? v) "✓"
-                  :else v)])
-             ]))]]]]
-     [mui/grid {:item true :xs 10}
-      (when @selected-item
-        [:span
-         [mui/tooltip {:title (or edit-tooltip "")
-                       :placement "top"}
-          [mui/icon-button {:on-click #(on-edit @selected-item)}
-           [mui-icons/edit]]]
-         [mui/tooltip {:title (or delete-tooltip "")
-                       :placement "top"}
-          [mui/icon-button {:on-click #(on-delete @selected-item)}
-           [mui-icons/delete]]]])]
-     [mui/grid {:item true :xs 2
-                :style {:text-align "right"}}
-      [mui/tooltip {:title (or add-tooltip "")
-                    :placement "left"}
-       [mui/button {:style {:margin-top "0.5em"}
-                    :on-click on-add
-                    :variant "fab"
-                    :color "secondary"}
-        [mui-icons/add]]]]]))
+                          on-delete] :as props}]
+  (if read-only?
+    [table props]
+    (r/with-let [selected-item (r/atom nil)]
+      [mui/grid {:container true
+                 :spacing 8
+                 :justify "flex-end"
+                 :align-items "center"}
+       [mui/grid {:item true :xs 12}
+        [:div {:style {:overflow-x "auto"}}
+         [mui/table
+          [mui/table-head
+           (into [mui/table-row {:hover true}
+                  [mui/table-cell ""]]
+                 (for [[_ header] headers]
+                   [mui/table-cell header]))]
+          [mui/table-body
+           (doall
+            (for [item items
+                  :let [id (:id item)]]
+              [mui/table-row {:key id
+                              :hover true}
+               [mui/table-cell {:padding "checkbox"}
+                [mui/checkbox {:checked (= item @selected-item)
+                               :on-change (fn [_ checked?]
+                                            (let [v (when checked? item)]
+                                              (reset! selected-item v)))}]]
+               (for [[k _] headers
+                     :let [v (get item k)]]
+                 [mui/table-cell {:key (str id k)
+                                  :padding "dense"}
+                  (cond
+                    (true? v) CHECK_MARK
+                    :else v)])
+               ]))]]]]
+       [mui/grid {:item true :xs 10}
+        (when @selected-item
+          [:span
+           [mui/tooltip {:title (or edit-tooltip "")
+                         :placement "top"}
+            [mui/icon-button {:on-click #(on-edit @selected-item)}
+             [mui/icon "edit"]]]
+           [mui/tooltip {:title (or delete-tooltip "")
+                         :placement "top"}
+            [mui/icon-button {:on-click #(on-delete @selected-item)}
+             [mui/icon "delete"]]]])]
+       [mui/grid {:item true :xs 2
+                  :style {:text-align "right"}}
+        [mui/tooltip {:title (or add-tooltip "")
+                      :placement "left"}
+         [mui/button {:style {:margin-top "0.5em"}
+                      :on-click on-add
+                      :variant "fab"
+                      :color "secondary"}
+          [mui/icon "add"]]]]])))
 
 (defn dialog [{:keys [title
                       on-save
@@ -117,8 +143,8 @@
                                                      :on-click on-close
                                                      :color "secondary"}
                                     (if (:success? notification)
-                                      [mui-icons/done]
-                                      [mui-icons/warning])])}]])
+                                      [mui/icon "done"]
+                                      [mui/icon "warning"])])}]])
 
 (defn trim-safe [s]
   (if (string? s)
@@ -140,29 +166,20 @@
     (read-string s)
     (not-empty s)))
 
-(defn text-field [{:keys [value type adornment Input-props
-                          on-change spec required]
-                   :as props} & children]
-  (r/with-let [state (r/atom value)]
-    (let [props (-> props
-                    (assoc :default-value (or value ""))
-                    (dissoc :value)
-                    (assoc :error (error? spec @state required))
-                    (assoc :Input-props (merge Input-props
-                                               (when adornment
-                                                 (->adornment adornment))))
-                    (assoc :on-change (fn [e]
-                                        (swap! state
-                                               #(->> e
-                                                    .-target
-                                                    .-value
-                                                    (coerce type)))))
-                    (assoc :on-blur #(on-change (trim-safe @state))))]
-      (into [mui/text-field props] children))))
+(defn patched-input [props]
+  [:input (dissoc props :inputRef)])
 
-(defn text-field-controlled [{:keys [value type on-change]
+(defn text-field-controlled [{:keys [value type on-change spec required
+                                     Input-props adornment]
                               :as props} & children]
   (let [props (-> props
+                  (assoc :error (error? spec value required))
+                  (assoc :Input-props
+                         (merge Input-props
+                                {:input-component (r/reactify-component
+                                                   patched-input)}
+                                (when adornment
+                                  (->adornment adornment))))
                   (assoc :value (or value ""))
                   (assoc :on-change #(->> %
                                           .-target
@@ -173,18 +190,20 @@
                                      (on-change (trim value)))))]
     (into [mui/text-field props] children)))
 
-(defn select [{:keys [label value items on-change required]}]
+(def text-field text-field-controlled)
+
+(defn select [{:keys [label value items on-change required sort-key]
+               :or   {sort-key :label}}]
   [text-field-controlled {:select true
                           :required required
                           :label label
                           :value (pr-str value)
                           :on-change #(on-change (read-string %))}
-   (for [{:keys [label value]} (sort-by :label items)]
+   (for [{:keys [label value]} (sort-by sort-key items)]
      [mui/menu-item {:key value :value (pr-str value)}
       label])])
 
 (def react-select (r/adapt-react-class js/Select))
-
 
 (defn extract-values [multi-select-state]
   (as-> multi-select-state $
@@ -240,6 +259,36 @@
     :Input-label-props
     {:shrink true} ; This makes the label show actually
     :on-change #(on-change (-> % .-target .-value))}])
+
+
+(defn site-selector [{:keys [locale label value on-change items required]}]
+  [select {:label     label
+           :required  required
+           :value     (:lipas-id value)
+           :items     (map #(hash-map :label (-> % :name locale)
+                                      :value (-> % :lipas-id))
+                           (map :latest (vals items)))
+           :on-change #(when-let [site (get items %)]
+                         (on-change site))}])
+
+(defn rev-selector [{:keys [label value on-change items required template-fn]}]
+  (let [revs-by-year (index-by (comp resolve-year :timestamp) items)
+        years        (range 2000 (inc this-year))
+        items        (for [y    years
+                           :let [data-exists? (some #{y} (keys revs-by-year))]]
+                       {:label (if data-exists?
+                                 (str y " " CHECK_MARK)
+                                 (str y))
+                        :value y
+                        :sort  (- y)})]
+    [select {:label     label
+             :items     items
+             :on-change #(on-change (or
+                                     (get revs-by-year %)
+                                     (template-fn (->timestamp %))))
+             :value     (-> value :timestamp resolve-year)
+             :sort-key  :sort
+             :required  required}]))
 
 (defn sports-place-form [{:keys [tr data types admins owners on-change]}]
   [mui/form-group
