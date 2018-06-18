@@ -9,8 +9,7 @@
       (update-in [:pools] ->indexed-map)
       (update-in [:renovations] ->indexed-map)
       (update-in [:saunas] ->indexed-map)
-      (update-in [:slides] ->indexed-map)
-      (update-in [:energy-consumption] ->indexed-map)))
+      (update-in [:slides] ->indexed-map)))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -18,9 +17,16 @@
    (assoc-in db [:swimming-pools :active-tab] active-tab)))
 
 (re-frame/reg-event-db
- ::edit
- (fn [db [_ swimming-pool]]
-   (assoc-in db [:swimming-pools :editing] (make-editable swimming-pool))))
+ ::set-edit-site
+ (fn [db [_ site]]
+   (-> db
+       (assoc-in [:swimming-pools :editing :site] site)
+       (assoc-in [:swimming-pools :editing :lipas-id] (:lipas-id site)))))
+
+(re-frame/reg-event-db
+ ::set-edit-rev
+ (fn [db [_ rev]]
+   (assoc-in db [:swimming-pools :editing :rev] (make-editable rev))))
 
 (re-frame/reg-event-db
  ::set-field
@@ -38,31 +44,25 @@
 (re-frame/reg-event-db
  ::save-renovation
  (fn [db [_ value]]
-   (let [path [:swimming-pools :editing :renovations]]
+   (let [path [:swimming-pools :editing :rev :renovations]]
      (save-entity db path value))))
 
 (re-frame/reg-event-db
  ::save-sauna
  (fn [db [_ value]]
-   (let [path [:swimming-pools :editing :saunas]]
+   (let [path [:swimming-pools :editing :rev :saunas]]
      (save-entity db path value))))
 
 (re-frame/reg-event-db
  ::save-pool
  (fn [db [_ value]]
-   (let [path [:swimming-pools :editing :pools]]
+   (let [path [:swimming-pools :editing :rev :pools]]
      (save-entity db path value))))
 
 (re-frame/reg-event-db
  ::save-slide
  (fn [db [_ value]]
-   (let [path [:swimming-pools :editing :slides]]
-     (save-entity db path value))))
-
-(re-frame/reg-event-db
- ::save-energy
- (fn [db [_ value]]
-   (let [path [:swimming-pools :editing :energy-consumption]]
+   (let [path [:swimming-pools :editing :rev :slides]]
      (save-entity db path value))))
 
 (re-frame/reg-event-db
@@ -84,11 +84,6 @@
  ::remove-slide
  (fn [db [_ {:keys [id]}]]
    (update-in db [:swimming-pools :editing :slides] dissoc id)))
-
-(re-frame/reg-event-db
- ::remove-energy
- (fn [db [_ {:keys [id]}]]
-   (update-in db [:swimming-pools :editing :energy-consumption] dissoc id)))
 
 (re-frame/reg-event-db
  ::reset-dialog

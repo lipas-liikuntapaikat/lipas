@@ -1,12 +1,11 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
-  (:require [cljsjs.material-ui]
+  (:require [material-ui]
             [goog.object :as gobj]
             [clojure.string :as s]
             [reagent.core :as r]
             [camel-snake-kebab.core :refer [convert-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]))
-
 
 (comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
 (comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
@@ -16,7 +15,9 @@
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
-(def create-mui-theme (gobj/get js/MaterialUIStyles "createMuiTheme"))
+(keys (js->clj js/MaterialUI))
+
+(def create-mui-theme (gobj/get js/MaterialUI "createMuiTheme"))
 
 (defn ->mui-theme [opts]
   (->> opts
@@ -107,8 +108,13 @@
 (def dialog-actions (mui->reagent "DialogActions"))
 (def snackbar (mui->reagent "Snackbar"))
 (def snackbar-content (mui->reagent "SnackbarContent"))
+(def expansion-panel (mui->reagent "ExpansionPanel"))
+(def expansion-panel-actions (mui->reagent "ExpansionPanelActions"))
+(def expansion-panel-details (mui->reagent "ExpansionPanelDetails"))
+(def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
+(def input-label (mui->reagent "InputLabel"))
 
-(def with-styles* (gobj/get js/MaterialUIStyles "withStyles"))
+(def with-styles* (gobj/get js/MaterialUI "withStyles"))
 
 (defn with-styles [styles]
   (->> styles

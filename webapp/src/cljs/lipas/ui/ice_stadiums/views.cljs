@@ -4,12 +4,11 @@
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.renovations :as renovations]
             [lipas.ui.ice-stadiums.rinks :as rinks]
-            [lipas.ui.ice-stadiums.energy :as energy]
+            [lipas.ui.energy :as energy]
             [lipas.ui.ice-stadiums.subs :as subs]
-            [lipas.ui.ice-stadiums.utils :refer [set-field]]
+            [lipas.ui.ice-stadiums.utils :refer [set-field make-revision]]
             [lipas.ui.mui :as mui]
-            [lipas.ui.mui-icons :as mui-icons]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :refer [<== ==> resolve-year]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -24,24 +23,35 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn ice-stadium-form [tr data]
-  (let [data      (<== [::subs/editing])
+
+(defn ice-stadium-form [{:keys [tr rev]}]
+  (let [data      rev
+        year      (resolve-year (:timestamp rev))
         dialogs   (<== [::subs/dialogs])
         types     (<== [::subs/types])
         cities    (<== [::subs/cities])
         owners    (<== [::subs/owners])
         admins    (<== [::subs/admins])
-        set-field (partial set-field :editing)]
+        energy    (<== [::subs/energy-consumption-history])
+        set-field (partial set-field :editing :rev)]
 
     [mui/grid {:container true}
 
      ;; Energy consumption
-     (when (-> dialogs :energy :open?)
-       [energy/dialog {:tr tr}])
-
-     [lui/form-card {:title (tr :energy/headline)}
-      [energy/table {:tr tr :items (-> data :energy-consumption)}]]
-
+     [lui/form-card {:title (tr :energy/headline-year year)}
+      [energy/form {:tr tr
+                    :data (:energy-consumption data)
+                    :on-change (partial set-field :energy-consumption)}]
+      [mui/expansion-panel {:style {:margin-top "1em"}}
+       [mui/expansion-panel-summary {:expand-icon (r/as-element
+                                                   [mui/icon "expand_more"])}
+        [mui/typography {:color "primary"
+                         :variant "button"}
+         (tr :actions/show-all-years)]]
+       [mui/expansion-panel-details
+        [energy/table {:tr tr
+                       :read-only? true
+                       :items energy}]]]]
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
@@ -290,24 +300,40 @@
        (tr :actions/save)]]]))
 
 (defn edit-tab [tr]
-  (let [data    (<== [::subs/sites-to-edit])
-        editing (<== [::subs/editing])
-        locale  (tr)]
-    [:div
-     [mui/grid {:container true}
-      (if data
-        [lui/form-card {:title (tr :actions/select-hall)}
-         [mui/form-group
-          [lui/select {:label     (tr :actions/select-hall)
-                       :value     (:lipas-id editing)
-                       :items     (map #(hash-map :label (-> % :name locale)
-                                                  :value (-> % :lipas-id))
-                                       (vals data))
-                       :on-change #(when-let [pool (get data %)]
-                                     (==> [::events/edit pool]))}]]]
-        [mui/typography "Sinulla ei ole oikeuksia yhteenkään jäähalliin. :/"])]
-     (when editing
-       [ice-stadium-form tr editing])]))
+  (let [data   (<== [::subs/sites-to-edit])
+        site   (<== [::subs/editing-site])
+        rev    (<== [::subs/editing-rev])
+        locale (tr)]
+
+    [mui/grid {:container true}
+
+     (when-not data
+       [mui/typography "Sinulla ei ole oikeuksia yhteenkään jäähalliin. :/"])
+
+     (when data
+       [lui/form-card {:title (tr :actions/select-hall)}
+        [mui/form-group
+         [lui/site-selector
+          {:label     (tr :actions/select-hall)
+           :locale    locale
+           :value     (-> site :latest)
+           :items     data
+           :on-change #(==> [::events/set-edit-site %])}]]])
+
+     (when site
+       [lui/form-card {:title (tr :actions/select-year)}
+        [mui/form-group
+         [lui/rev-selector
+          {:label       (tr :actions/select-year)
+           :value       rev
+           :items       (:history site)
+           :template-fn (partial make-revision site)
+           :on-change   #(==> [::events/set-edit-rev %])}]]])
+
+     (when (and site rev)
+       [ice-stadium-form
+        {:tr  tr
+         :rev rev}])]))
 
 (defn create-panel [{:keys [tr url logged-in?]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
@@ -324,16 +350,16 @@
 
          ;; Info tab
          [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon (r/as-element [mui-icons/info])}]
+                   :icon (r/as-element [mui/icon "info"])}]
 
          ;; Edit tab
          (when logged-in?
            [mui/tab {:label (tr :ice-basic-data/headline)
-                     :icon (r/as-element [mui-icons/edit])}])
+                     :icon (r/as-element [mui/icon "edit"])}])
 
          ;; Energy tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui-icons/flash-on])}]]]]]
+                   :icon (r/as-element [mui/icon "flash_on"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       [mui/card card-props

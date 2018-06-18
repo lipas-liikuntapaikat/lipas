@@ -89,6 +89,7 @@
 
    :energy
    {:headline "Energiankulutus"
+    :headline-year "Energiankulutus vuonna {1}"
     :electricity "Sähkö MWh"
     :heat "Lämpö (ostettu) MWh"
     :water "Vesi m³"
@@ -319,7 +320,9 @@
     :save "Tallenna"
     :delete "Poista"
     :cancel "Peruuta"
-    :select-hall "Valitse halli"}
+    :select-hall "Valitse halli"
+    :select-year "Valitse vuosi"
+    :show-all-years "Näytä kaikki vuodet"}
 
    :general
    {:name "Nimi"
@@ -404,6 +407,11 @@
 (comment (translate :fi :menu/sports-panel :lower))
 (def translate (tongue/build-translate dicts))
 
+(def formatters
+  {:lower-case s/lower-case
+   :upper-case s/upper-case
+   :capitalize s/capitalize})
+
 (defn fmt
   "Supported formatter options:
 
@@ -433,5 +441,5 @@
     ([]
      locale)
     ([kw & args]
-     (-> (translate locale kw)
+     (-> (apply translate (into [locale kw] (filter (complement keyword?) args)))
          (fmt args)))))

@@ -1,5 +1,6 @@
 (ns lipas.ui.ice-stadiums.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as re-frame]
+            [lipas.ui.utils :refer [resolve-year]]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -7,9 +8,21 @@
    (-> db :ice-stadiums :active-tab)))
 
 (re-frame/reg-sub
- ::editing
+ ::editing-site
  (fn [db _]
-   (-> db :ice-stadiums :editing)))
+   (-> db :ice-stadiums :editing :site)))
+
+(re-frame/reg-sub
+ ::editing-rev
+ (fn [db _]
+   (-> db :ice-stadiums :editing :rev)))
+
+(re-frame/reg-sub
+ ::energy-consumption-history
+ (fn [db _]
+   (let [history (-> db :ice-stadiums :editing :site :history)]
+     (map #(assoc (:energy-consumption %)
+                  :year (resolve-year (:timestamp %))) history))))
 
 (re-frame/reg-sub
  ::access-to-sports-sites
@@ -28,7 +41,7 @@
  (fn [[ids sites] _]
    (as-> sites $
      (select-keys $ ids)
-     (into {} (filter (comp #{2510 2520} :type-code :type second)) $)
+     (into {} (filter (comp #{2510 2520} :type-code :type :latest second)) $)
      (not-empty $))))
 
 (re-frame/reg-sub

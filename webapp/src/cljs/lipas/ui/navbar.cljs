@@ -3,7 +3,6 @@
             [lipas.ui.subs :as subs]
             [lipas.ui.i18n :as i18n]
             [lipas.ui.mui :as mui]
-            [lipas.ui.mui-icons :as mui-icons]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
             [re-frame.core :as re-frame]))
@@ -29,30 +28,30 @@
      (when (not logged-in?)
        [mui/menu-item {:on-click (comp close #(navigate! "/#/kirjaudu"))}
         [mui/list-item-icon
-         [mui-icons/lock]]
+         [mui/icon "lock"]]
         [mui/list-item-text {:primary (tr :login/headline)}]])
 
      (when (not logged-in?)
        [mui/menu-item {:on-click (comp close #(navigate! "/#/rekisteroidy"))}
         [mui/list-item-icon
-         [mui-icons/group-add]]
+         [mui/icon "group_add"]]
         [mui/list-item-text {:primary (tr :register/headline)}]])
 
      (when logged-in?
        [mui/menu-item {:on-click (comp close #(navigate! "/#/profiili"))}
         [mui/list-item-icon
-         [mui-icons/account-circle]]
+         [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
      [mui/menu-item {:on-click (comp close #(navigate! "/#/ohjeet"))}
       [mui/list-item-icon
-       [mui-icons/help]]
+       [mui/icon "help"]]
       [mui/list-item-text {:primary (tr :help/headline)}]]
 
      (when logged-in?
        [mui/menu-item {:on-click (comp close logout!)}
         [mui/list-item-icon
-         [mui-icons/exit-to-app]]
+         [mui/icon "exit_to_app"]]
         [mui/list-item-text {:primary (tr :login/logout)}]])]))
 
 (def separator
@@ -102,7 +101,7 @@
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/")}
        [mui/list-item-icon
-        [mui-icons/home]]
+        [mui/icon "home"]]
        [mui/list-item-text {:primary (tr :menu/frontpage)}]]
 
       [mui/divider]
@@ -110,32 +109,32 @@
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
        [mui/list-item-icon
-        [mui-icons/place]]
+        [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
        [mui/list-item-icon
-        [mui-icons/ac-unit]]
+        [mui/icon "ac_unit"]]
        [mui/list-item-text {:primary (tr :ice/headline)}]]
 
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
        [mui/list-item-icon
-        [mui-icons/pool]]
+        [mui/icon "pool"]]
        [mui/list-item-text {:primary (tr :swim/headline)}]]
       [mui/divider]
 
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/avoin-data")}
        [mui/list-item-icon
-        [mui-icons/build]]
+        [mui/icon "build"]]
        [mui/list-item-text {:primary (tr :open-data/headline)}]]
 
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/ohjeet")}
        [mui/list-item-icon
-        [mui-icons/help]]
+        [mui/icon "help"]]
        [mui/list-item-text {:primary (tr :help/headline)}]]
       [mui/divider]
 
@@ -143,28 +142,28 @@
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/profiili")}
          [mui/list-item-icon
-          [mui-icons/account-circle]]
+          [mui/icon "account_circle"]]
          [mui/list-item-text {:primary (tr :user/headline)}]])
 
       (when logged-in?
         [mui/list-item {:button true
                         :on-click logout!}
          [mui/list-item-icon
-          [mui-icons/exit-to-app]]
+          [mui/icon "exit_to_app"]]
          [mui/list-item-text {:primary (tr :login/logout)}]])
 
       (when (not logged-in?)
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/kirjaudu")}
          [mui/list-item-icon
-          [mui-icons/lock]]
+          [mui/icon "lock"]]
          [mui/list-item-text {:primary (tr :login/headline)}]])
 
       (when (not logged-in?)
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/rekisteroidy")}
          [mui/list-item-icon
-          [mui-icons/group-add]]
+          [mui/icon "group_add"]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
 
 (defn nav [tr menu-anchor drawer-open? active-panel logged-in?]
@@ -209,11 +208,11 @@
     [mui/hidden {:sm-down true}
      lang-selector]
     [mui/icon-button
-     [mui-icons/search]]
+     [mui/icon "search"]]
     ;;[mui/text-field {:placeholder "Haku"}]
     [mui/icon-button {:on-click show-menu}
      (if logged-in?
        [avatar]
-       [mui-icons/account-circle])]
+       [mui/icon "account_circle"])]
     [mui/icon-button {:on-click toggle-drawer}
-     [mui-icons/menu {:color "secondary"}]]]])
+     [mui/icon {:color "secondary"} "menu"]]]])

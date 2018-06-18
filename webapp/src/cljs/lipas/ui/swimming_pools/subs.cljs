@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as re-frame]
+            [lipas.ui.utils :refer [resolve-year]]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -23,13 +24,25 @@
  (fn [[ids sites] _]
    (as-> sites $
      (select-keys $ ids)
-     (into {} (filter (comp #{3110} :type-code :type second)) $)
+     (into {} (filter (comp #{3110} :type-code :type :latest second)) $)
      (not-empty $))))
 
 (re-frame/reg-sub
- ::editing
+ ::editing-site
  (fn [db _]
-   (-> db :swimming-pools :editing)))
+   (-> db :swimming-pools :editing :site)))
+
+(re-frame/reg-sub
+ ::editing-rev
+ (fn [db _]
+   (-> db :swimming-pools :editing :rev)))
+
+(re-frame/reg-sub
+ ::energy-consumption-history
+ (fn [db _]
+   (let [history (-> db :swimming-pools :editing :site :history)]
+     (map #(assoc (:energy-consumption %)
+                  :year (resolve-year (:timestamp %))) history))))
 
 (re-frame/reg-sub
  ::dialogs
