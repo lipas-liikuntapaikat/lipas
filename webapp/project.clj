@@ -6,14 +6,14 @@
                  [com.cemerick/url "0.1.1"]
 
                  ;;; Frontend ;;;
-                 [org.clojure/clojurescript "1.10.238"]
-                 [cljsjs/react "16.3.0-1"]
-                 [cljsjs/react-dom "16.3.0-1"]
-                 [reagent "0.8.0"]
+                 [org.clojure/clojurescript "1.10.312"]
+                 [cljsjs/react "16.4.0-0"]
+                 [cljsjs/react-dom "16.4.0-0"]
+                 [reagent "0.8.1"]
                  [re-frame "0.10.5"]
                  [secretary "1.2.3"]
                  [ns-tracker "0.3.0"]
-                 [cljsjs/material-ui "1.0.0-beta.40-0"]
+                 [cljsjs/material-ui "1.2.1-0"]
                  [cljsjs/react-select "1.2.1-1" :exclusions [cljsjs/react
                                                              cljsjs/react-dom]]
                  [tongue "0.2.4"]
@@ -69,8 +69,8 @@
   {:dev
    {:dependencies
                    [;;; Frontend ;;;
-                   [binaryage/devtools "0.9.4"]
-                   [day8.re-frame/re-frame-10x "0.2.0"]
+                   [binaryage/devtools "0.9.10"]
+                   [day8.re-frame/re-frame-10x "0.3.3"]
                    [figwheel-sidecar "0.5.13"]
                    [com.cemerick/piggieback "0.2.2"]
 
