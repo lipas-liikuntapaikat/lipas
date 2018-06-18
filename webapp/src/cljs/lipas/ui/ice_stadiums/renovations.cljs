@@ -9,9 +9,6 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :dialogs :renovation :data)]
     [mui/form-group
-     [lui/year-selector {:label (tr :renovations/end-year)
-                         :value (:year data)
-                         :on-change #(set-field :year %)}]
      [lui/text-field {:label (tr :building/main-designers)
                       :value (:main-designers data)
                       :on-change #(set-field :main-designers %)}]
@@ -37,8 +34,7 @@
      [form {:tr tr :data data}]]))
 
 (defn table [{:keys [tr items]}]
-  [lui/form-table {:headers [[:year (tr :time/year)]
-                             [:comment (tr :general/description)]
+  [lui/form-table {:headers [ [:comment (tr :general/description)]
                              [:main-designers (tr :building/main-designers)]]
                    :items items
                    :on-add #(toggle-dialog :renovation)

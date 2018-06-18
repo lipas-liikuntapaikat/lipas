@@ -1,6 +1,5 @@
 (ns lipas.ui.open-data.views
   (:require [lipas.ui.mui :as mui]
-            [lipas.ui.mui-icons :as mui-icons]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]))
 
@@ -26,7 +25,7 @@
                   [mui/list-item {:button true
                                   :on-click #(navigate! {:lipas links})}
                    [mui/list-item-icon
-                    [mui-icons/build]]
+                    [mui/icon "build"]]
                    [mui/list-item-text {:primary "Swagger"}]]
                   [mui/list-item {:button true
                                   :on-click #(navigate! (:github links))}

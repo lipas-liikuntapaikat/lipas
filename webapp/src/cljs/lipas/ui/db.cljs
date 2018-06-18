@@ -7,11 +7,11 @@
             [lipas.data.materials :as materials]
             [lipas.data.swimming-pools :as swimming-pools]))
 
-(def jaahalli
+(def jaahalli-2016
 
   ;;; Yleiset ;;;
   {:lipas-id 89839
-   :last-modified "2016-11-14 10:13:20.103"
+   :timestamp "2016-11-14 10:13:20.103"
 
    :name
    {:fi "Jyväskylän kilpajäähalli"
@@ -135,23 +135,24 @@
 
    ;; Energiankulutus
    :energy-consumption
-   [{:start "2015-01-01"
-     :end   "2015-12-31"
-     :electricity-mwh 1795
-     :heat-mwh 1159
-     :water-m3 8338}
-    {:start "2014-01-01"
-     :end   "2014-12-31"
-     :electricity-mwh 1820
-     :heat-mwh 125
-     :water-m3 7796}]
-   })
+   {:electricity-mwh 1795
+    :heat-mwh 1159
+    :water-m3 8338}})
 
-(def vesivelho
+(def jaahalli-2017
+  (assoc jaahalli-2016
+         :timestamp          "2017-11-14 10:13:20.103"
+         :name {:fi "Synergia-areena"}
+         :owner :unknown
+         :energy-consumption {:electricity-mwh 1500
+                              :heat-mwh 1164
+                              :water-m3 11032}))
+
+(def vesivelho-2012
   {
    ;;; Yleiset ;;;
    :lipas-id 506032
-   :last-modified "2016-11-14 10:13:20.103"
+   :timestamp "2012-11-14 10:13:20.103"
 
    :name {:fi "Äänekosken uimahalli VesiVelho"
           :se nil
@@ -298,41 +299,53 @@
 
    ;; Energiankulutus
    :energy-consumption
-   [{:start "2017-01-01"
-     :end   "2017-12-31"
-     :electricity-mwh 818
-     :heat-mwh 0
-     :water-m3 8573}
-    {:start "2016-01-01"
-     :end   "2016-12-31"
-     :electricity-mwh 0
-     :heat-mwh 0
-     :water-m3 0}
-    {:start "2015-01-01"
-     :end   "2015-12-31"
-     :electricity-mwh 0
-     :heat-mwh 0
-     :water-m3 0}
-    {:start "2014-01-01"
-     :end   "2014-12-31"
-     :electricity-mwh 0
-     :heat-mwh 0
-     :water-m3 0}
-    {:start "2013-01-01"
-     :end   "2013-12-31"
-     :electricity-mwh 664
-     :heat-mwh 0
-     :water-m3 0}
-    {:start "2012-01-01"
-     :end   "2012-12-31"
-     :electricity-mwh 643
-     :heat-mwh 1298
-     :water-m3 9221}]})
+   {:electricity-mwh 643
+    :heat-mwh 1298
+    :water-m3 9221}})
+
+(def vesivelho-2013
+  (assoc vesivelho-2012
+         :timestamp "2013-01-01"
+         :energy-consumption {:electricity-mwh 0
+                              :heat-mwh 0
+                              :water-m3 0}))
+
+(def vesivelho-2014
+  (assoc vesivelho-2013
+         :timestamp "2014-01-01"
+         :energy-consumption {:electricity-mwh 664
+                              :heat-mwh 0
+                              :water-m3 0}))
+
+(def vesivelho-2015
+  (assoc vesivelho-2014
+         :timestamp "2015-01-01"
+         :energy-consumption {:electricity-mwh 0
+                              :heat-mwh 0
+                              :water-m3 0}))
+
+(def vesivelho-2016
+  (assoc vesivelho-2015
+         :timestamp "2016-01-01"
+         :energy-consumption {:electricity-mwh 0
+                              :heat-mwh 0
+                              :water-m3 0}))
+
+(def vesivelho-2017
+  (assoc vesivelho-2016
+         :timestamp "2017-01-01"
+         :energy-consumption {:electricity-mwh 818
+                              :heat-mwh 0
+                              :water-m3 8573}))
 
 (comment (index-by :id [{:id 1 :name "kissa"}
                         {:id 2 :name "koira"}]))
 (defn index-by [idx-fn coll]
   (into {} (map (juxt idx-fn identity)) coll))
+
+(def all-docs [jaahalli-2016 jaahalli-2017
+               vesivelho-2012 vesivelho-2013 vesivelho-2014
+               vesivelho-2015 vesivelho-2016 vesivelho-2017])
 
 (def default-db
   {;:backend-url "/api"
@@ -342,7 +355,13 @@
 
    ;; Sports sites
    :sports-sites
-   (index-by :lipas-id [jaahalli vesivelho]) ; For demo
+   {506032
+    {:latest vesivelho-2017
+     :history [vesivelho-2012 vesivelho-2013 vesivelho-2014
+               vesivelho-2015 vesivelho-2016 vesivelho-2017]}
+    89839
+    {:latest jaahalli-2017
+     :history [jaahalli-2016 jaahalli-2017]}}
 
    ;; Ice stadiums
    :ice-stadiums

@@ -69,6 +69,9 @@
 (s/def ::username (s/and string? #(<= 1 (count %) 128)))
 (s/def ::password (s/and string? #(<= 6 (count %) 128)))
 
+(s/def ::login (s/or :username ::username
+                     :email ::email))
+
 (s/def ::user-data (s/keys :req-un [::firstname
                                     ::lastname]))
 (s/def ::permissions map?)
@@ -208,6 +211,7 @@
 (comment (s/valid? ::electricity-mwh 1e4))
 (comment (s/valid? ::electricity-mwh 0))
 (comment (s/valid? ::electricity-mwh (inc 1e4)))
+(comment (s/valid? ::electricity-mwh 1795))
 (s/def ::electricity-mwh #(<= 0 % (dec 1e4)))
 (s/def ::heat-mwh #(<= 0 % (dec 1e4)))
 (s/def ::water-m3 #(<= 0 % (dec 1e5)))

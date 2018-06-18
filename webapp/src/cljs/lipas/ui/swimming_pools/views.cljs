@@ -2,8 +2,7 @@
   (:require [lipas.schema.core :as schema]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
-            [lipas.ui.mui-icons :as mui-icons]
-            [lipas.ui.swimming-pools.energy :as energy]
+            [lipas.ui.energy :as energy]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.renovations :as renovations]
@@ -11,7 +10,8 @@
             [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.swimming-pools.utils :refer [set-field]]
-            [lipas.ui.utils :refer [<== ==> ->select-entries]]
+            [lipas.ui.utils :refer [<== ==> ->select-entries make-revision
+                                    resolve-year]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -26,8 +26,10 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn swimming-pool-form [tr data]
-  (let [dialogs               (<== [::subs/dialogs])
+(defn swimming-pool-form [{:keys [tr rev]}]
+  (let [data                  rev
+        year                  (resolve-year (:timestamp rev))
+        dialogs               (<== [::subs/dialogs])
         types                 (<== [::subs/types])
         cities                (<== [::subs/cities])
         owners                (<== [::subs/owners])
@@ -36,16 +38,26 @@
         building-materials    (<== [::subs/building-materials])
         supporting-structures (<== [::subs/supporting-structures])
         ceiling-structures    (<== [::subs/ceiling-structures])
-        set-field             (partial set-field :editing)]
+        energy                (<== [::subs/energy-consumption-history])
+        set-field             (partial set-field :editing :rev)]
 
     [mui/grid {:container true}
 
      ;; Energy consumption
-     (when (-> dialogs :energy :open?)
-       [energy/dialog {:tr tr}])
-
-     [lui/form-card {:title (tr :energy/headline)}
-      [energy/table {:tr tr :items (-> data :energy-consumption)}]]
+     [lui/form-card {:title (tr :energy/headline-year year)}
+      [energy/form {:tr tr
+                    :data (:energy-consumption data)
+                    :on-change (partial set-field :energy-consumption)}]
+      [mui/expansion-panel {:style {:margin-top "1em"}}
+       [mui/expansion-panel-summary {:expand-icon (r/as-element
+                                                   [mui/icon "expand_more"])}
+        [mui/typography {:color "primary"
+                         :variant "button"}
+         (tr :actions/show-all-years)]]
+       [mui/expansion-panel-details
+        [energy/table {:tr tr
+                       :read-only? true
+                       :items energy}]]]]
 
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
@@ -280,24 +292,40 @@
        (tr :actions/save)]]]))
 
 (defn edit-tab [tr]
-  (let [pools   (<== [::subs/sites-to-edit])
-        editing (<== [::subs/editing])
-        locale  (tr)]
-    [:div
-     [mui/grid {:container true}
-      (if pools
-        [lui/form-card {:title (tr :actions/select-hall)}
-         [mui/form-group
-          [lui/select {:label (tr :actions/select-hall)
-                       :value (:lipas-id editing)
-                       :items (map #(hash-map :label (-> % :name locale)
-                                              :value (-> % :lipas-id))
-                                   (vals pools))
-                       :on-change #(when-let [pool (get pools %)]
-                                     (==> [::events/edit pool]))}]]]
-        [mui/typography "Sinulla ei ole oikeuksia yhteenkään uimahalliin. :/"])]
-     (when editing
-       [swimming-pool-form tr editing])]))
+  (let [data   (<== [::subs/sites-to-edit])
+        site   (<== [::subs/editing-site])
+        rev    (<== [::subs/editing-rev])
+        locale (tr)]
+
+    [mui/grid {:container true}
+
+     (when-not data
+       [mui/typography "Sinulla ei ole oikeuksia yhteenkään Uimahalliin. :/"])
+
+     (when data
+       [lui/form-card {:title (tr :actions/select-hall)}
+        [mui/form-group
+         [lui/site-selector
+          {:label     (tr :actions/select-hall)
+           :locale    locale
+           :value     (-> site :latest)
+           :items     data
+           :on-change #(==> [::events/set-edit-site %])}]]])
+
+     (when site
+       [lui/form-card {:title (tr :actions/select-year)}
+        [mui/form-group
+         [lui/rev-selector
+          {:label       (tr :actions/select-year)
+           :value       rev
+           :items       (:history site)
+           :template-fn (partial make-revision site)
+           :on-change   #(==> [::events/set-edit-rev %])}]]])
+
+     (when (and site rev)
+       [swimming-pool-form
+        {:tr  tr
+         :rev rev}])]))
 
 (defn create-panel [tr logged-in? url]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]
@@ -314,16 +342,16 @@
 
          ;; 0 Info tab
          [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon (r/as-element [mui-icons/info])}]
+                   :icon (r/as-element [mui/icon "info"])}]
 
          ;; 1 Edit tab
          (when logged-in?
            [mui/tab {:label (tr :swim/edit)
-                     :icon (r/as-element [mui-icons/edit])}])
+                     :icon (r/as-element [mui/icon "edit"])}])
 
          ;; 2 Energy tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui-icons/flash-on])}]]]]]
+                   :icon (r/as-element [mui/icon "flash_on"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
