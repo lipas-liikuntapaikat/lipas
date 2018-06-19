@@ -113,6 +113,7 @@
 (def expansion-panel-details (mui->reagent "ExpansionPanelDetails"))
 (def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
 (def input-label (mui->reagent "InputLabel"))
+(def select (mui->reagent "Select"))
 
 (def with-styles* (gobj/get js/MaterialUI "withStyles"))
 
