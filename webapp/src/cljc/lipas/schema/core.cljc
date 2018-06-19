@@ -97,15 +97,17 @@
 (s/def ::total-volume-m3 (s/int-in 100 (inc 200000)))
 (s/def ::pool-room-total-area-m2 (s/int-in 100 (inc 10000)))
 (s/def ::total-water-area-m2 (s/int-in 100 (inc 10000)))
-(s/def ::heat-sections boolean?)
-(s/def ::main-construction-materials (s/coll-of ::material))
+(s/def ::heat-sections? boolean?)
 (s/def ::piled? boolean?)
-(s/def ::supporting-structures-description string?)
-(s/def ::ceiling-description string?)
+(s/def ::main-construction-materials (s/coll-of ::material))
+(s/def ::supporting-structures (s/coll-of ::material))
+(s/def ::ceiling-structures (s/coll-of ::material))
 (s/def ::staff-count (s/int-in 0 (inc 1000)))
 (s/def ::seating-capacity (s/int-in 0 (inc 10000)))
 (s/def ::heat-source (into #{} (keys swimming-pools/heat-sources)))
 (s/def ::ventilation-units-count (s/int-in 0 (inc 100)))
+(s/def ::pool-room-total-area-m2 (s/int-in 0 (inc 5000)))
+(s/def ::total-water-area-m2 (s/int-in 0 (inc 5000)))
 
 (comment (s/valid? ::main-construction-materials [:concrete :brick]))
 (comment (s/valid? ::ventilation-units-count 100))
@@ -119,7 +121,7 @@
                                    ::heat-sections?
                                    ::main-construction-materials
                                    ::piled?
-                                   ::supporting-structures-description
+                                   ::supporting-structures
                                    ::ceiling-description
                                    ::staff-count
                                    ::seating-capacity
@@ -144,35 +146,61 @@
 (s/def ::uv-treatment boolean?)
 (s/def ::activated-carbon boolean?)
 
-(s/def ::filtering-method #{:pressure-suction      ; Paineimu
-                            :pressure-sand         ; Painehiekka
-                            :suction-sand          ; Imuhiekka ?
-                            :open-sand             ; Avohiekka
-                            :other                 ; Muu
-                            :multi-layer-filtering ; Monikerrossuodatus
-                            :coal                  ; Hiili ?
-                            :precipitation         ; Saostus ?
-                            :activated-carbon      ; aktiivihiili
-                            })
+(s/def ::filtering-method (into #{} (keys swimming-pools/filtering-methods)))
+(comment (s/valid? ::filtering-method :coal))
 
 ;;; Pools ;;;
 
-(s/def ::pool-type #{:main-pool         ; Pääallas
-                     :diving-pool       ; Hyppyallas
-                     :multipurpose-pool ; Monitoimiallas
-                     :teaching-pool     ; Opetusallas
-                     :paddling-pool     ; Kahluuallas
-                     :childrens-pool    ; Lastenallas
-                     :cold-pool         ; Kylmäallas
-                     :whirlpool-bath    ; Poreallas
-                     :therapy-pool      ; Terapia-allas
-                     })
+(comment (s/valid? ::pool-type :therapy-pool))
+(s/def ::pool-type (into #{} (keys swimming-pools/pool-types)))
+(s/def ::pool-temperature-c (s/int-in 0 50))
+(s/def ::pool-volume-m3 (s/int-in 0 5000))
+(s/def ::pool-area-m2 (s/int-in 0 2000))
+(s/def ::pool-length-m (s/int-in 0 (inc 100)))
+(s/def ::pool-width-m (s/int-in 0 (inc 100)))
+(s/def ::pool-depth-min-m (s/double-in :min 0 :max 10))
+(s/def ::pool-depth-max-m (s/double-in :min 0 :max 10))
+(s/valid? ::pool-depth-max-m 0.1)
+
+;;; Other services ;;;
+
+(s/def ::platforms-1m-count (s/int-in 0 100))
+(s/def ::platforms-3m-count (s/int-in 0 100))
+(s/def ::platforms-5m-count (s/int-in 0 100))
+(s/def ::platforms-7.5m-count (s/int-in 0 100))
+(s/def ::platforms-10m-count (s/int-in 0 100))
+(s/def ::hydro-massage-spots-count (s/int-in 0 100))
+(s/def ::hydro-neck-massage-spots-count (s/int-in 0 100))
+(s/def ::kiosk? boolean?)
+
+;;; Showers and lockers ;;;
+
+(s/def ::showers-men-count (s/int-in 0 200))
+(s/def ::showers-women-count (s/int-in 0 200))
+(s/def ::lockers-men-count (s/int-in 0 1000))
+(s/def ::lockers-women-count (s/int-in 0 1000))
+
+;;; Saunas ;;;
+
+(s/def ::sauna-type (into #{} (keys swimming-pools/sauna-types)))
+(s/def ::men? boolean?)
+(s/def ::women? boolean?)
+
+;;; Slides ;;;
+
+(s/def ::slide-structure (into #{} (keys materials/slide-structures)))
+(s/def ::slide-length-m (s/int-in 0 200))
 
 ;;; Ice Rinks ;;;
 
 (s/def ::ice-rink-category #{:small
                              :competition
                              :large})
+
+;;; Rinks ;;;
+
+(s/def ::rink-length-m (s/int-in 0 100))
+(s/def ::rink-width-m (s/int-in 0 100))
 
 ;;; Refrigeration ;;;
 

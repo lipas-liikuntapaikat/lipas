@@ -108,19 +108,22 @@
         {:label     (tr :building/staff-count)
          :type      "number"
          :value     (-> data :building :staff-count)
+         :spec      ::schema/staff-count
          :adornment (tr :units/person)
          :on-change #(set-field :building :staff-count %)}]
        [lui/text-field
         {:label     (tr :building/pool-room-total-area-m2)
          :type      "number"
-         :adornment (tr :physical-units/m2)
          :value     (-> data :building :pool-room-total-area-m2)
+         :spec      ::schema/pool-room-total-area-m2
+         :adornment (tr :physical-units/m2)
          :on-change #(set-field :building :pool-room-total-area-m2 %)}]
        [lui/text-field
         {:label     (tr :building/total-water-area-m2)
          :type      "number"
-         :adornment (tr :physical-units/m2)
          :value     (-> data :building :total-water-area-m2)
+         :spec      ::schema/total-water-area-m2
+         :adornment (tr :physical-units/m2)
          :on-change #(set-field :building :total-water-area-m2 %)}]
        [lui/checkbox
         {:label     (tr :building/heat-sections?)
@@ -180,6 +183,7 @@
        [lui/text-field
         {:label     (tr :general/comment)
          :value     (-> data :water-treatment :comment)
+         :spec      ::schema/comment
          :on-change #(set-field :water-treatment :comment %)}]]]
 
      ;; Pools
@@ -212,37 +216,51 @@
        [lui/text-field
         {:label     (tr :other-services/platforms-1m-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :platforms-1m-count)
+         :spec      ::schema/platforms-1m-count
          :on-change #(set-field :other-services :platforms-1m-count %)}]
        [lui/text-field
         {:label     (tr :other-services/platforms-3m-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :platforms-3m-count)
+         :spec      ::schema/platforms-3m-count
          :on-change #(set-field :other-services :platforms-3m-count %)}]
        [lui/text-field
         {:label     (tr :other-services/platforms-5m-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :platforms-5m-count)
+         :spec      ::schema/platforms-5m-count
          :on-change #(set-field :other-services :platforms-5m-count %)}]
        [lui/text-field
         {:label     (tr :other-services/platforms-7.5m-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :platforms-7.5m-count)
+         :spec      ::schema/platforms-7.5m-count
          :on-change #(set-field :other-services :platforms-7.5m-count %)}]
        [lui/text-field
         {:label     (tr :other-services/platforms-10m-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :platforms-10m-count)
+         :spec      ::schema/platforms-10m-count
          :on-change #(set-field :other-services :platforms-10m-count %)}]
        [lui/text-field
         {:label     (tr :other-services/hydro-massage-spots-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :hydro-massage-spots-count)
+         :spec      ::schema/hydro-massage-spots-count
          :on-change #(set-field :other-services :hydro-massage-spots-count %)}]
        [lui/text-field
         {:label     (tr :other-services/hydro-neck-massage-spots-count)
          :adornment (tr :units/pcs)
+         :type      "number"
          :value     (-> data :other-services :hydro-neck-massage-spots-count)
+         :spec      ::schema/hydro-neck-massage-spots-count
          :on-change #(set-field :other-services :hydro-neck-massage-spots-count %)}]
        [lui/checkbox
         {:label     (tr :other-services/kiosk?)
@@ -257,24 +275,28 @@
          :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :showers-men-count)
+         :spec      ::schema/showers-men-count
          :on-change #(set-field :facilities :showers-men-count %)}]
        [lui/text-field
         {:label     (tr :facilities/showers-women-count)
          :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :showers-women-count)
+         :spec      ::schema/showers-women-count
          :on-change #(set-field :facilities :showers-women-count %)}]
        [lui/text-field
         {:label     (tr :facilities/lockers-men-count)
          :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :lockers-men-count)
+         :spec      ::schema/lockers-men-count
          :on-change #(set-field :facilities :lockers-men-count %)}]
        [lui/text-field
         {:label     (tr :facilities/lockers-women-count)
          :type      "number"
          :adornment (tr :units/pcs)
          :value     (-> data :facilities :lockers-women-count)
+         :spec      ::schema/lockers-women-count
          :on-change #(set-field :facilities :lockers-women-count %)}]]]
 
      ;; Actions

@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.pools
   (:require [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
+            [lipas.schema.core :as schema]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.swimming-pools.utils :refer [set-field toggle-dialog]]
@@ -25,37 +26,51 @@
      [lui/text-field
       {:type      "number"
        :label     (tr :physical-units/temperature-c)
+       :adornment (tr :physical-units/celsius)
        :value     (:temperature-c data)
+       :spec      ::schema/pool-temperature-c
        :on-change #(set-field :temperature-c %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/volume-m3)
+       :adornment (tr :physical-units/m3)
        :value     (:volume-m3 data)
+       :spec      ::schema/pool-volume-m3
        :on-change #(set-field :volume-m3 %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/area-m2)
+       :adornment (tr :physical-units/m2)
        :value     (:area-m2 data)
+       :spec      ::schema/pool-area-m2
        :on-change #(set-field :area-m2 %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/length-m)
+       :adornment (tr :physical-units/m)
        :value     (:length-m data)
+       :spec      ::schema/pool-length-m
        :on-change #(set-field :length-m %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/width-m)
+       :adornment (tr :physical-units/m)
        :value     (:width-m data)
+       :spec      ::schema/pool-width-m
        :on-change #(set-field :width-m %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-min-m)
+       :adornment (tr :physical-units/m)
        :value     (:depth-min-m data)
+       :spec      ::schema/pool-depth-min-m
        :on-change #(set-field :depth-min-m %)}]
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-max-m)
+       :adornment (tr :physical-units/m)
        :value     (:depth-max-m data)
+       :spec      ::schema/pool-depth-max-m
        :on-change #(set-field :depth-max-m %)}]]))
 
 (defn dialog [{:keys [tr]}]
