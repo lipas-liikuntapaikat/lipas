@@ -34,7 +34,7 @@ services:
       DB_NAME:
       DB_USER:
       DB_PASSWORD:
-      AUTH_KEY: ${AUTH_TOKEN_PRIVATE_KEY}
+      LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
@@ -62,7 +62,7 @@ services:
     command: lein test
     links:
       - postgres
-      - elasticsearch
+      # - elasticsearch
 
   frontend-build:
     extends:
