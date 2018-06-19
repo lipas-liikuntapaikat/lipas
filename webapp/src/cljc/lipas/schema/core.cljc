@@ -156,11 +156,10 @@
 (s/def ::pool-temperature-c (s/int-in 0 50))
 (s/def ::pool-volume-m3 (s/int-in 0 5000))
 (s/def ::pool-area-m2 (s/int-in 0 2000))
-(s/def ::pool-length-m (s/int-in 0 (inc 100)))
-(s/def ::pool-width-m (s/int-in 0 (inc 100)))
+(s/def ::pool-length-m (s/double-in :min 0 :max 100))
+(s/def ::pool-width-m (s/double-in :min 0 :max 100))
 (s/def ::pool-depth-min-m (s/double-in :min 0 :max 10))
 (s/def ::pool-depth-max-m (s/double-in :min 0 :max 10))
-(s/valid? ::pool-depth-max-m 0.1)
 
 ;;; Other services ;;;
 
