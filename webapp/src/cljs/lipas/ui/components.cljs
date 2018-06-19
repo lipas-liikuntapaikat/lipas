@@ -1,6 +1,5 @@
 (ns lipas.ui.components
-  (:require [cljsjs.react-select]
-            [clojure.reader :refer [read-string]]
+  (:require [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim]]
             [lipas.schema.core :as schema]
@@ -203,8 +202,6 @@
      [mui/menu-item {:key value :value (pr-str value)}
       label])])
 
-(def react-select (r/adapt-react-class js/Select))
-
 (defn extract-values [multi-select-state]
   (as-> multi-select-state $
     (js->clj $)
@@ -221,22 +218,17 @@
     (map #(lookup %) vals)))
 
 (defn multi-select [{:keys [label value items on-change]}]
-  (r/with-let [state (r/atom (map (partial str-field :value)
-                                  (find-by-vals :value items value)))]
-    [mui/text-field
-     {:label label
-      :Input-label-props
-      {:shrink true} ; This makes the label show actually
-      :Input-props
-      {:input-component js/Select
-       :input-props
-       {:multi true
-        :name label
-        :placeholder label
-        :value @state
-        :on-change (fn [v] (swap! state #(identity v)))
-        :on-blur #(on-change (extract-values @state))
-        :options (map (partial str-field :value) items)}}}]))
+  [mui/form-control
+   [mui/input-label label]
+   [mui/select
+    {:multiple true
+     :value value
+     :on-change #(on-change (-> % .-target .-value))}
+    (for [i items]
+      [mui/menu-item
+       {:key (:value i)
+        :value (:value i)}
+       (:label i)])]])
 
 (defn year-selector [{:keys [label value on-change required years]}]
   (let [years (or years

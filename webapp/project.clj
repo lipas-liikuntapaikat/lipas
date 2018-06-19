@@ -14,8 +14,6 @@
                  [secretary "1.2.3"]
                  [ns-tracker "0.3.0"]
                  [cljsjs/material-ui "1.2.1-0"]
-                 [cljsjs/react-select "1.2.1-1" :exclusions [cljsjs/react
-                                                             cljsjs/react-dom]]
                  [tongue "0.2.4"]
                  [day8.re-frame/http-fx "0.1.6"]
 
