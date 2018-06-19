@@ -10,8 +10,12 @@
 
 (def fi
   {:menu
-   {:jyu "Jyväskylän yliopisto"
+   {:headline "LIPAS"
+    :jyu "Jyväskylän yliopisto"
     :frontpage "Etusivu"}
+
+   :home-page
+   {:headline "Etusivu"}
 
    :sport
    {:headline "Liikuntapaikat"

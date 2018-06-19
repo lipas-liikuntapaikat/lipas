@@ -194,17 +194,26 @@
                                :text-decoration "none"}}
        (tr :menu/jyu)]
       separator]
-     (let [prefix "Lipas"]
-       (str prefix " " (case active-panel
-                         :sports-panel (tr :sport/headline :lower-case)
-                         :ice-panel (tr :ice/headline :lower-case)
-                         :swim-panel (tr :swim/headline :lower-case)
-                         :open-data-panel (tr :open-data/headline :lower-case)
-                         :help-panel (tr :help/headline :lower-case)
-                         :login-panel ""
-                         :register-panel ""
-                         :user-panel (tr :user/headline :lower-case)
-                         "")))]
+     [mui/typography {:component "a"
+                      :variant "title"
+                      :href "/#/"
+                      :style {:display "inline"
+                              :font-weight "bold"
+                              :font-size "1em"
+                              :text-decoration "none"}}
+      (tr :menu/headline)]
+     separator
+     (case active-panel
+       :home-panel (tr :home-page/headline)
+       :sports-panel (tr :sport/headline)
+       :ice-panel (tr :ice/headline)
+       :swim-panel (tr :swim/headline)
+       :open-data-panel (tr :open-data/headline)
+       :help-panel (tr :help/headline)
+       :login-panel ""
+       :register-panel ""
+       :user-panel (tr :user/headline)
+       "")]
     [mui/hidden {:sm-down true}
      lang-selector]
     [mui/icon-button
