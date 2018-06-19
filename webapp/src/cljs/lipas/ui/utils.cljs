@@ -84,4 +84,5 @@
   (let [prev-rev (resolve-prev-rev (:history site) timestamp)]
     (-> prev-rev
         (assoc :timestamp timestamp)
-        (dissoc :energy-consumption))))
+        (dissoc :energy-consumption)
+        (dissoc :visitors))))
