@@ -302,6 +302,7 @@
    :physical-units
    {:temperature-c "Lämpötila C°"
     :mwh "MWh"
+    :m "m"
     :m2 "m²"
     :m3 "m³"
     :celsius "C°"

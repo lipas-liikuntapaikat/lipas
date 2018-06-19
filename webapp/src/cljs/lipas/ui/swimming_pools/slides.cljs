@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.slides
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.schema.core :as schema]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -16,7 +17,10 @@
                   :items (->select-entries tr :slide-structures structures)
                   :on-change #(set-field :structure %)}]
      [lui/text-field {:label (tr :dimensions/length-m)
+                      :adornment (tr :physical-units/m)
+                      :type "number"
                       :value (:length-m data)
+                      :spec ::schema/slide-length-m
                       :on-change #(set-field :length-m %)}]]))
 
 (defn reset [] #(==> [::events/reset-dialog :slide]))
