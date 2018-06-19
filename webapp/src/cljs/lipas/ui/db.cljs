@@ -14,7 +14,7 @@
    :timestamp "2016-11-14 10:13:20.103"
 
    :name
-   {:fi "Jyväskylän kilpajäähalli"
+   {:fi "Synergia areena"
     :se nil
     :en nil}
 
@@ -142,7 +142,7 @@
 (def jaahalli-2017
   (assoc jaahalli-2016
          :timestamp          "2017-11-14 10:13:20.103"
-         :name {:fi "Synergia-areena"}
+         :name {:fi "Jyväskylän kilpajäähalli"}
          :owner :unknown
          :energy-consumption {:electricity-mwh 1500
                               :heat-mwh 1164
@@ -297,6 +297,10 @@
     :lockers-men-count 94
     :lockers-women-count 100}
 
+   ;; Kävijämäärät
+   :visitors
+   {:total-count 69835}
+
    ;; Energiankulutus
    :energy-consumption
    {:electricity-mwh 643
@@ -306,6 +310,7 @@
 (def vesivelho-2013
   (assoc vesivelho-2012
          :timestamp "2013-01-01"
+         :visitors {:total-count 67216}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
                               :water-m3 0}))
@@ -313,6 +318,7 @@
 (def vesivelho-2014
   (assoc vesivelho-2013
          :timestamp "2014-01-01"
+         :visitors {:total-count 66529}
          :energy-consumption {:electricity-mwh 664
                               :heat-mwh 0
                               :water-m3 0}))
@@ -320,6 +326,7 @@
 (def vesivelho-2015
   (assoc vesivelho-2014
          :timestamp "2015-01-01"
+         :visitors {:total-count 34002}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
                               :water-m3 0}))
@@ -327,6 +334,7 @@
 (def vesivelho-2016
   (assoc vesivelho-2015
          :timestamp "2016-01-01"
+         :visitors {:total-count 8793}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
                               :water-m3 0}))
@@ -334,6 +342,7 @@
 (def vesivelho-2017
   (assoc vesivelho-2016
          :timestamp "2017-01-01"
+         :visitors {:total-count 55648}
          :energy-consumption {:electricity-mwh 818
                               :heat-mwh 0
                               :water-m3 8573}))

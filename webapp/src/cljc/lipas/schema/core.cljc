@@ -234,12 +234,15 @@
 ;; Note: in cljs (type 1e7) => Number (implicitly int)
 ;;       in clj  (type 1e7) => Double
 ;;
-;; So `int-in` can't be used because it would yield non-deterministic
-;; results between platforms.
+;; So scientific notation shouln't be used because it would yield
+;; non-deterministic results between platforms.
 (comment (s/valid? ::electricity-mwh 1e4))
 (comment (s/valid? ::electricity-mwh 0))
-(comment (s/valid? ::electricity-mwh (inc 1e4)))
+(comment (s/valid? ::electricity-mwh (dec 1e4))) ; works in clj but not in cljs
 (comment (s/valid? ::electricity-mwh 1795))
-(s/def ::electricity-mwh #(<= 0 % (dec 1e4)))
-(s/def ::heat-mwh #(<= 0 % (dec 1e4)))
-(s/def ::water-m3 #(<= 0 % (dec 1e5)))
+(s/def ::electricity-mwh (s/int-in 0 10000))
+(s/def ::heat-mwh (s/int-in 0 10000))
+(s/def ::water-m3 (s/int-in 0 100000))
+
+;; Visitors
+(s/def ::visitors-total-count (s/int-in 0 1000000))

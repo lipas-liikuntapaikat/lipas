@@ -53,6 +53,17 @@
                       :read-only? true
                       :items energy}]]]
 
+     ;; Visitors
+     [lui/form-card {:title (tr :visitors/headline-year year)}
+      [mui/form-group
+       [lui/text-field
+        {:label     (tr :visitors/total-count)
+         :type      "number"
+         :value     (-> data :visitors :total-count)
+         :spec      ::schema/visitors-total-count
+         :adornment (tr :units/person)
+         :on-change #(set-field :visitors :total-count %)}]]]
+
      ;; General info
      [lui/form-card {:title (tr :general/general-info)}
       [lui/sports-place-form

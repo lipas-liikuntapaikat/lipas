@@ -97,6 +97,10 @@
     :edit-energy-entry "Muokkaa energiatietoa"
     :remove-energy-entry "Poista energiatieto"}
 
+   :visitors
+   {:headline "Kävijämäärät"
+    :headline-year "Kävijämäärä vuonna {1}"
+    :total-count "Kokonaismäärä"}
    :swim
    {:headline "Uimahalliportaali"
     :edit "Päivitä tiedot"
