@@ -15,8 +15,6 @@
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
-(keys (js->clj js/MaterialUI))
-
 (def create-mui-theme (gobj/get js/MaterialUI "createMuiTheme"))
 
 (defn ->mui-theme [opts]
