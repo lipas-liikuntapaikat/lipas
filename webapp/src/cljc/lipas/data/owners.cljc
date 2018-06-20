@@ -8,5 +8,3 @@
            :state
            :other
            :unknown})
-
-(type (set (keys {:a 1 :b 2})))
