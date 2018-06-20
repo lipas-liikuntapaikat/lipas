@@ -19,13 +19,14 @@
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
 
-(defn table [{:keys [headers items]}]
+(defn table [{:keys [headers items on-select]}]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
     [:div {:style {:overflow-x "auto"}}
      [mui/table
       [mui/table-head
-       (into [mui/table-row]
+       (into [mui/table-row (when on-select
+                              [mui/table-cell ""])]
              (for [[_ header] headers]
                [mui/table-cell header]))]
       [mui/table-body
@@ -33,6 +34,10 @@
              :let [id (or (:id item) (gensym))]]
          [mui/table-row {:key id
                          :hover true}
+          (when on-select
+            [mui/table-cell {:padding "checkbox"}
+             [mui/icon-button {:on-click #(on-select item)}
+              [mui/icon {:color "secondary"} "folder_open"]]])
           (for [[k _] headers
                 :let [v (get item k)]]
             [mui/table-cell {:key (str id k)}
@@ -81,8 +86,7 @@
                                   :padding "dense"}
                   (cond
                     (true? v) CHECK_MARK
-                    :else v)])
-               ]))]]]]
+                    :else v)])]))]]]]
        [mui/grid {:item true :xs 10}
         (when @selected-item
           [:span
@@ -191,13 +195,14 @@
 
 (def text-field text-field-controlled)
 
-(defn select [{:keys [label value items on-change required sort-key]
-               :or   {sort-key :label}}]
-  [text-field-controlled {:select true
-                          :required required
-                          :label label
-                          :value (pr-str value)
-                          :on-change #(on-change (read-string %))}
+(defn select [{:keys [label value items on-change sort-key]
+               :or   {sort-key :label}
+               :as   props}]
+  [text-field-controlled (merge (dissoc props :sort-key)
+                                {:select true
+                                 :label label
+                                 :value (pr-str value)
+                                 :on-change #(on-change (read-string %))})
    (for [{:keys [label value]} (sort-by sort-key items)]
      [mui/menu-item {:key value :value (pr-str value)}
       label])])
@@ -217,27 +222,28 @@
   (let [lookup (reduce into {} (map #(hash-map (field %) %) items))]
     (map #(lookup %) vals)))
 
-(defn multi-select [{:keys [label value items on-change]}]
+(defn multi-select [{:keys [label value items on-change] :as props}]
   [mui/form-control
    [mui/input-label label]
    [mui/select
-    {:multiple true
-     :value value
-     :on-change #(on-change (-> % .-target .-value))}
+    (merge (dissoc props :label)
+           {:multiple true
+            :value value
+            :on-change #(on-change (-> % .-target .-value))})
     (for [i items]
       [mui/menu-item
        {:key (:value i)
         :value (:value i)}
        (:label i)])]])
 
-(defn year-selector [{:keys [label value on-change required years]}]
+(defn year-selector [{:keys [label value on-change required years] :as props}]
   (let [years (or years
                   (range 1900 (inc (.getFullYear (js/Date.)))))]
-    [select {:label label
-             :items (map #(hash-map :label % :value %) years)
-             :on-change on-change
-             :value value
-             :required required}]))
+    [select (merge props {:label label
+                          :items (map #(hash-map :label % :value %) years)
+                          :on-change on-change
+                          :value value
+                          :required required})]))
 
 (defn ->select-entry [tr prefix enum]
   {:value enum
@@ -317,7 +323,6 @@
                    {:value :competition :label (tr :ice/competition)}
                    {:value :large       :label (tr :ice/large)}]
        :on-change #(on-change :type :size-category %)}])
-
    [select
     {:label     (tr :sports-place/owner)
      :value     (-> data :owner)
