@@ -188,8 +188,7 @@
 
    ;;; Tyyppiluokitus ;;;
    :type
-   {:type-code 3110,
-    :name "Uimahalli"}
+   {:type-code 3110}
 
    ;;; Rakennus ;;;
    :building
@@ -392,6 +391,7 @@
     :pool-types swimming-pools/pool-types
     :sauna-types swimming-pools/sauna-types
     :filtering-methods swimming-pools/filtering-methods
+    :heat-sources swimming-pools/heat-sources
     :slide-structures materials/slide-structures
     :pool-structures materials/pool-structures
     :editing nil
@@ -441,6 +441,7 @@
    :owners owners/all
    :cities cities/active
    :types types/all
+   :materials materials/all
    :building-materials materials/building-materials
    :supporting-structures materials/supporting-structures
    :ceiling-structures materials/ceiling-structures})

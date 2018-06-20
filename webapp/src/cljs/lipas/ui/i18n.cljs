@@ -2,7 +2,9 @@
   (:require [tongue.core :as tongue]
             [clojure.string :as s]
             [lipas.data.swimming-pools :as pools]
-            [lipas.data.materials :as materials]))
+            [lipas.data.materials :as materials]
+            [lipas.data.admins :as admins]
+            [lipas.data.owners :as owners]))
 
 (defn ->translation-map [locale m]
   (reduce-kv (fn [res k v]
@@ -37,27 +39,8 @@
    :type
    {:type-code "Liikuntapaikkatyyppi"}
 
-   :admin
-   {:city-sports "Kunta / liikuntatoimi"
-    :city-education "Kunta / opetustoimi"
-    :city-technical-services "Kunta / tekninen toimi"
-    :city-other "Kunta / muu"
-    :private-association "Yksityinen / yhdistys"
-    :private-company "Yksityinen / yritys"
-    :private-foundation "Yksityinen / säätiö"
-    :state "Valtio"
-    :other "Muu"
-    :unknown "Ei tietoa"}
-
-   :owner
-   {:city "Kunta"
-    :registered-association "Rekisteröity yhdistys"
-    :company-ltd "Yritys"
-    :city-main-owner "Kuntaenemmistöinen yritys"
-    :foundation "Säätiö"
-    :state "Valtio"
-    :other "Muu"
-    :unkonwn "Ei tietoa"}
+   :admin (->translation-map :fi admins/all)
+   :owner (->translation-map :fi owners/all)
 
    :location
    {:headline "Sijainti"
@@ -107,7 +90,9 @@
     :total-count "Kokonaismäärä"}
    :swim
    {:headline "Uimahalliportaali"
-    :edit "Päivitä tiedot"
+    :list "Hallien tiedot"
+    :visualizations "Hallien vertailu"
+    :edit "Ilmoita tiedot"
     :description "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."}
@@ -134,10 +119,11 @@
     :description "Tekijöille voisi olla myös esittely?"}
 
    :pool-types (->translation-map :fi pools/pool-types)
-   :pool-structures (->translation-map :fi materials/pool-structures)
    :sauna-types (->translation-map :fi pools/sauna-types)
-   :slide-structures (->translation-map :fi materials/slide-structures)
+   :heat-sources (->translation-map :fi pools/heat-sources)
    :filtering-methods (->translation-map :fi pools/filtering-methods)
+   :pool-structures (->translation-map :fi materials/pool-structures)
+   :slide-structures (->translation-map :fi materials/slide-structures)
    :building-materials (->translation-map :fi materials/building-materials)
    :supporting-structures (->translation-map :fi materials/supporting-structures)
    :ceiling-structures (->translation-map :fi materials/ceiling-structures)
@@ -183,6 +169,7 @@
     :water-slides-total-length-m "Vesiliukumäet yht. (m)"
     :heat-sections? "Allastila on jaettu lämpötilaosioihin"
     :piled? "Paalutettu"
+    :heat-source "Lämmönlähde"
     :main-construction-materials "Päärakennusmateriaalit"
     :supporting-structures "Kantavat rakenteet"
     :ceiling-structures "Yläpohjan rakenteet"
@@ -329,6 +316,7 @@
     :save "Tallenna"
     :delete "Poista"
     :cancel "Peruuta"
+    :close "Sulje"
     :select-hall "Valitse halli"
     :select-year "Valitse vuosi"
     :show-all-years "Näytä kaikki vuodet"}

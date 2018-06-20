@@ -112,3 +112,9 @@
        :on-failure      [:lipas.ui.events/set-active-notification
                          {:message (tr :notification/save-failed)
                           :success? false}]}})))
+
+(re-frame/reg-event-db
+ ::display-site
+ (fn [db [_ {:keys [lipas-id]}]]
+   (let [site (get-in db [:sports-sites lipas-id])]
+     (assoc-in db [:swimming-pools :display-site] site))))
