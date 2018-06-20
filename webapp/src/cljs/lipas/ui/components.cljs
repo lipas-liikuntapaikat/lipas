@@ -275,9 +275,10 @@
                         :sort  (- y)})]
     [select {:label     label
              :items     items
-             :on-change #(on-change (or
-                                     (get revs-by-year %)
-                                     (template-fn (->timestamp %))))
+             :on-change #(when (not-empty (str %))
+                           (on-change (or
+                                       (get revs-by-year %)
+                                       (template-fn (->timestamp %)))))
              :value     (-> value :timestamp resolve-year)
              :sort-key  :sort
              :required  required}]))
