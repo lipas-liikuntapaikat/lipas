@@ -68,22 +68,22 @@
 (re-frame/reg-event-db
  ::remove-renovation
  (fn [db [_ {:keys [id]}]]
-   (update-in db [:swimming-pools :editing :renovations] dissoc id)))
+   (update-in db [:swimming-pools :editing :rev :renovations] dissoc id)))
 
 (re-frame/reg-event-db
  ::remove-sauna
  (fn [db [_ {:keys [id]}]]
-   (update-in db [:swimming-pools :editing :saunas] dissoc id)))
+   (update-in db [:swimming-pools :editing :rev :saunas] dissoc id)))
 
 (re-frame/reg-event-db
  ::remove-pool
  (fn [db [_ {:keys [id]}]]
-   (update-in db [:swimming-pools :editing :pools] dissoc id)))
+   (update-in db [:swimming-pools :editing :rev :pools] dissoc id)))
 
 (re-frame/reg-event-db
  ::remove-slide
  (fn [db [_ {:keys [id]}]]
-   (update-in db [:swimming-pools :editing :slides] dissoc id)))
+   (update-in db [:swimming-pools :editing :rev :slides] dissoc id)))
 
 (re-frame/reg-event-db
  ::reset-dialog
