@@ -33,7 +33,7 @@
   {:pressure-suction      {:fi "Paineimu"
                            :se nil
                            :en nil}
-   :pressure-sand         {:fi "Painehiekka "
+   :pressure-sand         {:fi "Painehiekka"
                            :se nil
                            :en nil}
    :suction-sand          {:fi "Imuhiekka"
