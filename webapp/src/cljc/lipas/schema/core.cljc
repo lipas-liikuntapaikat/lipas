@@ -15,9 +15,8 @@
 
 (s/def ::name (s/and string? #(<= 2 (count %))))
 
-(s/def ::owner owners/all)
-
-(s/def ::admin admins/all)
+(s/def ::owner (into #{} (keys owners/all)))
+(s/def ::admin (into #{} (keys admins/all)))
 
 (s/def ::phone-number string?)
 (s/def ::www string?)
