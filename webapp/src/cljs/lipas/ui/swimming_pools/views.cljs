@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.views
   (:require [lipas.schema.core :as schema]
             [lipas.ui.components :as lui]
+            [clojure.pprint :refer [pprint]]
             [lipas.ui.mui :as mui]
             [lipas.ui.energy :as energy]
             [lipas.ui.swimming-pools.events :as events]
@@ -15,7 +16,44 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-(defn info-tab [url]
+(defn details-dialog [{:keys [tr site]}]
+  (let [locale (tr)
+        close  #(==> [::events/display-site nil])]
+    [mui/dialog {:open       true
+                 :full-width true
+                 :max-width  "md"
+                 :on-close   close}
+     [mui/dialog-title (-> site :name)]
+     [mui/dialog-content
+      [:pre (with-out-str (pprint site))]]
+     [mui/dialog-actions
+      [mui/button {:on-click close}
+       (tr :actions/close)]]]))
+
+(defn info-tab [tr]
+  (let [locale       (tr)
+        pools        (<== [::subs/swimming-pools-list locale])
+        display-site (<== [::subs/display-site locale])]
+
+    [mui/grid {:container true}
+
+     (when display-site
+       [details-dialog {:tr tr :site display-site}])
+
+     [mui/grid {:item true :xs 12}
+      [mui/paper
+       [lui/table
+        {:headers   [[:name "Nimi"]
+                     [:address "Osoite"]
+                     [:postal-code "Postinumero"]
+                     [:city "Kunta"]
+                     [:type "Tyyppi"]
+                     [:admin "Ylläpitäjä"]
+                     [:owner "Omistaja"]]
+         :items     pools
+         :on-select #(==> [::events/display-site %])}]]]]))
+
+(defn compare-tab [url]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
     [:iframe {:src url
@@ -34,6 +72,7 @@
         cities                (<== [::subs/cities])
         owners                (<== [::subs/owners])
         admins                (<== [::subs/admins])
+        heat-sources          (<== [::subs/heat-sources])
         filtering-methods     (<== [::subs/filtering-methods])
         building-materials    (<== [::subs/building-materials])
         supporting-structures (<== [::subs/supporting-structures])
@@ -144,6 +183,10 @@
         {:label     (tr :building/piled?)
          :value     (-> data :building :piled?)
          :on-change #(set-field :building :piled? %)}]
+       [lui/select
+        {:label (tr :building/heat-source)
+         :value (-> data :building :heat-source)
+         :items (->select-entries tr :heat-sources heat-sources)}]
        [lui/multi-select
         {:label     (tr :building/main-construction-materials)
          :value     (-> data :building :main-construction-materials)
@@ -368,23 +411,29 @@
                    :value @active-tab}
 
          ;; 0 Info tab
-         [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon (r/as-element [mui/icon "info"])}]
+         [mui/tab {:label (tr :swim/list)
+                   :icon (r/as-element [mui/icon "list_alt"])}]
 
-         ;; 1 Edit tab
+         ;; 1 Compare tab
+         [mui/tab {:label (tr :swim/visualizations)
+                                        ; chart table_chart show_chart pie_chart
+                   :icon (r/as-element [mui/icon "compare"])}]
+
+         ;; 2 Edit tab
          (when logged-in?
            [mui/tab {:label (tr :swim/edit)
                      :icon (r/as-element [mui/icon "edit"])}])
 
-         ;; 2 Energy tab
+         ;; 3 Energy tab
          [mui/tab {:label (tr :ice-energy/headline)
                    :icon (r/as-element [mui/icon "flash_on"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
-        0 (info-tab url)
-        1 (edit-tab tr)
-        2 (energy-tab tr))]]))
+        0 (info-tab tr)
+        1 (compare-tab url)
+        2 (edit-tab tr)
+        3 (energy-tab tr))]]))
 
 (defn main [tr logged-in?]
   (let [url "https://liikuntaportaalit.sportvenue.net/Uimahalli"]

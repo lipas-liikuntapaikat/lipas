@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :refer [resolve-year]]))
+            [lipas.ui.utils :refer [resolve-year index-by]]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -18,14 +18,19 @@
    (-> db :sports-sites)))
 
 (re-frame/reg-sub
- ::sites-to-edit
- :<- [::access-to-sports-sites]
+ ::swimming-pools
  :<- [::sports-sites]
- (fn [[ids sites] _]
+ (fn [sites _]
    (as-> sites $
-     (select-keys $ ids)
      (into {} (filter (comp #{3110} :type-code :type :latest second)) $)
      (not-empty $))))
+
+(re-frame/reg-sub
+ ::sites-to-edit
+ :<- [::access-to-sports-sites]
+ :<- [::swimming-pools]
+ (fn [[ids pools] _]
+   (select-keys pools ids)))
 
 (re-frame/reg-sub
  ::editing-site
@@ -80,6 +85,12 @@
    (-> db :cities)))
 
 (re-frame/reg-sub
+ ::cities-by-city-code
+ :<- [::cities]
+ (fn [cities _]
+   (index-by :city-code cities)))
+
+(re-frame/reg-sub
  ::admins
  (fn [db _]
    (-> db :admins)))
@@ -100,6 +111,11 @@
  (fn [types _ _]
    (filter (comp #{3110} :type-code) types)))
 
+(re-frame/reg-sub
+ ::types-by-type-code
+ :<- [::types]
+ (fn [types _ _]
+   (index-by :type-code types)))
 
 (re-frame/reg-sub
  ::pool-types
@@ -110,6 +126,11 @@
  ::pool-structures
  (fn [db _]
    (-> db :swimming-pools :pool-structures)))
+
+(re-frame/reg-sub
+ ::heat-sources
+ (fn [db _]
+   (-> db :swimming-pools :heat-sources)))
 
 (re-frame/reg-sub
  ::filtering-methods
@@ -127,6 +148,11 @@
    (-> db :swimming-pools :slide-structures)))
 
 (re-frame/reg-sub
+ ::materials
+ (fn [db _]
+   (-> db :materials)))
+
+(re-frame/reg-sub
  ::building-materials
  (fn [db _]
    (-> db :building-materials)))
@@ -140,3 +166,110 @@
  ::ceiling-structures
  (fn [db _]
    (-> db :ceiling-structures)))
+
+(defn ->list-entry [{:keys [cities admins owners types locale]} pool]
+  (let [latest (:latest pool)
+        type   (types (-> latest :type :type-code))
+        admin  (admins (-> latest :admin))
+        owner  (owners (-> latest :owner))
+        city   (get cities (-> latest :location :city :city-code))]
+    {:lipas-id    (-> latest :lipas-id)
+     :name        (-> latest :name locale)
+     :type        (-> type :name locale)
+     :address     (-> latest :location :address)
+     :postal-code (-> latest :location :postal-code)
+     :city        (-> city :name locale)
+     :owner       (-> owner locale)
+     :admin       (-> admin locale)}))
+
+(re-frame/reg-sub
+ ::swimming-pools-list
+ :<- [::swimming-pools]
+ :<- [::cities-by-city-code]
+ :<- [::admins]
+ :<- [::owners]
+ :<- [::types-by-type-code]
+ (fn [[pools cities admins owners types] [_ locale]]
+   (let [data  {:locale locale
+                :cities cities
+                :admins admins
+                :owners owners
+                :types types} ]
+     (map (partial ->list-entry data) (vals pools)))))
+
+(re-frame/reg-sub
+ ::display-site-raw
+ (fn [db _]
+   (-> db :swimming-pools :display-site)))
+
+(re-frame/reg-sub
+ ::display-site
+ :<- [::display-site-raw]
+ :<- [::cities-by-city-code]
+ :<- [::admins]
+ :<- [::owners]
+ :<- [::types-by-type-code]
+ :<- [::materials]
+ :<- [::filtering-methods]
+ :<- [::pool-types]
+ :<- [::sauna-types]
+ (fn [[site cities admins owners types materials
+       filtering-methods pool-types sauna-types] [_ locale]]
+   (when site
+     (let [latest               (:latest site)
+           type                 (types (-> latest :type :type-code))
+           admin                (admins (-> latest :admin))
+           owner                (owners (-> latest :owner))
+           city                 (get cities (-> latest :location :city :city-code))
+           get-material         #(get-in materials [% locale])
+           get-filtering-method #(get-in filtering-methods [% locale])
+           get-pool-type        #(get-in pool-types [% locale])
+           get-sauna-type       #(get-in sauna-types [% locale])]
+
+       {:lipas-id     (-> latest :lipas-id)
+        :name         (-> latest :name locale)
+        :type
+        {:name      (-> type :name locale)
+         :type-code (-> latest :type :type-code)}
+        :owner        (-> owner locale)
+        :admin        (-> admin locale)
+        :phone-number (-> latest :phone-number)
+        :www          (-> latest :www)
+        :email        (-> latest :email)
+
+        :location
+        {:address       (-> latest :location :address)
+         :postal-code   (-> latest :location :postal-code)
+         :postal-office (-> latest :location :postal-office)
+         :city
+         {:name (-> city :name locale)}}
+
+        :building
+        (-> (:building latest)
+            (update :main-construction-materials #(map get-material %))
+            (update :ceiling-structures #(map get-material %))
+            (update :supporting-structures #(map get-material %)))
+
+        :renovations (:renovations latest)
+
+        :water-treatment
+        (-> (:water-treatment latest)
+            (update :filtering-method #(map get-filtering-method %)))
+
+        :pools
+        (->> (:pools latest)
+             (map #(update % :type get-pool-type))
+             (map #(update % :structure get-material)))
+
+        :slides
+        (->> (:slides latest)
+             (map #(update % :structure get-material)))
+
+        :saunas
+        (->> (:saunas latest)
+             (map #(update % :type get-sauna-type)))
+
+        :other-services     (:other-services latest)
+        :facilities         (:facilities latest)
+        :visitors           (:visitors latest)
+        :energy-consumption (:energy-consumption :altest)}))))
