@@ -355,6 +355,12 @@
                vesivelho-2012 vesivelho-2013 vesivelho-2014
                vesivelho-2015 vesivelho-2016 vesivelho-2017])
 
+(defn gen-pools [n]
+  (reduce (fn [res n]
+            (assoc-in res [n :latest] (assoc vesivelho-2017 :lipas-id n
+                                             :name {:fi (str "Uimahalli " n)})))
+          {} (range n)))
+
 (def default-db
   {:backend-url "/api"
    :logged-in? false
@@ -362,13 +368,15 @@
 
    ;; Sports sites
    :sports-sites
-   {506032
-    {:latest vesivelho-2017
-     :history [vesivelho-2012 vesivelho-2013 vesivelho-2014
-               vesivelho-2015 vesivelho-2016 vesivelho-2017]}
-    89839
-    {:latest jaahalli-2017
-     :history [jaahalli-2016 jaahalli-2017]}}
+   (merge (gen-pools 200)
+          {
+           506032
+           {:latest vesivelho-2017
+            :history [vesivelho-2012 vesivelho-2013 vesivelho-2014
+                      vesivelho-2015 vesivelho-2016 vesivelho-2017]}
+           89839
+           {:latest jaahalli-2017
+            :history [jaahalli-2016 jaahalli-2017]}})
 
    ;; Ice stadiums
    :ice-stadiums

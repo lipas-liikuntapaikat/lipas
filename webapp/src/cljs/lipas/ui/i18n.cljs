@@ -188,7 +188,8 @@
     :add-renovation "Lisää peruskorjaus"
     :edit-renovation "Muokkaa peruskorjausta"
     :end-year "Valmistumisvuosi"
-    :designers "Suunnittelijat"}
+    :designers "Suunnittelijat"
+    :done? "Rakennukseen on tehty peruskorjauksia tai parannuksia..."}
 
    :rinks
    {:headline "Radat"

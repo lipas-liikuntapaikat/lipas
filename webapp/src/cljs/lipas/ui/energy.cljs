@@ -42,4 +42,5 @@
                                     [:heat-mwh (tr :energy/heat)]
                                     [:water-m3 (tr :energy/water)]]
                    :items          (reverse (sort-by :year items))
+                   :key-fn         :year
                    :read-only?     read-only?}])

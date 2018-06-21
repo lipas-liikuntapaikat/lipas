@@ -89,3 +89,51 @@
  :<- [::all-types]
  (fn [types _ _]
    (filter (comp #{2510 2520} :type-code) types)))
+
+(re-frame/reg-sub
+ ::display-site
+ :<- [::display-site-raw]
+ :<- [::cities-by-city-code]
+ :<- [::admins]
+ :<- [::owners]
+ :<- [::types-by-type-code]
+ :<- [::materials]
+ (fn [[site cities admins owners types materials] [_ locale]]
+   (when site
+     (let [latest       (:latest site)
+           type         (types (-> latest :type :type-code))
+           admin        (admins (-> latest :admin))
+           owner        (owners (-> latest :owner))
+           city         (get cities (-> latest :location :city :city-code))
+           get-material #(get-in materials [% locale])]
+
+       {:lipas-id     (-> latest :lipas-id)
+        :name         (-> latest :name locale)
+        :type
+        {:name      (-> type :name locale)
+         :type-code (-> latest :type :type-code)}
+        :owner        (-> owner locale)
+        :admin        (-> admin locale)
+        :phone-number (-> latest :phone-number)
+        :www          (-> latest :www)
+        :email        (-> latest :email)
+
+        :location
+        {:address       (-> latest :location :address)
+         :postal-code   (-> latest :location :postal-code)
+         :postal-office (-> latest :location :postal-office)
+         :city
+         {:name (-> city :name locale)}}
+
+        :building (:building latest)
+
+        :envelope-structure
+        (-> (:envelope-structure latest)
+            (update :base-floor-structure get-material))
+
+        :rinks              (:rinks latest)
+        :refrigeration      (:refrigeration latest)
+        :ice-maintenance    (:ice-maintenance latest)
+        :renovations        (:renovations latest)
+        :ventilation        (:ventilation latest)
+        :energy-consumption (:energy-consumption latest)}))))
