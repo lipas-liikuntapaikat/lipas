@@ -847,6 +847,16 @@
   {:fi "Kilpajäähalli",
    :se "Tävlingsishall",
    :en "Competition ice arena"},
+  :additional-type
+  {:small       {:fi "Pieni kilpahalli > 500 hlö"
+                 :en nil
+                 :se nil}
+   :competition {:fi "Kilpahalli < 3000 hlö"
+                 :en nil
+                 :se nil}
+   :large       {:fi "Suurhalli > 3000 hlö"
+                 :en nil
+                 :se nil}}
   :description
   {:fi
    "Katsomo on, katsomon koko määritellään ominaisuustiedoissa. Kenttien määrät yms. ominaisuuksiin.",

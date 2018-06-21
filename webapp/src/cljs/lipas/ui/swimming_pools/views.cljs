@@ -16,6 +16,12 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
+(defn details-card [{:keys [title] :as props} & content]
+  [mui/grid {:item true :md 6 :xs 12}
+   [mui/card {:square true}
+    [mui/card-header {:title title}]
+    (into [mui/card-content] content)]])
+
 (defn details-dialog [{:keys [tr site]}]
   (let [locale (tr)
         close  #(==> [::events/display-site nil])]
@@ -25,7 +31,94 @@
                  :on-close   close}
      [mui/dialog-title (-> site :name)]
      [mui/dialog-content
-      [:pre (with-out-str (pprint site))]]
+      [mui/grid {:container true :spacing 16}
+
+       [details-card {:title "Yleiset tiedot"}
+        [mui/table
+         [mui/table-body
+          [mui/table-row
+           [mui/table-cell "ID"]
+           [mui/table-cell (-> site :lipas-id)]]
+          [mui/table-row
+           [mui/table-cell "Liikuntapaikkatyyppi"]
+           [mui/table-cell (-> site :type :name)] ]
+          [mui/table-row
+           [mui/table-cell "Tyyppikoodi"]
+           [mui/table-cell (-> site :type :type-code)]]
+          [mui/table-row
+           [mui/table-cell "Omistaja"]
+           [mui/table-cell (-> site :owner)]]
+          [mui/table-row
+           [mui/table-cell "Ylläpitäjä"]
+           [mui/table-cell (-> site :admin)]]
+          [mui/table-row
+           [mui/table-cell "WWW-osoite"]
+           [mui/table-cell (-> site :www)]]
+          [mui/table-row
+           [mui/table-cell "Sähköposti"]
+           [mui/table-cell (-> site :email)]]
+          [mui/table-row
+           [mui/table-cell "Puhelinnumero"]
+           [mui/table-cell (-> site :phone-number)]]]]]
+
+       [details-card {:title "Sijainti"}
+        [mui/table
+         [mui/table-body
+          [mui/table-row
+           [mui/table-cell "Katuosoite"]
+           [mui/table-cell (-> site :location :address)]]
+          [mui/table-row
+           [mui/table-cell "Postinumero"]
+           [mui/table-cell (-> site :location :postal-code)]]
+          [mui/table-row
+           [mui/table-cell "Postitoimipaikka"]
+           [mui/table-cell (-> site :location :postal-office)]]
+          [mui/table-row
+           [mui/table-cell "Kunta"]
+           [mui/table-cell (-> site :location :city :name)]]]]]
+
+       [details-card {:title "Rakennus"}
+        [mui/table
+         [mui/table-body
+          [mui/table-row
+           [mui/table-cell (tr :building/construction-year)]
+           [mui/table-cell (-> site :building :construction-year)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/main-designers)]
+           [mui/table-cell (-> site :building :main-designers)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/total-surface-area-m2)]
+           [mui/table-cell (-> site :building :total-surface-area-m2)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/total-volume-m3)]
+           [mui/table-cell (-> site :building :total-volume-m3)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/seating-capacity)]
+           [mui/table-cell (-> site :building :seating-capacity)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/staff-count)]
+           [mui/table-cell (-> site :building :staff-count)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/pool-room-total-area-m2)]
+           [mui/table-cell (-> site :building :pool-room-total-area-m2)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/total-water-area-m2)]
+           [mui/table-cell (-> site :building :total-water-area-m2)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/heat-sections?)]
+           [mui/table-cell (-> site :building :heat-sections?)]]
+          [mui/table-row
+           [lui/table-cell (tr :building/piled?)]
+           [lui/table-cell (-> site :building :piled?)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/heat-source)]
+           [mui/table-cell (-> site :building :heat-source)]]
+          [mui/table-row
+           [mui/table-cell (tr :building/main-construction-materials)]
+           [mui/table-cell (-> site :building :main-construction-materials)]]
+          ]]]
+       [details-card {:title "Raakadata"}
+        [:pre (with-out-str (pprint site))]]]]
      [mui/dialog-actions
       [mui/button {:on-click close}
        (tr :actions/close)]]]))
@@ -80,286 +173,299 @@
         energy                (<== [::subs/energy-consumption-history])
         set-field             (partial set-field :editing :rev)]
 
-    [mui/grid {:container true}
+    (r/with-let [renovations-done? (r/atom false)]
+      [mui/grid {:container true}
 
-     ;; Energy consumption
-     [lui/form-card {:title (tr :energy/headline-year year)}
-      [energy/form {:tr tr
-                    :data (:energy-consumption data)
-                    :on-change (partial set-field :energy-consumption)}]
-      [lui/expansion-panel {:label (tr :actions/show-all-years)}
-       [energy/table {:tr tr
-                      :read-only? true
-                      :items energy}]]]
+       ;; Energy consumption
+       [lui/form-card {:title (tr :energy/headline-year year)}
+        [energy/form {:tr tr
+                      :data (:energy-consumption data)
+                      :on-change (partial set-field :energy-consumption)}]
+        [lui/expansion-panel {:label (tr :actions/show-all-years)}
+         [energy/table {:tr tr
+                        :read-only? true
+                        :items energy}]]]
 
-     ;; Visitors
-     [lui/form-card {:title (tr :visitors/headline-year year)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :visitors/total-count)
-         :type      "number"
-         :value     (-> data :visitors :total-count)
-         :spec      ::schema/visitors-total-count
-         :adornment (tr :units/person)
-         :on-change #(set-field :visitors :total-count %)}]]]
+       ;; Visitors
+       [lui/form-card {:title (tr :visitors/headline-year year)}
+        [mui/form-group
+         [lui/text-field
+          {:label     (tr :visitors/total-count)
+           :type      "number"
+           :value     (-> data :visitors :total-count)
+           :spec      ::schema/visitors-total-count
+           :adornment (tr :units/person)
+           :on-change #(set-field :visitors :total-count %)}]]]
 
-     ;; General info
-     [lui/form-card {:title (tr :general/general-info)}
-      [lui/sports-place-form
-       {:tr        tr
-        :data      data
-        :types     types
-        :owners    owners
-        :admins    admins
-        :on-change set-field}]]
+       [lui/form-card {:title (str "Peruskorjaukset parannukset ja remontit vuonna"
+                                   " "
+                                   year)}
+        [lui/checkbox
+         {:label (str "Halliin on tehty muutos, korjaus tai parannustöitä vuonna"
+                      " "
+                      year)
+          :checked @renovations-done?
+          :on-change #(swap! renovations-done? not)}]]
 
-     ;; Location
-     [lui/form-card {:title (tr :location/headline)}
-      [lui/location-form
-       {:tr        tr
-        :data      (:location data)
-        :cities    cities
-        :on-change (partial set-field :location)}]]
+       (when @renovations-done?
+         [:span
+          ;; General info
+          [lui/form-card {:title (tr :general/general-info)}
+           [lui/sports-place-form
+            {:tr        tr
+             :data      data
+             :types     types
+             :owners    owners
+             :admins    admins
+             :on-change set-field}]]
 
-     ;; Building
-     [lui/form-card {:title (tr :building/headline)}
-      [mui/form-group
-       [lui/year-selector
-        {:label     (tr :building/construction-year)
-         :value     (-> data :building :construction-year)
-         :on-change #(set-field :building :construction-year %)}]
-       [lui/text-field
-        {:label     (tr :building/main-designers)
-         :value     (-> data :building :main-designers)
-         :spec      ::schema/main-designers
-         :on-change #(set-field :building :main-designers %)}]
-       [lui/text-field
-        {:label     (tr :building/total-surface-area-m2)
-         :type      "number"
-         :value     (-> data :building :total-surface-area-m2)
-         :spec      ::schema/total-surface-area-m2
-         :adornment (tr :physical-units/m2)
-         :on-change #(set-field :building :total-surface-area-m2 %)}]
-       [lui/text-field
-        {:label     (tr :building/total-volume-m3)
-         :type      "number"
-         :value     (-> data :building :total-volume-m3)
-         :spec      ::schema/total-volume-m3
-         :adornment (tr :physical-units/m3)
-         :on-change #(set-field :building :total-volume-m3 %)}]
-       [lui/text-field
-        {:label     (tr :building/seating-capacity)
-         :type      "number"
-         :value     (-> data :building :seating-capacity)
-         :spec      ::schema/seating-capacity
-         :adornment (tr :units/person)
-         :on-change #(set-field :building :seating-capacity %)}]
-       [lui/text-field
-        {:label     (tr :building/staff-count)
-         :type      "number"
-         :value     (-> data :building :staff-count)
-         :spec      ::schema/staff-count
-         :adornment (tr :units/person)
-         :on-change #(set-field :building :staff-count %)}]
-       [lui/text-field
-        {:label     (tr :building/pool-room-total-area-m2)
-         :type      "number"
-         :value     (-> data :building :pool-room-total-area-m2)
-         :spec      ::schema/pool-room-total-area-m2
-         :adornment (tr :physical-units/m2)
-         :on-change #(set-field :building :pool-room-total-area-m2 %)}]
-       [lui/text-field
-        {:label     (tr :building/total-water-area-m2)
-         :type      "number"
-         :value     (-> data :building :total-water-area-m2)
-         :spec      ::schema/total-water-area-m2
-         :adornment (tr :physical-units/m2)
-         :on-change #(set-field :building :total-water-area-m2 %)}]
-       [lui/checkbox
-        {:label     (tr :building/heat-sections?)
-         :value     (-> data :building :heat-sections?)
-         :on-change #(set-field :building :heat-sections? %)}]
-       [lui/checkbox
-        {:label     (tr :building/piled?)
-         :value     (-> data :building :piled?)
-         :on-change #(set-field :building :piled? %)}]
-       [lui/select
-        {:label (tr :building/heat-source)
-         :value (-> data :building :heat-source)
-         :items (->select-entries tr :heat-sources heat-sources)}]
-       [lui/multi-select
-        {:label     (tr :building/main-construction-materials)
-         :value     (-> data :building :main-construction-materials)
-         :items     (->select-entries tr :building-materials building-materials)
-         :on-change #(set-field :building :main-construction-materials %)}]
-       [lui/multi-select
-        {:label     (tr :building/supporting-structures)
-         :value     (-> data :building :supporting-structures)
-         :items     (->select-entries tr
-                                      :supporting-structures
-                                      supporting-structures)
-         :on-change #(set-field :building :supporting-structures %)}]
-       [lui/multi-select
-        {:label     (tr :building/ceiling-structures)
-         :value     (-> data :building :ceiling-structures)
-         :items     (->select-entries tr :ceiling-structures ceiling-structures)
-         :on-change #(set-field :building :ceiling-structures %)}]]]
+          ;; Location
+          [lui/form-card {:title (tr :location/headline)}
+           [lui/location-form
+            {:tr        tr
+             :data      (:location data)
+             :cities    cities
+             :on-change (partial set-field :location)}]]
 
-     ;; Renovations
-     (when (-> dialogs :renovation :open?)
-       [renovations/dialog {:tr tr}])
+          ;; Building
+          [lui/form-card {:title (tr :building/headline)}
+           [mui/form-group
+            [lui/year-selector
+             {:label     (tr :building/construction-year)
+              :value     (-> data :building :construction-year)
+              :on-change #(set-field :building :construction-year %)}]
+            [lui/text-field
+             {:label     (tr :building/main-designers)
+              :value     (-> data :building :main-designers)
+              :spec      ::schema/main-designers
+              :on-change #(set-field :building :main-designers %)}]
+            [lui/text-field
+             {:label     (tr :building/total-surface-area-m2)
+              :type      "number"
+              :value     (-> data :building :total-surface-area-m2)
+              :spec      ::schema/total-surface-area-m2
+              :adornment (tr :physical-units/m2)
+              :on-change #(set-field :building :total-surface-area-m2 %)}]
+            [lui/text-field
+             {:label     (tr :building/total-volume-m3)
+              :type      "number"
+              :value     (-> data :building :total-volume-m3)
+              :spec      ::schema/total-volume-m3
+              :adornment (tr :physical-units/m3)
+              :on-change #(set-field :building :total-volume-m3 %)}]
+            [lui/text-field
+             {:label     (tr :building/seating-capacity)
+              :type      "number"
+              :value     (-> data :building :seating-capacity)
+              :spec      ::schema/seating-capacity
+              :adornment (tr :units/person)
+              :on-change #(set-field :building :seating-capacity %)}]
+            [lui/text-field
+             {:label     (tr :building/staff-count)
+              :type      "number"
+              :value     (-> data :building :staff-count)
+              :spec      ::schema/staff-count
+              :adornment (tr :units/person)
+              :on-change #(set-field :building :staff-count %)}]
+            [lui/text-field
+             {:label     (tr :building/pool-room-total-area-m2)
+              :type      "number"
+              :value     (-> data :building :pool-room-total-area-m2)
+              :spec      ::schema/pool-room-total-area-m2
+              :adornment (tr :physical-units/m2)
+              :on-change #(set-field :building :pool-room-total-area-m2 %)}]
+            [lui/text-field
+             {:label     (tr :building/total-water-area-m2)
+              :type      "number"
+              :value     (-> data :building :total-water-area-m2)
+              :spec      ::schema/total-water-area-m2
+              :adornment (tr :physical-units/m2)
+              :on-change #(set-field :building :total-water-area-m2 %)}]
+            [lui/checkbox
+             {:label     (tr :building/heat-sections?)
+              :value     (-> data :building :heat-sections?)
+              :on-change #(set-field :building :heat-sections? %)}]
+            [lui/checkbox
+             {:label     (tr :building/piled?)
+              :value     (-> data :building :piled?)
+              :on-change #(set-field :building :piled? %)}]
+            [lui/select
+             {:label (tr :building/heat-source)
+              :value (-> data :building :heat-source)
+              :items (->select-entries tr :heat-sources heat-sources)}]
+            [lui/multi-select
+             {:label     (tr :building/main-construction-materials)
+              :value     (-> data :building :main-construction-materials)
+              :items     (->select-entries tr :building-materials building-materials)
+              :on-change #(set-field :building :main-construction-materials %)}]
+            [lui/multi-select
+             {:label     (tr :building/supporting-structures)
+              :value     (-> data :building :supporting-structures)
+              :items     (->select-entries tr
+                                           :supporting-structures
+                                           supporting-structures)
+              :on-change #(set-field :building :supporting-structures %)}]
+            [lui/multi-select
+             {:label     (tr :building/ceiling-structures)
+              :value     (-> data :building :ceiling-structures)
+              :items     (->select-entries tr :ceiling-structures ceiling-structures)
+              :on-change #(set-field :building :ceiling-structures %)}]]]
 
-     [lui/form-card {:title (tr :renovations/headline)}
-      [renovations/table {:tr tr :items (-> data :renovations vals)}]]
+          ;; Renovations
+          (when (-> dialogs :renovation :open?)
+            [renovations/dialog {:tr tr}])
 
-     ;; Water treatment
-     [lui/form-card {:title (tr :water-treatment/headline)}
-      [mui/form-group
-       [lui/checkbox
-        {:label     (tr :water-treatment/ozonation?)
-         :value     (-> data :water-treatment :ozonation?)
-         :on-change #(set-field :water-treatment :ozonation? %)}]
-       [lui/checkbox
-        {:label     (tr :water-treatment/uv-treatment?)
-         :value     (-> data :water-treatment :uv-treatment?)
-         :on-change #(set-field :water-treatment :uv-treatment? %)}]
-       [lui/checkbox
-        {:label     (tr :water-treatment/activated-carbon?)
-         :value     (-> data :water-treatment :activated-carbon?)
-         :on-change #(set-field :water-treatment :activated-carbon? %)}]
-       [lui/multi-select
-        {:label     (tr :water-treatment/filtering-method)
-         :value     (-> data :water-treatment :filtering-method)
-         :items     (map #(hash-map :value %
-                                    :label (tr (keyword :filtering-methods %)))
-                         (keys filtering-methods))
-         :on-change #(set-field :water-treatment :filtering-method %)}]
-       [lui/text-field
-        {:label     (tr :general/comment)
-         :value     (-> data :water-treatment :comment)
-         :spec      ::schema/comment
-         :on-change #(set-field :water-treatment :comment %)}]]]
+          [lui/form-card {:title (tr :renovations/headline)}
+           [renovations/table {:tr tr :items (-> data :renovations vals)}]]
 
-     ;; Pools
-     (when (-> dialogs :pool :open?)
-       [pools/dialog {:tr tr}])
+          ;; Water treatment
+          [lui/form-card {:title (tr :water-treatment/headline)}
+           [mui/form-group
+            [lui/checkbox
+             {:label     (tr :water-treatment/ozonation?)
+              :value     (-> data :water-treatment :ozonation?)
+              :on-change #(set-field :water-treatment :ozonation? %)}]
+            [lui/checkbox
+             {:label     (tr :water-treatment/uv-treatment?)
+              :value     (-> data :water-treatment :uv-treatment?)
+              :on-change #(set-field :water-treatment :uv-treatment? %)}]
+            [lui/checkbox
+             {:label     (tr :water-treatment/activated-carbon?)
+              :value     (-> data :water-treatment :activated-carbon?)
+              :on-change #(set-field :water-treatment :activated-carbon? %)}]
+            [lui/multi-select
+             {:label     (tr :water-treatment/filtering-method)
+              :value     (-> data :water-treatment :filtering-method)
+              :items     (map #(hash-map :value %
+                                         :label (tr (keyword :filtering-methods %)))
+                              (keys filtering-methods))
+              :on-change #(set-field :water-treatment :filtering-method %)}]
+            [lui/text-field
+             {:label     (tr :general/comment)
+              :value     (-> data :water-treatment :comment)
+              :spec      ::schema/comment
+              :on-change #(set-field :water-treatment :comment %)}]]]
 
-     [lui/form-card {:title (tr :pools/headline)}
-      [pools/table {:tr    tr
-                    :items (-> data :pools)}]]
+          ;; Pools
+          (when (-> dialogs :pool :open?)
+            [pools/dialog {:tr tr}])
 
-     ;; Saunas
-     (when (-> dialogs :sauna :open?)
-       [saunas/dialog {:tr tr}])
+          [lui/form-card {:title (tr :pools/headline)}
+           [pools/table {:tr    tr
+                         :items (-> data :pools)}]]
 
-     [lui/form-card {:title (tr :saunas/headline)}
-      [saunas/table {:tr    tr
-                     :items (-> data :saunas)}]]
+          ;; Saunas
+          (when (-> dialogs :sauna :open?)
+            [saunas/dialog {:tr tr}])
 
-     ;; Slides
-     (when (-> dialogs :slide :open?)
-       [slides/dialog {:tr tr}])
+          [lui/form-card {:title (tr :saunas/headline)}
+           [saunas/table {:tr    tr
+                          :items (-> data :saunas)}]]
 
-     [lui/form-card {:title (tr :slides/headline)}
-      [slides/table {:tr    tr
-                     :items (-> data :slides)}]]
+          ;; Slides
+          (when (-> dialogs :slide :open?)
+            [slides/dialog {:tr tr}])
 
-     ;; Other services
-     [lui/form-card {:title (tr :other-services/headline)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :other-services/platforms-1m-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :platforms-1m-count)
-         :spec      ::schema/platforms-1m-count
-         :on-change #(set-field :other-services :platforms-1m-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/platforms-3m-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :platforms-3m-count)
-         :spec      ::schema/platforms-3m-count
-         :on-change #(set-field :other-services :platforms-3m-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/platforms-5m-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :platforms-5m-count)
-         :spec      ::schema/platforms-5m-count
-         :on-change #(set-field :other-services :platforms-5m-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/platforms-7.5m-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :platforms-7.5m-count)
-         :spec      ::schema/platforms-7.5m-count
-         :on-change #(set-field :other-services :platforms-7.5m-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/platforms-10m-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :platforms-10m-count)
-         :spec      ::schema/platforms-10m-count
-         :on-change #(set-field :other-services :platforms-10m-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/hydro-massage-spots-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :hydro-massage-spots-count)
-         :spec      ::schema/hydro-massage-spots-count
-         :on-change #(set-field :other-services :hydro-massage-spots-count %)}]
-       [lui/text-field
-        {:label     (tr :other-services/hydro-neck-massage-spots-count)
-         :adornment (tr :units/pcs)
-         :type      "number"
-         :value     (-> data :other-services :hydro-neck-massage-spots-count)
-         :spec      ::schema/hydro-neck-massage-spots-count
-         :on-change #(set-field :other-services :hydro-neck-massage-spots-count %)}]
-       [lui/checkbox
-        {:label     (tr :other-services/kiosk?)
-         :value     (-> data :other-services :kiosk?)
-         :on-change #(set-field :other-services :kiosk? %)}]]]
+          [lui/form-card {:title (tr :slides/headline)}
+           [slides/table {:tr    tr
+                          :items (-> data :slides)}]]
 
-     ;; Showers and lockers
-     [lui/form-card {:title (tr :facilities/headline)}
-      [mui/form-group
-       [lui/text-field
-        {:label     (tr :facilities/showers-men-count)
-         :type      "number"
-         :adornment (tr :units/pcs)
-         :value     (-> data :facilities :showers-men-count)
-         :spec      ::schema/showers-men-count
-         :on-change #(set-field :facilities :showers-men-count %)}]
-       [lui/text-field
-        {:label     (tr :facilities/showers-women-count)
-         :type      "number"
-         :adornment (tr :units/pcs)
-         :value     (-> data :facilities :showers-women-count)
-         :spec      ::schema/showers-women-count
-         :on-change #(set-field :facilities :showers-women-count %)}]
-       [lui/text-field
-        {:label     (tr :facilities/lockers-men-count)
-         :type      "number"
-         :adornment (tr :units/pcs)
-         :value     (-> data :facilities :lockers-men-count)
-         :spec      ::schema/lockers-men-count
-         :on-change #(set-field :facilities :lockers-men-count %)}]
-       [lui/text-field
-        {:label     (tr :facilities/lockers-women-count)
-         :type      "number"
-         :adornment (tr :units/pcs)
-         :value     (-> data :facilities :lockers-women-count)
-         :spec      ::schema/lockers-women-count
-         :on-change #(set-field :facilities :lockers-women-count %)}]]]
+          ;; Other services
+          [lui/form-card {:title (tr :other-services/headline)}
+           [mui/form-group
+            [lui/text-field
+             {:label     (tr :other-services/platforms-1m-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :platforms-1m-count)
+              :spec      ::schema/platforms-1m-count
+              :on-change #(set-field :other-services :platforms-1m-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/platforms-3m-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :platforms-3m-count)
+              :spec      ::schema/platforms-3m-count
+              :on-change #(set-field :other-services :platforms-3m-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/platforms-5m-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :platforms-5m-count)
+              :spec      ::schema/platforms-5m-count
+              :on-change #(set-field :other-services :platforms-5m-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/platforms-7.5m-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :platforms-7.5m-count)
+              :spec      ::schema/platforms-7.5m-count
+              :on-change #(set-field :other-services :platforms-7.5m-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/platforms-10m-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :platforms-10m-count)
+              :spec      ::schema/platforms-10m-count
+              :on-change #(set-field :other-services :platforms-10m-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/hydro-massage-spots-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :hydro-massage-spots-count)
+              :spec      ::schema/hydro-massage-spots-count
+              :on-change #(set-field :other-services :hydro-massage-spots-count %)}]
+            [lui/text-field
+             {:label     (tr :other-services/hydro-neck-massage-spots-count)
+              :adornment (tr :units/pcs)
+              :type      "number"
+              :value     (-> data :other-services :hydro-neck-massage-spots-count)
+              :spec      ::schema/hydro-neck-massage-spots-count
+              :on-change #(set-field :other-services :hydro-neck-massage-spots-count %)}]
+            [lui/checkbox
+             {:label     (tr :other-services/kiosk?)
+              :value     (-> data :other-services :kiosk?)
+              :on-change #(set-field :other-services :kiosk? %)}]]]
 
-     ;; Actions
-     [lui/form-card {}
-      [mui/button {:full-width true
-                   :color      "secondary"
-                   :variant    "raised"
-                   :on-click   #(==> [::events/submit data])}
-       (tr :actions/save)]]]))
+          ;; Showers and lockers
+          [lui/form-card {:title (tr :facilities/headline)}
+           [mui/form-group
+            [lui/text-field
+             {:label     (tr :facilities/showers-men-count)
+              :type      "number"
+              :adornment (tr :units/pcs)
+              :value     (-> data :facilities :showers-men-count)
+              :spec      ::schema/showers-men-count
+              :on-change #(set-field :facilities :showers-men-count %)}]
+            [lui/text-field
+             {:label     (tr :facilities/showers-women-count)
+              :type      "number"
+              :adornment (tr :units/pcs)
+              :value     (-> data :facilities :showers-women-count)
+              :spec      ::schema/showers-women-count
+              :on-change #(set-field :facilities :showers-women-count %)}]
+            [lui/text-field
+             {:label     (tr :facilities/lockers-men-count)
+              :type      "number"
+              :adornment (tr :units/pcs)
+              :value     (-> data :facilities :lockers-men-count)
+              :spec      ::schema/lockers-men-count
+              :on-change #(set-field :facilities :lockers-men-count %)}]
+            [lui/text-field
+             {:label     (tr :facilities/lockers-women-count)
+              :type      "number"
+              :adornment (tr :units/pcs)
+              :value     (-> data :facilities :lockers-women-count)
+              :spec      ::schema/lockers-women-count
+              :on-change #(set-field :facilities :lockers-women-count %)}]]]])
+
+       ;; Actions
+       [lui/form-card {}
+        [mui/button {:full-width true
+                     :color      "secondary"
+                     :variant    "raised"
+                     :on-click   #(==> [::events/submit data])}
+         (tr :actions/save)]]])))
 
 (defn edit-tab [tr]
   (let [data   (<== [::subs/sites-to-edit])

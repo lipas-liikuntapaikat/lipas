@@ -18,35 +18,45 @@
                 :checked value
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
+(defn display-value [v]
+  (cond
+    (true? v) CHECK_MARK
+    :else v))
 
-(defn table [{:keys [headers items on-select]}]
-  [mui/grid {:container true}
-   [mui/grid {:item true :xs 12}
-    [:div {:style {:overflow-x "auto"}}
-     [mui/table
-      [mui/table-head
-       (into [mui/table-row (when on-select
-                              [mui/table-cell ""])]
-             (for [[_ header] headers]
-               [mui/table-cell header]))]
-      [mui/table-body
-       (for [item items
-             :let [id (or (:id item) (gensym))]]
-         [mui/table-row {:key id
-                         :hover true}
-          (when on-select
-            [mui/table-cell {:padding "checkbox"}
-             [mui/icon-button {:on-click #(on-select item)}
-              [mui/icon {:color "secondary"} "folder_open"]]])
-          (for [[k _] headers
-                :let [v (get item k)]]
-            [mui/table-cell {:key (str id k)}
-             (cond
-               (true? v) CHECK_MARK
-               :else v)])])]]]]])
+(defn table-cell
+  ([value]
+   (table-cell {} value))
+  ([props value]
+   [mui/table-cell props (display-value value)]))
+
+(defn table [{:keys [headers items on-select key-fn]}]
+  (let [key-fn (or key-fn (constantly nil))]
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
+      [:div {:style {:overflow-x "auto"}}
+       [mui/table
+        [mui/table-head
+         (into [mui/table-row (when on-select
+                                [mui/table-cell ""])]
+               (for [[_ header] headers]
+                 [mui/table-cell header]))]
+        [mui/table-body
+         (for [item items
+               :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
+           [mui/table-row {:key id
+                           :hover true}
+            (when on-select
+              [mui/table-cell {:padding "checkbox"}
+               [mui/icon-button {:on-click #(on-select item)}
+                [mui/icon {:color "secondary"} "folder_open"]]])
+            (for [[k _] headers
+                  :let [v (get item k)]]
+              [mui/table-cell {:key (str id k)}
+               (display-value v)])])]]]]]))
 
 (defn form-table [{:keys [headers
                           items
+                          key-fn
                           add-tooltip
                           edit-tooltip
                           delete-tooltip
@@ -56,7 +66,8 @@
                           on-delete] :as props}]
   (if read-only?
     [table props]
-    (r/with-let [selected-item (r/atom nil)]
+    (r/with-let [selected-item (r/atom nil)
+                 key-fn (or key-fn (constantly nil))]
       [mui/grid {:container true
                  :spacing 8
                  :justify "flex-end"
@@ -72,7 +83,7 @@
           [mui/table-body
            (doall
             (for [item items
-                  :let [id (:id item)]]
+                  :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
               [mui/table-row {:key id
                               :hover true}
                [mui/table-cell {:padding "checkbox"}
@@ -84,9 +95,7 @@
                      :let [v (get item k)]]
                  [mui/table-cell {:key (str id k)
                                   :padding "dense"}
-                  (cond
-                    (true? v) CHECK_MARK
-                    :else v)])]))]]]]
+                  (display-value v)])]))]]]]
        [mui/grid {:item true :xs 10}
         (when @selected-item
           [:span
@@ -326,12 +335,12 @@
    [select
     {:label     (tr :sports-place/owner)
      :value     (-> data :owner)
-     :items     (map (partial ->select-entry tr :owner) owners)
+     :items     (map (partial ->select-entry tr :owner) (keys owners))
      :on-change #(on-change :owner %)}]
    [select
     {:label     (tr :sports-place/admin)
      :value     (-> data :admin)
-     :items     (map (partial ->select-entry tr :admin) admins)
+     :items     (map (partial ->select-entry tr :admin) (keys admins))
      :on-change #(on-change :admin %)}]
    [text-field
     {:label     (tr :sports-place/phone-number)

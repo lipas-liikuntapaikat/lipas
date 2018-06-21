@@ -211,10 +211,11 @@
  :<- [::types-by-type-code]
  :<- [::materials]
  :<- [::filtering-methods]
+ :<- [::heat-sources]
  :<- [::pool-types]
  :<- [::sauna-types]
- (fn [[site cities admins owners types materials
-       filtering-methods pool-types sauna-types] [_ locale]]
+ (fn [[site cities admins owners types materials filtering-methods
+       heat-sources pool-types sauna-types] [_ locale]]
    (when site
      (let [latest               (:latest site)
            type                 (types (-> latest :type :type-code))
@@ -223,6 +224,7 @@
            city                 (get cities (-> latest :location :city :city-code))
            get-material         #(get-in materials [% locale])
            get-filtering-method #(get-in filtering-methods [% locale])
+           get-heat-source      #(get-in heat-sources [% locale])
            get-pool-type        #(get-in pool-types [% locale])
            get-sauna-type       #(get-in sauna-types [% locale])]
 
@@ -248,7 +250,8 @@
         (-> (:building latest)
             (update :main-construction-materials #(map get-material %))
             (update :ceiling-structures #(map get-material %))
-            (update :supporting-structures #(map get-material %)))
+            (update :supporting-structures #(map get-material %))
+            (update :heat-source get-heat-source))
 
         :renovations (:renovations latest)
 
@@ -272,4 +275,4 @@
         :other-services     (:other-services latest)
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :energy-consumption (:energy-consumption :altest)}))))
+        :energy-consumption (:energy-consumption latest)}))))
