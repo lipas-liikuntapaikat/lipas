@@ -210,8 +210,8 @@
        :swim-panel (tr :swim/headline)
        :open-data-panel (tr :open-data/headline)
        :help-panel (tr :help/headline)
-       :login-panel ""
-       :register-panel ""
+       :login-panel (tr :login/headline)
+       :register-panel (tr :register/headline)
        :user-panel (tr :user/headline)
        "")]
     [mui/hidden {:sm-down true}
