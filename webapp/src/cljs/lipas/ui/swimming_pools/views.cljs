@@ -6,7 +6,6 @@
             [lipas.ui.energy :as energy]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
-            [lipas.ui.swimming-pools.renovations :as renovations]
             [lipas.ui.swimming-pools.saunas :as saunas]
             [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -161,8 +160,8 @@
   (let [data                  rev
         year                  (resolve-year (:timestamp rev))
         dialogs               (<== [::subs/dialogs])
-        types                 (<== [::subs/types])
-        cities                (<== [::subs/cities])
+        types                 (<== [::subs/types-list])
+        cities                (<== [::subs/cities-list])
         owners                (<== [::subs/owners])
         admins                (<== [::subs/admins])
         heat-sources          (<== [::subs/heat-sources])
@@ -178,13 +177,13 @@
 
        ;; Energy consumption
        [lui/form-card {:title (tr :energy/headline-year year)}
-        [energy/form {:tr tr
-                      :data (:energy-consumption data)
+        [energy/form {:tr        tr
+                      :data      (:energy-consumption data)
                       :on-change (partial set-field :energy-consumption)}]
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
-         [energy/table {:tr tr
+         [energy/table {:tr         tr
                         :read-only? true
-                        :items energy}]]]
+                        :items      energy}]]]
 
        ;; Visitors
        [lui/form-card {:title (tr :visitors/headline-year year)}
@@ -197,14 +196,10 @@
            :adornment (tr :units/person)
            :on-change #(set-field :visitors :total-count %)}]]]
 
-       [lui/form-card {:title (str "Peruskorjaukset parannukset ja remontit vuonna"
-                                   " "
-                                   year)}
+       [lui/form-card {:title (tr :renovations/headline-year year)}
         [lui/checkbox
-         {:label (str "Halliin on tehty muutos, korjaus tai parannustöitä vuonna"
-                      " "
-                      year)
-          :checked @renovations-done?
+         {:label     (tr :renovations/renovations-done? year)
+          :checked   @renovations-done?
           :on-change #(swap! renovations-done? not)}]]
 
        ;; General info
@@ -529,7 +524,6 @@
 
          ;; 1 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
-                                        ; chart table_chart show_chart pie_chart
                    :icon (r/as-element [mui/icon "compare"])}]
 
          ;; 2 Edit tab

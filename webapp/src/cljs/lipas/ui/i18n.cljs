@@ -185,6 +185,8 @@
 
    :renovations
    {:headline "Peruskorjaukset"
+    :headline-year "Peruskorjaukset parannukset ja remontit vuonna {1}"
+    :renovations-done? "Halliin on tehty muutos, korjaus tai parannustöitä vuonna {1}"
     :add-renovation "Lisää peruskorjaus"
     :edit-renovation "Muokkaa peruskorjausta"
     :end-year "Valmistumisvuosi"

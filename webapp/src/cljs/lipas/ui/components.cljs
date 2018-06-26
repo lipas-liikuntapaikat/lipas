@@ -204,17 +204,26 @@
 
 (def text-field text-field-controlled)
 
-(defn select [{:keys [label value items on-change sort-key]
-               :or   {sort-key :label}
+(defn select [{:keys [label value items on-change value-fn label-fn]
+               :or   {value-fn :value
+                      label-fn :label}
                :as   props}]
-  [text-field-controlled (merge (dissoc props :sort-key)
-                                {:select true
-                                 :label label
-                                 :value (pr-str value)
-                                 :on-change #(on-change (read-string %))})
-   (for [{:keys [label value]} (sort-by sort-key items)]
-     [mui/menu-item {:key value :value (pr-str value)}
-      label])])
+  (let [props (-> props
+                  (dissoc :value-fn :label-fn :label)
+                  (assoc :value (pr-str value))
+                  (assoc :on-change #(on-change (-> %
+                                                    .-target
+                                                    .-value
+                                                    read-string))))]
+    [mui/form-control
+     [mui/input-label label]
+     (into [mui/select props]
+           (for [i items]
+             (let [value (value-fn i)
+                   label (label-fn i)]
+               [mui/menu-item {:key (pr-str value)
+                               :value (pr-str value)}
+                label])))]))
 
 (defn extract-values [multi-select-state]
   (as-> multi-select-state $
@@ -289,74 +298,81 @@
                         :value y
                         :sort  (- y)})]
     [select {:label     label
-             :items     items
+             :items     (sort-by :sort items)
              :on-change #(when (not-empty (str %))
                            (on-change (or
                                        (get revs-by-year %)
                                        (template-fn (->timestamp %)))))
              :value     (-> value :timestamp resolve-year)
-             :sort-key  :sort
              :required  required}]))
 
-(defn sports-place-form [{:keys [tr data types admins owners on-change]}]
-  [mui/form-group
-   [text-field
-    {:label     (tr :sports-place/name-fi)
-     :value     (-> data :name :fi)
-     :spec      ::schema/name
-     :required  true
-     :on-change #(on-change :name :fi %)}]
-   [text-field
-    {:label     (tr :sports-place/name-se)
-     :spec      ::schema/name
-     :value     (-> data :name :se)
-     :on-change #(on-change :name :se %)}]
-   [text-field
-    {:label     (tr :sports-place/name-en)
-     :spec      ::schema/name
-     :value     (-> data :name :en)
-     :on-change #(on-change :name :en %)}]
-   [select
-    {:label     (tr :type/type-code)
-     :value     (-> data :type :type-code)
-     :items     (map #(hash-map :label (-> % :name :fi)
-                                :value (-> % :type-code)) types)
-     :on-change #(on-change :type :type-code %)}]
-
-   ;; Ice-stadiums get special treatment
-   (when (= 2520 (-> data :type :type-code))
+(defn sports-place-form [{:keys [tr data types size-categories
+                                 admins owners on-change]}]
+  (let [locale (tr)]
+    [mui/form-group
+     [text-field
+      {:label     (tr :sports-place/name-fi)
+       :value     (-> data :name :fi)
+       :spec      ::schema/name
+       :required  true
+       :on-change #(on-change :name :fi %)}]
+     [text-field
+      {:label     (tr :sports-place/name-se)
+       :spec      ::schema/name
+       :value     (-> data :name :se)
+       :on-change #(on-change :name :se %)}]
+     [text-field
+      {:label     (tr :sports-place/name-en)
+       :spec      ::schema/name
+       :value     (-> data :name :en)
+       :on-change #(on-change :name :en %)}]
      [select
-      {:label     (tr :ice/size-category)
-       :value     (-> data :type :size-category)
-       :items     [{:value :small       :label (tr :ice/small)}
-                   {:value :competition :label (tr :ice/competition)}
-                   {:value :large       :label (tr :ice/large)}]
-       :on-change #(on-change :type :size-category %)}])
-   [select
-    {:label     (tr :sports-place/owner)
-     :value     (-> data :owner)
-     :items     (map (partial ->select-entry tr :owner) (keys owners))
-     :on-change #(on-change :owner %)}]
-   [select
-    {:label     (tr :sports-place/admin)
-     :value     (-> data :admin)
-     :items     (map (partial ->select-entry tr :admin) (keys admins))
-     :on-change #(on-change :admin %)}]
-   [text-field
-    {:label     (tr :sports-place/phone-number)
-     :value     (-> data :phone-number)
-     :spec      ::schema/phone-number
-     :on-change #(on-change :phone-number %)}]
-   [text-field
-    {:label     (tr :sports-place/www)
-     :value     (-> data :www)
-     :spec      ::schema/www
-     :on-change #(on-change :www %)}]
-   [text-field
-    {:label     (tr :sports-place/email-public)
-     :value     (-> data :email)
-     :spec      ::schema/email
-     :on-change #(on-change :email %)}]])
+      {:label     (tr :type/type-code)
+       :value     (-> data :type :type-code)
+       :items     types
+       :label-fn  (comp locale :name)
+       :value-fn  :type-code
+       :on-change #(on-change :type :type-code %)}]
+
+     ;; Ice-stadiums get special treatment
+     (when (= 2520 (-> data :type :type-code))
+       [select
+        {:label     (tr :ice/size-category)
+         :value     (-> data :type :size-category)
+         :items     size-categories
+         :value-fn  first
+         :label-fn  (comp locale second)
+         :on-change #(on-change :type :size-category %)}])
+
+     [select
+      {:label     (tr :sports-place/owner)
+       :value     (-> data :owner)
+       :items     owners
+       :value-fn  first
+       :label-fn  (comp locale second)
+       :on-change #(on-change :owner %)}]
+     [select
+      {:label     (tr :sports-place/admin)
+       :value     (-> data :admin)
+       :items     admins
+       :value-fn  first
+       :label-fn  (comp locale second)
+       :on-change #(on-change :admin %)}]
+     [text-field
+      {:label     (tr :sports-place/phone-number)
+       :value     (-> data :phone-number)
+       :spec      ::schema/phone-number
+       :on-change #(on-change :phone-number %)}]
+     [text-field
+      {:label     (tr :sports-place/www)
+       :value     (-> data :www)
+       :spec      ::schema/www
+       :on-change #(on-change :www %)}]
+     [text-field
+      {:label     (tr :sports-place/email-public)
+       :value     (-> data :email)
+       :spec      ::schema/email
+       :on-change #(on-change :email %)}]]))
 
 (defn location-form [{:keys [tr data cities on-change]}]
   (let [locale (tr)]
@@ -379,8 +395,9 @@
      [select
       {:label     (tr :location/city)
        :value     (-> data :city :city-code)
-       :items     (map #(hash-map :label (-> % :name locale)
-                                  :value (-> % :city-code)) cities)
+       :items     cities
+       :label-fn  (comp locale :name)
+       :value-fn  :city-code
        :on-change #(on-change :city :city-code %)}]]))
 
 (defn expansion-panel [{:keys [label]} & children]

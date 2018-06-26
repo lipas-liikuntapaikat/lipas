@@ -5,7 +5,8 @@
             [lipas.data.owners :as owners]
             [lipas.data.types :as types]
             [lipas.data.materials :as materials]
-            [lipas.data.swimming-pools :as swimming-pools]))
+            [lipas.data.swimming-pools :as swimming-pools]
+            [lipas.data.ice-stadiums :as ice-stadiums]))
 
 (def jaahalli-2016
 
@@ -391,7 +392,8 @@
      :rink
      {:open? false
       :data {:width-m ""
-             :length-m ""}}}}
+             :length-m ""}}}
+    :size-categories ice-stadiums/size-categories}
 
    ;; Swimming pools
    :swimming-pools
@@ -447,9 +449,10 @@
 
    :admins admins/all
    :owners owners/all
-   :cities cities/active
-   :types types/all
+   :cities (index-by :city-code cities/active)
+   :types (index-by :type-code types/all)
    :materials materials/all
    :building-materials materials/building-materials
    :supporting-structures materials/supporting-structures
-   :ceiling-structures materials/ceiling-structures})
+   :ceiling-structures materials/ceiling-structures
+   :base-floor-structures materials/base-floor-structures})
