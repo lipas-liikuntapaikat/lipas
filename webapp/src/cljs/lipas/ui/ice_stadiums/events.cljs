@@ -66,3 +66,9 @@
  ::remove-rink
  (fn [db [_ {:keys [id]}]]
    (update-in db [:ice-stadiums :editing :rev :rinks] dissoc id)))
+
+(re-frame/reg-event-db
+ ::display-site
+ (fn [db [_ {:keys [lipas-id]}]]
+   (let [site (get-in db [:sports-sites lipas-id])]
+     (assoc-in db [:ice-stadiums :display-site] site))))

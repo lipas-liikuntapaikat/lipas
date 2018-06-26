@@ -80,15 +80,15 @@
    (-> db :swimming-pools :dialogs :energy :data)))
 
 (re-frame/reg-sub
- ::cities
+ ::cities-by-city-code
  (fn [db _]
    (-> db :cities)))
 
 (re-frame/reg-sub
- ::cities-by-city-code
- :<- [::cities]
+ ::cities-list
+ :<- [::cities-by-city-code]
  (fn [cities _]
-   (index-by :city-code cities)))
+   (vals cities)))
 
 (re-frame/reg-sub
  ::admins
@@ -106,16 +106,16 @@
    (-> db :types)))
 
 (re-frame/reg-sub
- ::types
+ ::types-by-type-code
  :<- [::all-types]
  (fn [types _ _]
-   (filter (comp #{3110} :type-code) types)))
+   (select-keys types [3110])))
 
 (re-frame/reg-sub
- ::types-by-type-code
- :<- [::types]
+ ::types-list
+ :<- [::types-by-type-code]
  (fn [types _ _]
-   (index-by :type-code types)))
+   (vals types)))
 
 (re-frame/reg-sub
  ::pool-types

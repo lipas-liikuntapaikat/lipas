@@ -1,6 +1,6 @@
 (ns lipas.ui.ice-stadiums.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :refer [resolve-year]]))
+            [lipas.ui.utils :refer [resolve-year index-by]]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -35,14 +35,19 @@
    (-> db :sports-sites)))
 
 (re-frame/reg-sub
- ::sites-to-edit
- :<- [::access-to-sports-sites]
+ ::ice-stadiums
  :<- [::sports-sites]
- (fn [[ids sites] _]
+ (fn [sites _]
    (as-> sites $
-     (select-keys $ ids)
      (into {} (filter (comp #{2510 2520} :type-code :type :latest second)) $)
      (not-empty $))))
+
+(re-frame/reg-sub
+ ::sites-to-edit
+ :<- [::access-to-sports-sites]
+ :<- [::ice-stadiums]
+ (fn [[ids sites] _]
+   (select-keys sites ids)))
 
 (re-frame/reg-sub
  ::dialogs
@@ -65,9 +70,15 @@
    (-> db :ice-stadiums :dialogs :energy :data)))
 
 (re-frame/reg-sub
- ::cities
+ ::cities-by-city-code
  (fn [db _]
    (-> db :cities)))
+
+(re-frame/reg-sub
+ ::cities-list
+ :<- [::cities-by-city-code]
+ (fn [cities _ _]
+   (vals cities)))
 
 (re-frame/reg-sub
  ::admins
@@ -85,10 +96,66 @@
    (-> db :types)))
 
 (re-frame/reg-sub
- ::types
+ ::types-by-type-code
  :<- [::all-types]
+ (fn [types _]
+   (select-keys types [2510 2520])))
+
+(re-frame/reg-sub
+ ::types-list
+ :<- [::types-by-type-code]
  (fn [types _ _]
-   (filter (comp #{2510 2520} :type-code) types)))
+   (vals types)))
+
+(re-frame/reg-sub
+ ::size-categories
+ (fn [db _ _]
+   (-> db :ice-stadiums :size-categories)))
+
+(re-frame/reg-sub
+ ::materials
+ (fn [db _]
+   (-> db :materials)))
+
+(re-frame/reg-sub
+ ::base-floor-structures
+ (fn [db _]
+   (-> db :base-floor-structures)))
+
+(defn ->list-entry [{:keys [cities admins owners types locale]} site]
+  (let [latest (:latest site)
+        type   (types (-> latest :type :type-code))
+        admin  (admins (-> latest :admin))
+        owner  (owners (-> latest :owner))
+        city   (get cities (-> latest :location :city :city-code))]
+    {:lipas-id    (-> latest :lipas-id)
+     :name        (-> latest :name locale)
+     :type        (-> type :name locale)
+     :address     (-> latest :location :address)
+     :postal-code (-> latest :location :postal-code)
+     :city        (-> city :name locale)
+     :owner       (-> owner locale)
+     :admin       (-> admin locale)}))
+
+(re-frame/reg-sub
+ ::sites-list
+ :<- [::ice-stadiums]
+ :<- [::cities-by-city-code]
+ :<- [::admins]
+ :<- [::owners]
+ :<- [::types-by-type-code]
+ (fn [[sites cities admins owners types] [_ locale]]
+   (let [data  {:locale locale
+                :cities cities
+                :admins admins
+                :owners owners
+                :types types}]
+     (map (partial ->list-entry data) (vals sites)))))
+
+(re-frame/reg-sub
+ ::display-site-raw
+ (fn [db _]
+   (-> db :ice-stadiums :display-site)))
 
 (re-frame/reg-sub
  ::display-site
@@ -96,7 +163,7 @@
  :<- [::cities-by-city-code]
  :<- [::admins]
  :<- [::owners]
- :<- [::types-by-type-code]
+ :<- [::all-types]
  :<- [::materials]
  (fn [[site cities admins owners types materials] [_ locale]]
    (when site
@@ -106,6 +173,7 @@
            owner        (owners (-> latest :owner))
            city         (get cities (-> latest :location :city :city-code))
            get-material #(get-in materials [% locale])]
+
 
        {:lipas-id     (-> latest :lipas-id)
         :name         (-> latest :name locale)
