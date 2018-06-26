@@ -3,7 +3,13 @@
 ;;;; Contains also structures
 
 (def all
-  {:concrete         {:fi "Betoni"
+  {:asphalt          {:fi "Asfaltti"
+                      :se nil
+                      :en nil}
+   :sand             {:fi "Hiekka"
+                      :se nil
+                      :en nil}
+   :concrete         {:fi "Betoni"
                       :se nil
                       :en nil}
    :brick            {:fi "Tiili"
@@ -78,3 +84,6 @@
 (def ceiling-structures
   (select-keys all [:wood :hollow-core-slab :steel :insulator :double-t-beam
                     :concrete :glulam :pent-roof :felt :composite-beam]))
+
+(def base-floor-structures
+  (select-keys all [:concrete :asphalt :sand]))
