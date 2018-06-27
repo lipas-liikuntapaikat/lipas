@@ -113,6 +113,12 @@
 (def input-label (mui->reagent "InputLabel"))
 (def select (mui->reagent "Select"))
 
+(def transitions {:slide    (gobj/get js/MaterialUI "Slide")
+                  :zoom     (gobj/get js/MaterialUI "Zoom")
+                  :fade     (gobj/get js/MaterialUI "Fade")
+                  :grow     (gobj/get js/MaterialUI "Grow")
+                  :collapse (gobj/get js/MaterialUI "Collapse")})
+
 (def with-styles* (gobj/get js/MaterialUI "withStyles"))
 
 (defn with-styles [styles]

@@ -14,16 +14,20 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-(defn details-dialog [{:keys [tr site]}]
-  (let [location        (:location site)
+(defn details-dialog [{:keys [tr]}]
+  (let [site            (<== [::subs/display-site (tr)])
+        location        (:location site)
         building        (:building site)
         water-treatment (:water-treatment site)
         other-services  (:other-services site)
         facilities      (:facilities site)
         close           #(==> [::events/display-site nil])]
-    [mui/dialog {:open        true
-                 :full-screen true
-                 :on-close    close}
+
+    [mui/dialog {:open                 ((complement empty?) site)
+                 :full-screen          true
+                 :Transition-component (:slide mui/transitions)
+                 :on-close             close}
+
      [mui/dialog-title (-> site :name)]
      [mui/dialog-content {:style {:padding 0}}
       [mui/grid {:container true}
@@ -133,13 +137,11 @@
 
 (defn info-tab [tr]
   (let [locale       (tr)
-        pools        (<== [::subs/swimming-pools-list locale])
-        display-site (<== [::subs/display-site locale])]
+        pools        (<== [::subs/swimming-pools-list locale])]
 
     [mui/grid {:container true}
 
-     (when display-site
-       [details-dialog {:tr tr :site display-site}])
+     [details-dialog {:tr tr}]
 
      [mui/grid {:item true :xs 12}
       [mui/paper
