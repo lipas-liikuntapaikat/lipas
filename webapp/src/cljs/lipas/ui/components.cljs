@@ -379,7 +379,9 @@
    (into [mui/table-body]
          (for [row data]
            [mui/table-row
-            [table-cell (first row)]
+            [table-cell
+             [mui/typography {:variant "caption"}
+              (first row)]]
             [table-cell (second row)]]))])
 
 (defn sports-site-info [{:keys [tr site]}]
