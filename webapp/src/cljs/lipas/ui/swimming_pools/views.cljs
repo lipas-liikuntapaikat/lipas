@@ -1,7 +1,6 @@
 (ns lipas.ui.swimming-pools.views
   (:require [lipas.schema.core :as schema]
             [lipas.ui.components :as lui]
-            [clojure.pprint :refer [pprint]]
             [lipas.ui.mui :as mui]
             [lipas.ui.energy :as energy]
             [lipas.ui.swimming-pools.events :as events]
@@ -15,15 +14,8 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-(defn details-card [{:keys [title] :as props} & content]
-  [mui/grid {:item true :md 12 :xs 12}
-   [mui/card {:square true}
-    [mui/card-header {:title title}]
-    (into [mui/card-content] content)]])
-
 (defn details-dialog [{:keys [tr site]}]
-  (let [locale          (tr)
-        location        (:location site)
+  (let [location        (:location site)
         building        (:building site)
         water-treatment (:water-treatment site)
         other-services  (:other-services site)
@@ -38,16 +30,15 @@
       [mui/grid {:container true :spacing 16}
 
        ;; General info
-       [details-card {:title (tr :general/general-info)}
+       [lui/form-card {:title (tr :general/general-info)}
         [lui/sports-site-info {:tr tr :site site}]]
 
        ;; Location
-       [details-card {:title (tr :location/headline)}
+       [lui/form-card {:title (tr :location/headline)}
         [lui/location-info {:tr tr :location location}]]
 
-
        ;; Building
-       [details-card {:title (tr :building/headline)}
+       [lui/form-card {:title (tr :building/headline)}
         [lui/info-table
          {:data
           [[(tr :building/construction-year) (-> building :construction-year)]
@@ -63,7 +54,7 @@
            [(tr :building/heat-source) (-> building :heat-source)]
            [(tr :building/main-construction-materials) (-> building :main-construction-materials)]]}]]
        ;; Water treatment
-       [details-card {:title (tr :water-treatment/headline)}
+       [lui/form-card {:title (tr :water-treatment/headline)}
         [lui/info-table
          {:data
           [[(tr :water-treatment/ozonation?) (-> water-treatment :ozonation?)]
@@ -72,7 +63,7 @@
            [(tr :water-treatment/activated-carbon?) (-> water-treatment :activated-carbon?)]]}]]
 
        ;; Other services
-       [details-card {:title (tr :other-services/headline)}
+       [lui/form-card {:title (tr :other-services/headline)}
         [lui/info-table
          {:data
           [[(tr :other-services/platforms-1m-count) (-> other-services :platforms-1m-count?)]
@@ -85,7 +76,7 @@
            [(tr :other-services/kiosk?) (-> other-services :kiosk?)]]}]]
 
        ;; Showers and lockers
-       [details-card {:title (tr :facilities/headline)}
+       [lui/form-card {:title (tr :facilities/headline)}
         [lui/info-table
          {:data
           [[(tr :facilities/showers-men-count) (-> facilities :showers-men-count)]
@@ -94,19 +85,19 @@
            [(tr :facilities/lockers-women-count) (-> facilities :lockers-women-count)]]}]]
 
        ;; Pools
-       [details-card {:title (tr :pools/headline)}
+       [lui/form-card {:title (tr :pools/headline)}
         [pools/read-only-table {:tr tr :items (:pools site)}]]
 
        ;; Slides
-       [details-card {:title (tr :slides/headline)}
+       [lui/form-card {:title (tr :slides/headline)}
         [slides/read-only-table {:tr tr :items (:slides site)}]]
 
        ;; Saunas
-       [details-card {:title (tr :saunas/headline)}
+       [lui/form-card {:title (tr :saunas/headline)}
         [saunas/read-only-table {:tr tr :items (:saunas site)}]]
 
        ;; Energy consumption
-       [details-card {:title (tr :energy/headline)}
+       [lui/form-card {:title (tr :energy/headline)}
         [energy/table {:read-only? true :tr tr :items (:energy-consumption site)}]]]]
 
      [mui/dialog-actions
