@@ -16,14 +16,19 @@
             [reagent.core :as r]))
 
 (defn details-card [{:keys [title] :as props} & content]
-  [mui/grid {:item true :md 6 :xs 12}
+  [mui/grid {:item true :md 12 :xs 12}
    [mui/card {:square true}
     [mui/card-header {:title title}]
     (into [mui/card-content] content)]])
 
 (defn details-dialog [{:keys [tr site]}]
-  (let [locale (tr)
-        close  #(==> [::events/display-site nil])]
+  (let [locale          (tr)
+        location        (:location site)
+        building        (:building site)
+        water-treatment (:water-treatment site)
+        other-services  (:other-services site)
+        facilities      (:facilities site)
+        close           #(==> [::events/display-site nil])]
     [mui/dialog {:open       true
                  :full-width true
                  :max-width  "md"
@@ -32,92 +37,78 @@
      [mui/dialog-content
       [mui/grid {:container true :spacing 16}
 
-       [details-card {:title "Yleiset tiedot"}
-        [mui/table
-         [mui/table-body
-          [mui/table-row
-           [mui/table-cell "ID"]
-           [mui/table-cell (-> site :lipas-id)]]
-          [mui/table-row
-           [mui/table-cell "Liikuntapaikkatyyppi"]
-           [mui/table-cell (-> site :type :name)] ]
-          [mui/table-row
-           [mui/table-cell "Tyyppikoodi"]
-           [mui/table-cell (-> site :type :type-code)]]
-          [mui/table-row
-           [mui/table-cell "Omistaja"]
-           [mui/table-cell (-> site :owner)]]
-          [mui/table-row
-           [mui/table-cell "Ylläpitäjä"]
-           [mui/table-cell (-> site :admin)]]
-          [mui/table-row
-           [mui/table-cell "WWW-osoite"]
-           [mui/table-cell (-> site :www)]]
-          [mui/table-row
-           [mui/table-cell "Sähköposti"]
-           [mui/table-cell (-> site :email)]]
-          [mui/table-row
-           [mui/table-cell "Puhelinnumero"]
-           [mui/table-cell (-> site :phone-number)]]]]]
+       ;; General info
+       [details-card {:title (tr :general/general-info)}
+        [lui/sports-site-info {:tr tr :site site}]]
 
-       [details-card {:title "Sijainti"}
-        [mui/table
-         [mui/table-body
-          [mui/table-row
-           [mui/table-cell "Katuosoite"]
-           [mui/table-cell (-> site :location :address)]]
-          [mui/table-row
-           [mui/table-cell "Postinumero"]
-           [mui/table-cell (-> site :location :postal-code)]]
-          [mui/table-row
-           [mui/table-cell "Postitoimipaikka"]
-           [mui/table-cell (-> site :location :postal-office)]]
-          [mui/table-row
-           [mui/table-cell "Kunta"]
-           [mui/table-cell (-> site :location :city :name)]]]]]
+       ;; Location
+       [details-card {:title (tr :location/headline)}
+        [lui/location-info {:tr tr :location location}]]
 
-       [details-card {:title "Rakennus"}
-        [mui/table
-         [mui/table-body
-          [mui/table-row
-           [mui/table-cell (tr :building/construction-year)]
-           [mui/table-cell (-> site :building :construction-year)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/main-designers)]
-           [mui/table-cell (-> site :building :main-designers)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/total-surface-area-m2)]
-           [mui/table-cell (-> site :building :total-surface-area-m2)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/total-volume-m3)]
-           [mui/table-cell (-> site :building :total-volume-m3)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/seating-capacity)]
-           [mui/table-cell (-> site :building :seating-capacity)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/staff-count)]
-           [mui/table-cell (-> site :building :staff-count)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/pool-room-total-area-m2)]
-           [mui/table-cell (-> site :building :pool-room-total-area-m2)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/total-water-area-m2)]
-           [mui/table-cell (-> site :building :total-water-area-m2)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/heat-sections?)]
-           [mui/table-cell (-> site :building :heat-sections?)]]
-          [mui/table-row
-           [lui/table-cell (tr :building/piled?)]
-           [lui/table-cell (-> site :building :piled?)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/heat-source)]
-           [mui/table-cell (-> site :building :heat-source)]]
-          [mui/table-row
-           [mui/table-cell (tr :building/main-construction-materials)]
-           [mui/table-cell (-> site :building :main-construction-materials)]]
-          ]]]
-       [details-card {:title "Raakadata"}
-        [:pre (with-out-str (pprint site))]]]]
+
+       ;; Building
+       [details-card {:title (tr :building/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :building/construction-year) (-> building :construction-year)]
+           [(tr :building/main-designers) (-> building :main-designers)]
+           [(tr :building/total-surface-area-m2) (-> building :total-surface-area-m2)]
+           [(tr :building/total-volume-m3) (-> building :total-volume-m3)]
+           [(tr :building/seating-capacity) (-> building :seating-capacity)]
+           [(tr :building/staff-count) (-> building :staff-count)]
+           [(tr :building/pool-room-total-area-m2) (-> site :building :pool-room-total-area-m2)]
+           [(tr :building/total-water-area-m2) (-> building :total-water-area-m2)]
+           [(tr :building/heat-sections?) (-> building :heat-sections?)]
+           [(tr :building/piled?) (-> building :piled?)]
+           [(tr :building/heat-source) (-> building :heat-source)]
+           [(tr :building/main-construction-materials) (-> building :main-construction-materials)]]}]]
+       ;; Water treatment
+       [details-card {:title (tr :water-treatment/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :water-treatment/ozonation?) (-> water-treatment :ozonation?)]
+           [(tr :water-treatment/uv-treatment?) (-> water-treatment :uv-treatment?)]
+           [(tr :water-treatment/uv-treatment?) (-> water-treatment :uv-treatment?)]
+           [(tr :water-treatment/activated-carbon?) (-> water-treatment :activated-carbon?)]]}]]
+
+       ;; Other services
+       [details-card {:title (tr :other-services/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :other-services/platforms-1m-count) (-> other-services :platforms-1m-count?)]
+           [(tr :other-services/platforms-3m-count) (-> other-services :platforms-3m-count?)]
+           [(tr :other-services/platforms-5m-count) (-> other-services :platforms-5m-count?)]
+           [(tr :other-services/platforms-7.5m-count) (-> other-services :platforms-7.5m-count?)]
+           [(tr :other-services/platforms-10m-count) (-> other-services :platforms-10m-count?)]
+           [(tr :other-services/hydro-massage-spots-count) (-> other-services :hydro-massage-spots-count)]
+           [(tr :other-services/hydro-neck-massage-spots-count) (-> other-services :hydro-neck-massage-spots-count)]
+           [(tr :other-services/kiosk?) (-> other-services :kiosk?)]]}]]
+
+       ;; Showers and lockers
+       [details-card {:title (tr :facilities/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :facilities/showers-men-count) (-> facilities :showers-men-count)]
+           [(tr :facilities/showers-women-count) (-> facilities :showers-women-count)]
+           [(tr :facilities/lockers-men-count) (-> facilities :lockers-men-count)]
+           [(tr :facilities/lockers-women-count) (-> facilities :lockers-women-count)]]}]]
+
+       ;; Pools
+       [details-card {:title (tr :pools/headline)}
+        [pools/read-only-table {:tr tr :items (:pools site)}]]
+
+       ;; Slides
+       [details-card {:title (tr :slides/headline)}
+        [slides/read-only-table {:tr tr :items (:slides site)}]]
+
+       ;; Saunas
+       [details-card {:title (tr :saunas/headline)}
+        [saunas/read-only-table {:tr tr :items (:saunas site)}]]
+
+       ;; Energy consumption
+       [details-card {:title (tr :energy/headline)}
+        [energy/table {:read-only? true :tr tr :items (:energy-consumption site)}]]]]
+
      [mui/dialog-actions
       [mui/button {:on-click close}
        (tr :actions/close)]]]))

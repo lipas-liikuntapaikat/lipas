@@ -39,11 +39,14 @@
                                 #(==> [::events/save-sauna data]))}
      [form {:tr tr :data data}]]))
 
+(defn- make-headers [tr]
+  [[:type (tr :general/type)]
+   [:women (tr :saunas/women)]
+   [:men (tr :saunas/men)]])
+
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr :type :sauna-types)]
-    [lui/form-table {:headers [[:type (tr :general/type)]
-                               [:women (tr :saunas/women)]
-                               [:men (tr :saunas/men)]]
+    [lui/form-table {:headers (make-headers tr)
                      :items (map localize (vals items))
                      :add-tooltip (tr :saunas/add-sauna)
                      :edit-tooltip (tr :actions/edit)
@@ -51,3 +54,8 @@
                      :on-add #(toggle-dialog :sauna)
                      :on-edit #(toggle-dialog :sauna (get items (:id %)))
                      :on-delete #(==> [::events/remove-sauna %])}]))
+
+(defn read-only-table [{:keys [tr items]}]
+  [lui/table {:headers (make-headers tr)
+              :items items
+              :key-fn #(gensym)}])

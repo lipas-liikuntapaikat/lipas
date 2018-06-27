@@ -27,6 +27,7 @@
 
    :sports-place
    {:headline "Liikuntapaikka"
+    :id "LIPAS-ID"
     :name-fi "Nimi"
     :name-se "Nimi ruotsiksi"
     :name-en "Nimi englanniksi"
@@ -37,7 +38,8 @@
     :email-public "Sähköposti (julkinen)"}
 
    :type
-   {:type-code "Liikuntapaikkatyyppi"}
+   {:type-code "Tyyppikoodi"
+    :name "Liikuntapaikkatyyppi"}
 
    :admin (->translation-map :fi admins/all)
    :owner (->translation-map :fi owners/all)

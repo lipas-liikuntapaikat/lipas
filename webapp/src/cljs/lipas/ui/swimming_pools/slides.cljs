@@ -39,10 +39,13 @@
                                 #(==> [::events/save-slide data]))}
      [form {:tr tr :data data}]]))
 
+(defn- make-headers [tr]
+  [[:structure (tr :general/structure)]
+   [:length-m (tr :dimensions/length-m)]])
+
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr :structure :slide-structures)]
-    [lui/form-table {:headers [[:structure (tr :general/structure)]
-                               [:length-m (tr :dimensions/length-m)]]
+    [lui/form-table {:headers (make-headers tr)
                      :items (map localize (vals items))
                      :add-tooltip (tr :slides/add-slide)
                      :edit-tooltip (tr :actions/edit)
@@ -50,3 +53,8 @@
                      :on-add (comp #(toggle-dialog :slide) reset)
                      :on-edit #(toggle-dialog :slide (get items (:id %)))
                      :on-delete #(==> [::events/remove-slide %])}]))
+
+(defn read-only-table [{:keys [tr items]}]
+  [lui/table {:headers (make-headers tr)
+              :items items
+              :key-fn #(gensym)}])
