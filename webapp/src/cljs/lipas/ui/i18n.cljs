@@ -80,9 +80,8 @@
     :electricity "Sähkö MWh"
     :heat "Lämpö (ostettu) MWh"
     :water "Vesi m³"
-    :add-energy-entry "Lisää energiatieto"
-    :edit-energy-entry "Muokkaa energiatietoa"
-    :remove-energy-entry "Poista energiatieto"}
+    :yearly "Energiankulutus vuositasolla"
+    :monthly? "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
 
    :visitors
    {:headline "Kävijämäärät"
@@ -308,10 +307,14 @@
 
    :time
    {:year "Vuosi"
-    :month "kuukautta"
-    :hour "tuntia"
+    :hour "Tunti"
+    :month "Kuukausi"
     :start "Alkoi"
     :end   "Päättyi"}
+
+   :duration
+   {:hour "tuntia"
+    :month "kuukautta"}
 
    :actions
    {:add "Lisää"

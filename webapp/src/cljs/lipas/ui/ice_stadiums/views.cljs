@@ -71,23 +71,43 @@
         cities                (<== [::subs/cities-list])
         owners                (<== [::subs/owners])
         admins                (<== [::subs/admins])
-        energy                (<== [::subs/energy-consumption-history])
+        energy-history        (<== [::subs/energy-consumption-history])
         base-floor-structures (<== [::subs/base-floor-structures])
         set-field             (partial set-field :editing :rev)]
 
-    (r/with-let [renovations-done? (r/atom false)]
+    (r/with-let [renovations-done? (r/atom false)
+                 monthly-energy?   (r/atom false)]
 
       [mui/grid {:container true}
 
        ;; Energy consumption
        [lui/form-card {:title (tr :energy/headline-year year)}
-        [energy/form {:tr        tr
-                      :data      (:energy-consumption data)
-                      :on-change (partial set-field :energy-consumption)}]
+
+        [mui/typography {:variant "subheading"
+                         :style   {:margin-bottom "1em"}}
+         (tr :energy/yearly)]
+        [energy/form
+         {:tr        tr
+          :disabled? @monthly-energy?
+          :data      (:energy-consumption data)
+          :on-change (partial set-field :energy-consumption)}]
+
+        [lui/checkbox
+         {:label     (tr :energy/monthly?)
+          :checked   @monthly-energy?
+          :on-change #(swap! monthly-energy? not)}]
+
+        (when @monthly-energy?
+          [energy/form-monthly
+           {:tr        tr
+            :data      (:energy-consumption-monthly data)
+            :on-change #(==> [::events/set-monthly-energy-consumption %&])}])
+
+
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [energy/table {:tr         tr
                         :read-only? true
-                        :items      energy}]]]
+                        :items      energy-history}]]]
 
        [lui/form-card {:title (tr :renovations/headline-year year)}
         [lui/checkbox
