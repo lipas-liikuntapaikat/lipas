@@ -169,10 +169,10 @@
          :items     pools
          :on-select #(==> [::events/display-site %])}]]]]))
 
-(defn compare-tab [url]
+(defn compare-tab []
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [:iframe {:src url
+    [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
               :style {:min-height "800px" :width "100%"}}]]])
 
 (defn energy-tab [tr]
@@ -519,7 +519,7 @@
         {:tr  tr
          :rev rev}])]))
 
-(defn create-panel [{:keys [tr url logged-in?]}]
+(defn create-panel [{:keys [tr logged-in?]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
         card-props {:square true}]
     [mui/grid {:container true}
@@ -553,11 +553,9 @@
      [mui/grid {:item true :xs 12}
       (case @active-tab
         0 (info-tab tr)
-        1 (compare-tab url)
+        1 (compare-tab)
         2 (edit-tab tr)
         3 (energy-tab tr))]]))
 
 (defn main [tr logged-in?]
-  (create-panel {:tr tr
-                 :url "https://liikuntaportaalit.sportvenue.net/Jaahalli"
-                 :logged-in? logged-in?}))
+  (create-panel {:tr tr :logged-in? logged-in?}))
