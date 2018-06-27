@@ -145,13 +145,12 @@
      [mui/grid {:item true :xs 12}
       [mui/paper
        [lui/table
-        {:headers   [[:name "Nimi"]
-                     [:address "Osoite"]
-                     [:postal-code "Postinumero"]
-                     [:city "Kunta"]
-                     [:type "Tyyppi"]
-                     [:admin "Ylläpitäjä"]
-                     [:owner "Omistaja"]]
+        {:headers   [[:name (tr :sports-place/name)]
+                     [:address (tr :location/address)]
+                     [:postal-code (tr :location/postal-code)]
+                     [:city (tr :location/city)]
+                     [:admin (tr :sports-place/admin)]
+                     [:owner (tr :sports-place/owner)]]
          :items     pools
          :on-select #(==> [::events/display-site %])}]]]]))
 
@@ -518,7 +517,6 @@
 (defn create-panel [tr logged-in? url]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]
     [mui/grid {:container true}
-
      [mui/grid {:item true :xs 12}
       [mui/card
        [mui/card-content
