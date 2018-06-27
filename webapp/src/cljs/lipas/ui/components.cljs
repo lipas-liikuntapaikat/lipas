@@ -327,7 +327,7 @@
        :value     (-> data :name :en)
        :on-change #(on-change :name :en %)}]
      [select
-      {:label     (tr :type/type-code)
+      {:label     (tr :type/type-name)
        :value     (-> data :type :type-code)
        :items     types
        :label-fn  (comp locale :name)
@@ -374,6 +374,24 @@
        :spec      ::schema/email
        :on-change #(on-change :email %)}]]))
 
+(defn info-table [{:keys [data]}]
+  [mui/table
+   (into [mui/table-body]
+         (for [row data]
+           [mui/table-row
+            [table-cell (first row)]
+            [table-cell (second row)]]))])
+
+(defn sports-site-info [{:keys [tr site]}]
+  [info-table
+   {:data [[(tr :type/name) (-> site :type :name)]
+           [(tr :type/type-code) (-> site :type :type-code)]
+           [(tr :sports-place/owner) (-> site :owner)]
+           [(tr :sports-place/admin) (-> site :admin)]
+           [(tr :sports-place/www) (-> site :www)]
+           [(tr :sports-place/email-public) (-> site :email)]
+           [(tr :sports-place/phone-number) (-> site :phone-number)]]}])
+
 (defn location-form [{:keys [tr data cities on-change]}]
   (let [locale (tr)]
     [mui/form-group
@@ -399,6 +417,13 @@
        :label-fn  (comp locale :name)
        :value-fn  :city-code
        :on-change #(on-change :city :city-code %)}]]))
+
+(defn location-info [{:keys [tr location]}]
+  [info-table
+   {:data [[(tr :location/address) (-> location :address)]
+           [(tr :location/postal-code) (-> location :postal-code)]
+           [(tr :location/postal-office) (-> location :postal-office)]
+           [(tr :location/city) (-> location :city :name)]]}])
 
 (defn expansion-panel [{:keys [label]} & children]
   [mui/expansion-panel {:style {:margin-top "1em"}}

@@ -88,17 +88,20 @@
                                 #(==> [::events/save-pool data]))}
      [form {:tr tr :data data}]]))
 
+(defn- make-headers [tr]
+  [[:type (tr :general/type)]
+   [:temperature-c (tr :physical-units/temperature-c)]
+   [:volume-m3 (tr :dimensions/volume-m3)]
+   [:area-m2 (tr :dimensions/surface-area-m2)]
+   [:length-m (tr :dimensions/length-m)]
+   [:width-m (tr :dimensions/width-m)]
+   [:depth-min-m (tr :dimensions/depth-min-m)]
+   [:depth-max-m (tr :dimensions/depth-max-m)]
+   [:structure (tr :pools/structure)]])
+
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr)]
-    [lui/form-table {:headers [[:type (tr :general/type)]
-                               [:temperature-c (tr :physical-units/temperature-c)]
-                               [:volume-m3 (tr :dimensions/volume-m3)]
-                               [:area-m2 (tr :dimensions/surface-area-m2)]
-                               [:length-m (tr :dimensions/length-m)]
-                               [:width-m (tr :dimensions/width-m)]
-                               [:depth-min-m (tr :dimensions/depth-min-m)]
-                               [:depth-max-m (tr :dimensions/depth-max-m)]
-                               [:structure (tr :pools/structure)]]
+    [lui/form-table {:headers (make-headers tr)
                      :items (->> (vals items)
                                  (map (partial localize :type :pool-types))
                                  (map (partial localize :structure :pool-structures)))
@@ -108,3 +111,8 @@
                      :on-add #(toggle-dialog :pool)
                      :on-edit #(toggle-dialog :pool (get items (:id %)))
                      :on-delete #(==> [::events/remove-pool %])}]))
+
+(defn read-only-table [{:keys [tr items]}]
+  [lui/table {:headers (make-headers tr)
+              :items items
+              :key-fn #(gensym)}])
