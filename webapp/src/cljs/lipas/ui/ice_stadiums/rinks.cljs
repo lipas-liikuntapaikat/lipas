@@ -38,9 +38,12 @@
                                 #(==> [::events/save-rink data]))}
      [form {:tr tr :data data}]]))
 
+(defn- make-headers [tr]
+  [[:length-m (tr :dimensions/length-m)]
+   [:width-m (tr :dimensions/width-m)]])
+
 (defn table [{:keys [tr items]}]
-  [lui/form-table {:headers [[:length-m (tr :dimensions/length-m)]
-                             [:width-m (tr :dimensions/width-m)]]
+  [lui/form-table {:headers (make-headers tr)
                    :items items
                    :on-add #(toggle-dialog :rink)
                    :on-edit #(toggle-dialog :rink %)
@@ -48,3 +51,8 @@
                    :add-tooltip (tr :rinks/add-rink)
                    :edit-tooltip (tr :actions/edit)
                    :delete-tooltip (tr :actions/delete)}])
+
+(defn read-only-table [{:keys [tr items]}]
+  (lui/table {:headers (make-headers tr)
+              :items items
+              :key-fn #(gensym)}))

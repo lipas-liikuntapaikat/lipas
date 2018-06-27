@@ -17,13 +17,17 @@
  (fn [db _]
    (-> db :ice-stadiums :editing :rev)))
 
+(defn energy-consumption-history [site]
+  (let [entries (map #(assoc (:energy-consumption %)
+                             :year (resolve-year (:timestamp %))) (:history site))]
+    (->> entries (sort-by :year) reverse)))
+
 (re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [history (-> db :ice-stadiums :editing :site :history)
-         entries (map #(assoc (:energy-consumption %)
-                              :year (resolve-year (:timestamp %))) history)]
-     (->> entries (sort-by :year) reverse))))
+   (let [site    (-> db :ice-stadiums :editing :site)
+         history (energy-consumption-history site)]
+     (->> history (sort-by :year) reverse))))
 
 (re-frame/reg-sub
  ::access-to-sports-sites
@@ -168,12 +172,13 @@
  :<- [::materials]
  (fn [[site cities admins owners types materials] [_ locale]]
    (when site
-     (let [latest       (:latest site)
-           type         (types (-> latest :type :type-code))
-           admin        (admins (-> latest :admin))
-           owner        (owners (-> latest :owner))
-           city         (get cities (-> latest :location :city :city-code))
-           get-material #(get-in materials [% locale])]
+     (let [latest         (:latest site)
+           type           (types (-> latest :type :type-code))
+           admin          (admins (-> latest :admin))
+           owner          (owners (-> latest :owner))
+           city           (get cities (-> latest :location :city :city-code))
+           energy-history (energy-consumption-history site)
+           get-material   #(get-in materials [% locale])]
 
 
        {:lipas-id     (-> latest :lipas-id)
@@ -205,4 +210,5 @@
         :ice-maintenance    (:ice-maintenance latest)
         :renovations        (:renovations latest)
         :ventilation        (:ventilation latest)
-        :energy-consumption (:energy-consumption latest)}))))
+        :conditions         (:conditions latest)
+        :energy-consumption energy-history}))))
