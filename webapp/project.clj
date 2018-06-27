@@ -52,7 +52,7 @@
 
   :figwheel {:css-dirs ["resources/public/css"]}
 
-  :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
 
   :migratus {:store         :database
              :migration-dir "migrations"
@@ -67,15 +67,15 @@
   {:dev
    {:dependencies
                    [;;; Frontend ;;;
-                   [binaryage/devtools "0.9.10"]
-                   [day8.re-frame/re-frame-10x "0.3.3"]
-                   [figwheel-sidecar "0.5.13"]
-                   [com.cemerick/piggieback "0.2.2"]
+                    [binaryage/devtools "0.9.10"]
+                    [day8.re-frame/re-frame-10x "0.3.3"]
+                    [figwheel-sidecar "0.5.16"]
+                    [cider/piggieback "0.3.6"]
 
-                   ;;; Backend ;;;
-                   [ring/ring-mock "0.3.2"]]
+                    ;;; Backend ;;;
+                    [ring/ring-mock "0.3.2"]]
 
-    :plugins      [[lein-figwheel "0.5.13"]
+    :plugins      [[lein-figwheel "0.5.16"]
                    [lein-doo "0.1.8"]]}}
 
   :cljsbuild
@@ -84,6 +84,7 @@
      :source-paths ["src/cljs" "src/cljc"]
      :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
      :compiler     {:main                 lipas.ui.core
+                    :npm-deps             false
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"
                     :asset-path           "js/compiled/out"
@@ -97,6 +98,7 @@
     {:id           "min"
      :source-paths ["src/cljs" "src/cljc"]
      :compiler     {:main            lipas.ui.core
+                    :npm-deps        false
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
