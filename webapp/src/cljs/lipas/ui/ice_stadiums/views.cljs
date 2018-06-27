@@ -21,13 +21,12 @@
         conditions         (:conditions site)
         ice-maintenance    (:ice-maintenance site)
         close              #(==> [::events/display-site nil])]
-    [mui/dialog {:open       true
-                 :full-width true
-                 :max-width  "md"
-                 :on-close   close}
+    [mui/dialog {:open        true
+                 :full-screen true
+                 :on-close    close}
      [mui/dialog-title (-> site :name)]
-     [mui/dialog-content
-      [mui/grid {:container true :spacing 16}
+     [mui/dialog-content {:style {:padding 0}}
+      [mui/grid {:container true}
 
        ;; General info
        [lui/form-card {:title (tr :general/general-info)}
