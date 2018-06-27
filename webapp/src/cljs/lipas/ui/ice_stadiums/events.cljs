@@ -30,6 +30,31 @@
  (fn [db [_ path value]]
    (assoc-in db (into [:ice-stadiums] path) value)))
 
+(defn- calculate-totals [data]
+  {:electricity-mwh (reduce + (map :electricity-mwh (vals data)))
+   :heat-mwh        (reduce + (map :heat-mwh (vals data)))
+   :water-m3        (reduce + (map :water-m3 (vals data)))})
+
+(re-frame/reg-event-db
+ ::calculate-total-energy-consumption
+ (fn [db _]
+   (let [base-path    [:ice-stadiums :editing :rev]
+         yearly-path  (conj base-path :energy-consumption)
+         monthly-path (conj base-path :energy-consumption-monthly)
+         monthly-data (get-in db monthly-path)]
+     (if monthly-data
+       (update-in db yearly-path #(calculate-totals monthly-data))
+       db))))
+
+(re-frame/reg-event-fx
+ ::set-monthly-energy-consumption
+ (fn [{:keys [db]} [_ args]]
+   (let [basepath [:ice-stadiums :editing :rev :energy-consumption-monthly]
+         path  (into basepath (butlast args))
+         value (last args)]
+     {:db (assoc-in db path value)
+      :dispatch [::calculate-total-energy-consumption]})))
+
 (re-frame/reg-event-db
  ::toggle-dialog
  (fn [db [_ dialog data]]
@@ -47,7 +72,6 @@
 (re-frame/reg-event-db
  ::save-renovation
  (fn [db [_ value]]
-   (prn value)
    (let [path [:ice-stadiums :editing :rev :renovations]]
      (save-entity db path value))))
 
