@@ -60,24 +60,24 @@
              [lui/table-cell
               [lui/text-field {:type      "number"
                                :spec      ::schema/electricity-mwh
-                               :value     (get month-data :electricity-mwh)
+                               :value     (:electricity-mwh month-data)
                                :on-change #(on-change month :electricity-mwh %)}]]
              [lui/table-cell
               [lui/text-field {:type      "number"
                                :spec      ::schema/heat-mwh
-                               :value     (get month-data :heat-mwh)
+                               :value     (:heat-mwh month-data)
                                :on-change #(on-change month :heat-mwh %)}]]
              [lui/table-cell
               [lui/text-field {:type      "number"
                                :spec      ::schema/water-m3
-                               :value     (get month-data :water-m3)
+                               :value     (:water-m3 month-data)
                                :on-change #(on-change month :water-m3 %)}]]]))]])
 
 (defn table [{:keys [tr items read-only?]}]
-  [lui/form-table {:headers        [[:year (tr :time/year)]
-                                    [:electricity-mwh (tr :energy/electricity)]
-                                    [:heat-mwh (tr :energy/heat)]
-                                    [:water-m3 (tr :energy/water)]]
-                   :items          (reverse (sort-by :year items))
-                   :key-fn         :year
-                   :read-only?     read-only?}])
+  [lui/form-table {:headers    [[:year (tr :time/year)]
+                                [:electricity-mwh (tr :energy/electricity)]
+                                [:heat-mwh (tr :energy/heat)]
+                                [:water-m3 (tr :energy/water)]]
+                   :items      items
+                   :key-fn     :year
+                   :read-only? read-only?}])

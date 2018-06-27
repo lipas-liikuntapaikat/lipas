@@ -20,9 +20,10 @@
 (re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [history (-> db :ice-stadiums :editing :site :history)]
-     (map #(assoc (:energy-consumption %)
-                  :year (resolve-year (:timestamp %))) history))))
+   (let [history (-> db :ice-stadiums :editing :site :history)
+         entries (map #(assoc (:energy-consumption %)
+                              :year (resolve-year (:timestamp %))) history)]
+     (->> entries (sort-by :year) reverse))))
 
 (re-frame/reg-sub
  ::access-to-sports-sites

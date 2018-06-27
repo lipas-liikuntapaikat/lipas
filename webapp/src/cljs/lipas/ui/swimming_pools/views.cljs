@@ -169,7 +169,7 @@
         building-materials    (<== [::subs/building-materials])
         supporting-structures (<== [::subs/supporting-structures])
         ceiling-structures    (<== [::subs/ceiling-structures])
-        energy                (<== [::subs/energy-consumption-history])
+        energy-history        (<== [::subs/energy-consumption-history])
         set-field             (partial set-field :editing :rev)]
 
     (r/with-let [renovations-done? (r/atom false)]
@@ -183,7 +183,7 @@
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [energy/table {:tr         tr
                         :read-only? true
-                        :items      energy}]]]
+                        :items      energy-history}]]]
 
        ;; Visitors
        [lui/form-card {:title (tr :visitors/headline-year year)}
