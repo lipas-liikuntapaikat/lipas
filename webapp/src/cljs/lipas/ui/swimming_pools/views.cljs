@@ -41,48 +41,76 @@
        [lui/form-card {:title (tr :building/headline)}
         [lui/info-table
          {:data
-          [[(tr :building/construction-year) (-> building :construction-year)]
-           [(tr :building/main-designers) (-> building :main-designers)]
-           [(tr :building/total-surface-area-m2) (-> building :total-surface-area-m2)]
-           [(tr :building/total-volume-m3) (-> building :total-volume-m3)]
-           [(tr :building/seating-capacity) (-> building :seating-capacity)]
-           [(tr :building/staff-count) (-> building :staff-count)]
-           [(tr :building/pool-room-total-area-m2) (-> site :building :pool-room-total-area-m2)]
-           [(tr :building/total-water-area-m2) (-> building :total-water-area-m2)]
-           [(tr :building/heat-sections?) (-> building :heat-sections?)]
-           [(tr :building/piled?) (-> building :piled?)]
-           [(tr :building/heat-source) (-> building :heat-source)]
-           [(tr :building/main-construction-materials) (-> building :main-construction-materials)]]}]]
+          [[(tr :building/construction-year)
+            (-> building :construction-year)]
+           [(tr :building/main-designers)
+            (-> building :main-designers)]
+           [(tr :building/total-surface-area-m2)
+            (-> building :total-surface-area-m2)]
+           [(tr :building/total-volume-m3)
+            (-> building :total-volume-m3)]
+           [(tr :building/seating-capacity)
+            (-> building :seating-capacity)]
+           [(tr :building/staff-count)
+            (-> building :staff-count)]
+           [(tr :building/pool-room-total-area-m2)
+            (-> site :building :pool-room-total-area-m2)]
+           [(tr :building/total-water-area-m2)
+            (-> building :total-water-area-m2)]
+           [(tr :building/heat-sections?)
+            (-> building :heat-sections?)]
+           [(tr :building/piled?)
+            (-> building :piled?)]
+           [(tr :building/heat-source)
+            (-> building :heat-source)]
+           [(tr :building/main-construction-materials)
+            (-> building :main-construction-materials)]]}]]
+
        ;; Water treatment
        [lui/form-card {:title (tr :water-treatment/headline)}
         [lui/info-table
          {:data
-          [[(tr :water-treatment/ozonation?) (-> water-treatment :ozonation?)]
-           [(tr :water-treatment/uv-treatment?) (-> water-treatment :uv-treatment?)]
-           [(tr :water-treatment/uv-treatment?) (-> water-treatment :uv-treatment?)]
-           [(tr :water-treatment/activated-carbon?) (-> water-treatment :activated-carbon?)]]}]]
+          [[(tr :water-treatment/ozonation?)
+            (-> water-treatment :ozonation?)]
+           [(tr :water-treatment/uv-treatment?)
+            (-> water-treatment :uv-treatment?)]
+           [(tr :water-treatment/uv-treatment?)
+            (-> water-treatment :uv-treatment?)]
+           [(tr :water-treatment/activated-carbon?)
+            (-> water-treatment :activated-carbon?)]]}]]
 
        ;; Other services
        [lui/form-card {:title (tr :other-services/headline)}
         [lui/info-table
          {:data
-          [[(tr :other-services/platforms-1m-count) (-> other-services :platforms-1m-count?)]
-           [(tr :other-services/platforms-3m-count) (-> other-services :platforms-3m-count?)]
-           [(tr :other-services/platforms-5m-count) (-> other-services :platforms-5m-count?)]
-           [(tr :other-services/platforms-7.5m-count) (-> other-services :platforms-7.5m-count?)]
-           [(tr :other-services/platforms-10m-count) (-> other-services :platforms-10m-count?)]
-           [(tr :other-services/hydro-massage-spots-count) (-> other-services :hydro-massage-spots-count)]
-           [(tr :other-services/hydro-neck-massage-spots-count) (-> other-services :hydro-neck-massage-spots-count)]
+          [[(tr :other-services/platforms-1m-count)
+            (-> other-services :platforms-1m-count?)]
+           [(tr :other-services/platforms-3m-count)
+            (-> other-services :platforms-3m-count?)]
+           [(tr :other-services/platforms-5m-count)
+            (-> other-services :platforms-5m-count?)]
+           [(tr :other-services/platforms-7.5m-count)
+            (-> other-services :platforms-7.5m-count?)]
+           [(tr :other-services/platforms-10m-count)
+            (-> other-services :platforms-10m-count?)]
+           [(tr :other-services/hydro-massage-spots-count)
+            (-> other-services :hydro-massage-spots-count)]
+           [(tr :other-services/hydro-neck-massage-spots-count)
+            (-> other-services :hydro-neck-massage-spots-count)]
            [(tr :other-services/kiosk?) (-> other-services :kiosk?)]]}]]
 
        ;; Showers and lockers
        [lui/form-card {:title (tr :facilities/headline)}
         [lui/info-table
          {:data
-          [[(tr :facilities/showers-men-count) (-> facilities :showers-men-count)]
-           [(tr :facilities/showers-women-count) (-> facilities :showers-women-count)]
-           [(tr :facilities/lockers-men-count) (-> facilities :lockers-men-count)]
-           [(tr :facilities/lockers-women-count) (-> facilities :lockers-women-count)]]}]]
+          [[(tr :facilities/showers-men-count)
+            (-> facilities :showers-men-count)]
+           [(tr :facilities/showers-women-count)
+            (-> facilities :showers-women-count)]
+           [(tr :facilities/lockers-men-count)
+            (-> facilities :lockers-men-count)]
+           [(tr :facilities/lockers-women-count)
+            (-> facilities :lockers-women-count)]]}]]
 
        ;; Pools
        [lui/form-card {:title (tr :pools/headline)}
