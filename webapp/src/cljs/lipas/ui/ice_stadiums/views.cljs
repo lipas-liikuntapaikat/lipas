@@ -1,6 +1,5 @@
 (ns lipas.ui.ice-stadiums.views
-  (:require [clojure.pprint :refer [pprint]]
-            [lipas.schema.core :as schema]
+  (:require [lipas.schema.core :as schema]
             [lipas.ui.components :as lui]
             [lipas.ui.energy :as energy]
             [lipas.ui.ice-stadiums.events :as events]
@@ -13,15 +12,137 @@
             [reagent.core :as r]))
 
 (defn details-dialog [{:keys [tr site]}]
-  (let [locale (tr)
-        close  #(==> [::events/display-site nil])]
+  (let [location           (:location site)
+        building           (:building site)
+        envelope-structure (:envelope-structure site)
+        rinks              (:rinks site)
+        refrigeration      (:refrigeration site)
+        ventilation        (:ventilation site)
+        conditions         (:conditions site)
+        ice-maintenance    (:ice-maintenance site)
+        close              #(==> [::events/display-site nil])]
     [mui/dialog {:open       true
                  :full-width true
                  :max-width  "md"
                  :on-close   close}
      [mui/dialog-title (-> site :name)]
      [mui/dialog-content
-      [:pre (with-out-str (pprint site))]]
+      [mui/grid {:container true :spacing 16}
+
+       ;; General info
+       [lui/form-card {:title (tr :general/general-info)}
+        [lui/sports-site-info {:tr tr :site site}]]
+
+       ;; Location
+       [lui/form-card {:title (tr :location/headline)}
+        [lui/location-info {:tr tr :location location}]]
+
+       ;; Building
+       [lui/form-card {:title (tr :building/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :building/construction-year)
+            (-> building :construction-year)]
+           [(tr :building/main-designers)
+            (-> building :main-designers)]
+           [(tr :building/total-surface-area-m2)
+            (-> building :total-surface-area-m2)]
+           [(tr :building/total-volume-m3)
+            (-> building :total-volume-m3)]
+           [(tr :building/seating-capacity)
+            (-> building :seating-capacity)]]}]]
+
+       ;; Envelope structure
+       [lui/form-card {:title (tr :envelope-structure/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :envelope-structure/base-floor-structure)
+            (-> envelope-structure :base-floor-structure)]
+           [(tr :envelope-structure/insulated-exterior?)
+            (-> envelope-structure :insulated-exterior?)]
+           [(tr :envelope-structure/insulated-ceiling?)
+            (-> envelope-structure  :insulated-ceiling?)]
+           [(tr :envelope-structure/low-emissivity-coating?)
+            (-> envelope-structure :low-emissivity-coating?)]]}]]
+
+       ;; Rinks
+       [lui/form-card {:title (tr :rinks/headline)}
+        [rinks/read-only-table {:tr tr :items rinks}]]
+
+       ;; Refrigeration
+       [lui/form-card {:title (tr :refrigeration/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :refrigeration/original?)
+            (-> refrigeration :original?)]
+           [(tr :refrigeration/individual-metering?)
+            (-> refrigeration :individual-metering?)]
+           [(tr :refrigeration/condensate-energy-recycling?)
+            (-> refrigeration :condensate-energy-recycling?)]
+           [(tr :refrigeration/condensate-energy-main-target)
+            (-> refrigeration :condensate-energy-main-target)]
+           [(tr :refrigeration/power-kw)
+            (-> refrigeration :power-kw)]
+           [(tr :refrigeration/refrigerant)
+            (-> refrigeration :refrigerant)]
+           [(tr :refrigeration/refrigerant-amount-kg)
+            (-> refrigeration :refrigerant-amount-kg)]
+           [(tr :refrigeration/refrigerant-solution)
+            (-> refrigeration :refrigerant-solution)]
+           [(tr :refrigeration/refrigerant-solution-amount-l)
+            (-> refrigeration :refrigerant-solution-amount-l)]]}]]
+
+       ;; Ventilation
+       [lui/form-card {:title (tr :ventilation/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :ventilation/heat-recovery-type)
+            (-> ventilation :heat-recovery-type)]
+           [(tr :ventilation/heat-recovery-thermal-efficiency-percent)
+            (-> ventilation :heat-recovery-thermal-efficiency-percent)]
+           [(tr :ventilation/dryer-type)
+            (-> ventilation  :dryer-type)]
+           [(tr :ventilation/dryer-duty-type)
+            (-> ventilation :dryer-duty-type)]
+           [(tr :ventilation/heat-pump-type)
+            (-> ventilation :heat-pump-type)]]}]]
+
+       ;; Conditions
+       [lui/form-card {:title (tr :conditions/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :conditions/open-months)
+            (-> conditions :open-months)]
+           [(tr :conditions/daily-open-hours)
+            (-> conditions :daily-open-hours)]
+           [(tr :conditions/air-humidity-min)
+            (-> conditions  :air-humidity :min)]
+           [(tr :conditions/air-humidity-max)
+            (-> conditions  :air-humidity :max)]
+           [(tr :conditions/ice-surface-temperature-c)
+            (-> conditions :ice-surface-temperature-c)]
+           [(tr :conditions/skating-area-temperature-c)
+            (-> conditions :skating-area-temperature-c)]
+           [(tr :conditions/stand-temperature-c)
+            (-> conditions :stand-temperature-c)]]}]]
+
+       ;; Ice maintenance
+       [lui/form-card {:title (tr :ice-maintenance/headline)}
+        [lui/info-table
+         {:data
+          [[(tr :ice-maintenance/daily-maintenance-count-week-days)
+            (-> ice-maintenance :daily-maintenance-count-week-days)]
+           [(tr :ice-maintenance/daily-maintenance-count-weekends)
+            (-> ice-maintenance :daily-maintenance-count-weekends)]
+           [(tr :ice-maintenance/average-water-consumption-l)
+            (-> ice-maintenance :average-water-consumption-l)]
+           [(tr :ice-maintenance/ice-average-thickness-mm)
+            (-> ice-maintenance :ice-average-thickness-mm)]]}]]
+
+       ;; Energy consumption
+       [lui/form-card {:title (tr :energy/headline)}
+        [energy/table {:read-only? true :tr tr :items (:energy-consumption site)}]]]]
+
      [mui/dialog-actions
       [mui/button {:on-click close}
        (tr :actions/close)]]]))
