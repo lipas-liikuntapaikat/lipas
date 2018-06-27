@@ -154,10 +154,10 @@
          :items     pools
          :on-select #(==> [::events/display-site %])}]]]]))
 
-(defn compare-tab [url]
+(defn compare-tab []
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [:iframe {:src url
+    [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Uimahalli"
               :style {:min-height "800px" :width "100%"}}]]])
 
 (defn energy-tab [tr]
@@ -514,7 +514,7 @@
         {:tr  tr
          :rev rev}])]))
 
-(defn create-panel [tr logged-in? url]
+(defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
@@ -546,10 +546,9 @@
      [mui/grid {:item true :xs 12}
       (case @active-tab
         0 (info-tab tr)
-        1 (compare-tab url)
+        1 (compare-tab)
         2 (edit-tab tr)
         3 (energy-tab tr))]]))
 
 (defn main [tr logged-in?]
-  (let [url "https://liikuntaportaalit.sportvenue.net/Uimahalli"]
-    (create-panel tr logged-in? url)))
+  (create-panel tr logged-in?))

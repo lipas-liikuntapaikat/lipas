@@ -30,7 +30,7 @@
  :<- [::access-to-sports-sites]
  :<- [::swimming-pools]
  (fn [[ids pools] _]
-   (select-keys pools ids)))
+   (not-empty (select-keys pools ids))))
 
 (re-frame/reg-sub
  ::editing-site

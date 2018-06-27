@@ -52,7 +52,7 @@
  :<- [::access-to-sports-sites]
  :<- [::ice-stadiums]
  (fn [[ids sites] _]
-   (select-keys sites ids)))
+   (not-empty (select-keys sites ids))))
 
 (re-frame/reg-sub
  ::dialogs
