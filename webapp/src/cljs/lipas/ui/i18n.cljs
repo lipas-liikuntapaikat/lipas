@@ -28,6 +28,7 @@
    :sports-place
    {:headline "Liikuntapaikka"
     :id "LIPAS-ID"
+    :name "Nimi"
     :name-fi "Nimi"
     :name-se "Nimi ruotsiksi"
     :name-en "Nimi englanniksi"
