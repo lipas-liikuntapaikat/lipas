@@ -1,28 +1,40 @@
 (ns lipas.ui.swimming-pools.pools
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.schema.core :as schema]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
-            [lipas.schema.core :as schema]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.swimming-pools.utils :refer [set-field toggle-dialog]]
-            [lipas.ui.utils :refer [<== ==> localize-field ->select-entries]]))
+            [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
+
+(def set-field (->setter-fn ::events/set-field))
 
 (defn form [{:keys [tr data]}]
   (let [set-field       (partial set-field :dialogs :pool :data)
         pool-types      (<== [::subs/pool-types])
-        pool-structures (<== [::subs/pool-structures])]
+        pool-structures (<== [::subs/pool-structures])
+        locale          (tr)]
     [mui/form-group
+
+     ;; Pool type
      [lui/select
       {:required  true
        :label     (tr :general/type)
        :value     (:type data)
-       :items     (->select-entries tr :pool-types pool-types)
+       :items     pool-types
+       :label-fn  (comp locale second)
+       :value-fn  first
        :on-change #(set-field :type %)}]
+
+     ;; Structure
      [lui/select
       {:label     (tr :pools/structure)
        :value     (:structure data)
-       :items     (->select-entries tr :pool-structures pool-structures)
+       :items     pool-structures
+       :label-fn  (comp locale second)
+       :value-fn  first
        :on-change #(set-field :structure %)}]
+
+     ;; Temperature c
      [lui/text-field
       {:type      "number"
        :label     (tr :physical-units/temperature-c)
@@ -30,6 +42,8 @@
        :value     (:temperature-c data)
        :spec      ::schema/pool-temperature-c
        :on-change #(set-field :temperature-c %)}]
+
+     ;; Volume m3
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/volume-m3)
@@ -37,6 +51,8 @@
        :value     (:volume-m3 data)
        :spec      ::schema/pool-volume-m3
        :on-change #(set-field :volume-m3 %)}]
+
+     ;; Area m2
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/area-m2)
@@ -44,6 +60,8 @@
        :value     (:area-m2 data)
        :spec      ::schema/pool-area-m2
        :on-change #(set-field :area-m2 %)}]
+
+     ;; Length m
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/length-m)
@@ -51,6 +69,8 @@
        :value     (:length-m data)
        :spec      ::schema/pool-length-m
        :on-change #(set-field :length-m %)}]
+
+     ;; Width m
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/width-m)
@@ -58,6 +78,8 @@
        :value     (:width-m data)
        :spec      ::schema/pool-width-m
        :on-change #(set-field :width-m %)}]
+
+     ;; Depth min m
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-min-m)
@@ -65,6 +87,8 @@
        :value     (:depth-min-m data)
        :spec      ::schema/pool-depth-min-m
        :on-change #(set-field :depth-min-m %)}]
+
+     ;; Depth max m
      [lui/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-max-m)
@@ -76,13 +100,13 @@
 (defn dialog [{:keys [tr]}]
   (let [data (<== [::subs/pool-form])
         reset #(==> [::events/reset-dialog :pool])
-        close #(toggle-dialog :pool)]
+        close #(==> [::events/toggle-dialog :pool])]
     [lui/dialog {:title (if (:id data)
                           (tr :pools/edit-pool)
                           (tr :pools/add-pool))
                  :save-label (tr :actions/save)
                  :cancel-label (tr :actions/cancel)
-                 :on-close #(toggle-dialog :pool)
+                 :on-close #(==> [::events/toggle-dialog :pool])
                  :on-save (comp reset
                                 close
                                 #(==> [::events/save-pool data]))}
@@ -101,18 +125,19 @@
 
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr)]
-    [lui/form-table {:headers (make-headers tr)
-                     :items (->> (vals items)
-                                 (map (partial localize :type :pool-types))
-                                 (map (partial localize :structure :pool-structures)))
-                     :add-tooltip (tr :pools/add-pool)
-                     :edit-tooltip (tr :actions/edit)
-                     :delete-tooltip (tr :actions/delete)
-                     :on-add #(toggle-dialog :pool)
-                     :on-edit #(toggle-dialog :pool (get items (:id %)))
-                     :on-delete #(==> [::events/remove-pool %])}]))
+    [lui/form-table
+     {:headers        (make-headers tr)
+      :items          (->> (vals items)
+                           (map (partial localize :type :pool-types))
+                           (map (partial localize :structure :pool-structures)))
+      :add-tooltip    (tr :pools/add-pool)
+      :edit-tooltip   (tr :actions/edit)
+      :delete-tooltip (tr :actions/delete)
+      :on-add         #(==> [::events/toggle-dialog :pool {}])
+      :on-edit        #(==> [::events/toggle-dialog :pool (get items (:id %))])
+      :on-delete      #(==> [::events/remove-pool %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)
-              :items items
-              :key-fn #(gensym)}])
+              :items   items
+              :key-fn  #(gensym)}])

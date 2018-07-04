@@ -5,158 +5,482 @@
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
-            [lipas.ui.ice-stadiums.utils :refer [set-field make-revision]]
             [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==> resolve-year]]
+            [lipas.ui.utils :refer [<== ==>]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-(defn details-dialog [{:keys [tr]}]
-  (let [site               (<== [::subs/display-site (tr)])
-        location           (:location site)
-        building           (:building site)
-        envelope-structure (:envelope-structure site)
-        rinks              (:rinks site)
-        refrigeration      (:refrigeration site)
-        ventilation        (:ventilation site)
-        conditions         (:conditions site)
-        ice-maintenance    (:ice-maintenance site)
-        close              #(==> [::events/display-site nil])]
+(defn toggle-dialog
+  ([dialog]
+   (toggle-dialog dialog {}))
+  ([dialog data]
+   (==> [::events/toggle-dialog dialog data])))
 
-    [mui/dialog {:open                 ((complement empty?) site)
-                 :full-screen          true
-                 :Transition-component (:slide mui/transitions)
-                 :on-close             close}
+(defn set-field
+  [& args]
+  (==> [::events/set-field (butlast args) (last args)]))
 
-     [mui/dialog-title (-> site :name)]
-     [mui/dialog-content {:style {:padding 0}}
-      [mui/grid {:container true}
+(defn site-view [{:keys [tr logged-in?]}]
+  (let [locale                (tr)
+        site                  (<== [::subs/display-site locale])
+        editing-rev           (<== [::subs/editing-rev])
+        types                 (<== [::subs/types-list])
+        dialogs               (<== [::subs/dialogs])
+        types                 (<== [::subs/types-list])
+        size-categories       (<== [::subs/size-categories])
+        cities                (<== [::subs/cities-list])
+        owners                (<== [::subs/owners])
+        admins                (<== [::subs/admins])
+        base-floor-structures (<== [::subs/base-floor-structures])
+        cets                  (<== [::subs/condensate-energy-targets])
+        refrigerants          (<== [::subs/refrigerants])
+        refrigerant-solutions (<== [::subs/refrigerant-solutions])
+        heat-recovery-types   (<== [::subs/heat-recovery-types])
+        dryer-types           (<== [::subs/dryer-types])
+        dryer-duty-types      (<== [::subs/dryer-duty-types])
+        heat-pump-types       (<== [::subs/heat-pump-types])
 
-       ;; General info
-       [lui/form-card {:title (tr :general/general-info)}
-        [lui/sports-site-info {:tr tr :site site}]]
+        set-field (partial set-field :editing :rev)]
 
-       ;; Location
-       [lui/form-card {:title (tr :location/headline)}
-        [lui/location-info {:tr tr :location location}]]
+    (r/with-let [editing? (r/atom false)]
+      [lui/full-screen-dialog
+       {:open?       ((complement empty?) site)
+        :title       (-> site :name)
+        :close-label (tr :actions/close)
+        :actions     [(when logged-in?
+                        [lui/edit-button
+                         {:active?  @editing?
+                          :on-click #(do (if @editing?
+                                           (==> [::events/commit-edits])
+                                           (==> [::events/edit-site site]))
+                                         (swap! editing? not))}])]
+        :on-close    #(==> [::events/display-site nil])}
 
-       ;; Building
-       [lui/form-card {:title (tr :building/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :building/construction-year)
-            (-> building :construction-year)]
-           [(tr :building/main-designers)
-            (-> building :main-designers)]
-           [(tr :building/total-surface-area-m2)
-            (-> building :total-surface-area-m2)]
-           [(tr :building/total-volume-m3)
-            (-> building :total-volume-m3)]
-           [(tr :building/seating-capacity)
-            (-> building :seating-capacity)]]}]]
+       [mui/grid {:container true}
 
-       ;; Envelope structure
-       [lui/form-card {:title (tr :envelope-structure/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :envelope-structure/base-floor-structure)
-            (-> envelope-structure :base-floor-structure)]
-           [(tr :envelope-structure/insulated-exterior?)
-            (-> envelope-structure :insulated-exterior?)]
-           [(tr :envelope-structure/insulated-ceiling?)
-            (-> envelope-structure  :insulated-ceiling?)]
-           [(tr :envelope-structure/low-emissivity-coating?)
-            (-> envelope-structure :low-emissivity-coating?)]]}]]
+        ;;; General info
+        [lui/form-card {:title (tr :general/general-info)}
+         [lui/sports-site-form {:tr              tr
+                                :display-data    site
+                                :edit-data       editing-rev
+                                :read-only?      (not @editing?)
+                                :types           types
+                                :size-categories size-categories
+                                :admins          admins
+                                :owners          owners
+                                :on-change       set-field}]]
 
-       ;; Rinks
-       [lui/form-card {:title (tr :rinks/headline)}
-        [rinks/read-only-table {:tr tr :items rinks}]]
+        ;;; Location
+        [lui/form-card {:title (tr :location/headline)}
+         [lui/location-form {:tr           tr
+                             :read-only?   (not @editing?)
+                             :cities       cities
+                             :edit-data    (:location editing-rev)
+                             :display-data (:location site)
+                             :on-change    (partial set-field :location)}]]
 
-       ;; Refrigeration
-       [lui/form-card {:title (tr :refrigeration/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :refrigeration/original?)
-            (-> refrigeration :original?)]
-           [(tr :refrigeration/individual-metering?)
-            (-> refrigeration :individual-metering?)]
-           [(tr :refrigeration/condensate-energy-recycling?)
-            (-> refrigeration :condensate-energy-recycling?)]
-           [(tr :refrigeration/condensate-energy-main-target)
-            (-> refrigeration :condensate-energy-main-target)]
-           [(tr :refrigeration/power-kw)
-            (-> refrigeration :power-kw)]
-           [(tr :refrigeration/refrigerant)
-            (-> refrigeration :refrigerant)]
-           [(tr :refrigeration/refrigerant-amount-kg)
-            (-> refrigeration :refrigerant-amount-kg)]
-           [(tr :refrigeration/refrigerant-solution)
-            (-> refrigeration :refrigerant-solution)]
-           [(tr :refrigeration/refrigerant-solution-amount-l)
-            (-> refrigeration :refrigerant-solution-amount-l)]]}]]
+        ;;; Building
+        (let [on-change    (partial set-field :building)
+              edit-data    (:building editing-rev)
+              display-data (:building site)]
+          [lui/form-card {:title (tr :building/headline)}
+           [lui/form {:read-only? (not @editing?)}
 
-       ;; Ventilation
-       [lui/form-card {:title (tr :ventilation/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :ventilation/heat-recovery-type)
-            (-> ventilation :heat-recovery-type)]
-           [(tr :ventilation/heat-recovery-thermal-efficiency-percent)
-            (-> ventilation :heat-recovery-thermal-efficiency-percent)]
-           [(tr :ventilation/dryer-type)
-            (-> ventilation  :dryer-type)]
-           [(tr :ventilation/dryer-duty-type)
-            (-> ventilation :dryer-duty-type)]
-           [(tr :ventilation/heat-pump-type)
-            (-> ventilation :heat-pump-type)]]}]]
+            ;; Construction year
+            {:label (tr :building/construction-year)
+             :value (-> display-data :construction-year)
+             :form-field
+             [lui/year-selector
+              {:value     (-> edit-data :construction-year)
+               :on-change #(on-change :construction-year %)}]}
 
-       ;; Conditions
-       [lui/form-card {:title (tr :conditions/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :conditions/open-months)
-            (-> conditions :open-months)]
-           [(tr :conditions/daily-open-hours)
-            (-> conditions :daily-open-hours)]
-           [(tr :conditions/air-humidity-min)
-            (-> conditions  :air-humidity :min)]
-           [(tr :conditions/air-humidity-max)
-            (-> conditions  :air-humidity :max)]
-           [(tr :conditions/ice-surface-temperature-c)
-            (-> conditions :ice-surface-temperature-c)]
-           [(tr :conditions/skating-area-temperature-c)
-            (-> conditions :skating-area-temperature-c)]
-           [(tr :conditions/stand-temperature-c)
-            (-> conditions :stand-temperature-c)]]}]]
+            ;; Main designers
+            {:label      (tr :building/main-designers)
+             :value      (-> display-data :main-designers)
+             :form-field [lui/text-field
+                          {:value     (-> edit-data :main-designers)
+                           :spec      ::schema/main-designers
+                           :on-change #(on-change :main-designers %)}]}
 
-       ;; Ice maintenance
-       [lui/form-card {:title (tr :ice-maintenance/headline)}
-        [lui/info-table
-         {:data
-          [[(tr :ice-maintenance/daily-maintenance-count-week-days)
-            (-> ice-maintenance :daily-maintenance-count-week-days)]
-           [(tr :ice-maintenance/daily-maintenance-count-weekends)
-            (-> ice-maintenance :daily-maintenance-count-weekends)]
-           [(tr :ice-maintenance/average-water-consumption-l)
-            (-> ice-maintenance :average-water-consumption-l)]
-           [(tr :ice-maintenance/ice-average-thickness-mm)
-            (-> ice-maintenance :ice-average-thickness-mm)]]}]]
+            ;; Total surface area m2
+            {:label (tr :building/total-surface-area-m2)
+             :value (-> display-data :total-surface-area-m2)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :value     (-> edit-data :total-surface-area-m2)
+               :spec      ::schema/total-surface-area-m2
+               :adornment (tr :physical-units/m2)
+               :on-change #(on-change :total-surface-area-m2 %)}]}
 
-       ;; Energy consumption
-       [lui/form-card {:title (tr :energy/headline)}
-        [energy/table {:read-only? true :tr tr :items (:energy-consumption site)}]]]]
+            ;; Total volume m3
+            {:label (tr :building/total-volume-m3)
+             :value (-> display-data :total-volume-m3)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :value     (-> edit-data :total-volume-m3)
+               :spec      ::schema/total-volume-m3
+               :adornment (tr :physical-units/m3)
+               :on-change #(on-change :total-volume-m3 %)}]}
 
-     [mui/dialog-actions
-      [mui/button {:on-click close}
-       (tr :actions/close)]]]))
+            {:label (tr :building/seating-capacity)
+             :value (-> display-data :seating-capacity)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :value     (-> edit-data :seating-capacity)
+               :spec      ::schema/seating-capacity
+               :adornment (tr :units/person)
+               :on-change #(on-change :seating-capacity %)}]}]])
 
-(defn info-tab [tr]
-  (let [locale       (tr)
-        pools        (<== [::subs/sites-list locale])]
+        ;;; Envelope structure
+        (let [on-change    (partial set-field :envelope-structure)
+              display-data (:envelope-structure site)
+              edit-data    (:envelope-structure editing-rev)]
+          [lui/form-card {:title (tr :envelope-structure/headline)}
+           [lui/form {:read-only? (not @editing?)}
+
+            ;; Base floor structure
+            {:label (tr :envelope-structure/base-floor-structure)
+             :value (-> display-data :base-floor-structure)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :base-floor-structure)
+               :on-change #(on-change :base-floor-structure %)
+               :items     base-floor-structures
+               :value-fn  first
+               :label-fn  (comp locale second)}]}
+
+            ;; Insulated exterior?
+            {:label (tr :envelope-structure/insulated-exterior?)
+             :value (-> display-data :insulated-exterior?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :insulated-exterior?)
+               :on-change #(on-change :insulated-exterior? %)}]}
+
+            ;; Insulated ceiling?
+            {:label (tr :envelope-structure/insulated-ceiling?)
+             :value (-> display-data :insulated-ceiling?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :insulated-ceiling?)
+               :on-change #(on-change :insulated-ceiling? %)}]}
+
+            ;; Low emissivity coating?
+            {:label (tr :envelope-structure/low-emissivity-coating?)
+             :value (-> display-data :low-emissivity-coating?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :low-emissivity-coating?)
+               :on-change #(on-change :low-emissivity-coating? %)}]}]])
+
+        ;;; Rinks
+        [lui/form-card {:title (tr :rinks/headline)}
+
+         (when (-> dialogs :rink :open?)
+           [rinks/dialog {:tr tr}])
+
+         (if @editing?
+           [rinks/table {:tr tr :items (-> editing-rev :rinks vals)}]
+           [rinks/read-only-table {:tr tr :items (-> site :rinks)}])]
+
+        ;;; Refrigeration
+        (let [on-change    (partial set-field :refrigeration)
+              display-data (:refrigeration site)
+              edit-data    (:refrigeration editing-rev)]
+          [lui/form-card {:title (tr :refrigeration/headline)}
+           [lui/form {:read-only? (not @editing?)}
+
+            ;; Original?
+            {:label (tr :refrigeration/original?)
+             :value (-> display-data :original?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :original?)
+               :on-change #(on-change :original? %)}]}
+
+            ;; Individual metering?
+            {:label (tr :refrigeration/individual-metering?)
+             :value (-> display-data :individual-metering?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :individual-metering?)
+               :on-change #(on-change :individual-metering? %)}]}
+
+            ;; Condensate energy recycling?
+            {:label (tr :refrigeration/condensate-energy-recycling?)
+             :value (-> display-data :condensate-energy-recycling?)
+             :form-field
+             [lui/checkbox
+              {:value     (-> edit-data :condensate-energy-recycling?)
+               :on-change #(on-change :condensate-energy-recycling? %)}]}
+
+            ;; Condensate energy main target
+            {:label (tr :refrigeration/condensate-energy-main-targets)
+             :value (-> display-data :condensate-energy-main-targets)
+             :form-field
+             [lui/multi-select
+              {:value     (-> edit-data :condensate-energy-main-targets)
+               :items     cets
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :condensate-energy-main-targets %)}]}
+
+            ;; Power kW
+            {:label (tr :refrigeration/power-kw)
+             :value (-> display-data :power-kw)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/power-kw
+               :value     (-> edit-data :power-kw)
+               :on-change #(on-change :power-kw %)}]}
+
+            ;; Refrigerant
+            {:label (tr :refrigeration/refrigerant)
+             :value (-> display-data :refrigerant)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :refrigerant)
+               :items     refrigerants
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :refrigerant %)}]}
+
+            ;; Refrigerant amount kg
+            {:label (tr :refrigeration/refrigerant-amount-kg)
+             :value (-> display-data :refrigerant-amount-kg)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/refrigerant-amount-kg
+               :value     (-> edit-data :refrigerant-amount-kg)
+               :on-change #(on-change :refrigerant-amount-kg %)}]}
+
+            ;; Refrigerant solution
+            {:label (tr :refrigeration/refrigerant-solution)
+             :value (-> display-data :refrigerant-solution)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :refrigerant-solution)
+               :items     refrigerant-solutions
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :refrigerant-solution %)}]}
+
+            ;; Refrigerant solution amount l
+            {:label (tr :refrigeration/refrigerant-solution-amount-l)
+             :value (-> display-data :refrigerant-solution-amount-l)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/refrigerant-solution-amount-l
+               :value     (-> edit-data :refrigerant-solution-amount-l)
+               :on-change #(on-change :refrigerant-solution-amount-l %)}]}]])
+
+        ;;; Ventilation
+        (let [on-change    (partial set-field :ventilation)
+              edit-data    (:ventilation editing-rev)
+              display-data (:ventilation site)]
+          [lui/form-card {:title (tr :ventilation/headline)}
+           [lui/form {:read-only? (not @editing?)}
+
+            ;; Heat recovery type
+            {:label (tr :ventilation/heat-recovery-type)
+             :value (-> display-data :heat-recovery-type)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :heat-recovery-type)
+               :items     heat-recovery-types
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :heat-recovery-type %)}]}
+
+            ;; Heat recovery thermal efficiency percent
+            {:label (tr :ventilation/heat-recovery-thermal-efficiency-percent)
+             :value (-> display-data :heat-recovery-thermal-efficiency-percent)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/heat-recovery-thermal-efficiency-percent
+               :adornment (tr :units/percent)
+               :value     (-> edit-data :heat-recovery-thermal-efficiency-percent)
+               :on-change #(on-change :heat-recovery-thermal-efficiency-percent %)}]}
+
+            ;; Dryer type
+            {:label (tr :ventilation/dryer-type)
+             :value (-> display-data :dryer-type)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :dryer-type)
+               :items     dryer-types
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :dryer-type %)}]}
+
+            ;; Dryer duty type
+            {:label (tr :ventilation/dryer-duty-type)
+             :value (-> display-data :dryer-duty-type)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :dryer-duty-type)
+               :items     dryer-duty-types
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(on-change :dryer-duty-type %)}]}
+
+            ;; Heat pump type
+            {:label (tr :ventilation/heat-pump-type)
+             :value (-> display-data :heat-pump-type)
+             :form-field
+             [lui/select
+              {:value     (-> edit-data :heat-pump-type)
+               :items     heat-pump-types
+               :label-fn  (comp locale second)
+               :value-fn  first
+               :on-change #(set-field :heat-pump-type %)}]}]])
+
+        ;;; Conditions
+        (let [on-change    (partial set-field :conditions)
+              display-data (-> site :conditions)
+              edit-data    (-> editing-rev :conditions)]
+          [lui/form-card {:title (tr :conditions/headline)}
+           [lui/form {:read-only? (not @editing?)}
+
+            ;; Open months
+            {:label (tr :conditions/open-months)
+             :value (-> display-data :open-months)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/open-months
+               :adornment (tr :time/month)
+               :value     (-> edit-data :open-months)
+               :on-change #(on-change :open-months %)}]}
+
+            ;; Daily open hours
+            {:label (tr :conditions/daily-open-hours)
+             :value (-> display-data :daily-open-hours)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/daily-open-hours
+               :adornment (tr :time/hour)
+               :value     (-> edit-data :daily-open-hours)
+               :on-change #(on-change :daily-open-hours %)}]}
+
+            ;; Air humidity min %
+            {:label (tr :conditions/air-humidity-min)
+             :value (-> display-data :air-humidity-min)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/air-humidity-percent
+               :value     (-> edit-data :air-humidity :min)
+               :on-change #(on-change :air-humidity :min %)}]}
+
+            ;; Air humidity max %
+            {:label (tr :conditions/air-humidity-max)
+             :value (-> display-data :air-humidity-max)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/air-humidity-percent
+               :value     (-> edit-data :air-humidity :max)
+               :on-change #(on-change :air-humidity :max %)}]}
+
+            ;; Ice surface temperature c
+            {:label (tr :conditions/ice-surface-temperature-c)
+             :value (-> display-data :ice-surface-temperature-c)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/ice-surface-temperature-c
+               :value     (-> edit-data :ice-surface-temperature-c)
+               :on-change #(on-change :ice-surface-temperature-c %)}]}
+
+            ;; Skating area temperature c
+            {:label (tr :conditions/skating-area-temperature-c)
+             :value (-> display-data :skating-area-temperature-c)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/skating-area-temperature-c
+               :value     (-> edit-data :skating-area-temperature-c)
+               :on-change #(on-change :skating-area-temperature-c %)}]}
+
+            ;; Stand temperature c
+            {:label (tr :conditions/stand-temperature-c)
+             :value (-> display-data :stand-temperature-c)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/stand-temperature-c
+               :value     (-> edit-data :stand-temperature-c)
+               :on-change #(on-change :stand-temperature-c %)}]}]])
+
+        ;;; Ice maintenance
+        (let [on-change    (partial set-field :ice-maintenance)
+              display-data (-> site :ice-maintenance)
+              edit-data    (-> editing-rev :ice-maintenance)]
+          [lui/form-card {:title (tr :ice-maintenance/headline)}
+           [lui/form {:read-only? (not @editing?)}
+
+            ;; Daily maintenance count week days
+            {:label (tr :ice-maintenance/daily-maintenance-count-week-days)
+             :value (-> display-data :daily-maintenance-count-week-days)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/daily-maintenance-count-week-days
+               :value     (-> edit-data :daily-maintenance-count-week-days)
+               :on-change #(on-change :daily-maintenance-count-week-days %)}]}
+
+            ;; Daily maintenance count weekends
+            {:label (tr :ice-maintenance/daily-maintenance-count-weekends)
+             :value (-> display-data :daily-maintenance-count-weekends)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/daily-maintenance-count-weekends
+               :value     (-> edit-data :daily-maintenance-count-weekends)
+               :on-change #(on-change :daily-maintenance-count-weekends %)}]}
+
+            ;; Average water consumption l
+            {:label (tr :ice-maintenance/average-water-consumption-l)
+             :value (-> display-data :average-water-consumption-l)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/average-water-consumption-l
+               :value     (-> edit-data :average-water-consumption-l)
+               :on-change #(on-change :average-water-consumption-l %)}]}
+
+            ;; Ice average thickness mm
+            {:label (tr :ice-maintenance/ice-average-thickness-mm)
+             :value (-> display-data :ice-average-thickness-mm)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      ::schema/ice-average-thickness-mm
+               :value     (-> edit-data :ice-average-thickness-mm)
+               :on-change #(on-change :ice-average-thickness-mm %)}]}]])
+
+        ;;; Energy consumption
+        [lui/form-card {:title (tr :energy/headline)}
+         [energy/table {:read-only? true
+                        :tr         tr
+                        :items      (:energy-consumption site)}]]]])))
+
+(defn ice-stadiums-tab [tr logged-in?]
+  (let [locale (tr)
+        sites  (<== [::subs/sites-list locale])]
 
     [mui/grid {:container true}
 
-     [details-dialog {:tr tr}]
+     [site-view {:tr tr :logged-in? logged-in?}]
 
      [mui/grid {:item true :xs 12}
       [mui/paper
@@ -167,7 +491,7 @@
                      [:city (tr :location/city)]
                      [:admin (tr :sports-place/admin)]
                      [:owner (tr :sports-place/owner)]]
-         :items     pools
+         :items     sites
          :on-select #(==> [::events/display-site %])}]]]]))
 
 (defn compare-tab []
@@ -176,28 +500,17 @@
     [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
               :style {:min-height "800px" :width "100%"}}]]])
 
-(defn energy-tab [tr]
+(defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
+(defn energy-form [{:keys [tr year]}]
+  (let [data           (<== [::subs/editing-rev])
+        energy-history (<== [::subs/energy-consumption-history])
+        set-field      (partial set-field :editing :rev)]
 
-(defn ice-stadium-form [{:keys [tr rev]}]
-  (let [locale                (tr)
-        data                  rev
-        year                  (resolve-year (:timestamp rev))
-        dialogs               (<== [::subs/dialogs])
-        types                 (<== [::subs/types-list])
-        size-categories       (<== [::subs/size-categories])
-        cities                (<== [::subs/cities-list])
-        owners                (<== [::subs/owners])
-        admins                (<== [::subs/admins])
-        energy-history        (<== [::subs/energy-consumption-history])
-        base-floor-structures (<== [::subs/base-floor-structures])
-        set-field             (partial set-field :editing :rev)]
-
-    (r/with-let [renovations-done? (r/atom false)
-                 monthly-energy?   (r/atom false)]
+    (r/with-let [monthly-energy? (r/atom false)]
 
       [mui/grid {:container true}
 
@@ -224,270 +537,24 @@
             :data      (:energy-consumption-monthly data)
             :on-change #(==> [::events/set-monthly-energy-consumption %&])}])
 
-
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [energy/table {:tr         tr
                         :read-only? true
                         :items      energy-history}]]]
-
-       [lui/form-card {:title (tr :renovations/headline-year year)}
-        [lui/checkbox
-         {:label     (tr :renovations/renovations-done? year)
-          :checked   @renovations-done?
-          :on-change #(swap! renovations-done? not)}]]
-
-       (when @renovations-done?
-         ;; General info
-         [lui/form-card {:title (tr :general/general-info)}
-          [lui/sports-place-form
-           {:tr              tr
-            :data            data
-            :types           types
-            :size-categories size-categories
-            :owners          owners
-            :admins          admins
-            :on-change       set-field}]])
-
-       (when @renovations-done?
-         ;; Location
-         [lui/form-card {:title (tr :location/headline)}
-          [lui/location-form
-           {:tr        tr
-            :data      (:location data)
-            :cities    cities
-            :on-change (partial set-field :location)}]])
-
-       (when @renovations-done?
-         ;; Building
-         [lui/form-card {:title (tr :building/headline)}
-          [mui/form-group
-           [lui/year-selector
-            {:label     (tr :building/construction-year)
-             :value     (-> data :building :construction-year)
-             :on-change #(set-field :building :construction-year %)}]
-           [lui/text-field
-            {:label     (tr :building/main-designers)
-             :value     (-> data :building :main-designers)
-             :spec      ::schema/main-designers
-             :on-change #(set-field :building :main-designers %)}]
-           [lui/text-field
-            {:label     (tr :building/total-surface-area-m2)
-             :type      "number"
-             :value     (-> data :building :total-surface-area-m2)
-             :spec      ::schema/total-surface-area-m2
-             :adornment (tr :physical-units/m2)
-             :on-change #(set-field :building :total-surface-area-m2 %)}]
-           [lui/text-field
-            {:label     (tr :building/total-volume-m3)
-             :type      "number"
-             :value     (-> data :building :total-volume-m3)
-             :spec      ::schema/total-volume-m3
-             :adornment (tr :physical-units/m3)
-             :on-change #(set-field :building :total-volume-m3 %)}]
-           [lui/text-field
-            {:label     (tr :building/seating-capacity)
-             :type      "number"
-             :value     (-> data :building :seating-capacity)
-             :spec      ::schema/seating-capacity
-             :adornment (tr :units/person)
-             :on-change #(set-field :building :seating-capacity %)}]]])
-
-       (when @renovations-done?
-         ;; Envelope structure
-         [lui/form-card {:title (tr :envelope-structure/headline)}
-          [mui/form-group
-           [lui/select
-            {:label     (tr :envelope-structure/base-floor-structure)
-             :value     (-> data :envelope-structure :base-floor-structure)
-             :on-change #(set-field :envelope-structure :base-floor-structure %)
-             :items     base-floor-structures
-             :value-fn  first
-             :label-fn  (comp locale second)}]
-           [lui/checkbox
-            {:label     (tr :envelope-structure/insulated-exterior?)
-             :value     (-> data :envelope-structure :insulated-exterior?)
-             :on-change #(set-field :envelope-structure :insulated-exterior? %)}]
-           [lui/checkbox
-            {:label     (tr :envelope-structure/insulated-ceiling?)
-             :value     (-> data :envelope-structure :insulated-ceiling?)
-             :on-change #(set-field :envelope-structure :insulated-ceiling? %)}]
-           [lui/checkbox
-            {:label     (tr :envelope-structure/low-emissivity-coating?)
-             :value     (-> data :envelope-structure :low-emissivity-coating?)
-             :on-change #(set-field :envelope-structure :low-emissivity-coating? %)}]]])
-
-       (when @renovations-done?
-         ;; Rinks
-         (when (-> dialogs :rink :open?)
-           [rinks/dialog {:tr tr}]))
-
-       (when @renovations-done?
-         [lui/form-card {:title (tr :rinks/headline)}
-          [rinks/table {:tr tr :items (-> data :rinks vals)}]])
-
-       (when @renovations-done?
-         ;; Refrigeration
-         [lui/form-card {:title (tr :refrigeration/headline)}
-          [mui/form-group
-           [lui/checkbox
-            {:label     (tr :refrigeration/original?)
-             :value     (-> data :refrigeration :original?)
-             :on-change #(set-field :refrigeration :original? %)}]
-           [lui/checkbox
-            {:label     (tr :refrigeration/individual-metering?)
-             :value     (-> data :refrigeration :individual-metering?)
-             :on-change #(set-field :refrigeration :individual-metering? %)}]
-           [lui/checkbox
-            {:label     (tr :refrigeration/condensate-energy-recycling?)
-             :value     (-> data :refrigeration :condensate-energy-recycling?)
-             :on-change #(set-field :refrigeration :condensate-energy-recycling? %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/condensate-energy-main-target)
-             :value     (-> data :refrigeration :condensate-energy-main-target)
-             :on-change #(set-field :refrigeration :condensate-energy-main-target %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/power-kw)
-             :type      "number"
-             :spec      ::schema/power-kw
-             :value     (-> data :refrigeration :power-kw)
-             :on-change #(set-field :refrigeration :power-kw %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/refrigerant)
-             :value     (-> data :refrigeration :refrigerant)
-             :on-change #(set-field :refrigeration :refrigerant %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/refrigerant-amount-kg)
-             :type      "number"
-             :spec      ::schema/refrigerant-amount-kg
-             :value     (-> data :refrigeration :refrigerant-amount-kg)
-             :on-change #(set-field :refrigeration :refrigerant-amount-kg %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/refrigerant-solution)
-             :value     (-> data :refrigeration :refrigerant-solution)
-             :on-change #(set-field :refrigeration :refrigerant-solution %)}]
-           [lui/text-field
-            {:label     (tr :refrigeration/refrigerant-solution-amount-l)
-             :type      "number"
-             :spec      ::schema/refrigerant-solution-amount-l
-             :value     (-> data :refrigeration :refrigerant-solution-amount-l)
-             :on-change #(set-field :refrigeration :refrigerant-solution-amount-l %)}]]])
-
-       (when @renovations-done?
-         ;; Ventilation
-         [lui/form-card {:title (tr :ventilation/headline)}
-          [mui/form-group
-           [lui/text-field
-            {:label     (tr :ventilation/heat-recovery-type)
-             :value     (-> data :ventilation :heat-recovery-type)
-             :on-change #(set-field :ventilation :heat-recovery-type %)}]
-           [lui/text-field
-            {:label     (tr :ventilation/heat-recovery-thermal-efficiency-percent)
-             :type      "number"
-             :spec      ::schema/heat-recovery-thermal-efficiency-percent
-             :adornment (tr :units/percent)
-             :value     (-> data :ventilation :heat-recovery-thermal-efficiency-percent)
-             :on-change #(set-field :ventilation :heat-recovery-thermal-efficiency-percent %)}]
-           [lui/text-field
-            {:label     (tr :ventilation/dryer-type)
-             :value     (-> data :ventilation :dryer-type)
-             :on-change #(set-field :ventilation :dryer-type %)}]
-           [lui/text-field
-            {:label     (tr :ventilation/dryer-duty-type)
-             :value     (-> data :ventilation :dryer-duty-type)
-             :on-change #(set-field :ventilation :dryer-duty-type %)}]
-           [lui/text-field
-            {:label     (tr :ventilation/heat-pump-type)
-             :value     (-> data :ventilation :heat-pump-type)
-             :on-change #(set-field :ventilation :heat-pump-type %)}]]])
-
-       ;; Conditions
-       [lui/form-card {:title (tr :conditions/headline)}
-        [mui/form-group
-         [lui/text-field
-          {:label     (tr :conditions/open-months)
-           :type      "number"
-           :spec      ::schema/open-months
-           :adornment (tr :time/month)
-           :value     (-> data :conditions :open-months)
-           :on-change #(set-field :conditions :open-months %)}]
-         [lui/text-field
-          {:label     (tr :conditions/daily-open-hours)
-           :type      "number"
-           :spec      ::schema/daily-open-hours
-           :adornment (tr :time/hour)
-           :value     (-> data :conditions :daily-open-hours)
-           :on-change #(set-field :conditions :daily-open-hours %)}]
-         [lui/text-field
-          {:label     (tr :conditions/air-humidity-min)
-           :type      "number"
-           :spec      ::schema/air-humidity-percent
-           :value     (-> data :conditions :air-humidity :min)
-           :on-change #(set-field :conditions :air-humidity :min %)}]
-         [lui/text-field
-          {:label     (tr :conditions/air-humidity-max)
-           :type      "number"
-           :spec      ::schema/air-humidity-percent
-           :value     (-> data :conditions :air-humidity :max)
-           :on-change #(set-field :conditions :air-humidity :max %)}]
-         [lui/text-field
-          {:label     (tr :conditions/ice-surface-temperature-c)
-           :type      "number"
-           :spec      ::schema/ice-surface-temperature-c
-           :value     (-> data :conditions :ice-surface-temperature-c)
-           :on-change #(set-field :conditions :ice-surface-temperature-c %)}]
-         [lui/text-field
-          {:label     (tr :conditions/skating-area-temperature-c)
-           :type      "number"
-           :spec      ::schema/skating-area-temperature-c
-           :value     (-> data :conditions :skating-area-temperature-c)
-           :on-change #(set-field :conditions :skating-area-temperature-c %)}]
-         [lui/text-field
-          {:label     (tr :conditions/stand-temperature-c)
-           :type      "number"
-           :spec      ::schema/stand-temperature-c
-           :value     (-> data :conditions :stand-temperature-c)
-           :on-change #(set-field :conditions :stand-temperature-c %)}]]]
-
-       ;; Ice maintenance
-       [lui/form-card {:title (tr :ice-maintenance/headline)}
-        [mui/form-group
-         [lui/text-field
-          {:label     (tr :ice-maintenance/daily-maintenance-count-week-days)
-           :type      "number"
-           :spec      ::schema/daily-maintenance-count-week-days
-           :value     (-> data :ice-maintenance :daily-maintenance-count-week-days)
-           :on-change #(set-field :ice-maintenance :daily-maintenance-count-week-days %)}]
-         [lui/text-field
-          {:label     (tr :ice-maintenance/daily-maintenance-count-weekends)
-           :type      "number"
-           :spec      ::schema/daily-maintenance-count-weekends
-           :value     (-> data :ice-maintenance :daily-maintenance-count-weekends)
-           :on-change #(set-field :ice-maintenance :daily-maintenance-count-weekends %)}]
-         [lui/text-field
-          {:label     (tr :ice-maintenance/average-water-consumption-l)
-           :type      "number"
-           :spec      ::schema/average-water-consumption-l
-           :value     (-> data :ice-maintenance :average-water-consumption-l)
-           :on-change #(set-field :ice-maintenance :average-water-consumption-l %)}]
-         [lui/text-field
-          {:label     (tr :ice-maintenance/ice-average-thickness-mm)
-           :type      "number"
-           :spec      ::schema/ice-average-thickness-mm
-           :value     (-> data :ice-maintenance :ice-average-thickness-mm)
-           :on-change #(set-field :ice-maintenance :ice-average-thickness-mm %)}]]]
 
        ;; Actions
        [lui/form-card {}
         [mui/button {:full-width true
                      :color      "secondary"
                      :variant    "raised"
-                     :on-click   #(==> [::events/submit data])}
+                     :on-click   #(==> [::events/commit-energy-consumption data])}
          (tr :actions/save)]]])))
 
-(defn edit-tab [tr]
-  (let [data   (<== [::subs/sites-to-edit])
+(defn energy-form-tab [tr]
+  (let [data   (<== [::subs/sites-to-edit-list])
         site   (<== [::subs/editing-site])
-        rev    (<== [::subs/editing-rev])
+        years  (<== [::subs/energy-consumption-years-list])
+        year   (<== [::subs/editing-year])
         locale (tr)]
 
     [mui/grid {:container true}
@@ -498,27 +565,27 @@
      (when data
        [lui/form-card {:title (tr :actions/select-hall)}
         [mui/form-group
-         [lui/site-selector
+         [lui/select
           {:label     (tr :actions/select-hall)
-           :locale    locale
-           :value     (-> site :latest)
+           :value     (-> site :latest :lipas-id)
            :items     data
-           :on-change #(==> [::events/set-edit-site %])}]]])
+           :label-fn  (comp locale :name)
+           :value-fn  :lipas-id
+           :on-change #(==> [::events/set-edit-site {:lipas-id %}])}]]])
 
      (when site
        [lui/form-card {:title (tr :actions/select-year)}
         [mui/form-group
-         [lui/rev-selector
-          {:label       (tr :actions/select-year)
-           :value       rev
-           :items       (:history site)
-           :template-fn (partial make-revision site)
-           :on-change   #(==> [::events/set-edit-rev %])}]]])
+         [lui/select
+          {:label     (tr :actions/select-year)
+           :value     year
+           :items     years
+           :on-change #(==> [::events/select-energy-consumption-year %])}]]])
 
-     (when (and site rev)
-       [ice-stadium-form
-        {:tr  tr
-         :rev rev}])]))
+     (when (and site year)
+       [energy-form
+        {:tr   tr
+         :year year}])]))
 
 (defn create-panel [{:keys [tr logged-in?]}]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
@@ -534,29 +601,29 @@
                    :on-change #(==> [::events/set-active-tab %2])
                    :value @active-tab}
 
-         ;; 0 Info tab
+         ;; 0 Ice stadiums tab
          [mui/tab {:label (tr :ice-rinks/headline)
                    :icon (r/as-element [mui/icon "info"])}]
 
-         ;; 1 Compare tab
-         [mui/tab {:label (tr :swim/visualizations)
-                   :icon (r/as-element [mui/icon "compare"])}]
-
-         ;; 2 Edit tab
+         ;; 1 Energy form tab
          (when logged-in?
            [mui/tab {:label (tr :ice-basic-data/headline)
                      :icon (r/as-element [mui/icon "edit"])}])
 
-         ;; 3 Energy tab
+         ;; 2 Compare tab
+         [mui/tab {:label (tr :swim/visualizations)
+                   :icon (r/as-element [mui/icon "compare"])}]
+
+         ;; 3 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
                    :icon (r/as-element [mui/icon "flash_on"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
-        0 (info-tab tr)
-        1 (compare-tab)
-        2 (edit-tab tr)
-        3 (energy-tab tr))]]))
+        0 (ice-stadiums-tab tr logged-in?)
+        1 (energy-form-tab tr)
+        2 (compare-tab)
+        3 (energy-info-tab tr))]]))
 
 (defn main [tr logged-in?]
   (create-panel {:tr tr :logged-in? logged-in?}))

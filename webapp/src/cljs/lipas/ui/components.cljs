@@ -4,10 +4,35 @@
             [clojure.string :refer [trim]]
             [lipas.schema.core :as schema]
             [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [resolve-year this-year index-by ->timestamp]]
             [reagent.core :as r]))
 
 (def CHECK_MARK "✓")
+
+;;; Transitions ;;;
+
+(defn slide [props]
+  [mui/slide props])
+
+(defn fade [props]
+  [mui/fade props])
+
+(defn zoom [props]
+  [mui/zoom props])
+
+(defn grow [props]
+  [mui/grow props])
+
+;;; Components ;;;
+
+(defn save-button [{:keys [on-click] :as props}]
+  [mui/button (merge props {:on-click on-click
+                            :color    "primary"})
+   [mui/icon "save_icon"]])
+
+(defn edit-button [{:keys [on-click active?]}]
+  [mui/button {:on-click on-click
+               :color    (if active? "secondary" "primary")}
+   [mui/icon "edit_icon"]])
 
 (defn checkbox [{:keys [label value on-change]}]
   [mui/form-control-label
@@ -216,7 +241,7 @@
                                                     .-value
                                                     read-string))))]
     [mui/form-control
-     [mui/input-label label]
+     (when label [mui/input-label label])
      (into [mui/select props]
            (for [i items]
              (let [value (value-fn i)
@@ -225,34 +250,22 @@
                                :value (pr-str value)}
                 label])))]))
 
-(defn extract-values [multi-select-state]
-  (as-> multi-select-state $
-    (js->clj $)
-    (mapv #(read-string (get % "value")) $)))
-
-(defn str-field [field m]
-  (update m field pr-str))
-
-(comment (def items [{:label "kissa", :value "kiskis"}
-                     {:label "koira", :value "koirkoir"}]))
-(comment (find-by-vals items ["kiskis"]))
-(defn find-by-vals [field items vals]
-  (let [lookup (reduce into {} (map #(hash-map (field %) %) items))]
-    (map #(lookup %) vals)))
-
-(defn multi-select [{:keys [label value items on-change] :as props}]
+(defn multi-select [{:keys [label value items on-change value-fn label-fn]
+                     :or {value-fn :value
+                          label-fn :label}
+                     :as props}]
   [mui/form-control
-   [mui/input-label label]
+   (when label [mui/input-label label])
    [mui/select
-    (merge (dissoc props :label)
+    (merge (dissoc props :label :value-fn :label-fn)
            {:multiple true
             :value value
             :on-change #(on-change (-> % .-target .-value))})
     (for [i items]
       [mui/menu-item
-       {:key (:value i)
-        :value (:value i)}
-       (:label i)])]])
+       {:key (value-fn i)
+        :value (value-fn i)}
+       (label-fn i)])]])
 
 (defn year-selector [{:keys [label value on-change required years] :as props}]
   (let [years (or years
@@ -263,10 +276,6 @@
                           :value value
                           :required required})]))
 
-(defn ->select-entry [tr prefix enum]
-  {:value enum
-   :label (tr (keyword prefix enum))})
-
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field
    {:type "date"
@@ -275,104 +284,6 @@
     :Input-label-props
     {:shrink true} ; This makes the label show actually
     :on-change #(on-change (-> % .-target .-value))}])
-
-
-(defn site-selector [{:keys [locale label value on-change items required]}]
-  [select {:label     label
-           :required  required
-           :value     (:lipas-id value)
-           :items     (map #(hash-map :label (-> % :name locale)
-                                      :value (-> % :lipas-id))
-                           (map :latest (vals items)))
-           :on-change #(when-let [site (get items %)]
-                         (on-change site))}])
-
-(defn rev-selector [{:keys [label value on-change items required template-fn]}]
-  (let [revs-by-year (index-by (comp resolve-year :timestamp) items)
-        years        (range 2000 (inc this-year))
-        items        (for [y    years
-                           :let [data-exists? (some #{y} (keys revs-by-year))]]
-                       {:label (if data-exists?
-                                 (str y " " CHECK_MARK)
-                                 (str y))
-                        :value y
-                        :sort  (- y)})]
-    [select {:label     label
-             :items     (sort-by :sort items)
-             :on-change #(when (not-empty (str %))
-                           (on-change (or
-                                       (get revs-by-year %)
-                                       (template-fn (->timestamp %)))))
-             :value     (-> value :timestamp resolve-year)
-             :required  required}]))
-
-(defn sports-place-form [{:keys [tr data types size-categories
-                                 admins owners on-change]}]
-  (let [locale (tr)]
-    [mui/form-group
-     [text-field
-      {:label     (tr :sports-place/name-fi)
-       :value     (-> data :name :fi)
-       :spec      ::schema/name
-       :required  true
-       :on-change #(on-change :name :fi %)}]
-     [text-field
-      {:label     (tr :sports-place/name-se)
-       :spec      ::schema/name
-       :value     (-> data :name :se)
-       :on-change #(on-change :name :se %)}]
-     [text-field
-      {:label     (tr :sports-place/name-en)
-       :spec      ::schema/name
-       :value     (-> data :name :en)
-       :on-change #(on-change :name :en %)}]
-     [select
-      {:label     (tr :type/type-name)
-       :value     (-> data :type :type-code)
-       :items     types
-       :label-fn  (comp locale :name)
-       :value-fn  :type-code
-       :on-change #(on-change :type :type-code %)}]
-
-     ;; Ice-stadiums get special treatment
-     (when (= 2520 (-> data :type :type-code))
-       [select
-        {:label     (tr :ice/size-category)
-         :value     (-> data :type :size-category)
-         :items     size-categories
-         :value-fn  first
-         :label-fn  (comp locale second)
-         :on-change #(on-change :type :size-category %)}])
-
-     [select
-      {:label     (tr :sports-place/owner)
-       :value     (-> data :owner)
-       :items     owners
-       :value-fn  first
-       :label-fn  (comp locale second)
-       :on-change #(on-change :owner %)}]
-     [select
-      {:label     (tr :sports-place/admin)
-       :value     (-> data :admin)
-       :items     admins
-       :value-fn  first
-       :label-fn  (comp locale second)
-       :on-change #(on-change :admin %)}]
-     [text-field
-      {:label     (tr :sports-place/phone-number)
-       :value     (-> data :phone-number)
-       :spec      ::schema/phone-number
-       :on-change #(on-change :phone-number %)}]
-     [text-field
-      {:label     (tr :sports-place/www)
-       :value     (-> data :www)
-       :spec      ::schema/www
-       :on-change #(on-change :www %)}]
-     [text-field
-      {:label     (tr :sports-place/email-public)
-       :value     (-> data :email)
-       :spec      ::schema/email
-       :on-change #(on-change :email %)}]]))
 
 (defn info-table [{:keys [data]}]
   [mui/table
@@ -384,48 +295,140 @@
               (first row)]]
             [table-cell (second row)]]))])
 
-(defn sports-site-info [{:keys [tr site]}]
-  [info-table
-   {:data [[(tr :type/name) (-> site :type :name)]
-           [(tr :type/type-code) (-> site :type :type-code)]
-           [(tr :sports-place/owner) (-> site :owner)]
-           [(tr :sports-place/admin) (-> site :admin)]
-           [(tr :sports-place/www) (-> site :www)]
-           [(tr :sports-place/email-public) (-> site :email)]
-           [(tr :sports-place/phone-number) (-> site :phone-number)]]}])
+(defn table-form [{:keys [read-only?]} & fields]
+  [mui/table
+   (into [mui/table-body]
+         (for [row (remove nil? fields)
+               :let [{:keys [label value form-field]} row]]
+           [mui/table-row
+            [table-cell
+             [mui/typography {:variant "caption"}
+              label]]
+            [table-cell
+             (if read-only?
+               value
+               [mui/form-group
+                form-field])]]))])
 
-(defn location-form [{:keys [tr data cities on-change]}]
+(def form table-form)
+
+(defn sports-site-form [{:keys [tr display-data edit-data types size-categories
+                                admins owners on-change read-only?]}]
   (let [locale (tr)]
-    [mui/form-group
-     [text-field
-      {:label     (tr :location/address)
-       :value     (-> data :address)
-       :spec      ::schema/address
-       :on-change #(on-change :address %)}]
-     [text-field
-      {:label     (tr :location/postal-code)
-       :value     (-> data :postal-code)
-       :spec      ::schema/postal-code
-       :on-change #(on-change :postal-code %)}]
-     [text-field
-      {:label     (tr :location/postal-office)
-       :value     (-> data :postal-office)
-       :spec      ::schema/postal-office
-       :on-change #(on-change :postal-office %)}]
-     [select
-      {:label     (tr :location/city)
-       :value     (-> data :city :city-code)
-       :items     cities
-       :label-fn  (comp locale :name)
-       :value-fn  :city-code
-       :on-change #(on-change :city :city-code %)}]]))
+    [form {:read-only? read-only?}
 
-(defn location-info [{:keys [tr location]}]
-  [info-table
-   {:data [[(tr :location/address) (-> location :address)]
-           [(tr :location/postal-code) (-> location :postal-code)]
-           [(tr :location/postal-office) (-> location :postal-office)]
-           [(tr :location/city) (-> location :city :name)]]}])
+     ;; Name
+     {:label      (tr :sports-place/name-fi)
+      :value      (-> display-data :name)
+      :form-field [text-field
+                   {:spec      ::schema/name
+                    :value     (-> edit-data :name :fi)
+                    :on-change #(on-change :name :fi %)}]}
+
+     ;; Type
+     {:label      (tr :type/name)
+      :value      (-> display-data :type :name)
+      :form-field [select
+                   {:value     (-> edit-data :type :type-code)
+                    :items     types
+                    :label-fn  (comp locale :name)
+                    :value-fn  :type-code
+                    :on-change #(on-change :type :type-code %)}]}
+
+     ;; Ice-stadiums get special treatment
+     (when (= 2520 (-> display-data :type :type-code))
+       {:label      (tr :ice/size-category)
+        :value      (-> display-data :type :size-category)
+        :form-field [select
+                     {:value     (-> edit-data :type :size-category)
+                      :items     size-categories
+                      :value-fn  first
+                      :label-fn  (comp locale second)
+                      :on-change #(on-change :type :size-category %)}]})
+
+     ;; Owner
+     {:label      (tr :sports-place/owner)
+      :value      (-> display-data :owner)
+      :form-field [select
+                   {:value     (-> edit-data :owner)
+                    :items     owners
+                    :value-fn  first
+                    :label-fn  (comp locale second)
+                    :on-change #(on-change :owner %)}]}
+
+     ;; Admin
+     {:label      (tr :sports-place/admin)
+      :value      (-> display-data :admin)
+      :form-field [select
+                   {:value     (-> edit-data :admin)
+                    :items     admins
+                    :value-fn  first
+                    :label-fn  (comp locale second)
+                    :on-change #(on-change :admin %)}]}
+
+     ;; Phone number
+     {:label      (tr :sports-place/phone-number)
+      :value      (-> display-data :phone-number)
+      :form-field [text-field
+                   {:value     (-> edit-data :phone-number)
+                    :spec      ::schema/phone-number
+                    :on-change #(on-change :phone-number %)}]}
+
+     ;; WWW
+     {:label      (tr :sports-place/www)
+      :value      (-> display-data :www)
+      :form-field [text-field
+                   {:value     (-> edit-data :www)
+                    :spec      ::schema/www
+                    :on-change #(on-change :www %)}]}
+
+     ;; Email
+     {:label      (tr :sports-place/email-public)
+      :value      (-> display-data :email)
+      :form-field [text-field
+                   {:value     (-> edit-data :email)
+                    :spec      ::schema/email
+                    :on-change #(on-change :email %)}]}]))
+
+(defn location-form [{:keys [tr edit-data display-data cities on-change
+                                   read-only?]}]
+  (let [locale (tr)]
+    [form
+     {:read-only? read-only?}
+
+     ;; Address
+     {:label      (tr :location/address)
+      :value      (-> display-data :address)
+      :form-field [text-field
+                   { :value    (-> edit-data :address)
+                    :spec      ::schema/address
+                    :on-change #(on-change :address %)}]}
+
+     ;; Postal code
+     { :label     (tr :location/postal-code)
+      :value      (-> display-data :postal-code)
+      :form-field [text-field
+                   { :value    (-> edit-data :postal-code)
+                    :spec      ::schema/postal-code
+                    :on-change #(on-change :postal-code %)}]}
+
+     ;; Postal office
+     {:label      (tr :location/postal-office)
+      :value      (-> display-data :postal-office)
+      :form-field [text-field
+                   { :value    (-> edit-data :postal-office)
+                    :spec      ::schema/postal-office
+                    :on-change #(on-change :postal-office %)}]}
+
+     ;; City
+     {:label      (tr :location/city)
+      :value      (-> display-data :city :name)
+      :form-field [select
+                   {:value     (-> edit-data :city :city-code)
+                    :items     cities
+                    :label-fn  (comp locale :name)
+                    :value-fn  :city-code
+                    :on-change #(on-change :city :city-code %)}]}]))
 
 (defn expansion-panel [{:keys [label]} & children]
   [mui/expansion-panel {:style {:margin-top "1em"}}
@@ -436,3 +439,18 @@
      label]]
    (into [mui/expansion-panel-details]
          children)])
+
+(defn full-screen-dialog [{:keys [open? title on-close close-label actions]}
+                          & contents]
+  [mui/dialog {:open                 open?
+               :full-screen          true
+               :Transition-component (r/reactify-component slide)
+               :Transition-props     {:direction "up"}
+               :on-close             on-close}
+
+   [mui/dialog-title (or title "")]
+   (into [mui/dialog-content {:style {:padding 0}}]
+         contents)
+   (conj (into [mui/dialog-actions] actions)
+         [mui/button {:on-click on-close}
+          close-label])])

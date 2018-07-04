@@ -39,15 +39,16 @@
 (def primary "#002957")
 (def secondary "#f1563f")
 
-(def jyu-styles-dark {:typography
-                      {:font-family "Aleo, serif"}
-                      :palette
-                      {:type "dark"
-                       :primary {:main primary}
-                       :secondary {:main secondary}}
-                      :overrides
-                      {:Mui-card-header
-                       {:title {:color secondary}}}})
+(def jyu-styles-dark
+  {:typography
+   {:font-family "Aleo, serif"}
+   :palette
+   {:type "dark"
+    :primary {:main primary}
+    :secondary {:main secondary}}
+   :overrides
+   {:Mui-card-header
+    {:title {:color secondary}}}})
 
 (def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
 
@@ -112,25 +113,7 @@
 (def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
 (def input-label (mui->reagent "InputLabel"))
 (def select (mui->reagent "Select"))
-
-(def transitions {:slide    (gobj/get js/MaterialUI "Slide")
-                  :zoom     (gobj/get js/MaterialUI "Zoom")
-                  :fade     (gobj/get js/MaterialUI "Fade")
-                  :grow     (gobj/get js/MaterialUI "Grow")
-                  :collapse (gobj/get js/MaterialUI "Collapse")})
-
-(def with-styles* (gobj/get js/MaterialUI "withStyles"))
-
-(defn with-styles [styles]
-  (->> styles
-       (transform-keys keyword->PasCamelCase)
-       clj->js
-       with-styles*))
-
-;; (def red-bg {:root {:background-color "red"}})
-;; (def red-btn (->styled red-bg "Button"))
-(defn ->styled [styles component-name]
-  (let [style-fn (with-styles styles)]
-    (-> (gobj/get js/MaterialUI component-name)
-        style-fn
-        r/adapt-react-class)))
+(def slide (mui->reagent "Slide"))
+(def zoom (mui->reagent "Zoom"))
+(def fade (mui->reagent "Fade"))
+(def grow (mui->reagent "Grow"))

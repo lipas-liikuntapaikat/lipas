@@ -1,6 +1,6 @@
 (ns lipas.ui.ice-stadiums.subs
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :refer [resolve-year index-by]]))
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -10,24 +10,41 @@
 (re-frame/reg-sub
  ::editing-site
  (fn [db _]
-   (-> db :ice-stadiums :editing :site)))
+   (let [lipas-id (-> db :ice-stadiums :editing :site)]
+     (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::editing-rev
  (fn [db _]
    (-> db :ice-stadiums :editing :rev)))
 
-(defn energy-consumption-history [site]
-  (let [entries (map #(assoc (:energy-consumption %)
-                             :year (resolve-year (:timestamp %))) (:history site))]
-    (->> entries (sort-by :year) reverse)))
+(re-frame/reg-sub
+ ::editing-year
+ (fn [db _]
+   (-> db :ice-stadiums :editing :year)))
+
+(re-frame/reg-sub
+ ::energy-consumption-data
+ :<- [::editing-site]
+ :<- [::editing-year]
+ (fn [[{:keys [history]} year] _]
+   (let [by-year (utils/latest-by-year history)
+         rev     (get by-year year)]
+     (get history rev))))
 
 (re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [site    (-> db :ice-stadiums :editing :site)
-         history (energy-consumption-history site)]
-     (->> history (sort-by :year) reverse))))
+   (let [lipas-id (-> db :ice-stadiums :editing :site)
+         site (get-in db [:sports-sites lipas-id])
+         history (utils/energy-consumption-history site)]
+     (->> history (sort-by :year utils/reverse-cmp)))))
+
+(re-frame/reg-sub
+ ::energy-consumption-years-list
+ :<- [::energy-consumption-history]
+ (fn [history _]
+   (utils/make-year-list (map :year history))))
 
 (re-frame/reg-sub
  ::access-to-sports-sites
@@ -53,6 +70,12 @@
  :<- [::ice-stadiums]
  (fn [[ids sites] _]
    (not-empty (select-keys sites ids))))
+
+(re-frame/reg-sub
+ ::sites-to-edit-list
+ :<- [::sites-to-edit]
+ (fn [sites _]
+   (not-empty (map :latest (vals sites)))))
 
 (re-frame/reg-sub
  ::dialogs
@@ -118,6 +141,41 @@
    (-> db :ice-stadiums :size-categories)))
 
 (re-frame/reg-sub
+ ::heat-recovery-types
+ (fn [db _ _]
+   (-> db :ice-stadiums :heat-recovery-types)))
+
+(re-frame/reg-sub
+ ::dryer-types
+ (fn [db _]
+   (-> db :ice-stadiums :dryer-types)))
+
+(re-frame/reg-sub
+ ::dryer-duty-types
+ (fn [db _]
+   (-> db :ice-stadiums :dryer-duty-types)))
+
+(re-frame/reg-sub
+ ::heat-pump-types
+ (fn [db _]
+   (-> db :ice-stadiums :heat-pump-types)))
+
+(re-frame/reg-sub
+ ::condensate-energy-targets
+ (fn [db _]
+   (-> db :ice-stadiums :condensate-energy-targets)))
+
+(re-frame/reg-sub
+ ::refrigerants
+ (fn [db _]
+   (-> db :ice-stadiums :refrigerants)))
+
+(re-frame/reg-sub
+ ::refrigerant-solutions
+ (fn [db _]
+   (-> db :ice-stadiums :refrigerant-solutions)))
+
+(re-frame/reg-sub
  ::materials
  (fn [db _]
    (-> db :materials)))
@@ -160,7 +218,8 @@
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
-   (-> db :ice-stadiums :display-site)))
+   (let [lipas-id (-> db :ice-stadiums :display-site)]
+     (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::display-site
@@ -169,23 +228,56 @@
  :<- [::admins]
  :<- [::owners]
  :<- [::all-types]
+ :<- [::size-categories]
+ :<- [::condensate-energy-targets]
+ :<- [::refrigerants]
+ :<- [::refrigerant-solutions]
+ :<- [::heat-recovery-types]
+ :<- [::dryer-types]
+ :<- [::dryer-duty-types]
+ :<- [::heat-pump-types]
  :<- [::materials]
- (fn [[site cities admins owners types materials] [_ locale]]
+ (fn [[site
+       cities admins owners types size-categories
+       condensate-energy-targets refrigerants refrigerant-solutions
+       heat-recovery-types dryer-types dryer-duty-types heat-pump-types
+       materials] [_ locale]]
    (when site
-     (let [latest         (:latest site)
-           type           (types (-> latest :type :type-code))
-           admin          (admins (-> latest :admin))
-           owner          (owners (-> latest :owner))
-           city           (get cities (-> latest :location :city :city-code))
-           energy-history (energy-consumption-history site)
-           get-material   #(get-in materials [% locale])]
+     (let [latest               (:latest site)
+           type                 (types (-> latest :type :type-code))
+           size-category        (size-categories (-> latest :type :size-category))
+           admin                (admins (-> latest :admin))
+           owner                (owners (-> latest :owner))
+           city                 (get cities (-> latest :location :city :city-code))
+           energy-history       (utils/energy-consumption-history site)
+           heat-pump-type       (heat-pump-types (-> latest
+                                                     :ventilation
+                                                     :heat-pump-type))
+           dryer-type           (dryer-types (-> latest
+                                                 :ventilation
+                                                 :dryer-type))
+           dryer-duty-type      (dryer-duty-types (-> latest
+                                                      :ventilation
+                                                      :dryer-duty-type))
+           refrigerant          (refrigerants (-> latest
+                                                  :refrigeration
+                                                  :refrigerant))
+           refrigerant-solution (refrigerant-solutions (-> latest
+                                                           :refrigeration
+                                                           :refrigerant-solution))
+           heat-recovery-type   (heat-recovery-types (-> latest
+                                                         :ventilation
+                                                         :heat-recovery-type))
 
+           get-cet      #(get-in condensate-energy-targets [% locale])
+           get-material #(get-in materials [% locale])]
 
        {:lipas-id     (-> latest :lipas-id)
         :name         (-> latest :name locale)
         :type
-        {:name      (-> type :name locale)
-         :type-code (-> latest :type :type-code)}
+        {:name          (-> type :name locale)
+         :type-code     (-> latest :type :type-code)
+         :size-category (-> size-category locale)}
         :owner        (-> owner locale)
         :admin        (-> admin locale)
         :phone-number (-> latest :phone-number)
@@ -205,10 +297,21 @@
         (-> (:envelope-structure latest)
             (update :base-floor-structure get-material))
 
+        :refrigeration
+        (-> (:refrigeration latest)
+            (update :condensate-energy-main-targets #(map get-cet %))
+            (assoc :refrigerant (-> refrigerant locale))
+            (assoc :refrigerant-solution (-> refrigerant-solution locale)))
+
+        :ventilation
+        (-> (:ventilation latest)
+            (assoc :heat-recovery-type (-> heat-recovery-type locale))
+            (assoc :dryer-type (-> dryer-type locale))
+            (assoc :dryer-duty-type (-> dryer-duty-type locale))
+            (assoc :heat-pump-type (-> heat-pump-type locale)))
+
         :rinks              (:rinks latest)
-        :refrigeration      (:refrigeration latest)
         :ice-maintenance    (:ice-maintenance latest)
         :renovations        (:renovations latest)
-        :ventilation        (:ventilation latest)
         :conditions         (:conditions latest)
-        :energy-consumption energy-history}))))
+        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
