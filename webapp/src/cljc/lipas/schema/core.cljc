@@ -1,19 +1,23 @@
 (ns lipas.schema.core
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [lipas.data.cities :as cities]
             [lipas.data.admins :as admins]
-            [lipas.data.owners :as owners]
+            [lipas.data.cities :as cities]
+            [lipas.data.ice-stadiums :as ice-stadiums]
             [lipas.data.materials :as materials]
+            [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as sports-place-types]))
 
 (def this-year #?(:cljs (.getFullYear (js/Date.))
                   :clj  (.getYear (java.time.LocalDate/now))))
 
+(defn str-btw [min max]
+  (s/and string? #(<= min (count %) max)))
+
 ;; Sports-place
 
-(s/def ::name (s/and string? #(<= 2 (count %))))
+(s/def ::name (str-btw 2 100))
 
 (s/def ::owner (into #{} (keys owners/all)))
 (s/def ::admin (into #{} (keys admins/all)))
@@ -29,7 +33,7 @@
 (comment (re-matches postal-code-regex "00010"))
 
 (s/def ::postal-code (s/and string? #(re-matches postal-code-regex %)))
-(s/def ::postal-office string?)
+(s/def ::postal-office (str-btw 0 50))
 
 (s/def ::city-code (into #{} (map :city-code) cities/active))
 (s/def ::sports-place-type (into #{} (map :type-code) sports-place-types/all))
@@ -63,10 +67,10 @@
 
 ;;; User ;;;
 
-(s/def ::firstname (s/and string? #(<= 1 (count %) 128)))
-(s/def ::lastname (s/and string? #(<= 1 (count %) 128)))
-(s/def ::username (s/and string? #(<= 1 (count %) 128)))
-(s/def ::password (s/and string? #(<= 6 (count %) 128)))
+(s/def ::firstname (str-btw 1 128))
+(s/def ::lastname (str-btw 1 128))
+(s/def ::username (str-btw 1 128))
+(s/def ::password (str-btw 6 128))
 
 (s/def ::login (s/or :username ::username
                      :email ::email))
@@ -203,7 +207,9 @@
 ;;; Refrigeration ;;;
 
 (s/def ::power-kw (s/int-in 0 (inc 10000)))
+(s/def ::refrigerant (into #{} (keys ice-stadiums/refrigerants)))
 (s/def ::refrigerant-amount-kg (s/int-in 0 (inc 10000)))
+(s/def ::refrigerant-solution (into #{} (keys ice-stadiums/refrigerant-solutions)))
 (s/def ::refrigerant-solution-amount-l (s/int-in 0 (inc 30000)))
 
 ;;; Conditions ;;;
@@ -218,6 +224,10 @@
 ;;; Ventilation ;;;
 
 (s/def ::heat-recovery-thermal-efficiency-percent (s/int-in 0 (inc 100)))
+(s/def ::heat-recovery-type (into #{} (keys ice-stadiums/heat-recovery-types)))
+(s/def ::dryer-type (into #{} (keys ice-stadiums/dryer-types)))
+(s/def ::dryer-duty-type (into #{} (keys ice-stadiums/dryer-duty-types)))
+(s/def ::heat-pump-type (into #{} (keys ice-stadiums/heat-pump-types)))
 
 ;;; Ice maintenance ;;;
 

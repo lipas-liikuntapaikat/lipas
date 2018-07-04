@@ -7,6 +7,10 @@
 
 (def maxc (partial apply max))
 
+(defn ->setter-fn [event]
+  (fn [& args]
+    (==> [event (butlast args) (last args)])))
+
 (defn next-id [db path]
   (-> db (get-in path) keys maxc inc))
 
@@ -37,7 +41,6 @@
 (defn ->select-entries [tr prefix enum-map]
   (map (partial ->localized-select-entry tr prefix) (keys enum-map)))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TODO consider using proper time-manipulation lib ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -61,6 +64,9 @@
   ([y]
    (str y "-12-31")))
 
+(defn timestamp []
+  (.toISOString (js/Date.)))
+
 (defn ->timestamp [year]
   (str year))
 
@@ -71,18 +77,48 @@
         head-at-x (drop-while #(not= x %) ordered)]
     (or (fnext head-at-x) (last (butlast ordered)))))
 
-(comment (resolve-prev-rev [{:timestamp "2018-01-01"}
-                            {:timestamp "2012-01-01"}
-                            {:timestamp "2000-01-01"}]
-                           "2013"))
 (defn resolve-prev-rev [history rev-ts]
-  (let [by-ts   (index-by :timestamp history)
-        closest (prev-or-first (keys by-ts) rev-ts)]
-    (get by-ts closest)))
+  (let [closest (prev-or-first (keys history) rev-ts)]
+    (get history closest)))
 
-(defn make-revision [site timestamp]
-  (let [prev-rev (resolve-prev-rev (:history site) timestamp)]
-    (-> prev-rev
-        (assoc :timestamp timestamp)
-        (dissoc :energy-consumption)
-        (dissoc :visitors))))
+(defn reverse-cmp [a b]
+  (compare b a))
+
+(defn latest-by-year [history]
+  (let [by-year (group-by resolve-year (keys history))]
+    (reduce-kv (fn [res k v]
+                 (assoc res k (first (sort reverse-cmp v))))
+               {}
+               by-year)))
+
+(defn make-year-list
+  "Highlights matching `years`."
+  [years]
+  (let [data (for [y    (range 2000 (inc this-year))
+                   :let [data-exists? (some #{y} years)]]
+               {:label (if data-exists?
+                         (str y " " "✓")
+                         (str y))
+                :value y})]
+    (sort-by :label reverse-cmp data)))
+
+(defn energy-consumption-history [{:keys [history]}]
+  (let [by-year (latest-by-year history)
+        entries (select-keys history (vals by-year))]
+    (map #(assoc (:energy-consumption %)
+                 :year (resolve-year (:timestamp %))) (vals entries))))
+
+(defn find-revision [{:keys [history]} year]
+  (let [latest-by-year (latest-by-year history)
+        timestamp      (get latest-by-year year)]
+    (get history timestamp)))
+
+(defn make-revision
+  ([site]
+   (make-revision site (timestamp)))
+  ([site timestamp]
+   (let [prev-rev (resolve-prev-rev (:history site) timestamp)]
+     (-> prev-rev
+         (assoc :timestamp timestamp)
+         (dissoc :energy-consumption)
+         (dissoc :visitors)))))

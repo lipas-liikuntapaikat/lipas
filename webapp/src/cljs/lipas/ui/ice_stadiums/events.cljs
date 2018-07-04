@@ -1,12 +1,17 @@
 (ns lipas.ui.ice-stadiums.events
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.db :refer [default-db]]
-            [lipas.ui.utils :refer [save-entity ->indexed-map]]))
+  (:require [lipas.ui.db :refer [default-db]]
+            [lipas.ui.utils :as utils]
+            [re-frame.core :as re-frame]))
 
 (defn make-editable [ice-stadium]
   (-> ice-stadium
-      (update-in [:renovations] ->indexed-map)
-      (update-in [:rinks] ->indexed-map)))
+      (update-in [:renovations] utils/->indexed-map)
+      (update-in [:rinks] utils/->indexed-map)))
+
+(defn make-saveable [ice-stadium]
+  (-> ice-stadium
+      (update-in [:renovations] vals)
+      (update-in [:rinks] vals)))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -15,15 +20,44 @@
 
 (re-frame/reg-event-db
  ::set-edit-site
- (fn [db [_ site]]
-   (-> db
-       (assoc-in [:ice-stadiums :editing :site] site)
-       (assoc-in [:ice-stadiums :editing :lipas-id] (:lipas-id site)))))
+ (fn [db [_ {:keys [lipas-id]}]]
+   (assoc-in db [:ice-stadiums :editing :site] lipas-id)))
 
 (re-frame/reg-event-db
- ::set-edit-rev
+ ::select-energy-consumption-year
+ (fn [db [_ year]]
+   (let [lipas-id (-> db :ice-stadiums :editing :site)
+         site     (get-in db [:sports-sites lipas-id])
+         rev      (or (utils/find-revision site year)
+                      (utils/make-revision site (str year)))]
+     (-> db
+         (assoc-in [:ice-stadiums :editing :year] year)
+         (assoc-in [:ice-stadiums :editing :rev] rev)))))
+
+(re-frame/reg-event-db
+ ::commit-energy-consumption
  (fn [db [_ rev]]
-   (assoc-in db [:ice-stadiums :editing :rev] (make-editable rev))))
+   (let [lipas-id  (-> db :ice-stadiums :editing :site)
+         timestamp (:timestamp rev)]
+     (assoc-in db [:sports-sites lipas-id :history timestamp] rev))))
+
+(re-frame/reg-event-db
+ ::edit-site
+ (fn [db [_ {:keys [lipas-id]}]]
+   (let [site      (get-in db [:sports-sites lipas-id])
+         timestamp (utils/timestamp)
+         rev       (utils/make-revision site timestamp)]
+     (assoc-in db [:ice-stadiums :editing :rev] (make-editable rev)))))
+
+;; TODO do ajax request to backend and move this to success handler
+(re-frame/reg-event-db
+ ::commit-edits
+ (fn [db _]
+   (let [rev      (-> db :ice-stadiums :editing :rev make-saveable)
+         lipas-id (:lipas-id rev)]
+     (-> db
+      (assoc-in [:sports-sites lipas-id :latest] rev)
+      (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev)))))
 
 (re-frame/reg-event-db
  ::set-field
@@ -70,21 +104,10 @@
      (assoc-in db [:ice-stadiums :dialogs dialog] empty-data))))
 
 (re-frame/reg-event-db
- ::save-renovation
- (fn [db [_ value]]
-   (let [path [:ice-stadiums :editing :rev :renovations]]
-     (save-entity db path value))))
-
-(re-frame/reg-event-db
  ::save-rink
  (fn [db [_ value]]
    (let [path [:ice-stadiums :editing :rev :rinks]]
-     (save-entity db path value))))
-
-(re-frame/reg-event-db
- ::remove-renovation
- (fn [db [_ {:keys [id]}]]
-   (update-in db [:ice-stadiums :editing :rev :renovations] dissoc id)))
+     (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::remove-rink
@@ -94,5 +117,4 @@
 (re-frame/reg-event-db
  ::display-site
  (fn [db [_ {:keys [lipas-id]}]]
-   (let [site (get-in db [:sports-sites lipas-id])]
-     (assoc-in db [:ice-stadiums :display-site] site))))
+   (assoc-in db [:ice-stadiums :display-site] lipas-id)))

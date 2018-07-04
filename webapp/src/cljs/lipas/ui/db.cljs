@@ -81,26 +81,21 @@
     {:length-m 44
      :width-m 5}]
 
-   ;;; Peruskorjaukset ;;;
-   :renovations
-   [{:year 2013                            ; Peruskorjausvuosi
-     :comment "Asennettiin uusi ilmanvaihto."
-     :main-designers nil}]                 ; varmistetaan Erjalta
-
-   ;; Kylmätekniikka
+   ;;; Kylmätekniikka
    :refrigeration
    {:original? true                        ; Alkuperäinen
     :individual-metering? true             ; Alamittaroitu
     :power-kw 212                          ; Kylmäkoneen teho (kW)
     :condensate-energy-recycling? true     ; Lauhde-energia hyötykäytetty
-    :condensate-energy-main-target         ; Lauhdelämmön pääkäyttökohde
-    "Jäänhoito/käyttöveden lämmitys"
-    :refrigerant "R404A"                   ; Kylmäaine
+    :condensate-energy-main-targets        ; Lauhdelämmön pääkäyttökohde
+    [:maintenance-water-heating
+     :service-water-heating]
+    :refrigerant :R404A                    ; Kylmäaine
     :refrigerant-amount-kg 100             ; Kylmäaineen määrä
-    :refrigerant-solution "Vesi-glykoli"   ; Kylmäliuos
-    :refrigerant-solution-amount-l 7000 }  ; Kylmäliuos 0-30000
+    :refrigerant-solution :water-glycol    ; Kylmäliuos
+    :refrigerant-solution-amount-l 7000}   ; Kylmäliuos 0-30000
 
-   ;; Olosuhteet
+   ;;; Olosuhteet
    :conditions
    {;; --> energiankulutukseen liittyvää lisätietoa kerätään vuositasolla
     :daily-open-hours 15                  ; Aukiolo päivässä (tuntia/pv) ???
@@ -116,7 +111,7 @@
                                           ;  ottelun aikana tavoiteltu
                                           ;  keskilämpötila
 
-   ;; Jäänhoito (vuosittain muuttuvat)
+   ;;; Jäänhoito (vuosittain muuttuvat)
    :ice-maintenance
    {:daily-maintenance-count-week-days 8  ; Jäähoitokerrat arkipäivinä
     :daily-maintenance-count-weekends 12  ; Jäähoitokerrat viikonlppuina
@@ -126,13 +121,13 @@
     :ice-average-thickness-mm 20          ; Jään keskipaksuus mm
     }
 
-   ;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
+   ;;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
    :ventilation
-   {:heat-recovery-type "Levysiirrin"             ; LTO_tyyppi
+   {:heat-recovery-type :plate-heat-exchanger     ; LTO_tyyppi
     :heat-recovery-thermal-efficiency-percent 10  ; LTO_hyötysuhde
-    :dryer-type "Jäähdytyspatteri"                ; Ilmankuivaustapa
-    :dryer-duty-type nil                          ; Ilm.kuiv.käyttötapa
-    :heat-pump-type nil}                          ; Lämpöpumpputyyppi
+    :dryer-type :cooling-coil                     ; Ilmankuivaustapa
+    :dryer-duty-type :manual                      ; Ilm.kuiv.käyttötapa
+    :heat-pump-type :none}                        ; Lämpöpumpputyyppi
 
    ;; Energiankulutus
    :energy-consumption
@@ -209,18 +204,12 @@
     :heat-source :district-heating
     :ventilation-units-count 2}
 
-   ;;; Peruskorjaukset ;;;
-   :renovations
-   [{:year 2016
-     :comment "Remontti 2015/06-2016/11"
-     :main-designers "?"}]
-
    ;;; Vedekäsittely ;;;
    :water-treatment
    {:ozonation? false
     :uv-treatment? true
     :activated-carbon? true
-    :filtering-method [:pressure-sand]
+    :filtering-methods [:pressure-sand]
     :comment "-"}
 
    ;;; Altaat ;;;
@@ -349,12 +338,9 @@
 
 (comment (index-by :id [{:id 1 :name "kissa"}
                         {:id 2 :name "koira"}]))
+
 (defn index-by [idx-fn coll]
   (into {} (map (juxt idx-fn identity)) coll))
-
-(def all-docs [jaahalli-2016 jaahalli-2017
-               vesivelho-2012 vesivelho-2013 vesivelho-2014
-               vesivelho-2015 vesivelho-2016 vesivelho-2017])
 
 (defn gen-pools [n]
   (reduce (fn [res n]
@@ -364,64 +350,69 @@
 
 (def default-db
   {:backend-url "/api"
-   :logged-in? false
-   :translator (i18n/->tr-fn :fi)
+   :logged-in?  false
+   :translator  (i18n/->tr-fn :fi)
 
    ;; Sports sites
    :sports-sites
    (merge (gen-pools 200)
           {
            506032
-           {:latest vesivelho-2017
-            :history [vesivelho-2012 vesivelho-2013 vesivelho-2014
-                      vesivelho-2015 vesivelho-2016 vesivelho-2017]}
+           {:latest  vesivelho-2017
+            :history (index-by :timestamp [vesivelho-2012
+                                           vesivelho-2013
+                                           vesivelho-2014
+                                           vesivelho-2015
+                                           vesivelho-2016
+                                           vesivelho-2017])
+            :edits   nil}
            89839
-           {:latest jaahalli-2017
-            :history [jaahalli-2016 jaahalli-2017]}})
+           {:latest  jaahalli-2017
+            :history (index-by :timestamp [jaahalli-2016 jaahalli-2017])
+            :edits   nil}})
 
    ;; Ice stadiums
    :ice-stadiums
-   {:active-tab 0
-    :editing nil
+   {:active-tab                0
+    :editing                   nil
     :dialogs
-    {:renovation
+    {:rink
      {:open? false
-      :data {:year (.getFullYear (js/Date.))
-             :comment ""
-             :designer ""}}
-     :rink
-     {:open? false
-      :data {:width-m ""
-             :length-m ""}}}
-    :size-categories ice-stadiums/size-categories}
+      :data
+      {:width-m  ""
+       :length-m ""}}}
+    :size-categories           ice-stadiums/size-categories
+    :condensate-energy-targets ice-stadiums/condensate-energy-targets
+    :refrigerants              ice-stadiums/refrigerants
+    :refrigerant-solutions     ice-stadiums/refrigerant-solutions
+    :heat-recovery-types       ice-stadiums/heat-recovery-types
+    :dryer-types               ice-stadiums/dryer-types
+    :dryer-duty-types          ice-stadiums/dryer-duty-types
+    :heat-pump-types           ice-stadiums/heat-pump-types}
 
    ;; Swimming pools
    :swimming-pools
-   {:active-tab 0
-    :pool-types swimming-pools/pool-types
-    :sauna-types swimming-pools/sauna-types
+   {:active-tab        0
+    :pool-types        swimming-pools/pool-types
+    :sauna-types       swimming-pools/sauna-types
     :filtering-methods swimming-pools/filtering-methods
-    :heat-sources swimming-pools/heat-sources
-    :slide-structures materials/slide-structures
-    :pool-structures materials/pool-structures
-    :editing nil
+    :heat-sources      swimming-pools/heat-sources
+    :slide-structures  materials/slide-structures
+    :pool-structures   materials/pool-structures
+    :editing           nil
     :dialogs
-    {:renovation
+    {:pool
      {:open? false
-      :data {:year (.getFullYear (js/Date.))
-             :comment ""
-             :designer ""}}
-     :pool
-     {:open? false
-      :data {:name ""
-             :temperature-c nil
-             :volume-m3 nil
-             :area-m2 nil
-             :length-m nil
-             :width-m nil
-             :depth-min-m nil
-             :depth-max-m nil
-             :structure ""}}
+      :data
+      {:name          ""
+       :temperature-c nil
+       :volume-m3     nil
+       :area-m2       nil
+       :length-m      nil
+       :width-m       nil
+       :depth-min-m   nil
+       :depth-max-m   nil
+       :structure     ""}}
      :slide
      {:open? false}
      :energy
@@ -429,9 +420,9 @@
      :sauna
      {:open? false
       :data
-      {:name ""
+      {:name  ""
        :women false
-       :men false}}}}
+       :men   false}}}}
 
    ;; User
    :user
@@ -439,20 +430,20 @@
     {:username ""
      :password ""}
     :registration-form
-    {:email ""
+    {:email    ""
      :password ""
      :username ""
      :user-data
-     {:firstname ""
-      :lastname ""
+     {:firstname           ""
+      :lastname            ""
       :permissions-request ""}}}
 
-   :admins admins/all
-   :owners owners/all
-   :cities (index-by :city-code cities/active)
-   :types (index-by :type-code types/all)
-   :materials materials/all
-   :building-materials materials/building-materials
+   :admins                admins/all
+   :owners                owners/all
+   :cities                (index-by :city-code cities/active)
+   :types                 (index-by :type-code types/all)
+   :materials             materials/all
+   :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures
-   :ceiling-structures materials/ceiling-structures
+   :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures})

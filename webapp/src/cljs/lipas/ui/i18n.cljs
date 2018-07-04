@@ -75,7 +75,7 @@
     :select-rink "Valitse halli"}
 
    :ice-basic-data
-   {:headline "Ilmoita tiedot"}
+   {:headline "Ilmoita energiankulutus"}
 
    :energy
    {:headline "Energiankulutus"
@@ -94,7 +94,7 @@
    {:headline "Uimahalliportaali"
     :list "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit "Ilmoita tiedot"
+    :edit "Ilmoita energiankulutus"
     :description "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."}
@@ -104,7 +104,7 @@
     :description "Linkit ja ohjeet rajapintojen käyttöön."
     :rest "REST"
     :wms-wfs "WMS & WFS"
-    :wms-wfs-description "Tämmöisetkin löytyy Geoserveriltä"}
+    :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
    :data-users
    {:headline "Käyttäjät"
@@ -187,7 +187,7 @@
 
    :renovations
    {:headline "Peruskorjaukset"
-    :headline-year "Peruskorjaukset parannukset ja remontit vuonna {1}"
+    :headline-year "Peruskorjaukset vuonna {1}"
     :renovations-done? "Halliin on tehty muutos, korjaus tai parannustöitä vuonna {1}"
     :add-renovation "Lisää peruskorjaus"
     :edit-renovation "Muokkaa peruskorjausta"
@@ -206,7 +206,7 @@
     :individual-metering? "Alamittaroitu"
     :power-kw "Kylmäkoneen teho (kW)"
     :condensate-energy-recycling? "Lauhde-energia hyötykäytetty"
-    :condensate-energy-main-target "Lauhdelämmön pääkäyttökohde"
+    :condensate-energy-main-targets "Lauhdelämmön pääkäyttökohde"
     :refrigerant "Kylmäaine"
     :refrigerant-amount-kg "Kylmäaineen määrä (kg)"
     :refrigerant-solution "Kylmäliuos"
@@ -247,7 +247,7 @@
     :ozonation? "Otsonointi"
     :uv-treatment? "UV-käsittely"
     :activated-carbon? "Aktiivihiili"
-    :filtering-method "Suodatustapa"}
+    :filtering-methods "Suodatustapa"}
 
    :pools
    {:headline "Altaat"

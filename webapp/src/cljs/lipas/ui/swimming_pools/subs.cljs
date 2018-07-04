@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :refer [resolve-year index-by]]))
+            [lipas.ui.utils :as utils]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -33,25 +33,40 @@
    (not-empty (select-keys pools ids))))
 
 (re-frame/reg-sub
+ ::sites-to-edit-list
+ :<- [::sites-to-edit]
+ (fn [sites _]
+   (not-empty (map :latest (vals sites)))))
+
+(re-frame/reg-sub
  ::editing-site
  (fn [db _]
-   (-> db :swimming-pools :editing :site)))
+   (let [lipas-id (-> db :swimming-pools :editing :site)]
+     (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::editing-rev
  (fn [db _]
    (-> db :swimming-pools :editing :rev)))
 
-(defn energy-consumption-history [site]
-  (let [entries (map #(assoc (:energy-consumption %)
-                             :year (resolve-year (:timestamp %))) (:history site))]
-    (->> entries (sort-by :year) reverse)))
+(re-frame/reg-sub
+ ::editing-year
+ (fn [db _]
+   (-> db :swimming-pools :editing :year)))
 
 (re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [site (-> db :swimming-pools :editing :site)]
-     (energy-consumption-history site))))
+   (let [lipas-id (-> db :swimming-pools :editing :site)
+         site (get-in db [:sports-sites lipas-id])
+         history (utils/energy-consumption-history site)]
+     (->> history (sort-by :year utils/reverse-cmp)))))
+
+(re-frame/reg-sub
+ ::energy-consumption-years-list
+ :<- [::energy-consumption-history]
+ (fn [history _]
+   (utils/make-year-list (map :year history))))
 
 (re-frame/reg-sub
  ::dialogs
@@ -187,7 +202,7 @@
      :admin       (-> admin locale)}))
 
 (re-frame/reg-sub
- ::swimming-pools-list
+ ::sites-list
  :<- [::swimming-pools]
  :<- [::cities-by-city-code]
  :<- [::admins]
@@ -204,7 +219,8 @@
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
-   (-> db :swimming-pools :display-site)))
+   (let [lipas-id (-> db :swimming-pools :display-site)]
+     (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::display-site
@@ -226,7 +242,7 @@
            admin                (admins (-> latest :admin))
            owner                (owners (-> latest :owner))
            city                 (get cities (-> latest :location :city :city-code))
-           energy-history       (energy-consumption-history site)
+           energy-history       (utils/energy-consumption-history site)
            get-material         #(get-in materials [% locale])
            get-filtering-method #(get-in filtering-methods [% locale])
            get-heat-source      #(get-in heat-sources [% locale])
@@ -262,7 +278,7 @@
 
         :water-treatment
         (-> (:water-treatment latest)
-            (update :filtering-method #(map get-filtering-method %)))
+            (update :filtering-methods #(map get-filtering-method %)))
 
         :pools
         (->> (:pools latest)
@@ -280,4 +296,4 @@
         :other-services     (:other-services latest)
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :energy-consumption energy-history}))))
+        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
