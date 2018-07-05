@@ -70,19 +70,19 @@
 (defn ->timestamp [year]
   (str year))
 
-(comment (prev-or-first [1 3 5] 2))
+(defn reverse-cmp [a b]
+  (compare b a))
+
+(comment (prev-or-first [1 3 5] 4))
 (comment (prev-or-first ["2005" "2012" "2001"] "2006"))
 (defn prev-or-first [coll x]
-  (let [ordered   (-> (conj coll x) sort reverse)
+  (let [ordered   (->> (conj coll x) (sort reverse-cmp))
         head-at-x (drop-while #(not= x %) ordered)]
-    (or (fnext head-at-x) (last (butlast ordered)))))
+    (or (fnext head-at-x) (last (drop-last ordered)))))
 
 (defn resolve-prev-rev [history rev-ts]
   (let [closest (prev-or-first (keys history) rev-ts)]
     (get history closest)))
-
-(defn reverse-cmp [a b]
-  (compare b a))
 
 (defn latest-by-year [history]
   (let [by-year (group-by resolve-year (keys history))]
@@ -117,8 +117,18 @@
   ([site]
    (make-revision site (timestamp)))
   ([site timestamp]
-   (let [prev-rev (resolve-prev-rev (:history site) timestamp)]
+   (let [history-with-edits (merge (:history site) (:edits site))
+         prev-rev (resolve-prev-rev history-with-edits timestamp)]
      (-> prev-rev
          (assoc :timestamp timestamp)
          (dissoc :energy-consumption)
          (dissoc :visitors)))))
+
+(defn latest-edit [edits]
+  (let [latest (first (sort reverse-cmp (keys edits)))]
+    (get edits latest)))
+
+(defn different? [rev1 rev2]
+  (let [rev1 (dissoc rev1 :timestamp :energy-consumption :visitors)
+        rev2 (dissoc rev2 :timestamp :energy-consumption :visitors)]
+    (not= rev1 rev2)))

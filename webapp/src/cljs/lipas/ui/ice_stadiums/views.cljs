@@ -40,20 +40,35 @@
         dryer-duty-types      (<== [::subs/dryer-duty-types])
         heat-pump-types       (<== [::subs/heat-pump-types])
 
+        lipas-id           (:lipas-id site)
+        can-publish?       (<== [::subs/permission-to-publish? lipas-id])
+        uncommitted-edits? (<== [::subs/uncommitted-edits? lipas-id])
+
         set-field (partial set-field :editing :rev)]
 
     (r/with-let [editing? (r/atom false)]
       [lui/full-screen-dialog
        {:open?       ((complement empty?) site)
-        :title       (-> site :name)
+        :title       (if uncommitted-edits?
+                       (tr :statuses/edited (-> site :name))
+                       (-> site :name))
         :close-label (tr :actions/close)
-        :actions     [(when logged-in?
+        :actions     [(when uncommitted-edits?
+                        [lui/discard-button
+                         {:on-click #(==> [::events/discard-edits])
+                          :tooltip  (tr :actions/discard)}])
+                      (when (and uncommitted-edits? can-publish?)
+                        [lui/save-button
+                         {:on-click #(==> [::events/commit-edits])
+                          :tooltip  (tr :actions/save)}])
+                      (when logged-in?
                         [lui/edit-button
                          {:active?  @editing?
                           :on-click #(do (if @editing?
-                                           (==> [::events/commit-edits])
+                                           (==> [::events/save-edits])
                                            (==> [::events/edit-site site]))
-                                         (swap! editing? not))}])]
+                                         (swap! editing? not))
+                          :tooltip  (tr :actions/edit)}])]
         :on-close    #(==> [::events/display-site nil])}
 
        [mui/grid {:container true}

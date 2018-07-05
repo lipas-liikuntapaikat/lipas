@@ -5,13 +5,11 @@
 
 (defn make-editable [ice-stadium]
   (-> ice-stadium
-      (update-in [:renovations] utils/->indexed-map)
       (update-in [:rinks] utils/->indexed-map)))
 
 (defn make-saveable [ice-stadium]
   (-> ice-stadium
-      (update-in [:renovations] vals)
-      (update-in [:rinks] vals)))
+      (update-in [:rinks] (comp (fn [m] (map #(dissoc % :id) m)) vals))))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -49,13 +47,36 @@
          rev       (utils/make-revision site timestamp)]
      (assoc-in db [:ice-stadiums :editing :rev] (make-editable rev)))))
 
+(re-frame/reg-event-db
+ ::save-edits
+ (fn [db _]
+   (let [rev         (-> db :ice-stadiums :editing :rev make-saveable)
+         lipas-id    (:lipas-id rev)
+         site        (get-in db [:sports-sites lipas-id])
+         original    (-> site :latest)
+         original?   (not (utils/different? rev original))
+         latest-edit (utils/latest-edit (-> site :edits))
+         dirty?      (utils/different? rev (or latest-edit original))
+         timestamp   (:timestamp rev)]
+     (cond
+       original? (assoc-in db [:sports-sites lipas-id :edits] nil)
+       dirty?    (assoc-in db [:sports-sites lipas-id :edits timestamp] rev)
+       :else     db))))
+
+(re-frame/reg-event-db
+ ::discard-edits
+ (fn [db _]
+   (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)]
+     (assoc-in db [:sports-sites lipas-id :edits] nil))))
+
 ;; TODO do ajax request to backend and move this to success handler
 (re-frame/reg-event-db
  ::commit-edits
  (fn [db _]
-   (let [rev      (-> db :ice-stadiums :editing :rev make-saveable)
-         lipas-id (:lipas-id rev)]
+   (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)
+         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))]
      (-> db
+      (assoc-in [:sports-sites lipas-id :edits] nil)
       (assoc-in [:sports-sites lipas-id :latest] rev)
       (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev)))))
 

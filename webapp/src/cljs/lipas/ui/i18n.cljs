@@ -325,11 +325,15 @@
     :edit           "Muokkaa"
     :save           "Tallenna"
     :delete         "Poista"
+    :discard        "Kumoa"
     :cancel         "Peruuta"
     :close          "Sulje"
     :select-hall    "Valitse halli"
     :select-year    "Valitse vuosi"
     :show-all-years "Näytä kaikki vuodet"}
+
+   :statuses
+   {:edited "{1} (muokattu)"}
 
    :general
    {:name         "Nimi"
