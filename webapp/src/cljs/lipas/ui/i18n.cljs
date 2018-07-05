@@ -12,339 +12,339 @@
 
 (def fi
   {:menu
-   {:headline "LIPAS"
-    :jyu "Jyväskylän yliopisto"
+   {:headline  "LIPAS"
+    :jyu       "Jyväskylän yliopisto"
     :frontpage "Etusivu"}
 
    :home-page
    {:headline "Etusivu"}
 
    :sport
-   {:headline "Liikuntapaikat"
-    :description "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
+   {:headline          "Liikuntapaikat"
+    :description       "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi vielä
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
    :sports-place
-   {:headline "Liikuntapaikka"
-    :id "LIPAS-ID"
-    :name "Nimi"
-    :name-fi "Nimi"
-    :name-se "Nimi ruotsiksi"
-    :name-en "Nimi englanniksi"
-    :owner "Omistaja"
-    :admin "Ylläpitäjä"
+   {:headline     "Liikuntapaikka"
+    :id           "LIPAS-ID"
+    :name         "Nimi"
+    :name-fi      "Nimi"
+    :name-se      "Nimi ruotsiksi"
+    :name-en      "Nimi englanniksi"
+    :owner        "Omistaja"
+    :admin        "Ylläpitäjä"
     :phone-number "Puhelinnumero"
-    :www "Web-sivu"
+    :www          "Web-sivu"
     :email-public "Sähköposti (julkinen)"}
 
    :type
    {:type-code "Tyyppikoodi"
-    :name "Liikuntapaikkatyyppi"}
+    :name      "Liikuntapaikkatyyppi"}
 
    :admin (->translation-map :fi admins/all)
    :owner (->translation-map :fi owners/all)
 
    :location
-   {:headline "Sijainti"
-    :address "Katuosoite"
-    :postal-code "Postinumero"
+   {:headline      "Sijainti"
+    :address       "Katuosoite"
+    :postal-code   "Postinumero"
     :postal-office "Postitoimipaikka"
-    :city "Kunta"
-    :city-code "Kuntanumero"}
+    :city          "Kunta"
+    :city-code     "Kuntanumero"}
 
    :ice
-   {:headline "Jäähalliportaali"
-    :description "Jäähalliportaali sisältää
+   {:headline      "Jäähalliportaali"
+    :description   "Jäähalliportaali sisältää
               hallien perus- ja energiankulutustietoja sekä ohjeita
               energiatehokkuuden parantamiseen"
     :size-category "Kokoluokitus"
-    :small "Pieni kilpahalli > 500 hlö"
-    :competition "Kilpahalli < 3000 hlö"
-    :large "Suurhalli > 3000 hlö"}
+    :small         "Pieni kilpahalli > 500 hlö"
+    :competition   "Kilpahalli < 3000 hlö"
+    :large         "Suurhalli > 3000 hlö"}
 
    :ice-rinks
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline "Energiatehokkuus"
+   {:headline    "Energiatehokkuus"
     :description "Tänne .pdf dokumentti"}
 
    :ice-form
-   {:headline "Ilmoita kulutustiedot"
+   {:headline    "Ilmoita kulutustiedot"
     :select-rink "Valitse halli"}
 
    :ice-basic-data
    {:headline "Ilmoita energiankulutus"}
 
    :energy
-   {:headline "Energiankulutus"
+   {:headline      "Energiankulutus"
     :headline-year "Energiankulutus vuonna {1}"
-    :electricity "Sähkö MWh"
-    :heat "Lämpö (ostettu) MWh"
-    :water "Vesi m³"
-    :yearly "Energiankulutus vuositasolla"
-    :monthly? "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
+    :electricity   "Sähkö MWh"
+    :heat          "Lämpö (ostettu) MWh"
+    :water         "Vesi m³"
+    :yearly        "Energiankulutus vuositasolla"
+    :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
 
    :visitors
-   {:headline "Kävijämäärät"
+   {:headline      "Kävijämäärät"
     :headline-year "Kävijämäärä vuonna {1}"
-    :total-count "Kokonaismäärä"}
+    :total-count   "Kokonaismäärä"}
    :swim
-   {:headline "Uimahalliportaali"
-    :list "Hallien tiedot"
+   {:headline       "Uimahalliportaali"
+    :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit "Ilmoita energiankulutus"
-    :description "Uimahalliportaali sisältää hallien perus- ja
+    :edit           "Ilmoita energiankulutus"
+    :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."}
 
    :open-data
-   {:headline "Avoin data"
-    :description "Linkit ja ohjeet rajapintojen käyttöön."
-    :rest "REST"
-    :wms-wfs "WMS & WFS"
+   {:headline            "Avoin data"
+    :description         "Linkit ja ohjeet rajapintojen käyttöön."
+    :rest                "REST"
+    :wms-wfs             "WMS & WFS"
     :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
    :data-users
-   {:headline "Käyttäjät"
+   {:headline    "Käyttäjät"
     :description "Olisiko tähän hyvä laittaa lista Lipaksen datan
     hyödyntäjistä ja muista käyttäjistä?"}
 
    :partners
-   {:headline "Kumppanit"
+   {:headline    "Kumppanit"
     :description "Yhteistyökumppaneille voisi olla myös oma osio. Tai
     ainakin listaus logoineen."}
 
    :team
-   {:headline "Tiimi"
+   {:headline    "Tiimi"
     :description "Tekijöille voisi olla myös esittely?"}
 
-   :pool-types (->translation-map :fi pools/pool-types)
-   :sauna-types (->translation-map :fi pools/sauna-types)
-   :heat-sources (->translation-map :fi pools/heat-sources)
-   :filtering-methods (->translation-map :fi pools/filtering-methods)
-   :pool-structures (->translation-map :fi materials/pool-structures)
-   :slide-structures (->translation-map :fi materials/slide-structures)
-   :building-materials (->translation-map :fi materials/building-materials)
+   :pool-types            (->translation-map :fi pools/pool-types)
+   :sauna-types           (->translation-map :fi pools/sauna-types)
+   :heat-sources          (->translation-map :fi pools/heat-sources)
+   :filtering-methods     (->translation-map :fi pools/filtering-methods)
+   :pool-structures       (->translation-map :fi materials/pool-structures)
+   :slide-structures      (->translation-map :fi materials/slide-structures)
+   :building-materials    (->translation-map :fi materials/building-materials)
    :supporting-structures (->translation-map :fi materials/supporting-structures)
-   :ceiling-structures (->translation-map :fi materials/ceiling-structures)
+   :ceiling-structures    (->translation-map :fi materials/ceiling-structures)
 
    :help
-   {:headline "Ohjeet"
+   {:headline    "Ohjeet"
     :description "Lipaksen käyttöohjeet, videot yms."}
 
    :user
-   {:headline "Oma sivu"
-    :greeting "Hei {1} {2}!"
+   {:headline              "Oma sivu"
+    :greeting              "Hei {1} {2}!"
     :requested-permissions "Pyydetyt oikeudet"}
 
    :register
-   {:headline "Rekisteröidy"
-    :email "Sähköposti"
-    :email-example "email@example.com"
-    :username "Käyttäjätunnus"
-    :username-example "tane12"
-    :firstname "Etunimi"
-    :lastname "Sukunimi"
-    :password "Salasana"
-    :permissions "Käyttöoikeudet"
+   {:headline            "Rekisteröidy"
+    :email               "Sähköposti"
+    :email-example       "email@example.com"
+    :username            "Käyttäjätunnus"
+    :username-example    "tane12"
+    :firstname           "Etunimi"
+    :lastname            "Sukunimi"
+    :password            "Salasana"
+    :permissions         "Käyttöoikeudet"
     :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."
-    :permissions-help "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
+    :permissions-help    "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
 
    :login
-   {:headline "Kirjaudu"
-    :username "Käyttäjätunnus"
+   {:headline         "Kirjaudu"
+    :username         "Käyttäjätunnus"
     :username-example "tane12"
-    :password "Salasana"
-    :login "Kirjaudu"
-    :logout "Kirjaudu ulos"
-    :bad-credentials "Käyttäjätunnus tai salasana ei kelpaa"}
+    :password         "Salasana"
+    :login            "Kirjaudu"
+    :logout           "Kirjaudu ulos"
+    :bad-credentials  "Käyttäjätunnus tai salasana ei kelpaa"}
 
    :building
-   {:headline "Rakennus"
-    :construction-year "Rakennusvuosi"
-    :main-designers "Pääsuunnittelijat"
-    :total-surface-area-m2 "Bruttopinta-ala m²"
-    :total-volume-m3 "Bruttotilavuus m³"
-    :pool-room-total-area-m2 "Allashuoneen pinta-ala m²"
-    :total-water-area-m2 "Vesipinta-ala m²"
+   {:headline                    "Rakennus"
+    :construction-year           "Rakennusvuosi"
+    :main-designers              "Pääsuunnittelijat"
+    :total-surface-area-m2       "Bruttopinta-ala m²"
+    :total-volume-m3             "Bruttotilavuus m³"
+    :pool-room-total-area-m2     "Allashuoneen pinta-ala m²"
+    :total-water-area-m2         "Vesipinta-ala m²"
     :water-slides-total-length-m "Vesiliukumäet yht. (m)"
-    :heat-sections? "Allastila on jaettu lämpötilaosioihin"
-    :piled? "Paalutettu"
-    :heat-source "Lämmönlähde"
+    :heat-sections?              "Allastila on jaettu lämpötilaosioihin"
+    :piled?                      "Paalutettu"
+    :heat-source                 "Lämmönlähde"
     :main-construction-materials "Päärakennusmateriaalit"
-    :supporting-structures "Kantavat rakenteet"
-    :ceiling-structures "Yläpohjan rakenteet"
-    :staff-count "Henkilökunnan lukumäärä"
-    :seating-capacity "Katsomokapasiteetti"}
+    :supporting-structures       "Kantavat rakenteet"
+    :ceiling-structures          "Yläpohjan rakenteet"
+    :staff-count                 "Henkilökunnan lukumäärä"
+    :seating-capacity            "Katsomokapasiteetti"}
 
    :envelope-structure
-   {:headline "Vaipan rakenne"
-    :base-floor-structure "Alapohjan laatan rakenne"
-    :insulated-exterior? "Ulkoseinä lämpöeristetty"
-    :insulated-ceiling? "Yläpohja lämpöeristetty"
+   {:headline                "Vaipan rakenne"
+    :base-floor-structure    "Alapohjan laatan rakenne"
+    :insulated-exterior?     "Ulkoseinä lämpöeristetty"
+    :insulated-ceiling?      "Yläpohja lämpöeristetty"
     :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnote"}
 
    :renovations
-   {:headline "Peruskorjaukset"
-    :headline-year "Peruskorjaukset vuonna {1}"
+   {:headline          "Peruskorjaukset"
+    :headline-year     "Peruskorjaukset vuonna {1}"
     :renovations-done? "Halliin on tehty muutos, korjaus tai parannustöitä vuonna {1}"
-    :add-renovation "Lisää peruskorjaus"
-    :edit-renovation "Muokkaa peruskorjausta"
-    :end-year "Valmistumisvuosi"
-    :designers "Suunnittelijat"
-    :done? "Rakennukseen on tehty peruskorjauksia tai parannuksia..."}
+    :add-renovation    "Lisää peruskorjaus"
+    :edit-renovation   "Muokkaa peruskorjausta"
+    :end-year          "Valmistumisvuosi"
+    :designers         "Suunnittelijat"
+    :done?             "Rakennukseen on tehty peruskorjauksia tai parannuksia..."}
 
    :rinks
-   {:headline "Radat"
+   {:headline  "Radat"
     :edit-rink "Muokkaa rataa"
-    :add-rink "Lisää rata"}
+    :add-rink  "Lisää rata"}
 
    :refrigeration
-   {:headline "Kylmätekniikka"
-    :original? "Alkuperäinen"
-    :individual-metering? "Alamittaroitu"
-    :power-kw "Kylmäkoneen teho (kW)"
-    :condensate-energy-recycling? "Lauhde-energia hyötykäytetty"
+   {:headline                       "Kylmätekniikka"
+    :original?                      "Alkuperäinen"
+    :individual-metering?           "Alamittaroitu"
+    :power-kw                       "Kylmäkoneen teho (kW)"
+    :condensate-energy-recycling?   "Lauhde-energia hyötykäytetty"
     :condensate-energy-main-targets "Lauhdelämmön pääkäyttökohde"
-    :refrigerant "Kylmäaine"
-    :refrigerant-amount-kg "Kylmäaineen määrä (kg)"
-    :refrigerant-solution "Kylmäliuos"
-    :refrigerant-solution-amount-l "Kylmäliuoksen määrä (l)"}
+    :refrigerant                    "Kylmäaine"
+    :refrigerant-amount-kg          "Kylmäaineen määrä (kg)"
+    :refrigerant-solution           "Kylmäliuos"
+    :refrigerant-solution-amount-l  "Kylmäliuoksen määrä (l)"}
 
    :conditions
-   {:headline "Olosuhteet"
-    :daily-open-hours "Aukiolotunnit päivässä"
-    :open-months "Aukiolokuukaudet vuodessa"
-    :air-humidity-min "Ilman suhteellinen kosteus % min"
-    :air-humidity-max "Ilman suhteellinen kosteus % max"
-    :ice-surface-temperature-c "Jään pinnan lämpötila"
+   {:headline                   "Olosuhteet"
+    :daily-open-hours           "Aukiolotunnit päivässä"
+    :open-months                "Aukiolokuukaudet vuodessa"
+    :air-humidity-min           "Ilman suhteellinen kosteus % min"
+    :air-humidity-max           "Ilman suhteellinen kosteus % max"
+    :ice-surface-temperature-c  "Jään pinnan lämpötila"
     :skating-area-temperature-c "Luistelualueen lämpötila 1m korkeudella"
-    :stand-temperature-c "Katsomon tavoiteltu keskilämpötila
+    :stand-temperature-c        "Katsomon tavoiteltu keskilämpötila
           ottelun aikana"}
 
    :ice-maintenance
-   {:headline "Jäänhoito"
+   {:headline                          "Jäänhoito"
     :daily-maintenance-count-week-days "Jäähoitokerrat arkipäivinä"
-    :daily-maintenance-count-weekends "Jäähoitokerrat viikonlppuina"
-    :average-water-consumption-l "Keskimääräinen jäänhoitoon
+    :daily-maintenance-count-weekends  "Jäähoitokerrat viikonlppuina"
+    :average-water-consumption-l       "Keskimääräinen jäänhoitoon
           käytetty veden määrä (per ajo)"
-    :maintenance-water-temperature-c "Jäähoitoveden
+    :maintenance-water-temperature-c   "Jäähoitoveden
           lämpötila (tavoite +40)"
-    :ice-average-thickness-mm "Jään keskipaksuus mm"}
+    :ice-average-thickness-mm          "Jään keskipaksuus mm"}
 
    :ventilation
-   {:headline "Hallin ilmanvaihto"
-    :heat-recovery-type "Lämmöntalteenoton tyyppi"
+   {:headline                                 "Hallin ilmanvaihto"
+    :heat-recovery-type                       "Lämmöntalteenoton tyyppi"
     :heat-recovery-thermal-efficiency-percent "Lämmöntalteenoton
           hyötysuhde %"
-    :dryer-type "Ilmankuivaustapa"
-    :dryer-duty-type "Ilmankuivauksen käyttötapa"
-    :heat-pump-type "Lämpöpumpputyyppi"}
+    :dryer-type                               "Ilmankuivaustapa"
+    :dryer-duty-type                          "Ilmankuivauksen käyttötapa"
+    :heat-pump-type                           "Lämpöpumpputyyppi"}
 
    :water-treatment
-   {:headline "Vedenkäsittely"
-    :ozonation? "Otsonointi"
-    :uv-treatment? "UV-käsittely"
+   {:headline          "Vedenkäsittely"
+    :ozonation?        "Otsonointi"
+    :uv-treatment?     "UV-käsittely"
     :activated-carbon? "Aktiivihiili"
     :filtering-methods "Suodatustapa"}
 
    :pools
-   {:headline "Altaat"
-    :add-pool "Lisää allas"
+   {:headline  "Altaat"
+    :add-pool  "Lisää allas"
     :edit-pool "Muokkaa allasta"
     :structure "Rakenne"}
 
    :slides
-   {:headline "Liukumäet"
-    :add-slide "Lisää liukumäki"
+   {:headline   "Liukumäet"
+    :add-slide  "Lisää liukumäki"
     :edit-slide "Muokkaa liukumäkeä"}
 
    :saunas
-   {:headline "Saunat"
-    :add-sauna "Lisää sauna"
+   {:headline   "Saunat"
+    :add-sauna  "Lisää sauna"
     :edit-sauna "Muokkaa saunaa"
-    :women "Naiset"
-    :men "Miehet"}
+    :women      "Naiset"
+    :men        "Miehet"}
 
    :other-services
-   {:headline "Muut palvelut"
-    :platforms-1m-count "1m hyppypaikkojen lkm"
-    :platforms-3m-count "3m hyppypaikkojen lkm"
-    :platforms-5m-count "5m hyppypaikkojen lkm"
-    :platforms-7.5m-count "7.5m hyppypaikkojen lkm"
-    :platforms-10m-count "10m hyppypaikkojen lkm"
-    :hydro-massage-spots-count "Hierontapisteiden lkm"
+   {:headline                       "Muut palvelut"
+    :platforms-1m-count             "1m hyppypaikkojen lkm"
+    :platforms-3m-count             "3m hyppypaikkojen lkm"
+    :platforms-5m-count             "5m hyppypaikkojen lkm"
+    :platforms-7.5m-count           "7.5m hyppypaikkojen lkm"
+    :platforms-10m-count            "10m hyppypaikkojen lkm"
+    :hydro-massage-spots-count      "Hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
-    :kiosk? "Kioski / kahvio"}
+    :kiosk?                         "Kioski / kahvio"}
 
    :facilities
-   {:headline "Suihkut ja pukukaapit"
-    :showers-men-count "Miesten suihkut lkm"
+   {:headline            "Suihkut ja pukukaapit"
+    :showers-men-count   "Miesten suihkut lkm"
     :showers-women-count "Naisten suihkut lkm"
-    :lockers-men-count "Miesten pukukaapit lkm"
+    :lockers-men-count   "Miesten pukukaapit lkm"
     :lockers-women-count "Naisten pukukaapit lkm"}
 
    :dimensions
-   {:volume-m3 "Tilavuus m²"
-    :area-m2 "Pinta-ala m²"
+   {:volume-m3       "Tilavuus m²"
+    :area-m2         "Pinta-ala m²"
     :surface-area-m2 "Pinta-ala m²"
-    :length-m "Pituus m"
-    :width-m "Leveys m"
-    :depth-min-m "Syvyys min m"
-    :depth-max-m "Syvyys max m"}
+    :length-m        "Pituus m"
+    :width-m         "Leveys m"
+    :depth-min-m     "Syvyys min m"
+    :depth-max-m     "Syvyys max m"}
 
    :units
-   {:person "hlö"
-    :pcs "kpl"
+   {:person  "hlö"
+    :pcs     "kpl"
     :percent "%"}
 
    :physical-units
    {:temperature-c "Lämpötila °C"
-    :mwh "MWh"
-    :m "m"
-    :m2 "m²"
-    :m3 "m³"
-    :celsius "°C"
-    :hour "h"}
+    :mwh           "MWh"
+    :m             "m"
+    :m2            "m²"
+    :m3            "m³"
+    :celsius       "°C"
+    :hour          "h"}
 
    :time
-   {:year "Vuosi"
-    :hour "Tunti"
+   {:year  "Vuosi"
+    :hour  "Tunti"
     :month "Kuukausi"
     :start "Alkoi"
     :end   "Päättyi"}
 
    :duration
-   {:hour "tuntia"
+   {:hour  "tuntia"
     :month "kuukautta"}
 
    :actions
-   {:add "Lisää"
-    :edit "Muokkaa"
-    :save "Tallenna"
-    :delete "Poista"
-    :cancel "Peruuta"
-    :close "Sulje"
-    :select-hall "Valitse halli"
-    :select-year "Valitse vuosi"
+   {:add            "Lisää"
+    :edit           "Muokkaa"
+    :save           "Tallenna"
+    :delete         "Poista"
+    :cancel         "Peruuta"
+    :close          "Sulje"
+    :select-hall    "Valitse halli"
+    :select-year    "Valitse vuosi"
     :show-all-years "Näytä kaikki vuodet"}
 
    :general
-   {:name "Nimi"
-    :type "Tyyppi"
-    :description "Kuvaus"
+   {:name         "Nimi"
+    :type         "Tyyppi"
+    :description  "Kuvaus"
     :general-info "Yleiset tiedot"
-    :comment "Kommentti"
-    :structure "Rakenne"}
+    :comment      "Kommentti"
+    :structure    "Rakenne"}
 
    :notification
    {:save-success "Tallennus onnistui"
-    :save-failed "Tallennus epäonnistui"}
+    :save-failed  "Tallennus epäonnistui"}
 
    :disclaimer
-   {:headline "HUOMIO!"
+   {:headline     "HUOMIO!"
     :test-version "Tämä on LIPAS-sovelluksen testiversio ja
     tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan
     Lipakseen."}
