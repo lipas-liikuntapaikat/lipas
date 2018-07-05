@@ -24,15 +24,26 @@
 
 ;;; Components ;;;
 
-(defn save-button [{:keys [on-click] :as props}]
-  [mui/button (merge props {:on-click on-click
-                            :color    "primary"})
-   [mui/icon "save_icon"]])
+(defn edit-button [{:keys [on-click active? tooltip]}]
+  [mui/tooltip {:title     (or tooltip "")
+                :placement "top"}
+   [mui/button {:on-click on-click
+                :color    (if active? "secondary" "primary")}
+    [mui/icon "edit_icon"]]])
 
-(defn edit-button [{:keys [on-click active?]}]
-  [mui/button {:on-click on-click
-               :color    (if active? "secondary" "primary")}
-   [mui/icon "edit_icon"]])
+(defn save-button [{:keys [on-click tooltip] :as props}]
+  [mui/tooltip {:title     (or tooltip "")
+                :placement "top"}
+   [mui/button (merge props {:on-click on-click
+                             :color    "primary"})
+    [mui/icon "save_icon"]]])
+
+(defn discard-button [{:keys [on-click tooltip] :as props}]
+  [mui/tooltip {:title     (or tooltip "")
+                :placement "top"}
+   [mui/button (merge props {:on-click on-click
+                             :color    "primary"})
+    [mui/icon "undo"]]])
 
 (defn checkbox [{:keys [label value on-change]}]
   [mui/form-control-label

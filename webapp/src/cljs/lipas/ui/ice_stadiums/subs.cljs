@@ -24,6 +24,11 @@
    (-> db :ice-stadiums :editing :year)))
 
 (re-frame/reg-sub
+ ::uncommitted-edits?
+ (fn [db [_ lipas-id]]
+   ((complement empty?) (get-in db [:sports-sites lipas-id :edits]))))
+
+(re-frame/reg-sub
  ::energy-consumption-data
  :<- [::editing-site]
  :<- [::editing-year]
@@ -50,6 +55,12 @@
  ::access-to-sports-sites
  (fn [db _]
    (-> db :user :login :permissions :sports-sites)))
+
+(re-frame/reg-sub
+ ::permission-to-publish?
+ :<- [::access-to-sports-sites]
+ (fn [ids [_ lipas-id]]
+   (boolean (some #{lipas-id} ids))))
 
 (re-frame/reg-sub
  ::sports-sites
@@ -243,7 +254,8 @@
        heat-recovery-types dryer-types dryer-duty-types heat-pump-types
        materials] [_ locale]]
    (when site
-     (let [latest               (:latest site)
+     (let [latest               (or (utils/latest-edit (:edits site))
+                                    (:latest site))
            type                 (types (-> latest :type :type-code))
            size-category        (size-categories (-> latest :type :size-category))
            admin                (admins (-> latest :admin))
