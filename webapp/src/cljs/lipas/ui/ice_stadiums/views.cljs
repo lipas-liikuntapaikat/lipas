@@ -598,25 +598,25 @@
         [mui/tabs {:scrollable true
                    :full-width true
                    :text-color "secondary"
-                   :on-change #(==> [::events/set-active-tab %2])
-                   :value @active-tab}
+                   :on-change  #(==> [::events/set-active-tab %2])
+                   :value      @active-tab}
 
          ;; 0 Ice stadiums tab
          [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon (r/as-element [mui/icon "info"])}]
+                   :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 1 Energy form tab
-         (when logged-in?
-           [mui/tab {:label (tr :ice-basic-data/headline)
-                     :icon (r/as-element [mui/icon "edit"])}])
+         [mui/tab {:label    (tr :ice-basic-data/headline)
+                   :icon     (r/as-element [mui/icon "edit"])
+                   :disabled (not logged-in?)}]
 
          ;; 2 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
-                   :icon (r/as-element [mui/icon "compare"])}]
+                   :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 3 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui/icon "flash_on"])}]]]]]
+                   :icon  (r/as-element [mui/icon "flash_on"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab

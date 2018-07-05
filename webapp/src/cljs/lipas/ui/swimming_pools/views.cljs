@@ -585,9 +585,9 @@
                    :icon (r/as-element [mui/icon "list_alt"])}]
 
          ;; 1 Energy form tab
-         (when logged-in?
-           [mui/tab {:label (tr :swim/edit)
-                     :icon (r/as-element [mui/icon "edit"])}])
+         [mui/tab {:label (tr :swim/edit)
+                   :icon (r/as-element [mui/icon "edit"])
+                   :disabled (not logged-in?)}]
 
          ;; 2 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
