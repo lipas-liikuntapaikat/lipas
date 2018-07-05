@@ -136,6 +136,7 @@
 
    :user
    {:headline "Oma sivu"
+    :greeting "Hei {1} {2}!"
     :requested-permissions "Pyydetyt oikeudet"}
 
    :register
