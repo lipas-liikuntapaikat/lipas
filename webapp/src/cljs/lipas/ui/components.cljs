@@ -45,6 +45,29 @@
                              :color    "primary"})
     [mui/icon "undo"]]])
 
+;; Returns actually a list of components.
+;; TODO think something more intuitive here.
+(defn edit-actions-list [{:keys [uncommitted-edits? editing? logged-in?
+                                 user-can-publish? on-discard
+                                 discard-tooltip edit-tooltip
+                                 publish-tooltip on-edit-start on-edit-end
+                                 on-publish]}]
+  [(when uncommitted-edits?
+     [discard-button
+      {:on-click on-discard
+       :tooltip  discard-tooltip}])
+   (when (and uncommitted-edits? user-can-publish?)
+     [save-button
+      {:on-click on-publish
+       :tooltip  publish-tooltip}])
+   (when logged-in?
+     [edit-button
+      {:active?  editing?
+       :on-click #(if editing?
+                    (on-edit-end %)
+                    (on-edit-start %))
+       :tooltip  edit-tooltip}])])
+
 (defn checkbox [{:keys [label value on-change]}]
   [mui/form-control-label
    {:label label

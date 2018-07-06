@@ -33,6 +33,12 @@
    (not-empty (select-keys pools ids))))
 
 (re-frame/reg-sub
+ ::permission-to-publish?
+ :<- [::access-to-sports-sites]
+ (fn [ids [_ lipas-id]]
+   (boolean (some #{lipas-id} ids))))
+
+(re-frame/reg-sub
  ::sites-to-edit-list
  :<- [::sites-to-edit]
  (fn [sites _]
@@ -53,6 +59,11 @@
  ::editing-year
  (fn [db _]
    (-> db :swimming-pools :editing :year)))
+
+(re-frame/reg-sub
+ ::uncommitted-edits?
+ (fn [db [_ lipas-id]]
+   ((complement empty?) (get-in db [:sports-sites lipas-id :edits]))))
 
 (re-frame/reg-sub
  ::energy-consumption-history
@@ -237,7 +248,8 @@
  (fn [[site cities admins owners types materials filtering-methods
        heat-sources pool-types sauna-types] [_ locale]]
    (when site
-     (let [latest               (:latest site)
+     (let [latest               (or (utils/latest-edit (:edits site))
+                                    (:latest site))
            type                 (types (-> latest :type :type-code))
            admin                (admins (-> latest :admin))
            owner                (owners (-> latest :owner))

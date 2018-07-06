@@ -36,22 +36,37 @@
         building-materials    (<== [::subs/building-materials])
         supporting-structures (<== [::subs/supporting-structures])
         ceiling-structures    (<== [::subs/ceiling-structures])
-        set-field             (partial set-field :editing :rev)]
+        set-field             (partial set-field :editing :rev)
+
+        lipas-id           (:lipas-id display-data)
+        user-can-publish?  (<== [::subs/permission-to-publish? lipas-id])
+        uncommitted-edits? (<== [::subs/uncommitted-edits? lipas-id])]
 
     (r/with-let [editing? (r/atom false)]
 
       [lui/full-screen-dialog
-       {:open?       ((complement empty?) display-data)
-        :title       (-> display-data :name)
+       {:open? ((complement empty?) display-data)
+        :title (if uncommitted-edits?
+                 (tr :statuses/edited (-> display-data :name))
+                 (-> display-data :name))
+
+        :on-close    #(==> [::events/display-site nil])
         :close-label (tr :actions/close)
-        :actions     [(when logged-in?
-                        [lui/edit-button
-                         {:active?  @editing?
-                          :on-click #(do (if @editing?
-                                           (==> [::events/commit-edits])
-                                           (==> [::events/edit-site display-data]))
-                                         (swap! editing? not))}])]
-        :on-close    #(==> [::events/display-site nil])}
+
+        :actions (lui/edit-actions-list
+                  {:uncommitted-edits? uncommitted-edits?
+                   :editing?           @editing?
+                   :logged-in?         logged-in?
+                   :user-can-publish?  user-can-publish?
+                   :on-discard         #(==> [::events/discard-edits])
+                   :discard-tooltip    (tr :actions/discard)
+                   :on-edit-start      #(do (==> [::events/edit-site display-data])
+                                            (swap! editing? not))
+                   :on-edit-end        #(do (==> [::events/save-edits])
+                                            (swap! editing? not))
+                   :edit-tooltip       (tr :actions/edit)
+                   :on-publish         #(==> [::events/commit-edits])
+                   :publish-tooltip    (tr :actions/save)})}
 
        [mui/grid {:container true}
 
@@ -552,7 +567,7 @@
            :items     data
            :label-fn  (comp locale :name)
            :value-fn  :lipas-id
-           :on-change #(==> [::events/set-edit-site {:lipas-id %}])}]]])
+           :on-change #(==> [::events/select-energy-consumption-site {:lipas-id %}])}]]])
 
      (when site
        [lui/form-card {:title (tr :actions/select-year)}
