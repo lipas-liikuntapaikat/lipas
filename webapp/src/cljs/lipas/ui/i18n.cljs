@@ -80,8 +80,9 @@
    :energy
    {:headline      "Energiankulutus"
     :headline-year "Energiankulutus vuonna {1}"
-    :electricity   "Sähkö MWh"
-    :heat          "Lämpö (ostettu) MWh"
+    :electricity   "Sähköenergia MWh"
+    :heat          "Lämpöenergia (ostettu) MWh"
+    :cold          "Kylmäenergia (ostettu) Mwh"
     :water         "Vesi m³"
     :yearly        "Energiankulutus vuositasolla"
     :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}

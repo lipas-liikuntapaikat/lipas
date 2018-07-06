@@ -3,7 +3,7 @@
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]))
 
-(defn form [{:keys [tr data on-change disabled?]}]
+(defn form [{:keys [tr data on-change disabled? cold?]}]
   [mui/form-group
    [lui/text-field {:label     (tr :energy/electricity)
                     :disabled  disabled?
@@ -21,6 +21,15 @@
                     :value     (:heat-mwh data)
                     :on-change #(on-change :heat-mwh %)}]
 
+   (when cold?
+     [lui/text-field {:label     (tr :energy/cold)
+                      :disabled  disabled?
+                      :type      "number"
+                      :spec      ::schema/cold-mwh
+                      :adornment (tr :physical-units/mwh)
+                      :value     (:cold-mwh data)
+                      :on-change #(on-change :cold-mwh %)}])
+
    [lui/text-field {:label     (tr :energy/water)
                     :disabled  disabled?
                     :type      "number"
@@ -30,19 +39,19 @@
                     :on-change #(on-change :water-m3 %)}]])
 
 (comment ;; Example data grid
-  {1  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   2  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   3  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   4  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   5  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   6  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   7  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   8  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   9  {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   10 {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   11 {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}
-   12 {:electricity-mwh 1233 :heat-mwh 2323 :water-m3 5533}})
-(defn form-monthly [{:keys [tr data on-change]}]
+  {1  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   2  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   3  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   4  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   5  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   6  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   7  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   8  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   9  {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   10 {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   11 {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
+   12 {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}})
+(defn form-monthly [{:keys [tr data on-change cold?]}]
   [mui/form-group
    [mui/table
     [mui/table-head
@@ -50,6 +59,8 @@
       [mui/table-cell (tr :time/month)]
       [mui/table-cell (tr :energy/electricity)]
       [mui/table-cell (tr :energy/heat)]
+      (when cold?
+        [mui/table-cell (tr :energy/cold)])
       [mui/table-cell (tr :energy/water)]]]
     (into [mui/table-body]
           (for [row  (range 12)
@@ -58,26 +69,45 @@
             [mui/table-row
              [lui/table-cell month]
              [lui/table-cell
+
+              ;; Electricity Mwh
               [lui/text-field {:type      "number"
                                :spec      ::schema/electricity-mwh
                                :value     (:electricity-mwh month-data)
                                :on-change #(on-change month :electricity-mwh %)}]]
+
+             ;; Heat Mwh
              [lui/table-cell
               [lui/text-field {:type      "number"
                                :spec      ::schema/heat-mwh
                                :value     (:heat-mwh month-data)
                                :on-change #(on-change month :heat-mwh %)}]]
+
+             ;; Cold Mwh
+             (when cold?
+               [lui/table-cell
+                [lui/text-field {:type      "number"
+                                 :spec      ::schema/cold-mwh
+                                 :value     (:cold-mwh month-data)
+                                 :on-change #(on-change month :cold-mwh %)}]])
+
+             ;; Water m³
              [lui/table-cell
               [lui/text-field {:type      "number"
                                :spec      ::schema/water-m3
                                :value     (:water-m3 month-data)
                                :on-change #(on-change month :water-m3 %)}]]]))]])
 
-(defn table [{:keys [tr items read-only?]}]
-  [lui/form-table {:headers    [[:year (tr :time/year)]
-                                [:electricity-mwh (tr :energy/electricity)]
-                                [:heat-mwh (tr :energy/heat)]
-                                [:water-m3 (tr :energy/water)]]
+(defn make-headers [tr cold?]
+  (filter some?
+          [[:year (tr :time/year)]
+           [:electricity-mwh (tr :energy/electricity)]
+           [:heat-mwh (tr :energy/heat)]
+           (when cold? [:cold-mwh (tr :energy/cold)])
+           [:water-m3 (tr :energy/water)]]))
+
+(defn table [{:keys [tr items read-only? cold?]}]
+  [lui/form-table {:headers    (make-headers tr cold?)
                    :items      items
                    :key-fn     :year
                    :read-only? read-only?}])
