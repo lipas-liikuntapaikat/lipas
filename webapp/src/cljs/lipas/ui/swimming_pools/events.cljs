@@ -12,9 +12,9 @@
 
 (defn make-saveable [swimming-pool]
   (-> swimming-pool
-      (update-in [:pools] vals)
-      (update-in [:saunas] vals)
-      (update-in [:slides] vals)))
+      (update-in [:pools] (comp utils/remove-ids vals))
+      (update-in [:saunas] (comp utils/remove-ids vals))
+      (update-in [:slides] (comp utils/remove-ids vals))))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -40,9 +40,7 @@
 (re-frame/reg-event-db
  ::commit-energy-consumption
  (fn [db [_ rev]]
-   (let [lipas-id  (-> db :swimming-pools :editing :site)
-         timestamp (:timestamp rev)]
-     (assoc-in db [:sports-sites lipas-id :history timestamp] rev))))
+   (utils/commit-energy-consumption db rev)))
 
 (re-frame/reg-event-db
  ::edit-site
@@ -50,6 +48,18 @@
    (let [site (get-in db [:sports-sites lipas-id])
          rev  (utils/make-revision site (utils/timestamp))]
      (assoc-in db [:swimming-pools :editing :rev] (make-editable rev)))))
+
+(re-frame/reg-event-db
+ ::save-edits
+ (fn [db _]
+   (let [rev (-> db :swimming-pools :editing :rev make-saveable)]
+     (utils/save-edits db rev))))
+
+(re-frame/reg-event-db
+ ::discard-edits
+ (fn [db _]
+   (let [lipas-id (-> db :swimming-pools :editing :rev :lipas-id)]
+     (utils/discard-edits db lipas-id))))
 
 (re-frame/reg-event-db
  ::set-field
@@ -60,11 +70,8 @@
 (re-frame/reg-event-db
  ::commit-edits
  (fn [db _]
-   (let [rev      (-> db :swimming-pools :editing :rev make-saveable)
-         lipas-id (:lipas-id rev)]
-     (-> db
-         (assoc-in [:sports-sites lipas-id :latest] rev)
-         (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev)))))
+   (let [rev      (-> db :swimming-pools :editing :rev make-saveable)]
+     (utils/commit-edits db rev))))
 
 (re-frame/reg-event-db
  ::toggle-dialog

@@ -9,7 +9,7 @@
 
 (defn make-saveable [ice-stadium]
   (-> ice-stadium
-      (update-in [:rinks] (comp (fn [m] (map #(dissoc % :id) m)) vals))))
+      (update-in [:rinks] (comp utils/remove-ids vals))))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -35,9 +35,7 @@
 (re-frame/reg-event-db
  ::commit-energy-consumption
  (fn [db [_ rev]]
-   (let [lipas-id  (-> db :ice-stadiums :editing :site)
-         timestamp (:timestamp rev)]
-     (assoc-in db [:sports-sites lipas-id :history timestamp] rev))))
+   (utils/commit-energy-consumption db rev)))
 
 (re-frame/reg-event-db
  ::edit-site
@@ -50,24 +48,14 @@
 (re-frame/reg-event-db
  ::save-edits
  (fn [db _]
-   (let [rev         (-> db :ice-stadiums :editing :rev make-saveable)
-         lipas-id    (:lipas-id rev)
-         site        (get-in db [:sports-sites lipas-id])
-         original    (-> site :latest)
-         original?   (not (utils/different? rev original))
-         latest-edit (utils/latest-edit (-> site :edits))
-         dirty?      (utils/different? rev (or latest-edit original))
-         timestamp   (:timestamp rev)]
-     (cond
-       original? (assoc-in db [:sports-sites lipas-id :edits] nil)
-       dirty?    (assoc-in db [:sports-sites lipas-id :edits timestamp] rev)
-       :else     db))))
+   (let [rev (-> db :ice-stadiums :editing :rev make-saveable)]
+     (utils/save-edits db rev))))
 
 (re-frame/reg-event-db
  ::discard-edits
  (fn [db _]
    (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)]
-     (assoc-in db [:sports-sites lipas-id :edits] nil))))
+     (utils/discard-edits db lipas-id))))
 
 ;; TODO do ajax request to backend and move this to success handler
 (re-frame/reg-event-db
@@ -75,10 +63,7 @@
  (fn [db _]
    (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)
          rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))]
-     (-> db
-      (assoc-in [:sports-sites lipas-id :edits] nil)
-      (assoc-in [:sports-sites lipas-id :latest] rev)
-      (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev)))))
+     (utils/commit-edits db rev))))
 
 (re-frame/reg-event-db
  ::set-field

@@ -132,3 +132,34 @@
   (let [rev1 (dissoc rev1 :timestamp :energy-consumption :visitors)
         rev2 (dissoc rev2 :timestamp :energy-consumption :visitors)]
     (not= rev1 rev2)))
+
+(defn remove-ids [m]
+  (map #(dissoc % :id) m))
+
+(defn save-edits [db rev]
+  (let [lipas-id    (:lipas-id rev)
+        site        (get-in db [:sports-sites lipas-id])
+        original    (-> site :latest)
+        original?   (not (different? rev original))
+        latest-edit (latest-edit (-> site :edits))
+        dirty?      (different? rev (or latest-edit original))
+        timestamp   (:timestamp rev)]
+    (cond
+      original? (assoc-in db [:sports-sites lipas-id :edits] nil)
+      dirty?    (assoc-in db [:sports-sites lipas-id :edits timestamp] rev)
+      :else     db)))
+
+(defn commit-edits [db rev]
+  (let [lipas-id (:lipas-id rev)]
+    (-> db
+        (assoc-in [:sports-sites lipas-id :edits] nil)
+        (assoc-in [:sports-sites lipas-id :latest] rev)
+        (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev))))
+
+(defn discard-edits [db lipas-id]
+  (assoc-in db [:sports-sites lipas-id :edits] nil))
+
+(defn commit-energy-consumption [db rev]
+  (let [lipas-id (:lipas-id rev)
+        ts       (:timestamp rev)]
+    (assoc-in db [:sports-sites lipas-id :history ts] rev)))
