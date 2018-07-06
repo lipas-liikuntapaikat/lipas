@@ -344,8 +344,12 @@
 
 (defn gen-pools [n]
   (reduce (fn [res n]
-            (assoc-in res [n :latest] (assoc vesivelho-2017 :lipas-id n
-                                             :name {:fi (str "Uimahalli " n)})))
+            (let [e (assoc vesivelho-2017
+                           :lipas-id n
+                           :name {:fi (str "Uimahalli " n)})]
+              (-> res
+                  (assoc-in [n :latest] e)
+                  (assoc-in [n :history] {"2013" e}))))
           {} (range n)))
 
 (def default-db
