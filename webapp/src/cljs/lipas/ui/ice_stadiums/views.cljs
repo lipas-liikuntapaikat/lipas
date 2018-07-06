@@ -490,6 +490,7 @@
         ;;; Energy consumption
         [lui/form-card {:title (tr :energy/headline)}
          [energy/table {:read-only? true
+                        :cold?      true
                         :tr         tr
                         :items      (:energy-consumption site)}]]]])))
 
@@ -542,6 +543,7 @@
         [energy/form
          {:tr        tr
           :disabled? @monthly-energy?
+          :cold?     true
           :data      (:energy-consumption data)
           :on-change (partial set-field :energy-consumption)}]
 
@@ -553,11 +555,13 @@
         (when @monthly-energy?
           [energy/form-monthly
            {:tr        tr
+            :cold?     true
             :data      (:energy-consumption-monthly data)
             :on-change #(==> [::events/set-monthly-energy-consumption %&])}])
 
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [energy/table {:tr         tr
+                        :cold?      true
                         :read-only? true
                         :items      energy-history}]]]
 

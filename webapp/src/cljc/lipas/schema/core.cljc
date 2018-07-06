@@ -250,6 +250,7 @@
 (comment (s/valid? ::electricity-mwh 1795))
 (s/def ::electricity-mwh (s/int-in 0 10000))
 (s/def ::heat-mwh (s/int-in 0 10000))
+(s/def ::cold-mwh (s/int-in 0 100000)) ; TODO figure out realistic limits
 (s/def ::water-m3 (s/int-in 0 100000))
 
 ;; Visitors

@@ -94,6 +94,7 @@
 (defn- calculate-totals [data]
   {:electricity-mwh (reduce + (map :electricity-mwh (vals data)))
    :heat-mwh        (reduce + (map :heat-mwh (vals data)))
+   :cold-mwh        (reduce + (map :cold-mwh (vals data)))
    :water-m3        (reduce + (map :water-m3 (vals data)))})
 
 (re-frame/reg-event-db
