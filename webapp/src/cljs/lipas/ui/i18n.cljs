@@ -324,6 +324,8 @@
    {:add            "Lisää"
     :edit           "Muokkaa"
     :save           "Tallenna"
+    :save-draft     "Tallenna ehdotus"
+    :publish        "Julkaise muutokset"
     :delete         "Poista"
     :discard        "Kumoa"
     :cancel         "Peruuta"
@@ -343,7 +345,7 @@
     :comment      "Kommentti"
     :structure    "Rakenne"}
 
-   :notification
+   :notifications
    {:save-success "Tallennus onnistui"
     :save-failed  "Tallennus epäonnistui"}
 

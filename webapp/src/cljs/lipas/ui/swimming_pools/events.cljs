@@ -37,10 +37,14 @@
          (assoc-in [:swimming-pools :editing :year] year)
          (assoc-in [:swimming-pools :editing :rev] rev)))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::commit-energy-consumption
- (fn [db [_ rev]]
-   (utils/commit-energy-consumption db rev)))
+ (fn [{:keys [db]} [_ rev]]
+   (let [tr (:translator db)]
+     {:db       (utils/commit-energy-consumption db rev)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
 
 (re-frame/reg-event-db
  ::edit-site
@@ -67,11 +71,29 @@
    (assoc-in db (into [:swimming-pools] path) value)))
 
 ;; TODO do ajax request to backend and move this to success handler
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::commit-edits
- (fn [db _]
-   (let [rev      (-> db :swimming-pools :editing :rev make-saveable)]
-     (utils/commit-edits db rev))))
+ (fn [{:keys [db]} _]
+   (let [lipas-id (-> db :swimming-pools :editing :rev :lipas-id)
+         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
+         tr       (:translator db)]
+     {:db       (utils/commit-edits db rev)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
+
+;; TODO do ajax request to backend and move this to success handler
+(re-frame/reg-event-fx
+ ::commit-draft
+ (fn [{:keys [db]} _]
+   (let [lipas-id (-> db :swimming-pools :editing :rev :lipas-id)
+         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
+         draft    (assoc rev :status :draft)
+         tr       (:translator db)]
+     {:db       (utils/commit-edits db draft)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
 
 (re-frame/reg-event-db
  ::toggle-dialog
@@ -136,10 +158,10 @@
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [:lipas.ui.events/set-active-notification
-                         {:message (tr :notification/save-success)
+                         {:message (tr :notifications/save-success)
                           :success? true}]
        :on-failure      [:lipas.ui.events/set-active-notification
-                         {:message (tr :notification/save-failed)
+                         {:message (tr :notifications/save-failed)
                           :success? false}]}})))
 
 (re-frame/reg-event-db
