@@ -70,8 +70,10 @@
                    :on-edit-end        #(do (==> [::events/save-edits])
                                             (swap! editing? not))
                    :edit-tooltip       (tr :actions/edit)
+                   :on-save-draft      #(==> [::events/commit-draft])
+                   :save-draft-tooltip (tr :actions/save-draft)
                    :on-publish         #(==> [::events/commit-edits])
-                   :publish-tooltip    (tr :actions/save)})}
+                   :publish-tooltip    (tr :actions/publish)})}
 
        [mui/grid {:container true}
 

@@ -32,10 +32,14 @@
          (assoc-in [:ice-stadiums :editing :year] year)
          (assoc-in [:ice-stadiums :editing :rev] rev)))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::commit-energy-consumption
- (fn [db [_ rev]]
-   (utils/commit-energy-consumption db rev)))
+ (fn [{:keys [db]} [_ rev]]
+   (let [tr (:translator db)]
+     {:db       (utils/commit-energy-consumption db rev)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
 
 (re-frame/reg-event-db
  ::edit-site
@@ -58,12 +62,29 @@
      (utils/discard-edits db lipas-id))))
 
 ;; TODO do ajax request to backend and move this to success handler
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::commit-edits
- (fn [db _]
+ (fn [{:keys [db]} _]
    (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)
-         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))]
-     (utils/commit-edits db rev))))
+         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
+         tr       (:translator db)]
+     {:db       (utils/commit-edits db rev)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
+
+;; TODO do ajax request to backend and move this to success handler
+(re-frame/reg-event-fx
+ ::commit-draft
+ (fn [{:keys [db]} _]
+   (let [lipas-id (-> db :ice-stadiums :editing :rev :lipas-id)
+         rev      (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
+         draft    (assoc rev :status :draft)
+         tr       (:translator db)]
+     {:db       (utils/commit-edits db draft)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/save-success)
+                  :success? true}]})))
 
 (re-frame/reg-event-db
  ::set-field

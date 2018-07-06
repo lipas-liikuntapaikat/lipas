@@ -32,11 +32,24 @@
     [mui/icon "edit_icon"]]])
 
 (defn save-button [{:keys [on-click tooltip] :as props}]
-  [mui/tooltip {:title     (or tooltip "")
+  [mui/tooltip {:title     ""
                 :placement "top"}
-   [mui/button (merge props {:on-click on-click
-                             :color    "primary"})
-    [mui/icon "save_icon"]]])
+   [mui/button (merge props {:variant  "contained"
+                             :on-click on-click
+                             :color    "secondary"})
+    tooltip
+    [mui/icon {:style {:margin-left "0.25em"}}
+     "save_icon"]]])
+
+(defn publish-button [{:keys [on-click tooltip] :as props}]
+  [mui/tooltip {:title     ""
+                :placement "top"}
+   [mui/button (merge props {:variant  "contained"
+                             :on-click on-click
+                             :color    "secondary"})
+    tooltip
+    [mui/icon {:style {:margin-left "0.25em"}}
+     "cloud_upload"]]])
 
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title     (or tooltip "")
@@ -47,19 +60,25 @@
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
-(defn edit-actions-list [{:keys [uncommitted-edits? editing? logged-in?
-                                 user-can-publish? on-discard
-                                 discard-tooltip edit-tooltip
-                                 publish-tooltip on-edit-start on-edit-end
+(defn edit-actions-list [{:keys [uncommitted-edits? editing?
+                                 logged-in?  user-can-publish?
+                                 on-discard on-save-draft
+                                 save-draft-tooltip discard-tooltip
+                                 edit-tooltip publish-tooltip
+                                 on-edit-start on-edit-end
                                  on-publish]}]
-  [(when uncommitted-edits?
+  [(when (and uncommitted-edits? user-can-publish? (not editing?))
+     [publish-button
+      {:on-click on-publish
+       :tooltip  publish-tooltip}])
+   (when (and uncommitted-edits? (not user-can-publish?) (not editing?))
+     [save-button
+      {:on-click on-save-draft
+       :tooltip  save-draft-tooltip}])
+   (when (and uncommitted-edits? (not editing?))
      [discard-button
       {:on-click on-discard
        :tooltip  discard-tooltip}])
-   (when (and uncommitted-edits? user-can-publish?)
-     [save-button
-      {:on-click on-publish
-       :tooltip  publish-tooltip}])
    (when logged-in?
      [edit-button
       {:active?  editing?
