@@ -2,16 +2,15 @@
   (:require [clojure.spec.gen.alpha :as gen]
             [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest testing is]]
-            [jsonista.core :as j]
+            [cheshire.core :as j]
             [lipas.backend.system :refer [start-system!]]
             [lipas.backend.core :as core]
             [lipas.schema.core :as lipas]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
 
-(def mapper (j/object-mapper {:decode-key-fn keyword}))
-(def <-json #(j/read-value % mapper))
-(def ->json j/write-value-as-string)
+(def <-json #(j/parse-string (slurp %) true))
+(def ->json j/generate-string)
 
 (defn ->base64
   "Encodes a string as base64."
