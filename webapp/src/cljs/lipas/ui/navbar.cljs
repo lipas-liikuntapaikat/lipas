@@ -5,51 +5,58 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
-            [re-frame.core :as re-frame]))
+            [lipas.ui.utils :refer [<== ==>]]))
 
 (defn logout! []
-  (re-frame/dispatch [::events/logout])
+  (==> [::events/logout])
   (navigate! "/#/kirjaudu"))
 
-(defn ->avatar [initials]
-  [mui/avatar {:style {:font-size "0.65em"
-                       :color "#fff"}}
-   initials])
-
 (defn avatar []
-  (let [initials (re-frame/subscribe [::subs/user-initials])]
-    (->avatar @initials)))
+  (let [initials (<== [::subs/user-initials])]
+    [mui/avatar {:style {:font-size "0.65em"
+                         :color     "#fff"}}
+   initials]))
 
 (defn create-menu [tr anchor logged-in?]
-  (let [close #(re-frame/dispatch [::events/set-menu-anchor nil])]
+  (let [close #(==> [::events/set-menu-anchor nil])]
     [mui/menu {:anchor-el anchor :open true
-               :on-close close}
+               :on-close  close}
 
+     ;; Login
      (when (not logged-in?)
-       [mui/menu-item {:on-click (comp close #(navigate! "/#/kirjaudu"))}
+       [mui/menu-item {:id "account-menu-item-login"
+                       :on-click (comp close #(navigate! "/#/kirjaudu"))}
         [mui/list-item-icon
          [mui/icon "lock"]]
         [mui/list-item-text {:primary (tr :login/headline)}]])
 
+     ;; Register
      (when (not logged-in?)
-       [mui/menu-item {:on-click (comp close #(navigate! "/#/rekisteroidy"))}
+       [mui/menu-item {:id "account-menu-item-register"
+                       :on-click (comp close #(navigate! "/#/rekisteroidy"))}
         [mui/list-item-icon
          [mui/icon "group_add"]]
         [mui/list-item-text {:primary (tr :register/headline)}]])
 
+     ;; Profile
      (when logged-in?
-       [mui/menu-item {:on-click (comp close #(navigate! "/#/profiili"))}
+       [mui/menu-item {:id "account-menu-item-profile"
+                       :on-click (comp close #(navigate! "/#/profiili"))}
         [mui/list-item-icon
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
-     [mui/menu-item {:on-click (comp close #(navigate! "/#/ohjeet"))}
+     ;; Help
+     [mui/menu-item {:id "account-menu-item-help"
+                     :on-click (comp close #(navigate! "/#/ohjeet"))}
       [mui/list-item-icon
        [mui/icon "help"]]
       [mui/list-item-text {:primary (tr :help/headline)}]]
 
+     ;; Logout
      (when logged-in?
-       [mui/menu-item {:on-click (comp close logout!)}
+       [mui/menu-item {:id "account-menu-item-logout"
+                       :on-click (comp close logout!)}
         [mui/list-item-icon
          [mui/icon "exit_to_app"]]
         [mui/list-item-text {:primary (tr :login/logout)}]])]))
@@ -66,28 +73,28 @@
 
 (defn set-translator [locale]
   (let [translator (i18n/->tr-fn locale)]
-    (re-frame/dispatch [::events/set-translator translator])))
+    (==> [::events/set-translator translator])))
 
-(defn ->lang-btn [locale]
-  [mui/button {:style {:min-width "0px"
-                       :padding 0
-                       :font-size "1em"}
+(defn lang-btn [locale]
+  [mui/button {:style    {:min-width "0px"
+                          :padding   0
+                          :font-size "1em"}
                :on-click #(set-translator locale)}
    (name locale)])
 
 (def lang-selector
   [mui/grid {:item true :style {:margin "1em"}}
-   [->lang-btn :fi]
+   [lang-btn :fi]
    separator
-   [->lang-btn :sv]
+   [lang-btn :se]
    separator
-   [->lang-btn :en]])
+   [lang-btn :en]])
 
 (defn show-menu [event]
-  (re-frame/dispatch [::events/set-menu-anchor (.-currentTarget event)]))
+  (==> [::events/set-menu-anchor (.-currentTarget event)]))
 
 (defn toggle-drawer [_]
-  (re-frame/dispatch [::events/toggle-drawer]))
+  (==> [::events/toggle-drawer]))
 
 (defn create-drawer [tr logged-in?]
   (let [hide-and-navigate! (comp toggle-drawer navigate!)]
@@ -98,6 +105,7 @@
 
      [mui/list
 
+      ;; Home
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/")}
        [mui/list-item-icon
@@ -106,18 +114,21 @@
 
       [mui/divider]
 
+      ;; Sports sites
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
        [mui/list-item-icon
         [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
+      ;; Ice stadiums
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
        [mui/list-item-icon
         [mui/icon "ac_unit"]]
        [mui/list-item-text {:primary (tr :ice/headline)}]]
 
+      ;; Swiming pools
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
        [mui/list-item-icon
@@ -125,12 +136,14 @@
        [mui/list-item-text {:primary (tr :swim/headline)}]]
       [mui/divider]
 
+      ;; Open data
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/avoin-data")}
        [mui/list-item-icon
         [mui/icon "build"]]
        [mui/list-item-text {:primary (tr :open-data/headline)}]]
 
+      ;; Help
       [mui/list-item {:button true
                       :on-click #(hide-and-navigate! "/#/ohjeet")}
        [mui/list-item-icon
@@ -138,6 +151,7 @@
        [mui/list-item-text {:primary (tr :help/headline)}]]
       [mui/divider]
 
+      ;; Profile
       (when logged-in?
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/profiili")}
@@ -145,6 +159,7 @@
           [mui/icon "account_circle"]]
          [mui/list-item-text {:primary (tr :user/headline)}]])
 
+      ;; Logout
       (when logged-in?
         [mui/list-item {:button true
                         :on-click logout!}
@@ -152,6 +167,7 @@
           [mui/icon "exit_to_app"]]
          [mui/list-item-text {:primary (tr :login/logout)}]])
 
+      ;; Login
       (when (not logged-in?)
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/kirjaudu")}
@@ -159,6 +175,7 @@
           [mui/icon "lock"]]
          [mui/list-item-text {:primary (tr :login/headline)}]])
 
+      ;; Register
       (when (not logged-in?)
         [mui/list-item {:button true
                         :on-click #(hide-and-navigate! "/#/rekisteroidy")}
@@ -168,60 +185,86 @@
 
 (defn nav [tr menu-anchor drawer-open? active-panel logged-in?]
   [mui/app-bar {:position "static"
-                :color "primary"
-                :style {:border-box "1px solid black"}}
+                :color    "primary"
+                :style    {:border-box "1px solid black"}}
+
    [mui/tool-bar {:disable-gutters true}
+
     (when menu-anchor
       (create-menu tr menu-anchor logged-in?))
+
     (when drawer-open?
       (create-drawer tr logged-in?))
+
+    ;;; JYU logo
     [:a {:href "/#/"}
      [mui/svg-icon {:view-box "0 0 132.54 301.95"
-                    :style {:height "2em"
-                            :margin "0.45em"}}
+                    :style    {:height "2em"
+                               :margin "0.45em"}}
       svg/jyu-logo]]
+
+    ;;; Header text
     [mui/typography {:variant "title"
-                     :style {:flex 1
-                             :font-size "1em"
-                             :font-weight "bold"}}
+                     :style   {:flex        1
+                               :font-size   "1em"
+                               :font-weight "bold"}}
+
+     ;; University of Jyväskylä
      [mui/hidden {:sm-down true}
       [mui/typography {:component "a"
-                       :variant "title"
-                       :href "/#/"
-                       :style {:display "inline"
-                               :font-weight "bold"
-                               :font-size "1em"
-                               :text-decoration "none"}}
+                       :variant   "title"
+                       :href      "/#/"
+                       :style     {:display         "inline"
+                                   :font-weight     "bold"
+                                   :font-size       "1em"
+                                   :text-decoration "none"}}
        (tr :menu/jyu)]
+
       separator]
+
+     ;; LIPAS
      [mui/typography {:component "a"
-                      :variant "title"
-                      :href "/#/"
-                      :style {:display "inline"
-                              :font-weight "bold"
-                              :font-size "1em"
-                              :text-decoration "none"}}
+                      :variant   "title"
+                      :href      "/#/"
+                      :style     {:display         "inline"
+                                  :font-weight     "bold"
+                                  :font-size       "1em"
+                                  :text-decoration "none"}}
       (tr :menu/headline)]
+
      separator
+
+     ;; Sub page header
      (case active-panel
-       :home-panel (tr :home-page/headline)
-       :sports-panel (tr :sport/headline)
-       :ice-panel (tr :ice/headline)
-       :swim-panel (tr :swim/headline)
+       :home-panel      (tr :home-page/headline)
+       :sports-panel    (tr :sport/headline)
+       :ice-panel       (tr :ice/headline)
+       :swim-panel      (tr :swim/headline)
        :open-data-panel (tr :open-data/headline)
-       :help-panel (tr :help/headline)
-       :login-panel (tr :login/headline)
-       :register-panel (tr :register/headline)
-       :user-panel (tr :user/headline)
+       :help-panel      (tr :help/headline)
+       :login-panel     (tr :login/headline)
+       :register-panel  (tr :register/headline)
+       :user-panel      (tr :user/headline)
        "")]
+
     [mui/hidden {:sm-down true}
      lang-selector]
-    [mui/icon-button
+
+    ;;; Search button
+    [mui/icon-button {:id         "search-btn"
+                      :aria-label (tr :actions/open-search)}
      [mui/icon "search"]]
-    ;;[mui/text-field {:placeholder "Haku"}]
-    [mui/icon-button {:on-click show-menu}
+
+    ;;; Account menu button
+    [mui/icon-button {:id         "account-btn"
+                      :aria-label (tr :actions/open-account-menu)
+                      :on-click   show-menu}
      (if logged-in?
        [avatar]
        [mui/icon "account_circle"])]
-    [mui/icon-button {:on-click toggle-drawer}
+
+    ;;; Main menu (drawer) button
+    [mui/icon-button {:id         "main-menu-btn"
+                      :aria-label (tr :actions/open-main-menu)
+                      :on-click   toggle-drawer}
      [mui/icon {:color "secondary"} "menu"]]]])

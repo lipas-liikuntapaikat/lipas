@@ -14,36 +14,39 @@
   (==> [::events/clear-errors]))
 
 (defn login-form [{:keys [tr]}]
-  (let [form-data  (<== [::subs/login-form])
-        error      (<== [::subs/login-error])]
+  (let [form-data (<== [::subs/login-form])
+        error     (<== [::subs/login-error])]
 
     [mui/form-group
 
      ;; Username
      [lui/text-field
-      {:label (tr :login/username)
-       :auto-focus true
-       :value (:username form-data)
-       :on-change (comp clear-errors #(set-field :username %))
-       :required true
+      {:id          "login-username-input"
+       :label       (tr :login/username)
+       :auto-focus  true
+       :value       (:username form-data)
+       :on-change   (comp clear-errors #(set-field :username %))
+       :required    true
        :placeholder (tr :login/username-example)}]
 
      ;; Password
      [lui/text-field
-      {:label (tr :login/password)
-       :type "password"
-       :value (:password form-data)
+      {:id        "login-password-input"
+       :label     (tr :login/password)
+       :type      "password"
+       :value     (:password form-data)
        :on-change (comp clear-errors #(set-field :password %))
-       :required true}]
+       :required  true}]
 
      ;; Login button
      [mui/button
-      {:color "secondary"
-       :style {:margin-top "1em"}
+      {:id         "login-submit-btn"
+       :color      "secondary"
+       :style      {:margin-top "1em"}
        :full-width true
-       :size "large"
-       :variant "raised"
-       :on-click #(==> [::events/submit-login-form form-data])}
+       :size       "large"
+       :variant    "raised"
+       :on-click   #(==> [::events/submit-login-form form-data])}
       (tr :login/login)]
 
      ;; Error messages

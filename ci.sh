@@ -14,3 +14,8 @@ docker-compose run backend-test
 
 printf "\n *** Compiling frontend *** \n\n"
 docker-compose run frontend-build
+
+### Integration tests ###
+
+printf "\n *** Running integration tests *** \n\n"
+docker-compose run integration-test
