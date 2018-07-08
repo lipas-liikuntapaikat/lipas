@@ -6,8 +6,9 @@
 
 (defn remote-driver []
   (e/create-driver :chrome-headless
-                   {:host "headless-chrome"
-                    :port 4444}))
+                   {:host      "headless-chrome"
+                    :port      4444
+                    :log-level :info}))
 
 (defn fixture-driver
   "Executes a test running a driver. Bounds a driver
