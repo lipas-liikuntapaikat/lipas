@@ -59,7 +59,7 @@ services:
   backend-test:
     extends:
       service: backend-base
-    command: lein test
+    command: lein test :default
     links:
       - postgres
       # - elasticsearch
@@ -68,6 +68,22 @@ services:
     extends:
       service: backend-base
     command: lein cljsbuild once min
+
+  headless-chrome:
+    image: robcherry/docker-chromedriver
+    privileged: true
+    environment:
+      CHROMEDRIVER_WHITELISTED_IPS: '' # Allow any source
+    ports:
+      - '4444:4444'
+
+  integration-test:
+    extends:
+      service: backend-base
+    command: lein test :integration
+    links:
+      - headless-chrome
+      - proxy
 
   postgres:
     image: mdillon/postgis:10

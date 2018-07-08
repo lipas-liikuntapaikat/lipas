@@ -3,7 +3,7 @@
                  ;;; Common ;;;
                  [org.clojure/clojure "1.9.0"]
                  [camel-snake-kebab "0.4.0"]
-                 [com.cemerick/url "0.1.1"]
+                 [etaoin "0.2.8-SNAPSHOT"]
 
                  ;;; Frontend ;;;
                  [org.clojure/clojurescript "1.10.312"]
@@ -36,8 +36,8 @@
             [lein-ring "0.12.4"]
             [migratus-lein "0.5.7"]]
 
-  :ring {:handler lipas.dev/dev-handler
-         :port 8091
+  :ring {:handler      lipas.dev/dev-handler
+         :port         8091
          :auto-reload? true
          :reload-paths ["src/clj" "src/cljc"]}
 
@@ -46,6 +46,9 @@
   :source-paths ["src/clj" "src/cljc"]
 
   :test-paths ["test/clj"]
+
+  :test-selectors {:default     (complement :integration)
+                   :integration :integration}
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"
                                     "test/js"]
@@ -56,27 +59,26 @@
 
   :migratus {:store         :database
              :migration-dir "migrations"
-             :db            {:dbtype "postgresql"
-                             :dbname ~(get (System/getenv) "DB_NAME")
-                             :host ~(get (System/getenv) "DB_HOST")
-                             :user ~(get (System/getenv) "DB_USER")
-                             :port ~(get (System/getenv) "DB_PORT")
+             :db            {:dbtype   "postgresql"
+                             :dbname   ~(get (System/getenv) "DB_NAME")
+                             :host     ~(get (System/getenv) "DB_HOST")
+                             :user     ~(get (System/getenv) "DB_USER")
+                             :port     ~(get (System/getenv) "DB_PORT")
                              :password ~(get (System/getenv) "DB_PASSWORD")}}
 
   :profiles
   {:dev
-   {:dependencies
-                   [;;; Frontend ;;;
-                    [binaryage/devtools "0.9.10"]
-                    [day8.re-frame/re-frame-10x "0.3.3"]
-                    [figwheel-sidecar "0.5.16"]
-                    [cider/piggieback "0.3.6"]
+   {:dependencies [;;; Frontend ;;;
+                   [binaryage/devtools "0.9.10"]
+                   [day8.re-frame/re-frame-10x "0.3.3"]
+                   [figwheel-sidecar "0.5.16"]
+                   [cider/piggieback "0.3.6"]
 
                     ;;; Backend ;;;
-                    [ring/ring-mock "0.3.2"]]
+                   [ring/ring-mock "0.3.2"]]
 
-    :plugins      [[lein-figwheel "0.5.16"]
-                   [lein-doo "0.1.8"]]}}
+    :plugins [[lein-figwheel "0.5.16"]
+              [lein-doo "0.1.8"]]}}
 
   :cljsbuild
   {:builds

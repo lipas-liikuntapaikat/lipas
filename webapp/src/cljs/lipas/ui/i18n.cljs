@@ -13,6 +13,7 @@
 (def fi
   {:menu
    {:headline  "LIPAS"
+    :main-menu "Päävalikko"
     :jyu       "Jyväskylän yliopisto"
     :frontpage "Etusivu"}
 
@@ -322,18 +323,23 @@
     :month "kuukautta"}
 
    :actions
-   {:add            "Lisää"
-    :edit           "Muokkaa"
-    :save           "Tallenna"
-    :save-draft     "Tallenna ehdotus"
-    :publish        "Julkaise muutokset"
-    :delete         "Poista"
-    :discard        "Kumoa"
-    :cancel         "Peruuta"
-    :close          "Sulje"
-    :select-hall    "Valitse halli"
-    :select-year    "Valitse vuosi"
-    :show-all-years "Näytä kaikki vuodet"}
+   {:add               "Lisää"
+    :edit              "Muokkaa"
+    :save              "Tallenna"
+    :save-draft        "Tallenna ehdotus"
+    :publish           "Julkaise muutokset"
+    :delete            "Poista"
+    :discard           "Kumoa"
+    :cancel            "Peruuta"
+    :close             "Sulje"
+    :select-hall       "Valitse halli"
+    :select-year       "Valitse vuosi"
+    :show-all-years    "Näytä kaikki vuodet"
+    :open-account-menu "Avaa käyttäjävalikko"
+    :open-main-menu    "Avaa päävalikko"}
+
+   :search
+   {:headline "Haku"}
 
    :statuses
    {:edited "{1} (muokattu)"}
@@ -359,7 +365,7 @@
    :error
    {:unknown "Tuntematon virhe tapahtui. :/"}})
 
-(def sv {:menu
+(def se {:menu
          {:jyu "Jyväskylä universitet"
           :login "Logga in"}
          :sport
@@ -412,7 +418,7 @@
          {:headline "Login"}})
 
 (def dicts {:fi fi
-            :sv sv
+            :sv se
             :en en
             :tongue/fallback :fi})
 
