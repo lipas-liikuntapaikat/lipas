@@ -1,4 +1,4 @@
-(ns lipas.integration.registration-test
+(ns lipas.integration.core
   (:require [etaoin.api :as e]
             [clojure.test :refer [deftest use-fixtures]]))
 
@@ -24,8 +24,7 @@
   :each ;; start and stop driver for each test
   fixture-driver)
 
-(deftest ^:integration
-  test-login
+(deftest ^:integration login-test
   (doto *driver*
     (e/go "http://proxy")
     (e/wait-visible {:id "account-btn"})
