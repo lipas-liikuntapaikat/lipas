@@ -20,7 +20,7 @@
                  ;;; Backend ;;;
                  [org.clojure/test.check "0.9.0"]
                  [metosin/compojure-api "2.0.0-alpha21"]
-                 [metosin/jsonista "0.2.1"]
+                 [cheshire "5.8.0"]
                  [buddy "2.0.0"]
                  [com.layerware/hugsql "0.4.8"]
                  [org.postgresql/postgresql  "42.2.2"]
