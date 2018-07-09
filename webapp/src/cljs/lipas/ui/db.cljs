@@ -107,19 +107,21 @@
     :skating-area-temperature-c 5         ; Luistelualueen lämpötila 1m kork.
                                           ;  harjoitushalleissa  +5 +9
                                           ;  kilpahalleissa +9 +12
-    :stand-temperature-c 10}              ; Katsomon lämpötila (0-50)
-                                          ;  ottelun aikana tavoiteltu
-                                          ;  keskilämpötila
+    :stand-temperature-c 10             ; Katsomon lämpötila (0-50)
+                                        ;  ottelun aikana tavoiteltu
+                                        ;  keskilämpötila
 
-   ;;; Jäänhoito (vuosittain muuttuvat)
-   :ice-maintenance
-   {:daily-maintenance-count-week-days 8  ; Jäähoitokerrat arkipäivinä
+    ;;; Jäänhoito (vuosittain muuttuvat)
+
+    :daily-maintenance-count-week-days 8  ; Jäähoitokerrat arkipäivinä
     :daily-maintenance-count-weekends 12  ; Jäähoitokerrat viikonlppuina
     :average-water-consumption-l 300      ; Keskimääräinen jäänhoitoon käytetty
-                                          ;  vesimäärä/jäänajo (ltr)
+                                        ;  vesimäärä/jäänajo (ltr)
     :maintenance-water-temperature-c 35   ; Jäähoitoveden lämpötila (tavoite +40)
     :ice-average-thickness-mm 20          ; Jään keskipaksuus mm
     }
+
+
 
    ;;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
    :ventilation

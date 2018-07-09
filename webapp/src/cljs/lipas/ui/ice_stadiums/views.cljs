@@ -438,17 +438,10 @@
               {:type      "number"
                :spec      ::schema/stand-temperature-c
                :value     (-> edit-data :stand-temperature-c)
-               :on-change #(on-change :stand-temperature-c %)}]}]])
-
-        ;;; Ice maintenance
-        (let [on-change    (partial set-field :ice-maintenance)
-              display-data (-> site :ice-maintenance)
-              edit-data    (-> editing-rev :ice-maintenance)]
-          [lui/form-card {:title (tr :ice-maintenance/headline)}
-           [lui/form {:read-only? (not @editing?)}
+               :on-change #(on-change :stand-temperature-c %)}]}
 
             ;; Daily maintenance count week days
-            {:label (tr :ice-maintenance/daily-maintenance-count-week-days)
+            {:label (tr :conditions/daily-maintenance-count-week-days)
              :value (-> display-data :daily-maintenance-count-week-days)
              :form-field
              [lui/text-field
@@ -458,7 +451,7 @@
                :on-change #(on-change :daily-maintenance-count-week-days %)}]}
 
             ;; Daily maintenance count weekends
-            {:label (tr :ice-maintenance/daily-maintenance-count-weekends)
+            {:label (tr :conditions/daily-maintenance-count-weekends)
              :value (-> display-data :daily-maintenance-count-weekends)
              :form-field
              [lui/text-field
@@ -468,7 +461,7 @@
                :on-change #(on-change :daily-maintenance-count-weekends %)}]}
 
             ;; Average water consumption l
-            {:label (tr :ice-maintenance/average-water-consumption-l)
+            {:label (tr :conditions/average-water-consumption-l)
              :value (-> display-data :average-water-consumption-l)
              :form-field
              [lui/text-field
@@ -478,7 +471,7 @@
                :on-change #(on-change :average-water-consumption-l %)}]}
 
             ;; Ice average thickness mm
-            {:label (tr :ice-maintenance/ice-average-thickness-mm)
+            {:label (tr :conditions/ice-average-thickness-mm)
              :value (-> display-data :ice-average-thickness-mm)
              :form-field
              [lui/text-field
