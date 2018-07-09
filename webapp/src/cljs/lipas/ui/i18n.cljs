@@ -295,14 +295,18 @@
     :depth-max-m     "Syvyys max m"}
 
    :units
-   {:person  "hlö"
-    :pcs     "kpl"
-    :percent "%"}
+   {:times-per-day "kertaa päivässä"
+    :hours-per-day "tuntia päivässä"
+    :person        "hlö"
+    :pcs           "kpl"
+    :percent       "%"}
 
    :physical-units
    {:temperature-c "Lämpötila °C"
     :mwh           "MWh"
     :m             "m"
+    :mm            "mm"
+    :l             "l"
     :m2            "m²"
     :m3            "m³"
     :celsius       "°C"
