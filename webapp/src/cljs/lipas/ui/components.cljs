@@ -357,7 +357,7 @@
             [table-cell
              [mui/typography {:variant "caption"}
               label]]
-            [table-cell
+            [table-cell {:numeric true}
              (if read-only?
                value
                [mui/form-group
