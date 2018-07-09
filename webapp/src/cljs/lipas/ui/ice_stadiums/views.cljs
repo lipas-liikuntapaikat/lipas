@@ -392,7 +392,7 @@
 
             ;; Air humidity min %
             {:label (tr :conditions/air-humidity-min)
-             :value (-> display-data :air-humidity-min)
+             :value (-> display-data :air-humidity :min)
              :form-field
              [lui/text-field
               {:type      "number"
@@ -402,7 +402,7 @@
 
             ;; Air humidity max %
             {:label (tr :conditions/air-humidity-max)
-             :value (-> display-data :air-humidity-max)
+             :value (-> display-data :air-humidity :max)
              :form-field
              [lui/text-field
               {:type      "number"
