@@ -8,7 +8,7 @@ printf "\n *** Running backend migrations *** \n\n"
 docker-compose run backend-migrate
 
 printf "\n *** Running backend tests *** \n\n"
-docker-compose run backend-test
+docker-compose run backend-tests
 
 ### Frontend ###
 
@@ -21,4 +21,4 @@ printf "\n *** Seeding test data *** \n\n"
 docker-compose run backend-seed
 
 printf "\n *** Running integration tests *** \n\n"
-docker-compose run integration-test
+docker-compose run integration-tests
