@@ -1,6 +1,9 @@
 (ns lipas.integration.core
-  (:require [etaoin.api :as e]
-            [clojure.test :refer [deftest use-fixtures]]))
+  (:require [clojure.test :refer [deftest use-fixtures]]
+            [etaoin.api :as e]
+            [taoensso.timbre :as timbre]))
+
+(timbre/set-level! :info)
 
 (def ^:dynamic *driver*)
 
