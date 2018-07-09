@@ -56,6 +56,11 @@ services:
     links:
       - postgres
 
+  backend-seed:
+    extends:
+      service: backend-base
+    command: lein run -m lipas.seed
+
   backend-test:
     extends:
       service: backend-base
@@ -95,7 +100,6 @@ services:
       DB_SUPERUSER:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
-      POSTGRES_INITDB_ARGS: '-A trust'
     ports:
       - '55432:5432'
     volumes:
