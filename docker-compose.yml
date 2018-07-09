@@ -56,18 +56,20 @@ services:
     links:
       - postgres
 
+  backend-tests:
+    extends:
+      service: backend-base
+    command: lein test
+    links:
+      - postgres
+      # - elasticsearch
+
   backend-seed:
     extends:
       service: backend-base
     command: lein run -m lipas.seed
-
-  backend-test:
-    extends:
-      service: backend-base
-    command: lein test :default
     links:
       - postgres
-      # - elasticsearch
 
   frontend-build:
     extends:
@@ -82,7 +84,7 @@ services:
     ports:
       - '4444:4444'
 
-  integration-test:
+  integration-tests:
     extends:
       service: backend-base
     command: lein test :integration
