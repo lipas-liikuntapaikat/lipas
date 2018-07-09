@@ -375,7 +375,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/open-months
-               :adornment (tr :time/month)
+               :adornment (tr :duration/month)
                :value     (-> edit-data :open-months)
                :on-change #(on-change :open-months %)}]}
 
@@ -386,7 +386,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/daily-open-hours
-               :adornment (tr :time/hour)
+               :adornment (tr :units/hours-per-day)
                :value     (-> edit-data :daily-open-hours)
                :on-change #(on-change :daily-open-hours %)}]}
 
@@ -397,6 +397,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/air-humidity-percent
+               :adornment (tr :units/percent)
                :value     (-> edit-data :air-humidity :min)
                :on-change #(on-change :air-humidity :min %)}]}
 
@@ -407,6 +408,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/air-humidity-percent
+               :adornment (tr :units/percent)
                :value     (-> edit-data :air-humidity :max)
                :on-change #(on-change :air-humidity :max %)}]}
 
@@ -417,6 +419,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/ice-surface-temperature-c
+               :adornment (tr :physical-units/celsius)
                :value     (-> edit-data :ice-surface-temperature-c)
                :on-change #(on-change :ice-surface-temperature-c %)}]}
 
@@ -427,6 +430,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/skating-area-temperature-c
+               :adornment (tr :physical-units/celsius)
                :value     (-> edit-data :skating-area-temperature-c)
                :on-change #(on-change :skating-area-temperature-c %)}]}
 
@@ -437,6 +441,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/stand-temperature-c
+               :adornment (tr :physical-units/celsius)
                :value     (-> edit-data :stand-temperature-c)
                :on-change #(on-change :stand-temperature-c %)}]}
 
@@ -447,6 +452,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/daily-maintenance-count-week-days
+               :adornment (tr :units/times-per-day)
                :value     (-> edit-data :daily-maintenance-count-week-days)
                :on-change #(on-change :daily-maintenance-count-week-days %)}]}
 
@@ -457,6 +463,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/daily-maintenance-count-weekends
+               :adornment (tr :units/times-per-day)
                :value     (-> edit-data :daily-maintenance-count-weekends)
                :on-change #(on-change :daily-maintenance-count-weekends %)}]}
 
@@ -467,6 +474,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/average-water-consumption-l
+               :adornment (tr :physical-units/l)
                :value     (-> edit-data :average-water-consumption-l)
                :on-change #(on-change :average-water-consumption-l %)}]}
 
@@ -477,6 +485,7 @@
              [lui/text-field
               {:type      "number"
                :spec      ::schema/ice-average-thickness-mm
+               :adornment (tr :physical-units/mm)
                :value     (-> edit-data :ice-average-thickness-mm)
                :on-change #(on-change :ice-average-thickness-mm %)}]}]])
 
