@@ -323,7 +323,6 @@
             (assoc :heat-pump-type (-> heat-pump-type locale)))
 
         :rinks              (:rinks latest)
-        :ice-maintenance    (:ice-maintenance latest)
         :renovations        (:renovations latest)
         :conditions         (:conditions latest)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
