@@ -17,5 +17,8 @@ docker-compose run frontend-build
 
 ### Integration tests ###
 
+printf "\n *** Seeding test data *** \n\n"
+docker-compose run backend-seed
+
 printf "\n *** Running integration tests *** \n\n"
 docker-compose run integration-test

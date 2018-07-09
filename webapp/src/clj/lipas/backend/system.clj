@@ -29,3 +29,6 @@
     (pprint (-> config
                 (update-in [:db :password] mask)))
     system))
+
+(defn stop-system! [system]
+  (ig/halt! system))
