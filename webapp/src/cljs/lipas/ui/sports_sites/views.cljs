@@ -1,4 +1,4 @@
-(ns lipas.ui.sports-places.views
+(ns lipas.ui.sports-sites.views
   (:require [lipas.ui.mui :as mui]))
 
 (defn create-panel [tr]
