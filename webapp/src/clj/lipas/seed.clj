@@ -24,7 +24,8 @@
     Vesivelhon tietoja."}})
 
 (defn -main [& args]
-  (let [system (backend/start-system!)]
+  (let [config (select-keys backend/default-config [:db])
+        system (backend/start-system! config)]
     (try
       (log/info "Seeding demo users 'jhdemo' and 'uhdemo'")
       (core/add-user (:db system) jh-demo)
