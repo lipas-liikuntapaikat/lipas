@@ -27,17 +27,15 @@
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
    :sports-site
-   {:headline     "Liikuntapaikka"
-    :id           "LIPAS-ID"
-    :name         "Nimi"
-    :name-fi      "Nimi"
-    :name-se      "Nimi ruotsiksi"
-    :name-en      "Nimi englanniksi"
-    :owner        "Omistaja"
-    :admin        "Ylläpitäjä"
-    :phone-number "Puhelinnumero"
-    :www          "Web-sivu"
-    :email-public "Sähköposti (julkinen)"}
+   {:headline       "Liikuntapaikka"
+    :id             "LIPAS-ID"
+    :name           "Virallinen nimi"
+    :marketing-name "Markkinointinimi"
+    :owner          "Omistaja"
+    :admin          "Ylläpitäjä"
+    :phone-number   "Puhelinnumero"
+    :www            "Web-sivu"
+    :email-public   "Sähköposti (julkinen)"}
 
    :type
    {:type-code "Tyyppikoodi"

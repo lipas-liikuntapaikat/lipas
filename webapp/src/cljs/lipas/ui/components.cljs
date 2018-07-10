@@ -371,12 +371,20 @@
     [form {:read-only? read-only?}
 
      ;; Name
-     {:label      (tr :sports-site/name-fi)
+     {:label      (tr :sports-site/name)
       :value      (-> display-data :name)
       :form-field [text-field
                    {:spec      ::schema/name
-                    :value     (-> edit-data :name :fi)
-                    :on-change #(on-change :name :fi %)}]}
+                    :value     (-> edit-data :name)
+                    :on-change #(on-change :name %)}]}
+
+     ;; Marketing name
+     {:label      (tr :sports-site/marketing-name)
+      :value      (-> display-data :marketing-name)
+      :form-field [text-field
+                   {:spec      ::schema/marketing-name
+                    :value     (-> edit-data :marketing-name)
+                    :on-change #(on-change :marketing-name %)}]}
 
      ;; Type
      {:label      (tr :type/name)

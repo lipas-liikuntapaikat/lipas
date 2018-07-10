@@ -14,10 +14,8 @@
   {:lipas-id 89839
    :timestamp "2016-11-14 10:13:20.103"
 
-   :name
-   {:fi "Synergia areena"
-    :se nil
-    :en nil}
+   :name "Jyväskylän kilpajäähalli"
+   :marketing-name "Synergia areena"
 
    :admin :city-sports
    :owner :city
@@ -140,11 +138,11 @@
 (def jaahalli-2017
   (assoc jaahalli-2016
          :timestamp          "2017-11-14 10:13:20.103"
-         :name {:fi "Jyväskylän kilpajäähalli"}
+         :marketing-name     "Lähi-Tapoola areena"
          :owner :unknown
          :energy-consumption {:electricity-mwh 1500
-                              :heat-mwh 1164
-                              :water-m3 11032}))
+                              :heat-mwh        1164
+                              :water-m3        11032}))
 
 (def vesivelho-2012
   {
@@ -152,9 +150,8 @@
    :lipas-id 506032
    :timestamp "2012-11-14 10:13:20.103"
 
-   :name {:fi "Äänekosken uimahalli VesiVelho"
-          :se nil
-          :en nil}
+   :name "Äänekosken uimahalli"
+   :marketing-name "Vesivelho"
 
    :admin :city-sports
    :owner :city
