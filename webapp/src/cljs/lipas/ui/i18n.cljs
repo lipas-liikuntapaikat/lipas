@@ -26,7 +26,7 @@
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi vielä
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
-   :sports-place
+   :sports-site
    {:headline     "Liikuntapaikka"
     :id           "LIPAS-ID"
     :name         "Nimi"

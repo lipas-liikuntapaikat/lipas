@@ -486,12 +486,12 @@
      [mui/grid {:item true :xs 12}
       [mui/paper
        [lui/table
-        {:headers   [[:name (tr :sports-place/name)]
+        {:headers   [[:name (tr :sports-site/name)]
                      [:address (tr :location/address)]
                      [:postal-code (tr :location/postal-code)]
                      [:city (tr :location/city)]
-                     [:admin (tr :sports-place/admin)]
-                     [:owner (tr :sports-place/owner)]]
+                     [:admin (tr :sports-site/admin)]
+                     [:owner (tr :sports-site/owner)]]
          :items     sites
          :on-select #(==> [::events/display-site %])}]]]]))
 

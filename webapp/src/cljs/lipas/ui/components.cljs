@@ -371,7 +371,7 @@
     [form {:read-only? read-only?}
 
      ;; Name
-     {:label      (tr :sports-place/name-fi)
+     {:label      (tr :sports-site/name-fi)
       :value      (-> display-data :name)
       :form-field [text-field
                    {:spec      ::schema/name
@@ -400,7 +400,7 @@
                       :on-change #(on-change :type :size-category %)}]})
 
      ;; Owner
-     {:label      (tr :sports-place/owner)
+     {:label      (tr :sports-site/owner)
       :value      (-> display-data :owner)
       :form-field [select
                    {:value     (-> edit-data :owner)
@@ -410,7 +410,7 @@
                     :on-change #(on-change :owner %)}]}
 
      ;; Admin
-     {:label      (tr :sports-place/admin)
+     {:label      (tr :sports-site/admin)
       :value      (-> display-data :admin)
       :form-field [select
                    {:value     (-> edit-data :admin)
@@ -420,7 +420,7 @@
                     :on-change #(on-change :admin %)}]}
 
      ;; Phone number
-     {:label      (tr :sports-place/phone-number)
+     {:label      (tr :sports-site/phone-number)
       :value      (-> display-data :phone-number)
       :form-field [text-field
                    {:value     (-> edit-data :phone-number)
@@ -428,7 +428,7 @@
                     :on-change #(on-change :phone-number %)}]}
 
      ;; WWW
-     {:label      (tr :sports-place/www)
+     {:label      (tr :sports-site/www)
       :value      (-> display-data :www)
       :form-field [text-field
                    {:value     (-> edit-data :www)
@@ -436,7 +436,7 @@
                     :on-change #(on-change :www %)}]}
 
      ;; Email
-     {:label      (tr :sports-place/email-public)
+     {:label      (tr :sports-site/email-public)
       :value      (-> display-data :email)
       :form-field [text-field
                    {:value     (-> edit-data :email)

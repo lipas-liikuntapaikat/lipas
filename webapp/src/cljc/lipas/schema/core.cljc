@@ -7,7 +7,7 @@
             [lipas.data.materials :as materials]
             [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.data.types :as sports-place-types]))
+            [lipas.data.types :as sports-site-types]))
 
 (def this-year #?(:cljs (.getFullYear (js/Date.))
                   :clj  (.getYear (java.time.LocalDate/now))))
@@ -15,7 +15,7 @@
 (defn str-btw [min max]
   (s/and string? #(<= min (count %) max)))
 
-;; Sports-place
+;; Sports site
 
 (s/def ::name (str-btw 2 100))
 
@@ -36,7 +36,7 @@
 (s/def ::postal-office (str-btw 0 50))
 
 (s/def ::city-code (into #{} (map :city-code) cities/active))
-(s/def ::sports-place-type (into #{} (map :type-code) sports-place-types/all))
+(s/def ::sports-site-type (into #{} (map :type-code) sports-site-types/all))
 
 (s/def ::relevant-year (s/int-in 1800 (inc this-year)))
 
