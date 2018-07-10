@@ -5,7 +5,7 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.handler :as handler]))
 
-(def config
+(def default-config
   {:db  {:dbtype   "postgresql"
          :dbname   (:db-name env)
          :host     (:db-host env)
@@ -23,12 +23,15 @@
 (defn mask [s]
   "[secret]")
 
-(defn start-system! []
-  (let [system (ig/init config)]
-    (prn "System started with config:")
-    (pprint (-> config
-                (update-in [:db :password] mask)))
-    system))
+(defn start-system!
+  ([]
+   (start-system! default-config))
+  ([config]
+   (let [system (ig/init config)]
+     (prn "System started with config:")
+     (pprint (-> config
+                 (update-in [:db :password] mask)))
+     system)))
 
 (defn stop-system! [system]
   (ig/halt! system))
