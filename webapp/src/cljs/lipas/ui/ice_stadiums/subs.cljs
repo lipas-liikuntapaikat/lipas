@@ -203,7 +203,7 @@
         owner  (owners (-> latest :owner))
         city   (get cities (-> latest :location :city :city-code))]
     {:lipas-id    (-> latest :lipas-id)
-     :name        (-> latest :name locale)
+     :name        (-> latest :name)
      :type        (-> type :name locale)
      :address     (-> latest :location :address)
      :postal-code (-> latest :location :postal-code)
@@ -284,17 +284,18 @@
            get-cet      #(get-in condensate-energy-targets [% locale])
            get-material #(get-in materials [% locale])]
 
-       {:lipas-id     (-> latest :lipas-id)
-        :name         (-> latest :name locale)
+       {:lipas-id       (-> latest :lipas-id)
+        :name           (-> latest :name)
+        :marketing-name (-> latest :marketing-name)
         :type
         {:name          (-> type :name locale)
          :type-code     (-> latest :type :type-code)
          :size-category (-> size-category locale)}
-        :owner        (-> owner locale)
-        :admin        (-> admin locale)
-        :phone-number (-> latest :phone-number)
-        :www          (-> latest :www)
-        :email        (-> latest :email)
+        :owner          (-> owner locale)
+        :admin          (-> admin locale)
+        :phone-number   (-> latest :phone-number)
+        :www            (-> latest :www)
+        :email          (-> latest :email)
 
         :location
         {:address       (-> latest :location :address)
