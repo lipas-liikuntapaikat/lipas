@@ -4,6 +4,7 @@
                  [org.clojure/clojure "1.9.0"]
                  [camel-snake-kebab "0.4.0"]
                  [etaoin "0.2.8-SNAPSHOT"]
+                 [hiposfer/geojson.specs "0.2.0"]
 
                  ;;; Frontend ;;;
                  [org.clojure/clojurescript "1.10.312"]
