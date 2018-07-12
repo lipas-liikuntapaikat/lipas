@@ -312,12 +312,12 @@
    [mui/select
     (merge (dissoc props :label :value-fn :label-fn)
            {:multiple true
-            :value value
-            :on-change #(on-change (-> % .-target .-value))})
+            :value (map pr-str value)
+            :on-change #(on-change (->> % .-target .-value (map read-string)))})
     (for [i items]
       [mui/menu-item
-       {:key (value-fn i)
-        :value (value-fn i)}
+       {:key (pr-str (value-fn i))
+        :value (pr-str (value-fn i))}
        (label-fn i)])]])
 
 (defn year-selector [{:keys [label value on-change required years] :as props}]
