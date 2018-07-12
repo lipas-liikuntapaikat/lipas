@@ -499,11 +499,18 @@
 (s/def :lipas.swimming-pool.water-treatment/filtering-method
   (into #{} (keys swimming-pools/filtering-methods)))
 
+(s/def :lipas.swimming-pool.water-treatment/filtering-methods
+  (s/coll-of :lipas.swimming-pool.water-treatment/filtering-method
+             :min-count 0
+             :max-count 10
+             :distinct true
+             :into []))
+
 ;; TODO maybe get rid of this?
 (s/def :lipas.swimming-pool.water-treatment/comment (str-btw 1 1024))
 
 (s/def :lipas.swimming-pool/water-treatment
-  (s/keys :req-un [:lipas.swimming-pool.water-treatment/filtering-method
+  (s/keys :req-un [:lipas.swimming-pool.water-treatment/filtering-methods
                    :lipas.swimming-pool.water-treatment/activated-carbon
                    :lipas.swimming-pool.water-treatment/uv-treatment
                    :lipas.swimming-pool.water-treatment/ozonation
