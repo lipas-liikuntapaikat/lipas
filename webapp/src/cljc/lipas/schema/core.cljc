@@ -270,29 +270,12 @@
 (comment (s/valid? :lipas.building/main-construction-materials [:concrete :brick]))
 (comment (s/valid? :lipas.building/ventilation-units-count 100))
 
-(s/def :lipas.swimming-pool/building
-  (s/keys :req-un [:lipas.building/construction-year
-                   :lipas.building/main-designers
-                   :lipas.building/total-surface-area-m2
-                   :lipas.building/total-volume-m3
-                   :lipas.building/pool-room-total-area-m2
-                   :lipas.building/total-water-area-m2
-                   :lipas.building/heat-sections?
-                   :lipas.building/main-construction-materials
-                   :lipas.building/piled?
-                   :lipas.building/supporting-structures
-                   :lipas.building/ceiling-structures
-                   :lipas.building/staff-count
-                   :lipas.building/seating-capacity
-                   :lipas.building/heat-source
-                   :lipas.building/ventilation-units-count]))
-
 ;;; Ice stadiums ;;;
 
 ;; Building ;;
 
 (s/def :lipas.ice-stadium/building
-  (s/keys :req-un [:lipas.building/total-surface-area-m2
+  (s/keys :opt-un [:lipas.building/total-surface-area-m2
                    :lipas.building/total-volume-m3
                    :lipas.building/construction-year
                    :lipas.building/seating-capacity]))
@@ -307,7 +290,7 @@
 (s/def :lipas.ice-stadium.envelope/low-emissivity-coating? boolean?)
 
 (s/def :lipas.ice-stadium/envelope
-  (s/keys :req-un [:lipas.ice-stadium.envelope/insulated-exterior?
+  (s/keys :opt-un [:lipas.ice-stadium.envelope/insulated-exterior?
                    :lipas.ice-stadium.envelope/insulated-ceiling?
                    :lipas.ice-stadium.envelope/low-emissivity-coating?]))
 
@@ -316,7 +299,7 @@
 (s/def :lipas.ice-stadium.rink/width-m (s/int-in 0 100))
 (s/def :lipas.ice-stadium.rink/length-m (s/int-in 0 100))
 
-(s/def :lipas.ice-stadium/rink (s/keys :req-un [:lipas.ice-stadium.rink/width-m
+(s/def :lipas.ice-stadium/rink (s/keys :opt-un [:lipas.ice-stadium.rink/width-m
                                                 :lipas.ice-stadium.rink/length-m]))
 (s/def :lipas.ice-stadium/rinks
   (s/coll-of :lipas.ice-stadium/rink
@@ -357,7 +340,7 @@
   (s/int-in 0 (inc 30000)))
 
 (s/def :lipas.ice-stadium/refrigeration
-  (s/keys :req-un [:lipas.ice-stadium.refrigeration/original?
+  (s/keys :opt-un [:lipas.ice-stadium.refrigeration/original?
                    :lipas.ice-stadium.refrigeration/individual-metering?
                    :lipas.ice-stadium.refrigeration/condensate-energy-recycling?
                    :lipas.ice-stadium.refrigeration/condensate-energy-main-targets
@@ -397,7 +380,7 @@
   (s/int-in 0 (inc 150)))
 
 (s/def :lipas.ice-stadium/conditions
-  (s/keys :req-un [:lipas.ice-stadium.conditions/air-humidity-min-percent
+  (s/keys :opt-un [:lipas.ice-stadium.conditions/air-humidity-min-percent
                    :lipas.ice-stadium.conditions/air-humidity-max-percent
                    :lipas.ice-stadium.conditions/ice-surface-temperature-c
                    :lipas.ice-stadium.conditions/skating-area-temperature-c
@@ -428,7 +411,7 @@
   (into #{} (keys ice-stadiums/heat-pump-types)))
 
 (s/def :lipas.ice-stadium/ventilation
-  (s/keys :req-un
+  (s/keys :opt-un
           [:lipas.ice-stadium.ventilation/heat-recovery-efficiency
            :lipas.ice-stadium.ventilation/heat-recovery-type
            :lipas.ice-stadium.ventilation/dryer-type
@@ -444,10 +427,10 @@
 (s/def :lipas.energy-consumption/water-m3 (s/int-in 0 100000))
 
 (s/def :lipas/energy-consumption
-  (s/keys :req-un [:lipas.energy-consumption/electricity-mwh
+  (s/keys :opt-un [:lipas.energy-consumption/cold-mwh
+                   :lipas.energy-consumption/electricity-mwh
                    :lipas.energy-consumption/heat-mwh
-                   :lipas.energy-consumption/water-m3]
-          :opt-un [:lipas.energy-consumption/cold-mwh]))
+                   :lipas.energy-consumption/water-m3]))
 
 (s/def :lipas.ice-stadium/energy-consumption-monthly
   (s/map-of (s/int-in 1 (inc 12)) :lipas/energy-consumption))
@@ -461,27 +444,28 @@
 (s/def :lipas.sports-site/ice-stadium
   (s/merge
    :lipas/sports-site
-   (s/keys :req-un [:lipas.ice-stadium/type
+   (s/keys :req-un [:lipas.ice-stadium/type]
+           :opt-un [:lipas.ice-stadium/energy-consumption-monthly
                     :lipas.ice-stadium/building
                     :lipas.ice-stadium/rinks
                     :lipas.ice-stadium/envelope
                     :lipas.ice-stadium/refrigeration
                     :lipas.ice-stadium/ventilation
                     :lipas.ice-stadium/conditions
-                    :lipas/energy-consumption]
-           :opt-un [:lipas.ice-stadium/energy-consumption-monthly])))
+                    :lipas/energy-consumption])))
 
 ;;; Swimming pools ;;;
 
 ;; Building ;;
 
 (s/def :lipas.swimming-pool/building
-  (s/keys :req-un [:lipas.building/main-designers
+  (s/keys :opt-un [:lipas.building/main-designers
                    :lipas.building/total-surface-area-m2
                    :lipas.building/total-volume-m3
                    :lipas.building/construction-year
                    :lipas.building/seating-capacity
                    :lipas.building/total-water-area-m2
+                   :lipas.building/pool-room-total-area-m2
                    :lipas.building/heat-sections?
                    :lipas.building/main-construction-materials
                    :lipas.building/piled?
@@ -510,7 +494,7 @@
 (s/def :lipas.swimming-pool.water-treatment/comment (str-btw 1 1024))
 
 (s/def :lipas.swimming-pool/water-treatment
-  (s/keys :req-un [:lipas.swimming-pool.water-treatment/filtering-methods
+  (s/keys :opt-un [:lipas.swimming-pool.water-treatment/filtering-methods
                    :lipas.swimming-pool.water-treatment/activated-carbon
                    :lipas.swimming-pool.water-treatment/uv-treatment
                    :lipas.swimming-pool.water-treatment/ozonation
@@ -528,7 +512,7 @@
 (s/def :lipas.swimming-pool.pool/depth-max-m (s/double-in :min 0 :max 10))
 
 (s/def :lipas.swimming-pool/pool
-  (s/keys :req-un [:lipas.swimming-pool.pool/type
+  (s/keys :opt-un [:lipas.swimming-pool.pool/type
                    :lipas.swimming-pool.pool/temperature-c
                    :lipas.swimming-pool.pool/volume-m3
                    :lipas.swimming-pool.pool/area-m2
@@ -551,7 +535,7 @@
   (into #{} (keys materials/slide-structures)))
 
 (s/def :lipas.swimming-pool/slide
-  (s/keys :req-un [:lipas.swimming-pool.slide/length-m
+  (s/keys :opt-un [:lipas.swimming-pool.slide/length-m
                    :lipas.swimming-pool.slide/structure]))
 
 (s/def :lipas.swimming-pool/slides
@@ -569,7 +553,7 @@
   (into #{} (keys swimming-pools/sauna-types)))
 
 (s/def :lipas.swimming-pool/sauna
-  (s/keys :req-un [:lipas.swimming-pool.sauna/men?
+  (s/keys :opt-un [:lipas.swimming-pool.sauna/men?
                    :lipas.swimming-pool.sauna/women?
                    :lipas.swimming-pool.sauna/type]))
 
@@ -600,7 +584,7 @@
 (s/def :lipas.swimming-pool.facilities/lockers-women-count (s/int-in 0 1000))
 
 (s/def :lipas.swimming-pool/facilities
-  (s/keys :req-un [:lipas.swimming-pool.facilities/platforms-1m-count
+  (s/keys :opt-un [:lipas.swimming-pool.facilities/platforms-1m-count
                    :lipas.swimming-pool.facilities/platforms-3m-count
                    :lipas.swimming-pool.facilities/platforms-5m-count
                    :lipas.swimming-pool.facilities/platforms-7.5m-count
@@ -628,8 +612,8 @@
 (s/def :lipas.sports-site/swimming-pool
   (s/merge
    :lipas/sports-site
-   (s/keys :req-un [:lipas.swimming-pool/type
-                    :lipas.swimming-pool/water-treatment
+   (s/keys :req-un [:lipas.swimming-pool/type]
+           :opt-un [:lipas.swimming-pool/water-treatment
                     :lipas.swimming-pool/facilities
                     :lipas.swimming-pool/building
                     :lipas.swimming-pool/pools
