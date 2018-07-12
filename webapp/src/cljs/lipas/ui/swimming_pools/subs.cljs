@@ -306,7 +306,6 @@
         (->> (:saunas latest)
              (map #(update % :type get-sauna-type)))
 
-        :other-services     (:other-services latest)
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

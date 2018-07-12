@@ -23,22 +23,22 @@
                   :on-change #(set-field :type %)}]
 
      ;; Women?
-     [lui/checkbox {:label     (tr :saunas/women)
-                    :on-change #(set-field :women %)
-                    :value     (:women data)}]
+     [lui/checkbox {:label     (tr :lipas.swimming-pool.saunas/women?)
+                    :on-change #(set-field :women? %)
+                    :value     (:women? data)}]
 
      ;; Men?
-     [lui/checkbox {:label     (tr :saunas/men)
-                    :on-change #(set-field :men %)
-                    :value     (:men data)}]]))
+     [lui/checkbox {:label     (tr :lipas.swimming-pool.saunas/men?)
+                    :on-change #(set-field :men? %)
+                    :value     (:men? data)}]]))
 
 (defn dialog [{:keys [tr]}]
   (let [data (<== [::subs/sauna-form])
         reset #(==> [::events/reset-dialog :sauna])
         close #(==> [::events/toggle-dialog :sauna])]
     [lui/dialog {:title (if (:id data)
-                          (tr :saunas/edit-sauna)
-                          (tr :saunas/add-sauna))
+                          (tr :lipas.swimming-pool.saunas/edit-sauna)
+                          (tr :lipas.swimming-pool.saunas/add-sauna))
                  :save-label (tr :actions/save)
                  :cancel-label (tr :actions/cancel)
                  :on-close #(==> [::events/toggle-dialog :sauna])
@@ -49,15 +49,15 @@
 
 (defn- make-headers [tr]
   [[:type (tr :general/type)]
-   [:women (tr :saunas/women)]
-   [:men (tr :saunas/men)]])
+   [:women? (tr :lipas.swimming-pool.saunas/women?)]
+   [:men? (tr :lipas.swimming-pool.saunas/men?)]])
 
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr :type :sauna-types)]
     [lui/form-table
      {:headers        (make-headers tr)
       :items          (map localize (vals items))
-      :add-tooltip    (tr :saunas/add-sauna)
+      :add-tooltip    (tr :lipas.swimming-pool.saunas/add-sauna)
       :edit-tooltip   (tr :actions/edit)
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :sauna {}])

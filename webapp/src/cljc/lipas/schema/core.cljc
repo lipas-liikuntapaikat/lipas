@@ -9,7 +9,11 @@
             [lipas.data.owners :as owners]
             [lipas.data.sports-sites :as sports-sites]
             [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.data.types :as sports-site-types]))
+            [lipas.data.types :as sports-site-types]
+            #?(:cljs [goog.string :as gstring])
+            #?(:cljs [goog.string.format])))
+
+;;; Utils ;;;
 
 (def this-year #?(:cljs (.getFullYear (js/Date.))
                   :clj  (.getYear (java.time.LocalDate/now))))
@@ -17,50 +21,29 @@
 (defn str-btw [min max]
   (s/and string? #(<= min (count %) max)))
 
-;; Sports site
+(defn timestamp
+  "Returns current timestamp in \"2018-07-11T09:38:06.370Z\" format.
+  Always UTC."
+  []
+  #?(:cljs (.toISOString (js/Date.))
+     :clj  (.toString (java.time.Instant/now))))
 
-(s/def ::name (str-btw 2 100))
-(s/def ::marketing-name (str-btw 2 100))
+(defn zero-left-pad
+  [s len]
+  (let [format-fn #?(:clj format
+                     :cljs gstring/format)]
+    (format-fn (str "%0" len "d") s)))
 
-(s/def ::owner (into #{} (keys owners/all)))
-(s/def ::admin (into #{} (keys admins/all)))
+;;; Regexes ;;;
 
-(s/def ::phone-number string?)
-(s/def ::www string?)
-
-(s/def ::sports-site-type (into #{} (map :type-code) sports-site-types/all))
-
-;; Location
-
-(s/def ::address string?)
-
+(def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
 (def postal-code-regex #"[0-9]{5}")
-(comment (re-matches postal-code-regex "00010"))
 
-(s/def ::postal-code-type (s/and string? #(re-matches postal-code-regex %)))
+;; https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime
+(def timestamp-regex
+  #"\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)")
 
-(defn postal-code-gen []
-  "Function that returns a Generator for Finnish postal codes"
-  (gen/fmap
-   (partial reduce str)
-   (s/gen
-    (s/tuple
-     (s/int-in 0 10)
-     (s/int-in 0 10)
-     (s/int-in 0 10)
-     (s/int-in 0 10)
-     (s/int-in 0 10)))))
-
-(s/def ::postal-code (s/with-gen
-                       ::postal-code-type
-                       postal-code-gen))
-
-(s/def ::postal-office (str-btw 0 50))
-
-(s/def ::city-code (into #{} (map :city-code) cities/active))
-(s/def ::neighborhood (str-btw 1 100))
-
-(s/def ::relevant-year (s/int-in 1800 (inc this-year)))
+;;; Generators ;;;
 
 (defn gen-str [min max]
   (gen/fmap #(apply str %)
@@ -76,224 +59,17 @@
     (gen-str 1 15)
     (gen-str 2 63))))
 
-(def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
-
-(comment (gen/generate (s/gen ::email)))
-(comment (gen/generate (gen/vector (gen/char-alpha 10))))
-(comment (gen/generate (gen-str 1 5)))
-(comment (s/conform ::email-type "kissa@koira.fi"))
-(s/def ::email-type (s/and string? #(re-matches email-regex %)))
-(s/def ::email (s/with-gen
-                 ::email-type
-                 email-gen))
-
-;;; User ;;;
-
-(s/def ::firstname (str-btw 1 128))
-(s/def ::lastname (str-btw 1 128))
-(s/def ::username (str-btw 1 128))
-(s/def ::password (str-btw 6 128))
-
-(s/def ::login (s/or :username ::username
-                     :email ::email))
-
-(s/def ::user-data (s/keys :req-un [::firstname
-                                    ::lastname]))
-(s/def ::permissions map?)
-(s/def ::user (s/keys :req-un [::email
-                               ::username
-                               ::password
-                               ::user-data]
-                      :opt-un [::permissions]))
-
-;;; General ;;;
-
-(comment (s/valid? ::construction-year 2018))
-(s/def ::construction-year ::relevant-year)
-
-(comment (s/valid? ::material :concrete))
-(comment (s/valid? ::material :kebab))
-(s/def ::material (into #{} (keys materials/all)))
-
-;;; Building ;;;
-
-(s/def ::main-designers string?)
-(s/def ::total-surface-area-m2 (s/int-in 100 (inc 50000)))
-(s/def ::total-volume-m3 (s/int-in 100 (inc 200000)))
-(s/def ::pool-room-total-area-m2 (s/int-in 100 (inc 10000)))
-(s/def ::total-water-area-m2 (s/int-in 100 (inc 10000)))
-(s/def ::heat-sections? boolean?)
-(s/def ::piled? boolean?)
-(s/def ::main-construction-materials (s/coll-of ::material))
-(s/def ::supporting-structures (s/coll-of ::material))
-(s/def ::ceiling-structures (s/coll-of ::material))
-(s/def ::staff-count (s/int-in 0 (inc 1000)))
-(s/def ::seating-capacity (s/int-in 0 (inc 10000)))
-(s/def ::heat-source (into #{} (keys swimming-pools/heat-sources)))
-(s/def ::ventilation-units-count (s/int-in 0 (inc 100)))
-(s/def ::pool-room-total-area-m2 (s/int-in 0 (inc 5000)))
-(s/def ::total-water-area-m2 (s/int-in 0 (inc 5000)))
-
-(comment (s/valid? ::main-construction-materials [:concrete :brick]))
-(comment (s/valid? ::ventilation-units-count 100))
-
-(s/def ::building (s/keys :opt-un [::construction-year
-                                   ::main-designers
-                                   ::total-surface-area-m2
-                                   ::total-volume-m3
-                                   ::pool-room-total-area-m2
-                                   ::total-water-area-m2
-                                   ::heat-sections?
-                                   ::main-construction-materials
-                                   ::piled?
-                                   ::supporting-structures
-                                   ::ceiling-description
-                                   ::staff-count
-                                   ::seating-capacity
-                                   ::heat-source
-                                   ::ventilation-units-count]))
-
-(comment (s/valid? ::building {:construction-year 1995
-                               :main-designer "Tipokatti"}))
-
-;;; Renovations ;;;
-
-(s/def ::year ::relevant-year)
-(s/def ::comment string?)
-
-(s/def ::renovation (s/keys :req-un [::year]
-                            :opt-un [::comment
-                                     ::main-designers]))
-
-;;; Water treatment ;;;
-
-(s/def ::ozonation boolean?)
-(s/def ::uv-treatment boolean?)
-(s/def ::activated-carbon boolean?)
-
-(s/def ::filtering-method (into #{} (keys swimming-pools/filtering-methods)))
-(comment (s/valid? ::filtering-method :coal))
-
-;;; Pools ;;;
-
-(comment (s/valid? ::pool-type :therapy-pool))
-(s/def ::pool-type (into #{} (keys swimming-pools/pool-types)))
-(s/def ::pool-temperature-c (s/int-in 0 50))
-(s/def ::pool-volume-m3 (s/int-in 0 5000))
-(s/def ::pool-area-m2 (s/int-in 0 2000))
-(s/def ::pool-length-m (s/double-in :min 0 :max 100))
-(s/def ::pool-width-m (s/double-in :min 0 :max 100))
-(s/def ::pool-depth-min-m (s/double-in :min 0 :max 10))
-(s/def ::pool-depth-max-m (s/double-in :min 0 :max 10))
-
-;;; Other services ;;;
-
-(s/def ::platforms-1m-count (s/int-in 0 100))
-(s/def ::platforms-3m-count (s/int-in 0 100))
-(s/def ::platforms-5m-count (s/int-in 0 100))
-(s/def ::platforms-7.5m-count (s/int-in 0 100))
-(s/def ::platforms-10m-count (s/int-in 0 100))
-(s/def ::hydro-massage-spots-count (s/int-in 0 100))
-(s/def ::hydro-neck-massage-spots-count (s/int-in 0 100))
-(s/def ::kiosk? boolean?)
-
-;;; Showers and lockers ;;;
-
-(s/def ::showers-men-count (s/int-in 0 200))
-(s/def ::showers-women-count (s/int-in 0 200))
-(s/def ::lockers-men-count (s/int-in 0 1000))
-(s/def ::lockers-women-count (s/int-in 0 1000))
-
-;;; Saunas ;;;
-
-(s/def ::sauna-type (into #{} (keys swimming-pools/sauna-types)))
-(s/def ::men? boolean?)
-(s/def ::women? boolean?)
-
-;;; Slides ;;;
-
-(s/def ::slide-structure (into #{} (keys materials/slide-structures)))
-(s/def ::slide-length-m (s/int-in 0 200))
-
-;;; Ice Rinks ;;;
-
-(s/def ::ice-rink-category #{:small
-                             :competition
-                             :large})
-
-;;; Rinks ;;;
-
-(s/def ::rink-length-m (s/int-in 0 100))
-(s/def ::rink-width-m (s/int-in 0 100))
-
-;;; Refrigeration ;;;
-
-(s/def ::power-kw (s/int-in 0 (inc 10000)))
-(s/def ::refrigerant (into #{} (keys ice-stadiums/refrigerants)))
-(s/def ::refrigerant-amount-kg (s/int-in 0 (inc 10000)))
-(s/def ::refrigerant-solution (into #{} (keys ice-stadiums/refrigerant-solutions)))
-(s/def ::refrigerant-solution-amount-l (s/int-in 0 (inc 30000)))
-
-;;; Conditions ;;;
-
-(s/def ::air-humidity-percent (s/int-in 50 (inc 70)))
-(s/def ::ice-surface-temperature-c (s/int-in -6 (inc -3)))
-(s/def ::skating-area-temperature-c (s/int-in 5 (inc 12)))
-(s/def ::stand-temperature-c (s/int-in 0 (inc 50)))
-(s/def ::daily-open-hours (s/int-in 0 (inc 24)))
-(s/def ::open-months (s/int-in 0 (inc 12)))
-
-;;; Ventilation ;;;
-
-(s/def ::heat-recovery-thermal-efficiency-percent (s/int-in 0 (inc 100)))
-(s/def ::heat-recovery-type (into #{} (keys ice-stadiums/heat-recovery-types)))
-(s/def ::dryer-type (into #{} (keys ice-stadiums/dryer-types)))
-(s/def ::dryer-duty-type (into #{} (keys ice-stadiums/dryer-duty-types)))
-(s/def ::heat-pump-type (into #{} (keys ice-stadiums/heat-pump-types)))
-
-;;; Ice maintenance ;;;
-
-(s/def ::daily-maintenance-count-week-days (s/int-in 0 (inc 50)))
-(s/def ::daily-maintenance-count-weekends (s/int-in 0 (inc 50)))
-(s/def ::average-water-consumption-l (s/int-in 0 (inc 1000)))
-(s/def ::maintenance-water-temperature-c (s/int-in 0 100))
-(s/def ::ice-average-thickness-mm (s/int-in 0 (inc 150)))
-
-;;; Energy consumption ;;;
-
-;; Note: in cljs (type 1e7) => Number (implicitly int)
-;;       in clj  (type 1e7) => Double
-;;
-;; So scientific notation shouln't be used because it would yield
-;; non-deterministic results between platforms.
-(comment (s/valid? ::electricity-mwh 1e4))
-(comment (s/valid? ::electricity-mwh 0))
-(comment (s/valid? ::electricity-mwh (dec 1e4))) ; works in clj but not in cljs
-(comment (s/valid? ::electricity-mwh 1795))
-(s/def ::electricity-mwh (s/int-in 0 10000))
-(s/def ::heat-mwh (s/int-in 0 10000))
-(s/def ::cold-mwh (s/int-in 0 100000)) ; TODO figure out realistic limits
-(s/def ::water-m3 (s/int-in 0 100000))
-
-;; Visitors
-(s/def ::visitors-total-count (s/int-in 0 1000000))
-
-(defn timestamp
-  "Returns current timestamp in \"2018-07-11T09:38:06.370Z\" format.
-  Always UTC."
-  []
-  #?(:cljs (.toISOString (js/Date.))
-     :clj  (.toString (java.time.Instant/now))))
-
-;; https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime
-(def timestamp-regex
-  #"\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)")
-
-(defn zero-left-pad
-  [s len]
-  (let [format-fn #?(:clj format
-                     :cljs gstring/format)]
-    (format-fn (str "%0" len "d") s)))
+(defn postal-code-gen []
+  "Function that returns a Generator for Finnish postal codes"
+  (gen/fmap
+   (partial reduce str)
+   (s/gen
+    (s/tuple
+     (s/int-in 0 10)
+     (s/int-in 0 10)
+     (s/int-in 0 10)
+     (s/int-in 0 10)
+     (s/int-in 0 10)))))
 
 (defn timestamp-gen []
   (gen/fmap
@@ -312,6 +88,20 @@
     (s/gen (s/int-in 0 (inc 59)))
     (s/gen (s/int-in 0 (inc 59)))
     (s/gen (s/int-in 0 (inc 999))))))
+
+(defn lipas-point-feature-gen []
+  (gen/fmap
+   (fn [[lon lat]]
+     {:type "FeatureCollection"
+      :features
+      [{:type "Feature"
+        :geometry
+        {:type "Point"
+         :coordinates [lon lat]}}]})
+   (s/gen (s/tuple :lipas.location.coordinates/lon
+                   :lipas.location.coordinates/lat))))
+
+;; Specs ;;
 
 (s/def :lipas/timestamp-type (s/and string? #(re-matches timestamp-regex %)))
 (s/def :lipas/timestamp (s/with-gen :lipas/timestamp-type timestamp-gen))
@@ -344,8 +134,6 @@
 ;;; Location ;;;
 
 (s/def :lipas.location/address (str-btw 1 200))
-
-
 (s/def :lipas.location/postal-code-type
   (s/and string? #(re-matches postal-code-regex %)))
 
@@ -354,7 +142,6 @@
                        postal-code-gen))
 
 (s/def :lipas.location/postal-office (str-btw 0 50))
-
 (s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/active))
 (s/def :lipas.location.city/neighborhood (str-btw 1 100))
 
@@ -372,18 +159,6 @@
                                                     :max 180.0
                                                     :NaN? false
                                                     :infinite? false))
-
-(defn lipas-point-feature-gen []
-  (gen/fmap
-   (fn [[lon lat]]
-     {:type "FeatureCollection"
-      :features
-      [{:type "Feature"
-        :geometry
-        {:type "Point"
-         :coordinates [lon lat]}}]})
-   (s/gen (s/tuple :lipas.location.coordinates/lat
-                   :lipas.location.coordinates/lon))))
 
 ;; NOTE: generator supports only point features atm
 (s/def :lipas.location/geometries (s/with-gen
@@ -419,7 +194,7 @@
                            :number? number?
                            :boolean? boolean?)))
 
-(s/def :lipas.sports-site/location
+(s/def :lipas/location
   (s/keys :req-un [:lipas.location/address
                    :lipas.location/postal-code
                    :lipas.location/geometries
@@ -444,8 +219,8 @@
                    :lipas.sports-site/name
                    :lipas.sports-site/owner
                    :lipas.sports-site/admin
-                   :lipas.sports-site/location
-                   :lipas.sports-site/type]
+                   :lipas.sports-site/type
+                   :lipas/location]
           :opt-un [:lipas.sports-site/marketing-name
                    :lipas.sports-site/phone-number
                    :lipas.sports-site/www
@@ -524,17 +299,17 @@
 
 ;; Envelope structure ;;
 
-(s/def :lipas.ice-stadium.envelope-structure/base-floor-structure
+(s/def :lipas.ice-stadium.envelope/base-floor-structure
   (into #{} (keys materials/base-floor-structures)))
 
-(s/def :lipas.ice-stadium.envelope-structure/insulated-exterior? boolean?)
-(s/def :lipas.ice-stadium.envelope-structure/insulated-ceiling? boolean?)
-(s/def :lipas.ice-stadium.envelope-structure/low-emissivity-coating? boolean?)
+(s/def :lipas.ice-stadium.envelope/insulated-exterior? boolean?)
+(s/def :lipas.ice-stadium.envelope/insulated-ceiling? boolean?)
+(s/def :lipas.ice-stadium.envelope/low-emissivity-coating? boolean?)
 
-(s/def :lipas.ice-stadium/envelope-structure
-  (s/keys :opt-un [:lipas.ice-stadium.envelope-structure/insulated-exterior?
-                   :lipas.ice-stadium.envelope-structure/insulated-ceiling?
-                   :lipas.ice-stadium.envelope-structure/low-emissivity-coating?]))
+(s/def :lipas.ice-stadium/envelope
+  (s/keys :req-un [:lipas.ice-stadium.envelope/insulated-exterior?
+                   :lipas.ice-stadium.envelope/insulated-ceiling?
+                   :lipas.ice-stadium.envelope/low-emissivity-coating?]))
 
 ;; Rinks ;;
 
@@ -582,7 +357,7 @@
   (s/int-in 0 (inc 30000)))
 
 (s/def :lipas.ice-stadium/refrigeration
-  (s/keys :opt-un [:lipas.ice-stadium.refrigeration/original?
+  (s/keys :req-un [:lipas.ice-stadium.refrigeration/original?
                    :lipas.ice-stadium.refrigeration/individual-metering?
                    :lipas.ice-stadium.refrigeration/condensate-energy-recycling?
                    :lipas.ice-stadium.refrigeration/condensate-energy-main-targets
@@ -594,18 +369,22 @@
 
 ;; Conditions ;;
 
-(s/def :lipas.ice-stadium.conditions/air-humidity-min-percent (s/int-in 50 (inc 70)))
-(s/def :lipas.ice-stadium.conditions/air-humidity-max-percent (s/int-in 50 (inc 70)))
-(s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c (s/int-in -6 (inc -3)))
-(s/def :lipas.ice-stadium.conditions/skating-area-temperature-c (s/int-in 5 (inc 12)))
+(s/def :lipas.ice-stadium.conditions/air-humidity-min (s/int-in 50 (inc 70)))
+(s/def :lipas.ice-stadium.conditions/air-humidity-max (s/int-in 50 (inc 70)))
 (s/def :lipas.ice-stadium.conditions/stand-temperature-c (s/int-in 0 (inc 50)))
 (s/def :lipas.ice-stadium.conditions/daily-open-hours (s/int-in 0 (inc 24)))
 (s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
 
-(s/def :lipas.ice-stadium.conditions/daily-maintenance-count-week-days
+(s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
+  (s/int-in -6 (inc -3)))
+
+(s/def :lipas.ice-stadium.conditions/skating-area-temperature-c
+  (s/int-in 5 (inc 12)))
+
+(s/def :lipas.ice-stadium.conditions/daily-maintenances-week-days
   (s/int-in 0 (inc 50)))
 
-(s/def :lipas.ice-stadium.conditions/daily-maintenance-count-weekends
+(s/def :lipas.ice-stadium.conditions/daily-maintenances-weekends
   (s/int-in 0 (inc 50)))
 
 (s/def :lipas.ice-stadium.conditions/average-water-consumption-l
@@ -618,22 +397,22 @@
   (s/int-in 0 (inc 150)))
 
 (s/def :lipas.ice-stadium/conditions
-  (s/keys :opt-un [:lipas.ice-stadium.conditions/air-humidity-min-percent
+  (s/keys :req-un [:lipas.ice-stadium.conditions/air-humidity-min-percent
                    :lipas.ice-stadium.conditions/air-humidity-max-percent
                    :lipas.ice-stadium.conditions/ice-surface-temperature-c
                    :lipas.ice-stadium.conditions/skating-area-temperature-c
                    :lipas.ice-stadium.conditions/stand-temperature-c
                    :lipas.ice-stadium.conditions/daily-open-hours
                    :lipas.ice-stadium.conditions/open-months
-                   :lipas.ice-stadium.conditions/daily-maintenance-count-week-days
-                   :lipas.ice-stadium.conditions/daily-maintenance-count-weekends
+                   :lipas.ice-stadium.conditions/daily-maintenances-week-days
+                   :lipas.ice-stadium.conditions/daily-maintenances-weekends
                    :lipas.ice-stadium.conditions/average-water-consumption-l
                    :lipas.ice-stadium.conditions/maintenance-water-temperature-c
                    :lipas.ice-stadium.conditions/ice-average-thickness-mm]))
 
 ;; Ventilation ;;
 
-(s/def :lipas.ice-stadium.ventilation/heat-recovery-thermal-efficiency-percent
+(s/def :lipas.ice-stadium.ventilation/heat-recovery-efficiency
   (s/int-in 0 (inc 100)))
 
 (s/def :lipas.ice-stadium.ventilation/heat-recovery-type
@@ -649,8 +428,8 @@
   (into #{} (keys ice-stadiums/heat-pump-types)))
 
 (s/def :lipas.ice-stadium/ventilation
-  (s/keys :opt-un
-          [:lipas.ice-stadium.ventilation/heat-recovery-thermal-efficiency-percent
+  (s/keys :req-un
+          [:lipas.ice-stadium.ventilation/heat-recovery-efficiency
            :lipas.ice-stadium.ventilation/heat-recovery-type
            :lipas.ice-stadium.ventilation/dryer-type
            :lipas.ice-stadium.ventilation/dryer-duty-type
@@ -673,12 +452,19 @@
 (s/def :lipas.ice-stadium/energy-consumption-monthly
   (s/map-of (s/int-in 1 (inc 12)) :lipas/energy-consumption))
 
+(s/def :lipas.ice-stadium.type/type-code #{2510 2520})
+(s/def :lipas.ice-stadium/type
+  (s/merge
+   :lipas.sports-site/type
+   (s/keys :req-un [:lipas.ice-stadium.type/type-code])))
+
 (s/def :lipas.sports-site/ice-stadium
   (s/merge
    :lipas/sports-site
-   (s/keys :req-un [:lipas.ice-stadium/building
+   (s/keys :req-un [:lipas.ice-stadium/type
+                    :lipas.ice-stadium/building
                     :lipas.ice-stadium/rinks
-                    :lipas.ice-stadium/envelope-structure
+                    :lipas.ice-stadium/envelope
                     :lipas.ice-stadium/refrigeration
                     :lipas.ice-stadium/ventilation
                     :lipas.ice-stadium/conditions
@@ -713,11 +499,15 @@
 (s/def :lipas.swimming-pool.water-treatment/filtering-method
   (into #{} (keys swimming-pools/filtering-methods)))
 
+;; TODO maybe get rid of this?
+(s/def :lipas.swimming-pool.water-treatment/comment (str-btw 1 1024))
+
 (s/def :lipas.swimming-pool/water-treatment
   (s/keys :req-un [:lipas.swimming-pool.water-treatment/filtering-method
                    :lipas.swimming-pool.water-treatment/activated-carbon
                    :lipas.swimming-pool.water-treatment/uv-treatment
-                   :lipas.swimming-pool.water-treatment/ozonation]))
+                   :lipas.swimming-pool.water-treatment/ozonation
+                   :lipas.swimming-pool.water-treatment/comment]))
 
 ;; Pools ;;
 
@@ -783,40 +573,35 @@
              :distincg false
              :into []))
 
-;; Other services ;;
+;; Other facilities ;;
 
-(s/def :lipas.swimming-pool.other-services/platforms-1m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/platforms-3m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/platforms-5m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/platforms-7.5m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/platforms-10m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/hydro-massage-spots-count
+(s/def :lipas.swimming-pool.facilities/platforms-1m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-3m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-5m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-7.5m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-10m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/hydro-massage-spots-count
   (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/hydro-neck-massage-spots-count
+(s/def :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
   (s/int-in 0 100))
-(s/def :lipas.swimming-pool.other-services/kiosk? boolean?)
-
-(s/def :lipas.swimming-pool/other-services
-  (s/keys :req-un
-          [:lipas.swimming-pool.other-services/platforms-1m-count
-           :lipas.swimming-pool.other-services/platforms-1m-count
-           :lipas.swimming-pool.other-services/platforms-3m-count
-           :lipas.swimming-pool.other-services/platforms-5m-count
-           :lipas.swimming-pool.other-services/platforms-7.5m-count
-           :lipas.swimming-pool.other-services/platforms-10m-count
-           :lipas.swimming-pool.other-services/hydro-massage-spots-count
-           :lipas.swimming-pool.other-services/hydro-neck-massage-spots-count
-           :lipas.swimming-pool.other-services/kiosk?]))
+(s/def :lipas.swimming-pool.facilities/kiosk? boolean?)
 
 ;; Showers and lockers ;;
-
 (s/def :lipas.swimming-pool.facilities/showers-men-count (s/int-in 0 200))
 (s/def :lipas.swimming-pool.facilities/showers-women-count (s/int-in 0 200))
 (s/def :lipas.swimming-pool.facilities/lockers-men-count (s/int-in 0 1000))
 (s/def :lipas.swimming-pool.facilities/lockers-women-count (s/int-in 0 1000))
 
 (s/def :lipas.swimming-pool/facilities
-  (s/keys :req-un [:lipas.swimming-pool.facilities/showers-men-count
+  (s/keys :req-un [:lipas.swimming-pool.facilities/platforms-1m-count
+                   :lipas.swimming-pool.facilities/platforms-3m-count
+                   :lipas.swimming-pool.facilities/platforms-5m-count
+                   :lipas.swimming-pool.facilities/platforms-7.5m-count
+                   :lipas.swimming-pool.facilities/platforms-10m-count
+                   :lipas.swimming-pool.facilities/hydro-massage-spots-count
+                   :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
+                   :lipas.swimming-pool.facilities/kiosk?
+                   :lipas.swimming-pool.facilities/showers-men-count
                    :lipas.swimming-pool.facilities/showers-women-count
                    :lipas.swimming-pool.facilities/lockers-men-count
                    :lipas.swimming-pool.facilities/lockers-women-count]))
@@ -824,14 +609,21 @@
 ;; Visitors ;;
 
 (s/def :lipas.swimming-pool.visitors/total-count (s/int-in 0 1000000))
-(s/def :lipas.swimming-pool/visitors (s/keys :req-un [:lipas.visitors/total-count]))
+(s/def :lipas.swimming-pool/visitors
+  (s/keys :req-un [:lipas.swimming-pool.visitors/total-count]))
+
+(s/def :lipas.swimming-pool.type/type-code #{3110})
+(s/def :lipas.swimming-pool/type
+  (s/merge
+   :lipas.sports-site/type
+   (s/keys :req-un [:lipas.swimming-pool.type/type-code])))
 
 (s/def :lipas.sports-site/swimming-pool
   (s/merge
    :lipas/sports-site
-   (s/keys :req-un [:lipas.swimming-pool/water-treatment
+   (s/keys :req-un [:lipas.swimming-pool/type
+                    :lipas.swimming-pool/water-treatment
                     :lipas.swimming-pool/facilities
-                    :lipas.swimming-pool/other-services
                     :lipas.swimming-pool/building
                     :lipas.swimming-pool/pools
                     :lipas.swimming-pool/saunas
