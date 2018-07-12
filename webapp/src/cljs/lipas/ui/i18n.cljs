@@ -86,7 +86,7 @@
     :yearly        "Energiankulutus vuositasolla"
     :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
 
-   :visitors
+   :lipas.swimming-pool.visitors
    {:headline      "Kävijämäärät"
     :headline-year "Kävijämäärä vuonna {1}"
     :total-count   "Kokonaismäärä"}

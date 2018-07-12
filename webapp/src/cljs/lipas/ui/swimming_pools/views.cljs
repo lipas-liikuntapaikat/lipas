@@ -521,13 +521,13 @@
                       :items      energy-history}]]]
 
      ;; Visitors
-     [lui/form-card {:title (tr :visitors/headline-year year)}
+     [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline-year year)}
       [mui/form-group
        [lui/text-field
-        {:label     (tr :visitors/total-count)
+        {:label     (tr :lipas.swimming-pool.visitors/total-count)
          :type      "number"
          :value     (-> data :visitors :total-count)
-         :spec      ::schema/visitors-total-count
+         :spec      :lipas.swimming-pool.visitors/total-count
          :adornment (tr :units/person)
          :on-change #(set-field :visitors :total-count %)}]]]
 
