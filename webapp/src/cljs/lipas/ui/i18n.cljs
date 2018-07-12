@@ -26,7 +26,7 @@
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi vielä
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
-   :sports-site
+   :lipas.sports-site
    {:headline       "Liikuntapaikka"
     :id             "LIPAS-ID"
     :name           "Virallinen nimi"
@@ -44,7 +44,7 @@
    :admin (->translation-map :fi admins/all)
    :owner (->translation-map :fi owners/all)
 
-   :location
+   :lipas.location
    {:headline      "Sijainti"
     :address       "Katuosoite"
     :postal-code   "Postinumero"
@@ -76,7 +76,7 @@
    :ice-basic-data
    {:headline "Ilmoita energiankulutus"}
 
-   :energy
+   :lipas.energy-consumption
    {:headline      "Energiankulutus"
     :headline-year "Energiankulutus vuonna {1}"
     :electricity   "Sähköenergia MWh"
@@ -161,7 +161,7 @@
     :logout           "Kirjaudu ulos"
     :bad-credentials  "Käyttäjätunnus tai salasana ei kelpaa"}
 
-   :building
+   :lipas.building
    {:headline                    "Rakennus"
     :construction-year           "Rakennusvuosi"
     :main-designers              "Pääsuunnittelijat"
@@ -179,29 +179,19 @@
     :staff-count                 "Henkilökunnan lukumäärä"
     :seating-capacity            "Katsomokapasiteetti"}
 
-   :envelope-structure
+   :lipas.ice-stadium.envelope
    {:headline                "Vaipan rakenne"
     :base-floor-structure    "Alapohjan laatan rakenne"
     :insulated-exterior?     "Ulkoseinä lämpöeristetty"
     :insulated-ceiling?      "Yläpohja lämpöeristetty"
     :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnote"}
 
-   :renovations
-   {:headline          "Peruskorjaukset"
-    :headline-year     "Peruskorjaukset vuonna {1}"
-    :renovations-done? "Halliin on tehty muutos, korjaus tai parannustöitä vuonna {1}"
-    :add-renovation    "Lisää peruskorjaus"
-    :edit-renovation   "Muokkaa peruskorjausta"
-    :end-year          "Valmistumisvuosi"
-    :designers         "Suunnittelijat"
-    :done?             "Rakennukseen on tehty peruskorjauksia tai parannuksia..."}
-
-   :rinks
+   :lipas.ice-stadium.rinks
    {:headline  "Radat"
     :edit-rink "Muokkaa rataa"
     :add-rink  "Lisää rata"}
 
-   :refrigeration
+   ::lipas.ice-stadium.refrigeration
    {:headline                       "Kylmätekniikka"
     :original?                      "Alkuperäinen"
     :individual-metering?           "Alamittaroitu"
@@ -213,7 +203,7 @@
     :refrigerant-solution           "Kylmäliuos"
     :refrigerant-solution-amount-l  "Kylmäliuoksen määrä (l)"}
 
-   :conditions
+   :lipas.ice-stadium.conditions
    {:headline                          "Käyttöolosuhteet"
     :daily-open-hours                  "Aukiolotunnit päivässä"
     :open-months                       "Aukiolokuukaudet vuodessa"
@@ -231,7 +221,7 @@
           lämpötila (tavoite +40)"
     :ice-average-thickness-mm          "Jään keskipaksuus mm"}
 
-   :ventilation
+   :lipas.ice-stadium.ventilation
    {:headline                                 "Hallin ilmanvaihto"
     :heat-recovery-type                       "Lämmöntalteenoton tyyppi"
     :heat-recovery-thermal-efficiency-percent "Lämmöntalteenoton
@@ -240,32 +230,32 @@
     :dryer-duty-type                          "Ilmankuivauksen käyttötapa"
     :heat-pump-type                           "Lämpöpumpputyyppi"}
 
-   :water-treatment
+   :lipas.swimming-pool.water-treatment
    {:headline          "Vedenkäsittely"
     :ozonation?        "Otsonointi"
     :uv-treatment?     "UV-käsittely"
     :activated-carbon? "Aktiivihiili"
     :filtering-methods "Suodatustapa"}
 
-   :pools
+   :lipas.swimming-pool.pools
    {:headline  "Altaat"
     :add-pool  "Lisää allas"
     :edit-pool "Muokkaa allasta"
     :structure "Rakenne"}
 
-   :slides
+   :lipas.swimming-pool.slides
    {:headline   "Liukumäet"
     :add-slide  "Lisää liukumäki"
     :edit-slide "Muokkaa liukumäkeä"}
 
-   :saunas
+   :lipas.swimming-pool.saunas
    {:headline   "Saunat"
     :add-sauna  "Lisää sauna"
     :edit-sauna "Muokkaa saunaa"
-    :women      "Naiset"
-    :men        "Miehet"}
+    :women?     "Naiset"
+    :men?       "Miehet"}
 
-   :other-services
+   :lipas.swimming-pool.facilities
    {:headline                       "Muut palvelut"
     :platforms-1m-count             "1m hyppypaikkojen lkm"
     :platforms-3m-count             "3m hyppypaikkojen lkm"
@@ -274,14 +264,11 @@
     :platforms-10m-count            "10m hyppypaikkojen lkm"
     :hydro-massage-spots-count      "Hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
-    :kiosk?                         "Kioski / kahvio"}
-
-   :facilities
-   {:headline            "Suihkut ja pukukaapit"
-    :showers-men-count   "Miesten suihkut lkm"
-    :showers-women-count "Naisten suihkut lkm"
-    :lockers-men-count   "Miesten pukukaapit lkm"
-    :lockers-women-count "Naisten pukukaapit lkm"}
+    :kiosk?                         "Kioski / kahvio"
+    :showers-men-count              "Miesten suihkut lkm"
+    :showers-women-count            "Naisten suihkut lkm"
+    :lockers-men-count              "Miesten pukukaapit lkm"
+    :lockers-women-count            "Naisten pukukaapit lkm"}
 
    :dimensions
    {:volume-m3       "Tilavuus m²"

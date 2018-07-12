@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.schema.core :as schema]
-            [lipas.ui.components :as lui]
+  (:require [lipas.ui.components :as lui]
             [lipas.ui.energy :as energy]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
@@ -84,7 +83,7 @@
                                 :on-change    set-field}]]
 
         ;;; Location
-        [lui/form-card {:title (tr :location/headline)}
+        [lui/form-card {:title (tr :lipas.location/headline)}
          [lui/location-form {:tr           tr
                              :read-only?   (not @editing?)
                              :cities       cities
@@ -96,11 +95,11 @@
         (let [display-data (-> display-data :building)
               edit-data    (-> edit-data :building)
               on-change    (partial set-field :building)]
-          [lui/form-card {:title (tr :building/headline)}
+          [lui/form-card {:title (tr :lipas.building/headline)}
            [lui/form {:read-only? (not @editing?)}
 
             ;; Construction year
-            {:label (tr :building/construction-year)
+            {:label (tr :lipas.building/construction-year)
              :value (-> display-data :construction-year)
              :form-field
              [lui/year-selector
@@ -108,82 +107,82 @@
                :on-change #(on-change :construction-year %)}]}
 
             ;; Main designers
-            {:label (tr :building/main-designers)
+            {:label (tr :lipas.building/main-designers)
              :value (-> display-data :main-designers)
              :form-field
              [lui/text-field
               {:value     (-> edit-data :main-designers)
-               :spec      ::schema/main-designers
+               :spec      :lipas.building/main-designers
                :on-change #(on-change :main-designers %)}]}
 
             ;; Total surface area m2
-            {:label (tr :building/total-surface-area-m2)
+            {:label (tr :lipas.building/total-surface-area-m2)
              :value (-> display-data :total-surface-area-m2)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :total-surface-area-m2)
-               :spec      ::schema/total-surface-area-m2
+               :spec      :lipas.building/total-surface-area-m2
                :adornment (tr :physical-units/m2)
                :on-change #(on-change :total-surface-area-m2 %)}]}
 
             ;; Total volume m3
-            {:label (tr :building/total-volume-m3)
+            {:label (tr :lipas.building/total-volume-m3)
              :value (-> display-data :total-volume-m3)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :total-volume-m3)
-               :spec      ::schema/total-volume-m3
+               :spec      :lipas.building/total-volume-m3
                :adornment (tr :physical-units/m3)
                :on-change #(on-change :total-volume-m3 %)}]}
 
             ;; Seating capacity
-            {:label (tr :building/seating-capacity)
+            {:label (tr :lipas.building/seating-capacity)
              :value (-> display-data :seating-capacity)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :seating-capacity)
-               :spec      ::schema/seating-capacity
+               :spec      :lipas.building/seating-capacity
                :adornment (tr :units/person)
                :on-change #(on-change :seating-capacity %)}]}
 
             ;; Staff count
-            {:label (tr :building/staff-count)
+            {:label (tr :lipas.building/staff-count)
              :value (-> display-data :staff-count)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :staff-count)
-               :spec      ::schema/staff-count
+               :spec      :lipas.building/staff-count
                :adornment (tr :units/person)
                :on-change #(on-change :staff-count %)}]}
 
             ;; Pool room total area m2
-            {:label (tr :building/pool-room-total-area-m2)
+            {:label (tr :lipas.building/pool-room-total-area-m2)
              :value (-> display-data :pool-room-total-area-m2)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :pool-room-total-area-m2)
-               :spec      ::schema/pool-room-total-area-m2
+               :spec      :lipas.building/pool-room-total-area-m2
                :adornment (tr :physical-units/m2)
                :on-change #(on-change :pool-room-total-area-m2 %)}]}
 
             ;; Total water area m2
-            {:label (tr :building/total-water-area-m2)
+            {:label (tr :lipas.building/total-water-area-m2)
              :value (-> display-data :total-water-area-m2)
              :form-field
              [lui/text-field
               {:type      "number"
                :value     (-> edit-data :total-water-area-m2)
-               :spec      ::schema/total-water-area-m2
+               :spec      :lipas.building/total-water-area-m2
                :adornment (tr :physical-units/m2)
                :on-change #(on-change :total-water-area-m2 %)}]}
 
             ;; Heat sections?
-            {:label (tr :building/heat-sections?)
+            {:label (tr :lipas.building/heat-sections?)
              :value (-> display-data :heat-sections?)
              :form-field
              [lui/checkbox
@@ -191,7 +190,7 @@
                :on-change #(on-change :heat-sections? %)}]}
 
             ;; Piled?
-            {:label (tr :building/piled?)
+            {:label (tr :lipas.building/piled?)
              :value (-> display-data :piled?)
              :form-field
              [lui/checkbox
@@ -199,7 +198,7 @@
                :on-change #(on-change :piled? %)}]}
 
             ;; Heat source
-            {:label (tr :building/heat-source)
+            {:label (tr :lipas.building/heat-source)
              :value (-> display-data :heat-source)
              :form-field
              [lui/select
@@ -210,7 +209,7 @@
                :on-change #(on-change :heat-source %)}]}
 
             ;; Main construction materials
-            {:label (tr :building/main-construction-materials)
+            {:label (tr :lipas.building/main-construction-materials)
              :value (-> display-data :main-construction-materials)
              :form-field
              [lui/multi-select
@@ -221,7 +220,7 @@
                :on-change #(on-change :main-construction-materials %)}]}
 
             ;; Supporting structures
-            {:label (tr :building/supporting-structures)
+            {:label (tr :lipas.building/supporting-structures)
              :value (-> display-data :supporting-structures)
              :form-field
              [lui/multi-select
@@ -232,7 +231,7 @@
                :on-change #(on-change :supporting-structures %)}]}
 
             ;; Ceiling structures
-            {:label (tr :building/ceiling-structures)
+            {:label (tr :lipas.building/ceiling-structures)
              :value (-> display-data :ceiling-structures)
              :form-field
              [lui/multi-select
@@ -247,11 +246,11 @@
               edit-data    (-> edit-data :water-treatment)
               on-change    (partial set-field :water-treatment)]
 
-          [lui/form-card {:title (tr :water-treatment/headline)}
+          [lui/form-card {:title (tr :lipas.swimming-pool.water-treatment/headline)}
            [lui/form {:read-only? (not @editing?)}
 
             ;; Ozonation?
-            {:label (tr :water-treatment/ozonation?)
+            {:label (tr :lipas.swimming-pool.water-treatment/ozonation?)
              :value (-> display-data :ozonation?)
              :form-field
              [lui/checkbox
@@ -259,7 +258,7 @@
                :on-change #(on-change :ozonation? %)}]}
 
             ;; UV-treatment?
-            {:label (tr :water-treatment/uv-treatment?)
+            {:label (tr :lipas.swimming-pool.water-treatment/uv-treatment?)
              :value (-> display-data :uv-treatment?)
              :form-field
              [lui/checkbox
@@ -267,7 +266,7 @@
                :on-change #(on-change :uv-treatment? %)}]}
 
             ;; Activated carbon?
-            {:label (tr :water-treatment/activated-carbon?)
+            {:label (tr :lipas.swimming-pool.water-treatment/activated-carbon?)
              :value (-> display-data :activated-carbon?)
              :form-field
              [lui/checkbox
@@ -275,7 +274,7 @@
                :on-change #(on-change :activated-carbon? %)}]}
 
             ;; Filtering methods
-            {:label (tr :water-treatment/filtering-methods)
+            {:label (tr :lipas.swimming-pool.water-treatment/filtering-methods)
              :value (-> display-data :filtering-methods)
              :form-field
              [lui/multi-select
@@ -291,11 +290,11 @@
              :form-field
              [lui/text-field
               {:value     (-> edit-data :comment)
-               :spec      ::schema/comment
+               :spec      :lipas.swimming-pool.water-treatment/comment
                :on-change #(on-change :comment %)}]}]])
 
         ;;; Pools
-        [lui/form-card {:title (tr :pools/headline)}
+        [lui/form-card {:title (tr :lipas.swimming-pool.pools/headline)}
 
          (when (-> dialogs :pool :open?)
            [pools/dialog {:tr tr}])
@@ -305,7 +304,7 @@
            [pools/read-only-table {:tr tr :items (-> display-data :pools)}])]
 
         ;;; Saunas
-        [lui/form-card {:title (tr :saunas/headline)}
+        [lui/form-card {:title (tr :lipas.swimming-pool.saunas/headline)}
 
          (when (-> dialogs :sauna :open?)
            [saunas/dialog {:tr tr}])
@@ -315,7 +314,7 @@
            [saunas/read-only-table {:tr tr :items (-> display-data :saunas)}])]
 
         ;;; Slides
-        [lui/form-card {:title (tr :slides/headline)}
+        [lui/form-card {:title (tr :lipas.swimming-pool.slides/headline)}
 
          (when (-> dialogs :slide :open?)
            [slides/dialog {:tr tr}])
@@ -324,153 +323,145 @@
            [slides/table {:tr tr :items (-> edit-data :slides)}]
            [slides/read-only-table {:tr tr :items (-> display-data :slides)}])]
 
-       ;;; Other services
-        (let [display-data (-> display-data :other-services)
-              edit-data    (-> edit-data :other-services)
-              on-change    (partial set-field :other-services)]
+        ;;; Facilities
+        (let [display-data (-> display-data :facilities)
+              edit-data    (-> edit-data :facilities)
+              on-change    (partial set-field :facilities)]
 
-          [lui/form-card {:title (tr :other-services/headline)}
+          [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
            [lui/form {:read-only? (not @editing?)}
 
             ;; Platforms 1m count
-            {:label (tr :other-services/platforms-1m-count)
+            {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
              :value (-> display-data :platforms-1m-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :platforms-1m-count)
-               :spec      ::schema/platforms-1m-count
+               :spec      :lipas.swimming-pool.facilities/platforms-1m-count
                :on-change #(on-change :platforms-1m-count %)}]}
 
             ;; Platforms 3m count
-            {:label (tr :other-services/platforms-3m-count)
+            {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
              :value (-> display-data :platforms-3m-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :platforms-3m-count)
-               :spec      ::schema/platforms-3m-count
+               :spec      :lipas.swimming-pool.facilities/platforms-3m-count
                :on-change #(on-change :platforms-3m-count %)}]}
 
             ;; Platforms 5m count
-            {:label (tr :other-services/platforms-5m-count)
+            {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
              :value (-> display-data :platforms-5m-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :platforms-5m-count)
-               :spec      ::schema/platforms-5m-count
+               :spec      :lipas.swimming-pool.facilities/platforms-5m-count
                :on-change #(on-change :platforms-5m-count %)}]}
 
             ;; Platforms 7.5m count
-            {:label (tr :other-services/platforms-7.5m-count)
+            {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
              :value (-> display-data :platforms-7.5m-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :platforms-7.5m-count)
-               :spec      ::schema/platforms-7.5m-count
+               :spec      :lipas.swimming-pool.facilities/platforms-7.5m-count
                :on-change #(on-change :platforms-7.5m-count %)}]}
 
             ;; Platforms 10m count
-            {:label (tr :other-services/platforms-10m-count)
+            {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
              :value (-> display-data :platforms-10m-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :platforms-10m-count)
-               :spec      ::schema/platforms-10m-count
+               :spec      :lipas.swimming-pool.facilities/platforms-10m-count
                :on-change #(on-change :platforms-10m-count %)}]}
 
             ;; Hydro massage spots count
-            {:label (tr :other-services/hydro-massage-spots-count)
+            {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
              :value (-> display-data :hydro-massage-spots-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :hydro-massage-spots-count)
-               :spec      ::schema/hydro-massage-spots-count
+               :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
                :on-change #(on-change :hydro-massage-spots-count %)}]}
 
             ;; Hydro neck massage spots count
-            {:label (tr :other-services/hydro-neck-massage-spots-count)
+            {:label (tr :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count)
              :value (-> display-data :hydro-neck-massage-spots-count)
              :form-field
              [lui/text-field
               {:adornment (tr :units/pcs)
                :type      "number"
                :value     (-> edit-data :hydro-neck-massage-spots-count)
-               :spec      ::schema/hydro-neck-massage-spots-count
+               :spec      :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
                :on-change #(on-change :hydro-neck-massage-spots-count %)}]}
 
             ;; Kiosk?
-            {:label (tr :other-services/kiosk?)
+            {:label (tr :lipas.swimming-pool.facilities/kiosk?)
              :value (-> display-data :kiosk?)
              :form-field
              [lui/checkbox
               {:value     (-> edit-data :kiosk?)
-               :on-change #(on-change :kiosk? %)}]}]])
-
-        ;;; Showers and lockers
-        (let [display-data (-> display-data :facilities)
-              edit-data    (-> edit-data :facilities)
-              on-change    (partial set-field :facilities)]
-
-          [lui/form-card {:title (tr :facilities/headline)}
-           [lui/form {:read-only? (not @editing?)}
+               :on-change #(on-change :kiosk? %)}]}
 
             ;; Showers men count
-            {:label (tr :facilities/showers-men-count)
+            {:label (tr :lipas.swimming-pool.facilities/showers-men-count)
              :value (-> display-data :showers-men-count)
              :form-field
              [lui/text-field
               {:type      "number"
                :adornment (tr :units/pcs)
                :value     (-> edit-data :showers-men-count)
-               :spec      ::schema/showers-men-count
+               :spec      :lipas.swimming-pool.facilities/showers-men-count
                :on-change #(on-change :showers-men-count %)}]}
 
             ;; Showers women count
-            {:label (tr :facilities/showers-women-count)
+            {:label (tr :lipas.swimming-pool.facilities/showers-women-count)
              :value (-> display-data :showers-women-count)
              :form-field
              [lui/text-field
               {:type        "number"
                :adornwoment (tr :units/pcs)
                :value       (-> edit-data :showers-women-count)
-               :spec        ::schema/showers-women-count
+               :spec        :lipas.swimming-pool.facilities/showers-women-count
                :on-change   #(on-change :showers-women-count %)}]}
 
             ;; Lockers men count
-            {:label (tr :facilities/lockers-men-count)
+            {:label (tr :lipas.swimming-pool.facilities/lockers-men-count)
              :value (-> display-data :lockers-men-count)
              :form-field
              [lui/text-field
               {:type      "number"
                :adornment (tr :units/pcs)
                :value     (-> edit-data :lockers-men-count)
-               :spec      ::schema/lockers-men-count
+               :spec      :lipas.swimming-pool.facilities/lockers-men-count
                :on-change #(on-change :lockers-men-count %)}]}
 
             ;; Lockers women count
-            {:label (tr :facilities/lockers-women-count)
+            {:label (tr :lipas.swimming-pool.facilities/lockers-women-count)
              :value (-> display-data :lockers-women-count)
              :form-field
              [lui/text-field
               {:type        "number"
                :adornwoment (tr :units/pcs)
                :value       (-> edit-data :lockers-women-count)
-               :spec        ::schema/lockers-women-count
+               :spec        :lipas.swimming-pool.facilities/lockers-women-count
                :on-change   #(on-change :lockers-women-count %)}]}]])
 
         ;;; Energy consumption
-        [lui/form-card {:title (tr :energy/headline)}
+        [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
          [energy/table {:read-only? true
                         :tr         tr
                         :items      (-> display-data :energy-consumption)}]]]])))

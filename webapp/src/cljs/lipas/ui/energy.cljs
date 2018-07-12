@@ -1,39 +1,38 @@
 (ns lipas.ui.energy
-  (:require [lipas.schema.core :as schema]
-            [lipas.ui.components :as lui]
+  (:require [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]))
 
 (defn form [{:keys [tr data on-change disabled? cold?]}]
   [mui/form-group
-   [lui/text-field {:label     (tr :energy/electricity)
+   [lui/text-field {:label     (tr :lipas.energy-consumption/electricity)
                     :disabled  disabled?
                     :type      "number"
                     :value     (:electricity-mwh data)
-                    :spec      ::schema/electricity-mwh
+                    :spec      :lipas.energy-consumption/electricity-mwh
                     :adornment (tr :physical-units/mwh)
                     :on-change #(on-change :electricity-mwh %)}]
 
-   [lui/text-field {:label     (tr :energy/heat)
+   [lui/text-field {:label     (tr :lipas.energy-consumption/heat)
                     :disabled  disabled?
                     :type      "number"
-                    :spec      ::schema/heat-mwh
+                    :spec      :lipas.energy-consumption/heat-mwh
                     :adornment (tr :physical-units/mwh)
                     :value     (:heat-mwh data)
                     :on-change #(on-change :heat-mwh %)}]
 
    (when cold?
-     [lui/text-field {:label     (tr :energy/cold)
+     [lui/text-field {:label     (tr :lipas.energy-consumption/cold)
                       :disabled  disabled?
                       :type      "number"
-                      :spec      ::schema/cold-mwh
+                      :spec      :lipas.energy-consumption/cold-mwh
                       :adornment (tr :physical-units/mwh)
                       :value     (:cold-mwh data)
                       :on-change #(on-change :cold-mwh %)}])
 
-   [lui/text-field {:label     (tr :energy/water)
+   [lui/text-field {:label     (tr :lipas.energy-consumption/water)
                     :disabled  disabled?
                     :type      "number"
-                    :spec      ::schema/water-m3
+                    :spec      :lipas.energy-consumption/water-m3
                     :adornment (tr :physical-units/m3)
                     :value     (:water-m3 data)
                     :on-change #(on-change :water-m3 %)}]])
@@ -57,11 +56,11 @@
     [mui/table-head
      [mui/table-row
       [mui/table-cell (tr :time/month)]
-      [mui/table-cell (tr :energy/electricity)]
-      [mui/table-cell (tr :energy/heat)]
+      [mui/table-cell (tr :lipas.energy-consumption/electricity)]
+      [mui/table-cell (tr :lipas.energy-consumption/heat)]
       (when cold?
-        [mui/table-cell (tr :energy/cold)])
-      [mui/table-cell (tr :energy/water)]]]
+        [mui/table-cell (tr :lipas.energy-consumption/cold)])
+      [mui/table-cell (tr :lipas.energy-consumption/water)]]]
     (into [mui/table-body]
           (for [row  (range 12)
                 :let [month (inc row)
@@ -72,14 +71,14 @@
 
               ;; Electricity Mwh
               [lui/text-field {:type      "number"
-                               :spec      ::schema/electricity-mwh
+                               :spec      :lipas.energy-consumption/electricity-mwh
                                :value     (:electricity-mwh month-data)
                                :on-change #(on-change month :electricity-mwh %)}]]
 
              ;; Heat Mwh
              [lui/table-cell
               [lui/text-field {:type      "number"
-                               :spec      ::schema/heat-mwh
+                               :spec      :lipas.energy-consumption/heat-mwh
                                :value     (:heat-mwh month-data)
                                :on-change #(on-change month :heat-mwh %)}]]
 
@@ -87,24 +86,24 @@
              (when cold?
                [lui/table-cell
                 [lui/text-field {:type      "number"
-                                 :spec      ::schema/cold-mwh
+                                 :spec      :lipas.energy-consumption/cold-mwh
                                  :value     (:cold-mwh month-data)
                                  :on-change #(on-change month :cold-mwh %)}]])
 
              ;; Water m³
              [lui/table-cell
               [lui/text-field {:type      "number"
-                               :spec      ::schema/water-m3
+                               :spec      :lipas.energy-consumption/water-m3
                                :value     (:water-m3 month-data)
                                :on-change #(on-change month :water-m3 %)}]]]))]])
 
 (defn make-headers [tr cold?]
   (filter some?
           [[:year (tr :time/year)]
-           [:electricity-mwh (tr :energy/electricity)]
-           [:heat-mwh (tr :energy/heat)]
-           (when cold? [:cold-mwh (tr :energy/cold)])
-           [:water-m3 (tr :energy/water)]]))
+           [:electricity-mwh (tr :lipas.energy-consumption/electricity)]
+           [:heat-mwh (tr :lipas.energy-consumption/heat)]
+           (when cold? [:cold-mwh (tr :lipas.energy-consumption/cold)])
+           [:water-m3 (tr :lipas.energy-consumption/water)]]))
 
 (defn table [{:keys [tr items read-only? cold?]}]
   [lui/form-table {:headers    (make-headers tr cold?)

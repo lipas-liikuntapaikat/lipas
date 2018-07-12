@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.pools
-  (:require [lipas.schema.core :as schema]
-            [lipas.ui.components :as lui]
+  (:require [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -27,7 +26,7 @@
 
      ;; Structure
      [lui/select
-      {:label     (tr :pools/structure)
+      {:label     (tr :general/structure)
        :value     (:structure data)
        :items     pool-structures
        :label-fn  (comp locale second)
@@ -40,7 +39,7 @@
        :label     (tr :physical-units/temperature-c)
        :adornment (tr :physical-units/celsius)
        :value     (:temperature-c data)
-       :spec      ::schema/pool-temperature-c
+       :spec      :lipas.swimming-pool.pool/temperature-c
        :on-change #(set-field :temperature-c %)}]
 
      ;; Volume m3
@@ -49,7 +48,7 @@
        :label     (tr :dimensions/volume-m3)
        :adornment (tr :physical-units/m3)
        :value     (:volume-m3 data)
-       :spec      ::schema/pool-volume-m3
+       :spec      :lipas.swimming-pool.pool/volume-m3
        :on-change #(set-field :volume-m3 %)}]
 
      ;; Area m2
@@ -58,7 +57,7 @@
        :label     (tr :dimensions/area-m2)
        :adornment (tr :physical-units/m2)
        :value     (:area-m2 data)
-       :spec      ::schema/pool-area-m2
+       :spec      :lipas.swimming-pool.pool/area-m2
        :on-change #(set-field :area-m2 %)}]
 
      ;; Length m
@@ -67,7 +66,7 @@
        :label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
        :value     (:length-m data)
-       :spec      ::schema/pool-length-m
+       :spec      :lipas.swimming-pool.pool/length-m
        :on-change #(set-field :length-m %)}]
 
      ;; Width m
@@ -76,7 +75,7 @@
        :label     (tr :dimensions/width-m)
        :adornment (tr :physical-units/m)
        :value     (:width-m data)
-       :spec      ::schema/pool-width-m
+       :spec      :lipas.swimming-pool.pool/width-m
        :on-change #(set-field :width-m %)}]
 
      ;; Depth min m
@@ -85,7 +84,7 @@
        :label     (tr :dimensions/depth-min-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-min-m data)
-       :spec      ::schema/pool-depth-min-m
+       :spec      :lipas.swimming-pool.pool/depth-min-m
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
@@ -94,7 +93,7 @@
        :label     (tr :dimensions/depth-max-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-max-m data)
-       :spec      ::schema/pool-depth-max-m
+       :spec      :lipas.swimming-pool.pool/depth-max-m
        :on-change #(set-field :depth-max-m %)}]]))
 
 (defn dialog [{:keys [tr]}]
@@ -102,8 +101,8 @@
         reset #(==> [::events/reset-dialog :pool])
         close #(==> [::events/toggle-dialog :pool])]
     [lui/dialog {:title (if (:id data)
-                          (tr :pools/edit-pool)
-                          (tr :pools/add-pool))
+                          (tr :lipas.swimming-pool.pools/edit-pool)
+                          (tr :lipas.swimming-pool.pools/add-pool))
                  :save-label (tr :actions/save)
                  :cancel-label (tr :actions/cancel)
                  :on-close #(==> [::events/toggle-dialog :pool])
@@ -121,7 +120,7 @@
    [:width-m (tr :dimensions/width-m)]
    [:depth-min-m (tr :dimensions/depth-min-m)]
    [:depth-max-m (tr :dimensions/depth-max-m)]
-   [:structure (tr :pools/structure)]])
+   [:structure (tr :general/structure)]])
 
 (defn table [{:keys [tr items]}]
   (let [localize (partial localize-field tr)]
@@ -130,7 +129,7 @@
       :items          (->> (vals items)
                            (map (partial localize :type :pool-types))
                            (map (partial localize :structure :pool-structures)))
-      :add-tooltip    (tr :pools/add-pool)
+      :add-tooltip    (tr :lipas.swimming-pool.pool/add-pool)
       :edit-tooltip   (tr :actions/edit)
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :pool {}])

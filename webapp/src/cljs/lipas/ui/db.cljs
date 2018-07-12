@@ -4,6 +4,11 @@
             [lipas.data.admins :as admins]
             [lipas.data.owners :as owners]
             [lipas.data.types :as types]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [lipas.schema.core :as schema]
+            [clojure.test.check]
+            [clojure.test.check.generators]
             [lipas.data.materials :as materials]
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.ice-stadiums :as ice-stadiums]))
@@ -12,7 +17,7 @@
 
   ;;; Yleiset ;;;
   {:lipas-id 89839
-   :timestamp "2016-11-14 10:13:20.103"
+   :timestamp "2016-11-14T10:13:20.103Z"
 
    :name "Jyväskylän kilpajäähalli"
    :marketing-name "Synergia areena"
@@ -23,7 +28,6 @@
    :www "www.jyvaskyla.fi"
    :email nil
    :phone-number nil
-   :info-fi nil
 
    ;;; Sijainti ;;;
    :location
@@ -66,7 +70,7 @@
     }
 
    ;;; Vaipan rakenne ;;;
-   :envelope-structure
+   :envelope
    {:base-floor-structure :concrete  ; betoni / asfaltti / hiekka
     :insulated-exterior? true        ; Onko ulkoseinä lämpöeristetty
     :insulated-ceiling? true         ; Onko yläpohja lämpöeristetty
@@ -98,9 +102,8 @@
    {;; --> energiankulutukseen liittyvää lisätietoa kerätään vuositasolla
     :daily-open-hours 15                  ; Aukiolo päivässä (tuntia/pv) ???
     :open-months 12                       ; Aukiolo vuodessa (kk/vuosi) ???
-    :air-humidity                         ; Ilman suhteellisen kosteuden
-    {:min 50                              ;  vaihteluväli  50-70
-     :max 60}
+    :air-humidity-min 50                         ; Ilman suhteellisen kosteuden
+    :air-humidity-max 60
     :ice-surface-temperature-c -3         ; Jään pinnan lämpötila -3 -6
     :skating-area-temperature-c 5         ; Luistelualueen lämpötila 1m kork.
                                           ;  harjoitushalleissa  +5 +9
@@ -111,8 +114,8 @@
 
     ;;; Jäänhoito (vuosittain muuttuvat)
 
-    :daily-maintenance-count-week-days 8  ; Jäähoitokerrat arkipäivinä
-    :daily-maintenance-count-weekends 12  ; Jäähoitokerrat viikonlppuina
+    :daily-maintenances-week-days 8  ; Jäähoitokerrat arkipäivinä
+    :daily-maintenances-weekends 12  ; Jäähoitokerrat viikonlppuina
     :average-water-consumption-l 300      ; Keskimääräinen jäänhoitoon käytetty
                                         ;  vesimäärä/jäänajo (ltr)
     :maintenance-water-temperature-c 35   ; Jäähoitoveden lämpötila (tavoite +40)
@@ -124,7 +127,7 @@
    ;;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
    :ventilation
    {:heat-recovery-type :plate-heat-exchanger     ; LTO_tyyppi
-    :heat-recovery-thermal-efficiency-percent 10  ; LTO_hyötysuhde
+    :heat-recovery-efficiency 10                  ; LTO_hyötysuhde
     :dryer-type :cooling-coil                     ; Ilmankuivaustapa
     :dryer-duty-type :manual                      ; Ilm.kuiv.käyttötapa
     :heat-pump-type :none}                        ; Lämpöpumpputyyppi
@@ -137,7 +140,7 @@
 
 (def jaahalli-2017
   (assoc jaahalli-2016
-         :timestamp          "2017-11-14 10:13:20.103"
+         :timestamp          "2017-11-14T10:13:20.103Z"
          :marketing-name     "Lähi-Tapoola areena"
          :owner :unknown
          :energy-consumption {:electricity-mwh 1500
@@ -148,7 +151,7 @@
   {
    ;;; Yleiset ;;;
    :lipas-id 506032
-   :timestamp "2012-11-14 10:13:20.103"
+   :timestamp "2012-11-14T10:13:20.103Z"
 
    :name "Äänekosken uimahalli"
    :marketing-name "Vesivelho"
@@ -262,13 +265,13 @@
 
    ;;; Saunat ;;;
    :saunas
-   [{:type :steam-sauna :men true :women true}
-    {:type :sauna :men false :women true}
-    {:type :sauna :men true :women false}
-    {:type :infrared-sauna :men nil :women nil}]
+   [{:type :steam-sauna :men? true :women? true}
+    {:type :sauna :men? false :women? true}
+    {:type :sauna :men? true :women? false}
+    {:type :infrared-sauna :men? nil :women? nil}]
 
    ;;; Muut palvelut ;;;
-   :other-services
+   :facilities
    {:hydro-massage-spots-count 7
     :hydro-neck-massage-spots-count 0
     :platforms-1m-count 0
@@ -276,11 +279,8 @@
     :platforms-5m-count 0
     :platforms-7.5m-count 0
     :platforms-10m-count 0
-    :kiosk? true}
-
-   ;;; Suihkut ja pukukaapit ;;;
-   :facilities
-   {:showers-men-count 12
+    :kiosk? true
+    :showers-men-count 12
     :showers-women-count 12
     :lockers-men-count 94
     :lockers-women-count 100}
@@ -297,7 +297,7 @@
 
 (def vesivelho-2013
   (assoc vesivelho-2012
-         :timestamp "2013-01-01"
+         :timestamp "2013-01-01T00:00:00.000Z"
          :visitors {:total-count 67216}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -305,7 +305,7 @@
 
 (def vesivelho-2014
   (assoc vesivelho-2013
-         :timestamp "2014-01-01"
+         :timestamp "2014-01-01T00:00:00.000Z"
          :visitors {:total-count 66529}
          :energy-consumption {:electricity-mwh 664
                               :heat-mwh 0
@@ -313,7 +313,7 @@
 
 (def vesivelho-2015
   (assoc vesivelho-2014
-         :timestamp "2015-01-01"
+         :timestamp "2015-01-01T00:00:00.000Z"
          :visitors {:total-count 34002}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -321,7 +321,7 @@
 
 (def vesivelho-2016
   (assoc vesivelho-2015
-         :timestamp "2016-01-01"
+         :timestamp "2016-01-01T00:00:00.000Z"
          :visitors {:total-count 8793}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -329,7 +329,7 @@
 
 (def vesivelho-2017
   (assoc vesivelho-2016
-         :timestamp "2017-01-01"
+         :timestamp "2017-01-01T00:00:00.000Z"
          :visitors {:total-count 55648}
          :energy-consumption {:electricity-mwh 818
                               :heat-mwh 0
@@ -341,14 +341,23 @@
 (defn index-by [idx-fn coll]
   (into {} (map (juxt idx-fn identity)) coll))
 
-(defn gen-pools [n]
+(defn gen-pools-old [n]
   (reduce (fn [res n]
             (let [e (assoc vesivelho-2017
                            :lipas-id n
                            :name {:fi (str "Uimahalli " n)})]
               (-> res
                   (assoc-in [n :latest] e)
-                  (assoc-in [n :history] {"2013" e}))))
+                  (assoc-in [n :history] {"2013-01-03T00:00:00.000Z" e}))))
+          {} (range n)))
+
+(defn gen-pools [n]
+  (reduce (fn [res n]
+            (let [e  (gen/generate (s/gen :lipas.sports-site/swimming-pool))
+                  id (:lipas-id e)]
+              (-> res
+                  (assoc-in [id :latest] e)
+                  (assoc-in [id :history] {(:timestamp e) e}))))
           {} (range n)))
 
 (def default-db
@@ -358,7 +367,7 @@
 
    ;; Sports sites
    :sports-sites
-   (merge (gen-pools 200)
+   (merge (gen-pools 20)
           {
            506032
            {:latest  vesivelho-2017

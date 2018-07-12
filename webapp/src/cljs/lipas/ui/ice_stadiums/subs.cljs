@@ -306,8 +306,8 @@
 
         :building (:building latest)
 
-        :envelope-structure
-        (-> (:envelope-structure latest)
+        :envelope
+        (-> (:envelope latest)
             (update :base-floor-structure get-material))
 
         :refrigeration

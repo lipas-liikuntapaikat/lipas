@@ -371,18 +371,18 @@
     [form {:read-only? read-only?}
 
      ;; Name
-     {:label      (tr :sports-site/name)
+     {:label      (tr :lipas.sports-site/name)
       :value      (-> display-data :name)
       :form-field [text-field
-                   {:spec      ::schema/name
+                   {:spec      :lipas.sports-site/name
                     :value     (-> edit-data :name)
                     :on-change #(on-change :name %)}]}
 
      ;; Marketing name
-     {:label      (tr :sports-site/marketing-name)
+     {:label      (tr :lipas.sports-site/marketing-name)
       :value      (-> display-data :marketing-name)
       :form-field [text-field
-                   {:spec      ::schema/marketing-name
+                   {:spec      :lipas.sports-site/marketing-name
                     :value     (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
 
@@ -408,7 +408,7 @@
                       :on-change #(on-change :type :size-category %)}]})
 
      ;; Owner
-     {:label      (tr :sports-site/owner)
+     {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
       :form-field [select
                    {:value     (-> edit-data :owner)
@@ -418,7 +418,7 @@
                     :on-change #(on-change :owner %)}]}
 
      ;; Admin
-     {:label      (tr :sports-site/admin)
+     {:label      (tr :lipas.sports-site/admin)
       :value      (-> display-data :admin)
       :form-field [select
                    {:value     (-> edit-data :admin)
@@ -428,27 +428,27 @@
                     :on-change #(on-change :admin %)}]}
 
      ;; Phone number
-     {:label      (tr :sports-site/phone-number)
+     {:label      (tr :lipas.sports-site/phone-number)
       :value      (-> display-data :phone-number)
       :form-field [text-field
                    {:value     (-> edit-data :phone-number)
-                    :spec      ::schema/phone-number
+                    :spec      :lipas.sports-site/phone-number
                     :on-change #(on-change :phone-number %)}]}
 
      ;; WWW
-     {:label      (tr :sports-site/www)
+     {:label      (tr :lipas.sports-site/www)
       :value      (-> display-data :www)
       :form-field [text-field
                    {:value     (-> edit-data :www)
-                    :spec      ::schema/www
+                    :spec      :lipas.sports-site/www
                     :on-change #(on-change :www %)}]}
 
      ;; Email
-     {:label      (tr :sports-site/email-public)
+     {:label      (tr :lipas.sports-site/email-public)
       :value      (-> display-data :email)
       :form-field [text-field
                    {:value     (-> edit-data :email)
-                    :spec      ::schema/email
+                    :spec      :lipas.sports-site/email
                     :on-change #(on-change :email %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
@@ -458,31 +458,31 @@
      {:read-only? read-only?}
 
      ;; Address
-     {:label      (tr :location/address)
+     {:label      (tr :lipas.location/address)
       :value      (-> display-data :address)
       :form-field [text-field
                    { :value    (-> edit-data :address)
-                    :spec      ::schema/address
+                    :spec      :lipas.location/address
                     :on-change #(on-change :address %)}]}
 
      ;; Postal code
-     { :label     (tr :location/postal-code)
+     { :label     (tr :lipas.location/postal-code)
       :value      (-> display-data :postal-code)
       :form-field [text-field
                    { :value    (-> edit-data :postal-code)
-                    :spec      ::schema/postal-code
+                    :spec      :lipas.location/postal-code
                     :on-change #(on-change :postal-code %)}]}
 
      ;; Postal office
-     {:label      (tr :location/postal-office)
+     {:label      (tr :lipas.location/postal-office)
       :value      (-> display-data :postal-office)
       :form-field [text-field
                    { :value    (-> edit-data :postal-office)
-                    :spec      ::schema/postal-office
+                    :spec      :lipas.location/postal-office
                     :on-change #(on-change :postal-office %)}]}
 
      ;; City
-     {:label      (tr :location/city)
+     {:label      (tr :lipas.location/city)
       :value      (-> display-data :city :name)
       :form-field [select
                    {:value     (-> edit-data :city :city-code)
