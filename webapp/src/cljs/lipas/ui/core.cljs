@@ -8,11 +8,13 @@
             [re-frame.core :as re-frame]
             [reagent.core :as reagent]))
 
+(def dev-backend-url "http://localhost:8091/api")
 
 (defn dev-setup []
   (when config/debug?
     (enable-console-print!)
-    (println "dev mode")))
+    (re-frame/dispatch [::events/set-backend-url dev-backend-url])
+    (println "dev mode, backend-url:" dev-backend-url)))
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
