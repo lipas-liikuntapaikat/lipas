@@ -125,11 +125,11 @@
 
 (s/def :lipas.user/permissions map?) ;; TODO
 
-(s/def :lipas.user/user (s/keys :req-un [:lipas.user/email
-                               :lipas.user/username
-                               :lipas.user/password
-                               :lipas.user/user-data]
-                      :opt-un [:lipas.user/permissions]))
+(s/def :lipas/user (s/keys :req-un [:lipas.user/email
+                                    :lipas.user/username
+                                    :lipas.user/password
+                                    :lipas.user/user-data]
+                           :opt-un [:lipas.user/permissions]))
 
 ;;; Location ;;;
 
