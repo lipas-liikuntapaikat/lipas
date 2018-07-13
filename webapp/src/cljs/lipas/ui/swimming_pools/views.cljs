@@ -37,9 +37,11 @@
         ceiling-structures    (<== [::subs/ceiling-structures])
         set-field             (partial set-field :editing :rev)
 
-        lipas-id           (:lipas-id display-data)
-        user-can-publish?  (<== [::subs/permission-to-publish? lipas-id])
-        uncommitted-edits? (<== [::subs/uncommitted-edits? lipas-id])]
+        lipas-id              (:lipas-id display-data)
+        user-can-publish?     (<== [::subs/permission-to-publish? lipas-id])
+        uncommitted-edits?    (<== [::subs/uncommitted-edits? lipas-id])
+
+        edits-valid?          (<== [::subs/edits-valid?])]
 
     (r/with-let [editing? (r/atom false)]
 
@@ -55,6 +57,7 @@
         :actions (lui/edit-actions-list
                   {:uncommitted-edits? uncommitted-edits?
                    :editing?           @editing?
+                   :valid?             edits-valid?
                    :logged-in?         logged-in?
                    :user-can-publish?  user-can-publish?
                    :on-discard         #(==> [::events/discard-edits])
@@ -500,6 +503,7 @@
 (defn energy-form [{:keys [tr year]}]
   (let [data           (<== [::subs/editing-rev])
         energy-history (<== [::subs/energy-consumption-history])
+        edits-valid?   (<== [::subs/edits-valid?])
         set-field      (partial set-field :editing :rev)]
 
     [mui/grid {:container true}
@@ -509,7 +513,7 @@
 
       [mui/typography {:variant "subheading"
                        :style   {:margin-bottom "1em"}}
-       (tr :energy/yearly)]
+       (tr :lipas.energy-consumption/yearly)]
       [energy/form
        {:tr        tr
         :data      (:energy-consumption data)
@@ -534,6 +538,7 @@
      ;; Actions
      [lui/form-card {}
       [mui/button {:full-width true
+                   :disabled   (not edits-valid?)
                    :color      "secondary"
                    :variant    "raised"
                    :on-click   #(==> [::events/commit-energy-consumption data])}
@@ -543,8 +548,7 @@
   (let [data   (<== [::subs/sites-to-edit-list])
         site   (<== [::subs/editing-site])
         years  (<== [::subs/energy-consumption-years-list])
-        year   (<== [::subs/editing-year])
-        locale (tr)]
+        year   (<== [::subs/editing-year])]
 
     [mui/grid {:container true}
 
@@ -556,11 +560,12 @@
         [mui/form-group
          [lui/select
           {:label     (tr :actions/select-hall)
-           :value     (-> site :latest :lipas-id)
+           :value     (get-in site [:history (:latest site) :lipas-id])
            :items     data
-           :label-fn  (comp locale :name)
+           :label-fn  :name
            :value-fn  :lipas-id
-           :on-change #(==> [::events/select-energy-consumption-site {:lipas-id %}])}]]])
+           :on-change #(==> [::events/select-energy-consumption-site
+                             {:lipas-id %}])}]]])
 
      (when site
        [lui/form-card {:title (tr :actions/select-year)}

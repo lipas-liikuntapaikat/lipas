@@ -1,6 +1,8 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]))
+            [lipas.ui.utils :as utils]
+            [lipas.ui.swimming-pools.utils :as swim-utils]
+            [clojure.spec.alpha :as s]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -18,17 +20,26 @@
    (-> db :sports-sites)))
 
 (re-frame/reg-sub
- ::swimming-pools
+ ::latest-sports-site-revs
  :<- [::sports-sites]
  (fn [sites _]
+   (reduce-kv (fn [m k v]
+                (assoc m k (get-in v [:history (:latest v)])))
+              {}
+              sites)))
+
+(re-frame/reg-sub
+ ::latest-swimming-pool-revs
+ :<- [::latest-sports-site-revs]
+ (fn [sites _]
    (as-> sites $
-     (into {} (filter (comp #{3110} :type-code :type :latest second)) $)
+     (into {} (filter (comp #{3110} :type-code :type second)) $)
      (not-empty $))))
 
 (re-frame/reg-sub
  ::sites-to-edit
  :<- [::access-to-sports-sites]
- :<- [::swimming-pools]
+ :<- [::latest-swimming-pool-revs]
  (fn [[ids pools] _]
    (not-empty (select-keys pools ids))))
 
@@ -42,7 +53,7 @@
  ::sites-to-edit-list
  :<- [::sites-to-edit]
  (fn [sites _]
-   (not-empty (map :latest (vals sites)))))
+   (not-empty (vals sites))))
 
 (re-frame/reg-sub
  ::editing-site
@@ -54,6 +65,14 @@
  ::editing-rev
  (fn [db _]
    (-> db :swimming-pools :editing :rev)))
+
+(re-frame/reg-sub
+ ::edits-valid?
+ :<- [::editing-rev]
+ (fn [rev _]
+   (let [rev (swim-utils/make-saveable rev)]
+     ;; (s/explain :lipas.sports-site/swimming-pool rev)
+     (s/valid? :lipas.sports-site/swimming-pool rev))))
 
 (re-frame/reg-sub
  ::editing-year
@@ -198,23 +217,22 @@
    (-> db :ceiling-structures)))
 
 (defn ->list-entry [{:keys [cities admins owners types locale]} pool]
-  (let [latest (:latest pool)
-        type   (types (-> latest :type :type-code))
-        admin  (admins (-> latest :admin))
-        owner  (owners (-> latest :owner))
-        city   (get cities (-> latest :location :city :city-code))]
-    {:lipas-id    (-> latest :lipas-id)
-     :name        (-> latest :name)
+  (let [type   (types (-> pool :type :type-code))
+        admin  (admins (-> pool :admin))
+        owner  (owners (-> pool :owner))
+        city   (get cities (-> pool :location :city :city-code))]
+    {:lipas-id    (-> pool :lipas-id)
+     :name        (-> pool :name)
      :type        (-> type :name locale)
-     :address     (-> latest :location :address)
-     :postal-code (-> latest :location :postal-code)
+     :address     (-> pool :location :address)
+     :postal-code (-> pool :location :postal-code)
      :city        (-> city :name locale)
      :owner       (-> owner locale)
      :admin       (-> admin locale)}))
 
 (re-frame/reg-sub
  ::sites-list
- :<- [::swimming-pools]
+ :<- [::latest-swimming-pool-revs]
  :<- [::cities-by-city-code]
  :<- [::admins]
  :<- [::owners]
@@ -249,7 +267,7 @@
        heat-sources pool-types sauna-types] [_ locale]]
    (when site
      (let [latest               (or (utils/latest-edit (:edits site))
-                                    (:latest site))
+                                    (get-in site [:history (:latest site)]))
            type                 (types (-> latest :type :type-code))
            admin                (admins (-> latest :admin))
            owner                (owners (-> latest :owner))

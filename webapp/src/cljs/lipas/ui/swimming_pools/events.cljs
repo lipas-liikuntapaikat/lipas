@@ -2,19 +2,8 @@
   (:require [ajax.core :as ajax]
             [lipas.ui.db :refer [default-db]]
             [lipas.ui.utils :as utils]
+            [lipas.ui.swimming-pools.utils :as swim-utils]
             [re-frame.core :as re-frame]))
-
-(defn make-editable [swimming-pool]
-  (-> swimming-pool
-      (update-in [:pools] utils/->indexed-map)
-      (update-in [:saunas] utils/->indexed-map)
-      (update-in [:slides] utils/->indexed-map)))
-
-(defn make-saveable [swimming-pool]
-  (-> swimming-pool
-      (update-in [:pools] (comp utils/remove-ids vals))
-      (update-in [:saunas] (comp utils/remove-ids vals))
-      (update-in [:slides] (comp utils/remove-ids vals))))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -32,7 +21,8 @@
    (let [lipas-id (-> db :swimming-pools :editing :site)
          site     (get-in db [:sports-sites lipas-id])
          rev      (or (utils/find-revision site year)
-                      (utils/make-revision site (utils/->timestamp year)))]
+                      (utils/make-revision site (utils/->timestamp year)))
+         rev      (swim-utils/make-editable rev)]
      (-> db
          (assoc-in [:swimming-pools :editing :year] year)
          (assoc-in [:swimming-pools :editing :rev] rev)))))
@@ -40,7 +30,8 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [{:keys [db]} [_ rev]]
-   (let [tr (:translator db)]
+   (let [tr  (:translator db)
+         rev (swim-utils/make-saveable rev)]
      {:db       (utils/commit-energy-consumption db rev)
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/save-success)
@@ -51,12 +42,12 @@
  (fn [db [_ {:keys [lipas-id]}]]
    (let [site (get-in db [:sports-sites lipas-id])
          rev  (utils/make-revision site (utils/timestamp))]
-     (assoc-in db [:swimming-pools :editing :rev] (make-editable rev)))))
+     (assoc-in db [:swimming-pools :editing :rev] (swim-utils/make-editable rev)))))
 
 (re-frame/reg-event-db
  ::save-edits
  (fn [db _]
-   (let [rev (-> db :swimming-pools :editing :rev make-saveable)]
+   (let [rev (-> db :swimming-pools :editing :rev swim-utils/make-saveable)]
      (utils/save-edits db rev))))
 
 (re-frame/reg-event-db
@@ -68,7 +59,7 @@
 (re-frame/reg-event-db
  ::set-field
  (fn [db [_ path value]]
-   (assoc-in db (into [:swimming-pools] path) value)))
+   (utils/set-field db (into [:swimming-pools] path) value)))
 
 ;; TODO do ajax request to backend and move this to success handler
 (re-frame/reg-event-fx

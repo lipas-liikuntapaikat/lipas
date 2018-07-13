@@ -1,15 +1,8 @@
 (ns lipas.ui.ice-stadiums.events
   (:require [lipas.ui.db :refer [default-db]]
             [lipas.ui.utils :as utils]
+            [lipas.ui.ice-stadiums.utils :as ice-utils]
             [re-frame.core :as re-frame]))
-
-(defn make-editable [ice-stadium]
-  (-> ice-stadium
-      (update-in [:rinks] utils/->indexed-map)))
-
-(defn make-saveable [ice-stadium]
-  (-> ice-stadium
-      (update-in [:rinks] (comp utils/remove-ids vals))))
 
 (re-frame/reg-event-db
  ::set-active-tab
@@ -17,7 +10,7 @@
    (assoc-in db [:ice-stadiums :active-tab] active-tab)))
 
 (re-frame/reg-event-db
- ::set-edit-site
+ ::select-energy-consumption-site
  (fn [db [_ {:keys [lipas-id]}]]
    (assoc-in db [:ice-stadiums :editing :site] lipas-id)))
 
@@ -27,7 +20,8 @@
    (let [lipas-id (-> db :ice-stadiums :editing :site)
          site     (get-in db [:sports-sites lipas-id])
          rev      (or (utils/find-revision site year)
-                      (utils/make-revision site (str year)))]
+                      (utils/make-revision site (utils/->timestamp year)))
+         rev      (ice-utils/make-editable rev)]
      (-> db
          (assoc-in [:ice-stadiums :editing :year] year)
          (assoc-in [:ice-stadiums :editing :rev] rev)))))
@@ -35,7 +29,8 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [{:keys [db]} [_ rev]]
-   (let [tr (:translator db)]
+   (let [tr  (:translator db)
+         rev (ice-utils/make-saveable rev)]
      {:db       (utils/commit-energy-consumption db rev)
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/save-success)
@@ -47,12 +42,12 @@
    (let [site      (get-in db [:sports-sites lipas-id])
          timestamp (utils/timestamp)
          rev       (utils/make-revision site timestamp)]
-     (assoc-in db [:ice-stadiums :editing :rev] (make-editable rev)))))
+     (assoc-in db [:ice-stadiums :editing :rev] (ice-utils/make-editable rev)))))
 
 (re-frame/reg-event-db
  ::save-edits
  (fn [db _]
-   (let [rev (-> db :ice-stadiums :editing :rev make-saveable)]
+   (let [rev (-> db :ice-stadiums :editing :rev ice-utils/make-saveable)]
      (utils/save-edits db rev))))
 
 (re-frame/reg-event-db
@@ -89,7 +84,7 @@
 (re-frame/reg-event-db
  ::set-field
  (fn [db [_ path value]]
-   (assoc-in db (into [:ice-stadiums] path) value)))
+   (utils/set-field db (into [:ice-stadiums] path) value)))
 
 (defn- calculate-totals [data]
   {:electricity-mwh (reduce + (map :electricity-mwh (vals data)))
