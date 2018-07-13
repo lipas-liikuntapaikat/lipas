@@ -24,12 +24,15 @@
 
 ;;; Components ;;;
 
-(defn edit-button [{:keys [on-click active? tooltip]}]
-  [mui/tooltip {:title     (or tooltip "")
-                :placement "top"}
-   [mui/button {:on-click on-click
-                :color    (if active? "secondary" "primary")}
-    [mui/icon "edit_icon"]]])
+(defn edit-button [{:keys [on-click active? tooltip] :as props}]
+  (let [btn-props (-> props
+                      (dissoc :active?)
+                      (merge {:on-click on-click
+                              :color    (if active? "secondary" "primary")}))]
+    [mui/tooltip {:title     (or tooltip "")
+                  :placement "top"}
+     [mui/button btn-props
+      [mui/icon "edit_icon"]]]))
 
 (defn save-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title     ""
@@ -60,7 +63,7 @@
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
-(defn edit-actions-list [{:keys [uncommitted-edits? editing?
+(defn edit-actions-list [{:keys [uncommitted-edits? editing? valid?
                                  logged-in?  user-can-publish?
                                  on-discard on-save-draft
                                  save-draft-tooltip discard-tooltip
@@ -81,7 +84,8 @@
        :tooltip  discard-tooltip}])
    (when logged-in?
      [edit-button
-      {:active?  editing?
+      {:disabled (and editing? (not valid?))
+       :active?  editing?
        :on-click #(if editing?
                     (on-edit-end %)
                     (on-edit-start %))
@@ -313,7 +317,11 @@
     (merge (dissoc props :label :value-fn :label-fn)
            {:multiple true
             :value (map pr-str value)
-            :on-change #(on-change (->> % .-target .-value (map read-string)))})
+            :on-change #(on-change (->> %
+                                        .-target
+                                        .-value
+                                        (map read-string)
+                                        not-empty))})
     (for [i items]
       [mui/menu-item
        {:key (pr-str (value-fn i))
@@ -375,6 +383,7 @@
       :value      (-> display-data :name)
       :form-field [text-field
                    {:spec      :lipas.sports-site/name
+                    :required  true
                     :value     (-> edit-data :name)
                     :on-change #(on-change :name %)}]}
 
@@ -391,6 +400,7 @@
       :value      (-> display-data :type :name)
       :form-field [select
                    {:value     (-> edit-data :type :type-code)
+                    :required  true
                     :items     types
                     :label-fn  (comp locale :name)
                     :value-fn  :type-code
@@ -412,6 +422,7 @@
       :value      (-> display-data :owner)
       :form-field [select
                    {:value     (-> edit-data :owner)
+                    :required  true
                     :items     owners
                     :value-fn  first
                     :label-fn  (comp locale second)
@@ -422,6 +433,7 @@
       :value      (-> display-data :admin)
       :form-field [select
                    {:value     (-> edit-data :admin)
+                    :required  true
                     :items     admins
                     :value-fn  first
                     :label-fn  (comp locale second)
@@ -452,7 +464,7 @@
                     :on-change #(on-change :email %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
-                                   read-only?]}]
+                             read-only?]}]
   (let [locale (tr)]
     [form
      {:read-only? read-only?}
@@ -461,15 +473,17 @@
      {:label      (tr :lipas.location/address)
       :value      (-> display-data :address)
       :form-field [text-field
-                   { :value    (-> edit-data :address)
+                   {:value     (-> edit-data :address)
                     :spec      :lipas.location/address
+                    :required  true
                     :on-change #(on-change :address %)}]}
 
      ;; Postal code
      { :label     (tr :lipas.location/postal-code)
       :value      (-> display-data :postal-code)
       :form-field [text-field
-                   { :value    (-> edit-data :postal-code)
+                   {:value     (-> edit-data :postal-code)
+                    :required  true
                     :spec      :lipas.location/postal-code
                     :on-change #(on-change :postal-code %)}]}
 
@@ -486,6 +500,7 @@
       :value      (-> display-data :city :name)
       :form-field [select
                    {:value     (-> edit-data :city :city-code)
+                    :required  true
                     :items     cities
                     :label-fn  (comp locale :name)
                     :value-fn  :city-code
