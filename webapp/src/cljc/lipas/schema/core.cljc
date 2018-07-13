@@ -106,7 +106,7 @@
 (s/def :lipas/timestamp-type (s/and string? #(re-matches timestamp-regex %)))
 (s/def :lipas/timestamp (s/with-gen :lipas/timestamp-type timestamp-gen))
 
-(s/def :lipas/email-type (s/nilable (s/and string? #(re-matches email-regex %))))
+(s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
 ;;; User ;;;
@@ -179,8 +179,8 @@
 (s/def :lipas.sports-site/owner (into #{} (keys owners/all)))
 (s/def :lipas.sports-site/admin (into #{} (keys admins/all)))
 
-(s/def :lipas.sports-site/phone-number (s/nilable (str-btw 1 50)))
-(s/def :lipas.sports-site/www (s/nilable (str-btw 1 200)))
+(s/def :lipas.sports-site/phone-number (str-btw 1 50))
+(s/def :lipas.sports-site/www (str-btw 1 200))
 (s/def :lipas.sports-site/email :lipas/email)
 
 (s/def :lipas.sports-site.type/type-code
@@ -299,7 +299,7 @@
 (s/def :lipas.ice-stadium.rink/width-m (s/int-in 0 100))
 (s/def :lipas.ice-stadium.rink/length-m (s/int-in 0 100))
 
-(s/def :lipas.ice-stadium/rink (s/keys :opt-un [:lipas.ice-stadium.rink/width-m
+(s/def :lipas.ice-stadium/rink (s/keys :req-un [:lipas.ice-stadium.rink/width-m
                                                 :lipas.ice-stadium.rink/length-m]))
 (s/def :lipas.ice-stadium/rinks
   (s/coll-of :lipas.ice-stadium/rink
@@ -411,12 +411,11 @@
   (into #{} (keys ice-stadiums/heat-pump-types)))
 
 (s/def :lipas.ice-stadium/ventilation
-  (s/keys :opt-un
-          [:lipas.ice-stadium.ventilation/heat-recovery-efficiency
-           :lipas.ice-stadium.ventilation/heat-recovery-type
-           :lipas.ice-stadium.ventilation/dryer-type
-           :lipas.ice-stadium.ventilation/dryer-duty-type
-           :lipas.ice-stadium.ventilation/heat-pump-type]))
+  (s/keys :opt-un [:lipas.ice-stadium.ventilation/heat-recovery-efficiency
+                   :lipas.ice-stadium.ventilation/heat-recovery-type
+                   :lipas.ice-stadium.ventilation/dryer-type
+                   :lipas.ice-stadium.ventilation/dryer-duty-type
+                   :lipas.ice-stadium.ventilation/heat-pump-type]))
 
 ;; Energy consumption ;;
 
@@ -427,8 +426,8 @@
 (s/def :lipas.energy-consumption/water-m3 (s/int-in 0 100000))
 
 (s/def :lipas/energy-consumption
-  (s/keys :opt-un [:lipas.energy-consumption/cold-mwh
-                   :lipas.energy-consumption/electricity-mwh
+  (s/keys :req-un [:lipas.energy-consumption/electricity-mwh]
+          :opt-un [:lipas.energy-consumption/cold-mwh
                    :lipas.energy-consumption/heat-mwh
                    :lipas.energy-consumption/water-m3]))
 
@@ -445,13 +444,13 @@
   (s/merge
    :lipas/sports-site
    (s/keys :req-un [:lipas.ice-stadium/type]
-           :opt-un [:lipas.ice-stadium/energy-consumption-monthly
-                    :lipas.ice-stadium/building
+           :opt-un [:lipas.ice-stadium/building
                     :lipas.ice-stadium/rinks
                     :lipas.ice-stadium/envelope
                     :lipas.ice-stadium/refrigeration
                     :lipas.ice-stadium/ventilation
                     :lipas.ice-stadium/conditions
+                    :lipas.ice-stadium/energy-consumption-monthly
                     :lipas/energy-consumption])))
 
 ;;; Swimming pools ;;;
@@ -502,7 +501,6 @@
 
 ;; Pools ;;
 
-(s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
 (s/def :lipas.swimming-pool.pool/temperature-c (s/int-in 0 50))
 (s/def :lipas.swimming-pool.pool/volume-m3 (s/int-in 0 5000))
 (s/def :lipas.swimming-pool.pool/area-m2 (s/int-in 0 2000))
@@ -510,10 +508,12 @@
 (s/def :lipas.swimming-pool.pool/width-m (s/double-in :min 0 :max 100))
 (s/def :lipas.swimming-pool.pool/depth-min-m (s/double-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/depth-max-m (s/double-in :min 0 :max 10))
+(s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
+
 
 (s/def :lipas.swimming-pool/pool
-  (s/keys :opt-un [:lipas.swimming-pool.pool/type
-                   :lipas.swimming-pool.pool/temperature-c
+  (s/keys :req-un [:lipas.swimming-pool.pool/type]
+          :opt-un [:lipas.swimming-pool.pool/temperature-c
                    :lipas.swimming-pool.pool/volume-m3
                    :lipas.swimming-pool.pool/area-m2
                    :lipas.swimming-pool.pool/length-m
@@ -535,8 +535,8 @@
   (into #{} (keys materials/slide-structures)))
 
 (s/def :lipas.swimming-pool/slide
-  (s/keys :opt-un [:lipas.swimming-pool.slide/length-m
-                   :lipas.swimming-pool.slide/structure]))
+  (s/keys :req-un [:lipas.swimming-pool.slide/length-m]
+          :opt-un [:lipas.swimming-pool.slide/structure]))
 
 (s/def :lipas.swimming-pool/slides
   (s/coll-of :lipas.swimming-pool/slide
@@ -553,9 +553,9 @@
   (into #{} (keys swimming-pools/sauna-types)))
 
 (s/def :lipas.swimming-pool/sauna
-  (s/keys :opt-un [:lipas.swimming-pool.sauna/men?
-                   :lipas.swimming-pool.sauna/women?
-                   :lipas.swimming-pool.sauna/type]))
+  (s/keys :req-un [:lipas.swimming-pool.sauna/type]
+          :opt-un [:lipas.swimming-pool.sauna/men?
+                   :lipas.swimming-pool.sauna/women?]))
 
 (s/def :lipas.swimming-pool/saunas
   (s/coll-of :lipas.swimming-pool/sauna
