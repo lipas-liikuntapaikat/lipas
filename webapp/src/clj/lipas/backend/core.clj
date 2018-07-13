@@ -19,7 +19,8 @@
                     {:type :email-conflict})))
 
   (let [user (-> user
-                 (assoc :permissions default-permissions)
+                 (assoc :permissions (or (:permissions user)
+                                         default-permissions))
                  (update :password hashers/encrypt))]
 
     (.add-user db user)
