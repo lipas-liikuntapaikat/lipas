@@ -1,23 +1,25 @@
 (ns lipas.ui.db
-  (:require [lipas.ui.i18n :as i18n]
-            [lipas.data.cities :as cities]
-            [lipas.data.admins :as admins]
-            [lipas.data.owners :as owners]
-            [lipas.data.types :as types]
-            [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [lipas.schema.core :as schema]
             [clojure.test.check]
             [clojure.test.check.generators]
+            [lipas.data.admins :as admins]
+            [lipas.data.cities :as cities]
+            [lipas.data.ice-stadiums :as ice-stadiums]
             [lipas.data.materials :as materials]
+            [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.data.ice-stadiums :as ice-stadiums]))
+            [lipas.data.types :as types]
+            [lipas.schema.core :as schema]
+            [lipas.ui.i18n :as i18n]
+            [lipas.ui.utils :as utils]))
 
 (def jaahalli-2016
 
   ;;; Yleiset ;;;
   {:lipas-id 89839
    :timestamp "2016-11-14T10:13:20.103Z"
+   :status :active
 
    :name "Jyväskylän kilpajäähalli"
    :marketing-name "Synergia areena"
@@ -26,8 +28,8 @@
    :owner :city
 
    :www "www.jyvaskyla.fi"
-   :email nil
-   :phone-number nil
+   ;; :email nil
+   ;; :phone-number nil
 
    ;;; Sijainti ;;;
    :location
@@ -152,6 +154,7 @@
    ;;; Yleiset ;;;
    :lipas-id 506032
    :timestamp "2012-11-14T10:13:20.103Z"
+   :status :active
 
    :name "Äänekosken uimahalli"
    :marketing-name "Vesivelho"
@@ -181,8 +184,7 @@
     :postal-code "44100"
     :postal-office "ÄÄNEKOSKI"
     :city
-    {:city-code 992
-     :neighborhood nil}}
+    {:city-code 992}}
 
    ;;; Tyyppiluokitus ;;;
    :type
@@ -228,16 +230,16 @@
      :temperature-c 30
      :volume-m3 43
      :area-m2 43
-     :length-m nil
-     :width-m nil
+     ;; :length-m nil
+     ;; :width-m nil
      :depth-min-m 0.6
      :depth-max-m 1}
     {:type :childrens-pool
      :temperature-c 32
      :volume-m3 2
      :area-m2 7
-     :length-m nil
-     :width-m nil
+     ;; :length-m nil
+     ;; :width-m nil
      :depth-min-m 0.2
      :depth-max-m 0.2}
     {:type :multipurpose-pool
@@ -268,7 +270,7 @@
    [{:type :steam-sauna :men? true :women? true}
     {:type :sauna :men? false :women? true}
     {:type :sauna :men? true :women? false}
-    {:type :infrared-sauna :men? nil :women? nil}]
+    {:type :infrared-sauna}]
 
    ;;; Muut palvelut ;;;
    :facilities
@@ -335,29 +337,14 @@
                               :heat-mwh 0
                               :water-m3 8573}))
 
-(comment (index-by :id [{:id 1 :name "kissa"}
-                        {:id 2 :name "koira"}]))
-
-(defn index-by [idx-fn coll]
-  (into {} (map (juxt idx-fn identity)) coll))
-
-(defn gen-pools-old [n]
-  (reduce (fn [res n]
-            (let [e (assoc vesivelho-2017
-                           :lipas-id n
-                           :name {:fi (str "Uimahalli " n)})]
-              (-> res
-                  (assoc-in [n :latest] e)
-                  (assoc-in [n :history] {"2013-01-03T00:00:00.000Z" e}))))
-          {} (range n)))
-
 (defn gen-pools [n]
   (reduce (fn [res n]
             (let [e  (gen/generate (s/gen :lipas.sports-site/swimming-pool))
-                  id (:lipas-id e)]
+                  id (:lipas-id e)
+                  ts (:timestamp e)]
               (-> res
-                  (assoc-in [id :latest] e)
-                  (assoc-in [id :history] {(:timestamp e) e}))))
+                  (assoc-in [id :latest] ts)
+                  (assoc-in [id :history] {ts e}))))
           {} (range n)))
 
 (def default-db
@@ -367,20 +354,20 @@
 
    ;; Sports sites
    :sports-sites
-   (merge (gen-pools 20)
+   (merge (gen-pools 10)
           {
            506032
-           {:latest  vesivelho-2017
-            :history (index-by :timestamp [vesivelho-2012
-                                           vesivelho-2013
-                                           vesivelho-2014
-                                           vesivelho-2015
-                                           vesivelho-2016
-                                           vesivelho-2017])
+           {:latest  (:timestamp vesivelho-2017)
+            :history (utils/index-by :timestamp [vesivelho-2012
+                                                 vesivelho-2013
+                                                 vesivelho-2014
+                                                 vesivelho-2015
+                                                 vesivelho-2016
+                                                 vesivelho-2017])
             :edits   nil}
            89839
-           {:latest  jaahalli-2017
-            :history (index-by :timestamp [jaahalli-2016 jaahalli-2017])
+           {:latest  (:timestamp jaahalli-2017)
+            :history (utils/index-by :timestamp [jaahalli-2016 jaahalli-2017])
             :edits   nil}})
 
    ;; Ice stadiums
@@ -389,10 +376,7 @@
     :editing                   nil
     :dialogs
     {:rink
-     {:open? false
-      :data
-      {:width-m  ""
-       :length-m ""}}}
+     {:open? false}}
     :size-categories           ice-stadiums/size-categories
     :condensate-energy-targets ice-stadiums/condensate-energy-targets
     :refrigerants              ice-stadiums/refrigerants
@@ -414,27 +398,13 @@
     :editing           nil
     :dialogs
     {:pool
-     {:open? false
-      :data
-      {:name          ""
-       :temperature-c nil
-       :volume-m3     nil
-       :area-m2       nil
-       :length-m      nil
-       :width-m       nil
-       :depth-min-m   nil
-       :depth-max-m   nil
-       :structure     ""}}
+     {:open? false}
      :slide
      {:open? false}
      :energy
      {:open? false}
      :sauna
-     {:open? false
-      :data
-      {:name  ""
-       :women false
-       :men   false}}}}
+     {:open? false}}}
 
    ;; User
    :user
@@ -452,10 +422,13 @@
 
    :admins                admins/all
    :owners                owners/all
-   :cities                (index-by :city-code cities/active)
-   :types                 (index-by :type-code types/all)
+   :cities                (utils/index-by :city-code cities/active)
+   :types                 (utils/index-by :type-code types/all)
    :materials             materials/all
    :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures})
+
+(comment
+  (gen/generate (s/gen :lipas.swimming-pool/pool)))

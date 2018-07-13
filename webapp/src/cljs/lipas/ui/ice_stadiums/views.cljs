@@ -39,9 +39,11 @@
         dryer-duty-types      (<== [::subs/dryer-duty-types])
         heat-pump-types       (<== [::subs/heat-pump-types])
 
-        lipas-id           (:lipas-id site)
-        user-can-publish?  (<== [::subs/permission-to-publish? lipas-id])
-        uncommitted-edits? (<== [::subs/uncommitted-edits? lipas-id])
+        lipas-id              (:lipas-id site)
+        user-can-publish?     (<== [::subs/permission-to-publish? lipas-id])
+        uncommitted-edits?    (<== [::subs/uncommitted-edits? lipas-id])
+
+        edits-valid?          (<== [::subs/edits-valid?])
 
         set-field (partial set-field :editing :rev)]
 
@@ -60,6 +62,7 @@
         :actions (lui/edit-actions-list
                   {:uncommitted-edits? uncommitted-edits?
                    :editing?           @editing?
+                   :valid?             edits-valid?
                    :logged-in?         logged-in?
                    :user-can-publish?  user-can-publish?
                    :on-discard         #(==> [::events/discard-edits])
@@ -530,6 +533,7 @@
 (defn energy-form [{:keys [tr year]}]
   (let [data           (<== [::subs/editing-rev])
         energy-history (<== [::subs/energy-consumption-history])
+        edits-valid?   (<== [::subs/edits-valid?])
         set-field      (partial set-field :editing :rev)]
 
     (r/with-let [monthly-energy? (r/atom false)]
@@ -537,11 +541,11 @@
       [mui/grid {:container true}
 
        ;; Energy consumption
-       [lui/form-card {:title (tr :energy/headline-year year)}
+       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
 
         [mui/typography {:variant "subheading"
                          :style   {:margin-bottom "1em"}}
-         (tr :energy/yearly)]
+         (tr :lipas.energy-consumption/yearly)]
         [energy/form
          {:tr        tr
           :disabled? @monthly-energy?
@@ -550,7 +554,7 @@
           :on-change (partial set-field :energy-consumption)}]
 
         [lui/checkbox
-         {:label     (tr :energy/monthly?)
+         {:label     (tr :lipas.energy-consumption/monthly?)
           :checked   @monthly-energy?
           :on-change #(swap! monthly-energy? not)}]
 
@@ -570,6 +574,7 @@
        ;; Actions
        [lui/form-card {}
         [mui/button {:full-width true
+                     :disabled   (not edits-valid?)
                      :color      "secondary"
                      :variant    "raised"
                      :on-click   #(==> [::events/commit-energy-consumption data])}
@@ -592,11 +597,12 @@
         [mui/form-group
          [lui/select
           {:label     (tr :actions/select-hall)
-           :value     (-> site :latest :lipas-id)
+           :value     (get-in site [:history (:latest site) :lipas-id])
            :items     data
-           :label-fn  (comp locale :name)
+           :label-fn  :name
            :value-fn  :lipas-id
-           :on-change #(==> [::events/set-edit-site {:lipas-id %}])}]]])
+           :on-change #(==> [::events/select-energy-consumption-site
+                             {:lipas-id %}])}]]])
 
      (when site
        [lui/form-card {:title (tr :actions/select-year)}

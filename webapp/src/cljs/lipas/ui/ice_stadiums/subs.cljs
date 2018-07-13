@@ -1,6 +1,8 @@
 (ns lipas.ui.ice-stadiums.subs
   (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [clojure.spec.alpha :as s]
+            [lipas.ui.ice-stadiums.utils :as ice-utils]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -17,6 +19,14 @@
  ::editing-rev
  (fn [db _]
    (-> db :ice-stadiums :editing :rev)))
+
+(re-frame/reg-sub
+ ::edits-valid?
+ :<- [::editing-rev]
+ (fn [rev _]
+   (let [rev (ice-utils/make-saveable rev)]
+     ;;(s/explain :lipas.sports-site/ice-stadium rev)
+     (s/valid? :lipas.sports-site/ice-stadium rev))))
 
 (re-frame/reg-sub
  ::editing-year
@@ -57,6 +67,23 @@
    (-> db :user :login :permissions :sports-sites)))
 
 (re-frame/reg-sub
+ ::latest-sports-site-revs
+ :<- [::sports-sites]
+ (fn [sites _]
+   (reduce-kv (fn [m k v]
+                (assoc m k (get-in v [:history (:latest v)])))
+              {}
+              sites)))
+
+(re-frame/reg-sub
+ ::latest-ice-stadium-revs
+ :<- [::latest-sports-site-revs]
+ (fn [sites _]
+   (as-> sites $
+     (into {} (filter (comp #{2510 2520} :type-code :type second)) $)
+     (not-empty $))))
+
+(re-frame/reg-sub
  ::permission-to-publish?
  :<- [::access-to-sports-sites]
  (fn [ids [_ lipas-id]]
@@ -68,17 +95,9 @@
    (-> db :sports-sites)))
 
 (re-frame/reg-sub
- ::ice-stadiums
- :<- [::sports-sites]
- (fn [sites _]
-   (as-> sites $
-     (into {} (filter (comp #{2510 2520} :type-code :type :latest second)) $)
-     (not-empty $))))
-
-(re-frame/reg-sub
  ::sites-to-edit
  :<- [::access-to-sports-sites]
- :<- [::ice-stadiums]
+ :<- [::latest-ice-stadium-revs]
  (fn [[ids sites] _]
    (not-empty (select-keys sites ids))))
 
@@ -86,7 +105,7 @@
  ::sites-to-edit-list
  :<- [::sites-to-edit]
  (fn [sites _]
-   (not-empty (map :latest (vals sites)))))
+   (not-empty (vals sites))))
 
 (re-frame/reg-sub
  ::dialogs
@@ -196,34 +215,33 @@
  (fn [db _]
    (-> db :base-floor-structures)))
 
-(defn ->list-entry [{:keys [cities admins owners types locale]} site]
-  (let [latest (:latest site)
-        type   (types (-> latest :type :type-code))
-        admin  (admins (-> latest :admin))
-        owner  (owners (-> latest :owner))
-        city   (get cities (-> latest :location :city :city-code))]
-    {:lipas-id    (-> latest :lipas-id)
-     :name        (-> latest :name)
+(defn ->list-entry [{:keys [cities admins owners types locale]} ice-stadium]
+  (let [type   (types (-> ice-stadium :type :type-code))
+        admin  (admins (-> ice-stadium :admin))
+        owner  (owners (-> ice-stadium :owner))
+        city   (get cities (-> ice-stadium :location :city :city-code))]
+    {:lipas-id    (-> ice-stadium :lipas-id)
+     :name        (-> ice-stadium :name)
      :type        (-> type :name locale)
-     :address     (-> latest :location :address)
-     :postal-code (-> latest :location :postal-code)
+     :address     (-> ice-stadium :location :address)
+     :postal-code (-> ice-stadium :location :postal-code)
      :city        (-> city :name locale)
      :owner       (-> owner locale)
      :admin       (-> admin locale)}))
 
 (re-frame/reg-sub
  ::sites-list
- :<- [::ice-stadiums]
+ :<- [::latest-ice-stadium-revs]
  :<- [::cities-by-city-code]
  :<- [::admins]
  :<- [::owners]
  :<- [::types-by-type-code]
  (fn [[sites cities admins owners types] [_ locale]]
-   (let [data  {:locale locale
-                :cities cities
-                :admins admins
-                :owners owners
-                :types types}]
+   (let [data {:locale locale
+               :cities cities
+               :admins admins
+               :owners owners
+               :types types}]
      (map (partial ->list-entry data) (vals sites)))))
 
 (re-frame/reg-sub
@@ -255,7 +273,7 @@
        materials] [_ locale]]
    (when site
      (let [latest               (or (utils/latest-edit (:edits site))
-                                    (:latest site))
+                                    (get-in site [:history (:latest site)]))
            type                 (types (-> latest :type :type-code))
            size-category        (size-categories (-> latest :type :size-category))
            admin                (admins (-> latest :admin))

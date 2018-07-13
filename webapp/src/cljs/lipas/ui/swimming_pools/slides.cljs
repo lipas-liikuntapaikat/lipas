@@ -23,7 +23,7 @@
                       :adornment (tr :physical-units/m)
                       :type      "number"
                       :value     (:length-m data)
-                      :spec      :lipas.swimming-pool.slides/slide-length-m
+                      :spec      :lipas.swimming-pool.slide/length-m
                       :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr]}]

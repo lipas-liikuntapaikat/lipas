@@ -1,30 +1,39 @@
 (ns lipas.ui.utils
   (:require [re-frame.core :as re-frame]
-            [clojure.reader :refer [read-string]]))
+            [clojure.reader :refer [read-string]]
+            [clojure.walk :as walk]))
 
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
-
-(def maxc (partial apply max))
 
 (defn ->setter-fn [event]
   (fn [& args]
     (==> [event (butlast args) (last args)])))
 
+(defn set-field [db path value]
+  (if value
+    (assoc-in db path value)
+    (if-let [base-path (butlast path)]
+      (update-in db (into [] base-path) dissoc (last path))
+      (dissoc db path))))
+
+(def maxc (partial apply max))
+
 (defn next-id [db path]
-  (-> db (get-in path) keys maxc inc))
+  (gensym))
 
 (defn save-entity [db path entity]
   (let [id (or (:id entity) (next-id db path))]
     (assoc-in db (conj path id) (assoc entity :id id))))
 
 (defn ->indexed-map [coll]
-  (into {} (map-indexed (fn [idx item]
-                          [idx
-                           (if (map? item)
-                             (assoc item :id idx)
-                             item)])
-                        coll)))
+  (when coll
+    (into {} (map-indexed (fn [idx item]
+                            [idx
+                             (if (map? item)
+                               (assoc item :id idx)
+                               item)])
+                          coll))))
 
 (defn index-by [idx-fn coll]
   (into {} (map (juxt idx-fn identity)) coll))
@@ -52,23 +61,11 @@
 
 (def this-year (.getFullYear (js/Date.)))
 
-(defn begin-of-year
-  ([]
-   (begin-of-year this-year))
-  ([y]
-   (str y "-01-01")))
-
-(defn end-of-year
-  ([]
-   (end-of-year this-year))
-  ([y]
-   (str y "-12-31")))
-
 (defn timestamp []
   (.toISOString (js/Date.)))
 
 (defn ->timestamp [year]
-  (str year))
+  (str year "-01-01T00:00:00.000Z"))
 
 (defn reverse-cmp [a b]
   (compare b a))
@@ -134,12 +131,12 @@
     (not= rev1 rev2)))
 
 (defn remove-ids [m]
-  (map #(dissoc % :id) m))
+  (not-empty (map #(dissoc % :id) m)))
 
 (defn save-edits [db rev]
   (let [lipas-id    (:lipas-id rev)
         site        (get-in db [:sports-sites lipas-id])
-        original    (-> site :latest)
+        original    (get-in site [:history (:latest site)])
         original?   (not (different? rev original))
         latest-edit (latest-edit (-> site :edits))
         dirty?      (different? rev (or latest-edit original))
@@ -153,7 +150,7 @@
   (let [lipas-id (:lipas-id rev)]
     (-> db
         (assoc-in [:sports-sites lipas-id :edits] nil)
-        (assoc-in [:sports-sites lipas-id :latest] rev)
+        (assoc-in [:sports-sites lipas-id :latest] (:timestamp rev))
         (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev))))
 
 (defn discard-edits [db lipas-id]
@@ -162,4 +159,23 @@
 (defn commit-energy-consumption [db rev]
   (let [lipas-id (:lipas-id rev)
         ts       (:timestamp rev)]
+    ;; TODO Need to update latest maybe?
     (assoc-in db [:sports-sites lipas-id :history ts] rev)))
+
+(defn maybe-update-in
+  "Like `update-in` but updates only if path is present. Otherwise
+  returns the map unmodified."
+  [m path update-fn & args]
+  (if (not-empty (get-in m path))
+    (apply update-in (into [m path update-fn] args))
+    m))
+
+(defn clean
+  "Removes nil values and empty {} entries recursively from maps."
+  [m]
+  (walk/postwalk
+   (fn [x]
+     (cond
+       (map? x) (not-empty (into {} (filter (comp some? val)) x))
+       :else x))
+   m))
