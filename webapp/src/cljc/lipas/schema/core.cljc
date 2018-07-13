@@ -81,7 +81,7 @@
            ss (zero-left-pad ss 2)]
        (str yyyy "-" MM "-" dd "T" hh ":" mm ":" ss "." ms "Z")))
    (gen/tuple
-    (s/gen (s/int-in 1900 2019))
+    (s/gen (s/int-in 1900 (inc this-year)))
     (s/gen (s/int-in 1 (inc 12)))
     (s/gen (s/int-in 1 (inc 28)))
     (s/gen (s/int-in 1 (inc 23)))
