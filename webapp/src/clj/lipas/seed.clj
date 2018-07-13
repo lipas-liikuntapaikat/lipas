@@ -7,6 +7,8 @@
   {:email    "jh@lipas.fi"
    :username "jhdemo"
    :password "jaahalli"
+   :permissions
+   {:sports-sites [89839]}
    :user-data
    {:firstname           "Jää"
     :lastname            "Halli"
@@ -17,6 +19,8 @@
   {:email    "uh@lipas.fi"
    :username "uhdemo"
    :password "uimahalli"
+   :permissions
+   {:sports-sites [506032]}
    :user-data
    {:firstname           "Uima"
     :lastname            "Halli"
