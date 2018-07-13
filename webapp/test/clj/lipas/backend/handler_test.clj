@@ -1,11 +1,11 @@
 (ns lipas.backend.handler-test
-  (:require [clojure.spec.gen.alpha :as gen]
+  (:require [cheshire.core :as j]
             [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
-            [cheshire.core :as j]
-            [lipas.backend.system :refer [start-system!]]
             [lipas.backend.core :as core]
-            [lipas.schema.core :as lipas]
+            [lipas.backend.system :refer [start-system!]]
+            [lipas.schema.core]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
 
@@ -32,12 +32,12 @@
 (def db (:db system))
 (def app (:app system))
 
-(comment (gen/generate (s/gen ::lipas/email)))
+(comment (gen/generate (s/gen :lipas/email)))
 (defn gen-user
   ([]
    (gen-user {:db? false}))
   ([{:keys [db?]}]
-   (let [user (gen/generate (s/gen ::lipas/user))]
+   (let [user (gen/generate (s/gen :lipas/user))]
      (when db?
        (core/add-user db user))
      user)))
