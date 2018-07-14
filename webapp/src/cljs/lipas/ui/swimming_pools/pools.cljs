@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.pools
-  (:require [lipas.ui.components :as lui]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -99,13 +100,15 @@
 (defn dialog [{:keys [tr]}]
   (let [data (<== [::subs/pool-form])
         reset #(==> [::events/reset-dialog :pool])
-        close #(==> [::events/toggle-dialog :pool])]
+        close #(==> [::events/toggle-dialog :pool])
+        valid? (s/valid? :lipas.swimming-pool/pool data)]
     [lui/dialog {:title (if (:id data)
                           (tr :lipas.swimming-pool.pools/edit-pool)
                           (tr :lipas.swimming-pool.pools/add-pool))
                  :save-label (tr :actions/save)
                  :cancel-label (tr :actions/cancel)
                  :on-close #(==> [::events/toggle-dialog :pool])
+                 :save-enabled? valid?
                  :on-save (comp reset
                                 close
                                 #(==> [::events/save-pool data]))}
@@ -129,7 +132,7 @@
       :items          (->> (vals items)
                            (map (partial localize :type :pool-types))
                            (map (partial localize :structure :pool-structures)))
-      :add-tooltip    (tr :lipas.swimming-pool.pool/add-pool)
+      :add-tooltip    (tr :lipas.swimming-pool.pools/add-pool)
       :edit-tooltip   (tr :actions/edit)
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :pool {}])

@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.slides
-  (:require [lipas.ui.components :as lui]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -27,18 +28,20 @@
                       :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr]}]
-  (let [data (<== [::subs/slide-form])
-        close #(==> [::events/toggle-dialog :slide])
-        reset #(==> [::events/reset-dialog :slide])]
-    [lui/dialog {:title (if (:id data)
-                          (tr :lipas.swimming-pool.slides/edit-slide)
-                          (tr :lipas.swimming-pool.slides/add-slide))
-                 :save-label (tr :actions/save)
-                 :cancel-label (tr :actions/cancel)
-                 :on-close #(==> [::events/toggle-dialog :slide])
-                 :on-save (comp reset
-                                close
-                                #(==> [::events/save-slide data]))}
+  (let [data    (<== [::subs/slide-form])
+        close   #(==> [::events/toggle-dialog :slide])
+        reset   #(==> [::events/reset-dialog :slide])
+        valid?  (s/valid? :lipas.swimming-pool/slide data)
+        title   (if (:id data)
+                  (tr :lipas.swimming-pool.slides/edit-slide)
+                  (tr :lipas.swimming-pool.slides/add-slide))
+        on-save (comp reset close #(==> [::events/save-slide data]))]
+    [lui/dialog {:title         title
+                 :save-label    (tr :actions/save)
+                 :cancel-label  (tr :actions/cancel)
+                 :on-close      #(==> [::events/toggle-dialog :slide])
+                 :save-enabled? valid?
+                 :on-save       on-save}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]

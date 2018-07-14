@@ -123,8 +123,7 @@
 (re-frame/reg-event-db
  ::reset-dialog
  (fn [db [_ dialog]]
-   (let [empty-data (-> default-db :ice-stadiums :dialogs dialog)]
-     (assoc-in db [:ice-stadiums :dialogs dialog] empty-data))))
+   (assoc-in db [:ice-stadiums :dialogs dialog] {})))
 
 (re-frame/reg-event-db
  ::save-rink

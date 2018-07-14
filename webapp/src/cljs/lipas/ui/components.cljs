@@ -2,7 +2,6 @@
   (:require [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim]]
-            [lipas.schema.core :as schema]
             [lipas.ui.mui :as mui]
             [reagent.core :as r]))
 
@@ -203,6 +202,7 @@
                       on-save
                       on-close
                       save-label
+                      save-enabled?
                       cancel-label]} content]
   [mui/dialog {:open true
                :full-width true
@@ -212,7 +212,8 @@
    [mui/dialog-actions
     [mui/button {:on-click on-close}
      cancel-label]
-    [mui/button {:on-click on-save}
+    [mui/button {:on-click on-save
+                 :disabled (not save-enabled?)}
      save-label]]])
 
 (defn form-card [{:keys [title]} & content]
