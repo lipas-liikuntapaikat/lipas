@@ -10,18 +10,8 @@
    (-> db :swimming-pools :active-tab)))
 
 (re-frame/reg-sub
- ::access-to-sports-sites
- (fn [db _]
-   (-> db :user :login :permissions :sports-sites)))
-
-(re-frame/reg-sub
- ::sports-sites
- (fn [db _]
-   (-> db :sports-sites)))
-
-(re-frame/reg-sub
  ::latest-sports-site-revs
- :<- [::sports-sites]
+ :<- [:lipas.ui.sports-sites.subs/sports-sites]
  (fn [sites _]
    (reduce-kv (fn [m k v]
                 (assoc m k (get-in v [:history (:latest v)])))
@@ -38,16 +28,10 @@
 
 (re-frame/reg-sub
  ::sites-to-edit
- :<- [::access-to-sports-sites]
+ :<- [:lipas.ui.user.subs/access-to-sports-sites]
  :<- [::latest-swimming-pool-revs]
  (fn [[ids pools] _]
    (not-empty (select-keys pools ids))))
-
-(re-frame/reg-sub
- ::permission-to-publish?
- :<- [::access-to-sports-sites]
- (fn [ids [_ lipas-id]]
-   (boolean (some #{lipas-id} ids))))
 
 (re-frame/reg-sub
  ::sites-to-edit-list
@@ -129,35 +113,9 @@
    (-> db :swimming-pools :dialogs :energy :data)))
 
 (re-frame/reg-sub
- ::cities-by-city-code
- (fn [db _]
-   (-> db :cities)))
-
-(re-frame/reg-sub
- ::cities-list
- :<- [::cities-by-city-code]
- (fn [cities _]
-   (vals cities)))
-
-(re-frame/reg-sub
- ::admins
- (fn [db _]
-   (-> db :admins)))
-
-(re-frame/reg-sub
- ::owners
- (fn [db _]
-   (-> db :owners)))
-
-(re-frame/reg-sub
- ::all-types
- (fn [db _]
-   (-> db :types)))
-
-(re-frame/reg-sub
  ::types-by-type-code
- :<- [::all-types]
- (fn [types _ _]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ (fn [types _]
    (select-keys types [3110])))
 
 (re-frame/reg-sub
@@ -196,26 +154,6 @@
  (fn [db _]
    (-> db :swimming-pools :slide-structures)))
 
-(re-frame/reg-sub
- ::materials
- (fn [db _]
-   (-> db :materials)))
-
-(re-frame/reg-sub
- ::building-materials
- (fn [db _]
-   (-> db :building-materials)))
-
-(re-frame/reg-sub
- ::supporting-structures
- (fn [db _]
-   (-> db :supporting-structures)))
-
-(re-frame/reg-sub
- ::ceiling-structures
- (fn [db _]
-   (-> db :ceiling-structures)))
-
 (defn ->list-entry [{:keys [cities admins owners types locale]} pool]
   (let [type   (types (-> pool :type :type-code))
         admin  (admins (-> pool :admin))
@@ -233,16 +171,16 @@
 (re-frame/reg-sub
  ::sites-list
  :<- [::latest-swimming-pool-revs]
- :<- [::cities-by-city-code]
- :<- [::admins]
- :<- [::owners]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
  :<- [::types-by-type-code]
  (fn [[pools cities admins owners types] [_ locale]]
-   (let [data  {:locale locale
-                :cities cities
-                :admins admins
-                :owners owners
-                :types types} ]
+   (let [data {:locale locale
+               :cities cities
+               :admins admins
+               :owners owners
+               :types  types}]
      (map (partial ->list-entry data) (vals pools)))))
 
 (re-frame/reg-sub
@@ -254,11 +192,11 @@
 (re-frame/reg-sub
  ::display-site
  :<- [::display-site-raw]
- :<- [::cities-by-city-code]
- :<- [::admins]
- :<- [::owners]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
  :<- [::types-by-type-code]
- :<- [::materials]
+ :<- [:lipas.ui.sports-sites.subs/materials]
  :<- [::filtering-methods]
  :<- [::heat-sources]
  :<- [::pool-types]

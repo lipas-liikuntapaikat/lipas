@@ -40,7 +40,7 @@
         heat-pump-types       (<== [::subs/heat-pump-types])
 
         lipas-id              (:lipas-id site)
-        user-can-publish?     (<== [::subs/permission-to-publish? lipas-id])
+        user-can-publish?     (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
         uncommitted-edits?    (<== [::subs/uncommitted-edits? lipas-id])
 
         edits-valid?          (<== [::subs/edits-valid?])

@@ -62,41 +62,16 @@
    (utils/make-year-list (map :year history))))
 
 (re-frame/reg-sub
- ::access-to-sports-sites
- (fn [db _]
-   (-> db :user :login :permissions :sports-sites)))
-
-(re-frame/reg-sub
- ::latest-sports-site-revs
- :<- [::sports-sites]
- (fn [sites _]
-   (reduce-kv (fn [m k v]
-                (assoc m k (get-in v [:history (:latest v)])))
-              {}
-              sites)))
-
-(re-frame/reg-sub
  ::latest-ice-stadium-revs
- :<- [::latest-sports-site-revs]
+ :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
    (as-> sites $
      (into {} (filter (comp #{2510 2520} :type-code :type second)) $)
      (not-empty $))))
 
 (re-frame/reg-sub
- ::permission-to-publish?
- :<- [::access-to-sports-sites]
- (fn [ids [_ lipas-id]]
-   (boolean (some #{lipas-id} ids))))
-
-(re-frame/reg-sub
- ::sports-sites
- (fn [db _]
-   (-> db :sports-sites)))
-
-(re-frame/reg-sub
  ::sites-to-edit
- :<- [::access-to-sports-sites]
+ :<- [:lipas.ui.user.subs/access-to-sports-sites]
  :<- [::latest-ice-stadium-revs]
  (fn [[ids sites] _]
    (not-empty (select-keys sites ids))))
@@ -128,34 +103,8 @@
    (-> db :ice-stadiums :dialogs :energy :data)))
 
 (re-frame/reg-sub
- ::cities-by-city-code
- (fn [db _]
-   (-> db :cities)))
-
-(re-frame/reg-sub
- ::cities-list
- :<- [::cities-by-city-code]
- (fn [cities _ _]
-   (vals cities)))
-
-(re-frame/reg-sub
- ::admins
- (fn [db _]
-   (-> db :admins)))
-
-(re-frame/reg-sub
- ::owners
- (fn [db _]
-   (-> db :owners)))
-
-(re-frame/reg-sub
- ::all-types
- (fn [db _]
-   (-> db :types)))
-
-(re-frame/reg-sub
  ::types-by-type-code
- :<- [::all-types]
+ :<- [:lipas.ui.sports_sites.subs/all-types]
  (fn [types _]
    (select-keys types [2510 2520])))
 
@@ -164,6 +113,7 @@
  :<- [::types-by-type-code]
  (fn [types _ _]
    (vals types)))
+
 
 (re-frame/reg-sub
  ::size-categories
@@ -206,11 +156,6 @@
    (-> db :ice-stadiums :refrigerant-solutions)))
 
 (re-frame/reg-sub
- ::materials
- (fn [db _]
-   (-> db :materials)))
-
-(re-frame/reg-sub
  ::base-floor-structures
  (fn [db _]
    (-> db :base-floor-structures)))
@@ -232,9 +177,9 @@
 (re-frame/reg-sub
  ::sites-list
  :<- [::latest-ice-stadium-revs]
- :<- [::cities-by-city-code]
- :<- [::admins]
- :<- [::owners]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
  :<- [::types-by-type-code]
  (fn [[sites cities admins owners types] [_ locale]]
    (let [data {:locale locale
@@ -253,10 +198,10 @@
 (re-frame/reg-sub
  ::display-site
  :<- [::display-site-raw]
- :<- [::cities-by-city-code]
- :<- [::admins]
- :<- [::owners]
- :<- [::all-types]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
  :<- [::size-categories]
  :<- [::condensate-energy-targets]
  :<- [::refrigerants]
@@ -265,7 +210,7 @@
  :<- [::dryer-types]
  :<- [::dryer-duty-types]
  :<- [::heat-pump-types]
- :<- [::materials]
+ :<- [:lipas.ui.sports-sites.subs/materials]
  (fn [[site
        cities admins owners types size-categories
        condensate-energy-targets refrigerants refrigerant-solutions
