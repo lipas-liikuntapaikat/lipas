@@ -408,17 +408,8 @@
 
    ;; User
    :user
-   {:login-form
-    {:username ""
-     :password ""}
-    :registration-form
-    {:email    ""
-     :password ""
-     :username ""
-     :user-data
-     {:firstname           ""
-      :lastname            ""
-      :permissions-request ""}}}
+   {:login-form        {}
+    :registration-form {}}
 
    :admins                admins/all
    :owners                owners/all

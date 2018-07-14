@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.events
   (:require [ajax.core :as ajax]
-            [lipas.ui.db :refer [default-db]]
             [lipas.ui.utils :as utils]
             [lipas.ui.swimming-pools.utils :as swim-utils]
             [re-frame.core :as re-frame]))
@@ -130,8 +129,7 @@
 (re-frame/reg-event-db
  ::reset-dialog
  (fn [db [_ dialog]]
-   (let [empty-data (-> default-db :swimming-pools :dialogs dialog)]
-     (assoc-in db [:swimming-pools :dialogs dialog] empty-data))))
+   (assoc-in db [:swimming-pools :dialogs dialog] {})))
 
 (defn ->auth-token [token]
   (str "Bearer " token))
@@ -139,7 +137,7 @@
 (re-frame/reg-event-fx
  ::submit
  (fn [{:keys [db]} [_ data]]
-   (let [tr (:translator db)
+   (let [tr    (:translator db)
          token (-> db :user :login :token)]
      {:http-xhrio
       {:method          :post
@@ -149,10 +147,10 @@
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [:lipas.ui.events/set-active-notification
-                         {:message (tr :notifications/save-success)
+                         {:message  (tr :notifications/save-success)
                           :success? true}]
        :on-failure      [:lipas.ui.events/set-active-notification
-                         {:message (tr :notifications/save-failed)
+                         {:message  (tr :notifications/save-failed)
                           :success? false}]}})))
 
 (re-frame/reg-event-db

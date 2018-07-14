@@ -1,5 +1,6 @@
 (ns lipas.ui.swimming-pools.saunas
-  (:require [lipas.ui.components :as lui]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
@@ -33,18 +34,20 @@
                     :value     (:men? data)}]]))
 
 (defn dialog [{:keys [tr]}]
-  (let [data (<== [::subs/sauna-form])
-        reset #(==> [::events/reset-dialog :sauna])
-        close #(==> [::events/toggle-dialog :sauna])]
-    [lui/dialog {:title (if (:id data)
-                          (tr :lipas.swimming-pool.saunas/edit-sauna)
-                          (tr :lipas.swimming-pool.saunas/add-sauna))
-                 :save-label (tr :actions/save)
-                 :cancel-label (tr :actions/cancel)
-                 :on-close #(==> [::events/toggle-dialog :sauna])
-                 :on-save (comp reset
-                                close
-                                #(==> [::events/save-sauna data]))}
+  (let [data    (<== [::subs/sauna-form])
+        title   (if (:id data)
+                  (tr :lipas.swimming-pool.saunas/edit-sauna)
+                  (tr :lipas.swimming-pool.saunas/add-sauna))
+        reset   #(==> [::events/reset-dialog :sauna])
+        close   #(==> [::events/toggle-dialog :sauna])
+        on-save (comp reset close #(==> [::events/save-sauna data]))
+        valid?  (s/valid? :lipas.swimming-pool/sauna data)]
+    [lui/dialog {:title         title
+                 :save-label    (tr :actions/save)
+                 :cancel-label  (tr :actions/cancel)
+                 :on-close      close
+                 :save-enabled? valid?
+                 :on-save       on-save}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]

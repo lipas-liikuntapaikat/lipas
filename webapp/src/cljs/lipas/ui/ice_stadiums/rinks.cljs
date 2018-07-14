@@ -1,5 +1,6 @@
 (ns lipas.ui.ice-stadiums.rinks
-  (:require [lipas.ui.components :as lui]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -24,18 +25,20 @@
                       :on-change #(set-field :width-m %)}]]))
 
 (defn dialog [{:keys [tr]}]
-  (let [data (<== [::subs/rink-form])
-        reset #(==> [::events/reset-dialog :rink])
-        close #(==> [::events/toggle-dialog :rink])]
-    [lui/dialog {:title (if (:id data)
-                          (tr :lipas.ice-stadium.rinks/edit-rink)
-                          (tr :lipas.ice-stadium.rinks/add-rink))
-                 :save-label (tr :actions/save)
-                 :cancel-label (tr :actions/cancel)
-                 :on-close  #(==> [::events/toggle-dialog :rink])
-                 :on-save (comp reset
-                                close
-                                #(==> [::events/save-rink data]))}
+  (let [data    (<== [::subs/rink-form])
+        title   (if (:id data)
+                  (tr :lipas.ice-stadium.rinks/edit-rink)
+                  (tr :lipas.ice-stadium.rinks/add-rink))
+        reset   #(==> [::events/reset-dialog :rink])
+        close   #(==> [::events/toggle-dialog :rink])
+        valid?  (s/valid? :lipas.ice-stadium/rink data)
+        on-save (comp reset close #(==> [::events/save-rink data]))]
+    [lui/dialog {:title         title
+                 :save-label    (tr :actions/save)
+                 :cancel-label  (tr :actions/cancel)
+                 :on-close      close
+                 :save-enabled? valid?
+                 :on-save       on-save}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]

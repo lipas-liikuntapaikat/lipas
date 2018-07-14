@@ -204,22 +204,22 @@
     :refrigerant-solution-amount-l  "Kylmäliuoksen määrä (l)"}
 
    :lipas.ice-stadium.conditions
-   {:headline                          "Käyttöolosuhteet"
-    :daily-open-hours                  "Aukiolotunnit päivässä"
-    :open-months                       "Aukiolokuukaudet vuodessa"
-    :air-humidity-min                  "Ilman suhteellinen kosteus % min"
-    :air-humidity-max                  "Ilman suhteellinen kosteus % max"
-    :ice-surface-temperature-c         "Jään pinnan lämpötila"
-    :skating-area-temperature-c        "Luistelualueen lämpötila 1m korkeudella"
-    :stand-temperature-c               "Katsomon tavoiteltu keskilämpötila
+   {:headline                        "Käyttöolosuhteet"
+    :daily-open-hours                "Aukiolotunnit päivässä"
+    :open-months                     "Aukiolokuukaudet vuodessa"
+    :air-humidity-min                "Ilman suhteellinen kosteus % min"
+    :air-humidity-max                "Ilman suhteellinen kosteus % max"
+    :ice-surface-temperature-c       "Jään pinnan lämpötila"
+    :skating-area-temperature-c      "Luistelualueen lämpötila 1m korkeudella"
+    :stand-temperature-c             "Katsomon tavoiteltu keskilämpötila
           ottelun aikana"
-    :daily-maintenance-count-week-days "Jäähoitokerrat arkipäivinä"
-    :daily-maintenance-count-weekends  "Jäähoitokerrat viikonlppuina"
-    :average-water-consumption-l       "Keskimääräinen jäänhoitoon
+    :daily-maintenances-week-days    "Jäähoitokerrat arkipäivinä"
+    :daily-maintenances-weekends     "Jäähoitokerrat viikonlppuina"
+    :average-water-consumption-l     "Keskimääräinen jäänhoitoon
           käytetty veden määrä (per ajo)"
-    :maintenance-water-temperature-c   "Jäähoitoveden
+    :maintenance-water-temperature-c "Jäähoitoveden
           lämpötila (tavoite +40)"
-    :ice-average-thickness-mm          "Jään keskipaksuus mm"}
+    :ice-average-thickness-mm        "Jään keskipaksuus mm"}
 
    :lipas.ice-stadium.ventilation
    {:headline                                 "Hallin ilmanvaihto"
