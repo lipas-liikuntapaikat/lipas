@@ -28,8 +28,8 @@
         reset #(==> [::events/reset-dialog :rink])
         close #(==> [::events/toggle-dialog :rink])]
     [lui/dialog {:title (if (:id data)
-                          (tr :rink/edit-rink)
-                          (tr :rink/add-rink))
+                          (tr :lipas.ice-stadium.rinks/edit-rink)
+                          (tr :lipas.ice-stadium.rinks/add-rink))
                  :save-label (tr :actions/save)
                  :cancel-label (tr :actions/cancel)
                  :on-close  #(==> [::events/toggle-dialog :rink])
@@ -45,7 +45,7 @@
 (defn table [{:keys [tr items]}]
   [lui/form-table {:headers        (make-headers tr)
                    :items          items
-                   :on-add         #(==> [::events/toggle-dialog :rink])
+                   :on-add         #(==> [::events/toggle-dialog :rink {}])
                    :on-edit        #(==> [::events/toggle-dialog :rink %])
                    :on-delete      #(==> [::events/remove-rink %])
                    :add-tooltip    (tr :lipas.ice-stadium.rinks/add-rink)
