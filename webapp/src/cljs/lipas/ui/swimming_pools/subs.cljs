@@ -40,6 +40,11 @@
    (not-empty (vals sites))))
 
 (re-frame/reg-sub
+ ::editing?
+ (fn [db _]
+   (-> db :swimming-pools :editing?)))
+
+(re-frame/reg-sub
  ::editing-site
  (fn [db _]
    (let [lipas-id (-> db :swimming-pools :editing :site)]

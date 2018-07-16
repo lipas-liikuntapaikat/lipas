@@ -41,13 +41,17 @@
  (fn [db [_ {:keys [lipas-id]}]]
    (let [site (get-in db [:sports-sites lipas-id])
          rev  (utils/make-revision site (utils/timestamp))]
-     (assoc-in db [:swimming-pools :editing :rev] (swim-utils/make-editable rev)))))
+     (-> db
+         (assoc-in [:swimming-pools :editing :rev] (swim-utils/make-editable rev))
+         (assoc-in [:swimming-pools :editing?] true)))))
 
 (re-frame/reg-event-db
  ::save-edits
  (fn [db _]
    (let [rev (-> db :swimming-pools :editing :rev swim-utils/make-saveable)]
-     (utils/save-edits db rev))))
+     (-> db
+         (assoc-in [:swimming-pools :editing?] false)
+         (utils/save-edits rev)))))
 
 (re-frame/reg-event-db
  ::discard-edits
