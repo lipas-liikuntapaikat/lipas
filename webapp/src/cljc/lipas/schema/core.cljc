@@ -121,9 +121,32 @@
                                :email :lipas.user/email))
 
 (s/def :lipas.user/user-data (s/keys :req-un [:lipas.user/firstname
-                                    :lipas.user/lastname]))
+                                              :lipas.user/lastname]))
 
-(s/def :lipas.user/permissions map?) ;; TODO
+(s/def :lipas.user.permissions/sports-sites
+  (s/coll-of :lipas.sports-site/lipas-id
+             :min-count 0
+             :max-count 1000
+             :distinct true
+             :into []))
+
+(s/def :lipas.user.permissions/cities
+  (s/coll-of :lipas.location.city/city-code
+             :min-count 0
+             :distinct true
+             :into []))
+
+(s/def :lipas.user.permissions/types
+  (s/coll-of :lipas.sports-site.type/type-code
+             :min-count 0
+             :distinct true
+             :into []))
+
+(s/def :lipas.user/permissions
+  (s/keys :opt-un [:lipas.user.permissions/sports-sites
+                   :lipas.user.permissions/cities
+                   :lipas.user.permissions/types]))
+
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
 (s/def :lipas/user (s/keys :req-un [:lipas.user/email
