@@ -124,6 +124,7 @@
                                     :lipas.user/lastname]))
 
 (s/def :lipas.user/permissions map?) ;; TODO
+(s/def :lipas.user/permissions-request (str-btw 1 200))
 
 (s/def :lipas/user (s/keys :req-un [:lipas.user/email
                                     :lipas.user/username
@@ -510,7 +511,6 @@
 (s/def :lipas.swimming-pool.pool/depth-max-m (s/double-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
 
-
 (s/def :lipas.swimming-pool/pool
   (s/keys :req-un [:lipas.swimming-pool.pool/type]
           :opt-un [:lipas.swimming-pool.pool/temperature-c
@@ -542,7 +542,7 @@
   (s/coll-of :lipas.swimming-pool/slide
              :min-count 0
              :max-count 10
-             :distincg false
+             :distinct false
              :into []))
 
 ;; Saunas ;;
@@ -561,7 +561,7 @@
   (s/coll-of :lipas.swimming-pool/sauna
              :min-count 0
              :max-count 10
-             :distincg false
+             :distinct false
              :into []))
 
 ;; Other facilities ;;
