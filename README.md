@@ -14,6 +14,23 @@ $EDITOR .env.sh
 # Load environment variables
 source .env.sh
 
-# Run services in background
-docker-compose up -d
+# Initialize
+docker-compose run backend-migrate
+docker-compose run backend-seed
+
+# Run backend services in background
+docker-compose up -d proxy
+
+# Run figwheel
+lein figwheel
 ```
+
+## Production build
+
+### Backend
+
+TODO
+
+### Frontend
+
+`docker-compose run frontend-build`
