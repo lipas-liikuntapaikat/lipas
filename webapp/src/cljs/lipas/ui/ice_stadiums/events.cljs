@@ -42,13 +42,17 @@
    (let [site      (get-in db [:sports-sites lipas-id])
          timestamp (utils/timestamp)
          rev       (utils/make-revision site timestamp)]
-     (assoc-in db [:ice-stadiums :editing :rev] (ice-utils/make-editable rev)))))
+     (-> db
+         (assoc-in [:ice-stadiums :editing :rev] (ice-utils/make-editable rev))
+         (assoc-in [:ice-stadiums :editing?] true)))))
 
 (re-frame/reg-event-db
  ::save-edits
  (fn [db _]
    (let [rev (-> db :ice-stadiums :editing :rev ice-utils/make-saveable)]
-     (utils/save-edits db rev))))
+     (-> db
+         (assoc-in [:ice-stadiums :editing?] false)
+         (utils/save-edits rev)))))
 
 (re-frame/reg-event-db
  ::discard-edits

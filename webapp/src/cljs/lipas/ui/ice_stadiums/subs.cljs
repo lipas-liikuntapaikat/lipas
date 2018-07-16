@@ -10,6 +10,11 @@
    (-> db :ice-stadiums :active-tab)))
 
 (re-frame/reg-sub
+ ::editing?
+ (fn [db _]
+   (-> db :ice-stadiums :editing?)))
+
+(re-frame/reg-sub
  ::editing-site
  (fn [db _]
    (let [lipas-id (-> db :ice-stadiums :editing :site)]

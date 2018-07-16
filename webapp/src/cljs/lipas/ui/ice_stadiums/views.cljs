@@ -25,6 +25,7 @@
         editing-rev           (<== [::subs/editing-rev])
         types                 (<== [::subs/types-list])
         dialogs               (<== [::subs/dialogs])
+        editing?              (<== [::subs/editing?])
         size-categories       (<== [::subs/size-categories])
         cities                (<== [:lipas.ui.sports-sites.subs/cities-list])
         owners                (<== [:lipas.ui.sports-sites.subs/owners])
@@ -46,457 +47,453 @@
 
         set-field (partial set-field :editing :rev)]
 
-    (r/with-let [editing? (r/atom false)]
+    [lui/full-screen-dialog
+     {:open? ((complement empty?) site)
 
-      [lui/full-screen-dialog
-       {:open? ((complement empty?) site)
+      :title (if uncommitted-edits?
+               (tr :statuses/edited (-> site :name))
+               (-> site :name))
 
-        :title (if uncommitted-edits?
-                 (tr :statuses/edited (-> site :name))
-                 (-> site :name))
+      :close-label (tr :actions/close)
+      :on-close    #(==> [::events/display-site nil])
 
-        :close-label (tr :actions/close)
-        :on-close    #(==> [::events/display-site nil])
+      :actions (lui/edit-actions-list
+                {:uncommitted-edits? uncommitted-edits?
+                 :editing?           editing?
+                 :valid?             edits-valid?
+                 :logged-in?         logged-in?
+                 :user-can-publish?  user-can-publish?
+                 :on-discard         #(==> [::events/discard-edits])
+                 :discard-tooltip    (tr :actions/discard)
+                 :on-edit-start      #(==> [::events/edit-site site])
+                 :on-edit-end        #(==> [::events/save-edits])
+                 :edit-tooltip       (tr :actions/edit)
+                 :on-save-draft      #(==> [::events/commit-draft])
+                 :save-draft-tooltip (tr :actions/save-draft)
+                 :on-publish         #(==> [::events/commit-edits])
+                 :publish-tooltip    (tr :actions/publish)})}
 
-        :actions (lui/edit-actions-list
-                  {:uncommitted-edits? uncommitted-edits?
-                   :editing?           @editing?
-                   :valid?             edits-valid?
-                   :logged-in?         logged-in?
-                   :user-can-publish?  user-can-publish?
-                   :on-discard         #(==> [::events/discard-edits])
-                   :discard-tooltip    (tr :actions/discard)
-                   :on-edit-start      #(do (==> [::events/edit-site site])
-                                            (swap! editing? not))
-                   :on-edit-end        #(do (==> [::events/save-edits])
-                                            (swap! editing? not))
-                   :edit-tooltip       (tr :actions/edit)
-                   :on-save-draft      #(==> [::events/commit-draft])
-                   :save-draft-tooltip (tr :actions/save-draft)
-                   :on-publish         #(==> [::events/commit-edits])
-                   :publish-tooltip    (tr :actions/publish)})}
-
-       [mui/grid {:container true}
+     [mui/grid {:container true}
 
         ;;; General info
-        [lui/form-card {:title (tr :general/general-info)}
-         [lui/sports-site-form {:tr              tr
-                                :display-data    site
-                                :edit-data       editing-rev
-                                :read-only?      (not @editing?)
-                                :types           types
-                                :size-categories size-categories
-                                :admins          admins
-                                :owners          owners
-                                :on-change       set-field}]]
+      [lui/form-card {:title (tr :general/general-info)}
+       [lui/sports-site-form {:tr              tr
+                              :display-data    site
+                              :edit-data       editing-rev
+                              :read-only?      (not editing?)
+                              :types           types
+                              :size-categories size-categories
+                              :admins          admins
+                              :owners          owners
+                              :on-change       set-field}]]
 
         ;;; Location
-        [lui/form-card {:title (tr :lipas.location/headline)}
-         [lui/location-form {:tr           tr
-                             :read-only?   (not @editing?)
-                             :cities       cities
-                             :edit-data    (:location editing-rev)
-                             :display-data (:location site)
-                             :on-change    (partial set-field :location)}]]
+      [lui/form-card {:title (tr :lipas.location/headline)}
+       [lui/location-form {:tr           tr
+                           :read-only?   (not editing?)
+                           :cities       cities
+                           :edit-data    (:location editing-rev)
+                           :display-data (:location site)
+                           :on-change    (partial set-field :location)}]]
 
         ;;; Building
-        (let [on-change    (partial set-field :building)
-              edit-data    (:building editing-rev)
-              display-data (:building site)]
-          [lui/form-card {:title (tr :lipas.building/headline)}
-           [lui/form {:read-only? (not @editing?)}
+      (let [on-change    (partial set-field :building)
+            edit-data    (:building editing-rev)
+            display-data (:building site)]
+        [lui/form-card {:title (tr :lipas.building/headline)}
+         [lui/form {:read-only? (not editing?)}
 
-            ;; Construction year
-            {:label (tr :lipas.building/construction-year)
-             :value (-> display-data :construction-year)
-             :form-field
-             [lui/year-selector
-              {:value     (-> edit-data :construction-year)
-               :on-change #(on-change :construction-year %)}]}
+          ;; Construction year
+          {:label (tr :lipas.building/construction-year)
+           :value (-> display-data :construction-year)
+           :form-field
+           [lui/year-selector
+            {:value     (-> edit-data :construction-year)
+             :on-change #(on-change :construction-year %)}]}
 
-            ;; Main designers
-            {:label (tr :lipas.building/main-designers)
-             :value (-> display-data :main-designers)
-             :form-field
-             [lui/text-field
-              {:value     (-> edit-data :main-designers)
-               :spec      :lipas.building/main-designers
-               :on-change #(on-change :main-designers %)}]}
+          ;; Main designers
+          {:label (tr :lipas.building/main-designers)
+           :value (-> display-data :main-designers)
+           :form-field
+           [lui/text-field
+            {:value     (-> edit-data :main-designers)
+             :spec      :lipas.building/main-designers
+             :on-change #(on-change :main-designers %)}]}
 
-            ;; Total surface area m2
-            {:label (tr :lipas.building/total-surface-area-m2)
-             :value (-> display-data :total-surface-area-m2)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :value     (-> edit-data :total-surface-area-m2)
-               :spec      :lipas.building/total-surface-area-m2
-               :adornment (tr :physical-units/m2)
-               :on-change #(on-change :total-surface-area-m2 %)}]}
+          ;; Total surface area m2
+          {:label (tr :lipas.building/total-surface-area-m2)
+           :value (-> display-data :total-surface-area-m2)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :value     (-> edit-data :total-surface-area-m2)
+             :spec      :lipas.building/total-surface-area-m2
+             :adornment (tr :physical-units/m2)
+             :on-change #(on-change :total-surface-area-m2 %)}]}
 
-            ;; Total volume m3
-            {:label (tr :lipas.building/total-volume-m3)
-             :value (-> display-data :total-volume-m3)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :value     (-> edit-data :total-volume-m3)
-               :spec      :lipas.building/total-volume-m3
-               :adornment (tr :physical-units/m3)
-               :on-change #(on-change :total-volume-m3 %)}]}
+          ;; Total volume m3
+          {:label (tr :lipas.building/total-volume-m3)
+           :value (-> display-data :total-volume-m3)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :value     (-> edit-data :total-volume-m3)
+             :spec      :lipas.building/total-volume-m3
+             :adornment (tr :physical-units/m3)
+             :on-change #(on-change :total-volume-m3 %)}]}
 
-            {:label (tr :lipas.building/seating-capacity)
-             :value (-> display-data :seating-capacity)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :value     (-> edit-data :seating-capacity)
-               :spec      :lipas.building/seating-capacity
-               :adornment (tr :units/person)
-               :on-change #(on-change :seating-capacity %)}]}]])
+          {:label (tr :lipas.building/seating-capacity)
+           :value (-> display-data :seating-capacity)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :value     (-> edit-data :seating-capacity)
+             :spec      :lipas.building/seating-capacity
+             :adornment (tr :units/person)
+             :on-change #(on-change :seating-capacity %)}]}]])
 
         ;;; Envelope structure
-        (let [on-change    (partial set-field :envelope)
-              display-data (:envelope site)
-              edit-data    (:envelope editing-rev)]
-          [lui/form-card {:title (tr :lipas.ice-stadium.envelope/headline)}
-           [lui/form {:read-only? (not @editing?)}
+      (let [on-change    (partial set-field :envelope)
+            display-data (:envelope site)
+            edit-data    (:envelope editing-rev)]
+        [lui/form-card {:title (tr :lipas.ice-stadium.envelope/headline)}
+         [lui/form {:read-only? (not editing?)}
 
-            ;; Base floor structure
-            {:label (tr :lipas.ice-stadium.envelope/base-floor-structure)
-             :value (-> display-data :base-floor-structure)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :base-floor-structure)
-               :on-change #(on-change :base-floor-structure %)
-               :items     base-floor-structures
-               :value-fn  first
-               :label-fn  (comp locale second)}]}
+          ;; Base floor structure
+          {:label (tr :lipas.ice-stadium.envelope/base-floor-structure)
+           :value (-> display-data :base-floor-structure)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :base-floor-structure)
+             :on-change #(on-change :base-floor-structure %)
+             :items     base-floor-structures
+             :value-fn  first
+             :label-fn  (comp locale second)}]}
 
-            ;; Insulated exterior?
-            {:label (tr :lipas.ice-stadium.envelope/insulated-exterior?)
-             :value (-> display-data :insulated-exterior?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :insulated-exterior?)
-               :on-change #(on-change :insulated-exterior? %)}]}
+          ;; Insulated exterior?
+          {:label (tr :lipas.ice-stadium.envelope/insulated-exterior?)
+           :value (-> display-data :insulated-exterior?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :insulated-exterior?)
+             :on-change #(on-change :insulated-exterior? %)}]}
 
-            ;; Insulated ceiling?
-            {:label (tr :lipas.ice-stadium.envelope/insulated-ceiling?)
-             :value (-> display-data :insulated-ceiling?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :insulated-ceiling?)
-               :on-change #(on-change :insulated-ceiling? %)}]}
+          ;; Insulated ceiling?
+          {:label (tr :lipas.ice-stadium.envelope/insulated-ceiling?)
+           :value (-> display-data :insulated-ceiling?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :insulated-ceiling?)
+             :on-change #(on-change :insulated-ceiling? %)}]}
 
-            ;; Low emissivity coating?
-            {:label (tr :lipas.ice-stadium.envelope/low-emissivity-coating?)
-             :value (-> display-data :low-emissivity-coating?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :low-emissivity-coating?)
-               :on-change #(on-change :low-emissivity-coating? %)}]}]])
+          ;; Low emissivity coating?
+          {:label (tr :lipas.ice-stadium.envelope/low-emissivity-coating?)
+           :value (-> display-data :low-emissivity-coating?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :low-emissivity-coating?)
+             :on-change #(on-change :low-emissivity-coating? %)}]}]])
 
         ;;; Rinks
-        [lui/form-card {:title (tr :lipas.ice-stadium.rinks/headline)}
+      [lui/form-card {:title (tr :lipas.ice-stadium.rinks/headline)}
 
-         (when (-> dialogs :rink :open?)
-           [rinks/dialog {:tr tr}])
+       (when (-> dialogs :rink :open?)
+         [rinks/dialog {:tr tr}])
 
-         (if @editing?
-           [rinks/table {:tr tr :items (-> editing-rev :rinks vals)}]
-           [rinks/read-only-table {:tr tr :items (-> site :rinks)}])]
+       (if editing?
+         [rinks/table {:tr tr :items (-> editing-rev :rinks vals)}]
+         [rinks/read-only-table {:tr tr :items (-> site :rinks)}])]
 
         ;;; Refrigeration
-        (let [on-change    (partial set-field :refrigeration)
-              display-data (:refrigeration site)
-              edit-data    (:refrigeration editing-rev)]
-          [lui/form-card {:title (tr :lipas.ice-stadium.refrigeration/headline)}
-           [lui/form {:read-only? (not @editing?)}
+      (let [on-change    (partial set-field :refrigeration)
+            display-data (:refrigeration site)
+            edit-data    (:refrigeration editing-rev)]
+        [lui/form-card {:title (tr :lipas.ice-stadium.refrigeration/headline)}
+         [lui/form {:read-only? (not editing?)}
 
-            ;; Original?
-            {:label (tr :lipas.ice-stadium.refrigeration/original?)
-             :value (-> display-data :original?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :original?)
-               :on-change #(on-change :original? %)}]}
+          ;; Original?
+          {:label (tr :lipas.ice-stadium.refrigeration/original?)
+           :value (-> display-data :original?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :original?)
+             :on-change #(on-change :original? %)}]}
 
-            ;; Individual metering?
-            {:label (tr :lipas.ice-stadium.refrigeration/individual-metering?)
-             :value (-> display-data :individual-metering?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :individual-metering?)
-               :on-change #(on-change :individual-metering? %)}]}
+          ;; Individual metering?
+          {:label (tr :lipas.ice-stadium.refrigeration/individual-metering?)
+           :value (-> display-data :individual-metering?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :individual-metering?)
+             :on-change #(on-change :individual-metering? %)}]}
 
-            ;; Condensate energy recycling?
-            {:label (tr :lipas.ice-stadium.refrigeration/condensate-energy-recycling?)
-             :value (-> display-data :condensate-energy-recycling?)
-             :form-field
-             [lui/checkbox
-              {:value     (-> edit-data :condensate-energy-recycling?)
-               :on-change #(on-change :condensate-energy-recycling? %)}]}
+          ;; Condensate energy recycling?
+          {:label (tr :lipas.ice-stadium.refrigeration/condensate-energy-recycling?)
+           :value (-> display-data :condensate-energy-recycling?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :condensate-energy-recycling?)
+             :on-change #(on-change :condensate-energy-recycling? %)}]}
 
-            ;; Condensate energy main target
-            {:label (tr :lipas.ice-stadium.refrigeration/condensate-energy-main-targets)
-             :value (-> display-data :condensate-energy-main-targets)
-             :form-field
-             [lui/multi-select
-              {:value     (-> edit-data :condensate-energy-main-targets)
-               :items     cets
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :condensate-energy-main-targets %)}]}
+          ;; Condensate energy main target
+          {:label (tr :lipas.ice-stadium.refrigeration/condensate-energy-main-targets)
+           :value (-> display-data :condensate-energy-main-targets)
+           :form-field
+           [lui/multi-select
+            {:value     (-> edit-data :condensate-energy-main-targets)
+             :items     cets
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :condensate-energy-main-targets %)}]}
 
-            ;; Power kW
-            {:label (tr :lipas.ice-stadium.refrigeration/power-kw)
-             :value (-> display-data :power-kw)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.refrigeration/power-kw
-               :value     (-> edit-data :power-kw)
-               :on-change #(on-change :power-kw %)}]}
+          ;; Power kW
+          {:label (tr :lipas.ice-stadium.refrigeration/power-kw)
+           :value (-> display-data :power-kw)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.refrigeration/power-kw
+             :value     (-> edit-data :power-kw)
+             :on-change #(on-change :power-kw %)}]}
 
-            ;; Refrigerant
-            {:label (tr :lipas.ice-stadium.refrigeration/refrigerant)
-             :value (-> display-data :refrigerant)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :refrigerant)
-               :items     refrigerants
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :refrigerant %)}]}
+          ;; Refrigerant
+          {:label (tr :lipas.ice-stadium.refrigeration/refrigerant)
+           :value (-> display-data :refrigerant)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :refrigerant)
+             :items     refrigerants
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :refrigerant %)}]}
 
-            ;; Refrigerant amount kg
-            {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-amount-kg)
-             :value (-> display-data :refrigerant-amount-kg)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.refrigeration/refrigerant-amount-kg
-               :value     (-> edit-data :refrigerant-amount-kg)
-               :on-change #(on-change :refrigerant-amount-kg %)}]}
+          ;; Refrigerant amount kg
+          {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-amount-kg)
+           :value (-> display-data :refrigerant-amount-kg)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.refrigeration/refrigerant-amount-kg
+             :value     (-> edit-data :refrigerant-amount-kg)
+             :on-change #(on-change :refrigerant-amount-kg %)}]}
 
-            ;; Refrigerant solution
-            {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-solution)
-             :value (-> display-data :refrigerant-solution)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :refrigerant-solution)
-               :items     refrigerant-solutions
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :refrigerant-solution %)}]}
+          ;; Refrigerant solution
+          {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-solution)
+           :value (-> display-data :refrigerant-solution)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :refrigerant-solution)
+             :items     refrigerant-solutions
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :refrigerant-solution %)}]}
 
-            ;; Refrigerant solution amount l
-            {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-solution-amount-l)
-             :value (-> display-data :refrigerant-solution-amount-l)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.refrigeration/refrigerant-solution-amount-l
-               :value     (-> edit-data :refrigerant-solution-amount-l)
-               :on-change #(on-change :refrigerant-solution-amount-l %)}]}]])
+          ;; Refrigerant solution amount l
+          {:label (tr :lipas.ice-stadium.refrigeration/refrigerant-solution-amount-l)
+           :value (-> display-data :refrigerant-solution-amount-l)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.refrigeration/refrigerant-solution-amount-l
+             :value     (-> edit-data :refrigerant-solution-amount-l)
+             :on-change #(on-change :refrigerant-solution-amount-l %)}]}]])
 
         ;;; Ventilation
-        (let [on-change    (partial set-field :ventilation)
-              edit-data    (:ventilation editing-rev)
-              display-data (:ventilation site)]
-          [lui/form-card {:title (tr :lipas.ice-stadium.ventilation/headline)}
-           [lui/form {:read-only? (not @editing?)}
+      (let [on-change    (partial set-field :ventilation)
+            edit-data    (:ventilation editing-rev)
+            display-data (:ventilation site)]
+        [lui/form-card {:title (tr :lipas.ice-stadium.ventilation/headline)}
+         [lui/form {:read-only? (not editing?)}
 
-            ;; Heat recovery type
-            {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-type)
-             :value (-> display-data :heat-recovery-type)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :heat-recovery-type)
-               :items     heat-recovery-types
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :heat-recovery-type %)}]}
+          ;; Heat recovery type
+          {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-type)
+           :value (-> display-data :heat-recovery-type)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :heat-recovery-type)
+             :items     heat-recovery-types
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :heat-recovery-type %)}]}
 
-            ;; Heat recovery thermal efficiency percent
-            {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-efficiency)
-             :value (-> display-data :heat-recovery-efficiency)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.ventilation/heat-recovery-efficiency
-               :adornment (tr :units/percent)
-               :value     (-> edit-data :heat-recovery-efficiency)
-               :on-change #(on-change :heat-recovery-efficiency %)}]}
+          ;; Heat recovery thermal efficiency percent
+          {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-efficiency)
+           :value (-> display-data :heat-recovery-efficiency)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.ventilation/heat-recovery-efficiency
+             :adornment (tr :units/percent)
+             :value     (-> edit-data :heat-recovery-efficiency)
+             :on-change #(on-change :heat-recovery-efficiency %)}]}
 
-            ;; Dryer type
-            {:label (tr :lipas.ice-stadium.ventilation/dryer-type)
-             :value (-> display-data :dryer-type)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :dryer-type)
-               :items     dryer-types
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :dryer-type %)}]}
+          ;; Dryer type
+          {:label (tr :lipas.ice-stadium.ventilation/dryer-type)
+           :value (-> display-data :dryer-type)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :dryer-type)
+             :items     dryer-types
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :dryer-type %)}]}
 
-            ;; Dryer duty type
-            {:label (tr :lipas.ice-stadium.ventilation/dryer-duty-type)
-             :value (-> display-data :dryer-duty-type)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :dryer-duty-type)
-               :items     dryer-duty-types
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(on-change :dryer-duty-type %)}]}
+          ;; Dryer duty type
+          {:label (tr :lipas.ice-stadium.ventilation/dryer-duty-type)
+           :value (-> display-data :dryer-duty-type)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :dryer-duty-type)
+             :items     dryer-duty-types
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(on-change :dryer-duty-type %)}]}
 
-            ;; Heat pump type
-            {:label (tr :lipas.ice-stadium.ventilation/heat-pump-type)
-             :value (-> display-data :heat-pump-type)
-             :form-field
-             [lui/select
-              {:value     (-> edit-data :heat-pump-type)
-               :items     heat-pump-types
-               :label-fn  (comp locale second)
-               :value-fn  first
-               :on-change #(set-field :heat-pump-type %)}]}]])
+          ;; Heat pump type
+          {:label (tr :lipas.ice-stadium.ventilation/heat-pump-type)
+           :value (-> display-data :heat-pump-type)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :heat-pump-type)
+             :items     heat-pump-types
+             :label-fn  (comp locale second)
+             :value-fn  first
+             :on-change #(set-field :heat-pump-type %)}]}]])
 
         ;;; Conditions
-        (let [on-change    (partial set-field :conditions)
-              display-data (-> site :conditions)
-              edit-data    (-> editing-rev :conditions)]
-          [lui/form-card {:title (tr :lipas.ice-stadium.conditions/headline)}
-           [lui/form {:read-only? (not @editing?)}
+      (let [on-change    (partial set-field :conditions)
+            display-data (-> site :conditions)
+            edit-data    (-> editing-rev :conditions)]
+        [lui/form-card {:title (tr :lipas.ice-stadium.conditions/headline)}
+         [lui/form {:read-only? (not editing?)}
 
-            ;; Open months
-            {:label (tr :lipas.ice-stadium.conditions/open-months)
-             :value (-> display-data :open-months)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/open-months
-               :adornment (tr :duration/month)
-               :value     (-> edit-data :open-months)
-               :on-change #(on-change :open-months %)}]}
+          ;; Open months
+          {:label (tr :lipas.ice-stadium.conditions/open-months)
+           :value (-> display-data :open-months)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/open-months
+             :adornment (tr :duration/month)
+             :value     (-> edit-data :open-months)
+             :on-change #(on-change :open-months %)}]}
 
-            ;; Daily open hours
-            {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
-             :value (-> display-data :daily-open-hours)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/daily-open-hours
-               :adornment (tr :units/hours-per-day)
-               :value     (-> edit-data :daily-open-hours)
-               :on-change #(on-change :daily-open-hours %)}]}
+          ;; Daily open hours
+          {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
+           :value (-> display-data :daily-open-hours)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/daily-open-hours
+             :adornment (tr :units/hours-per-day)
+             :value     (-> edit-data :daily-open-hours)
+             :on-change #(on-change :daily-open-hours %)}]}
 
-            ;; Air humidity min %
-            {:label (tr :lipas.ice-stadium.conditions/air-humidity-min)
-             :value (-> display-data :air-humidity-min)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/air-humidity-min
-               :adornment (tr :units/percent)
-               :value     (-> edit-data :air-humidity-min)
-               :on-change #(on-change :air-humidity-min %)}]}
+          ;; Air humidity min %
+          {:label (tr :lipas.ice-stadium.conditions/air-humidity-min)
+           :value (-> display-data :air-humidity-min)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/air-humidity-min
+             :adornment (tr :units/percent)
+             :value     (-> edit-data :air-humidity-min)
+             :on-change #(on-change :air-humidity-min %)}]}
 
-            ;; Air humidity max %
-            {:label (tr :lipas.ice-stadium.conditions/air-humidity-max)
-             :value (-> display-data :air-humidity-max)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/air-humidity-max
-               :adornment (tr :units/percent)
-               :value     (-> edit-data :air-humidity-max)
-               :on-change #(on-change :air-humidity-max %)}]}
+          ;; Air humidity max %
+          {:label (tr :lipas.ice-stadium.conditions/air-humidity-max)
+           :value (-> display-data :air-humidity-max)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/air-humidity-max
+             :adornment (tr :units/percent)
+             :value     (-> edit-data :air-humidity-max)
+             :on-change #(on-change :air-humidity-max %)}]}
 
-            ;; Ice surface temperature c
-            {:label (tr :lipas.ice-stadium.conditions/ice-surface-temperature-c)
-             :value (-> display-data :ice-surface-temperature-c)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/ice-surface-temperature-c
-               :adornment (tr :physical-units/celsius)
-               :value     (-> edit-data :ice-surface-temperature-c)
-               :on-change #(on-change :ice-surface-temperature-c %)}]}
+          ;; Ice surface temperature c
+          {:label (tr :lipas.ice-stadium.conditions/ice-surface-temperature-c)
+           :value (-> display-data :ice-surface-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/ice-surface-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :ice-surface-temperature-c)
+             :on-change #(on-change :ice-surface-temperature-c %)}]}
 
-            ;; Skating area temperature c
-            {:label (tr :lipas.ice-stadium.conditions/skating-area-temperature-c)
-             :value (-> display-data :skating-area-temperature-c)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/skating-area-temperature-c
-               :adornment (tr :physical-units/celsius)
-               :value     (-> edit-data :skating-area-temperature-c)
-               :on-change #(on-change :skating-area-temperature-c %)}]}
+          ;; Skating area temperature c
+          {:label (tr :lipas.ice-stadium.conditions/skating-area-temperature-c)
+           :value (-> display-data :skating-area-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/skating-area-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :skating-area-temperature-c)
+             :on-change #(on-change :skating-area-temperature-c %)}]}
 
-            ;; Stand temperature c
-            {:label (tr :lipas.ice-stadium.conditions/stand-temperature-c)
-             :value (-> display-data :stand-temperature-c)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/stand-temperature-c
-               :adornment (tr :physical-units/celsius)
-               :value     (-> edit-data :stand-temperature-c)
-               :on-change #(on-change :stand-temperature-c %)}]}
+          ;; Stand temperature c
+          {:label (tr :lipas.ice-stadium.conditions/stand-temperature-c)
+           :value (-> display-data :stand-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/stand-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :stand-temperature-c)
+             :on-change #(on-change :stand-temperature-c %)}]}
 
-            ;; Daily maintenance count week days
-            {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-week-days)
-             :value (-> display-data :daily-maintenances-week-days)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/daily-maintenances-week-days
-               :adornment (tr :units/times-per-day)
-               :value     (-> edit-data :daily-maintenances-week-days)
-               :on-change #(on-change :daily-maintenances-week-days %)}]}
+          ;; Daily maintenance count week days
+          {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-week-days)
+           :value (-> display-data :daily-maintenances-week-days)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/daily-maintenances-week-days
+             :adornment (tr :units/times-per-day)
+             :value     (-> edit-data :daily-maintenances-week-days)
+             :on-change #(on-change :daily-maintenances-week-days %)}]}
 
-            ;; Daily maintenance count weekends
-            {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-weekends)
-             :value (-> display-data :daily-maintenances-weekends)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/daily-maintenances-weekends
-               :adornment (tr :units/times-per-day)
-               :value     (-> edit-data :daily-maintenances-weekends)
-               :on-change #(on-change :daily-maintenances-weekends %)}]}
+          ;; Daily maintenance count weekends
+          {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-weekends)
+           :value (-> display-data :daily-maintenances-weekends)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/daily-maintenances-weekends
+             :adornment (tr :units/times-per-day)
+             :value     (-> edit-data :daily-maintenances-weekends)
+             :on-change #(on-change :daily-maintenances-weekends %)}]}
 
-            ;; Average water consumption l
-            {:label (tr :lipas.ice-stadium.conditions/average-water-consumption-l)
-             :value (-> display-data :average-water-consumption-l)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/average-water-consumption-l
-               :adornment (tr :physical-units/l)
-               :value     (-> edit-data :average-water-consumption-l)
-               :on-change #(on-change :average-water-consumption-l %)}]}
+          ;; Average water consumption l
+          {:label (tr :lipas.ice-stadium.conditions/average-water-consumption-l)
+           :value (-> display-data :average-water-consumption-l)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/average-water-consumption-l
+             :adornment (tr :physical-units/l)
+             :value     (-> edit-data :average-water-consumption-l)
+             :on-change #(on-change :average-water-consumption-l %)}]}
 
-            ;; Ice average thickness mm
-            {:label (tr :lipas.ice-stadium.conditions/ice-average-thickness-mm)
-             :value (-> display-data :ice-average-thickness-mm)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      :lipas.ice-stadium.conditions/ice-average-thickness-mm
-               :adornment (tr :physical-units/mm)
-               :value     (-> edit-data :ice-average-thickness-mm)
-               :on-change #(on-change :ice-average-thickness-mm %)}]}]])
+          ;; Ice average thickness mm
+          {:label (tr :lipas.ice-stadium.conditions/ice-average-thickness-mm)
+           :value (-> display-data :ice-average-thickness-mm)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/ice-average-thickness-mm
+             :adornment (tr :physical-units/mm)
+             :value     (-> edit-data :ice-average-thickness-mm)
+             :on-change #(on-change :ice-average-thickness-mm %)}]}]])
 
         ;;; Energy consumption
-        [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
-         [energy/table {:read-only? true
-                        :cold?      true
-                        :tr         tr
-                        :items      (:energy-consumption site)}]]]])))
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
+       [energy/table {:read-only? true
+                      :cold?      true
+                      :tr         tr
+                      :items      (:energy-consumption site)}]]]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale (tr)

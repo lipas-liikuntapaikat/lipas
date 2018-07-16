@@ -374,6 +374,7 @@
    :ice-stadiums
    {:active-tab                0
     :editing                   nil
+    :editing?                  false
     :dialogs
     {:rink
      {:open? false}}
@@ -396,6 +397,7 @@
     :slide-structures  materials/slide-structures
     :pool-structures   materials/pool-structures
     :editing           nil
+    :editing?          false
     :dialogs
     {:pool
      {:open? false}
