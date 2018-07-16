@@ -1,64 +1,83 @@
 (ns lipas.ui.register.views
-  (:require [lipas.ui.mui :as mui]
+  (:require [clojure.spec.alpha :as s]
             [lipas.ui.components :as lui]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.mui :as mui]
             [lipas.ui.register.events :as events]
             [lipas.ui.register.subs :as subs]
-            [lipas.ui.routes :refer [navigate!]]))
+            [lipas.ui.routes :refer [navigate!]]
+            [lipas.ui.utils :refer [<== ==>]]))
 
 (defn set-field [& args]
   (==> [::events/set-registration-form-field (butlast args) (last args)]))
 
-(comment (validate-email "kissakoira.fi"))
-(defn validate-email
-  [email]
-  (let [pattern #"[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"]
-    (and (string? email) (re-matches pattern email))))
+(defn registration-form [tr]
+  (let [form-data (<== [::subs/registration-form])
+        error     (<== [::subs/registration-error])]
 
-(defn invalid? [result]
-  (not (some? result)))
+    [mui/form-group
 
-(defn create-registration-form [tr form-data]
-  [mui/form-group
-   [lui/text-field {:label (tr :register/email)
-                    :type "email"
-                    :error (invalid? (validate-email (:email form-data)))
-                    :value (:email form-data)
-                    :on-change #(set-field :email %)
-                    :required true
-                    :placeholder (tr :register/email-example)}]
-   [lui/text-field {:label (tr :register/username)
-                    :type "text"
-                    :value (:username form-data)
-                    :on-change #(set-field :username %)
-                    :required true
-                    :placeholder (tr :register/username-example)}]
-   [lui/text-field {:label (tr :register/password)
-                    :type "password"
-                    :value (:password form-data)
-                    :on-change #(set-field :password %)
-                    :required true}]
-   [lui/text-field {:label (tr :register/firstname)
-                    :required true
-                    :value (-> form-data :user-data :firstname)
-                    :on-change #(set-field :user-data :firstname %)}]
-   [lui/text-field {:label (tr :register/lastname)
-                    :required true
-                    :value (-> form-data :user-data :lastname)
-                    :on-change #(set-field :user-data :lastname %)}]
-   [lui/text-field {:label (tr :register/permissions)
-                    :multiline true
-                    :value (-> form-data :user-data :permissions-request)
-                    :on-change #(set-field :user-data :permissions-request %)
-                    :rows 3
-                    :placeholder (tr :register/permissions-example)
-                    :helper-text (tr :register/permissions-help)}]
-   [mui/button {:color "primary"
-                :size "large"
-                :on-click #(==> [::events/submit-registration-form form-data])}
-    (tr :actions/save)]])
+     ;; Email
+     [lui/text-field {:label       (tr :register/email)
+                      :type        "email"
+                      :spec        :lipas.user/email
+                      :value       (:email form-data)
+                      :on-change   #(set-field :email %)
+                      :placeholder (tr :register/email-example)}]
 
-(defn create-registration-panel [tr form-data]
+     ;; Username
+     [lui/text-field {:label       (tr :register/username)
+                      :type        "text"
+                      :spec        :lipas.user/username
+                      :value       (:username form-data)
+                      :on-change   #(set-field :username %)
+                      :placeholder (tr :register/username-example)}]
+
+     ;; Password
+     [lui/text-field {:label     (tr :register/password)
+                      :type      "password"
+                      :spec      :lipas.user/password
+                      :value     (:password form-data)
+                      :on-change #(set-field :password %)}]
+
+     ;; Firstname
+     [lui/text-field {:label     (tr :register/firstname)
+                      :spec      :lipas.user/firstname
+                      :value     (-> form-data :user-data :firstname)
+                      :on-change #(set-field :user-data :firstname %)}]
+
+     ;; Lastname
+     [lui/text-field {:label     (tr :register/lastname)
+                      :spec      :lipas.user/lastname
+                      :value     (-> form-data :user-data :lastname)
+                      :on-change #(set-field :user-data :lastname %)}]
+
+     ;; Permissions request
+     [lui/text-field {:label       (tr :register/permissions)
+                      :multiline   true
+                      :spec        :lipas.user/permissions-request
+                      :value       (-> form-data :user-data :permissions-request)
+                      :on-change   #(set-field :user-data :permissions-request %)
+                      :rows        3
+                      :placeholder (tr :register/permissions-example)
+                      :helper-text (tr :register/permissions-help)}]
+
+     ;; Register button
+     [mui/button {:style    {:margin-top "1em"}
+                  :color    "secondary"
+                  :variant  "raised"
+                  :disabled (not (s/valid? :lipas/user form-data))
+                  :size     "large"
+                  :on-click #(==> [::events/submit-registration-form form-data])}
+      (tr :actions/save)]
+
+     ;; Error messages
+     (when error
+       [mui/typography {:color "error"}
+        (case (-> error :response :error)
+          "Not authorized" (tr :login/bad-credentials)
+          (tr :error/unknown))])]))
+
+(defn create-panel [tr form-data]
   (let [card-props {:square true
                     :style {:height "100%"}}]
     [mui/grid {:container true
@@ -68,11 +87,10 @@
       [mui/card card-props
        [mui/card-header {:title (tr :register/headline)}]
        [mui/card-content
-        (create-registration-form tr form-data)]]]]))
+        [registration-form tr form-data]]]]]))
 
 (defn main [tr]
-  (let [logged-in? (<== [::subs/logged-in?])
-        form-data  (<== [::subs/registration-form])]
+  (let [logged-in? (<== [::subs/logged-in?])]
     (if logged-in?
       (navigate! "/#/profiili")
-      (create-registration-panel tr form-data))))
+      [create-panel tr])))
