@@ -18,7 +18,7 @@
 (def this-year #?(:cljs (.getFullYear (js/Date.))
                   :clj  (.getYear (java.time.LocalDate/now))))
 
-(defn str-btw [min max]
+(defn str-in [min max]
   (s/and string? #(<= min (count %) max)))
 
 (defn timestamp
@@ -111,10 +111,10 @@
 
 ;;; User ;;;
 
-(s/def :lipas.user/firstname (str-btw 1 128))
-(s/def :lipas.user/lastname (str-btw 1 128))
-(s/def :lipas.user/username (str-btw 1 128))
-(s/def :lipas.user/password (str-btw 6 128))
+(s/def :lipas.user/firstname (str-in 1 128))
+(s/def :lipas.user/lastname (str-in 1 128))
+(s/def :lipas.user/username (str-in 1 128))
+(s/def :lipas.user/password (str-in 6 128))
 (s/def :lipas.user/email :lipas/email)
 
 (s/def :lipas.user/login (s/or :username :lipas.user/username
@@ -124,7 +124,7 @@
                                     :lipas.user/lastname]))
 
 (s/def :lipas.user/permissions map?) ;; TODO
-(s/def :lipas.user/permissions-request (str-btw 1 200))
+(s/def :lipas.user/permissions-request (str-in 1 200))
 
 (s/def :lipas/user (s/keys :req-un [:lipas.user/email
                                     :lipas.user/username
@@ -134,7 +134,7 @@
 
 ;;; Location ;;;
 
-(s/def :lipas.location/address (str-btw 1 200))
+(s/def :lipas.location/address (str-in 1 200))
 (s/def :lipas.location/postal-code-type
   (s/and string? #(re-matches postal-code-regex %)))
 
@@ -142,9 +142,9 @@
                        :lipas.location/postal-code-type
                        postal-code-gen))
 
-(s/def :lipas.location/postal-office (str-btw 0 50))
+(s/def :lipas.location/postal-office (str-in 0 50))
 (s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/active))
-(s/def :lipas.location.city/neighborhood (str-btw 1 100))
+(s/def :lipas.location.city/neighborhood (str-in 1 100))
 
 (s/def :lipas.location/city
   (s/keys :req-un [:lipas.location.city/city-code]
@@ -174,14 +174,14 @@
 
 (s/def :lipas.sports-site/lipas-id (s/and int? pos?))
 (s/def :lipas.sports-site/status (into #{} (keys sports-sites/statuses)))
-(s/def :lipas.sports-site/name (str-btw 2 100))
-(s/def :lipas.sports-site/marketing-name (str-btw 2 100))
+(s/def :lipas.sports-site/name (str-in 2 100))
+(s/def :lipas.sports-site/marketing-name (str-in 2 100))
 
 (s/def :lipas.sports-site/owner (into #{} (keys owners/all)))
 (s/def :lipas.sports-site/admin (into #{} (keys admins/all)))
 
-(s/def :lipas.sports-site/phone-number (str-btw 1 50))
-(s/def :lipas.sports-site/www (str-btw 1 200))
+(s/def :lipas.sports-site/phone-number (str-in 1 50))
+(s/def :lipas.sports-site/www (str-in 1 200))
 (s/def :lipas.sports-site/email :lipas/email)
 
 (s/def :lipas.sports-site.type/type-code
@@ -191,7 +191,7 @@
   (into #{} (range 1850 this-year)))
 
 (s/def :lipas.sports-site/properties
-  (s/map-of keyword? (s/or :string? (str-btw 1 100)
+  (s/map-of keyword? (s/or :string? (str-in 1 100)
                            :number? number?
                            :boolean? boolean?)))
 
@@ -233,7 +233,7 @@
 
 (s/def :lipas.building/material (into #{} (keys materials/all)))
 (s/def :lipas.building/construction-year :lipas.sports-site/construction-year)
-(s/def :lipas.building/main-designers (str-btw 2 100))
+(s/def :lipas.building/main-designers (str-in 2 100))
 (s/def :lipas.building/total-surface-area-m2 (s/int-in 100 (inc 50000)))
 (s/def :lipas.building/total-volume-m3 (s/int-in 100 (inc 200000)))
 (s/def :lipas.building/pool-room-total-area-m2 (s/int-in 100 (inc 10000)))
@@ -491,7 +491,7 @@
              :into []))
 
 ;; TODO maybe get rid of this?
-(s/def :lipas.swimming-pool.water-treatment/comment (str-btw 1 1024))
+(s/def :lipas.swimming-pool.water-treatment/comment (str-in 1 1024))
 
 (s/def :lipas.swimming-pool/water-treatment
   (s/keys :opt-un [:lipas.swimming-pool.water-treatment/filtering-methods
