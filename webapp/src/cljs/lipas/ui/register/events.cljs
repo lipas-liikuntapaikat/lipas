@@ -5,6 +5,11 @@
             [ajax.core :as ajax]))
 
 (re-frame/reg-event-db
+ ::clear-errors
+ (fn [db [_ _]]
+   (update-in db [:user] dissoc :registration-error)))
+
+(re-frame/reg-event-db
  ::set-registration-form-field
  (fn [db [_ path value]]
    (let [path (into [:user :registration-form] path)]

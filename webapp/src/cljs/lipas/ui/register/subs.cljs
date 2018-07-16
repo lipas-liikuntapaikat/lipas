@@ -10,3 +10,8 @@
  ::logged-in?
  (fn [db _]
    (-> db :logged-in?)))
+
+(re-frame/reg-sub
+ ::registration-error
+ (fn [db _]
+   (-> db :user :registration-error)))
