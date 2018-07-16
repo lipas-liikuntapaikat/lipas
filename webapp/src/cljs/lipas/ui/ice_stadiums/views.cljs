@@ -506,12 +506,12 @@
      [mui/grid {:item true :xs 12}
       [mui/paper
        [lui/table
-        {:headers   [[:name (tr :sports-site/name)]
-                     [:address (tr :location/address)]
-                     [:postal-code (tr :location/postal-code)]
-                     [:city (tr :location/city)]
-                     [:admin (tr :sports-site/admin)]
-                     [:owner (tr :sports-site/owner)]]
+        {:headers   [[:name (tr :lipas.sports-site/name)]
+                     [:address (tr :lipas.location/address)]
+                     [:postal-code (tr :lipas.location/postal-code)]
+                     [:city (tr :lipas.location/city)]
+                     [:admin (tr :lipas.sports-site/admin)]
+                     [:owner (tr :lipas.sports-site/owner)]]
          :items     sites
          :on-select #(==> [::events/display-site %])}]]]]))
 
