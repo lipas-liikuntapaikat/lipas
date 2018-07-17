@@ -23,7 +23,7 @@ services:
       - './mapproxy:/mapproxy:z'
       - 'mapproxy_cache:/mapproxy/cache_data'
     ports:
-      - '8089:8080'
+      - '8080:8080'
 
   backend-base:
     image: clojure:lein
@@ -103,7 +103,7 @@ services:
       # Official Postgres image uses this variable
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD}
     ports:
-      - '55432:5432'
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d:z
