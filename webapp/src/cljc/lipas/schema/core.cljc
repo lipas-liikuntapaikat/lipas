@@ -405,8 +405,8 @@
   (s/int-in 0 (inc 150)))
 
 (s/def :lipas.ice-stadium/conditions
-  (s/keys :opt-un [:lipas.ice-stadium.conditions/air-humidity-min-percent
-                   :lipas.ice-stadium.conditions/air-humidity-max-percent
+  (s/keys :opt-un [:lipas.ice-stadium.conditions/air-humidity-min
+                   :lipas.ice-stadium.conditions/air-humidity-max
                    :lipas.ice-stadium.conditions/ice-surface-temperature-c
                    :lipas.ice-stadium.conditions/skating-area-temperature-c
                    :lipas.ice-stadium.conditions/stand-temperature-c

@@ -44,7 +44,6 @@
     (jdbc/with-db-transaction [tx db-spec]
       (let [lipas-id    (or (:lipas-id sports-site)
                             (:nextval (sports-site/next-lipas-id tx)))
-            sports-site (assoc sports-site :lipas-id lipas-id)
-            _ (prn sports-site)]
+            sports-site (assoc sports-site :lipas-id lipas-id)]
         (->> (sports-site/marshall sports-site user)
              (sports-site/insert-sports-site-rev! tx))))))
