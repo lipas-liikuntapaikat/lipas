@@ -25,6 +25,16 @@ docker-compose up -d proxy
 lein figwheel
 ```
 
+Add following to your `hosts` file to use same hostnames in both
+docker and host while developing.
+
+``` shell
+# Lipas dev
+127.0.0.1       postgres
+127.0.0.1       backend-dev
+127.0.0.1       mapproxy
+```
+
 ## Production build
 
 ### Backend
