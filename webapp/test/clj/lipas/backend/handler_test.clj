@@ -39,7 +39,7 @@
   ([{:keys [db?]}]
    (let [user (gen/generate (s/gen :lipas/user))]
      (when db?
-       (core/add-user db user))
+       (core/add-user! db user))
      user)))
 
 (deftest register-user-test
@@ -72,3 +72,27 @@
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (= (:email user) (:email body)))))
+
+(deftest upsert-sports-site-draft-test
+  (let [user (gen-user {:db? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc :status "draft")
+                 (dissoc :lipas-id))
+        resp (app (-> (mock/request :post "/api/sports-sites")
+                      (mock/content-type "application/json")
+                      (mock/body (->json site))
+                      (auth-header (:username user) (:password user))))]
+    (is (= 201 (:status resp)))))
+
+(deftest upsert-sports-site-permissions-test
+  (let [user (gen-user)
+        _    (as-> user $
+               (dissoc $ :permissions)
+               (core/add-user! db $))
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc :status "active"))
+        resp (app (-> (mock/request :post "/api/sports-sites")
+                      (mock/content-type "application/json")
+                      (mock/body (->json site))
+                      (auth-header (:username user) (:password user))))]
+    (is (= 403 (:status resp)))))
