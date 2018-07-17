@@ -2,7 +2,7 @@
   (:require [compojure.api.sweet :refer [api context GET POST OPTIONS]]
             [lipas.backend.middleware :as mw]
             [lipas.backend.core :as core]
-            [ring.util.http-response :refer [ok created conflict]]
+            [ring.util.http-response :refer [ok created conflict forbidden]]
             [ring.util.response :refer [resource-response]]))
 
 (defn exception-handler [resp-fn type]
@@ -12,7 +12,8 @@
 
 (def exception-handlers
   {:username-conflict (exception-handler conflict :username-conflict)
-   :email-conflict    (exception-handler conflict :email-conflict)})
+   :email-conflict    (exception-handler conflict :email-conflict)
+   :no-permission     (exception-handler forbidden :no-permission)})
 
 (defn create-app [{:keys [db]}]
   (api
@@ -27,9 +28,16 @@
 
     (GET "/api/health" [] (ok {:status "OK"}))
 
+    (POST "/api/sports-sites" req
+      :middleware [(mw/basic-auth db) mw/cors mw/auth]
+      (let [user        (:identity req)
+            sports-site (:body-params req)
+            _           (core/upsert-sports-site! db user sports-site)]
+        (created "/fixme" {:status "OK"})))
+
     (POST "/api/actions/register" req
       :middleware [mw/cors]
-      (let [_ (core/add-user db (:body-params req))]
+      (let [_ (core/add-user! db (:body-params req))]
         (created "/fixme" {:status "OK"})))
 
     (POST "/api/actions/login" req

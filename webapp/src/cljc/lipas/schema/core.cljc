@@ -250,7 +250,8 @@
                    :lipas.sports-site/www
                    :lipas.sports-site/email
                    :lipas.sports-site/construction-year
-                   :lipas.sports-site/properties]))
+                   ;; :lipas.sports-site/properties
+                   ]))
 
 ;;; Building ;;;
 
