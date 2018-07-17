@@ -32,7 +32,7 @@
         system (backend/start-system! config)]
     (try
       (log/info "Seeding demo users 'jhdemo' and 'uhdemo'")
-      (core/add-user (:db system) jh-demo)
-      (core/add-user (:db system) uh-demo)
+      (core/add-user! (:db system) jh-demo)
+      (core/add-user! (:db system) uh-demo)
       (log/info "Seeding done!")
       (finally (backend/stop-system! system)))))
