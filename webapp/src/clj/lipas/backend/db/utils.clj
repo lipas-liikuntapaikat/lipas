@@ -15,9 +15,11 @@
 (defn ->snake-case-keywords [user]
   (transform-keys ->snake_case user))
 
+;;; Automatically transform clojure maps -> jsonb ;;;
+
 (defn ->pgobject [m]
   (doto (PGobject.)
-    ;; hack for now -- eventually we should properly determine the actual type
+    ;; eventually we should properly determine the actual type
     (.setType "jsonb")
     (.setValue (->json m))))
 

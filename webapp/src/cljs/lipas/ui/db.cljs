@@ -19,13 +19,13 @@
   ;;; Yleiset ;;;
   {:lipas-id 89839
    :timestamp "2016-11-14T10:13:20.103Z"
-   :status :active
+   :status "active"
 
    :name "Jyväskylän kilpajäähalli"
    :marketing-name "Synergia areena"
 
-   :admin :city-sports
-   :owner :city
+   :admin "city-sports"
+   :owner "city"
 
    :www "www.jyvaskyla.fi"
    ;; :email nil
@@ -53,7 +53,7 @@
    ;;; Tyyppiluokitus ;;;
    :type
    {:type-code 2520
-    :size-category :competition}
+    :size-category "competition"}
 
          ; PORTAALI                      LIPAS
          ; kilpahallit < 3000            --> 2520 kilpajäählli
@@ -73,7 +73,7 @@
 
    ;;; Vaipan rakenne ;;;
    :envelope
-   {:base-floor-structure :concrete  ; betoni / asfaltti / hiekka
+   {:base-floor-structure "concrete"  ; betoni / asfaltti / hiekka
     :insulated-exterior? true        ; Onko ulkoseinä lämpöeristetty
     :insulated-ceiling? true         ; Onko yläpohja lämpöeristetty
     :low-emissivity-coating? false}  ; Yläpohjassa matalaemissiiviteettipinnote
@@ -92,11 +92,11 @@
     :power-kw 212                          ; Kylmäkoneen teho (kW)
     :condensate-energy-recycling? true     ; Lauhde-energia hyötykäytetty
     :condensate-energy-main-targets        ; Lauhdelämmön pääkäyttökohde
-    [:maintenance-water-heating
-     :service-water-heating]
-    :refrigerant :R404A                    ; Kylmäaine
+    ["maintenance-water-heating"
+     "service-water-heating"]
+    :refrigerant "R404A"                    ; Kylmäaine
     :refrigerant-amount-kg 100             ; Kylmäaineen määrä
-    :refrigerant-solution :water-glycol    ; Kylmäliuos
+    :refrigerant-solution "water-glycol"    ; Kylmäliuos
     :refrigerant-solution-amount-l 7000}   ; Kylmäliuos 0-30000
 
    ;;; Olosuhteet
@@ -128,11 +128,11 @@
 
    ;;; Hallin ilmanvaihto                          ; LTO=lämmöntalteenotto?
    :ventilation
-   {:heat-recovery-type :plate-heat-exchanger     ; LTO_tyyppi
+   {:heat-recovery-type "plate-heat-exchanger"     ; LTO_tyyppi
     :heat-recovery-efficiency 10                  ; LTO_hyötysuhde
-    :dryer-type :cooling-coil                     ; Ilmankuivaustapa
-    :dryer-duty-type :manual                      ; Ilm.kuiv.käyttötapa
-    :heat-pump-type :none}                        ; Lämpöpumpputyyppi
+    :dryer-type "cooling-coil"                     ; Ilmankuivaustapa
+    :dryer-duty-type "manual"                      ; Ilm.kuiv.käyttötapa
+    :heat-pump-type "none"}                        ; Lämpöpumpputyyppi
 
    ;; Energiankulutus
    :energy-consumption
@@ -144,7 +144,7 @@
   (assoc jaahalli-2016
          :timestamp          "2017-11-14T10:13:20.103Z"
          :marketing-name     "Lähi-Tapoola areena"
-         :owner :unknown
+         :owner "unknown"
          :energy-consumption {:electricity-mwh 1500
                               :heat-mwh        1164
                               :water-m3        11032}))
@@ -154,13 +154,13 @@
    ;;; Yleiset ;;;
    :lipas-id 506032
    :timestamp "2012-11-14T10:13:20.103Z"
-   :status :active
+   :status "active"
 
    :name "Äänekosken uimahalli"
    :marketing-name "Vesivelho"
 
-   :admin :city-sports
-   :owner :city
+   :admin "city-sports"
+   :owner "city"
 
    :www "www.aanekoski.fi"
    :email "uima@aanekoski.fi"
@@ -199,13 +199,13 @@
     :pool-room-total-area-m2 702
     :total-water-area-m2 439
     :heat-sections? false
-    :main-construction-materials [:concrete :brick :tile]
+    :main-construction-materials ["concrete" "brick" "tile"]
     :piled? true
-    :supporting-structures [:concrete]
-    :ceiling-structures [:hollow-core-slab]
+    :supporting-structures ["concrete"]
+    :ceiling-structures ["hollow-core-slab"]
     :staff-count 0
     :seating-capacity 0
-    :heat-source :district-heating
+    :heat-source "district-heating"
     :ventilation-units-count 2}
 
    ;;; Vedekäsittely ;;;
@@ -213,12 +213,12 @@
    {:ozonation? false
     :uv-treatment? true
     :activated-carbon? true
-    :filtering-methods [:pressure-sand]
+    :filtering-methods ["pressure-sand"]
     :comment "-"}
 
    ;;; Altaat ;;;
    :pools
-   [{:type :main-pool
+   [{:type "main-pool"
      :temperature-c 27
      :volume-m3 490
      :area-m2 313
@@ -226,7 +226,7 @@
      :width-m 12
      :depth-min-m 1.2
      :depth-max-m 2}
-    {:type :teaching-pool
+    {:type "teaching-pool"
      :temperature-c 30
      :volume-m3 43
      :area-m2 43
@@ -234,7 +234,7 @@
      ;; :width-m nil
      :depth-min-m 0.6
      :depth-max-m 1}
-    {:type :childrens-pool
+    {:type "childrens-pool"
      :temperature-c 32
      :volume-m3 2
      :area-m2 7
@@ -242,7 +242,7 @@
      ;; :width-m nil
      :depth-min-m 0.2
      :depth-max-m 0.2}
-    {:type :multipurpose-pool
+    {:type "multipurpose-pool"
      :temperature-c 30
      :volume-m3 67
      :area-m2 77
@@ -250,8 +250,8 @@
      :width-m 7
      :depth-min-m 1
      :depth-max-m 1.4}
-    {:type :cold-pool
-     :structure :hardened-plastic
+    {:type "cold-pool"
+     :structure "hardened-plastic"
      :temperature-c 7
      :volume-m3 1
      :area-m2 0
@@ -263,14 +263,14 @@
    ;;; Liukumäet ;;;
    :slides
    [{:length-m 23
-     :structure :hardened-plastic}]
+     :structure "hardened-plastic"}]
 
    ;;; Saunat ;;;
    :saunas
-   [{:type :steam-sauna :men? true :women? true}
-    {:type :sauna :men? false :women? true}
-    {:type :sauna :men? true :women? false}
-    {:type :infrared-sauna}]
+   [{:type "steam-sauna" :men? true :women? true}
+    {:type "sauna" :men? false :women? true}
+    {:type "sauna" :men? true :women? false}
+    {:type "infrared-sauna"}]
 
    ;;; Muut palvelut ;;;
    :facilities
@@ -424,4 +424,5 @@
    :base-floor-structures materials/base-floor-structures})
 
 (comment
-  (gen/generate (s/gen :lipas.swimming-pool/pool)))
+  (gen/generate (s/gen :lipas.swimming-pool/pool))
+  (gen/generate (s/gen :lipas.sports-site/swimming-pool)))

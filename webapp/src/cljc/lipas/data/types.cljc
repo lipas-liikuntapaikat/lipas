@@ -10,8 +10,8 @@
    :en
    "In population centres, in or near residential areas. Intended for daily use. Used for play, recreation and walks. Symbol VL."},
   :type-code 101,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name {:fi "Ulkoilupuisto", :se "Friluftspark", :en "Leisure park"},
   :description
   {:fi
@@ -21,8 +21,8 @@
    :en
    "Used daily, max. 1 km from residential areas. Intended for walks, play, recreation, jogging and cycling. There may be bicycle and pedestrian traffic across the park. May consist of park, forest, fields, meadows, bodies of water. Symbol V or VL."},
   :type-code 102,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name {:fi "Ulkoilualue", :se "Friluftsområde", :en "Outdoor area"},
   :description
   {:fi
@@ -32,8 +32,8 @@
    :en
    "On the edge of population centres or zoned within population centres. 1-10 km from residential areas. Used for e.g. walks, skiing, jogging, swimming. Serves usually recreational needs within one municipality, offers versatile sports facilities. May include forest, swamp, fields, natural areas and park areas. Symbol VR."},
   :type-code 103,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name {:fi "Retkeilyalue", :se "Utflyktsområde", :en "Hiking area"},
   :description
   {:fi
@@ -43,8 +43,8 @@
    :en
    "Located further away from population centres, accessible by car. Complex network of paths and routes. Use concentrated during weekends and holidays. Often serves several municipalities. Symbol VR."},
   :type-code 104,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Monikäyttöalue, jolla on virkistyspalveluita",
    :se "Allaktivitetsområde med rekreationstjänster",
@@ -57,8 +57,8 @@
    :en
    "Agricultural and forestry areas that (based on the right of public access) are also used for recreation can be called multipurpose areas. In particular, these include unbuilt shores and agricultural and forestry areas close to population centres. Symbol MU."},
   :type-code 106,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Matkailupalveluiden alue",
    :se "Område med turisttjänster",
@@ -71,8 +71,8 @@
    :en
    "Area reserved for tourism and holiday centres, holiday villages, hotels, etc., also including internal traffic routes and areas; services and recreational areas needed for operations, as well as technical maintenance areas. Symbol RM."},
   :type-code 107,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Virkistysmetsä",
    :se "Friluftsskog",
@@ -85,8 +85,8 @@
    :en
    "Recreational forest designated by Metsähallitus. E.g. scenic value is considered in forestry. Source of information  Metsähallitus."},
   :type-code 108,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Valtion retkeilyalue",
    :se "Statens friluftsområde",
@@ -99,8 +99,8 @@
    :en
    "Established based on the Outdoor Recreation Act for hiking and recreational use of nature. Source of information  Metsähallitus."},
   :type-code 109,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Erämaa-alue", :se "Vildmarksområde", :en "Wilderness area"},
   :description
@@ -111,8 +111,8 @@
    :en
    "Areas located in northernmost Lapland, established based on the Wildeness Act (1991/62). Source of information  Metsähallitus."},
   :type-code 110,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Kansallispuisto", :se "Nationalpark", :en "National park"},
   :description
@@ -123,8 +123,8 @@
    :en
    "Nature conservation areas whose establishment and purpose are based on legislation. Min. area 1,000 ha. Source of information  Metsähallitus."},
   :type-code 111,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Muu luonnonsuojelualue, jolla on virkistyspalveluita",
    :se "Annat naturskyddsområde med rekreationstjänster",
@@ -137,8 +137,8 @@
    :en
    "Nature conservation areas other than national parks and natural parks. Only nature conservation areas with opportunities for recreation. E.g. protection areas established on municipal and private land. Symbol S, SL."},
   :type-code 112,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Kalastusalue/-paikka",
    :se "Område eller plats för fiske",
@@ -151,8 +151,8 @@
    :en
    "Natural aquatic destination equipped and maintained for recreational fishing."},
   :type-code 201,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Telttailu ja leiriytyminen",
    :se "Tältning och läger",
@@ -162,8 +162,8 @@
    :se "Tältplats eller annat område ordnat för tältning.",
    :en "Camping site for tents or other encampment. "},
   :type-code 202,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Veneilyn palvelupaikka",
    :se "Serviceplats för båtfarare",
@@ -173,8 +173,8 @@
    :se "Tjänster för båtfarare. Precisering i karakteristika.",
    :en "Facilities related to boating. Specififed in 'attributes'."},
   :type-code 203,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Luontotorni", :se "Naturtorn", :en "Nature observation tower"},
   :description
@@ -184,8 +184,8 @@
    :en
    "Structure built for nature observation. E.g. bird observation tower."},
   :type-code 204,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Rantautumispaikka",
    :se "Ilandstigningsplats",
@@ -195,8 +195,8 @@
    :se "Plats som anvisats för ilandstigning, inga ordnade tjänster.",
    :en "Place intended for landing by boat, no services provided."},
   :type-code 205,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ruoanlaittopaikka",
    :se "Matlagningsplats",
@@ -206,8 +206,8 @@
    :se "Kokskjul eller ordnad plats för att göra upp eld.",
    :en "Campfire or cooking shelter."},
   :type-code 206,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Opastuspiste", :se "Informationspunkt", :en "Info"},
   :description
   {:fi
@@ -217,8 +217,8 @@
    :en
    "Information point or starting point of a route, recreation area etc. Map of the route or area included, possibly also parking area."},
   :type-code 207,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Laavu, kota tai kammi",
    :se "Vindskydd eller kåta",
@@ -228,8 +228,8 @@
    :se "Viloplats för vandrare under dagtid.",
    :en "Daytime rest stop for hikers."},
   :type-code 301,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Tupa", :se "Stuga", :en "Hut"},
   :description
   {:fi
@@ -239,8 +239,8 @@
    :en
    "Open hut, reservable hut, rest hut, day hut. Overnight resting place for hikers. An open hut is freely available; a reservable hut locked and subject to a charge. A day hut is for daytime use."},
   :type-code 302,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ulkoilumaja/hiihtomaja",
    :se "Friluftsstuga/skidstuga",
@@ -250,8 +250,8 @@
    :se "Rastplats för bruk under dagen, vardagsmotion.",
    :en "Rest area for regular daily sports, for daytime use."},
   :type-code 304,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Liikuntapuisto", :se "Idrottspark", :en "Sports park"},
   :description
   {:fi
@@ -261,8 +261,8 @@
    :en
    "A sports park is an area including several sports facilities, e.g., different fields, beach, a jogging track, a multi-purpose hall, a playground. 'Lipas' contains information both on the sports park and the individual sports facilities found there. The sports facilities are listed as individual items in the classification, enabling search by the park or by the individual facility."},
   :type-code 1110,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Lähiliikuntapaikka",
    :se "Näridrottsplats",
@@ -275,8 +275,8 @@
    :en
    "A neighbourhood sports area is intended for daily outdoor activities and exercise. It is a small area located in or near a residential area, with free public access. It usually provides different exercise/play facilities. It is specified in 'additional information' whether it is a school/nursery school yard, what facilities/equipment are offered, etc."},
   :type-code 1120,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ulkokuntoilupaikka",
    :se "Konditionsplats för utomhusaktiviteter",
@@ -289,16 +289,16 @@
    :en
    "Contains fitness and gym equipment, etc., \"outdoor gym\". May be part of a sports park."},
   :type-code 1130,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Parkour-alue", :se "Parkourområde", :en "Parkour area"},
   :description
   {:fi "Parkouria varten varustettu alue.",
    :se "Område utrustat för parkour.",
    :en "An area equipped for parkour."},
   :type-code 1140,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Skeitti-/rullaluistelupaikka",
    :se "Plats för skejtning/rullskridskoåkning",
@@ -311,8 +311,8 @@
    :en
    "An area equipped  for roller-blading, skateboarding, kick scooting. Hobby  specified in 'attribute data'."},
   :type-code 1150,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Pyöräilyalue", :se "Cykelområde", :en "Cycling area"},
   :description
   {:fi
@@ -320,16 +320,16 @@
    :se "Avsett för cykelåkning och trick, t ex bmx- eller dirtåkning.",
    :en "For cycling and stunting, e.g. BMX or dirt-biking."},
   :type-code 1160,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Pyöräilyrata", :se "Cykelbana", :en "Velodrome"},
   :description
   {:fi "Ratapyöräilyä varten,ulkona (velodromi).",
    :se "Utomhus, velodrom.",
    :en "For track racing outdoors (velodrome)."},
   :type-code 1170,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Frisbeegolfrata",
    :se "Frisbeegolfbana",
@@ -339,8 +339,8 @@
    :se "Frisbeegolfbanor finns i idrotts- och friluftsleder.",
    :en "Track built for disc golf. "},
   :type-code 1180,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Yleisurheilun harjoitusalue",
    :se "Träningsområde för friidrott",
@@ -353,8 +353,8 @@
    :en
    "The various sports venues are specified in 'attribute data', also individual venues."},
   :type-code 1210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Yleisurheilukenttä",
    :se "Friidrottsplan",
@@ -367,8 +367,8 @@
    :en
    "Field, track and athletic venues/facilities. Centre, tracks, surfaces, venues specified in 'attribute data'. "},
   :type-code 1220,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Koripallokenttä", :se "Basketplan", :en "Basketball court"},
   :description
@@ -379,8 +379,8 @@
    :en
    "A field equipped for basketball, with fixed or movable apparatus. 'Mini-court' and 'one-basket court'  included in additional information. "},
   :type-code 1310,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Lentopallokenttä",
    :se "Volleybollplan",
@@ -390,8 +390,8 @@
    :se "Plan utrustad för volleyboll. Fasta volleybollställningar.",
    :en "A field equipped for volleyball. Fixed volleyball apparatus."},
   :type-code 1320,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Beachvolleykenttä",
    :se "Beachvolleyplan",
@@ -404,8 +404,8 @@
    :en
    "Beach volleyball court, soft basement. May also be located far from a beach."},
   :type-code 1330,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Pallokenttä", :se "Bollplan", :en "Ball field"},
   :description
   {:fi
@@ -415,8 +415,8 @@
    :en
    "A field intended for ball games. Sand, grass, artificial turf, etc., size varies. One or more types of ball games possible."},
   :type-code 1340,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jalkapallostadion",
    :se "Fotbollsstadion",
@@ -429,8 +429,8 @@
    :en
    "Large football field, stands. Can host at least national-level games."},
   :type-code 1350,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Pesäpallokenttä", :se "Bobollsplan", :en "Baseball field"},
   :description
@@ -441,8 +441,8 @@
    :en
    "Finnish baseball field, may include stands. Can host at least national-level games. Sand, artificial turf / other synthetic surface, > 50 x 100 m. "},
   :type-code 1360,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Tenniskenttäalue",
    :se "Område med tennisbanor",
@@ -455,8 +455,8 @@
    :en
    "One or more tennis courts in the same area. Number of courts, surface material, etc. specified in 'attribute data', including information about a potential hit wall."},
   :type-code 1370,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Rullakiekkokenttä",
    :se "Inlinehockeyplan",
@@ -466,8 +466,8 @@
    :se "Plan utrustad för inlinehockey.",
    :en "Field equipped for roller hockey."},
   :type-code 1380,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Tekojääkenttä",
    :se "Konstisplan",
@@ -480,8 +480,8 @@
    :en
    "Mechanically/artificially frozen open-air field. Field size, equipment, rink, lighting, etc. specified in 'attribute data', as well as information about multi-use fields."},
   :type-code 1510,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Luistelukenttä", :se "Skridskobana", :en "Ice-skating field"},
   :description
@@ -492,8 +492,8 @@
    :en
    "Field intended for ice-skating. Summer use specified in 'attribute data'."},
   :type-code 1520,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kaukalo", :se "Rink", :en "Rink"},
   :description
   {:fi
@@ -503,8 +503,8 @@
    :en
    "Rink intended for ice-skating, ice hockey, rink bandy, etc. Potential summer use specified in 'attribute data'."},
   :type-code 1530,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Pikaluistelurata",
    :se "Bana för hastighetsåkning på skridskor",
@@ -514,8 +514,8 @@
    :se "Storlek och längd på banan i karakteristika.",
    :en "Track size and length specified in 'attribute data'."},
   :type-code 1540,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Luistelureitti", :se "Skridskoled", :en "Ice-skating route"},
   :description
@@ -526,8 +526,8 @@
    :en
    "Built yearly in the same area, e.g., in a sports park or on frozen lake/sea. Same as 'ice-skating route' in 'outdoor recreation routes'."},
   :type-code 1550,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Alamäkiluistelurata",
    :se "Skridskobana för utförsåkning",
@@ -537,8 +537,8 @@
    :se "Permanent bana byggd för utförsåkning.",
    :en "Permanent track built for downhill skating. "},
   :type-code 1560,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Golfin harjoitusalue",
    :se "Träningsområde för golf",
@@ -550,8 +550,8 @@
    "Träningsplats för golf, en eller flera övningsplatser. Utomhus.",
    :en "One or more areas for golf training. Outdoors."},
   :type-code 1610,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Golfkenttä", :se "Golfbana", :en "Golf course"},
   :description
   {:fi
@@ -560,8 +560,8 @@
    :en
    "Official golf course. Number of holes included in 'attribute data'."},
   :type-code 1620,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Golfin harjoitushalli",
    :se "Övningshall för golf",
@@ -574,8 +574,8 @@
    :en
    "Training space built for golf. Size specified in 'attribute data'. Link to 'indoor sport facilities'"},
   :type-code 1630,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Ratagolf", :se "Bangolf", :en "Minigolf course"},
   :description
   {:fi "Ratagolf- liiton hyväksymät ratagolf /minigolf- radat.",
@@ -583,8 +583,8 @@
    :en
    "A course built for miniature golf, accepted by the Ratagolf Union"},
   :type-code 1640,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kuntokeskus", :se "Motionscenter", :en "Fitness centre"},
   :description
   {:fi
@@ -594,16 +594,16 @@
    :en
    "Different sports services and premises, e.g., gym, group exercise premises. "},
   :type-code 2110,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kuntosali", :se "Gym", :en "Gym"},
   :description
   {:fi "Kuntosalilaitteita yms. Koko määritellään ominaisuustiedoissa",
    :se "Gymredskap osv. Storleken anges i karakteristika.",
    :en "Gym equipment, etc. Size specified in 'attribute data'."},
   :type-code 2120,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Voimailusali",
    :se "Kraftsportsal",
@@ -616,8 +616,8 @@
    :en
    "Equipped for weightlifting and boxing. Size specified in 'attribute data'."},
   :type-code 2130,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Kamppailulajien sali",
    :se "Sal för kampsport",
@@ -630,8 +630,8 @@
    :en
    "Hall for self-defence sports, e.g., wrestling, boxing. Size specified in 'attribute data'. "},
   :type-code 2140,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Liikuntasali", :se "Idrottssal", :en "Gymnastics hall"},
   :description
   {:fi
@@ -641,8 +641,8 @@
    :en
    "A gymnastics hall connected to another building. Size and height specified in 'additional information'. Also specified in 'additional information' if within a school."},
   :type-code 2150,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Liikuntahalli", :se "Idrottshall", :en "Sports hall "},
   :description
   {:fi
@@ -652,8 +652,8 @@
    :en
    "Building containing facilities for various sports. Size and facilities specified in 'attribute data'."},
   :type-code 2210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Monitoimihalli/areena",
    :se "Allaktivitetshall/multiarena",
@@ -663,8 +663,8 @@
    :se "Större tävlingsplats för ett flertal grenar, >= 5 000 m2.",
    :en "Significant competition venue for various sports, >=5000 m2."},
   :type-code 2220,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jalkapallohalli", :se "Fotbollshall", :en "Football hall"},
   :description
@@ -675,8 +675,8 @@
    :en
    "Hall intended for football. Surface material, number and size of courts specified in 'attribute data', as well as hall structure."},
   :type-code 2230,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Salibandyhalli", :se "Innebandyhall", :en "Floorball hall"},
   :description
@@ -687,8 +687,8 @@
    :en
    "Hall primarily intended for floorball. Number of courts and surface material specified in 'attribute data'."},
   :type-code 2240,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Skeittihalli", :se "Skateboardhall", :en "Indoor skatepark"},
   :description
@@ -699,8 +699,8 @@
    :en
    "An area for skateboarding, roller-blading, BMX biking, etc,. found in sports halls."},
   :type-code 2250,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Sulkapallohalli", :se "Badmintonhall", :en "Badminton hall"},
   :description
@@ -708,8 +708,8 @@
    :se "Hall i första hand  avsedd för badminton.",
    :en "Hall intended primarily for badminton."},
   :type-code 2260,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Squash-halli", :se "Squashhall", :en "Squash hall"},
   :description
   {:fi
@@ -718,16 +718,16 @@
    :en
    "One or more squash courts. Number of courts specified in 'attribute data'."},
   :type-code 2270,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Tennishalli", :se "Tennishall", :en "Tennis hall"},
   :description
   {:fi "Kenttien määrä ominaisuuksiin.",
    :se "Antalet banor i karakteristika.",
    :en "Number of courts specified in 'attribute data'."},
   :type-code 2280,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Petanque-halli", :se "Petanquehall ", :en "Petanque Hall"},
   :description
@@ -737,8 +737,8 @@
    "Hall avsedd för petanque. Storlek, antalet planer och utrustning i karakteristika.",
    :en "Hall intended for petanque"},
   :type-code 2290,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Yksittäinen yleisurheilun suorituspaikka",
    :se "Enstaka övningsplats för friidrott",
@@ -751,8 +751,8 @@
    :en
    "Stand-alone, not in an athletics hall. Venues specified under 'attribute data' (examples below)."},
   :type-code 2310,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Telinevoimistelutila",
    :se "Utrymme för redskapsgymnastik",
@@ -762,8 +762,8 @@
    :se "Permanent utrustning för att träna redskapsgymnastik.",
    :en "Space permanently equipped for artistic gymnastics."},
   :type-code 2320,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Pöytätennistila",
    :se "Utrymme för bordtennis",
@@ -773,8 +773,8 @@
    :se "Permanent utrustning för att träna bordtennis.",
    :en "Space permanently equipped for table tennis."},
   :type-code 2330,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Miekkailutila",
    :se "Utrymme för fäktning",
@@ -784,8 +784,8 @@
    :se "Permanent utrustning för fäktning.",
    :en "Space permanently equipped for fencing."},
   :type-code 2340,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Tanssitila", :se "Utrymme för dans", :en "Dance studio"},
   :description
   {:fi "Pysyvästi tanssi- tai ilmaisuliikuntaan varustettu tila.",
@@ -793,8 +793,8 @@
    :en
    "Space permanently equipped for dance or expressive movement exercise (tanssi- tai ilmaisuliikunta)."},
   :type-code 2350,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Sisäampumarata",
    :se "Inomhusskjutbana",
@@ -807,8 +807,8 @@
    :en
    "Permanent indoor shooting range. Note  Link to 'shooting sports facilities'."},
   :type-code 2360,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Sisäkiipeilyseinä",
    :se "Klättervägg inomhus",
@@ -819,16 +819,16 @@
    "Inomhusutrymme utrustat för klättring, också platser för bouldering.",
    :en "Indoor space equipped for climbing. Also bouldering venues."},
   :type-code 2370,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Parkour-sali", :se "Parkoursal", :en "Parkour hall"},
   :description
   {:fi "Parkouria varten varustettu sisätila. ",
    :se "Inomhusutrymme utrustat för parkour.",
    :en "Indoor space equipped for parkour. "},
   :type-code 2380,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Harjoitusjäähalli",
    :se "Övningsishall",
@@ -841,8 +841,8 @@
    :en
    "Number of fields, heating, changing rooms, etc., specified in 'attribute data'. "},
   :type-code 2510,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Kilpajäähalli",
    :se "Tävlingsishall",
@@ -865,8 +865,8 @@
    :en
    "Includes bleachers, whose size is specified in 'attribute data'. Number of fields, etc., specified in 'attribute data'."},
   :type-code 2520,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Pikaluisteluhalli",
    :se "Skridskohall",
@@ -877,8 +877,8 @@
    "Hall avsedd för hastighetsåkning på skridsko. Storlek > 333,3 m.",
    :en "Hall intended for speed-skating. Size > 333.3 m."},
   :type-code 2530,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Keilahalli", :se "Bowlinghall", :en "Bowling alley"},
   :description
   {:fi
@@ -886,8 +886,8 @@
    :se "Antalet banor och serviceutrustning i karakteristika.",
    :en "Number of alleys and service facilities in 'attribute data'."},
   :type-code 2610,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Uimahalli", :se "Simhall", :en "Public indoor swimming pool"},
   :description
@@ -898,8 +898,8 @@
    :en
    "Hall with one or several swimming pools. Number of pools and water surface area is requested in 'attribute data'."},
   :type-code 3110,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Uima-allas", :se "Simbassäng", :en "Swimming pool"},
   :description
   {:fi
@@ -909,8 +909,8 @@
    :en
    "Individual swimming pool, often in connection with other buildings. <17 m long."},
   :type-code 3120,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kylpylä", :se "Badinrättning", :en "Spa"},
   :description
   {:fi
@@ -920,16 +920,16 @@
    :en
    "Versatile spa with rehabilitation or wellness services. Water volume and number/types of pools specified in 'attribute data'."},
   :type-code 3130,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Maauimala", :se "Utebassäng", :en "Open-air pool "},
   :description
   {:fi "Vedenpuhdistusjärjestelmä.",
    :se "Vattenreningssystem.",
    :en "Water treatment system."},
   :type-code 3210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Uimaranta", :se "Badstrand", :en "Supervised beach"},
   :description
   {:fi
@@ -939,8 +939,8 @@
    :en
    "Supervised during opening hours; includes changing rooms and other facilities. "},
   :type-code 3220,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Uimapaikka", :se "Badplats", :en "Unsupervised beach "},
   :description
   {:fi
@@ -949,8 +949,8 @@
    "Badplats med t ex omklädningshytter men ej övervakning. Vinterbad sparas som egen idrottsplats.",
    :en "Beach with e.g. changing rooms. No lifeguards. "},
   :type-code 3230,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Talviuintipaikka",
    :se "Vinterbadplats",
@@ -960,8 +960,8 @@
    :se "Endast vinterbadplats, eventuellt vak.",
    :en "Winter swimming area only, possibly a hole in the ice. "},
   :type-code 3240,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Laskettelun suorituspaikka",
    :se "Slalombackar och alpina skidcentra",
@@ -972,16 +972,16 @@
    "Slalombacke, rodelbana, pipe, puckelpist, freestyle ramp, trickbana.",
    :en "-"},
   :type-code 4110,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Curlingrata", :se "Curlingbana", :en "Curling sheet"},
   :description
   {:fi "Pysyvästi lajiin varustettu, katettu curlingrata.",
    :se "Curlingbana med tak och permanent utrustning för grenen.",
    :en "Covered track permanently equipped for curling."},
   :type-code 4210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Hiihtotunneli", :se "Skidtunnel", :en "Ski tunnel"},
   :description
   {:fi
@@ -991,8 +991,8 @@
    :en
    "Covered space (tunnel, tube, hall, etc.) intended for skiing."},
   :type-code 4220,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Lumilautatunneli",
    :se "Snowboardtunnel",
@@ -1005,8 +1005,8 @@
    :en
    "Tunnel intended for snowboarding. Different uses specified in additional information."},
   :type-code 4230,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Lasketteluhalli",
    :se "Slalomhall",
@@ -1017,8 +1017,8 @@
    :en
    "Covered ski slope. Height and length specified in attributes."},
   :type-code 4240,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Harjoitushyppyrimäki",
    :se "Träningshoppbacke",
@@ -1031,8 +1031,8 @@
    :en
    "K point in 'attribute data'; materials, summer and winter use specified in attributes. "},
   :type-code 4310,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Hyppyrimäki", :se "Hoppbacke", :en "Ski jumping hill"},
   :description
   {:fi
@@ -1042,8 +1042,8 @@
    :en
    "Ice, ceramic or plastic track. Summer and winter use specified in attributes, along with K point, etc. Minimum normal hill, K point minimum 75 m."},
   :type-code 4320,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kuntorata", :se "Konditionsbana", :en "Jogging track"},
   :description
   {:fi
@@ -1053,8 +1053,8 @@
    :en
    "Winter and summer uses specified in 'attribute data'. Route intended for jogging in or near a residential area."},
   :type-code 4401,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Latu", :se "Skidspår", :en "Ski track"},
   :description
   {:fi
@@ -1064,8 +1064,8 @@
    :en
    "Route intended for skiing. Not in use and unmaintained in summer. Ski styles provided in 'attribute data'."},
   :type-code 4402,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Kävelyreitti/ulkoilureitti",
    :se "Promenadled/friluftsled",
@@ -1078,8 +1078,8 @@
    :en
    "Route intended for outdoor pedestrian activities. Relatively broad and passable. Potentially lit and surfaced."},
   :type-code 4403,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Luontopolku", :se "Naturstig", :en "Nature trail"},
   :description
   {:fi
@@ -1089,8 +1089,8 @@
    :en
    "Intended particularly for nature activities; signposts or info boards along the route."},
   :type-code 4404,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Retkeilyreitti", :se "Utflyktsled", :en "Hiking route"},
   :description
   {:fi
@@ -1100,8 +1100,8 @@
    :en
    "Natural hiking route, usually further away from residential areas. Provides hiking facilities, e.g. lean-to structures. Summer and winter use specified in 'attribute data'."},
   :type-code 4405,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Maastopyöräilyreitti",
    :se "Cykelled för terrängcykling",
@@ -1111,16 +1111,16 @@
    :se "Led avsedd framför allt för terrängcykling, märkt.",
    :en "Marked route intended especially for cross-country biking."},
   :type-code 4411,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Pyöräilyreitti", :se "Cykelled", :en "Biking route"},
   :description
   {:fi "Pyöräilyreitti, ei maastopyöräilyyn.",
    :se "Cykelled, ej för terrängcykling.",
    :en "Biking route, not intended for cross-country biking."},
   :type-code 4412,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Moottorikelkkareitti",
    :se "Snöskoterled",
@@ -1130,8 +1130,8 @@
    :se "En officiell rutt som godkänts genom en ruttexpedition.",
    :en "Officially approved route (in compliance with Act 670/1991)."},
   :type-code 4421,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Moottorikelkkaura",
    :se "Snöskoterspår",
@@ -1141,8 +1141,8 @@
    :se "Ingen ruttexpedition.",
    :en "No official approval."},
   :type-code 4422,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Hevosreitti", :se "Hästled", :en "Horse track"},
   :description
   {:fi
@@ -1152,8 +1152,8 @@
    :en
    "Route intended for horseback riding and/or carriage riding. Different uses specified in 'attribute data'."},
   :type-code 4430,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Koirahiihtolatu",
    :se "Spår för skidåkning med hund",
@@ -1166,8 +1166,8 @@
    :en
    "Ski track on which dog skijoring is allowed either always or at given times. Traditional or free style."},
   :type-code 4440,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name {:fi "Melontareitti", :se "Paddlingsled", :en "Canoe route"},
   :description
   {:fi
@@ -1177,8 +1177,8 @@
    :en
    "Marked route particularly for canoeing. Route suggestions are not intended for navigation."},
   :type-code 4451,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Vesiretkeilyreitti",
    :se "Utflyktsled i vattendrag",
@@ -1191,8 +1191,8 @@
    :en
    "Marked water route, not a navigation channel. Route suggestions included. E.g., route for \"church rowing boats\"."},
   :type-code 4452,
-  :status :active,
-  :geometry-type :route}
+  :status "active",
+  :geometry-type "route"}
  {:name
   {:fi "Suunnistusalue",
    :se "Orienteringsområde",
@@ -1204,8 +1204,8 @@
    :en
    "The Finnish Orienteering Federation has been informed. A map of the area available."},
   :type-code 4510,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Hiihtosuunnistusalue",
    :se "Skidorienteringsområde",
@@ -1216,8 +1216,8 @@
    :en
    "A ski orienteering map of the area available; no summer orienteering."},
   :type-code 4520,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Pyöräsuunnistusalue",
    :se "Cykelorienteringsområde",
@@ -1227,8 +1227,8 @@
    :se "Karta över område som lämpar sig för cykelorientering.",
    :en "A map for mountain bike orienteering available."},
   :type-code 4530,
-  :status :active,
-  :geometry-type :area}
+  :status "active",
+  :geometry-type "area"}
  {:name
   {:fi "Ampumahiihdon harjoittelualue",
    :se "Träningsområde för skidskytte",
@@ -1241,8 +1241,8 @@
    :en
    "Other training area for biathlon. Ski track and shooting range."},
   :type-code 4610,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ampumahiihtokeskus",
    :se "Skidskyttecentrum",
@@ -1252,8 +1252,8 @@
    :se "Tillräckligt stort för åtminstone nationella tävlingar.",
    :en "For minimum national level competitions."},
   :type-code 4620,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Kilpahiihtokeskus",
    :se "Skidtävlingscentrum",
@@ -1263,8 +1263,8 @@
    :se "Start- och målområden, serviceutrymmen, spårsystem.",
    :en "Start and finish area, service premises. Tracks."},
   :type-code 4630,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Hiihtomaa", :se "Skidland", :en "Cross-country ski park"},
   :description
@@ -1273,8 +1273,8 @@
    :en
    "Ski training venue, an area of parallel short ski tracks for ski instruction, etc."},
   :type-code 4640,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ulkokiipeilyseinä",
    :se "Utomhusklättervägg",
@@ -1287,8 +1287,8 @@
    :en
    "Built outdoor climbing wall. Height given in 'attribute data'. Also includes bouldering venues."},
   :type-code 4710,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kiipeilykallio", :se "Klätterberg", :en "Climbing rock"},
   :description
   {:fi
@@ -1298,8 +1298,8 @@
    :en
    "Marked natural cliff. Ice climbing specified in additional information. Also includes bouldering cliffs."},
   :type-code 4720,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ampumarata", :se "Skjutbana", :en "Open-air shooting range"},
   :description
@@ -1307,8 +1307,8 @@
    :se "Utomhusskjutbana för en eller flera grenar.",
    :en "Outdoor shooting range for one or more sports. "},
   :type-code 4810,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Ampumaurheilukeskus",
    :se "Sportskyttecentrum",
@@ -1320,8 +1320,8 @@
    :en
    "Shooting range with services. National competitions possible."},
   :type-code 4820,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jousiammuntarata", :se "Bågskyttebana", :en "Archery range"},
   :description
@@ -1330,8 +1330,8 @@
    :en
    "Outdoors or indoors. Equipment and the various sports detailed in 'attribute data'."},
   :type-code 4830,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jousiammuntamaastorata",
    :se "Terrängbana för bågskytte.",
@@ -1341,8 +1341,8 @@
    :se "Bågskyttebana byggd i terrängen.",
    :en "Archery course built in rough terrain."},
   :type-code 4840,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Soutustadion", :se "Roddstadion", :en "Rowing stadium"},
   :description
   {:fi
@@ -1352,8 +1352,8 @@
    :en
    "Permanent construction for rowing. Bleachers, track markings possible."},
   :type-code 5110,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Purjehdusalue", :se "Seglingsområde", :en "Sailing area"},
   :description
@@ -1361,8 +1361,8 @@
    :se "Byggt för segling, permanent. ",
    :en "Permanent construction for sailing."},
   :type-code 5120,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Moottoriveneurheilualue",
    :se "Område för motorbåtsport",
@@ -1372,8 +1372,8 @@
    :se "Permanent banområde för hastighetstävlingar.",
    :en "Permanent track area for speed competitions."},
   :type-code 5130,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Vesihiihtoalue",
    :se "Område för vattenskidåkning",
@@ -1384,8 +1384,8 @@
    :en
    "Permanent construction for water skiing. Minimum equipment  pier."},
   :type-code 5140,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Koskimelontakeskus",
    :se "Centrum för forspaddling",
@@ -1395,8 +1395,8 @@
    :se "Möjligt att arrangera tävlingar.",
    :en "Competitions possible."},
   :type-code 5150,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Soudun ja melonnan sisäharjoittelutila",
    :se "Inomhusträningsutrymme för rodd och paddling",
@@ -1406,16 +1406,16 @@
    :se "Separat, ej normal simbassäng.",
    :en "Separate training facility, not a regular swimming pool."},
   :type-code 5160,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Urheiluilmailualue",
    :se "Område för flygsport",
    :en "Sport aviation area"},
   :description {:fi nil, :se nil, :en nil},
   :type-code 5210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Moottoriurheilukeskus",
    :se "Centrum för motorsport",
@@ -1427,8 +1427,8 @@
    "Platser för flera olika motorsportgrenar, serviceutrymmen finns.",
    :en "Venues for various motor sports; service premises available."},
   :type-code 5310,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Moottoripyöräilyalue",
    :se "Område för motorcykelsport",
@@ -1441,8 +1441,8 @@
    :en
    "Mainly for motorcycling. Sports types detailed in 'attribute data'."},
   :type-code 5320,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Moottorirata", :se "Motorbana", :en "Formula race track"},
   :description
@@ -1450,24 +1450,24 @@
    :se "Stor motorsportplats avsedd för bankörning.",
    :en "Large motor sports venue for formula racing."},
   :type-code 5330,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Karting-rata", :se "Kartingbana", :en "Kart circuit"},
   :description
   {:fi "Pääasiallisesti karting-ajoa varten",
    :se "Huvudsakligen för karting.",
    :en "Mainly for karting."},
   :type-code 5340,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Kiihdytysrata", :se "Dragracingbana", :en "Dragstrip"},
   :description
   {:fi "Pääasiallisesti kiihdytysautoilua varten.",
    :se "Huvudsakligen avsedd för dragracing.",
    :en "Mainly for drag racing."},
   :type-code 5350,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jokamies- ja rallicross-rata",
    :se "Allemans- och rallycrossbana",
@@ -1477,8 +1477,8 @@
    :se "Huvudsakligen för allemanskörning och/eller rallycross.",
    :en "Mainly for everyman racing and/or rallycross."},
   :type-code 5360,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Jääspeedway-rata",
    :se "Isracingbana",
@@ -1488,8 +1488,8 @@
    :se "Huvudsakligen för isracing.",
    :en "Speedway mainly for ice racing."},
   :type-code 5370,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Ratsastuskenttä", :se "Ridbana", :en "Equestrian field"},
   :description
   {:fi "Ratsastukseen varattu kenttä. Koko ominasuustietoihin.",
@@ -1497,16 +1497,16 @@
    :en
    "Field reserved for horseback riding. Size specified in 'attribute data'."},
   :type-code 6110,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Ratsastusmaneesi", :se "Ridmanege", :en "Riding manège"},
   :description
   {:fi "Kylmä tai lämmin, katettu tila ratsastukseen.",
    :se "Kallt eller varmt takförsett utrymme för ridning.",
    :en "Cold or warm, covered space for horseback riding."},
   :type-code 6120,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Esteratsastuskenttä",
    :se "Bana för banhoppning",
@@ -1516,16 +1516,16 @@
    :se "Bana med permanent utrustning för banhoppning.",
    :en "Field permanently equipped for show jumping. Outdoors."},
   :type-code 6130,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name {:fi "Ravirata", :se "Travbana", :en "Horse racing track"},
   :description
   {:fi "Raviurheilun harjoitus- tai kilparata.",
    :se "Övnings- eller tävlingsbana för travsport.",
    :en "Training or competition track for horse racing."},
   :type-code 6140,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Koiraurheilualue",
    :se "Område för hundsport",
@@ -1537,8 +1537,8 @@
    "Område reserverat för hunddressyr, agility eller annan träning.",
    :en "Area reserved for dog training, agility or other dog sports."},
   :type-code 6210,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Koiraurheiluhalli",
    :se "Hundsporthall",
@@ -1551,8 +1551,8 @@
    :en
    "Hall specifically equipped for dog sports, agility, training, etc."},
   :type-code 6220,
-  :status :active,
-  :geometry-type :point}
+  :status "active",
+  :geometry-type "point"}
  {:name
   {:fi "Huoltorakennukset",
    :se "Servicebyggnader",
@@ -1562,5 +1562,5 @@
    :se "Servicebyggnader i anslutning till idrottsanläggningar.",
    :en "Maintenance buildings in connection with sports facilities."},
   :type-code 7000,
-  :status :active,
-  :geometry-type :point}])
+  :status "active",
+  :geometry-type "point"}])
