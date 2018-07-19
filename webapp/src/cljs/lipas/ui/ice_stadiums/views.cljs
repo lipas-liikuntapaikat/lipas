@@ -1,6 +1,7 @@
 (ns lipas.ui.ice-stadiums.views
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy :as energy]
+            [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
@@ -16,8 +17,8 @@
    (==> [::events/toggle-dialog dialog data])))
 
 (defn set-field
-  [& args]
-  (==> [::events/set-field (butlast args) (last args)]))
+  [lipas-id & args]
+  (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn site-view [{:keys [tr logged-in?]}]
   (let [locale                (tr)
@@ -41,11 +42,11 @@
 
         lipas-id              (:lipas-id site)
         user-can-publish?     (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
-        uncommitted-edits?    (<== [::subs/uncommitted-edits? lipas-id])
+        uncommitted-edits?    (<== [:lipas.ui.sports-sites.subs/uncommitted-edits? lipas-id])
 
         edits-valid?          (<== [::subs/edits-valid?])
 
-        set-field (partial set-field :editing :rev)]
+        set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
      {:open? ((complement empty?) site)
@@ -63,14 +64,14 @@
                  :valid?             edits-valid?
                  :logged-in?         logged-in?
                  :user-can-publish?  user-can-publish?
-                 :on-discard         #(==> [::events/discard-edits])
+                 :on-discard         #(==> [::site-events/discard-edits lipas-id])
                  :discard-tooltip    (tr :actions/discard)
                  :on-edit-start      #(==> [::events/edit-site site])
                  :on-edit-end        #(==> [::events/save-edits])
                  :edit-tooltip       (tr :actions/edit)
-                 :on-save-draft      #(==> [::events/commit-draft])
+                 :on-save-draft      #(==> [::site-events/commit-draft lipas-id])
                  :save-draft-tooltip (tr :actions/save-draft)
-                 :on-publish         #(==> [::events/commit-edits])
+                 :on-publish         #(==> [::site-events/commit-edits lipas-id])
                  :publish-tooltip    (tr :actions/publish)})}
 
      [mui/grid {:container true}
@@ -530,7 +531,8 @@
   (let [data           (<== [::subs/editing-rev])
         energy-history (<== [::subs/energy-consumption-history])
         edits-valid?   (<== [::subs/edits-valid?])
-        set-field      (partial set-field :editing :rev)]
+        lipas-id       (:lipas-id data)
+        set-field      (partial set-field lipas-id)]
 
     (r/with-let [monthly-energy? (r/atom false)]
 
@@ -559,7 +561,8 @@
            {:tr        tr
             :cold?     true
             :data      (:energy-consumption-monthly data)
-            :on-change #(==> [::events/set-monthly-energy-consumption %&])}])
+            :on-change #(==> [::events/set-monthly-energy-consumption
+                             lipas-id %1 %2 %3])}])
 
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [energy/table {:tr         tr
@@ -580,8 +583,7 @@
   (let [data   (<== [::subs/sites-to-edit-list])
         site   (<== [::subs/editing-site])
         years  (<== [::subs/energy-consumption-years-list])
-        year   (<== [::subs/editing-year])
-        locale (tr)]
+        year   (<== [::subs/editing-year])]
 
     [mui/grid {:container true}
 

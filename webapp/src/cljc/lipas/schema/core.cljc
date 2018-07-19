@@ -235,8 +235,10 @@
   (s/keys :req-un [:lipas.sports-site.type/type-code]
           :opt-un [:lipas.sports-site.type/size-category]))
 
+(s/def :lipas.sports-site/event-date :lipas/timestamp)
+
 (s/def :lipas/sports-site
-  (s/keys :req-un [:lipas/timestamp
+  (s/keys :req-un [:lipas.sports-site/event-date
                    :lipas.sports-site/lipas-id
                    :lipas.sports-site/status
                    :lipas.sports-site/type
@@ -456,8 +458,10 @@
                    :lipas.energy-consumption/heat-mwh
                    :lipas.energy-consumption/water-m3]))
 
+(def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
+
 (s/def :lipas.ice-stadium/energy-consumption-monthly
-  (s/map-of (s/int-in 1 (inc 12)) :lipas/energy-consumption))
+  (s/map-of months :lipas/energy-consumption))
 
 (s/def :lipas.ice-stadium.type/type-code #{2510 2520})
 (s/def :lipas.ice-stadium/type

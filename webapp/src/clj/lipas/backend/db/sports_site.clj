@@ -4,16 +4,16 @@
 
 (defn marshall [sports-site user]
   (->
-   {:document  sports-site
-    :lipas-id  (-> sports-site :lipas-id)
-    :status    (-> sports-site :status)
-    :type-code (-> sports-site :type :type-code)
-    :city-code (-> sports-site :location :city :city-code)
-    :author-id (:id user)}
-   utils/->snake-case-keywords))
+   {:event-date (-> sports-site :event-date)
+    :lipas-id   (-> sports-site :lipas-id)
+    :status     (-> sports-site :status)
+    :type-code  (-> sports-site :type :type-code)
+    :city-code  (-> sports-site :location :city :city-code)
+    :author-id  (-> user :id utils/->uuid)}
+   utils/->snake-case-keywords
+   (assoc :document sports-site)))
 
 (defn unmarshall [{:keys [document]}]
-  (-> document
-      utils/->kebab-case-keywords))
+  document)
 
 (hugsql/def-db-fns "sql/sports_site.sql")

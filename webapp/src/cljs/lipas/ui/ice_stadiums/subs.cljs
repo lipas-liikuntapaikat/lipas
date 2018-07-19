@@ -17,31 +17,27 @@
 (re-frame/reg-sub
  ::editing-site
  (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :site)]
+   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
      (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::editing-rev
  (fn [db _]
-   (-> db :ice-stadiums :editing :rev)))
+   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
+     (get-in db [:sports-sites lipas-id :editing]))))
 
 (re-frame/reg-sub
  ::edits-valid?
  :<- [::editing-rev]
  (fn [rev _]
    (let [rev (ice-utils/make-saveable rev)]
-     ;;(s/explain :lipas.sports-site/ice-stadium rev)
+     (s/explain :lipas.sports-site/ice-stadium rev)
      (s/valid? :lipas.sports-site/ice-stadium rev))))
 
 (re-frame/reg-sub
  ::editing-year
  (fn [db _]
    (-> db :ice-stadiums :editing :year)))
-
-(re-frame/reg-sub
- ::uncommitted-edits?
- (fn [db [_ lipas-id]]
-   ((complement empty?) (get-in db [:sports-sites lipas-id :edits]))))
 
 (re-frame/reg-sub
  ::energy-consumption-data
@@ -55,7 +51,7 @@
 (re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :site)
+   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)
          site (get-in db [:sports-sites lipas-id])
          history (utils/energy-consumption-history site)]
      (->> history (sort-by :year utils/reverse-cmp)))))
@@ -64,7 +60,7 @@
  ::energy-consumption-years-list
  :<- [::energy-consumption-history]
  (fn [history _]
-   (utils/make-year-list (map :year history))))
+   (utils/make-energy-consumption-year-list history)))
 
 (re-frame/reg-sub
  ::latest-ice-stadium-revs

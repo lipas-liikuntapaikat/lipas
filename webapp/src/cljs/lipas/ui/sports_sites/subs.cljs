@@ -17,6 +17,11 @@
               sites)))
 
 (re-frame/reg-sub
+ ::uncommitted-edits?
+ (fn [db [_ lipas-id]]
+   ((complement empty?) (get-in db [:sports-sites lipas-id :edits]))))
+
+(re-frame/reg-sub
  ::cities-by-city-code
  (fn [db _]
    (-> db :cities)))

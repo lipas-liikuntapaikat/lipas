@@ -46,4 +46,5 @@
                             (:nextval (sports-site/next-lipas-id tx)))
             sports-site (assoc sports-site :lipas-id lipas-id)]
         (->> (sports-site/marshall sports-site user)
-             (sports-site/insert-sports-site-rev! tx))))))
+             (sports-site/insert-sports-site-rev! tx)
+             (sports-site/unmarshall))))))

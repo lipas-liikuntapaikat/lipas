@@ -297,6 +297,20 @@
     :celsius       "°C"
     :hour          "h"}
 
+   :month
+   {:jan "Tammikuu"
+    :feb "Helmikuu"
+    :mar "Maaliskuu"
+    :apr "Huhtikuu"
+    :may "Toukokuu"
+    :jun "Kesäkuu"
+    :jul "Heinäkuu"
+    :aug "Elokuu"
+    :sep "Syyskuu"
+    :oct "Lokakuu"
+    :nov "Marraskuu"
+    :dec "Joulukuu"}
+
    :time
    {:year  "Vuosi"
     :hour  "Tunti"

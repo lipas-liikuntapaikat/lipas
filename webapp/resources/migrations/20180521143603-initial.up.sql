@@ -1,12 +1,15 @@
 CREATE TABLE public.account (
-  id            uuid NOT NULL DEFAULT uuid_generate_v4(),
-  created_at    timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  email         text COLLATE pg_catalog."default" NOT NULL,
-  username      text COLLATE pg_catalog."default" NOT NULL,
-  password      text COLLATE pg_catalog."default" NOT NULL,
-  permissions   jsonb,
-  user_data     jsonb,
-  refresh_token text COLLATE pg_catalog."default",
+  id                uuid NOT NULL DEFAULT uuid_generate_v4(),
+  created_at        timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  email             text COLLATE pg_catalog."default" NOT NULL,
+  username          text COLLATE pg_catalog."default" NOT NULL,
+  password          text COLLATE pg_catalog."default" NOT NULL,
+  permissions       jsonb,
+  user_data         jsonb,
+  history           jsonb,
+  status            text COLLATE pg_catalog."default",
+  reset_token       text COLLATE pg_catalog."default",
+  reset_valid_until timestamp without time zone,
 
   CONSTRAINT account_pkey PRIMARY KEY (id),
   CONSTRAINT account_email_key UNIQUE (email),
@@ -21,6 +24,7 @@ OWNER to lipas;
 
 CREATE TABLE public.sports_site (
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  event_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   lipas_id   integer NOT NULL,
   status     text COLLATE pg_catalog."default" NOT NULL,
   document   jsonb NOT NULL,
@@ -49,6 +53,7 @@ OWNER TO lipas;
 CREATE OR REPLACE VIEW public.sports_site_current AS
 SELECT
   a.created_at,
+  a.event_date,
   a.lipas_id,
   a.status,
   a.document,
@@ -59,10 +64,11 @@ FROM sports_site a
 JOIN (
   SELECT
     sports_site.lipas_id,
-    max(sports_site.created_at) AS max_date
+    max(sports_site.event_date) AS max_date
   FROM sports_site
+  WHERE status = 'active'
   GROUP BY sports_site.lipas_id) b
-ON a.lipas_id = b.lipas_id AND a.created_at = b.max_date;
+ON a.lipas_id = b.lipas_id AND a.event_date = b.max_date;
 
 ALTER TABLE public.sports_site_current
 OWNER TO lipas;

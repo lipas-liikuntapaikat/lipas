@@ -8,7 +8,6 @@ SELECT id
        , password
        , user_data
        , permissions
-       , refresh_token
 FROM   account;
 
 -- :name get-user-by-id
@@ -21,7 +20,6 @@ SELECT id
        , password
        , user_data
        , permissions
-       , refresh_token
 FROM   account
 WHERE  id = :id
 
@@ -35,7 +33,6 @@ SELECT id
        , password
        , user_data
        , permissions
-       , refresh_token
 FROM   account
 WHERE  username = :username
 
@@ -49,7 +46,6 @@ SELECT id
        , password
        , user_data
        , permissions
-       , refresh_token
 FROM   account
 WHERE  email = :email
 
@@ -63,7 +59,6 @@ SELECT id
        , password
        , user_data
        , permissions
-       , refresh_token
 FROM   account
 WHERE  refresh_token = :refresh_token
 
@@ -95,7 +90,6 @@ SET    email = :email
        , password = :password
        , user_data = :user_data
        , permissions = :permissions
-       , refresh_token = :refresh_token
 WHERE  id = :id;
 
 -- :name update-user-password!
@@ -105,19 +99,3 @@ WHERE  id = :id;
 UPDATE account
 SET    password = :password
 WHERE  id = :id;
-
--- :name update-user-refresh-token!
--- :command :execute
--- :result :affected
--- :doc Update the refresh token for the user matching the given userid
-UPDATE account
-SET    refresh_token = :refresh_token
-WHERE  id = :id;
-
--- :name null-refresh-token!
--- :command :execute
--- :result :affected
--- :doc Set refresh token to null for row matching the given refresh token
-UPDATE registered_user
-SET    refresh_token = NULL
-WHERE  refresh_token = :refresh_token;

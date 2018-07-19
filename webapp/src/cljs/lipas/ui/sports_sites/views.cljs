@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.views
   (:require [lipas.ui.mui :as mui]
-            [lipas.ui.sports-sites.subs :as subs]))
+            [lipas.ui.sports-sites.subs :as subs]
+            [lipas.ui.sports-sites.events :as events]))
 
 (defn create-panel [tr]
   [:div {:style {:padding "1em"}}

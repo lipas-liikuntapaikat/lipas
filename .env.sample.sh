@@ -2,6 +2,9 @@
 
 # Environment variables
 
+# Backend
+export AUTH_KEY=***FILL_THIS***
+
 # Postgres
 export DB_NAME=lipas
 export DB_HOST=postgres

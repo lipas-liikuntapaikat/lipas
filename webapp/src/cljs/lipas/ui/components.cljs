@@ -123,7 +123,7 @@
                  [mui/table-cell header]))]
         [mui/table-body
          (for [item items
-               :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
+               :let [id (or (key-fn item) (:id item) (:lipas-id item) (gensym))]]
            [mui/table-row {:key id
                            :hover true}
             (when on-select

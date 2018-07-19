@@ -10,17 +10,8 @@
    (-> db :swimming-pools :active-tab)))
 
 (re-frame/reg-sub
- ::latest-sports-site-revs
- :<- [:lipas.ui.sports-sites.subs/sports-sites]
- (fn [sites _]
-   (reduce-kv (fn [m k v]
-                (assoc m k (get-in v [:history (:latest v)])))
-              {}
-              sites)))
-
-(re-frame/reg-sub
  ::latest-swimming-pool-revs
- :<- [::latest-sports-site-revs]
+ :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
    (as-> sites $
      (into {} (filter (comp #{3110} :type-code :type second)) $)
@@ -47,13 +38,14 @@
 (re-frame/reg-sub
  ::editing-site
  (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :site)]
+   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)]
      (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
  ::editing-rev
  (fn [db _]
-   (-> db :swimming-pools :editing :rev)))
+   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)]
+     (get-in db [:sports-sites lipas-id :editing]))))
 
 (re-frame/reg-sub
  ::edits-valid?
@@ -69,14 +61,9 @@
    (-> db :swimming-pools :editing :year)))
 
 (re-frame/reg-sub
- ::uncommitted-edits?
- (fn [db [_ lipas-id]]
-   ((complement empty?) (get-in db [:sports-sites lipas-id :edits]))))
-
-(re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :site)
+   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)
          site (get-in db [:sports-sites lipas-id])
          history (utils/energy-consumption-history site)]
      (->> history (sort-by :year utils/reverse-cmp)))))
@@ -85,7 +72,7 @@
  ::energy-consumption-years-list
  :<- [::energy-consumption-history]
  (fn [history _]
-   (utils/make-year-list (map :year history))))
+   (utils/make-energy-consumption-year-list history)))
 
 (re-frame/reg-sub
  ::dialogs

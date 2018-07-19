@@ -1,9 +1,9 @@
 (ns lipas.ui.login.events
   (:require [ajax.core :as ajax]
-            [goog.crypt.base64 :as b64]
             [camel-snake-kebab.core :refer [->kebab-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]
             [lipas.ui.local-storage :refer [ls-set ls-get]]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -35,11 +35,6 @@
  (fn [db [_ result]]
    (assoc-in db [:user :login-error] result)))
 
-(comment (->basic-auth {:username "kissa" :password "koira"}))
-(defn ->basic-auth
-  "Creates base64 encoded Authorization header value"
-  [{:keys [username password]}]
-  (str "Basic " (b64/encodeString (str username ":" password))))
 
 (re-frame/reg-event-db
  ::clear-errors
@@ -51,7 +46,7 @@
  (fn [{:keys [db]} [_ form-data]]
    {:http-xhrio {:method          :post
                  :uri             (str (:backend-url db) "/actions/login")
-                 :headers         {:Authorization (->basic-auth form-data)}
+                 :headers         {:Authorization (utils/->basic-auth form-data)}
                  :format          (ajax/json-request-format)
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      [::login-success]
