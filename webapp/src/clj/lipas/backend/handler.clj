@@ -2,6 +2,7 @@
   (:require [compojure.api.sweet :refer [api context GET POST OPTIONS]]
             [lipas.backend.middleware :as mw]
             [lipas.backend.core :as core]
+            [lipas.backend.auth :as auth]
             [ring.util.http-response :refer [ok created conflict forbidden]]
             [ring.util.response :refer [resource-response]]))
 
@@ -29,11 +30,10 @@
     (GET "/api/health" [] (ok {:status "OK"}))
 
     (POST "/api/sports-sites" req
-      :middleware [(mw/basic-auth db) mw/cors mw/auth]
+      :middleware [mw/token-auth mw/cors mw/auth]
       (let [user        (:identity req)
-            sports-site (:body-params req)
-            _           (core/upsert-sports-site! db user sports-site)]
-        (created "/fixme" {:status "OK"})))
+            sports-site (:body-params req)]
+        (created "/fixme" (core/upsert-sports-site! db user sports-site))))
 
     (POST "/api/actions/register" req
       :middleware [mw/cors]
@@ -42,4 +42,8 @@
 
     (POST "/api/actions/login" req
       :middleware [(mw/basic-auth db) mw/cors mw/auth]
-      (ok (:identity req)))))
+      (ok (:identity req)))
+
+    (GET "/api/actions/refresh-login" req
+      :middleware [mw/token-auth mw/cors mw/auth]
+      (ok {:token (auth/create-token (:identity req))}))))

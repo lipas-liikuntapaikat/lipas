@@ -3,7 +3,8 @@
             [camel-snake-kebab.extras :refer [transform-keys]]
             [cheshire.core :as j]
             [clojure.java.jdbc :as jdbc])
-  (:import [org.postgresql.util PGobject]))
+  (:import [org.postgresql.util PGobject]
+           [java.util.UUID]))
 
 (comment (<-json (->json {:kissa "koira"})))
 (def <-json #(j/decode % true))
@@ -14,6 +15,9 @@
 
 (defn ->snake-case-keywords [user]
   (transform-keys ->snake_case user))
+
+(defn ->uuid [s]
+  (java.util.UUID/fromString s))
 
 ;;; Automatically transform clojure maps -> jsonb ;;;
 

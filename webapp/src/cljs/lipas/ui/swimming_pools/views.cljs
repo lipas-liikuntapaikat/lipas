@@ -2,6 +2,7 @@
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy :as energy]
             [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.saunas :as saunas]
@@ -18,8 +19,8 @@
    (==> [::events/toggle-dialog dialog data])))
 
 (defn set-field
-  [& args]
-  (==> [::events/set-field (butlast args) (last args)]))
+  [lipas-id & args]
+  (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn site-view [{:keys [tr logged-in?]}]
   (let [locale                (tr)
@@ -35,11 +36,12 @@
         building-materials    (<== [:lipas.ui.sports-sites.subs/building-materials])
         supporting-structures (<== [:lipas.ui.sports-sites.subs/supporting-structures])
         ceiling-structures    (<== [:lipas.ui.sports-sites.subs/ceiling-structures])
-        set-field             (partial set-field :editing :rev)
 
         lipas-id              (:lipas-id display-data)
         user-can-publish?     (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
-        uncommitted-edits?    (<== [::subs/uncommitted-edits? lipas-id])
+        uncommitted-edits?    (<== [:lipas.ui.sports-sites.subs/uncommitted-edits? lipas-id])
+
+        set-field             (partial set-field lipas-id)
 
         editing?              (<== [::subs/editing?])
         edits-valid?          (<== [::subs/edits-valid?])]
@@ -59,14 +61,14 @@
                  :valid?             edits-valid?
                  :logged-in?         logged-in?
                  :user-can-publish?  user-can-publish?
-                 :on-discard         #(==> [::events/discard-edits])
+                 :on-discard         #(==> [::site-events/discard-edits lipas-id])
                  :discard-tooltip    (tr :actions/discard)
                  :on-edit-start      #(==> [::events/edit-site display-data])
                  :on-edit-end        #(==> [::events/save-edits])
                  :edit-tooltip       (tr :actions/edit)
-                 :on-save-draft      #(==> [::events/commit-draft])
+                 :on-save-draft      #(==> [::site-events/commit-draft lipas-id])
                  :save-draft-tooltip (tr :actions/save-draft)
-                 :on-publish         #(==> [::events/commit-edits :publish])
+                 :on-publish         #(==> [::site-events/commit-edits lipas-id])
                  :publish-tooltip    (tr :actions/publish)})}
 
      [mui/grid {:container true}
@@ -501,7 +503,8 @@
   (let [data           (<== [::subs/editing-rev])
         energy-history (<== [::subs/energy-consumption-history])
         edits-valid?   (<== [::subs/edits-valid?])
-        set-field      (partial set-field :editing :rev)]
+        lipas-id       (:lipas-id data)
+        set-field      (partial set-field lipas-id)]
 
     [mui/grid {:container true}
 

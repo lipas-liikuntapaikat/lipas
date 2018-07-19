@@ -18,7 +18,7 @@
 
   ;;; Yleiset ;;;
   {:lipas-id 89839
-   :timestamp "2016-11-14T10:13:20.103Z"
+   :event-date "2016-11-14T10:13:20.103Z"
    :status "active"
 
    :name "Jyväskylän kilpajäähalli"
@@ -142,7 +142,7 @@
 
 (def jaahalli-2017
   (assoc jaahalli-2016
-         :timestamp          "2017-11-14T10:13:20.103Z"
+         :event-date          "2017-11-14T10:13:20.103Z"
          :marketing-name     "Lähi-Tapoola areena"
          :owner "unknown"
          :energy-consumption {:electricity-mwh 1500
@@ -153,7 +153,7 @@
   {
    ;;; Yleiset ;;;
    :lipas-id 506032
-   :timestamp "2012-11-14T10:13:20.103Z"
+   :event-date "2012-11-14T10:13:20.103Z"
    :status "active"
 
    :name "Äänekosken uimahalli"
@@ -299,7 +299,7 @@
 
 (def vesivelho-2013
   (assoc vesivelho-2012
-         :timestamp "2013-01-01T00:00:00.000Z"
+         :event-date "2013-01-01T00:00:00.000Z"
          :visitors {:total-count 67216}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -307,7 +307,7 @@
 
 (def vesivelho-2014
   (assoc vesivelho-2013
-         :timestamp "2014-01-01T00:00:00.000Z"
+         :event-date "2014-01-01T00:00:00.000Z"
          :visitors {:total-count 66529}
          :energy-consumption {:electricity-mwh 664
                               :heat-mwh 0
@@ -315,7 +315,7 @@
 
 (def vesivelho-2015
   (assoc vesivelho-2014
-         :timestamp "2015-01-01T00:00:00.000Z"
+         :event-date "2015-01-01T00:00:00.000Z"
          :visitors {:total-count 34002}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -323,7 +323,7 @@
 
 (def vesivelho-2016
   (assoc vesivelho-2015
-         :timestamp "2016-01-01T00:00:00.000Z"
+         :event-date "2016-01-01T00:00:00.000Z"
          :visitors {:total-count 8793}
          :energy-consumption {:electricity-mwh 0
                               :heat-mwh 0
@@ -331,7 +331,7 @@
 
 (def vesivelho-2017
   (assoc vesivelho-2016
-         :timestamp "2017-01-01T00:00:00.000Z"
+         :event-date "2017-01-01T00:00:00.000Z"
          :visitors {:total-count 55648}
          :energy-consumption {:electricity-mwh 818
                               :heat-mwh 0
@@ -341,7 +341,7 @@
   (reduce (fn [res n]
             (let [e  (gen/generate (s/gen :lipas.sports-site/swimming-pool))
                   id (:lipas-id e)
-                  ts (:timestamp e)]
+                  ts (:event-date e)]
               (-> res
                   (assoc-in [id :latest] ts)
                   (assoc-in [id :history] {ts e}))))
@@ -357,8 +357,8 @@
    (merge (gen-pools 10)
           {
            506032
-           {:latest  (:timestamp vesivelho-2017)
-            :history (utils/index-by :timestamp [vesivelho-2012
+           {:latest  (:event-date vesivelho-2017)
+            :history (utils/index-by :event-date [vesivelho-2012
                                                  vesivelho-2013
                                                  vesivelho-2014
                                                  vesivelho-2015
@@ -366,8 +366,8 @@
                                                  vesivelho-2017])
             :edits   nil}
            89839
-           {:latest  (:timestamp jaahalli-2017)
-            :history (utils/index-by :timestamp [jaahalli-2016 jaahalli-2017])
+           {:latest  (:event-date jaahalli-2017)
+            :history (utils/index-by :event-date [jaahalli-2016 jaahalli-2017])
             :edits   nil}})
 
    ;; Ice stadiums
@@ -425,4 +425,7 @@
 
 (comment
   (gen/generate (s/gen :lipas.swimming-pool/pool))
-  (gen/generate (s/gen :lipas.sports-site/swimming-pool)))
+  (gen/generate (s/gen :lipas.sports-site/swimming-pool))
+  (s/exercise :lipas.sports-site/swimming-pool 100)
+  (s/exercise :lipas.sports-site/ice-stadium 100)
+  (s/exercise :lipas/user 100))

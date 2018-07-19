@@ -4,12 +4,13 @@
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==> ->setter-fn]]))
+            [lipas.ui.utils :refer [<== ==>]]))
 
-(def set-field (->setter-fn ::events/set-field))
+(defn set-field [dialog field value]
+  (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field (partial set-field :dialogs :rink :data)]
+  (let [set-field (partial set-field :rink)]
     [mui/form-group
      [lui/text-field {:label     (tr :dimensions/length-m)
                       :adornment (tr :physical-units/m)

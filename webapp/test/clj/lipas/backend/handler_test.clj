@@ -4,6 +4,7 @@
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
             [lipas.backend.core :as core]
+            [lipas.backend.auth :as auth]
             [lipas.backend.system :refer [start-system!]]
             [lipas.schema.core]
             [ring.mock.request :as mock])
@@ -17,16 +18,15 @@
   [s]
   (.encodeToString (Base64/getEncoder) (.getBytes s)))
 
-(defn basic-auth
-  "Creates base64 encoded Authorization header value."
-  [user pass]
-  (str "Basic " (->base64 (str user ":" pass))))
-
 (defn auth-header
   "Adds Authorization header to the request
   with base64 encoded \"Basic user:pass\" value."
   [req user passwd]
-  (mock/header req "Authorization" (basic-auth user passwd)))
+  (mock/header req "Authorization" (str "Basic " (->base64 (str user ":" passwd)))))
+
+(defn token-header
+  [req token]
+  (mock/header req "Authorization" (str "Token " token)))
 
 (def system (start-system!))
 (def db (:db system))
@@ -38,9 +38,11 @@
    (gen-user {:db? false}))
   ([{:keys [db?]}]
    (let [user (gen/generate (s/gen :lipas/user))]
-     (when db?
-       (core/add-user! db user))
-     user)))
+     (if db?
+       (do
+         (core/add-user! db user)
+         (assoc user :id (:id (core/get-user db (:email user)))))
+       user))))
 
 (deftest register-user-test
   (let [user (gen-user)
@@ -74,25 +76,29 @@
     (is (= (:email user) (:email body)))))
 
 (deftest upsert-sports-site-draft-test
-  (let [user (gen-user {:db? true})
-        site (-> (gen/generate (s/gen :lipas/sports-site))
-                 (assoc :status "draft")
-                 (dissoc :lipas-id))
-        resp (app (-> (mock/request :post "/api/sports-sites")
-                      (mock/content-type "application/json")
-                      (mock/body (->json site))
-                      (auth-header (:username user) (:password user))))]
+  (let [user  (gen-user {:db? true})
+        token (auth/create-token user)
+        site  (-> (gen/generate (s/gen :lipas/sports-site))
+                  (assoc :status "draft")
+                  (dissoc :lipas-id))
+        resp  (app (-> (mock/request :post "/api/sports-sites")
+                       (mock/content-type "application/json")
+                       (mock/body (->json site))
+                       (token-header token)))]
     (is (= 201 (:status resp)))))
 
-(deftest upsert-sports-site-permissions-test
-  (let [user (gen-user)
-        _    (as-> user $
-               (dissoc $ :permissions)
-               (core/add-user! db $))
-        site (-> (gen/generate (s/gen :lipas/sports-site))
-                 (assoc :status "active"))
-        resp (app (-> (mock/request :post "/api/sports-sites")
-                      (mock/content-type "application/json")
-                      (mock/body (->json site))
-                      (auth-header (:username user) (:password user))))]
+(deftest upsert-sports-site-no-permissions-test
+  (let [user  (gen-user)
+        token (auth/create-token user)
+        _     (as-> user $
+                (dissoc $ :permissions)
+                (core/add-user! db $))
+        site  (-> (gen/generate (s/gen :lipas/sports-site))
+                  (assoc :status "active"))
+        resp  (app (-> (mock/request :post "/api/sports-sites")
+                       (mock/content-type "application/json")
+                       (mock/body (->json site))
+                       (token-header token)))]
     (is (= 403 (:status resp)))))
+
+(comment (gen/generate (s/gen :lipas/sports-site)))

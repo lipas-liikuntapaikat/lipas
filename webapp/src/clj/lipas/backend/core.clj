@@ -1,6 +1,8 @@
 (ns lipas.backend.core
   (:require [buddy.hashers :as hashers]))
 
+;;; User ;;;
+
 (def default-permissions {:draft true})
 
 (defn username-exists? [db user]
@@ -32,6 +34,13 @@
       (.get-user-by-username db {:username identifier})
       (when (uuid? identifier)
         (.get-user-by-id db {:id identifier}))))
+
+(defn refresh-login! [db token]
+  ;; TODO check that user has not explicitely logged out and issue new
+  ;; access token.
+  )
+
+;;; Sports-sites ;;;
 
 (defn draft? [sports-site]
   (= (-> sports-site :status) "draft"))

@@ -1,7 +1,8 @@
 (ns lipas.ui.utils
-  (:require [re-frame.core :as re-frame]
-            [clojure.reader :refer [read-string]]
-            [clojure.walk :as walk]))
+  (:require [clojure.reader :refer [read-string]]
+            [clojure.walk :as walk]
+            [goog.crypt.base64 :as b64]
+            [re-frame.core :as re-frame]))
 
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
@@ -88,11 +89,20 @@
                {}
                by-year)))
 
-(defn make-year-list
-  "Highlights matching `years`."
-  [years]
-  (let [data (for [y    (range 2000 (inc this-year))
-                   :let [data-exists? (some #{y} years)]]
+(defn- data-exists? [year history]
+  (some (complement nil?)
+        (vals (select-keys (get history year)
+                           [:electricity-mwh
+                            :heat-mwh
+                            :water-m3
+                            :cold-mwh]))))
+
+(defn make-energy-consumption-year-list
+  "Highlights years where there exists any energy consumption data."
+  [history]
+  (let [history (index-by :year history)
+        data (for [y    (range 2000 (inc this-year))
+                   :let [data-exists? (data-exists? y history)]]
                {:label (if data-exists?
                          (str y " " "✓")
                          (str y))
@@ -103,7 +113,7 @@
   (let [by-year (latest-by-year history)
         entries (select-keys history (vals by-year))]
     (map #(assoc (:energy-consumption %)
-                 :year (resolve-year (:timestamp %))) (vals entries))))
+                 :year (resolve-year (:event-date %))) (vals entries))))
 
 (defn find-revision [{:keys [history]} year]
   (let [latest-by-year (latest-by-year history)
@@ -117,7 +127,7 @@
    (let [history-with-edits (merge (:history site) (:edits site))
          prev-rev (resolve-prev-rev history-with-edits timestamp)]
      (-> prev-rev
-         (assoc :timestamp timestamp)
+         (assoc :event-date timestamp)
          (dissoc :energy-consumption)
          (dissoc :visitors)))))
 
@@ -126,8 +136,8 @@
     (get edits latest)))
 
 (defn different? [rev1 rev2]
-  (let [rev1 (dissoc rev1 :timestamp :energy-consumption :visitors)
-        rev2 (dissoc rev2 :timestamp :energy-consumption :visitors)]
+  (let [rev1 (dissoc rev1 :event-date :energy-consumption :visitors)
+        rev2 (dissoc rev2 :event-date :energy-consumption :visitors)]
     (not= rev1 rev2)))
 
 (defn remove-ids [m]
@@ -140,25 +150,33 @@
         original?   (not (different? rev original))
         latest-edit (latest-edit (-> site :edits))
         dirty?      (different? rev (or latest-edit original))
-        timestamp   (:timestamp rev)]
+        timestamp   (:event-date rev)]
     (cond
       original? (assoc-in db [:sports-sites lipas-id :edits] nil)
       dirty?    (assoc-in db [:sports-sites lipas-id :edits timestamp] rev)
       :else     db)))
 
+(defn latest? [rev history]
+  (let [event-date  (:event-date rev)
+        event-dates (conj (keys history) event-date)]
+    (= event-date (first (sort reverse-cmp event-dates)))))
+
 (defn commit-edits [db rev]
-  (let [lipas-id (:lipas-id rev)]
-    (-> db
-        (assoc-in [:sports-sites lipas-id :edits] nil)
-        (assoc-in [:sports-sites lipas-id :latest] (:timestamp rev))
-        (assoc-in [:sports-sites lipas-id :history (:timestamp rev)] rev))))
+  (let [lipas-id (:lipas-id rev)
+        history (get-in db [:sports-sites lipas-id :history])]
+    (as-> db $
+        (assoc-in $ [:sports-sites lipas-id :edits] nil)
+        (assoc-in $ [:sports-sites lipas-id :history (:event-date rev)] rev)
+        (if (latest? rev history)
+          (assoc-in $ [:sports-sites lipas-id :latest] (:event-date rev))
+          $))))
 
 (defn discard-edits [db lipas-id]
   (assoc-in db [:sports-sites lipas-id :edits] nil))
 
 (defn commit-energy-consumption [db rev]
   (let [lipas-id (:lipas-id rev)
-        ts       (:timestamp rev)]
+        ts       (:event-date rev)]
     ;; TODO Need to update latest maybe?
     (assoc-in db [:sports-sites lipas-id :history ts] rev)))
 
@@ -179,3 +197,9 @@
        (map? x) (not-empty (into {} (filter (comp some? val)) x))
        :else x))
    m))
+
+(comment (->basic-auth {:username "kissa" :password "koira"}))
+(defn ->basic-auth
+  "Creates base64 encoded Authorization header value"
+  [{:keys [username password]}]
+  (str "Basic " (b64/encodeString (str username ":" password))))

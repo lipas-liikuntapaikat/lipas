@@ -9,6 +9,7 @@ SELECT nextval('lipas_id_seq');
 -- :result :raw
 -- :doc Inserts a sports-site revision into sports_site table
 INSERT INTO public.sports_site (
+  event_date,
   lipas_id,
   status,
   document,
@@ -17,6 +18,7 @@ INSERT INTO public.sports_site (
   city_code
 )
 VALUES (
+  :event_date ::timestamptz,
   :lipas_id,
   :status,
   :document,
