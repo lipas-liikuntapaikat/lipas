@@ -1,7 +1,8 @@
 (ns lipas.backend.db.db
   (:require [clojure.java.jdbc :as jdbc]
             [lipas.backend.db.sports-site :as sports-site]
-            [lipas.backend.db.user :as user]))
+            [lipas.backend.db.user :as user]
+            [lipas.backend.db.utils :as utils]))
 
 (defprotocol Database
   (get-users [db])
@@ -10,7 +11,9 @@
   (get-user-by-username [db username])
   (get-user-by-refresh-token [db refresh-token])
   (add-user! [db user])
-  (upsert-sports-site! [db sports-site user]))
+  (upsert-sports-site! [db sports-site user])
+  (get-sports-site-history [db lipas-id])
+  (get-sports-sites-by-type-code [db type-code]))
 
 (defrecord SqlDatabase [db-spec]
   Database
@@ -47,4 +50,16 @@
             sports-site (assoc sports-site :lipas-id lipas-id)]
         (->> (sports-site/marshall sports-site user)
              (sports-site/insert-sports-site-rev! tx)
-             (sports-site/unmarshall))))))
+             (sports-site/unmarshall)))))
+
+  (get-sports-site-history [_ lipas-id]
+    (let [params (-> {:lipas-id lipas-id}
+                     (utils/->snake-case-keywords))]
+      (->> (sports-site/get-history db-spec params)
+           (map sports-site/unmarshall))))
+
+  (get-sports-sites-by-type-code [_ type-code]
+    (let [params (-> {:type-code type-code}
+                     (utils/->snake-case-keywords))]
+      (->> (sports-site/get-latest-by-type-code db-spec params)
+           (map sports-site/unmarshall)))))

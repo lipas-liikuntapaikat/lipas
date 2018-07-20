@@ -22,7 +22,23 @@ VALUES (
   :lipas_id,
   :status,
   :document,
-  :author_id,
+  :author_id ::uuid,
   :type_code,
   :city_code
 );
+
+-- :name get-latest-by-type-code
+-- :command :query
+-- :result :many
+-- :doc Returns latests revisions of all sports sites by type_code
+SELECT *
+FROM sports_site_current
+WHERE type_code = :type_code
+
+-- :name get-history
+-- :command :query
+-- :result :many
+-- :doc Returns history for a single sports-site (lipas_id)
+SELECT *
+FROM sports_site
+WHERE lipas_id = :lipas_id

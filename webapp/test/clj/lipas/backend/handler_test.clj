@@ -33,6 +33,7 @@
 (def app (:app system))
 
 (comment (gen/generate (s/gen :lipas/email)))
+
 (defn gen-user
   ([]
    (gen-user {:db? false}))
@@ -100,5 +101,34 @@
                        (mock/body (->json site))
                        (token-header token)))]
     (is (= 403 (:status resp)))))
+
+(deftest get-sports-sites-by-type-code-test
+  (let [user (gen-user {:db? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc-in [:type :type-code] 3110)
+                 (assoc :status "draft"))
+        _    (core/upsert-sports-site! db user site)
+        resp (app (-> (mock/request :get "/api/sports-sites/type/3110")
+                      (mock/content-type "application/json")))
+        body (<-json (:body resp))]
+    (is (= 200 (:status resp)))
+    (is (s/valid? :lipas/sports-sites body))))
+
+(deftest get-sports-site-history-test
+  (let [user     (gen-user {:db? true})
+        rev1     (-> (gen/generate (s/gen :lipas/sports-site))
+                     (assoc :status "draft"))
+        rev2     (-> rev1
+                     (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
+                     (assoc :name "Kissalan kuulahalli"))
+        _        (core/upsert-sports-site! db user rev1)
+        _        (core/upsert-sports-site! db user rev2)
+        lipas-id (:lipas-id rev1)
+        resp     (app (-> (mock/request :get (str "/api/sports-sites/"
+                                                  lipas-id "/history"))
+                          (mock/content-type "application/json")))
+        body     (<-json (:body resp))]
+    (is (= 200 (:status resp)))
+    (is (s/valid? :lipas/sports-sites body))))
 
 (comment (gen/generate (s/gen :lipas/sports-site)))

@@ -9,7 +9,7 @@
     :status     (-> sports-site :status)
     :type-code  (-> sports-site :type :type-code)
     :city-code  (-> sports-site :location :city :city-code)
-    :author-id  (-> user :id utils/->uuid)}
+    :author-id  (-> user :id)}
    utils/->snake-case-keywords
    (assoc :document sports-site)))
 
