@@ -1,8 +1,8 @@
 (ns lipas.backend.handler
   (:require [compojure.api.sweet :refer [api context GET POST OPTIONS]]
-            [lipas.backend.middleware :as mw]
-            [lipas.backend.core :as core]
             [lipas.backend.auth :as auth]
+            [lipas.backend.core :as core]
+            [lipas.backend.middleware :as mw]
             [ring.util.http-response :refer [ok created conflict forbidden]]
             [ring.util.response :refer [resource-response]]))
 
@@ -18,7 +18,8 @@
 
 (defn create-app [{:keys [db]}]
   (api
-    {:exceptions
+    {:coercion :spec
+     :exceptions
      {:handlers exception-handlers}}
 
     (OPTIONS "/api/*" []
@@ -29,11 +30,25 @@
 
     (GET "/api/health" [] (ok {:status "OK"}))
 
+    ;;; Sports-sites ;;;
+
     (POST "/api/sports-sites" req
       :middleware [mw/token-auth mw/cors mw/auth]
       (let [user        (:identity req)
             sports-site (:body-params req)]
         (created "/fixme" (core/upsert-sports-site! db user sports-site))))
+
+    (GET "/api/sports-sites/:lipas-id/history" req
+      :path-params [lipas-id :- int?]
+      :middleware [mw/cors]
+      (ok (core/get-sports-site-history db lipas-id)))
+
+    (GET "/api/sports-sites/type/:type-code" req
+      :path-params [type-code :- int?]
+      :middleware [mw/cors]
+      (ok (core/get-sports-sites-by-type-code db type-code)))
+
+    ;;; User ;;;
 
     (POST "/api/actions/register" req
       :middleware [mw/cors]

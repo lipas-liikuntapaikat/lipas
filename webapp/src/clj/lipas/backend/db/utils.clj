@@ -16,9 +16,6 @@
 (defn ->snake-case-keywords [user]
   (transform-keys ->snake_case user))
 
-(defn ->uuid [s]
-  (java.util.UUID/fromString s))
-
 ;;; Automatically transform clojure maps -> jsonb ;;;
 
 (defn ->pgobject [m]

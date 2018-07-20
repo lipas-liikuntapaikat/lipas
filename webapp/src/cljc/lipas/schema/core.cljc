@@ -34,6 +34,12 @@
                      :cljs gstring/format)]
     (format-fn (str "%0" len "d") s)))
 
+(defn number-in
+  "Returns a spec that validates numbers in the range from
+  min (inclusive) to max (exclusive)."
+  [& {:keys [min max]}]
+  (s/and number? #(<= min % (dec max))))
+
 ;;; Regexes ;;;
 
 (def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
@@ -111,6 +117,7 @@
 
 ;;; User ;;;
 
+(s/def :lipas.user/id uuid?)
 (s/def :lipas.user/firstname (str-in 1 128))
 (s/def :lipas.user/lastname (str-in 1 128))
 (s/def :lipas.user/username (str-in 1 128))
@@ -149,11 +156,14 @@
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
-(s/def :lipas/user (s/keys :req-un [:lipas.user/email
-                                    :lipas.user/username
-                                    :lipas.user/password
-                                    :lipas.user/user-data]
-                           :opt-un [:lipas.user/permissions]))
+(s/def :lipas/new-user (s/keys :req-un [:lipas.user/email
+                                        :lipas.user/username
+                                        :lipas.user/password
+                                        :lipas.user/user-data]
+                               :opt-un [:lipas.user/permissions]))
+
+(s/def :lipas/user (s/merge :lipas/new-user
+                            (s/keys :req-un [:lipas.user/id])))
 
 ;;; Location ;;;
 
@@ -254,6 +264,8 @@
                    :lipas.sports-site/construction-year
                    ;; :lipas.sports-site/properties
                    ]))
+
+(s/def :lipas/sports-sites (s/coll-of :lipas/sports-site :distinct true :into []))
 
 ;;; Building ;;;
 
@@ -533,10 +545,10 @@
 (s/def :lipas.swimming-pool.pool/temperature-c (s/int-in 0 50))
 (s/def :lipas.swimming-pool.pool/volume-m3 (s/int-in 0 5000))
 (s/def :lipas.swimming-pool.pool/area-m2 (s/int-in 0 2000))
-(s/def :lipas.swimming-pool.pool/length-m (s/double-in :min 0 :max 100))
-(s/def :lipas.swimming-pool.pool/width-m (s/double-in :min 0 :max 100))
-(s/def :lipas.swimming-pool.pool/depth-min-m (s/double-in :min 0 :max 10))
-(s/def :lipas.swimming-pool.pool/depth-max-m (s/double-in :min 0 :max 10))
+(s/def :lipas.swimming-pool.pool/length-m (number-in :min 0 :max 100))
+(s/def :lipas.swimming-pool.pool/width-m (number-in :min 0 :max 100))
+(s/def :lipas.swimming-pool.pool/depth-min-m (number-in :min 0 :max 10))
+(s/def :lipas.swimming-pool.pool/depth-max-m (number-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
 
 (s/def :lipas.swimming-pool/pool
@@ -649,3 +661,8 @@
                     :lipas.swimming-pool/slides
                     :lipas.swimming-pool/visitors
                     :lipas/energy-consumption])))
+
+(s/def :lipas.sports-site/swimming-pools
+  (s/coll-of :lipas.sports-site/swimming-pool
+             :distinct true
+             :into []))
