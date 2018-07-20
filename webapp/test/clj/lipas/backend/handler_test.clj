@@ -90,10 +90,11 @@
 
 (deftest upsert-sports-site-no-permissions-test
   (let [user  (gen-user)
-        token (auth/create-token user)
         _     (as-> user $
                 (dissoc $ :permissions)
                 (core/add-user! db $))
+        user  (core/get-user db (:email user))
+        token (auth/create-token user)
         site  (-> (gen/generate (s/gen :lipas/sports-site))
                   (assoc :status "active"))
         resp  (app (-> (mock/request :post "/api/sports-sites")
