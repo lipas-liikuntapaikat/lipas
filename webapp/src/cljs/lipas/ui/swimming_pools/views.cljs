@@ -618,5 +618,8 @@
         2 (compare-tab)
         3 (energy-info-tab tr))]]))
 
-(defn main [tr logged-in?]
-  (create-panel tr logged-in?))
+(defn main []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [:lipas.ui.subs/logged-in?])]
+    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 3110])
+    [create-panel tr logged-in?]))

@@ -1,6 +1,7 @@
 (ns lipas.ui.events
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.db :as db]))
+  (:require [lipas.ui.db :as db]
+            [lipas.ui.routes :as routes]
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
  ::initialize-db
@@ -9,7 +10,8 @@
    (if login-data
      {:db (-> db/default-db
               (assoc-in [:user :login] login-data)
-              (assoc :logged-in? true))}
+              (assoc :logged-in? true))
+      :dispatch [:lipas.ui.login.events/refresh-login]}
      {:db db/default-db})))
 
 (re-frame/reg-event-db
@@ -37,13 +39,13 @@
  (fn [db [_ translator]]
    (assoc db :translator translator)))
 
-(re-frame/reg-event-fx
- ::logout
- [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
- (fn [_  _]
-   {:db db/default-db}))
-
 (re-frame/reg-event-db
  ::set-active-notification
  (fn [db [_ notification]]
    (assoc db :active-notification notification)))
+
+(re-frame/reg-event-fx
+ ::navigate
+ (fn [_ [_ path]]
+   (routes/navigate! path)
+   {}))
