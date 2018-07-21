@@ -354,7 +354,8 @@
 
    :notifications
    {:save-success "Tallennus onnistui"
-    :save-failed  "Tallennus epäonnistui"}
+    :save-failed  "Tallennus epäonnistui"
+    :get-failed "Tietojen hakeminen epäonnistui."}
 
    :disclaimer
    {:headline     "HUOMIO!"
@@ -418,7 +419,7 @@
          {:headline "Login"}})
 
 (def dicts {:fi fi
-            :sv se
+            :se se
             :en en
             :tongue/fallback :fi})
 

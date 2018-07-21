@@ -203,3 +203,9 @@
   "Creates base64 encoded Authorization header value"
   [{:keys [username password]}]
   (str "Basic " (b64/encodeString (str username ":" password))))
+
+(defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
+  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
+    (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
+      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
+      new-db)))

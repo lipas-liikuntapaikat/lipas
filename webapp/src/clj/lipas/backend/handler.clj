@@ -61,4 +61,6 @@
 
     (GET "/api/actions/refresh-login" req
       :middleware [mw/token-auth mw/cors mw/auth]
-      (ok {:token (auth/create-token (:identity req))}))))
+      (ok (merge
+           (:identity req)
+           {:token (auth/create-token (:identity req))})))))

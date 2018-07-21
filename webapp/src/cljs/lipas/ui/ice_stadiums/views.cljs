@@ -616,7 +616,7 @@
         {:tr   tr
          :year year}])]))
 
-(defn create-panel [{:keys [tr logged-in?]}]
+(defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
         card-props {:square true}]
     [mui/grid {:container true}
@@ -654,5 +654,9 @@
         2 (compare-tab)
         3 (energy-info-tab tr))]]))
 
-(defn main [tr logged-in?]
-  (create-panel {:tr tr :logged-in? logged-in?}))
+(defn main []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [:lipas.ui.subs/logged-in?])]
+    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 2510])
+    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 2520])
+    [create-panel tr logged-in?]))

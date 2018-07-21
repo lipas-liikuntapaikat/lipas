@@ -108,7 +108,9 @@
  (fn [db [_ dialog]]
    (assoc-in db [:swimming-pools :dialogs dialog] {})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::display-site
- (fn [db [_ {:keys [lipas-id]}]]
-   (assoc-in db [:swimming-pools :display-site] lipas-id)))
+ (fn [{:keys [db]} [_ {:keys [lipas-id]}]]
+   {:db         (assoc-in db [:swimming-pools :display-site] lipas-id)
+    :dispatch-n [(when lipas-id
+                   [:lipas.ui.sports-sites.events/get-history lipas-id])]}))

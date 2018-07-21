@@ -32,9 +32,7 @@
 (re-frame/reg-event-fx
  ::commit-edits
  (fn [{:keys [db]} [_ lipas-id]]
-   (prn lipas-id)
    (let [rev   (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
-         _ (prn rev)
          data  (assoc rev :status "active")
          token (-> db :user :login :token)]
      (commit-ajax db token data))))
@@ -64,3 +62,39 @@
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/save-failed)
                   :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::get-success
+ (fn [{:keys [db]} [_ sites]]
+   {:db (reduce utils/add-to-db db sites)}))
+
+(re-frame/reg-event-fx
+ ::get-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:sports-sites :errors (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::get-by-type-code
+ (fn [{:keys [db]} [_ type-code]]
+   ;; (prn "Get by type-code!")
+   {:http-xhrio
+    {:method          :get
+     :uri             (str (:backend-url db) "/sports-sites/type/" type-code)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::get-success]
+     :on-failure      [::get-failure]}}))
+
+(re-frame/reg-event-fx
+ ::get-history
+ (fn [{:keys [db]} [_ lipas-id]]
+   ;; (prn "Get history!")
+   {:http-xhrio
+    {:method          :get
+     :uri             (str (:backend-url db) "/sports-sites/" lipas-id "/history")
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::get-success]
+     :on-failure      [::get-failure]}}))

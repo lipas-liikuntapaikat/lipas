@@ -1,7 +1,6 @@
 (ns lipas.ui.login.events
   (:require [ajax.core :as ajax]
-            [camel-snake-kebab.core :refer [->kebab-case]]
-            [camel-snake-kebab.extras :refer [transform-keys]]
+            [lipas.ui.db :as db]
             [lipas.ui.local-storage :refer [ls-set ls-get]]
             [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
@@ -12,29 +11,24 @@
    (let [path (into [:user :login-form] path)]
      (assoc-in db path value))))
 
-(def body->kebab-case
-  (re-frame/->interceptor
-   :id :kebab-case-interceptor
-   :before (fn [context]
-               (let [transform-fn (partial transform-keys ->kebab-case)]
-                 (update-in context [:coeffects :event] transform-fn)))))
-
 (re-frame/reg-event-fx
  ::login-success
  [(re-frame/after (fn [db _]
-                    (ls-set :login-data (-> db :user :login))))
-  body->kebab-case]
+                    (ls-set :login-data (-> db :user :login))))]
  (fn [{:keys [db]} [_ body]]
-   (let [body body]
+   (let [body               body
+         refresh-interval-s 900] ; 15 minutes
      {:db (-> db
               (assoc-in [:logged-in?] true)
-              (assoc-in [:user :login] body))})))
+              (assoc-in [:user :login] body))
+      :dispatch-later
+      [{:ms       (* 1000 refresh-interval-s)
+        :dispatch [::refresh-login]}]})))
 
 (re-frame/reg-event-db
  ::login-failure
  (fn [db [_ result]]
    (assoc-in db [:user :login-error] result)))
-
 
 (re-frame/reg-event-db
  ::clear-errors
@@ -51,5 +45,29 @@
                  :response-format (ajax/json-response-format {:keywords? true})
                  :on-success      [::login-success]
                  :on-failure      [::login-failure]}
-
     :dispatch    [::clear-errors]}))
+
+(re-frame/reg-event-fx
+ ::refresh-login
+ [(re-frame/inject-cofx :get-local-storage-value :login-data)]
+ (fn [{login-data :local-storage-value
+       db         :db} _]
+   (if (or (empty? login-data) (not (:logged-in? db)))
+     {}
+     (let [token (-> login-data :token)]
+       {:http-xhrio {:method          :get
+                     :uri             (str (:backend-url db) "/actions/refresh-login")
+                     :headers         {:Authorization (str "Token " token)}
+                     :format          (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success      [::login-success]
+                     :on-failure      [::logout]}}))))
+
+(re-frame/reg-event-fx
+ ::logout
+ [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
+ (fn [{:keys [db]}  _]
+   {:db       (->  db/default-db
+                   (assoc :active-panel :login-panel)      ; Avoid flickering
+                   (assoc :backend-url (:backend-url db))) ; Dev-time helper
+    :dispatch [:lipas.ui.events/navigate "#/kirjaudu"]}))

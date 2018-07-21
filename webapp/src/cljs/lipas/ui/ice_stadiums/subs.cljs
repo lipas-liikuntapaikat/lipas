@@ -31,7 +31,7 @@
  :<- [::editing-rev]
  (fn [rev _]
    (let [rev (ice-utils/make-saveable rev)]
-     (s/explain :lipas.sports-site/ice-stadium rev)
+     ;; (s/explain :lipas.sports-site/ice-stadium rev)
      (s/valid? :lipas.sports-site/ice-stadium rev))))
 
 (re-frame/reg-sub

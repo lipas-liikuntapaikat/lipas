@@ -107,7 +107,9 @@
    (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
      (update-in db [:sports-sites lipas-id :editing :rinks] dissoc id))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::display-site
- (fn [db [_ {:keys [lipas-id]}]]
-   (assoc-in db [:ice-stadiums :display-site] lipas-id)))
+ (fn [{:keys [db]} [_ {:keys [lipas-id]}]]
+   {:db       (assoc-in db [:ice-stadiums :display-site] lipas-id)
+    :dispatch-n [(when lipas-id
+                   [:lipas.ui.sports-sites.events/get-history lipas-id])]}))

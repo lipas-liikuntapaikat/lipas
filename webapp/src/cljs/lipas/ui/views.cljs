@@ -19,14 +19,14 @@
   (case panel-name
     :home-panel      [front-page/main tr]
     :sports-panel    [sports-sites/main tr]
-    :ice-panel       [ice-stadiums/main tr logged-in?]
-    :swim-panel      [swimming-pools/main tr logged-in?]
+    :ice-panel       [ice-stadiums/main]
+    :swim-panel      [swimming-pools/main]
     :open-data-panel [open-data/main tr]
     :help-panel      [help/main tr]
     :login-panel     [login/main tr]
     :register-panel  [register/main tr]
     :user-panel      [user/main tr]
-    [:div "Unknown page :/"]))
+    [front-page/main tr]))
 
 (defn show-panel [panel-name tr logged-in?]
   [panels panel-name tr logged-in?])
@@ -46,4 +46,4 @@
       (when notification
         [lui/notification
          {:notification notification
-          :on-close #(==> [::events/set-active-notification nil])}])]]))
+          :on-close     #(==> [::events/set-active-notification nil])}])]]))

@@ -8,7 +8,7 @@
             [lipas.ui.utils :refer [<== ==>]]))
 
 (defn logout! []
-  (==> [::events/logout])
+  (==> [:lipas.ui.login.events/logout])
   (navigate! "/#/kirjaudu"))
 
 (defn avatar []

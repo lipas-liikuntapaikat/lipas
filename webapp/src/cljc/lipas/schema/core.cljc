@@ -205,7 +205,7 @@
 
 ;;; Sports site ;;;
 
-(s/def :lipas.sports-site/lipas-id (s/and int? pos?))
+(s/def :lipas.sports-site/lipas-id (s/int-in 0 2147483647)) ; PSQL integer max
 (s/def :lipas.sports-site/status (into #{} (keys sports-sites/statuses)))
 (s/def :lipas.sports-site/name (str-in 2 100))
 (s/def :lipas.sports-site/marketing-name (str-in 2 100))
@@ -305,9 +305,6 @@
              :max-count 10
              :distinct true
              :into []))
-
-(comment (s/valid? :lipas.building/main-construction-materials [:concrete :brick]))
-(comment (s/valid? :lipas.building/ventilation-units-count 100))
 
 ;;; Ice stadiums ;;;
 

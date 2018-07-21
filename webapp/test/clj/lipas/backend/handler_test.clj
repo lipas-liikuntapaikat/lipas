@@ -1,10 +1,12 @@
 (ns lipas.backend.handler-test
-  (:require [cheshire.core :as j]
+  (:require [buddy.sign.jwt :as jwt]
+            [cheshire.core :as j]
+            [environ.core :refer [env]]
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
-            [lipas.backend.core :as core]
             [lipas.backend.auth :as auth]
+            [lipas.backend.core :as core]
             [lipas.backend.system :refer [start-system!]]
             [lipas.schema.core]
             [ring.mock.request :as mock])
@@ -75,6 +77,24 @@
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (= (:email user) (:email body)))))
+
+(deftest refresh-login-test
+  (let [user   (gen-user {:db true})
+        token1 (auth/create-token user)
+        _      (Thread/sleep 1000) ; to see effect between timestamps
+        resp   (app (-> (mock/request :get "/api/actions/refresh-login")
+                        (mock/content-type "application/json")
+                        (token-header token1)))
+        body   (<-json (:body resp))
+        token2 (:token body)
+
+        unsign  #(jwt/unsign % (:auth-key env) {:alg :hs512})
+
+        exp-old (:exp (unsign token1))
+        exp-new (:exp (unsign token2))]
+
+    (is (= 200 (:status resp)))
+    (is (> exp-new exp-old))))
 
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})
