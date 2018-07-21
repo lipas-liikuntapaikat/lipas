@@ -4,6 +4,7 @@
 
 # Backend
 export AUTH_KEY=***FILL_THIS***
+export ADMIN_PASSWORD=***FILL_THIS***
 
 # Postgres
 export DB_NAME=lipas
