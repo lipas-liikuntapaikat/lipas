@@ -45,10 +45,11 @@
 (defn draft? [sports-site]
   (= (-> sports-site :status) "draft"))
 
-(defn user-can-publish? [{:keys [cities types sports-sites]} sports-site]
+(defn user-can-publish? [{:keys [cities types sports-sites admin?]} sports-site]
   (or (some #{(-> sports-site :lipas-id)} sports-sites)
       (some #{(-> sports-site :location :city :city-code)} cities)
-      (some #{(-> sports-site :type :type-code)} types)))
+      (some #{(-> sports-site :type :type-code)} types)
+      admin?))
 
 (defn upsert-sports-site! [db user sports-site]
   (if (or (draft? sports-site)
