@@ -149,8 +149,13 @@
              :distinct true
              :into []))
 
+(s/def :lipas.user.permissions/admin? boolean?)
+(s/def :lipas.user.permissions/draft? boolean?)
+
 (s/def :lipas.user/permissions
-  (s/keys :opt-un [:lipas.user.permissions/sports-sites
+  (s/keys :opt-un [:lipas.user.permissions/admin?
+                   :lipas.user.permissions/draft?
+                   :lipas.user.permissions/sports-sites
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types]))
 
