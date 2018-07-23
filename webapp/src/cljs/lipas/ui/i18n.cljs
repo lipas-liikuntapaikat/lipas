@@ -136,22 +136,31 @@
     :description "Lipaksen käyttöohjeet, videot yms."}
 
    :user
-   {:headline              "Oma sivu"
-    :greeting              "Hei {1} {2}!"
+   {:headline "Oma sivu"
+    :greeting "Hei {1} {2}!"}
+
+   :lipas.user
+   {:email                 "Sähköposti"
+    :email-example         "email@example.com"
+    :username              "Käyttäjätunnus"
+    :username-example      "tane12"
+    :firstname             "Etunimi"
+    :lastname              "Sukunimi"
+    :password              "Salasana"
+    :permissions           "Käyttöoikeudet"
+    :permissions-example   "Oikeus päivittää Jyväskylän jäähallien tietoja."
+    :permissions-help      "Kerro, mitä tietoja haluat päivittää Lipaksessa"
     :requested-permissions "Pyydetyt oikeudet"}
 
+   :lipas.user.permissions
+   {:admin?       "Pääkäyttäjän oikeudet"
+    :draft?       "Ehdota muutoksia"
+    :sports-sites "Oikeus liikuntapaikkoihin"
+    :types        "Oikeus liikuntapaikkatyypin liikuntapaikkoihin"
+    :cities       "Oikeus kunnan liikuntapaikkoihin"}
+
    :register
-   {:headline            "Rekisteröidy"
-    :email               "Sähköposti"
-    :email-example       "email@example.com"
-    :username            "Käyttäjätunnus"
-    :username-example    "tane12"
-    :firstname           "Etunimi"
-    :lastname            "Sukunimi"
-    :password            "Salasana"
-    :permissions         "Käyttöoikeudet"
-    :permissions-example "Oikeus päivittää Jyväskylän jäähallien tietoja."
-    :permissions-help    "Kerro, mitä tietoja haluat päivittää Lipaksessa"}
+   {:headline "Rekisteröidy"}
 
    :login
    {:headline         "Kirjaudu"
