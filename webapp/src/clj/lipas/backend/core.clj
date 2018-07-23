@@ -3,7 +3,7 @@
 
 ;;; User ;;;
 
-(def default-permissions {:draft true})
+(def default-permissions {:draft? true})
 
 (defn username-exists? [db user]
   (some? (.get-user-by-username db user)))
