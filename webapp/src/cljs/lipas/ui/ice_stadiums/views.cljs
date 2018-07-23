@@ -359,7 +359,7 @@
              :items     heat-pump-types
              :label-fn  (comp locale second)
              :value-fn  first
-             :on-change #(set-field :heat-pump-type %)}]}]])
+             :on-change #(on-change :heat-pump-type %)}]}]])
 
         ;;; Conditions
       (let [on-change    (partial set-field :conditions)

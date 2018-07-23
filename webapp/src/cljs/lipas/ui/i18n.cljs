@@ -223,13 +223,12 @@
     :ice-average-thickness-mm        "Jään keskipaksuus mm"}
 
    :lipas.ice-stadium.ventilation
-   {:headline                                 "Hallin ilmanvaihto"
-    :heat-recovery-type                       "Lämmöntalteenoton tyyppi"
-    :heat-recovery-thermal-efficiency-percent "Lämmöntalteenoton
-          hyötysuhde %"
-    :dryer-type                               "Ilmankuivaustapa"
-    :dryer-duty-type                          "Ilmankuivauksen käyttötapa"
-    :heat-pump-type                           "Lämpöpumpputyyppi"}
+   {:headline                 "Hallin ilmanvaihto"
+    :heat-recovery-type       "Lämmöntalteenoton tyyppi"
+    :heat-recovery-efficiency "Lämmöntalteenoton hyötysuhde %"
+    :dryer-type               "Ilmankuivaustapa"
+    :dryer-duty-type          "Ilmankuivauksen käyttötapa"
+    :heat-pump-type           "Lämpöpumpputyyppi"}
 
    :lipas.swimming-pool.water-treatment
    {:headline          "Vedenkäsittely"
@@ -356,7 +355,7 @@
    :notifications
    {:save-success "Tallennus onnistui"
     :save-failed  "Tallennus epäonnistui"
-    :get-failed "Tietojen hakeminen epäonnistui."}
+    :get-failed   "Tietojen hakeminen epäonnistui."}
 
    :disclaimer
    {:headline     "HUOMIO!"
