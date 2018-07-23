@@ -7,6 +7,11 @@
    (:logged-in? db)))
 
 (re-frame/reg-sub
+ ::admin?
+ (fn [db _]
+   (-> db :user :login :permissions :admin?)))
+
+(re-frame/reg-sub
  ::user-data
  (fn [db _]
    (-> db :user :login)))
@@ -19,5 +24,7 @@
 (re-frame/reg-sub
  ::permission-to-publish?
  :<- [::access-to-sports-sites]
- (fn [ids [_ lipas-id]]
-   (boolean (some #{lipas-id} ids))))
+ :<- [::admin?]
+ (fn [[ids admin?] [_ lipas-id]]
+   (or (boolean (some #{lipas-id} ids))
+       admin?)))
