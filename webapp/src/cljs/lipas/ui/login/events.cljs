@@ -38,13 +38,14 @@
 (re-frame/reg-event-fx
  ::submit-login-form
  (fn [{:keys [db]} [_ form-data]]
-   {:http-xhrio {:method          :post
-                 :uri             (str (:backend-url db) "/actions/login")
-                 :headers         {:Authorization (utils/->basic-auth form-data)}
-                 :format          (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success      [::login-success]
-                 :on-failure      [::login-failure]}
+   {:http-xhrio
+    {:method          :post
+     :uri             (str (:backend-url db) "/actions/login")
+     :headers         {:Authorization (utils/->basic-auth form-data)}
+     :format          (ajax/json-request-format)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::login-success]
+     :on-failure      [::login-failure]}
     :dispatch    [::clear-errors]}))
 
 (re-frame/reg-event-fx
@@ -55,13 +56,14 @@
    (if (or (empty? login-data) (not (:logged-in? db)))
      {}
      (let [token (-> login-data :token)]
-       {:http-xhrio {:method          :get
-                     :uri             (str (:backend-url db) "/actions/refresh-login")
-                     :headers         {:Authorization (str "Token " token)}
-                     :format          (ajax/json-request-format)
-                     :response-format (ajax/json-response-format {:keywords? true})
-                     :on-success      [::login-success]
-                     :on-failure      [::logout]}}))))
+       {:http-xhrio
+        {:method          :get
+         :uri             (str (:backend-url db) "/actions/refresh-login")
+         :headers         {:Authorization (str "Token " token)}
+         :format          (ajax/json-request-format)
+         :response-format (ajax/json-response-format {:keywords? true})
+         :on-success      [::login-success]
+         :on-failure      [::logout]}}))))
 
 (re-frame/reg-event-fx
  ::logout
