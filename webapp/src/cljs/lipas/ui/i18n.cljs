@@ -50,7 +50,8 @@
     :postal-code   "Postinumero"
     :postal-office "Postitoimipaikka"
     :city          "Kunta"
-    :city-code     "Kuntanumero"}
+    :city-code     "Kuntanumero"
+    :neighborhood  "Kuntaosa"}
 
    :ice
    {:headline      "Jäähalliportaali"

@@ -505,7 +505,15 @@
                     :items     cities
                     :label-fn  (comp locale :name)
                     :value-fn  :city-code
-                    :on-change #(on-change :city :city-code %)}]}]))
+                    :on-change #(on-change :city :city-code %)}]}
+
+     ;; Neighborhood
+     {:label      (tr :lipas.location/neighborhood)
+      :value      (-> display-data :city :neighborhood)
+      :form-field [text-field
+                   {:value    (-> edit-data :city :neighborhood)
+                    :spec      :lipas.location.city/neighborhood
+                    :on-change #(on-change :city :neighborhood %)}]}]))
 
 (defn expansion-panel [{:keys [label]} & children]
   [mui/expansion-panel {:style {:margin-top "1em"}}
