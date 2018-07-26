@@ -6,6 +6,10 @@
 export AUTH_KEY=***FILL_THIS***
 export ADMIN_PASSWORD=***FILL_THIS***
 
+# Data migrations
+export ICE_STADIUMS_CSV_PATH="/tmp/ice_stadiums_utf_8.csv"
+export SWIMMING_POOLS_CSV_PATH="/tmp/swimming_pools_utf_8.csv"
+
 # Postgres
 export DB_NAME=lipas
 export DB_HOST=postgres

@@ -23,6 +23,7 @@ ALTER TABLE public.account
 OWNER to lipas;
 
 CREATE TABLE public.sports_site (
+  id         uuid NOT NULL DEFAULT uuid_generate_v4(),
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   event_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   lipas_id   integer NOT NULL,
@@ -32,7 +33,7 @@ CREATE TABLE public.sports_site (
   type_code  integer NOT NULL,
   city_code  text COLLATE pg_catalog."default" NOT NULL,
 
-  CONSTRAINT "sports-site_pkey" PRIMARY KEY (created_at, lipas_id),
+  CONSTRAINT "sports-site_pkey" PRIMARY KEY (id),
   CONSTRAINT author_id_account_fk FOREIGN KEY (author_id)
   REFERENCES public.account (id) MATCH SIMPLE
   ON UPDATE NO ACTION

@@ -27,15 +27,17 @@
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
 
    :lipas.sports-site
-   {:headline       "Liikuntapaikka"
-    :id             "LIPAS-ID"
-    :name           "Virallinen nimi"
-    :marketing-name "Markkinointinimi"
-    :owner          "Omistaja"
-    :admin          "Ylläpitäjä"
-    :phone-number   "Puhelinnumero"
-    :www            "Web-sivu"
-    :email-public   "Sähköposti (julkinen)"}
+   {:headline          "Liikuntapaikka"
+    :id                "LIPAS-ID"
+    :name              "Virallinen nimi"
+    :marketing-name    "Markkinointinimi"
+    :owner             "Omistaja"
+    :admin             "Ylläpitäjä"
+    :construction-year "Rakennusvuosi"
+    :renovation-years  "Peruskorjausvuodet"
+    :phone-number      "Puhelinnumero"
+    :www               "Web-sivu"
+    :email-public      "Sähköposti (julkinen)"}
 
    :type
    {:type-code "Tyyppikoodi"
@@ -87,10 +89,12 @@
     :yearly        "Energiankulutus vuositasolla"
     :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
 
-   :lipas.swimming-pool.visitors
-   {:headline      "Kävijämäärät"
-    :headline-year "Kävijämäärä vuonna {1}"
-    :total-count   "Kokonaismäärä"}
+   :lipas.swimming-pool.conditions
+   {:headline          "Kävijämäärät"
+    :headline-year     "Kävijämäärä vuonna {1}"
+    :total-count       "Kokonaismäärä"
+    :open-days-in-year "Aukiolopäivät vuodessa"}
+
    :swim
    {:headline       "Uimahalliportaali"
     :list           "Hallien tiedot"
@@ -173,12 +177,12 @@
 
    :lipas.building
    {:headline                    "Rakennus"
-    :construction-year           "Rakennusvuosi"
     :main-designers              "Pääsuunnittelijat"
     :total-surface-area-m2       "Bruttopinta-ala m²"
     :total-volume-m3             "Bruttotilavuus m³"
     :pool-room-total-area-m2     "Allashuoneen pinta-ala m²"
     :total-water-area-m2         "Vesipinta-ala m²"
+    :total-ice-area-m2           "Jääpinta-ala m²"
     :water-slides-total-length-m "Vesiliukumäet yht. (m)"
     :heat-sections?              "Allastila on jaettu lämpötilaosioihin"
     :piled?                      "Paalutettu"
@@ -225,6 +229,7 @@
           ottelun aikana"
     :daily-maintenances-week-days    "Jäähoitokerrat arkipäivinä"
     :daily-maintenances-weekends     "Jäähoitokerrat viikonlppuina"
+    :weekly-maintenances             "Jäänhoitokerrat viikossa"
     :average-water-consumption-l     "Keskimääräinen jäänhoitoon
           käytetty veden määrä (per ajo)"
     :maintenance-water-temperature-c "Jäähoitoveden
@@ -289,11 +294,13 @@
     :depth-max-m     "Syvyys max m"}
 
    :units
-   {:times-per-day "kertaa päivässä"
-    :hours-per-day "tuntia päivässä"
-    :person        "hlö"
-    :pcs           "kpl"
-    :percent       "%"}
+   {:times-per-day  "kertaa päivässä"
+    :times-per-week "kertaa viikossa"
+    :hours-per-day  "tuntia päivässä"
+    :days-in-year   "päivää vuodessa"
+    :person         "hlö"
+    :pcs            "kpl"
+    :percent        "%"}
 
    :physical-units
    {:temperature-c "Lämpötila °C"

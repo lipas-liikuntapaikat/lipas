@@ -1,7 +1,7 @@
 (ns lipas.ui.components
   (:require [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
-            [clojure.string :refer [trim]]
+            [clojure.string :refer [trim] :as string]
             [lipas.ui.mui :as mui]
             [reagent.core :as r]))
 
@@ -102,14 +102,9 @@
 
 (defn display-value [v]
   (cond
+    (coll? v) (string/join ", " v)
     (true? v) CHECK_MARK
     :else v))
-
-(defn table-cell
-  ([value]
-   (table-cell {} value))
-  ([props value]
-   [mui/table-cell props (display-value value)]))
 
 (defn table [{:keys [headers items on-select key-fn]}]
   (let [key-fn (or key-fn (constantly nil))]
@@ -330,14 +325,16 @@
         :value (pr-str (value-fn i))}
        (label-fn i)])]])
 
-(defn year-selector [{:keys [label value on-change required years] :as props}]
-  (let [years (or years
-                  (range 1900 (inc (.getFullYear (js/Date.)))))]
-    [select (merge props {:label label
-                          :items (map #(hash-map :label % :value %) years)
-                          :on-change on-change
-                          :value value
-                          :required required})]))
+(defn year-selector [{:keys [label value on-change required years multi?]
+                      :as props}]
+  (let [years     (or years
+                      (reverse (range 1900 (inc (.getFullYear (js/Date.))))))
+        component (if multi? multi-select select)]
+    [component (merge props {:label  label
+                             :items     (map #(hash-map :label % :value %) years)
+                             :on-change on-change
+                             :value     value
+                             :required  required})]))
 
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field
@@ -353,10 +350,10 @@
    (into [mui/table-body]
          (for [row data]
            [mui/table-row
-            [table-cell
+            [mui/table-cell
              [mui/typography {:variant "caption"}
               (first row)]]
-            [table-cell (second row)]]))])
+            [mui/table-cell (-> row second display-value)]]))])
 
 (defn table-form [{:keys [read-only?]} & fields]
   [mui/table
@@ -364,12 +361,12 @@
          (for [row (remove nil? fields)
                :let [{:keys [label value form-field]} row]]
            [mui/table-row
-            [table-cell
+            [mui/table-cell
              [mui/typography {:variant "caption"}
               label]]
-            [table-cell {:numeric true}
+            [mui/table-cell {:numeric true}
              (if read-only?
-               value
+               (display-value value)
                [mui/form-group
                 form-field])]]))])
 
@@ -440,6 +437,21 @@
                     :value-fn  first
                     :label-fn  (comp locale second)
                     :on-change #(on-change :admin %)}]}
+
+     ;; Construction year
+     {:label (tr :lipas.sports-site/construction-year)
+      :value (-> display-data :construction-year)
+      :form-field [year-selector
+                   {:value     (-> edit-data :construction-year)
+                    :on-change #(on-change :construction-year %)}]}
+
+     ;; Renovation years
+     {:label (tr :lipas.sports-site/renovation-years)
+      :value (-> display-data :renovation-years)
+      :form-field [year-selector
+                   {:multi?    true
+                    :value     (-> edit-data :renovation-years)
+                    :on-change #(on-change :renovation-years %)}]}
 
      ;; Phone number
      {:label      (tr :lipas.sports-site/phone-number)

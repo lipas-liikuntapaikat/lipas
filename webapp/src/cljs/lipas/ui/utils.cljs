@@ -1,6 +1,7 @@
 (ns lipas.ui.utils
   (:require [clojure.reader :refer [read-string]]
             [clojure.walk :as walk]
+            [clojure.string :as string]
             [goog.crypt.base64 :as b64]
             [re-frame.core :as re-frame]))
 
@@ -209,3 +210,6 @@
     (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
       (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
       new-db)))
+
+(defn join-pretty [coll]
+  (string/join ", " coll))

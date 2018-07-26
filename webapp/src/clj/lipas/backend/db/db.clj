@@ -12,6 +12,7 @@
   (get-user-by-refresh-token [db refresh-token])
   (add-user! [db user])
   (upsert-sports-site! [db sports-site user])
+  (upsert-sports-sites! [db sports-sites user])
   (get-sports-site-history [db lipas-id])
   (get-sports-sites-by-type-code [db type-code]))
 
@@ -51,6 +52,15 @@
         (->> (sports-site/marshall sports-site user)
              (sports-site/insert-sports-site-rev! tx)
              (sports-site/unmarshall)))))
+
+  (upsert-sports-sites! [_ user sports-sites]
+    (jdbc/with-db-transaction [tx db-spec]
+      (doseq [sports-site sports-sites]
+        (let [lipas-id    (or (:lipas-id sports-site)
+                              (:nextval (sports-site/next-lipas-id tx)))
+              sports-site (assoc sports-site :lipas-id lipas-id)]
+          (->> (sports-site/marshall sports-site user)
+               (sports-site/insert-sports-site-rev! tx))))))
 
   (get-sports-site-history [_ lipas-id]
     (let [params (-> {:lipas-id lipas-id}

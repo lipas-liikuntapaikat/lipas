@@ -31,7 +31,7 @@
  :<- [::editing-rev]
  (fn [rev _]
    (let [rev (ice-utils/make-saveable rev)]
-     ;; (s/explain :lipas.sports-site/ice-stadium rev)
+      (s/explain :lipas.sports-site/ice-stadium rev)
      (s/valid? :lipas.sports-site/ice-stadium rev))))
 
 (re-frame/reg-sub
@@ -188,7 +188,7 @@
                :admins admins
                :owners owners
                :types types}]
-     (map (partial ->list-entry data) (vals sites)))))
+     (sort-by :city (map (partial ->list-entry data) (vals sites))))))
 
 (re-frame/reg-sub
  ::display-site-raw
@@ -260,6 +260,9 @@
         :phone-number   (-> latest :phone-number)
         :www            (-> latest :www)
         :email          (-> latest :email)
+
+        :construction-year (-> latest :construction-year)
+        :renovation-years  (-> latest :renovation-years)
 
         :location
         {:address       (-> latest :location :address)

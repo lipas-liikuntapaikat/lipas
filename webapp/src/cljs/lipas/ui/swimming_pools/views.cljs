@@ -99,15 +99,6 @@
             on-change    (partial set-field :building)]
         [lui/form-card {:title (tr :lipas.building/headline)}
          [lui/form {:read-only? (not editing?)}
-
-          ;; Construction year
-          {:label (tr :lipas.building/construction-year)
-           :value (-> display-data :construction-year)
-           :form-field
-           [lui/year-selector
-            {:value     (-> edit-data :construction-year)
-             :on-change #(on-change :construction-year %)}]}
-
           ;; Main designers
           {:label (tr :lipas.building/main-designers)
            :value (-> display-data :main-designers)
@@ -480,9 +471,9 @@
       [mui/paper
        [lui/table
         {:headers   [[:name (tr :lipas.sports-site/name)]
+                     [:city (tr :lipas.location/city)]
                      [:address (tr :lipas.location/address)]
                      [:postal-code (tr :lipas.location/postal-code)]
-                     [:city (tr :lipas.location/city)]
                      [:admin (tr :lipas.sports-site/admin)]
                      [:owner (tr :lipas.sports-site/owner)]]
          :items     sites
@@ -524,16 +515,36 @@
                       :read-only? true
                       :items      energy-history}]]]
 
-     ;; Visitors
-     [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline-year year)}
+     ;; Conditions
+     [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline-year year)}
       [mui/form-group
+
+       ;; Visitors total count
        [lui/text-field
-        {:label     (tr :lipas.swimming-pool.visitors/total-count)
+        {:label     (tr :lipas.swimming-pool.conditions/total-visitors-count)
          :type      "number"
-         :value     (-> data :visitors :total-count)
-         :spec      :lipas.swimming-pool.visitors/total-count
+         :value     (-> data :conditions :total-visitors-count)
+         :spec      :lipas.swimming-pool.conditions/total-visitors-count
          :adornment (tr :units/person)
-         :on-change #(set-field :visitors :total-count %)}]]]
+         :on-change #(set-field :conditions :total-visitors-count %)}]
+
+       ;; Daily open hours
+       [lui/text-field
+        {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
+         :type      "number"
+         :spec      :lipas.ice-stadium.conditions/daily-open-hours
+         :adornment (tr :units/hours-per-day)
+         :value     (-> data :daily-open-hours)
+         :on-change #(set-field :conditions :daily-open-hours %)}]
+
+       ;; Open days in year
+       [lui/text-field
+        {:label     (tr :lipas.swimming-pool.conditions/open-days-in-year)
+         :type      "number"
+         :value     (-> data :conditions :open-days-in-year)
+         :spec      :lipas.swimming-pool.conditions/open-days-in-year
+         :adornment (tr :units/days-in-year)
+         :on-change #(set-field :conditions :total-visitors-count %)}]]]
 
      ;; Actions
      [lui/form-card {}
@@ -621,5 +632,6 @@
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
-    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 3110])
+    (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
+    (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
     [create-panel tr logged-in?]))

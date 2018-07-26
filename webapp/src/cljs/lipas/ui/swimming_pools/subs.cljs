@@ -14,7 +14,7 @@
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
    (as-> sites $
-     (into {} (filter (comp #{3110} :type-code :type second)) $)
+     (into {} (filter (comp #{3110 3120 3130} :type-code :type second)) $)
      (not-empty $))))
 
 (re-frame/reg-sub
@@ -108,7 +108,7 @@
  ::types-by-type-code
  :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [types _]
-   (select-keys types [3110])))
+   (select-keys types [3110 3120 3130])))
 
 (re-frame/reg-sub
  ::types-list
@@ -173,7 +173,7 @@
                :admins admins
                :owners owners
                :types  types}]
-     (map (partial ->list-entry data) (vals pools)))))
+     (sort-by :city (map (partial ->list-entry data) (vals pools))))))
 
 (re-frame/reg-sub
  ::display-site-raw
@@ -220,6 +220,9 @@
         :phone-number   (-> latest :phone-number)
         :www            (-> latest :www)
         :email          (-> latest :email)
+
+        :construction-year (-> latest :construction-year)
+        :renovation-years  (-> latest :renovation-years)
 
         :location
         {:address       (-> latest :location :address)

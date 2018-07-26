@@ -51,6 +51,9 @@
             :se "R717"}
    "CO2"   {:fi "CO2 (hiilidioksidi)"
             :en nil
+            :se nil}
+   "R22"   {:fi "R22"
+            :en nil
             :se nil}})
 
 ;; Kylmäliuos
