@@ -54,6 +54,9 @@
    "precipitation"         {:fi "Saostus"
                             :se nil
                             :en nil}
+   "sand"                  {:fi "Hiekka"
+                            :se nil
+                            :en nil}
    "activated-carbon"      {:fi "Aktiivihiili"
                             :se nil
                             :en nil}})

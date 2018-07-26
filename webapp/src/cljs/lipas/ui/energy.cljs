@@ -65,8 +65,8 @@
           (for [month [:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec]
                 :let  [month-data (get data month)]]
             [mui/table-row
-             [lui/table-cell (tr (keyword :month month))]
-             [lui/table-cell
+             [mui/table-cell (tr (keyword :month month))]
+             [mui/table-cell
 
               ;; Electricity Mwh
               [lui/text-field {:type      "number"
@@ -75,7 +75,7 @@
                                :on-change #(on-change month :electricity-mwh %)}]]
 
              ;; Heat Mwh
-             [lui/table-cell
+             [mui/table-cell
               [lui/text-field {:type      "number"
                                :spec      :lipas.energy-consumption/heat-mwh
                                :value     (:heat-mwh month-data)
@@ -83,14 +83,14 @@
 
              ;; Cold Mwh
              (when cold?
-               [lui/table-cell
+               [mui/table-cell
                 [lui/text-field {:type      "number"
                                  :spec      :lipas.energy-consumption/cold-mwh
                                  :value     (:cold-mwh month-data)
                                  :on-change #(on-change month :cold-mwh %)}]])
 
              ;; Water m³
-             [lui/table-cell
+             [mui/table-cell
               [lui/text-field {:type      "number"
                                :spec      :lipas.energy-consumption/water-m3
                                :value     (:water-m3 month-data)

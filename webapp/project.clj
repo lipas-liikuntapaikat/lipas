@@ -31,7 +31,8 @@
                  [migratus "1.0.6"]
                  [environ "1.1.0"]
                  [com.fzakaria/slf4j-timbre "0.3.7"]
-                 [ring "1.4.0"]]
+                 [ring "1.4.0"]
+                 [org.clojure/data.csv "0.1.4"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.5"]

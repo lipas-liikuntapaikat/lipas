@@ -57,6 +57,16 @@ services:
     links:
       - postgres
 
+  backend-migrate-data:
+    extends:
+      service: backend-base
+    environment:
+      ICE_STADIUMS_CSV_URL:
+      SWIMMING_POOLS_CSV_URL:
+    command: lein run -m lipas.migrate-data
+    links:
+      - postgres
+
   backend-tests:
     extends:
       service: backend-base
