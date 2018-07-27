@@ -3,11 +3,13 @@
             [lipas.ui.energy :as energy]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as site-events]
+            [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.saunas :as saunas]
             [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
@@ -20,31 +22,33 @@
 
 (defn set-field
   [lipas-id & args]
-  (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
+  (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn site-view [{:keys [tr logged-in?]}]
-  (let [locale                (tr)
-        display-data          (<== [::subs/display-site locale])
-        edit-data             (<== [::subs/editing-rev])
+  (let [locale       (tr)
+        display-data (<== [::subs/display-site locale])
+
+        lipas-id     (:lipas-id display-data)
+
+        edit-data    (<== [::site-subs/editing-rev lipas-id])
+        editing?     (<== [::site-subs/editing? lipas-id])
+        edits-valid? (<== [::site-subs/edits-valid? lipas-id])
+
         types                 (<== [::subs/types-list])
         dialogs               (<== [::subs/dialogs])
-        cities                (<== [:lipas.ui.sports-sites.subs/cities-list])
-        owners                (<== [:lipas.ui.sports-sites.subs/owners])
-        admins                (<== [:lipas.ui.sports-sites.subs/admins])
+        cities                (<== [::site-subs/cities-list])
+        owners                (<== [::site-subs/owners])
+        admins                (<== [::site-subs/admins])
         heat-sources          (<== [::subs/heat-sources])
         filtering-methods     (<== [::subs/filtering-methods])
-        building-materials    (<== [:lipas.ui.sports-sites.subs/building-materials])
-        supporting-structures (<== [:lipas.ui.sports-sites.subs/supporting-structures])
-        ceiling-structures    (<== [:lipas.ui.sports-sites.subs/ceiling-structures])
+        building-materials    (<== [::site-subs/building-materials])
+        supporting-structures (<== [::site-subs/supporting-structures])
+        ceiling-structures    (<== [::site-subs/ceiling-structures])
 
-        lipas-id              (:lipas-id display-data)
-        user-can-publish?     (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
-        uncommitted-edits?    (<== [:lipas.ui.sports-sites.subs/uncommitted-edits? lipas-id])
+        user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
+        uncommitted-edits? (<== [::site-subs/uncommitted-edits? lipas-id])
 
-        set-field             (partial set-field lipas-id)
-
-        editing?              (<== [::subs/editing?])
-        edits-valid?          (<== [::subs/edits-valid?])]
+        set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
      {:open? ((complement empty?) display-data)
@@ -63,8 +67,8 @@
                  :user-can-publish?  user-can-publish?
                  :on-discard         #(==> [::site-events/discard-edits lipas-id])
                  :discard-tooltip    (tr :actions/discard)
-                 :on-edit-start      #(==> [::events/edit-site display-data])
-                 :on-edit-end        #(==> [::events/save-edits])
+                 :on-edit-start      #(==> [::site-events/edit-site lipas-id])
+                 :on-edit-end        #(==> [::site-events/save-edits lipas-id])
                  :edit-tooltip       (tr :actions/edit)
                  :on-save-draft      #(==> [::site-events/commit-draft lipas-id])
                  :save-draft-tooltip (tr :actions/save-draft)

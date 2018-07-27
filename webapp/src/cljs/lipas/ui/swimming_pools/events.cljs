@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.events
   (:require [lipas.ui.utils :as utils]
-            [lipas.ui.swimming-pools.utils :as swim-utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -20,7 +19,7 @@
          site     (get-in db [:sports-sites lipas-id])
          rev      (or (utils/find-revision site year)
                       (utils/make-revision site (utils/->timestamp year)))
-         rev      (swim-utils/make-editable rev)]
+         rev      (utils/make-editable rev)]
      (-> db
          (assoc-in [:swimming-pools :editing :year] year)
          (assoc-in [:sports-sites lipas-id :editing] rev)))))
@@ -28,27 +27,8 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [_ [_ rev]]
-   (let [rev (swim-utils/make-saveable rev)]
+   (let [rev (utils/make-saveable rev)]
      {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
-
-(re-frame/reg-event-db
- ::edit-site
- (fn [db [_ {:keys [lipas-id]}]]
-   (let [site (get-in db [:sports-sites lipas-id])
-         rev  (utils/make-revision site (utils/timestamp))]
-     (-> db
-         (assoc-in [:sports-sites lipas-id :editing] (swim-utils/make-editable rev))
-         (assoc-in [:swimming-pools :editing?] true)
-         (assoc-in [:swimming-pools :editing :lipas-id] lipas-id)))))
-
-(re-frame/reg-event-db
- ::save-edits
- (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)
-         rev      (get-in db [:sports-sites lipas-id :editing])]
-     (-> db
-         (assoc-in [:swimming-pools :editing?] false)
-         (utils/save-edits (swim-utils/make-saveable rev))))))
 
 (re-frame/reg-event-db
  ::toggle-dialog
@@ -111,6 +91,6 @@
 (re-frame/reg-event-fx
  ::display-site
  (fn [{:keys [db]} [_ {:keys [lipas-id]}]]
-   {:db         (assoc-in db [:swimming-pools :display-site] lipas-id)
+   {:db         (assoc-in db [:swimming-pools :displaying] lipas-id)
     :dispatch-n [(when lipas-id
                    [:lipas.ui.sports-sites.events/get-history lipas-id])]}))

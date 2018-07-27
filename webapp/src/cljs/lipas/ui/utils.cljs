@@ -152,10 +152,12 @@
         latest-edit (latest-edit (-> site :edits))
         dirty?      (different? rev (or latest-edit original))
         timestamp   (:event-date rev)]
-    (cond
-      original? (assoc-in db [:sports-sites lipas-id :edits] nil)
-      dirty?    (assoc-in db [:sports-sites lipas-id :edits timestamp] rev)
-      :else     db)))
+    (as-> db $
+      (assoc-in $ [:sports-sites lipas-id :editing] nil)
+      (cond
+        original? (assoc-in $ [:sports-sites lipas-id :edits] nil)
+        dirty?    (assoc-in $ [:sports-sites lipas-id :edits timestamp] rev)
+        :else     $))))
 
 (defn latest? [rev history]
   (let [event-date  (:event-date rev)
@@ -213,3 +215,27 @@
 
 (defn join-pretty [coll]
   (string/join ", " coll))
+
+(defn make-editable [sports-site]
+  (-> sports-site
+
+      ;; Swimming pools
+      (maybe-update-in [:pools] ->indexed-map)
+      (maybe-update-in [:saunas] ->indexed-map)
+      (maybe-update-in [:slides] ->indexed-map)
+
+      ;; Ice Stadiums
+      (maybe-update-in [:rinks] ->indexed-map)))
+
+(defn make-saveable [sports-site]
+  (-> sports-site
+
+      ;; Swimming pools
+      (maybe-update-in [:pools] (comp remove-ids vals))
+      (maybe-update-in [:saunas] (comp remove-ids vals))
+      (maybe-update-in [:slides] (comp remove-ids vals))
+
+      ;; Ice stadiums
+      (maybe-update-in [:rinks] (comp remove-ids vals))
+
+      clean))

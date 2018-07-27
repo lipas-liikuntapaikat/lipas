@@ -326,15 +326,16 @@
        (label-fn i)])]])
 
 (defn year-selector [{:keys [label value on-change required years multi?]
-                      :as props}]
+                      :as   props}]
   (let [years     (or years
                       (reverse (range 1900 (inc (.getFullYear (js/Date.))))))
         component (if multi? multi-select select)]
-    [component (merge props {:label  label
-                             :items     (map #(hash-map :label % :value %) years)
-                             :on-change on-change
-                             :value     value
-                             :required  required})]))
+    [component (merge (dissoc props :multi?)
+                      {:label     label
+                       :items     (map #(hash-map :label % :value %) years)
+                       :on-change on-change
+                       :value     value
+                       :required  required})]))
 
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field

@@ -46,16 +46,16 @@
    "MI006000" 522048   ; Mikkeli, Otavan seurakuntatalon uimahalli / uima-allas
    })
 
-
 (def missing
   ["96400RO2" ; Rovaniemi Lappi-areena harjoitushalli2 (doesn't exist in Lipas)
 
-   "UU041000" ; ESPOO-TAPIOLAN UIMAHALLI (deleted from Lipas, opens again in 2019)
+   "UU041000" ; ESPOO-TAPIOLAN UIMAHALLI (deleted from Lipas, will be
+              ; most probably demolished but maybe opened again in 2020)
    "YY360000" ; Liperi/Liprakan uimahalli (doesn't exist in Lipas)
    "YY400000" ; KAJAANI/HEIKIN HALLI (doesn't exist in Lipas)
    "TP012000" ; KIIKAN UIMAHALLI (deleted from Lipas 6/2018)
    "YY410000" ; Kuopio, Kylpylähotelli Rauhalahti (deleted from lipas 6/2016)
-   "PK007000" ; Pääskynpesä (wtf?) (doesn't exist in Lipas)
+   "PK007000" ; Pääskynpesä (duplicate for YY430000 'Ilomantsin uimahalli')
    "YY330000" ; TAHKO SPA OY / NILSIÄ (deleted from Lipas 12/2016)
    "UU058000" ; Lapinjärven uimahalli (doesn't exist in Lipas)
    ])

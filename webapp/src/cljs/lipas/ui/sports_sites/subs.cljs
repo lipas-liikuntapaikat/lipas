@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.subs
   (:require [lipas.ui.utils :as utils]
+            [clojure.spec.alpha :as s]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -15,6 +16,32 @@
                 (assoc m k (get-in v [:history (:latest v)])))
               {}
               sites)))
+
+(re-frame/reg-sub
+ ::editing-rev
+ (fn [db [_ lipas-id]]
+   (get-in db [:sports-sites lipas-id :editing])))
+
+(re-frame/reg-sub
+ ::editing?
+ (fn [[_ lipas-id] _]
+   (re-frame/subscribe [::editing-rev lipas-id]))
+ (fn [edit-data _]
+   ((complement empty?) edit-data)))
+
+(re-frame/reg-sub
+ ::edits-valid?
+ (fn [[_ lipas-id] _]
+   (re-frame/subscribe [::editing-rev lipas-id]))
+ (fn [edit-data _]
+   (let [spec (case (-> edit-data :type :type-code)
+                (3110 3120 3130) :lipas.sports-site/swimming-pool
+                (2510 2520)      :lipas.sports-site/ice-stadium
+                :lipas/sports-site)]
+     (as-> edit-data $
+       (utils/make-saveable $)
+       ;; (do (s/explain spec $) $)
+       (s/valid? spec $)))))
 
 (re-frame/reg-sub
  ::uncommitted-edits?
