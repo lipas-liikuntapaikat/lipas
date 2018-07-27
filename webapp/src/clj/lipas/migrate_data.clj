@@ -53,11 +53,11 @@
               ; most probably demolished but maybe opened again in 2020)
    "YY360000" ; Liperi/Liprakan uimahalli (doesn't exist in Lipas)
    "YY400000" ; KAJAANI/HEIKIN HALLI (doesn't exist in Lipas)
-   "TP012000" ; KIIKAN UIMAHALLI (deleted from Lipas 6/2018)
+   "TP012000" ; KIIKAN UIMAHALLI (closed, will be demolished soon)
    "YY410000" ; Kuopio, Kylpylähotelli Rauhalahti (deleted from lipas 6/2016)
    "PK007000" ; Pääskynpesä (duplicate for YY430000 'Ilomantsin uimahalli')
    "YY330000" ; TAHKO SPA OY / NILSIÄ (deleted from Lipas 12/2016)
-   "UU058000" ; Lapinjärven uimahalli (doesn't exist in Lipas)
+   "UU058000" ; Lapinjärven uimahalli (closed 2012)
    ])
 
 (def lipas-url (str "http://lipas.cc.jyu.fi/api/sports-places?"
@@ -408,9 +408,9 @@
     :slides
     (into [] (remove empty?)
           (map utils/remove-nils
-               [{:length-m (when (= 1 (when-gt0-int (-> lipas-entry :waterSlidesCount str)))
-                             (-> lipas-entry :properties :waterslidesTotalLengthM
-                                 str utils/->int))
+               [{:length-m  (when (= 1 (when-gt0-int (-> lipas-entry :waterSlidesCount str)))
+                              (-> lipas-entry :properties :waterslidesTotalLengthM
+                                  str utils/->int))
                  :structure nil}])) ; not asked before in either system
 
     :saunas
@@ -437,11 +437,12 @@
      :lockers-women-count            nil} ; not present in data dump
 
     :conditions
-    {:total-visitors-count (when-gt0-int (get portal-entry "Kävijät"))
-     :open-days-in-year    (when-gt0 (get portal-entry "Aukiolo,päivät" ))
-     :daily-open-hours     (when-gt0 (get portal-entry "Aukiolo,tunnit"))}
+    {:open-days-in-year (when-gt0 (get portal-entry "Aukiolo,päivät" ))
+     :daily-open-hours  (when-gt0 (get portal-entry "Aukiolo,tunnit"))}
 
-    ;; Energiankulutus
+    :visitors
+    {:total-count (when-gt0-int (get portal-entry "Kävijät"))}
+
     :energy-consumption
     {:electricity-mwh (kwh->mwh (get portal-entry "Sähkö"))
      :heat-mwh        (kwh->mwh (get portal-entry "Lämpö"))

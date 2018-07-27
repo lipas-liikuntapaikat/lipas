@@ -1,9 +1,15 @@
-(ns lipas.ui.energy
+(ns lipas.ui.energy.views
   (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]))
+            [lipas.ui.energy.events :as events]
+            [lipas.ui.energy.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>]]
+            [reagent.core :as r]))
 
 (defn form [{:keys [tr data on-change disabled? cold?]}]
   [mui/form-group
+
+   ;; Electricity Mwh
    [lui/text-field {:label     (tr :lipas.energy-consumption/electricity)
                     :disabled  disabled?
                     :type      "number"
@@ -12,6 +18,7 @@
                     :adornment (tr :physical-units/mwh)
                     :on-change #(on-change :electricity-mwh %)}]
 
+   ;; Heat Mwh
    [lui/text-field {:label     (tr :lipas.energy-consumption/heat)
                     :disabled  disabled?
                     :type      "number"
@@ -20,6 +27,7 @@
                     :value     (:heat-mwh data)
                     :on-change #(on-change :heat-mwh %)}]
 
+   ;; Cold Mwh
    (when cold?
      [lui/text-field {:label     (tr :lipas.energy-consumption/cold)
                       :disabled  disabled?
@@ -29,6 +37,7 @@
                       :value     (:cold-mwh data)
                       :on-change #(on-change :cold-mwh %)}])
 
+   ;; Water m³
    [lui/text-field {:label     (tr :lipas.energy-consumption/water)
                     :disabled  disabled?
                     :type      "number"
@@ -109,3 +118,112 @@
                    :items      items
                    :key-fn     :year
                    :read-only? read-only?}])
+
+
+(defn set-field
+  [lipas-id & args]
+  (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
+
+(defn energy-form [{:keys [tr year cold? visitors? monthly?]}]
+  (let [data           (<== [::subs/energy-consumption-rev])
+        lipas-id       (:lipas-id data)
+        energy-history (<== [::subs/energy-consumption-history])
+        edits-valid?   (<== [:lipas.ui.sports-sites.subs/edits-valid? lipas-id])
+
+        set-field      (partial set-field lipas-id)]
+
+    (r/with-let [monthly-energy? (r/atom false)]
+
+      [mui/grid {:container true}
+
+       ;; Energy consumption
+       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
+
+        [mui/typography {:variant "subheading"
+                         :style   {:margin-bottom "1em"}}
+         (tr :lipas.energy-consumption/yearly)]
+        [form
+         {:tr        tr
+          :disabled? @monthly-energy?
+          :cold?     cold?
+          :data      (:energy-consumption data)
+          :on-change (partial set-field :energy-consumption)}]
+
+        (when monthly?
+          [lui/checkbox
+           {:label     (tr :lipas.energy-consumption/monthly?)
+            :checked   @monthly-energy?
+            :on-change #(swap! monthly-energy? not)}])
+
+        (when @monthly-energy?
+          [form-monthly
+           {:tr        tr
+            :cold?     cold?
+            :data      (:energy-consumption-monthly data)
+            :on-change #(==> [::events/set-monthly-energy-consumption
+                             lipas-id %1 %2 %3])}])
+
+        [lui/expansion-panel {:label (tr :actions/show-all-years)}
+         [table {:tr         tr
+                        :cold?      true
+                        :read-only? true
+                 :items      energy-history}]]]
+
+       (when visitors?
+         [lui/form-card
+          {:title (tr :lipas.swimming-pool.visitors/headline-year year)}
+          [mui/form-group
+           [lui/text-field
+            {:label     (tr :lipas.swimming-pool.visitors/total-count)
+             :type      "number"
+             :value     (-> data :visitors :total-count)
+             :spec      :lipas.swimming-pool.visitors/total-count
+             :adornment (tr :units/person)
+             :on-change #(set-field :visitors :total-count %)}]]])
+
+       ;; Actions
+       [lui/form-card {}
+        [mui/button {:full-width true
+                     :disabled   (not edits-valid?)
+                     :color      "secondary"
+                     :variant    "raised"
+                     :on-click   #(==> [::events/commit-energy-consumption data])}
+         (tr :actions/save)]]])))
+
+(defn energy-consumption-form [{:keys [tr editable-sites visitors? cold? monthly?]}]
+  (let [site  (<== [::subs/energy-consumption-site])
+        years (<== [::subs/energy-consumption-years-list])
+        year  (<== [::subs/energy-consumption-year])]
+
+    [mui/grid {:container true}
+
+     (when-not editable-sites
+       [mui/typography "Sinulla ei ole oikeuksia yhteenkään liikuntapaikkaan. :/"])
+
+     (when editable-sites
+       [lui/form-card {:title (tr :actions/select-hall)}
+        [mui/form-group
+         [lui/select
+          {:label     (tr :actions/select-hall)
+           :value     (get-in site [:history (:latest site) :lipas-id])
+           :items     editable-sites
+           :label-fn  :name
+           :value-fn  :lipas-id
+           :on-change #(==> [::events/select-energy-consumption-site %])}]]])
+
+     (when site
+       [lui/form-card {:title (tr :actions/select-year)}
+        [mui/form-group
+         [lui/select
+          {:label     (tr :actions/select-year)
+           :value     year
+           :items     years
+           :on-change #(==> [::events/select-energy-consumption-year %])}]]])
+
+     (when (and site year)
+       [energy-form
+        {:tr        tr
+         :year      year
+         :visitors? visitors?
+         :monthly?  monthly?
+         :cold?     cold?}])]))

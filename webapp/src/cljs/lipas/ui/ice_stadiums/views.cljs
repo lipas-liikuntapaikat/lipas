@@ -1,6 +1,6 @@
 (ns lipas.ui.ice-stadiums.views
   (:require [lipas.ui.components :as lui]
-            [lipas.ui.energy :as energy]
+            [lipas.ui.energy.views :as energy]
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
@@ -546,94 +546,14 @@
    [mui/grid {:item true :xs 12}
     [mui/typography (tr :ice-energy/description)]]])
 
-(defn energy-form [{:keys [tr year]}]
-  (let [data           (<== [::subs/editing-rev])
-        energy-history (<== [::subs/energy-consumption-history])
-        edits-valid?   (<== [::subs/edits-valid?])
-        lipas-id       (:lipas-id data)
-        set-field      (partial set-field lipas-id)]
-
-    (r/with-let [monthly-energy? (r/atom false)]
-
-      [mui/grid {:container true}
-
-       ;; Energy consumption
-       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
-
-        [mui/typography {:variant "subheading"
-                         :style   {:margin-bottom "1em"}}
-         (tr :lipas.energy-consumption/yearly)]
-        [energy/form
-         {:tr        tr
-          :disabled? @monthly-energy?
-          :cold?     true
-          :data      (:energy-consumption data)
-          :on-change (partial set-field :energy-consumption)}]
-
-        [lui/checkbox
-         {:label     (tr :lipas.energy-consumption/monthly?)
-          :checked   @monthly-energy?
-          :on-change #(swap! monthly-energy? not)}]
-
-        (when @monthly-energy?
-          [energy/form-monthly
-           {:tr        tr
-            :cold?     true
-            :data      (:energy-consumption-monthly data)
-            :on-change #(==> [::events/set-monthly-energy-consumption
-                             lipas-id %1 %2 %3])}])
-
-        [lui/expansion-panel {:label (tr :actions/show-all-years)}
-         [energy/table {:tr         tr
-                        :cold?      true
-                        :read-only? true
-                        :items      energy-history}]]]
-
-       ;; Actions
-       [lui/form-card {}
-        [mui/button {:full-width true
-                     :disabled   (not edits-valid?)
-                     :color      "secondary"
-                     :variant    "raised"
-                     :on-click   #(==> [::events/commit-energy-consumption data])}
-         (tr :actions/save)]]])))
-
 (defn energy-form-tab [tr]
-  (let [data   (<== [::subs/sites-to-edit-list])
-        site   (<== [::subs/editing-site])
-        years  (<== [::subs/energy-consumption-years-list])
-        year   (<== [::subs/editing-year])]
-
-    [mui/grid {:container true}
-
-     (when-not data
-       [mui/typography "Sinulla ei ole oikeuksia yhteenkään jäähalliin. :/"])
-
-     (when data
-       [lui/form-card {:title (tr :actions/select-hall)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-hall)
-           :value     (get-in site [:history (:latest site) :lipas-id])
-           :items     data
-           :label-fn  :name
-           :value-fn  :lipas-id
-           :on-change #(==> [::events/select-energy-consumption-site
-                             {:lipas-id %}])}]]])
-
-     (when site
-       [lui/form-card {:title (tr :actions/select-year)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-year)
-           :value     year
-           :items     years
-           :on-change #(==> [::events/select-energy-consumption-year %])}]]])
-
-     (when (and site year)
-       [energy-form
-        {:tr   tr
-         :year year}])]))
+  (let [editable-sites (<== [::subs/sites-to-edit-list])]
+    (energy/energy-consumption-form
+     {:tr             tr
+      :cold?          true
+      :monthly?       true
+      :visitors?      false
+      :editable-sites editable-sites})))
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
@@ -676,6 +596,6 @@
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
-    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 2510])
-    (re-frame/dispatch [:lipas.ui.sports-sites.events/get-by-type-code 2520])
+    (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
+    (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
     [create-panel tr logged-in?]))
