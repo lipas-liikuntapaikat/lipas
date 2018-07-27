@@ -23,7 +23,7 @@
 ;; data again from legacy systems (portals, 'old' Lipas).
 
 (def fixed-mappings
-;;  Halli-ID  Lipas-ID
+ ;; Halli-ID  Lipas-ID
   {"47400II1" 76276    ; Iitin jäähalli
    "43500KA1" 518758   ; Karstula-Areena
    "29900ME1" 520708   ; Merikarvian jäähalli
@@ -44,19 +44,18 @@
    "MI010000" 505999   ; HAUKIPUTAAN UIMAHALLI / Vesi-Jatuli
    "UU052000" 505802   ; Helsinki SYK:n uimahalli / Haagan uimahalli
    "MI006000" 522048   ; Mikkeli, Otavan seurakuntatalon uimahalli / uima-allas
+   "YY400000" 529313   ; Heikinhalli
+   "YY360000" 529312   ; Liperin uimahalli Liprakka
+   "YY410000" 529314   ; Kuopio, Kylpylähotelli Rauhalahti
+   "YY330000" 529315   ; TAHKO SPA OY / NILSIÄ (deleted from Lipas 12/2016)
    })
 
 (def missing
   ["96400RO2" ; Rovaniemi Lappi-areena harjoitushalli2 (doesn't exist in Lipas)
-
    "UU041000" ; ESPOO-TAPIOLAN UIMAHALLI (deleted from Lipas, will be
               ; most probably demolished but maybe opened again in 2020)
-   "YY360000" ; Liperi/Liprakan uimahalli (doesn't exist in Lipas)
-   "YY400000" ; KAJAANI/HEIKIN HALLI (doesn't exist in Lipas)
    "TP012000" ; KIIKAN UIMAHALLI (closed, will be demolished soon)
-   "YY410000" ; Kuopio, Kylpylähotelli Rauhalahti (deleted from lipas 6/2016)
    "PK007000" ; Pääskynpesä (duplicate for YY430000 'Ilomantsin uimahalli')
-   "YY330000" ; TAHKO SPA OY / NILSIÄ (deleted from Lipas 12/2016)
    "UU058000" ; Lapinjärven uimahalli (closed 2012)
    ])
 
