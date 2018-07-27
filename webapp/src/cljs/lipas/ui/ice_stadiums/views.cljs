@@ -651,7 +651,7 @@
 
          ;; 0 Ice stadiums tab
          [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]
+                   :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 1 Energy form tab
          [mui/tab {:label    (tr :ice-basic-data/headline)
@@ -664,7 +664,7 @@
 
          ;; 3 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon  (r/as-element [mui/icon "flash_on"])}]]]]]
+                   :icon  (r/as-element [mui/icon "info"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
