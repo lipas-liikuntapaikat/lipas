@@ -29,7 +29,13 @@
  ::sites-to-edit-list
  :<- [::sites-to-edit]
  (fn [sites _]
-   (sort-by :name (not-empty (vals sites)))))
+   (not-empty (sort-by :name (vals sites)))))
+
+(re-frame/reg-sub
+ ::sites-to-draft-list
+ :<- [::latest-swimming-pool-revs]
+ (fn [sites _]
+   (not-empty (sort-by :name (vals sites)))))
 
 (re-frame/reg-sub
  ::dialogs
