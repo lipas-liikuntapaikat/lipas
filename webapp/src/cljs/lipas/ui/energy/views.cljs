@@ -190,40 +190,58 @@
                      :on-click   #(==> [::events/commit-energy-consumption data])}
          (tr :actions/save)]]])))
 
-(defn energy-consumption-form [{:keys [tr editable-sites visitors? cold? monthly?]}]
-  (let [site  (<== [::subs/energy-consumption-site])
-        years (<== [::subs/energy-consumption-years-list])
-        year  (<== [::subs/energy-consumption-year])]
+(defn energy-consumption-form [{:keys [tr editable-sites visitors? cold?  monthly?]}]
+  (let [logged-in? (<== [:lipas.ui.user.subs/logged-in?])
+        site       (<== [::subs/energy-consumption-site])
+        years      (<== [::subs/energy-consumption-years-list])
+        year       (<== [::subs/energy-consumption-year])]
 
-    [mui/grid {:container true}
+    (if-not logged-in?
 
-     (when-not editable-sites
-       [mui/typography "Sinulla ei ole oikeuksia yhteenkään liikuntapaikkaan. :/"])
+      [mui/paper {:style {:padding "1em"}}
+       [mui/grid {:container true :spacing 16}
 
-     (when editable-sites
-       [lui/form-card {:title (tr :actions/select-hall)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-hall)
-           :value     (get-in site [:history (:latest site) :lipas-id])
-           :items     editable-sites
-           :label-fn  :name
-           :value-fn  :lipas-id
-           :on-change #(==> [::events/select-energy-consumption-site %])}]]])
+        [mui/grid {:item true}
+         [mui/typography {:variant "headline"
+                          :color "secondary"}
+          (tr :restricted/login-or-register)]]
 
-     (when site
-       [lui/form-card {:title (tr :actions/select-year)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-year)
-           :value     year
-           :items     years
-           :on-change #(==> [::events/select-energy-consumption-year %])}]]])
+        [mui/grid {:item true :xs 12}
+         [lui/login-button
+          {:label (tr :login/headline)
+           :on-click #(==> [:lipas.ui.events/navigate "/#/kirjaudu"])}]]
 
-     (when (and site year)
-       [energy-form
-        {:tr        tr
-         :year      year
-         :visitors? visitors?
-         :monthly?  monthly?
-         :cold?     cold?}])]))
+        [mui/grid {:item true}
+         [lui/register-button
+          {:label (tr :register/headline)
+           :on-click #(==> [:lipas.ui.events/navigate "/#/rekisteroidy"])}]]]]
+
+      [mui/grid {:container true}
+
+       (when editable-sites
+         [lui/form-card {:title (tr :actions/select-hall)}
+          [mui/form-group
+           [lui/select
+            {:label     (tr :actions/select-hall)
+             :value     (get-in site [:history (:latest site) :lipas-id])
+             :items     editable-sites
+             :label-fn  :name
+             :value-fn  :lipas-id
+             :on-change #(==> [::events/select-energy-consumption-site %])}]]])
+
+       (when (and editable-sites site)
+         [lui/form-card {:title (tr :actions/select-year)}
+          [mui/form-group
+           [lui/select
+            {:label     (tr :actions/select-year)
+             :value     year
+             :items     years
+             :on-change #(==> [::events/select-energy-consumption-year %])}]]])
+
+       (when (and editable-sites site year)
+         [energy-form
+          {:tr        tr
+           :year      year
+           :visitors? visitors?
+           :monthly?  monthly?
+           :cold?     cold?}])])))

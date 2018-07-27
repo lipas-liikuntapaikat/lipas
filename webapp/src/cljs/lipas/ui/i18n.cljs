@@ -17,6 +17,9 @@
     :jyu       "Jyväskylän yliopisto"
     :frontpage "Etusivu"}
 
+   :restricted
+   {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
+
    :home-page
    {:headline "Etusivu"}
 
