@@ -49,6 +49,8 @@
 
 (re-frame/reg-event-fx
  ::commit-energy-consumption
- (fn [_ [_ rev]]
-   (let [rev (utils/make-saveable rev)]
+ (fn [_ [_ rev draft?]]
+   (let [status (if draft? "draft" (:status rev))
+         rev    (-> (utils/make-saveable rev)
+                    (assoc :status status))]
      {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))

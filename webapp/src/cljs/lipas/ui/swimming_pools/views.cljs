@@ -561,13 +561,15 @@
        (tr :actions/save)]]]))
 
 (defn energy-form-tab [tr]
-  (let [editable-sites (<== [::subs/sites-to-edit-list])]
+  (let [editable-sites  (<== [::subs/sites-to-edit-list])
+        draftable-sites (<== [::subs/sites-to-draft-list])]
     (energy/energy-consumption-form
-     {:tr             tr
-      :cold?          false
-      :monthly?       false
-      :visitors?      true
-      :editable-sites editable-sites})))
+     {:tr              tr
+      :cold?           false
+      :monthly?        false
+      :visitors?       true
+      :draftable-sites draftable-sites
+      :editable-sites  editable-sites})))
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]

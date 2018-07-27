@@ -547,13 +547,15 @@
     [mui/typography (tr :ice-energy/description)]]])
 
 (defn energy-form-tab [tr]
-  (let [editable-sites (<== [::subs/sites-to-edit-list])]
+  (let [editable-sites  (<== [::subs/sites-to-edit-list])
+        draftable-sites (<== [::subs/sites-to-draft-list])]
     (energy/energy-consumption-form
-     {:tr             tr
-      :cold?          true
-      :monthly?       true
-      :visitors?      false
-      :editable-sites editable-sites})))
+     {:tr              tr
+      :cold?           true
+      :monthly?        true
+      :visitors?       false
+      :editable-sites  editable-sites
+      :draftable-sites draftable-sites})))
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
