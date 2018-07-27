@@ -624,7 +624,7 @@
 
          ;; 3 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui/icon "flash_on"])}]]]]]
+                   :icon (r/as-element [mui/icon "info"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
