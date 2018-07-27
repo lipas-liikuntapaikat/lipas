@@ -8,46 +8,6 @@
    (-> db :ice-stadiums :active-tab)))
 
 (re-frame/reg-sub
- ::editing-site
- (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
-     (get-in db [:sports-sites lipas-id]))))
-
-(re-frame/reg-sub
- ::editing-rev
- (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
-     (get-in db [:sports-sites lipas-id :editing]))))
-
-(re-frame/reg-sub
- ::editing-year
- (fn [db _]
-   (-> db :ice-stadiums :editing :year)))
-
-(re-frame/reg-sub
- ::energy-consumption-data
- :<- [::editing-site]
- :<- [::editing-year]
- (fn [[{:keys [history]} year] _]
-   (let [by-year (utils/latest-by-year history)
-         rev     (get by-year year)]
-     (get history rev))))
-
-(re-frame/reg-sub
- ::energy-consumption-history
- (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)
-         site (get-in db [:sports-sites lipas-id])
-         history (utils/energy-consumption-history site)]
-     (->> history (sort-by :year utils/reverse-cmp)))))
-
-(re-frame/reg-sub
- ::energy-consumption-years-list
- :<- [::energy-consumption-history]
- (fn [history _]
-   (utils/make-energy-consumption-year-list history)))
-
-(re-frame/reg-sub
  ::latest-ice-stadium-revs
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
@@ -58,13 +18,22 @@
 (re-frame/reg-sub
  ::sites-to-edit
  :<- [:lipas.ui.user.subs/access-to-sports-sites]
+ :<- [:lipas.ui.user.subs/admin?]
  :<- [::latest-ice-stadium-revs]
- (fn [[ids sites] _]
-   (not-empty (select-keys sites ids))))
+ (fn [[ids admin? sites] _]
+   (if admin?
+     (not-empty sites)
+     (not-empty (select-keys sites ids)))))
 
 (re-frame/reg-sub
  ::sites-to-edit-list
  :<- [::sites-to-edit]
+ (fn [sites _]
+   (sort-by :name (not-empty (vals sites)))))
+
+(re-frame/reg-sub
+ ::sites-to-draft-list
+ :<- [::latest-ice-stadium-revs]
  (fn [sites _]
    (not-empty (vals sites))))
 
@@ -74,19 +43,9 @@
    (-> db :ice-stadiums :dialogs)))
 
 (re-frame/reg-sub
- ::renovation-form
- (fn [db _]
-   (-> db :ice-stadiums :dialogs :renovation :data)))
-
-(re-frame/reg-sub
  ::rink-form
  (fn [db _]
    (-> db :ice-stadiums :dialogs :rink :data)))
-
-(re-frame/reg-sub
- ::energy-form
- (fn [db _]
-   (-> db :ice-stadiums :dialogs :energy :data)))
 
 (re-frame/reg-sub
  ::types-by-type-code
@@ -99,7 +58,6 @@
  :<- [::types-by-type-code]
  (fn [types _ _]
    (vals types)))
-
 
 (re-frame/reg-sub
  ::size-categories

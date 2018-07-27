@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.views
   (:require [lipas.ui.components :as lui]
-            [lipas.ui.energy :as energy]
+            [lipas.ui.energy.views :as energy]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
@@ -97,7 +97,7 @@
                            :display-data (:location display-data)
                            :on-change    (partial set-field :location)}]]
 
-        ;;; Building
+      ;;; Building
       (let [display-data (-> display-data :building)
             edit-data    (-> edit-data :building)
             on-change    (partial set-field :building)]
@@ -457,7 +457,39 @@
              :spec        :lipas.swimming-pool.facilities/lockers-women-count
              :on-change   #(on-change :lockers-women-count %)}]}]])
 
-        ;;; Energy consumption
+      ;;; Conditions
+      (let [display-data (-> display-data :conditions)
+            edit-data (-> edit-data :conditions)
+            on-change (partial set-field :visitors)]
+
+        [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline)}
+         [lui/form {:read-only? (not editing?)}
+
+          ;; Daily open hours
+          {:label (tr :lipas.swimming-pool.conditions/daily-open-hours)
+           :value (-> display-data :daily-open-hours)
+           :form-field
+           [lui/text-field
+            {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
+             :type      "number"
+             :spec      :lipas.ice-stadium.conditions/daily-open-hours
+             :adornment (tr :units/hours-per-day)
+             :value     (-> edit-data :daily-open-hours)
+             :on-change #(on-change :daily-open-hours %)}]}
+
+          ;; Open days in year
+          {:label (tr :lipas.swimming-pool.conditions/open-days-in-year)
+           :value (-> display-data :open-days-in-year)
+           :form-field
+           [lui/text-field
+            {:label     (tr :lipas.swimming-pool.conditions/open-days-in-year)
+             :type      "number"
+             :value     (-> edit-data :open-days-in-year)
+             :spec      :lipas.swimming-pool.conditions/open-days-in-year
+             :adornment (tr :units/days-in-year)
+             :on-change #(on-change :open-days-in-year %)}]}]])
+
+      ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
        [energy/table {:read-only? true
                       :tr         tr
@@ -519,37 +551,6 @@
                       :read-only? true
                       :items      energy-history}]]]
 
-     ;; Conditions
-     [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline-year year)}
-      [mui/form-group
-
-       ;; Visitors total count
-       [lui/text-field
-        {:label     (tr :lipas.swimming-pool.conditions/total-visitors-count)
-         :type      "number"
-         :value     (-> data :conditions :total-visitors-count)
-         :spec      :lipas.swimming-pool.conditions/total-visitors-count
-         :adornment (tr :units/person)
-         :on-change #(set-field :conditions :total-visitors-count %)}]
-
-       ;; Daily open hours
-       [lui/text-field
-        {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
-         :type      "number"
-         :spec      :lipas.ice-stadium.conditions/daily-open-hours
-         :adornment (tr :units/hours-per-day)
-         :value     (-> data :daily-open-hours)
-         :on-change #(set-field :conditions :daily-open-hours %)}]
-
-       ;; Open days in year
-       [lui/text-field
-        {:label     (tr :lipas.swimming-pool.conditions/open-days-in-year)
-         :type      "number"
-         :value     (-> data :conditions :open-days-in-year)
-         :spec      :lipas.swimming-pool.conditions/open-days-in-year
-         :adornment (tr :units/days-in-year)
-         :on-change #(set-field :conditions :total-visitors-count %)}]]]
-
      ;; Actions
      [lui/form-card {}
       [mui/button {:full-width true
@@ -560,41 +561,13 @@
        (tr :actions/save)]]]))
 
 (defn energy-form-tab [tr]
-  (let [data   (<== [::subs/sites-to-edit-list])
-        site   (<== [::subs/editing-site])
-        years  (<== [::subs/energy-consumption-years-list])
-        year   (<== [::subs/editing-year])]
-
-    [mui/grid {:container true}
-
-     (when-not data
-       [mui/typography "Sinulla ei ole oikeuksia yhteenkään uimahalliin. :/"])
-
-     (when data
-       [lui/form-card {:title (tr :actions/select-hall)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-hall)
-           :value     (get-in site [:history (:latest site) :lipas-id])
-           :items     data
-           :label-fn  :name
-           :value-fn  :lipas-id
-           :on-change #(==> [::events/select-energy-consumption-site
-                             {:lipas-id %}])}]]])
-
-     (when site
-       [lui/form-card {:title (tr :actions/select-year)}
-        [mui/form-group
-         [lui/select
-          {:label     (tr :actions/select-year)
-           :value     year
-           :items     years
-           :on-change #(==> [::events/select-energy-consumption-year %])}]]])
-
-     (when (and site year)
-       [energy-form
-        {:tr   tr
-         :year year}])]))
+  (let [editable-sites (<== [::subs/sites-to-edit-list])]
+    (energy/energy-consumption-form
+     {:tr             tr
+      :cold?          false
+      :monthly?       false
+      :visitors?      true
+      :editable-sites editable-sites})))
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])]

@@ -18,61 +18,23 @@
 (re-frame/reg-sub
  ::sites-to-edit
  :<- [:lipas.ui.user.subs/access-to-sports-sites]
+ :<- [:lipas.ui.user.subs/admin?]
  :<- [::latest-swimming-pool-revs]
- (fn [[ids pools] _]
-   (not-empty (select-keys pools ids))))
+ (fn [[ids admin? sites] _]
+   (if admin?
+     (not-empty sites)
+     (not-empty (select-keys sites ids)))))
 
 (re-frame/reg-sub
  ::sites-to-edit-list
  :<- [::sites-to-edit]
  (fn [sites _]
-   (not-empty (vals sites))))
-
-(re-frame/reg-sub
- ::editing?
- (fn [db _]
-   (-> db :swimming-pools :editing?)))
-
-(re-frame/reg-sub
- ::editing-site
- (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)]
-     (get-in db [:sports-sites lipas-id]))))
-
-(re-frame/reg-sub
- ::editing-rev
- (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)]
-     (get-in db [:sports-sites lipas-id :editing]))))
-
-(re-frame/reg-sub
- ::editing-year
- (fn [db _]
-   (-> db :swimming-pools :editing :year)))
-
-(re-frame/reg-sub
- ::energy-consumption-history
- (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)
-         site (get-in db [:sports-sites lipas-id])
-         history (utils/energy-consumption-history site)]
-     (->> history (sort-by :year utils/reverse-cmp)))))
-
-(re-frame/reg-sub
- ::energy-consumption-years-list
- :<- [::energy-consumption-history]
- (fn [history _]
-   (utils/make-energy-consumption-year-list history)))
+   (sort-by :name (not-empty (vals sites)))))
 
 (re-frame/reg-sub
  ::dialogs
  (fn [db _]
    (-> db :swimming-pools :dialogs)))
-
-(re-frame/reg-sub
- ::renovation-form
- (fn [db _]
-   (-> db :swimming-pools :dialogs :renovation :data)))
 
 (re-frame/reg-sub
  ::pool-form
@@ -88,11 +50,6 @@
  ::slide-form
  (fn [db _]
    (-> db :swimming-pools :dialogs :slide :data)))
-
-(re-frame/reg-sub
- ::energy-form
- (fn [db _]
-   (-> db :swimming-pools :dialogs :energy :data)))
 
 (re-frame/reg-sub
  ::types-by-type-code

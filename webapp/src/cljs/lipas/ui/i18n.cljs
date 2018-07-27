@@ -89,10 +89,14 @@
     :yearly        "Energiankulutus vuositasolla"
     :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
 
+   :lipas.swimming-pool.visitors
+   {:headline      "Kävijämäärä"
+    :headline-year "Kävijämäärä vuonna {1}"
+    :total-count   "Kokonaismäärä"}
+
    :lipas.swimming-pool.conditions
-   {:headline          "Kävijämäärät"
-    :headline-year     "Kävijämäärä vuonna {1}"
-    :total-count       "Kokonaismäärä"
+   {:headline          "Aukiolo"
+    :daily-open-hours  "Aukiolotunnit päivässä"
     :open-days-in-year "Aukiolopäivät vuodessa"}
 
    :swim

@@ -635,7 +635,6 @@
 ;; Conditions ;;
 
 (s/def :lipas.swimming-pool.conditions/open-days-in-year (s/int-in 0 (inc 365)))
-(s/def :lipas.swimming-pool.conditions/total-visitors-count (s/int-in 0 1000000))
 (s/def :lipas.swimming-pool/conditions
   (s/keys :opt-un [:lipas.swimming-pool.conditions/open-days-in-year
                    :lipas.swimming-pool.conditions/total-visitors-count]))
@@ -645,6 +644,11 @@
   (s/merge
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.swimming-pool.type/type-code])))
+
+;; Visitors ;;
+(s/def :lipas.swimming-pool.visitors/total-count (s/int-in 0 1000000))
+(s/def :lipas.swimming-pool/visitors
+  (s/keys :req-un [:lipas.swimming-pool.visitors/total-count]))
 
 (s/def :lipas.sports-site/swimming-pool
   (s/merge
@@ -658,6 +662,7 @@
                     :lipas.swimming-pool/saunas
                     :lipas.swimming-pool/slides
                     :lipas.swimming-pool/conditions
+                    :lipas.swimming-pool/visitors
                     :lipas/energy-consumption])))
 
 (s/def :lipas.sports-site/swimming-pools
