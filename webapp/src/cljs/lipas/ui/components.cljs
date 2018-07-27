@@ -23,6 +23,22 @@
 
 ;;; Components ;;;
 
+(defn login-button [{:keys [on-click label]}]
+  [mui/button {:variant  "contained"
+               :color    "secondary"
+               :on-click on-click}
+   [mui/icon {:style {:margin-right "0.25em"}}
+    "lock"]
+   label])
+
+(defn register-button [{:keys [on-click label]}]
+  [mui/button {:variant  "contained"
+               :color    "secondary"
+               :on-click on-click}
+   [mui/icon {:style {:margin-right "0.25em"}}
+    "group_add"]
+   label])
+
 (defn edit-button [{:keys [on-click active? tooltip] :as props}]
   (let [btn-props (-> props
                       (dissoc :active?)

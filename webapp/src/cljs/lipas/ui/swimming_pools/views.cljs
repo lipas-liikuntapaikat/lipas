@@ -587,8 +587,7 @@
 
          ;; 1 Energy form tab
          [mui/tab {:label (tr :swim/edit)
-                   :icon (r/as-element [mui/icon "edit"])
-                   :disabled (not logged-in?)}]
+                   :icon (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
