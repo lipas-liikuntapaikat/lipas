@@ -1,11 +1,13 @@
 (ns lipas.ui.ice-stadiums.views
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy :as energy]
-            [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.ice-stadiums.events :as events]
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.events :as site-events]
+            [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>]]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
@@ -21,16 +23,21 @@
   (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn site-view [{:keys [tr logged-in?]}]
-  (let [locale                (tr)
-        site                  (<== [::subs/display-site locale])
-        editing-rev           (<== [::subs/editing-rev])
-        types                 (<== [::subs/types-list])
+  (let [locale       (tr)
+        display-data (<== [::subs/display-site locale])
+
+        lipas-id (:lipas-id display-data)
+
+        edit-data    (<== [::site-subs/editing-rev lipas-id])
+        editing?     (<== [::site-subs/editing? lipas-id])
+        edits-valid? (<== [::site-subs/edits-valid? lipas-id])
+
         dialogs               (<== [::subs/dialogs])
-        editing?              (<== [::subs/editing?])
+        types                 (<== [::subs/types-list])
         size-categories       (<== [::subs/size-categories])
-        cities                (<== [:lipas.ui.sports-sites.subs/cities-list])
-        owners                (<== [:lipas.ui.sports-sites.subs/owners])
-        admins                (<== [:lipas.ui.sports-sites.subs/admins])
+        cities                (<== [::site-subs/cities-list])
+        owners                (<== [::site-subs/owners])
+        admins                (<== [::site-subs/admins])
         base-floor-structures (<== [::subs/base-floor-structures])
         cets                  (<== [::subs/condensate-energy-targets])
         refrigerants          (<== [::subs/refrigerants])
@@ -40,20 +47,17 @@
         dryer-duty-types      (<== [::subs/dryer-duty-types])
         heat-pump-types       (<== [::subs/heat-pump-types])
 
-        lipas-id           (:lipas-id site)
-        user-can-publish?  (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
-        uncommitted-edits? (<== [:lipas.ui.sports-sites.subs/uncommitted-edits? lipas-id])
-
-        edits-valid? (<== [::subs/edits-valid?])
+        user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
+        uncommitted-edits? (<== [::site-subs/uncommitted-edits? lipas-id])
 
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open? ((complement empty?) site)
+     {:open? ((complement empty?) display-data)
 
       :title (if uncommitted-edits?
-               (tr :statuses/edited (-> site :name))
-               (-> site :name))
+               (tr :statuses/edited (-> display-data :name))
+               (-> display-data :name))
 
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/display-site nil])
@@ -66,8 +70,8 @@
                  :user-can-publish?  user-can-publish?
                  :on-discard         #(==> [::site-events/discard-edits lipas-id])
                  :discard-tooltip    (tr :actions/discard)
-                 :on-edit-start      #(==> [::events/edit-site site])
-                 :on-edit-end        #(==> [::events/save-edits])
+                 :on-edit-start      #(==> [::site-events/edit-site lipas-id])
+                 :on-edit-end        #(==> [::site-events/save-edits lipas-id])
                  :edit-tooltip       (tr :actions/edit)
                  :on-save-draft      #(==> [::site-events/commit-draft lipas-id])
                  :save-draft-tooltip (tr :actions/save-draft)
@@ -79,8 +83,8 @@
         ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
        [lui/sports-site-form {:tr              tr
-                              :display-data    site
-                              :edit-data       editing-rev
+                              :display-data    display-data
+                              :edit-data       edit-data
                               :read-only?      (not editing?)
                               :types           types
                               :size-categories size-categories
@@ -93,14 +97,14 @@
        [lui/location-form {:tr           tr
                            :read-only?   (not editing?)
                            :cities       cities
-                           :edit-data    (:location editing-rev)
-                           :display-data (:location site)
+                           :edit-data    (:location edit-data)
+                           :display-data (:location display-data)
                            :on-change    (partial set-field :location)}]]
 
         ;;; Building
       (let [on-change    (partial set-field :building)
-            edit-data    (:building editing-rev)
-            display-data (:building site)]
+            edit-data    (:building edit-data)
+            display-data (:building display-data)]
         [lui/form-card {:title (tr :lipas.building/headline)}
          [lui/form {:read-only? (not editing?)}
 
@@ -159,8 +163,8 @@
 
         ;;; Envelope structure
       (let [on-change    (partial set-field :envelope)
-            display-data (:envelope site)
-            edit-data    (:envelope editing-rev)]
+            display-data (:envelope display-data)
+            edit-data    (:envelope edit-data)]
         [lui/form-card {:title (tr :lipas.ice-stadium.envelope/headline)}
          [lui/form {:read-only? (not editing?)}
 
@@ -206,13 +210,13 @@
          [rinks/dialog {:tr tr}])
 
        (if editing?
-         [rinks/table {:tr tr :items (-> editing-rev :rinks vals)}]
-         [rinks/read-only-table {:tr tr :items (-> site :rinks)}])]
+         [rinks/table {:tr tr :items (-> edit-data :rinks vals)}]
+         [rinks/read-only-table {:tr tr :items (-> display-data :rinks)}])]
 
         ;;; Refrigeration
       (let [on-change    (partial set-field :refrigeration)
-            display-data (:refrigeration site)
-            edit-data    (:refrigeration editing-rev)]
+            display-data (:refrigeration display-data)
+            edit-data    (:refrigeration edit-data)]
         [lui/form-card {:title (tr :lipas.ice-stadium.refrigeration/headline)}
          [lui/form {:read-only? (not editing?)}
 
@@ -305,8 +309,8 @@
 
         ;;; Ventilation
       (let [on-change    (partial set-field :ventilation)
-            edit-data    (:ventilation editing-rev)
-            display-data (:ventilation site)]
+            edit-data    (:ventilation edit-data)
+            display-data (:ventilation display-data)]
         [lui/form-card {:title (tr :lipas.ice-stadium.ventilation/headline)}
          [lui/form {:read-only? (not editing?)}
 
@@ -367,8 +371,8 @@
 
         ;;; Conditions
       (let [on-change    (partial set-field :conditions)
-            display-data (-> site :conditions)
-            edit-data    (-> editing-rev :conditions)]
+            display-data (-> display-data :conditions)
+            edit-data    (-> edit-data :conditions)]
         [lui/form-card {:title (tr :lipas.ice-stadium.conditions/headline)}
          [lui/form {:read-only? (not editing?)}
 
@@ -509,7 +513,7 @@
        [energy/table {:read-only? true
                       :cold?      true
                       :tr         tr
-                      :items      (:energy-consumption site)}]]]]))
+                      :items      (:energy-consumption display-data)}]]]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale (tr)

@@ -1,18 +1,11 @@
 (ns lipas.ui.ice-stadiums.subs
   (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]
-            [clojure.spec.alpha :as s]
-            [lipas.ui.ice-stadiums.utils :as ice-utils]))
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::active-tab
  (fn [db _]
    (-> db :ice-stadiums :active-tab)))
-
-(re-frame/reg-sub
- ::editing?
- (fn [db _]
-   (-> db :ice-stadiums :editing?)))
 
 (re-frame/reg-sub
  ::editing-site
@@ -25,14 +18,6 @@
  (fn [db _]
    (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
      (get-in db [:sports-sites lipas-id :editing]))))
-
-(re-frame/reg-sub
- ::edits-valid?
- :<- [::editing-rev]
- (fn [rev _]
-   (let [rev (ice-utils/make-saveable rev)]
-      (s/explain :lipas.sports-site/ice-stadium rev)
-     (s/valid? :lipas.sports-site/ice-stadium rev))))
 
 (re-frame/reg-sub
  ::editing-year

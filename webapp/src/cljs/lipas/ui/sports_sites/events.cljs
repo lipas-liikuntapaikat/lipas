@@ -4,9 +4,25 @@
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
+ ::edit-site
+ (fn [db [_ lipas-id]]
+   (let [site (get-in db [:sports-sites lipas-id])
+         rev  (-> (utils/make-revision site (utils/timestamp))
+                  (utils/make-editable))]
+     (-> db
+         (assoc-in [:sports-sites lipas-id :editing] rev)))))
+
+(re-frame/reg-event-db
  ::edit-field
  (fn [db [_ lipas-id path value]]
    (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)))
+
+(re-frame/reg-event-db
+ ::save-edits
+ (fn [db [_ lipas-id]]
+   (let [rev (get-in db [:sports-sites lipas-id :editing])]
+     (-> db
+         (utils/save-edits (utils/make-saveable rev))))))
 
 (re-frame/reg-event-db
  ::discard-edits
@@ -14,14 +30,15 @@
    (utils/discard-edits db lipas-id)))
 
 (defn- commit-ajax [db token data]
-  {:http-xhrio {:method          :post
-                :headers         {:Authorization (str "Token " token)}
-                :uri             (str (:backend-url db) "/sports-sites")
-                :params          data
-                :format          (ajax/json-request-format)
-                :response-format (ajax/json-response-format {:keywords? true})
-                :on-success      [::commit-success]
-                :on-failure      [::commit-failure]}})
+  {:http-xhrio
+   {:method          :post
+    :headers         {:Authorization (str "Token " token)}
+    :uri             (str (:backend-url db) "/sports-sites")
+    :params          data
+    :format          (ajax/json-request-format)
+    :response-format (ajax/json-response-format {:keywords? true})
+    :on-success      [::commit-success]
+    :on-failure      [::commit-failure]}})
 
 (re-frame/reg-event-fx
  ::commit-rev

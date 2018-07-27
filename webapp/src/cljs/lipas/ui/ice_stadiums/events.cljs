@@ -1,6 +1,5 @@
 (ns lipas.ui.ice-stadiums.events
   (:require [lipas.ui.utils :as utils]
-            [lipas.ui.ice-stadiums.utils :as ice-utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -20,29 +19,10 @@
          site     (get-in db [:sports-sites lipas-id])
          rev      (or (utils/find-revision site year)
                       (utils/make-revision site (utils/->timestamp year)))
-         rev      (ice-utils/make-editable rev)]
+         rev      (utils/make-editable rev)]
      (-> db
          (assoc-in [:ice-stadiums :editing :year] year)
          (assoc-in [:sports-sites lipas-id :editing] rev)))))
-
-(re-frame/reg-event-db
- ::edit-site
- (fn [db [_ {:keys [lipas-id]}]]
-   (let [site      (get-in db [:sports-sites lipas-id])
-         rev       (utils/make-revision site (utils/timestamp))]
-     (-> db
-         (assoc-in [:sports-sites lipas-id :editing] (ice-utils/make-editable rev))
-         (assoc-in [:ice-stadiums :editing :lipas-id] lipas-id)
-         (assoc-in [:ice-stadiums :editing?] true)))))
-
-(re-frame/reg-event-db
- ::save-edits
- (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)
-         rev      (get-in db [:sports-sites lipas-id :editing])]
-     (-> db
-         (assoc-in [:ice-stadiums :editing?] false)
-         (utils/save-edits (ice-utils/make-saveable rev))))))
 
 (defn- calculate-totals [data]
   {:electricity-mwh (reduce + (map :electricity-mwh (vals data)))
@@ -72,7 +52,7 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [_ [_ rev]]
-   (let [rev (ice-utils/make-saveable rev)]
+   (let [rev (utils/make-saveable rev)]
      {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
 
 (re-frame/reg-event-db

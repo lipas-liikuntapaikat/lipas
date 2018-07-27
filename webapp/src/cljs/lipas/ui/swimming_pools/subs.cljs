@@ -1,8 +1,6 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]
-            [lipas.ui.swimming-pools.utils :as swim-utils]
-            [clojure.spec.alpha :as s]))
+            [lipas.ui.utils :as utils]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -46,14 +44,6 @@
  (fn [db _]
    (let [lipas-id (-> db :swimming-pools :editing :lipas-id)]
      (get-in db [:sports-sites lipas-id :editing]))))
-
-(re-frame/reg-sub
- ::edits-valid?
- :<- [::editing-rev]
- (fn [rev _]
-   (let [rev (swim-utils/make-saveable rev)]
-     ;; (s/explain :lipas.sports-site/swimming-pool rev)
-     (s/valid? :lipas.sports-site/swimming-pool rev))))
 
 (re-frame/reg-sub
  ::editing-year
@@ -178,7 +168,7 @@
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :display-site)]
+   (let [lipas-id (-> db :swimming-pools :displaying)]
      (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
