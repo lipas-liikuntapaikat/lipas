@@ -17,7 +17,7 @@
     [mui/form-group
 
      ;; Email
-     [lui/text-field {:label       (tr :register/email)
+     [lui/text-field {:label       (tr :lipas.user/email)
                       :type        "email"
                       :spec        :lipas.user/email
                       :value       (:email form-data)
@@ -25,7 +25,7 @@
                       :placeholder (tr :register/email-example)}]
 
      ;; Username
-     [lui/text-field {:label       (tr :register/username)
+     [lui/text-field {:label       (tr :lipas.user/username)
                       :type        "text"
                       :spec        :lipas.user/username
                       :value       (:username form-data)
@@ -33,42 +33,42 @@
                       :placeholder (tr :register/username-example)}]
 
      ;; Password
-     [lui/text-field {:label     (tr :register/password)
+     [lui/text-field {:label     (tr :lipas.user/password)
                       :type      "password"
                       :spec      :lipas.user/password
                       :value     (:password form-data)
                       :on-change #(set-field :password %)}]
 
      ;; Firstname
-     [lui/text-field {:label     (tr :register/firstname)
+     [lui/text-field {:label     (tr :lipas.user/firstname)
                       :spec      :lipas.user/firstname
                       :value     (-> form-data :user-data :firstname)
                       :on-change #(set-field :user-data :firstname %)}]
 
      ;; Lastname
-     [lui/text-field {:label     (tr :register/lastname)
+     [lui/text-field {:label     (tr :lipas.user/lastname)
                       :spec      :lipas.user/lastname
                       :value     (-> form-data :user-data :lastname)
                       :on-change #(set-field :user-data :lastname %)}]
 
      ;; Permissions request
-     [lui/text-field {:label       (tr :register/permissions)
+     [lui/text-field {:label       (tr :lipas.user/permissions)
                       :multiline   true
                       :spec        :lipas.user/permissions-request
                       :value       (-> form-data :user-data :permissions-request)
                       :on-change   #(set-field :user-data :permissions-request %)
                       :rows        3
-                      :placeholder (tr :register/permissions-example)
-                      :helper-text (tr :register/permissions-help)}]
+                      :placeholder (tr :lipas.user/permissions-example)
+                      :helper-text (tr :lipas.user/permissions-help)}]
 
      ;; Register button
      [mui/button {:style    {:margin-top "1em"}
                   :color    "secondary"
                   :variant  "raised"
-                  :disabled (not (s/valid? :lipas/user form-data))
+                  :disabled (not (s/valid? :lipas/new-user form-data))
                   :size     "large"
                   :on-click #(==> [::events/submit-registration-form form-data])}
-      (tr :actions/save)]
+      (tr :register/headline)]
 
      ;; Error messages
      (when error
