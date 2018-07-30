@@ -5,8 +5,10 @@ services:
     image: nginx
     ports:
       - '80:80'
+      - '443:443'
     volumes:
       - './nginx/:/etc/nginx/conf.d:z'
+      - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
     links:
       - mapproxy
