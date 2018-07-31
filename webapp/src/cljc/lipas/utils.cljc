@@ -43,7 +43,8 @@
   (try
     (let [x (read-string s)]
       (when (number? x) x))
-    (catch Exception ex)))
+    #?(:cljs (catch :default ex)
+       :clj  (catch Exception ex))))
 
 (defn ->int [s]
   (when-let [num (->number s)]
