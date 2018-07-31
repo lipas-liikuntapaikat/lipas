@@ -7,7 +7,7 @@
             [clojure.test :refer [deftest testing is]]
             [lipas.backend.auth :as auth]
             [lipas.backend.core :as core]
-            [lipas.backend.system :refer [start-system!]]
+            [lipas.backend.system :as system]
             [lipas.schema.core]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
@@ -30,7 +30,8 @@
   [req token]
   (mock/header req "Authorization" (str "Token " token)))
 
-(def system (start-system!))
+(def config (select-keys system/default-config [:db :app]))
+(def system (system/start-system! config))
 (def db (:db system))
 (def app (:app system))
 

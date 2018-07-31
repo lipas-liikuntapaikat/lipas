@@ -6,6 +6,7 @@
                  [etaoin "0.2.8-SNAPSHOT"]
                  [hiposfer/geojson.specs "0.2.0"]
                  [metosin/spec-tools "0.7.1"]
+                 [com.taoensso/timbre "4.10.0"]
 
                  ;;; Frontend ;;;
                  [org.clojure/clojurescript "1.10.312"]
@@ -20,7 +21,6 @@
                  [day8.re-frame/http-fx "0.1.6"]
 
                  ;;; Backend ;;;
-                 [org.clojure/test.check "0.9.0"]
                  [metosin/compojure-api "2.0.0-alpha21"]
                  [cheshire "5.8.0"]
                  [buddy "2.0.0"]
@@ -30,8 +30,7 @@
                  [integrant "0.6.3"]
                  [migratus "1.0.6"]
                  [environ "1.1.0"]
-                 [com.fzakaria/slf4j-timbre "0.3.7"]
-                 [ring "1.4.0"]
+                 [ring/ring-jetty-adapter "1.6.3"]
                  [org.clojure/data.csv "0.1.4"]]
 
   :plugins [[lein-environ "1.1.0"]
@@ -78,10 +77,21 @@
                    [cider/piggieback "0.3.6"]
 
                     ;;; Backend ;;;
-                   [ring/ring-mock "0.3.2"]]
+                   [ring/ring-mock "0.3.2"]
+                   [org.clojure/test.check "0.9.0"]]
 
     :plugins [[lein-figwheel "0.5.16"]
-              [lein-doo "0.1.8"]]}}
+              [lein-doo "0.1.8"]]}
+   :uberjar
+   {:main         lipas.aot
+    :aot          [lipas.aot]
+    ;; Hack to speed up build with docker. Writing to mounted volumes
+    ;; is slow (at least in OSX) so it's better to build using
+    ;; non-mounted path and copy backend.jar to mounted location
+    ;; afterwards.
+    :target-path  "/tmp/%s"
+    :compile-path "%s/classy-files"
+    :uberjar-name "backend.jar"}}
 
   :cljsbuild
   {:builds
