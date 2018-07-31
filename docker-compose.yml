@@ -1,7 +1,7 @@
 version: '2'
 services:
 
-  proxy:
+  proxy-base:
     image: nginx
     ports:
       - '80:80'
@@ -10,6 +10,17 @@ services:
       - './nginx/:/etc/nginx/conf.d:z'
       - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
+
+  proxy:
+    extends:
+      service: proxy-base
+    links:
+      - mapproxy
+      - backend
+
+  proxy-dev:
+    extends:
+      service: proxy-base
     links:
       - mapproxy
       - backend-dev
@@ -42,6 +53,15 @@ services:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
 
+  backend:
+    extends:
+      service: backend-base
+    command: java -jar backend.jar
+    ports:
+      - '8091:8091'
+    links:
+      - postgres
+
   backend-dev:
     extends:
       service: backend-base
@@ -51,6 +71,11 @@ services:
     links:
       - postgres
       # - elasticsearch
+
+  backend-build:
+    extends:
+      service: backend-base
+    command: bash -c 'lein uberjar && cp /tmp/uberjar/backend.jar .'
 
   backend-migrate:
     extends:

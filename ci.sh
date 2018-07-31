@@ -10,6 +10,9 @@ docker-compose run backend-migrate
 printf "\n *** Running backend tests *** \n\n"
 docker-compose run backend-tests
 
+printf "\n *** Packaging backend *** \n\n"
+docker-compose run backend-build
+
 ### Frontend ###
 
 printf "\n *** Compiling frontend *** \n\n"
