@@ -53,11 +53,10 @@
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open? ((complement empty?) display-data)
-
-      :title (if uncommitted-edits?
-               (tr :statuses/edited (-> display-data :name))
-               (-> display-data :name))
+     {:open?       ((complement empty?) display-data)
+      :title       (if uncommitted-edits?
+                     (tr :statuses/edited (-> display-data :name))
+                     (-> display-data :name))
 
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/display-site nil])
@@ -91,6 +90,145 @@
                               :admins          admins
                               :owners          owners
                               :on-change       set-field}]]
+
+;;; Conditions
+      (let [on-change    (partial set-field :conditions)
+            display-data (-> display-data :conditions)
+            edit-data    (-> edit-data :conditions)]
+        [lui/form-card {:title (tr :lipas.ice-stadium.conditions/headline)}
+         [lui/form {:read-only? (not editing?)}
+
+          ;; Open months
+          {:label (tr :lipas.ice-stadium.conditions/open-months)
+           :value (-> display-data :open-months)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/open-months
+             :adornment (tr :duration/month)
+             :value     (-> edit-data :open-months)
+             :on-change #(on-change :open-months %)}]}
+
+          ;; Daily open hours
+          {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
+           :value (-> display-data :daily-open-hours)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/daily-open-hours
+             :adornment (tr :units/hours-per-day)
+             :value     (-> edit-data :daily-open-hours)
+             :on-change #(on-change :daily-open-hours %)}]}
+
+          ;; Air humidity min %
+          {:label (tr :lipas.ice-stadium.conditions/air-humidity-min)
+           :value (-> display-data :air-humidity-min)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/air-humidity-min
+             :adornment (tr :units/percent)
+             :value     (-> edit-data :air-humidity-min)
+             :on-change #(on-change :air-humidity-min %)}]}
+
+          ;; Air humidity max %
+          {:label (tr :lipas.ice-stadium.conditions/air-humidity-max)
+           :value (-> display-data :air-humidity-max)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/air-humidity-max
+             :adornment (tr :units/percent)
+             :value     (-> edit-data :air-humidity-max)
+             :on-change #(on-change :air-humidity-max %)}]}
+
+          ;; Ice surface temperature c
+          {:label (tr :lipas.ice-stadium.conditions/ice-surface-temperature-c)
+           :value (-> display-data :ice-surface-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/ice-surface-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :ice-surface-temperature-c)
+             :on-change #(on-change :ice-surface-temperature-c %)}]}
+
+          ;; Skating area temperature c
+          {:label (tr :lipas.ice-stadium.conditions/skating-area-temperature-c)
+           :value (-> display-data :skating-area-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/skating-area-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :skating-area-temperature-c)
+             :on-change #(on-change :skating-area-temperature-c %)}]}
+
+          ;; Stand temperature c
+          {:label (tr :lipas.ice-stadium.conditions/stand-temperature-c)
+           :value (-> display-data :stand-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/stand-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :stand-temperature-c)
+             :on-change #(on-change :stand-temperature-c %)}]}
+
+          ;; ;; Daily maintenance count week days
+          ;; {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-week-days)
+          ;;  :value (-> display-data :daily-maintenances-week-days)
+          ;;  :form-field
+          ;;  [lui/text-field
+          ;;   {:type      "number"
+          ;;    :spec      :lipas.ice-stadium.conditions/daily-maintenances-week-days
+          ;;    :adornment (tr :units/times-per-day)
+          ;;    :value     (-> edit-data :daily-maintenances-week-days)
+          ;;    :on-change #(on-change :daily-maintenances-week-days %)}]}
+
+          ;; ;; Daily maintenance count weekends
+          ;; {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-weekends)
+          ;;  :value (-> display-data :daily-maintenances-weekends)
+          ;;  :form-field
+          ;;  [lui/text-field
+          ;;   {:type      "number"
+          ;;    :spec      :lipas.ice-stadium.conditions/daily-maintenances-weekends
+          ;;    :adornment (tr :units/times-per-day)
+          ;;    :value     (-> edit-data :daily-maintenances-weekends)
+          ;;    :on-change #(on-change :daily-maintenances-weekends %)}]}
+
+          ;; Weekly maintenance count
+          {:label (tr :lipas.ice-stadium.conditions/weekly-maintenances)
+           :value (-> display-data :weekly-maintenances)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/weekly-maintenances
+             :adornment (tr :units/times-per-week)
+             :value     (-> edit-data :weekly-maintenances)
+             :on-change #(on-change :weekly-maintenances %)}]}
+
+          ;; Average water consumption l
+          {:label (tr :lipas.ice-stadium.conditions/average-water-consumption-l)
+           :value (-> display-data :average-water-consumption-l)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/average-water-consumption-l
+             :adornment (tr :physical-units/l)
+             :value     (-> edit-data :average-water-consumption-l)
+             :on-change #(on-change :average-water-consumption-l %)}]}
+
+          ;; Ice average thickness mm
+          {:label (tr :lipas.ice-stadium.conditions/ice-average-thickness-mm)
+           :value (-> display-data :ice-average-thickness-mm)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/ice-average-thickness-mm
+             :adornment (tr :physical-units/mm)
+             :value     (-> edit-data :ice-average-thickness-mm)
+             :on-change #(on-change :ice-average-thickness-mm %)}]}]])
 
         ;;; Location
       [lui/form-card {:title (tr :lipas.location/headline)}
@@ -369,147 +507,8 @@
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])
 
-        ;;; Conditions
-      (let [on-change    (partial set-field :conditions)
-            display-data (-> display-data :conditions)
-            edit-data    (-> edit-data :conditions)]
-        [lui/form-card {:title (tr :lipas.ice-stadium.conditions/headline)}
-         [lui/form {:read-only? (not editing?)}
-
-          ;; Open months
-          {:label (tr :lipas.ice-stadium.conditions/open-months)
-           :value (-> display-data :open-months)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/open-months
-             :adornment (tr :duration/month)
-             :value     (-> edit-data :open-months)
-             :on-change #(on-change :open-months %)}]}
-
-          ;; Daily open hours
-          {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
-           :value (-> display-data :daily-open-hours)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/daily-open-hours
-             :adornment (tr :units/hours-per-day)
-             :value     (-> edit-data :daily-open-hours)
-             :on-change #(on-change :daily-open-hours %)}]}
-
-          ;; Air humidity min %
-          {:label (tr :lipas.ice-stadium.conditions/air-humidity-min)
-           :value (-> display-data :air-humidity-min)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/air-humidity-min
-             :adornment (tr :units/percent)
-             :value     (-> edit-data :air-humidity-min)
-             :on-change #(on-change :air-humidity-min %)}]}
-
-          ;; Air humidity max %
-          {:label (tr :lipas.ice-stadium.conditions/air-humidity-max)
-           :value (-> display-data :air-humidity-max)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/air-humidity-max
-             :adornment (tr :units/percent)
-             :value     (-> edit-data :air-humidity-max)
-             :on-change #(on-change :air-humidity-max %)}]}
-
-          ;; Ice surface temperature c
-          {:label (tr :lipas.ice-stadium.conditions/ice-surface-temperature-c)
-           :value (-> display-data :ice-surface-temperature-c)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/ice-surface-temperature-c
-             :adornment (tr :physical-units/celsius)
-             :value     (-> edit-data :ice-surface-temperature-c)
-             :on-change #(on-change :ice-surface-temperature-c %)}]}
-
-          ;; Skating area temperature c
-          {:label (tr :lipas.ice-stadium.conditions/skating-area-temperature-c)
-           :value (-> display-data :skating-area-temperature-c)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/skating-area-temperature-c
-             :adornment (tr :physical-units/celsius)
-             :value     (-> edit-data :skating-area-temperature-c)
-             :on-change #(on-change :skating-area-temperature-c %)}]}
-
-          ;; Stand temperature c
-          {:label (tr :lipas.ice-stadium.conditions/stand-temperature-c)
-           :value (-> display-data :stand-temperature-c)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/stand-temperature-c
-             :adornment (tr :physical-units/celsius)
-             :value     (-> edit-data :stand-temperature-c)
-             :on-change #(on-change :stand-temperature-c %)}]}
-
-          ;; ;; Daily maintenance count week days
-          ;; {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-week-days)
-          ;;  :value (-> display-data :daily-maintenances-week-days)
-          ;;  :form-field
-          ;;  [lui/text-field
-          ;;   {:type      "number"
-          ;;    :spec      :lipas.ice-stadium.conditions/daily-maintenances-week-days
-          ;;    :adornment (tr :units/times-per-day)
-          ;;    :value     (-> edit-data :daily-maintenances-week-days)
-          ;;    :on-change #(on-change :daily-maintenances-week-days %)}]}
-
-          ;; ;; Daily maintenance count weekends
-          ;; {:label (tr :lipas.ice-stadium.conditions/daily-maintenances-weekends)
-          ;;  :value (-> display-data :daily-maintenances-weekends)
-          ;;  :form-field
-          ;;  [lui/text-field
-          ;;   {:type      "number"
-          ;;    :spec      :lipas.ice-stadium.conditions/daily-maintenances-weekends
-          ;;    :adornment (tr :units/times-per-day)
-          ;;    :value     (-> edit-data :daily-maintenances-weekends)
-          ;;    :on-change #(on-change :daily-maintenances-weekends %)}]}
-
-          ;; Weekly maintenance count
-          {:label (tr :lipas.ice-stadium.conditions/weekly-maintenances)
-           :value (-> display-data :weekly-maintenances)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/weekly-maintenances
-             :adornment (tr :units/times-per-week)
-             :value     (-> edit-data :weekly-maintenances)
-             :on-change #(on-change :weekly-maintenances %)}]}
-
-          ;; Average water consumption l
-          {:label (tr :lipas.ice-stadium.conditions/average-water-consumption-l)
-           :value (-> display-data :average-water-consumption-l)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/average-water-consumption-l
-             :adornment (tr :physical-units/l)
-             :value     (-> edit-data :average-water-consumption-l)
-             :on-change #(on-change :average-water-consumption-l %)}]}
-
-          ;; Ice average thickness mm
-          {:label (tr :lipas.ice-stadium.conditions/ice-average-thickness-mm)
-           :value (-> display-data :ice-average-thickness-mm)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/ice-average-thickness-mm
-             :adornment (tr :physical-units/mm)
-             :value     (-> edit-data :ice-average-thickness-mm)
-             :on-change #(on-change :ice-average-thickness-mm %)}]}]])
-
         ;;; Energy consumption
-      [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
        [energy/table {:read-only? true
                       :cold?      true
                       :tr         tr
@@ -526,12 +525,12 @@
      [mui/grid {:item true :xs 12}
       [mui/paper
        [lui/table
-        {:headers   [[:name (tr :lipas.sports-site/name)]
-                     [:city (tr :lipas.location/city)]
-                     [:address (tr :lipas.location/address)]
-                     [:postal-code (tr :lipas.location/postal-code)]
-                     [:admin (tr :lipas.sports-site/admin)]
-                     [:owner (tr :lipas.sports-site/owner)]]
+        {:headers
+         [[:name (tr :lipas.sports-site/name)]
+          [:city (tr :lipas.location/city)]
+          [:type (tr :lipas.sports-site/type)]
+          [:construction-year (tr :lipas.sports-site/construction-year)]
+          [:renovation-years (tr :lipas.sports-site/renovation-years)]]
          :items     sites
          :on-select #(==> [::events/display-site %])}]]]]))
 
@@ -576,11 +575,11 @@
                    :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label    (tr :ice-basic-data/headline)
+         [mui/tab {:label    (tr :ice-form/headline-short)
                    :icon     (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Compare tab
-         [mui/tab {:label (tr :swim/visualizations)
+         [mui/tab {:label (tr :ice/comparison)
                    :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 3 Energy info tab

@@ -10,7 +10,7 @@
             [lipas.ui.swimming-pools.slides :as slides]
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -24,11 +24,14 @@
   [lipas-id & args]
   (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
-(defn site-view [{:keys [tr logged-in?]}]
-  (let [locale       (tr)
+(defn site-view []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [:lipas.ui.subs/logged-in?])
+
+        locale       (tr)
         display-data (<== [::subs/display-site locale])
 
-        lipas-id     (:lipas-id display-data)
+        lipas-id (:lipas-id display-data)
 
         edit-data    (<== [::site-subs/editing-rev lipas-id])
         editing?     (<== [::site-subs/editing? lipas-id])
@@ -51,10 +54,10 @@
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open? ((complement empty?) display-data)
-      :title (if uncommitted-edits?
-               (tr :statuses/edited (-> display-data :name))
-               (-> display-data :name))
+     {:open?        ((complement empty?) display-data)
+      :title        (if uncommitted-edits?
+                      (tr :statuses/edited (-> display-data :name))
+                      (-> display-data :name))
 
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
@@ -87,15 +90,6 @@
                               :admins       admins
                               :owners       owners
                               :on-change    set-field}]]
-
-        ;;; Location
-      [lui/form-card {:title (tr :lipas.location/headline)}
-       [lui/location-form {:tr           tr
-                           :read-only?   (not editing?)
-                           :cities       cities
-                           :edit-data    (:location edit-data)
-                           :display-data (:location display-data)
-                           :on-change    (partial set-field :location)}]]
 
       ;;; Building
       (let [display-data (-> display-data :building)
@@ -238,7 +232,16 @@
              :value-fn  first
              :on-change #(on-change :ceiling-structures %)}]}]])
 
-        ;;; Water treatment
+      ;;; Location
+      [lui/form-card {:title (tr :lipas.location/headline)}
+       [lui/location-form {:tr           tr
+                           :read-only?   (not editing?)
+                           :cities       cities
+                           :edit-data    (:location edit-data)
+                           :display-data (:location display-data)
+                           :on-change    (partial set-field :location)}]]
+
+      ;;; Water treatment
       (let [display-data (-> display-data :water-treatment)
             edit-data    (-> edit-data :water-treatment)
             on-change    (partial set-field :water-treatment)]
@@ -290,44 +293,43 @@
              :spec      :lipas.swimming-pool.water-treatment/comment
              :on-change #(on-change :comment %)}]}]])
 
-        ;;; Pools
-      [lui/form-card {:title (tr :lipas.swimming-pool.pools/headline)}
+      ;;; Pools
+      [lui/form-card
+       {:title (tr :lipas.swimming-pool.pools/headline) :md 12 :lg 12}
 
        (when (-> dialogs :pool :open?)
-         [pools/dialog {:tr tr}])
+         [pools/dialog {:tr tr :lipas-id lipas-id}])
 
        (if editing?
-         [pools/table {:tr tr :items (-> edit-data :pools)}]
+         [pools/table {:tr tr :items (-> edit-data :pools) :lipas-id lipas-id}]
          [pools/read-only-table {:tr tr :items (-> display-data :pools)}])]
 
-        ;;; Saunas
-      [lui/form-card {:title (tr :lipas.swimming-pool.saunas/headline)}
+      ;;; Saunas
+      [lui/form-card
+       {:title (tr :lipas.swimming-pool.saunas/headline)}
 
        (when (-> dialogs :sauna :open?)
-         [saunas/dialog {:tr tr}])
+         [saunas/dialog {:tr tr :lipas-id lipas-id}])
 
        (if editing?
-         [saunas/table {:tr tr :items (-> edit-data :saunas)}]
+         [saunas/table {:tr tr :items (-> edit-data :saunas) :lipas-id lipas-id}]
          [saunas/read-only-table {:tr tr :items (-> display-data :saunas)}])]
 
-        ;;; Slides
+      ;;; Slides
       [lui/form-card {:title (tr :lipas.swimming-pool.slides/headline)}
 
        (when (-> dialogs :slide :open?)
-         [slides/dialog {:tr tr}])
+         [slides/dialog {:tr tr :lipas-id lipas-id}])
 
        (if editing?
-         [slides/table {:tr tr :items (-> edit-data :slides)}]
+         [slides/table {:tr tr :items (-> edit-data :slides) :lipas-id lipas-id}]
          [slides/read-only-table {:tr tr :items (-> display-data :slides)}])]
 
-        ;;; Facilities
       (let [display-data (-> display-data :facilities)
             edit-data    (-> edit-data :facilities)
             on-change    (partial set-field :facilities)]
-
-        [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
+        [lui/form-card {:title "Hyppypaikat"}
          [lui/form {:read-only? (not editing?)}
-
           ;; Platforms 1m count
           {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
            :value (-> display-data :platforms-1m-count)
@@ -381,7 +383,15 @@
              :type      "number"
              :value     (-> edit-data :platforms-10m-count)
              :spec      :lipas.swimming-pool.facilities/platforms-10m-count
-             :on-change #(on-change :platforms-10m-count %)}]}
+             :on-change #(on-change :platforms-10m-count %)}]}]])
+
+      ;;; Facilities
+      (let [display-data (-> display-data :facilities)
+            edit-data    (-> edit-data :facilities)
+            on-change    (partial set-field :facilities)]
+
+        [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
+         [lui/form {:read-only? (not editing?)}
 
           ;; Hydro massage spots count
           {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
@@ -459,8 +469,8 @@
 
       ;;; Conditions
       (let [display-data (-> display-data :conditions)
-            edit-data (-> edit-data :conditions)
-            on-change (partial set-field :visitors)]
+            edit-data    (-> edit-data :conditions)
+            on-change    (partial set-field :visitors)]
 
         [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline)}
          [lui/form {:read-only? (not editing?)}
@@ -470,8 +480,7 @@
            :value (-> display-data :daily-open-hours)
            :form-field
            [lui/text-field
-            {:label (tr :lipas.ice-stadium.conditions/daily-open-hours)
-             :type      "number"
+            {:type      "number"
              :spec      :lipas.ice-stadium.conditions/daily-open-hours
              :adornment (tr :units/hours-per-day)
              :value     (-> edit-data :daily-open-hours)
@@ -482,15 +491,14 @@
            :value (-> display-data :open-days-in-year)
            :form-field
            [lui/text-field
-            {:label     (tr :lipas.swimming-pool.conditions/open-days-in-year)
-             :type      "number"
+            {:type      "number"
              :value     (-> edit-data :open-days-in-year)
              :spec      :lipas.swimming-pool.conditions/open-days-in-year
              :adornment (tr :units/days-in-year)
              :on-change #(on-change :open-days-in-year %)}]}]])
 
       ;;; Energy consumption
-      [lui/form-card {:title (tr :lipas.energy-consumption/headline)}
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
        [energy/table {:read-only? true
                       :tr         tr
                       :items      (-> display-data :energy-consumption)}]]]]))
@@ -506,12 +514,12 @@
      [mui/grid {:item true :xs 12}
       [mui/paper
        [lui/table
-        {:headers   [[:name (tr :lipas.sports-site/name)]
-                     [:city (tr :lipas.location/city)]
-                     [:address (tr :lipas.location/address)]
-                     [:postal-code (tr :lipas.location/postal-code)]
-                     [:admin (tr :lipas.sports-site/admin)]
-                     [:owner (tr :lipas.sports-site/owner)]]
+        {:headers
+         [[:name (tr :lipas.sports-site/name)]
+          [:city (tr :lipas.location/city)]
+          [:type (tr :lipas.sports-site/type)]
+          [:construction-year (tr :lipas.sports-site/construction-year)]
+          [:renovation-years (tr :lipas.sports-site/renovation-years)]]
          :items     sites
          :on-select #(==> [::events/display-site %])}]]]]))
 

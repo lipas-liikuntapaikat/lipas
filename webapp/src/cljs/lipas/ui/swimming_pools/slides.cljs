@@ -6,11 +6,12 @@
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
 
-(def set-field (->setter-fn ::events/set-field))
+(defn set-field [dialog field value]
+  (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
   (let [structures (<== [::subs/slide-structures])
-        set-field  (partial set-field :dialogs :slide :data)
+        set-field  (partial set-field :slide)
         locale     (tr)]
     [mui/form-group
      [lui/select {:required  true
@@ -27,7 +28,7 @@
                       :spec      :lipas.swimming-pool.slide/length-m
                       :on-change #(set-field :length-m %)}]]))
 
-(defn dialog [{:keys [tr]}]
+(defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::subs/slide-form])
         close   #(==> [::events/toggle-dialog :slide])
         reset   #(==> [::events/reset-dialog :slide])
@@ -35,7 +36,7 @@
         title   (if (:id data)
                   (tr :lipas.swimming-pool.slides/edit-slide)
                   (tr :lipas.swimming-pool.slides/add-slide))
-        on-save (comp reset close #(==> [::events/save-slide data]))]
+        on-save (comp reset close #(==> [::events/save-slide lipas-id data]))]
     [lui/dialog {:title         title
                  :save-label    (tr :actions/save)
                  :cancel-label  (tr :actions/cancel)
@@ -48,7 +49,7 @@
   [[:structure (tr :general/structure)]
    [:length-m (tr :dimensions/length-m)]])
 
-(defn table [{:keys [tr items]}]
+(defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr :structure :slide-structures)]
     [lui/form-table
      {:headers        (make-headers tr)
@@ -58,7 +59,7 @@
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :slide {}])
       :on-edit        #(==> [::events/toggle-dialog :slide (get items (:id %))])
-      :on-delete      #(==> [::events/remove-slide %])}]))
+      :on-delete      #(==> [::events/remove-slide lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

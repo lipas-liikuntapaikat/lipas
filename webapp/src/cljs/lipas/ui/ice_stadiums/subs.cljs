@@ -1,5 +1,6 @@
 (ns lipas.ui.ice-stadiums.subs
   (:require [lipas.ui.utils :as utils]
+            [clojure.string :as string]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -104,19 +105,31 @@
  (fn [db _]
    (-> db :base-floor-structures)))
 
-(defn ->list-entry [{:keys [cities admins owners types locale]} ice-stadium]
-  (let [type   (types (-> ice-stadium :type :type-code))
-        admin  (admins (-> ice-stadium :admin))
-        owner  (owners (-> ice-stadium :owner))
-        city   (get cities (-> ice-stadium :location :city :city-code))]
-    {:lipas-id    (-> ice-stadium :lipas-id)
-     :name        (-> ice-stadium :name)
-     :type        (-> type :name locale)
-     :address     (-> ice-stadium :location :address)
-     :postal-code (-> ice-stadium :location :postal-code)
-     :city        (-> city :name locale)
-     :owner       (-> owner locale)
-     :admin       (-> admin locale)}))
+(defn- truncate [s]
+  (when (string? s)
+    (-> s
+        (string/split #"(<|>)")
+        first
+        (string/trim))))
+
+(defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
+                    ice-stadium]
+  (let [type          (types (-> ice-stadium :type :type-code))
+        size-category (-> ice-stadium :type :size-category size-categories locale)
+        admin         (admins (-> ice-stadium :admin))
+        owner         (owners (-> ice-stadium :owner))
+        city          (get cities (-> ice-stadium :location :city :city-code))]
+    {:lipas-id          (-> ice-stadium :lipas-id)
+     :name              (-> ice-stadium :name)
+     :type              (or (truncate size-category)
+                            (-> type :name locale))
+     :address           (-> ice-stadium :location :address)
+     :postal-code       (-> ice-stadium :location :postal-code)
+     :city              (-> city :name locale)
+     :construction-year (-> ice-stadium :construction-year)
+     :renovation-years  (-> ice-stadium :renovation-years)
+     :owner             (-> owner locale)
+     :admin             (-> admin locale)}))
 
 (re-frame/reg-sub
  ::sites-list
@@ -125,12 +138,14 @@
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
  :<- [::types-by-type-code]
- (fn [[sites cities admins owners types] [_ locale]]
-   (let [data {:locale locale
-               :cities cities
-               :admins admins
-               :owners owners
-               :types types}]
+ :<- [::size-categories]
+ (fn [[sites cities admins owners types size-categories] [_ locale]]
+   (let [data {:locale          locale
+               :cities          cities
+               :admins          admins
+               :owners          owners
+               :types           types
+               :size-categories size-categories}]
      (sort-by :city (map (partial ->list-entry data) (vals sites))))))
 
 (re-frame/reg-sub

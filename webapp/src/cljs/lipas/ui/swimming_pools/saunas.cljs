@@ -6,11 +6,12 @@
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
 
-(def set-field (->setter-fn ::events/set-field))
+(defn set-field [dialog field value]
+  (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
   (let [sauna-types (<== [::subs/sauna-types])
-        set-field   (partial set-field :dialogs :sauna :data)
+        set-field   (partial set-field :sauna)
         locale      (tr)]
     [mui/form-group
 
@@ -33,14 +34,14 @@
                     :on-change #(set-field :men? %)
                     :value     (:men? data)}]]))
 
-(defn dialog [{:keys [tr]}]
+(defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::subs/sauna-form])
         title   (if (:id data)
                   (tr :lipas.swimming-pool.saunas/edit-sauna)
                   (tr :lipas.swimming-pool.saunas/add-sauna))
         reset   #(==> [::events/reset-dialog :sauna])
         close   #(==> [::events/toggle-dialog :sauna])
-        on-save (comp reset close #(==> [::events/save-sauna data]))
+        on-save (comp reset close #(==> [::events/save-sauna lipas-id data]))
         valid?  (s/valid? :lipas.swimming-pool/sauna data)]
     [lui/dialog {:title         title
                  :save-label    (tr :actions/save)
@@ -55,7 +56,7 @@
    [:women? (tr :lipas.swimming-pool.saunas/women?)]
    [:men? (tr :lipas.swimming-pool.saunas/men?)]])
 
-(defn table [{:keys [tr items]}]
+(defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr :type :sauna-types)]
     [lui/form-table
      {:headers        (make-headers tr)
@@ -65,7 +66,7 @@
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :sauna {}])
       :on-edit        #(==> [::events/toggle-dialog :sauna (get items (:id %))])
-      :on-delete      #(==> [::events/remove-sauna %])}]))
+      :on-delete      #(==> [::events/remove-sauna lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

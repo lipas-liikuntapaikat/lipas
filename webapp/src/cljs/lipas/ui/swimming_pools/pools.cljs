@@ -6,10 +6,11 @@
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
 
-(def set-field (->setter-fn ::events/set-field))
+(defn set-field [dialog field value]
+  (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field       (partial set-field :dialogs :pool :data)
+  (let [set-field       (partial set-field :pool)
         pool-types      (<== [::subs/pool-types])
         pool-structures (<== [::subs/pool-structures])
         locale          (tr)]
@@ -97,7 +98,7 @@
        :spec      :lipas.swimming-pool.pool/depth-max-m
        :on-change #(set-field :depth-max-m %)}]]))
 
-(defn dialog [{:keys [tr]}]
+(defn dialog [{:keys [tr lipas-id]}]
   (let [data (<== [::subs/pool-form])
         reset #(==> [::events/reset-dialog :pool])
         close #(==> [::events/toggle-dialog :pool])
@@ -111,7 +112,7 @@
                  :save-enabled? valid?
                  :on-save (comp reset
                                 close
-                                #(==> [::events/save-pool data]))}
+                                #(==> [::events/save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -125,7 +126,7 @@
    [:depth-max-m (tr :dimensions/depth-max-m)]
    [:structure (tr :general/structure)]])
 
-(defn table [{:keys [tr items]}]
+(defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr)]
     [lui/form-table
      {:headers        (make-headers tr)
@@ -137,7 +138,7 @@
       :delete-tooltip (tr :actions/delete)
       :on-add         #(==> [::events/toggle-dialog :pool {}])
       :on-edit        #(==> [::events/toggle-dialog :pool (get items (:id %))])
-      :on-delete      #(==> [::events/remove-pool %])}]))
+      :on-delete      #(==> [::events/remove-pool lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

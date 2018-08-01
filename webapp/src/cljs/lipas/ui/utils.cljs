@@ -141,9 +141,6 @@
         rev2 (dissoc rev2 :event-date :energy-consumption :visitors)]
     (not= rev1 rev2)))
 
-(defn remove-ids [m]
-  (not-empty (map #(dissoc % :id) m)))
-
 (defn save-edits [db rev]
   (let [lipas-id    (:lipas-id rev)
         site        (get-in db [:sports-sites lipas-id])
@@ -183,24 +180,6 @@
     ;; TODO Need to update latest maybe?
     (assoc-in db [:sports-sites lipas-id :history ts] rev)))
 
-(defn maybe-update-in
-  "Like `update-in` but updates only if path is present. Otherwise
-  returns the map unmodified."
-  [m path update-fn & args]
-  (if (not-empty (get-in m path))
-    (apply update-in (into [m path update-fn] args))
-    m))
-
-(defn clean
-  "Removes nil values and empty {} entries recursively from maps."
-  [m]
-  (walk/postwalk
-   (fn [x]
-     (cond
-       (map? x) (not-empty (into {} (filter (comp some? val)) x))
-       :else x))
-   m))
-
 (comment (->basic-auth {:username "kissa" :password "koira"}))
 (defn ->basic-auth
   "Creates base64 encoded Authorization header value"
@@ -216,16 +195,37 @@
 (defn join-pretty [coll]
   (string/join ", " coll))
 
+(defn clean
+  "Removes nil values and empty {} entries recursively from maps."
+  [m]
+  (walk/postwalk
+   (fn [x]
+     (cond
+       (map? x) (not-empty (into {} (filter (comp some? val)) x))
+       :else x))
+   m))
+
+(defn maybe-update-in
+  "Like `update-in` but updates only if path is present. Otherwise
+  returns the map unmodified."
+  [m path update-fn & args]
+  (if (not-empty (get-in m path))
+    (apply update-in (into [m path update-fn] args))
+    m))
+
 (defn make-editable [sports-site]
   (-> sports-site
 
       ;; Swimming pools
-      (maybe-update-in [:pools] ->indexed-map)
-      (maybe-update-in [:saunas] ->indexed-map)
-      (maybe-update-in [:slides] ->indexed-map)
+      (update-in [:pools] ->indexed-map)
+      (update-in [:saunas] ->indexed-map)
+      (update-in [:slides] ->indexed-map)
 
       ;; Ice Stadiums
-      (maybe-update-in [:rinks] ->indexed-map)))
+      (update-in [:rinks] ->indexed-map)))
+
+(defn remove-ids [m]
+  (not-empty (map #(dissoc % :id) m)))
 
 (defn make-saveable [sports-site]
   (-> sports-site
@@ -239,3 +239,8 @@
       (maybe-update-in [:rinks] (comp remove-ids vals))
 
       clean))
+
+(defn mobile? [width]
+  (case width
+    ("xs" "sm") true
+    false))
