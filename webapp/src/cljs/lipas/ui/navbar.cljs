@@ -101,15 +101,16 @@
 
 (defn create-drawer [tr logged-in?]
   (let [hide-and-navigate! (comp toggle-drawer navigate!)]
-    [mui/swipeable-drawer {:open true
-                           :on-open #()
+    [mui/swipeable-drawer {:open     true
+                           :anchor   :top
+                           :on-open  #()
                            :on-close toggle-drawer}
      lang-selector
 
      [mui/list
 
       ;; Home
-      [mui/list-item {:button true
+      [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! "/#/")}
        [mui/list-item-icon
         [mui/icon "home"]]
@@ -118,21 +119,21 @@
       [mui/divider]
 
       ;; Sports sites
-      [mui/list-item {:button true
+      [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
        [mui/list-item-icon
         [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
       ;; Ice stadiums
-      [mui/list-item {:button true
+      [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
        [mui/list-item-icon
         [mui/icon "ac_unit"]]
        [mui/list-item-text {:primary (tr :ice/headline)}]]
 
       ;; Swiming pools
-      [mui/list-item {:button true
+      [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
        [mui/list-item-icon
         [mui/icon "pool"]]
@@ -140,7 +141,7 @@
       [mui/divider]
 
       ;; Help
-      [mui/list-item {:button true
+      [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! (:help links))}
        [mui/list-item-icon
         [mui/icon "help"]]
@@ -149,7 +150,7 @@
 
       ;; Profile
       (when logged-in?
-        [mui/list-item {:button true
+        [mui/list-item {:button   true
                         :on-click #(hide-and-navigate! "/#/profiili")}
          [mui/list-item-icon
           [mui/icon "account_circle"]]
@@ -157,7 +158,7 @@
 
       ;; Logout
       (when logged-in?
-        [mui/list-item {:button true
+        [mui/list-item {:button   true
                         :on-click logout!}
          [mui/list-item-icon
           [mui/icon "exit_to_app"]]
@@ -165,7 +166,7 @@
 
       ;; Login
       (when (not logged-in?)
-        [mui/list-item {:button true
+        [mui/list-item {:button   true
                         :on-click #(hide-and-navigate! "/#/kirjaudu")}
          [mui/list-item-icon
           [mui/icon "lock"]]
@@ -173,7 +174,7 @@
 
       ;; Register
       (when (not logged-in?)
-        [mui/list-item {:button true
+        [mui/list-item {:button   true
                         :on-click #(hide-and-navigate! "/#/rekisteroidy")}
          [mui/list-item-icon
           [mui/icon "group_add"]]
