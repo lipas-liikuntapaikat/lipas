@@ -137,7 +137,8 @@
       [mui/grid {:container true}
 
        ;; Energy consumption
-       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
+       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)
+                       :xs 12 :md 12 :lg 12}
 
         [mui/typography {:variant "subheading"
                          :style   {:margin-bottom "1em"}}
@@ -171,7 +172,8 @@
 
        (when visitors?
          [lui/form-card
-          {:title (tr :lipas.swimming-pool.visitors/headline-year year)}
+          {:title (tr :lipas.swimming-pool.visitors/headline-year year)
+           :xs 12 :md 12 :lg 12}
           [mui/form-group
            [lui/text-field
             {:label     (tr :lipas.swimming-pool.visitors/total-count)
@@ -182,7 +184,7 @@
              :on-change #(set-field :visitors :total-count %)}]]])
 
        ;; Actions
-       [lui/form-card {}
+       [lui/form-card {:xs 12 :md 12 :lg 12}
         [mui/button
          {:full-width true
           :disabled   (not edits-valid?)
@@ -226,7 +228,8 @@
       [mui/grid {:container true}
 
        (when sites
-         [lui/form-card {:title (tr :actions/select-hall)}
+         [lui/form-card {:title (tr :actions/select-hall)
+                         :xs 12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-hall)
@@ -237,7 +240,8 @@
              :on-change #(==> [::events/select-energy-consumption-site %])}]]])
 
        (when (and sites site)
-         [lui/form-card {:title (tr :actions/select-year)}
+         [lui/form-card {:title (tr :actions/select-year)
+                         :xs 12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-year)

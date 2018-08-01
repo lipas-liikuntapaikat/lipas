@@ -248,8 +248,7 @@
              :md   md
              :lg   lg}
    [mui/card {:square true
-              :style  {:height "100%"}
-              }
+              :style  {:height "100%"}}
     [mui/card-header {:title title}]
     (into [mui/card-content] content)]])
 
