@@ -89,12 +89,12 @@
             [mui/icon "info"]]
            [mui/list-item-text {:primary "Info"}]]
 
-          ;; Lipas-API Swagger
+          ;; Lipas-API
           [mui/list-item {:button   true
                           :on-click #(navigate! (:lipas links))}
            [mui/list-item-icon
             [mui/icon "build"]]
-           [mui/list-item-text {:primary "Lipas-API Swagger"}]]
+           [mui/list-item-text {:primary "Lipas API"}]]
 
           ;; Geoserver
           [mui/list-item {:button   true
