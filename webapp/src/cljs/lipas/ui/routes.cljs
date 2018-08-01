@@ -33,12 +33,6 @@
   (defroute "/uimahalliportaali" []
     (==> [:lipas.ui.events/set-active-panel :swim-panel]))
 
-  (defroute "/avoin-data" []
-    (==> [:lipas.ui.events/set-active-panel :open-data-panel]))
-
-  (defroute "/ohjeet" []
-    (==> [:lipas.ui.events/set-active-panel :help-panel]))
-
   (defroute "/kirjaudu" []
     (==> [:lipas.ui.events/set-active-panel :login-panel]))
 

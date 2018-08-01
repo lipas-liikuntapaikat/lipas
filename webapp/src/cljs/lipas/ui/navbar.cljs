@@ -7,6 +7,9 @@
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>]]))
 
+(def links
+  {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
+
 (defn logout! []
   (==> [:lipas.ui.login.events/logout])
   (navigate! "/#/kirjaudu"))
@@ -48,7 +51,7 @@
 
      ;; Help
      [mui/menu-item {:id "account-menu-item-help"
-                     :on-click (comp close #(navigate! "/#/ohjeet"))}
+                     :on-click (comp close #(navigate! (:help links)))}
       [mui/list-item-icon
        [mui/icon "help"]]
       [mui/list-item-text {:primary (tr :help/headline)}]]
@@ -136,16 +139,9 @@
        [mui/list-item-text {:primary (tr :swim/headline)}]]
       [mui/divider]
 
-      ;; Open data
-      [mui/list-item {:button true
-                      :on-click #(hide-and-navigate! "/#/avoin-data")}
-       [mui/list-item-icon
-        [mui/icon "build"]]
-       [mui/list-item-text {:primary (tr :open-data/headline)}]]
-
       ;; Help
       [mui/list-item {:button true
-                      :on-click #(hide-and-navigate! "/#/ohjeet")}
+                      :on-click #(hide-and-navigate! (:help links))}
        [mui/list-item-icon
         [mui/icon "help"]]
        [mui/list-item-text {:primary (tr :help/headline)}]]
@@ -240,8 +236,6 @@
        :sports-panel    (tr :sport/headline)
        :ice-panel       (tr :ice/headline)
        :swim-panel      (tr :swim/headline)
-       :open-data-panel (tr :open-data/headline)
-       :help-panel      (tr :help/headline)
        :login-panel     (tr :login/headline)
        :register-panel  (tr :register/headline)
        :user-panel      (tr :user/headline)
