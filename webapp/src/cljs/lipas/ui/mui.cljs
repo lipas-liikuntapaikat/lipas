@@ -73,6 +73,7 @@
 (def card-content (mui->reagent "CardContent"))
 (def card-header (mui->reagent "CardHeader"))
 (def card-actions (mui->reagent "CardActions"))
+(def card-media (mui->reagent "CardMedia"))
 (def menu (mui->reagent "Menu"))
 (def menu-item (mui->reagent "MenuItem"))
 (def menu-list (mui->reagent "MenuList"))
