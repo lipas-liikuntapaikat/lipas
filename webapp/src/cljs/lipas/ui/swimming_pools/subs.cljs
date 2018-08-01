@@ -100,18 +100,20 @@
    (-> db :swimming-pools :slide-structures)))
 
 (defn ->list-entry [{:keys [cities admins owners types locale]} pool]
-  (let [type   (types (-> pool :type :type-code))
-        admin  (admins (-> pool :admin))
-        owner  (owners (-> pool :owner))
-        city   (get cities (-> pool :location :city :city-code))]
-    {:lipas-id    (-> pool :lipas-id)
-     :name        (-> pool :name)
-     :type        (-> type :name locale)
-     :address     (-> pool :location :address)
-     :postal-code (-> pool :location :postal-code)
-     :city        (-> city :name locale)
-     :owner       (-> owner locale)
-     :admin       (-> admin locale)}))
+  (let [type  (types (-> pool :type :type-code))
+        admin (admins (-> pool :admin))
+        owner (owners (-> pool :owner))
+        city  (get cities (-> pool :location :city :city-code))]
+    {:lipas-id          (-> pool :lipas-id)
+     :name              (-> pool :name)
+     :type              (-> type :name locale)
+     :address           (-> pool :location :address)
+     :postal-code       (-> pool :location :postal-code)
+     :city              (-> city :name locale)
+     :construction-year (-> pool :construction-year)
+     :renovation-years  (-> pool :renovation-years)
+     :owner             (-> owner locale)
+     :admin             (-> admin locale)}))
 
 (re-frame/reg-sub
  ::sites-list

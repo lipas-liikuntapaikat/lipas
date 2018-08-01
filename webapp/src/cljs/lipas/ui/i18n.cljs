@@ -36,6 +36,7 @@
     :marketing-name    "Markkinointinimi"
     :owner             "Omistaja"
     :admin             "Ylläpitäjä"
+    :type              "Tyyppi"
     :construction-year "Rakennusvuosi"
     :renovation-years  "Peruskorjausvuodet"
     :phone-number      "Puhelinnumero"
@@ -68,19 +69,21 @@
     :competition   "Kilpahalli < 3000 hlö"
     :large         "Suurhalli > 3000 hlö"}
 
+
    :ice-rinks
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline    "Energiatehokkuus"
+   {:headline    "Energia-info"
     :description "Tänne .pdf dokumentti"}
 
-   :ice-form
-   {:headline    "Ilmoita kulutustiedot"
-    :select-rink "Valitse halli"}
+   :ice-comparison
+   {:headline "Hallien vertailu"}
 
-   :ice-basic-data
-   {:headline "Ilmoita energiankulutus"}
+   :ice-form
+   {:headline       "Ilmoita tiedot"
+    :headline-short "Ilmoita kulutus"
+    :select-rink    "Valitse halli"}
 
    :lipas.energy-consumption
    {:headline      "Energiankulutus"
@@ -106,7 +109,7 @@
    {:headline       "Uimahalliportaali"
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit           "Ilmoita energiankulutus"
+    :edit           "Ilmoita tiedot"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."}

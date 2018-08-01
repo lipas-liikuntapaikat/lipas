@@ -116,11 +116,24 @@
                 :disabled  disabled
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
+(defn link? [x]
+  (and (string? x)
+       (or
+        (string/starts-with? x "http")
+        (string/starts-with? x "www"))))
+
+(defn truncate [s]
+  (if (> (count s) 30)
+    (str (subs s 0 27) "...")
+    s))
+
 (defn display-value [v]
   (cond
-    (coll? v) (string/join ", " v)
-    (true? v) CHECK_MARK
-    :else v))
+    (link? v)  [:a {:href v} (truncate v)]
+    (coll? v)  (if (empty? v) "" (string/join ", " v))
+    (true? v)  CHECK_MARK
+    (nil? v)   ""
+    :else      v))
 
 (defn table [{:keys [headers items on-select key-fn]}]
   (let [key-fn (or key-fn (constantly nil))]
@@ -228,12 +241,15 @@
                  :disabled (not save-enabled?)}
      save-label]]])
 
-(defn form-card [{:keys [title]} & content]
+(defn form-card [{:keys [title xs md lg]
+                  :or   {xs 12 md 6}} & content]
   [mui/grid {:item true
-             :xs 12
-             :md 12}
+             :xs   xs
+             :md   md
+             :lg   lg}
    [mui/card {:square true
-              :style {:height "100%"}}
+              :style  {:height "100%"}
+              }
     [mui/card-header {:title title}]
     (into [mui/card-content] content)]])
 
@@ -373,19 +389,21 @@
             [mui/table-cell (-> row second display-value)]]))])
 
 (defn table-form [{:keys [read-only?]} & fields]
-  [mui/table
-   (into [mui/table-body]
-         (for [row (remove nil? fields)
-               :let [{:keys [label value form-field]} row]]
-           [mui/table-row
-            [mui/table-cell
-             [mui/typography {:variant "caption"}
-              label]]
-            [mui/table-cell {:numeric true}
-             (if read-only?
-               (display-value value)
-               [mui/form-group
-                form-field])]]))])
+  [:div {:style {:overflow-x "auto"}}
+   [mui/table
+    (into [mui/table-body]
+          (for [row (remove nil? fields)
+                :let [{:keys [label value form-field]} row]]
+            [mui/table-row
+             [mui/table-cell
+              [mui/typography {:variant "caption"}
+               label]]
+             [mui/table-cell {:numeric true
+                              :style {:text-overflow :ellipsis}}
+              (if read-only?
+                (display-value value)
+                [mui/form-group
+                 form-field])]]))]])
 
 (def form table-form)
 
