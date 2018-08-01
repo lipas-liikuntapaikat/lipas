@@ -65,6 +65,7 @@
               hallien perus- ja energiankulutustietoja sekä ohjeita
               energiatehokkuuden parantamiseen."
     :size-category "Kokoluokitus"
+    :comparison    "Hallien vertailu"
     :small         "Pieni kilpahalli > 500 hlö"
     :competition   "Kilpahalli < 3000 hlö"
     :large         "Suurhalli > 3000 hlö"}
