@@ -63,7 +63,7 @@
    {:headline      "Jäähalliportaali"
     :description   "Jäähalliportaali sisältää
               hallien perus- ja energiankulutustietoja sekä ohjeita
-              energiatehokkuuden parantamiseen"
+              energiatehokkuuden parantamiseen."
     :size-category "Kokoluokitus"
     :small         "Pieni kilpahalli > 500 hlö"
     :competition   "Kilpahalli < 3000 hlö"
