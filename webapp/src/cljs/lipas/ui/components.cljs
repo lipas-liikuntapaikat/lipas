@@ -127,13 +127,15 @@
     (str (subs s 0 27) "...")
     s))
 
-(defn display-value [v]
+(defn display-value [v & {:keys [empty links?]
+                          :or   {empty  ""
+                                 links? true}}]
   (cond
-    (link? v)  [:a {:href v} (truncate v)]
-    (coll? v)  (if (empty? v) "" (string/join ", " v))
-    (true? v)  CHECK_MARK
-    (nil? v)   ""
-    :else      v))
+    (link? v) (if links? [:a {:href v} (truncate v)] v)
+    (coll? v) (if (empty? v) empty (string/join ", " v))
+    (true? v) CHECK_MARK
+    (nil? v)  empty
+    :else     v))
 
 (defn table [{:keys [headers items on-select key-fn]}]
   (let [key-fn (or key-fn (constantly nil))]
@@ -388,23 +390,41 @@
             [mui/table-cell (-> row second display-value)]]))])
 
 (defn table-form [{:keys [read-only?]} & fields]
-  [:div {:style {:overflow-x "auto"}}
+  [:div {:style {:overflow-x "auto"
+                 :max-width  "600px"}}
    [mui/table
     (into [mui/table-body]
-          (for [row (remove nil? fields)
+          (for [row  (remove nil? fields)
                 :let [{:keys [label value form-field]} row]]
             [mui/table-row
              [mui/table-cell
               [mui/typography {:variant "caption"}
                label]]
              [mui/table-cell {:numeric true
-                              :style {:text-overflow :ellipsis}}
+                              :style   {:text-overflow :ellipsis}}
               (if read-only?
                 (display-value value)
                 [mui/form-group
                  form-field])]]))]])
 
-(def form table-form)
+(defn ->display-tf [{:keys [label value]}]
+  (let [value (display-value value :empty "-" :links? false)]
+    [text-field {:label     label
+                 :value     value
+                 :disabled  true}]))
+
+(defn form-trad [{:keys [read-only?]} & data]
+  (into [mui/form-group]
+        (for [d     data
+              :when (some? d)
+              :let  [field (-> d :form-field)
+                     props (-> field second)]]
+          (if read-only?
+            (->display-tf d)
+            (assoc field 1 (assoc props :label (:label d)))))))
+
+;;(def form table-form)
+(def form form-trad)
 
 (defn sports-site-form [{:keys [tr display-data edit-data types size-categories
                                 admins owners on-change read-only?]}]
