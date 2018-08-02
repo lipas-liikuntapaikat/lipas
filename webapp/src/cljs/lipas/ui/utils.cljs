@@ -1,6 +1,7 @@
 (ns lipas.ui.utils
   (:require [clojure.reader :refer [read-string]]
             [clojure.walk :as walk]
+            [clojure.data :as data]
             [clojure.string :as string]
             [goog.crypt.base64 :as b64]
             [re-frame.core :as re-frame]))
@@ -136,9 +137,26 @@
   (let [latest (first (sort reverse-cmp (keys edits)))]
     (get edits latest)))
 
+(defn clean
+  "Removes nil values and empty entries recursively from maps."
+  [m]
+  (walk/postwalk
+   (fn [x]
+     (cond
+       (map? x) (not-empty (into {} (filter (comp some? val)) x))
+       (and (coll? x) (empty? x)) nil
+       :else x))
+   m))
+
+(defn- make-comparable [rev]
+  (-> rev
+      (dissoc :event-date :energy-consumption :visitors)
+      clean))
+
 (defn different? [rev1 rev2]
-  (let [rev1 (dissoc rev1 :event-date :energy-consumption :visitors)
-        rev2 (dissoc rev2 :event-date :energy-consumption :visitors)]
+  (let [rev1 (make-comparable rev1)
+        rev2 (make-comparable rev2)]
+    ;; (prn (data/diff rev1 rev2))
     (not= rev1 rev2)))
 
 (defn save-edits [db rev]
@@ -195,29 +213,11 @@
 (defn join-pretty [coll]
   (string/join ", " coll))
 
-(defn clean
-  "Removes nil values and empty {} entries recursively from maps."
-  [m]
-  (walk/postwalk
-   (fn [x]
-     (cond
-       (map? x) (not-empty (into {} (filter (comp some? val)) x))
-       :else x))
-   m))
-
-(defn maybe-update-in
-  "Like `update-in` but updates only if path is present. Otherwise
-  returns the map unmodified."
-  [m path update-fn & args]
-  (if (not-empty (get-in m path))
-    (apply update-in (into [m path update-fn] args))
-    m))
-
 (defn make-editable [sports-site]
   (-> sports-site
 
       ;; Swimming pools
-      (update-in [:pools] ->indexed-map)
+      (update-in [:pools]  ->indexed-map)
       (update-in [:saunas] ->indexed-map)
       (update-in [:slides] ->indexed-map)
 
@@ -231,12 +231,12 @@
   (-> sports-site
 
       ;; Swimming pools
-      (maybe-update-in [:pools] (comp remove-ids vals))
-      (maybe-update-in [:saunas] (comp remove-ids vals))
-      (maybe-update-in [:slides] (comp remove-ids vals))
+      (update-in [:pools]  (comp not-empty remove-ids vals))
+      (update-in [:saunas] (comp not-empty remove-ids vals))
+      (update-in [:slides] (comp not-empty remove-ids vals))
 
       ;; Ice stadiums
-      (maybe-update-in [:rinks] (comp remove-ids vals))
+      (update-in [:rinks] (comp not-empty remove-ids vals))
 
       clean))
 
