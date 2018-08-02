@@ -6,7 +6,7 @@
 
 (def links
   {:github    "https://github.com/lipas-liikuntapaikat/lipas-api"
-   :lipas     "http://lipas.cc.jyu.fi/api/index.html"
+   :lipas-api "http://lipas.cc.jyu.fi/api/index.html"
    :geoserver "http://lipas.cc.jyu.fi/geoserver"
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
    :open-data "https://bit.ly/2v6wE9t"})
@@ -91,7 +91,7 @@
 
           ;; Lipas-API
           [mui/list-item {:button   true
-                          :on-click #(navigate! (:lipas links))}
+                          :on-click #(navigate! (:lipas-api links))}
            [mui/list-item-icon
             [:img {:height "24px"
                    :src    "/img/swagger_logo.svg"}]]
