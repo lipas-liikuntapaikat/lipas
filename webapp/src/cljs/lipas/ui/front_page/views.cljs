@@ -93,7 +93,8 @@
           [mui/list-item {:button   true
                           :on-click #(navigate! (:lipas links))}
            [mui/list-item-icon
-            [mui/icon "build"]]
+            [:img {:height "24px"
+                   :src    "/img/swagger_logo.svg"}]]
            [mui/list-item-text {:primary "Lipas API"}]]
 
           ;; Geoserver
@@ -101,7 +102,6 @@
                           :on-click #(navigate! (:geoserver links))}
            [mui/list-item-icon
             [:img {:height "24px"
-                   :widht  "100%"
                    :src    "/img/geoserver_logo.svg"}]]
            [mui/list-item-text "Geoserver"]]
 
