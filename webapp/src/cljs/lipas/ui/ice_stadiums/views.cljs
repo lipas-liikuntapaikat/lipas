@@ -53,10 +53,10 @@
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open?       ((complement empty?) display-data)
-      :title       (if uncommitted-edits?
-                     (tr :statuses/edited (-> display-data :name))
-                     (-> display-data :name))
+     {:open? ((complement empty?) display-data)
+      :title (if uncommitted-edits?
+               (tr :statuses/edited (-> display-data :name))
+               (-> display-data :name))
 
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/display-site nil])
@@ -79,7 +79,7 @@
 
      [mui/grid {:container true}
 
-        ;;; General info
+      ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
        [lui/sports-site-form {:tr              tr
                               :display-data    display-data
@@ -91,7 +91,7 @@
                               :owners          owners
                               :on-change       set-field}]]
 
-;;; Conditions
+      ;;; Conditions
       (let [on-change    (partial set-field :conditions)
             display-data (-> display-data :conditions)
             edit-data    (-> edit-data :conditions)]
@@ -230,7 +230,7 @@
              :value     (-> edit-data :ice-average-thickness-mm)
              :on-change #(on-change :ice-average-thickness-mm %)}]}]])
 
-        ;;; Location
+      ;;; Location
       [lui/form-card {:title (tr :lipas.location/headline)}
        [lui/location-form {:tr           tr
                            :read-only?   (not editing?)
@@ -239,7 +239,7 @@
                            :display-data (:location display-data)
                            :on-change    (partial set-field :location)}]]
 
-        ;;; Building
+      ;;; Building
       (let [on-change    (partial set-field :building)
             edit-data    (:building edit-data)
             display-data (:building display-data)]
@@ -299,7 +299,7 @@
              :adornment (tr :units/person)
              :on-change #(on-change :seating-capacity %)}]}]])
 
-        ;;; Envelope structure
+      ;;; Envelope structure
       (let [on-change    (partial set-field :envelope)
             display-data (:envelope display-data)
             edit-data    (:envelope edit-data)]
@@ -341,7 +341,7 @@
             {:value     (-> edit-data :low-emissivity-coating?)
              :on-change #(on-change :low-emissivity-coating? %)}]}]])
 
-        ;;; Rinks
+      ;;; Rinks
       [lui/form-card {:title (tr :lipas.ice-stadium.rinks/headline)}
 
        (when (-> dialogs :rink :open?)
@@ -351,7 +351,7 @@
          [rinks/table {:tr tr :items (-> edit-data :rinks vals)}]
          [rinks/read-only-table {:tr tr :items (-> display-data :rinks)}])]
 
-        ;;; Refrigeration
+      ;;; Refrigeration
       (let [on-change    (partial set-field :refrigeration)
             display-data (:refrigeration display-data)
             edit-data    (:refrigeration edit-data)]
@@ -445,7 +445,7 @@
              :value     (-> edit-data :refrigerant-solution-amount-l)
              :on-change #(on-change :refrigerant-solution-amount-l %)}]}]])
 
-        ;;; Ventilation
+      ;;; Ventilation
       (let [on-change    (partial set-field :ventilation)
             edit-data    (:ventilation edit-data)
             display-data (:ventilation display-data)]
@@ -507,7 +507,7 @@
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])
 
-        ;;; Energy consumption
+      ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
        [energy/table {:read-only? true
                       :cold?      true
