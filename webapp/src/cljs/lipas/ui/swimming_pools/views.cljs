@@ -80,7 +80,7 @@
 
      [mui/grid {:container true}
 
-        ;;; General info
+      ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
        [lui/sports-site-form {:tr           tr
                               :display-data display-data
