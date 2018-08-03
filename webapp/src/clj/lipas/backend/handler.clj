@@ -1,20 +1,24 @@
 (ns lipas.backend.handler
-  (:require [compojure.api.sweet :refer [api context GET POST OPTIONS]]
-            [lipas.backend.auth :as auth]
+  (:require [compojure.api.sweet :refer [api context GET POST OPTIONS undocumented]]
+            [lipas.backend.jwt :as jwt]
             [lipas.backend.core :as core]
             [lipas.backend.middleware :as mw]
-            [ring.util.http-response :refer [ok created conflict forbidden]]
-            [ring.util.response :refer [resource-response]]))
+            [compojure.route :as route]
+            [ring.util.http-response :as resp]))
 
 (defn exception-handler [resp-fn type]
   (fn [^Exception e data request]
-    (resp-fn {:message (.getMessage e)
-              :type type})))
+    (let [payload {:message (.getMessage e) :type type}]
+      (-> payload
+          resp-fn
+          mw/add-cors-headers))))
 
 (def exception-handlers
-  {:username-conflict (exception-handler conflict :username-conflict)
-   :email-conflict    (exception-handler conflict :email-conflict)
-   :no-permission     (exception-handler forbidden :no-permission)})
+  {:username-conflict (exception-handler resp/conflict :username-conflict)
+   :email-conflict    (exception-handler resp/conflict :email-conflict)
+   :no-permission     (exception-handler resp/forbidden :no-permission)
+   :user-not-found    (exception-handler resp/not-found :user-not-found)
+   :email-not-found   (exception-handler resp/not-found :email-not-found)})
 
 (defn create-app [{:keys [db]}]
   (api
@@ -22,45 +26,57 @@
      :exceptions
      {:handlers exception-handlers}}
 
-    (OPTIONS "/api/*" []
+    (context "/api" []
       :middleware [mw/cors]
-      (ok  {}))
 
-    (GET "/api/" [] (resource-response "index.html" {:root "public"}))
+      (OPTIONS "/*" []
+        (resp/ok))
 
-    (GET "/api/health" [] (ok {:status "OK"}))
+      (GET "/health" [] (resp/ok {:status "OK"}))
 
-    ;;; Sports-sites ;;;
+      ;;; Sports-sites ;;;
 
-    (POST "/api/sports-sites" req
-      :middleware [mw/token-auth mw/cors mw/auth]
-      (let [user        (:identity req)
-            sports-site (:body-params req)]
-        (created "/fixme" (core/upsert-sports-site! db user sports-site))))
+      (POST "/sports-sites" req
+        :middleware [mw/token-auth mw/auth]
+        (let [user        (:identity req)
+              sports-site (:body-params req)]
+          (resp/created "/fixme" (core/upsert-sports-site! db user sports-site))))
 
-    (GET "/api/sports-sites/:lipas-id/history" req
-      :path-params [lipas-id :- int?]
-      :middleware [mw/cors]
-      (ok (core/get-sports-site-history db lipas-id)))
+      (GET "/sports-sites/:lipas-id/history" req
+        :path-params [lipas-id :- int?]
+        (resp/ok (core/get-sports-site-history db lipas-id)))
 
-    (GET "/api/sports-sites/type/:type-code" req
-      :path-params [type-code :- int?]
-      :middleware [mw/cors]
-      (ok (core/get-sports-sites-by-type-code db type-code)))
+      (GET "/sports-sites/type/:type-code" req
+        :path-params [type-code :- int?]
+        (resp/ok (core/get-sports-sites-by-type-code db type-code)))
 
-    ;;; User ;;;
+      ;;; User ;;;
 
-    (POST "/api/actions/register" req
-      :middleware [mw/cors]
-      (let [_ (core/add-user! db (:body-params req))]
-        (created "/fixme" {:status "OK"})))
+      (POST "/actions/register" req
+        (let [_ (core/add-user! db (:body-params req))]
+          (resp/created "/fixme" {:status "OK"})))
 
-    (POST "/api/actions/login" req
-      :middleware [(mw/basic-auth db) mw/cors mw/auth]
-      (ok (:identity req)))
+      (POST "/actions/login" req
+        :middleware [(mw/basic-auth db) mw/auth]
+        (resp/ok (:identity req)))
 
-    (GET "/api/actions/refresh-login" req
-      :middleware [mw/token-auth mw/cors mw/auth]
-      (ok (merge
-           (:identity req)
-           {:token (auth/create-token (:identity req))})))))
+      (GET "/actions/refresh-login" req
+        :middleware [mw/token-auth mw/auth]
+        (resp/ok (merge
+                  (:identity req)
+                  {:token (jwt/create-token (:identity req))})))
+
+      (POST "/actions/request-password-reset" req
+        :body-params [email :- string?]
+        (let [_ (core/send-password-reset-link! db (:body-params req))]
+          (resp/ok {:status "OK"})))
+
+      (POST "/actions/reset-password" req
+        :middleware [mw/token-auth mw/auth]
+        :body-params [password :- string?]
+        (let [_ (core/reset-password! db (:identity req) password)]
+          (resp/ok {:status "OK"}))))
+
+    (undocumented
+     (route/resources "/")
+     (route/not-found "404 not found"))))

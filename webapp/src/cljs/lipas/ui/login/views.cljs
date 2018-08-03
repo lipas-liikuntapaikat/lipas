@@ -54,13 +54,16 @@
        [mui/typography {:color "error"}
         (case (-> error :response :error)
           "Not authorized" (tr :login/bad-credentials)
-          (tr :error/unknown))])]))
+          (tr :error/unknown))])
+
+     [mui/button {:style    {:margin-top "2em"}
+                  :href     "#/passu-hukassa"}
+      (tr :login/forgot-password?)]]))
 
 (defn register-btn [{:keys [tooltip]}]
   [mui/tooltip
    {:title tooltip}
-   [mui/icon-button
-    { :on-click #(navigate! "/#/rekisteroidy")}
+   [mui/icon-button {:href "/#/rekisteroidy"}
     [mui/icon "group_add"]]])
 
 (defn login-panel [{:keys [tr]}]

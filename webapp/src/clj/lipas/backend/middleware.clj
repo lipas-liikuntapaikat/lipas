@@ -20,16 +20,19 @@
 (def allow-methods "GET, PUT, PATCH, POST, DELETE, OPTIONS")
 (def allow-headers "Authorization, Content-Type")
 
+(defn add-cors-headers [resp]
+  (-> resp
+      (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
+      (assoc-in [:headers "Access-Control-Allow-Methods"] allow-methods)
+      (assoc-in [:headers "Access-Control-Allow-Headers"] allow-headers)))
+
 (defn cors
   "Cross-origin Resource Sharing (CORS) middleware. Allow requests from all
    origins, all http methods and Authorization and Content-Type headers."
   [handler]
   (fn [request]
     (let [response (handler request)]
-      (-> response
-          (assoc-in [:headers "Access-Control-Allow-Origin"] "*")
-          (assoc-in [:headers "Access-Control-Allow-Methods"] allow-methods)
-          (assoc-in [:headers "Access-Control-Allow-Headers"] allow-headers)))))
+      (add-cors-headers response))))
 
 (defn token-auth
   "Middleware used on routes requiring token authentication"

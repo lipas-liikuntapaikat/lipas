@@ -10,18 +10,20 @@
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.subs :as subs]
             [lipas.ui.swimming-pools.views :as swimming-pools]
+            [lipas.ui.user.reset-password :as reset-password]
             [lipas.ui.user.views :as user]
             [lipas.ui.utils :refer [<== ==>]]))
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
-    :home-panel      [front-page/main tr]
-    :sports-panel    [sports-sites/main tr]
-    :ice-panel       [ice-stadiums/main]
-    :swim-panel      [swimming-pools/main]
-    :login-panel     [login/main tr]
-    :register-panel  [register/main tr]
-    :user-panel      [user/main tr]
+    :home-panel           [front-page/main tr]
+    :sports-panel         [sports-sites/main tr]
+    :ice-panel            [ice-stadiums/main]
+    :swim-panel           [swimming-pools/main]
+    :login-panel          [login/main tr]
+    :reset-password-panel [reset-password/main tr]
+    :register-panel       [register/main tr]
+    :user-panel           [user/main tr]
     [front-page/main tr]))
 
 (defn show-panel [panel-name tr logged-in?]

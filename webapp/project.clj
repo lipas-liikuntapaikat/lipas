@@ -7,6 +7,7 @@
                  [hiposfer/geojson.specs "0.2.0"]
                  [metosin/spec-tools "0.7.1"]
                  [com.taoensso/timbre "4.10.0"]
+                 [com.cemerick/url "0.1.1"]
 
                  ;;; Frontend ;;;
                  [org.clojure/clojurescript "1.10.312"]

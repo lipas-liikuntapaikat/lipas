@@ -28,3 +28,13 @@
  (fn [[ids admin?] [_ lipas-id]]
    (or (boolean (some #{lipas-id} ids))
        admin?)))
+
+(re-frame/reg-sub
+ ::reset-password-request-error
+ (fn [db _]
+   (-> db :user :reset-password-request :error)))
+
+(re-frame/reg-sub
+ ::reset-password-request-success
+ (fn [db _]
+   (-> db :user :reset-password-request :success)))
