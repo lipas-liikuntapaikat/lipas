@@ -24,7 +24,7 @@
   (handler/create-app config))
 
 (defmethod ig/init-key :server [_ {:keys [app port]}]
-  (jetty/run-jetty app {:port port :join false}))
+  (jetty/run-jetty app {:port port :join? false}))
 
 (defmethod ig/halt-key! :server [_ server]
   (.stop server))
