@@ -11,6 +11,7 @@
   (get-user-by-username [db username])
   (get-user-by-refresh-token [db refresh-token])
   (add-user! [db user])
+  (reset-user-password! [db user])
   (upsert-sports-site! [db sports-site user])
   (upsert-sports-sites! [db sports-sites user])
   (get-sports-site-history [db lipas-id])
@@ -41,6 +42,11 @@
     (->> user
          (user/marshall)
          (user/insert-user! db-spec)))
+
+  (reset-user-password! [_ user]
+    (->> user
+         (user/marshall)
+         (user/update-user-password! db-spec)))
 
   ;; Sports Site ;;
 

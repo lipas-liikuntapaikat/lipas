@@ -36,6 +36,9 @@
   (defroute "/kirjaudu" []
     (==> [:lipas.ui.events/set-active-panel :login-panel]))
 
+  (defroute "/passu-hukassa" []
+    (==> [:lipas.ui.events/set-active-panel :reset-password-panel]))
+
   (defroute "/rekisteroidy" []
     (==> [:lipas.ui.events/set-active-panel :register-panel]))
 

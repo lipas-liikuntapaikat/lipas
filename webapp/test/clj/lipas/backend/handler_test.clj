@@ -1,11 +1,9 @@
 (ns lipas.backend.handler-test
-  (:require [buddy.sign.jwt :as jwt]
-            [cheshire.core :as j]
-            [environ.core :refer [env]]
+  (:require [cheshire.core :as j]
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
-            [lipas.backend.auth :as auth]
+            [lipas.backend.jwt :as jwt]
             [lipas.backend.core :as core]
             [lipas.backend.system :as system]
             [lipas.schema.core]
@@ -80,8 +78,8 @@
     (is (= (:email user) (:email body)))))
 
 (deftest refresh-login-test
-  (let [user   (gen-user {:db true})
-        token1 (auth/create-token user)
+  (let [user   (gen-user)
+        token1 (jwt/create-token user :terse? true)
         _      (Thread/sleep 1000) ; to see effect between timestamps
         resp   (app (-> (mock/request :get "/api/actions/refresh-login")
                         (mock/content-type "application/json")
@@ -89,17 +87,50 @@
         body   (<-json (:body resp))
         token2 (:token body)
 
-        unsign  #(jwt/unsign % (:auth-key env) {:alg :hs512})
-
-        exp-old (:exp (unsign token1))
-        exp-new (:exp (unsign token2))]
+        exp-old (:exp (jwt/unsign token1))
+        exp-new (:exp (jwt/unsign token2))]
 
     (is (= 200 (:status resp)))
     (is (> exp-new exp-old))))
 
+;; TODO how to test side-effects? (sending email)
+(deftest request-password-reset-test
+  (let [user (gen-user {:db? true})
+        resp (app (-> (mock/request :post "/api/actions/request-password-reset")
+                      (mock/content-type "application/json")
+                      (mock/body (->json (select-keys user [:email])))))]
+    (is (= 200 (:status resp)))))
+
+(deftest request-password-reset-email-not-found-test
+  (let [resp (app (-> (mock/request :post "/api/actions/request-password-reset")
+                      (mock/content-type "application/json")
+                      (mock/body (->json {:email "i-will-fail@fail.com"}))))
+        body (<-json (:body resp))]
+    (is (= 400 (:status resp)))
+    (is (= "email-not-found" (:type body)))))
+
+(deftest reset-password-test
+  (let [user  (gen-user {:db? true})
+        token (jwt/create-token user :terse? true)
+        resp  (app (-> (mock/request :post "/api/actions/reset-password")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:password "blablaba"}))
+                       (token-header token)))]
+    (is (= 200 (:status resp)))))
+
+(deftest reset-password-expired-token-test
+  (let [user  (gen-user {:db? true})
+        token (jwt/create-token user :terse? true :valid-seconds 0)
+        _     (Thread/sleep 100) ; make sure token expires
+        resp  (app (-> (mock/request :post "/api/actions/reset-password")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:password "blablaba"}))
+                       (token-header token)))]
+    (is (= 401 (:status resp)))))
+
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})
-        token (auth/create-token user)
+        token (jwt/create-token user)
         site  (-> (gen/generate (s/gen :lipas/sports-site))
                   (assoc :status "draft")
                   (dissoc :lipas-id))
@@ -115,7 +146,7 @@
                 (dissoc $ :permissions)
                 (core/add-user! db $))
         user  (core/get-user db (:email user))
-        token (auth/create-token user)
+        token (jwt/create-token user)
         site  (-> (gen/generate (s/gen :lipas/sports-site))
                   (assoc :status "active"))
         resp  (app (-> (mock/request :post "/api/sports-sites")

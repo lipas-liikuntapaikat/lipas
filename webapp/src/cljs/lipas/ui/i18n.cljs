@@ -184,7 +184,17 @@
     :password         "Salasana"
     :login            "Kirjaudu"
     :logout           "Kirjaudu ulos"
-    :bad-credentials  "Käyttäjätunnus tai salasana ei kelpaa"}
+    :bad-credentials  "Käyttäjätunnus tai salasana ei kelpaa"
+    :forgot-password? "Unohtuiko salasana?"}
+
+   :reset-password
+   {:headline             "Unohtuiko salasana?"
+    :helper-text          "Lähetämme salasanan vaihtolinkin sinulle sähköpostitse."
+    :reset-link-sent      "Linkki lähetetty! Tarkista sähköpostisi."
+    :enter-new-password   "Syötä uusi salasana"
+    :password-helper-text "Salasanassa on oltava vähintään 6 merkkiä"
+    :reset-success        "Salasana vaihdettu! Kirjaudu sisään uudella salasanalla."
+    :get-new-link         "Tilaa uusi vaihtolinkki"}
 
    :lipas.building
    {:headline                    "Rakennus"
@@ -363,7 +373,8 @@
     :select-year       "Valitse vuosi"
     :show-all-years    "Näytä kaikki vuodet"
     :open-account-menu "Avaa käyttäjävalikko"
-    :open-main-menu    "Avaa päävalikko"}
+    :open-main-menu    "Avaa päävalikko"
+    :submit            "Lähetä"}
 
    :search
    {:headline "Haku"}
@@ -391,7 +402,10 @@
     Lipakseen."}
 
    :error
-   {:unknown "Tuntematon virhe tapahtui. :/"}})
+   {:unknown             "Tuntematon virhe tapahtui. :/"
+    :user-not-found      "Käyttäjää ei löydy."
+    :email-not-found     "Sähköpostiosoitetta ei ole rekisteröity."
+    :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."}})
 
 (def se {:menu
          {:jyu "Jyväskylä universitet"

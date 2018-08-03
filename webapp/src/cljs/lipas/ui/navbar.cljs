@@ -233,13 +233,14 @@
 
      ;; Sub page header
      (case active-panel
-       :home-panel      (tr :home-page/headline)
-       :sports-panel    (tr :sport/headline)
-       :ice-panel       (tr :ice/headline)
-       :swim-panel      (tr :swim/headline)
-       :login-panel     (tr :login/headline)
-       :register-panel  (tr :register/headline)
-       :user-panel      (tr :user/headline)
+       :home-panel           (tr :home-page/headline)
+       :sports-panel         (tr :sport/headline)
+       :ice-panel            (tr :ice/headline)
+       :swim-panel           (tr :swim/headline)
+       :login-panel          (tr :login/headline)
+       :register-panel       (tr :register/headline)
+       :user-panel           (tr :user/headline)
+       :reset-password-panel (tr :reset-password/headline)
        "")]
 
     [mui/hidden {:sm-down true}

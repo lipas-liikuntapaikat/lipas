@@ -1,5 +1,6 @@
 (ns lipas.backend.core
-  (:require [buddy.hashers :as hashers]))
+  (:require [buddy.hashers :as hashers]
+            [lipas.backend.jwt :as jwt]))
 
 ;;; User ;;;
 
@@ -39,6 +40,22 @@
   ;; TODO check that user has not explicitely logged out and issue new
   ;; access token.
   )
+
+(defn email-password-reset-link! [user]
+  (let [token (jwt/create-token user :terse? true)]
+    ;; TODO resolve current host and send the email
+    (prn
+     (str "https://www.lipas.fi/passu-hukassa?token=" token))))
+
+(defn send-password-reset-link! [db {:keys [email]}]
+  (if-let [user (.get-user-by-email db {:email email})]
+    (email-password-reset-link! user)
+    (throw (ex-info "User not found"
+                    {:type :email-not-found}))))
+
+(defn reset-password! [db user password]
+  (.reset-user-password! db (assoc user :password
+                                    (hashers/encrypt password))))
 
 ;;; Sports-sites ;;;
 

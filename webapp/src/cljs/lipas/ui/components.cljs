@@ -31,9 +31,10 @@
     "lock"]
    label])
 
-(defn register-button [{:keys [on-click label]}]
+(defn register-button [{:keys [href on-click label]}]
   [mui/button {:variant  "contained"
                :color    "secondary"
+               :href     href
                :on-click on-click}
    [mui/icon {:style {:margin-right "0.25em"}}
     "group_add"]
