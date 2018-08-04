@@ -4,21 +4,30 @@
             [ring.adapter.jetty :as jetty]
             [integrant.core :as ig]
             [lipas.backend.db.db :as db]
+            [lipas.backend.email :as email]
             [lipas.backend.handler :as handler]))
 
 (def default-config
-  {:db     {:dbtype   "postgresql"
-            :dbname   (:db-name env)
-            :host     (:db-host env)
-            :user     (:db-user env)
-            :port     (:db-port env)
-            :password (:db-password env)}
-   :app    {:db (ig/ref :db)}
-   :server {:app  (ig/ref :app)
-            :port 8091}})
+  {:db      {:dbtype   "postgresql"
+             :dbname   (:db-name env)
+             :host     (:db-host env)
+             :user     (:db-user env)
+             :port     (:db-port env)
+             :password (:db-password env)}
+   :emailer {:host (:smtp-host env)
+             :user (:smtp-user env)
+             :pass (:smtp-pass env)
+             :from (:smtp-from env)}
+   :app     {:db      (ig/ref :db)
+             :emailer (ig/ref :emailer)}
+   :server  {:app  (ig/ref :app)
+             :port 8091}})
 
 (defmethod ig/init-key :db [_ db-spec]
   (db/->SqlDatabase db-spec))
+
+(defmethod ig/init-key :emailer [_ config]
+  (email/->SMTPEmailer config))
 
 (defmethod ig/init-key :app [_ config]
   (handler/create-app config))
@@ -39,7 +48,8 @@
    (let [system (ig/init config)]
      (prn "System started with config:")
      (pprint (-> config
-                 (update-in [:db :password] mask)))
+                 (update-in [:db :password] mask)
+                 (update-in [:email :pass] mask)))
      system)))
 
 (defn stop-system! [system]

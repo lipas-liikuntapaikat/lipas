@@ -1,5 +1,6 @@
 (ns lipas.ui.user.events
   (:require [ajax.core :as ajax]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
@@ -35,12 +36,13 @@
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/request-password-reset")
-     :params          {:email email}
+     :params          {:email     email
+                       :reset-url (str (utils/base-url) "/#/passu-hukassa")}
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::reset-password-request-success]
      :on-failure      [::failure]}
-    :dispatch    [::clear-feedback]}))
+    :dispatch [::clear-feedback]}))
 
 (re-frame/reg-event-fx
  ::reset-password-success
