@@ -20,7 +20,7 @@
    :user-not-found    (exception-handler resp/not-found :user-not-found)
    :email-not-found   (exception-handler resp/not-found :email-not-found)})
 
-(defn create-app [{:keys [db]}]
+(defn create-app [{:keys [db emailer]}]
   (api
     {:coercion :spec
      :exceptions
@@ -68,7 +68,7 @@
 
       (POST "/actions/request-password-reset" req
         :body-params [email :- string?]
-        (let [_ (core/send-password-reset-link! db (:body-params req))]
+        (let [_ (core/send-password-reset-link! db emailer (:body-params req))]
           (resp/ok {:status "OK"})))
 
       (POST "/actions/reset-password" req

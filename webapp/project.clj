@@ -31,6 +31,7 @@
                  [integrant "0.6.3"]
                  [migratus "1.0.6"]
                  [environ "1.1.0"]
+                 [com.draines/postal "2.0.2"]
                  [ring/ring-jetty-adapter "1.6.3"]
                  [org.clojure/data.csv "0.1.4"]]
 

@@ -1,6 +1,7 @@
 (ns lipas.ui.utils
   (:require [clojure.reader :refer [read-string]]
             [clojure.walk :as walk]
+            [cemerick.url :as url]
             [clojure.data :as data]
             [clojure.string :as string]
             [goog.crypt.base64 :as b64]
@@ -244,3 +245,10 @@
   (case width
     ("xs" "sm") true
     false))
+
+(defn base-url []
+  (let [m (-> js/window .-location .-href url/url)
+        {:keys [protocol host port]} m]
+    (str protocol "://"
+         host
+         (when-not (#{80 443} port) (str ":" port)))))

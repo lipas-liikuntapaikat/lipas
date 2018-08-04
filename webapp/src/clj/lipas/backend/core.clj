@@ -1,5 +1,6 @@
 (ns lipas.backend.core
   (:require [buddy.hashers :as hashers]
+            [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]))
 
 ;;; User ;;;
@@ -36,20 +37,14 @@
       (when (uuid? identifier)
         (.get-user-by-id db {:id identifier}))))
 
-(defn refresh-login! [db token]
-  ;; TODO check that user has not explicitely logged out and issue new
-  ;; access token.
-  )
-
-(defn email-password-reset-link! [user]
+(defn create-reset-link [reset-url user]
   (let [token (jwt/create-token user :terse? true)]
-    ;; TODO resolve current host and send the email
-    (prn
-     (str "https://www.lipas.fi/passu-hukassa?token=" token))))
+    (str reset-url "?token=" token) ))
 
-(defn send-password-reset-link! [db {:keys [email]}]
+(defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (.get-user-by-email db {:email email})]
-    (email-password-reset-link! user)
+    (let [reset-link (create-reset-link reset-url user)]
+      (email/send-reset-password-email! emailer email reset-link))
     (throw (ex-info "User not found"
                     {:type :email-not-found}))))
 
