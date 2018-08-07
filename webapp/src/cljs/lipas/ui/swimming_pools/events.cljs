@@ -88,5 +88,10 @@
  ::display-site
  (fn [{:keys [db]} [_ {:keys [lipas-id]}]]
    {:db         (assoc-in db [:swimming-pools :displaying] lipas-id)
-    :dispatch-n [(when lipas-id
-                   [:lipas.ui.sports-sites.events/get-history lipas-id])]}))
+    :dispatch-n
+    [(when lipas-id
+       [:lipas.ui.sports-sites.events/get-history lipas-id])
+     (when lipas-id
+       [:lipas.ui.events/navigate (str "/#/uimahalliportaali/" lipas-id)])
+     (when-not lipas-id
+       [:lipas.ui.events/navigate "/#/uimahalliportaali"])]}))
