@@ -30,3 +30,7 @@
 (defrecord SMTPEmailer [config]
   Emailer
   (send! [_ message] (send*! config message)))
+
+(defrecord TestEmailer []
+  Emailer
+  (send! [_ message] {:status "OK"}))

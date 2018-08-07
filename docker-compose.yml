@@ -47,6 +47,10 @@ services:
       DB_NAME:
       DB_USER:
       DB_PASSWORD:
+      SMTP_HOST:
+      SMTP_USER:
+      SMTP_PASS:
+      SMTP_FROM:
       ADMIN_PASSWORD:
       LEIN_SILENT: 'true'
     volumes:

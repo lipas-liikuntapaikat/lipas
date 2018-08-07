@@ -49,7 +49,7 @@
      (prn "System started with config:")
      (pprint (-> config
                  (update-in [:db :password] mask)
-                 (update-in [:email :pass] mask)))
+                 (update-in [:emailer :pass] mask)))
      system)))
 
 (defn stop-system! [system]
