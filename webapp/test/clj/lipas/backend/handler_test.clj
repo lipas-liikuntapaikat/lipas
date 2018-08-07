@@ -3,8 +3,9 @@
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
-            [lipas.backend.jwt :as jwt]
             [lipas.backend.core :as core]
+            [lipas.backend.email :as email]
+            [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
             [lipas.schema.core]
             [ring.mock.request :as mock])
@@ -28,7 +29,9 @@
   [req token]
   (mock/header req "Authorization" (str "Token " token)))
 
-(def config (select-keys system/default-config [:db :app]))
+(def config (-> system/default-config
+                (select-keys [:db :app])
+                (assoc-in [:app :emailer] (email/->TestEmailer))))
 (def system (system/start-system! config))
 (def db (:db system))
 (def app (:app system))
@@ -106,7 +109,7 @@
                       (mock/content-type "application/json")
                       (mock/body (->json {:email "i-will-fail@fail.com"}))))
         body (<-json (:body resp))]
-    (is (= 400 (:status resp)))
+    (is (= 404 (:status resp)))
     (is (= "email-not-found" (:type body)))))
 
 (deftest reset-password-test
