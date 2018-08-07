@@ -15,7 +15,7 @@
   (upsert-sports-site! [db sports-site user])
   (upsert-sports-sites! [db sports-sites user])
   (get-sports-site-history [db lipas-id])
-  (get-sports-sites-by-type-code [db type-code]))
+  (get-sports-sites-by-type-code [db type-code opts]))
 
 (defrecord SqlDatabase [db-spec]
   Database
@@ -70,12 +70,16 @@
 
   (get-sports-site-history [_ lipas-id]
     (let [params (-> {:lipas-id lipas-id}
-                     (utils/->snake-case-keywords))]
+                     utils/->snake-case-keywords)]
       (->> (sports-site/get-history db-spec params)
            (map sports-site/unmarshall))))
 
-  (get-sports-sites-by-type-code [_ type-code]
-    (let [params (-> {:type-code type-code}
-                     (utils/->snake-case-keywords))]
-      (->> (sports-site/get-latest-by-type-code db-spec params)
+  (get-sports-sites-by-type-code [_ type-code {:keys [revs]
+                                               :or   {revs "latest"}}]
+    (let [db-fn  (case revs
+                   "latest" sports-site/get-latest-by-type-code
+                   "yearly" sports-site/get-yearly-by-type-code)
+          params (-> {:type-code type-code}
+                     utils/->snake-case-keywords)]
+      (->> (db-fn db-spec params)
            (map sports-site/unmarshall)))))

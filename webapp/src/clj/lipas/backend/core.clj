@@ -70,8 +70,8 @@
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
-(defn get-sports-sites-by-type-code [db type-code]
-  (.get-sports-sites-by-type-code db type-code))
+(defn get-sports-sites-by-type-code [db type-code opts]
+  (.get-sports-sites-by-type-code db type-code opts))
 
 (defn get-sports-site-history [db lipas-id]
   (.get-sports-site-history db lipas-id))

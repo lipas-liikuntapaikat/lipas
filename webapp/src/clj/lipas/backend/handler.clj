@@ -4,7 +4,10 @@
             [lipas.backend.core :as core]
             [lipas.backend.middleware :as mw]
             [compojure.route :as route]
+            [clojure.spec.alpha :as s]
             [ring.util.http-response :as resp]))
+
+(s/def ::revs #{"latest" "yearly"})
 
 (defn exception-handler [resp-fn type]
   (fn [^Exception e data request]
@@ -47,13 +50,15 @@
         (resp/ok (core/get-sports-site-history db lipas-id)))
 
       (GET "/sports-sites/type/:type-code" req
-        :path-params [type-code :- int?]
-        (resp/ok (core/get-sports-sites-by-type-code db type-code)))
+        :query-params [{revs :- ::revs "latest"}]
+        :path-params  [type-code :- int?]
+        (resp/ok (core/get-sports-sites-by-type-code db type-code (:params req))))
 
       ;;; User ;;;
 
       (POST "/actions/register" req
-        (let [_ (core/add-user! db (:body-params req))]
+        (let [_ (core/add-user! db (-> (:body-params req)
+                                       (dissoc :permissions)))]
           (resp/created "/fixme" {:status "OK"})))
 
       (POST "/actions/login" req
