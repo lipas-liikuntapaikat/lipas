@@ -28,10 +28,22 @@
     (==> [:lipas.ui.events/set-active-panel :sports-panel]))
 
   (defroute "/jaahalliportaali" []
-    (==> [:lipas.ui.events/set-active-panel :ice-panel]))
+    (==> [:lipas.ui.events/set-active-panel :ice-panel])
+    (==> [:lipas.ui.ice-stadiums.events/display-site nil]))
+
+  (defroute "/jaahalliportaali/:lipas-id" {lipas-id :lipas-id}
+    (let [lipas-id (js/parseInt lipas-id)]
+      (==> [:lipas.ui.events/set-active-panel :ice-panel])
+      (==> [:lipas.ui.ice-stadiums.events/display-site {:lipas-id lipas-id}])))
 
   (defroute "/uimahalliportaali" []
-    (==> [:lipas.ui.events/set-active-panel :swim-panel]))
+    (==> [:lipas.ui.events/set-active-panel :swim-panel])
+    (==> [:lipas.ui.swimming-pools.events/display-site nil]))
+
+  (defroute "/uimahalliportaali/:lipas-id" {lipas-id :lipas-id}
+    (let [lipas-id (js/parseInt lipas-id)]
+      (==> [:lipas.ui.events/set-active-panel :swim-panel])
+      (==> [:lipas.ui.swimming-pools.events/display-site {:lipas-id lipas-id}])))
 
   (defroute "/kirjaudu" []
     (==> [:lipas.ui.events/set-active-panel :login-panel]))
