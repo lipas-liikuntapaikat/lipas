@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is]]
+            [lipas.utils :as utils]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
@@ -36,13 +37,12 @@
 (def db (:db system))
 (def app (:app system))
 
-(comment (gen/generate (s/gen :lipas/email)))
-
 (defn gen-user
   ([]
-   (gen-user {:db? false}))
-  ([{:keys [db?]}]
-   (let [user (gen/generate (s/gen :lipas/user))]
+   (gen-user {:db? false :admin? false}))
+  ([{:keys [db? admin?]}]
+   (let [user (-> (gen/generate (s/gen :lipas/user))
+                  (assoc-in [:permissions :admin?] admin?))]
      (if db?
        (do
          (core/add-user! db user)
@@ -159,16 +159,38 @@
     (is (= 403 (:status resp)))))
 
 (deftest get-sports-sites-by-type-code-test
-  (let [user (gen-user {:db? true})
+  (let [user (gen-user {:db? true :admin? true})
         site (-> (gen/generate (s/gen :lipas/sports-site))
                  (assoc-in [:type :type-code] 3110)
-                 (assoc :status "draft"))
+                 (assoc :status "active"))
         _    (core/upsert-sports-site! db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (s/valid? :lipas/sports-sites body))))
+
+(deftest get-sports-sites-yearly-by-type-code-test
+  (let [user (gen-user {:db? true :admin? true})
+        rev1 (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc-in [:type :type-code] 3110)
+                 (assoc :status "active")
+                 (assoc :event-date "2018-01-01T00:00:00.000Z"))
+        rev2 (assoc rev1 :event-date "2018-02-01T00:00:00.000Z")
+        rev3 (assoc rev1 :event-date "2017-01-01T00:00:00.000Z")
+        _    (core/upsert-sports-site! db user rev1)
+        _    (core/upsert-sports-site! db user rev2)
+        _    (core/upsert-sports-site! db user rev3)
+        id   (:lipas-id rev1)
+        resp (app (-> (mock/request :get "/api/sports-sites/type/3110?revs=yearly")
+                      (mock/content-type "application/json")))
+        body (<-json (:body resp))]
+
+    (is (= 200 (:status resp)))
+    (is (= #{"2018-02-01T00:00:00.000Z" "2017-01-01T00:00:00.000Z"}
+           (-> (group-by :lipas-id body)
+               (get id)
+               (as-> $ (into #{} (map :event-date) $)))))))
 
 (deftest get-sports-site-history-test
   (let [user     (gen-user {:db? true})
