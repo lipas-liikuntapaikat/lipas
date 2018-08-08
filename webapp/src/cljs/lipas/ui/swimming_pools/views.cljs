@@ -497,8 +497,19 @@
              :adornment (tr :units/days-in-year)
              :on-change #(on-change :open-days-in-year %)}]}]])
 
+      ;;; Visitors
+      [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline)
+                      :md 12 :lg 12}
+       [lui/form-table
+        {:headers    [[:year (tr :time/year)]
+                      [:total-count (tr :lipas.swimming-pool.visitors/total-count)]]
+         :items      (-> display-data :visitors-history)
+         :key-fn     :year
+         :read-only? true}]]
+
       ;;; Energy consumption
-      [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline)
+                      :md 12 :lg 12}
        [energy/table {:read-only? true
                       :tr         tr
                       :items      (-> display-data :energy-consumption)}]]]]))
@@ -532,7 +543,15 @@
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [mui/typography (tr :ice-energy/description)]]])
+    [mui/card {:square true?}
+     [mui/card-header {:title (tr :swim-energy/headline)}]
+     [mui/card-content
+      [mui/typography
+       (tr :swim-energy/description)]]
+     [mui/card-actions
+      [mui/button {:color :secondary
+                   :href  "https://www.ukty.fi/index.php/ohjepankki"}
+       (str "> " (tr :swim-energy/ukty-link))]]]]])
 
 (defn energy-form [{:keys [tr year]}]
   (let [data           (<== [::subs/editing-rev])

@@ -158,6 +158,7 @@
            owner                (owners (-> latest :owner))
            city                 (get cities (-> latest :location :city :city-code))
            energy-history       (utils/energy-consumption-history site)
+           visitors-history     (utils/visitors-history site)
            get-material         #(get-in materials [% locale])
            get-filtering-method #(get-in filtering-methods [% locale])
            get-heat-source      #(get-in heat-sources [% locale])
@@ -215,4 +216,5 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

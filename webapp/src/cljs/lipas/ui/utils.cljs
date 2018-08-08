@@ -119,6 +119,12 @@
     (map #(assoc (:energy-consumption %)
                  :year (resolve-year (:event-date %))) (vals entries))))
 
+(defn visitors-history [{:keys [history]}]
+  (let [by-year (latest-by-year history)
+        entries (select-keys history (vals by-year))]
+    (map #(assoc (:visitors %)
+                 :year (resolve-year (:event-date %))) (vals entries))))
+
 (defn find-revision [{:keys [history]} year]
   (let [latest-by-year (latest-by-year history)
         timestamp      (get latest-by-year year)]

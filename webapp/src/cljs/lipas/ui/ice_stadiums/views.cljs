@@ -543,7 +543,15 @@
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [mui/typography (tr :ice-energy/description)]]])
+    [mui/card {:square true?}
+     [mui/card-header {:title (tr :ice-energy/headline)}]
+     [mui/card-content
+      [mui/typography
+       (tr :ice-energy/description)]]
+     [mui/card-actions
+      [mui/button {:color   :secondary
+                   :href    "http://www.leijonat.fi/info/jaahallit.html"}
+       (str "> " (tr :ice-energy/finhockey-link))]]]]])
 
 (defn energy-form-tab [tr]
   (let [editable-sites  (<== [::subs/sites-to-edit-list])
@@ -576,7 +584,7 @@
                         :variant :headline}
         (tr :reports/contacts)]
        [lui/download-button
-        {:style {:margin-left "1.5em"}
+        {:style    {:margin-left "1.5em"}
          :on-click #(==> [::events/download-contacts-report sites headers])
          :label    (tr :actions/download)}]
        [mui/grid {:item true}
