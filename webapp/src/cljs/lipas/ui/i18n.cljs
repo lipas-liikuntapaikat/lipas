@@ -79,8 +79,9 @@
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline    "Energia-info"
-    :description "Tänne .pdf dokumentti"}
+   {:headline       "Energia-info"
+    :description    "Ajantasaisen tietopaketin löydät Jääkiekkiliiton sivuilta."
+    :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
 
    :ice-comparison
    {:headline "Hallien vertailu"}
@@ -118,6 +119,12 @@
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."}
+
+   :swim-energy
+   {:headline       "Energia-info"
+    :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
+    :ukty-link "Siirry UKTYn sivuille"}
+
 
    :open-data
    {:headline            "Avoin data"
