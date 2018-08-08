@@ -162,8 +162,9 @@
     :description "Lipaksen käyttöohjeet, videot yms."}
 
    :user
-   {:headline "Oma sivu"
-    :greeting "Hei {1} {2}!"}
+   {:headline        "Oma sivu"
+    :greeting        "Hei {1} {2}!"
+    :front-page-link "Siirry etusivulle"}
 
    :lipas.user
    {:email                 "Sähköposti"
