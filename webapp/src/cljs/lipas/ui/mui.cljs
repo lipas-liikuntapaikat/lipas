@@ -81,6 +81,7 @@
 (def list-item (mui->reagent "ListItem"))
 (def list-item-icon (mui->reagent "ListItemIcon"))
 (def list-item-text (mui->reagent "ListItemText"))
+(def list-item-secondary-action (mui->reagent "ListItemSecondaryAction"))
 (def drawer (mui->reagent "Drawer"))
 (def divider (mui->reagent "Divider"))
 (def swipeable-drawer (mui->reagent "SwipeableDrawer"))

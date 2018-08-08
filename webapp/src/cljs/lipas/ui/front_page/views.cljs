@@ -23,7 +23,7 @@
                       :action (when link
                                 (r/as-element
                                  [mui/icon-button
-                                  {:on-click #(navigate! link)
+                                  {:href link
                                    :color    "secondary"}
                                   [mui/icon "arrow_forward_ios"]]))}]
     (into [mui/card-content] children)
@@ -110,7 +110,7 @@
                           :on-click #(navigate! (:github links))}
            [mui/list-item-icon
             [mui/svg-icon
-             svg/github-icon]]
+             [svg/github-icon]]]
            [mui/list-item-text {:primary "GitHub"}]]]]
 
         ;; Help
