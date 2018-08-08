@@ -266,3 +266,7 @@
 
 (defn ->csv [data headers]
   (csv/write-csv (mapv #(->row % headers) data) :quote? true))
+
+(defn prod? []
+  (-> (base-url)
+      (string/includes? "lipas.fi")))

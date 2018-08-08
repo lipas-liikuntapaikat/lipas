@@ -21,7 +21,9 @@
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
 
    :home-page
-   {:headline "Etusivu"}
+   {:headline    "Etusivu"
+    :description "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
+    julkisista liikuntapaikoista avoimessa tietokannassa."}
 
    :sport
    {:headline          "Liikuntapaikat"
