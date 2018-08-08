@@ -59,6 +59,10 @@
     :city-code     "Kuntanumero"
     :neighborhood  "Kuntaosa"}
 
+   :reports
+   {:headline "Raportit"
+    :contacts "Yhteystiedot"}
+
    :ice
    {:headline      "Jäähalliportaali"
     :description   "Jäähalliportaali sisältää
@@ -374,7 +378,8 @@
     :show-all-years    "Näytä kaikki vuodet"
     :open-account-menu "Avaa käyttäjävalikko"
     :open-main-menu    "Avaa päävalikko"
-    :submit            "Lähetä"}
+    :submit            "Lähetä"
+    :download          "Lataa"}
 
    :search
    {:headline "Haku"}

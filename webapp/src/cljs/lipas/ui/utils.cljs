@@ -1,11 +1,12 @@
 (ns lipas.ui.utils
-  (:require [clojure.reader :refer [read-string]]
-            [clojure.walk :as walk]
-            [cemerick.url :as url]
+  (:require [cemerick.url :as url]
             [clojure.data :as data]
+            [clojure.reader :refer [read-string]]
             [clojure.string :as string]
+            [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [testdouble.cljs.csv :as csv]))
 
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
@@ -252,3 +253,10 @@
     (str protocol "://"
          host
          (when-not (#{80 443} port) (str ":" port)))))
+
+(defn ->row [d headers]
+  (let [header-keys (map first headers)]
+    (mapv (fn [k] (get d k)) header-keys)))
+
+(defn ->csv [data headers]
+  (csv/write-csv (mapv #(->row % headers) data) :quote? true))

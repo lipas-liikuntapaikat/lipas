@@ -125,11 +125,15 @@
                             (-> type :name locale))
      :address           (-> ice-stadium :location :address)
      :postal-code       (-> ice-stadium :location :postal-code)
+     :postal-office     (-> ice-stadium :location :postal-office)
      :city              (-> city :name locale)
      :construction-year (-> ice-stadium :construction-year)
      :renovation-years  (-> ice-stadium :renovation-years)
      :owner             (-> owner locale)
-     :admin             (-> admin locale)}))
+     :admin             (-> admin locale)
+     :www               (-> ice-stadium :www)
+     :email             (-> ice-stadium :email)
+     :phone-number      (-> ice-stadium :phone-number)}))
 
 (re-frame/reg-sub
  ::sites-list
