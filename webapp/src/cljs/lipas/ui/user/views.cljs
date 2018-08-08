@@ -86,7 +86,12 @@
          [lui/text-field
           {:label    (tr :lipas.user/requested-permissions)
            :value    (-> data :user-data :permissions-request)
-           :disabled true}]]]]]]))
+           :disabled true}]]]
+
+       [mui/card-actions
+        [mui/button {:href  "/#/"
+                     :color :secondary}
+         (str "> " (tr :user/front-page-link))]]]]]))
 
 (defn main [tr]
   (let [logged-in? (re-frame/subscribe [::subs/logged-in?])
