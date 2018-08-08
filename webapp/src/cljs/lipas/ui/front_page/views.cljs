@@ -54,12 +54,16 @@
                       :title (tr :disclaimer/headline)}
            [mui/typography (tr :disclaimer/test-version)]])
 
-        [grid-card {:title (tr :menu/headline)}
+        [grid-card {:title (tr :menu/headline)
+                    :link      "http://www.lipas.fi"
+                    :link-text "lipas.fi"}
          [mui/typography (tr :home-page/description)]
          [:ul
           [:li "Ajantasainen tieto Suomen liikuntapaikoista"]
           [:li "Päivitystyökalut tiedontuottajille"]
-          [:li "Avoimet rajapinnat"]]]
+          [:li "Avoimet rajapinnat"]]
+         [mui/typography (tr :sport/legacy-disclaimer)]]
+
 
         ;; Skating rinks portal
         [grid-card {:title     (tr :ice/headline)
@@ -80,12 +84,6 @@
           [:li "211 uimahallin perustiedot"]
           [:li "Energiankulutustietojen syöttäminen"]
           [:li "Perustietojen päivitys"]]]
-
-        ;; Sports Sites
-        [grid-card {:title     (tr :sport/headline)
-                    :link      "http://www.lipas.fi"
-                    :link-text "lipas.fi"}
-         [mui/typography (tr :sport/legacy-disclaimer)]]
 
         ;; Open Data
         [grid-card {:title (tr :open-data/headline)}
