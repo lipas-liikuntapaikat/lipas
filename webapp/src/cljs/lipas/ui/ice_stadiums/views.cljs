@@ -556,6 +556,34 @@
       :editable-sites  editable-sites
       :draftable-sites draftable-sites})))
 
+(defn reports-tab [tr]
+  (let [locale  (tr)
+        sites   (<== [::subs/sites-list locale])
+        headers [[:name (tr :lipas.sports-site/name)]
+                 [:city (tr :lipas.location/city)]
+                 [:type (tr :lipas.sports-site/type)]
+                 [:address (tr :lipas.location/address)]
+                 [:postal-code (tr :lipas.location/postal-code)]
+                 [:postal-office (tr :lipas.location/postal-office)]
+                 [:email (tr :lipas.sports-site/email-public)]
+                 [:phone-number (tr :lipas.sports-site/phone-number)]
+                 [:www (tr :lipas.sports-site/www)]]]
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
+      [mui/paper
+       [mui/typography {:color   :secondary
+                        :style   {:padding "1em"}
+                        :variant :headline}
+        (tr :reports/contacts)]
+       [lui/download-button
+        {:style {:margin-left "1.5em"}
+         :on-click #(==> [::events/download-contacts-report sites headers])
+         :label    (tr :actions/download)}]
+       [mui/grid {:item true}
+        [lui/table
+         {:headers headers
+          :items   sites}]]]]]))
+
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
         card-props {:square true}]
@@ -584,14 +612,19 @@
 
          ;; 3 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]]]]]
+                   :icon  (r/as-element [mui/icon "info"])}]
+
+         ;; 4 Reports tab
+         [mui/tab {:label (tr :reports/headline)
+                   :icon  (r/as-element [mui/icon "assessment"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case @active-tab
         0 (ice-stadiums-tab tr logged-in?)
         1 (energy-form-tab tr)
         2 (compare-tab)
-        3 (energy-info-tab tr))]]))
+        3 (energy-info-tab tr)
+        4 (reports-tab tr))]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

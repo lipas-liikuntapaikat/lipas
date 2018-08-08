@@ -20,6 +20,8 @@
                  [cljsjs/material-ui "1.2.1-0"]
                  [tongue "0.2.4"]
                  [day8.re-frame/http-fx "0.1.6"]
+                 [cljsjs/filesaverjs "1.3.3-0"]
+                 [testdouble/clojurescript.csv "0.3.0"]
 
                  ;;; Backend ;;;
                  [metosin/compojure-api "2.0.0-alpha21"]
