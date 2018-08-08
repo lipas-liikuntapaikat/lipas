@@ -86,6 +86,11 @@
    (-> db :ice-stadiums :heat-pump-types)))
 
 (re-frame/reg-sub
+ ::ice-resurfacer-fuels
+ (fn [db _]
+   (-> db :ice-stadiums :ice-resurfacer-fuels)))
+
+(re-frame/reg-sub
  ::condensate-energy-targets
  (fn [db _]
    (-> db :ice-stadiums :condensate-energy-targets)))
@@ -173,12 +178,13 @@
  :<- [::dryer-types]
  :<- [::dryer-duty-types]
  :<- [::heat-pump-types]
+ :<- [::ice-resurfacer-fuels]
  :<- [:lipas.ui.sports-sites.subs/materials]
  (fn [[site
        cities admins owners types size-categories
        condensate-energy-targets refrigerants refrigerant-solutions
        heat-recovery-types dryer-types dryer-duty-types heat-pump-types
-       materials] [_ locale]]
+       ice-resurfacer-fuels materials] [_ locale]]
    (when site
      (let [latest               (or (utils/latest-edit (:edits site))
                                     (get-in site [:history (:latest site)]))
@@ -191,6 +197,10 @@
            heat-pump-type       (heat-pump-types (-> latest
                                                      :ventilation
                                                      :heat-pump-type))
+           ice-resurfacer-fuel (ice-resurfacer-fuels (-> latest
+                                                         :conditions
+                                                         :ice-resurfacer-fuel))
+
            dryer-type           (dryer-types (-> latest
                                                  :ventilation
                                                  :dryer-type))
@@ -253,7 +263,10 @@
             (assoc :dryer-duty-type (-> dryer-duty-type locale))
             (assoc :heat-pump-type (-> heat-pump-type locale)))
 
+        :conditions
+        (-> (:conditions latest)
+            (assoc :ice-resurfacer-fuel (-> ice-resurfacer-fuel locale)))
+
         :rinks              (:rinks latest)
         :renovations        (:renovations latest)
-        :conditions         (:conditions latest)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

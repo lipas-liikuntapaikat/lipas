@@ -44,7 +44,8 @@
     :heat-recovery-types       ice-stadiums/heat-recovery-types
     :dryer-types               ice-stadiums/dryer-types
     :dryer-duty-types          ice-stadiums/dryer-duty-types
-    :heat-pump-types           ice-stadiums/heat-pump-types}
+    :heat-pump-types           ice-stadiums/heat-pump-types
+    :ice-resurfacer-fuels      ice-stadiums/ice-resurfacer-fuels}
 
    ;; Swimming pools
    :swimming-pools
