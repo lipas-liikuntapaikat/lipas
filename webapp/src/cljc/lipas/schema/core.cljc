@@ -408,6 +408,9 @@
 (s/def :lipas.ice-stadium.conditions/maintenance-water-temperature-c
   (s/int-in 0 100))
 
+(s/def :lipas.ice-stadium.conditions/ice-resurfacer-fuel
+  (into #{} (keys ice-stadiums/ice-resurfacer-fuels)))
+
 (s/def :lipas.ice-stadium.conditions/ice-average-thickness-mm
   (s/int-in 0 (inc 150)))
 
@@ -424,6 +427,7 @@
                    :lipas.ice-stadium.conditions/weekly-maintenances
                    :lipas.ice-stadium.conditions/average-water-consumption-l
                    :lipas.ice-stadium.conditions/maintenance-water-temperature-c
+                   :lipas.ice-stadium.conditions/ice-resurfacer-fuel
                    :lipas.ice-stadium.conditions/ice-average-thickness-mm]))
 
 ;; Ventilation ;;

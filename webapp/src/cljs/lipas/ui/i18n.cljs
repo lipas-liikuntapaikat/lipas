@@ -121,9 +121,9 @@
           parantamiseen."}
 
    :swim-energy
-   {:headline       "Energia-info"
-    :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
-    :ukty-link "Siirry UKTYn sivuille"}
+   {:headline    "Energia-info"
+    :description "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
+    :ukty-link   "Siirry UKTYn sivuille"}
 
 
    :open-data
@@ -266,6 +266,7 @@
           käytetty veden määrä (per ajo)"
     :maintenance-water-temperature-c "Jäähoitoveden
           lämpötila (tavoite +40)"
+    :ice-resurfacer-fuel             "Jäänhoitokoneen polttoaine"
     :ice-average-thickness-mm        "Jään keskipaksuus mm"}
 
    :lipas.ice-stadium.ventilation

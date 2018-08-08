@@ -127,3 +127,21 @@
    "none"               {:fi "Ei lämpöpumppua"
                          :en nil
                          :se nil}})
+
+;; Jäänhoitokoneen polttoaine
+(def ice-resurfacer-fuels
+  {"gasoline"    {:fi "Bensiini"
+                  :en nil
+                  :se nil}
+   "natural-gas" {:fi "Maakaasu"
+                  :en nil
+                  :se nil}
+   "propane"     {:fi "Propaani"
+                  :en nil
+                  :se nil}
+   "LPG"         {:fi "Nestekaasu"
+                  :en nil
+                  :se nil}
+   "electicity"  {:fi "Sähkö"
+                  :en nil
+                  :se nil}})

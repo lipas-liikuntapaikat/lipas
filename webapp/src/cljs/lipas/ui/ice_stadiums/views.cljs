@@ -46,6 +46,7 @@
         dryer-types           (<== [::subs/dryer-types])
         dryer-duty-types      (<== [::subs/dryer-duty-types])
         heat-pump-types       (<== [::subs/heat-pump-types])
+        ice-resurfacer-fuels  (<== [::subs/ice-resurfacer-fuels])
 
         user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
         uncommitted-edits? (<== [::site-subs/uncommitted-edits? lipas-id])
@@ -218,6 +219,17 @@
              :adornment (tr :physical-units/l)
              :value     (-> edit-data :average-water-consumption-l)
              :on-change #(on-change :average-water-consumption-l %)}]}
+
+          ;; Ice resurfacer fuel
+          {:label (tr :lipas.ice-stadium.conditions/ice-resurfacer-fuel)
+           :value (-> display-data :ice-resurfacer-fuel)
+           :form-field
+           [lui/select
+            {:value     (-> edit-data :ice-resurfacer-fuel)
+             :on-change #(on-change :ice-resurfacer-fuel %)
+             :items     ice-resurfacer-fuels
+             :value-fn  first
+             :label-fn  (comp locale second)}]}
 
           ;; Ice average thickness mm
           {:label (tr :lipas.ice-stadium.conditions/ice-average-thickness-mm)
