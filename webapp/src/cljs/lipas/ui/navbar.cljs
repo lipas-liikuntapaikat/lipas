@@ -5,7 +5,7 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
@@ -117,7 +117,9 @@
                       :on-click toggle-drawer}
        [mui/typography {:variant :title
                         :color   :text-primary}
-        "LIPAS"]
+         (if (utils/prod?)
+           (tr :menu/headline)
+           (tr :menu/headline-test))]
        [mui/list-item-secondary-action
         [mui/icon-button {:on-click toggle-drawer}
          [mui/icon {:color "secondary"} "close"]]]]
@@ -240,7 +242,9 @@
                                   :font-weight     "bold"
                                   :font-size       "1em"
                                   :text-decoration "none"}}
-      (tr :menu/headline)]
+      (if (utils/prod?)
+        (tr :menu/headline)
+        (tr :menu/headline-test))]
 
      [separator]
 

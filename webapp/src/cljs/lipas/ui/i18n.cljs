@@ -12,10 +12,11 @@
 
 (def fi
   {:menu
-   {:headline  "LIPAS"
-    :main-menu "Päävalikko"
-    :jyu       "Jyväskylän yliopisto"
-    :frontpage "Etusivu"}
+   {:headline      "LIPAS"
+    :headline-test "LIPAS-TESTIYMPÄRISTÖ"
+    :main-menu     "Päävalikko"
+    :jyu           "Jyväskylän yliopisto"
+    :frontpage     "Etusivu"}
 
    :restricted
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
@@ -28,8 +29,9 @@
    :sport
    {:headline          "Liikuntapaikat"
     :description       "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
-    :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi vielä
-    nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta linkistä."}
+    :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
+    nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
+    linkistä."}
 
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
