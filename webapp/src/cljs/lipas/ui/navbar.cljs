@@ -64,14 +64,15 @@
          [mui/icon "exit_to_app"]]
         [mui/list-item-text {:primary (tr :login/logout)}]])]))
 
-(def separator
+(defn separator []
   [mui/typography {:component "span"
                    :color "secondary"
                    :variant "title"
-                   :style {:display "inline"
-                           :font-weight "bold"
-                           :font-size "1em"
-                           :margin "0.5em"}}
+                   :style
+                   {:display "inline"
+                    :font-weight "bold"
+                    :font-size "1em"
+                    :margin "0.5em"}}
    "|"])
 
 (defn set-translator [locale]
@@ -79,19 +80,21 @@
     (==> [::events/set-translator translator])))
 
 (defn lang-btn [locale]
-  [mui/button {:style    {:min-width "0px"
-                          :padding   0
-                          :font-size "1em"}
+  [mui/button {:style
+               {:min-width "0px"
+                :padding   0
+                :font-size "1em"}
                :on-click #(set-translator locale)}
    (name locale)])
 
-(def lang-selector
+(defn lang-selector []
   [mui/grid {:item true :style {:margin "1em"}}
    [lang-btn :fi]
-   separator
-   [lang-btn :se]
-   separator
-   [lang-btn :en]])
+   ;; [separator]
+   ;; [lang-btn :se]
+   ;; [separator]
+   ;; [lang-btn :en]
+   ])
 
 (defn show-menu [event]
   (==> [::events/set-menu-anchor (.-currentTarget event)]))
@@ -105,9 +108,19 @@
                            :anchor   :top
                            :on-open  #()
                            :on-close toggle-drawer}
-     lang-selector
+     ;; [lang-selector]
 
      [mui/list
+
+      ;; Close btn
+      [mui/list-item {:button   true
+                      :on-click toggle-drawer}
+       [mui/typography {:variant :title
+                        :color   :text-primary}
+        "LIPAS"]
+       [mui/list-item-secondary-action
+        [mui/icon-button {:on-click toggle-drawer}
+         [mui/icon {:color "secondary"} "close"]]]]
 
       ;; Home
       [mui/list-item {:button   true
@@ -198,7 +211,7 @@
      [mui/svg-icon {:view-box "0 0 132.54 301.95"
                     :style    {:height "2em"
                                :margin "0.45em"}}
-      svg/jyu-logo]]
+      [svg/jyu-logo]]]
 
     ;;; Header text
     [mui/typography {:variant "title"
@@ -217,7 +230,7 @@
                                    :text-decoration "none"}}
        (tr :menu/jyu)]
 
-      separator]
+      [separator]]
 
      ;; LIPAS
      [mui/typography {:component "a"
@@ -229,7 +242,7 @@
                                   :text-decoration "none"}}
       (tr :menu/headline)]
 
-     separator
+     [separator]
 
      ;; Sub page header
      (case active-panel
@@ -243,13 +256,13 @@
        :reset-password-panel (tr :reset-password/headline)
        "")]
 
-    [mui/hidden {:sm-down true}
-     lang-selector]
+    ;; [mui/hidden {:sm-down true}
+    ;;  [lang-selector]]
 
     ;;; Search button
-    [mui/icon-button {:id         "search-btn"
-                      :aria-label (tr :actions/open-search)}
-     [mui/icon "search"]]
+    ;; [mui/icon-button {:id         "search-btn"
+    ;;                   :aria-label (tr :actions/open-search)}
+    ;;  [mui/icon "search"]]
 
     ;;; Account menu button
     [mui/icon-button {:id         "account-btn"
