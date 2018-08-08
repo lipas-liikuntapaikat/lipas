@@ -2,6 +2,7 @@
   (:require [lipas.ui.mui :as mui]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
+            [lipas.ui.utils :as utils]
             [reagent.core :as r]))
 
 (def links
@@ -47,16 +48,18 @@
        [mui/grid {:container true
                   :spacing   16}
 
-        ;; Disclaimer
-        [grid-card {:style {:background-color "#f7ed33"}
-                    :title (tr :disclaimer/headline)}
-         [mui/typography (tr :disclaimer/test-version)]]
+        ;; Dev-env disclaimer
+        (when-not (utils/prod?)
+          [grid-card {:style {:background-color "#f7ed33"}
+                      :title (tr :disclaimer/headline)}
+           [mui/typography (tr :disclaimer/test-version)]])
 
-        ;; Sports Sites
-        [grid-card {:title     (tr :sport/headline)
-                    :link      "http://www.lipas.fi"
-                    :link-text "lipas.fi"}
-         [mui/typography (tr :sport/legacy-disclaimer)]]
+        [grid-card {:title (tr :menu/headline)}
+         [mui/typography (tr :home-page/description)]
+         [:ul
+          [:li "Ajantasainen tieto Suomen liikuntapaikoista"]
+          [:li "Päivitystyökalut tiedontuottajille"]
+          [:li "Avoimet rajapinnat"]]]
 
         ;; Skating rinks portal
         [grid-card {:title     (tr :ice/headline)
@@ -77,6 +80,12 @@
           [:li "211 uimahallin perustiedot"]
           [:li "Energiankulutustietojen syöttäminen"]
           [:li "Perustietojen päivitys"]]]
+
+        ;; Sports Sites
+        [grid-card {:title     (tr :sport/headline)
+                    :link      "http://www.lipas.fi"
+                    :link-text "lipas.fi"}
+         [mui/typography (tr :sport/legacy-disclaimer)]]
 
         ;; Open Data
         [grid-card {:title (tr :open-data/headline)}
