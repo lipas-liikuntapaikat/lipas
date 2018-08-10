@@ -3,7 +3,6 @@
             [clojure.pprint :refer [pprint]]
             [ring.adapter.jetty :as jetty]
             [integrant.core :as ig]
-            [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.handler :as handler]))
 
@@ -24,7 +23,8 @@
              :port 8091}})
 
 (defmethod ig/init-key :db [_ db-spec]
-  (db/->SqlDatabase db-spec))
+  ;; TODO setup connection pooling
+  db-spec)
 
 (defmethod ig/init-key :emailer [_ config]
   (email/->SMTPEmailer config))
