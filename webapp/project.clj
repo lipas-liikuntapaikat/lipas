@@ -24,7 +24,8 @@
                  [testdouble/clojurescript.csv "0.3.0"]
 
                  ;;; Backend ;;;
-                 [metosin/compojure-api "2.0.0-alpha21"]
+                 [metosin/reitit "0.2.0-SNAPSHOT"]
+                 [metosin/ring-http-response "0.9.0"]
                  [cheshire "5.8.0"]
                  [buddy "2.0.0"]
                  [com.layerware/hugsql "0.4.8"]

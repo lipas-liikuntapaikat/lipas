@@ -111,7 +111,7 @@
    ;; (prn "Get history!")
    {:http-xhrio
     {:method          :get
-     :uri             (str (:backend-url db) "/sports-sites/" lipas-id "/history")
+     :uri             (str (:backend-url db) "/sports-sites/history/" lipas-id)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::get-success]
      :on-failure      [::get-failure]}}))

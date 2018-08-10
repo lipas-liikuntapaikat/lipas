@@ -2,8 +2,7 @@
   (:require [cheshire.core :as j]
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [clojure.test :refer [deftest testing is]]
-            [lipas.utils :as utils]
+            [clojure.test :refer [deftest testing is] :as t]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
@@ -202,11 +201,12 @@
         _        (core/upsert-sports-site! db user rev1)
         _        (core/upsert-sports-site! db user rev2)
         lipas-id (:lipas-id rev1)
-        resp     (app (-> (mock/request :get (str "/api/sports-sites/"
-                                                  lipas-id "/history"))
+        resp     (app (-> (mock/request :get (str "/api/sports-sites/history/"
+                                                  lipas-id))
                           (mock/content-type "application/json")))
         body     (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (s/valid? :lipas/sports-sites body))))
 
-(comment (gen/generate (s/gen :lipas/sports-site)))
+(comment (gen/generate (s/gen :lipas/sports-site))
+         (t/run-tests *ns*))

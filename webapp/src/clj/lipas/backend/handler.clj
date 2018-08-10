@@ -1,87 +1,181 @@
 (ns lipas.backend.handler
-  (:require [compojure.api.sweet :refer [api context GET POST OPTIONS undocumented]]
-            [lipas.backend.jwt :as jwt]
-            [lipas.backend.core :as core]
-            [lipas.backend.middleware :as mw]
-            [compojure.route :as route]
+  (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [ring.util.http-response :as resp]))
+            [lipas.backend.core :as core]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.middleware :as mw]
+            [muuntaja.core :as m]
+            [reitit.coercion.spec]
+            [reitit.ring :as ring]
+            [reitit.ring.coercion :as coercion]
+            [reitit.ring.middleware.exception :as exception]
+            [reitit.ring.middleware.muuntaja :as muuntaja]
+            [reitit.swagger :as swagger]
+            [reitit.swagger-ui :as swagger-ui]
+            [ring.middleware.params :as params]))
 
 (s/def ::revs #{"latest" "yearly"})
+(s/def ::query (s/keys :opt-un [::revs]))
 
-(defn exception-handler [resp-fn type]
-  (fn [^Exception e data request]
-    (let [payload {:message (.getMessage e) :type type}]
-      (-> payload
-          resp-fn
-          mw/add-cors-headers))))
+(defn exception-handler [status type]
+  (fn [^Exception e request]
+    (-> {:status status
+         :body   {:message (.getMessage e)
+                  :type    type}}
+        mw/add-cors-headers)))
 
 (def exception-handlers
-  {:username-conflict (exception-handler resp/conflict :username-conflict)
-   :email-conflict    (exception-handler resp/conflict :email-conflict)
-   :no-permission     (exception-handler resp/forbidden :no-permission)
-   :user-not-found    (exception-handler resp/not-found :user-not-found)
-   :email-not-found   (exception-handler resp/not-found :email-not-found)})
+  {:username-conflict (exception-handler 409 :username-conflict)
+   :email-conflict    (exception-handler 409 :email-conflict)
+   :no-permission     (exception-handler 403 :no-permission)
+   :user-not-found    (exception-handler 404 :user-not-found)
+   :email-not-found   (exception-handler 404 :email-not-found)})
+
+(def exceptions-mw
+  (exception/create-exception-middleware
+   (merge
+    exception/default-handlers
+    exception-handlers
+    ;; Prints all stack traces
+    ;; {::exception/wrap (fn [handler e request]
+    ;;                     (.printStackTrace e)
+    ;;                     (handler e request))}
+    )))
 
 (defn create-app [{:keys [db emailer]}]
-  (api
-    {:coercion :spec
-     :exceptions
-     {:handlers exception-handlers}}
+  (ring/ring-handler
+   (ring/router
 
-    (context "/api" []
-      :middleware [mw/cors]
+    [["/favicon.ico"
+      {:get
+       {:no-doc true
+        :handler
+        (fn [_]
+          {:status  200
+           :headers {"Content-Type" "image/x-icon"}
+           :body    (io/input-stream (io/resource "public/favicon.ico"))})}}]
 
-      (OPTIONS "/*" []
-        (resp/ok))
+     ["/index.html"
+      {:get
+       {:no-doc true
+        :handler
+        (fn [_]
+          {:status  200
+           :headers {"Content-Type" "text/html"}
+           :body    (io/input-stream (io/resource "public/index.html"))})}}]
 
-      (GET "/health" [] (resp/ok {:status "OK"}))
+     ["/swagger.json"
+      {:get
+       {:no-doc  true
+        :swagger {:info {:title "my-api"}}
+        :handler (swagger/create-swagger-handler)}}]
 
-      ;;; Sports-sites ;;;
+     ["/api"
+      {:options
+       {:handler
+        (fn [_]
+          {:status 200
+           :body   {:status "OK"}})}}
 
-      (POST "/sports-sites" req
-        :middleware [mw/token-auth mw/auth]
-        (let [user        (:identity req)
-              sports-site (:body-params req)]
-          (resp/created "/fixme" (core/upsert-sports-site! db user sports-site))))
+      ["/health"
+       {:get
+        {:handler
+         (fn [_]
+           {:status 200
+            :body   {:status "OK"}})}}]
 
-      (GET "/sports-sites/:lipas-id/history" req
-        :path-params [lipas-id :- int?]
-        (resp/ok (core/get-sports-site-history db lipas-id)))
+      ["/sports-sites"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 201
+            :body   (core/upsert-sports-site! db identity body-params)})}}]
 
-      (GET "/sports-sites/type/:type-code" req
-        :query-params [{revs :- ::revs "latest"}]
-        :path-params  [type-code :- int?]
-        (resp/ok (core/get-sports-sites-by-type-code db type-code (:params req))))
+      ["/sports-sites/history/:lipas-id"
+       {:get
+        {:parameters {:path {:lipas-id int?}}
+         :handler
+         (fn [{{{:keys [lipas-id]} :path} :parameters}]
+           {:status 200
+            :body   (core/get-sports-site-history db lipas-id)})}}]
 
-      ;;; User ;;;
+      ["/sports-sites/type/:type-code"
+       {:get
+        {:parameters {:path  {:type-code int?}
+                      :query ::query}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [type-code (-> parameters :path :type-code)
+                 revs      (or (-> parameters :query :revs)
+                               "latest")]
+             {:status 200
+              :body   (core/get-sports-sites-by-type-code db type-code {:revs revs})}))}}]
 
-      (POST "/actions/register" req
-        (let [_ (core/add-user! db (-> (:body-params req)
-                                       (dissoc :permissions)))]
-          (resp/created "/fixme" {:status "OK"})))
+      ["/actions/register"
+       {:post
+        {:handler
+         (fn [req]
+           (let [user (-> req :body-params)
+                 _    (core/add-user! db (-> user
+                                             (dissoc :permissions)))]
+             {:status 201
+              :body   {:status "OK"}}))}}]
 
-      (POST "/actions/login" req
-        :middleware [(mw/basic-auth db) mw/auth]
-        (resp/ok (:identity req)))
+      ["/actions/login"
+       {:post
+        {:middleware [(mw/basic-auth db) mw/auth]
+         :handler
+         (fn [{:keys [identity]}]
+           {:status 200
+            :body   identity})}}]
 
-      (GET "/actions/refresh-login" req
-        :middleware [mw/token-auth mw/auth]
-        (resp/ok (merge
-                  (:identity req)
-                  {:token (jwt/create-token (:identity req))})))
+      ["/actions/refresh-login"
+       {:get
+        {:middleware [mw/token-auth mw/auth]
+         :handler
+         (fn [{:keys [identity]}]
+           {:status 200
+            :body   (merge identity
+                           {:token (jwt/create-token identity)})})}}]
 
-      (POST "/actions/request-password-reset" req
-        :body-params [email :- string?]
-        (let [_ (core/send-password-reset-link! db emailer (:body-params req))]
-          (resp/ok {:status "OK"})))
+      ["/actions/request-password-reset"
+       {:post
+        {:parameters {:body {:email string?}}
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [_ (core/send-password-reset-link! db emailer body-params)]
+             {:status 200
+              :body   {:status "OK"}}))}}]
 
-      (POST "/actions/reset-password" req
-        :middleware [mw/token-auth mw/auth]
-        :body-params [password :- string?]
-        (let [_ (core/reset-password! db (:identity req) password)]
-          (resp/ok {:status "OK"}))))
+      ["/actions/reset-password"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :parameters {:body {:password string?}}
+         :handler
+         (fn [req]
+           (let [user (-> req :identity)
+                 pass (-> req :parameters :body :password)
+                 _    (core/reset-password! db user pass)]
+             {:status 200
+              :body   {:status "OK"}}))}}]]]
 
-    (undocumented
-     (route/resources "/")
-     (route/not-found "404 not found"))))
+    {:data {:coercion   reitit.coercion.spec/coercion
+            :muuntaja   m/instance
+            :middleware [;; query-params & form-params
+                         params/wrap-params
+                         ;; content-negotiation
+                         muuntaja/format-negotiate-middleware
+                         ;; encoding response body
+                         muuntaja/format-response-middleware
+                         ;; exception handling
+                         exceptions-mw
+                         ;; decoding request body
+                         muuntaja/format-request-middleware
+                         ;; coercing response bodys
+                         coercion/coerce-response-middleware
+                         ;; coercing request parameters
+                         coercion/coerce-request-middleware]}})
+   (ring/routes
+    (swagger-ui/create-swagger-ui-handler {:path "/"})
+    (ring/create-default-handler))))
