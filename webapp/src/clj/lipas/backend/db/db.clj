@@ -4,82 +4,66 @@
             [lipas.backend.db.user :as user]
             [lipas.backend.db.utils :as utils]))
 
-(defprotocol Database
-  (get-users [db])
-  (get-user-by-id [db user-id])
-  (get-user-by-email [db email])
-  (get-user-by-username [db username])
-  (get-user-by-refresh-token [db refresh-token])
-  (add-user! [db user])
-  (reset-user-password! [db user])
-  (upsert-sports-site! [db sports-site user])
-  (upsert-sports-sites! [db sports-sites user])
-  (get-sports-site-history [db lipas-id])
-  (get-sports-sites-by-type-code [db type-code opts]))
+;; User ;;
 
-(defrecord SqlDatabase [db-spec]
-  Database
+(defn get-users [db-spec]
+  (-> (user/all-users db-spec)
+      (user/unmarshall)))
 
-  ;; User ;;
+(defn get-user-by-id [db-spec user-id]
+  (-> (user/get-user-by-id db-spec user-id)
+      (user/unmarshall)))
 
-  (get-users [_]
-    (-> (user/all-users db-spec)
-        (user/unmarshall)))
+(defn get-user-by-email [db-spec email]
+  (-> (user/get-user-by-email db-spec email)
+      (user/unmarshall)))
 
-  (get-user-by-id [_ user-id]
-    (-> (user/get-user-by-id db-spec user-id)
-        (user/unmarshall)))
+(defn get-user-by-username [db-spec username]
+  (-> (user/get-user-by-username db-spec username)
+      (user/unmarshall)))
 
-  (get-user-by-email [_ email]
-    (-> (user/get-user-by-email db-spec email)
-        (user/unmarshall)))
+(defn add-user! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/insert-user! db-spec)))
 
-  (get-user-by-username [_ username]
-    (-> (user/get-user-by-username db-spec username)
-        (user/unmarshall)))
+(defn reset-user-password! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-password! db-spec)))
 
-  (add-user! [_ user]
-    (->> user
-         (user/marshall)
-         (user/insert-user! db-spec)))
+;; Sports Site ;;
 
-  (reset-user-password! [_ user]
-    (->> user
-         (user/marshall)
-         (user/update-user-password! db-spec)))
+(defn upsert-sports-site! [db-spec user sports-site]
+  (jdbc/with-db-transaction [tx db-spec]
+    (let [lipas-id    (or (:lipas-id sports-site)
+                          (:nextval (sports-site/next-lipas-id tx)))
+          sports-site (assoc sports-site :lipas-id lipas-id)]
+      (->> (sports-site/marshall sports-site user)
+           (sports-site/insert-sports-site-rev! tx)
+           (sports-site/unmarshall)))))
 
-  ;; Sports Site ;;
-
-  (upsert-sports-site! [_ user sports-site]
-    (jdbc/with-db-transaction [tx db-spec]
+(defn upsert-sports-sites! [db-spec user sports-sites]
+  (jdbc/with-db-transaction [tx db-spec]
+    (doseq [sports-site sports-sites]
       (let [lipas-id    (or (:lipas-id sports-site)
                             (:nextval (sports-site/next-lipas-id tx)))
             sports-site (assoc sports-site :lipas-id lipas-id)]
         (->> (sports-site/marshall sports-site user)
-             (sports-site/insert-sports-site-rev! tx)
-             (sports-site/unmarshall)))))
+             (sports-site/insert-sports-site-rev! tx))))))
 
-  (upsert-sports-sites! [_ user sports-sites]
-    (jdbc/with-db-transaction [tx db-spec]
-      (doseq [sports-site sports-sites]
-        (let [lipas-id    (or (:lipas-id sports-site)
-                              (:nextval (sports-site/next-lipas-id tx)))
-              sports-site (assoc sports-site :lipas-id lipas-id)]
-          (->> (sports-site/marshall sports-site user)
-               (sports-site/insert-sports-site-rev! tx))))))
+(defn get-sports-site-history [db-spec lipas-id]
+  (let [params (-> {:lipas-id lipas-id}
+                   utils/->snake-case-keywords)]
+    (->> (sports-site/get-history db-spec params)
+         (map sports-site/unmarshall))))
 
-  (get-sports-site-history [_ lipas-id]
-    (let [params (-> {:lipas-id lipas-id}
-                     utils/->snake-case-keywords)]
-      (->> (sports-site/get-history db-spec params)
-           (map sports-site/unmarshall))))
-
-  (get-sports-sites-by-type-code [_ type-code {:keys [revs]
-                                               :or   {revs "latest"}}]
-    (let [db-fn  (case revs
-                   "latest" sports-site/get-latest-by-type-code
-                   "yearly" sports-site/get-yearly-by-type-code)
-          params (-> {:type-code type-code}
-                     utils/->snake-case-keywords)]
-      (->> (db-fn db-spec params)
-           (map sports-site/unmarshall)))))
+(defn get-sports-sites-by-type-code [db-spec type-code {:keys [revs]
+                                                  :or   {revs "latest"}}]
+  (let [db-fn  (case revs
+                 "latest" sports-site/get-latest-by-type-code
+                 "yearly" sports-site/get-yearly-by-type-code)
+        params (-> {:type-code type-code}
+                   utils/->snake-case-keywords)]
+    (->> (db-fn db-spec params)
+         (map sports-site/unmarshall))))
