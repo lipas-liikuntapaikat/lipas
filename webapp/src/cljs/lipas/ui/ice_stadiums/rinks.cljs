@@ -25,7 +25,7 @@
                       :value     (:width-m data)
                       :on-change #(set-field :width-m %)}]]))
 
-(defn dialog [{:keys [tr]}]
+(defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::subs/rink-form])
         title   (if (:id data)
                   (tr :lipas.ice-stadium.rinks/edit-rink)
@@ -33,7 +33,7 @@
         reset   #(==> [::events/reset-dialog :rink])
         close   #(==> [::events/toggle-dialog :rink])
         valid?  (s/valid? :lipas.ice-stadium/rink data)
-        on-save (comp reset close #(==> [::events/save-rink data]))]
+        on-save (comp reset close #(==> [::events/save-rink lipas-id data]))]
     [lui/dialog {:title         title
                  :save-label    (tr :actions/save)
                  :cancel-label  (tr :actions/cancel)
@@ -46,12 +46,12 @@
   [[:length-m (tr :dimensions/length-m)]
    [:width-m (tr :dimensions/width-m)]])
 
-(defn table [{:keys [tr items]}]
+(defn table [{:keys [tr items lipas-id]}]
   [lui/form-table {:headers        (make-headers tr)
                    :items          items
                    :on-add         #(==> [::events/toggle-dialog :rink {}])
                    :on-edit        #(==> [::events/toggle-dialog :rink %])
-                   :on-delete      #(==> [::events/remove-rink %])
+                   :on-delete      #(==> [::events/remove-rink lipas-id %])
                    :add-tooltip    (tr :lipas.ice-stadium.rinks/add-rink)
                    :edit-tooltip   (tr :actions/edit)
                    :delete-tooltip (tr :actions/delete)}])

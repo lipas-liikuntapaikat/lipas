@@ -80,16 +80,14 @@
 
 (re-frame/reg-event-db
  ::save-rink
- (fn [db [_ value]]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)
-         path [:sports-sites lipas-id :editing :rinks]]
+ (fn [db [_ lipas-id value]]
+   (let [path [:sports-sites lipas-id :editing :rinks]]
      (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::remove-rink
- (fn [db [_ {:keys [id]}]]
-   (let [lipas-id (-> db :ice-stadiums :editing :lipas-id)]
-     (update-in db [:sports-sites lipas-id :editing :rinks] dissoc id))))
+ (fn [db [_ lipas-id {:keys [id]}]]
+   (update-in db [:sports-sites lipas-id :editing :rinks] dissoc id)))
 
 (re-frame/reg-event-fx
  ::display-site

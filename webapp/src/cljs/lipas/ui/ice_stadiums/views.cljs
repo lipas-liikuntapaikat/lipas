@@ -357,10 +357,13 @@
       [lui/form-card {:title (tr :lipas.ice-stadium.rinks/headline)}
 
        (when (-> dialogs :rink :open?)
-         [rinks/dialog {:tr tr}])
+         [rinks/dialog {:tr       tr
+                        :lipas-id lipas-id}])
 
        (if editing?
-         [rinks/table {:tr tr :items (-> edit-data :rinks vals)}]
+         [rinks/table {:tr       tr
+                       :lipas-id lipas-id
+                       :items    (-> edit-data :rinks vals)}]
          [rinks/read-only-table {:tr tr :items (-> display-data :rinks)}])]
 
       ;;; Refrigeration
