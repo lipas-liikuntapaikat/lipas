@@ -323,7 +323,7 @@
     :lockers-women-count            "Naisten pukukaapit lkm"}
 
    :dimensions
-   {:volume-m3       "Tilavuus m²"
+   {:volume-m3       "Tilavuus m³"
     :area-m2         "Pinta-ala m²"
     :surface-area-m2 "Pinta-ala m²"
     :length-m        "Pituus m"
