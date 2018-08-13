@@ -1,9 +1,9 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
+            [lipas.schema.core]
             [muuntaja.core :as m]
             [reitit.coercion.spec]
             [reitit.ring :as ring]
@@ -13,9 +13,6 @@
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [ring.middleware.params :as params]))
-
-(s/def ::revs #{"latest" "yearly"})
-(s/def ::query (s/keys :opt-un [::revs]))
 
 (defn exception-handler [status type]
   (fn [^Exception e request]
@@ -103,7 +100,7 @@
       ["/sports-sites/type/:type-code"
        {:get
         {:parameters {:path  {:type-code int?}
-                      :query ::query}
+                      :query :lipas.api/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)

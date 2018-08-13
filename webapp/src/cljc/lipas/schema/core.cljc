@@ -673,3 +673,8 @@
   (s/coll-of :lipas.sports-site/swimming-pool
              :distinct true
              :into []))
+
+;;; HTTP-API ;;;
+
+(s/def :lipas.api/revs #{"latest" "yearly"})
+(s/def :lipas.api/query-params (s/keys :opt-un [::revs]))
