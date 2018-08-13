@@ -68,7 +68,8 @@
         :handler (swagger/create-swagger-handler)}}]
 
      ["/api"
-      {:options
+      {:middleware [mw/cors]
+       :options
        {:handler
         (fn [_]
           {:status 200
