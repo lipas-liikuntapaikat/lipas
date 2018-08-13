@@ -54,10 +54,10 @@
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open?        ((complement empty?) display-data)
-      :title        (if uncommitted-edits?
-                      (tr :statuses/edited (-> display-data :name))
-                      (-> display-data :name))
+     {:open? ((complement empty?) display-data)
+      :title (if uncommitted-edits?
+               (tr :statuses/edited (-> display-data :name))
+               (-> display-data :name))
 
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
@@ -151,15 +151,15 @@
              :on-change #(on-change :staff-count %)}]}
 
           ;; Pool room total area m2
-          {:label (tr :lipas.building/pool-room-total-area-m2)
-           :value (-> display-data :pool-room-total-area-m2)
+          {:label (tr :lipas.building/total-pool-room-area-m2)
+           :value (-> display-data :total-pool-room-area-m2)
            :form-field
            [lui/text-field
             {:type      "number"
-             :value     (-> edit-data :pool-room-total-area-m2)
-             :spec      :lipas.building/pool-room-total-area-m2
+             :value     (-> edit-data :total-pool-room-area-m2)
+             :spec      :lipas.building/total-pool-room-area-m2
              :adornment (tr :physical-units/m2)
-             :on-change #(on-change :pool-room-total-area-m2 %)}]}
+             :on-change #(on-change :total-pool-room-area-m2 %)}]}
 
           ;; Total water area m2
           {:label (tr :lipas.building/total-water-area-m2)
@@ -499,7 +499,7 @@
 
       ;;; Visitors
       [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline)
-                      :md 12 :lg 12}
+                      :md    12 :lg 12}
        [lui/form-table
         {:headers    [[:year (tr :time/year)]
                       [:total-count (tr :lipas.swimming-pool.visitors/total-count)]]
@@ -509,7 +509,7 @@
 
       ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
-                      :md 12 :lg 12}
+                      :md    12 :lg 12}
        [energy/table {:read-only? true
                       :tr         tr
                       :items      (-> display-data :energy-consumption)}]]]]))
