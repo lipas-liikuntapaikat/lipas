@@ -1,6 +1,7 @@
 (ns lipas.ui.core
   (:require [day8.re-frame.http-fx]
             [lipas.ui.local-storage]
+            [lipas.ui.analytics :as analytics]
             [lipas.ui.config :as config]
             [lipas.ui.events :as events]
             [lipas.ui.routes :as routes]
@@ -25,4 +26,5 @@
   (routes/app-routes)
   (re-frame/dispatch-sync [::events/initialize-db])
   (dev-setup)
-  (mount-root))
+  (mount-root)
+  (analytics/track!))
