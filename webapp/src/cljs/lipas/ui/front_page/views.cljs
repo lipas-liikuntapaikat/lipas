@@ -12,11 +12,39 @@
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
    :open-data "https://bit.ly/2v6wE9t"})
 
+(def logos
+  [{:img "img/partners/okm.png"}
+   {:img "img/partners/jaakiekkoliitto.png"}
+   {:img "img/partners/kuntaliitto.jpg"}
+   {:img "img/partners/metsahallitus.jpg"}
+   {:img "img/partners/sport_venue.png"}
+   {:img "img/partners/suh.png"}
+   {:img "img/partners/syke.gif"}
+   {:img "img/partners/ukty.png"}
+   {:img "img/partners/vtt.png"}])
+
+(defn ->logo [{:keys [img]}]
+  [:img {:style {:margin     "1em"
+                 :max-width  "200px"
+                 :max-height "100px"}
+         :src   img}])
+
+(defn footer []
+  (into
+   [mui/grid {:item  true :xs 12
+              :style {:padding "2em"
+                                        ;:background-color "#e9e9e9"
+                      }}
+    [mui/typography {:variant "display1"}
+     "Kehittämisessä mukana"]]
+   (map ->logo logos)))
+
 (defn grid-card [{:keys [title style link link-text]} & children]
   [mui/grid {:item true :xs 12 :md 12 :lg 12}
    [mui/card {:square true
               :raised true
               :style  (merge  {:height           "100%"
+                               :background-color "rgb(250, 250, 250)"
                                ;;:background-color "#e9e9e9"
                                :opacity          0.95}
                               style)}
@@ -157,7 +185,8 @@
         ;; ;; Team
         ;; [grid-card {:title (tr :team/headline)}
         ;;  [mui/typography (tr :team/description)]]
-        ]]]]]])
+        ]]]]]
+   [footer]])
 
 (defn main [tr]
   (create-panel tr))
