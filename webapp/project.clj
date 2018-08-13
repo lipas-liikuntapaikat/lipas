@@ -22,6 +22,7 @@
                  [day8.re-frame/http-fx "0.1.6"]
                  [cljsjs/filesaverjs "1.3.3-0"]
                  [testdouble/clojurescript.csv "0.3.0"]
+                 [cljsjs/google-analytics "2015.04.13-0"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.0-SNAPSHOT"]
@@ -105,6 +106,8 @@
      :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
      :compiler     {:main                 lipas.ui.core
                     :npm-deps             false
+                    :foreign-libs         [{:file     "src/js/autotrack.js"
+                                            :provides ["autotrack"]}]
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"
                     :asset-path           "js/compiled/out"
