@@ -217,7 +217,7 @@
     :main-designers              "Pääsuunnittelijat"
     :total-surface-area-m2       "Bruttopinta-ala m²"
     :total-volume-m3             "Bruttotilavuus m³"
-    :pool-room-total-area-m2     "Allashuoneen pinta-ala m²"
+    :total-pool-room-area-m2     "Allashuoneen pinta-ala m²"
     :total-water-area-m2         "Vesipinta-ala m²"
     :total-ice-area-m2           "Jääpinta-ala m²"
     :water-slides-total-length-m "Vesiliukumäet yht. (m)"
