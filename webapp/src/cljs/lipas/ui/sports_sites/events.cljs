@@ -18,61 +18,60 @@
    (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)))
 
 (re-frame/reg-event-db
- ::save-edits
- (fn [db [_ lipas-id]]
-   (let [rev (get-in db [:sports-sites lipas-id :editing])]
-     (-> db
-         (utils/save-edits (utils/make-saveable rev))))))
-
-(re-frame/reg-event-db
  ::discard-edits
  (fn [db [_ lipas-id]]
    (utils/discard-edits db lipas-id)))
 
-(defn- commit-ajax [db token data]
-  {:http-xhrio
-   {:method          :post
-    :headers         {:Authorization (str "Token " token)}
-    :uri             (str (:backend-url db) "/sports-sites")
-    :params          data
-    :format          (ajax/json-request-format)
-    :response-format (ajax/json-response-format {:keywords? true})
-    :on-success      [::commit-success]
-    :on-failure      [::commit-failure]}})
+(defn- commit-ajax [db data]
+  (let [token  (-> db :user :login :token)]
+    {:http-xhrio
+     {:method          :post
+      :headers         {:Authorization (str "Token " token)}
+      :uri             (str (:backend-url db) "/sports-sites")
+      :params          data
+      :format          (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success      [::save-success]
+      :on-failure      [::save-failure]}}))
 
 (re-frame/reg-event-fx
  ::commit-rev
  (fn [{:keys [db]} [_ rev]]
-   (let [token (-> db :user :login :token)]
-     (commit-ajax db token rev))))
+   (commit-ajax db rev)))
+
+(defn- save-with-status [db lipas-id status]
+  (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
+                   utils/make-saveable
+                   (assoc :status status))
+        db     (utils/save-edits db rev) ;; Store temp state client side
+        dirty? (some? (get-in db [:sports-sites lipas-id :edits]))]
+    (merge
+     {:db db}
+     (if dirty?
+       (commit-ajax db rev) ;; Attempt to save server side
+       {:dispatch [::commit-success rev]}))))
 
 (re-frame/reg-event-fx
- ::commit-edits
+ ::save-edits
  (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev   (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
-         data  (assoc rev :status "active")
-         token (-> db :user :login :token)]
-     (commit-ajax db token data))))
+   (save-with-status db lipas-id "active")))
 
 (re-frame/reg-event-fx
- ::commit-draft
+ ::save-draft
  (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev   (utils/latest-edit (get-in db [:sports-sites lipas-id :edits]))
-         token (-> db :user :login :token)
-         data  (assoc rev :status "draft")]
-     (commit-ajax db token data))))
+   (save-with-status db lipas-id "draft")))
 
 (re-frame/reg-event-fx
- ::commit-success
+ ::save-success
  (fn [{:keys [db]} [_ result]]
    (let [tr       (:translator db)]
-     {:db       (utils/commit-edits db result)
+     {:db       (utils/commit-edits db result) ;; Clear client side temp state
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/save-success)
                   :success? true}]})))
 
 (re-frame/reg-event-fx
- ::commit-failure
+ ::save-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr       (:translator db)]
      {:db       (assoc-in db [:sports-sites :errors (utils/timestamp)] error)

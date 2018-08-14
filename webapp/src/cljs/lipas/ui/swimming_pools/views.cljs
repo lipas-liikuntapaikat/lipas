@@ -62,21 +62,21 @@
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
 
-      :actions (lui/edit-actions-list
-                {:uncommitted-edits? uncommitted-edits?
-                 :editing?           editing?
-                 :valid?             edits-valid?
-                 :logged-in?         logged-in?
-                 :user-can-publish?  user-can-publish?
-                 :on-discard         #(==> [::site-events/discard-edits lipas-id])
-                 :discard-tooltip    (tr :actions/discard)
-                 :on-edit-start      #(==> [::site-events/edit-site lipas-id])
-                 :on-edit-end        #(==> [::site-events/save-edits lipas-id])
-                 :edit-tooltip       (tr :actions/edit)
-                 :on-save-draft      #(==> [::site-events/commit-draft lipas-id])
-                 :save-draft-tooltip (tr :actions/save-draft)
-                 :on-publish         #(==> [::site-events/commit-edits lipas-id])
-                 :publish-tooltip    (tr :actions/publish)})}
+      :actions
+      (lui/edit-actions-list
+       {:editing?           editing?
+        :valid?             edits-valid?
+        :logged-in?         logged-in?
+        :user-can-publish?  user-can-publish?
+        :on-discard         #(==> [::site-events/discard-edits lipas-id])
+        :discard-tooltip    (tr :actions/discard)
+        :on-edit-start      #(==> [::site-events/edit-site lipas-id])
+        :edit-tooltip       (tr :actions/edit)
+        :on-save-draft      #(==> [::site-events/save-draft lipas-id])
+        :save-draft-tooltip (tr :actions/save-draft)
+        :on-publish         #(==> [::site-events/save-edits lipas-id])
+        :publish-tooltip    (tr :actions/save)
+        :invalid-message    (tr :error/invalid-form)})}
 
      [mui/grid {:container true}
 

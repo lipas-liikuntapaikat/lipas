@@ -135,7 +135,7 @@
    (make-revision site (timestamp)))
   ([site timestamp]
    (let [history-with-edits (merge (:history site) (:edits site))
-         prev-rev (resolve-prev-rev history-with-edits timestamp)]
+         prev-rev           (resolve-prev-rev history-with-edits timestamp)]
      (-> prev-rev
          (assoc :event-date timestamp)
          (dissoc :energy-consumption)
@@ -198,7 +198,7 @@
           $))))
 
 (defn discard-edits [db lipas-id]
-  (assoc-in db [:sports-sites lipas-id :edits] nil))
+  (assoc-in db [:sports-sites lipas-id :editing] nil))
 
 (defn commit-energy-consumption [db rev]
   (let [lipas-id (:lipas-id rev)
@@ -221,17 +221,6 @@
 (defn join-pretty [coll]
   (string/join ", " coll))
 
-(defn make-editable [sports-site]
-  (-> sports-site
-
-      ;; Swimming pools
-      (update-in [:pools]  ->indexed-map)
-      (update-in [:saunas] ->indexed-map)
-      (update-in [:slides] ->indexed-map)
-
-      ;; Ice Stadiums
-      (update-in [:rinks] ->indexed-map)))
-
 (defn remove-ids [m]
   (not-empty (map #(dissoc % :id) m)))
 
@@ -247,6 +236,17 @@
       (update-in [:rinks] (comp not-empty remove-ids vals))
 
       clean))
+
+(defn make-editable [sports-site]
+  (-> sports-site
+
+      ;; Swimming pools
+      (update-in [:pools]  ->indexed-map)
+      (update-in [:saunas] ->indexed-map)
+      (update-in [:slides] ->indexed-map)
+
+      ;; Ice Stadiums
+      (update-in [:rinks] ->indexed-map)))
 
 (defn mobile? [width]
   (case width
