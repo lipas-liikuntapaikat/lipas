@@ -1,7 +1,6 @@
 (ns lipas.ui.core
   (:require cljsjs.babel-polyfill
             cljsjs.google-analytics
-            autotrack
             [day8.re-frame.http-fx]
             [lipas.ui.local-storage]
             [lipas.ui.config :as config]
@@ -17,9 +16,8 @@
 (def tracking-code (if (utils/prod?) "" "UA-123820613-1"))
 
 (defn track! []
-  (js/ga "create" tracking-code "auto")
-  (js/ga "require" "autotrack")
-  (js/ga "send" "pageview"))
+  (js/ga "create" tracking-code "auto" "tracker1")
+  (js/ga "tracker1.send" "pageview"))
 
 (defn dev-setup []
   (when config/debug?
