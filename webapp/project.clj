@@ -103,7 +103,7 @@
   :cljsbuild
   {:builds
    [{:id           "dev"
-     :source-paths ["src/cljs" "src/cljc"]
+     :source-paths ["src/cljs" "src/cljc" "src/js"]
      :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
      :compiler     {:main                 lipas.ui.core
                     :npm-deps             false
@@ -120,9 +120,11 @@
                     }}
 
     {:id           "min"
-     :source-paths ["src/cljs" "src/cljc"]
+     :source-paths ["src/cljs" "src/cljc" "src/js"]
      :compiler     {:main            lipas.ui.core
                     :npm-deps        false
+                    :foreign-libs    [{:file     "src/js/autotrack.js"
+                                       :provides ["autotrack"]}]
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
