@@ -1,5 +1,6 @@
 (ns lipas.ui.core
-  (:require [day8.re-frame.http-fx]
+  (:require cljsjs.babel-polyfill
+            [day8.re-frame.http-fx]
             [lipas.ui.local-storage]
             [lipas.ui.config :as config]
             [lipas.ui.events :as events]

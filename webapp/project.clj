@@ -23,6 +23,7 @@
                  [cljsjs/filesaverjs "1.3.3-0"]
                  [testdouble/clojurescript.csv "0.3.0"]
                  [cljsjs/google-analytics "2015.04.13-0"]
+                 [cljsjs/babel-polyfill "6.20.0-2"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.0-SNAPSHOT"]
