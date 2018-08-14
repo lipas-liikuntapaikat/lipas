@@ -31,12 +31,15 @@
 
      ;; Password
      [lui/text-field
-      {:id        "login-password-input"
-       :label     (tr :login/password)
-       :type      "password"
-       :value     (:password form-data)
-       :on-change (comp clear-errors #(set-field :password %))
-       :required  true}]
+      {:id           "login-password-input"
+       :label        (tr :login/password)
+       :type         "password"
+       :value        (:password form-data)
+       :on-change    (comp clear-errors #(set-field :password %))
+       :on-key-press (fn [e]
+                       (when (= 13 (.-charCode e)) ; Enter
+                         (==> [::events/submit-login-form form-data])))
+       :required     true}]
 
      ;; Login button
      [mui/button
@@ -56,8 +59,8 @@
           "Not authorized" (tr :login/bad-credentials)
           (tr :error/unknown))])
 
-     [mui/button {:style    {:margin-top "2em"}
-                  :href     "#/passu-hukassa"}
+     [mui/button {:style {:margin-top "2em"}
+                  :href  "#/passu-hukassa"}
       (tr :login/forgot-password?)]]))
 
 (defn register-btn [{:keys [tooltip]}]
