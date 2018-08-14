@@ -43,9 +43,10 @@
   {:typography
    {:font-family "Aleo, serif"}
    :palette
-   {:type "dark"
-    :primary {:main primary}
-    :secondary {:main secondary}}
+   {:type      "dark"
+    :primary   {:main primary}
+    :secondary {:main secondary}
+    :text      {:disabled "rgba(0, 0, 0, 0.68)"}}
    :overrides
    {:Mui-card-header
     {:title {:color secondary}}}})
