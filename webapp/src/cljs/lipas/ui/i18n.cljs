@@ -423,7 +423,8 @@
    {:unknown             "Tuntematon virhe tapahtui. :/"
     :user-not-found      "Käyttäjää ei löydy."
     :email-not-found     "Sähköpostiosoitetta ei ole rekisteröity."
-    :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."}})
+    :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."
+    :invalid-form        "Korjaa punaisella merkityt kohdat"}})
 
 (def se {:menu
          {:jyu "Jyväskylä universitet"
