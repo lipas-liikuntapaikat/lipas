@@ -167,6 +167,7 @@
          (for [item items
                :let [id (or (key-fn item) (:id item) (:lipas-id item) (gensym))]]
            [mui/table-row {:key id
+                           :on-click (when on-select #(on-select item))
                            :hover true}
             (when on-select
               [mui/table-cell {:padding "checkbox"}
