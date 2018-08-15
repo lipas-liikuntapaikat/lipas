@@ -14,7 +14,9 @@
 
 (def dev-backend-url "http://localhost:8091/api")
 
-(def tracking-code (if (utils/prod?) "" "UA-123820613-1"))
+(def tracking-code (if (utils/prod?)
+                     "UA-123952697-1"
+                     "UA-123820613-1"))
 
 (defn track! []
   (js/ga
