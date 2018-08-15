@@ -8,11 +8,12 @@
  [(re-frame/inject-cofx :get-local-storage-value :login-data)]
  (fn  [{login-data :local-storage-value} _]
    (if login-data
-     {:db (-> db/default-db
-              (assoc-in [:user :login] login-data)
-              (assoc :logged-in? true))
-      :dispatch [:lipas.ui.login.events/refresh-login]
-      :ga/set [{:dimension1 "logged-in"}]}
+     (let [admin? (-> login-data :permissions :admin?)]
+       {:db (-> db/default-db
+                (assoc-in [:user :login] login-data)
+                (assoc :logged-in? true))
+        :dispatch [:lipas.ui.login.events/refresh-login]
+        :ga/set [{:dimension1 (if admin? "admin" "user")}]})
      {:db db/default-db
       :ga/set [{:dimension1 "guest"}]})))
 

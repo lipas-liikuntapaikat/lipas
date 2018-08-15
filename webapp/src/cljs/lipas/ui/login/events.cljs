@@ -16,7 +16,7 @@
  [(re-frame/after (fn [db _]
                     (ls-set :login-data (-> db :user :login))))]
  (fn [{:keys [db]} [_ body]]
-   (let [body               body
+   (let [admin?             (-> body :permissions :admin?)
          refresh-interval-s 900] ; 15 minutes
      {:db       (-> db
                     (assoc-in [:logged-in?] true)
@@ -24,7 +24,7 @@
       :dispatch-later
       [{:ms       (* 1000 refresh-interval-s)
         :dispatch [::refresh-login]}]
-      :ga/set   [{:dimension1 "logged-in"}]
+      :ga/set   [{:dimension1 (if admin? "admin" "user")}]
       :ga/event ["user" "login-success"]})))
 
 (re-frame/reg-event-fx
