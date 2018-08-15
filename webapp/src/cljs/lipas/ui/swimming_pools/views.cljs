@@ -543,7 +543,7 @@
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [mui/card {:square true?}
+    [mui/card {:square true}
      [mui/card-header {:title (tr :swim-energy/headline)}]
      [mui/card-content
       [mui/typography
