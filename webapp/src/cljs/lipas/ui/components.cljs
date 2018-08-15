@@ -626,7 +626,7 @@
    (conj (into [mui/dialog-actions {:style {:margin 0}}
                 [mui/dialog-title {:style {:flex-grow 1
                                            :padding ""}}
-                 title]]
+                 (or title "")]]
                actions)
          [mui/button {:on-click on-close}
           close-label])
