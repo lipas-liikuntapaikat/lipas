@@ -61,10 +61,11 @@
   [mui/tooltip {:title     (if disabled disabled-tooltip "")
                 :placement "top"}
    [:div
-    [mui/button (merge props {:variant  "contained"
-                              :disabled disabled
-                              :on-click on-click
-                              :color    "secondary"})
+    [mui/button (merge (dissoc props :disabled-tooltip)
+                       {:variant  "contained"
+                        :disabled disabled
+                        :on-click on-click
+                        :color    "secondary"})
      tooltip
      [mui/icon {:style {:margin-left "0.25em"}}
       "save_icon"]]]])
@@ -301,7 +302,10 @@
 
 (defn coerce [type s]
   (if (= type "number")
-    (read-string s)
+    (if (or (string/ends-with? s ".")
+            (string/ends-with? s ","))
+      (not-empty s)
+      (read-string s))
     (not-empty s)))
 
 (defn patched-input [props]
@@ -437,7 +441,7 @@
             (->display-tf d)
             (assoc field 1 (assoc props :label (:label d)))))))
 
-;;(def form table-form)
+;; (def form table-form)
 (def form form-trad)
 
 (defn sports-site-form [{:keys [tr display-data edit-data types size-categories
