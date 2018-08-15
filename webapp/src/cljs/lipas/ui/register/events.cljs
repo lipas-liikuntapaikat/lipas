@@ -25,7 +25,8 @@
            (assoc-in [:user :registration] result)
            (assoc-in [:user :registration-form] empty-form))
       :dispatch [::login-events/submit-login-form {:username username
-                                                   :password password}]})))
+                                                   :password password}]
+      :ga/event ["user" "registered"]})))
 
 (re-frame/reg-event-db
  ::registration-failure

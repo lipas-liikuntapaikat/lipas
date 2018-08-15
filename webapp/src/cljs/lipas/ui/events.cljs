@@ -11,8 +11,10 @@
      {:db (-> db/default-db
               (assoc-in [:user :login] login-data)
               (assoc :logged-in? true))
-      :dispatch [:lipas.ui.login.events/refresh-login]}
-     {:db db/default-db})))
+      :dispatch [:lipas.ui.login.events/refresh-login]
+      :ga/set [{:dimension1 "logged-in"}]}
+     {:db db/default-db
+      :ga/set [{:dimension1 "guest"}]})))
 
 (re-frame/reg-event-db
  ::set-backend-url
