@@ -22,7 +22,7 @@
                       :spec        :lipas.user/email
                       :value       (:email form-data)
                       :on-change   #(set-field :email %)
-                      :placeholder (tr :register/email-example)}]
+                      :placeholder (tr :lipas.user/email-example)}]
 
      ;; Username
      [lui/text-field {:label       (tr :lipas.user/username)
@@ -30,7 +30,7 @@
                       :spec        :lipas.user/username
                       :value       (:username form-data)
                       :on-change   #(set-field :username %)
-                      :placeholder (tr :register/username-example)}]
+                      :placeholder (tr :lipas.user/username-example)}]
 
      ;; Password
      [lui/text-field {:label     (tr :lipas.user/password)
