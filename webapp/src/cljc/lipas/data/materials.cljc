@@ -78,7 +78,7 @@
   (select-keys all ["concrete" "steel" "hardened-plastic"]))
 
 (def supporting-structures
-  (select-keys all ["concrete" "wood" "concrete-pillar" "concrete-beam"
+  (select-keys all ["concrete" "wood" "concrete-pillar" "concrete-beam" "steel"
                     "solid-rock" "precast-concrete"]))
 
 (def ceiling-structures
