@@ -99,7 +99,7 @@
     [(when lipas-id
        [:lipas.ui.sports-sites.events/get-history lipas-id])
      (when lipas-id
-       [:lipas.ui.events/navigate (str "/#/jaahalliportaali/" lipas-id)])
+       [:lipas.ui.events/navigate (str "/#/jaahalliportaali/halli/" lipas-id)])
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/jaahalliportaali"])]}))
 

@@ -607,6 +607,13 @@
          {:headers headers
           :items   sites}]]]]]))
 
+(def tabs
+  {0 "/#/jaahalliportaali"
+   1 "/#/jaahalliportaali/ilmoita-tiedot"
+   2 "/#/jaahalliportaali/hallien-vertailu"
+   3 "/#/jaahalliportaali/energia-info"
+   4 "/#/jaahalliportaali/raportit"})
+
 (defn create-panel [tr logged-in?]
   (let [active-tab (re-frame/subscribe [::subs/active-tab])
         card-props {:square true}]
@@ -618,7 +625,7 @@
         [mui/tabs {:scrollable true
                    :full-width true
                    :text-color "secondary"
-                   :on-change  #(==> [::events/set-active-tab %2])
+                   :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
                    :value      @active-tab}
 
          ;; 0 Ice stadiums tab
@@ -626,8 +633,8 @@
                    :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label    (tr :ice-form/headline-short)
-                   :icon     (r/as-element [mui/icon "edit"])}]
+         [mui/tab {:label (tr :ice-form/headline-short)
+                   :icon  (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Compare tab
          [mui/tab {:label (tr :ice/comparison)
