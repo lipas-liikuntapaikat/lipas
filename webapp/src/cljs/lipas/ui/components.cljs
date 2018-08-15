@@ -305,7 +305,8 @@
     (-> s
         (string/replace "," ".")
         (string/replace #"[^\d.]" "")
-        (as-> $ (if (string/ends-with? $ ".")
+        (as-> $ (if (or (string/ends-with? $ ".")
+                        (string/ends-with? $ ".0"))
                   $
                   (read-string $))))
     (not-empty s)))
@@ -317,7 +318,7 @@
                                      Input-props adornment]
                               :as   props} & children]
   (let [props (-> props
-                  (dissoc :type)
+                  (as-> $ (if (= "number" type) (dissoc $ :type) $))
                   (assoc :error (error? spec value required))
                   (assoc :Input-props
                          (merge Input-props
@@ -343,7 +344,7 @@
                :as   props}]
   (let [props (-> props
                   (dissoc :value-fn :label-fn :label)
-                  (assoc :value (pr-str value))
+                  (assoc :value (if value (pr-str value) ""))
                   (assoc :on-change #(on-change (-> %
                                                     .-target
                                                     .-value
@@ -354,7 +355,7 @@
            (for [i items]
              (let [value (value-fn i)
                    label (label-fn i)]
-               [mui/menu-item {:key (pr-str value)
+               [mui/menu-item {:key   (pr-str value)
                                :value (pr-str value)}
                 label])))]))
 
