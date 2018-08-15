@@ -302,10 +302,12 @@
 
 (defn coerce [type s]
   (if (= type "number")
-    (if (or (string/ends-with? s ".")
-            (string/ends-with? s ","))
-      (not-empty s)
-      (read-string s))
+    (-> s
+        (string/replace "," ".")
+        (string/replace #"[^\d.]" "")
+        (as-> $ (if (string/ends-with? $ ".")
+                  $
+                  (read-string $))))
     (not-empty s)))
 
 (defn patched-input [props]
@@ -313,8 +315,9 @@
 
 (defn text-field-controlled [{:keys [value type on-change spec required
                                      Input-props adornment]
-                              :as props} & children]
+                              :as   props} & children]
   (let [props (-> props
+                  (dissoc :type)
                   (assoc :error (error? spec value required))
                   (assoc :Input-props
                          (merge Input-props
