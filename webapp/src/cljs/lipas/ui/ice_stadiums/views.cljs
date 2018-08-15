@@ -615,7 +615,7 @@
    4 "/#/jaahalliportaali/raportit"})
 
 (defn create-panel [tr logged-in?]
-  (let [active-tab (re-frame/subscribe [::subs/active-tab])
+  (let [active-tab (<== [::subs/active-tab])
         card-props {:square true}]
     [mui/grid {:container true}
 
@@ -626,7 +626,7 @@
                    :full-width true
                    :text-color "secondary"
                    :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
-                   :value      @active-tab}
+                   :value      active-tab}
 
          ;; 0 Ice stadiums tab
          [mui/tab {:label (tr :ice-rinks/headline)
@@ -649,7 +649,7 @@
                    :icon  (r/as-element [mui/icon "assessment"])}]]]]]
 
      [mui/grid {:item true :xs 12}
-      (case @active-tab
+      (case active-tab
         0 (ice-stadiums-tab tr logged-in?)
         1 (energy-form-tab tr)
         2 (compare-tab)
