@@ -14,7 +14,9 @@
     (gevents/listen
      EventType/NAVIGATE
      (fn [event]
-       (secretary/dispatch! (.-token event))))
+       (let [token (.-token event)]
+         (secretary/dispatch! token)
+         (js/ga "send" "pageview" token))))
     (.setEnabled true)))
 
 (defn app-routes []

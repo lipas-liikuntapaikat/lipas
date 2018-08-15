@@ -18,17 +18,20 @@
  (fn [{:keys [db]} [_ body]]
    (let [body               body
          refresh-interval-s 900] ; 15 minutes
-     {:db (-> db
-              (assoc-in [:logged-in?] true)
-              (assoc-in [:user :login] body))
+     {:db       (-> db
+                    (assoc-in [:logged-in?] true)
+                    (assoc-in [:user :login] body))
       :dispatch-later
       [{:ms       (* 1000 refresh-interval-s)
-        :dispatch [::refresh-login]}]})))
+        :dispatch [::refresh-login]}]
+      :ga/set   [{:dimension1 "logged-in"}]
+      :ga/event ["user" "login-success"]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::login-failure
- (fn [db [_ result]]
-   (assoc-in db [:user :login-error] result)))
+ (fn [{:keys [db]} [_ result]]
+   {:db       (assoc-in db [:user :login-error] result)
+    :ga/event ["user" "login-failed"]}))
 
 (re-frame/reg-event-db
  ::clear-errors
@@ -72,4 +75,5 @@
    {:db       (->  db/default-db
                    (assoc :active-panel :login-panel)      ; Avoid flickering
                    (assoc :backend-url (:backend-url db))) ; Dev-time helper
-    :dispatch [:lipas.ui.events/navigate "#/kirjaudu"]}))
+    :dispatch [:lipas.ui.events/navigate "#/kirjaudu"]
+    :ga/set [{:dimension1 "logged-out"}]}))

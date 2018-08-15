@@ -59,25 +59,31 @@
 (re-frame/reg-event-fx
  ::save-draft
  (fn [{:keys [db]} [_ lipas-id]]
-   (save-with-status db lipas-id "draft")))
+   (merge
+    (save-with-status db lipas-id "draft"))))
 
 (re-frame/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_ result]]
-   (let [tr       (:translator db)]
+   (let [tr     (:translator db)
+         status (:status result)
+         type   (-> result :type :type-code)]
      {:db       (utils/commit-edits db result) ;; Clear client side temp state
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/save-success)
-                  :success? true}]})))
+                  :success? true}]
+      :ga/event ["save-sports-site" status type]})))
 
 (re-frame/reg-event-fx
  ::save-failure
  (fn [{:keys [db]} [_ error]]
-   (let [tr       (:translator db)]
-     {:db       (assoc-in db [:sports-sites :errors (utils/timestamp)] error)
-      :dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr :notifications/save-failed)
-                  :success? false}]})))
+   (let [tr     (:translator db)
+         fatal? false]
+     {:db           (assoc-in db [:sports-sites :errors (utils/timestamp)] error)
+      :dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr :notifications/save-failed)
+                      :success? false}]
+      :ga/exception [(:message error) fatal?]})))
 
 (re-frame/reg-event-fx
  ::get-success

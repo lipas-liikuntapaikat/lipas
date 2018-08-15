@@ -11,19 +11,22 @@
                  {:message  (tr :reset-password/reset-link-sent)
                   :success? true}]
       :db (assoc-in db [:user :reset-password-request :success]
-                    :reset-link-sent)})))
+                    :reset-link-sent)
+      :ga/event ["user" "reset-password-request"]})))
 
 (re-frame/reg-event-fx
  ::failure
  (fn [{:keys [db]} [_ resp]]
-   (let [tr    (:translator db)
-         error (or (-> resp :response :type keyword)
-                   (when (= 401 (:status resp)) :reset-token-expired)
-                   :unknown)]
-     {:dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr (keyword :error error))
-                  :success? false}]
-      :db       (assoc-in db [:user :reset-password-request :error] error)})))
+   (let [tr     (:translator db)
+         error  (or (-> resp :response :type keyword)
+                    (when (= 401 (:status resp)) :reset-token-expired)
+                    :unknown)
+         fatal? (= error :unknown)]
+     {:dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr (keyword :error error))
+                      :success? false}]
+      :db           (assoc-in db [:user :reset-password-request :error] error)
+      :ga/exception [(:message resp) fatal?]})))
 
 (re-frame/reg-event-db
  ::clear-feedback
@@ -42,7 +45,8 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::reset-password-request-success]
      :on-failure      [::failure]}
-    :dispatch [::clear-feedback]}))
+    :dispatch [::clear-feedback]
+    :ga/event ["user" "reset-password-request"]}))
 
 (re-frame/reg-event-fx
  ::reset-password-success
@@ -53,7 +57,8 @@
                      :success? true}]
                    [:lipas.ui.events/navigate "/#/kirjaudu"]]
       :db         (assoc-in db [:user :reset-password :success]
-                            :reset-link-sent)})))
+                            :reset-link-sent)
+      :ga/event   ["user" "reset-password-success"]})))
 
 
 (re-frame/reg-event-fx
@@ -68,4 +73,4 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::reset-password-success]
      :on-failure      [::failure]}
-    :dispatch    [::clear-feedback]}))
+    :dispatch [::clear-feedback]}))

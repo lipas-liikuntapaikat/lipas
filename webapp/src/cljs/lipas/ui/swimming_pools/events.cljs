@@ -27,8 +27,10 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [_ [_ rev]]
-   (let [rev (utils/make-saveable rev)]
-     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
+   (let [rev (utils/make-saveable rev)
+         id  (:lipas-id rev)]
+     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]
+      :ga/event ["swimming-pool" "energy-reported" id]})))
 
 (re-frame/reg-event-db
  ::toggle-dialog
