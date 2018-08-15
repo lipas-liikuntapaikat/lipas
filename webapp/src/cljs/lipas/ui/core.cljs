@@ -18,11 +18,17 @@
                      "UA-123952697-1"
                      "UA-123820613-1"))
 
+(defn- resolve-cookie-domain []
+  (if (utils/prod?)
+    "lipas.fi"
+    "auto"))
+
 (defn track! []
-  (js/ga
-   (fn []
-     (js/ga "create" tracking-code "auto")
-     (js/ga "send" "pageview"))))
+  (let [domain (resolve-cookie-domain)]
+    (js/ga
+     (fn []
+       (js/ga "create" tracking-code domain)
+       (js/ga "send" "pageview")))))
 
 (defn dev-setup []
   (when config/debug?
