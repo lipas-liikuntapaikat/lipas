@@ -598,17 +598,24 @@
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
 
+(def tabs
+  {0 "/#/uimahalliportaali"
+   1 "/#/uimahalliportaali/ilmoita-tiedot"
+   2 "/#/uimahalliportaali/hallien-vertailu"
+   3 "/#/uimahalliportaali/energia-info"})
+
 (defn create-panel [tr logged-in?]
-  (let [active-tab (re-frame/subscribe [::subs/active-tab])]
+  (let [active-tab (<== [::subs/active-tab])]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card
        [mui/card-content
-        [mui/tabs {:scrollable true
-                   :full-width true
-                   :text-color "secondary"
-                   :on-change #(==> [::events/set-active-tab %2])
-                   :value @active-tab}
+        [mui/tabs
+         {:scrollable true
+          :full-width true
+          :text-color "secondary"
+          :on-change #(==> [:lipas.ui.events/navigate (get tabs %2)])
+          :value active-tab}
 
          ;; 0 Info tab
          [mui/tab {:label (tr :swim/list)
@@ -628,7 +635,7 @@
                    :icon (r/as-element [mui/icon "info"])}]]]]]
 
      [mui/grid {:item true :xs 12}
-      (case @active-tab
+      (case active-tab
         0 (swimming-pools-tab tr logged-in?)
         1 (energy-form-tab tr)
         2 (compare-tab)

@@ -61,8 +61,6 @@
 (re-frame/reg-event-db
  ::save-slide
  (fn [db [_ lipas-id value]]
-   (prn lipas-id)
-   (prn value)
    (let [path [:sports-sites lipas-id :editing :slides]]
      (utils/save-entity db path value))))
 
@@ -94,6 +92,6 @@
     [(when lipas-id
        [:lipas.ui.sports-sites.events/get-history lipas-id])
      (when lipas-id
-       [:lipas.ui.events/navigate (str "/#/uimahalliportaali/" lipas-id)])
+       [:lipas.ui.events/navigate (str "/#/uimahalliportaali/halli/" lipas-id)])
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/uimahalliportaali"])]}))
