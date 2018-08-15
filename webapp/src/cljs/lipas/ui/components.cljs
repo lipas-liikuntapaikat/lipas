@@ -623,9 +623,12 @@
                :Transition-props     {:direction "up"}
                :on-close             on-close}
 
-   [mui/dialog-title (or title "")]
-   (into [mui/dialog-content {:style {:padding 0}}]
-         contents)
-   (conj (into [mui/dialog-actions] actions)
+   (conj (into [mui/dialog-actions {:style {:margin 0}}
+                [mui/dialog-title {:style {:flex-grow 1
+                                           :padding ""}}
+                 title]]
+               actions)
          [mui/button {:on-click on-close}
-          close-label])])
+          close-label])
+   (into [mui/dialog-content {:style {:padding 0}}]
+         contents)])
