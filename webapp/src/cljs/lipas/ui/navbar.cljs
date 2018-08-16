@@ -115,8 +115,7 @@
       ;; Close btn
       [mui/list-item {:button   true
                       :on-click toggle-drawer}
-       [mui/typography {:variant :title
-                        :color   :text-primary}
+       [mui/typography {:variant :title}
          (if (utils/prod?)
            (tr :menu/headline)
            (tr :menu/headline-test))]
