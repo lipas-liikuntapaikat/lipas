@@ -28,9 +28,8 @@
   fixture-driver)
 
 (deftest ^:integration login-test
-  (doto *driver*
+  (e/doto-wait 1 *driver*
     (e/go "http://proxy")
-    (e/wait-visible {:id "account-btn"} {:timeout 60})
     (e/click  {:id "account-btn"})
     (e/click  {:id "account-menu-item-login"})
     (e/fill   {:id "login-username-input"} "jhdemo")
