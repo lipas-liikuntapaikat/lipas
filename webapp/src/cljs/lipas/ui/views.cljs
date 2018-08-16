@@ -35,12 +35,21 @@
         drawer-open? (<== [::subs/drawer-open?])
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
+        confirmation (<== [::subs/active-confirmation])
         tr           (<== [::subs/translator])]
     [mui/css-baseline
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
       [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]]
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+
+      ;; Main panel
       [show-panel active-panel tr logged-in?]
+
+      ;; Global UI-blocking confirmation dialog
+      (when confirmation
+        [lui/confirmation-dialog confirmation])
+
+      ;; Global ephmeral notifications
       (when notification
         [lui/notification
          {:notification notification

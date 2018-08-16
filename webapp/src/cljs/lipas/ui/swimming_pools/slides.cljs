@@ -52,14 +52,15 @@
 (defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr :structure :slide-structures)]
     [lui/form-table
-     {:headers        (make-headers tr)
-      :items          (map localize (vals items))
-      :add-tooltip    (tr :lipas.swimming-pool.slides/add-slide)
-      :edit-tooltip   (tr :actions/edit)
-      :delete-tooltip (tr :actions/delete)
-      :on-add         #(==> [::events/toggle-dialog :slide {}])
-      :on-edit        #(==> [::events/toggle-dialog :slide (get items (:id %))])
-      :on-delete      #(==> [::events/remove-slide lipas-id %])}]))
+     {:headers         (make-headers tr)
+      :items           (map localize (vals items))
+      :add-tooltip     (tr :lipas.swimming-pool.slides/add-slide)
+      :edit-tooltip    (tr :actions/edit)
+      :delete-tooltip  (tr :actions/delete)
+      :confirm-tooltip (tr :confirm/press-again-to-delete)
+      :on-add          #(==> [::events/toggle-dialog :slide {}])
+      :on-edit         #(==> [::events/toggle-dialog :slide (get items (:id %))])
+      :on-delete       #(==> [::events/remove-slide lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

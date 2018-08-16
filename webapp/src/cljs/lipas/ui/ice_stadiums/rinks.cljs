@@ -47,14 +47,15 @@
    [:width-m (tr :dimensions/width-m)]])
 
 (defn table [{:keys [tr items lipas-id]}]
-  [lui/form-table {:headers        (make-headers tr)
-                   :items          items
-                   :on-add         #(==> [::events/toggle-dialog :rink {}])
-                   :on-edit        #(==> [::events/toggle-dialog :rink %])
-                   :on-delete      #(==> [::events/remove-rink lipas-id %])
-                   :add-tooltip    (tr :lipas.ice-stadium.rinks/add-rink)
-                   :edit-tooltip   (tr :actions/edit)
-                   :delete-tooltip (tr :actions/delete)}])
+  [lui/form-table {:headers         (make-headers tr)
+                   :items           items
+                   :on-add          #(==> [::events/toggle-dialog :rink {}])
+                   :on-edit         #(==> [::events/toggle-dialog :rink %])
+                   :on-delete       #(==> [::events/remove-rink lipas-id %])
+                   :add-tooltip     (tr :lipas.ice-stadium.rinks/add-rink)
+                   :edit-tooltip    (tr :actions/edit)
+                   :delete-tooltip  (tr :actions/delete)
+                   :confirm-tooltip (tr :confirm/press-again-to-delete)}])
 
 (defn read-only-table [{:keys [tr items]}]
   (lui/table {:headers (make-headers tr)

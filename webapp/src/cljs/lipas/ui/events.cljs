@@ -1,6 +1,7 @@
 (ns lipas.ui.events
   (:require [lipas.ui.db :as db]
             [lipas.ui.routes :as routes]
+            [lipas.ui.utils :refer [==>]]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
@@ -46,6 +47,24 @@
  ::set-active-notification
  (fn [db [_ notification]]
    (assoc db :active-notification notification)))
+
+(re-frame/reg-event-db
+ ::confirmed
+ (fn [db _]
+   (assoc db :active-confirmation nil)))
+
+(re-frame/reg-event-db
+ ::confirm
+ (fn [db [_ message on-confirm]]
+   (let [tr           (:translator db)
+         close        #(==> [:lipas.ui.events/confirmed])
+         confirmation {:title         (tr :confirm/headline)
+                       :message       message
+                       :cancel-label  (tr :confirm/no)
+                       :confirm-label (tr :confirm/yes)
+                       :on-confirm    (comp on-confirm close)
+                       :on-cancel     close}]
+     (assoc db :active-confirmation confirmation))))
 
 (re-frame/reg-event-fx
  ::navigate
