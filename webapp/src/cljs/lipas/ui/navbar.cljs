@@ -18,16 +18,26 @@
   (let [initials (<== [::subs/user-initials])]
     [mui/avatar {:style {:font-size "0.65em"
                          :color     "#fff"}}
-   initials]))
+     initials]))
+
+(defn account-menu-button [{:keys [tr logged-in?]}]
+  [mui/icon-button
+   {:on-click   #(==> [::events/show-account-menu (.-currentTarget %)])
+    :id         "account-btn"
+    :aria-label (tr :actions/open-account-menu)}
+   (if logged-in?
+     [avatar]
+     [mui/icon "account_circle"])])
 
 (defn create-menu [tr anchor logged-in?]
-  (let [close #(==> [::events/set-menu-anchor nil])]
-    [mui/menu {:anchor-el anchor :open true
+  (let [close #(==> [::events/show-account-menu nil])]
+    [mui/menu {:anchor-el anchor
+               :open      true
                :on-close  close}
 
      ;; Login
      (when (not logged-in?)
-       [mui/menu-item {:id "account-menu-item-login"
+       [mui/menu-item {:id       "account-menu-item-login"
                        :on-click (comp close #(navigate! "/#/kirjaudu"))}
         [mui/list-item-icon
          [mui/icon "lock"]]
@@ -35,7 +45,7 @@
 
      ;; Register
      (when (not logged-in?)
-       [mui/menu-item {:id "account-menu-item-register"
+       [mui/menu-item {:id       "account-menu-item-register"
                        :on-click (comp close #(navigate! "/#/rekisteroidy"))}
         [mui/list-item-icon
          [mui/icon "group_add"]]
@@ -43,14 +53,14 @@
 
      ;; Profile
      (when logged-in?
-       [mui/menu-item {:id "account-menu-item-profile"
+       [mui/menu-item {:id       "account-menu-item-profile"
                        :on-click (comp close #(navigate! "/#/profiili"))}
         [mui/list-item-icon
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
      ;; Help
-     [mui/menu-item {:id "account-menu-item-help"
+     [mui/menu-item {:id       "account-menu-item-help"
                      :on-click (comp close #(navigate! (:help links)))}
       [mui/list-item-icon
        [mui/icon "help"]]
@@ -58,7 +68,7 @@
 
      ;; Logout
      (when logged-in?
-       [mui/menu-item {:id "account-menu-item-logout"
+       [mui/menu-item {:id       "account-menu-item-logout"
                        :on-click (comp close logout!)}
         [mui/list-item-icon
          [mui/icon "exit_to_app"]]
@@ -95,9 +105,6 @@
    ;; [separator]
    ;; [lang-btn :en]
    ])
-
-(defn show-menu [event]
-  (==> [::events/set-menu-anchor (.-currentTarget event)]))
 
 (defn toggle-drawer [_]
   (==> [::events/toggle-drawer]))
@@ -268,12 +275,7 @@
     ;;  [mui/icon "search"]]
 
     ;;; Account menu button
-    [mui/icon-button {:id         "account-btn"
-                      :aria-label (tr :actions/open-account-menu)
-                      :on-click   show-menu}
-     (if logged-in?
-       [avatar]
-       [mui/icon "account_circle"])]
+    [account-menu-button {:tr tr :logged-in? logged-in?}]
 
     ;;; Main menu (drawer) button
     [mui/icon-button {:id         "main-menu-btn"

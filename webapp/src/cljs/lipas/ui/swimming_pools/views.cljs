@@ -2,6 +2,7 @@
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
             [lipas.ui.mui :as mui]
+            [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.swimming-pools.events :as events]
@@ -58,7 +59,11 @@
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
 
-      :actions
+
+      :top-actions
+      [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
+
+      :bottom-actions
       (lui/edit-actions-list
        {:editing?           editing?
         :valid?             edits-valid?

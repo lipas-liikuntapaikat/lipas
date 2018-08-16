@@ -389,7 +389,7 @@
     :select-hall       "Valitse halli"
     :select-year       "Valitse vuosi"
     :show-all-years    "Näytä kaikki vuodet"
-    :open-account-menu "Avaa käyttäjävalikko"
+    :show-account-menu "Avaa käyttäjävalikko"
     :open-main-menu    "Avaa päävalikko"
     :submit            "Lähetä"
     :download          "Lataa"}

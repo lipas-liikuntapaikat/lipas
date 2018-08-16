@@ -5,6 +5,7 @@
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.mui :as mui]
+            [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.user.subs :as user-subs]
@@ -47,7 +48,7 @@
         heat-pump-types       (<== [::subs/heat-pump-types])
         ice-resurfacer-fuels  (<== [::subs/ice-resurfacer-fuels])
 
-        user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
+        user-can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
 
         set-field (partial set-field lipas-id)]
 
@@ -58,7 +59,10 @@
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/display-site nil])
 
-      :actions
+      :top-actions
+      [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
+
+      :bottom-actions
       (lui/edit-actions-list
        {:editing?           editing?
         :valid?             edits-valid?
