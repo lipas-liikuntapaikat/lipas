@@ -68,7 +68,7 @@
     (==> [:lipas.ui.swimming-pools.events/display-site nil])
     (==> [:lipas.ui.swimming-pools.events/set-active-tab 0]))
 
-  (defroute "/uimahalliportaali/hallien-tiedot/:lipas-id" {lipas-id :lipas-id}
+  (defroute "/uimahalliportaali/halli/:lipas-id" {lipas-id :lipas-id}
     (let [lipas-id (js/parseInt lipas-id)]
       (==> [:lipas.ui.events/set-active-panel :swim-panel])
       (==> [:lipas.ui.swimming-pools.events/set-active-tab 0])
