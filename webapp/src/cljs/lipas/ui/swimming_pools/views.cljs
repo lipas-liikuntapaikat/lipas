@@ -53,7 +53,7 @@
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
-     {:open? ((complement empty?) display-data)
+     {:open? (boolean (seq display-data))
       :title (-> display-data :name)
 
       :on-close    #(==> [::events/display-site nil])
@@ -65,11 +65,14 @@
 
       :bottom-actions
       (lui/edit-actions-list
-       {:editing?           editing?
-        :valid?             edits-valid?
-        :logged-in?         logged-in?
-        :user-can-publish?  user-can-publish?
-        :on-discard         #(==> [::site-events/discard-edits lipas-id])
+       {:editing?          editing?
+        :valid?            edits-valid?
+        :logged-in?        logged-in?
+        :user-can-publish? user-can-publish?
+        :on-discard        #(==> [:lipas.ui.events/confirm
+                                  (tr :confirm/discard-changes?)
+                                  (fn []
+                                    (==> [::site-events/discard-edits lipas-id]))])
         :discard-tooltip    (tr :actions/discard)
         :on-edit-start      #(==> [::site-events/edit-site lipas-id])
         :edit-tooltip       (tr :actions/edit)

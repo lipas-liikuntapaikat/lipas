@@ -129,16 +129,17 @@
 (defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr)]
     [lui/form-table
-     {:headers        (make-headers tr)
-      :items          (->> (vals items)
-                           (map (partial localize :type :pool-types))
-                           (map (partial localize :structure :pool-structures)))
-      :add-tooltip    (tr :lipas.swimming-pool.pools/add-pool)
-      :edit-tooltip   (tr :actions/edit)
-      :delete-tooltip (tr :actions/delete)
-      :on-add         #(==> [::events/toggle-dialog :pool {}])
-      :on-edit        #(==> [::events/toggle-dialog :pool (get items (:id %))])
-      :on-delete      #(==> [::events/remove-pool lipas-id %])}]))
+     {:headers         (make-headers tr)
+      :items           (->> (vals items)
+                            (map (partial localize :type :pool-types))
+                            (map (partial localize :structure :pool-structures)))
+      :add-tooltip     (tr :lipas.swimming-pool.pools/add-pool)
+      :edit-tooltip    (tr :actions/edit)
+      :delete-tooltip  (tr :actions/delete)
+      :confirm-tooltip (tr :confirm/press-again-to-delete)
+      :on-add          #(==> [::events/toggle-dialog :pool {}])
+      :on-edit         #(==> [::events/toggle-dialog :pool (get items (:id %))])
+      :on-delete       #(==> [::events/remove-pool lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

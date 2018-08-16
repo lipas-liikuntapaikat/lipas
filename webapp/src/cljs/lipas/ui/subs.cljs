@@ -28,6 +28,11 @@
    (:active-notification db)))
 
 (re-frame/reg-sub
+ ::active-confirmation
+ (fn [db _]
+   (:active-confirmation db)))
+
+(re-frame/reg-sub
  ::logged-in?
  (fn [db _]
    (:logged-in? db)))

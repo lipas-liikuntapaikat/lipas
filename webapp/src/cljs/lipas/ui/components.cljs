@@ -87,6 +87,34 @@
                              :color    "primary"})
     [mui/icon "undo"]]])
 
+(defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
+  (r/with-let [timeout  10000
+               clicked? (r/atom false)
+               timeout* (r/atom nil)]
+    [:span
+     [mui/tooltip {:style     {:color :yellow}
+                   :title     (or tooltip "")
+                   :placement "top"}
+      [mui/icon-button
+       {:on-click #(if @clicked?
+                     (do
+                       (js/clearTimeout @timeout*)
+                       (reset! clicked? false)
+                       (on-delete %))
+                     (do
+                       (reset! timeout*
+                               (js/setTimeout
+                                (fn []
+                                  (reset! clicked? false)) timeout))
+                       (reset! clicked? true)))}
+       (if @clicked?
+         [mui/icon "delete_forever"]
+         [mui/icon "delete"])]]
+     (when @clicked?
+       [mui/typography {:style {:display :inline}
+                        :color :error}
+        confirm-tooltip])]))
+
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
 (defn edit-actions-list [{:keys [editing? valid? logged-in?
@@ -178,67 +206,80 @@
               [mui/table-cell {:key (str id k)}
                (display-value v)])])]]]]]))
 
-(defn form-table [{:keys [headers
-                          items
-                          key-fn
-                          add-tooltip
-                          edit-tooltip
-                          delete-tooltip
-                          read-only?
-                          on-add
-                          on-edit
-                          on-delete] :as props}]
+(defn form-table [{:keys [headers items key-fn add-tooltip
+                          edit-tooltip delete-tooltip confirm-tooltip
+                          read-only? on-add on-edit on-delete]
+                   :as props}]
   (if read-only?
+
+    ;; Normal read-only table
     [table props]
+
+    ;; Table with selectable rows and 'edit' 'delete' and 'add'
+    ;; actions
     (r/with-let [selected-item (r/atom nil)
                  key-fn (or key-fn (constantly nil))]
-      [mui/grid {:container true
-                 :spacing 8
-                 :justify "flex-end"
+      [mui/grid {:container   true
+                 :spacing     8
+                 :justify     "flex-end"
                  :align-items "center"}
+
+       ;; Table
        [mui/grid {:item true :xs 12}
         [:div {:style {:overflow-x "auto"}}
          [mui/table
+
           [mui/table-head
            (into [mui/table-row {:hover true}
                   [mui/table-cell ""]]
                  (for [[_ header] headers]
                    [mui/table-cell header]))]
+
           [mui/table-body
            (doall
             (for [item items
                   :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
-              [mui/table-row {:key id
+              [mui/table-row {:key   id
                               :hover true}
                [mui/table-cell {:padding "checkbox"}
-                [mui/checkbox {:checked (= item @selected-item)
+                [mui/checkbox {:checked   (= item @selected-item)
                                :on-change (fn [_ checked?]
                                             (let [v (when checked? item)]
                                               (reset! selected-item v)))}]]
                (for [[k _] headers
-                     :let [v (get item k)]]
-                 [mui/table-cell {:key (str id k)
+                     :let  [v (get item k)]]
+                 [mui/table-cell {:key     (str id k)
                                   :padding "dense"}
                   (display-value v)])]))]]]]
+
+       ;; Editing tools
        [mui/grid {:item true :xs 10}
+
+        ;; Edit button
         (when @selected-item
-          [:span
-           [mui/tooltip {:title (or edit-tooltip "")
-                         :placement "top"}
-            [mui/icon-button {:on-click #(on-edit @selected-item)}
-             [mui/icon "edit"]]]
-           [mui/tooltip {:title (or delete-tooltip "")
-                         :placement "top"}
-            [mui/icon-button {:on-click #(on-delete @selected-item)}
-             [mui/icon "delete"]]]])]
-       [mui/grid {:item true :xs 2
+          [mui/tooltip {:title     (or edit-tooltip "")
+                        :placement "top"}
+           [mui/icon-button {:on-click #(on-edit @selected-item)}
+            [mui/icon "edit"]]])
+
+        ;; Delete button
+        (when @selected-item
+          [confirming-delete-button
+           {:tooltip         delete-tooltip
+            :confirm-tooltip confirm-tooltip
+            :on-delete       #(do
+                                (on-delete @selected-item)
+                                (reset! selected-item nil))}])]
+
+       ;; Add button
+       [mui/grid {:item  true :xs 2
                   :style {:text-align "right"}}
-        [mui/tooltip {:title (or add-tooltip "")
+        [mui/tooltip {:title     (or add-tooltip "")
                       :placement "left"}
-         [mui/button {:style {:margin-top "0.5em"}
+         [mui/button {:style    {:margin-top "0.5em"}
                       :on-click on-add
-                      :variant "fab"
-                      :color "secondary"}
+                      :variant  "fab"
+                      :color    "secondary"}
           [mui/icon "add"]]]]])))
 
 (defn dialog [{:keys [title
@@ -639,3 +680,15 @@
    (conj (into [mui/dialog-actions] bottom-actions)
          [mui/button {:on-click on-close}
           close-label])])
+
+(defn confirmation-dialog [{:keys [title message on-cancel
+                                   cancel-label on-confirm confirm-label]}]
+  [mui/dialog {:open                    true
+               :disable-backdrop-click  true
+               :disable-escape-key-down true}
+   [mui/dialog-title title]
+   [mui/dialog-content
+    [mui/typography message]]
+   [mui/dialog-actions
+    [mui/button {:on-click on-cancel} cancel-label]
+    [mui/button {:on-click on-confirm} confirm-label]]])

@@ -394,6 +394,13 @@
     :submit            "Lähetä"
     :download          "Lataa"}
 
+   :confirm
+   {:headline              "Varmistus"
+    :no                    "Ei"
+    :yes                   "Kyllä"
+    :discard-changes?      "Tahdotko kumota tekemäsi muutokset?"
+    :press-again-to-delete "Varmista painamalla uudestaan"}
+
    :search
    {:headline "Haku"}
 
