@@ -2,17 +2,15 @@
   (:require [re-frame.core :as re-frame]
             [clojure.string :refer [upper-case]]))
 
-;; Level 2
-
 (re-frame/reg-sub
  ::active-panel
  (fn [db _]
    (:active-panel db)))
 
 (re-frame/reg-sub
- ::menu-anchor
+ ::account-menu-anchor
  (fn [db _]
-   (:menu-anchor db)))
+   (:account-menu-anchor db)))
 
 (re-frame/reg-sub
  ::drawer-open?
@@ -39,7 +37,6 @@
  (fn [db _]
    (-> db :user :login :user-data)))
 
-;; Level 3
 (comment ((comp (fnil upper-case "?") first) ""))
 (comment ((comp (fnil upper-case "?") first) "kis"))
 (re-frame/reg-sub

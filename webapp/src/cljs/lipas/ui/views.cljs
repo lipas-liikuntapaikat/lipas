@@ -31,7 +31,7 @@
 
 (defn main-panel []
   (let [active-panel (<== [::subs/active-panel])
-        menu-anchor  (<== [::subs/menu-anchor])
+        menu-anchor  (<== [::subs/account-menu-anchor])
         drawer-open? (<== [::subs/drawer-open?])
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])

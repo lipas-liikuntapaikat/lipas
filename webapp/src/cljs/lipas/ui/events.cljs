@@ -28,9 +28,9 @@
    (assoc db :active-panel active-panel)))
 
 (re-frame/reg-event-db
- ::set-menu-anchor
- (fn [db [_ menu-anchor]]
-   (assoc db :menu-anchor menu-anchor)))
+ ::show-account-menu
+ (fn [db [_ anchor]]
+   (assoc db :account-menu-anchor anchor)))
 
 (re-frame/reg-event-db
  ::toggle-drawer

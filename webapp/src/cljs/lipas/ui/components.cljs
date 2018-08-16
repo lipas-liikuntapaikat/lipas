@@ -615,7 +615,8 @@
    (into [mui/expansion-panel-details]
          children)])
 
-(defn full-screen-dialog [{:keys [open? title on-close close-label actions]}
+(defn full-screen-dialog [{:keys [open? title on-close close-label top-actions
+                                  bottom-actions]}
                           & contents]
   [mui/dialog {:open                 open?
                :full-screen          true
@@ -623,9 +624,18 @@
                :Transition-props     {:direction "up"}
                :on-close             on-close}
 
-   [mui/dialog-title (or title "")]
+   ;; Top bar
+   (into
+    [mui/dialog-actions {:style {:margin "0 1em 0 0"}}
+     [mui/dialog-title {:style {:flex-grow 1}}
+      (or title "")]]
+    top-actions)
+
+   ;; Content
    (into [mui/dialog-content {:style {:padding 0}}]
          contents)
-   (conj (into [mui/dialog-actions] actions)
+
+   ;; Bottom bar
+   (conj (into [mui/dialog-actions] bottom-actions)
          [mui/button {:on-click on-close}
           close-label])])
