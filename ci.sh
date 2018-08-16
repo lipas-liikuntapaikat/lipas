@@ -23,5 +23,10 @@ docker-compose run frontend-build
 printf "\n *** Seeding test data *** \n\n"
 docker-compose run backend-seed
 
+printf "\n *** Generating self-signed SSL certificate *** \n\n"
+openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+        -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com" \
+        -keyout certs/server.key -out certs/server.crt
+
 printf "\n *** Running integration tests *** \n\n"
 docker-compose run integration-tests
