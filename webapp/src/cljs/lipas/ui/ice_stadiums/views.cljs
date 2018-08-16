@@ -9,7 +9,6 @@
             [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>]]
-            [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
 (defn toggle-dialog
@@ -49,15 +48,12 @@
         ice-resurfacer-fuels  (<== [::subs/ice-resurfacer-fuels])
 
         user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
-        uncommitted-edits? (<== [::site-subs/uncommitted-edits? lipas-id])
 
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
      {:open? ((complement empty?) display-data)
-      :title (if uncommitted-edits?
-               (tr :statuses/edited (-> display-data :name))
-               (-> display-data :name))
+      :title (-> display-data :name)
 
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/display-site nil])
