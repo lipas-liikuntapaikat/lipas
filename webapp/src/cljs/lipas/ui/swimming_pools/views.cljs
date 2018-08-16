@@ -11,7 +11,6 @@
             [lipas.ui.swimming-pools.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
 (defn toggle-dialog
@@ -48,16 +47,13 @@
         supporting-structures (<== [::site-subs/supporting-structures])
         ceiling-structures    (<== [::site-subs/ceiling-structures])
 
-        user-can-publish?  (<== [::user-subs/permission-to-publish? lipas-id])
-        uncommitted-edits? (<== [::site-subs/uncommitted-edits? lipas-id])
+        user-can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
 
         set-field (partial set-field lipas-id)]
 
     [lui/full-screen-dialog
      {:open? ((complement empty?) display-data)
-      :title (if uncommitted-edits?
-               (tr :statuses/edited (-> display-data :name))
-               (-> display-data :name))
+      :title (-> display-data :name)
 
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
