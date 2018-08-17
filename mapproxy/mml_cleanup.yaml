@@ -1,0 +1,9 @@
+seeds:
+
+cleanups:
+  mml_all:
+    caches: [mml_maastokartta_cache,mml_taustakartta_cache,mml_ortokuva_cache]
+    grids: [mml_grid]
+    remove_all: true
+
+coverages:
