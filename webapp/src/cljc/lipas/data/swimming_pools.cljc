@@ -28,6 +28,9 @@
    "therapy-pool"      {:fi "Terapia-allas"
                         :se nil
                         :en nil}
+   "outdoor-pool"      {:fi "Ulkoallas"
+                        :se nil
+                        :en nil}
    "other-pool"        {:fi "Muu allas"
                         :se nil
                         :en nil}})
