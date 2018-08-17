@@ -5,6 +5,7 @@
             [clojure.string :as string]
             [environ.core :refer [env]]
             [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
             [lipas.backend.system :as backend]
             [lipas.data.admins :as admins]
             [lipas.data.ice-stadiums :as ice-stadiums]
@@ -469,7 +470,7 @@
 
 (defn upsert! [db user sports-sites]
   (log/info "Starting to put data into db...")
-  (.upsert-sports-sites! db user sports-sites)
+  (db/upsert-sports-sites! db user sports-sites)
   (log/info "Done inserting data!"))
 
 (defn migrate-ice-stadiums! [db user csv-path]
