@@ -334,7 +334,7 @@
 (s/def :lipas.ice-stadium/rinks
   (s/coll-of :lipas.ice-stadium/rink
              :min-count 0
-             :max-count 10
+             :max-count 20
              :distinct false
              :into []))
 
@@ -563,7 +563,7 @@
 (s/def :lipas.swimming-pool/pools
   (s/coll-of :lipas.swimming-pool/pool
              :min-count 0
-             :max-count 10
+             :max-count 50
              :distinct false
              :into []))
 
