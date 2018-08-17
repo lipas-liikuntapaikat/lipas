@@ -4,6 +4,7 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.utils :as utils]
             [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
 
 (defn set-field [dialog field value]
@@ -132,7 +133,8 @@
      {:headers         (make-headers tr)
       :items           (->> (vals items)
                             (map (partial localize :type :pool-types))
-                            (map (partial localize :structure :pool-structures)))
+                            (map (partial localize :structure :pool-structures))
+                            (sort-by :length-m utils/reverse-cmp))
       :add-tooltip     (tr :lipas.swimming-pool.pools/add-pool)
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)
@@ -143,5 +145,5 @@
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)
-              :items   items
+              :items   (sort-by :length-m utils/reverse-cmp items)
               :key-fn  #(gensym)}])
