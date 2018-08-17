@@ -1,0 +1,69 @@
+html, body, #app {
+  height: 100%;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//976f09b10bf7cf919474bbc0b81fcb61.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//976f09b10bf7cf919474bbc0b81fcb61.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//a16a80808c0b20975cc084142680acf2.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//21375a2ef6f67a5d6e5a22ddba22cc10.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//d8bdd01350547c37aededc6f3f80a74b.svg#aleolight) format('svg');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//6520b7a468ee35ec155cfe51ea6ad0c6.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//6520b7a468ee35ec155cfe51ea6ad0c6.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//87b84d6d5e243671934ca8e9b8f120ea.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//1aa2faf350911e6a73342a64e33eed08.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//496b9c9b371ccf90bed73e912ab541ad.svg#aleolightitalic) format('svg');
+    font-weight: 100;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//80b70d41919f8756f4e0ee448a65c47d.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//80b70d41919f8756f4e0ee448a65c47d.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//426710ad44b1c0088d4fe48b1f88db0c.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//825ce72cd0f7b15e3a89f16de150b717.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//24861539e3f8f41e8ec4a33aef2d2b4e.svg#aleoregular) format('svg');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//fcf3ee3d0bcb7baa95af4ae9dc3ea208.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//fcf3ee3d0bcb7baa95af4ae9dc3ea208.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//c23a7a2677527e3450103f09c91953af.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//332910441a50aa3b7796677c2a8fbdf4.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//cb6e086cceb031c4d7c28b21a11b7e55.svg#aleoitalic) format('svg');
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//8745343249b05c18626e57e6b9160258.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//8745343249b05c18626e57e6b9160258.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//54f63789b87ec4721fd195a7074eaa59.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//e7db0a556662af85a0b5694feafdf614.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//29b14190624fcd600d42de555df75d7d.svg#aleobold) format('svg');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Aleo';
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//fe19314e0081c22d7a6e484f4feca441.eot);
+    src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//fe19314e0081c22d7a6e484f4feca441.eot?#iefix) format('embedded-opentype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//36a34e33ed3ca367dacd60de45aca41e.woff) format('woff'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//648444f0f0e90d39f62604bb732590cb.ttf) format('truetype'),
+    url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//42e68820684905fb6772572b27668cb9.svg#aleobolditalic) format('svg');
+    font-weight: 700;
+    font-style: italic;
+}

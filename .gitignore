@@ -1,0 +1,6 @@
+/.env*
+!/.env.sample.sh
+.DS_Store
+/certs/*
+!/certs/README.md
+*.jar

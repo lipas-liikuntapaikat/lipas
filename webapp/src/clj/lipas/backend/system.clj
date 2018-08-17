@@ -1,0 +1,59 @@
+(ns lipas.backend.system
+  (:require [environ.core :refer [env]]
+            [clojure.pprint :refer [pprint]]
+            [ring.adapter.jetty :as jetty]
+            [integrant.core :as ig]
+            [lipas.backend.email :as email]
+            [lipas.backend.handler :as handler]))
+
+(def default-config
+  {:db      {:dbtype   "postgresql"
+             :dbname   (:db-name env)
+             :host     (:db-host env)
+             :user     (:db-user env)
+             :port     (:db-port env)
+             :password (:db-password env)}
+   :emailer {:host (:smtp-host env)
+             :user (:smtp-user env)
+             :pass (:smtp-pass env)
+             :from (:smtp-from env)}
+   :app     {:db      (ig/ref :db)
+             :emailer (ig/ref :emailer)}
+   :server  {:app  (ig/ref :app)
+             :port 8091}})
+
+(defmethod ig/init-key :db [_ db-spec]
+  ;; TODO setup connection pooling
+  db-spec)
+
+(defmethod ig/init-key :emailer [_ config]
+  (email/->SMTPEmailer config))
+
+(defmethod ig/init-key :app [_ config]
+  (handler/create-app config))
+
+(defmethod ig/init-key :server [_ {:keys [app port]}]
+  (jetty/run-jetty app {:port port :join? false}))
+
+(defmethod ig/halt-key! :server [_ server]
+  (.stop server))
+
+(defn mask [s]
+  "[secret]")
+
+(defn start-system!
+  ([]
+   (start-system! default-config))
+  ([config]
+   (let [system (ig/init config)]
+     (prn "System started with config:")
+     (pprint (-> config
+                 (update-in [:db :password] mask)
+                 (update-in [:emailer :pass] mask)))
+     system)))
+
+(defn stop-system! [system]
+  (ig/halt! system))
+
+(defn -main [& args]
+  (start-system! default-config))
