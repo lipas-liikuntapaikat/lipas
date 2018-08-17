@@ -1,10 +1,34 @@
-# lipas-ui
+# LIPAS webapp
 
-A [re-frame](https://github.com/Day8/re-frame) application designed to ... well, that part is up to you.
+Webapp is written in Clojure(script).
 
-## Development Mode
+[Architecture diagram](https://drive.google.com/file/d/18JercdBIV_QO8HOXz4uBjAMPRvhy2CUW/view?usp=sharing)
 
-### Start Cider from Emacs:
+## Backend
+
+* [reitit](https://github.com/metosin/reitit) HTTP request handler
+* [PostGIS](https://postgis.net/) spatial database
+* [Elasticsearch](https://www.elastic.co/) search engine (under construction)
+* [Mapproxy](https://mapproxy.org/) basemap proxy and cache
+* [Geoserver](http://geoserver.org/) publishing spatial data (under construction)
+* [Nginx](https://www.nginx.com/) reverse proxy, ssl-termination
+
+### Handler
+
+Handler is a simple HTTP(s) service with endpoints for different
+tasks. Some endpoints require authentication. Authentication is
+implemented using HTTP-basic authentication and signed JWT-tokens.
+
+## Frontend
+
+* [re-frame](https://github.com/Day8/re-frame)
+* [material-ui](https://material-ui.com/)
+
+Frontend is a Single Page Application (SPA)
+
+### Development
+
+#### Start Cider from Emacs:
 
 Put this in your Emacs config file:
 
@@ -17,20 +41,6 @@ Put this in your Emacs config file:
 
 Navigate to a clojurescript file and start a figwheel REPL with `cider-jack-in-clojurescript` or (`C-c M-J`)
 
-### Compile css:
-
-Compile css file once.
-
-```
-lein garden once
-```
-
-Automatically recompile css file on change.
-
-```
-lein garden auto
-```
-
 ### Run application:
 
 ```
@@ -42,29 +52,17 @@ Figwheel will automatically push cljs changes to the browser.
 
 Wait a bit, then browse to [http://localhost:3449](http://localhost:3449).
 
-### Run tests:
-
-Prequisities
-
-TODO: how to run on ci?
-
-``` shell
-npm install -g karma karma-cli karma-cljs-test karma-junit-reporter karma-chrome-launcher
-```
-
-```
-lein clean
-lein doo chrome test once
-```
-
-The above command assumes that you have [phantomjs](https://www.npmjs.com/package/phantomjs) installed. However, please note that [doo](https://github.com/bensu/doo) can be configured to run cljs.test in many other JS environments (chrome, ie, safari, opera, slimer, node, rhino, or nashorn).
-
 ## Production Build
 
-
 To compile clojurescript to javascript:
+
+Using `lein`:
 
 ```
 lein clean
 lein cljsbuild once min
 ```
+
+Using Docker:
+
+`docker-compose run frontend-build`
