@@ -196,6 +196,7 @@
             (update :heat-source get-heat-source))
 
         :renovations (:renovations latest)
+        :conditions  (:conditions latest)
 
         :water-treatment
         (-> (:water-treatment latest)
