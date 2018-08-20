@@ -68,6 +68,6 @@
 
 (re-frame/reg-event-fx
  ::navigate
- (fn [_ [_ path]]
-   (routes/navigate! path)
+ (fn [_ [_ path & opts]]
+   (apply routes/navigate! (into [path] opts))
    {}))

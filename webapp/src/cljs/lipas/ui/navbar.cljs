@@ -11,8 +11,7 @@
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
 
 (defn logout! []
-  (==> [:lipas.ui.login.events/logout])
-  (navigate! "/#/kirjaudu"))
+  (==> [:lipas.ui.login.events/logout]))
 
 (defn avatar []
   (let [initials (<== [::subs/user-initials])]
@@ -37,8 +36,9 @@
 
      ;; Login
      (when (not logged-in?)
-       [mui/menu-item {:id       "account-menu-item-login"
-                       :on-click (comp close #(navigate! "/#/kirjaudu"))}
+       [mui/menu-item
+        {:id       "account-menu-item-login"
+         :on-click (comp close #(navigate! "/#/kirjaudu" :comeback? true))}
         [mui/list-item-icon
          [mui/icon "lock"]]
         [mui/list-item-text {:primary (tr :login/headline)}]])
