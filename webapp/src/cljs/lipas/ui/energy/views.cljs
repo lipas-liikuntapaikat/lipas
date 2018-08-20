@@ -218,7 +218,8 @@
         [mui/grid {:item true :xs 12}
          [lui/login-button
           {:label    (tr :login/headline)
-           :on-click #(==> [:lipas.ui.events/navigate "/#/kirjaudu"])}]]
+           :on-click #(==> [:lipas.ui.events/navigate "/#/kirjaudu"
+                            :comeback? true])}]]
 
         [mui/grid {:item true}
          [lui/register-button
@@ -229,7 +230,7 @@
 
        (when sites
          [lui/form-card {:title (tr :actions/select-hall)
-                         :xs 12 :md 12 :lg 12}
+                         :xs    12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-hall)
@@ -241,7 +242,7 @@
 
        (when (and sites site)
          [lui/form-card {:title (tr :actions/select-year)
-                         :xs 12 :md 12 :lg 12}
+                         :xs    12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-year)

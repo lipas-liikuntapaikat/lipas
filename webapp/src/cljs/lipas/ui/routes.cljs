@@ -3,11 +3,16 @@
   (:import goog.History)
   (:require [goog.events :as gevents]
             [goog.history.EventType :as EventType]
-            [lipas.ui.utils :refer [==>]]
+            [lipas.ui.utils :refer [==>] :as utils]
             [secretary.core :as secretary]))
 
-(defn navigate! [path]
-  (set! (.-location js/window) path))
+(defn navigate!
+  ([path]
+   (navigate! path :comeback? false))
+  ([path & {:keys [comeback?]}]
+   (when comeback?
+     (==> [:lipas.ui.login.events/set-comeback-path (utils/current-path)]))
+   (set! (.-location js/window) path)))
 
 (defn hook-browser-navigation! []
   (doto (History.)

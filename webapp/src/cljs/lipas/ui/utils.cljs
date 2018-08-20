@@ -260,6 +260,10 @@
          host
          (when-not (#{80 443} port) (str ":" port)))))
 
+(defn current-path []
+  (let [path (-> js/window .-location .-href url/url :anchor)]
+    (str "/#" path)))
+
 (defn ->row [d headers]
   (let [header-keys (map first headers)]
     (mapv (fn [k] (get d k)) header-keys)))
