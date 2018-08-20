@@ -82,14 +82,14 @@
                       :title (tr :disclaimer/headline)}
            [mui/typography (tr :disclaimer/test-version)]])
 
-        [grid-card {:title (tr :menu/headline)
+        [grid-card {:title     (tr :menu/headline)
                     :link      "http://www.lipas.fi"
                     :link-text "lipas.fi"}
          [mui/typography (tr :home-page/description)]
          [:ul
-          [:li "Ajantasainen tieto Suomen liikuntapaikoista"]
-          [:li "Päivitystyökalut tiedontuottajille"]
-          [:li "Avoimet rajapinnat"]]
+          [:li (tr :sport/up-to-date-information)]
+          [:li (tr :sport/updating-tools)]
+          [:li (tr :sport/open-interfaces)]]
          [mui/typography (tr :sport/legacy-disclaimer)]]
 
 
@@ -99,9 +99,9 @@
                     :link-text "Siirry portaaliin"}
          [mui/typography (tr :ice/description)]
          [:ul
-          [:li "221 jäähallin perustiedot"]
-          [:li "Energiankulutustietojen syöttäminen"]
-          [:li "Perustietojen päivitys"]]]
+          [:li (tr :ice/basic-data-of-n-halls 221)]
+          [:li (tr :ice/entering-energy-data)]
+          [:li (tr :ice/updating-basic-data)]]]
 
         ;; Swimming pools portal
         [grid-card {:title     (tr :swim/headline)
@@ -109,9 +109,9 @@
                     :link-text "Siirry portaaliin"}
          [mui/typography (tr :swim/description)]
          [:ul
-          [:li "211 uimahallin perustiedot"]
-          [:li "Energiankulutustietojen syöttäminen"]
-          [:li "Perustietojen päivitys"]]]
+          [:li (tr :swim/basic-data-of-n-halls 211)]
+          [:li (tr :swim/entering-energy-data)]
+          [:li (tr :swim/updating-basic-data)]]]
 
         ;; Open Data
         [grid-card {:title (tr :open-data/headline)}
@@ -154,21 +154,21 @@
          [mui/list
 
           ;; Lipasinfo
-          [mui/list-item {:button true
+          [mui/list-item {:button   true
                           :on-click #(navigate! (:lipasinfo links))}
            [mui/list-item-icon
             [mui/icon "library_books"]]
            [mui/list-item-text "lipasinfo.fi"]]
 
           ;; Email
-          [mui/list-item {:button true
+          [mui/list-item {:button   true
                           :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
            [mui/list-item-icon
             [mui/icon "email"]]
            [mui/list-item-text "lipasinfo@jyu.fi"]]
 
           ;; Phone
-          [mui/list-item {:button true
+          [mui/list-item {:button   true
                           :on-click #(navigate! "tel:+358400247980")}
            [mui/list-item-icon
             [mui/icon "phone"]]

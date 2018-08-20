@@ -31,7 +31,11 @@
     :description       "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
-    linkistä."}
+    linkistä."
+
+    :up-to-date-information "Ajantasainen tieto Suomen liikuntapaikoista"
+    :updating-tools         "Päivitystyökalut tiedontuottajille"
+    :open-interfaces        "Avoimet rajapinnat"}
 
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
@@ -68,10 +72,15 @@
     :contacts "Yhteystiedot"}
 
    :ice
-   {:headline      "Jäähalliportaali"
-    :description   "Jäähalliportaali sisältää
-              hallien perus- ja energiankulutustietoja sekä ohjeita
+   {:headline    "Jäähalliportaali"
+    :description "Jäähalliportaali sisältää
+              hallien perus- ja energiankulutustietoja, sekä ohjeita
               energiatehokkuuden parantamiseen."
+
+    :basic-data-of-n-halls "{1} jäähallin perustiedot"
+    :entering-energy-data  "Energiankulutustietojen syöttäminen"
+    :updating-basic-data   "Perustietojen päivitys"
+
     :size-category "Kokoluokitus"
     :comparison    "Hallien vertailu"
     :small         "Pieni kilpahalli > 500 hlö"
@@ -84,7 +93,7 @@
 
    :ice-energy
    {:headline       "Energia-info"
-    :description    "Ajantasaisen tietopaketin löydät Jääkiekkiliiton sivuilta."
+    :description    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
     :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
 
    :ice-comparison
@@ -122,7 +131,11 @@
     :edit           "Ilmoita tiedot"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
-          parantamiseen."}
+          parantamiseen."
+
+    :basic-data-of-n-halls "{1} uimahallin perustiedot"
+    :entering-energy-data  "Energiankulutustietojen syöttäminen"
+    :updating-basic-data   "Perustietojen päivitys"}
 
    :swim-energy
    {:headline    "Energia-info"
