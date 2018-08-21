@@ -13,11 +13,15 @@
 (re-frame/reg-event-db
  ::select-energy-consumption-year
  (fn [db [_ year]]
-   (let [lipas-id (-> db :energy-consumption :lipas-id)
-         site     (get-in db [:sports-sites lipas-id])
-         rev      (or (utils/find-revision site year)
-                      (utils/make-revision site (utils/->timestamp year)))
-         rev      (utils/make-editable rev)]
+   (let [lipas-id   (-> db :energy-consumption :lipas-id)
+         site       (get-in db [:sports-sites lipas-id])
+         event-date (if (utils/this-year? year)
+                      (utils/timestamp)
+                      (utils/->timestamp year))
+         rev        (or (utils/find-revision site year)
+                        (utils/make-revision site event-date))
+         rev        (assoc rev :event-date event-date)
+         rev        (utils/make-editable rev)]
      (-> db
          (assoc-in [:energy-consumption :year] year)
          (assoc-in [:sports-sites lipas-id :editing] rev)))))

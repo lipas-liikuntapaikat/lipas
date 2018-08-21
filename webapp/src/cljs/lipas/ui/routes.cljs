@@ -70,26 +70,30 @@
 
   (defroute "/uimahalliportaali" []
     (==> [:lipas.ui.events/set-active-panel :swim-panel])
-    (==> [:lipas.ui.swimming-pools.events/display-site nil])
     (==> [:lipas.ui.swimming-pools.events/set-active-tab 0]))
 
-  (defroute "/uimahalliportaali/halli/:lipas-id" {lipas-id :lipas-id}
+  (defroute "/uimahalliportaali/hallit" []
+    (==> [:lipas.ui.events/set-active-panel :swim-panel])
+    (==> [:lipas.ui.swimming-pools.events/display-site nil])
+    (==> [:lipas.ui.swimming-pools.events/set-active-tab 1]))
+
+  (defroute "/uimahalliportaali/hallit/:lipas-id" {lipas-id :lipas-id}
     (let [lipas-id (js/parseInt lipas-id)]
       (==> [:lipas.ui.events/set-active-panel :swim-panel])
-      (==> [:lipas.ui.swimming-pools.events/set-active-tab 0])
+      (==> [:lipas.ui.swimming-pools.events/set-active-tab 1])
       (==> [:lipas.ui.swimming-pools.events/display-site {:lipas-id lipas-id}])))
 
   (defroute "/uimahalliportaali/ilmoita-tiedot" []
     (==> [:lipas.ui.events/set-active-panel :swim-panel])
-    (==> [:lipas.ui.swimming-pools.events/set-active-tab 1]))
+    (==> [:lipas.ui.swimming-pools.events/set-active-tab 2]))
 
   (defroute "/uimahalliportaali/hallien-vertailu" []
     (==> [:lipas.ui.events/set-active-panel :swim-panel])
-    (==> [:lipas.ui.swimming-pools.events/set-active-tab 2]))
+    (==> [:lipas.ui.swimming-pools.events/set-active-tab 3]))
 
   (defroute "/uimahalliportaali/energia-info" []
     (==> [:lipas.ui.events/set-active-panel :swim-panel])
-    (==> [:lipas.ui.swimming-pools.events/set-active-tab 3]))
+    (==> [:lipas.ui.swimming-pools.events/set-active-tab 4]))
 
    ;;; User ;;;
 

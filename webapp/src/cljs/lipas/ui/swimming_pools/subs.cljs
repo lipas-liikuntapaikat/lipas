@@ -16,6 +16,46 @@
      (not-empty $))))
 
 (re-frame/reg-sub
+ ::latest-updates-top5
+ :<- [::latest-swimming-pool-revs]
+ (fn [sites [_ tr]]
+   (->> sites
+        vals
+        (sort-by :event-date utils/reverse-cmp)
+        (take 5)
+        (map #(select-keys % [:lipas-id :name :event-date]))
+        (map #(update % :event-date (comp tr
+                                          (partial keyword :time)
+                                          utils/pretty-since-kw))))))
+
+(re-frame/reg-sub
+ ::did-you-know-stats
+ :<- [::latest-swimming-pool-revs]
+ (fn [sites [_ tr]]
+   {:total-count       (count sites)
+    :count-by-type     (->> (vals sites)
+                            (map (comp :type-code :type))
+                            frequencies)
+    :construction-year (->> sites
+                            vals
+                            (map :construction-year)
+                            (remove nil?)
+                            utils/simple-stats)
+    :water-area-sum    (->> sites
+                            vals
+                            (map (comp :total-water-area-m2 :building))
+                            (reduce +))
+    :slide-sum (->> sites
+                    vals
+                    (mapcat (comp #(map :length-m %) :slides))
+                    (reduce +))
+    :showers-sum (->> sites
+                      vals
+                      (map #(+ (-> % :facilities :showers-men-count)
+                               (-> % :facilities :showers-women-count)))
+                      (reduce +))}))
+
+(re-frame/reg-sub
  ::sites-to-edit
  :<- [:lipas.ui.user.subs/access-to-sports-sites]
  :<- [:lipas.ui.user.subs/admin?]
