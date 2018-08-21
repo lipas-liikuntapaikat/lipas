@@ -238,6 +238,10 @@
   (s/keys :req-un [:lipas.sports-site.type/type-code]
           :opt-un [:lipas.sports-site.type/size-category]))
 
+;; When was the *document* created
+(s/def :lipas.sports-site/created-at :lipas/timestamp)
+
+;; What date/time does the document describe
 (s/def :lipas.sports-site/event-date :lipas/timestamp)
 
 (s/def :lipas/sports-site
@@ -250,7 +254,8 @@
                    :lipas.sports-site/admin
                    :lipas.sports-site/type
                    :lipas/location]
-          :opt-un [:lipas.sports-site/marketing-name
+          :opt-un [:lipas.sports-site/created-at
+                   :lipas.sports-site/marketing-name
                    :lipas.sports-site/phone-number
                    :lipas.sports-site/www
                    :lipas.sports-site/email

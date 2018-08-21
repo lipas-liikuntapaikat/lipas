@@ -105,14 +105,16 @@
     :select-rink    "Valitse halli"}
 
    :lipas.energy-consumption
-   {:headline      "Energiankulutus"
-    :headline-year "Energiankulutus vuonna {1}"
-    :electricity   "Sähköenergia MWh"
-    :heat          "Lämpöenergia (ostettu) MWh"
-    :cold          "Kylmäenergia (ostettu) Mwh"
-    :water         "Vesi m³"
-    :yearly        "Energiankulutus vuositasolla"
-    :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
+   {:headline          "Energiankulutus"
+    :headline-year     "Energiankulutus vuonna {1}"
+    :electricity       "Sähköenergia MWh"
+    :heat              "Lämpöenergia (ostettu) MWh"
+    :cold              "Kylmäenergia (ostettu) Mwh"
+    :water             "Vesi m³"
+    :yearly            "Energiankulutus vuositasolla"
+    :monthly?          "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
+    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"
+    :reported-count    "Ilmottaneita {1}/{2}"}
 
    :lipas.swimming-pool.visitors
    {:headline      "Kävijämäärä"
@@ -128,20 +130,30 @@
    {:headline       "Uimahalliportaali"
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit           "Ilmoita tiedot"
+    :edit           "Ilmoita kulutustiedot"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."
 
     :basic-data-of-n-halls "{1} uimahallin perustiedot"
     :entering-energy-data  "Energiankulutustietojen syöttäminen"
-    :updating-basic-data   "Perustietojen päivitys"}
+    :updating-basic-data   "Perustietojen päivitys"
+
+    :latest-updates             "Viimeksi päivitetyt tiedot"
+    :five-latest-energy-updates "Viimeksi ilmoitetut energiatiedot"}
 
    :swim-energy
    {:headline    "Energia-info"
     :description "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
     :ukty-link   "Siirry UKTYn sivuille"}
 
+   :did-you-know
+   {:headline          "Tiesitkö että..."
+    :count-by-type     "Suomessa on {1} uimahallia ja {2} kylpylää"
+    :construction-year "Keskimääräinen rakennusvuosi on {1}"
+    :water-area        "Vesipinta-alaa on yhteensä {1} m²"
+    :slide-sum         "Vesiliukumäkeä on yhteensä {1} metriä"
+    :showers-sum       "Suihkuja on {1} kappaletta"}
 
    :open-data
    {:headline            "Avoin data"
@@ -379,11 +391,23 @@
     :dec "Joulukuu"}
 
    :time
-   {:year  "Vuosi"
-    :hour  "Tunti"
-    :month "Kuukausi"
-    :start "Alkoi"
-    :end   "Päättyi"}
+   {:year               "Vuosi"
+    :hour               "Tunti"
+    :month              "Kuukausi"
+    :start              "Alkoi"
+    :end                "Päättyi"
+    :date               "Päivämäärä"
+    :just-a-moment-ago  "Hetki sitten"
+    :less-than-hour-ago "Alle tunti sitten"
+    :today              "Tänään"
+    :yesterday          "Eilen"
+    :this-week          "Tällä viikolla"
+    :this-month         "Tässä kuussa"
+    :this-year          "Tänä vuonna"
+    :last-year          "Viime vuonna"
+    :two-years-ago      "2 vuotta sitten"
+    :three-years-ago    "3 vuotta sitten"
+    :long-time-ago      "Kauan sitten"}
 
    :duration
    {:hour  "tuntia"
@@ -426,7 +450,10 @@
     :description  "Kuvaus"
     :general-info "Yleiset tiedot"
     :comment      "Kommentti"
-    :structure    "Rakenne"}
+    :structure    "Rakenne"
+    :hall         "Halli"
+    :updated      "Päivitetty"
+    :reported     "Ilmoitettu"}
 
    :notifications
    {:save-success "Tallennus onnistui"

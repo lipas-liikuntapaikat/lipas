@@ -25,6 +25,7 @@
                  [cljsjs/google-analytics "2015.04.13-0"]
                  [district0x.re-frame/google-analytics-fx "1.0.0"]
                  [cljsjs/babel-polyfill "6.20.0-2"]
+                 [cljsjs/date-fns "1.29.0-0"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.0-SNAPSHOT"]
