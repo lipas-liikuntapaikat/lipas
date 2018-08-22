@@ -50,3 +50,11 @@ WHERE lipas_id = :lipas_id
 SELECT *
 FROM sports_site_by_year
 WHERE type_code = :type_code
+
+-- :name get-by-type-code-and-year
+-- :command :query
+-- :result :many
+-- :doc Lists latest revision for each sports-site for given year
+SELECT *
+FROM sports_site_by_year
+WHERE type_code = :type_code AND date_part('year', event_date) = :year

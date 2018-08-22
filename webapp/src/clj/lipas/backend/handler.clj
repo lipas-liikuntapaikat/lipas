@@ -156,7 +156,18 @@
                  pass (-> req :parameters :body :password)
                  _    (core/reset-password! db user pass)]
              {:status 200
-              :body   {:status "OK"}}))}}]]]
+              :body   {:status "OK"}}))}}]
+
+      ["/actions/create-energy-report"
+       {:post
+        {:parameters {:body {:year      int?
+                             :type-code int?}}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [type-code (-> parameters :body :type-code)
+                 year      (-> parameters :body :year)]
+             {:status 200
+              :body   (core/energy-report db type-code year)}))}}]]]
 
     {:data {:coercion   reitit.coercion.spec/coercion
             :muuntaja   m/instance
