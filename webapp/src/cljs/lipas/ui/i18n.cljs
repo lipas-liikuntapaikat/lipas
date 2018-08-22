@@ -128,9 +128,10 @@
 
    :swim
    {:headline       "Uimahalliportaali"
+    :headline-split "Uimahalli-portaali"
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit           "Ilmoita kulutustiedot"
+    :edit           "Ilmoita kulutus"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."
@@ -143,9 +144,10 @@
     :five-latest-energy-updates "Viimeksi ilmoitetut energiatiedot"}
 
    :swim-energy
-   {:headline    "Energia-info"
-    :description "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
-    :ukty-link   "Siirry UKTYn sivuille"}
+   {:headline       "Energiainfo"
+    :headline-short "Info"
+    :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
+    :ukty-link      "Siirry UKTYn sivuille"}
 
    :did-you-know
    {:headline            "Tiesitkö että..."

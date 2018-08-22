@@ -15,8 +15,16 @@
             [reagent.core :as r]))
 
 
-(defn stats-tab [tr]
-  (let [latest-updates     (<== [::subs/latest-updates tr])
+(defn- li [text & children]
+  (into
+   [:li [mui/typography {:color :default}
+         text]]
+   children))
+
+
+(defn stats-tab [{:keys [width]}]
+  (let [tr                 (<== [:lipas.ui.subs/translator])
+        latest-updates     (<== [::subs/latest-updates tr])
         funny-stats        (<== [::subs/did-you-know-stats tr])
         year               (dec utils/this-year)
         energy-report-3110 (<== [:lipas.ui.energy.subs/energy-report year 3110])
@@ -28,48 +36,50 @@
      [mui/grid {:item true :xs 12 :md 6}
 
       ;; Did-you-know facts
-      [mui/card {:square true
-                 :style  {:height              "100%"
-                          :min-height          "500px"
-                          :background-position "right top"
-                          :background-size     "300px"
-                          :background-image    "url('/img/uimahallit.jpg')"
-                          :background-repeat   :no-repeat}}
-
+      [mui/card
+       {:square true
+        :style
+        {:height              "100%"
+         :min-height          "500px"
+         :background-color    "efefef"
+         :background-position "right top"
+         :background-size     "300px"
+         :background-image    (if (= "xs" width)
+                                :none
+                                "url('/img/uimahallit.jpg')")
+         :background-repeat   :no-repeat}}
+       (when (= "xs" width)
+         [:img {:src   "/img/uimahallit.jpg"
+                :style {:margin-left  "3em"}}])
        [mui/card-header {:title (tr :did-you-know/headline)}]
        [mui/card-content
         [:ul {:style {:line-height "1.5em"
                       :width       "100%"}}
-         [:li [mui/typography
-               (tr :did-you-know/count-by-type
-                   (get-in funny-stats [:count-by-type 3110])
-                   (get-in funny-stats [:count-by-type 3130]))]]
-         [:li [mui/typography
-               (tr :did-you-know/construction-year
-                   (int (get-in funny-stats [:construction-year :median])))]]
-         [:li [mui/typography
-               (tr :did-you-know/water-area (:water-area-sum funny-stats))]]
-         [:li [mui/typography
-               (tr :did-you-know/slide-sum (:slide-sum funny-stats))]]
-         [:li [mui/typography
-               (tr :did-you-know/showers-sum (:showers-sum funny-stats))]]
+         [li (tr :did-you-know/count-by-type
+              (get-in funny-stats [:count-by-type 3110])
+              (get-in funny-stats [:count-by-type 3130]))]
+         [li (tr :did-you-know/construction-year
+              (int (get-in funny-stats [:construction-year :median])))]
+         [li (tr :did-you-know/water-area (:water-area-sum funny-stats))]
+         [li (tr :did-you-know/slide-sum (:slide-sum funny-stats))]
+         [li (tr :did-you-know/showers-sum (:showers-sum funny-stats))]
          (when energy-report-3110
-           [:li (tr :did-you-know/energy-3110-avg)
+           [li (tr :did-you-know/energy-3110-avg)
             [:ul
-             [:li (tr :did-you-know/electricity-avg
+             [li (tr :did-you-know/electricity-avg
                       (int (get-in energy-report-3110 [:electricity-mwh :mean])))]
-             [:li (tr :did-you-know/heat-avg
+             [li (tr :did-you-know/heat-avg
                       (int (get-in energy-report-3110 [:heat-mwh :mean])))]
-             [:li (tr :did-you-know/water-avg
+             [li (tr :did-you-know/water-avg
                       (int (get-in energy-report-3110 [:water-m3 :mean])))]]])
          (when energy-report-3130
-           [:li (tr :did-you-know/energy-3130-avg)
+           [li (tr :did-you-know/energy-3130-avg)
             [:ul
-             [:li (tr :did-you-know/electricity-avg
+             [li (tr :did-you-know/electricity-avg
                       (int (get-in energy-report-3130 [:electricity-mwh :mean])))]
-             [:li (tr :did-you-know/heat-avg
+             [li (tr :did-you-know/heat-avg
                       (int (get-in energy-report-3130 [:heat-mwh :mean])))]
-             [:li (tr :did-you-know/water-avg
+             [li (tr :did-you-know/water-avg
                       (int (get-in energy-report-3130 [:water-m3 :mean])))]]])]
         [mui/typography {:variant :body2}
          (tr :did-you-know/disclaimer year)]]]]
@@ -82,20 +92,21 @@
         :headers
         [[:name (tr :general/hall)]
          [:event-date (tr :general/updated)]]
-        :items latest-updates}]]
+        :items     latest-updates}]]
 
      ;; Hall of Fame (all energy info for previous year reported)
      [mui/grid  {:item true :xs 12 :md 12 :lg 12}
       [mui/card {:square true
-                 :style {:background-color "#efefef"}}
+                 :style  {:background-color "rgb(250, 250, 250)"}}
        [mui/card-content
         [mui/typography {:variant :display2}
          "Hall of Fame"]
         [mui/typography {:variant :title
+                         :color   :secondary
                          :style   {:margin-top "0.75em"}}
          (tr :did-you-know/energy-reported-for year)]
         [:div {:style {:margin-top   "1em"
-                       :column-count 3}}
+                       :column-width "300px"}}
          (into [:ul]
                (for [m hall-of-fame]
                  [:li
@@ -710,7 +721,7 @@
           :value      active-tab}
 
          ;; 0 Stats
-         [mui/tab {:label (tr :swim/headline)
+         [mui/tab {:label (tr :swim/headline-split)
                    :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Halls tab
@@ -732,11 +743,11 @@
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 (stats-tab tr)
-        1 (swimming-pools-tab tr logged-in?)
-        2 (energy-form-tab tr)
-        3 (compare-tab)
-        4 (energy-info-tab tr))]]))
+        0 [:> (mui/with-width* (r/reactify-component stats-tab))]
+        1 [swimming-pools-tab tr logged-in?]
+        2 [energy-form-tab tr]
+        3 [compare-tab]
+        4 [energy-info-tab tr])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
