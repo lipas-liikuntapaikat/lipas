@@ -32,3 +32,8 @@
  :<- [::energy-consumption-history]
  (fn [history _]
    (utils/make-energy-consumption-year-list history)))
+
+(re-frame/reg-sub
+ ::energy-report
+ (fn [db [_ year type-code]]
+   (get-in db [:energy-stats year type-code])))

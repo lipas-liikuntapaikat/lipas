@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]))
+            [lipas.ui.utils :as utils]
+            [lipas.utils :as utils2]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -16,7 +17,7 @@
      (not-empty $))))
 
 (re-frame/reg-sub
- ::latest-updates-top5
+ ::latest-updates
  :<- [::latest-swimming-pool-revs]
  (fn [sites [_ tr]]
    (->> sites
@@ -31,7 +32,7 @@
 (re-frame/reg-sub
  ::did-you-know-stats
  :<- [::latest-swimming-pool-revs]
- (fn [sites [_ tr]]
+ (fn [sites _]
    {:total-count       (count sites)
     :count-by-type     (->> (vals sites)
                             (map (comp :type-code :type))
@@ -40,7 +41,7 @@
                             vals
                             (map :construction-year)
                             (remove nil?)
-                            utils/simple-stats)
+                            utils2/simple-stats)
     :water-area-sum    (->> sites
                             vals
                             (map (comp :total-water-area-m2 :building))

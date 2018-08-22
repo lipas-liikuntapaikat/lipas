@@ -14,31 +14,92 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
+
 (defn stats-tab [tr]
-  (let [latest-energy (<== [::subs/latest-updates-top5 tr])
-        funny-stats (<== [::subs/did-you-know-stats tr])]
+  (let [latest-updates     (<== [::subs/latest-updates tr])
+        funny-stats        (<== [::subs/did-you-know-stats tr])
+        year               (dec utils/this-year)
+        energy-report-3110 (<== [:lipas.ui.energy.subs/energy-report year 3110])
+        energy-report-3130 (<== [:lipas.ui.energy.subs/energy-report year 3130])
+        hall-of-fame       (concat (:hall-of-fame energy-report-3110)
+                                   (:hall-of-fame energy-report-3130))]
 
     [mui/grid {:container true}
+     [mui/grid {:item true :xs 12 :md 6}
 
-     [lui/form-card {:title (tr :did-you-know/headline)}
-      [:ul
-       [:li (tr :did-you-know/count-by-type
-                (get-in funny-stats [:count-by-type 3110])
-                (get-in funny-stats [:count-by-type 3130]))]
-       [:li (tr :did-you-know/construction-year
-                (get-in funny-stats [:construction-year :median]))]
-       [:li (tr :did-you-know/water-area (:water-area-sum funny-stats))]
-       [:li (tr :did-you-know/slide-sum (:slide-sum funny-stats))]
-       [:li (tr :did-you-know/showers-sum (:showers-sum funny-stats))]]]
+      ;; Did-you-know facts
+      [mui/card {:square true
+                 :style  {:height              "100%"
+                          :min-height          "500px"
+                          :background-position "right top"
+                          :background-size     "300px"
+                          :background-image    "url('/img/uimahallit.jpg')"
+                          :background-repeat   :no-repeat}}
 
-     ;; Latest Energy consumption reported top-5
+       [mui/card-header {:title (tr :did-you-know/headline)}]
+       [mui/card-content
+        [:ul {:style {:line-height "1.5em"
+                      :width       "100%"}}
+         [:li [mui/typography
+               (tr :did-you-know/count-by-type
+                   (get-in funny-stats [:count-by-type 3110])
+                   (get-in funny-stats [:count-by-type 3130]))]]
+         [:li [mui/typography
+               (tr :did-you-know/construction-year
+                   (int (get-in funny-stats [:construction-year :median])))]]
+         [:li [mui/typography
+               (tr :did-you-know/water-area (:water-area-sum funny-stats))]]
+         [:li [mui/typography
+               (tr :did-you-know/slide-sum (:slide-sum funny-stats))]]
+         [:li [mui/typography
+               (tr :did-you-know/showers-sum (:showers-sum funny-stats))]]
+         (when energy-report-3110
+           [:li (tr :did-you-know/energy-3110-avg)
+            [:ul
+             [:li (tr :did-you-know/electricity-avg
+                      (int (get-in energy-report-3110 [:electricity-mwh :mean])))]
+             [:li (tr :did-you-know/heat-avg
+                      (int (get-in energy-report-3110 [:heat-mwh :mean])))]
+             [:li (tr :did-you-know/water-avg
+                      (int (get-in energy-report-3110 [:water-m3 :mean])))]]])
+         (when energy-report-3130
+           [:li (tr :did-you-know/energy-3130-avg)
+            [:ul
+             [:li (tr :did-you-know/electricity-avg
+                      (int (get-in energy-report-3130 [:electricity-mwh :mean])))]
+             [:li (tr :did-you-know/heat-avg
+                      (int (get-in energy-report-3130 [:heat-mwh :mean])))]
+             [:li (tr :did-you-know/water-avg
+                      (int (get-in energy-report-3130 [:water-m3 :mean])))]]])]
+        [mui/typography {:variant :body2}
+         (tr :did-you-know/disclaimer year)]]]]
+
+     ;; Top-5 last updates
      [lui/form-card {:title (tr :swim/latest-updates)
                      :xs    12 :md 12 :lg 6}
       [lui/table
-       {:headers
+       {:on-select #(==> [::events/display-site %])
+        :headers
         [[:name (tr :general/hall)]
          [:event-date (tr :general/updated)]]
-        :items latest-energy}]]]))
+        :items latest-updates}]]
+
+     ;; Hall of Fame (all energy info for previous year reported)
+     [mui/grid  {:item true :xs 12 :md 12 :lg 12}
+      [mui/card {:square true
+                 :style {:background-color "#efefef"}}
+       [mui/card-content
+        [mui/typography {:variant :display2}
+         "Hall of Fame"]
+        [mui/typography {:variant :title
+                         :style   {:margin-top "0.75em"}}
+         (tr :did-you-know/energy-reported-for year)]
+        [:div {:style {:margin-top   "1em"
+                       :column-count 3}}
+         (into [:ul]
+               (for [m hall-of-fame]
+                 [:li
+                  [mui/typography (:name m)]]))]]]]]))
 
 (defn toggle-dialog
   ([dialog]
@@ -682,4 +743,6 @@
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3110])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3130])
     [create-panel tr logged-in?]))
