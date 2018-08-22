@@ -73,8 +73,11 @@
 (defn timestamp []
   (.toISOString (js/Date.)))
 
-(defn ->timestamp [year]
+(defn ->begin-of-year [year]
   (str year "-01-01T00:00:00.000Z"))
+
+(defn ->end-of-year [year]
+  (str year "-12-31T23:59:59.999Z"))
 
 (defn pretty-since-kw [s]
   (let [tz-offset     (.getTimezoneOffset (js/Date.))
@@ -130,7 +133,7 @@
   "Highlights years where there exists any energy consumption data."
   [history]
   (let [history (index-by :year history)
-        data (for [y    (range 2000 (inc this-year))
+        data (for [y    (range 2000 this-year)
                    :let [data-exists? (data-exists? y history)]]
                {:label (if data-exists?
                          (str y " " "✓")
@@ -144,15 +147,6 @@
     (map #(assoc (:energy-consumption %)
                  :year (resolve-year (:event-date %))) (vals entries))))
 
-(defn energy-data-exists? [{:keys [energy-consumption]}]
-  (let [{:keys [electricity-mwh
-                heat-mwh
-                water-m3]} energy-consumption]
-    (and
-     (some? electricity-mwh)
-     (some? heat-mwh)
-     (some? water-m3))))
-
 (defn visitors-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
         entries (select-keys history (vals by-year))]
@@ -164,10 +158,14 @@
         timestamp      (get latest-by-year year)]
     (get history timestamp)))
 
+(comment
+  (.getFullYear (.parse js/dateFns "2014-01-01T00:00:00.000Z")) ; This works
+  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999Z")) ; Interesting...
+  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999"))) ; This works
 (defn same-year? [ts1 ts2]
   (.isSameYear js/dateFns
-               (.parse js/dateFns ts1)
-               (.parse js/dateFns ts2)))
+               (string/replace ts1 "Z" "")
+               (string/replace ts2 "Z" "")))
 
 (defn make-revision
   ([site]
@@ -317,41 +315,3 @@
 (defn prod? []
   (-> (base-url)
       (string/includes? "lipas.fi")))
-
-;;; Simple statistics ;;;
-
-;; https://github.com/clojure-cookbook/clojure-cookbook
-
-(defn mean [coll]
-  (let [sum (apply + coll)
-        count (count coll)]
-    (if (pos? count)
-      (/ sum count)
-      0)))
-
-(defn median [coll]
-  (let [sorted (sort coll)
-        cnt (count sorted)
-        halfway (quot cnt 2)]
-    (if (odd? cnt)
-      (nth sorted halfway) ; (1)
-      (let [bottom (dec halfway)
-            bottom-val (nth sorted bottom)
-            top-val (nth sorted halfway)]
-        (mean [bottom-val top-val])))))
-
-(defn mode [coll]
-  (let [freqs (frequencies coll)
-        occurrences (group-by val freqs)
-        modes (last (sort occurrences))
-        modes (->> modes
-                   val
-                   (map key))]
-    modes))
-
-(defn simple-stats [coll]
-  {:count  (count coll)
-   :sum    (reduce + coll)
-   :mean   (mean coll)
-   :median (median coll)
-   :mode   (mode coll)})

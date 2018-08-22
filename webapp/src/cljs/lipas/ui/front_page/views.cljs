@@ -99,7 +99,7 @@
                     :link-text "Siirry portaaliin"}
          [mui/typography (tr :ice/description)]
          [:ul
-          [:li (tr :ice/basic-data-of-n-halls 221)]
+          [:li (tr :ice/basic-data-of-halls)]
           [:li (tr :ice/entering-energy-data)]
           [:li (tr :ice/updating-basic-data)]]]
 
@@ -109,7 +109,7 @@
                     :link-text "Siirry portaaliin"}
          [mui/typography (tr :swim/description)]
          [:ul
-          [:li (tr :swim/basic-data-of-n-halls 211)]
+          [:li (tr :swim/basic-data-of-halls)]
           [:li (tr :swim/entering-energy-data)]
           [:li (tr :swim/updating-basic-data)]]]
 

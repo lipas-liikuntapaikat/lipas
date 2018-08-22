@@ -77,9 +77,9 @@
               hallien perus- ja energiankulutustietoja, sekä ohjeita
               energiatehokkuuden parantamiseen."
 
-    :basic-data-of-n-halls "{1} jäähallin perustiedot"
-    :entering-energy-data  "Energiankulutustietojen syöttäminen"
-    :updating-basic-data   "Perustietojen päivitys"
+    :basic-data-of-halls  "Jäähallien perustiedot"
+    :entering-energy-data "Energiankulutustietojen syöttäminen"
+    :updating-basic-data  "Perustietojen päivitys"
 
     :size-category "Kokoluokitus"
     :comparison    "Hallien vertailu"
@@ -135,9 +135,9 @@
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."
 
-    :basic-data-of-n-halls "{1} uimahallin perustiedot"
-    :entering-energy-data  "Energiankulutustietojen syöttäminen"
-    :updating-basic-data   "Perustietojen päivitys"
+    :basic-data-of-halls  "Uimahallien perustiedot"
+    :entering-energy-data "Energiankulutustietojen syöttäminen"
+    :updating-basic-data  "Perustietojen päivitys"
 
     :latest-updates             "Viimeksi päivitetyt tiedot"
     :five-latest-energy-updates "Viimeksi ilmoitetut energiatiedot"}
@@ -148,12 +148,19 @@
     :ukty-link   "Siirry UKTYn sivuille"}
 
    :did-you-know
-   {:headline          "Tiesitkö että..."
-    :count-by-type     "Suomessa on {1} uimahallia ja {2} kylpylää"
-    :construction-year "Keskimääräinen rakennusvuosi on {1}"
-    :water-area        "Vesipinta-alaa on yhteensä {1} m²"
-    :slide-sum         "Vesiliukumäkeä on yhteensä {1} metriä"
-    :showers-sum       "Suihkuja on {1} kappaletta"}
+   {:headline            "Tiesitkö että..."
+    :count-by-type       "Suomessa on {1} uimahallia ja {2} kylpylää"
+    :construction-year   "Keskimääräinen rakennusvuosi on {1}"
+    :water-area          "Vesipinta-alaa on yhteensä {1} m²"
+    :slide-sum           "Vesiliukumäkeä on yhteensä {1} metriä"
+    :showers-sum         "Suihkuja on yhteensä {1} kappaletta"
+    :energy-3110-avg     "Keskimääräinen uimahalli kuluttaa vuodessa*"
+    :energy-3130-avg     "Keskimääräinen kylpylä kuluttaa vuodessa*"
+    :electricity-avg     "{1} MWh sähköä"
+    :heat-avg            "{1} MWh lämpöenergiaa"
+    :water-avg           "{1} kuutiota vettä"
+    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"
+    :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"}
 
    :open-data
    {:headline            "Avoin data"
