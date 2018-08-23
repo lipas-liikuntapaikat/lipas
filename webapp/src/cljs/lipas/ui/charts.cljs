@@ -34,7 +34,7 @@
 (defn energy-activity-chart-3 [{:keys [data energy]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    [:> rc/BarChart {:data data}
-    [:> rc/CartesianGrid {:strokeDasharray "3 3"}]
+    [:> rc/CartesianGrid]
     [:> rc/Legend]
     [:> rc/Tooltip]
     [:> rc/YAxis]
