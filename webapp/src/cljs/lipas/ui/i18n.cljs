@@ -13,7 +13,7 @@
 (def fi
   {:menu
    {:headline      "LIPAS"
-    :headline-test "LIPAS-TESTIYMPÄRISTÖ"
+    :headline-test "LIPAS-TESTAUS"
     :main-menu     "Päävalikko"
     :jyu           "Jyväskylän yliopisto"
     :frontpage     "Etusivu"}
