@@ -546,7 +546,7 @@
 
 ;; Pools ;;
 
-(s/def :lipas.swimming-pool.pool/temperature-c (s/int-in 0 50))
+(s/def :lipas.swimming-pool.pool/temperature-c (number-in 0 50))
 (s/def :lipas.swimming-pool.pool/volume-m3 (number-in :min 0 :max 5000))
 (s/def :lipas.swimming-pool.pool/area-m2 (number-in :min 0 :max 2000))
 (s/def :lipas.swimming-pool.pool/length-m (number-in :min 0 :max 200))
@@ -574,7 +574,7 @@
 
 ;; Slides ;;
 
-(s/def :lipas.swimming-pool.slide/length-m (s/int-in 0 200))
+(s/def :lipas.swimming-pool.slide/length-m (number-in 0 200))
 (s/def :lipas.swimming-pool.slide/structure
   (into #{} (keys materials/slide-structures)))
 
