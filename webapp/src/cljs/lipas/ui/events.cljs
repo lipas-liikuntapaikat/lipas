@@ -1,5 +1,6 @@
 (ns lipas.ui.events
-  (:require [lipas.ui.db :as db]
+  (:require [lipas.i18n.core :as i18n]
+            [lipas.ui.db :as db]
             [lipas.ui.routes :as routes]
             [lipas.ui.utils :refer [==>]]
             [re-frame.core :as re-frame]))
@@ -40,8 +41,8 @@
 
 (re-frame/reg-event-db
  ::set-translator
- (fn [db [_ translator]]
-   (assoc db :translator translator)))
+ (fn [db [_ locale]]
+   (assoc db :translator (i18n/->tr-fn locale))))
 
 (re-frame/reg-event-db
  ::set-active-notification

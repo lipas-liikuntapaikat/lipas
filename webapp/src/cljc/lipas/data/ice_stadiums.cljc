@@ -2,34 +2,34 @@
 
 (def size-categories
   {"small"       {:fi "Pieni kilpahalli > 500 hlö"
-                  :en nil
+                  :en "Small > 500 persons"
                   :se nil}
    "competition" {:fi "Kilpahalli < 3000 hlö"
-                  :en nil
+                  :en "Competition < 3000 persons"
                   :se nil}
    "large"       {:fi "Suurhalli > 3000 hlö"
-                  :en nil
+                  :en "Large > 3000 persons"
                   :se nil}})
 
 ;; Lauhdelämmön pääkäyttökohde
 (def condensate-energy-targets
   {"hall-heating"              {:fi "Hallin lämmitys"
-                                :en nil
+                                :en "Hall heating"
                                 :se nil}
    "other-space-heating"       {:fi "Muun tilan lämmitys"
-                                :en nil
+                                :en "Other heating"
                                 :se nil}
    "track-heating"             {:fi "Ratapohjan lämmitys"
-                                :en nil
+                                :en "Track heating"
                                 :se nil}
    "snow-melting"              {:fi "Lumensulatus"
-                                :en nil
+                                :en "Snow melting"
                                 :se nil}
    "maintenance-water-heating" {:fi "Jäänhoitoveden lämmitys"
-                                :en nil
+                                :en "Maintenance water heating"
                                 :se nil}
    "service-water-heating"     {:fi "Käyttöveden lämmitys"
-                                :en nil
+                                :en "Service water heating"
                                 :se nil}})
 
 ;; Kylmäaine
@@ -50,10 +50,10 @@
             :en "R717"
             :se "R717"}
    "CO2"   {:fi "CO2 (hiilidioksidi)"
-            :en nil
+            :en "CO2"
             :se nil}
    "R22"   {:fi "R22"
-            :en nil
+            :en "R22"
             :se nil}})
 
 ;; Kylmäliuos
@@ -65,10 +65,10 @@
                     :en "Freezium"
                     :se "Freezium"}
    "water-glycol"  {:fi "Vesi-glykoli"
-                    :en nil
+                    :en "Water-glycol"
                     :se nil}
    "ethanol-water" {:fi "Etanoli-vesi"
-                    :en nil
+                    :en "Ethanol-water"
                     :se nil}
    "CO2"           {:fi "CO2"
                     :en "CO2"
@@ -80,68 +80,68 @@
 ;; LTO_tyyppi
 (def heat-recovery-types
   {"thermal-wheel"        {:fi "Pyörivä"
-                          :en nil
+                          :en "Thermal wheel"
                           :se nil}
    "liquid-circulation"   {:fi "Nestekierto"
-                          :en nil
+                          :en "Liquid circulation"
                           :se nil}
    "plate-heat-exchanger" {:fi "Levysiirrin"
-                          :en nil
+                          :en "Plate heat exchanger"
                           :se nil}})
 
 ;; Ilmankuivaustapa
 (def dryer-types
   {"munters"      {:fi "Muntters"
-                   :en nil
+                   :en "Munters"
                    :se nil}
    "cooling-coil" {:fi "Jäähdytyspatteri"
-                   :en nil
+                   :en "Cooling coil"
                    :se nil}
    "none"         {:fi "Ei ilmankuivausta"
-                   :en nil
+                   :en "None"
                    :se nil}})
 
 ;; Ilm.kuiv.käyttötapa
 (def dryer-duty-types
   {"manual"    {:fi "Manuaali"
-                :en nil
+                :en "Manual"
                 :se nil}
    "automatic" {:fi "Automaattinen"
-                :en nil
+                :en "Automatic"
                 :se nil}})
 
 ;; Lämpöpumpputyyppi
 (def heat-pump-types
   {"air-source"         {:fi "Ilmalämpöpumppu"
-                         :en nil
+                         :en "Air source"
                          :se nil}
    "air-water-source"   {:fi "Ilma-vesilämpöpumppu"
-                         :en nil
+                         :en "Air-water source"
                          :se nil}
    "ground-source"      {:fi "Maalämpöpumppu"
-                         :en nil
+                         :en "Ground source"
                          :se nil}
    "exhaust-air-source" {:fi "Poistoilmalämpöpumppu"
-                         :en nil
+                         :en "Exhaust air source"
                          :se nil}
    "none"               {:fi "Ei lämpöpumppua"
-                         :en nil
+                         :en "None"
                          :se nil}})
 
 ;; Jäänhoitokoneen polttoaine
 (def ice-resurfacer-fuels
   {"gasoline"    {:fi "Bensiini"
-                  :en nil
+                  :en "Gasoline"
                   :se nil}
    "natural-gas" {:fi "Maakaasu"
-                  :en nil
+                  :en "Natural gas"
                   :se nil}
    "propane"     {:fi "Propaani"
-                  :en nil
+                  :en "Propane"
                   :se nil}
    "LPG"         {:fi "Nestekaasu"
-                  :en nil
+                  :en "LPG"
                   :se nil}
    "electicity"  {:fi "Sähkö"
-                  :en nil
+                  :en "Electricity"
                   :se nil}})
