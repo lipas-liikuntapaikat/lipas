@@ -1,7 +1,7 @@
 (ns lipas.ui.swimming-pools.subs
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]
-            [lipas.utils :as utils2]))
+  (:require [lipas.ui.utils :as utils]
+            [lipas.utils :as utils2]
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -17,44 +17,39 @@
      (not-empty $))))
 
 (re-frame/reg-sub
- ::latest-updates
- :<- [::latest-swimming-pool-revs]
- (fn [sites [_ tr]]
-   (->> sites
-        vals
-        (sort-by :event-date utils/reverse-cmp)
-        (take 5)
-        (map #(select-keys % [:lipas-id :name :event-date]))
-        (map #(update % :event-date (comp tr
-                                          (partial keyword :time)
-                                          utils/pretty-since-kw))))))
-
-(re-frame/reg-sub
- ::did-you-know-stats
+ ::total-counts
  :<- [::latest-swimming-pool-revs]
  (fn [sites _]
-   {:total-count       (count sites)
-    :count-by-type     (->> (vals sites)
-                            (map (comp :type-code :type))
-                            frequencies)
-    :construction-year (->> sites
-                            vals
-                            (map :construction-year)
-                            (remove nil?)
-                            utils2/simple-stats)
-    :water-area-sum    (->> sites
-                            vals
-                            (map (comp :total-water-area-m2 :building))
-                            (reduce +))
-    :slide-sum (->> sites
-                    vals
-                    (mapcat (comp #(map :length-m %) :slides))
-                    (reduce +))
-    :showers-sum (->> sites
-                      vals
-                      (map #(+ (-> % :facilities :showers-men-count)
-                               (-> % :facilities :showers-women-count)))
-                      (reduce +))}))
+   (->> sites
+        vals
+        (group-by (comp :type-code :type))
+        (reduce-kv (fn [m k v] (assoc m k (count v))) {}))))
+
+(re-frame/reg-sub
+ ::stats
+ (fn [[_ year] _]
+   [(re-frame/subscribe [::total-counts])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3110])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3130])])
+ (fn [[total-counts stats-3110 stats-3130] _]
+   {:counts
+    {:sites       (+ (get total-counts 3110)
+                     (get total-counts 3130))
+     :electricity (+ (-> stats-3110 :electricity-mwh :count)
+                     (-> stats-3130 :electricity-mwh :count))
+     :heat        (+ (-> stats-3110 :heat-mwh :count)
+                     (-> stats-3130 :heat-mwh :count))
+     :water       (+ (-> stats-3110 :water-m3 :count)
+                     (-> stats-3130 :water-m3 :count))}
+    :data-points (sort-by :name (concat (:data-points stats-3110)
+                                        (:data-points stats-3130)))
+    :hall-of-fame (concat (:hall-of-fame stats-3110)
+                          (:hall-of-fame stats-3130))}))
+
+(re-frame/reg-sub
+ ::chart-energy-type
+ (fn [db _]
+   (-> db :swimming-pools :chart-energy-type)))
 
 (re-frame/reg-sub
  ::sites-to-edit

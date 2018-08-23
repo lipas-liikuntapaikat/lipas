@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.views
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
+            [lipas.ui.charts :as charts]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
@@ -14,77 +15,46 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
-(defn stats-tab [{:keys [width]}]
-  (let [tr                 (<== [:lipas.ui.subs/translator])
-        latest-updates     (<== [::subs/latest-updates tr])
-        funny-stats        (<== [::subs/did-you-know-stats tr])
-        year               (dec utils/this-year)
-        energy-report-3110 (<== [:lipas.ui.energy.subs/energy-report year 3110])
-        energy-report-3130 (<== [:lipas.ui.energy.subs/energy-report year 3130])
-        hall-of-fame       (concat (:hall-of-fame energy-report-3110)
-                                   (:hall-of-fame energy-report-3130))]
+(defn stats-tab []
+  (let [tr          (<== [:lipas.ui.subs/translator])
+        year        (dec utils/this-year)
+        stats       (<== [::subs/stats year])
+        energy-type (<== [::subs/chart-energy-type])]
 
     [mui/grid {:container true}
-     [mui/grid {:item true :xs 12 :md 6}
 
-      ;; Did-you-know facts
-      [mui/card
-       {:square true
-        :style
-        {:height              "100%"
-         :min-height          "500px"
-         :background-color    "efefef"
-         :background-position "right top"
-         :background-size     "300px"
-         :background-image    (if (= "xs" width)
-                                :none
-                                "url('/img/uimahallit.jpg')")
-         :background-repeat   :no-repeat}}
-       (when (= "xs" width)
-         [:img {:src   "/img/uimahallit.jpg"
-                :style {:margin-left  "3em"}}])
-       [mui/card-header {:title (tr :did-you-know/headline)}]
+     [mui/grid {:item true :xs 12 :md 12}
+      [mui/card {:square true}
+       [mui/card-header {:title "Hallien energiankulutus vuonna 2017"}]
        [mui/card-content
-        [:ul {:style {:line-height "1.5em"
-                      :width       "100%"}}
-         [lui/li (tr :did-you-know/count-by-type
-              (get-in funny-stats [:count-by-type 3110])
-              (get-in funny-stats [:count-by-type 3130]))]
-         [lui/li (tr :did-you-know/construction-year
-              (int (get-in funny-stats [:construction-year :median])))]
-         [lui/li (tr :did-you-know/water-area (:water-area-sum funny-stats))]
-         [lui/li (tr :did-you-know/slide-sum (:slide-sum funny-stats))]
-         [lui/li (tr :did-you-know/showers-sum (:showers-sum funny-stats))]
-         (when energy-report-3110
-           [lui/li (tr :did-you-know/energy-3110-avg)
-            [:ul
-             [lui/li (tr :did-you-know/electricity-avg
-                      (int (get-in energy-report-3110 [:electricity-mwh :mean])))]
-             [lui/li (tr :did-you-know/heat-avg
-                      (int (get-in energy-report-3110 [:heat-mwh :mean])))]
-             [lui/li (tr :did-you-know/water-avg
-                      (int (get-in energy-report-3110 [:water-m3 :mean])))]]])
-         (when energy-report-3130
-           [lui/li (tr :did-you-know/energy-3130-avg)
-            [:ul
-             [lui/li (tr :did-you-know/electricity-avg
-                      (int (get-in energy-report-3130 [:electricity-mwh :mean])))]
-             [lui/li (tr :did-you-know/heat-avg
-                      (int (get-in energy-report-3130 [:heat-mwh :mean])))]
-             [lui/li (tr :did-you-know/water-avg
-                      (int (get-in energy-report-3130 [:water-m3 :mean])))]]])]
-        [mui/typography {:variant :body2}
-         (tr :did-you-know/disclaimer year)]]]]
+        [mui/form-group {:style {:min-width     120
+                                 :max-width     200
+                                 :margin-bottom "2em"}}
+         [lui/select {:label     "Valitse energia"
+                      :items     [{:value :electricity-mwh :label "Sähkö MWh"}
+                                  {:value :heat-mwh :label "Lämpö MWh"}
+                                  {:value :water-m3 :label "Vesi m³"}]
+                      :value     energy-type
+                      :on-change #(==> [::events/select-energy-type %])}]]
+        (when (seq (:data-points stats))
+          [charts/energy-activity-chart-3 {:energy energy-type
+                                           :data   (:data-points stats)}])
+        [mui/typography {:variant :display1} "Puuttuvatko hallisi tiedot kuvasta?"]
+        [mui/button {:color :secondary
+                     :size :large
+                     :variant :flat
+                     :href "/#/uimahalliportaali/ilmoita-tiedot"}
+         "> Ilmoita tiedot"]]]]
 
-     ;; Top-5 last updates
-     [lui/form-card {:title (tr :swim/latest-updates)
-                     :xs    12 :md 12 :lg 6}
-      [lui/table
-       {:on-select #(==> [::events/display-site %])
-        :headers
-        [[:name (tr :general/hall)]
-         [:event-date (tr :general/updated)]]
-        :items     latest-updates}]]
+     ;; [mui/grid {:item true :xs 12 :md 4}
+     ;;  [mui/card {:square true}
+     ;;   [mui/card-header {:title "Energiatietojen täyttöaste"}]
+     ;;   [mui/card-content
+     ;;    [charts/energy-activity-chart
+     ;;     {:n                 (-> stats :counts :sites)
+     ;;      :electricity-count (-> stats :counts :electricity)
+     ;;      :heat-count        (-> stats :counts :heat)
+     ;;      :water-count       (-> stats :counts :water)}]]]]
 
      ;; Hall of Fame (all energy info for previous year reported)
      [mui/grid  {:item true :xs 12 :md 12 :lg 12}
@@ -100,7 +70,7 @@
         [:div {:style {:margin-top   "1em"
                        :column-width "300px"}}
          (into [:ul]
-               (for [m hall-of-fame]
+               (for [m (:hall-of-fame stats)]
                  [:lui/li
                   [mui/typography (:name m)]]))]]]]]))
 
@@ -694,8 +664,8 @@
 
 (def tabs
   {0 "/#/uimahalliportaali"
-   1 "/#/uimahalliportaali/hallit"
-   2 "/#/uimahalliportaali/ilmoita-tiedot"
+   1 "/#/uimahalliportaali/ilmoita-tiedot"
+   2 "/#/uimahalliportaali/hallit"
    3 "/#/uimahalliportaali/hallien-vertailu"
    4 "/#/uimahalliportaali/energia-info"})
 
@@ -716,18 +686,17 @@
          [mui/tab {:label (tr :swim/headline-split)
                    :icon  (r/as-element [mui/icon "pool"])}]
 
-         ;; 1 Halls tab
-         [mui/tab {:label (tr :swim/list)
-                   :icon  (r/as-element [mui/icon "list_alt"])}]
-
-         ;; 2 Energy form tab
+         ;; 1 Energy form tab
          [mui/tab {:label (tr :swim/edit)
                    :icon  (r/as-element [mui/icon "edit"])}]
+
+         ;; 2 Halls tab
+         [mui/tab {:label (tr :swim/list)
+                   :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 3 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
                    :icon  (r/as-element [mui/icon "compare"])}]
-
 
          ;; 4 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
@@ -735,9 +704,9 @@
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 [:> (mui/with-width* (r/reactify-component stats-tab))]
-        1 [swimming-pools-tab tr logged-in?]
-        2 [energy-form-tab tr]
+        0 [stats-tab]
+        1 [energy-form-tab tr]
+        2 [swimming-pools-tab tr logged-in?]
         3 [compare-tab]
         4 [energy-info-tab tr])]]))
 
