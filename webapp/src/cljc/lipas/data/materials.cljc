@@ -45,7 +45,7 @@
    "concrete-beam"    {:fi "Betonipalkki"
                       :se nil
                       :en nil}
-   "double-t-beam"    {:fi "TT-palkki" ; TT-palkki/TT-laatta, betonia??
+   "double-t-beam"    {:fi "TT-laatta" ; TT-palkki/TT-laatta, betonia??
                       :se nil
                       :en nil}
    "precast-concrete" {:fi "Betonielementti"
