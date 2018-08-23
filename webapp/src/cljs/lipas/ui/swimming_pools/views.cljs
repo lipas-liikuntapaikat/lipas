@@ -14,14 +14,6 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
-
-(defn- li [text & children]
-  (into
-   [:li [mui/typography {:color :default}
-         text]]
-   children))
-
-
 (defn stats-tab [{:keys [width]}]
   (let [tr                 (<== [:lipas.ui.subs/translator])
         latest-updates     (<== [::subs/latest-updates tr])
@@ -55,31 +47,31 @@
        [mui/card-content
         [:ul {:style {:line-height "1.5em"
                       :width       "100%"}}
-         [li (tr :did-you-know/count-by-type
+         [lui/li (tr :did-you-know/count-by-type
               (get-in funny-stats [:count-by-type 3110])
               (get-in funny-stats [:count-by-type 3130]))]
-         [li (tr :did-you-know/construction-year
+         [lui/li (tr :did-you-know/construction-year
               (int (get-in funny-stats [:construction-year :median])))]
-         [li (tr :did-you-know/water-area (:water-area-sum funny-stats))]
-         [li (tr :did-you-know/slide-sum (:slide-sum funny-stats))]
-         [li (tr :did-you-know/showers-sum (:showers-sum funny-stats))]
+         [lui/li (tr :did-you-know/water-area (:water-area-sum funny-stats))]
+         [lui/li (tr :did-you-know/slide-sum (:slide-sum funny-stats))]
+         [lui/li (tr :did-you-know/showers-sum (:showers-sum funny-stats))]
          (when energy-report-3110
-           [li (tr :did-you-know/energy-3110-avg)
+           [lui/li (tr :did-you-know/energy-3110-avg)
             [:ul
-             [li (tr :did-you-know/electricity-avg
+             [lui/li (tr :did-you-know/electricity-avg
                       (int (get-in energy-report-3110 [:electricity-mwh :mean])))]
-             [li (tr :did-you-know/heat-avg
+             [lui/li (tr :did-you-know/heat-avg
                       (int (get-in energy-report-3110 [:heat-mwh :mean])))]
-             [li (tr :did-you-know/water-avg
+             [lui/li (tr :did-you-know/water-avg
                       (int (get-in energy-report-3110 [:water-m3 :mean])))]]])
          (when energy-report-3130
-           [li (tr :did-you-know/energy-3130-avg)
+           [lui/li (tr :did-you-know/energy-3130-avg)
             [:ul
-             [li (tr :did-you-know/electricity-avg
+             [lui/li (tr :did-you-know/electricity-avg
                       (int (get-in energy-report-3130 [:electricity-mwh :mean])))]
-             [li (tr :did-you-know/heat-avg
+             [lui/li (tr :did-you-know/heat-avg
                       (int (get-in energy-report-3130 [:heat-mwh :mean])))]
-             [li (tr :did-you-know/water-avg
+             [lui/li (tr :did-you-know/water-avg
                       (int (get-in energy-report-3130 [:water-m3 :mean])))]]])]
         [mui/typography {:variant :body2}
          (tr :did-you-know/disclaimer year)]]]]
@@ -109,7 +101,7 @@
                        :column-width "300px"}}
          (into [:ul]
                (for [m hall-of-fame]
-                 [:li
+                 [:lui/li
                   [mui/typography (:name m)]]))]]]]]))
 
 (defn toggle-dialog
