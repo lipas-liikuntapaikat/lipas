@@ -8,7 +8,7 @@
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as types]
             [lipas.schema.core :as schema]
-            [lipas.ui.i18n :as i18n]
+            [lipas.i18n.core :as i18n]
             [lipas.ui.utils :as utils]))
 
 (def default-db
@@ -56,6 +56,7 @@
     :heat-sources      swimming-pools/heat-sources
     :slide-structures  materials/slide-structures
     :pool-structures   materials/pool-structures
+    :chart-energy-type :electricity-mwh
     :editing           nil
     :editing?          false
     :dialogs

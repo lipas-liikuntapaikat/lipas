@@ -1,5 +1,6 @@
 (ns lipas.ui.front-page.views
-  (:require [lipas.ui.mui :as mui]
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :as utils]
@@ -29,14 +30,14 @@
                  :max-height "100px"}
          :src   img}])
 
-(defn footer []
+(defn footer [tr]
   (into
    [mui/grid {:item  true :xs 12
               :style {:padding "2em"
                                         ;:background-color "#e9e9e9"
                       }}
     [mui/typography {:variant "display1"}
-     "Kehittämisessä mukana"]]
+     (tr :partners/headline)]]
    (map ->logo logos)))
 
 (defn grid-card [{:keys [title style link link-text]} & children]
@@ -87,31 +88,31 @@
                     :link-text "lipas.fi"}
          [mui/typography (tr :home-page/description)]
          [:ul
-          [:li (tr :sport/up-to-date-information)]
-          [:li (tr :sport/updating-tools)]
-          [:li (tr :sport/open-interfaces)]]
+          [lui/li (tr :sport/up-to-date-information)]
+          [lui/li (tr :sport/updating-tools)]
+          [lui/li (tr :sport/open-interfaces)]]
          [mui/typography (tr :sport/legacy-disclaimer)]]
 
 
         ;; Skating rinks portal
         [grid-card {:title     (tr :ice/headline)
                     :link      "/#/jaahalliportaali"
-                    :link-text "Siirry portaaliin"}
+                    :link-text (tr :actions/browse-to-portal)}
          [mui/typography (tr :ice/description)]
          [:ul
-          [:li (tr :ice/basic-data-of-halls)]
-          [:li (tr :ice/entering-energy-data)]
-          [:li (tr :ice/updating-basic-data)]]]
+          [lui/li (tr :ice/basic-data-of-halls)]
+          [lui/li (tr :ice/entering-energy-data)]
+          [lui/li (tr :ice/updating-basic-data)]]]
 
         ;; Swimming pools portal
         [grid-card {:title     (tr :swim/headline)
                     :link      "/#/uimahalliportaali"
-                    :link-text "Siirry portaaliin"}
+                    :link-text (tr :actions/browse-to-portal)}
          [mui/typography (tr :swim/description)]
          [:ul
-          [:li (tr :swim/basic-data-of-halls)]
-          [:li (tr :swim/entering-energy-data)]
-          [:li (tr :swim/updating-basic-data)]]]
+          [lui/li (tr :swim/basic-data-of-halls)]
+          [lui/li (tr :swim/entering-energy-data)]
+          [lui/li (tr :swim/updating-basic-data)]]]
 
         ;; Open Data
         [grid-card {:title (tr :open-data/headline)}
@@ -186,7 +187,7 @@
         ;; [grid-card {:title (tr :team/headline)}
         ;;  [mui/typography (tr :team/description)]]
         ]]]]]
-   [footer]])
+   [footer tr]])
 
 (defn main [tr]
   (create-panel tr))

@@ -1,7 +1,6 @@
 (ns lipas.ui.navbar
   (:require [lipas.ui.events :as events]
             [lipas.ui.subs :as subs]
-            [lipas.ui.i18n :as i18n]
             [lipas.ui.mui :as mui]
             [lipas.ui.routes :refer [navigate!]]
             [lipas.ui.svg :as svg]
@@ -85,26 +84,21 @@
                     :margin "0.5em"}}
    "|"])
 
-(defn set-translator [locale]
-  (let [translator (i18n/->tr-fn locale)]
-    (==> [::events/set-translator translator])))
-
 (defn lang-btn [locale]
   [mui/button {:style
                {:min-width "0px"
                 :padding   0
                 :font-size "1em"}
-               :on-click #(set-translator locale)}
+               :on-click #(==> [::events/set-translator locale])}
    (name locale)])
 
 (defn lang-selector []
   [mui/grid {:item true :style {:margin "1em"}}
    [lang-btn :fi]
-   ;; [separator]
+   [separator]
    ;; [lang-btn :se]
    ;; [separator]
-   ;; [lang-btn :en]
-   ])
+   [lang-btn :en]])
 
 (defn toggle-drawer [_]
   (==> [::events/toggle-drawer]))
@@ -115,7 +109,7 @@
                            :anchor   :top
                            :on-open  #()
                            :on-close toggle-drawer}
-     ;; [lang-selector]
+     [lang-selector]
 
      [mui/list
 
@@ -266,8 +260,8 @@
        :reset-password-panel (tr :reset-password/headline)
        "")]
 
-    ;; [mui/hidden {:sm-down true}
-    ;;  [lang-selector]]
+     [mui/hidden {:sm-down true}
+      [lang-selector]]
 
     ;;; Search button
     ;; [mui/icon-button {:id         "search-btn"

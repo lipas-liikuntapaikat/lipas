@@ -4,72 +4,78 @@
 
 (def all
   {"asphalt"          {:fi "Asfaltti"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Asphalt"}
+   "aluminum"         {:fi "Alumiini"
+                       :en "Aluminum"
+                       :se nil}
+   "stone"            {:fi "Kivi"
+                       :en "Stone"
+                       :se nil}
    "sand"             {:fi "Hiekka"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Sand"}
    "concrete"         {:fi "Betoni"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Concrete"}
    "brick"            {:fi "Tiili"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Brick"}
    "tile"             {:fi "Laatta"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Tile"}
    "steel"            {:fi "Teräs"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Steel"}
    "wood"             {:fi "Puu"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Wood"}
    "glass"            {:fi "Lasi"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Glass"}
    "hardened-plastic" {:fi "Lujitemuovi"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Hardened plastic"}
    "sheet-metal"      {:fi "Pelti"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Sheet metal"}
    "glulam"           {:fi "Liimapuu"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Glulam"}
    "hollow-core-slab" {:fi "Ontelolaatta"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Hollow-core slab"}
    "concrete-pillar"  {:fi "Betonipilari"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Concrete pillar"}
    "concrete-beam"    {:fi "Betonipalkki"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Concrete beam"}
    "double-t-beam"    {:fi "TT-laatta" ; TT-palkki/TT-laatta, betonia??
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Double-T"}
    "precast-concrete" {:fi "Betonielementti"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Precast concrete"}
    "pent-roof"        {:fi "Pulpettikatto"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Pent roof"}
    "felt"             {:fi "Huopa"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Felt"}
    "solid-rock"       {:fi "Kallio"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Solid rock"}
    "insulator"        {:fi "Eriste"
-                      :se nil
-                      :en nil}
+                       :se nil
+                       :en "Insulator"}
    "composite-beam"   {:fi "Liittopalkki"
-                      :se nil
-                      :en nil}})
+                       :se nil
+                       :en "Composite beam"}})
 
 (def building-materials
   (select-keys all ["concrete" "brick" "tile" "steel" "wood" "glass"
-                    "sheet-metal" "solid-rock" "concrete-pillar"]))
+                    "sheet-metal" "solid-rock"]))
 
 (def slide-structures
   (select-keys all ["concrete" "steel" "hardened-plastic"]))
@@ -79,11 +85,11 @@
 
 (def supporting-structures
   (select-keys all ["concrete" "wood" "concrete-pillar" "concrete-beam" "steel"
-                    "solid-rock" "precast-concrete"]))
+                    "solid-rock" "brick"]))
 
 (def ceiling-structures
-  (select-keys all ["wood" "hollow-core-slab" "steel" "insulator" "double-t-beam"
-                    "concrete" "glulam" "pent-roof" "felt" "composite-beam"]))
+  (select-keys all ["wood" "hollow-core-slab" "steel" "double-t-beam"
+                    "concrete" "glass" "solid-rock"]))
 
 (def base-floor-structures
   (select-keys all ["concrete" "asphalt" "sand"]))
