@@ -37,3 +37,8 @@
  ::energy-report
  (fn [db [_ year type-code]]
    (get-in db [:energy-stats year type-code])))
+
+(re-frame/reg-sub
+ ::chart-energy-type
+ (fn [db _]
+   (-> db :energy-stats :chart-energy-type)))

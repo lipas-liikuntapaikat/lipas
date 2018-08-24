@@ -59,11 +59,6 @@
  (fn [db [_ dialog]]
    (assoc-in db [:swimming-pools :dialogs dialog] {})))
 
-(re-frame/reg-event-db
- ::select-energy-type
- (fn [db [_ energy-type]]
-   (assoc-in db [:swimming-pools :chart-energy-type] energy-type)))
-
 (re-frame/reg-event-fx
  ::display-site
  (fn [{:keys [db]} [_ {:keys [lipas-id]}]]

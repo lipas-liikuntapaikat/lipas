@@ -1,7 +1,6 @@
 (ns lipas.ui.swimming-pools.views
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
-            [lipas.ui.charts :as charts]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
@@ -16,63 +15,13 @@
             [reagent.core :as r]))
 
 (defn stats-tab []
-  (let [tr          (<== [:lipas.ui.subs/translator])
-        year        (dec utils/this-year)
-        stats       (<== [::subs/stats year])
-        energy-type (<== [::subs/chart-energy-type])]
-
-    [mui/grid {:container true}
-
-     [mui/grid {:item true :xs 12 :md 12}
-      [mui/card {:square true}
-       [mui/card-header {:title "Hallien energiankulutus vuonna 2017"}]
-       [mui/card-content
-        [mui/form-group {:style {:min-width     120
-                                 :max-width     200
-                                 :margin-bottom "2em"}}
-         [lui/select {:label     "Valitse energia"
-                      :items     [{:value :electricity-mwh :label "Sähkö MWh"}
-                                  {:value :heat-mwh :label "Lämpö MWh"}
-                                  {:value :water-m3 :label "Vesi m³"}]
-                      :value     energy-type
-                      :on-change #(==> [::events/select-energy-type %])}]]
-        (when (seq (:data-points stats))
-          [charts/energy-activity-chart-3 {:energy energy-type
-                                           :data   (:data-points stats)}])
-        [mui/typography {:variant :display1} "Puuttuvatko hallisi tiedot kuvasta?"]
-        [mui/button {:color :secondary
-                     :size :large
-                     :variant :flat
-                     :href "/#/uimahalliportaali/ilmoita-tiedot"}
-         "> Ilmoita tiedot"]]]]
-
-     ;; [mui/grid {:item true :xs 12 :md 4}
-     ;;  [mui/card {:square true}
-     ;;   [mui/card-header {:title "Energiatietojen täyttöaste"}]
-     ;;   [mui/card-content
-     ;;    [charts/energy-activity-chart
-     ;;     {:n                 (-> stats :counts :sites)
-     ;;      :electricity-count (-> stats :counts :electricity)
-     ;;      :heat-count        (-> stats :counts :heat)
-     ;;      :water-count       (-> stats :counts :water)}]]]]
-
-     ;; Hall of Fame (all energy info for previous year reported)
-     [mui/grid  {:item true :xs 12 :md 12 :lg 12}
-      [mui/card {:square true
-                 :style  {:background-color "rgb(250, 250, 250)"}}
-       [mui/card-content
-        [mui/typography {:variant :display2}
-         "Hall of Fame"]
-        [mui/typography {:variant :title
-                         :color   :secondary
-                         :style   {:margin-top "0.75em"}}
-         (tr :did-you-know/energy-reported-for year)]
-        [:div {:style {:margin-top   "1em"
-                       :column-width "300px"}}
-         (into [:ul]
-               (for [m (:hall-of-fame stats)]
-                 [:lui/li
-                  [mui/typography (:name m)]]))]]]]]))
+  (let [tr    (<== [:lipas.ui.subs/translator])
+        year  (dec utils/this-year)
+        stats (<== [::subs/stats year])]
+    (energy/energy-stats
+     {:tr    tr
+      :year  year
+      :stats stats})))
 
 (defn toggle-dialog
   ([dialog]
@@ -687,7 +636,7 @@
                    :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label (tr :swim/edit)
+         [mui/tab {:label (tr :lipas.energy-consumption/report)
                    :icon  (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Halls tab
@@ -699,7 +648,7 @@
                    :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 4 Energy info tab
-         [mui/tab {:label (tr :ice-energy/headline)
+         [mui/tab {:label (tr :swim-energy/headline)
                    :icon  (r/as-element [mui/icon "info"])}]]]]]
 
      [mui/grid {:item true :xs 12}
