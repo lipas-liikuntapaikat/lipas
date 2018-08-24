@@ -1,26 +1,26 @@
 (ns lipas.data.owners)
 
 (def all {"city"                   {:fi "Kunta"
-                                    :en nil
+                                    :en "City"
                                     :se nil}
           "registered-association" {:fi "Rekisteröity yhdistys"
-                                    :en nil
+                                    :en "Registered association"
                                     :se nil}
           "company-ltd"            {:fi "Yritys"
-                                    :en nil
+                                    :en "Company ltd"
                                     :se nil}
           "city-main-owner"        {:fi "Kuntaenemmistöinen yritys"
-                                    :en nil
+                                    :en "City main owner"
                                     :se nil}
           "foundation"             {:fi "Säätiö"
-                                    :en nil
+                                    :en "Foundation"
                                     :se nil}
           "state"                  {:fi "Valtio"
-                                    :en nil
+                                    :en "State"
                                     :se nil}
           "other"                  {:fi "Muu"
-                                    :en nil
+                                    :en "Other"
                                     :se nil}
           "unknown"                {:fi "Ei tietoa"
-                                    :en nil
+                                    :en "Unknown"
                                     :se nil}})

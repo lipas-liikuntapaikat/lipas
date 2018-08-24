@@ -238,6 +238,10 @@
   (s/keys :req-un [:lipas.sports-site.type/type-code]
           :opt-un [:lipas.sports-site.type/size-category]))
 
+;; When was the *document* created
+(s/def :lipas.sports-site/created-at :lipas/timestamp)
+
+;; What date/time does the document describe
 (s/def :lipas.sports-site/event-date :lipas/timestamp)
 
 (s/def :lipas/sports-site
@@ -250,7 +254,8 @@
                    :lipas.sports-site/admin
                    :lipas.sports-site/type
                    :lipas/location]
-          :opt-un [:lipas.sports-site/marketing-name
+          :opt-un [:lipas.sports-site/created-at
+                   :lipas.sports-site/marketing-name
                    :lipas.sports-site/phone-number
                    :lipas.sports-site/www
                    :lipas.sports-site/email
@@ -541,7 +546,7 @@
 
 ;; Pools ;;
 
-(s/def :lipas.swimming-pool.pool/temperature-c (s/int-in 0 50))
+(s/def :lipas.swimming-pool.pool/temperature-c (number-in :min 0 :max 50))
 (s/def :lipas.swimming-pool.pool/volume-m3 (number-in :min 0 :max 5000))
 (s/def :lipas.swimming-pool.pool/area-m2 (number-in :min 0 :max 2000))
 (s/def :lipas.swimming-pool.pool/length-m (number-in :min 0 :max 200))
@@ -569,7 +574,7 @@
 
 ;; Slides ;;
 
-(s/def :lipas.swimming-pool.slide/length-m (s/int-in 0 200))
+(s/def :lipas.swimming-pool.slide/length-m (number-in :min 0 :max 200))
 (s/def :lipas.swimming-pool.slide/structure
   (into #{} (keys materials/slide-structures)))
 

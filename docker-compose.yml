@@ -60,7 +60,7 @@ services:
   backend:
     extends:
       service: backend-base
-    command: java -jar backend.jar
+    command: java -Duser.timezone=UTC -jar backend.jar
     ports:
       - '8091:8091'
     links:

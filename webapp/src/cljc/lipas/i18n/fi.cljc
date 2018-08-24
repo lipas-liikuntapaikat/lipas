@@ -1,19 +1,9 @@
-(ns lipas.ui.i18n
-  (:require [tongue.core :as tongue]
-            [clojure.string :as s]
-            [lipas.data.swimming-pools :as pools]
-            [lipas.data.materials :as materials]
-            [lipas.data.admins :as admins]
-            [lipas.data.owners :as owners]))
+(ns lipas.i18n.fi)
 
-(defn ->translation-map [locale m]
-  (reduce-kv (fn [res k v]
-               (assoc res k (-> v locale))) {} m))
-
-(def fi
+(def translations
   {:menu
    {:headline      "LIPAS"
-    :headline-test "LIPAS-TESTIYMPÄRISTÖ"
+    :headline-test "LIPAS-TESTAUS"
     :main-menu     "Päävalikko"
     :jyu           "Jyväskylän yliopisto"
     :frontpage     "Etusivu"}
@@ -31,7 +21,11 @@
     :description       "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
-    linkistä."}
+    linkistä."
+
+    :up-to-date-information "Ajantasainen tieto Suomen liikuntapaikoista"
+    :updating-tools         "Päivitystyökalut tiedontuottajille"
+    :open-interfaces        "Avoimet rajapinnat"}
 
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
@@ -51,9 +45,6 @@
    {:type-code "Tyyppikoodi"
     :name      "Liikuntapaikkatyyppi"}
 
-   :admin (->translation-map :fi admins/all)
-   :owner (->translation-map :fi owners/all)
-
    :lipas.location
    {:headline      "Sijainti"
     :address       "Katuosoite"
@@ -68,10 +59,15 @@
     :contacts "Yhteystiedot"}
 
    :ice
-   {:headline      "Jäähalliportaali"
-    :description   "Jäähalliportaali sisältää
-              hallien perus- ja energiankulutustietoja sekä ohjeita
+   {:headline    "Jäähalliportaali"
+    :description "Jäähalliportaali sisältää
+              hallien perus- ja energiankulutustietoja, sekä ohjeita
               energiatehokkuuden parantamiseen."
+
+    :basic-data-of-halls  "Jäähallien perustiedot"
+    :entering-energy-data "Energiankulutustietojen syöttäminen"
+    :updating-basic-data  "Perustietojen päivitys"
+
     :size-category "Kokoluokitus"
     :comparison    "Hallien vertailu"
     :small         "Pieni kilpahalli > 500 hlö"
@@ -83,27 +79,34 @@
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline       "Energia-info"
-    :description    "Ajantasaisen tietopaketin löydät Jääkiekkiliiton sivuilta."
+   {:headline       "Energia info"
+    :description    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
     :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
 
    :ice-comparison
    {:headline "Hallien vertailu"}
 
-   :ice-form
-   {:headline       "Ilmoita tiedot"
-    :headline-short "Ilmoita kulutus"
-    :select-rink    "Valitse halli"}
-
    :lipas.energy-consumption
-   {:headline      "Energiankulutus"
-    :headline-year "Energiankulutus vuonna {1}"
-    :electricity   "Sähköenergia MWh"
-    :heat          "Lämpöenergia (ostettu) MWh"
-    :cold          "Kylmäenergia (ostettu) Mwh"
-    :water         "Vesi m³"
-    :yearly        "Energiankulutus vuositasolla"
-    :monthly?      "Haluan ilmoittaa energiankulutuksen kuukausitasolla"}
+   {:headline          "Energiankulutus"
+    :headline-year     "Energiankulutus vuonna {1}"
+    :electricity       "Sähköenergia MWh"
+    :heat              "Lämpöenergia (ostettu) MWh"
+    :cold              "Kylmäenergia (ostettu) Mwh"
+    :water             "Vesi m³"
+    :yearly            "Energiankulutus vuositasolla"
+    :monthly?          "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
+    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"
+    :report            "Ilmoita kulutus"}
+
+   :lipas.energy-stats
+   {:headline            "Hallien energiankulutus vuonna {1}"
+    :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
+    :electricity-mwh     "Sähkö MWh"
+    :heat-mwh            "Lämpö MWh"
+    :water-m3            "Vesi M³"
+    :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
+    :report              "Ilmoita tiedot"
+    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
    :lipas.swimming-pool.visitors
    {:headline      "Kävijämäärä"
@@ -117,18 +120,24 @@
 
    :swim
    {:headline       "Uimahalliportaali"
+    :headline-split "Uimahalli portaali"
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit           "Ilmoita tiedot"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
-          parantamiseen."}
+          parantamiseen."
+
+    :basic-data-of-halls  "Uimahallien perustiedot"
+    :entering-energy-data "Energiankulutustietojen syöttäminen"
+    :updating-basic-data  "Perustietojen päivitys"
+
+    :latest-updates "Viimeksi päivitetyt tiedot"}
 
    :swim-energy
-   {:headline    "Energia-info"
-    :description "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
-    :ukty-link   "Siirry UKTYn sivuille"}
-
+   {:headline       "Energia info"
+    :headline-short "Info"
+    :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
+    :ukty-link      "Siirry UKTYn sivuille"}
 
    :open-data
    {:headline            "Avoin data"
@@ -137,33 +146,11 @@
     :wms-wfs             "WMS & WFS"
     :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
-   :data-users
-   {:headline    "Käyttäjät"
-    :description "Olisiko tähän hyvä laittaa lista Lipaksen datan
-    hyödyntäjistä ja muista käyttäjistä?"}
-
    :partners
-   {:headline    "Kumppanit"
-    :description "Yhteistyökumppaneille voisi olla myös oma osio. Tai
-    ainakin listaus logoineen."}
-
-   :team
-   {:headline    "Tiimi"
-    :description "Tekijöille voisi olla myös esittely?"}
-
-   :pool-types            (->translation-map :fi pools/pool-types)
-   :sauna-types           (->translation-map :fi pools/sauna-types)
-   :heat-sources          (->translation-map :fi pools/heat-sources)
-   :filtering-methods     (->translation-map :fi pools/filtering-methods)
-   :pool-structures       (->translation-map :fi materials/pool-structures)
-   :slide-structures      (->translation-map :fi materials/slide-structures)
-   :building-materials    (->translation-map :fi materials/building-materials)
-   :supporting-structures (->translation-map :fi materials/supporting-structures)
-   :ceiling-structures    (->translation-map :fi materials/ceiling-structures)
+   {:headline "Kehittämisessä mukana"}
 
    :help
-   {:headline    "Ohjeet"
-    :description "Lipaksen käyttöohjeet, videot yms."}
+   {:headline "Ohjeet"}
 
    :user
    {:headline        "Oma sivu"
@@ -220,7 +207,6 @@
     :total-pool-room-area-m2     "Allashuoneen pinta-ala m²"
     :total-water-area-m2         "Vesipinta-ala m²"
     :total-ice-area-m2           "Jääpinta-ala m²"
-    :water-slides-total-length-m "Vesiliukumäet yht. (m)"
     :heat-sections?              "Allastila on jaettu lämpötilaosioihin"
     :piled?                      "Paalutettu"
     :heat-source                 "Lämmönlähde"
@@ -366,11 +352,23 @@
     :dec "Joulukuu"}
 
    :time
-   {:year  "Vuosi"
-    :hour  "Tunti"
-    :month "Kuukausi"
-    :start "Alkoi"
-    :end   "Päättyi"}
+   {:year               "Vuosi"
+    :hour               "Tunti"
+    :month              "Kuukausi"
+    :start              "Alkoi"
+    :end                "Päättyi"
+    :date               "Päivämäärä"
+    :just-a-moment-ago  "Hetki sitten"
+    :less-than-hour-ago "Alle tunti sitten"
+    :today              "Tänään"
+    :yesterday          "Eilen"
+    :this-week          "Tällä viikolla"
+    :this-month         "Tässä kuussa"
+    :this-year          "Tänä vuonna"
+    :last-year          "Viime vuonna"
+    :two-years-ago      "2 vuotta sitten"
+    :three-years-ago    "3 vuotta sitten"
+    :long-time-ago      "Kauan sitten"}
 
    :duration
    {:hour  "tuntia"
@@ -381,7 +379,6 @@
     :edit              "Muokkaa"
     :save              "Tallenna"
     :save-draft        "Tallenna ehdotus"
-    :publish           "Julkaise muutokset"
     :delete            "Poista"
     :discard           "Kumoa"
     :cancel            "Peruuta"
@@ -392,7 +389,9 @@
     :show-account-menu "Avaa käyttäjävalikko"
     :open-main-menu    "Avaa päävalikko"
     :submit            "Lähetä"
-    :download          "Lataa"}
+    :download          "Lataa"
+    :browse-to-portal  "Siirry portaaliin"
+    :choose-energy     "Valitse energia"}
 
    :confirm
    {:headline              "Varmistus"
@@ -413,7 +412,10 @@
     :description  "Kuvaus"
     :general-info "Yleiset tiedot"
     :comment      "Kommentti"
-    :structure    "Rakenne"}
+    :structure    "Rakenne"
+    :hall         "Halli"
+    :updated      "Päivitetty"
+    :reported     "Ilmoitettu"}
 
    :notifications
    {:save-success "Tallennus onnistui"
@@ -432,102 +434,3 @@
     :email-not-found     "Sähköpostiosoitetta ei ole rekisteröity."
     :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."
     :invalid-form        "Korjaa punaisella merkityt kohdat"}})
-
-(def se {:menu
-         {:jyu "Jyväskylä universitet"
-          :login "Logga in"}
-         :sport
-         {:headline "Sport platsen"
-          :description "LIPAS är jättebra."}
-         :ice
-         {:headline "Ishall portal"
-          :description "Den här portal är jättebra"}
-         :ice-energy
-         {:description "Jaajaa"}
-         :swim
-         {:headline "Simhall portal"
-          :description "Den här portal är också jättebra"}
-         :open-data
-         {:headline "Öppen databorg"
-          :description "Alla data är jätteöppen."}
-         :help
-         {:headline "Hjälpa"
-          :description "Här har du hjälpa."}
-         :register
-         {:headline "Registera"}
-         :login
-         {:headline "Logga in"}
-         :time
-         {:year "År"}})
-
-
-(def en {:menu
-         {:jyu "University of Jyväskylä"
-          :login "Log in"
-          :register "Register"}
-         :sport
-         {:headline "Sports sites"
-          :description "LIPAS is cool."}
-         :ice
-         {:headline "Skating rink portal"
-          :description "Description comes here"}
-         :swim
-         {:headline "Swimming pool portal"
-          :description "Description comes here"}
-         :open-data
-         {:headline "Open data"
-          :description "All data is free for use"}
-         :help
-         {:headline "Help"
-          :description "Help help help"}
-         :register
-         {:headline "Register"}
-         :login
-         {:headline "Login"}})
-
-(def dicts {:fi fi
-            :se se
-            :en en
-            :tongue/fallback :fi})
-
-(comment (translate :fi :front-page/lipas-headline))
-(comment (translate :fi :menu/sports-panel))
-(comment (translate :fi :menu/sports-panel :lower))
-(def translate (tongue/build-translate dicts))
-
-(def formatters
-  {:lower-case s/lower-case
-   :upper-case s/upper-case
-   :capitalize s/capitalize})
-
-(defn fmt
-  "Supported formatter options:
-
-  :lower-case
-  :upper-case
-  :capitalize"
-  [s args]
-  (case (first args)
-    :lower-case (s/lower-case s)
-    :upper-case (s/upper-case s)
-    :capitalize (s/capitalize s)
-    s))
-
-(comment ((->tr-fn :fi) :menu/sports-panel))
-(comment ((->tr-fn :fi) :menu/sports-panel :lower))
-(defn ->tr-fn
-  "Creates translator fn with support for optional formatter. See
-  `lipas.ui.i18n/fmt`
-
-  Translator fn Returns current locale (:fi :sv :en) when called with
-  no args.
-
-  Function usage: ((->tr-fn :fi) :menu/sports-panel :lower)
-  => \"liikuntapaikat\""
-  [locale]
-  (fn
-    ([]
-     locale)
-    ([kw & args]
-     (-> (apply translate (into [locale kw] (filter (complement keyword?) args)))
-         (fmt args)))))

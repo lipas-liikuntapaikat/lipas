@@ -11,6 +11,11 @@
    (let [path (into [:user :login-form] path)]
      (assoc-in db path value))))
 
+(re-frame/reg-event-db
+ ::set-comeback-path
+ (fn [db [_ path]]
+   (assoc db :comeback-path path)))
+
 (re-frame/reg-event-fx
  ::login-success
  [(re-frame/after (fn [db _]
@@ -72,8 +77,8 @@
  ::logout
  [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
  (fn [{:keys [db]}  _]
-   {:db       (->  db/default-db
-                   (assoc :active-panel :login-panel)      ; Avoid flickering
-                   (assoc :backend-url (:backend-url db))) ; Dev-time helper
-    :dispatch [:lipas.ui.events/navigate "#/kirjaudu"]
-    :ga/set [{:dimension1 "logged-out"}]}))
+   {:db       (-> db/default-db
+                  (assoc :active-panel :login-panel)      ; avoid flickering
+                  (assoc :backend-url (:backend-url db))) ; dev-time helper
+    :dispatch [:lipas.ui.events/navigate "/#/kirjaudu"]
+    :ga/set   [{:dimension1 "logged-out"}]}))

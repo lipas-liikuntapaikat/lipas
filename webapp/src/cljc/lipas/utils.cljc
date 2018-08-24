@@ -49,3 +49,43 @@
 (defn ->int [s]
   (when-let [num (->number s)]
     (int num)))
+
+;;; Simple statistics ;;;
+
+;; https://github.com/clojure-cookbook/clojure-cookbook
+
+(defn mean [coll]
+  (let [sum (apply + coll)
+        count (count coll)]
+    (if (pos? count)
+      (/ sum count)
+      0)))
+
+(defn median [coll]
+  (when-not (empty? coll)
+    (let [sorted (sort coll)
+          cnt (count sorted)
+          halfway (quot cnt 2)]
+      (if (odd? cnt)
+        (nth sorted halfway) ; (1)
+        (let [bottom (dec halfway)
+              bottom-val (nth sorted bottom)
+              top-val (nth sorted halfway)]
+          (mean [bottom-val top-val]))))))
+
+(defn mode [coll]
+  (when-not (empty? coll)
+    (let [freqs (frequencies coll)
+          occurrences (group-by val freqs)
+          modes (last (sort occurrences))
+          modes (->> modes
+                     val
+                     (map key))]
+      modes)))
+
+(defn simple-stats [coll]
+  {:count  (count coll)
+   :sum    (reduce + coll)
+   :mean   (mean coll)
+   :median (median coll)
+   :mode   (mode coll)})

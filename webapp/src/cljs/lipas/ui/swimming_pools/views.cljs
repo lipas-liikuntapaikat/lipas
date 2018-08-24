@@ -14,6 +14,15 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
+(defn stats-tab []
+  (let [tr    (<== [:lipas.ui.subs/translator])
+        year  (dec utils/this-year)
+        stats (<== [::subs/stats year])]
+    (energy/energy-stats
+     {:tr    tr
+      :year  year
+      :stats stats})))
+
 (defn toggle-dialog
   ([dialog]
    (toggle-dialog dialog {}))
@@ -605,8 +614,9 @@
 (def tabs
   {0 "/#/uimahalliportaali"
    1 "/#/uimahalliportaali/ilmoita-tiedot"
-   2 "/#/uimahalliportaali/hallien-vertailu"
-   3 "/#/uimahalliportaali/energia-info"})
+   2 "/#/uimahalliportaali/hallit"
+   3 "/#/uimahalliportaali/hallien-vertailu"
+   4 "/#/uimahalliportaali/energia-info"})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])]
@@ -618,36 +628,42 @@
          {:scrollable true
           :full-width true
           :text-color "secondary"
-          :on-change #(==> [:lipas.ui.events/navigate (get tabs %2)])
-          :value active-tab}
+          :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
+          :value      active-tab}
 
-         ;; 0 Info tab
-         [mui/tab {:label (tr :swim/list)
-                   :icon (r/as-element [mui/icon "list_alt"])}]
+         ;; 0 Stats
+         [mui/tab {:label (tr :swim/headline-split)
+                   :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label (tr :swim/edit)
-                   :icon (r/as-element [mui/icon "edit"])}]
+         [mui/tab {:label (tr :lipas.energy-consumption/report)
+                   :icon  (r/as-element [mui/icon "edit"])}]
 
-         ;; 2 Compare tab
+         ;; 2 Halls tab
+         [mui/tab {:label (tr :swim/list)
+                   :icon  (r/as-element [mui/icon "list_alt"])}]
+
+         ;; 3 Compare tab
          [mui/tab {:label (tr :swim/visualizations)
-                   :icon (r/as-element [mui/icon "compare"])}]
+                   :icon  (r/as-element [mui/icon "compare"])}]
 
-
-         ;; 3 Energy info tab
-         [mui/tab {:label (tr :ice-energy/headline)
-                   :icon (r/as-element [mui/icon "info"])}]]]]]
+         ;; 4 Energy info tab
+         [mui/tab {:label (tr :swim-energy/headline)
+                   :icon  (r/as-element [mui/icon "info"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 (swimming-pools-tab tr logged-in?)
-        1 (energy-form-tab tr)
-        2 (compare-tab)
-        3 (energy-info-tab tr))]]))
+        0 [stats-tab]
+        1 [energy-form-tab tr]
+        2 [swimming-pools-tab tr logged-in?]
+        3 [compare-tab]
+        4 [energy-info-tab tr])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3110])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3130])
     [create-panel tr logged-in?]))

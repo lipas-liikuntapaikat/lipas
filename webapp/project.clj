@@ -25,6 +25,8 @@
                  [cljsjs/google-analytics "2015.04.13-0"]
                  [district0x.re-frame/google-analytics-fx "1.0.0"]
                  [cljsjs/babel-polyfill "6.20.0-2"]
+                 [cljsjs/date-fns "1.29.0-0"]
+                 [cljsjs/recharts "1.1.0-3"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.0-SNAPSHOT"]
@@ -66,6 +68,8 @@
   :figwheel {:css-dirs ["resources/public/css"]}
 
   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+
+  :jvm-opts ["-Duser.timezone=UTC"]
 
   :migratus {:store         :database
              :migration-dir "migrations"

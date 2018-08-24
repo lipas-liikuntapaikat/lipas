@@ -1,5 +1,6 @@
 (ns lipas.ui.energy.events
-  (:require [lipas.ui.utils :as utils]
+  (:require [ajax.core :as ajax]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
@@ -13,11 +14,15 @@
 (re-frame/reg-event-db
  ::select-energy-consumption-year
  (fn [db [_ year]]
-   (let [lipas-id (-> db :energy-consumption :lipas-id)
-         site     (get-in db [:sports-sites lipas-id])
-         rev      (or (utils/find-revision site year)
-                      (utils/make-revision site (utils/->timestamp year)))
-         rev      (utils/make-editable rev)]
+   (let [lipas-id   (-> db :energy-consumption :lipas-id)
+         site       (get-in db [:sports-sites lipas-id])
+         event-date (if (utils/this-year? year)
+                      (utils/timestamp)
+                      (utils/->end-of-year year))
+         rev        (or (utils/find-revision site year)
+                        (utils/make-revision site event-date))
+         rev        (assoc rev :event-date event-date)
+         rev        (utils/make-editable rev)]
      (-> db
          (assoc-in [:energy-consumption :year] year)
          (assoc-in [:sports-sites lipas-id :editing] rev)))))
@@ -54,3 +59,33 @@
          rev    (-> (utils/make-saveable rev)
                     (assoc :status status))]
      {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
+
+(re-frame/reg-event-db
+ ::fetch-energy-report-success
+ (fn [db [_ year type-code data]]
+   (assoc-in db [:energy-stats year type-code] data)))
+
+(re-frame/reg-event-fx
+ ::fetch-energy-report-failure
+ (fn [_ [_ resp]]
+   (let [fatal? false]
+     {:ga/exception [(:message resp) fatal?]})))
+
+(re-frame/reg-event-fx
+ ::fetch-energy-report
+ (fn [{:keys [db]} [_ year type-code]]
+   ;; (prn "Get by type-code!")
+   {:http-xhrio
+    {:method          :post
+     :params          {:type-code type-code
+                       :year      year}
+     :uri             (str (:backend-url db) "/actions/create-energy-report")
+     :format          (ajax/json-request-format)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::fetch-energy-report-success year type-code]
+     :on-failure      [::fetch-energy-report-failure]}}))
+
+(re-frame/reg-event-db
+ ::select-energy-type
+ (fn [db [_ energy-type]]
+   (assoc-in db [:energy-stats :chart-energy-type] energy-type)))

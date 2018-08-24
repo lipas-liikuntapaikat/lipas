@@ -9,8 +9,17 @@
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.user.subs :as user-subs]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
+
+(defn stats-tab []
+  (let [tr    (<== [:lipas.ui.subs/translator])
+        year  (dec utils/this-year)
+        stats (<== [::subs/stats year])]
+    [energy/energy-stats
+     {:tr    tr
+      :year  year
+      :stats stats}]))
 
 (defn toggle-dialog
   ([dialog]
@@ -613,9 +622,10 @@
 (def tabs
   {0 "/#/jaahalliportaali"
    1 "/#/jaahalliportaali/ilmoita-tiedot"
-   2 "/#/jaahalliportaali/hallien-vertailu"
-   3 "/#/jaahalliportaali/energia-info"
-   4 "/#/jaahalliportaali/raportit"})
+   2 "/#/jaahalliportaali/hallit"
+   3 "/#/jaahalliportaali/hallien-vertailu"
+   4 "/#/jaahalliportaali/energia-info"
+   5 "/#/jaahalliportaali/raportit"})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])
@@ -631,37 +641,44 @@
                    :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
                    :value      active-tab}
 
-         ;; 0 Ice stadiums tab
+         ;; 0 Stats tab
+         [mui/tab {:label (tr :ice-rinks/headline)
+                   :icon  (r/as-element [mui/icon "ac_unit"])}]
+
+         ;; 1 Energy form tab
+         [mui/tab {:label (tr :lipas.energy-consumption/report)
+                   :icon  (r/as-element [mui/icon "edit"])}]
+
+         ;; 2 Ice stadiums tab
          [mui/tab {:label (tr :ice-rinks/headline)
                    :icon  (r/as-element [mui/icon "list_alt"])}]
 
-         ;; 1 Energy form tab
-         [mui/tab {:label (tr :ice-form/headline-short)
-                   :icon  (r/as-element [mui/icon "edit"])}]
-
-         ;; 2 Compare tab
+         ;; 3 Compare tab
          [mui/tab {:label (tr :ice/comparison)
                    :icon  (r/as-element [mui/icon "compare"])}]
 
-         ;; 3 Energy info tab
+         ;; 4 Energy info tab
          [mui/tab {:label (tr :ice-energy/headline)
                    :icon  (r/as-element [mui/icon "info"])}]
 
-         ;; 4 Reports tab
+         ;; 5 Reports tab
          [mui/tab {:label (tr :reports/headline)
                    :icon  (r/as-element [mui/icon "assessment"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 (ice-stadiums-tab tr logged-in?)
-        1 (energy-form-tab tr)
-        2 (compare-tab)
-        3 (energy-info-tab tr)
-        4 (reports-tab tr))]]))
+        0 [stats-tab]
+        1 [energy-form-tab tr]
+        2 [ice-stadiums-tab tr logged-in?]
+        3 [compare-tab]
+        4 [energy-info-tab tr]
+        5 [reports-tab tr])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 2510])
+    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 2520])
     [create-panel tr logged-in?]))

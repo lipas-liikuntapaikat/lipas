@@ -8,31 +8,6 @@
    (assoc-in db [:swimming-pools :active-tab] active-tab)))
 
 (re-frame/reg-event-db
- ::select-energy-consumption-site
- (fn [db [_ {:keys [lipas-id]}]]
-   (assoc-in db [:swimming-pools :editing :lipas-id] lipas-id)))
-
-(re-frame/reg-event-db
- ::select-energy-consumption-year
- (fn [db [_ year]]
-   (let [lipas-id (-> db :swimming-pools :editing :lipas-id)
-         site     (get-in db [:sports-sites lipas-id])
-         rev      (or (utils/find-revision site year)
-                      (utils/make-revision site (utils/->timestamp year)))
-         rev      (utils/make-editable rev)]
-     (-> db
-         (assoc-in [:swimming-pools :editing :year] year)
-         (assoc-in [:sports-sites lipas-id :editing] rev)))))
-
-(re-frame/reg-event-fx
- ::commit-energy-consumption
- (fn [_ [_ rev]]
-   (let [rev (utils/make-saveable rev)
-         id  (:lipas-id rev)]
-     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]
-      :ga/event ["swimming-pool" "energy-reported" id]})))
-
-(re-frame/reg-event-db
  ::toggle-dialog
  (fn [db [_ dialog data]]
    (let [data (or data (-> db :swimming-pools :dialogs dialog :data))]
@@ -92,6 +67,6 @@
     [(when lipas-id
        [:lipas.ui.sports-sites.events/get-history lipas-id])
      (when lipas-id
-       [:lipas.ui.events/navigate (str "/#/uimahalliportaali/halli/" lipas-id)])
+       [:lipas.ui.events/navigate (str "/#/uimahalliportaali/hallit/" lipas-id)])
      (when-not lipas-id
-       [:lipas.ui.events/navigate "/#/uimahalliportaali"])]}))
+       [:lipas.ui.events/navigate "/#/uimahalliportaali/hallit"])]}))
