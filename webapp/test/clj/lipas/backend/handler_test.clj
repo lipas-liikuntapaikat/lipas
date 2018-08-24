@@ -214,10 +214,5 @@
                       (mock/body (->json {:type-code 3110 :year 2017}))))]
     (is (= 200 (:status resp)))))
 
-(comment (gen/generate (s/gen :lipas/sports-site))
-         (gen/generate (s/gen :lipas/email))
-         (gen/generate (s/gen :lipas.location/postal-code))
-         (gen/generate (s/gen :lipas/user))
-         (time
-          (core/energy-report db 3110 2016))
-         (t/run-tests *ns*))
+(comment
+  (t/run-tests *ns*))
