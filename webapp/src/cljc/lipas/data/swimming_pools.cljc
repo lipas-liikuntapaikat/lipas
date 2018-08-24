@@ -33,7 +33,10 @@
                         :en "Outdoor pool"}
    "other-pool"        {:fi "Muu allas"
                         :se nil
-                        :en "Other pool"}})
+                        :en "Other pool"}
+   "fitness-pool"      {:fi "Kuntouintiallas"
+                        :se nil
+                        :en "Fitness pool"}})
 
 (def filtering-methods
   {"pressure-suction"      {:fi "Paineimu"
