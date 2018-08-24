@@ -19,6 +19,7 @@
     [energy/energy-stats
      {:tr    tr
       :year  year
+      :link  "/#/jaahalliportaali/ilmoita-tiedot"
       :stats stats}]))
 
 (defn toggle-dialog
