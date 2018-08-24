@@ -109,7 +109,6 @@
                            :anchor   :top
                            :on-open  #()
                            :on-close toggle-drawer}
-     [lang-selector]
 
      [mui/list
 
@@ -123,6 +122,10 @@
        [mui/list-item-secondary-action
         [mui/icon-button {:on-click toggle-drawer}
          [mui/icon {:color "secondary"} "close"]]]]
+
+      ;; Lang-selector
+      [mui/list-item
+       [lang-selector]]
 
       ;; Home
       [mui/list-item {:button   true
