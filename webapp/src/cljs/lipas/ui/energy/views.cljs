@@ -260,7 +260,7 @@
            :monthly?  monthly?
            :cold?     cold?}])])))
 
-(defn energy-stats [{:keys [tr year stats]}]
+(defn energy-stats [{:keys [tr year stats link]}]
   (let [energy-type (<== [::subs/chart-energy-type])]
     [mui/grid {:container true}
 
@@ -298,7 +298,7 @@
         [mui/button {:color   :secondary
                      :size    :large
                      :variant :flat
-                     :href    "/#/uimahalliportaali/ilmoita-tiedot"}
+                     :href    link}
          (str "> " (tr :lipas.energy-stats/report))]]]]
 
      ;;; Hall of Fame (all energy info for previous year reported)
