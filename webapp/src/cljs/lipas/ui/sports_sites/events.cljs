@@ -67,12 +67,15 @@
  (fn [{:keys [db]} [_ result]]
    (let [tr     (:translator db)
          status (:status result)
-         type   (-> result :type :type-code)]
-     {:db       (utils/commit-edits db result) ;; Clear client side temp state
-      :dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr :notifications/save-success)
-                  :success? true}]
-      :ga/event ["save-sports-site" status type]})))
+         type   (-> result :type :type-code)
+         year   (dec utils/this-year)]
+     {:db         (utils/commit-edits db result) ;; Clear client side temp state
+      :dispatch-n [[:lipas.ui.events/set-active-notification
+                    {:message  (tr :notifications/save-success)
+                     :success? true}]
+                   (when (#{2510 2520 3110 3130} type)
+                     [:lipas.ui.energy.events/fetch-energy-report year type])]
+      :ga/event   ["save-sports-site" status type]})))
 
 (re-frame/reg-event-fx
  ::save-failure
