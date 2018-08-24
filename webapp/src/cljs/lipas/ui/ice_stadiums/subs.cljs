@@ -17,6 +17,38 @@
      (not-empty $))))
 
 (re-frame/reg-sub
+ ::total-counts
+ :<- [::latest-ice-stadium-revs]
+ (fn [sites _]
+   (->> sites
+        vals
+        (group-by (comp :type-code :type))
+        (reduce-kv (fn [m k v] (assoc m k (count v))) {}))))
+
+(re-frame/reg-sub
+ ::stats
+ (fn [[_ year] _]
+   [(re-frame/subscribe [::total-counts])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 2510])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 2520])])
+ (fn [[total-counts stats-2510 stats-2520] _]
+   {:counts
+    {:sites       (+ (get total-counts 2510)
+                     (get total-counts 2520))
+     :electricity (+ (-> stats-2510 :electricity-mwh :count)
+                     (-> stats-2520 :electricity-mwh :count))
+     :heat        (+ (-> stats-2510 :heat-mwh :count)
+                     (-> stats-2520 :heat-mwh :count))
+     :water       (+ (-> stats-2510 :water-m3 :count)
+                     (-> stats-2520 :water-m3 :count))}
+    :data-points  (sort-by :name (concat
+                                  (:data-points stats-2510)
+                                  (:data-points stats-2520)))
+    :hall-of-fame (sort-by :name (concat
+                                  (:hall-of-fame stats-2510)
+                                  (:hall-of-fame stats-2520)))}))
+
+(re-frame/reg-sub
  ::sites-to-edit
  :<- [:lipas.ui.user.subs/access-to-sports-sites]
  :<- [:lipas.ui.user.subs/admin?]

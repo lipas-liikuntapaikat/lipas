@@ -59,11 +59,14 @@
          (map sports-site/unmarshall))))
 
 (defn get-sports-sites-by-type-code [db-spec type-code {:keys [revs]
-                                                  :or   {revs "latest"}}]
-  (let [db-fn  (case revs
-                 "latest" sports-site/get-latest-by-type-code
-                 "yearly" sports-site/get-yearly-by-type-code)
-        params (-> {:type-code type-code}
+                                                        :or   {revs "latest"}}]
+  (let [db-fn  (cond
+                 (= revs "latest") sports-site/get-latest-by-type-code
+                 (= revs "yearly") sports-site/get-yearly-by-type-code
+                 (number? revs)    sports-site/get-by-type-code-and-year)
+        params (-> (merge {:type-code type-code}
+                          (when (number? revs)
+                            {:year revs}))
                    utils/->snake-case-keywords)]
     (->> (db-fn db-spec params)
          (map sports-site/unmarshall))))

@@ -1,5 +1,6 @@
 (ns lipas.ui.utils
-  (:require [cemerick.url :as url]
+  (:require [cljsjs.date-fns]
+            [cemerick.url :as url]
             [clojure.data :as data]
             [clojure.reader :refer [read-string]]
             [clojure.string :as string]
@@ -55,9 +56,9 @@
 (defn ->select-entries [tr prefix enum-map]
   (map (partial ->localized-select-entry tr prefix) (keys enum-map)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; TODO consider using proper time-manipulation lib ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TODO refactor to use js/dateFns where appropriate ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (comment (resolve-year "2014-12-02"))
 (comment (resolve-year 2014))
@@ -66,11 +67,38 @@
 
 (def this-year (.getFullYear (js/Date.)))
 
+(defn this-year? [x]
+  (= (str x) (str this-year)))
+
 (defn timestamp []
   (.toISOString (js/Date.)))
 
-(defn ->timestamp [year]
+(defn ->begin-of-year [year]
   (str year "-01-01T00:00:00.000Z"))
+
+(defn ->end-of-year [year]
+  (str year "-12-31T23:59:59.999Z"))
+
+(defn pretty-since-kw [s]
+  (let [tz-offset     (.getTimezoneOffset (js/Date.))
+        ts-utc        (.parse js/dateFns s)
+        ts            (.addMinutes js/dateFns ts-utc (- tz-offset))
+        now           (.addMinutes js/dateFns (js/Date.) (- tz-offset))
+        minutes-delta (.differenceInMinutes js/dateFns now ts)
+        hours-delta   (.differenceInHours js/dateFns now ts)
+        years-delta   (.differenceInCalendarYears js/dateFns now ts)]
+    (cond
+      (< minutes-delta 10)         :just-a-moment-ago
+      (< hours-delta 1)            :less-than-hour-ago
+      (.isToday js/dateFns ts)     :today
+      (.isYesterday js/dateFns ts) :yesterday
+      (.isThisWeek js/dateFns ts)  :this-week
+      (.isThisMonth js/dateFns ts) :this-month
+      (.isThisYear js/dateFns ts)  :this-year
+      (= years-delta 1)            :last-year
+      (= years-delta 2)            :two-years-ago
+      (= years-delta 3)            :three-years-ago
+      :else                        :long-time-ago)))
 
 (defn reverse-cmp [a b]
   (compare b a))
@@ -105,7 +133,7 @@
   "Highlights years where there exists any energy consumption data."
   [history]
   (let [history (index-by :year history)
-        data (for [y    (range 2000 (inc this-year))
+        data (for [y    (range 2000 this-year)
                    :let [data-exists? (data-exists? y history)]]
                {:label (if data-exists?
                          (str y " " "✓")
@@ -130,16 +158,29 @@
         timestamp      (get latest-by-year year)]
     (get history timestamp)))
 
+(comment
+  (.getFullYear (.parse js/dateFns "2014-01-01T00:00:00.000Z")) ; This works
+  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999Z")) ; Interesting...
+  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999"))) ; This works
+(defn same-year? [ts1 ts2]
+  (.isSameYear js/dateFns
+               (string/replace ts1 "Z" "")
+               (string/replace ts2 "Z" "")))
+
 (defn make-revision
   ([site]
    (make-revision site (timestamp)))
-  ([site timestamp]
+  ([site event-date]
    (let [history-with-edits (merge (:history site) (:edits site))
-         prev-rev           (resolve-prev-rev history-with-edits timestamp)]
+         prev-rev           (resolve-prev-rev history-with-edits event-date)
+         same-year?         (same-year? (:event-date prev-rev) event-date)]
      (-> prev-rev
-         (assoc :event-date timestamp)
-         (dissoc :energy-consumption)
-         (dissoc :visitors)))))
+         (assoc :event-date event-date)
+         (as-> $ (if same-year?
+                   $
+                   (-> $
+                       (dissoc :energy-consumption)
+                       (dissoc :visitors))))))))
 
 (defn latest-edit [edits]
   (let [latest (first (sort reverse-cmp (keys edits)))]
@@ -259,6 +300,10 @@
     (str protocol "://"
          host
          (when-not (#{80 443} port) (str ":" port)))))
+
+(defn current-path []
+  (let [path (-> js/window .-location .-href url/url :anchor)]
+    (str "/#" path)))
 
 (defn ->row [d headers]
   (let [header-keys (map first headers)]

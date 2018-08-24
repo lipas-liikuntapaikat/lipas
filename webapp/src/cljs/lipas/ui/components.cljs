@@ -692,3 +692,9 @@
    [mui/dialog-actions
     [mui/button {:on-click on-cancel} cancel-label]
     [mui/button {:on-click on-confirm} confirm-label]]])
+
+(defn li [text & children]
+  (into
+   [:li [mui/typography {:color :default}
+         text]]
+   children))

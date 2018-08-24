@@ -2,7 +2,8 @@
   (:require [buddy.hashers :as hashers]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
-            [lipas.backend.jwt :as jwt]))
+            [lipas.backend.jwt :as jwt]
+            [lipas.reports :as reports]))
 
 ;;; User ;;;
 
@@ -76,3 +77,9 @@
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
+
+;;; Reports ;;;
+
+(defn energy-report [db type-code year]
+  (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
+    (reports/energy-report data)))

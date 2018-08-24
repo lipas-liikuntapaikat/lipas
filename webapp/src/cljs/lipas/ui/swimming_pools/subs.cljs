@@ -1,6 +1,6 @@
 (ns lipas.ui.swimming-pools.subs
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]))
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::active-tab
@@ -14,6 +14,38 @@
    (as-> sites $
      (into {} (filter (comp #{3110 3120 3130} :type-code :type second)) $)
      (not-empty $))))
+
+(re-frame/reg-sub
+ ::total-counts
+ :<- [::latest-swimming-pool-revs]
+ (fn [sites _]
+   (->> sites
+        vals
+        (group-by (comp :type-code :type))
+        (reduce-kv (fn [m k v] (assoc m k (count v))) {}))))
+
+(re-frame/reg-sub
+ ::stats
+ (fn [[_ year] _]
+   [(re-frame/subscribe [::total-counts])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3110])
+    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3130])])
+ (fn [[total-counts stats-3110 stats-3130] _]
+   {:counts
+    {:sites       (+ (get total-counts 3110)
+                     (get total-counts 3130))
+     :electricity (+ (-> stats-3110 :electricity-mwh :count)
+                     (-> stats-3130 :electricity-mwh :count))
+     :heat        (+ (-> stats-3110 :heat-mwh :count)
+                     (-> stats-3130 :heat-mwh :count))
+     :water       (+ (-> stats-3110 :water-m3 :count)
+                     (-> stats-3130 :water-m3 :count))}
+    :data-points  (sort-by :name (concat
+                                  (:data-points stats-3110)
+                                  (:data-points stats-3130)))
+    :hall-of-fame (sort-by :name (concat
+                                  (:hall-of-fame stats-3110)
+                                  (:hall-of-fame stats-3130)))}))
 
 (re-frame/reg-sub
  ::sites-to-edit
@@ -196,6 +228,7 @@
             (update :heat-source get-heat-source))
 
         :renovations (:renovations latest)
+        :conditions  (:conditions latest)
 
         :water-treatment
         (-> (:water-treatment latest)

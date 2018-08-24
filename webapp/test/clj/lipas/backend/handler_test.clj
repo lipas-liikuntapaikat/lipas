@@ -208,5 +208,11 @@
     (is (= 200 (:status resp)))
     (is (s/valid? :lipas/sports-sites body))))
 
-(comment (gen/generate (s/gen :lipas/sports-site))
-         (t/run-tests *ns*))
+(deftest create-energy-report-test
+  (let [resp (app (-> (mock/request :post "/api/actions/create-energy-report")
+                      (mock/content-type "application/json")
+                      (mock/body (->json {:type-code 3110 :year 2017}))))]
+    (is (= 200 (:status resp)))))
+
+(comment
+  (t/run-tests *ns*))

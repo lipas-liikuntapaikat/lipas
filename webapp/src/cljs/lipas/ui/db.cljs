@@ -8,7 +8,7 @@
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as types]
             [lipas.schema.core :as schema]
-            [lipas.ui.i18n :as i18n]
+            [lipas.i18n.core :as i18n]
             [lipas.ui.utils :as utils]))
 
 (def default-db
@@ -63,6 +63,10 @@
      :slide  {:open? false}
      :energy {:open? false}
      :sauna  {:open? false}}}
+
+   ;; Energy stats
+   :energy-stats
+   {:chart-energy-type :electricity-mwh}
 
    ;; User
    :user

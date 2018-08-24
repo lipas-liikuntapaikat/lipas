@@ -15,3 +15,8 @@
  ::login-error
  (fn [db _]
    (-> db :user :login-error)))
+
+(re-frame/reg-sub
+ ::comeback-path
+ (fn [db _]
+   (:comeback-path db)))

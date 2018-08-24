@@ -85,7 +85,8 @@
         [login-form {:tr tr}]]]]]))
 
 (defn main [tr]
-  (let [logged-in? (<== [::subs/logged-in?])]
+  (let [logged-in?    (<== [::subs/logged-in?])
+        comeback-path (<== [::subs/comeback-path])]
     (if logged-in?
-      (navigate! "/#/profiili")
+      (navigate! (or comeback-path "/#/profiili"))
       [login-panel {:tr tr}])))
