@@ -103,7 +103,7 @@
     :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
     :electricity-mwh     "Sähkö MWh"
     :heat-mwh            "Lämpö MWh"
-    :water-m3            "Vesi M³"
+    :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
     :report              "Ilmoita tiedot"
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}

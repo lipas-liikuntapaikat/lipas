@@ -107,7 +107,7 @@
     :disclaimer          "*Based on reported consumption in {1}"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
-    :water-m3            "Water M³"
+    :water-m3            "Water m³"
     :hall-missing?       "Is your data missing from the diagram?"
     :report              "Report consumption"
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
