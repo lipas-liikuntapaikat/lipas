@@ -1,5 +1,6 @@
 (ns lipas.ui.energy.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
             [lipas.ui.energy.events :as events]
             [lipas.ui.energy.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -258,3 +259,62 @@
            :visitors? visitors?
            :monthly?  monthly?
            :cold?     cold?}])])))
+
+(defn energy-stats [{:keys [tr year stats]}]
+  (let [energy-type (<== [::subs/chart-energy-type])]
+    [mui/grid {:container true}
+
+     ;;; Energy chart
+     [mui/grid {:item true :xs 12 :md 12}
+      [mui/card {:square true}
+       [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
+       [mui/card-content
+        [mui/form-group {:style {:min-width     120
+                                 :max-width     200
+                                 :margin-bottom "2em"}}
+
+         ;; Select energy to display in the chart
+         [lui/select
+          {:label     (tr :actions/choose-energy)
+           :items     [{:value :electricity-mwh
+                        :label (tr :lipas.energy-stats/electricity-mwh)}
+                       {:value :heat-mwh
+                        :label (tr :lipas.energy-stats/heat-mwh)}
+                       {:value :water-m3
+                        :label (tr :lipas.energy-stats/water-m3)}]
+           :value     energy-type
+           :on-change #(==> [::events/select-energy-type %])}]]
+
+        ;; The Chart
+        (when (seq (:data-points stats))
+          [charts/energy-chart
+           {:energy       energy-type
+            :energy-label (tr (keyword :lipas.energy-stats energy-type))
+            :data         (:data-points stats)}])
+
+        ;; Is your hall missing from the chart? -> Report consumption
+        [mui/typography {:variant :display1}
+         (tr :lipas.energy-stats/hall-missing?)]
+        [mui/button {:color   :secondary
+                     :size    :large
+                     :variant :flat
+                     :href    "/#/uimahalliportaali/ilmoita-tiedot"}
+         (str "> " (tr :lipas.energy-stats/report))]]]]
+
+     ;;; Hall of Fame (all energy info for previous year reported)
+     [mui/grid  {:item true :xs 12 :md 12 :lg 12}
+      [mui/card {:square true
+                 :style  {:background-color "rgb(250, 250, 250)"}}
+       [mui/card-content
+        [mui/typography {:variant :display2}
+         "Hall of Fame"]
+        [mui/typography {:variant :title
+                         :color   :secondary
+                         :style   {:margin-top "0.75em"}}
+         (tr :lipas.energy-stats/energy-reported-for year)]
+        [:div {:style {:margin-top   "1em"
+                       :column-width "300px"}}
+         (into [:ul]
+               (for [m (:hall-of-fame stats)]
+                 [:lui/li
+                  [mui/typography (:name m)]]))]]]]]))

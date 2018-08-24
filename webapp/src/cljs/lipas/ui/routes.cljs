@@ -41,30 +41,34 @@
 
   (defroute "/jaahalliportaali" []
     (==> [:lipas.ui.events/set-active-panel :ice-panel])
-    (==> [:lipas.ui.ice-stadiums.events/display-site nil])
     (==> [:lipas.ui.ice-stadiums.events/set-active-tab 0]))
-
-  (defroute "/jaahalliportaali/halli/:lipas-id" {lipas-id :lipas-id}
-    (let [lipas-id (js/parseInt lipas-id)]
-      (==> [:lipas.ui.events/set-active-panel :ice-panel])
-      (==> [:lipas.ui.ice-stadiums.events/set-active-tab 0])
-      (==> [:lipas.ui.ice-stadiums.events/display-site {:lipas-id lipas-id}])))
 
   (defroute "/jaahalliportaali/ilmoita-tiedot" []
     (==> [:lipas.ui.events/set-active-panel :ice-panel])
     (==> [:lipas.ui.ice-stadiums.events/set-active-tab 1]))
 
-  (defroute "/jaahalliportaali/hallien-vertailu" []
+  (defroute "/jaahalliportaali/hallit" []
     (==> [:lipas.ui.events/set-active-panel :ice-panel])
+    (==> [:lipas.ui.ice-stadiums.events/display-site nil])
     (==> [:lipas.ui.ice-stadiums.events/set-active-tab 2]))
 
-  (defroute "/jaahalliportaali/energia-info" []
+  (defroute "/jaahalliportaali/hallit/:lipas-id" {lipas-id :lipas-id}
+    (let [lipas-id (js/parseInt lipas-id)]
+      (==> [:lipas.ui.events/set-active-panel :ice-panel])
+      (==> [:lipas.ui.ice-stadiums.events/set-active-tab 2])
+      (==> [:lipas.ui.ice-stadiums.events/display-site {:lipas-id lipas-id}])))
+
+  (defroute "/jaahalliportaali/hallien-vertailu" []
     (==> [:lipas.ui.events/set-active-panel :ice-panel])
     (==> [:lipas.ui.ice-stadiums.events/set-active-tab 3]))
 
-  (defroute "/jaahalliportaali/raportit" []
+  (defroute "/jaahalliportaali/energia-info" []
     (==> [:lipas.ui.events/set-active-panel :ice-panel])
     (==> [:lipas.ui.ice-stadiums.events/set-active-tab 4]))
+
+  (defroute "/jaahalliportaali/raportit" []
+    (==> [:lipas.ui.events/set-active-panel :ice-panel])
+    (==> [:lipas.ui.ice-stadiums.events/set-active-tab 5]))
 
    ;;; Swimming pools
 

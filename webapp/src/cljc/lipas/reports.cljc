@@ -2,27 +2,15 @@
   (:require [lipas.utils :as utils]))
 
 (defn- all-energy-data-exists? [{:keys [energy-consumption]}]
-  (let [{:keys [electricity-mwh
-                heat-mwh
-                water-m3]} energy-consumption]
+  (let [{:keys [electricity-mwh heat-mwh water-m3]} energy-consumption]
     (and
-     (some? electricity-mwh)
-     (some? heat-mwh)
-     (some? water-m3))))
-
-(defn- some-energy-data-exists? [{:keys [energy-consumption]}]
-  (let [{:keys [electricity-mwh
-                heat-mwh
-                water-m3]} energy-consumption]
-    (or
      (some? electricity-mwh)
      (some? heat-mwh)
      (some? water-m3))))
 
 (defn- get-values [sites field-kw]
   (->> sites
-       (map (comp field-kw
-                  :energy-consumption))
+       (map (comp field-kw :energy-consumption))
        (remove nil?)))
 
 (defn- ->data-point [{:keys [lipas-id name energy-consumption]}]

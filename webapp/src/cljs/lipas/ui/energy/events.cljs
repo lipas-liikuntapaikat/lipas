@@ -84,3 +84,8 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::fetch-energy-report-success year type-code]
      :on-failure      [::fetch-energy-report-failure]}}))
+
+(re-frame/reg-event-db
+ ::select-energy-type
+ (fn [db [_ energy-type]]
+   (assoc-in db [:energy-stats :chart-energy-type] energy-type)))

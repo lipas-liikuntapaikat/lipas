@@ -46,9 +46,9 @@
     [(when lipas-id
        [:lipas.ui.sports-sites.events/get-history lipas-id])
      (when lipas-id
-       [:lipas.ui.events/navigate (str "/#/jaahalliportaali/halli/" lipas-id)])
+       [:lipas.ui.events/navigate (str "/#/jaahalliportaali/hallit/" lipas-id)])
      (when-not lipas-id
-       [:lipas.ui.events/navigate "/#/jaahalliportaali"])]}))
+       [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]}))
 
 (re-frame/reg-event-fx
  ::download-contacts-report

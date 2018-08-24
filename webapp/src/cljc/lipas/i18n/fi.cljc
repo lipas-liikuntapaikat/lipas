@@ -79,17 +79,12 @@
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline       "Energia-info"
+   {:headline       "Energia info"
     :description    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
     :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
 
    :ice-comparison
    {:headline "Hallien vertailu"}
-
-   :ice-form
-   {:headline       "Ilmoita tiedot"
-    :headline-short "Ilmoita kulutus"
-    :select-rink    "Valitse halli"}
 
    :lipas.energy-consumption
    {:headline          "Energiankulutus"
@@ -100,7 +95,18 @@
     :water             "Vesi m³"
     :yearly            "Energiankulutus vuositasolla"
     :monthly?          "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
-    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"}
+    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"
+    :report            "Ilmoita kulutus"}
+
+   :lipas.energy-stats
+   {:headline            "Hallien energiankulutus vuonna {1}"
+    :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
+    :electricity-mwh     "Sähkö MWh"
+    :heat-mwh            "Lämpö MWh"
+    :water-m3            "Vesi M³"
+    :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
+    :report              "Ilmoita tiedot"
+    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
    :lipas.swimming-pool.visitors
    {:headline      "Kävijämäärä"
@@ -114,10 +120,9 @@
 
    :swim
    {:headline       "Uimahalliportaali"
-    :headline-split "Uimahalli-portaali"
+    :headline-split "Uimahalli portaali"
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
-    :edit           "Ilmoita kulutus"
     :description    "Uimahalliportaali sisältää hallien perus- ja
           energiankulutustietoja, sekä ohjeita energiatehokkuuden
           parantamiseen."
@@ -126,28 +131,13 @@
     :entering-energy-data "Energiankulutustietojen syöttäminen"
     :updating-basic-data  "Perustietojen päivitys"
 
-    :latest-updates             "Viimeksi päivitetyt tiedot"}
+    :latest-updates "Viimeksi päivitetyt tiedot"}
 
    :swim-energy
-   {:headline       "Energiainfo"
+   {:headline       "Energia info"
     :headline-short "Info"
     :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
     :ukty-link      "Siirry UKTYn sivuille"}
-
-   :did-you-know
-   {:headline            "Tiesitkö että..."
-    :count-by-type       "Suomessa on {1} uimahallia ja {2} kylpylää"
-    :construction-year   "Keskimääräinen rakennusvuosi on {1}"
-    :water-area          "Vesipinta-alaa on yhteensä {1} m²"
-    :slide-sum           "Vesiliukumäkeä on yhteensä {1} metriä"
-    :showers-sum         "Suihkuja on yhteensä {1} kappaletta"
-    :energy-3110-avg     "Keskimääräinen uimahalli kuluttaa vuodessa*"
-    :energy-3130-avg     "Keskimääräinen kylpylä kuluttaa vuodessa*"
-    :electricity-avg     "{1} MWh sähköä"
-    :heat-avg            "{1} MWh lämpöenergiaa"
-    :water-avg           "{1} kuutiota vettä"
-    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"
-    :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"}
 
    :open-data
    {:headline            "Avoin data"
@@ -157,10 +147,10 @@
     :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
    :partners
-   {:headline    "Kehittämisessä mukana"}
+   {:headline "Kehittämisessä mukana"}
 
    :help
-   {:headline    "Ohjeet"}
+   {:headline "Ohjeet"}
 
    :user
    {:headline        "Oma sivu"
@@ -400,7 +390,8 @@
     :open-main-menu    "Avaa päävalikko"
     :submit            "Lähetä"
     :download          "Lataa"
-    :browse-to-portal  "Siirry portaaliin"}
+    :browse-to-portal  "Siirry portaaliin"
+    :choose-energy     "Valitse energia"}
 
    :confirm
    {:headline              "Varmistus"

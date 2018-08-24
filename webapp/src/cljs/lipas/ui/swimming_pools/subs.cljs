@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.subs
   (:require [lipas.ui.utils :as utils]
-            [lipas.utils :as utils2]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -41,15 +40,12 @@
                      (-> stats-3130 :heat-mwh :count))
      :water       (+ (-> stats-3110 :water-m3 :count)
                      (-> stats-3130 :water-m3 :count))}
-    :data-points (sort-by :name (concat (:data-points stats-3110)
-                                        (:data-points stats-3130)))
-    :hall-of-fame (concat (:hall-of-fame stats-3110)
-                          (:hall-of-fame stats-3130))}))
-
-(re-frame/reg-sub
- ::chart-energy-type
- (fn [db _]
-   (-> db :swimming-pools :chart-energy-type)))
+    :data-points  (sort-by :name (concat
+                                  (:data-points stats-3110)
+                                  (:data-points stats-3130)))
+    :hall-of-fame (sort-by :name (concat
+                                  (:hall-of-fame stats-3110)
+                                  (:hall-of-fame stats-3130)))}))
 
 (re-frame/reg-sub
  ::sites-to-edit

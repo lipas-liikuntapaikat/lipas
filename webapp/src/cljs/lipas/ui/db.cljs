@@ -56,7 +56,6 @@
     :heat-sources      swimming-pools/heat-sources
     :slide-structures  materials/slide-structures
     :pool-structures   materials/pool-structures
-    :chart-energy-type :electricity-mwh
     :editing           nil
     :editing?          false
     :dialogs
@@ -64,6 +63,10 @@
      :slide  {:open? false}
      :energy {:open? false}
      :sauna  {:open? false}}}
+
+   ;; Energy stats
+   :energy-stats
+   {:chart-energy-type :electricity-mwh}
 
    ;; User
    :user
