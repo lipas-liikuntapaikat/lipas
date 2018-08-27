@@ -597,13 +597,15 @@
 
 (s/def :lipas.swimming-pool.sauna/men? boolean?)
 (s/def :lipas.swimming-pool.sauna/women? boolean?)
+(s/def :lipas.swimming-pool.sauna/accessible? boolean?)
 (s/def :lipas.swimming-pool.sauna/type
   (into #{} (keys swimming-pools/sauna-types)))
 
 (s/def :lipas.swimming-pool/sauna
   (s/keys :req-un [:lipas.swimming-pool.sauna/type]
           :opt-un [:lipas.swimming-pool.sauna/men?
-                   :lipas.swimming-pool.sauna/women?]))
+                   :lipas.swimming-pool.sauna/women?
+                   :lipas.swimming-pool.sauna/accessible?]))
 
 (s/def :lipas.swimming-pool/saunas
   (s/coll-of :lipas.swimming-pool/sauna
