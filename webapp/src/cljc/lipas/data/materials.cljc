@@ -1,6 +1,6 @@
 (ns lipas.data.materials)
 
-;;;; Contains also structures
+;; Contains also structures
 
 (def all
   {"asphalt"          {:fi "Asfaltti"
@@ -74,8 +74,7 @@
                        :en "Composite beam"}})
 
 (def building-materials
-  (select-keys all ["concrete" "brick" "tile" "steel" "wood" "glass"
-                    "sheet-metal" "solid-rock"]))
+  (select-keys all ["concrete" "brick""steel" "wood" "solid-rock"]))
 
 (def slide-structures
   (select-keys all ["concrete" "steel" "hardened-plastic"]))
@@ -89,7 +88,7 @@
 
 (def ceiling-structures
   (select-keys all ["wood" "hollow-core-slab" "steel" "double-t-beam"
-                    "concrete" "glass" "solid-rock"]))
+                    "concrete" "glass" "solid-rock" "polyurethane-panel"]))
 
 (def base-floor-structures
   (select-keys all ["concrete" "asphalt" "sand"]))
