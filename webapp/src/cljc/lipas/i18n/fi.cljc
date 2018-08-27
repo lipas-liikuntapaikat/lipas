@@ -87,16 +87,18 @@
    {:headline "Hallien vertailu"}
 
    :lipas.energy-consumption
-   {:headline          "Energiankulutus"
-    :headline-year     "Energiankulutus vuonna {1}"
-    :electricity       "Sähköenergia MWh"
-    :heat              "Lämpöenergia (ostettu) MWh"
-    :cold              "Kylmäenergia (ostettu) Mwh"
-    :water             "Vesi m³"
-    :yearly            "Energiankulutus vuositasolla"
-    :monthly?          "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
-    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"
-    :report            "Ilmoita kulutus"}
+   {:headline                  "Energiankulutus"
+    :headline-year             "Energiankulutus vuonna {1}"
+    :electricity               "Sähköenergia MWh"
+    :heat                      "Lämpöenergia (ostettu) MWh"
+    :cold                      "Kylmäenergia (ostettu) Mwh"
+    :water                     "Vesi m³"
+    :yearly                    "Hallin energiankulutus vuositasolla"
+    :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
+    :reported-for-year         "Vuoden {1} energiankulutus ilmoitettu"
+    :report                    "Ilmoita kulutus"
+    :contains-other-buildings? "Lukemat sisältävät myös muita
+    rakennuksia tai tiloja"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"

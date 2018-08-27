@@ -11,41 +11,52 @@
   [mui/form-group
 
    ;; Electricity Mwh
-   [lui/text-field {:label     (tr :lipas.energy-consumption/electricity)
-                    :disabled  disabled?
-                    :type      "number"
-                    :value     (:electricity-mwh data)
-                    :spec      :lipas.energy-consumption/electricity-mwh
-                    :adornment (tr :physical-units/mwh)
-                    :on-change #(on-change :electricity-mwh %)}]
+   [lui/text-field
+    {:label     (tr :lipas.energy-consumption/electricity)
+     :disabled  disabled?
+     :type      "number"
+     :value     (:electricity-mwh data)
+     :spec      :lipas.energy-consumption/electricity-mwh
+     :adornment (tr :physical-units/mwh)
+     :on-change #(on-change :electricity-mwh %)}]
 
    ;; Heat Mwh
-   [lui/text-field {:label     (tr :lipas.energy-consumption/heat)
-                    :disabled  disabled?
-                    :type      "number"
-                    :spec      :lipas.energy-consumption/heat-mwh
-                    :adornment (tr :physical-units/mwh)
-                    :value     (:heat-mwh data)
-                    :on-change #(on-change :heat-mwh %)}]
+   [lui/text-field
+    {:label     (tr :lipas.energy-consumption/heat)
+     :disabled  disabled?
+     :type      "number"
+     :spec      :lipas.energy-consumption/heat-mwh
+     :adornment (tr :physical-units/mwh)
+     :value     (:heat-mwh data)
+     :on-change #(on-change :heat-mwh %)}]
 
    ;; Cold Mwh
    (when cold?
-     [lui/text-field {:label     (tr :lipas.energy-consumption/cold)
-                      :disabled  disabled?
-                      :type      "number"
-                      :spec      :lipas.energy-consumption/cold-mwh
-                      :adornment (tr :physical-units/mwh)
-                      :value     (:cold-mwh data)
-                      :on-change #(on-change :cold-mwh %)}])
+     [lui/text-field
+      {:label     (tr :lipas.energy-consumption/cold)
+       :disabled  disabled?
+       :type      "number"
+       :spec      :lipas.energy-consumption/cold-mwh
+       :adornment (tr :physical-units/mwh)
+       :value     (:cold-mwh data)
+       :on-change #(on-change :cold-mwh %)}])
 
    ;; Water m³
-   [lui/text-field {:label     (tr :lipas.energy-consumption/water)
-                    :disabled  disabled?
-                    :type      "number"
-                    :spec      :lipas.energy-consumption/water-m3
-                    :adornment (tr :physical-units/m3)
-                    :value     (:water-m3 data)
-                    :on-change #(on-change :water-m3 %)}]])
+   [lui/text-field
+    {:label     (tr :lipas.energy-consumption/water)
+     :disabled  disabled?
+     :type      "number"
+     :spec      :lipas.energy-consumption/water-m3
+     :adornment (tr :physical-units/m3)
+     :value     (:water-m3 data)
+     :on-change #(on-change :water-m3 %)}]
+
+   ;; Contains other buildings?
+   [:span {:style {:margin-top "1em"}}
+    [lui/checkbox
+     {:label     (tr :lipas.energy-consumption/contains-other-buildings?)
+      :value     (:contains-other-buildings? data)
+      :on-change #(on-change :contains-other-buildings? %)}]]])
 
 (comment ;; Example data grid
   {:jan {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}

@@ -91,16 +91,17 @@
     :select-rink    "Select stadium"}
 
    :lipas.energy-consumption
-   {:headline          "Energy consumption"
-    :headline-year     "Energy consumption in {1}"
-    :electricity       "Electricity MWh"
-    :heat              "Heat (acquired) MWh"
-    :cold              "Cold energy (acquired) Mwh"
-    :water             "Water m³"
-    :yearly            "Yearly energy consumption"
-    :monthly?          "I want to report monthly energy consumption"
-    :reported-for-year "Energy consumption reported for {1}"
-    :report            "Report consumption"}
+   {:headline                  "Energy consumption"
+    :headline-year             "Energy consumption in {1}"
+    :electricity               "Electricity MWh"
+    :heat                      "Heat (acquired) MWh"
+    :cold                      "Cold energy (acquired) Mwh"
+    :water                     "Water m³"
+    :yearly                    "Yearly energy consumption"
+    :monthly?                  "I want to report monthly energy consumption"
+    :reported-for-year         "Energy consumption reported for {1}"
+    :report                    "Report consumption"
+    :contains-other-buildings? "Readings contain also other buildings or spaces"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"

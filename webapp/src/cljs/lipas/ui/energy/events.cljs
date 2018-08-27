@@ -27,11 +27,13 @@
          (assoc-in [:energy-consumption :year] year)
          (assoc-in [:sports-sites lipas-id :editing] rev)))))
 
-(defn- calculate-totals [data]
-  {:electricity-mwh (reduce + (map :electricity-mwh (vals data)))
-   :heat-mwh        (reduce + (map :heat-mwh (vals data)))
-   :cold-mwh        (reduce + (map :cold-mwh (vals data)))
-   :water-m3        (reduce + (map :water-m3 (vals data)))})
+(defn- calculate-totals [yearly-data monthly-data]
+  (merge
+   yearly-data
+   {:electricity-mwh (reduce + (map :electricity-mwh (vals monthly-data)))
+    :heat-mwh        (reduce + (map :heat-mwh (vals monthly-data)))
+    :cold-mwh        (reduce + (map :cold-mwh (vals monthly-data)))
+    :water-m3        (reduce + (map :water-m3 (vals monthly-data)))}))
 
 (re-frame/reg-event-db
  ::calculate-total-energy-consumption
@@ -41,7 +43,7 @@
          monthly-path (conj base-path :energy-consumption-monthly)
          monthly-data (get-in db monthly-path)]
      (if monthly-data
-       (update-in db yearly-path #(calculate-totals monthly-data))
+       (update-in db yearly-path #(calculate-totals % monthly-data))
        db))))
 
 (re-frame/reg-event-fx
