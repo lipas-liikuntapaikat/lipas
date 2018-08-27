@@ -98,6 +98,8 @@
 (s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
+(s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
+
 ;;; User ;;;
 
 (s/def :lipas.user/id uuid?)
@@ -390,7 +392,7 @@
 (s/def :lipas.ice-stadium.conditions/air-humidity-min (s/int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/air-humidity-max (s/int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/stand-temperature-c (s/int-in -10 (inc 50)))
-(s/def :lipas.ice-stadium.conditions/daily-open-hours (s/int-in 0 (inc 24)))
+(s/def :lipas.ice-stadium.conditions/daily-open-hours :lipas/hours-in-day)
 (s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
@@ -644,8 +646,25 @@
 ;; Conditions ;;
 
 (s/def :lipas.swimming-pool.conditions/open-days-in-year (s/int-in 0 (inc 365)))
+(s/def :lipas.swimming-pool.conditions/daily-open-hours :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-mon :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-tue :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-wed :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-thu :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-fri :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-sat :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-sun :lipas/hours-in-day)
+
 (s/def :lipas.swimming-pool/conditions
   (s/keys :opt-un [:lipas.swimming-pool.conditions/open-days-in-year
+                   :lipas.swimming-pool.conditions/open-hours-in-day
+                   :lipas.swimming-pool.conditions/open-hours-mon
+                   :lipas.swimming-pool.conditions/open-hours-tue
+                   :lipas.swimming-pool.conditions/open-hours-wed
+                   :lipas.swimming-pool.conditions/open-hours-thu
+                   :lipas.swimming-pool.conditions/open-hours-fri
+                   :lipas.swimming-pool.conditions/open-hours-sat
+                   :lipas.swimming-pool.conditions/open-hours-sun
                    :lipas.swimming-pool.conditions/total-visitors-count]))
 
 (s/def :lipas.swimming-pool.type/type-code #{3110 3120 3130})
@@ -653,6 +672,18 @@
   (s/merge
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.swimming-pool.type/type-code])))
+
+;; Energy saving ;;
+(s/def :lipas.swimming-pool.energy-saving/shower-water-heat-recovery?
+  boolean?)
+
+(s/def :lipas.swimming-pool.energy-saving/filter-rinse-water-recovery?
+  boolean?)
+
+(s/def :lipas.swimming-pool/energy-saving
+  (s/keys :opt-un
+          [:lipas.swimming-pool.energy-saving/shower-water-heat-recovery?
+           :lipas.swimming-pool.energy-saving/filter-rinse-water-recovery?]))
 
 ;; Visitors ;;
 (s/def :lipas.swimming-pool.visitors/total-count (s/int-in 0 1000000))
@@ -672,6 +703,7 @@
                     :lipas.swimming-pool/slides
                     :lipas.swimming-pool/conditions
                     :lipas.swimming-pool/visitors
+                    :lipas.swimming-pool/energy-saving
                     :lipas/energy-consumption])))
 
 (s/def :lipas.sports-site/swimming-pools

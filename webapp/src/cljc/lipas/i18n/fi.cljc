@@ -116,7 +116,20 @@
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"
     :daily-open-hours  "Aukiolotunnit päivässä"
-    :open-days-in-year "Aukiolopäivät vuodessa"}
+    :open-days-in-year "Aukiolopäivät vuodessa"
+    :open-hours-mon    "Maanantaisin"
+    :open-hours-tue    "Tiistaisin"
+    :open-hours-wed    "Keskiviikkoisin"
+    :open-hours-thu    "Torstaisin"
+    :open-hours-fri    "Perjantaisin"
+    :open-hours-sat    "Lauantaisin"
+    :open-hours-sun    "Sunnuntaisin"}
+
+   :lipas.swimming-pool.energy-saving
+   {:headline                    "Energiansäästö"
+    :shower-water-heat-recovery? "Suihkuveden lämmöntalteenotto"
+    :filter-rinse-water-heat-recovery?
+    "Suodattimien huuhteluveden lämmöntalteenotto"}
 
    :swim
    {:headline       "Uimahalliportaali"

@@ -121,7 +121,20 @@
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"
     :daily-open-hours  "Daily open hours"
-    :open-days-in-year "Open days in year"}
+    :open-days-in-year "Open days in year"
+    :open-hours-mon    "Mondays"
+    :open-hours-tue    "Tuesdays"
+    :open-hours-wed    "Wednesdays"
+    :open-hours-thu    "Thursdays"
+    :open-hours-fri    "Fridays"
+    :open-hours-sat    "Saturdays"
+    :open-hours-sun    "Sundays"}
+
+   :lipas.swimming-pool.energy-saving
+   {:headline                    "Energy saving"
+    :shower-water-heat-recovery? "Shower water heat recovery?"
+    :filter-rinse-water-heat-recovery?
+    "Filter rinse water heat recovery?"}
 
    :swim
    {:headline       "Swimming pools"
@@ -371,8 +384,8 @@
     :long-time-ago      "Long time ago"}
 
    :duration
-   {:hour  "Hours"
-    :month "Months"}
+   {:hour  "hours"
+    :month "months"}
 
    :actions
    {:add               "Add"
