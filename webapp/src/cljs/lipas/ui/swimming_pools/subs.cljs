@@ -107,7 +107,7 @@
    (-> db
        :swimming-pools
        :pool-types
-       (:dissoc "outdoor-pool")))) ; now we have checbox instead of own type
+       (dissoc "outdoor-pool")))) ; now we have checbox instead of own type
 
 (re-frame/reg-sub
  ::pool-structures
