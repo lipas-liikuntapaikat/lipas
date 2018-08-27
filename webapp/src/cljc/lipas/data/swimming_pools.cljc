@@ -39,15 +39,9 @@
                         :en "Fitness pool"}})
 
 (def filtering-methods
-  {"pressure-suction"      {:fi "Paineimu"
-                            :se nil
-                            :en "Pressure suction"}
-   "pressure-sand"         {:fi "Painehiekka"
+  {"pressure-sand"         {:fi "Painehiekka"
                             :se nil
                             :en "Pressure sand"}
-   "suction-sand"          {:fi "Imuhiekka"
-                            :se nil
-                            :en "Suction sand"}
    "open-sand"             {:fi "Avohiekka"
                             :se nil
                             :en "Open sand"}
@@ -63,12 +57,12 @@
    "precipitation"         {:fi "Saostus"
                             :se nil
                             :en "Precipitation"}
-   "sand"                  {:fi "Hiekka"
-                            :se nil
-                            :en "Sand"}
    "activated-carbon"      {:fi "Aktiivihiili"
                             :se nil
-                            :en "Activated carbon"}})
+                            :en "Activated carbon"}
+   "membrane-filtration"   {:fi "Kalvosuodatus"
+                            :se nil
+                            :en "Membrane filtration"}})
 
 (def sauna-types
   {"steam-sauna"    {:fi "Höyrysauna"
@@ -79,7 +73,10 @@
                      :en "Sauna"}
    "infrared-sauna" {:fi "Infrapunasauna"
                      :se nil
-                     :en "Infrared sauna"}})
+                     :en "Infrared sauna"}
+   "other-sauna"    {:fi "Muu sauna"
+                     :se nil
+                     :en "Other sauna"}})
 
 (def heat-sources
   {"private-power-station" {:fi "Oma voimalaitos"
