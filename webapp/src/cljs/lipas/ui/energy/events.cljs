@@ -74,7 +74,6 @@
 (re-frame/reg-event-fx
  ::fetch-energy-report
  (fn [{:keys [db]} [_ year type-code]]
-   ;; (prn "Get by type-code!")
    {:http-xhrio
     {:method          :post
      :params          {:type-code type-code

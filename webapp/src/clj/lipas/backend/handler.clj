@@ -169,22 +169,23 @@
              {:status 200
               :body   (core/energy-report db type-code year)}))}}]]]
 
-    {:data {:coercion   reitit.coercion.spec/coercion
-            :muuntaja   m/instance
-            :middleware [;; query-params & form-params
-                         params/wrap-params
-                         ;; content-negotiation
-                         muuntaja/format-negotiate-middleware
-                         ;; encoding response body
-                         muuntaja/format-response-middleware
-                         ;; exception handling
-                         exceptions-mw
-                         ;; decoding request body
-                         muuntaja/format-request-middleware
-                         ;; coercing response bodys
-                         coercion/coerce-response-middleware
-                         ;; coercing request parameters
-                         coercion/coerce-request-middleware]}})
+    {:data
+     {:coercion   reitit.coercion.spec/coercion
+      :muuntaja   m/instance
+      :middleware [;; query-params & form-params
+                   params/wrap-params
+                   ;; content-negotiation
+                   muuntaja/format-negotiate-middleware
+                   ;; encoding response body
+                   muuntaja/format-response-middleware
+                   ;; exception handling
+                   exceptions-mw
+                   ;; decoding request body
+                   muuntaja/format-request-middleware
+                   ;; coercing response bodys
+                   coercion/coerce-response-middleware
+                   ;; coercing request parameters
+                   coercion/coerce-request-middleware]}})
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/"})
     (ring/create-default-handler))))
