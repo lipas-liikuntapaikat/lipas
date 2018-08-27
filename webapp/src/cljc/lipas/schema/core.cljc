@@ -556,9 +556,11 @@
 (s/def :lipas.swimming-pool.pool/depth-min-m (number-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/depth-max-m (number-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
+(s/def :lipas.swimming-pool.pool/outdoor-pool? boolean?)
 
 (s/def :lipas.swimming-pool/pool
   (s/keys :opt-un [:lipas.swimming-pool.pool/type
+                   :lipas.swimming-pool.pool/outdoor-pool?
                    :lipas.swimming-pool.pool/temperature-c
                    :lipas.swimming-pool.pool/volume-m3
                    :lipas.swimming-pool.pool/area-m2

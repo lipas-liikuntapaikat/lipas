@@ -288,6 +288,9 @@
     :activated-carbon? "Activated carbon"
     :filtering-methods "Filtering methods"}
 
+   :lipas.swimming-pool.pool
+   {:outdoor-pool? "Outdoor pool?"}
+
    :lipas.swimming-pool.pools
    {:headline  "Pools"
     :add-pool  "Add pool"
