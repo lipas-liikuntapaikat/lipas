@@ -289,7 +289,7 @@
     :filtering-methods "Suodatustapa"}
 
    :lipas.swimming-pool.pool
-   {:outdoor-pool? "Ulkoallas?"}
+   {:outdoor-pool? "Ulkoallas"}
 
    :lipas.swimming-pool.pools
    {:headline  "Altaat"
@@ -303,11 +303,12 @@
     :edit-slide "Muokkaa liukumäkeä"}
 
    :lipas.swimming-pool.saunas
-   {:headline   "Saunat"
-    :add-sauna  "Lisää sauna"
-    :edit-sauna "Muokkaa saunaa"
-    :women?     "Naiset"
-    :men?       "Miehet"}
+   {:headline    "Saunat"
+    :add-sauna   "Lisää sauna"
+    :edit-sauna  "Muokkaa saunaa"
+    :women?      "Naiset"
+    :men?        "Miehet"
+    :accessible? "Esteetön"}
 
    :lipas.swimming-pool.facilities
    {:headline                       "Muut palvelut"

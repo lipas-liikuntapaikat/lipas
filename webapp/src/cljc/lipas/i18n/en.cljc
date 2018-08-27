@@ -289,7 +289,7 @@
     :filtering-methods "Filtering methods"}
 
    :lipas.swimming-pool.pool
-   {:outdoor-pool? "Outdoor pool?"}
+   {:outdoor-pool? "Outdoor pool"}
 
    :lipas.swimming-pool.pools
    {:headline  "Pools"
@@ -303,11 +303,12 @@
     :edit-slide "Edit slide"}
 
    :lipas.swimming-pool.saunas
-   {:headline   "Saunas"
-    :add-sauna  "Add sauna"
-    :edit-sauna "Edit sauna"
-    :women?     "Women"
-    :men?       "Men"}
+   {:headline    "Saunas"
+    :add-sauna   "Add sauna"
+    :edit-sauna  "Edit sauna"
+    :women?      "Women"
+    :men?        "Men"
+    :accessible? "Accessible"}
 
    :lipas.swimming-pool.facilities
    {:headline                       "Other services"
