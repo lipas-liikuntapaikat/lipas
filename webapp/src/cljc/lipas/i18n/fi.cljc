@@ -288,6 +288,9 @@
     :activated-carbon? "Aktiivihiili"
     :filtering-methods "Suodatustapa"}
 
+   :lipas.swimming-pool.pool
+   {:outdoor-pool? "Ulkoallas?"}
+
    :lipas.swimming-pool.pools
    {:headline  "Altaat"
     :add-pool  "Lisää allas"

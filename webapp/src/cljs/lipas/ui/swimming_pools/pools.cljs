@@ -16,6 +16,12 @@
         locale          (tr)]
     [mui/form-group
 
+     ;; Outdoor pool?
+     [lui/checkbox
+      {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
+       :value     (:outdoor-pool? data)
+       :on-change #(set-field :outdoor-pool? %)}]
+
      ;; Pool type
      [lui/select
       {:required  true
@@ -117,6 +123,7 @@
 
 (defn- make-headers [tr]
   [[:type (tr :general/type)]
+   [:outdoor-pool? (tr :lipas.swimming-pool.pool/outdoor-pool?)]
    [:temperature-c (tr :physical-units/temperature-c)]
    [:volume-m3 (tr :dimensions/volume-m3)]
    [:area-m2 (tr :dimensions/surface-area-m2)]
