@@ -4,7 +4,7 @@
             [lipas.ui.energy.events :as events]
             [lipas.ui.energy.subs :as subs]
             [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
 (defn form [{:keys [tr data on-change disabled? cold?]}]
@@ -246,10 +246,11 @@
                          :xs    12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
-            {:label     (tr :actions/select-year)
-             :value     year
-             :items     years
-             :on-change #(==> [::events/select-energy-consumption-year %])}]]])
+            {:label         (tr :actions/select-year)
+             :value         year
+             :items         years
+             :sort-cmp      utils/reverse-cmp
+             :on-change     #(==> [::events/select-energy-consumption-year %])}]]])
 
        (when (and sites site year)
          [energy-form
