@@ -10,23 +10,15 @@
   (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
-  (let [structures (<== [::subs/slide-structures])
-        set-field  (partial set-field :slide)
-        locale     (tr)]
+  (let [set-field  (partial set-field :slide)]
     [mui/form-group
-     [lui/select {:required  true
-                  :label     (tr :general/structure)
-                  :value     (:structure data)
-                  :items     structures
-                  :label-fn  (comp locale second)
-                  :value-fn  first
-                  :on-change #(set-field :structure %)}]
-     [lui/text-field {:label     (tr :dimensions/length-m)
-                      :adornment (tr :physical-units/m)
-                      :type      "number"
-                      :value     (:length-m data)
-                      :spec      :lipas.swimming-pool.slide/length-m
-                      :on-change #(set-field :length-m %)}]]))
+     [lui/text-field
+      {:label     (tr :dimensions/length-m)
+       :adornment (tr :physical-units/m)
+       :type      "number"
+       :value     (:length-m data)
+       :spec      :lipas.swimming-pool.slide/length-m
+       :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::subs/slide-form])
@@ -46,21 +38,19 @@
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
-  [[:structure (tr :general/structure)]
-   [:length-m (tr :dimensions/length-m)]])
+  [[:length-m (tr :dimensions/length-m)]])
 
 (defn table [{:keys [tr items lipas-id]}]
-  (let [localize (partial localize-field tr :structure :slide-structures)]
-    [lui/form-table
-     {:headers         (make-headers tr)
-      :items           (map localize (vals items))
-      :add-tooltip     (tr :lipas.swimming-pool.slides/add-slide)
-      :edit-tooltip    (tr :actions/edit)
-      :delete-tooltip  (tr :actions/delete)
-      :confirm-tooltip (tr :confirm/press-again-to-delete)
-      :on-add          #(==> [::events/toggle-dialog :slide {}])
-      :on-edit         #(==> [::events/toggle-dialog :slide (get items (:id %))])
-      :on-delete       #(==> [::events/remove-slide lipas-id %])}]))
+  [lui/form-table
+   {:headers         (make-headers tr)
+    :items           (vals items)
+    :add-tooltip     (tr :lipas.swimming-pool.slides/add-slide)
+    :edit-tooltip    (tr :actions/edit)
+    :delete-tooltip  (tr :actions/delete)
+    :confirm-tooltip (tr :confirm/press-again-to-delete)
+    :on-add          #(==> [::events/toggle-dialog :slide {}])
+    :on-edit         #(==> [::events/toggle-dialog :slide (get items (:id %))])
+    :on-delete       #(==> [::events/remove-slide lipas-id %])}])
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)
