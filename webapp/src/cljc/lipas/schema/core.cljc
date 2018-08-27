@@ -468,12 +468,14 @@
 ;; TODO find out realistic limits for cold energy
 (s/def :lipas.energy-consumption/cold-mwh (s/int-in 0 100000))
 (s/def :lipas.energy-consumption/water-m3 (s/int-in 0 500000))
+(s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
 
 (s/def :lipas/energy-consumption
   (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
                    :lipas.energy-consumption/cold-mwh
                    :lipas.energy-consumption/heat-mwh
-                   :lipas.energy-consumption/water-m3]))
+                   :lipas.energy-consumption/water-m3
+                   :lipas.energy-consumption/contains-other-buildings?]))
 
 (def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
 
