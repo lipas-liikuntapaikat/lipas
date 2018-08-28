@@ -113,6 +113,13 @@ services:
     links:
       - postgres
 
+  backend-maintenance:
+    extends:
+      service: backend-base
+    entrypoint: lein run -m lipas.maintenance
+    links:
+      - postgres
+
   frontend-build:
     extends:
       service: backend-base

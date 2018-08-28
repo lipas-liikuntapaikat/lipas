@@ -461,13 +461,6 @@
       (-> (migrate-fn portal-entry lipas-entry)
           utils/clean))))
 
-(defn validate [spec data]
-  (spec/explain spec data)
-  (spec/valid? spec data))
-
-(defn all-valid? [spec data]
-  (every? true? (map (partial validate spec) data)))
-
 (defn upsert! [db user sports-sites]
   (log/info "Starting to put data into db...")
   (db/upsert-sports-sites! db user sports-sites)
@@ -480,7 +473,7 @@
         ice-stadiums (->> (->sports-sites ->ice-stadium lipas-data portal-data)
                           (remove nil?))]
 
-    (if (all-valid? :lipas.sports-site/ice-stadium ice-stadiums)
+    (if (utils/all-valid? :lipas.sports-site/ice-stadium ice-stadiums)
       (upsert! db user ice-stadiums)
       (log/error "Invalid data, check messages in STDOUT."))))
 
@@ -491,7 +484,7 @@
         swimming-pools (->> (->sports-sites ->swimming-pool lipas-data portal-data)
                             (remove nil?))]
 
-    (if (all-valid? :lipas.sports-site/swimming-pool swimming-pools)
+    (if (utils/all-valid? :lipas.sports-site/swimming-pool swimming-pools)
       (upsert! db user swimming-pools)
       (log/error "Invalid data, check messages in REPL."))))
 
