@@ -1,5 +1,6 @@
 (ns lipas.utils
   (:require [clojure.walk :as walk]
+            [clojure.spec.alpha :as s]
             #?(:cljs [cljs.reader :refer [read-string]])
             #?(:cljs [goog.string :as gstring])
             #?(:cljs [goog.string.format])))
@@ -89,3 +90,10 @@
    :mean   (mean coll)
    :median (median coll)
    :mode   (mode coll)})
+
+(defn validate-noisy [spec data]
+  (s/explain spec data)
+  (s/valid? spec data))
+
+(defn all-valid? [spec data]
+  (every? true? (map (partial validate-noisy spec) data)))
