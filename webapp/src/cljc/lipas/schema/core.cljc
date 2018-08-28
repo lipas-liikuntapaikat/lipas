@@ -270,7 +270,13 @@
 
 ;;; Building ;;;
 
-(s/def :lipas.building/material (into #{} (keys materials/all)))
+(s/def :lipas.building/main-construction-material
+  (into #{} (keys materials/building-materials)))
+(s/def :lipas.building/supporting-structure
+  (into #{} (keys materials/supporting-structures)))
+(s/def :lipas.building/ceiling-structure
+  (into #{} (keys materials/ceiling-structures)))
+
 (s/def :lipas.building/construction-year :lipas.sports-site/construction-year)
 (s/def :lipas.building/main-designers (str-in 2 100))
 (s/def :lipas.building/total-surface-area-m2 (number-in :min 100 :max (inc 50000)))
@@ -286,23 +292,23 @@
 (s/def :lipas.building/ventilation-units-count (s/int-in 0 (inc 100)))
 
 (s/def :lipas.building/main-construction-materials
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/main-construction-material
              :min-count 0
-             :max-count 10
+             :max-count (count materials/building-materials)
              :distinct true
              :into []))
 
 (s/def :lipas.building/supporting-structures
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/supporting-structure
              :min-count 0
-             :max-count 10
+             :max-count (count materials/supporting-structures)
              :distinct true
              :into []))
 
 (s/def :lipas.building/ceiling-structures
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/ceiling-structure
              :min-count 0
-             :max-count 10
+             :max-count (count materials/ceiling-structures)
              :distinct true
              :into []))
 
