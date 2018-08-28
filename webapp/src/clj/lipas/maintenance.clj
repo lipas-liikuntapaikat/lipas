@@ -33,12 +33,12 @@
   "Updates [:water-treatment :filtering-method] to match spec."
   [db user]
   (log/info "Starting to fix swimming pool (3110 3130) filtering methods..")
-  (let [data1   (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
-        data2   (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
-        path    [:water-treatment :filtering-methods]
-        allowed (-> swimming-pools/filtering-methods keys set)
-        spec    :lipas.swimming-pool.water-treatment/filtering-methods]
-    (->> (concat data1 data2)
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
+        path      [:water-treatment :filtering-methods]
+        allowed   (-> swimming-pools/filtering-methods keys set)
+        spec      :lipas.swimming-pool.water-treatment/filtering-methods]
+    (->> (concat data-3110 data-3130)
          (filter-valid-in path spec)
          (map #(update-in % path (partial filter allowed)))
          (map utils/clean)
