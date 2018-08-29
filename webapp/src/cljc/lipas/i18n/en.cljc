@@ -91,23 +91,24 @@
     :select-rink    "Select stadium"}
 
    :lipas.energy-consumption
-   {:headline          "Energy consumption"
-    :headline-year     "Energy consumption in {1}"
-    :electricity       "Electricity MWh"
-    :heat              "Heat (acquired) MWh"
-    :cold              "Cold energy (acquired) Mwh"
-    :water             "Water m³"
-    :yearly            "Yearly energy consumption"
-    :monthly?          "I want to report monthly energy consumption"
-    :reported-for-year "Energy consumption reported for {1}"
-    :report            "Report consumption"}
+   {:headline                  "Energy consumption"
+    :headline-year             "Energy consumption in {1}"
+    :electricity               "Electricity MWh"
+    :heat                      "Heat (acquired) MWh"
+    :cold                      "Cold energy (acquired) Mwh"
+    :water                     "Water m³"
+    :yearly                    "Yearly energy consumption"
+    :monthly?                  "I want to report monthly energy consumption"
+    :reported-for-year         "Energy consumption reported for {1}"
+    :report                    "Report consumption"
+    :contains-other-buildings? "Readings contain also other buildings or spaces"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
     :disclaimer          "*Based on reported consumption in {1}"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
-    :water-m3            "Water M³"
+    :water-m3            "Water m³"
     :hall-missing?       "Is your data missing from the diagram?"
     :report              "Report consumption"
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
@@ -121,7 +122,20 @@
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"
     :daily-open-hours  "Daily open hours"
-    :open-days-in-year "Open days in year"}
+    :open-days-in-year "Open days in year"
+    :open-hours-mon    "Mondays"
+    :open-hours-tue    "Tuesdays"
+    :open-hours-wed    "Wednesdays"
+    :open-hours-thu    "Thursdays"
+    :open-hours-fri    "Fridays"
+    :open-hours-sat    "Saturdays"
+    :open-hours-sun    "Sundays"}
+
+   :lipas.swimming-pool.energy-saving
+   {:headline                    "Energy saving"
+    :shower-water-heat-recovery? "Shower water heat recovery?"
+    :filter-rinse-water-heat-recovery?
+    "Filter rinse water heat recovery?"}
 
    :swim
    {:headline       "Swimming pools"
@@ -275,6 +289,9 @@
     :activated-carbon? "Activated carbon"
     :filtering-methods "Filtering methods"}
 
+   :lipas.swimming-pool.pool
+   {:outdoor-pool? "Outdoor pool"}
+
    :lipas.swimming-pool.pools
    {:headline  "Pools"
     :add-pool  "Add pool"
@@ -287,11 +304,12 @@
     :edit-slide "Edit slide"}
 
    :lipas.swimming-pool.saunas
-   {:headline   "Saunas"
-    :add-sauna  "Add sauna"
-    :edit-sauna "Edit sauna"
-    :women?     "Women"
-    :men?       "Men"}
+   {:headline    "Saunas"
+    :add-sauna   "Add sauna"
+    :edit-sauna  "Edit sauna"
+    :women?      "Women"
+    :men?        "Men"
+    :accessible? "Accessible"}
 
    :lipas.swimming-pool.facilities
    {:headline                       "Other services"
@@ -371,8 +389,8 @@
     :long-time-ago      "Long time ago"}
 
    :duration
-   {:hour  "Hours"
-    :month "Months"}
+   {:hour  "hours"
+    :month "months"}
 
    :actions
    {:add               "Add"

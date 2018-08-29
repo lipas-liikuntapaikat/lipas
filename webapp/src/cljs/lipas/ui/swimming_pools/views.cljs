@@ -21,6 +21,7 @@
     (energy/energy-stats
      {:tr    tr
       :year  year
+      :link  "/#/uimahalliportaali/ilmoita-tiedot"
       :stats stats})))
 
 (defn toggle-dialog
@@ -74,14 +75,14 @@
 
       :bottom-actions
       (lui/edit-actions-list
-       {:editing?          editing?
-        :valid?            edits-valid?
-        :logged-in?        logged-in?
-        :user-can-publish? user-can-publish?
-        :on-discard        #(==> [:lipas.ui.events/confirm
-                                  (tr :confirm/discard-changes?)
-                                  (fn []
-                                    (==> [::site-events/discard-edits lipas-id]))])
+       {:editing?           editing?
+        :valid?             edits-valid?
+        :logged-in?         logged-in?
+        :user-can-publish?  user-can-publish?
+        :on-discard         #(==> [:lipas.ui.events/confirm
+                                   (tr :confirm/discard-changes?)
+                                   (fn []
+                                     (==> [::site-events/discard-edits lipas-id]))])
         :discard-tooltip    (tr :actions/discard)
         :on-edit-start      #(==> [::site-events/edit-site lipas-id])
         :edit-tooltip       (tr :actions/edit)
@@ -483,32 +484,74 @@
       ;;; Conditions
       (let [display-data (-> display-data :conditions)
             edit-data    (-> edit-data :conditions)
-            on-change    (partial set-field :visitors)]
+            on-change    (partial set-field :conditions)]
 
         [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline)}
+
+         (into
+          [lui/form {:read-only? (not editing?)}
+
+           ;; Open days in year
+           {:label (tr :lipas.swimming-pool.conditions/open-days-in-year)
+            :value (-> display-data :open-days-in-year)
+            :form-field
+            [lui/text-field
+             {:type      "number"
+              :value     (-> edit-data :open-days-in-year)
+              :spec      :lipas.swimming-pool.conditions/open-days-in-year
+              :adornment (tr :units/days-in-year)
+              :on-change #(on-change :open-days-in-year %)}]}
+
+           ;; Daily open hours total
+           {:label (tr :lipas.swimming-pool.conditions/daily-open-hours)
+            :value (-> display-data :daily-open-hours)
+            :form-field
+            [lui/text-field
+             {:type      "number"
+              :spec      :lipas.swimming-pool.conditions/daily-open-hours
+              :adornment (tr :units/hours-per-day)
+              :value     (-> edit-data :daily-open-hours)
+              :on-change #(on-change :daily-open-hours %)}]}]
+
+          ;; Daily open hours for each day
+          (for [day  ["mon" "tue" "wed" "thu" "fri" "sat" "sun"]
+                :let [kw (keyword (str "open-hours-" day))]]
+
+            {:label (tr (keyword :lipas.swimming-pool.conditions kw))
+             :value (-> display-data kw)
+             :form-field
+             [lui/text-field
+              {:type      "number"
+               :spec      (keyword :lipas.swimming-pool.conditions kw)
+               :adornment (tr :duration/hour)
+               :value     (-> edit-data kw)
+               :on-change #(on-change kw %)}]}))])
+
+      ;;; Energy saving
+      (let [display-data (-> display-data :energy-saving)
+            edit-data    (-> edit-data :energy-saving)
+            on-change    (partial set-field :energy-saving)]
+
+        [lui/form-card {:title (tr :lipas.swimming-pool.energy-saving/headline)}
          [lui/form {:read-only? (not editing?)}
 
-          ;; Daily open hours
-          {:label (tr :lipas.swimming-pool.conditions/daily-open-hours)
-           :value (-> display-data :daily-open-hours)
+          ;; Shower water recycling?
+          {:label (tr (keyword :lipas.swimming-pool.energy-saving
+                               :shower-water-heat-recovery?))
+           :value (-> display-data :shower-water-recovery)
            :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/daily-open-hours
-             :adornment (tr :units/hours-per-day)
-             :value     (-> edit-data :daily-open-hours)
-             :on-change #(on-change :daily-open-hours %)}]}
+           [lui/checkbox
+            {:value     (-> edit-data :shower-water-recovery)
+             :on-change #(on-change :shower-water-recovery %)}]}
 
-          ;; Open days in year
-          {:label (tr :lipas.swimming-pool.conditions/open-days-in-year)
-           :value (-> display-data :open-days-in-year)
+          ;; Filter rinse water heat recovery?
+          {:label (tr (keyword :lipas.swimming-pool.energy-saving
+                               :filter-rinse-water-heat-recovery?))
+           :value (-> display-data :filter-rinse-water-heat-recovery?)
            :form-field
-           [lui/text-field
-            {:type      "number"
-             :value     (-> edit-data :open-days-in-year)
-             :spec      :lipas.swimming-pool.conditions/open-days-in-year
-             :adornment (tr :units/days-in-year)
-             :on-change #(on-change :open-days-in-year %)}]}]])
+           [lui/checkbox
+            {:value     (-> edit-data :filter-rinse-water-heat-recovery?)
+             :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
       ;;; Visitors
       [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline)

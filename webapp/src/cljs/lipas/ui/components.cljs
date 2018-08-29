@@ -380,47 +380,53 @@
 
 (def text-field text-field-controlled)
 
-(defn select [{:keys [label value items on-change value-fn label-fn]
+(defn select [{:keys [label value items on-change value-fn label-fn
+                      sort-fn sort-cmp]
                :or   {value-fn :value
-                      label-fn :label}
+                      label-fn :label
+                      sort-cmp compare}
                :as   props}]
-  (let [props (-> props
-                  (dissoc :value-fn :label-fn :label)
-                  (assoc :value (if value (pr-str value) ""))
-                  (assoc :on-change #(on-change (-> %
-                                                    .-target
-                                                    .-value
-                                                    read-string))))]
+  (let [props   (-> props
+                    (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp)
+                    (assoc :value (if value (pr-str value) ""))
+                    (assoc :on-change #(on-change (-> %
+                                                      .-target
+                                                      .-value
+                                                      read-string))))
+        sort-fn (or sort-fn label-fn)]
     [mui/form-control
      (when label [mui/input-label label])
      (into [mui/select props]
-           (for [i items]
+           (for [i (sort-by sort-fn sort-cmp items)]
              (let [value (value-fn i)
                    label (label-fn i)]
                [mui/menu-item {:key   (pr-str value)
                                :value (pr-str value)}
                 label])))]))
 
-(defn multi-select [{:keys [label value items on-change value-fn label-fn]
-                     :or {value-fn :value
-                          label-fn :label}
-                     :as props}]
-  [mui/form-control
-   (when label [mui/input-label label])
-   [mui/select
-    (merge (dissoc props :label :value-fn :label-fn)
-           {:multiple true
-            :value (map pr-str value)
-            :on-change #(on-change (->> %
-                                        .-target
-                                        .-value
-                                        (map read-string)
-                                        not-empty))})
-    (for [i items]
-      [mui/menu-item
-       {:key (pr-str (value-fn i))
-        :value (pr-str (value-fn i))}
-       (label-fn i)])]])
+(defn multi-select [{:keys [label value items on-change value-fn
+                            label-fn sort-fn sort-cmp]
+                     :or   {value-fn :value
+                            label-fn :label
+                            sort-cmp compare}
+                     :as   props}]
+  (let [sort-fn (or sort-fn label-fn)]
+    [mui/form-control
+     (when label [mui/input-label label])
+     [mui/select
+      (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
+             {:multiple  true
+              :value     (map pr-str value)
+              :on-change #(on-change (->> %
+                                          .-target
+                                          .-value
+                                          (map read-string)
+                                          not-empty))})
+      (for [i (sort-by sort-fn sort-cmp items)]
+        [mui/menu-item
+         {:key   (pr-str (value-fn i))
+          :value (pr-str (value-fn i))}
+         (label-fn i)])]]))
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
