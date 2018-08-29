@@ -32,7 +32,12 @@
      ;; Men?
      [lui/checkbox {:label     (tr :lipas.swimming-pool.saunas/men?)
                     :on-change #(set-field :men? %)
-                    :value     (:men? data)}]]))
+                    :value     (:men? data)}]
+
+     ;; Accessible?
+     [lui/checkbox {:label     (tr :lipas.swimming-pool.saunas/accessible?)
+                    :on-change #(set-field :accessible? %)
+                    :value     (:accessible? data)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::subs/sauna-form])
@@ -54,7 +59,8 @@
 (defn- make-headers [tr]
   [[:type (tr :general/type)]
    [:women? (tr :lipas.swimming-pool.saunas/women?)]
-   [:men? (tr :lipas.swimming-pool.saunas/men?)]])
+   [:men? (tr :lipas.swimming-pool.saunas/men?)]
+   [:accessible? (tr :lipas.swimming-pool.saunas/accessible?)]])
 
 (defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial localize-field tr :type :sauna-types)]

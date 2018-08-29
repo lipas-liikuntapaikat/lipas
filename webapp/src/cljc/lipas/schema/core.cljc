@@ -98,6 +98,8 @@
 (s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
+(s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
+
 ;;; User ;;;
 
 (s/def :lipas.user/id uuid?)
@@ -268,7 +270,13 @@
 
 ;;; Building ;;;
 
-(s/def :lipas.building/material (into #{} (keys materials/all)))
+(s/def :lipas.building/main-construction-material
+  (into #{} (keys materials/building-materials)))
+(s/def :lipas.building/supporting-structure
+  (into #{} (keys materials/supporting-structures)))
+(s/def :lipas.building/ceiling-structure
+  (into #{} (keys materials/ceiling-structures)))
+
 (s/def :lipas.building/construction-year :lipas.sports-site/construction-year)
 (s/def :lipas.building/main-designers (str-in 2 100))
 (s/def :lipas.building/total-surface-area-m2 (number-in :min 100 :max (inc 50000)))
@@ -284,23 +292,23 @@
 (s/def :lipas.building/ventilation-units-count (s/int-in 0 (inc 100)))
 
 (s/def :lipas.building/main-construction-materials
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/main-construction-material
              :min-count 0
-             :max-count 10
+             :max-count (count materials/building-materials)
              :distinct true
              :into []))
 
 (s/def :lipas.building/supporting-structures
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/supporting-structure
              :min-count 0
-             :max-count 10
+             :max-count (count materials/supporting-structures)
              :distinct true
              :into []))
 
 (s/def :lipas.building/ceiling-structures
-  (s/coll-of :lipas.building/material
+  (s/coll-of :lipas.building/ceiling-structure
              :min-count 0
-             :max-count 10
+             :max-count (count materials/ceiling-structures)
              :distinct true
              :into []))
 
@@ -390,7 +398,7 @@
 (s/def :lipas.ice-stadium.conditions/air-humidity-min (s/int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/air-humidity-max (s/int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/stand-temperature-c (s/int-in -10 (inc 50)))
-(s/def :lipas.ice-stadium.conditions/daily-open-hours (s/int-in 0 (inc 24)))
+(s/def :lipas.ice-stadium.conditions/daily-open-hours :lipas/hours-in-day)
 (s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
@@ -466,12 +474,14 @@
 ;; TODO find out realistic limits for cold energy
 (s/def :lipas.energy-consumption/cold-mwh (s/int-in 0 100000))
 (s/def :lipas.energy-consumption/water-m3 (s/int-in 0 500000))
+(s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
 
 (s/def :lipas/energy-consumption
   (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
                    :lipas.energy-consumption/cold-mwh
                    :lipas.energy-consumption/heat-mwh
-                   :lipas.energy-consumption/water-m3]))
+                   :lipas.energy-consumption/water-m3
+                   :lipas.energy-consumption/contains-other-buildings?]))
 
 (def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
 
@@ -554,9 +564,11 @@
 (s/def :lipas.swimming-pool.pool/depth-min-m (number-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/depth-max-m (number-in :min 0 :max 10))
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
+(s/def :lipas.swimming-pool.pool/outdoor-pool? boolean?)
 
 (s/def :lipas.swimming-pool/pool
   (s/keys :opt-un [:lipas.swimming-pool.pool/type
+                   :lipas.swimming-pool.pool/outdoor-pool?
                    :lipas.swimming-pool.pool/temperature-c
                    :lipas.swimming-pool.pool/volume-m3
                    :lipas.swimming-pool.pool/area-m2
@@ -593,13 +605,15 @@
 
 (s/def :lipas.swimming-pool.sauna/men? boolean?)
 (s/def :lipas.swimming-pool.sauna/women? boolean?)
+(s/def :lipas.swimming-pool.sauna/accessible? boolean?)
 (s/def :lipas.swimming-pool.sauna/type
   (into #{} (keys swimming-pools/sauna-types)))
 
 (s/def :lipas.swimming-pool/sauna
   (s/keys :req-un [:lipas.swimming-pool.sauna/type]
           :opt-un [:lipas.swimming-pool.sauna/men?
-                   :lipas.swimming-pool.sauna/women?]))
+                   :lipas.swimming-pool.sauna/women?
+                   :lipas.swimming-pool.sauna/accessible?]))
 
 (s/def :lipas.swimming-pool/saunas
   (s/coll-of :lipas.swimming-pool/sauna
@@ -644,8 +658,25 @@
 ;; Conditions ;;
 
 (s/def :lipas.swimming-pool.conditions/open-days-in-year (s/int-in 0 (inc 365)))
+(s/def :lipas.swimming-pool.conditions/daily-open-hours :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-mon :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-tue :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-wed :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-thu :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-fri :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-sat :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/open-hours-sun :lipas/hours-in-day)
+
 (s/def :lipas.swimming-pool/conditions
   (s/keys :opt-un [:lipas.swimming-pool.conditions/open-days-in-year
+                   :lipas.swimming-pool.conditions/open-hours-in-day
+                   :lipas.swimming-pool.conditions/open-hours-mon
+                   :lipas.swimming-pool.conditions/open-hours-tue
+                   :lipas.swimming-pool.conditions/open-hours-wed
+                   :lipas.swimming-pool.conditions/open-hours-thu
+                   :lipas.swimming-pool.conditions/open-hours-fri
+                   :lipas.swimming-pool.conditions/open-hours-sat
+                   :lipas.swimming-pool.conditions/open-hours-sun
                    :lipas.swimming-pool.conditions/total-visitors-count]))
 
 (s/def :lipas.swimming-pool.type/type-code #{3110 3120 3130})
@@ -653,6 +684,18 @@
   (s/merge
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.swimming-pool.type/type-code])))
+
+;; Energy saving ;;
+(s/def :lipas.swimming-pool.energy-saving/shower-water-heat-recovery?
+  boolean?)
+
+(s/def :lipas.swimming-pool.energy-saving/filter-rinse-water-recovery?
+  boolean?)
+
+(s/def :lipas.swimming-pool/energy-saving
+  (s/keys :opt-un
+          [:lipas.swimming-pool.energy-saving/shower-water-heat-recovery?
+           :lipas.swimming-pool.energy-saving/filter-rinse-water-recovery?]))
 
 ;; Visitors ;;
 (s/def :lipas.swimming-pool.visitors/total-count (s/int-in 0 1000000))
@@ -672,6 +715,7 @@
                     :lipas.swimming-pool/slides
                     :lipas.swimming-pool/conditions
                     :lipas.swimming-pool/visitors
+                    :lipas.swimming-pool/energy-saving
                     :lipas/energy-consumption])))
 
 (s/def :lipas.sports-site/swimming-pools

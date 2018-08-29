@@ -132,14 +132,13 @@
 (defn make-energy-consumption-year-list
   "Highlights years where there exists any energy consumption data."
   [history]
-  (let [history (index-by :year history)
-        data (for [y    (range 2000 this-year)
-                   :let [data-exists? (data-exists? y history)]]
-               {:label (if data-exists?
-                         (str y " " "✓")
-                         (str y))
-                :value y})]
-    (sort-by :label reverse-cmp data)))
+  (let [history (index-by :year history)]
+    (for [y    (range 2000 this-year)
+          :let [data-exists? (data-exists? y history)]]
+      {:label (if data-exists?
+                (str y " " "✓")
+                (str y))
+       :value y})))
 
 (defn energy-consumption-history [{:keys [history]}]
   (let [by-year (latest-by-year history)

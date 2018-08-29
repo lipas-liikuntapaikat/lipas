@@ -87,23 +87,25 @@
    {:headline "Hallien vertailu"}
 
    :lipas.energy-consumption
-   {:headline          "Energiankulutus"
-    :headline-year     "Energiankulutus vuonna {1}"
-    :electricity       "Sähköenergia MWh"
-    :heat              "Lämpöenergia (ostettu) MWh"
-    :cold              "Kylmäenergia (ostettu) Mwh"
-    :water             "Vesi m³"
-    :yearly            "Energiankulutus vuositasolla"
-    :monthly?          "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
-    :reported-for-year "Vuoden {1} energiankulutus ilmoitettu"
-    :report            "Ilmoita kulutus"}
+   {:headline                  "Energiankulutus"
+    :headline-year             "Energiankulutus vuonna {1}"
+    :electricity               "Sähköenergia MWh"
+    :heat                      "Lämpöenergia (ostettu) MWh"
+    :cold                      "Kylmäenergia (ostettu) Mwh"
+    :water                     "Vesi m³"
+    :yearly                    "Hallin energiankulutus vuositasolla"
+    :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
+    :reported-for-year         "Vuoden {1} energiankulutus ilmoitettu"
+    :report                    "Ilmoita kulutus"
+    :contains-other-buildings? "Lukemat sisältävät myös muita
+    rakennuksia tai tiloja"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
     :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
     :electricity-mwh     "Sähkö MWh"
     :heat-mwh            "Lämpö MWh"
-    :water-m3            "Vesi M³"
+    :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
     :report              "Ilmoita tiedot"
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
@@ -116,7 +118,20 @@
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"
     :daily-open-hours  "Aukiolotunnit päivässä"
-    :open-days-in-year "Aukiolopäivät vuodessa"}
+    :open-days-in-year "Aukiolopäivät vuodessa"
+    :open-hours-mon    "Maanantaisin"
+    :open-hours-tue    "Tiistaisin"
+    :open-hours-wed    "Keskiviikkoisin"
+    :open-hours-thu    "Torstaisin"
+    :open-hours-fri    "Perjantaisin"
+    :open-hours-sat    "Lauantaisin"
+    :open-hours-sun    "Sunnuntaisin"}
+
+   :lipas.swimming-pool.energy-saving
+   {:headline                    "Energiansäästö"
+    :shower-water-heat-recovery? "Suihkuveden lämmöntalteenotto"
+    :filter-rinse-water-heat-recovery?
+    "Suodattimien huuhteluveden lämmöntalteenotto"}
 
    :swim
    {:headline       "Uimahalliportaali"
@@ -275,6 +290,9 @@
     :activated-carbon? "Aktiivihiili"
     :filtering-methods "Suodatustapa"}
 
+   :lipas.swimming-pool.pool
+   {:outdoor-pool? "Ulkoallas"}
+
    :lipas.swimming-pool.pools
    {:headline  "Altaat"
     :add-pool  "Lisää allas"
@@ -287,11 +305,12 @@
     :edit-slide "Muokkaa liukumäkeä"}
 
    :lipas.swimming-pool.saunas
-   {:headline   "Saunat"
-    :add-sauna  "Lisää sauna"
-    :edit-sauna "Muokkaa saunaa"
-    :women?     "Naiset"
-    :men?       "Miehet"}
+   {:headline    "Saunat"
+    :add-sauna   "Lisää sauna"
+    :edit-sauna  "Muokkaa saunaa"
+    :women?      "Naiset"
+    :men?        "Miehet"
+    :accessible? "Esteetön"}
 
    :lipas.swimming-pool.facilities
    {:headline                       "Muut palvelut"

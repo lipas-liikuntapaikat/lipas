@@ -126,11 +126,6 @@
  (fn [db _]
    (-> db :swimming-pools :sauna-types)))
 
-(re-frame/reg-sub
- ::slide-structures
- (fn [db _]
-   (-> db :swimming-pools :slide-structures)))
-
 (defn ->list-entry [{:keys [cities admins owners types locale]} pool]
   (let [type  (types (-> pool :type :type-code))
         admin (admins (-> pool :admin))
@@ -239,9 +234,7 @@
              (map #(update % :type get-pool-type))
              (map #(update % :structure get-material)))
 
-        :slides
-        (->> (:slides latest)
-             (map #(update % :structure get-material)))
+        :slides (:slides latest)
 
         :saunas
         (->> (:saunas latest)
