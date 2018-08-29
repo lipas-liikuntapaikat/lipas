@@ -88,7 +88,7 @@
 
 (def ceiling-structures
   (select-keys all ["wood" "hollow-core-slab" "steel" "double-t-beam"
-                    "concrete" "glass" "solid-rock" "polyurethane-panel"]))
+                    "concrete" "glass" "solid-rock"]))
 
 (def base-floor-structures
   (select-keys all ["concrete" "asphalt" "sand"]))
