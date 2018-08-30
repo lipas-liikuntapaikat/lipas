@@ -116,9 +116,7 @@
       [mui/list-item {:button   true
                       :on-click toggle-drawer}
        [mui/typography {:variant :title}
-         (if (utils/prod?)
-           (tr :menu/headline)
-           (tr :menu/headline-test))]
+        (tr :menu/headline)]
        [mui/list-item-secondary-action
         [mui/icon-button {:on-click toggle-drawer}
          [mui/icon {:color "secondary"} "close"]]]]
@@ -229,10 +227,12 @@
       [mui/typography {:component "a"
                        :variant   "title"
                        :href      "/#/"
-                       :style     {:display         "inline"
-                                   :font-weight     "bold"
-                                   :font-size       "1em"
-                                   :text-decoration "none"}}
+                       :style
+                       (merge mui/headline-aleo
+                              {:display         :inline
+                               :font-size       "1em"
+                               :text-transform  :none
+                               :text-decoration :none})}
        (tr :menu/jyu)]
 
       [separator]]
@@ -241,29 +241,30 @@
      [mui/typography {:component "a"
                       :variant   "title"
                       :href      "/#/"
-                      :style     {:display         "inline"
-                                  :font-weight     "bold"
-                                  :font-size       "1em"
-                                  :text-decoration "none"}}
-      (if (utils/prod?)
-        (tr :menu/headline)
-        (tr :menu/headline-test))]
+                      :style
+                      (merge mui/headline-aleo
+                             {:display         :inline
+                              :font-size       "1em"
+                              :text-transform  :none
+                              :text-decoration :none})}
 
-     [separator]
+      (tr :menu/headline)
 
-     ;; Sub page header
-     (case active-panel
-       :home-panel           (tr :home-page/headline)
-       :sports-panel         (tr :sport/headline)
-       :ice-panel            (tr :ice/headline)
-       :swim-panel           (tr :swim/headline)
-       :login-panel          (tr :login/headline)
-       :register-panel       (tr :register/headline)
-       :user-panel           (tr :user/headline)
-       :reset-password-panel (tr :reset-password/headline)
-       "")]
+      [separator]
 
-     [mui/hidden {:sm-down true}
+      ;; Sub page header
+      (case active-panel
+        :home-panel           (tr :home-page/headline)
+        :sports-panel         (tr :sport/headline)
+        :ice-panel            (tr :ice/headline)
+        :swim-panel           (tr :swim/headline)
+        :login-panel          (tr :login/headline)
+        :register-panel       (tr :register/headline)
+        :user-panel           (tr :user/headline)
+        :reset-password-panel (tr :reset-password/headline)
+        "")]]
+
+    [mui/hidden {:sm-down true}
       [lang-selector]]
 
     ;;; Search button

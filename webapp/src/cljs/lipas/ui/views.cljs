@@ -12,7 +12,7 @@
             [lipas.ui.swimming-pools.views :as swimming-pools]
             [lipas.ui.user.reset-password :as reset-password]
             [lipas.ui.user.views :as user]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
@@ -38,8 +38,25 @@
         confirmation (<== [::subs/active-confirmation])
         tr           (<== [::subs/translator])]
     [mui/css-baseline
+
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-      [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]]
+
+      ;; Navbar and drawer
+      [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]
+
+      ;; Dev-env disclaimer
+      (when-not (utils/prod?)
+        [mui/grid {:item true :xs 12 :md 12 :lg 12}
+         [mui/card {:square true
+                    :style  {:background-color mui/secondary}}
+          [mui/card-content
+           [mui/typography {:variant :headline
+                            :display :inline}
+            (tr :disclaimer/headline)]
+           [mui/typography {:variant :body2}
+            (tr :disclaimer/test-version)]]]])
+      ]
+
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
       ;; Main panel

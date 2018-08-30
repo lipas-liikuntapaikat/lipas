@@ -5,7 +5,8 @@
             [clojure.string :as s]
             [reagent.core :as r]
             [camel-snake-kebab.core :refer [convert-case]]
-            [camel-snake-kebab.extras :refer [transform-keys]]))
+            [camel-snake-kebab.extras :refer [transform-keys]]
+            [lipas.utils :as utils]))
 
 (comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
 (comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
@@ -38,10 +39,41 @@
 
 (def primary "#002957")
 (def secondary "#f1563f")
+(def gold "#C29A5B")
+(def gray1 "rgba(199, 201, 200, 1.0)")
+(def gray2 "rgba(199, 201, 200, 0.5)")
+(def gray3 "rgba(199, 201, 200, 0.3)")
+
+(def headline-aleo
+  {:font-family    "Aleo, serif"
+   :font-weight    700
+   :letter-spacing "+0.025em"
+   :text-transform :uppercase})
+
+(def headline-common
+  {:font-family    "Lato, serif"
+   :font-weight    700
+   :text-transform :uppercase})
 
 (def jyu-styles-dark
   {:typography
-   {:font-family "Aleo, serif"}
+   {:font-family "Lato, sans-serif"
+    :headline    headline-common
+    :display1    headline-common
+    :display2    headline-common
+    :display3    headline-common
+    :display4    headline-common
+    :title       headline-common
+    :body1
+    {:font-weight    400
+     :line-height    1.4
+     :letter-spacing "-0,025em"}
+    :body2
+    {:font-weight    700
+     :line-height    1.4
+     :letter-spacing "-0,025em"}
+    :button
+    {:font-weight 700}}
    :palette
    {:type      "dark"
     :primary   {:main primary}
@@ -49,9 +81,19 @@
     :text      {:disabled "rgba(0, 0, 0, 0.68)"}}
    :overrides
    {:Mui-card-header
-    {:title {:color secondary}}}})
+    {:title {:font-size      "2rem"}}}})
 
-(def jyu-styles-light (assoc-in jyu-styles-dark [:palette :type] "light"))
+(def jyu-styles-light
+  (utils/deep-merge
+   jyu-styles-dark
+   {:palette
+    {:type "light"}
+    :typography
+    {:body1 {:color primary}
+     :body2 {:color primary}}
+    :overrides
+    {:Mui-card-header
+     {:title {:color secondary}}}}))
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))
