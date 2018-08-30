@@ -33,11 +33,14 @@
 
 (defn dev-setup []
   (when config/debug?
+    (enable-console-print!)
+    (==> [::events/set-backend-url dev-backend-url])
+    (println "dev mode, backend-url:" dev-backend-url)))
+
+(defn qa-setup []
+  (when-not (utils/prod?)
     (let [tr (<== [::subs/translator])]
-      (enable-console-print!)
-      (==> [::events/set-backend-url dev-backend-url])
-      (==> [::events/set-active-disclaimer (tr :disclaimer/test-version)])
-      (println "dev mode, backend-url:" dev-backend-url))))
+      (==> [::events/set-active-disclaimer (tr :disclaimer/test-version)]))))
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
@@ -49,4 +52,5 @@
   (routes/app-routes)
   (re-frame/dispatch-sync [::events/initialize-db])
   (dev-setup)
+  (qa-setup)
   (mount-root))
