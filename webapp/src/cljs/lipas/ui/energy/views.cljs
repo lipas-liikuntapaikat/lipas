@@ -320,7 +320,7 @@
                   :style  {:background-color mui/primary}}
         [mui/card-content
          [mui/typography {:variant :display3
-                          :style   {:color mui/gold}}
+                          :style   {:color mui/secondary}}
           "Hall of Fame"]
          [mui/typography {:variant :title
                           :style   {:margin-top "0.75em"
@@ -328,9 +328,12 @@
           (tr :lipas.energy-stats/energy-reported-for year)]
          [:div {:style {:margin-top   "1em"
                         :column-width "300px"}}
-          (into [:ul]
+          (into [mui/list {:dense true}]
                 (for [m (:hall-of-fame stats)]
-                  [:li
-                   [mui/typography {:variant :body2
-                                    :color   :default}
+                  [mui/list-item
+                   [mui/list-item-icon {:style {:margin-right 0
+                                                :color        mui/gold}}
+                    [mui/icon "star"]]
+                   [mui/list-item-text {:variant :body2
+                                        :color   :default}
                     (:name m)]]))]]]]]]))
