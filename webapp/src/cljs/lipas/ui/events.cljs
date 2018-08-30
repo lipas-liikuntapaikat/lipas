@@ -50,6 +50,11 @@
    (assoc db :active-notification notification)))
 
 (re-frame/reg-event-db
+ ::set-active-disclaimer
+ (fn [db [_ disclaimer]]
+   (assoc db :active-disclaimer disclaimer)))
+
+(re-frame/reg-event-db
  ::confirmed
  (fn [db _]
    (assoc db :active-confirmation nil)))
