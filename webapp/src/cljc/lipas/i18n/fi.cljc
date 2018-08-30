@@ -66,7 +66,7 @@
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
     :description "Jäähalliportaali sisältää
-              hallien perus- ja energiankulutustietoja, sekä ohjeita
+              hallien perus- ja energiankulutustietoja sekä ohjeita
               energiatehokkuuden parantamiseen."
 
     :basic-data-of-halls  "Jäähallien perustiedot"
@@ -95,7 +95,7 @@
     :headline-year             (str "Energian" ZWSP "kulutus vuonna {1}")
     :electricity               "Sähköenergia MWh"
     :heat                      "Lämpöenergia (ostettu) MWh"
-    :cold                      "Kylmäenergia (ostettu) Mwh"
+    :cold                      "Kylmäenergia (ostettu) MWh"
     :water                     "Vesi m³"
     :yearly                    "Hallin energiankulutus vuositasolla"
     :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
@@ -142,7 +142,7 @@
     :list           "Hallien tiedot"
     :visualizations "Hallien vertailu"
     :description    "Uimahalliportaali sisältää hallien perus- ja
-          energiankulutustietoja, sekä ohjeita energiatehokkuuden
+          energiankulutustietoja sekä ohjeita energiatehokkuuden
           parantamiseen."
 
     :basic-data-of-halls  "Uimahallien perustiedot"
@@ -155,7 +155,7 @@
    {:headline       (str "Energia" ZWSP "info")
     :headline-short "Info"
     :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
-    :ukty-link      "Siirry UKTYn sivuille"}
+    :ukty-link      "Siirry UKTY:n sivuille"}
 
    :open-data
    {:headline            "Avoin data"
@@ -239,7 +239,7 @@
     :base-floor-structure    "Alapohjan laatan rakenne"
     :insulated-exterior?     "Ulkoseinä lämpöeristetty"
     :insulated-ceiling?      "Yläpohja lämpöeristetty"
-    :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnote"}
+    :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnoite"}
 
    :lipas.ice-stadium.rinks
    {:headline  "Radat"
@@ -265,7 +265,7 @@
     :air-humidity-min                "Ilman suhteellinen kosteus % min"
     :air-humidity-max                "Ilman suhteellinen kosteus % max"
     :ice-surface-temperature-c       "Jään pinnan lämpötila"
-    :skating-area-temperature-c      "Luistelualueen lämpötila 1m korkeudella"
+    :skating-area-temperature-c      "Luistelualueen lämpötila 1 m korkeudella"
     :stand-temperature-c             "Katsomon tavoiteltu keskilämpötila
           ottelun aikana"
     :daily-maintenances-week-days    "Jäähoitokerrat arkipäivinä"
@@ -317,11 +317,11 @@
 
    :lipas.swimming-pool.facilities
    {:headline                       "Muut palvelut"
-    :platforms-1m-count             "1m hyppypaikkojen lkm"
-    :platforms-3m-count             "3m hyppypaikkojen lkm"
-    :platforms-5m-count             "5m hyppypaikkojen lkm"
-    :platforms-7.5m-count           "7.5m hyppypaikkojen lkm"
-    :platforms-10m-count            "10m hyppypaikkojen lkm"
+    :platforms-1m-count             "1 m hyppypaikkojen lkm"
+    :platforms-3m-count             "3 m hyppypaikkojen lkm"
+    :platforms-5m-count             "5 m hyppypaikkojen lkm"
+    :platforms-7.5m-count           "7.5 m hyppypaikkojen lkm"
+    :platforms-10m-count            "10 m hyppypaikkojen lkm"
     :hydro-massage-spots-count      "Hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
     :kiosk?                         "Kioski / kahvio"
