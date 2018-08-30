@@ -643,7 +643,7 @@
                    :value      active-tab}
 
          ;; 0 Stats tab
-         [mui/tab {:label (tr :ice-rinks/headline)
+         [mui/tab {:label (tr :ice/headline)
                    :icon  (r/as-element [mui/icon "ac_unit"])}]
 
          ;; 1 Energy form tab

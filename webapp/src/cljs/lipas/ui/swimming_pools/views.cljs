@@ -675,7 +675,7 @@
           :value      active-tab}
 
          ;; 0 Stats
-         [mui/tab {:label (tr :swim/headline-split)
+         [mui/tab {:label (tr :swim/headline)
                    :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Energy form tab
