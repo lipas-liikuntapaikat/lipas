@@ -701,6 +701,7 @@
 
 (defn li [text & children]
   (into
-   [:li [mui/typography {:color :default}
+   [:li [mui/typography {:variant :body2
+                         :color   :default}
          text]]
    children))
