@@ -33,6 +33,11 @@
    (:active-confirmation db)))
 
 (re-frame/reg-sub
+ ::active-disclaimer
+ (fn [db _]
+   (:active-disclaimer db)))
+
+(re-frame/reg-sub
  ::logged-in?
  (fn [db _]
    (:logged-in? db)))
