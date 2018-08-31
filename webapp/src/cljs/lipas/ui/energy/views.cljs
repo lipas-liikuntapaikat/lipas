@@ -307,7 +307,8 @@
             :data         (:data-points stats)}])
 
         ;; Is your hall missing from the chart? -> Report consumption
-        [mui/typography {:variant :display1}
+        [mui/typography {:style   {:margin-top "0.5em"}
+                         :variant :display1}
          (tr :lipas.energy-stats/hall-missing?)]
         [mui/button {:color   :secondary
                      :size    :large
