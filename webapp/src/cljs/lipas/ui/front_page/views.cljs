@@ -22,7 +22,8 @@
    {:img "img/partners/suh.png"}
    {:img "img/partners/syke.svg"}
    {:img "img/partners/ukty.png"}
-   {:img "img/partners/vtt.svg"}])
+   {:img "img/partners/vtt.svg"}
+   {:img "img/partners/avi.png"}])
 
 (defn ->logo [{:keys [img]}]
   [:img {:style {:margin     "1em"

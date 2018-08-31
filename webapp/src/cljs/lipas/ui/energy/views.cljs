@@ -129,6 +129,8 @@
   [lui/form-table {:headers    (make-headers tr cold?)
                    :items      items
                    :key-fn     :year
+                   :sort-fn    :year
+                   :sort-asc?  true
                    :read-only? read-only?}])
 
 
@@ -305,7 +307,8 @@
             :data         (:data-points stats)}])
 
         ;; Is your hall missing from the chart? -> Report consumption
-        [mui/typography {:variant :display1}
+        [mui/typography {:style   {:margin-top "0.5em"}
+                         :variant :display1}
          (tr :lipas.energy-stats/hall-missing?)]
         [mui/button {:color   :secondary
                      :size    :large
@@ -326,11 +329,11 @@
                           :style   {:margin-top "0.75em"
                                     :color      mui/gray1}}
           (tr :lipas.energy-stats/energy-reported-for year)]
-         [:div {:style {:margin-top   "1em"
-                        :column-width "300px"}}
-          (into [mui/list {:dense true}]
+         [:div {:style {:margin-top "1em"}}
+          (into [mui/list {:dense true
+                           :style {:column-width "300px"}}]
                 (for [m (:hall-of-fame stats)]
-                  [mui/list-item
+                  [mui/list-item {:style {:break-inside :avoid}}
                    [mui/list-item-icon {:style {:margin-right 0
                                                 :color        mui/gold}}
                     [mui/icon "star"]]

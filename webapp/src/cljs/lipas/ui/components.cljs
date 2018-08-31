@@ -181,29 +181,53 @@
     (nil? v)  empty
     :else     v))
 
-(defn table [{:keys [headers items on-select key-fn]}]
-  (let [key-fn (or key-fn (constantly nil))]
+(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp]
+              :or   {sort-cmp  compare
+                     sort-asc? false}}]
+  (r/with-let [key-fn*   (or key-fn (constantly nil))
+               sort-fn*  (r/atom sort-fn)
+               sort-asc? (r/atom sort-asc?)]
+
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
-      [:div {:style {:overflow-x "auto"}}
+      [:div {:style {:overflow-x "auto"}} ; Fixes overflow outside screen
+
        [mui/table
+
+        ;; Head
         [mui/table-head
          (into [mui/table-row (when on-select
                                 [mui/table-cell ""])]
-               (for [[_ header] headers]
-                 [mui/table-cell header]))]
+               (for [[key header] headers]
+                 [mui/table-cell {:on-click #(reset! sort-fn* key)}
+                  [mui/table-sort-label
+                   {:active    (= key @sort-fn*)
+                    :direction (if @sort-asc? "asc" "desc")
+                    :on-click  #(swap! sort-asc? not)}
+                   header]]))]
+
+        ;; Body
         [mui/table-body
-         (for [item items
-               :let [id (or (key-fn item) (:id item) (:lipas-id item) (gensym))]]
-           [mui/table-row {:key id
+
+         ;; Rows
+         (for [item (if @sort-fn*
+                      (sort-by @sort-fn* (if @sort-asc?
+                                           utils/reverse-cmp
+                                           sort-cmp)
+                               items)
+                      items)
+               :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
+           [mui/table-row {:key      id
                            :on-click (when on-select #(on-select item))
-                           :hover true}
+                           :hover    true}
             (when on-select
               [mui/table-cell {:padding "checkbox"}
                [mui/icon-button {:on-click #(on-select item)}
                 [mui/icon {:color "secondary"} "folder_open"]]])
+
+            ;; Cells
             (for [[k _] headers
-                  :let [v (get item k)]]
+                  :let  [v (get item k)]]
               [mui/table-cell {:key (str id k)}
                (display-value v)])])]]]]]))
 
@@ -431,13 +455,13 @@
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
-  (let [years     (or years
-                      (reverse (range 1900 (inc (.getFullYear (js/Date.))))))
+  (let [years     (or years (range 1900 (inc (.getFullYear (js/Date.)))))
         component (if multi? multi-select select)]
     [component (merge (dissoc props :multi?)
                       {:label     label
                        :items     (map #(hash-map :label % :value %) years)
                        :on-change on-change
+                       :sort-cmp  utils/reverse-cmp
                        :value     value
                        :required  required})]))
 
