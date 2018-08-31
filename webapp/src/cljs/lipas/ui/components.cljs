@@ -542,7 +542,7 @@
                     :on-change #(on-change :type :type-code %)}]}
 
      ;; Ice-stadiums get special treatment
-     (when (= 2520 (-> display-data :type :type-code))
+     (when (= 2520 (-> edit-data :type :type-code))
        {:label      (tr :ice/size-category)
         :value      (-> display-data :type :size-category)
         :form-field [select
