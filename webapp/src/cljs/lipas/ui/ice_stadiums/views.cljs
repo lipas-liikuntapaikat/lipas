@@ -91,7 +91,7 @@
         :publish-tooltip    (tr :actions/save)
         :invalid-message    (tr :error/invalid-form)})}
 
-     [mui/grid {:container true}
+     [mui/grid {:container true :spacing 8}
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
