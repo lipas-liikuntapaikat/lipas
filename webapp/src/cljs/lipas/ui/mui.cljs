@@ -39,6 +39,7 @@
 
 (def primary "#002957")
 (def secondary "#f1563f")
+(def secondary2 "rgba(241, 86, 63, 0.9)")
 (def gold "#C29A5B")
 (def gray1 "rgba(199, 201, 200, 1.0)")
 (def gray2 "rgba(199, 201, 200, 0.5)")
