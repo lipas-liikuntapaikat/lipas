@@ -705,7 +705,7 @@
      (into
       [mui/dialog-actions
        {:style {:margin           0
-                :background-color mui/secondary}}]
+                :background-color mui/secondary2}}]
       bottom-actions)
      [mui/button {:on-click on-close}
       close-label])]])
