@@ -586,8 +586,9 @@
           [:type (tr :lipas.sports-site/type)]
           [:construction-year (tr :lipas.sports-site/construction-year)]
           [:renovation-years (tr :lipas.sports-site/renovation-years)]]
-         :items     sites
-         :on-select #(==> [::events/display-site %])}]]]]))
+         :items            sites
+         :sort-fn          :city
+         :on-select        #(==> [::events/display-site %])}]]]]))
 
 (defn compare-tab []
   [mui/grid {:container true}

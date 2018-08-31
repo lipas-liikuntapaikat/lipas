@@ -129,6 +129,8 @@
   [lui/form-table {:headers    (make-headers tr cold?)
                    :items      items
                    :key-fn     :year
+                   :sort-fn    :year
+                   :sort-asc?  true
                    :read-only? read-only?}])
 
 

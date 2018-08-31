@@ -557,6 +557,7 @@
           [:construction-year (tr :lipas.sports-site/construction-year)]
           [:renovation-years (tr :lipas.sports-site/renovation-years)]]
          :items     sites
+         :sort-fn   :city
          :on-select #(==> [::events/display-site %])}]]]]))
 
 (defn compare-tab []
@@ -615,6 +616,7 @@
        [mui/grid {:item true}
         [lui/table
          {:headers headers
+          :sort-fn :city
           :items   sites}]]]]]))
 
 (def tabs
