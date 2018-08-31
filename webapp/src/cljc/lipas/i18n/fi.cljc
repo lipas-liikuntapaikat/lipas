@@ -40,8 +40,8 @@
     :owner             "Omistaja"
     :admin             "Ylläpitäjä"
     :type              "Tyyppi"
-    :construction-year "Rakennusvuosi"
-    :renovation-years  "Peruskorjausvuodet"
+    :construction-year (str "Rakennus" ZWSP "vuosi")
+    :renovation-years  (str "Perus" ZWSP "korjaus" ZWSP "vuodet")
     :phone-number      "Puhelinnumero"
     :www               "Web-sivu"
     :email-public      "Sähköposti (julkinen)"}
