@@ -97,3 +97,12 @@
 
 (defn all-valid? [spec data]
   (every? true? (map (partial validate-noisy spec) data)))
+
+;; From Stackoverflow https://bit.ly/2wslBqY
+(defn deep-merge [a b]
+  (merge-with
+   (fn [x y]
+     (cond (map? y)    (deep-merge x y)
+           (vector? y) (concat x y)
+           :else       y))
+   a b))

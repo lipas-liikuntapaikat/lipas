@@ -314,19 +314,26 @@
          (str "> " (tr :lipas.energy-stats/report))]]]]
 
      ;;; Hall of Fame (all energy info for previous year reported)
-     [mui/grid  {:item true :xs 12 :md 12 :lg 12}
-      [mui/card {:square true
-                 :style  {:background-color "rgb(250, 250, 250)"}}
-       [mui/card-content
-        [mui/typography {:variant :display2}
-         "Hall of Fame"]
-        [mui/typography {:variant :title
-                         :color   :secondary
-                         :style   {:margin-top "0.75em"}}
-         (tr :lipas.energy-stats/energy-reported-for year)]
-        [:div {:style {:margin-top   "1em"
-                       :column-width "300px"}}
-         (into [:ul]
-               (for [m (:hall-of-fame stats)]
-                 [:lui/li
-                  [mui/typography (:name m)]]))]]]]]))
+     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+      [mui/grid  {:item true :xs 12 :md 12 :lg 12}
+       [mui/card {:square true
+                  :style  {:background-color mui/primary}}
+        [mui/card-content
+         [mui/typography {:variant :display3
+                          :style   {:color mui/gold}}
+          "Hall of Fame"]
+         [mui/typography {:variant :title
+                          :style   {:margin-top "0.75em"
+                                    :color      mui/gray1}}
+          (tr :lipas.energy-stats/energy-reported-for year)]
+         [:div {:style {:margin-top   "1em"
+                        :column-width "300px"}}
+          (into [mui/list {:dense true}]
+                (for [m (:hall-of-fame stats)]
+                  [mui/list-item
+                   [mui/list-item-icon {:style {:margin-right 0
+                                                :color        mui/gold}}
+                    [mui/icon "star"]]
+                   [mui/list-item-text {:variant :body2
+                                        :color   :default}
+                    (:name m)]]))]]]]]]))

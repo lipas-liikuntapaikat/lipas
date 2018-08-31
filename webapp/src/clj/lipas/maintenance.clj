@@ -60,6 +60,22 @@
          (map utils/clean)
          (upsert-all! db user :lipas.sports-site/swimming-pool))))
 
+(defn fix-ceiling-structures!
+  "Updates [:building :ceiling-structures] to contain only
+  allowed values."
+  [db user]
+  (log/info "Starting to fix swimming pool (3110 3130) ceiling structures..")
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
+        path      [:building :ceiling-structures]
+        allowed   (-> materials/ceiling-structures keys set)
+        spec      :lipas.building/ceiling-structures]
+    (->> (concat data-3110 data-3130)
+         (filter-valid-in path spec)
+         (map #(update-in % path (partial filter allowed)))
+         (map utils/clean)
+         (upsert-all! db user :lipas.sports-site/swimming-pool))))
+
 (defn fix-pool-type [spec pool]
   (if (s/valid? spec pool)
     pool
@@ -86,27 +102,34 @@
          (map utils/clean)
          (upsert-all! db user :lipas.sports-site/swimming-pool))))
 
+(def tasks
+  {:fix-filtering-methods  fix-filtering-methods!
+   :fix-building-materials fix-building-materials!
+   :fix-ceiling-structures fix-ceiling-structures!
+   :fix-pool-types         fix-pool-types!})
+
 (defn print-usage! []
   (println "\nUsage: lein run -m lipas.maintenance :task-name\n")
   (println "Available tasks:")
-  (doseq [s [:fix-filtering-methods
-             :fix-building-materials
-             :fix-pool-types]]
-    (println s)))
+  (doseq [task (keys tasks)]
+    (println task)))
 
-(defn -main [& args]
-  (let [config (select-keys backend/default-config [:db])
-        system (backend/start-system! config)
-        db     (:db system)
-        user   (core/get-user db "import@lipas.fi")
-        task   (-> args first edn/read-string)]
+(defn run-task! [task-fn]
+  (let [config   (select-keys backend/default-config [:db])
+        system   (backend/start-system! config)
+        db       (:db system)
+        user     (core/get-user db "import@lipas.fi")]
     (try
-      (case task
-        :fix-filtering-methods  (fix-filtering-methods! db user)
-        :fix-building-materials (fix-building-materials! db user)
-        :fix-pool-types         (fix-pool-types! db user)
-        (print-usage!))
+      (apply task-fn [db user]) ; TODO maybe pass a map instead?
       (finally (backend/stop-system! system)))))
 
+(defn -main [& args]
+  (let [task-key (-> args first edn/read-string)]
+    (if-let [task (get tasks task-key)]
+      (run-task! task)
+      (print-usage!))))
+
 (comment
-  (-main ":fix-pool-kissa"))
+  (-main ":fix-kissa")
+  (-main ":fix-pool-types")
+  (-main ":fix-ceiling-structures"))

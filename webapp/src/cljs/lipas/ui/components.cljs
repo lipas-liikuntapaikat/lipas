@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [lipas.ui.mui :as mui]
+            [lipas.ui.utils :as utils]
             [reagent.core :as r]))
 
 (def CHECK_MARK "✓")
@@ -60,7 +61,7 @@
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip] :as props}]
   [mui/tooltip {:title     (if disabled disabled-tooltip "")
                 :placement "top"}
-   [:div
+   [:span
     [mui/button (merge (dissoc props :disabled-tooltip)
                        {:variant  "contained"
                         :disabled disabled
@@ -276,7 +277,7 @@
                   :style {:text-align "right"}}
         [mui/tooltip {:title     (or add-tooltip "")
                       :placement "left"}
-         [mui/button {:style    {:margin-top "0.5em"}
+         [mui/button {:style    {:margin-top "1em"}
                       :on-click on-add
                       :variant  "fab"
                       :color    "secondary"}
@@ -440,6 +441,17 @@
                        :value     value
                        :required  required})]))
 
+(defn number-selector [{:keys [value on-change items unit label]}]
+  [select
+   {:label     label
+    :items     items
+    :sort-fn   identity
+    :sort-cmp  utils/reverse-cmp
+    :value-fn  identity
+    :label-fn  #(str % unit)
+    :value     value
+    :on-change on-change}])
+
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field
    {:type "date"
@@ -530,7 +542,7 @@
                     :on-change #(on-change :type :type-code %)}]}
 
      ;; Ice-stadiums get special treatment
-     (when (= 2520 (-> display-data :type :type-code))
+     (when (= 2520 (-> edit-data :type :type-code))
        {:label      (tr :ice/size-category)
         :value      (-> display-data :type :size-category)
         :form-field [select
@@ -669,23 +681,34 @@
                :full-screen          true
                :Transition-component (r/reactify-component slide)
                :Transition-props     {:direction "up"}
-               :on-close             on-close}
+               :on-close             on-close
+               :Paper-Props          {:style {:background-color mui/gray1}}}
 
    ;; Top bar
-   (into
-    [mui/dialog-actions {:style {:margin "0 1em 0 0"}}
-     [mui/dialog-title {:style {:flex-grow 1}}
-      (or title "")]]
-    top-actions)
+   [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+    (into
+     [mui/dialog-actions {:style
+                          {:margin           0
+                           :padding-right    "0.5em"
+                           :background-color mui/primary}}
+      [mui/dialog-title {:style {:flex-grow 1}}
+       (or title "")]]
+     top-actions)]
 
    ;; Content
-   (into [mui/dialog-content {:style {:padding 0}}]
+   (into [mui/dialog-content {:style {:padding 8}}]
          contents)
 
    ;; Bottom bar
-   (conj (into [mui/dialog-actions] bottom-actions)
-         [mui/button {:on-click on-close}
-          close-label])])
+   [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+    (conj
+     (into
+      [mui/dialog-actions
+       {:style {:margin           0
+                :background-color mui/secondary2}}]
+      bottom-actions)
+     [mui/button {:on-click on-close}
+      close-label])]])
 
 (defn confirmation-dialog [{:keys [title message on-cancel
                                    cancel-label on-confirm confirm-label]}]
@@ -701,6 +724,7 @@
 
 (defn li [text & children]
   (into
-   [:li [mui/typography {:color :default}
+   [:li [mui/typography {:variant :body2
+                         :color   :default}
          text]]
    children))

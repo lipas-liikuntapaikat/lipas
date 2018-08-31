@@ -7,7 +7,7 @@
             [reagent.core :as r]))
 
 (def links
-  {:github    "https://github.com/lipas-liikuntapaikat/lipas-api"
+  {:github    "https://github.com/lipas-liikuntapaikat"
    :lipas-api "http://lipas.cc.jyu.fi/api/index.html"
    :geoserver "http://lipas.cc.jyu.fi/geoserver"
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
@@ -15,14 +15,14 @@
 
 (def logos
   [{:img "img/partners/okm.png"}
-   {:img "img/partners/jaakiekkoliitto.png"}
-   {:img "img/partners/kuntaliitto.jpg"}
-   {:img "img/partners/metsahallitus.jpg"}
+   {:img "img/partners/jaakiekkoliitto.svg"}
+   {:img "img/partners/kuntaliitto.png"}
+   {:img "img/partners/metsahallitus.svg"}
    {:img "img/partners/sport_venue.png"}
    {:img "img/partners/suh.png"}
-   {:img "img/partners/syke.gif"}
+   {:img "img/partners/syke.svg"}
    {:img "img/partners/ukty.png"}
-   {:img "img/partners/vtt.png"}])
+   {:img "img/partners/vtt.svg"}])
 
 (defn ->logo [{:keys [img]}]
   [:img {:style {:margin     "1em"
@@ -34,9 +34,8 @@
   (into
    [mui/grid {:item  true :xs 12
               :style {:padding "2em"
-                                        ;:background-color "#e9e9e9"
-                      }}
-    [mui/typography {:variant "display1"}
+                      :background-color mui/gray3}}
+    [mui/typography {:variant "display2"}
      (tr :partners/headline)]]
    (map ->logo logos)))
 
@@ -44,23 +43,27 @@
   [mui/grid {:item true :xs 12 :md 12 :lg 12}
    [mui/card {:square true
               :raised true
-              :style  (merge  {:height           "100%"
-                               :background-color "rgb(250, 250, 250)"
-                               ;;:background-color "#e9e9e9"
-                               :opacity          0.95}
-                              style)}
+              :style
+              (merge
+               {:height           "100%"
+                :background-color "rgb(250, 250, 250)"
+                ;;:background-color "#e9e9e9"
+                :font-size "1.25em"
+                :opacity          0.95}
+                      style)}
     [mui/card-header {:title  title
                       :action (when link
                                 (r/as-element
                                  [mui/icon-button
-                                  {:href link
-                                   :color    "secondary"}
+                                  {:href  link
+                                   :color :secondary}
                                   [mui/icon "arrow_forward_ios"]]))}]
     (into [mui/card-content] children)
     [mui/card-actions
      (when link-text
-       [mui/button {:color "secondary"
-                    :href  link}
+       [mui/button {:variant :text
+                    :color   "secondary"
+                    :href    link}
         (str "> " link-text)])]]])
 
 (defn create-panel [tr]
@@ -72,16 +75,12 @@
               :background-repeat   :no-repeat}}
    [mui/grid {:item true :xs 12 :md 6 :lg 6}
     [mui/grid {:container true}
+
+     ;; LIPAS
      [mui/grid {:item true :xs 12}
       [:div {:style {:padding "1em"}}
        [mui/grid {:container true
                   :spacing   16}
-
-        ;; Dev-env disclaimer
-        (when-not (utils/prod?)
-          [grid-card {:style {:background-color "#f7ed33"}
-                      :title (tr :disclaimer/headline)}
-           [mui/typography (tr :disclaimer/test-version)]])
 
         [grid-card {:title     (tr :menu/headline)
                     :link      "http://www.lipas.fi"
@@ -173,20 +172,7 @@
                           :on-click #(navigate! "tel:+358400247980")}
            [mui/list-item-icon
             [mui/icon "phone"]]
-           [mui/list-item-text "0400 247 980"]]]]
-
-        ;; ;; Data Users
-        ;; [grid-card {:title (tr :data-users/headline)}
-        ;;  [mui/typography (tr :data-users/description)]]
-
-        ;; ;; Partners
-        ;; [grid-card {:title (tr :partners/headline)}
-        ;;  [mui/typography (tr :partners/description)]]
-
-        ;; ;; Team
-        ;; [grid-card {:title (tr :team/headline)}
-        ;;  [mui/typography (tr :team/description)]]
-        ]]]]]
+           [mui/list-item-text "0400 247 980"]]]]]]]]]
    [footer tr]])
 
 (defn main [tr]
