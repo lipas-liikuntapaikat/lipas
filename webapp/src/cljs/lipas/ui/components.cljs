@@ -455,13 +455,13 @@
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
-  (let [years     (or years
-                      (reverse (range 1900 (inc (.getFullYear (js/Date.))))))
+  (let [years     (or years (range 1900 (inc (.getFullYear (js/Date.)))))
         component (if multi? multi-select select)]
     [component (merge (dissoc props :multi?)
                       {:label     label
                        :items     (map #(hash-map :label % :value %) years)
                        :on-change on-change
+                       :sort-cmp  utils/reverse-cmp
                        :value     value
                        :required  required})]))
 
