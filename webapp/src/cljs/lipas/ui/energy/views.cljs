@@ -320,7 +320,7 @@
                   :style  {:background-color mui/primary}}
         [mui/card-content
          [mui/typography {:variant :display3
-                          :style   {:color mui/secondary}}
+                          :style   {:color mui/gold}}
           "Hall of Fame"]
          [mui/typography {:variant :title
                           :style   {:margin-top "0.75em"
