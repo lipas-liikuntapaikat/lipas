@@ -160,10 +160,9 @@
           {:label (tr :lipas.ice-stadium.conditions/ice-surface-temperature-c)
            :value (-> display-data :ice-surface-temperature-c)
            :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/ice-surface-temperature-c
-             :adornment (tr :physical-units/celsius)
+           [lui/number-selector
+            {:items     (range -10 (inc 0))
+             :unit      (tr :physical-units/celsius)
              :value     (-> edit-data :ice-surface-temperature-c)
              :on-change #(on-change :ice-surface-temperature-c %)}]}
 
@@ -171,10 +170,9 @@
           {:label (tr :lipas.ice-stadium.conditions/skating-area-temperature-c)
            :value (-> display-data :skating-area-temperature-c)
            :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/skating-area-temperature-c
-             :adornment (tr :physical-units/celsius)
+           [lui/number-selector
+            {:items     (range -8 (inc 20))
+             :unit      (tr :physical-units/celsius)
              :value     (-> edit-data :skating-area-temperature-c)
              :on-change #(on-change :skating-area-temperature-c %)}]}
 
@@ -182,10 +180,9 @@
           {:label (tr :lipas.ice-stadium.conditions/stand-temperature-c)
            :value (-> display-data :stand-temperature-c)
            :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.conditions/stand-temperature-c
-             :adornment (tr :physical-units/celsius)
+           [lui/number-selector
+            {:items     (range -8 (inc 20))
+             :unit      (tr :physical-units/celsius)
              :value     (-> edit-data :stand-temperature-c)
              :on-change #(on-change :stand-temperature-c %)}]}
 
