@@ -58,9 +58,9 @@
 
 ;; Kylmäliuos
 (def refrigerant-solutions
-  {"cacl"          {:fi "Cacl"
-                    :en "Cacl"
-                    :se "Cacl"}
+  {"cacl"          {:fi "CaCl"
+                    :en "CaCl"
+                    :se "CaCl"}
    "freezium"      {:fi "Freezium"
                     :en "Freezium"
                     :se "Freezium"}
