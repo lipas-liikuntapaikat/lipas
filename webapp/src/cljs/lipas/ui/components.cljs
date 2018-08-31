@@ -60,7 +60,7 @@
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip] :as props}]
   [mui/tooltip {:title     (if disabled disabled-tooltip "")
                 :placement "top"}
-   [:div
+   [:span
     [mui/button (merge (dissoc props :disabled-tooltip)
                        {:variant  "contained"
                         :disabled disabled
@@ -276,7 +276,7 @@
                   :style {:text-align "right"}}
         [mui/tooltip {:title     (or add-tooltip "")
                       :placement "left"}
-         [mui/button {:style    {:margin-top "0.5em"}
+         [mui/button {:style    {:margin-top "1em"}
                       :on-click on-add
                       :variant  "fab"
                       :color    "secondary"}
@@ -669,23 +669,34 @@
                :full-screen          true
                :Transition-component (r/reactify-component slide)
                :Transition-props     {:direction "up"}
-               :on-close             on-close}
+               :on-close             on-close
+               :Paper-Props          {:style {:background-color mui/gray1}}}
 
    ;; Top bar
-   (into
-    [mui/dialog-actions {:style {:margin "0 1em 0 0"}}
-     [mui/dialog-title {:style {:flex-grow 1}}
-      (or title "")]]
-    top-actions)
+   [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+    (into
+     [mui/dialog-actions {:style
+                          {:margin           0
+                           :padding-right    "0.5em"
+                           :background-color mui/primary}}
+      [mui/dialog-title {:style {:flex-grow 1}}
+       (or title "")]]
+     top-actions)]
 
    ;; Content
-   (into [mui/dialog-content {:style {:padding 0}}]
+   (into [mui/dialog-content {:style {:padding 8}}]
          contents)
 
    ;; Bottom bar
-   (conj (into [mui/dialog-actions] bottom-actions)
-         [mui/button {:on-click on-close}
-          close-label])])
+   [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+    (conj
+     (into
+      [mui/dialog-actions
+       {:style {:margin           0
+                :background-color mui/secondary}}]
+      bottom-actions)
+     [mui/button {:on-click on-close}
+      close-label])]])
 
 (defn confirmation-dialog [{:keys [title message on-cancel
                                    cancel-label on-confirm confirm-label]}]
