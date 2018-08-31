@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [lipas.ui.mui :as mui]
+            [lipas.ui.utils :as utils]
             [reagent.core :as r]))
 
 (def CHECK_MARK "✓")
@@ -439,6 +440,17 @@
                        :on-change on-change
                        :value     value
                        :required  required})]))
+
+(defn number-selector [{:keys [value on-change items unit label]}]
+  [select
+   {:label     label
+    :items     items
+    :sort-fn   identity
+    :sort-cmp  utils/reverse-cmp
+    :value-fn  identity
+    :label-fn  #(str % unit)
+    :value     value
+    :on-change on-change}])
 
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field
