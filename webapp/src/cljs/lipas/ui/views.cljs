@@ -12,7 +12,8 @@
             [lipas.ui.swimming-pools.views :as swimming-pools]
             [lipas.ui.user.reset-password :as reset-password]
             [lipas.ui.user.views :as user]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
@@ -36,10 +37,32 @@
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
         confirmation (<== [::subs/active-confirmation])
+        disclaimer   (<== [::subs/active-disclaimer])
         tr           (<== [::subs/translator])]
+
     [mui/css-baseline
+
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-      [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]]
+
+      ;; Navbar and drawer
+      [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]
+
+      ;; Dev-env disclaimer
+      (when disclaimer
+        [mui/grid {:item true :xs 12 :md 12 :lg 12}
+         [mui/card {:square true
+                    :style  {:background-color mui/secondary}}
+          [mui/card-header
+           {:style  {:padding-bottom 0}
+            :title  (tr :disclaimer/headline)
+            :action (r/as-element
+                     [mui/icon-button
+                      {:on-click #(==> [::events/set-active-disclaimer nil])}
+                      [mui/icon "close"]])}]
+          [mui/card-content
+           [mui/typography {:variant :body2}
+            disclaimer]]]])]
+
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
       ;; Main panel

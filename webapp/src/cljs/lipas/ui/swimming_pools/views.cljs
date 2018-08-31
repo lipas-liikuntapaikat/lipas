@@ -69,7 +69,6 @@
       :on-close    #(==> [::events/display-site nil])
       :close-label (tr :actions/close)
 
-
       :top-actions
       [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
 
@@ -92,7 +91,7 @@
         :publish-tooltip    (tr :actions/save)
         :invalid-message    (tr :error/invalid-form)})}
 
-     [mui/grid {:container true}
+     [mui/grid {:container true :spacing 8}
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
@@ -665,17 +664,17 @@
   (let [active-tab (<== [::subs/active-tab])]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
-      [mui/card
+      [mui/card {:square true}
        [mui/card-content
         [mui/tabs
          {:scrollable true
           :full-width true
-          :text-color "secondary"
+          :text-color :secondary
           :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
           :value      active-tab}
 
          ;; 0 Stats
-         [mui/tab {:label (tr :swim/headline-split)
+         [mui/tab {:label (tr :swim/headline)
                    :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Energy form tab
