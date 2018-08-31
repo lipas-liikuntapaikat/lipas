@@ -326,11 +326,11 @@
                           :style   {:margin-top "0.75em"
                                     :color      mui/gray1}}
           (tr :lipas.energy-stats/energy-reported-for year)]
-         [:div {:style {:margin-top   "1em"
-                        :column-width "300px"}}
-          (into [mui/list {:dense true}]
+         [:div {:style {:margin-top "1em"}}
+          (into [mui/list {:dense true
+                           :style {:column-width "300px"}}]
                 (for [m (:hall-of-fame stats)]
-                  [mui/list-item
+                  [mui/list-item {:style {:break-inside :avoid}}
                    [mui/list-item-icon {:style {:margin-right 0
                                                 :color        mui/gold}}
                     [mui/icon "star"]]
