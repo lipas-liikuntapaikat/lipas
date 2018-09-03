@@ -8,6 +8,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
             [lipas.schema.core]
+            [lipas.utils :as utils]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
 
@@ -190,6 +191,23 @@
            (-> (group-by :lipas-id body)
                (get id)
                (as-> $ (into #{} (map :event-date) $)))))))
+
+(deftest get-sports-sites-by-type-code-localized-test
+  (let [user (gen-user {:db? true :admin? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc-in [:type :type-code] 3110)
+                 (assoc-in [:admin] "state")
+                 (assoc :status "active"))
+        _    (core/upsert-sports-site! db user site)
+        resp (app (-> (mock/request :get "/api/sports-sites/type/3110?lang=fi")
+                      (mock/content-type "application/json")))
+        body (<-json (:body resp))]
+    (is (= 200 (:status resp)))
+    ;; Note returned entities are not valid according to specs!
+    (is (= "Valtio" (->> body
+                         (filter #(= (:lipas-id site) (:lipas-id %)))
+                         first
+                         :admin)))))
 
 (deftest get-sports-site-history-test
   (let [user     (gen-user {:db? true})

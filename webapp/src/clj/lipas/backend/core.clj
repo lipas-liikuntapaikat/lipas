@@ -3,6 +3,7 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
+            [lipas.i18n.core :as i18n]
             [lipas.reports :as reports]))
 
 ;;; User ;;;
@@ -72,8 +73,11 @@
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
-(defn get-sports-sites-by-type-code [db type-code opts]
-  (db/get-sports-sites-by-type-code db type-code opts))
+(defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
+  (let [data (db/get-sports-sites-by-type-code db type-code opts)]
+    (if (#{:fi :en :se} locale)
+      (map (partial i18n/localize locale) data)
+      data)))
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))

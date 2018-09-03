@@ -106,9 +106,14 @@
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
                  revs      (or (-> parameters :query :revs)
-                               "latest")]
+                               "latest")
+                 locale    (or (-> parameters :query :lang keyword)
+                               :none)]
              {:status 200
-              :body   (core/get-sports-sites-by-type-code db type-code {:revs revs})}))}}]
+              :body   (core/get-sports-sites-by-type-code db
+                                                          type-code
+                                                          {:revs   revs
+                                                           :locale locale})}))}}]
 
       ["/actions/register"
        {:post
