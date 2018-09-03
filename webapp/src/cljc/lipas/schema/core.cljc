@@ -726,4 +726,7 @@
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})
-(s/def :lipas.api/query-params (s/keys :opt-un [::revs]))
+(s/def :lipas.api/lang #{"fi" "en" "se"})
+(s/def :lipas.api/query-params
+  (s/keys :opt-un [:lipas.api/revs
+                   :lipas.api/lang]))
