@@ -220,7 +220,7 @@
             (update :main-construction-materials #(map get-material %))
             (update :ceiling-structures #(map get-material %))
             (update :supporting-structures #(map get-material %))
-            (update :heat-source get-heat-source))
+            (update :heat-sources #(map get-heat-source %)))
 
         :renovations (:renovations latest)
         :conditions  (:conditions latest)
