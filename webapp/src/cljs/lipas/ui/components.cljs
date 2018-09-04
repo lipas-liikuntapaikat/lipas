@@ -406,13 +406,21 @@
 (def text-field text-field-controlled)
 
 (defn select [{:keys [label value items on-change value-fn label-fn
-                      sort-fn sort-cmp]
+                      sort-fn sort-cmp deselect?]
                :or   {value-fn :value
                       label-fn :label
                       sort-cmp compare}
                :as   props}]
-  (let [props   (-> props
-                    (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp)
+  (let [on-change #(on-change (-> %
+                                  .-target
+                                  .-value
+                                  read-string
+                                  (as-> $ (if (and deselect? (= $ value))
+                                            nil ; toggle
+                                            $))))
+        props   (-> props
+                    (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
+                            :deselect?)
                     ;; Following fixes Chrome scroll issue
                     ;; https://github.com/mui-org/material-ui/pull/12003
                     (assoc :MenuProps
@@ -420,10 +428,7 @@
                             {:style
                              {:transform "translate2(0)"}}})
                     (assoc :value (if value (pr-str value) ""))
-                    (assoc :on-change #(on-change (-> %
-                                                      .-target
-                                                      .-value
-                                                      read-string))))
+                    (assoc :on-change on-change))
         sort-fn (or sort-fn label-fn)]
     [mui/form-control
      (when label [mui/input-label label])

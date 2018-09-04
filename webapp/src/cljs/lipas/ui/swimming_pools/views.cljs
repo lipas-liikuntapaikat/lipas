@@ -207,6 +207,7 @@
            :form-field
            [lui/select
             {:value     (-> edit-data :heat-source)
+             :deselect? true
              :items     heat-sources
              :label-fn  (comp locale second)
              :value-fn  first

@@ -24,7 +24,7 @@
 
      ;; Pool type
      [lui/select
-      {:required  true
+      {:deselect? true
        :label     (tr :general/type)
        :value     (:type data)
        :items     pool-types
@@ -35,6 +35,7 @@
      ;; Structure
      [lui/select
       {:label     (tr :general/structure)
+       :deselect? true
        :value     (:structure data)
        :items     pool-structures
        :label-fn  (comp locale second)

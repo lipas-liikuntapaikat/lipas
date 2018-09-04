@@ -237,6 +237,7 @@
            [lui/select
             {:value     (-> edit-data :ice-resurfacer-fuel)
              :on-change #(on-change :ice-resurfacer-fuel %)
+             :deselect? true
              :items     ice-resurfacer-fuels
              :value-fn  first
              :label-fn  (comp locale second)}]}
@@ -335,6 +336,7 @@
            [lui/select
             {:value     (-> edit-data :base-floor-structure)
              :on-change #(on-change :base-floor-structure %)
+             :deselect? true
              :items     base-floor-structures
              :value-fn  first
              :label-fn  (comp locale second)}]}
