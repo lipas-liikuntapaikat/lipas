@@ -150,13 +150,14 @@
                     (on-edit-start %))
        :tooltip  edit-tooltip}])])
 
-(defn checkbox [{:keys [label value on-change disabled]}]
+(defn checkbox [{:keys [label value on-change disabled style]}]
   [mui/form-control-label
    {:label   label
+    :style   style
     :control (r/as-element
               [mui/checkbox
-               {:value     (or (str value) "")
-                :checked   value
+               {:value     (str (boolean value))
+                :checked   (boolean value)
                 :disabled  disabled
                 :on-change #(on-change %2)}])}]) ; %2 = checked?
 
