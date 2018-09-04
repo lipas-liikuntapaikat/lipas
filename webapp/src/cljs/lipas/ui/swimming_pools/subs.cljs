@@ -155,7 +155,7 @@
                :admins admins
                :owners owners
                :types  types}]
-     (sort-by :city (map (partial ->list-entry data) (vals pools))))))
+     (map (partial ->list-entry data) (vals pools)))))
 
 (re-frame/reg-sub
  ::display-site-raw
