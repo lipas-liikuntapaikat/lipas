@@ -201,17 +201,16 @@
             {:value     (-> edit-data :piled?)
              :on-change #(on-change :piled? %)}]}
 
-          ;; Heat source
+          ;; Heat sources
           {:label (tr :lipas.building/heat-source)
-           :value (-> display-data :heat-source)
+           :value (-> display-data :heat-sources)
            :form-field
-           [lui/select
-            {:value     (-> edit-data :heat-source)
-             :deselect? true
+           [lui/multi-select
+            {:value     (-> edit-data :heat-sources)
              :items     heat-sources
              :label-fn  (comp locale second)
              :value-fn  first
-             :on-change #(on-change :heat-source %)}]}
+             :on-change #(on-change :heat-sources %)}]}
 
           ;; Main construction materials
           {:label (tr :lipas.building/main-construction-materials)

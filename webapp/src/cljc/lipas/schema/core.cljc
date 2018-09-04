@@ -289,6 +289,13 @@
 (s/def :lipas.building/staff-count (s/int-in 0 (inc 1000)))
 (s/def :lipas.building/seating-capacity (s/int-in 0 (inc 50000)))
 (s/def :lipas.building/heat-source (into #{} (keys swimming-pools/heat-sources)))
+(s/def :lipas.building/heat-sources
+  (s/coll-of :lipas.building/heat-source
+             :min-count 0
+             :max-count (count swimming-pools/heat-sources)
+             :distinct true
+             :into []))
+
 (s/def :lipas.building/ventilation-units-count (s/int-in 0 (inc 100)))
 
 (s/def :lipas.building/main-construction-materials
@@ -527,6 +534,7 @@
                    :lipas.building/ceiling-structures
                    :lipas.building/staff-count
                    :lipas.building/heat-source
+                   :lipas.building/heat-sources
                    :lipas.building/ventilation-units-count]))
 
 ;; Water treatment ;;
