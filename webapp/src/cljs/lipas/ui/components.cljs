@@ -413,6 +413,12 @@
                :as   props}]
   (let [props   (-> props
                     (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp)
+                    ;; Following fixes Chrome scroll issue
+                    ;; https://github.com/mui-org/material-ui/pull/12003
+                    (assoc :MenuProps
+                           {:PaperProps
+                            {:style
+                             {:transform "translate2(0)"}}})
                     (assoc :value (if value (pr-str value) ""))
                     (assoc :on-change #(on-change (-> %
                                                       .-target
