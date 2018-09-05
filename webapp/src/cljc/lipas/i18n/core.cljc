@@ -89,13 +89,13 @@
 
 (defn localize-pool [locale pool]
   (-> pool
-      (update-in [:type] #(locale (get-in pools/pool-types %)))
-      (update-in [:structure] #(locale (get-in materials/all %)))
+      (update-in [:type] #(locale (get pools/pool-types %)))
+      (update-in [:structure] #(locale (get materials/all %)))
       utils/clean))
 
 (defn localize-sauna [locale sauna]
   (-> sauna
-      (update-in [:type] #(locale (get-in pools/sauna-types %)))
+      (update-in [:type] #(locale (get pools/sauna-types %)))
       utils/clean))
 
 (def localizations
