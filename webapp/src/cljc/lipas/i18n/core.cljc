@@ -5,6 +5,7 @@
             [lipas.data.materials :as materials]
             [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as pools]
+            [lipas.data.cities :as cities]
             [lipas.i18n.en :as en]
             [lipas.i18n.fi :as fi]
             [lipas.i18n.se :as se]
@@ -14,6 +15,8 @@
 (defn- ->translations [locale m]
   (reduce-kv (fn [res k v]
                (assoc res k (-> v locale))) {} m))
+
+(def cities (utils/index-by :city-code cities/all))
 
 (defn- append-data! [locale m]
   (->>
@@ -105,6 +108,14 @@
     :translations admins/all}
    {:path         [:owner]
     :translations owners/all}
+
+   ;; Location
+
+   {:path [:location :city]
+    :translate-fn (fn [locale {:keys [city-code] :as city}]
+                    (assoc city :city-name (-> (get cities city-code)
+                                               :name
+                                               locale)))}
 
    ;; Ice stadiums
    {:path         [:type :size-category]
