@@ -1,10 +1,13 @@
 (ns lipas.ui.components
-  (:require [clojure.reader :refer [read-string]]
+  (:require cljsjs.react-autosuggest
+            [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
+
+(def autosuggest js/Autosuggest)
 
 (def CHECK_MARK "✓")
 
@@ -230,7 +233,8 @@
             (for [[k _] headers
                   :let  [v (get item k)]]
               [mui/table-cell {:key (str id k)}
-               (display-value v)])])]]]]]))
+               [mui/typography {:no-wrap false}
+                (display-value v)]])])]]]]]))
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
@@ -766,3 +770,85 @@
                          :color   :default}
          text]]
    children))
+
+
+(defn simple-matches [items label-fn s]
+  (->> items
+       (filter #(string/includes?
+                 (string/lower-case (label-fn %))
+                 (string/lower-case s)))))
+
+(defn js->clj* [x]
+  (js->clj x :keywordize-keys true))
+
+(defn ac-hack-input [props]
+  (let [props (js->clj* props)
+        ref   (:ref props)
+        label (:label props)]
+    (r/as-element
+     [mui/text-field
+      {:label      label
+       :inputRef   ref
+       :InputProps (dissoc props :ref :label)}])))
+
+(defn ac-hack-container [opts]
+  (r/as-element
+   [mui/paper (merge (js->clj* (.-containerProps opts)))
+    (.-children opts)]))
+
+(defn ac-hack-item [label-fn item]
+  (r/as-element
+   [mui/menu-item {:component "div"}
+    (-> item
+        (js->clj*)
+        label-fn)]))
+
+(defn autocomplete [{:keys [label items value value-fn label-fn
+                            suggestion-fn on-change]
+                     :or   {suggestion-fn (partial simple-matches items label-fn)
+                            label-fn      :label
+                            value-fn      :value}}]
+
+  (r/with-let [items       (utils/index-by value-fn items)
+               id          (r/atom (gensym))
+               value       (r/atom (or value []))
+               input-value (r/atom "")
+               suggs       (r/atom items)]
+
+    [mui/grid {:container true}
+
+     ;; Input field
+     [mui/grid {:item true}
+      [:> autosuggest
+       {:id                          @id
+        :suggestions                 @suggs
+        :getSuggestionValue          #(label-fn (js->clj* %1))
+        :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn (.-value %)))
+        :onSuggestionsClearRequested #(reset! suggs [])
+        :renderSuggestion            (partial ac-hack-item label-fn)
+        :renderSuggestionsContainer  ac-hack-container
+        :onSuggestionSelected        #(do
+                                        (let [v (-> %2 .-suggestion js->clj*)]
+                                          (swap! value conj (value-fn v))
+                                          (on-change @value)
+                                          (reset! input-value "")))
+        :renderInputComponent        ac-hack-input
+        :inputProps                  {:label    (or label "")
+                                      :value    (or @input-value "")
+                                      :onChange #(reset! input-value (.-newValue %2))}
+        :theme                       {:suggestionsList
+                                      {:list-style-type "none"
+                                       :padding         0
+                                       :margin          0}}}]]
+
+     ;; Selected values chips
+     (into
+      [mui/grid {:item  true
+                 :style {:margin-top :auto}}]
+      (for [v @value]
+        [mui/chip
+         {:label     (label-fn (get items v))
+          :on-delete #(do (swap! value (fn [old-value]
+                                         (into (empty old-value)
+                                               (remove #{v} old-value))))
+                          (on-change @value))}]))]))

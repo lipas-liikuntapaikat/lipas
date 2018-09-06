@@ -27,6 +27,7 @@
                  [cljsjs/babel-polyfill "6.20.0-2"]
                  [cljsjs/date-fns "1.29.0-0"]
                  [cljsjs/recharts "1.1.0-3"]
+                 [cljsjs/react-autosuggest "9.3.4-0"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.0-SNAPSHOT"]
