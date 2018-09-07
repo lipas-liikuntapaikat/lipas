@@ -38,7 +38,6 @@
     {:status "OK"}))
 
 (defn update-user-permissions! [db emailer user]
-  (prn user)
   (db/update-user-permissions! db user)) ;; TODO send email
 
 (defn get-user [db identifier]
