@@ -98,7 +98,7 @@
            {:status 200
             :body   (core/get-sports-site-history db lipas-id)})}}]
 
-n      ["/sports-sites/type/:type-code"
+      ["/sports-sites/type/:type-code"
        {:get
         {:parameters {:path  {:type-code int?}
                       :query :lipas.api/query-params}
