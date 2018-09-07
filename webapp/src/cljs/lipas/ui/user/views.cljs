@@ -3,9 +3,9 @@
             [lipas.ui.components :as lui]
             [lipas.ui.user.subs :as subs]
             [lipas.ui.routes :refer [navigate!]]
-            [re-frame.core :as re-frame]))
+            [lipas.ui.utils :refer [<== ==>]]))
 
-(defn user-panel [tr data]
+(defn user-panel [tr data admin?]
   (let [card-props {:square true
                     :style  {:height "100%"}}
         firstname  (-> data :user-data :firstname)
@@ -91,11 +91,16 @@
        [mui/card-actions
         [mui/button {:href  "/#/"
                      :color :secondary}
-         (str "> " (tr :user/front-page-link))]]]]]))
+         (str "> " (tr :user/front-page-link))]
+        (when admin?
+          [mui/button {:href  "/#/admin"
+                       :color :primary}
+           (str "> " (tr :user/admin-page-link))])]]]]))
 
 (defn main [tr]
-  (let [logged-in? (re-frame/subscribe [::subs/logged-in?])
-        user-data  (re-frame/subscribe [::subs/user-data])]
-    (if @logged-in?
-      [user-panel tr @user-data]
+  (let [logged-in? (<== [::subs/logged-in?])
+        user-data  (<== [::subs/user-data])
+        admin?     (<== [::subs/admin?])]
+    (if logged-in?
+      [user-panel tr user-data admin?]
       (navigate! "/#/kirjaudu"))))
