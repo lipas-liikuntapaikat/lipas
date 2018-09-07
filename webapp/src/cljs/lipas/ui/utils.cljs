@@ -304,6 +304,13 @@
   (let [path (-> js/window .-location .-href url/url :anchor)]
     (str "/#" path)))
 
+(defn parse-token [s]
+  (-> s
+      url/url
+      :anchor
+      (string/split "?token=")
+      second))
+
 (defn ->row [d headers]
   (let [header-keys (map first headers)]
     (mapv (fn [k] (get d k)) header-keys)))

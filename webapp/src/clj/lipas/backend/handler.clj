@@ -98,7 +98,7 @@
            {:status 200
             :body   (core/get-sports-site-history db lipas-id)})}}]
 
-      ["/sports-sites/type/:type-code"
+n      ["/sports-sites/type/:type-code"
        {:get
         {:parameters {:path  {:type-code int?}
                       :query :lipas.api/query-params}
@@ -114,6 +114,14 @@
                                                           type-code
                                                           {:revs   revs
                                                            :locale locale})}))}}]
+
+      ["/users"
+       {:get
+        {:middleware [mw/token-auth mw/auth mw/admin]
+         :handler
+         (fn [_]
+           {:status 200
+            :body   (core/get-users db)})}}]
 
       ["/actions/register"
        {:post
@@ -138,9 +146,10 @@
         {:middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
-           {:status 200
-            :body   (merge identity
-                           {:token (jwt/create-token identity)})})}}]
+           (let [user (core/get-user db (-> identity :id))]
+             {:status 200
+              :body   (merge (dissoc user :password)
+                             {:token (jwt/create-token identity)})}))}}]
 
       ["/actions/request-password-reset"
        {:post
@@ -160,6 +169,34 @@
            (let [user (-> req :identity)
                  pass (-> req :parameters :body :password)
                  _    (core/reset-password! db user pass)]
+             {:status 200
+              :body   {:status "OK"}}))}}]
+
+      ["/actions/update-user-permissions"
+       {:post
+        {:middleware [mw/token-auth mw/auth mw/admin]
+         :parameters {:body
+                      {:id          string?
+                       :permissions :lipas.user/permissions}}
+         :handler
+         (fn [req]
+           (let [params (-> req :parameters :body)
+                 _      (core/update-user-permissions! db emailer params)]
+             {:status 200
+              :body   {:status "OK"}}))}}]
+
+      ["/actions/send-magic-link"
+       {:post
+        {:middleware [mw/token-auth mw/auth mw/admin]
+         :parameters {:body
+                      {:login-url string?
+                       :user      :lipas/new-user}}
+         :handler
+         (fn [req]
+           (let [user (-> req :parameters :body :user)
+                 url  (-> req :parameters :body :login-url)
+                 _    (core/send-magic-link! db emailer {:user      user
+                                                         :login-url url})]
              {:status 200
               :body   {:status "OK"}}))}}]
 

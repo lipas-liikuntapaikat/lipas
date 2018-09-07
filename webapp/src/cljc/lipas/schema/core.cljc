@@ -136,21 +136,25 @@
 
 (s/def :lipas.user.permissions/admin? boolean?)
 (s/def :lipas.user.permissions/draft? boolean?)
+(s/def :lipas.user.permissions/all-cities? boolean?)
+(s/def :lipas.user.permissions/all-types? boolean?)
 
 (s/def :lipas.user/permissions
   (s/keys :opt-un [:lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
                    :lipas.user.permissions/sports-sites
+                   :lipas.user.permissions/all-cities?
+                   :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
 (s/def :lipas/new-user (s/keys :req-un [:lipas.user/email
-                                        :lipas.user/username
-                                        :lipas.user/password
-                                        :lipas.user/user-data]
-                               :opt-un [:lipas.user/permissions]))
+                                        :lipas.user/username]
+                               :opt-un [:lipas.user/password
+                                        :lipas.user/permissions
+                                        :lipas.user/user-data]))
 
 (s/def :lipas/user (s/merge :lipas/new-user
                             (s/keys :req-un [:lipas.user/id])))

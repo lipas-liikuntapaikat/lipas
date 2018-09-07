@@ -5,7 +5,7 @@
             [lipas.ui.mui :as mui]
             [reagent.core :as r]
             [lipas.ui.routes :refer [navigate!]]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn set-field [& args]
   (==> [::events/set-field (butlast args) (last args)]))
@@ -86,7 +86,9 @@
 
 (defn main [tr]
   (let [logged-in?    (<== [::subs/logged-in?])
-        comeback-path (<== [::subs/comeback-path])]
-    (if logged-in?
-      (navigate! (or comeback-path "/#/profiili"))
-      [login-panel {:tr tr}])))
+        comeback-path (<== [::subs/comeback-path])
+        token         (utils/parse-token (-> js/window .-location .-href))]
+    (cond
+      token      (==> [:lipas.ui.login.events/login-with-magic-link token])
+      logged-in? (navigate! (or comeback-path "/#/profiili"))
+      :else      [login-panel {:tr tr}])))

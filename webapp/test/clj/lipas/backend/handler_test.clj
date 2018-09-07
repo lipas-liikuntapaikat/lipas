@@ -8,7 +8,6 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
             [lipas.schema.core]
-            [lipas.utils :as utils]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
 
@@ -40,8 +39,10 @@
 (defn gen-user
   ([]
    (gen-user {:db? false :admin? false}))
-  ([{:keys [db? admin?]}]
+  ([{:keys [db? admin?]
+     :or   {admin? false}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
+                  (assoc :password (str (gensym)))
                   (assoc-in [:permissions :admin?] admin?))]
      (if db?
        (do
@@ -130,6 +131,53 @@
                        (mock/body (->json {:password "blablaba"}))
                        (token-header token)))]
     (is (= 401 (:status resp)))))
+
+(deftest send-magic-link-requires-admin-test
+  (let [admin (gen-user {:db? true :admin? false})
+        user  (-> (gen-user {:db? false})
+                  (dissoc :password :id))
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:user      user
+                                           :login-url "http://www.kissa.fi"}))
+                       (token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest update-user-permissions-test
+  (let [admin (gen-user {:db? true :admin? true})
+        user  (gen-user {:db? true})
+        perms {:admin? true}
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:id          (:id user)
+                                           :permissions perms}))
+                       (token-header token)))]
+    (is (= 200 (:status resp)))
+    (is (= perms (-> (core/get-user db (:email user))
+                     :permissions)))))
+
+(deftest update-user-permissions-requires-admin-test
+  (let [user  (gen-user {:db? true :admin? false})
+        token (jwt/create-token user)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
+                       (mock/content-type "application/json")
+                       (mock/body (->json (select-keys user [:id :permissions])))
+                       (token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest send-magic-link-test
+  (let [admin (gen-user {:db? true :admin? true})
+        user  (-> (gen-user {:db? false})
+                  (dissoc :password :id))
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:user      user
+                                           :login-url "http://www.kissa.fi"}))
+                       (token-header token)))]
+    (is (= 200 (:status resp)))))
 
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})

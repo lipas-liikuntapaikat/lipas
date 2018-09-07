@@ -1,5 +1,6 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.admin.views :as admin]
+            [lipas.ui.components :as lui]
             [lipas.ui.events :as events]
             [lipas.ui.front-page.views :as front-page]
             [lipas.ui.ice-stadiums.views :as ice-stadiums]
@@ -18,6 +19,7 @@
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
     :home-panel           [front-page/main tr]
+    :admin-panel          [admin/main]
     :sports-panel         [sports-sites/main tr]
     :ice-panel            [ice-stadiums/main]
     :swim-panel           [swimming-pools/main]

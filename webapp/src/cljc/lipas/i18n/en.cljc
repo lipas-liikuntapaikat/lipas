@@ -172,10 +172,16 @@
    :user
    {:headline        "Profile"
     :greeting        "Hello {1} {2}!"
-    :front-page-link "front page"}
+    :front-page-link "front page"
+    :admin-page-link "Admin page"}
+
+   :lipas.admin
+   {:headline "Admin"
+    :users    "Users"}
 
    :lipas.user
-   {:email                 "Email"
+   {:contact-info          "Contact info"
+    :email                 "Email"
     :email-example         "email@example.com"
     :username              "Username"
     :username-example      "tane12"

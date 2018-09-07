@@ -255,6 +255,7 @@
       ;; Sub page header
       (case active-panel
         :home-panel           (tr :home-page/headline)
+        :admin-panel          (tr :lipas.admin/headline)
         :sports-panel         (tr :sport/headline)
         :ice-panel            (tr :ice/headline)
         :swim-panel           (tr :swim/headline)
