@@ -56,6 +56,13 @@
   #?(:clj (java.util.UUID/fromString s)
      :cljs (uuid s)))
 
+(defn ->uuid-safe [x]
+  (cond
+    (uuid? x)   x
+    (string? x) (try (->uuid x) #?(:cljs (catch :default ex)
+                                   :clj  (catch Exception e)))
+    :else nil))
+
 (defn uuid []
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
