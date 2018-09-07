@@ -74,6 +74,18 @@
          :on-failure      [::logout]}}))))
 
 (re-frame/reg-event-fx
+ ::login-with-magic-link
+ (fn [{db :db} [_ token]]
+   {:http-xhrio
+    {:method          :get
+     :uri             (str (:backend-url db) "/actions/refresh-login")
+     :headers         {:Authorization (str "Token " token)}
+     :format          (ajax/json-request-format)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::login-success]
+     :on-failure      [::logout]}}))
+
+(re-frame/reg-event-fx
  ::logout
  [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
  (fn [{:keys [db]}  _]

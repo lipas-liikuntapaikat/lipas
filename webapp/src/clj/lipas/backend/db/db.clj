@@ -7,8 +7,9 @@
 ;; User ;;
 
 (defn get-users [db-spec]
-  (-> (user/all-users db-spec)
-      (user/unmarshall)))
+  (->> (user/all-users db-spec)
+       (map user/unmarshall)
+       (map #(dissoc % :password))))
 
 (defn get-user-by-id [db-spec user-id]
   (-> (user/get-user-by-id db-spec user-id)
@@ -26,6 +27,11 @@
   (->> user
        (user/marshall)
        (user/insert-user! db-spec)))
+
+(defn update-user-permissions! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-permissions! db-spec)))
 
 (defn reset-user-password! [db-spec user]
   (->> user
