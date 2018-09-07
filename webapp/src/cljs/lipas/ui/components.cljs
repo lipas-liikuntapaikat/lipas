@@ -27,6 +27,15 @@
 
 ;;; Components ;;;
 
+(defn email-button [{:keys [on-click label] :as props}]
+  [mui/button (merge {:color    "secondary"
+                      :variant  "contained"
+                      :on-click on-click}
+                     props)
+   [mui/icon {:style {:margin-right "0.25em"}}
+    "email"]
+   label])
+
 (defn download-button [{:keys [on-click label] :as props}]
   [mui/button (merge {:color    "secondary"
                       :variant  "outlined"
