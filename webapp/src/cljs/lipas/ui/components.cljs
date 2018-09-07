@@ -3,6 +3,7 @@
             [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
+            [goog.object :as gobj]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -802,8 +803,8 @@
 
 (defn ac-hack-container [opts]
   (r/as-element
-   [mui/paper (merge (js->clj* (.-containerProps opts)))
-    (.-children opts)]))
+   [mui/paper (merge (js->clj* (gobj/get opts "containerProps")))
+    (gobj/get opts "children")]))
 
 (defn ac-hack-item [label-fn item]
   (r/as-element
@@ -818,7 +819,7 @@
                             label-fn      :label
                             value-fn      :value}}]
 
-  (r/with-let [items       (utils/index-by value-fn items)
+  (r/with-let [items-m     (utils/index-by value-fn items)
                id          (r/atom (gensym))
                value       (r/atom (or value []))
                input-value (r/atom "")
@@ -832,19 +833,28 @@
        {:id                          @id
         :suggestions                 @suggs
         :getSuggestionValue          #(label-fn (js->clj* %1))
-        :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn (.-value %)))
+
+        :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
+                                                     (gobj/get % "value")))
+
         :onSuggestionsClearRequested #(reset! suggs [])
         :renderSuggestion            (partial ac-hack-item label-fn)
         :renderSuggestionsContainer  ac-hack-container
-        :onSuggestionSelected        #(do
-                                        (let [v (-> %2 .-suggestion js->clj*)]
-                                          (swap! value conj (value-fn v))
-                                          (on-change @value)
-                                          (reset! input-value "")))
+
+        :onSuggestionSelected        #(let [v (-> %2
+                                                  (gobj/get "suggestion")
+                                                  js->clj*)]
+                                        (swap! value conj (value-fn v))
+                                        (on-change @value)
+                                        (reset! input-value ""))
+
         :renderInputComponent        ac-hack-input
         :inputProps                  {:label    (or label "")
                                       :value    (or @input-value "")
-                                      :onChange #(reset! input-value (.-newValue %2))}
+
+                                      :onChange #(reset! input-value
+                                                         (gobj/get %2 "newValue"))}
+
         :theme                       {:suggestionsList
                                       {:list-style-type "none"
                                        :padding         0
@@ -856,7 +866,7 @@
                  :style {:margin-top :auto}}]
       (for [v @value]
         [mui/chip
-         {:label     (label-fn (get items v))
+         {:label     (label-fn (get items-m v))
           :on-delete #(do (swap! value (fn [old-value]
                                          (into (empty old-value)
                                                (remove #{v} old-value))))
