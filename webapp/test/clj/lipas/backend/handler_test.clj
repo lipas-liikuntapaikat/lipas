@@ -82,7 +82,7 @@
     (is (= (:email user) (:email body)))))
 
 (deftest refresh-login-test
-  (let [user   (gen-user)
+  (let [user   (gen-user {:db? true})
         token1 (jwt/create-token user :terse? true)
         _      (Thread/sleep 1000) ; to see effect between timestamps
         resp   (app (-> (mock/request :get "/api/actions/refresh-login")

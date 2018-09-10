@@ -63,7 +63,7 @@
                                    :clj  (catch Exception e)))
     :else nil))
 
-(defn uuid []
+(defn gen-uuid []
   #?(:clj (java.util.UUID/randomUUID)
      :cljs (random-uuid)))
 

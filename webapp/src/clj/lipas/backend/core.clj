@@ -30,7 +30,7 @@
   (let [defaults {:permissions default-permissions
                   :username    (:email user)
                   :user-data   {}
-                  :password    (str (utils/uuid))}
+                  :password    (str (utils/gen-uuid))}
         user     (-> (merge defaults user)
                      (update :password hashers/encrypt))]
 
@@ -44,6 +44,12 @@
   (or (db/get-user-by-email db {:email identifier})
       (db/get-user-by-username db {:username identifier})
       (db/get-user-by-id db {:id identifier})))
+
+(defn get-user! [db identifier]
+  (if-let [user (get-user db identifier)]
+    user
+    (throw (ex-info "User not found."
+                    {:type :user-not-found}))))
 
 (defn get-users [db]
   (db/get-users db))
