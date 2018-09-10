@@ -173,10 +173,20 @@
    :user
    {:headline        "Oma sivu"
     :greeting        "Hei {1} {2}!"
-    :front-page-link "Siirry etusivulle"}
+    :front-page-link "Siirry etusivulle"
+    :admin-page-link "Siirry admin-sivulle"}
+
+   :lipas.admin
+   {:headline           "Admin"
+    :users              "Käyttäjät"
+    :magic-link         "Taikalinkki"
+    :confirm-magic-link "Haluatko varmasti lähettää taikalinkin
+    käyttäjälle {1}?"
+    }
 
    :lipas.user
-   {:email                 "Sähköposti"
+   {:contact-info          "Yhteystiedot"
+    :email                 "Sähköposti"
     :email-example         "email@example.com"
     :username              "Käyttäjätunnus"
     :username-example      "tane12"
@@ -189,11 +199,13 @@
     :requested-permissions "Pyydetyt oikeudet"}
 
    :lipas.user.permissions
-   {:admin?       "Pääkäyttäjän oikeudet"
+   {:admin?       "Admin"
     :draft?       "Ehdota muutoksia"
-    :sports-sites "Oikeus liikuntapaikkoihin"
-    :types        "Oikeus liikuntapaikkatyypin liikuntapaikkoihin"
-    :cities       "Oikeus kunnan liikuntapaikkoihin"}
+    :all-cities?  "Oikeus kaikkiin kuntiin"
+    :all-types?   "Oikeus kaikkiin tyyppeihin"
+    :sports-sites "Liikuntapaikat"
+    :types        "Tyypit"
+    :cities       "Kunnat"}
 
    :register
    {:headline "Rekisteröidy"}

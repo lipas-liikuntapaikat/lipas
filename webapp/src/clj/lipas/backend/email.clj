@@ -27,6 +27,12 @@
                    :plain   (str reset-link)
                    :html    (str "<html><body>" reset-link "</body></html>")}))
 
+(defn send-magic-login-email! [emailer to link]
+  (.send! emailer {:subject "Taikalinkki Lipakseen"
+                   :to      to
+                   :plain   (str link)
+                   :html    (str "<html><body>" link "</body></html>")}))
+
 (defrecord SMTPEmailer [config]
   Emailer
   (send! [_ message] (send*! config message)))

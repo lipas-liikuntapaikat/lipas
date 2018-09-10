@@ -287,15 +287,15 @@
   {"Avo-/Painehiekka"     ["open-sand" "pressure-sand"]
    "Avohiekka"            ["open-sand"]
    "Avohiekka/monikerros" ["open-sand" "multi-layer-filtering"]
-   "Hiekka/aktiivihiili"  ["sand" "activated-carbon"]
-   "Hiekka/saostus"       ["sand" "precipitation"]
-   "Hiili/hiekka"         ["coal" "sand"]
-   "Imuhiekka"            ["suction-sand"]
+   "Hiekka/aktiivihiili"  ["activated-carbon"]
+   "Hiekka/saostus"       ["precipitation"]
+   "Hiili/hiekka"         ["coal"]
+   "Imuhiekka"            ["other"]
    "Moniker./painehiekka" ["multi-layer-filtering" "pressure-sand"]
    "Monikerrossuodatus"   ["multi-layer-filtering"]
    "Muu"                  ["other"]
    "Painehiekka"          ["pressure-sand"]
-   "Paineimu"             ["pressure-suction"]})
+   "Paineimu"             ["other"]})
 
 (defn ->swimming-pool [portal-entry lipas-entry]
   (merge
@@ -319,7 +319,7 @@
      :staff-count             (when-gt0 (get portal-entry "Henkilö-,kuntaa"))
      :seating-capacity        (-> lipas-entry :properties :standCapacityPerson
                                   utils/->int)
-     :heat-source             nil ; Not present in data dump
+     :heat-sources            nil ; Not present in data dump
      :ventilation-units-count (when-gt0 (get portal-entry "IV-,koneita"))}
 
     :water-treatment

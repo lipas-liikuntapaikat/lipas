@@ -155,7 +155,7 @@
                :admins admins
                :owners owners
                :types  types}]
-     (sort-by :city (map (partial ->list-entry data) (vals pools))))))
+     (map (partial ->list-entry data) (vals pools)))))
 
 (re-frame/reg-sub
  ::display-site-raw
@@ -220,7 +220,7 @@
             (update :main-construction-materials #(map get-material %))
             (update :ceiling-structures #(map get-material %))
             (update :supporting-structures #(map get-material %))
-            (update :heat-source get-heat-source))
+            (update :heat-sources #(map get-heat-source %)))
 
         :renovations (:renovations latest)
         :conditions  (:conditions latest)

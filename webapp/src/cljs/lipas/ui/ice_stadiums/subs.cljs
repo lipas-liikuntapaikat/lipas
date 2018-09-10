@@ -152,7 +152,9 @@
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     ice-stadium]
   (let [type          (types (-> ice-stadium :type :type-code))
-        size-category (-> ice-stadium :type :size-category size-categories locale)
+        size-category (and
+                       (= 2520 (-> ice-stadium :type :type-code))
+                       (-> ice-stadium :type :size-category size-categories locale))
         admin         (admins (-> ice-stadium :admin))
         owner         (owners (-> ice-stadium :owner))
         city          (get cities (-> ice-stadium :location :city :city-code))]
@@ -187,7 +189,7 @@
                :owners          owners
                :types           types
                :size-categories size-categories}]
-     (sort-by :city (map (partial ->list-entry data) (vals sites))))))
+     (map (partial ->list-entry data) (vals sites)))))
 
 (re-frame/reg-sub
  ::display-site-raw
