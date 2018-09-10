@@ -132,7 +132,7 @@
     :open-hours-sun    "Sunnuntaisin"}
 
    :lipas.swimming-pool.energy-saving
-   {:headline                    "Energiansäästö"
+   {:headline                    (str "Energian" ZWSP "säästö" ZWSP "toimet")
     :shower-water-heat-recovery? "Suihkuveden lämmöntalteenotto"
     :filter-rinse-water-heat-recovery?
     "Suodattimien huuhteluveden lämmöntalteenotto"}
