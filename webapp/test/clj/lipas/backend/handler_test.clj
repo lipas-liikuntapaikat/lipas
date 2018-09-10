@@ -39,8 +39,10 @@
 (defn gen-user
   ([]
    (gen-user {:db? false :admin? false}))
-  ([{:keys [db? admin?]}]
+  ([{:keys [db? admin?]
+     :or   {admin? false}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
+                  (assoc :password (str (gensym)))
                   (assoc-in [:permissions :admin?] admin?))]
      (if db?
        (do
@@ -80,7 +82,7 @@
     (is (= (:email user) (:email body)))))
 
 (deftest refresh-login-test
-  (let [user   (gen-user)
+  (let [user   (gen-user {:db? true})
         token1 (jwt/create-token user :terse? true)
         _      (Thread/sleep 1000) ; to see effect between timestamps
         resp   (app (-> (mock/request :get "/api/actions/refresh-login")
@@ -129,6 +131,53 @@
                        (mock/body (->json {:password "blablaba"}))
                        (token-header token)))]
     (is (= 401 (:status resp)))))
+
+(deftest send-magic-link-requires-admin-test
+  (let [admin (gen-user {:db? true :admin? false})
+        user  (-> (gen-user {:db? false})
+                  (dissoc :password :id))
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:user      user
+                                           :login-url "http://www.kissa.fi"}))
+                       (token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest update-user-permissions-test
+  (let [admin (gen-user {:db? true :admin? true})
+        user  (gen-user {:db? true})
+        perms {:admin? true}
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:id          (:id user)
+                                           :permissions perms}))
+                       (token-header token)))]
+    (is (= 200 (:status resp)))
+    (is (= perms (-> (core/get-user db (:email user))
+                     :permissions)))))
+
+(deftest update-user-permissions-requires-admin-test
+  (let [user  (gen-user {:db? true :admin? false})
+        token (jwt/create-token user)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
+                       (mock/content-type "application/json")
+                       (mock/body (->json (select-keys user [:id :permissions])))
+                       (token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest send-magic-link-test
+  (let [admin (gen-user {:db? true :admin? true})
+        user  (-> (gen-user {:db? false})
+                  (dissoc :password :id))
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:user      user
+                                           :login-url "http://www.kissa.fi"}))
+                       (token-header token)))]
+    (is (= 200 (:status resp)))))
 
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})
@@ -190,6 +239,23 @@
            (-> (group-by :lipas-id body)
                (get id)
                (as-> $ (into #{} (map :event-date) $)))))))
+
+(deftest get-sports-sites-by-type-code-localized-test
+  (let [user (gen-user {:db? true :admin? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc-in [:type :type-code] 3110)
+                 (assoc-in [:admin] "state")
+                 (assoc :status "active"))
+        _    (core/upsert-sports-site! db user site)
+        resp (app (-> (mock/request :get "/api/sports-sites/type/3110?lang=fi")
+                      (mock/content-type "application/json")))
+        body (<-json (:body resp))]
+    (is (= 200 (:status resp)))
+    ;; Note returned entities are not valid according to specs!
+    (is (= "Valtio" (->> body
+                         (filter #(= (:lipas-id site) (:lipas-id %)))
+                         first
+                         :admin)))))
 
 (deftest get-sports-site-history-test
   (let [user     (gen-user {:db? true})

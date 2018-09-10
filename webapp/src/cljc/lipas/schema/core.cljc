@@ -136,21 +136,25 @@
 
 (s/def :lipas.user.permissions/admin? boolean?)
 (s/def :lipas.user.permissions/draft? boolean?)
+(s/def :lipas.user.permissions/all-cities? boolean?)
+(s/def :lipas.user.permissions/all-types? boolean?)
 
 (s/def :lipas.user/permissions
   (s/keys :opt-un [:lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
                    :lipas.user.permissions/sports-sites
+                   :lipas.user.permissions/all-cities?
+                   :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
 (s/def :lipas/new-user (s/keys :req-un [:lipas.user/email
-                                        :lipas.user/username
-                                        :lipas.user/password
-                                        :lipas.user/user-data]
-                               :opt-un [:lipas.user/permissions]))
+                                        :lipas.user/username]
+                               :opt-un [:lipas.user/password
+                                        :lipas.user/permissions
+                                        :lipas.user/user-data]))
 
 (s/def :lipas/user (s/merge :lipas/new-user
                             (s/keys :req-un [:lipas.user/id])))
@@ -289,6 +293,13 @@
 (s/def :lipas.building/staff-count (s/int-in 0 (inc 1000)))
 (s/def :lipas.building/seating-capacity (s/int-in 0 (inc 50000)))
 (s/def :lipas.building/heat-source (into #{} (keys swimming-pools/heat-sources)))
+(s/def :lipas.building/heat-sources
+  (s/coll-of :lipas.building/heat-source
+             :min-count 0
+             :max-count (count swimming-pools/heat-sources)
+             :distinct true
+             :into []))
+
 (s/def :lipas.building/ventilation-units-count (s/int-in 0 (inc 100)))
 
 (s/def :lipas.building/main-construction-materials
@@ -402,7 +413,7 @@
 (s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
-  (s/int-in -10 (inc -1)))
+  (s/int-in -10 (inc 0)))
 
 (s/def :lipas.ice-stadium.conditions/skating-area-temperature-c
   (s/int-in -15 (inc 20)))
@@ -527,6 +538,7 @@
                    :lipas.building/ceiling-structures
                    :lipas.building/staff-count
                    :lipas.building/heat-source
+                   :lipas.building/heat-sources
                    :lipas.building/ventilation-units-count]))
 
 ;; Water treatment ;;
@@ -726,4 +738,7 @@
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})
-(s/def :lipas.api/query-params (s/keys :opt-un [::revs]))
+(s/def :lipas.api/lang #{"fi" "en" "se"})
+(s/def :lipas.api/query-params
+  (s/keys :opt-un [:lipas.api/revs
+                   :lipas.api/lang]))

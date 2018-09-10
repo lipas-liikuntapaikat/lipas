@@ -3,7 +3,8 @@
             [clojure.spec.alpha :as s]
             #?(:cljs [cljs.reader :refer [read-string]])
             #?(:cljs [goog.string :as gstring])
-            #?(:cljs [goog.string.format])))
+            #?(:cljs [goog.string.format]))
+  (:import [java.util.UUID]))
 
 (defn index-by
   ([idx-fn coll]
@@ -50,6 +51,21 @@
 (defn ->int [s]
   (when-let [num (->number s)]
     (int num)))
+
+(defn ->uuid [s]
+  #?(:clj (java.util.UUID/fromString s)
+     :cljs (uuid s)))
+
+(defn ->uuid-safe [x]
+  (cond
+    (uuid? x)   x
+    (string? x) (try (->uuid x) #?(:cljs (catch :default ex)
+                                   :clj  (catch Exception e)))
+    :else nil))
+
+(defn gen-uuid []
+  #?(:clj (java.util.UUID/randomUUID)
+     :cljs (random-uuid)))
 
 ;;; Simple statistics ;;;
 

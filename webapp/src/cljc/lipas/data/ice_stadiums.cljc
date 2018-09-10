@@ -58,24 +58,27 @@
 
 ;; Kylmäliuos
 (def refrigerant-solutions
-  {"cacl"          {:fi "CaCl"
-                    :en "CaCl"
-                    :se "CaCl"}
-   "freezium"      {:fi "Freezium"
-                    :en "Freezium"
-                    :se "Freezium"}
-   "water-glycol"  {:fi "Vesi-glykoli"
-                    :en "Water-glycol"
-                    :se nil}
-   "ethanol-water" {:fi "Etanoli-vesi"
-                    :en "Ethanol-water"
-                    :se nil}
-   "CO2"           {:fi "CO2"
-                    :en "CO2"
-                    :se "CO2"}
-   "H2ONH3"        {:fi "H2O/NH3"
-                    :en "H2O/NH3"
-                    :se "H2O/NH3"}})
+  {"cacl"            {:fi "CaCl"
+                      :en "CaCl"
+                      :se "CaCl"}
+   "freezium"        {:fi "Freezium"
+                      :en "Freezium"
+                      :se "Freezium"}
+   "water-glycol"    {:fi "Vesi-glykoli"
+                      :en "Water-glycol"
+                      :se nil}
+   "ethanol-water"   {:fi "Etanoli-vesi"
+                      :en "Ethanol-water"
+                      :se nil}
+   "CO2"             {:fi "CO2"
+                      :en "CO2"
+                      :se "CO2"}
+   "H2ONH3"          {:fi "H2O/NH3"
+                      :en "H2O/NH3"
+                      :se "H2O/NH3"}
+   "ethylene-glycol" {:fi "Etyleeniglykoli"
+                      :en "Ethylene glycol"
+                      :se nil}})
 
 ;; LTO_tyyppi
 (def heat-recovery-types

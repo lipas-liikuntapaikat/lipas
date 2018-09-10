@@ -2,30 +2,38 @@
   (:require [clojure.java.jdbc :as jdbc]
             [lipas.backend.db.sports-site :as sports-site]
             [lipas.backend.db.user :as user]
-            [lipas.backend.db.utils :as utils]))
+            [lipas.utils :as utils]
+            [lipas.backend.db.utils :as db-utils]))
 
 ;; User ;;
 
 (defn get-users [db-spec]
-  (-> (user/all-users db-spec)
+  (->> (user/all-users db-spec)
+       (map user/unmarshall)
+       (map #(dissoc % :password))))
+
+(defn get-user-by-id [db-spec params]
+  (when (uuid? (utils/->uuid-safe (:id params)))
+    (-> (user/get-user-by-id db-spec params)
+        (user/unmarshall))))
+
+(defn get-user-by-email [db-spec params]
+  (-> (user/get-user-by-email db-spec params)
       (user/unmarshall)))
 
-(defn get-user-by-id [db-spec user-id]
-  (-> (user/get-user-by-id db-spec user-id)
-      (user/unmarshall)))
-
-(defn get-user-by-email [db-spec email]
-  (-> (user/get-user-by-email db-spec email)
-      (user/unmarshall)))
-
-(defn get-user-by-username [db-spec username]
-  (-> (user/get-user-by-username db-spec username)
+(defn get-user-by-username [db-spec params]
+  (-> (user/get-user-by-username db-spec params)
       (user/unmarshall)))
 
 (defn add-user! [db-spec user]
   (->> user
        (user/marshall)
        (user/insert-user! db-spec)))
+
+(defn update-user-permissions! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-permissions! db-spec)))
 
 (defn reset-user-password! [db-spec user]
   (->> user
@@ -54,7 +62,7 @@
 
 (defn get-sports-site-history [db-spec lipas-id]
   (let [params (-> {:lipas-id lipas-id}
-                   utils/->snake-case-keywords)]
+                   db-utils/->snake-case-keywords)]
     (->> (sports-site/get-history db-spec params)
          (map sports-site/unmarshall))))
 
@@ -67,6 +75,6 @@
         params (-> (merge {:type-code type-code}
                           (when (number? revs)
                             {:year revs}))
-                   utils/->snake-case-keywords)]
+                   db-utils/->snake-case-keywords)]
     (->> (db-fn db-spec params)
          (map sports-site/unmarshall))))

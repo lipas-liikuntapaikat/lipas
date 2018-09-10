@@ -52,11 +52,11 @@
      :on-change #(on-change :water-m3 %)}]
 
    ;; Contains other buildings?
-   [:span {:style {:margin-top "1em"}}
-    [lui/checkbox
-     {:label     (tr :lipas.energy-consumption/contains-other-buildings?)
-      :value     (:contains-other-buildings? data)
-      :on-change #(on-change :contains-other-buildings? %)}]]])
+   [lui/checkbox
+    {:style     {:margin-top "1em"}
+     :label     (tr :lipas.energy-consumption/contains-other-buildings?)
+     :value     (:contains-other-buildings? data)
+     :on-change #(on-change :contains-other-buildings? %)}]])
 
 (comment ;; Example data grid
   {:jan {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}

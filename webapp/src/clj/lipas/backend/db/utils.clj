@@ -3,8 +3,7 @@
             [camel-snake-kebab.extras :refer [transform-keys]]
             [cheshire.core :as j]
             [clojure.java.jdbc :as jdbc])
-  (:import [org.postgresql.util PGobject]
-           [java.util.UUID]))
+  (:import [org.postgresql.util PGobject]))
 
 (comment (<-json (->json {:kissa "koira"})))
 (def <-json #(j/decode % true))

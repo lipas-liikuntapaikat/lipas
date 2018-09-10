@@ -102,11 +102,25 @@
          (map utils/clean)
          (upsert-all! db user :lipas.sports-site/swimming-pool))))
 
+(defn heat-source->heat-sources!
+  "Creates new field [:building :heat-sources [...]] and migrates values
+  from old field [:building :heat-source]. Old field is removed."
+  [db user]
+  (log/info "Starting to fix swimming pool (3110 3130) heat sources..")
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})]
+    (->> (concat data-3110 data-3130)
+         (filter (comp some? :heat-source :building))
+         (map #(assoc-in % [:building :heat-sources] [(-> % :building :heat-source)]))
+         (map #(update-in % [:building] dissoc :heat-source))
+         (upsert-all! db user :lipas.sports-site/swimming-pool))))
+
 (def tasks
-  {:fix-filtering-methods  fix-filtering-methods!
-   :fix-building-materials fix-building-materials!
-   :fix-ceiling-structures fix-ceiling-structures!
-   :fix-pool-types         fix-pool-types!})
+  {:fix-filtering-methods     fix-filtering-methods!
+   :fix-building-materials    fix-building-materials!
+   :fix-ceiling-structures    fix-ceiling-structures!
+   :fix-pool-types            fix-pool-types!
+   :heat-source->heat-sources heat-source->heat-sources!})
 
 (defn print-usage! []
   (println "\nUsage: lein run -m lipas.maintenance :task-name\n")
@@ -132,4 +146,5 @@
 (comment
   (-main ":fix-kissa")
   (-main ":fix-pool-types")
-  (-main ":fix-ceiling-structures"))
+  (-main ":fix-ceiling-structures")
+  (-main ":heat-source->heat-sources"))

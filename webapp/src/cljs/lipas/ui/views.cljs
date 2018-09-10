@@ -1,5 +1,6 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.admin.views :as admin]
+            [lipas.ui.components :as lui]
             [lipas.ui.events :as events]
             [lipas.ui.front-page.views :as front-page]
             [lipas.ui.ice-stadiums.views :as ice-stadiums]
@@ -18,6 +19,7 @@
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
     :home-panel           [front-page/main tr]
+    :admin-panel          [admin/main]
     :sports-panel         [sports-sites/main tr]
     :ice-panel            [ice-stadiums/main]
     :swim-panel           [swimming-pools/main]
@@ -32,8 +34,6 @@
 
 (defn main-panel []
   (let [active-panel (<== [::subs/active-panel])
-        menu-anchor  (<== [::subs/account-menu-anchor])
-        drawer-open? (<== [::subs/drawer-open?])
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
         confirmation (<== [::subs/active-confirmation])
@@ -45,7 +45,7 @@
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
       ;; Navbar and drawer
-      [nav/nav tr menu-anchor drawer-open? active-panel logged-in?]
+      [nav/nav tr active-panel logged-in?]
 
       ;; Dev-env disclaimer
       (when disclaimer

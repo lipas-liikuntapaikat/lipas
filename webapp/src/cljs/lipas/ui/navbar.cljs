@@ -27,8 +27,8 @@
      [avatar]
      [mui/icon "account_circle"])])
 
-(defn create-menu [tr anchor logged-in?]
-  (let [close #(==> [::events/show-account-menu nil])]
+(defn menu [tr anchor logged-in?]
+  (let [close  #(==> [::events/show-account-menu nil])]
     [mui/menu {:anchor-el anchor
                :open      true
                :on-close  close}
@@ -103,9 +103,11 @@
 (defn toggle-drawer [_]
   (==> [::events/toggle-drawer]))
 
-(defn create-drawer [tr logged-in?]
-  (let [hide-and-navigate! (comp toggle-drawer navigate!)]
-    [mui/swipeable-drawer {:open     true
+(defn drawer [tr logged-in?]
+  (let [open?              (<== [::subs/drawer-open?])
+        admin?             (<== [:lipas.ui.user.subs/admin?])
+        hide-and-navigate! (comp toggle-drawer navigate!)]
+    [mui/swipeable-drawer {:open     open?
                            :anchor   :top
                            :on-open  #()
                            :on-close toggle-drawer}
@@ -156,12 +158,21 @@
        [mui/list-item-text {:primary (tr :swim/headline)}]]
       [mui/divider]
 
+      ;; Admin
+      (when admin?
+        [mui/list-item {:button   true
+                        :on-click #(hide-and-navigate! "/#/admin")}
+         [mui/list-item-icon
+          [mui/icon "settings"]]
+         [mui/list-item-text {:primary (tr :lipas.admin/headline)}]])
+
       ;; Help
       [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! (:help links))}
        [mui/list-item-icon
         [mui/icon "help"]]
        [mui/list-item-text {:primary (tr :help/headline)}]]
+
       [mui/divider]
 
       ;; Profile
@@ -196,87 +207,88 @@
           [mui/icon "group_add"]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
 
-(defn nav [tr menu-anchor drawer-open? active-panel logged-in?]
-  [mui/app-bar {:position "static"
-                :color    "primary"
-                :style    {:border-box "1px solid black"}}
+(defn nav [tr active-panel logged-in?]
+  (let [menu-anchor (<== [::subs/account-menu-anchor])]
+    [mui/app-bar {:position "static"
+                  :color    "primary"
+                  :style    {:border-box "1px solid black"}}
 
-   [mui/tool-bar {:disable-gutters true}
+     [mui/tool-bar {:disable-gutters true}
 
-    (when menu-anchor
-      (create-menu tr menu-anchor logged-in?))
+      (when menu-anchor
+        [menu tr menu-anchor logged-in?])
 
-    (when drawer-open?
-      (create-drawer tr logged-in?))
+      [drawer tr logged-in?]
 
-    ;;; JYU logo
-    [:a {:href "/#/"}
-     [mui/svg-icon {:view-box "0 0 132.54 301.95"
-                    :style    {:height "2em"
-                               :margin "0.45em"}}
-      [svg/jyu-logo]]]
+      ;;; JYU logo
+      [:a {:href "/#/"}
+       [mui/svg-icon {:view-box "0 0 132.54 301.95"
+                      :style    {:height "2em"
+                                 :margin "0.45em"}}
+        [svg/jyu-logo]]]
 
-    ;;; Header text
-    [mui/typography {:variant "title"
-                     :style   {:flex        1
-                               :font-size   "1em"
-                               :font-weight "bold"}}
+      ;;; Header text
+      [mui/typography {:variant "title"
+                       :style   {:flex        1
+                                 :font-size   "1em"
+                                 :font-weight "bold"}}
 
-     ;; University of Jyväskylä
-     [mui/hidden {:sm-down true}
-      [mui/typography {:component "a"
-                       :variant   "title"
-                       :href      "/#/"
-                       :style
-                       (merge mui/headline-aleo
-                              {:display         :inline
-                               :font-size       "1em"
-                               :text-transform  :none
-                               :text-decoration :none})}
-       (tr :menu/jyu)]
+       ;; University of Jyväskylä
+       [mui/hidden {:sm-down true}
+        [mui/typography {:component "a"
+                         :variant   "title"
+                         :href      "/#/"
+                         :style
+                         (merge mui/headline-aleo
+                                {:display         :inline
+                                 :font-size       "1em"
+                                 :text-transform  :none
+                                 :text-decoration :none})}
+         (tr :menu/jyu)]
 
-      [separator]]
+        [separator]]
 
-     ;; LIPAS
-     [mui/typography {:component "a"
-                      :variant   "title"
-                      :href      "/#/"
-                      :style
-                      (merge mui/headline-aleo
-                             {:display         :inline
-                              :font-size       "1em"
-                              :text-transform  :none
-                              :text-decoration :none})}
+       ;; LIPAS
+       [mui/typography {:component "a"
+                        :variant   "title"
+                        :href      "/#/"
+                        :style
+                        (merge mui/headline-aleo
+                               {:display         :inline
+                                :font-size       "1em"
+                                :text-transform  :none
+                                :text-decoration :none})}
 
-      (tr :menu/headline)
+        (tr :menu/headline)
 
-      [separator]
+        [separator]
 
-      ;; Sub page header
-      (case active-panel
-        :home-panel           (tr :home-page/headline)
-        :sports-panel         (tr :sport/headline)
-        :ice-panel            (tr :ice/headline)
-        :swim-panel           (tr :swim/headline)
-        :login-panel          (tr :login/headline)
-        :register-panel       (tr :register/headline)
-        :user-panel           (tr :user/headline)
-        :reset-password-panel (tr :reset-password/headline)
-        "")]]
+        ;; Sub page header
+        (case active-panel
+          :home-panel           (tr :home-page/headline)
+          :admin-panel          (tr :lipas.admin/headline)
+          :sports-panel         (tr :sport/headline)
+          :ice-panel            (tr :ice/headline)
+          :swim-panel           (tr :swim/headline)
+          :login-panel          (tr :login/headline)
+          :register-panel       (tr :register/headline)
+          :user-panel           (tr :user/headline)
+          :reset-password-panel (tr :reset-password/headline)
+          "")]]
 
-    [mui/hidden {:sm-down true}
-      [lang-selector]]
+      [mui/hidden {:sm-down true}
+       [lang-selector]]
 
     ;;; Search button
-    ;; [mui/icon-button {:id         "search-btn"
-    ;;                   :aria-label (tr :actions/open-search)}
-    ;;  [mui/icon "search"]]
+      ;; [mui/icon-button {:id         "search-btn"
+      ;;                   :aria-label (tr :actions/open-search)}
+      ;;  [mui/icon "search"]]
 
-    ;;; Account menu button
-    [account-menu-button {:tr tr :logged-in? logged-in?}]
+      ;;; Account menu button
+      [account-menu-button {:tr tr :logged-in? logged-in?}]
 
-    ;;; Main menu (drawer) button
-    [mui/icon-button {:id         "main-menu-btn"
-                      :aria-label (tr :actions/open-main-menu)
-                      :on-click   toggle-drawer}
-     [mui/icon {:color "secondary"} "menu"]]]])
+      ;;; Main menu (drawer) button
+      [mui/icon-button {:id         "main-menu-btn"
+                        :aria-label (tr :actions/open-main-menu)
+                        :on-click   toggle-drawer}
+       [mui/icon {:color "secondary"} "menu"]]]]))

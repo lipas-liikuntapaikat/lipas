@@ -32,6 +32,11 @@
   (defroute "/" []
     (==> [:lipas.ui.events/set-active-panel :home-panel]))
 
+  ;;; Admin ;;;
+
+  (defroute "/admin" []
+    (==> [:lipas.ui.events/set-active-panel :admin-panel]))
+
   ;;; Sports sites ;;;
 
   (defroute "/liikuntapaikat" []

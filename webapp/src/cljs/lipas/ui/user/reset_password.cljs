@@ -87,17 +87,10 @@
        :disabled (not (s/valid? :lipas.user/password @password))}
       (tr :actions/submit)]]))
 
-(defn parse-token [s]
-  (-> s
-      url/url
-      :anchor
-      (string/split "?token=")
-      second))
-
 (defn main []
   (==> [::events/clear-feedback])
   (let [tr    (<== [:lipas.ui.subs/translator])
-        token (parse-token (-> js/window .-location .-href))]
+        token (utils/parse-token (-> js/window .-location .-href))]
     (if token
       ;; Reset password
       [panel {:tr          tr

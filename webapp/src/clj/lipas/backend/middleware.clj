@@ -2,7 +2,7 @@
   (:require [buddy.auth :refer [authenticated?]]
             [buddy.auth.middleware :refer [wrap-authentication]]
             [lipas.backend.auth :as auth]
-            [ring.util.http-response :refer [unauthorized]]))
+            [ring.util.http-response :as resp]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not
@@ -11,7 +11,7 @@
   (fn [request]
     (if (authenticated? request)
       (handler request)
-      (unauthorized {:error "Not authorized"}))))
+      (resp/unauthorized {:error "Not authorized"}))))
 
 (defn basic-auth [db]
   (fn [handler]
@@ -38,3 +38,9 @@
   "Middleware used on routes requiring token authentication"
   [handler]
   (wrap-authentication handler auth/token-backend))
+
+(defn admin [handler]
+  (fn [request]
+    (if (-> request :identity :permissions :admin?)
+      (handler request)
+      (resp/forbidden {:error "Admin access required"}))))

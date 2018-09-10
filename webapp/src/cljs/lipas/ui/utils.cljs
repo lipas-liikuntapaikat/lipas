@@ -140,11 +140,20 @@
                 (str y))
        :value y})))
 
+(defn some-energy-data-exists? [{:keys [energy-consumption]}]
+  (or (:electricity-mwh energy-consumption)
+      (:heat-mwh energy-consumption)
+      (:water-m3 energy-consumption)
+      (:cold-mwh energy-consumption)))
+
 (defn energy-consumption-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
         entries (select-keys history (vals by-year))]
-    (map #(assoc (:energy-consumption %)
-                 :year (resolve-year (:event-date %))) (vals entries))))
+    (->> entries
+         vals
+         (filter some-energy-data-exists?)
+         (map #(assoc (:energy-consumption %)
+                      :year (resolve-year (:event-date %)))))))
 
 (defn visitors-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
@@ -298,11 +307,18 @@
         {:keys [protocol host port]} m]
     (str protocol "://"
          host
-         (when-not (#{80 443} port) (str ":" port)))))
+         (when-not (#{80 443 -1 nil ""} port) (str ":" port)))))
 
 (defn current-path []
   (let [path (-> js/window .-location .-href url/url :anchor)]
     (str "/#" path)))
+
+(defn parse-token [s]
+  (-> s
+      url/url
+      :anchor
+      (string/split "?token=")
+      second))
 
 (defn ->row [d headers]
   (let [header-keys (map first headers)]
