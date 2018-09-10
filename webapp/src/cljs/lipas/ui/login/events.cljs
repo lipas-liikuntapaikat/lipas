@@ -20,17 +20,22 @@
  ::login-success
  [(re-frame/after (fn [db _]
                     (ls-set :login-data (-> db :user :login))))]
- (fn [{:keys [db]} [_ body]]
+ (fn [{:keys [db]} [_ login-type body]]
    (let [admin?             (-> body :permissions :admin?)
          refresh-interval-s 900] ; 15 minutes
-     {:db       (-> db
-                    (assoc-in [:logged-in?] true)
-                    (assoc-in [:user :login] body))
-      :dispatch-later
-      [{:ms       (* 1000 refresh-interval-s)
-        :dispatch [::refresh-login]}]
-      :ga/set   [{:dimension1 (if admin? "admin" "user")}]
-      :ga/event ["user" "login-success"]})))
+     (merge
+      {:db (-> db
+               (assoc-in [:logged-in?] true)
+               (assoc-in [:user :login] body))
+       :dispatch-later
+       [{:ms       (* 1000 refresh-interval-s)
+         :dispatch [::refresh-login]}]
+       :dispatch-n
+       [(when (= :magic-link login-type)
+          [:lipas.ui.events/navigate "/#/profiili"])]}
+      (when (not= :refresh login-type)
+        {:ga/set   [{:dimension1 (if admin? "admin" "user")}]
+         :ga/event ["user" "login-success"]})))))
 
 (re-frame/reg-event-fx
  ::login-failure
@@ -52,9 +57,16 @@
      :headers         {:Authorization (utils/->basic-auth form-data)}
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
-     :on-success      [::login-success]
+     :on-success      [::login-success :login]
      :on-failure      [::login-failure]}
     :dispatch    [::clear-errors]}))
+
+(re-frame/reg-event-fx
+ ::login-refresh-failure
+ (fn [_ [_ {:keys [status] :as resp}]]
+   (if (#{401 403} status)
+     {:dispatch [::logout]}
+     {})))
 
 (re-frame/reg-event-fx
  ::refresh-login
@@ -70,8 +82,8 @@
          :headers         {:Authorization (str "Token " token)}
          :format          (ajax/json-request-format)
          :response-format (ajax/json-response-format {:keywords? true})
-         :on-success      [::login-success]
-         :on-failure      [::logout]}}))))
+         :on-success      [::login-success :refresh]
+         :on-failure      [::login-refresh-failure]}}))))
 
 (re-frame/reg-event-fx
  ::login-with-magic-link
@@ -82,7 +94,7 @@
      :headers         {:Authorization (str "Token " token)}
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
-     :on-success      [::login-success]
+     :on-success      [::login-success :magic-link]
      :on-failure      [::logout]}}))
 
 (re-frame/reg-event-fx
