@@ -149,7 +149,7 @@
            (let [user (core/get-user! db (-> identity :id))]
              {:status 200
               :body   (merge (dissoc user :password)
-                             {:token (jwt/create-token identity)})}))}}]
+                             {:token (jwt/create-token user)})}))}}]
 
       ["/actions/request-password-reset"
        {:post
