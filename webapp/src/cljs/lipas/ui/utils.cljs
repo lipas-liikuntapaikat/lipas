@@ -298,7 +298,7 @@
         {:keys [protocol host port]} m]
     (str protocol "://"
          host
-         (when-not (#{80 443} port) (str ":" port)))))
+         (when-not (#{80 443 -1 nil ""} port) (str ":" port)))))
 
 (defn current-path []
   (let [path (-> js/window .-location .-href url/url :anchor)]
