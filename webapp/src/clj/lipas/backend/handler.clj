@@ -146,7 +146,7 @@
         {:middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
-           (let [user (core/get-user db (-> identity :id))]
+           (let [user (core/get-user! db (-> identity :id))]
              {:status 200
               :body   (merge (dissoc user :password)
                              {:token (jwt/create-token identity)})}))}}]

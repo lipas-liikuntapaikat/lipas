@@ -12,17 +12,17 @@
        (map user/unmarshall)
        (map #(dissoc % :password))))
 
-(defn get-user-by-id [db-spec user-id]
-  (when (uuid? (utils/->uuid-safe user-id))
-    (-> (user/get-user-by-id db-spec user-id)
+(defn get-user-by-id [db-spec params]
+  (when (uuid? (utils/->uuid-safe (:id params)))
+    (-> (user/get-user-by-id db-spec params)
         (user/unmarshall))))
 
-(defn get-user-by-email [db-spec email]
-  (-> (user/get-user-by-email db-spec email)
+(defn get-user-by-email [db-spec params]
+  (-> (user/get-user-by-email db-spec params)
       (user/unmarshall)))
 
-(defn get-user-by-username [db-spec username]
-  (-> (user/get-user-by-username db-spec username)
+(defn get-user-by-username [db-spec params]
+  (-> (user/get-user-by-username db-spec params)
       (user/unmarshall)))
 
 (defn add-user! [db-spec user]
