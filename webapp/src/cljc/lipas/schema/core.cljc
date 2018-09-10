@@ -413,7 +413,7 @@
 (s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
-  (s/int-in -10 (inc -1)))
+  (s/int-in -10 (inc 0)))
 
 (s/def :lipas.ice-stadium.conditions/skating-area-temperature-c
   (s/int-in -15 (inc 20)))
