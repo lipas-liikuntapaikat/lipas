@@ -35,6 +35,7 @@
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
     :id                "LIPAS-ID"
+    :name-short        "Nimi"
     :name              "Virallinen nimi"
     :marketing-name    "Markkinointinimi"
     :owner             "Omistaja"
@@ -182,21 +183,29 @@
     :magic-link         "Taikalinkki"
     :confirm-magic-link "Haluatko varmasti lähettää taikalinkin
     käyttäjälle {1}?"
-    }
+    :access-all-sites   "Sinulla on pääkäyttäjän oikeudet. Voit muokata
+    kaikkia liikuntapaikkoja."}
 
    :lipas.user
-   {:contact-info          "Yhteystiedot"
-    :email                 "Sähköposti"
-    :email-example         "email@example.com"
-    :username              "Käyttäjätunnus"
-    :username-example      "tane12"
-    :firstname             "Etunimi"
-    :lastname              "Sukunimi"
-    :password              "Salasana"
-    :permissions           "Käyttöoikeudet"
-    :permissions-example   "Oikeus päivittää Jyväskylän jäähallien tietoja."
-    :permissions-help      "Kerro, mitä tietoja haluat päivittää Lipaksessa"
-    :requested-permissions "Pyydetyt oikeudet"}
+   {:contact-info              "Yhteystiedot"
+    :email                     "Sähköposti"
+    :email-example             "email@example.com"
+    :username                  "Käyttäjätunnus"
+    :username-example          "tane12"
+    :firstname                 "Etunimi"
+    :lastname                  "Sukunimi"
+    :password                  "Salasana"
+    :permissions               "Käyttöoikeudet"
+    :permissions-example       "Oikeus päivittää Jyväskylän jäähallien tietoja."
+    :permissions-help          "Kerro, mitä tietoja haluat päivittää Lipaksessa"
+    :requested-permissions     "Pyydetyt oikeudet"
+    :sports-sites              "Omat kohteet"
+    :no-permissions            "Sinulle ei ole myönnetty käyttöoikeuksia
+    julkaista muutoksia yhteenkään kohteeseen. "
+    :draft-encouragement       "Voit kuitenkin luoda ehdotuksia ja tallentaa
+    ne jonkun muun hyväksyttäväksi."
+    :view-basic-info           "Tarkista perustiedot"
+    :report-energy-consumption "Ilmoita energiankulutus"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
