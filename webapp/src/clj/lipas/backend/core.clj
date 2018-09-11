@@ -4,13 +4,12 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
+            [lipas.permissions :as permissions]
             [lipas.i18n.core :as i18n]
             [lipas.reports :as reports]
             [lipas.utils :as utils]))
 
 ;;; User ;;;
-
-(def default-permissions {:draft? true})
 
 (defn username-exists? [db user]
   (some? (db/get-user-by-username db user)))
@@ -27,7 +26,7 @@
     (throw (ex-info "Email is already in use!"
                     {:type :email-conflict})))
 
-  (let [defaults {:permissions default-permissions
+  (let [defaults {:permissions permissions/default-permissions
                   :username    (:email user)
                   :user-data   {}
                   :password    (str (utils/gen-uuid))}
@@ -82,15 +81,9 @@
 (defn draft? [sports-site]
   (= (-> sports-site :status) "draft"))
 
-(defn user-can-publish? [{:keys [cities types sports-sites admin?]} sports-site]
-  (or (some #{(-> sports-site :lipas-id)} sports-sites)
-      (some #{(-> sports-site :location :city :city-code)} cities)
-      (some #{(-> sports-site :type :type-code)} types)
-      admin?))
-
 (defn upsert-sports-site! [db user sports-site]
   (if (or (draft? sports-site)
-          (user-can-publish? (:permissions user) sports-site))
+          (permissions/publish? (:permissions user) sports-site))
     (db/upsert-sports-site! db user sports-site)
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
