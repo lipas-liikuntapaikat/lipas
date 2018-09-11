@@ -77,3 +77,28 @@
  (fn [_ [_ path & opts]]
    (apply routes/navigate! (into [path] opts))
    {}))
+
+(re-frame/reg-event-fx
+ ::display
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [latest    (get-in db [:sports-sites lipas-id :latest])
+         site      (get-in db [:sports-sites lipas-id :history latest])
+         type-code (-> site :type :type-code)
+         path      (case type-code
+                     (2510 2520) "jaahalliportaali/hallit"
+                     (3110 3130) "uimahalliportaali/hallit"
+                     "liikuntapaikat")]
+     {:dispatch [::navigate (str "/#/" path "/" lipas-id)]})))
+
+(re-frame/reg-event-fx
+ ::report-energy-consumption
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [latest    (get-in db [:sports-sites lipas-id :latest])
+         site      (get-in db [:sports-sites lipas-id :history latest])
+         type-code (-> site :type :type-code)
+         path      (case type-code
+                     (2510 2520) "jaahalliportaali/ilmoita-tiedot"
+                     (3110 3130) "uimahalliportaali/ilmoita-tiedot")]
+     {:dispatch-n
+      [[::navigate (str "/#/" path)]
+       [:lipas.ui.energy.events/select-energy-consumption-site lipas-id]]})))

@@ -36,6 +36,31 @@
    (when (and permissions sports-site)
      (permissions/publish? permissions sports-site))))
 
+(defn ->list-entry [locale cities types sports-site]
+  (let [city-code (-> sports-site :location :city :city-code)
+        type-code (-> sports-site :type :type-code)]
+    {:lipas-id (:lipas-id sports-site)
+     :name     (:name sports-site)
+     :city     (get-in cities [city-code :name locale])
+     :type     (get-in types [type-code :name locale])}))
+
+(re-frame/reg-sub
+ ::sports-sites
+ :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
+ :<- [::permissions]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ (fn [[sites permissions cities types] [_ locale]]
+   (->> sites
+        vals
+        (filter (partial permissions/publish? permissions))
+        (map (partial ->list-entry locale cities types)))))
+
+(re-frame/reg-sub
+ ::selected-sports-site
+ (fn [db _]
+   (-> db :user :selected-sports-site)))
+
 (re-frame/reg-sub
  ::reset-password-request-error
  (fn [db _]

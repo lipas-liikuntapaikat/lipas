@@ -237,7 +237,7 @@
             (when on-select
               [mui/table-cell {:padding "checkbox"}
                [mui/icon-button {:on-click #(on-select item)}
-                [mui/icon {:color "secondary"} "folder_open"]]])
+                [mui/icon {:color "primary"} "more_horiz"]]])
 
             ;; Cells
             (for [[k _] headers
@@ -872,3 +872,15 @@
                                          (into (empty old-value)
                                                (remove #{v} old-value))))
                           (on-change @value))}]))]))
+
+(defn icon-text [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items :center
+             :style     {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:color (or icon-color "inherit")}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography {:variant :body2
+                     :style   {:margin-left "0.5em"
+                               :display     :inline}}
+     text]]])
