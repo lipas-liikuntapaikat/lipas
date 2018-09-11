@@ -163,6 +163,7 @@
            [lui/number-selector
             {:items     (range -10 (inc 0))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :ice-surface-temperature-c)
              :on-change #(on-change :ice-surface-temperature-c %)}]}
 
@@ -173,6 +174,7 @@
            [lui/number-selector
             {:items     (range -8 (inc 20))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :skating-area-temperature-c)
              :on-change #(on-change :skating-area-temperature-c %)}]}
 
@@ -183,6 +185,7 @@
            [lui/number-selector
             {:items     (range -8 (inc 20))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :stand-temperature-c)
              :on-change #(on-change :stand-temperature-c %)}]}
 
@@ -458,6 +461,7 @@
            [lui/select
             {:value     (-> edit-data :refrigerant-solution)
              :items     refrigerant-solutions
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :refrigerant-solution %)}]}
@@ -486,6 +490,7 @@
            [lui/select
             {:value     (-> edit-data :heat-recovery-type)
              :items     heat-recovery-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :heat-recovery-type %)}]}
@@ -508,6 +513,7 @@
            [lui/select
             {:value     (-> edit-data :dryer-type)
              :items     dryer-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :dryer-type %)}]}
@@ -519,6 +525,7 @@
            [lui/select
             {:value     (-> edit-data :dryer-duty-type)
              :items     dryer-duty-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :dryer-duty-type %)}]}
@@ -530,6 +537,7 @@
            [lui/select
             {:value     (-> edit-data :heat-pump-type)
              :items     heat-pump-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])

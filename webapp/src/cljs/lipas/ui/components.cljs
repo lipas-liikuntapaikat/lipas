@@ -491,7 +491,7 @@
                        :value     value
                        :required  required})]))
 
-(defn number-selector [{:keys [value on-change items unit label]}]
+(defn number-selector [{:keys [value on-change items unit label deselect?]}]
   [select
    {:label     label
     :items     items
@@ -500,6 +500,7 @@
     :value-fn  identity
     :label-fn  #(str % unit)
     :value     value
+    :deselect? deselect?
     :on-change on-change}])
 
 (defn date-picker [{:keys [label value on-change]}]
