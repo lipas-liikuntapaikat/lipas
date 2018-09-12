@@ -171,10 +171,12 @@
    {:headline "Help"}
 
    :user
-   {:headline        "Profile"
-    :greeting        "Hello {1} {2}!"
-    :front-page-link "front page"
-    :admin-page-link "Admin page"}
+   {:headline            "Profile"
+    :greeting            "Hello {1} {2}!"
+    :front-page-link     "front page"
+    :admin-page-link     "Admin page"
+    :ice-stadiums-link   "Ice stadiums"
+    :swimming-pools-link "Swimming pools"}
 
    :lipas.admin
    {:headline "Admin"
@@ -188,6 +190,7 @@
     :username-example      "tane12"
     :firstname             "First name"
     :lastname              "Last name"
+    :sports-sites          "My sites"
     :password              "Password"
     :permissions           "Permissions"
     :permissions-example   "Access to update Jyväskylä ice stadiums."
@@ -216,6 +219,7 @@
 
    :reset-password
    {:headline             "Forgot password?"
+    :change-password      "Change password"
     :helper-text          "We will email password reset link to you."
     :reset-link-sent      "Reset link sent! Please check your email!"
     :enter-new-password   "Enter new password"

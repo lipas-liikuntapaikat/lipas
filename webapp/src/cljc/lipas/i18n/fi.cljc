@@ -173,10 +173,12 @@
    {:headline "Ohjeet"}
 
    :user
-   {:headline        "Oma sivu"
-    :greeting        "Hei {1} {2}!"
-    :front-page-link "Siirry etusivulle"
-    :admin-page-link "Siirry admin-sivulle"}
+   {:headline            "Oma sivu"
+    :greeting            "Hei {1} {2}!"
+    :front-page-link     "Siirry etusivulle"
+    :admin-page-link     "Siirry admin-sivulle"
+    :ice-stadiums-link   "Jäähalliportaali"
+    :swimming-pools-link "Uimahalliportaali"}
 
    :lipas.admin
    {:headline           "Admin"
@@ -203,7 +205,7 @@
     :sports-sites              "Omat kohteet"
     :no-permissions            "Sinulle ei ole myönnetty käyttöoikeuksia
     julkaista muutoksia yhteenkään kohteeseen. "
-    :draft-encouragement "Voit kuitenkin tallentaa muutosehdotuksia,
+    :draft-encouragement       "Voit kuitenkin tallentaa muutosehdotuksia,
     jotka lähetetään ylläpidon hyväksyttäväksi."
     :view-basic-info           "Tarkista perustiedot"
     :report-energy-consumption "Ilmoita energiankulutus"}
@@ -232,6 +234,7 @@
 
    :reset-password
    {:headline             "Unohtuiko salasana?"
+    :change-password      "Vaihda salasana"
     :helper-text          "Lähetämme salasanan vaihtolinkin sinulle sähköpostitse."
     :reset-link-sent      "Linkki lähetetty! Tarkista sähköpostisi."
     :enter-new-password   "Syötä uusi salasana"

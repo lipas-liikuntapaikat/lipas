@@ -119,8 +119,7 @@
   (let [admin? (<== [::subs/admin?])
         sites  (<== [::subs/sports-sites (tr)])
 
-        card-props {:square true
-                    :style  {:height "100%"}}
+        card-props {:square true}
 
         firstname (-> user :user-data :firstname)
         lastname  (-> user :user-data :lastname)]
@@ -139,6 +138,9 @@
         [mui/button {:href  "/#/"
                      :color :secondary}
          (str "> " (tr :user/front-page-link))]
+        [mui/button {:href  "/#/passu-hukassa"
+                     :color :primary}
+         (str "> " (tr :reset-password/change-password))]
         (when admin?
           [mui/button {:href  "/#/admin"
                        :color :primary}
@@ -149,7 +151,7 @@
 
       [actions-dialog tr]
 
-      [mui/card card-props
+      [mui/card (merge card-props)
        [mui/card-header {:title (tr :lipas.user/sports-sites)}]
        [mui/card-content
         (cond
@@ -172,7 +174,16 @@
                               [:type (tr :lipas.sports-site/type)]
                               [:city (tr :lipas.location/city)]]
                   :items     sites
-                  :on-select #(==> [::events/select-sports-site %])}])]]]]))
+                  :on-select #(==> [::events/select-sports-site %])}])]
+       [mui/card-actions
+        (when (some #{2510 2520} (map :type-code sites))
+          [mui/button {:href  "/#/jaahalliportaali"
+                       :color :secondary}
+           (str "> " (tr :user/ice-stadiums-link))])
+        (when (some #{3110 3130} (map :type-code sites))
+          [mui/button {:href  "/#/uimahalliportaali"
+                       :color :secondary}
+           (str "> " (tr :user/swimming-pools-link))])]]]]))
 
 (defn main [tr]
   (let [logged-in? (<== [::subs/logged-in?])
