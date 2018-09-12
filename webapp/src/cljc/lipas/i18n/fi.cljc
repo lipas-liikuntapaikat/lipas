@@ -108,6 +108,7 @@
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
     :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
+    :energy-mwh          "Sähkö + lämpö MWh"
     :electricity-mwh     "Sähkö MWh"
     :heat-mwh            "Lämpö MWh"
     :water-m3            "Vesi m³"
@@ -202,8 +203,8 @@
     :sports-sites              "Omat kohteet"
     :no-permissions            "Sinulle ei ole myönnetty käyttöoikeuksia
     julkaista muutoksia yhteenkään kohteeseen. "
-    :draft-encouragement       "Voit kuitenkin luoda ehdotuksia ja tallentaa
-    ne jonkun muun hyväksyttäväksi."
+    :draft-encouragement "Voit kuitenkin tallentaa muutosehdotuksia,
+    jotka lähetetään ylläpidon hyväksyttäväksi."
     :view-basic-info           "Tarkista perustiedot"
     :report-energy-consumption "Ilmoita energiankulutus"}
 

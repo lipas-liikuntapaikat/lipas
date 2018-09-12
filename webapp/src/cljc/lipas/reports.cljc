@@ -15,6 +15,8 @@
 
 (defn- ->data-point [{:keys [lipas-id name energy-consumption]}]
   (-> energy-consumption
+      (assoc :energy-mwh (+ (:heat-mwh energy-consumption 0)
+                            (:electricity-mwh energy-consumption 0)))
       (assoc :name name)
       (assoc :lipas-id lipas-id)))
 
