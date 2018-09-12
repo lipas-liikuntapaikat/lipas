@@ -95,7 +95,7 @@
     :headline-year             "Energy consumption in {1}"
     :electricity               "Electricity MWh"
     :heat                      "Heat (acquired) MWh"
-    :cold                      "Cold energy (acquired) Mwh"
+    :cold                      "Cold energy (acquired) MWh"
     :water                     "Water m³"
     :yearly                    "Yearly energy consumption"
     :monthly?                  "I want to report monthly energy consumption"
@@ -106,6 +106,7 @@
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
     :disclaimer          "*Based on reported consumption in {1}"
+    :energy-mwh          "Energy MWh"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
     :water-m3            "Water m³"

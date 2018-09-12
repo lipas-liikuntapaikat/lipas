@@ -66,7 +66,7 @@
 
    ;; Energy stats
    :energy-stats
-   {:chart-energy-type :electricity-mwh}
+   {:chart-energy-type :energy-mwh}
 
    ;; User
    :user
