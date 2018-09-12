@@ -39,10 +39,12 @@
 (defn ->list-entry [locale cities types sports-site]
   (let [city-code (-> sports-site :location :city :city-code)
         type-code (-> sports-site :type :type-code)]
-    {:lipas-id (:lipas-id sports-site)
-     :name     (:name sports-site)
-     :city     (get-in cities [city-code :name locale])
-     :type     (get-in types [type-code :name locale])}))
+    {:lipas-id  (:lipas-id sports-site)
+     :name      (:name sports-site)
+     :city      (get-in cities [city-code :name locale])
+     :city-code city-code
+     :type      (get-in types [type-code :name locale])
+     :type-code type-code}))
 
 (re-frame/reg-sub
  ::sports-sites

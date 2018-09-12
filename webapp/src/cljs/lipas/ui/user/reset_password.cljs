@@ -90,7 +90,8 @@
 (defn main []
   (==> [::events/clear-feedback])
   (let [tr    (<== [:lipas.ui.subs/translator])
-        token (utils/parse-token (-> js/window .-location .-href))]
+        token (or (utils/parse-token (-> js/window .-location .-href))
+                  (:token (<== [::subs/user-data])))]
     (if token
       ;; Reset password
       [panel {:tr          tr
