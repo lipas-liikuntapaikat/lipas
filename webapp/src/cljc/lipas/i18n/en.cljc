@@ -183,19 +183,26 @@
     :users    "Users"}
 
    :lipas.user
-   {:contact-info          "Contact info"
-    :email                 "Email"
-    :email-example         "email@example.com"
-    :username              "Username"
-    :username-example      "tane12"
-    :firstname             "First name"
-    :lastname              "Last name"
-    :sports-sites          "My sites"
-    :password              "Password"
-    :permissions           "Permissions"
-    :permissions-example   "Access to update Jyväskylä ice stadiums."
-    :permissions-help      "Describe what permissions you wish to have"
-    :requested-permissions "Requested permissions"}
+   {:contact-info               "Contact info"
+    :email                      "Email"
+    :email-example              "email@example.com"
+    :username                   "Username"
+    :username-example           "tane12"
+    :firstname                  "First name"
+    :lastname                   "Last name"
+    :password                   "Password"
+    :permissions                "Permissions"
+    :permissions-example        "Access to update Jyväskylä ice stadiums."
+    :permissions-help           "Describe what permissions you wish to have"
+    :requested-permissions      "Requested permissions"
+    :sports-sites               "My sites"
+    :no-permissions             "You don't have permission to publish changes to
+    any sites."
+    :draft-encouragement        "However, you can save drafts to be approved
+    by administrators."
+    :view-basic-info            "View basic info"
+    :report-energy-consumption  "Report energy consumption"
+    :report-energy-and-visitors "Report visitors and energy consumption"}
 
    :lipas.user.permissions
    {:admin?       "Admin"

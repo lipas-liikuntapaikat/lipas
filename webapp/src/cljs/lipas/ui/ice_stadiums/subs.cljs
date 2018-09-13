@@ -194,7 +194,7 @@
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
-   (let [lipas-id (-> db :ice-stadiums :display-site)]
+   (when-let [lipas-id (-> db :ice-stadiums :display-site)]
      (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub
@@ -220,17 +220,17 @@
        heat-recovery-types dryer-types dryer-duty-types heat-pump-types
        ice-resurfacer-fuels materials] [_ locale]]
    (when site
-     (let [latest               (or (utils/latest-edit (:edits site))
-                                    (get-in site [:history (:latest site)]))
-           type                 (types (-> latest :type :type-code))
-           size-category        (size-categories (-> latest :type :size-category))
-           admin                (admins (-> latest :admin))
-           owner                (owners (-> latest :owner))
-           city                 (get cities (-> latest :location :city :city-code))
-           energy-history       (utils/energy-consumption-history site)
-           heat-pump-type       (heat-pump-types (-> latest
-                                                     :ventilation
-                                                     :heat-pump-type))
+     (let [latest              (or (utils/latest-edit (:edits site))
+                                   (get-in site [:history (:latest site)]))
+           type                (types (-> latest :type :type-code))
+           size-category       (size-categories (-> latest :type :size-category))
+           admin               (admins (-> latest :admin))
+           owner               (owners (-> latest :owner))
+           city                (get cities (-> latest :location :city :city-code))
+           energy-history      (utils/energy-consumption-history site)
+           heat-pump-type      (heat-pump-types (-> latest
+                                                    :ventilation
+                                                    :heat-pump-type))
            ice-resurfacer-fuel (ice-resurfacer-fuels (-> latest
                                                          :conditions
                                                          :ice-resurfacer-fuel))
