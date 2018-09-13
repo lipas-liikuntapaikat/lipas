@@ -763,8 +763,9 @@
      [mui/button {:on-click on-close}
       close-label])]])
 
-(defn confirmation-dialog [{:keys [title message on-cancel
-                                   cancel-label on-confirm confirm-label]}]
+(defn confirmation-dialog [{:keys [title message on-cancel on-decline
+                                   decline-label cancel-label
+                                   on-confirm confirm-label]}]
   [mui/dialog {:open                    true
                :disable-backdrop-click  true
                :disable-escape-key-down true}
@@ -773,6 +774,8 @@
     [mui/typography message]]
    [mui/dialog-actions
     [mui/button {:on-click on-cancel} cancel-label]
+    (when on-decline
+      [mui/button {:on-click on-decline} decline-label])
     [mui/button {:on-click on-confirm} confirm-label]]])
 
 (defn li [text & children]

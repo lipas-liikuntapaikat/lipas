@@ -61,14 +61,16 @@
 
 (re-frame/reg-event-db
  ::confirm
- (fn [db [_ message on-confirm]]
+ (fn [db [_ message on-confirm on-decline]]
    (let [tr           (:translator db)
          close        #(==> [:lipas.ui.events/confirmed])
          confirmation {:title         (tr :confirm/headline)
                        :message       message
-                       :cancel-label  (tr :confirm/no)
+                       :cancel-label  (tr :actions/cancel)
+                       :decline-label (tr :confirm/no)
                        :confirm-label (tr :confirm/yes)
                        :on-confirm    (comp on-confirm close)
+                       :on-decline    (comp on-decline close)
                        :on-cancel     close}]
      (assoc db :active-confirmation confirmation))))
 
