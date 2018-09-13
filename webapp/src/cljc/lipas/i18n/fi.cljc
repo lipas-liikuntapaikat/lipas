@@ -190,25 +190,26 @@
     kaikkia liikuntapaikkoja."}
 
    :lipas.user
-   {:contact-info              "Yhteystiedot"
-    :email                     "Sähköposti"
-    :email-example             "email@example.com"
-    :username                  "Käyttäjätunnus"
-    :username-example          "tane12"
-    :firstname                 "Etunimi"
-    :lastname                  "Sukunimi"
-    :password                  "Salasana"
-    :permissions               "Käyttöoikeudet"
-    :permissions-example       "Oikeus päivittää Jyväskylän jäähallien tietoja."
-    :permissions-help          "Kerro, mitä tietoja haluat päivittää Lipaksessa"
-    :requested-permissions     "Pyydetyt oikeudet"
-    :sports-sites              "Omat kohteet"
-    :no-permissions            "Sinulle ei ole myönnetty käyttöoikeuksia
+   {:contact-info               "Yhteystiedot"
+    :email                      "Sähköposti"
+    :email-example              "email@example.com"
+    :username                   "Käyttäjätunnus"
+    :username-example           "tane12"
+    :firstname                  "Etunimi"
+    :lastname                   "Sukunimi"
+    :password                   "Salasana"
+    :permissions                "Käyttöoikeudet"
+    :permissions-example        "Oikeus päivittää Jyväskylän jäähallien tietoja."
+    :permissions-help           "Kerro, mitä tietoja haluat päivittää Lipaksessa"
+    :requested-permissions      "Pyydetyt oikeudet"
+    :sports-sites               "Omat kohteet"
+    :no-permissions             "Sinulle ei ole myönnetty käyttöoikeuksia
     julkaista muutoksia yhteenkään kohteeseen. "
-    :draft-encouragement       "Voit kuitenkin tallentaa muutosehdotuksia,
+    :draft-encouragement        "Voit kuitenkin tallentaa muutosehdotuksia,
     jotka lähetetään ylläpidon hyväksyttäväksi."
-    :view-basic-info           "Tarkista perustiedot"
-    :report-energy-consumption "Ilmoita energiankulutus"}
+    :view-basic-info            "Tarkista perustiedot"
+    :report-energy-consumption  "Ilmoita energiankulutus"
+    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
@@ -445,7 +446,8 @@
     :no                    "Ei"
     :yes                   "Kyllä"
     :discard-changes?      "Tahdotko kumota tekemäsi muutokset?"
-    :press-again-to-delete "Varmista painamalla uudestaan"}
+    :press-again-to-delete "Varmista painamalla uudestaan"
+    :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
    {:headline "Haku"}

@@ -86,7 +86,7 @@
                  :on-close close}
 
      [mui/dialog-title
-      (:name site)]
+      (or (:name site) "")]
 
      [mui/dialog-content
       [mui/list
