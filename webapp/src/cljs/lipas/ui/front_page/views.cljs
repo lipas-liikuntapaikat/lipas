@@ -83,15 +83,43 @@
        [mui/grid {:container true
                   :spacing   16}
 
-        [grid-card {:title     (tr :menu/headline)
-                    :link      "http://www.lipas.fi"
-                    :link-text "lipas.fi"}
-         [mui/typography (tr :home-page/description)]
-         [:ul
-          [lui/li (tr :sport/up-to-date-information)]
-          [lui/li (tr :sport/updating-tools)]
-          [lui/li (tr :sport/open-interfaces)]]
-         [mui/typography (tr :sport/legacy-disclaimer)]]
+        [grid-card {:title     (tr :menu/headline)}
+
+         [mui/typography {:variant :body2}
+          "LIPAS muodostuu kolmesta palvelusta"]
+         ;; [mui/typography (tr :home-page/description)]
+
+         [mui/list {:style {:margin-top "1em"}}
+
+          [mui/list-item {:button   true
+                          :on-click #(navigate! "/#/liikuntapaikat")}
+           [mui/list-item-icon
+            [mui/icon "fitness_center"]]
+           [mui/list-item-text {:primary "Liikuntapaikat"}]]
+
+          ;; Ice stadiums portal
+          [mui/list-item {:button   true
+                          :on-click #(navigate! "/#/jaahalliportaali")}
+           [mui/list-item-icon
+            [mui/icon "ac_unit"]]
+           [mui/list-item-text {:primary "Jäähalliportaali"}]]
+
+          ;; Swimming pools portal
+          [mui/list-item {:button   true
+                          :on-click #(navigate! "/#/uimahalliportaali")}
+           [mui/list-item-icon
+            [mui/icon "pool"]]
+           [mui/list-item-text {:primary "Uimahalliportaali"}]]]]
+
+        ;; [grid-card {:title     (tr :menu/headline)
+        ;;             :link      "http://www.lipas.fi"
+        ;;             :link-text "lipas.fi"}
+        ;;  [mui/typography (tr :home-page/description)]
+        ;;  [:ul
+        ;;   [lui/li (tr :sport/up-to-date-information)]
+        ;;   [lui/li (tr :sport/updating-tools)]
+        ;;   [lui/li (tr :sport/open-interfaces)]]
+        ;;  [mui/typography (tr :sport/legacy-disclaimer)]]
 
 
         ;; Skating rinks portal
