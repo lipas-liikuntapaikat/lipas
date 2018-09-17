@@ -66,6 +66,12 @@
    "solid-rock"       {:fi "Kallio"
                        :se nil
                        :en "Solid rock"}
+   "rock-dust"        {:fi "Kivituhka"
+                       :se nil
+                       :en "Rock dust"}
+   "gravel"           {:fi "Sora"
+                       :se nil
+                       :en "Gravel"}
    "insulator"        {:fi "Eriste"
                        :se nil
                        :en "Insulator"}
@@ -91,4 +97,4 @@
                     "concrete" "glass" "solid-rock"]))
 
 (def base-floor-structures
-  (select-keys all ["concrete" "asphalt" "sand"]))
+  (select-keys all ["concrete" "asphalt" "sand" "rock-dust" "gravel"]))
