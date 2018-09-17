@@ -54,8 +54,8 @@
   (db/get-users db))
 
 (defn create-magic-link [url user]
-  (let [token (jwt/create-token user :terse? true)]
-    (str url "?token=" token) ))
+  (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
+    (str url "?token=" token)))
 
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]

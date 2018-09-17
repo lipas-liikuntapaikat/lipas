@@ -30,6 +30,12 @@
   ;;; Front page ;;;
 
   (defroute "/" []
+    (case (utils/domain)
+      "uimahallit.lipas.fi" (navigate! "/#/uimahalliportaali")
+      "jaahallit.lipas.fi"  (navigate! "/#/jaahalliportaali")
+      (navigate! "/#/etusivu")))
+
+  (defroute "/etusivu" []
     (==> [:lipas.ui.events/set-active-panel :home-panel]))
 
   ;;; Admin ;;;
