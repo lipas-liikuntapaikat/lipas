@@ -1,5 +1,6 @@
 (ns lipas.ui.admin.views
-  (:require [lipas.ui.admin.events :as events]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.admin.events :as events]
             [lipas.ui.admin.subs :as subs]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
@@ -14,14 +15,15 @@
         existing? (some? (:id user))]
 
     [lui/full-screen-dialog
-     {:open?          (boolean (seq user))
-      :title          (or (:username user)
-                          (:email user))
-      :close-label    (tr :actions/close)
-      :on-close       #(==> [::events/set-user-to-edit nil])
+     {:open?       (boolean (seq user))
+      :title       (or (:username user)
+                       (:email user))
+      :close-label (tr :actions/close)
+      :on-close    #(==> [::events/set-user-to-edit nil])
       :bottom-actions
       [[lui/email-button
         {:label    (tr :lipas.admin/magic-link)
+         :disabled (not (s/valid? :lipas/new-user user))
          :on-click #(==> [:lipas.ui.events/confirm
                           (tr :lipas.admin/confirm-magic-link (:email user))
                           (fn [] (==> [::events/send-magic-link user]))])}]
