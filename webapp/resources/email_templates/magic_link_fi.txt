@@ -1,0 +1,47 @@
+Saate päivityslinkin saajille
+
+Hyvä uimahalli/jäähalliasiantuntija!
+
+Uimahalliportaali ja jäähalliportaalit ovat nyt osa Jyväskylän yliopiston ylläpitämää LIPAS-järjestelmää. Opetus- ja kulttuuriministeriön myöntämän rahoituksen avulla VTT:n aiemmin keräämät tiedot uima- ja jäähalleista on siirretty Lipakseen ja portaaleista on tehty uudet versiot.
+
+Alla henkilökohtainen sisäänkirjautumislinkkisi:
+
+{{link}}
+
+Linkki on voimassa seuraavat X päivää/viikkoa/kuukautta/vuotta. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
+
+Mitä tapahtuu, kun klikkaan linkkiä?
+
+Kirjaudut suoraan uuteen uimahalli- tai jäähalliportaaliin. Pääset sivulle, jossa näet mihin halleihin sinulla on tietojen päivitysoikeus. Hallin nimen klikkaus avaa valintaruudun, jossa voit valita, haluatko syöttää oman hallisi vuosittaisia energiankulutustietoja vai muokata hallin perustietoja. Molempien tietojen tarkistus ja täydennys on tärkeää!
+
+Mitä minun toivotaan tekevän, kun olen portaalissa?
+
+Tarkista, että hallisi perustiedot ovat oikein. Jos tiedoissa on puutteita, täydennä puuttuvat tiedot. Jos tiedot ovat virheellisiä, tee korjaukset.
+
+Lisää hallisi energiankulutustiedot niin monelta vuodelta kuin pystyt. Toivomme erityisesti vuoden 2017 tietojen täydentämistä. Jos hallisi kulutuslukemat (veden, sähkön, lämmön…) koskevat myös muita rakennuksia tai tiloja kuin uimahalli tai jäähalli, kerro tämäkin sille varatussa tietokentässä.
+
+Entä jos minulla ei ole tarvittavia tietoja käytössäni?
+
+Pyri selvittämään mistä tarvittavat tiedot löytyvät, kerää tiedot ja lisää ne portaaliin. Jos koet olevasi väärä henkilö tiedon tallentamiseen, voit myös välittää tämän viestin eteenpäin oikealle henkilölle.
+
+Miksi uimahallien ja jäähallien energiankulutustietoja kerätään?
+
+Uimahallit ja jäähallit kuluttavat valtavia määriä sähköä, vettä ja lämpöä. Ylimääräinen kulutus aiheuttaa merkittäviä kuluja hallin omistajille, lisää liikunnan harrastamisen kustannuksia ja lisää tarpeettomasti hallin aiheuttamaa ympäristökuormitusta. Ilmastonmuutoksen hillintä vaatii meiltä kaikilta aktiivista oman toiminnan tarkastelua ja kehittämistä. Suomella on vahva pyrkimys kestävään kehitykseen ja vähähiilisyyteen. Kehittämistarve koskee myös liikuntapaikkoja.
+
+Kulutustietojen keräämisellä, seurannalla ja vertailulla pyritään tuomaan näkyväksi kuinka paljon hallit kuluttavat energiaa. Kulutuksen seuranta ja vertailu muihin halleihin auttaa halleja kehittämään omaa toimintaansa. Lisäksi hallissa tehtyjen kehittämistoimien ja investointien vaikutus saadaan todennettua ennen-jälkeen-mittauksilla. Portaaleissa on myös linkit ohjeisiin, kuinka hallin energiankulutusta voi vähentää.
+
+Palaute ja kommentit
+
+Toivomme runsaasti palautetta ja kehittämisehdotuksia portaalien toiminnasta. Kerro ajatuksesi sähköpostilla tai puhelimitse! Alla yhteystiedot.
+
+Jyväskylän yliopisto:
+
+Kirsi Vehkakoski, Lipas-projekti, puh. 0400 247 980
+
+s-posti: lipasinfo@jyu.fi
+
+Osoitteet
+
+Uimahalliportaali: https://uimahallit.lipas.fi
+
+Jäähalliportaali: https://jaahallit.lipas.fi
