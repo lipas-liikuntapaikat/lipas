@@ -1,5 +1,6 @@
 (ns lipas.ui.register.events
   (:require [re-frame.core :as re-frame]
+            [clojure.string :as string]
             [lipas.ui.db :refer [default-db]]
             [lipas.ui.login.events :as login-events]
             [ajax.core :as ajax]))
@@ -14,6 +15,16 @@
  (fn [db [_ path value]]
    (let [path (into [:user :registration-form] path)]
      (assoc-in db path value))))
+
+(re-frame/reg-event-db
+ ::set-registration-form-email
+ (fn [db [_ email]]
+   (let [username (-> email
+                      (string/split #"@")
+                      first)]
+     (-> db
+         (assoc-in [:user :registration-form :email] email)
+         (assoc-in [:user :registration-form :username] username)))))
 
 (re-frame/reg-event-fx
  ::registration-success
