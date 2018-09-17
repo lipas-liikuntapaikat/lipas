@@ -8,7 +8,7 @@ Alla henkilökohtainen sisäänkirjautumislinkkisi:
 
 {{link}}
 
-Linkki on voimassa seuraavat X päivää/viikkoa/kuukautta/vuotta. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
+Linkki on voimassa 7 päivää. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
 
 Mitä tapahtuu, kun klikkaan linkkiä?
 
