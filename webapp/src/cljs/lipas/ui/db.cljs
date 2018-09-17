@@ -15,6 +15,7 @@
   {:active-panel :main-panel
    :backend-url  "/api"
    :logged-in?   false
+   :drawer-open? false
    :translator   (i18n/->tr-fn :fi)
 
    ;; Sports sites
@@ -65,7 +66,7 @@
 
    ;; Energy stats
    :energy-stats
-   {:chart-energy-type :electricity-mwh}
+   {:chart-energy-type :energy-mwh}
 
    ;; User
    :user

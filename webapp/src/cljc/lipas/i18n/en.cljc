@@ -19,7 +19,8 @@
 
    :sport
    {:headline          "Sports sites"
-    :description       "LIPAS is the national database of sport facilities."
+    :description "LIPAS is the national database of sport facilities
+    and their conditions in Finland."
     :legacy-disclaimer "Sports sites are not here yet but they can be
     accessed through existing LIPAS by clicking the link below."
 
@@ -95,7 +96,7 @@
     :headline-year             "Energy consumption in {1}"
     :electricity               "Electricity MWh"
     :heat                      "Heat (acquired) MWh"
-    :cold                      "Cold energy (acquired) Mwh"
+    :cold                      "Cold energy (acquired) MWh"
     :water                     "Water m³"
     :yearly                    "Yearly energy consumption"
     :monthly?                  "I want to report monthly energy consumption"
@@ -106,6 +107,7 @@
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
     :disclaimer          "*Based on reported consumption in {1}"
+    :energy-mwh          "Energy MWh"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
     :water-m3            "Water m³"
@@ -170,28 +172,38 @@
    {:headline "Help"}
 
    :user
-   {:headline        "Profile"
-    :greeting        "Hello {1} {2}!"
-    :front-page-link "front page"
-    :admin-page-link "Admin page"}
+   {:headline            "Profile"
+    :greeting            "Hello {1} {2}!"
+    :front-page-link     "front page"
+    :admin-page-link     "Admin page"
+    :ice-stadiums-link   "Ice stadiums"
+    :swimming-pools-link "Swimming pools"}
 
    :lipas.admin
    {:headline "Admin"
     :users    "Users"}
 
    :lipas.user
-   {:contact-info          "Contact info"
-    :email                 "Email"
-    :email-example         "email@example.com"
-    :username              "Username"
-    :username-example      "tane12"
-    :firstname             "First name"
-    :lastname              "Last name"
-    :password              "Password"
-    :permissions           "Permissions"
-    :permissions-example   "Access to update Jyväskylä ice stadiums."
-    :permissions-help      "Describe what permissions you wish to have"
-    :requested-permissions "Requested permissions"}
+   {:contact-info               "Contact info"
+    :email                      "Email"
+    :email-example              "email@example.com"
+    :username                   "Username"
+    :username-example           "tane12"
+    :firstname                  "First name"
+    :lastname                   "Last name"
+    :password                   "Password"
+    :permissions                "Permissions"
+    :permissions-example        "Access to update Jyväskylä ice stadiums."
+    :permissions-help           "Describe what permissions you wish to have"
+    :requested-permissions      "Requested permissions"
+    :sports-sites               "My sites"
+    :no-permissions             "You don't have permission to publish changes to
+    any sites."
+    :draft-encouragement        "However, you can save drafts to be approved
+    by administrators."
+    :view-basic-info            "View basic info"
+    :report-energy-consumption  "Report energy consumption"
+    :report-energy-and-visitors "Report visitors and energy consumption"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
@@ -205,8 +217,8 @@
 
    :login
    {:headline         "Login"
-    :username         "Username"
-    :username-example "tane12"
+    :username         "Email / Username"
+    :username-example "paavo.paivittaja@kunta.fi"
     :password         "Password"
     :login            "Login"
     :logout           "Log out"
@@ -215,6 +227,7 @@
 
    :reset-password
    {:headline             "Forgot password?"
+    :change-password      "Change password"
     :helper-text          "We will email password reset link to you."
     :reset-link-sent      "Reset link sent! Please check your email!"
     :enter-new-password   "Enter new password"

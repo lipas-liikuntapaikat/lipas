@@ -17,13 +17,12 @@
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
 
    :home-page
-   {:headline    "Etusivu"
-    :description "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
-    julkisista liikuntapaikoista avoimessa tietokannassa."}
+   {:headline    "Etusivu"}
 
    :sport
    {:headline          "Liikuntapaikat"
-    :description       "LIPAS on suomalaisten liikuntapaikkojen tietokanta."
+    :description "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
+    julkisista liikuntapaikoista avoimessa tietokannassa."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
     linkistä."
@@ -35,6 +34,7 @@
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
     :id                "LIPAS-ID"
+    :name-short        "Nimi"
     :name              "Virallinen nimi"
     :marketing-name    "Markkinointinimi"
     :owner             "Omistaja"
@@ -107,6 +107,7 @@
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
     :disclaimer          "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}"
+    :energy-mwh          "Sähkö + lämpö MWh"
     :electricity-mwh     "Sähkö MWh"
     :heat-mwh            "Lämpö MWh"
     :water-m3            "Vesi m³"
@@ -132,7 +133,7 @@
     :open-hours-sun    "Sunnuntaisin"}
 
    :lipas.swimming-pool.energy-saving
-   {:headline                    "Energiansäästö"
+   {:headline                    (str "Energian" ZWSP "säästö" ZWSP "toimet")
     :shower-water-heat-recovery? "Suihkuveden lämmöntalteenotto"
     :filter-rinse-water-heat-recovery?
     "Suodattimien huuhteluveden lämmöntalteenotto"}
@@ -171,10 +172,12 @@
    {:headline "Ohjeet"}
 
    :user
-   {:headline        "Oma sivu"
-    :greeting        "Hei {1} {2}!"
-    :front-page-link "Siirry etusivulle"
-    :admin-page-link "Siirry admin-sivulle"}
+   {:headline            "Oma sivu"
+    :greeting            "Hei {1} {2}!"
+    :front-page-link     "Siirry etusivulle"
+    :admin-page-link     "Siirry admin-sivulle"
+    :ice-stadiums-link   "Jäähalliportaali"
+    :swimming-pools-link "Uimahalliportaali"}
 
    :lipas.admin
    {:headline           "Admin"
@@ -182,21 +185,30 @@
     :magic-link         "Taikalinkki"
     :confirm-magic-link "Haluatko varmasti lähettää taikalinkin
     käyttäjälle {1}?"
-    }
+    :access-all-sites   "Sinulla on pääkäyttäjän oikeudet. Voit muokata
+    kaikkia liikuntapaikkoja."}
 
    :lipas.user
-   {:contact-info          "Yhteystiedot"
-    :email                 "Sähköposti"
-    :email-example         "email@example.com"
-    :username              "Käyttäjätunnus"
-    :username-example      "tane12"
-    :firstname             "Etunimi"
-    :lastname              "Sukunimi"
-    :password              "Salasana"
-    :permissions           "Käyttöoikeudet"
-    :permissions-example   "Oikeus päivittää Jyväskylän jäähallien tietoja."
-    :permissions-help      "Kerro, mitä tietoja haluat päivittää Lipaksessa"
-    :requested-permissions "Pyydetyt oikeudet"}
+   {:contact-info               "Yhteystiedot"
+    :email                      "Sähköposti"
+    :email-example              "email@example.com"
+    :username                   "Käyttäjätunnus"
+    :username-example           "tane12"
+    :firstname                  "Etunimi"
+    :lastname                   "Sukunimi"
+    :password                   "Salasana"
+    :permissions                "Käyttöoikeudet"
+    :permissions-example        "Oikeus päivittää Jyväskylän jäähallien tietoja."
+    :permissions-help           "Kerro, mitä tietoja haluat päivittää Lipaksessa"
+    :requested-permissions      "Pyydetyt oikeudet"
+    :sports-sites               "Omat kohteet"
+    :no-permissions             "Sinulle ei ole myönnetty käyttöoikeuksia
+    julkaista muutoksia yhteenkään kohteeseen. "
+    :draft-encouragement        "Voit kuitenkin tallentaa muutosehdotuksia,
+    jotka lähetetään ylläpidon hyväksyttäväksi."
+    :view-basic-info            "Tarkista perustiedot"
+    :report-energy-consumption  "Ilmoita energiankulutus"
+    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
@@ -212,8 +224,8 @@
 
    :login
    {:headline         "Kirjaudu"
-    :username         "Käyttäjätunnus"
-    :username-example "tane12"
+    :username         "Sähköposti / käyttäjätunnus"
+    :username-example "paavo.paivittaja@kunta.fi"
     :password         "Salasana"
     :login            "Kirjaudu"
     :logout           "Kirjaudu ulos"
@@ -222,6 +234,7 @@
 
    :reset-password
    {:headline             "Unohtuiko salasana?"
+    :change-password      "Vaihda salasana"
     :helper-text          "Lähetämme salasanan vaihtolinkin sinulle sähköpostitse."
     :reset-link-sent      "Linkki lähetetty! Tarkista sähköpostisi."
     :enter-new-password   "Syötä uusi salasana"
@@ -432,7 +445,8 @@
     :no                    "Ei"
     :yes                   "Kyllä"
     :discard-changes?      "Tahdotko kumota tekemäsi muutokset?"
-    :press-again-to-delete "Varmista painamalla uudestaan"}
+    :press-again-to-delete "Varmista painamalla uudestaan"
+    :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
    {:headline "Haku"}

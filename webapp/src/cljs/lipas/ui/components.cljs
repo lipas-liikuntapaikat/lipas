@@ -237,7 +237,7 @@
             (when on-select
               [mui/table-cell {:padding "checkbox"}
                [mui/icon-button {:on-click #(on-select item)}
-                [mui/icon {:color "secondary"} "folder_open"]]])
+                [mui/icon {:color "primary"} "more_horiz"]]])
 
             ;; Cells
             (for [[k _] headers
@@ -491,7 +491,7 @@
                        :value     value
                        :required  required})]))
 
-(defn number-selector [{:keys [value on-change items unit label]}]
+(defn number-selector [{:keys [value on-change items unit label deselect?]}]
   [select
    {:label     label
     :items     items
@@ -500,6 +500,7 @@
     :value-fn  identity
     :label-fn  #(str % unit)
     :value     value
+    :deselect? deselect?
     :on-change on-change}])
 
 (defn date-picker [{:keys [label value on-change]}]
@@ -762,8 +763,9 @@
      [mui/button {:on-click on-close}
       close-label])]])
 
-(defn confirmation-dialog [{:keys [title message on-cancel
-                                   cancel-label on-confirm confirm-label]}]
+(defn confirmation-dialog [{:keys [title message on-cancel on-decline
+                                   decline-label cancel-label
+                                   on-confirm confirm-label]}]
   [mui/dialog {:open                    true
                :disable-backdrop-click  true
                :disable-escape-key-down true}
@@ -772,6 +774,8 @@
     [mui/typography message]]
    [mui/dialog-actions
     [mui/button {:on-click on-cancel} cancel-label]
+    (when on-decline
+      [mui/button {:on-click on-decline} decline-label])
     [mui/button {:on-click on-confirm} confirm-label]]])
 
 (defn li [text & children]
@@ -871,3 +875,15 @@
                                          (into (empty old-value)
                                                (remove #{v} old-value))))
                           (on-change @value))}]))]))
+
+(defn icon-text [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items :center
+             :style     {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:color (or icon-color "inherit")}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography {:variant :body2
+                     :style   {:margin-left "0.5em"
+                               :display     :inline}}
+     text]]])

@@ -290,7 +290,9 @@
          ;; Select energy to display in the chart
          [lui/select
           {:label     (tr :actions/choose-energy)
-           :items     [{:value :electricity-mwh
+           :items     [{:value :energy-mwh
+                        :label (tr :lipas.energy-stats/energy-mwh)}
+                       {:value :electricity-mwh
                         :label (tr :lipas.energy-stats/electricity-mwh)}
                        {:value :heat-mwh
                         :label (tr :lipas.energy-stats/heat-mwh)}

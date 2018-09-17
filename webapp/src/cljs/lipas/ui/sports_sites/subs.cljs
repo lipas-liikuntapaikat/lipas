@@ -18,6 +18,12 @@
               sites)))
 
 (re-frame/reg-sub
+ ::latest-rev
+ (fn [db [_ lipas-id]]
+   (let [latest (get-in db [:sports-sites lipas-id :latest])]
+     (get-in db [:sports-sites lipas-id :history latest]))))
+
+(re-frame/reg-sub
  ::editing-rev
  (fn [db [_ lipas-id]]
    (get-in db [:sports-sites lipas-id :editing])))

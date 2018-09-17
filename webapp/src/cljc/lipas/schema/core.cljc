@@ -151,10 +151,10 @@
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
 (s/def :lipas/new-user (s/keys :req-un [:lipas.user/email
-                                        :lipas.user/username]
+                                        :lipas.user/username
+                                        :lipas.user/user-data]
                                :opt-un [:lipas.user/password
-                                        :lipas.user/permissions
-                                        :lipas.user/user-data]))
+                                        :lipas.user/permissions]))
 
 (s/def :lipas/user (s/merge :lipas/new-user
                             (s/keys :req-un [:lipas.user/id])))

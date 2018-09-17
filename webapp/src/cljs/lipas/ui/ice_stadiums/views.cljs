@@ -38,6 +38,8 @@
 
         lipas-id (:lipas-id display-data)
 
+        close #(==> [::events/display-site nil])
+
         edit-data    (<== [::site-subs/editing-rev lipas-id])
         editing?     (<== [::site-subs/editing? lipas-id])
         edits-valid? (<== [::site-subs/edits-valid? lipas-id])
@@ -67,7 +69,7 @@
       :title (-> display-data :name)
 
       :close-label (tr :actions/close)
-      :on-close    #(==> [::events/display-site nil])
+      :on-close    close
 
       :top-actions
       [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
@@ -163,6 +165,7 @@
            [lui/number-selector
             {:items     (range -10 (inc 0))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :ice-surface-temperature-c)
              :on-change #(on-change :ice-surface-temperature-c %)}]}
 
@@ -173,6 +176,7 @@
            [lui/number-selector
             {:items     (range -8 (inc 20))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :skating-area-temperature-c)
              :on-change #(on-change :skating-area-temperature-c %)}]}
 
@@ -183,6 +187,7 @@
            [lui/number-selector
             {:items     (range -8 (inc 20))
              :unit      (tr :physical-units/celsius)
+             :deselect? true
              :value     (-> edit-data :stand-temperature-c)
              :on-change #(on-change :stand-temperature-c %)}]}
 
@@ -458,6 +463,7 @@
            [lui/select
             {:value     (-> edit-data :refrigerant-solution)
              :items     refrigerant-solutions
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :refrigerant-solution %)}]}
@@ -486,6 +492,7 @@
            [lui/select
             {:value     (-> edit-data :heat-recovery-type)
              :items     heat-recovery-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :heat-recovery-type %)}]}
@@ -508,6 +515,7 @@
            [lui/select
             {:value     (-> edit-data :dryer-type)
              :items     dryer-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :dryer-type %)}]}
@@ -519,6 +527,7 @@
            [lui/select
             {:value     (-> edit-data :dryer-duty-type)
              :items     dryer-duty-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :dryer-duty-type %)}]}
@@ -530,6 +539,7 @@
            [lui/select
             {:value     (-> edit-data :heat-pump-type)
              :items     heat-pump-types
+             :deselect? true
              :label-fn  (comp locale second)
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])
@@ -539,7 +549,25 @@
        [energy/table {:read-only? true
                       :cold?      true
                       :tr         tr
-                      :items      (:energy-consumption display-data)}]]]]))
+                      :items      (:energy-consumption display-data)}]
+
+       ;; Report energy consumption button
+       (when editing?
+         [mui/button
+          {:style {:margin-top "1em"}
+           :on-click
+           #(==> [:lipas.ui.events/confirm
+                  (tr :confirm/save-basic-data?)
+                  (fn []
+                    (==> [::site-events/save-edits lipas-id])
+                    (close)
+                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                  (fn []
+                    (==> [::site-events/discard-edits])
+                    (close)
+                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+          [mui/icon "add"]
+          (tr :lipas.user/report-energy-consumption)])]]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale (tr)
@@ -571,7 +599,7 @@
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [mui/card {:square true?}
+    [mui/card {:square true}
      [mui/card-header {:title (tr :ice-energy/headline)}]
      [mui/card-content
       [mui/typography

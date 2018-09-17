@@ -30,7 +30,7 @@
                  [cljsjs/react-autosuggest "9.3.4-0"]
 
                  ;;; Backend ;;;
-                 [metosin/reitit "0.2.0-SNAPSHOT"]
+                 [metosin/reitit "0.2.2"]
                  [metosin/ring-http-response "0.9.0"]
                  [cheshire "5.8.0"]
                  [buddy "2.0.0"]
