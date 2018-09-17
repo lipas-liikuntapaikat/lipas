@@ -309,6 +309,9 @@
          host
          (when-not (#{80 443 -1 nil ""} port) (str ":" port)))))
 
+(defn domain []
+  (-> js/window .-location .-href url/url :host))
+
 (defn current-path []
   (let [path (-> js/window .-location .-href url/url :anchor)]
     (str "/#" path)))
