@@ -129,7 +129,7 @@
 
       ;; Home
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/")}
+                      :on-click #(hide-and-navigate! "/#/etusivu")}
        [mui/list-item-icon
         [mui/icon "home"]]
        [mui/list-item-text {:primary (tr :menu/frontpage)}]]
@@ -207,6 +207,28 @@
           [mui/icon "group_add"]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
 
+(defn get-sub-page [panel tr]
+  (case panel
+    :home-panel           {:text (tr :home-page/headline)
+                           :href "/#/etusivu"}
+    :admin-panel          {:text (tr :lipas.admin/headline)
+                           :href "/#/admin"}
+    :sports-panel         {:text (tr :sport/headline)
+                           :href "/#/liikuntapaikat"}
+    :ice-panel            {:text (tr :ice/headline)
+                           :href "/#/jaahalliportaali"}
+    :swim-panel           {:text (tr :swim/headline)
+                           :href "/#/uimahalliportaali"}
+    :login-panel          {:text (tr :login/headline)
+                           :href "/#/kirjaudu"}
+    :register-panel       {:text (tr :register/headline)
+                           :href "/#/rekisteroidy"}
+    :user-panel           {:text (tr :user/headline)
+                           :href "/#/profiili"}
+    :reset-password-panel {:text (tr :reset-password/headline)
+                           :href "/#/passu-hukassa"}
+    {:text "" :href ""}))
+
 (defn nav [tr active-panel logged-in?]
   (let [menu-anchor (<== [::subs/account-menu-anchor])]
     [mui/app-bar {:position "static"
@@ -221,7 +243,7 @@
       [drawer tr logged-in?]
 
       ;;; JYU logo
-      [:a {:href "/#/"}
+      [:a {:href "https://www.jyu.fi"}
        [mui/svg-icon {:view-box "0 0 132.54 301.95"
                       :style    {:height "2em"
                                  :margin "0.45em"}}
@@ -237,7 +259,7 @@
        [mui/hidden {:sm-down true}
         [mui/typography {:component "a"
                          :variant   "title"
-                         :href      "/#/"
+                         :href      "https://www.jyu.fi"
                          :style
                          (merge mui/headline-aleo
                                 {:display         :inline
@@ -251,7 +273,7 @@
        ;; LIPAS
        [mui/typography {:component "a"
                         :variant   "title"
-                        :href      "/#/"
+                        :href      "/#/etusivu"
                         :style
                         (merge mui/headline-aleo
                                {:display         :inline
@@ -259,22 +281,22 @@
                                 :text-transform  :none
                                 :text-decoration :none})}
 
-        (tr :menu/headline)
+        (tr :menu/headline)]
 
-        [separator]
+       [separator]
+
+       [mui/typography {:component "a"
+                        :variant   "title"
+                        :href      (:href (get-sub-page active-panel tr))
+                        :style
+                        (merge mui/headline-aleo
+                               {:display         :inline
+                                :font-size       "1em"
+                                :text-transform  :none
+                                :text-decoration :none})}
 
         ;; Sub page header
-        (case active-panel
-          :home-panel           (tr :home-page/headline)
-          :admin-panel          (tr :lipas.admin/headline)
-          :sports-panel         (tr :sport/headline)
-          :ice-panel            (tr :ice/headline)
-          :swim-panel           (tr :swim/headline)
-          :login-panel          (tr :login/headline)
-          :register-panel       (tr :register/headline)
-          :user-panel           (tr :user/headline)
-          :reset-password-panel (tr :reset-password/headline)
-          "")]]
+        (:text (get-sub-page active-panel tr))]]
 
       [mui/hidden {:sm-down true}
        [lang-selector]]
