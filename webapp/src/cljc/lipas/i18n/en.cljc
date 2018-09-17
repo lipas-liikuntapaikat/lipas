@@ -217,8 +217,8 @@
 
    :login
    {:headline         "Login"
-    :username         "Username"
-    :username-example "tane12"
+    :username         "Email / Username"
+    :username-example "paavo.paivittaja@kunta.fi"
     :password         "Password"
     :login            "Login"
     :logout           "Log out"

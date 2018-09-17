@@ -224,8 +224,8 @@
 
    :login
    {:headline         "Kirjaudu"
-    :username         "Käyttäjätunnus"
-    :username-example "tane12"
+    :username         "Sähköposti / käyttäjätunnus"
+    :username-example "paavo.paivittaja@kunta.fi"
     :password         "Salasana"
     :login            "Kirjaudu"
     :logout           "Kirjaudu ulos"
