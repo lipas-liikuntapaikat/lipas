@@ -160,7 +160,7 @@
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
-   (let [lipas-id (-> db :swimming-pools :displaying)]
+   (when-let [lipas-id (-> db :swimming-pools :displaying)]
      (get-in db [:sports-sites lipas-id]))))
 
 (re-frame/reg-sub

@@ -35,13 +35,14 @@
   (into
    [mui/grid {:item  true :xs 12
               :style {:padding "2em"
-                      :background-color mui/gray3}}
+                      :background-color mui/gray1}}
     [mui/typography {:variant "display2"}
      (tr :partners/headline)]]
    (map ->logo logos)))
 
-(defn grid-card [{:keys [title style link link-text]} & children]
-  [mui/grid {:item true :xs 12 :md 12 :lg 12}
+(defn grid-card [{:keys [title style link link-text xs md lg]
+                  :or   {xs 12 md 6 lg 4}} & children]
+  [mui/grid {:item true :xs xs :md md :lg lg}
    [mui/card {:square true
               :raised true
               :style
@@ -49,9 +50,9 @@
                {:height           "100%"
                 :background-color "rgb(250, 250, 250)"
                 ;;:background-color "#e9e9e9"
-                :font-size "1.25em"
+                :font-size        "1.25em"
                 :opacity          0.95}
-                      style)}
+               style)}
     [mui/card-header {:title  title
                       :action (when link
                                 (r/as-element
@@ -67,113 +68,161 @@
                     :href    link}
         (str "> " link-text)])]]])
 
+(defn dense-list [{:keys [] :as props} & items]
+  (into [mui/list {:dense true}] items))
+
+(defn list-item [{:keys [href text icon]
+                  :or   {icon "arrow_right"}}]
+  [mui/list-item
+   [mui/list-item-icon
+    [mui/icon icon]]
+   [mui/typography {:variant :body2}
+    text]])
+
 (defn create-panel [tr]
-  [mui/grid {:container true
-             :style
-             {:background-position "right top"
-              :background-color    "#fafafa"
-              :background-image    "url('/img/background_full.png')"
-              :background-repeat   :no-repeat}}
-   [mui/grid {:item true :xs 12 :md 6 :lg 6}
-    [mui/grid {:container true}
+  [mui/grid {:container true}
 
-     ;; LIPAS
-     [mui/grid {:item true :xs 12}
-      [:div {:style {:padding "1em"}}
-       [mui/grid {:container true
-                  :spacing   16}
+   [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
-        [grid-card {:title     (tr :menu/headline)
-                    :link      "http://www.lipas.fi"
-                    :link-text "lipas.fi"}
-         [mui/typography (tr :home-page/description)]
-         [:ul
-          [lui/li (tr :sport/up-to-date-information)]
-          [lui/li (tr :sport/updating-tools)]
-          [lui/li (tr :sport/open-interfaces)]]
-         [mui/typography (tr :sport/legacy-disclaimer)]]
+    ;; "Jumbotron" header
+    [mui/grid {:item true :xs 12}
+     [mui/paper {:square true
+                 :style  {:background-color mui/secondary
+                          ;; :text-align       :center
+                          :padding          "1em 2em 1em 2em"}}
 
+      [mui/grid {:container   true
+                 :align-items :center
+                 :spacing     16}
 
-        ;; Skating rinks portal
-        [grid-card {:title     (tr :ice/headline)
-                    :link      "/#/jaahalliportaali"
-                    :link-text (tr :actions/browse-to-portal)}
-         [mui/typography (tr :ice/description)]
-         [:ul
-          [lui/li (tr :ice/basic-data-of-halls)]
-          [lui/li (tr :ice/entering-energy-data)]
-          [lui/li (tr :ice/updating-basic-data)]]]
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant :display2
+                         :style   {:color   :white}}
+         "LIPAS"]]
 
-        ;; Swimming pools portal
-        [grid-card {:title     (tr :swim/headline)
-                    :link      "/#/uimahalliportaali"
-                    :link-text (tr :actions/browse-to-portal)}
-         [mui/typography (tr :swim/description)]
-         [:ul
-          [lui/li (tr :swim/basic-data-of-halls)]
-          [lui/li (tr :swim/entering-energy-data)]
-          [lui/li (tr :swim/updating-basic-data)]]]
+       [mui/grid {:item true}
+        [mui/typography {:variant :title
+                         :style   {:color   :white}}
+         (tr :sport/headline)]]
 
-        ;; Open Data
-        [grid-card {:title (tr :open-data/headline)}
-         [mui/list
+       [mui/grid {:item true}
+        [mui/typography {:variant :title
+                         :style   {:color   :white}}
+         (tr :ice/headline)]]
 
-          ;; info
-          [mui/list-item {:button   true
-                          :on-click #(navigate! (:open-data links))}
-           [mui/list-item-icon
-            [mui/icon "info"]]
-           [mui/list-item-text {:primary "Info"}]]
+       [mui/grid {:item true}
+        [mui/typography {:variant :title
+                         :style   {:color   :white}}
+         (tr :swim/headline)]]]]]]
 
-          ;; Lipas-API
-          [mui/list-item {:button   true
-                          :on-click #(navigate! (:lipas-api links))}
-           [mui/list-item-icon
-            [:img {:height "24px"
-                   :src    "/img/swagger_logo.svg"}]]
-           [mui/list-item-text {:primary "Lipas API"}]]
+   ;; Main section with background image
+   [mui/grid {:item true :xs 12}
+    [mui/grid {:container true
+               :style
+               {:background-position "right center"
+                :background-color    mui/gray3
+                :background-image    "url('/img/background_full.png')"
+                :background-size     :contain
+                :background-repeat   :no-repeat}}
+     [mui/grid {:item true :xs 12 :md 12 :lg 12}
+      [mui/grid {:container true}
 
-          ;; Geoserver
-          [mui/list-item {:button   true
-                          :on-click #(navigate! (:geoserver links))}
-           [mui/list-item-icon
-            [:img {:height "24px"
-                   :src    "/img/geoserver_logo.svg"}]]
-           [mui/list-item-text "Geoserver"]]
+       [mui/grid {:item true :xs 12}
+        [:div {:style {:padding "1em"}}
+         [mui/grid {:container true
+                    :spacing   16}
 
-          ;; Github
-          [mui/list-item {:button   true
-                          :on-click #(navigate! (:github links))}
-           [mui/list-item-icon
-            [mui/svg-icon
-             [svg/github-icon]]]
-           [mui/list-item-text {:primary "GitHub"}]]]]
+          ;; Sports sites
+          [grid-card {:title     (tr :sport/headline)
+                      :link      "http://www.lipas.fi"
+                      :link-text "lipas.fi"}
+           [mui/typography (tr :sport/description)]
+           [:ul
+            [lui/li (tr :sport/up-to-date-information)]
+            [lui/li (tr :sport/updating-tools)]
+            [lui/li (tr :sport/open-interfaces)]]]
 
-        ;; Help
-        [grid-card {:title (tr :help/headline)}
+          ;; Skating rinks portal
+          [grid-card {:title     (tr :ice/headline)
+                      :link      "/#/jaahalliportaali"
+                      :link-text (tr :actions/browse-to-portal)}
+           [mui/typography (tr :ice/description)]
+           [:ul
+            [lui/li (tr :ice/basic-data-of-halls)]
+            [lui/li (tr :ice/entering-energy-data)]
+            [lui/li (tr :ice/updating-basic-data)]]]
 
-         [mui/list
+          ;; Swimming pools portal
+          [grid-card {:title     (tr :swim/headline)
+                      :link      "/#/uimahalliportaali"
+                      :link-text (tr :actions/browse-to-portal)}
+           [mui/typography (tr :swim/description)]
+           [:ul
+            [lui/li (tr :swim/basic-data-of-halls)]
+            [lui/li (tr :swim/entering-energy-data)]
+            [lui/li (tr :swim/updating-basic-data)]]]
 
-          ;; Lipasinfo
-          [mui/list-item {:button   true
-                          :on-click #(navigate! (:lipasinfo links))}
-           [mui/list-item-icon
-            [mui/icon "library_books"]]
-           [mui/list-item-text "lipasinfo.fi"]]
+          ;; Open Data
+          [grid-card {:title (tr :open-data/headline)}
+           [mui/list
 
-          ;; Email
-          [mui/list-item {:button   true
-                          :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
-           [mui/list-item-icon
-            [mui/icon "email"]]
-           [mui/list-item-text "lipasinfo@jyu.fi"]]
+            ;; info
+            [mui/list-item {:button   true
+                            :on-click #(navigate! (:open-data links))}
+             [mui/list-item-icon
+              [mui/icon "info"]]
+             [mui/list-item-text {:primary "Info"}]]
 
-          ;; Phone
-          [mui/list-item {:button   true
-                          :on-click #(navigate! "tel:+358400247980")}
-           [mui/list-item-icon
-            [mui/icon "phone"]]
-           [mui/list-item-text "0400 247 980"]]]]]]]]]
+            ;; Lipas-API
+            [mui/list-item {:button   true
+                            :on-click #(navigate! (:lipas-api links))}
+             [mui/list-item-icon
+              [:img {:height "24px"
+                     :src    "/img/swagger_logo.svg"}]]
+             [mui/list-item-text {:primary "Lipas API"}]]
+
+            ;; Geoserver
+            [mui/list-item {:button   true
+                            :on-click #(navigate! (:geoserver links))}
+             [mui/list-item-icon
+              [:img {:height "24px"
+                     :src    "/img/geoserver_logo.svg"}]]
+             [mui/list-item-text "Geoserver"]]
+
+            ;; Github
+            [mui/list-item {:button   true
+                            :on-click #(navigate! (:github links))}
+             [mui/list-item-icon
+              [mui/svg-icon
+               [svg/github-icon]]]
+             [mui/list-item-text {:primary "GitHub"}]]]]
+
+          ;; Help
+          [grid-card {:title (tr :help/headline)}
+
+           [mui/list
+
+            ;; Lipasinfo
+            [mui/list-item {:button   true
+                            :on-click #(navigate! (:lipasinfo links))}
+             [mui/list-item-icon
+              [mui/icon "library_books"]]
+             [mui/list-item-text "lipasinfo.fi"]]
+
+            ;; Email
+            [mui/list-item {:button   true
+                            :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
+             [mui/list-item-icon
+              [mui/icon "email"]]
+             [mui/list-item-text "lipasinfo@jyu.fi"]]
+
+            ;; Phone
+            [mui/list-item {:button   true
+                            :on-click #(navigate! "tel:+358400247980")}
+             [mui/list-item-icon
+              [mui/icon "phone"]]
+             [mui/list-item-text "0400 247 980"]]]]]]]]]]]
+
    [footer tr]])
 
 (defn main [tr]

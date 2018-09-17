@@ -51,7 +51,8 @@
       (when disclaimer
         [mui/grid {:item true :xs 12 :md 12 :lg 12}
          [mui/card {:square true
-                    :style  {:background-color mui/secondary}}
+                    :style  {:background-color mui/secondary
+                             :border-bottom "2px solid white"}}
           [mui/card-header
            {:style  {:padding-bottom 0}
             :title  (tr :disclaimer/headline)

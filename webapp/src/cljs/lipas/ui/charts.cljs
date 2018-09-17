@@ -1,9 +1,12 @@
 (ns lipas.ui.charts
   (:require ["recharts" :as rc]
+            [lipas.ui.mui :as mui]
             [clojure.set :refer [rename-keys]]))
 
 (def colors
-  {:electricity-mwh "#FFBD00"
+  {:energy-mwh      "orange"
+   ;;:electricity-mwh "#FFBD00"
+   :electricity-mwh "#ffd400"
    :heat-mwh        "#ff503c"
    :water-m3        "#0a9bff"})
 

@@ -49,7 +49,7 @@
      {:db db}
      (if dirty?
        (commit-ajax db rev) ;; Attempt to save server side
-       {:dispatch [::commit-success rev]}))))
+       {:dispatch [::save-success rev]}))))
 
 (re-frame/reg-event-fx
  ::save-edits
