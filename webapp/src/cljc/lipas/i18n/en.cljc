@@ -19,7 +19,8 @@
 
    :sport
    {:headline          "Sports sites"
-    :description       "LIPAS is the national database of sport facilities."
+    :description "LIPAS is the national database of sport facilities
+    and their conditions in Finland."
     :legacy-disclaimer "Sports sites are not here yet but they can be
     accessed through existing LIPAS by clicking the link below."
 
