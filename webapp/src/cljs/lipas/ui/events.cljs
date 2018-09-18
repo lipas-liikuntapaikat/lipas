@@ -70,7 +70,8 @@
                        :decline-label (tr :confirm/no)
                        :confirm-label (tr :confirm/yes)
                        :on-confirm    (comp on-confirm close)
-                       :on-decline    (comp on-decline close)
+                       :on-decline    (when on-decline
+                                        (comp on-decline close))
                        :on-cancel     close}]
      (assoc db :active-confirmation confirmation))))
 
