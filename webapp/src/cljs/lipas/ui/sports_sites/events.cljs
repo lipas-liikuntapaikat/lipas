@@ -37,7 +37,9 @@
 (re-frame/reg-event-fx
  ::commit-rev
  (fn [{:keys [db]} [_ rev]]
-   (commit-ajax db rev)))
+   (merge
+    (commit-ajax db rev)
+    {:db (utils/save-edits db rev)})))
 
 (defn- save-with-status [db lipas-id status]
   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
