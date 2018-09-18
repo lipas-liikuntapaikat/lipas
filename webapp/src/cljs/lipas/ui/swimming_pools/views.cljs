@@ -562,24 +562,24 @@
                       [:total-count (tr :lipas.swimming-pool.visitors/total-count)]]
          :items      (-> display-data :visitors-history)
          :key-fn     :year
-         :read-only? true}]]
+         :read-only? true}]
 
-      (when editing?
-        [mui/button
-         {:style {:margin-top "1em"}
-          :on-click
-          #(==> [:lipas.ui.events/confirm
-                 (tr :confirm/save-basic-data?)
-                 (fn []
-                   (==> [::site-events/save-edits lipas-id])
-                   (close)
-                   (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                 (fn []
-                   (==> [::site-events/discard-edits])
-                   (close)
-                   (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-         [mui/icon "add"]
-         (tr :lipas.user/report-consumption)])
+       (when editing?
+         [mui/button
+          {:style {:margin-top "1em"}
+           :on-click
+           #(==> [:lipas.ui.events/confirm
+                  (tr :confirm/save-basic-data?)
+                  (fn []
+                    (==> [::site-events/save-edits lipas-id])
+                    (close)
+                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                  (fn []
+                    (==> [::site-events/discard-edits])
+                    (close)
+                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+          [mui/icon "add"]
+          (tr :lipas.user/report-energy-and-visitors)])]
 
       ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
@@ -603,7 +603,7 @@
                     (close)
                     (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
           [mui/icon "add"]
-          (tr :lipas.user/report-consumption)])]]]))
+          (tr :lipas.user/report-energy-and-visitors)])]]]))
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale (tr)
