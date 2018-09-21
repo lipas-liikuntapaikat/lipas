@@ -17,11 +17,11 @@
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
 
    :home-page
-   {:headline    "Etusivu"}
+   {:headline "Etusivu"}
 
    :sport
    {:headline          "Liikuntapaikat"
-    :description "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
+    :description       "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
     julkisista liikuntapaikoista avoimessa tietokannassa."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
@@ -166,7 +166,7 @@
     :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
    :partners
-   {:headline "Kehittämisessä mukana"}
+   {:headline (str "Kehittä" ZWSP "misessä mukana")}
 
    :help
    {:headline "Ohjeet"}

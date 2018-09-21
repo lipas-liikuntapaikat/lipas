@@ -36,8 +36,12 @@
    [mui/grid {:item  true :xs 12
               :style {:padding "2em"
                       :background-color mui/gray1}}
-    [mui/typography {:variant "display2"}
-     (tr :partners/headline)]]
+    [mui/hidden {:smUp true}
+     [mui/typography {:variant "display1"}
+      (tr :partners/headline)]]
+    [mui/hidden {:xsDown true}
+     [mui/typography {:variant "display2"}
+      (tr :partners/headline)]]]
    (map ->logo logos)))
 
 (defn grid-card [{:keys [title style link link-text xs md lg]
