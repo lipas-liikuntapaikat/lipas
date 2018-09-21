@@ -95,7 +95,8 @@
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::login-success :magic-link]
-     :on-failure      [::logout]}}))
+     :on-failure      [::logout]}
+    :ga/event ["user" "magic-link-opened"]}))
 
 (re-frame/reg-event-fx
  ::logout
