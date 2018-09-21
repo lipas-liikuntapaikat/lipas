@@ -26,7 +26,7 @@
     :subject subject
     :body    [:alternative
               {:type "text/plain" :content plain}
-              {:type "text/html" :content html}]}))
+              {:type "text/html;charset=utf-8" :content html}]}))
 
 (defn send-reset-password-email! [emailer to reset-link]
   (.send! emailer {:subject "Salasanan vaihtolinkki"

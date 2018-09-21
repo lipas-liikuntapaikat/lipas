@@ -166,7 +166,7 @@
 (defn checkbox [{:keys [label value on-change disabled style]}]
   [mui/form-control-label
    {:label   label
-    :style   style
+    :style   (merge {:width :fit-content} style)
     :control (r/as-element
               [mui/checkbox
                {:value     (str (boolean value))
