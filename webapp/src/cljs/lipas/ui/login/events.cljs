@@ -1,8 +1,8 @@
 (ns lipas.ui.login.events
   (:require [ajax.core :as ajax]
             [lipas.ui.db :as db]
-            [lipas.ui.local-storage :refer [ls-set ls-get]]
             [lipas.ui.utils :as utils]
+            [lipas.ui.local-storage :as local-storage]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -18,8 +18,6 @@
 
 (re-frame/reg-event-fx
  ::login-success
- [(re-frame/after (fn [db _]
-                    (ls-set :login-data (-> db :user :login))))]
  (fn [{:keys [db]} [_ login-type body]]
    (let [admin?             (-> body :permissions :admin?)
          refresh-interval-s 900] ; 15 minutes
@@ -27,6 +25,9 @@
       {:db (-> db
                (assoc-in [:logged-in?] true)
                (assoc-in [:user :login] body))
+
+       ::local-storage/set! [:login-data body]
+
        :dispatch-later
        [{:ms       (* 1000 refresh-interval-s)
          :dispatch [::refresh-login]}]
@@ -70,7 +71,7 @@
 
 (re-frame/reg-event-fx
  ::refresh-login
- [(re-frame/inject-cofx :get-local-storage-value :login-data)]
+ [(re-frame/inject-cofx ::local-storage/get :login-data)]
  (fn [{login-data :local-storage-value
        db         :db} _]
    (if (or (empty? login-data) (not (:logged-in? db)))
@@ -100,10 +101,12 @@
 
 (re-frame/reg-event-fx
  ::logout
- [(re-frame/inject-cofx :remove-local-storage-value :login-data)]
  (fn [{:keys [db]}  _]
-   {:db       (-> db/default-db
-                  (assoc :active-panel :login-panel)      ; avoid flickering
-                  (assoc :backend-url (:backend-url db))) ; dev-time helper
+   {:db (-> db/default-db
+            (assoc :active-panel :login-panel)
+            (assoc :backend-url (:backend-url db)))
+
+    ::local-storage/remove! :login-data
+
     :dispatch [:lipas.ui.events/navigate "/#/kirjaudu"]
     :ga/set   [{:dimension1 "logged-out"}]}))
