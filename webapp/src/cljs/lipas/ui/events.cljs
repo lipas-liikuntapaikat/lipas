@@ -7,16 +7,16 @@
 
 (re-frame/reg-event-fx
  ::initialize-db
- [(re-frame/inject-cofx :get-local-storage-value :login-data)]
- (fn  [{login-data :local-storage-value} _]
-   (if login-data
+ [(re-frame/inject-cofx :lipas.ui.local-storage/get :login-data)]
+ (fn  [{:keys [local-storage]}]
+   (if-let [login-data (:login-data local-storage)]
      (let [admin? (-> login-data :permissions :admin?)]
-       {:db (-> db/default-db
-                (assoc-in [:user :login] login-data)
-                (assoc :logged-in? true))
+       {:db       (-> db/default-db
+                      (assoc-in [:user :login] login-data)
+                      (assoc :logged-in? true))
         :dispatch [:lipas.ui.login.events/refresh-login]
-        :ga/set [{:dimension1 (if admin? "admin" "user")}]})
-     {:db db/default-db
+        :ga/set   [{:dimension1 (if admin? "admin" "user")}]})
+     {:db     db/default-db
       :ga/set [{:dimension1 "guest"}]})))
 
 (re-frame/reg-event-db
