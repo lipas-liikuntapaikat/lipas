@@ -71,4 +71,12 @@
    ;; User
    :user
    {:login-form        {}
-    :registration-form {}}})
+    :registration-form {}}
+
+   ;; Map
+   :map
+   {:center  {:lon 25 :lat 65}
+    :zoom    2
+    :basemap :taustakartta
+    :filters {:ice-stadium   true
+              :swimming-pool false}}})

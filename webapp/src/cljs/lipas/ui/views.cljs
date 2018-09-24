@@ -44,37 +44,45 @@
 
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
-      ;; Navbar and drawer
-      [nav/nav tr active-panel logged-in?]
+      [mui/grid {:container true
+                 :style     {:min-height     "100%"
+                             :flex-direction "column"}}
 
-      ;; Dev-env disclaimer
-      (when disclaimer
-        [mui/grid {:item true :xs 12 :md 12 :lg 12}
-         [mui/card {:square true
-                    :style  {:background-color mui/secondary
-                             :border-bottom "2px solid white"}}
-          [mui/card-header
-           {:style  {:padding-bottom 0}
-            :title  (tr :disclaimer/headline)
-            :action (r/as-element
-                     [mui/icon-button
-                      {:on-click #(==> [::events/set-active-disclaimer nil])}
-                      [mui/icon "close"]])}]
-          [mui/card-content
-           [mui/typography {:variant :body2}
-            disclaimer]]]])]
+       [mui/grid {:item  true
+                  :xs    12
+                  :style {:flex   "0 1 auto"}}
 
-     [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+        ;; Navbar and drawer
+        [nav/nav tr active-panel logged-in?]
 
-      ;; Main panel
-      [show-panel active-panel tr logged-in?]
+        ;; Dev-env disclaimer
+        (when disclaimer
+          [mui/grid {:item true :xs 12 :md 12 :lg 12}
+           [mui/card {:square true
+                      :style  {:background-color mui/secondary
+                               :border-bottom    "2px solid white"}}
+            [mui/card-header
+             {:style  {:padding-bottom 0}
+              :title  (tr :disclaimer/headline)
+              :action (r/as-element
+                       [mui/icon-button
+                        {:on-click #(==> [::events/set-active-disclaimer nil])}
+                        [mui/icon "close"]])}]
+            [mui/card-content
+             [mui/typography {:variant :body2}
+              disclaimer]]]])]
 
-      ;; Global UI-blocking confirmation dialog
-      (when confirmation
-        [lui/confirmation-dialog confirmation])
+       [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
-      ;; Global ephmeral notifications
-      (when notification
-        [lui/notification
-         {:notification notification
-          :on-close     #(==> [::events/set-active-notification nil])}])]]))
+        ;; Main panel
+        [show-panel active-panel tr logged-in?]
+
+        ;; Global UI-blocking confirmation dialog
+        (when confirmation
+          [lui/confirmation-dialog confirmation])
+
+        ;; Global ephmeral notifications
+        (when notification
+          [lui/notification
+           {:notification notification
+            :on-close     #(==> [::events/set-active-notification nil])}])]]]]))
