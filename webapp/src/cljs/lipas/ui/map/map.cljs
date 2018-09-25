@@ -1,5 +1,6 @@
 (ns lipas.ui.map.map
-  (:require [goog.object :as gobj]
+  (:require proj4
+            [goog.object :as gobj]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -11,24 +12,78 @@
 
 ;; (set! *warn-on-infer* true)
 
-(def base-url "/mapproxy/wmts")
+(defn ->wmts-url [layer-name]
+  (str "/mapproxy/wmts/"
+       layer-name
+       "/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png"))
 
 (def urls
-  {;:osm          "http://{s}.tile.osm.org/{z}/{x}/{y}.png"
-   :taustakartta (str base-url "/mml_taustakartta/mml_grid/{z}/{x}/{y}.png")
-   :maastokartta (str base-url "/mml_maastokartta/mml_grid/{z}/{x}/{y}.png")
-   :ortokuva     (str base-url "/mml_ortokuva/mml_grid/{z}/{x}/{y}.png")})
+  {:taustakartta (->wmts-url "mml_taustakartta")
+   :maastokartta (->wmts-url "mml_maastokartta")
+   :ortokuva     (->wmts-url "mml_ortokuva")})
 
-(def resolutions
+(def mml-resolutions
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
+(js/proj4.defs "EPSG:3067" (str "+proj=utm"
+                              "+zone=35"
+                              "+ellps=GRS80"
+                              "+towgs84=0,0,0,0,0,0,0"
+                              "+units=m"
+                              "+no_defs"))
+
+(def mml-matrix-ids (clj->js (range (count mml-resolutions))))
+
+(js/ol.proj.proj4.register proj4)
+
+(def epsg3067 (js/ol.proj.get "EPSG:3067"))
+(def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
+
+(.setExtent epsg3067 epsg3067-extent)
+
+(def epsg3067-topLeft (js/ol.extent.getTopLeft (.getExtent epsg3067)))
+
+(def jyvaskyla #js[435047 6901408])
+(def center-wgs84 (js/ol.proj.fromLonLat #js[24 65]))
+
+(defn ->wmts [{:keys [url layer-name]}]
+  (js/ol.layer.Tile.
+   #js{:source
+       (js/ol.source.WMTS.
+        #js{:url             url
+            :layer           layer-name
+            :projection      "EPSG:3067"
+            :matrixSet       "mml_grid"
+            :tileGrid        (js/ol.tilegrid.WMTS.
+                              #js{:origin      epsg3067-topLeft
+                                  :extent      epsg3067-extent
+                                  :resolutions mml-resolutions
+                                  :matrixIds   mml-matrix-ids})
+            :format          "png"
+            :requestEncoding "REST"
+            :isBaseLayer     true})}))
+
+(defn init-base-layers []
+  {:taustakartta (->wmts {:url        (:taustakartta urls)
+                          :layer-name "MML-Taustakartta"})
+   :maastokartta (->wmts {:url        (:maastokartta urls)
+                          :layer-name "MML-Maastokartta"})
+   :ortokuva     (->wmts {:url        (:ortokuva urls)
+                          :layer-name "MML-Ortokuva"})
+   :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})})
 
 (defn init-map [opts]
-  (let [osm  (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})
-        view (js/ol.View. #js{:center (js/ol.proj.fromLonLat #js[37.41 8.82])
-                              :zoom   4})
+  (let [layers (init-base-layers)
+        view   (js/ol.View. #js{:center      jyvaskyla
+                                :zoom        1
+                                :projection  "EPSG:3067"
+                                :resolutions mml-resolutions
+                                :units       "m"})
+
+
+
         opts #js {:target "map"
-                  :layers #js[osm]
+                  :layers #js[(:taustakartta layers)]
                   :view   view}]
     (js/ol.Map. opts)))
 

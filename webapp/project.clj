@@ -28,6 +28,7 @@
                  [cljsjs/date-fns "1.29.0-0"]
                  [cljsjs/recharts "1.1.0-3"]
                  [cljsjs/react-autosuggest "9.3.4-0"]
+                 [cljsjs/proj4 "2.5.0-0"]
 
                  ;;; Backend ;;;
                  [metosin/reitit "0.2.2"]
