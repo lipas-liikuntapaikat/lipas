@@ -75,7 +75,7 @@
 
    ;; Map
    :map
-   {:center  {:lon 25 :lat 65}
+   {:center  {:lon 435047 :lat 6901408}
     :zoom    2
     :basemap :taustakartta
     :filters {:ice-stadium   true

@@ -2,6 +2,13 @@
   (:require [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
+ ::set-view
+ (fn [db [_ lat lon zoom]]
+   (-> db
+       (assoc-in [:map :center] {:lat lat :lon lon})
+       (assoc-in [:map :zoom] zoom))))
+
+(re-frame/reg-event-db
  ::set-center
  (fn [db [_ lat lon]]
    (assoc-in db [:map :center] {:lat lat :lon lon})))
