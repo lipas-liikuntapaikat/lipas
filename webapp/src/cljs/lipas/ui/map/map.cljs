@@ -77,10 +77,10 @@
    {:vectors (js/ol.layer.Vector.
               #js{:source (js/ol.source.Vector.)})}})
 
-(defn init-map [opts]
+(defn init-map [{:keys [center zoom]}]
   (let [layers (init-layers)
-        view   (js/ol.View. #js{:center      jyvaskyla
-                                :zoom        1
+        view   (js/ol.View. #js{:center      #js[(:lon center) (:lat center)]
+                                :zoom        zoom
                                 :projection  "EPSG:3067"
                                 :resolutions mml-resolutions
                                 :units       "m"})
@@ -90,8 +90,19 @@
                               (-> layers :basemaps :maastokartta)
                               (-> layers :basemaps :ortokuva)
                               (-> layers :overlays :vectors)]
-                  :view   view}]
-    [(js/ol.Map. opts) layers]))
+                  :view   view}
+
+        lmap (js/ol.Map. opts)]
+
+    (.on lmap "moveend"
+         (fn [e]
+           (let [lon  (aget (.getCenter view) 0)
+                 lat  (aget (.getCenter view) 1)
+                 zoom (.getZoom view)]
+             (==> [::events/set-view lat lon zoom]))))
+
+    [lmap layers]))
+
 
 (defn update-geoms [layers geoms]
   (let [source (-> layers :overlays :vectors .getSource)]
@@ -120,12 +131,14 @@
                                              :xs    12}])
       :component-did-mount (fn [comp]
                              (let [opts          (r/props comp)
+                                   basemap       (:basemap opts)
                                    [lmap layers] (init-map opts)]
 
                                (when-let [geoms (not-empty (:geoms opts))]
                                  (update-geoms layers geoms))
 
-                               (reset! basemap* (:basemap opts))
+                               (set-basemap layers basemap)
+                               (reset! basemap* basemap)
                                (reset! lmap* lmap)
                                (reset! layers* layers)))
       :component-did-update (fn [comp]
