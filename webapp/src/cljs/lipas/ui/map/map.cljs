@@ -8,8 +8,6 @@
             [reagent.core :as r]
             [re-frame.core :as re-frame]))
 
-;; Kudos https://github.com/jleh/Leaflet.MML-layers
-
 ;; (set! *warn-on-infer* true)
 
 (defn ->wmts-url [layer-name]
@@ -26,11 +24,11 @@
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (js/proj4.defs "EPSG:3067" (str "+proj=utm"
-                              "+zone=35"
-                              "+ellps=GRS80"
-                              "+towgs84=0,0,0,0,0,0,0"
-                              "+units=m"
-                              "+no_defs"))
+                                "+zone=35"
+                                "+ellps=GRS80"
+                                "+towgs84=0,0,0,0,0,0,0"
+                                "+units=m"
+                                "+no_defs"))
 
 (def mml-matrix-ids (clj->js (range (count mml-resolutions))))
 
@@ -92,6 +90,7 @@
 
 (defn update-geoms [layers geoms]
   (let [source (-> layers :overlays :vectors .getSource)]
+    (.clear source)
     (doseq [g    geoms
             :let [f (-> (js/ol.format.GeoJSON.)
                         (.readFeatures (clj->js g)
@@ -118,8 +117,10 @@
       :component-did-update (fn [comp]
                               (let [opts  (r/props comp)
                                     geoms (:geoms opts)]
+                                (prn "UPD")
                                 (when (not= @geoms* geoms)
-                                  (update-geoms @layers* @geoms*))))
+                                  (update-geoms @layers* geoms)
+                                  (reset! geoms* geoms))))
       :display-name         "map-inner"})))
 
 (defn map-outer []
