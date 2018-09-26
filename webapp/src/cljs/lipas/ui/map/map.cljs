@@ -44,9 +44,11 @@
 (def jyvaskyla #js[435047 6901408])
 (def center-wgs84 (js/ol.proj.fromLonLat #js[24 65]))
 
-(defn ->wmts [{:keys [url layer-name]}]
+(defn ->wmts [{:keys [url layer-name visible?]
+               :or   [visible? false]}]
   (js/ol.layer.Tile.
-   #js{:source
+   #js{:visible visible?
+       :source
        (js/ol.source.WMTS.
         #js{:url             url
             :layer           layer-name
@@ -64,7 +66,8 @@
 (defn init-layers []
   {:basemaps
    {:taustakartta (->wmts {:url        (:taustakartta urls)
-                           :layer-name "MML-Taustakartta"})
+                           :layer-name "MML-Taustakartta"
+                           :visible?   true})
     :maastokartta (->wmts {:url        (:maastokartta urls)
                            :layer-name "MML-Maastokartta"})
     :ortokuva     (->wmts {:url        (:ortokuva urls)
@@ -84,6 +87,8 @@
 
         opts #js {:target "map"
                   :layers #js[(-> layers :basemaps :taustakartta)
+                              (-> layers :basemaps :maastokartta)
+                              (-> layers :basemaps :ortokuva)
                               (-> layers :overlays :vectors)]
                   :view   view}]
     [(js/ol.Map. opts) layers]))
@@ -98,30 +103,44 @@
                                            :featureProjection "EPSG:3067"}))]]
       (.addFeatures source f))))
 
+(defn set-basemap [layers basemap]
+  (doseq [[k v] (:basemaps layers)
+          :let [visible? (= k basemap)]]
+    (.setVisible v visible?)))
+
 (defn map-inner []
-  (let [layers* (atom nil)
-        lmap*   (atom nil)
-        geoms*  (atom nil)]
+  (let [layers*  (atom nil)
+        lmap*    (atom nil)
+        geoms*   (atom nil)
+        basemap* (atom nil)]
     (r/create-class
-     {:reagent-render       (fn [] [mui/grid {:id    "map"
-                                              :item  true
-                                              :style {:flex "1 0 0"}
-                                              :xs    12}])
-      :component-did-mount  (fn [comp]
-                              (let [{:keys [geoms] :as opts} (r/props comp)
-                                    [lmap layers]            (init-map opts)]
-                                (when (not-empty geoms)
-                                  (update-geoms layers geoms))
-                                (reset! lmap* lmap)
-                                (reset! layers* layers)))
+     {:reagent-render      (fn [] [mui/grid {:id    "map"
+                                             :item  true
+                                             :style {:flex "1 0 0"}
+                                             :xs    12}])
+      :component-did-mount (fn [comp]
+                             (let [opts          (r/props comp)
+                                   [lmap layers] (init-map opts)]
+
+                               (when-let [geoms (not-empty (:geoms opts))]
+                                 (update-geoms layers geoms))
+
+                               (reset! basemap* (:basemap opts))
+                               (reset! lmap* lmap)
+                               (reset! layers* layers)))
       :component-did-update (fn [comp]
-                              (let [opts  (r/props comp)
-                                    geoms (:geoms opts)]
-                                (prn "UPD")
+                              (let [opts    (r/props comp)
+                                    geoms   (:geoms opts)
+                                    basemap (:basemap opts)]
+
                                 (when (not= @geoms* geoms)
                                   (update-geoms @layers* geoms)
-                                  (reset! geoms* geoms))))
-      :display-name         "map-inner"})))
+                                  (reset! geoms* geoms))
+
+                                (when (not= @basemap* basemap)
+                                  (set-basemap @layers* basemap)
+                                  (reset! basemap* basemap))))
+      :display-name "map-inner"})))
 
 (defn map-outer []
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
