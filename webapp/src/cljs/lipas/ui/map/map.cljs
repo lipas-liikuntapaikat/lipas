@@ -63,48 +63,64 @@
             :requestEncoding "REST"
             :isBaseLayer     true})}))
 
-(defn init-base-layers []
-  {:taustakartta (->wmts {:url        (:taustakartta urls)
-                          :layer-name "MML-Taustakartta"})
-   :maastokartta (->wmts {:url        (:maastokartta urls)
-                          :layer-name "MML-Maastokartta"})
-   :ortokuva     (->wmts {:url        (:ortokuva urls)
-                          :layer-name "MML-Ortokuva"})
-   :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})})
+(defn init-layers []
+  {:basemaps
+   {:taustakartta (->wmts {:url        (:taustakartta urls)
+                           :layer-name "MML-Taustakartta"})
+    :maastokartta (->wmts {:url        (:maastokartta urls)
+                           :layer-name "MML-Maastokartta"})
+    :ortokuva     (->wmts {:url        (:ortokuva urls)
+                           :layer-name "MML-Ortokuva"})
+    :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})}
+   :overlays
+   {:vectors (js/ol.layer.Vector.
+              #js{:source (js/ol.source.Vector.)})}})
 
 (defn init-map [opts]
-  (let [layers (init-base-layers)
+  (let [layers (init-layers)
         view   (js/ol.View. #js{:center      jyvaskyla
                                 :zoom        1
                                 :projection  "EPSG:3067"
                                 :resolutions mml-resolutions
                                 :units       "m"})
 
-
-
         opts #js {:target "map"
-                  :layers #js[(:taustakartta layers)]
+                  :layers #js[(-> layers :basemaps :taustakartta)
+                              (-> layers :overlays :vectors)]
                   :view   view}]
-    (js/ol.Map. opts)))
+    [(js/ol.Map. opts) layers]))
+
+(defn update-geoms [layers geoms]
+  (let [source (-> layers :overlays :vectors .getSource)]
+    (doseq [g    geoms
+            :let [f (-> (js/ol.format.GeoJSON.)
+                        (.readFeatures (clj->js g)
+                                       #js{:dataProjection    "EPSG:4326"
+                                           :featureProjection "EPSG:3067"}))]]
+      (.addFeatures source f))))
 
 (defn map-inner []
-  (let [layers-state (atom nil)
-        map-state    (atom nil)
-        geoms-state  (atom nil)]
+  (let [layers* (atom nil)
+        lmap*   (atom nil)
+        geoms*  (atom nil)]
     (r/create-class
      {:reagent-render       (fn [] [mui/grid {:id    "map"
                                               :item  true
                                               :style {:flex "1 0 0"}
                                               :xs    12}])
       :component-did-mount  (fn [comp]
-                              (let [{:keys [geoms] :as opts} (r/props comp)]
-                                (init-map opts)))
+                              (let [{:keys [geoms] :as opts} (r/props comp)
+                                    [lmap layers]            (init-map opts)]
+                                (when (not-empty geoms)
+                                  (update-geoms layers geoms))
+                                (reset! lmap* lmap)
+                                (reset! layers* layers)))
       :component-did-update (fn [comp]
                               (let [opts  (r/props comp)
                                     geoms (:geoms opts)]
-                                (when (not= @geoms-state geoms)
-                                  (prn "Maybe should update something?"))))
-      :display-name         "leaflet-inner"})))
+                                (when (not= @geoms* geoms)
+                                  (update-geoms @layers* @geoms*))))
+      :display-name         "map-inner"})))
 
 (defn map-outer []
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
