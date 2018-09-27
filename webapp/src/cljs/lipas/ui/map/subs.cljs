@@ -1,5 +1,6 @@
 (ns lipas.ui.map.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as re-frame]
+            [reagent.ratom :as ratom]))
 
 (defn ->feature [site]
   (-> site
@@ -7,7 +8,9 @@
       :geometries
       (update-in [:features]
                  #(map (fn [f]
-                         (assoc-in f [:properties :name] (:name site)))
+                         (-> f
+                             (assoc-in [:properties :name] (:name site))
+                             (assoc-in [:properties :lipas-id] (:lipas-id site))))
                        %))))
 
 (re-frame/reg-sub
@@ -29,6 +32,19 @@
  ::zoom
  (fn [db _]
    (-> db :map :zoom)))
+
+(re-frame/reg-sub
+ ::popup
+ (fn [db _]
+   (-> db :map :popup)))
+
+(re-frame/reg-sub-raw
+ ::selected-sports-site
+ (fn [app-db event]
+   (ratom/reaction
+    (let [lipas-id (-> @app-db :map :sports-site)
+          site @(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])]
+      site))))
 
 (re-frame/reg-sub
  ::geometries

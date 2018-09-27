@@ -27,3 +27,13 @@
  ::toggle-filter
  (fn [db [_ filter]]
    (update-in db [:map :filters filter] not)))
+
+(re-frame/reg-event-db
+ ::show-popup
+ (fn [db [_ feature]]
+   (assoc-in db [:map :popup] feature)))
+
+(re-frame/reg-event-db
+ ::show-sports-site
+ (fn [db [_ lipas-id]]
+   (assoc-in db [:map :sports-site] lipas-id)))

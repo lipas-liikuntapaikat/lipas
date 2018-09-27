@@ -162,6 +162,7 @@
 (def expansion-panel-details (mui->reagent "ExpansionPanelDetails"))
 (def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
 (def input-label (mui->reagent "InputLabel"))
+(def popper (mui->reagent "Popper"))
 (def select (mui->reagent "Select"))
 (def slide (mui->reagent "Slide"))
 (def zoom (mui->reagent "Zoom"))

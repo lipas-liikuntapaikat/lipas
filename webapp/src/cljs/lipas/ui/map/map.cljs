@@ -8,7 +8,7 @@
             [reagent.core :as r]
             [re-frame.core :as re-frame]))
 
-;; (set! *warn-on-infer* true)
+;;(set! *warn-on-infer* true)
 
 (defn ->wmts-url [layer-name]
   (str "/mapproxy/wmts/"
@@ -44,6 +44,15 @@
 (def jyvaskyla #js[435047 6901408])
 (def center-wgs84 (js/ol.proj.fromLonLat #js[24 65]))
 
+(def geoJSON (js/ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
+                                        :featureProjection "EPSG:3067"}))
+
+(defn ->ol-features [geoJSON-features]
+  (.readFeatures geoJSON geoJSON-features))
+
+(defn ->geoJSON [ol-feature]
+  (.writeFeaturesObject geoJSON #js[ol-feature]))
+
 (defn ->wmts [{:keys [url layer-name visible?]
                :or   [visible? false]}]
   (js/ol.layer.Tile.
@@ -75,6 +84,8 @@
     :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})}
    :overlays
    {:vectors (js/ol.layer.Vector.
+              #js{:source (js/ol.source.Vector.)})
+    :draw    (js/ol.layer.Vector.
               #js{:source (js/ol.source.Vector.)})}})
 
 (defn init-map [{:keys [center zoom]}]
@@ -85,14 +96,49 @@
                                 :resolutions mml-resolutions
                                 :units       "m"})
 
-        opts #js {:target "map"
-                  :layers #js[(-> layers :basemaps :taustakartta)
-                              (-> layers :basemaps :maastokartta)
-                              (-> layers :basemaps :ortokuva)
-                              (-> layers :overlays :vectors)]
-                  :view   view}
+        overlay (js/ol.Overlay. #js{:element
+                                    (js/document.getElementById "popup-anchor")})
 
-        lmap (js/ol.Map. opts)]
+        opts #js {:target   "map"
+                  :layers   #js[(-> layers :basemaps :taustakartta)
+                                (-> layers :basemaps :maastokartta)
+                                (-> layers :basemaps :ortokuva)
+                                (-> layers :overlays :vectors)]
+                  :overlays #js[overlay]
+                  :view     view}
+
+        lmap (js/ol.Map. opts)
+
+        hover (js/ol.interaction.Select.
+               #js{:layers    [(-> layers :overlays :vectors)]
+                   :condition js/ol.events.condition.pointerMove})
+
+        select (js/ol.interaction.Select.
+                #js{:layers #js[(-> layers :overlays :vectors)]})]
+
+    (.on hover "select"
+         (fn [^js e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (aget (gobj/get e "selected") 0)]
+             (.setPosition overlay coords)
+             (==> [::events/show-popup
+                   (when selected
+                     {:anchor-el (.getElement overlay)
+                      :data      (-> selected
+                                     ->geoJSON
+                                     (js->clj :keywordize-keys true))})]))))
+
+    (.addInteraction lmap hover)
+
+    (.on select "select"
+         (fn [^js e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (aget (gobj/get e "selected") 0)]
+             (.setPosition overlay coords)
+             (==> [::events/show-sports-site
+                   (when selected (.get selected "lipas-id"))]))))
+
+    (.addInteraction lmap select)
 
     (.on lmap "moveend"
          (fn [e]
@@ -103,19 +149,18 @@
 
     [lmap layers]))
 
-
 (defn update-geoms [layers geoms]
-  (let [source (-> layers :overlays :vectors .getSource)]
+  (let [^js vectors (-> layers :overlays :vectors)
+        ^js source  (.getSource vectors)]
     (.clear source)
     (doseq [g    geoms
-            :let [f (-> (js/ol.format.GeoJSON.)
-                        (.readFeatures (clj->js g)
-                                       #js{:dataProjection    "EPSG:4326"
-                                           :featureProjection "EPSG:3067"}))]]
+            :let [f (-> g
+                        clj->js
+                        ->ol-features)]]
       (.addFeatures source f))))
 
 (defn set-basemap [layers basemap]
-  (doseq [[k v] (:basemaps layers)
+  (doseq [[k ^js v] (:basemaps layers)
           :let [visible? (= k basemap)]]
     (.setVisible v visible?)))
 
@@ -125,34 +170,41 @@
         geoms*   (atom nil)
         basemap* (atom nil)]
     (r/create-class
-     {:reagent-render      (fn [] [mui/grid {:id    "map"
-                                             :item  true
-                                             :style {:flex "1 0 0"}
-                                             :xs    12}])
-      :component-did-mount (fn [comp]
-                             (let [opts          (r/props comp)
-                                   basemap       (:basemap opts)
-                                   [lmap layers] (init-map opts)]
 
-                               (when-let [geoms (not-empty (:geoms opts))]
-                                 (update-geoms layers geoms))
+     {:reagent-render
+      (fn [] [mui/grid {:id    "map"
+                        :item  true
+                        :style {:flex "1 0 0"}
+                        :xs    12}])
 
-                               (set-basemap layers basemap)
-                               (reset! basemap* basemap)
-                               (reset! lmap* lmap)
-                               (reset! layers* layers)))
-      :component-did-update (fn [comp]
-                              (let [opts    (r/props comp)
-                                    geoms   (:geoms opts)
-                                    basemap (:basemap opts)]
+      :component-did-mount
+      (fn [comp]
+        (let [opts          (r/props comp)
+              basemap       (:basemap opts)
+              [lmap layers] (init-map opts)]
 
-                                (when (not= @geoms* geoms)
-                                  (update-geoms @layers* geoms)
-                                  (reset! geoms* geoms))
+          (when-let [geoms (not-empty (:geoms opts))]
+            (update-geoms layers geoms))
 
-                                (when (not= @basemap* basemap)
-                                  (set-basemap @layers* basemap)
-                                  (reset! basemap* basemap))))
+          (set-basemap layers basemap)
+          (reset! basemap* basemap)
+          (reset! lmap* lmap)
+          (reset! layers* layers)))
+
+      :component-did-update
+      (fn [comp]
+        (let [opts    (r/props comp)
+              geoms   (:geoms opts)
+              basemap (:basemap opts)]
+
+          (when (not= @geoms* geoms)
+            (update-geoms @layers* geoms)
+            (reset! geoms* geoms))
+
+          (when (not= @basemap* basemap)
+            (set-basemap @layers* basemap)
+            (reset! basemap* basemap))))
+
       :display-name "map-inner"})))
 
 (defn map-outer []
