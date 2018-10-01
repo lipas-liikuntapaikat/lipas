@@ -2,15 +2,16 @@
   (:require [re-frame.core :as re-frame]
             [reagent.ratom :as ratom]))
 
-(defn ->feature [site]
+(defn ->feature [{:keys [lipas-id name] :as site}]
   (-> site
       :location
       :geometries
       (update-in [:features]
-                 #(map (fn [f]
+                 #(map-indexed (fn [idx f]
                          (-> f
-                             (assoc-in [:properties :name] (:name site))
-                             (assoc-in [:properties :lipas-id] (:lipas-id site))))
+                             (assoc-in [:id] (str lipas-id "-" idx))
+                             (assoc-in [:properties :name] name)
+                             (assoc-in [:properties :lipas-id] lipas-id)))
                        %))))
 
 (re-frame/reg-sub
@@ -43,7 +44,8 @@
  (fn [app-db event]
    (ratom/reaction
     (let [lipas-id (-> @app-db :map :sports-site)
-          site @(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])]
+          site     @(re-frame/subscribe
+                     [:lipas.ui.sports-sites.subs/display-site lipas-id])]
       site))))
 
 (re-frame/reg-sub
@@ -57,4 +59,5 @@
      (->> sites
           vals
           (filter (comp type-codes :type-code :type))
-          (map ->feature)))))
+          (map ->feature)
+          not-empty))))
