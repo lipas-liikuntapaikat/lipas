@@ -4,11 +4,23 @@
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
+            [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]
             [re-frame.core :as re-frame]))
 
 ;; (set! *warn-on-infer* true)
+
+(defn ->marker-style [opts]
+  (ol.style.Style.
+   #js{:image
+       (ol.style.Icon.
+        #js{:src    (str "data:image/svg+xml;charset=utf-8,"
+                         (-> opts
+                             svg/->marker-str
+                             js/encodeURIComponent))
+            :anchor #js[0.5 0.85]
+            :offset #js[0 0]})}))
 
 (defn ->wmts-url [layer-name]
   (str "/mapproxy/wmts/"
@@ -85,6 +97,9 @@
                     #js{:image
                         (js/ol.style.Circle.)}))
 
+(def blue-marker-style (->marker-style {}))
+(def red-marker-style (->marker-style {:color mui/secondary}))
+
 (defn init-layers []
   {:basemaps
    {:taustakartta (->wmts {:url        (:taustakartta urls)
@@ -97,7 +112,8 @@
     :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})}
    :overlays
    {:vectors (js/ol.layer.Vector.
-              #js{:source (js/ol.source.Vector.)})
+              #js{:source (js/ol.source.Vector.)
+                  })
     :draw    (js/ol.layer.Vector.
               #js{:source (js/ol.source.Vector.)})}})
 
@@ -124,10 +140,12 @@
 
         hover (js/ol.interaction.Select.
                #js{:layers    [(-> layers :overlays :vectors)]
+                   :style     blue-marker-style
                    :condition js/ol.events.condition.pointerMove})
 
         select (js/ol.interaction.Select.
-                #js{:layers #js[(-> layers :overlays :vectors)]})]
+                #js{:layers #js[(-> layers :overlays :vectors)]
+                    :style  blue-marker-style})]
 
     (.on hover "select"
          (fn [^js e]
