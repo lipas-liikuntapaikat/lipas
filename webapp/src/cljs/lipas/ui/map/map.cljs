@@ -8,7 +8,7 @@
             [reagent.core :as r]
             [re-frame.core :as re-frame]))
 
-;;(set! *warn-on-infer* true)
+;; (set! *warn-on-infer* true)
 
 (defn ->wmts-url [layer-name]
   (str "/mapproxy/wmts/"
@@ -39,7 +39,7 @@
 
 (.setExtent epsg3067 epsg3067-extent)
 
-(def epsg3067-topLeft (js/ol.extent.getTopLeft (.getExtent epsg3067)))
+(def epsg3067-top-left (js/ol.extent.getTopLeft (.getExtent epsg3067)))
 
 (def jyvaskyla #js[435047 6901408])
 (def center-wgs84 (js/ol.proj.fromLonLat #js[24 65]))
@@ -64,13 +64,26 @@
             :projection      "EPSG:3067"
             :matrixSet       "mml_grid"
             :tileGrid        (js/ol.tilegrid.WMTS.
-                              #js{:origin      epsg3067-topLeft
+                              #js{:origin      epsg3067-top-left
                                   :extent      epsg3067-extent
                                   :resolutions mml-resolutions
                                   :matrixIds   mml-matrix-ids})
             :format          "png"
             :requestEncoding "REST"
             :isBaseLayer     true})}))
+
+(def circle-style (ol.style.Style.
+                   #js{:image
+                       (js/ol.style.Circle.
+                        #js{:radius 10
+                            :stroke (js/ol.style.Stroke
+                                     #js{:color mui/primary})
+                            :fill   (js/ol.style.Fill.
+                                     #js{:color mui/secondary2})})}))
+
+(def circle-style2 (ol.style.Style.
+                    #js{:image
+                        (js/ol.style.Circle.)}))
 
 (defn init-layers []
   {:basemaps
@@ -132,11 +145,12 @@
 
     (.on select "select"
          (fn [^js e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (aget (gobj/get e "selected") 0)]
+           (let [^js coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 ^js selected (aget (gobj/get e "selected") 0)]
              (.setPosition overlay coords)
              (==> [::events/show-sports-site
-                   (when selected (.get selected "lipas-id"))]))))
+                   (when selected
+                     (.get selected "lipas-id"))]))))
 
     (.addInteraction lmap select)
 
@@ -147,9 +161,14 @@
                  zoom (.getZoom view)]
              (==> [::events/set-view lat lon zoom]))))
 
-    [lmap layers]))
+    {:lmap   lmap
+     :view   view
+     :interactions
+     {:hover  hover
+      :select select}
+     :layers layers}))
 
-(defn update-geoms [layers geoms]
+(defn update-geoms [{:keys [layers]} geoms]
   (let [^js vectors (-> layers :overlays :vectors)
         ^js source  (.getSource vectors)]
     (.clear source)
@@ -159,16 +178,28 @@
                         ->ol-features)]]
       (.addFeatures source f))))
 
-(defn set-basemap [layers basemap]
+(defn set-basemap [{:keys [layers]} basemap]
   (doseq [[k ^js v] (:basemaps layers)
           :let [visible? (= k basemap)]]
     (.setVisible v visible?)))
 
+(defn select-sports-site [{:keys [layers interactions]} lipas-id]
+  (let [^js layer  (-> layers :overlays :vectors)
+        ^js select (-> interactions :select)
+        source     (.getSource layer)
+        fid        (str lipas-id "-0") ; First feature in coll
+        feature    (.getFeatureById source fid)]
+    (when feature
+      (doto (.getFeatures select)
+        (.clear)
+        (.push feature)))))
+
 (defn map-inner []
-  (let [layers*  (atom nil)
-        lmap*    (atom nil)
-        geoms*   (atom nil)
-        basemap* (atom nil)]
+  (let [map-ctx*  (atom nil)
+        geoms*    (atom nil)
+        basemap*  (atom nil)
+        lipas-id* (atom nil)]
+
     (r/create-class
 
      {:reagent-render
@@ -179,31 +210,38 @@
 
       :component-did-mount
       (fn [comp]
-        (let [opts          (r/props comp)
-              basemap       (:basemap opts)
-              [lmap layers] (init-map opts)]
+        (let [opts     (r/props comp)
+              basemap  (:basemap opts)
+              geoms    (:geoms opts)
+              lipas-id (-> opts :site :lipas-id)
 
-          (when-let [geoms (not-empty (:geoms opts))]
-            (update-geoms layers geoms))
+              map-ctx (init-map opts)]
 
-          (set-basemap layers basemap)
-          (reset! basemap* basemap)
-          (reset! lmap* lmap)
-          (reset! layers* layers)))
+          (update-geoms map-ctx geoms)
+          (set-basemap map-ctx basemap)
+          (select-sports-site map-ctx lipas-id)
+
+          (reset! map-ctx* map-ctx)
+          (reset! basemap* basemap)))
 
       :component-did-update
       (fn [comp]
-        (let [opts    (r/props comp)
-              geoms   (:geoms opts)
-              basemap (:basemap opts)]
+        (let [opts     (r/props comp)
+              geoms    (:geoms opts)
+              lipas-id (-> opts :site :lipas-id)
+              basemap  (:basemap opts)]
 
           (when (not= @geoms* geoms)
-            (update-geoms @layers* geoms)
+            (update-geoms @map-ctx* geoms)
             (reset! geoms* geoms))
 
           (when (not= @basemap* basemap)
-            (set-basemap @layers* basemap)
-            (reset! basemap* basemap))))
+            (set-basemap @map-ctx* basemap)
+            (reset! basemap* basemap))
+
+          (when (not= @lipas-id* lipas-id)
+            (select-sports-site @map-ctx* lipas-id)
+            (reset! lipas-id* lipas-id))))
 
       :display-name "map-inner"})))
 
@@ -215,9 +253,11 @@
   (let [geoms   (re-frame/subscribe [::subs/geometries])
         basemap (re-frame/subscribe [::subs/basemap])
         center  (re-frame/subscribe [::subs/center])
-        zoom    (re-frame/subscribe [::subs/zoom])]
+        zoom    (re-frame/subscribe [::subs/zoom])
+        site    (re-frame/subscribe [::subs/selected-sports-site])]
     (fn []
       [map-inner {:geoms   @geoms
                   :basemap @basemap
                   :center  @center
-                  :zoom    @zoom}])))
+                  :zoom    @zoom
+                  :site    @site}])))
