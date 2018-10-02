@@ -664,7 +664,18 @@
       :form-field [text-field
                    {:value     (-> edit-data :email)
                     :spec      :lipas.sports-site/email
-                    :on-change #(on-change :email %)}]}]))
+                    :on-change #(on-change :email %)}]}
+
+     ;;; Comment
+     {:label (tr :general/comment)
+      :value (-> display-data :comment)
+      :form-field
+      [text-field
+       {:spec      :lipas.sports-site/comment
+        :value     (-> edit-data :comment)
+        :multiline true
+        :rows      5
+        :on-change #(on-change :comment %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
                              read-only?]}]
