@@ -19,7 +19,7 @@
 
    :sport
    {:headline          "Sports sites"
-    :description "LIPAS is the national database of sport facilities
+    :description       "LIPAS is the national database of sport facilities
     and their conditions in Finland."
     :legacy-disclaimer "Sports sites are not here yet but they can be
     accessed through existing LIPAS by clicking the link below."
@@ -56,7 +56,7 @@
     :neighborhood  "Neighborhood"}
 
    :reports
-   {:headline "Reports"
+   {:headline "Contacts report"
     :contacts "Contacts"}
 
    :ice
@@ -69,13 +69,13 @@
     :updating-basic-data  "Updating general information"
 
     :size-category "Size category"
-    :comparison    "Compare"
+    :comparison    "Compare venues"
     :small         "Small competition hall > 500 persons"
     :competition   "Competition hall < 3000 persons"
     :large         "Grand hall > 3000 persons"}
 
    :ice-rinks
-   {:headline "Stadiums"}
+   {:headline "Venue details"}
 
    :ice-energy
    {:headline       "Energy Info"
@@ -87,8 +87,8 @@
    {:headline "Compare"}
 
    :ice-form
-   {:headline       "Report consumption"
-    :headline-short "Report consumption"
+   {:headline       "Report readings"
+    :headline-short "Report readings"
     :select-rink    "Select stadium"}
 
    :lipas.energy-consumption
@@ -98,11 +98,13 @@
     :heat                      "Heat (acquired) MWh"
     :cold                      "Cold energy (acquired) MWh"
     :water                     "Water m³"
-    :yearly                    "Yearly energy consumption"
+    :yearly                    "Yearly"
+    :monthly                   "Monthly"
     :monthly?                  "I want to report monthly energy consumption"
     :reported-for-year         "Energy consumption reported for {1}"
-    :report                    "Report consumption"
-    :contains-other-buildings? "Readings contain also other buildings or spaces"}
+    :report                    "Report readings"
+    :contains-other-buildings? "Readings contain also other buildings or spaces"
+    :operating-hours           "Operating hours"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
@@ -115,11 +117,11 @@
     :report              "Report consumption"
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
 
-
-   :lipas.swimming-pool.visitors
-   {:headline      "Visitors"
-    :headline-year "Visitors in {1}"
-    :total-count   "Total count"}
+   :lipas.visitors
+   {:headline         "Visitors"
+    :headline-year    "Visitors in {1}"
+    :spectators-count "Spectators count"
+    :total-count      "Visitors count"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"
@@ -376,7 +378,7 @@
 
    :month
    {:jan "January"
-    :feb "Februaru"
+    :feb "February"
     :mar "March"
     :apr "April"
     :may "May"

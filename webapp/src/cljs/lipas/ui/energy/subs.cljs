@@ -12,12 +12,30 @@
  ::energy-consumption-rev
  (fn [db _]
    (let [lipas-id (-> db :energy-consumption :lipas-id)]
-     (get-in db [:sports-sites lipas-id :editing]))))
+     (get-in db [:energy-consumption :editing lipas-id]))))
 
 (re-frame/reg-sub
  ::energy-consumption-year
  (fn [db _]
    (-> db  :energy-consumption :year)))
+
+(re-frame/reg-sub
+ ::monthly-data-exists?
+ :<- [::energy-consumption-rev]
+ (fn [rev _]
+   (-> rev
+       :energy-consumption-monthly
+       not-empty
+       boolean)))
+
+(re-frame/reg-sub
+ ::edits-valid?
+ (fn [[_ lipas-id] _]
+   (re-frame/subscribe [::energy-consumption-rev lipas-id]))
+ (fn [edit-data _]
+   (-> edit-data
+       utils/make-saveable
+       utils/valid?)))
 
 (re-frame/reg-sub
  ::energy-consumption-history

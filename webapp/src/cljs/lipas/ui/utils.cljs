@@ -1,8 +1,9 @@
 (ns lipas.ui.utils
-  (:require [cljsjs.date-fns]
-            [cemerick.url :as url]
+  (:require [cemerick.url :as url]
+            [cljsjs.date-fns]
             [clojure.data :as data]
             [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
@@ -188,7 +189,9 @@
                    $
                    (-> $
                        (dissoc :energy-consumption)
-                       (dissoc :visitors))))))))
+                       (dissoc :energy-consumption-monthly)
+                       (dissoc :visitors)
+                       (dissoc :visitors-monthly))))))))
 
 (defn latest-edit [edits]
   (let [latest (first (sort reverse-cmp (keys edits)))]
@@ -207,7 +210,11 @@
 
 (defn- make-comparable [rev]
   (-> rev
-      (dissoc :event-date :energy-consumption :visitors)
+      (dissoc :event-date
+              :energy-consumption
+              :energy-consumption-monthly
+              :visitors
+              :visitors-monthly)
       clean))
 
 (defn different? [rev1 rev2]
@@ -296,6 +303,14 @@
 
       ;; Ice Stadiums
       (update-in [:rinks] ->indexed-map)))
+
+(defn valid? [sports-site] ;; TODO maybe multimethod?
+  (let [spec (case (-> sports-site :type :type-code)
+               (3110 3120 3130) :lipas.sports-site/swimming-pool
+               (2510 2520)      :lipas.sports-site/ice-stadium
+               :lipas/sports-site)]
+    ;; (do (s/explain spec $) $)
+    (s/valid? spec sports-site)))
 
 (defn mobile? [width]
   (case width

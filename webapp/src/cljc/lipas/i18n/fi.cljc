@@ -17,11 +17,11 @@
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
 
    :home-page
-   {:headline    "Etusivu"}
+   {:headline "Etusivu"}
 
    :sport
    {:headline          "Liikuntapaikat"
-    :description "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
+    :description       "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
     julkisista liikuntapaikoista avoimessa tietokannassa."
     :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
     nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
@@ -60,7 +60,7 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline "Raportit"
+   {:headline (str "Yhteys" ZWSP "tiedot")
     :contacts "Yhteystiedot"}
 
    :ice
@@ -92,17 +92,20 @@
 
    :lipas.energy-consumption
    {:headline                  (str "Energian" ZWSP "kulutus")
-    :headline-year             (str "Energian" ZWSP "kulutus vuonna {1}")
+    :headline-year             "Lukemat vuonna {1}"
     :electricity               "Sähköenergia MWh"
     :heat                      "Lämpöenergia (ostettu) MWh"
     :cold                      "Kylmäenergia (ostettu) MWh"
     :water                     "Vesi m³"
-    :yearly                    "Hallin energiankulutus vuositasolla"
     :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
     :reported-for-year         "Vuoden {1} energiankulutus ilmoitettu"
-    :report                    "Ilmoita kulutus"
-    :contains-other-buildings? "Lukemat sisältävät myös muita
-    rakennuksia tai tiloja"}
+    :report                    "Ilmoita lukemat"
+    :contains-other-buildings? "Energialukemat sisältävät myös muita
+    rakennuksia tai tiloja"
+    :comment                   "Kommentti"
+    :operating-hours           "Käyttötunnit"
+    :yearly                    "Vuositasolla*"
+    :monthly                   "Kuukausitasolla"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
@@ -115,10 +118,11 @@
     :report              "Ilmoita tiedot"
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
-   :lipas.swimming-pool.visitors
-   {:headline      "Kävijämäärä"
-    :headline-year "Kävijämäärä vuonna {1}"
-    :total-count   "Kokonaismäärä"}
+   :lipas.visitors
+   {:headline         "Kävijämäärä"
+    :headline-year    "Kävijämäärä vuonna {1}"
+    :total-count      "Käyttäjämäärä"
+    :spectators-count "Katsojamäärä"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"
@@ -166,7 +170,7 @@
     :wms-wfs-description "<Tähän linkki Geoserveriin>"}
 
    :partners
-   {:headline "Kehittämisessä mukana"}
+   {:headline (str "Kehittä" ZWSP "misessä mukana")}
 
    :help
    {:headline "Ohjeet"}
