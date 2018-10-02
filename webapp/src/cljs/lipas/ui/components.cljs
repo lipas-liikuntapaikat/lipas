@@ -605,6 +605,30 @@
                       :label-fn  (comp locale second)
                       :on-change #(on-change :type :size-category %)}]})
 
+     ;; Email
+     {:label      (tr :lipas.sports-site/email-public)
+      :value      (-> display-data :email)
+      :form-field [text-field
+                   {:value     (-> edit-data :email)
+                    :spec      :lipas.sports-site/email
+                    :on-change #(on-change :email %)}]}
+
+     ;; Phone number
+     {:label      (tr :lipas.sports-site/phone-number)
+      :value      (-> display-data :phone-number)
+      :form-field [text-field
+                   {:value     (-> edit-data :phone-number)
+                    :spec      :lipas.sports-site/phone-number
+                    :on-change #(on-change :phone-number %)}]}
+
+     ;; WWW
+     {:label      (tr :lipas.sports-site/www)
+      :value      (-> display-data :www)
+      :form-field [text-field
+                   {:value     (-> edit-data :www)
+                    :spec      :lipas.sports-site/www
+                    :on-change #(on-change :www %)}]}
+
      ;; Owner
      {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
@@ -641,30 +665,6 @@
                    {:multi?    true
                     :value     (-> edit-data :renovation-years)
                     :on-change #(on-change :renovation-years %)}]}
-
-     ;; Phone number
-     {:label      (tr :lipas.sports-site/phone-number)
-      :value      (-> display-data :phone-number)
-      :form-field [text-field
-                   {:value     (-> edit-data :phone-number)
-                    :spec      :lipas.sports-site/phone-number
-                    :on-change #(on-change :phone-number %)}]}
-
-     ;; WWW
-     {:label      (tr :lipas.sports-site/www)
-      :value      (-> display-data :www)
-      :form-field [text-field
-                   {:value     (-> edit-data :www)
-                    :spec      :lipas.sports-site/www
-                    :on-change #(on-change :www %)}]}
-
-     ;; Email
-     {:label      (tr :lipas.sports-site/email-public)
-      :value      (-> display-data :email)
-      :form-field [text-field
-                   {:value     (-> edit-data :email)
-                    :spec      :lipas.sports-site/email
-                    :on-change #(on-change :email %)}]}
 
      ;;; Comment
      {:label (tr :general/comment)
