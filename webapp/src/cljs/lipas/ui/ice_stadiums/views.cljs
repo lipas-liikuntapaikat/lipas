@@ -615,8 +615,7 @@
     (energy/energy-consumption-form
      {:tr              tr
       :cold?           true
-      :monthly?        true
-      :visitors?       false
+      :spectators?     true
       :editable-sites  editable-sites
       :draftable-sites draftable-sites})))
 

@@ -28,12 +28,11 @@
          (assoc-in [:sports-sites lipas-id :editing] rev)))))
 
 (defn- calculate-totals [yearly-data monthly-data]
+  (prn (into #{} (mapcat keys (vals monthly-data))))
   (merge
    yearly-data
-   {:electricity-mwh (reduce + (map :electricity-mwh (vals monthly-data)))
-    :heat-mwh        (reduce + (map :heat-mwh (vals monthly-data)))
-    :cold-mwh        (reduce + (map :cold-mwh (vals monthly-data)))
-    :water-m3        (reduce + (map :water-m3 (vals monthly-data)))}))
+   (into {} (for [k (into #{} (mapcat keys (vals monthly-data)))]
+              [k (reduce + (map k (vals monthly-data)))]))))
 
 (re-frame/reg-event-db
  ::calculate-total-energy-consumption
@@ -46,21 +45,38 @@
        (update-in db yearly-path #(calculate-totals % monthly-data))
        db))))
 
+(re-frame/reg-event-db
+ ::calculate-total-visitors
+ (fn [db [_ lipas-id]]
+   (let [base-path    [:sports-sites lipas-id :editing]
+         yearly-path  (conj base-path :visitors)
+         monthly-path (conj base-path :visitors-monthly)
+         monthly-data (get-in db monthly-path)]
+     (if monthly-data
+       (update-in db yearly-path #(calculate-totals % monthly-data))
+       db))))
+
 (re-frame/reg-event-fx
- ::set-monthly-energy-consumption
- (fn [{:keys [db]} [_ lipas-id month field value]]
-   (let [basepath [:sports-sites lipas-id :editing :energy-consumption-monthly]
-         path  (into basepath [month field])]
-     {:db (assoc-in db path value)
-      :dispatch [::calculate-total-energy-consumption lipas-id]})))
+ ::set-monthly-value
+ (fn [{:keys [db]} [_ lipas-id path value]]
+   (let [basepath [:sports-sites lipas-id :editing]
+         path     (into basepath path)]
+     {:db         (assoc-in db path value)
+      :dispatch-n [(when (some #{:energy-consumption-monthly} path)
+                     [::calculate-total-energy-consumption lipas-id])
+                   (when (some #{:visitors-monthly} path)
+                     [::calculate-total-visitors lipas-id])]})))
 
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [_ [_ rev draft?]]
    (let [status (if draft? "draft" (:status rev))
          rev    (-> (utils/make-saveable rev)
-                    (assoc :status status))]
-     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
+                    (assoc :status status))
+         year (utils/resolve-year (:event-date rev))]
+     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]
+      :dispatch-later ;; TODO super hacky, please figure out something else
+      [{:ms 100 :dispatch [::select-energy-consumption-year year]}]})))
 
 (re-frame/reg-event-db
  ::fetch-energy-report-success

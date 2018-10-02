@@ -115,11 +115,10 @@
     :report              "Report consumption"
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
 
-
-   :lipas.swimming-pool.visitors
+   :lipas.visitors
    {:headline      "Visitors"
     :headline-year "Visitors in {1}"
-    :total-count   "Total count"}
+    :total-count   "Visitors"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"

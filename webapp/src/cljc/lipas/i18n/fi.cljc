@@ -60,7 +60,7 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline "Raportit"
+   {:headline (str "Yhteys" ZWSP "tiedot")
     :contacts "Yhteystiedot"}
 
    :ice
@@ -100,9 +100,11 @@
     :yearly                    "Hallin energiankulutus vuositasolla"
     :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
     :reported-for-year         "Vuoden {1} energiankulutus ilmoitettu"
-    :report                    "Ilmoita kulutus"
+    :report                    "Ilmoita lukemat"
     :contains-other-buildings? "Lukemat sisältävät myös muita
-    rakennuksia tai tiloja"}
+    rakennuksia tai tiloja"
+    :comment                   "Kommentti"
+    :operating-hours           "Käyttötunnit"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
@@ -115,10 +117,11 @@
     :report              "Ilmoita tiedot"
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
-   :lipas.swimming-pool.visitors
-   {:headline      "Kävijämäärä"
-    :headline-year "Kävijämäärä vuonna {1}"
-    :total-count   "Kokonaismäärä"}
+   :lipas.visitors
+   {:headline         "Kävijämäärä"
+    :headline-year    "Kävijämäärä vuonna {1}"
+    :total-count      "Käyttäjämäärä"
+    :spectators-count "Katsojamäärä"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"
