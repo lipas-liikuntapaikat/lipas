@@ -25,20 +25,23 @@
          rev        (utils/make-editable rev)]
      (-> db
          (assoc-in [:energy-consumption :year] year)
-         (assoc-in [:sports-sites lipas-id :editing] rev)))))
+         (assoc-in [:energy-consumption :editing lipas-id] rev)))))
+
+(re-frame/reg-event-db
+ ::edit-field
+ (fn [db [_ lipas-id path value]]
+   (utils/set-field db (into [:energy-consumption :editing lipas-id] path) value)))
 
 (defn- calculate-totals [yearly-data monthly-data]
   (merge
    yearly-data
-   {:electricity-mwh (reduce + (map :electricity-mwh (vals monthly-data)))
-    :heat-mwh        (reduce + (map :heat-mwh (vals monthly-data)))
-    :cold-mwh        (reduce + (map :cold-mwh (vals monthly-data)))
-    :water-m3        (reduce + (map :water-m3 (vals monthly-data)))}))
+   (into {} (for [k (into #{} (mapcat keys (vals monthly-data)))]
+              [k (reduce + (map k (vals monthly-data)))]))))
 
 (re-frame/reg-event-db
  ::calculate-total-energy-consumption
  (fn [db [_ lipas-id]]
-   (let [base-path    [:sports-sites lipas-id :editing]
+   (let [base-path    [:energy-consumption :editing lipas-id]
          yearly-path  (conj base-path :energy-consumption)
          monthly-path (conj base-path :energy-consumption-monthly)
          monthly-data (get-in db monthly-path)]
@@ -46,13 +49,27 @@
        (update-in db yearly-path #(calculate-totals % monthly-data))
        db))))
 
+(re-frame/reg-event-db
+ ::calculate-total-visitors
+ (fn [db [_ lipas-id]]
+   (let [base-path    [:energy-consumption :editing lipas-id]
+         yearly-path  (conj base-path :visitors)
+         monthly-path (conj base-path :visitors-monthly)
+         monthly-data (get-in db monthly-path)]
+     (if monthly-data
+       (update-in db yearly-path #(calculate-totals % monthly-data))
+       db))))
+
 (re-frame/reg-event-fx
- ::set-monthly-energy-consumption
- (fn [{:keys [db]} [_ lipas-id month field value]]
-   (let [basepath [:sports-sites lipas-id :editing :energy-consumption-monthly]
-         path  (into basepath [month field])]
-     {:db (assoc-in db path value)
-      :dispatch [::calculate-total-energy-consumption lipas-id]})))
+ ::set-monthly-value
+ (fn [{:keys [db]} [_ lipas-id path value]]
+   (let [basepath [:energy-consumption :editing lipas-id]
+         path     (into basepath path)]
+     {:db         (assoc-in db path value)
+      :dispatch-n [(when (some #{:energy-consumption-monthly} path)
+                     [::calculate-total-energy-consumption lipas-id])
+                   (when (some #{:visitors-monthly} path)
+                     [::calculate-total-visitors lipas-id])]})))
 
 (re-frame/reg-event-fx
  ::commit-energy-consumption

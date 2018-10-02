@@ -109,7 +109,7 @@
                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "arrow_forward"]]
-        (tr :lipas.user/report-energy-consumption)]]]
+        (tr :lipas.user/report-energy-and-visitors)]]]
 
      [mui/dialog-actions
       [mui/button {:on-click close}

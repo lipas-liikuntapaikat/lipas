@@ -2,27 +2,27 @@
   (:require [cljs.reader :as reader]
             [re-frame.core :as re-frame]))
 
-(defn ls-set
-  [k v]
-  (when (and k v)
-    (.setItem js/localStorage k (str v))))
+(defn ls-set! [k v]
+  (.setItem js/localStorage (pr-str k) (pr-str v)))
 
-(defn ls-remove
-  [k]
+(defn ls-get [k]
+  (when-let [s (.getItem js/localStorage (pr-str k))]
+    (reader/read-string s)))
+
+(defn ls-remove! [k]
   (.removeItem js/localStorage k))
 
-(defn ls-get
-  [k]
-  (some->> (.getItem js/localStorage k)
-           (reader/read-string)))
-
 (re-frame/reg-cofx
- :get-local-storage-value
+ ::get
  (fn [cofx k]
-   (assoc cofx :local-storage-value (ls-get k))))
+   (assoc-in cofx [:local-storage k] (ls-get k))))
 
-(re-frame/reg-cofx
- :remove-local-storage-value
- (fn [cofx k]
-   (ls-remove k)
-   cofx))
+(re-frame/reg-fx
+ ::remove!
+ (fn  [k]
+   (ls-remove! k)))
+
+(re-frame/reg-fx
+ ::set!
+ (fn  [[k v]]
+   (ls-set! k v)))
