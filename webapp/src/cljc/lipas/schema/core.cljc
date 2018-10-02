@@ -212,6 +212,8 @@
 (s/def :lipas.sports-site/www (str-in 1 200))
 (s/def :lipas.sports-site/email :lipas/email)
 
+(s/def :lipas.sports-site/comment (str-in 1 1024))
+
 (s/def :lipas.sports-site.type/type-code
   (into #{} (map :type-code) sports-site-types/all))
 
@@ -267,6 +269,7 @@
                    :lipas.sports-site/email
                    :lipas.sports-site/construction-year
                    :lipas.sports-site/renovation-years
+                   :lipas.sports-site/comment
                    ;; :lipas.sports-site/properties
                    ]))
 
@@ -487,7 +490,6 @@
 (s/def :lipas.energy-consumption/water-m3 (number-in :min 0 :max 500000))
 (s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
 (s/def :lipas.energy-consumption/operating-hours (number-in :min 0 :max (* 24 7 365)))
-(s/def :lipas.energy-consumption/comment (str-in 0 1024))
 
 (s/def :lipas/energy-consumption
   (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
@@ -495,8 +497,7 @@
                    :lipas.energy-consumption/heat-mwh
                    :lipas.energy-consumption/water-m3
                    :lipas.energy-consumption/contains-other-buildings?
-                   :lipas.energy-consumption/operating-hours
-                   :lipas.energy-consumption/comment]))
+                   :lipas.energy-consumption/operating-hours]))
 
 (def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
 
