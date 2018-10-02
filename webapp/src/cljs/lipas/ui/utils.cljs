@@ -134,7 +134,7 @@
   "Highlights years where there exists any energy consumption data."
   [history]
   (let [history (index-by :year history)]
-    (for [y    (range 2000 this-year)
+    (for [y    (range 2000 (inc this-year))
           :let [data-exists? (data-exists? y history)]]
       {:label (if data-exists?
                 (str y " " "✓")
