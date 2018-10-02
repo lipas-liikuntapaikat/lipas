@@ -555,11 +555,11 @@
              :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
       ;;; Visitors
-      [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline)
+      [lui/form-card {:title (tr :lipas.visitors/headline)
                       :md    12 :lg 12}
        [lui/form-table
         {:headers    [[:year (tr :time/year)]
-                      [:total-count (tr :lipas.swimming-pool.visitors/total-count)]]
+                      [:total-count (tr :lipas.visitors/total-count)]]
          :items      (-> display-data :visitors-history)
          :key-fn     :year
          :read-only? true}]
@@ -685,8 +685,7 @@
     (energy/energy-consumption-form
      {:tr              tr
       :cold?           false
-      :monthly?        false
-      :visitors?       true
+      :spectators?     true
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
 

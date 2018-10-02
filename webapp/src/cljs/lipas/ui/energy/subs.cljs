@@ -20,6 +20,15 @@
    (-> db  :energy-consumption :year)))
 
 (re-frame/reg-sub
+ ::monthly-data-exists?
+ :<- [::energy-consumption-rev]
+ (fn [site _]
+   (-> site
+       :energy-consumption-monthly
+       not-empty
+       boolean)))
+
+(re-frame/reg-sub
  ::energy-consumption-history
  (fn [db _]
    (let [lipas-id (-> db :energy-consumption :lipas-id)

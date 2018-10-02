@@ -188,7 +188,9 @@
                    $
                    (-> $
                        (dissoc :energy-consumption)
-                       (dissoc :visitors))))))))
+                       (dissoc :energy-consumption-monthly)
+                       (dissoc :visitors)
+                       (dissoc :visitors-monthly))))))))
 
 (defn latest-edit [edits]
   (let [latest (first (sort reverse-cmp (keys edits)))]
@@ -207,7 +209,11 @@
 
 (defn- make-comparable [rev]
   (-> rev
-      (dissoc :event-date :energy-consumption :visitors)
+      (dissoc :event-date
+              :energy-consumption
+              :energy-consumption-monthly
+              :visitors
+              :visitors-monthly)
       clean))
 
 (defn different? [rev1 rev2]
