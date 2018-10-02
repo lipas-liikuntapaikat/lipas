@@ -184,7 +184,7 @@
 
 (defn set-field
   [lipas-id path value]
-  (==> [:lipas.ui.sports-sites.events/edit-field lipas-id path value]))
+  (==> [::events/edit-field lipas-id path value]))
 
 (defn tab-container [& children]
   (into [:div {:style {:margin-top "1em"
@@ -195,7 +195,7 @@
   (let [data           (<== [::subs/energy-consumption-rev])
         lipas-id       (:lipas-id data)
         energy-history (<== [::subs/energy-consumption-history])
-        edits-valid?   (<== [:lipas.ui.sports-sites.subs/edits-valid? lipas-id])
+        edits-valid?   (<== [::subs/edits-valid? lipas-id])
         ;; monthly-data?  (<== [::subs/monthly-data-exists?])
         set-field      (partial set-field lipas-id)]
 
