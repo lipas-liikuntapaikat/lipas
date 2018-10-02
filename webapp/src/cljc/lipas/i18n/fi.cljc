@@ -92,19 +92,20 @@
 
    :lipas.energy-consumption
    {:headline                  (str "Energian" ZWSP "kulutus")
-    :headline-year             (str "Energian" ZWSP "kulutus vuonna {1}")
+    :headline-year             "Lukemat vuonna {1}"
     :electricity               "Sähköenergia MWh"
     :heat                      "Lämpöenergia (ostettu) MWh"
     :cold                      "Kylmäenergia (ostettu) MWh"
     :water                     "Vesi m³"
-    :yearly                    "Hallin energiankulutus vuositasolla"
     :monthly?                  "Haluan ilmoittaa energiankulutuksen kuukausitasolla"
     :reported-for-year         "Vuoden {1} energiankulutus ilmoitettu"
     :report                    "Ilmoita lukemat"
-    :contains-other-buildings? "Lukemat sisältävät myös muita
+    :contains-other-buildings? "Energialukemat sisältävät myös muita
     rakennuksia tai tiloja"
     :comment                   "Kommentti"
-    :operating-hours           "Käyttötunnit"}
+    :operating-hours           "Käyttötunnit"
+    :yearly                    "Vuositasolla*"
+    :monthly                   "Kuukausitasolla"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"

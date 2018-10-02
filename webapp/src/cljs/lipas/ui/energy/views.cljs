@@ -211,8 +211,8 @@
 
         [mui/tabs {:value     (int @monthly-energy?)
                    :on-change #(swap! monthly-energy? not)}
-         [mui/tab {:label "Vuositasolla*"}]
-         [mui/tab {:label "Kuukausitasolla"}]]
+         [mui/tab {:label (tr :lipas.energy-consumption/yearly)}]
+         [mui/tab {:label (tr :lipas.energy-consumption/monthly)}]]
 
         (case @monthly-energy?
 
