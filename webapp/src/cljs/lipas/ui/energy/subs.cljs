@@ -60,3 +60,17 @@
  ::chart-energy-type
  (fn [db _]
    (-> db :energy-stats :chart-energy-type)))
+
+(re-frame/reg-sub
+ ::monthly-chart-data
+ (fn [db [_ lipas-id year]]
+   (let [site   (get-in db [:sports-sites lipas-id])
+         rev    (utils/find-revision site year)
+         months [:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec]]
+     (->> rev
+          :energy-consumption-monthly
+          (reduce-kv
+           (fn [res k v]
+             (conj res (merge v {:month k})))
+           [])
+          (sort-by (comp #(.indexOf months %) :month))))))

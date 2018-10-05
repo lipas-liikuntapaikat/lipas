@@ -7,6 +7,7 @@
             [clojure.string :as string]
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
+            [lipas.utils :as utils]
             [re-frame.core :as re-frame]
             [testdouble.cljs.csv :as csv]))
 
@@ -42,8 +43,7 @@
                                item)])
                           coll))))
 
-(defn index-by [idx-fn coll]
-  (into {} (map (juxt idx-fn identity)) coll))
+(def index-by utils/index-by)
 
 (defn localize-field [tr k prefix m]
   (if (k m)
