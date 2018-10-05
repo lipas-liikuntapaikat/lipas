@@ -694,7 +694,7 @@
     (energy/energy-consumption-form
      {:tr              tr
       :cold?           false
-      :spectators?     true
+      :spectators?     false
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
 
