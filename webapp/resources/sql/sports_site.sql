@@ -40,7 +40,7 @@ WHERE type_code = :type_code
 -- :result :many
 -- :doc Returns history for a single sports-site (lipas_id)
 SELECT *
-FROM sports_site
+FROM sports_site_by_year
 WHERE lipas_id = :lipas_id
 
 -- :name get-yearly-by-type-code
