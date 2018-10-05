@@ -309,7 +309,7 @@
                (3110 3120 3130) :lipas.sports-site/swimming-pool
                (2510 2520)      :lipas.sports-site/ice-stadium
                :lipas/sports-site)]
-    ;; (do (s/explain spec $) $)
+    (s/explain spec sports-site)
     (s/valid? spec sports-site)))
 
 (defn mobile? [width]
