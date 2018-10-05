@@ -266,6 +266,7 @@
         :phone-number   (-> latest :phone-number)
         :www            (-> latest :www)
         :email          (-> latest :email)
+        :comment        (-> latest :comment)
 
         :construction-year (-> latest :construction-year)
         :renovation-years  (-> latest :renovation-years)
