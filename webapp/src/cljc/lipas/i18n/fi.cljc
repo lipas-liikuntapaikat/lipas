@@ -105,7 +105,9 @@
     :comment                   "Kommentti"
     :operating-hours           "Käyttötunnit"
     :yearly                    "Vuositasolla*"
-    :monthly                   "Kuukausitasolla"}
+    :monthly                   "Kuukausitasolla"
+    :monthly-readings-in-year  "Kuukausikulutukset vuonna {1}"
+    :not-reported-monthly      "Ei kuukausikulutustietoja"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"

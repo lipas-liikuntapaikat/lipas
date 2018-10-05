@@ -174,13 +174,15 @@
            (when cold? [:cold-mwh (tr :lipas.energy-consumption/cold)])
            [:water-m3 (tr :lipas.energy-consumption/water)]]))
 
-(defn table [{:keys [tr items read-only? cold?]}]
-  [lui/form-table {:headers    (make-headers tr cold?)
-                   :items      items
-                   :key-fn     :year
-                   :sort-fn    :year
-                   :sort-asc?  true
-                   :read-only? read-only?}])
+(defn table [{:keys [tr items read-only? cold? on-select]}]
+  [lui/table {:headers          (make-headers tr cold?)
+              :items            items
+              :key-fn           :year
+              :sort-fn          :year
+              :sort-asc?        true
+              :on-select        on-select
+              :hide-action-btn? true
+              :read-only?       read-only?}])
 
 (defn set-field
   [lipas-id path value]
@@ -398,3 +400,27 @@
                    [mui/list-item-text {:variant :body2
                                         :color   :default}
                     (:name m)]]))]]]]]]))
+
+(defn monthly-chart [{:keys [tr lipas-id year]}]
+  (let [data   (<== [::subs/monthly-chart-data lipas-id year])
+        labels (merge
+                {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
+                 :heat-mwh        (tr :lipas.energy-stats/heat-mwh)
+                 :cold-mwh        (tr :lipas.energy-stats/cold-mwh)
+                 :water-m3        (tr :lipas.energy-stats/water-m3)}
+                (reduce (fn [m k] (assoc m k (tr (keyword :month k))))
+                        {}
+                        [:jan :feb :mar :apr :may :jun
+                         :jul :aug :sep :oct :nov :dec]))]
+    [mui/paper {:style     {:margin-top "1em"}
+                :elevation 0}
+     [mui/typography {:variant :headline
+                      :color   :secondary}
+      (tr :lipas.energy-consumption/monthly-readings-in-year year)]
+     (if (not-empty data)
+       [:div {:style {:padding-top "0.5em"}}
+        [charts/energy-history-chart
+         {:data   data
+          :labels labels}]]
+       [mui/typography
+        (tr :lipas.energy-consumption/not-reported-monthly)])]))

@@ -104,7 +104,9 @@
     :reported-for-year         "Energy consumption reported for {1}"
     :report                    "Report readings"
     :contains-other-buildings? "Readings contain also other buildings or spaces"
-    :operating-hours           "Operating hours"}
+    :operating-hours           "Operating hours"
+    :monthly-readings-in-year  "Monthly energy consumption in {1}"
+    :not-reported-monthly      "No monthly data available"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
