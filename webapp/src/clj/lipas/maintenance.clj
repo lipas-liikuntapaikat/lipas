@@ -162,18 +162,21 @@
   (let [entries (map k m)]
     ;; Sum only if there's data for all months
     (when (= 12 (count (filter some? entries)))
-      (/ (reduce utils/+safe (map #(* 1000 %) entries))
-         1000))))
+      (-> (reduce utils/+safe (map #(* 1000 %) entries))
+          (/ 1000)
+          (+ 0.5) ; rounding fix
+          int)))) ; flooring
 
 (defn- calculate-totals [rev]
-  (let [monthly-vals (-> rev :energy-consumption-monthly vals)
+  (let [monthly-e-vals (-> rev :energy-consumption-monthly vals)
+        monthly-v-vals (-> rev :visitors-monthly vals)
 
-        electricity-mwh  (yearly-sum :electricity-mwh monthly-vals)
-        heat-mwh         (yearly-sum :heat-mwh monthly-vals)
-        water-m3         (yearly-sum :water-m3 monthly-vals)
-        operating-hours  (yearly-sum :operating-hours monthly-vals)
-        spectators-count (yearly-sum :spectators-count monthly-vals)
-        total-count      (yearly-sum :total-count monthly-vals)]
+        electricity-mwh  (yearly-sum :electricity-mwh monthly-e-vals)
+        heat-mwh         (yearly-sum :heat-mwh monthly-e-vals)
+        water-m3         (yearly-sum :water-m3 monthly-e-vals)
+        operating-hours  (yearly-sum :operating-hours monthly-e-vals)
+        spectators-count (yearly-sum :spectators-count monthly-v-vals)
+        total-count      (yearly-sum :total-count monthly-v-vals)]
 
     (cond-> rev
       (some? electricity-mwh)  (assoc-in [:energy-consumption :electricity-mwh] electricity-mwh)
@@ -192,7 +195,12 @@
                                   monthly-entries)]
     (for [[year entries] entries-by-year
           :let           [rev (or (get revs-by-year year)
-                                  (first lipas-revs))
+                                  (-> lipas-revs
+                                      first
+                                      (dissoc :energy-consumption
+                                              :energy-consumption-monthly
+                                              :visitors
+                                              :visitors-monthly)))
                           event-date (str year "-12-31T23:59:59.999Z")
                           new-rev (assoc rev :event-date event-date)]]
       (->> entries
