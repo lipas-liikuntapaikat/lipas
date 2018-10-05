@@ -106,17 +106,11 @@
      (get-lipas-data* (str url "&page=3"))
      (get-lipas-data* (str url "&page=4")))))
 
-(defn csv-data->maps [csv-data]
-  (map zipmap
-       (->> (first csv-data) ;; First row is the header
-            repeat)
-       (rest csv-data)))
-
 (defn get-portal-data [path]
   (as-> path $
     (slurp $)
     (csv/read-csv $)
-    (csv-data->maps $)
+    (utils/csv-data->maps $)
     (group-by #(get % "Halli_ID") $)))
 
 (def admins (utils/index-by (comp :fi second) first admins/all))
