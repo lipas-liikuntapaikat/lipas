@@ -72,19 +72,20 @@
 (re-frame/reg-event-fx
  ::refresh-login
  [(re-frame/inject-cofx ::local-storage/get :login-data)]
- (fn [{login-data :local-storage-value
-       db         :db} _]
-   (if (or (empty? login-data) (not (:logged-in? db)))
-     {}
-     (let [token (-> login-data :token)]
-       {:http-xhrio
-        {:method          :get
-         :uri             (str (:backend-url db) "/actions/refresh-login")
-         :headers         {:Authorization (str "Token " token)}
-         :format          (ajax/json-request-format)
-         :response-format (ajax/json-response-format {:keywords? true})
-         :on-success      [::login-success :refresh]
-         :on-failure      [::login-refresh-failure]}}))))
+ (fn [{local-storage :local-storage
+       db            :db} _]
+   (let [login-data (:login-data local-storage)]
+     (if (or (empty? login-data) (not (:logged-in? db)))
+       {}
+       (let [token (-> login-data :token)]
+         {:http-xhrio
+          {:method          :get
+           :uri             (str (:backend-url db) "/actions/refresh-login")
+           :headers         {:Authorization (str "Token " token)}
+           :format          (ajax/json-request-format)
+           :response-format (ajax/json-response-format {:keywords? true})
+           :on-success      [::login-success :refresh]
+           :on-failure      [::login-refresh-failure]}})))))
 
 (re-frame/reg-event-fx
  ::login-with-magic-link
