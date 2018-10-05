@@ -614,7 +614,7 @@
        (tr :ice-energy/description)]]
      [mui/card-actions
       [mui/button {:color   :secondary
-                   :href    "http://www.leijonat.fi/info/jaahallit.html"}
+                   :href    "http://www.finhockey.fi/index.php/info/jaeaehallit"}
        (str "> " (tr :ice-energy/finhockey-link))]]]]])
 
 (defn energy-form-tab [tr]
