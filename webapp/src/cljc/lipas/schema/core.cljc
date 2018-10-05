@@ -252,6 +252,41 @@
 ;; What date/time does the document describe
 (s/def :lipas.sports-site/event-date :lipas/timestamp)
 
+;; Energy consumption ;;
+
+(s/def :lipas.energy-consumption/electricity-mwh (number-in :min 0 :max 10000))
+(s/def :lipas.energy-consumption/heat-mwh (number-in :min 0 :max 10000))
+;; TODO find out realistic limits for cold energy
+(s/def :lipas.energy-consumption/cold-mwh (number-in :min 0 :max 100000))
+(s/def :lipas.energy-consumption/water-m3 (number-in :min 0 :max 500000))
+(s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
+(s/def :lipas.energy-consumption/operating-hours (number-in :min 0 :max (* 24 7 365)))
+
+(s/def :lipas/energy-consumption
+  (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
+                   :lipas.energy-consumption/cold-mwh
+                   :lipas.energy-consumption/heat-mwh
+                   :lipas.energy-consumption/water-m3
+                   :lipas.energy-consumption/contains-other-buildings?
+                   :lipas.energy-consumption/operating-hours]))
+
+(def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
+
+(s/def :lipas/energy-consumption-monthly
+  (s/map-of months :lipas/energy-consumption))
+
+;; Visitors ;;
+
+(s/def :lipas.visitors/total-count (s/int-in 0 1000000))      ; Users
+(s/def :lipas.visitors/spectators-count (s/int-in 0 1000000)) ; Spectators
+
+(s/def :lipas/visitors
+  (s/keys :opt-un [:lipas.visitors/total-count
+                   :lipas.visitors/spectators-count]))
+
+(s/def :lipas/visitors-monthly
+  (s/map-of months :lipas/visitors))
+
 (s/def :lipas/sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
                    :lipas.sports-site/lipas-id
@@ -270,6 +305,10 @@
                    :lipas.sports-site/construction-year
                    :lipas.sports-site/renovation-years
                    :lipas.sports-site/comment
+                   :lipas/energy-consumption-monthly
+                   :lipas/energy-consumption
+                   :lipas/visitors
+                   :lipas/visitors-monthly
                    ;; :lipas.sports-site/properties
                    ]))
 
@@ -481,43 +520,6 @@
                    :lipas.ice-stadium.ventilation/dryer-duty-type
                    :lipas.ice-stadium.ventilation/heat-pump-type]))
 
-;; Energy consumption ;;
-
-(s/def :lipas.energy-consumption/electricity-mwh (number-in :min 0 :max 10000))
-(s/def :lipas.energy-consumption/heat-mwh (number-in :min 0 :max 10000))
-;; TODO find out realistic limits for cold energy
-(s/def :lipas.energy-consumption/cold-mwh (number-in :min 0 :max 100000))
-(s/def :lipas.energy-consumption/water-m3 (number-in :min 0 :max 500000))
-(s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
-(s/def :lipas.energy-consumption/operating-hours (number-in :min 0 :max (* 24 7 365)))
-
-(s/def :lipas/energy-consumption
-  (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
-                   :lipas.energy-consumption/cold-mwh
-                   :lipas.energy-consumption/heat-mwh
-                   :lipas.energy-consumption/water-m3
-                   :lipas.energy-consumption/contains-other-buildings?
-                   :lipas.energy-consumption/operating-hours]))
-
-(def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
-
-(s/def :lipas/energy-consumption-monthly
-  (s/map-of months :lipas/energy-consumption))
-
-;; Visitors ;;
-
-(s/def :lipas.visitors/total-count (s/int-in 0 1000000))
-(s/def :lipas.visitors/users-count (s/int-in 0 1000000))
-(s/def :lipas.visitors/spectators-count (s/int-in 0 1000000))
-
-(s/def :lipas/visitors
-  (s/keys :opt-un [:lipas.visitors/total-count
-                   :lipas.visitors/users-count
-                   :lipas.visitors/spectators-count]))
-
-(s/def :lipas/visitors-monthly
-  (s/map-of months :lipas/visitors))
-
 (s/def :lipas.ice-stadium.type/type-code #{2510 2520})
 (s/def :lipas.ice-stadium/type
   (s/merge
@@ -534,10 +536,7 @@
                     :lipas.ice-stadium/envelope
                     :lipas.ice-stadium/refrigeration
                     :lipas.ice-stadium/ventilation
-                    :lipas.ice-stadium/conditions
-                    :lipas/energy-consumption-monthly
-                    :lipas/energy-consumption
-                    :lipas/visitors])))
+                    :lipas.ice-stadium/conditions])))
 
 ;;; Swimming pools ;;;
 
@@ -741,9 +740,7 @@
                     :lipas.swimming-pool/saunas
                     :lipas.swimming-pool/slides
                     :lipas.swimming-pool/conditions
-                    :lipas.swimming-pool/energy-saving
-                    :lipas/visitors
-                    :lipas/energy-consumption])))
+                    :lipas.swimming-pool/energy-saving])))
 
 (s/def :lipas.sports-site/swimming-pools
   (s/coll-of :lipas.sports-site/swimming-pool
