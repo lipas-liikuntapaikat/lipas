@@ -408,17 +408,6 @@
         [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
          [lui/form {:read-only? (not editing?)}
 
-          ;; Hydro massage spots count
-          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
-           :value (-> display-data :hydro-massage-spots-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :hydro-massage-spots-count)
-             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
-             :on-change #(on-change :hydro-massage-spots-count %)}]}
-
           ;; Hydro neck massage spots count
           {:label (tr :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count)
            :value (-> display-data :hydro-neck-massage-spots-count)
@@ -429,6 +418,17 @@
              :value     (-> edit-data :hydro-neck-massage-spots-count)
              :spec      :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
              :on-change #(on-change :hydro-neck-massage-spots-count %)}]}
+
+          ;; Other Hydro massage spots count
+          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
+           :value (-> display-data :hydro-massage-spots-count)
+           :form-field
+           [lui/text-field
+            {:adornment (tr :units/pcs)
+             :type      "number"
+             :value     (-> edit-data :hydro-massage-spots-count)
+             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
+             :on-change #(on-change :hydro-massage-spots-count %)}]}
 
           ;; Kiosk?
           {:label (tr :lipas.swimming-pool.facilities/kiosk?)

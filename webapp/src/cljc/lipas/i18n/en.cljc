@@ -342,7 +342,7 @@
     :platforms-5m-count             "5m platforms count"
     :platforms-7.5m-count           "7.5m platforms count"
     :platforms-10m-count            "10m platforms count"
-    :hydro-massage-spots-count      "Hydro massage spots count"
+    :hydro-massage-spots-count      "Other hydro massage spots count"
     :hydro-neck-massage-spots-count "Neck hydro massage spots count"
     :kiosk?                         "Kiosk / cafeteria"
     :gym?                           "Gym"

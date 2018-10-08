@@ -354,7 +354,7 @@
     :platforms-5m-count             "5 m hyppypaikkojen lkm"
     :platforms-7.5m-count           "7.5 m hyppypaikkojen lkm"
     :platforms-10m-count            "10 m hyppypaikkojen lkm"
-    :hydro-massage-spots-count      "Hierontapisteiden lkm"
+    :hydro-massage-spots-count      "Muiden hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
     :kiosk?                         "Kioski / kahvio"
     :gym?                           "Kuntosali"
