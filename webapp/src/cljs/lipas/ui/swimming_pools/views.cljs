@@ -438,6 +438,14 @@
             {:value     (-> edit-data :kiosk?)
              :on-change #(on-change :kiosk? %)}]}
 
+          ;; Gym?
+          {:label (tr :lipas.swimming-pool.facilities/gym?)
+           :value (-> display-data :gym?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :gym?)
+             :on-change #(on-change :gym? %)}]}
+
           ;; Showers men count
           {:label (tr :lipas.swimming-pool.facilities/showers-men-count)
            :value (-> display-data :showers-men-count)
