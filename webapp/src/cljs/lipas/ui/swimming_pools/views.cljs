@@ -468,6 +468,17 @@
              :spec      :lipas.swimming-pool.facilities/showers-women-count
              :on-change #(on-change :showers-women-count %)}]}
 
+          ;; Showers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/showers-unisex-count)
+           :value (-> display-data :showers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :showers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/showers-unisex-count
+             :on-change #(on-change :showers-unisex-count %)}]}
+
           ;; Lockers men count
           {:label (tr :lipas.swimming-pool.facilities/lockers-men-count)
            :value (-> display-data :lockers-men-count)
@@ -488,7 +499,18 @@
              :adornment (tr :units/pcs)
              :value     (-> edit-data :lockers-women-count)
              :spec      :lipas.swimming-pool.facilities/lockers-women-count
-             :on-change #(on-change :lockers-women-count %)}]}]])
+             :on-change #(on-change :lockers-women-count %)}]}
+
+          ;; Lockers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/lockers-unisex-count)
+           :value (-> display-data :lockers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :lockers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/lockers-unisex-count
+             :on-change #(on-change :lockers-unisex-count %)}]}]])
 
       ;;; Conditions
       (let [display-data (-> display-data :conditions)
