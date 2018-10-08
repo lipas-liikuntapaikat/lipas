@@ -4,10 +4,12 @@
             [clojure.set :refer [rename-keys map-invert]]))
 
 (def colors
-  {:energy-mwh      "orange"
-   :electricity-mwh "#ffd400"
-   :heat-mwh        "#ff503c"
-   :water-m3        "#0a9bff"})
+  {:energy-mwh       "orange"
+   :electricity-mwh  "#ffd400"
+   :heat-mwh         "#ff503c"
+   :water-m3         "#0a9bff"
+   :total-count      "#8ce614"
+   :spectators-count "#05cdaa"})
 
 (defn energy-chart [{:keys [data energy energy-label]}]
   (let [data (map #(rename-keys % {energy energy-label}) data)]
@@ -20,8 +22,13 @@
      [:> rc/XAxis {:dataKey :name :label false :tick false}]
      [:> rc/Bar {:dataKey energy-label :label false :fill (get colors energy)}]]]))
 
-(defn energy-history-chart [{:keys [data labels]}]
-  (let [data-keys (vals (select-keys labels [:electricity-mwh :heat-mwh :cold-mwh :water-m3]))
+(defn monthly-chart [{:keys [data labels]}]
+  (let [data-keys (vals (select-keys labels [:electricity-mwh
+                                             :heat-mwh
+                                             :cold-mwh
+                                             :water-m3
+                                             :total-count
+                                             :spectators-count]))
         lookup    (map-invert labels)
         data      (->> data
                    (map #(rename-keys % labels))

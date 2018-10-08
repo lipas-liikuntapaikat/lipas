@@ -121,10 +121,11 @@
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
    :lipas.visitors
-   {:headline         "Kävijämäärä"
-    :headline-year    "Kävijämäärä vuonna {1}"
-    :total-count      "Käyttäjämäärä"
-    :spectators-count "Katsojamäärä"}
+   {:headline                 "Kävijämäärät"
+    :total-count              "Käyttäjämäärä"
+    :spectators-count         "Katsojamäärä"
+    :monthly-visitors-in-year "Kuukausittaiset kävijämäärät vuonna {1}"
+    :not-reported-monthly     "Ei kuukausitason tietoja"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"

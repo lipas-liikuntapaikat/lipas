@@ -554,32 +554,44 @@
             {:value     (-> edit-data :filter-rinse-water-heat-recovery?)
              :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
-      ;;; Visitors
-      [lui/form-card {:title (tr :lipas.visitors/headline)
-                      :md    12 :lg 12}
-       [lui/form-table
-        {:headers    [[:year (tr :time/year)]
-                      [:total-count (tr :lipas.visitors/total-count)]]
-         :items      (-> display-data :visitors-history)
-         :key-fn     :year
-         :read-only? true}]
+      (r/with-let [selected-year (r/atom {})]
 
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-and-visitors)])]
+        ;;; Visitors
+        [lui/form-card {:title (tr :lipas.visitors/headline)
+                        :md    12 :lg 12}
+         [lui/form-table
+          {:headers          [[:year (tr :time/year)]
+                              [:total-count (tr :lipas.visitors/total-count)]]
+           :items            (-> display-data :visitors-history)
+           :on-select        #(reset! selected-year {lipas-id (:year %)})
+           :key-fn           :year
+           :hide-action-btn? true
+           :read-only?       true}]
+
+         ;; Monthly chart
+         (when-let [year (get @selected-year lipas-id)]
+           [energy/monthly-visitors-chart
+            {:lipas-id lipas-id
+             :year     year
+             :tr       tr}])
+
+         ;; Report readings button
+         (when editing?
+           [mui/button
+            {:style {:margin-top "1em"}
+             :on-click
+             #(==> [:lipas.ui.events/confirm
+                    (tr :confirm/save-basic-data?)
+                    (fn []
+                      (==> [::site-events/save-edits lipas-id])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                    (fn []
+                      (==> [::site-events/discard-edits])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+            [mui/icon "add"]
+            (tr :lipas.user/report-energy-and-visitors)])])
 
       (r/with-let [selected-year (r/atom {})]
 
@@ -592,9 +604,10 @@
                         :items      (-> display-data :energy-consumption)}]
 
          (when-let [year (get @selected-year lipas-id)]
-           [energy/monthly-chart {:lipas-id lipas-id
-                                  :year     year
-                                  :tr       tr}])
+           [energy/monthly-chart
+            {:lipas-id lipas-id
+             :year     year
+             :tr       tr}])
 
          ;; Report energy consumption button
          (when editing?
