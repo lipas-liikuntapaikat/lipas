@@ -40,7 +40,8 @@
     :renovation-years  "Renovation years"
     :phone-number      "Phone number"
     :www               "Web-site"
-    :email-public      "Email (public)"}
+    :email-public      "Email (public)"
+    :comment           "More information"}
 
    :type
    {:type-code "Type code"
@@ -104,7 +105,9 @@
     :reported-for-year         "Energy consumption reported for {1}"
     :report                    "Report readings"
     :contains-other-buildings? "Readings contain also other buildings or spaces"
-    :operating-hours           "Operating hours"}
+    :operating-hours           "Operating hours"
+    :monthly-readings-in-year  "Monthly energy consumption in {1}"
+    :not-reported-monthly      "No monthly data available"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
@@ -118,10 +121,11 @@
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
 
    :lipas.visitors
-   {:headline         "Visitors"
-    :headline-year    "Visitors in {1}"
-    :spectators-count "Spectators count"
-    :total-count      "Visitors count"}
+   {:headline                 "Visitors"
+    :spectators-count         "Spectators count"
+    :total-count              "Visitors count"
+    :monthly-visitors-in-year "Monthly visitors in {1}"
+    :not-reported-monthly     "No monthly data"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"
@@ -339,13 +343,16 @@
     :platforms-5m-count             "5m platforms count"
     :platforms-7.5m-count           "7.5m platforms count"
     :platforms-10m-count            "10m platforms count"
-    :hydro-massage-spots-count      "Hydro massage spots count"
+    :hydro-massage-spots-count      "Other hydro massage spots count"
     :hydro-neck-massage-spots-count "Neck hydro massage spots count"
     :kiosk?                         "Kiosk / cafeteria"
+    :gym?                           "Gym"
     :showers-men-count              "Mens showers count"
     :showers-women-count            "Womens showers count"
+    :showers-unisex-count           "Unisex showers count"
     :lockers-men-count              "Mens lockers count"
-    :lockers-women-count            "Womens lockers count"}
+    :lockers-women-count            "Womens lockers count"
+    :lockers-unisex-count           "Unisex lockers count"}
 
    :dimensions
    {:volume-m3       "Volume m³"

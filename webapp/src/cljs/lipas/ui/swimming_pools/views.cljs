@@ -408,17 +408,6 @@
         [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
          [lui/form {:read-only? (not editing?)}
 
-          ;; Hydro massage spots count
-          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
-           :value (-> display-data :hydro-massage-spots-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :hydro-massage-spots-count)
-             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
-             :on-change #(on-change :hydro-massage-spots-count %)}]}
-
           ;; Hydro neck massage spots count
           {:label (tr :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count)
            :value (-> display-data :hydro-neck-massage-spots-count)
@@ -430,6 +419,17 @@
              :spec      :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
              :on-change #(on-change :hydro-neck-massage-spots-count %)}]}
 
+          ;; Other Hydro massage spots count
+          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
+           :value (-> display-data :hydro-massage-spots-count)
+           :form-field
+           [lui/text-field
+            {:adornment (tr :units/pcs)
+             :type      "number"
+             :value     (-> edit-data :hydro-massage-spots-count)
+             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
+             :on-change #(on-change :hydro-massage-spots-count %)}]}
+
           ;; Kiosk?
           {:label (tr :lipas.swimming-pool.facilities/kiosk?)
            :value (-> display-data :kiosk?)
@@ -437,6 +437,14 @@
            [lui/checkbox
             {:value     (-> edit-data :kiosk?)
              :on-change #(on-change :kiosk? %)}]}
+
+          ;; Gym?
+          {:label (tr :lipas.swimming-pool.facilities/gym?)
+           :value (-> display-data :gym?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :gym?)
+             :on-change #(on-change :gym? %)}]}
 
           ;; Showers men count
           {:label (tr :lipas.swimming-pool.facilities/showers-men-count)
@@ -454,11 +462,22 @@
            :value (-> display-data :showers-women-count)
            :form-field
            [lui/text-field
-            {:type        "number"
-             :adornwoment (tr :units/pcs)
-             :value       (-> edit-data :showers-women-count)
-             :spec        :lipas.swimming-pool.facilities/showers-women-count
-             :on-change   #(on-change :showers-women-count %)}]}
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :showers-women-count)
+             :spec      :lipas.swimming-pool.facilities/showers-women-count
+             :on-change #(on-change :showers-women-count %)}]}
+
+          ;; Showers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/showers-unisex-count)
+           :value (-> display-data :showers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :showers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/showers-unisex-count
+             :on-change #(on-change :showers-unisex-count %)}]}
 
           ;; Lockers men count
           {:label (tr :lipas.swimming-pool.facilities/lockers-men-count)
@@ -476,11 +495,22 @@
            :value (-> display-data :lockers-women-count)
            :form-field
            [lui/text-field
-            {:type        "number"
-             :adornwoment (tr :units/pcs)
-             :value       (-> edit-data :lockers-women-count)
-             :spec        :lipas.swimming-pool.facilities/lockers-women-count
-             :on-change   #(on-change :lockers-women-count %)}]}]])
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :lockers-women-count)
+             :spec      :lipas.swimming-pool.facilities/lockers-women-count
+             :on-change #(on-change :lockers-women-count %)}]}
+
+          ;; Lockers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/lockers-unisex-count)
+           :value (-> display-data :lockers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :lockers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/lockers-unisex-count
+             :on-change #(on-change :lockers-unisex-count %)}]}]])
 
       ;;; Conditions
       (let [display-data (-> display-data :conditions)
@@ -554,56 +584,78 @@
             {:value     (-> edit-data :filter-rinse-water-heat-recovery?)
              :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
-      ;;; Visitors
-      [lui/form-card {:title (tr :lipas.visitors/headline)
-                      :md    12 :lg 12}
-       [lui/form-table
-        {:headers    [[:year (tr :time/year)]
-                      [:total-count (tr :lipas.visitors/total-count)]]
-         :items      (-> display-data :visitors-history)
-         :key-fn     :year
-         :read-only? true}]
+      (r/with-let [selected-year (r/atom {})]
 
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-and-visitors)])]
+        ;;; Visitors
+        [lui/form-card {:title (tr :lipas.visitors/headline)
+                        :md    12 :lg 12}
+         [lui/form-table
+          {:headers          [[:year (tr :time/year)]
+                              [:total-count (tr :lipas.visitors/total-count)]]
+           :items            (-> display-data :visitors-history)
+           :on-select        #(reset! selected-year {lipas-id (:year %)})
+           :key-fn           :year
+           :hide-action-btn? true
+           :read-only?       true}]
 
-      ;;; Energy consumption
-      [lui/form-card {:title (tr :lipas.energy-consumption/headline)
-                      :md    12 :lg 12}
-       [energy/table {:read-only? true
-                      :tr         tr
-                      :items      (-> display-data :energy-consumption)}]
+         ;; Monthly chart
+         (when-let [year (get @selected-year lipas-id)]
+           [energy/monthly-visitors-chart
+            {:lipas-id lipas-id
+             :year     year
+             :tr       tr}])
 
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-and-visitors)])]]]))
+         ;; Report readings button
+         (when editing?
+           [mui/button
+            {:style {:margin-top "1em"}
+             :on-click
+             #(==> [:lipas.ui.events/confirm
+                    (tr :confirm/save-basic-data?)
+                    (fn []
+                      (==> [::site-events/save-edits lipas-id])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                    (fn []
+                      (==> [::site-events/discard-edits])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+            [mui/icon "add"]
+            (tr :lipas.user/report-energy-and-visitors)])])
+
+      (r/with-let [selected-year (r/atom {})]
+
+        ;;; Energy consumption
+        [lui/form-card {:title (tr :lipas.energy-consumption/headline)
+                        :md    12 :lg 12}
+         [energy/table {:read-only? true
+                        :tr         tr
+                        :on-select  #(reset! selected-year {lipas-id (:year %)})
+                        :items      (-> display-data :energy-consumption)}]
+
+         (when-let [year (get @selected-year lipas-id)]
+           [energy/monthly-chart
+            {:lipas-id lipas-id
+             :year     year
+             :tr       tr}])
+
+         ;; Report energy consumption button
+         (when editing?
+           [mui/button
+            {:style {:margin-top "1em"}
+             :on-click
+             #(==> [:lipas.ui.events/confirm
+                    (tr :confirm/save-basic-data?)
+                    (fn []
+                      (==> [::site-events/save-edits lipas-id])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                    (fn []
+                      (==> [::site-events/discard-edits])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+            [mui/icon "add"]
+            (tr :lipas.user/report-energy-and-visitors)])])]]))
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale (tr)
@@ -685,7 +737,7 @@
     (energy/energy-consumption-form
      {:tr              tr
       :cold?           false
-      :spectators?     true
+      :spectators?     false
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
 

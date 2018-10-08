@@ -44,7 +44,8 @@
     :renovation-years  (str "Perus" ZWSP "korjaus" ZWSP "vuodet")
     :phone-number      "Puhelinnumero"
     :www               "Web-sivu"
-    :email-public      "Sähköposti (julkinen)"}
+    :email-public      "Sähköposti (julkinen)"
+    :comment           "Lisätieto"}
 
    :type
    {:type-code "Tyyppikoodi"
@@ -105,7 +106,9 @@
     :comment                   "Kommentti"
     :operating-hours           "Käyttötunnit"
     :yearly                    "Vuositasolla*"
-    :monthly                   "Kuukausitasolla"}
+    :monthly                   "Kuukausitasolla"
+    :monthly-readings-in-year  "Kuukausikulutukset vuonna {1}"
+    :not-reported-monthly      "Ei kuukausikulutustietoja"}
 
    :lipas.energy-stats
    {:headline            "Hallien energiankulutus vuonna {1}"
@@ -119,10 +122,11 @@
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
    :lipas.visitors
-   {:headline         "Kävijämäärä"
-    :headline-year    "Kävijämäärä vuonna {1}"
-    :total-count      "Käyttäjämäärä"
-    :spectators-count "Katsojamäärä"}
+   {:headline                 "Kävijämäärät"
+    :total-count              "Käyttäjämäärä"
+    :spectators-count         "Katsojamäärä"
+    :monthly-visitors-in-year "Kuukausittaiset kävijämäärät vuonna {1}"
+    :not-reported-monthly     "Ei kuukausitason tietoja"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Aukiolo"
@@ -351,13 +355,16 @@
     :platforms-5m-count             "5 m hyppypaikkojen lkm"
     :platforms-7.5m-count           "7.5 m hyppypaikkojen lkm"
     :platforms-10m-count            "10 m hyppypaikkojen lkm"
-    :hydro-massage-spots-count      "Hierontapisteiden lkm"
+    :hydro-massage-spots-count      "Muiden hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
     :kiosk?                         "Kioski / kahvio"
+    :gym?                           "Kuntosali"
     :showers-men-count              "Miesten suihkut lkm"
     :showers-women-count            "Naisten suihkut lkm"
+    :showers-unisex-count           "Unisex suihkut lkm"
     :lockers-men-count              "Miesten pukukaapit lkm"
-    :lockers-women-count            "Naisten pukukaapit lkm"}
+    :lockers-women-count            "Naisten pukukaapit lkm"
+    :lockers-unisex-count           "Unisex pukukaapit lkm"}
 
    :dimensions
    {:volume-m3       "Tilavuus m³"
