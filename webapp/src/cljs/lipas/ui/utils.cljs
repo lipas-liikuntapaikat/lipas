@@ -7,6 +7,7 @@
             [clojure.string :as string]
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
+            [lipas.utils :as utils]
             [re-frame.core :as re-frame]
             [testdouble.cljs.csv :as csv]))
 
@@ -42,8 +43,7 @@
                                item)])
                           coll))))
 
-(defn index-by [idx-fn coll]
-  (into {} (map (juxt idx-fn identity)) coll))
+(def index-by utils/index-by)
 
 (defn localize-field [tr k prefix m]
   (if (k m)
@@ -309,7 +309,7 @@
                (3110 3120 3130) :lipas.sports-site/swimming-pool
                (2510 2520)      :lipas.sports-site/ice-stadium
                :lipas/sports-site)]
-    ;; (do (s/explain spec $) $)
+    ; (s/explain spec sports-site)
     (s/valid? spec sports-site)))
 
 (defn mobile? [width]

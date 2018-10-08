@@ -35,8 +35,8 @@
   "Updates [:water-treatment :filtering-method] to match spec."
   [db user & args]
   (log/info "Starting to fix swimming pool (3110 3130) filtering methods..")
-  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
-        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "yearly"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "yearly"})
         path      [:water-treatment :filtering-methods]
         allowed   (-> swimming-pools/filtering-methods keys set)
         spec      :lipas.swimming-pool.water-treatment/filtering-methods]
@@ -51,8 +51,8 @@
   allowed values."
   [db user & args]
   (log/info "Starting to fix swimming pool (3110 3130) building materials..")
-  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
-        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "yearly"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "yearly"})
         path      [:building :main-construction-materials]
         allowed   (-> materials/building-materials keys set)
         spec      :lipas.building/main-construction-materials]
@@ -67,8 +67,8 @@
   allowed values."
   [db user & args]
   (log/info "Starting to fix swimming pool (3110 3130) ceiling structures..")
-  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
-        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "yearly"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "yearly"})
         path      [:building :ceiling-structures]
         allowed   (-> materials/ceiling-structures keys set)
         spec      :lipas.building/ceiling-structures]
@@ -109,8 +109,8 @@
   from old field [:building :heat-source]. Old field is removed."
   [db user & args]
   (log/info "Starting to fix swimming pool (3110 3130) heat sources..")
-  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "latest"})
-        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "latest"})]
+  (let [data-3110 (core/get-sports-sites-by-type-code db 3110 {:revs "yearly"})
+        data-3130 (core/get-sports-sites-by-type-code db 3130 {:revs "yearly"})]
     (->> (concat data-3110 data-3130)
          (filter (comp some? :heat-source :building))
          (map #(assoc-in % [:building :heat-sources] [(-> % :building :heat-source)]))

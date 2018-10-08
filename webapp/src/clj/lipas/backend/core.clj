@@ -1,6 +1,5 @@
 (ns lipas.backend.core
   (:require [buddy.hashers :as hashers]
-            [clojure.string :as string]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
@@ -35,6 +34,11 @@
 
     (db/add-user! db user)
     {:status "OK"}))
+
+(defn register! [db emailer user]
+  (add-user! db user)
+  (email/send-register-notification! emailer "lipasinfo@jyu.fi" user)
+  {:status "OK"})
 
 (defn update-user-permissions! [db emailer user]
   (db/update-user-permissions! db user)) ;; TODO send email

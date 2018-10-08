@@ -189,15 +189,19 @@
                           :or   {empty  ""
                                  links? true}}]
   (cond
-    (link? v) (if links? [:a {:href v} (truncate v)] v)
-    (coll? v) (if (empty? v) empty (string/join ", " v))
-    (true? v) CHECK_MARK
-    (nil? v)  empty
-    :else     v))
+    (link? v)  (if links? [:a {:href v} (truncate v)] v)
+    (coll? v)  (if (empty? v) empty (string/join ", " v))
+    (true? v)  CHECK_MARK
+    (false? v) empty
+    (nil? v)   empty
+    :else      v))
 
-(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp]
-              :or   {sort-cmp  compare
-                     sort-asc? false}}]
+(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
+                     action-icon hide-action-btn?]
+              :or   {sort-cmp         compare
+                     sort-asc?        false
+                     action-icon      "more_horiz"
+                     hide-action-btn? false}}]
   (r/with-let [key-fn*   (or key-fn (constantly nil))
                sort-fn*  (r/atom sort-fn)
                sort-asc? (r/atom sort-asc?)]
@@ -210,7 +214,7 @@
 
         ;; Head
         [mui/table-head
-         (into [mui/table-row (when on-select
+         (into [mui/table-row (when (and on-select (not hide-action-btn?))
                                 [mui/table-cell ""])]
                (for [[key header] headers]
                  [mui/table-cell {:on-click #(reset! sort-fn* key)}
@@ -234,10 +238,10 @@
            [mui/table-row {:key      id
                            :on-click (when on-select #(on-select item))
                            :hover    true}
-            (when on-select
+            (when (and on-select (not hide-action-btn?))
               [mui/table-cell {:padding "checkbox"}
                [mui/icon-button {:on-click #(on-select item)}
-                [mui/icon {:color "primary"} "more_horiz"]]])
+                [mui/icon {:color "primary"} action-icon]]])
 
             ;; Cells
             (for [[k _] headers
@@ -652,22 +656,22 @@
                     :on-change #(on-change :admin %)}]}
 
      ;; Construction year
-     {:label (tr :lipas.sports-site/construction-year)
-      :value (-> display-data :construction-year)
+     {:label      (tr :lipas.sports-site/construction-year)
+      :value      (-> display-data :construction-year)
       :form-field [year-selector
                    {:value     (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)}]}
 
      ;; Renovation years
-     {:label (tr :lipas.sports-site/renovation-years)
-      :value (-> display-data :renovation-years)
+     {:label      (tr :lipas.sports-site/renovation-years)
+      :value      (-> display-data :renovation-years)
       :form-field [year-selector
                    {:multi?    true
                     :value     (-> edit-data :renovation-years)
                     :on-change #(on-change :renovation-years %)}]}
 
-     ;;; Comment
-     {:label (tr :general/comment)
+     ;; Comment
+     {:label (tr :lipas.sports-site/comment)
       :value (-> display-data :comment)
       :form-field
       [text-field

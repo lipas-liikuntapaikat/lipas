@@ -544,30 +544,78 @@
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])
 
-      ;;; Energy consumption
-      [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
-       [energy/table {:read-only? true
-                      :cold?      true
-                      :tr         tr
-                      :items      (:energy-consumption display-data)}]
+      (r/with-let [selected-year (r/atom {})]
 
-       ;; Report energy consumption button
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-consumption)])]]]))
+        ;;; Visitors
+        [lui/form-card {:title (tr :lipas.visitors/headline)
+                        :md    12 :lg 12}
+         [lui/form-table
+          {:headers          [[:year (tr :time/year)]
+                              [:total-count (tr :lipas.visitors/total-count)]
+                              [:spectators (tr :lipas.visitors/spectators-count)]]
+           :items            (-> display-data :visitors-history)
+           :on-select        #(reset! selected-year {lipas-id (:year %)})
+           :hide-action-btn? true
+           :key-fn           :year
+           :read-only?       true}]
+
+         ;; Monthly chart
+         (when-let [year (get @selected-year lipas-id)]
+           [energy/monthly-visitors-chart
+            {:lipas-id lipas-id
+             :year     year
+             :tr       tr}])
+
+         ;; Report readings button
+         (when editing?
+           [mui/button
+            {:style {:margin-top "1em"}
+             :on-click
+             #(==> [:lipas.ui.events/confirm
+                    (tr :confirm/save-basic-data?)
+                    (fn []
+                      (==> [::site-events/save-edits lipas-id])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                    (fn []
+                      (==> [::site-events/discard-edits])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+            [mui/icon "add"]
+            (tr :lipas.user/report-energy-and-visitors)])])
+
+      (r/with-let [selected-year (r/atom {})]
+
+        ;;; Energy consumption
+        [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
+         [energy/table {:read-only? true
+                        :cold?      true
+                        :tr         tr
+                        :on-select  #(reset! selected-year {lipas-id (:year %)})
+                        :items      (:energy-consumption display-data)}]
+
+         (when-let [year (get @selected-year lipas-id)]
+           [energy/monthly-chart {:lipas-id lipas-id
+                                  :year     year
+                                  :tr       tr}])
+
+         ;; Report energy consumption button
+         (when editing?
+           [mui/button
+            {:style {:margin-top "1em"}
+             :on-click
+             #(==> [:lipas.ui.events/confirm
+                    (tr :confirm/save-basic-data?)
+                    (fn []
+                      (==> [::site-events/save-edits lipas-id])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
+                    (fn []
+                      (==> [::site-events/discard-edits])
+                      (close)
+                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
+            [mui/icon "add"]
+            (tr :lipas.user/report-energy-consumption)])])]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale (tr)
@@ -606,7 +654,7 @@
        (tr :ice-energy/description)]]
      [mui/card-actions
       [mui/button {:color   :secondary
-                   :href    "http://www.leijonat.fi/info/jaahallit.html"}
+                   :href    "http://www.finhockey.fi/index.php/info/jaeaehallit"}
        (str "> " (tr :ice-energy/finhockey-link))]]]]])
 
 (defn energy-form-tab [tr]
