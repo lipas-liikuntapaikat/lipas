@@ -1,5 +1,6 @@
 (ns lipas.backend.email
   (:require [clojure.string :as str]
+            [clojure.pprint :as pprint]
             [clojure.java.io :as io]
             [postal.core :as postal]))
 
@@ -47,6 +48,14 @@
                                 :magic-link
                                 :html
                                 (str/replace "{{link}}" link))}))
+
+(defn send-register-notification! [emailer to user]
+  (.send! emailer {:subject "Uusi rekisteröitynyt käyttäjä"
+                   :to      to
+                   :plain   (with-out-str (pprint/pprint user))
+                   :html    (str "<html><body>"
+                                 (with-out-str (pprint/pprint user))
+                                 "</body></html>")}))
 
 (defrecord SMTPEmailer [config]
   Emailer
