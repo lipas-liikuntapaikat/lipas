@@ -348,8 +348,10 @@
     :gym?                           "Gym"
     :showers-men-count              "Mens showers count"
     :showers-women-count            "Womens showers count"
+    :showers-unisex-count           "Unisex showers count"
     :lockers-men-count              "Mens lockers count"
-    :lockers-women-count            "Womens lockers count"}
+    :lockers-women-count            "Womens lockers count"
+    :lockers-unisex-count           "Unisex lockers count"}
 
    :dimensions
    {:volume-m3       "Volume m³"

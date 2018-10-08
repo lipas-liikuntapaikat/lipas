@@ -360,8 +360,10 @@
     :gym?                           "Kuntosali"
     :showers-men-count              "Miesten suihkut lkm"
     :showers-women-count            "Naisten suihkut lkm"
+    :showers-unisex-count           "Unisex suihkut lkm"
     :lockers-men-count              "Miesten pukukaapit lkm"
-    :lockers-women-count            "Naisten pukukaapit lkm"}
+    :lockers-women-count            "Naisten pukukaapit lkm"
+    :lockers-unisex-count           "Unisex pukukaapit lkm"}
 
    :dimensions
    {:volume-m3       "Tilavuus m³"

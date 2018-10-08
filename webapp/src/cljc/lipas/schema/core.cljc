@@ -670,8 +670,10 @@
 ;; Showers and lockers ;;
 (s/def :lipas.swimming-pool.facilities/showers-men-count (s/int-in 0 200))
 (s/def :lipas.swimming-pool.facilities/showers-women-count (s/int-in 0 200))
+(s/def :lipas.swimming-pool.facilities/showers-unisex-count (s/int-in 0 200))
 (s/def :lipas.swimming-pool.facilities/lockers-men-count (s/int-in 0 1000))
 (s/def :lipas.swimming-pool.facilities/lockers-women-count (s/int-in 0 1000))
+(s/def :lipas.swimming-pool.facilities/lockers-unisex-count (s/int-in 0 1000))
 
 (s/def :lipas.swimming-pool/facilities
   (s/keys :opt-un [:lipas.swimming-pool.facilities/platforms-1m-count
