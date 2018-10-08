@@ -127,9 +127,10 @@
        {:post
         {:handler
          (fn [req]
-           (let [user (-> req :body-params)
-                 _    (core/add-user! db (-> user
-                                             (dissoc :permissions)))]
+           (let [user (-> req
+                          :body-params
+                          (dissoc :permissions))
+                 _    (core/register! db emailer user)]
              {:status 201
               :body   {:status "OK"}}))}}]
 
