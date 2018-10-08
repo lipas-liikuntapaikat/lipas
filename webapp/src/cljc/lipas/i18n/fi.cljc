@@ -44,7 +44,8 @@
     :renovation-years  (str "Perus" ZWSP "korjaus" ZWSP "vuodet")
     :phone-number      "Puhelinnumero"
     :www               "Web-sivu"
-    :email-public      "Sähköposti (julkinen)"}
+    :email-public      "Sähköposti (julkinen)"
+    :comment           "Lisätieto"}
 
    :type
    {:type-code "Tyyppikoodi"
