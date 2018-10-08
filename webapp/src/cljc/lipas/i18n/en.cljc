@@ -40,7 +40,8 @@
     :renovation-years  "Renovation years"
     :phone-number      "Phone number"
     :www               "Web-site"
-    :email-public      "Email (public)"}
+    :email-public      "Email (public)"
+    :comment           "More information"}
 
    :type
    {:type-code "Type code"
