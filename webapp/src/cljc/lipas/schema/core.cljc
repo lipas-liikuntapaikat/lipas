@@ -665,6 +665,7 @@
 (s/def :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
   (s/int-in 0 100))
 (s/def :lipas.swimming-pool.facilities/kiosk? boolean?)
+(s/def :lipas.swimming-pool.facilities/gym? boolean?)
 
 ;; Showers and lockers ;;
 (s/def :lipas.swimming-pool.facilities/showers-men-count (s/int-in 0 200))
@@ -681,6 +682,7 @@
                    :lipas.swimming-pool.facilities/hydro-massage-spots-count
                    :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
                    :lipas.swimming-pool.facilities/kiosk?
+                   :lipas.swimming-pool.facilities/gym?
                    :lipas.swimming-pool.facilities/showers-men-count
                    :lipas.swimming-pool.facilities/showers-women-count
                    :lipas.swimming-pool.facilities/lockers-men-count

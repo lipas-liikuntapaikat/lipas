@@ -357,6 +357,7 @@
     :hydro-massage-spots-count      "Hierontapisteiden lkm"
     :hydro-neck-massage-spots-count "Niskahierontapisteiden lkm"
     :kiosk?                         "Kioski / kahvio"
+    :gym?                           "Kuntosali"
     :showers-men-count              "Miesten suihkut lkm"
     :showers-women-count            "Naisten suihkut lkm"
     :lockers-men-count              "Miesten pukukaapit lkm"

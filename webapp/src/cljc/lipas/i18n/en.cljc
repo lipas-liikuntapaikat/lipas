@@ -345,6 +345,7 @@
     :hydro-massage-spots-count      "Hydro massage spots count"
     :hydro-neck-massage-spots-count "Neck hydro massage spots count"
     :kiosk?                         "Kiosk / cafeteria"
+    :gym?                           "Gym"
     :showers-men-count              "Mens showers count"
     :showers-women-count            "Womens showers count"
     :lockers-men-count              "Mens lockers count"
