@@ -227,6 +227,7 @@
            admin               (admins (-> latest :admin))
            owner               (owners (-> latest :owner))
            city                (get cities (-> latest :location :city :city-code))
+           visitors-history    (utils/visitors-history site)
            energy-history      (utils/energy-consumption-history site)
            heat-pump-type      (heat-pump-types (-> latest
                                                     :ventilation
@@ -304,4 +305,5 @@
 
         :rinks              (:rinks latest)
         :renovations        (:renovations latest)
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

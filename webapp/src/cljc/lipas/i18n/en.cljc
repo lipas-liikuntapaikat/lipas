@@ -120,10 +120,11 @@
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
 
    :lipas.visitors
-   {:headline         "Visitors"
-    :headline-year    "Visitors in {1}"
-    :spectators-count "Spectators count"
-    :total-count      "Visitors count"}
+   {:headline                 "Visitors"
+    :spectators-count         "Spectators count"
+    :total-count              "Visitors count"
+    :monthly-visitors-in-year "Monthly visitors in {1}"
+    :not-reported-monthly     "No monthly data"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"

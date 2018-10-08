@@ -401,6 +401,13 @@
                                         :color   :default}
                     (:name m)]]))]]]]]]))
 
+(defn localize-months [tr]
+  (let [months [:jan :feb :mar :apr :may :jun
+                :jul :aug :sep :oct :nov :dec]]
+    (reduce (fn [m k] (assoc m k (tr (keyword :month k))))
+            {}
+            months)))
+
 (defn monthly-chart [{:keys [tr lipas-id year]}]
   (let [data   (<== [::subs/monthly-chart-data lipas-id year])
         labels (merge
@@ -408,19 +415,35 @@
                  :heat-mwh        (tr :lipas.energy-stats/heat-mwh)
                  :cold-mwh        (tr :lipas.energy-stats/cold-mwh)
                  :water-m3        (tr :lipas.energy-stats/water-m3)}
-                (reduce (fn [m k] (assoc m k (tr (keyword :month k))))
-                        {}
-                        [:jan :feb :mar :apr :may :jun
-                         :jul :aug :sep :oct :nov :dec]))]
+                (localize-months tr))]
     [mui/paper {:style     {:margin-top "1em"}
                 :elevation 0}
-     [mui/typography {:variant :headline
+     [mui/typography {:variant :title
                       :color   :secondary}
       (tr :lipas.energy-consumption/monthly-readings-in-year year)]
      (if (not-empty data)
-       [:div {:style {:padding-top "0.5em"}}
-        [charts/energy-history-chart
+       [:div {:style {:padding-top "1em"}}
+        [charts/monthly-chart
          {:data   data
           :labels labels}]]
        [mui/typography
         (tr :lipas.energy-consumption/not-reported-monthly)])]))
+
+(defn monthly-visitors-chart [{:keys [tr lipas-id year]}]
+  (let [data   (<== [::subs/monthly-visitors-chart-data lipas-id year])
+        labels (merge
+                {:total-count      (tr :lipas.visitors/total-count)
+                 :spectators-count (tr :lipas.visitors/spectators-count)}
+                (localize-months tr))]
+    [mui/paper {:style     {:margin-top "1em"}
+                :elevation 0}
+     [mui/typography {:variant :title
+                      :color   :secondary}
+      (tr :lipas.visitors/monthly-visitors-in-year year)]
+     (if (not-empty data)
+       [:div {:style {:padding-top "1em"}}
+        [charts/monthly-chart
+         {:data   data
+          :labels labels}]]
+       [mui/typography
+        (tr :lipas.visitors/not-reported-monthly)])]))
