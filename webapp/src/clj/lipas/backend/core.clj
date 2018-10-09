@@ -37,7 +37,9 @@
 
 (defn register! [db emailer user]
   (add-user! db user)
-  (email/send-register-notification! emailer "lipasinfo@jyu.fi" user)
+  (email/send-register-notification! emailer
+                                     "lipasinfo@jyu.fi"
+                                     (dissoc user :password))
   {:status "OK"})
 
 (defn update-user-permissions! [db emailer user]
