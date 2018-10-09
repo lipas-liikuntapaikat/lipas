@@ -118,7 +118,7 @@
     :heat-mwh            "Lämpö MWh"
     :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
-    :report              "Ilmoita tiedot"
+    :report              "Ilmoita lukemat"
     :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
 
    :lipas.visitors
@@ -163,8 +163,9 @@
    :swim-energy
    {:headline       (str "Energia" ZWSP "info")
     :headline-short "Info"
-    :description    "Ajantasaisen tietopaketin löydät UKTY:n sivuilta."
-    :ukty-link      "Siirry UKTY:n sivuille"}
+    :description    "Ajantasaisen tietopaketin löydät UKTY:n ja SUH:n sivuilta."
+    :ukty-link      "Siirry UKTY:n sivuille"
+    :suh-link       "Siirry SUH:n sivuille"}
 
    :open-data
    {:headline            "Avoin data"

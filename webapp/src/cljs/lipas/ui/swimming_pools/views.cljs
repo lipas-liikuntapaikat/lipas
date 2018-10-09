@@ -695,7 +695,10 @@
      [mui/card-actions
       [mui/button {:color :secondary
                    :href  "https://www.ukty.fi/index.php/ohjepankki"}
-       (str "> " (tr :swim-energy/ukty-link))]]]]])
+       (str "> " (tr :swim-energy/ukty-link))]
+      [mui/button {:color :secondary
+                   :href  "http://www.suh.fi/toiminta/tekninen_neuvonta"}
+       (str "> " (tr :swim-energy/suh-link))]]]]])
 
 (defn energy-form [{:keys [tr year]}]
   (let [data           (<== [::subs/editing-rev])

@@ -163,8 +163,10 @@
    :swim-energy
    {:headline       "Energy info"
     :headline-short "Info"
-    :description    "Up-to-date information can be found from UKTY  web-site."
-    :ukty-link      "Browse to UKTY web-site"}
+    :description "Up-to-date information can be found from UKTY and
+    SUH web-sites."
+    :ukty-link      "Browse to UKTY web-site"
+    :suh-link       "Browse to SUH web-site"}
 
    :open-data
    {:headline "Open Data"
