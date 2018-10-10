@@ -61,11 +61,10 @@
     "group_add"]
    label])
 
-(defn edit-button [{:keys [on-click active? tooltip] :as props}]
+(defn edit-button [{:keys [on-click tooltip] :as props}]
   (let [btn-props (-> props
                       (dissoc :active?)
-                      (merge {:on-click on-click
-                              :color    (if active? "secondary" "primary")}))]
+                      (merge {:on-click on-click}))]
     [mui/tooltip {:title     (or tooltip "")
                   :placement "top"}
      [mui/button btn-props
@@ -76,8 +75,7 @@
                 :placement "top"}
    [:span
     [mui/button (merge (dissoc props :disabled-tooltip)
-                       {:variant  "contained"
-                        :disabled disabled
+                       {:disabled disabled
                         :on-click on-click
                         :color    "secondary"})
      tooltip
@@ -97,8 +95,7 @@
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title     (or tooltip "")
                 :placement "top"}
-   [mui/button (merge props {:on-click on-click
-                             :color    "primary"})
+   [mui/button (merge props {:on-click on-click})
     [mui/icon "undo"]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
@@ -128,40 +125,6 @@
        [mui/typography {:style {:display :inline}
                         :color :error}
         confirm-tooltip])]))
-
-;; Returns actually a list of components.
-;; TODO think something more intuitive here.
-(defn edit-actions-list [{:keys [editing? valid? logged-in?
-                                 user-can-publish? on-discard
-                                 on-save-draft save-draft-tooltip
-                                 discard-tooltip edit-tooltip
-                                 publish-tooltip on-edit-start
-                                 invalid-message on-edit-end
-                                 on-publish]}]
-  [(when (and editing? user-can-publish?)
-     [save-button
-      {:on-click         on-publish
-       :disabled         (not valid?)
-       :disabled-tooltip invalid-message
-       :tooltip          publish-tooltip}])
-   (when (and editing? (not user-can-publish?))
-     [save-button
-      {:on-click         on-save-draft
-       :disabled         (not valid?)
-       :disabled-tooltip invalid-message
-       :tooltip          save-draft-tooltip}])
-   (when editing?
-     [discard-button
-      {:on-click on-discard
-       :tooltip  discard-tooltip}])
-   (when (and logged-in? (not editing?))
-     [edit-button
-      {:disabled (and editing? (not valid?))
-       :active?  editing?
-       :on-click #(if editing?
-                    (on-edit-end %)
-                    (on-edit-start %))
-       :tooltip  edit-tooltip}])])
 
 (defn checkbox [{:keys [label value on-change disabled style]}]
   [mui/form-control-label
@@ -777,6 +740,100 @@
       bottom-actions)
      [mui/button {:on-click on-close}
       close-label])]])
+
+(defn floating-container [{:keys [top right bottom left background-color]
+                           :or   [background-color mui/gray2]}
+                          & children]
+  (into
+   [:div.no-print {:style
+                   {:position         :fixed
+                    :z-index          999
+                    :background-color background-color
+                    :top              top
+                    :right            right
+                    :bottom           bottom
+                    :left             left}}]
+   children))
+
+;; Returns actually a list of components.
+;; TODO think something more intuitive here.
+(defn edit-actions-list [{:keys [editing? valid? logged-in?
+                                 user-can-publish? on-discard
+                                 on-save-draft save-draft-tooltip
+                                 discard-tooltip edit-tooltip
+                                 publish-tooltip on-edit-start
+                                 invalid-message on-edit-end
+                                 on-publish]}]
+  [(when (and editing? user-can-publish?)
+     [save-button
+      {:variant          "extendedFab"
+       :on-click         on-publish
+       :disabled         (not valid?)
+       :disabled-tooltip invalid-message
+       :tooltip          publish-tooltip}])
+   (when (and editing? (not user-can-publish?))
+     [save-button
+      {:variant          "extendedFab"
+       :on-click         on-save-draft
+       :disabled         (not valid?)
+       :disabled-tooltip invalid-message
+       :tooltip          save-draft-tooltip}])
+   (when editing?
+     [discard-button
+      {:variant  :fab
+       :on-click on-discard
+       :tooltip  discard-tooltip}])
+   (when (and logged-in? (not editing?))
+     [edit-button
+      {:variant  "fab"
+       :color    "secondary"
+       :disabled (and editing? (not valid?))
+       :active?  editing?
+       :on-click #(if editing?
+                    (on-edit-end %)
+                    (on-edit-start %))
+       :tooltip  edit-tooltip}])])
+
+(defn site-view [{:keys [title on-close close-label bottom-actions]}
+                 & contents]
+  [mui/grid {:container true
+             :style     {:background-color mui/gray1}}
+   [mui/grid {:item  true :xs 12
+              :style {:padding "8px 8px 0px 8px"}}
+    [mui/paper {:style {:background-color "#fff"}}
+
+     ;; Site name
+     [mui/tool-bar {:disable-gutters true}
+      [mui/tooltip {:title (or close-label "")}
+       [mui/icon-button
+        {:on-click on-close
+         :style    {:margin-left  "0.5em"
+                    :margin-right "0.4em"}}
+
+        ;; "back to listing" button
+        [mui/icon {:color :primary}
+         "arrow_back_ios"]]]
+      [mui/typography {:style   {:color mui/primary}
+                       :variant :display1}
+       title]]]]
+
+   ;; Contents
+   (into
+    [mui/grid {:item  true :xs 12
+               :style {:padding 8}}]
+    contents)
+
+   ;; Floating actions
+   (into
+    [floating-container {:right 16 :bottom 16 :background-color "transparent"}]
+    (interpose [:span {:style {:margin-left  "0.25em"
+                               :margin-right "0.25em"}}]
+               bottom-actions))
+
+   ;; Small footer on top of which floating container may scroll
+   [mui/grid {:item  true :xs 12
+              :style {:height           "5em"
+                      :background-color mui/gray1}}]])
 
 (defn confirmation-dialog [{:keys [title message on-cancel on-decline
                                    decline-label cancel-label
