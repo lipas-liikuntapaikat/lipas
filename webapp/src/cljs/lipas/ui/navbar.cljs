@@ -231,9 +231,10 @@
 
 (defn nav [tr active-panel logged-in?]
   (let [menu-anchor (<== [::subs/account-menu-anchor])]
-    [mui/app-bar {:position "static"
-                  :color    "primary"
-                  :style    {:border-box "1px solid black"}}
+    [mui/app-bar {:position   "static"
+                  :color      "primary"
+                  :style      {:border-box "1px solid black"}
+                  :class-name :no-print}
 
      [mui/tool-bar {:disable-gutters true}
 
