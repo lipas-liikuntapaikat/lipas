@@ -48,7 +48,8 @@
      (when lipas-id
        [:lipas.ui.events/navigate (str "/#/jaahalliportaali/hallit/" lipas-id)])
      (when-not lipas-id
-       [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]}))
+       [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]
+    :lipas.ui.scroll/reset! nil}))
 
 (re-frame/reg-event-fx
  ::download-contacts-report

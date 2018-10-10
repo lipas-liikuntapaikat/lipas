@@ -5,7 +5,6 @@
             [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.ice-stadiums.subs :as subs]
             [lipas.ui.mui :as mui]
-            [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
             [lipas.ui.user.subs :as user-subs]
@@ -64,15 +63,11 @@
 
         set-field (partial set-field lipas-id)]
 
-    [lui/full-screen-dialog
-     {:open? (boolean (seq display-data))
-      :title (-> display-data :name)
+    [lui/site-view
+     {:title (-> display-data :name)
 
-      :close-label (tr :actions/close)
+      :close-label (tr :actions/back-to-listing)
       :on-close    close
-
-      :top-actions
-      [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
 
       :bottom-actions
       (lui/edit-actions-list
@@ -618,25 +613,30 @@
             (tr :lipas.user/report-energy-consumption)])])]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
-  (let [locale (tr)
-        sites  (<== [::subs/sites-list locale])]
+  (let [locale       (tr)
+        sites        (<== [::subs/sites-list locale])
+        display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
 
-     [site-view {:tr tr :logged-in? logged-in?}]
+     (if display-data
 
-     [mui/grid {:item true :xs 12}
-      [mui/paper
-       [lui/table
-        {:headers
-         [[:name (tr :lipas.sports-site/name)]
-          [:city (tr :lipas.location/city)]
-          [:type (tr :lipas.sports-site/type)]
-          [:construction-year (tr :lipas.sports-site/construction-year)]
-          [:renovation-years (tr :lipas.sports-site/renovation-years)]]
-         :items     sites
-         :sort-fn   :city
-         :on-select #(==> [::events/display-site %])}]]]]))
+       ;; Display individual site
+       [site-view {:tr tr :logged-in? logged-in?}]
+
+       ;; Display site list
+       [mui/grid {:item true :xs 12}
+        [mui/paper
+         [lui/table
+          {:headers
+           [[:name (tr :lipas.sports-site/name)]
+            [:city (tr :lipas.location/city)]
+            [:type (tr :lipas.sports-site/type)]
+            [:construction-year (tr :lipas.sports-site/construction-year)]
+            [:renovation-years (tr :lipas.sports-site/renovation-years)]]
+           :items     sites
+           :sort-fn   :city
+           :on-select #(==> [::events/display-site %])}]]])]))
 
 (defn compare-tab []
   [mui/grid {:container true}
@@ -709,7 +709,8 @@
         card-props {:square true}]
     [mui/grid {:container true}
 
-     [mui/grid {:item true :xs 12}
+     [mui/grid {:item       true :xs 12
+                :class-name :no-print}
       [mui/card card-props
        [mui/card-content
         [mui/tabs {:scrollable true
