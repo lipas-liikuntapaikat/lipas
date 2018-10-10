@@ -709,7 +709,8 @@
         card-props {:square true}]
     [mui/grid {:container true}
 
-     [mui/grid {:item true :xs 12}
+     [mui/grid {:item       true :xs 12
+                :class-name :no-print}
       [mui/card card-props
        [mui/card-content
         [mui/tabs {:scrollable true

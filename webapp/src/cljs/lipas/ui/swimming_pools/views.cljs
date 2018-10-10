@@ -754,7 +754,8 @@
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])]
     [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
+     [mui/grid {:item       true :xs 12
+                :class-name :no-print}
       [mui/card {:square true}
        [mui/card-content
         [mui/tabs

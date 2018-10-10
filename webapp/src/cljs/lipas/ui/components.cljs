@@ -216,7 +216,7 @@
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
                           read-only? on-add on-edit on-delete]
-                   :as props}]
+                   :as   props}]
   (if read-only?
 
     ;; Normal read-only table
@@ -260,7 +260,8 @@
                   (display-value v)])]))]]]]
 
        ;; Editing tools
-       [mui/grid {:item true :xs 10}
+       [mui/grid {:item       true :xs 10
+                  :class-name :no-print}
 
         ;; Edit button
         (when @selected-item
@@ -279,8 +280,9 @@
                                 (reset! selected-item nil))}])]
 
        ;; Add button
-       [mui/grid {:item  true :xs 2
-                  :style {:text-align "right"}}
+       [mui/grid {:item       true :xs 2
+                  :style      {:text-align "right"}
+                  :class-name :no-print}
         [mui/tooltip {:title     (or add-tooltip "")
                       :placement "left"}
          [mui/button {:style    {:margin-top "1em"}
