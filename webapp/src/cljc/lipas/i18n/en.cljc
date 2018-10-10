@@ -163,7 +163,7 @@
    :swim-energy
    {:headline       "Energy info"
     :headline-short "Info"
-    :description "Up-to-date information can be found from UKTY and
+    :description    "Up-to-date information can be found from UKTY and
     SUH web-sites."
     :ukty-link      "Browse to UKTY web-site"
     :suh-link       "Browse to SUH web-site"}
@@ -438,7 +438,8 @@
     :open-main-menu    "Open main menu"
     :submit            "Submit"
     :download          "Download"
-    :browse-to-portal  "Enter portal"}
+    :browse-to-portal  "Enter portal"
+    :back-to-listing   "Back to list view"}
 
    :confirm
    {:headline              "Confirmation"

@@ -2,6 +2,12 @@ html, body, #app {
   height: 100%;
 }
 
+@media print {
+  .no-print, .no-print *{
+    display: none !important;
+  }
+}
+
 @font-face {
     font-family: 'Aleo';
     src: url(https://static.cc.jyu.fi/plone/jyunitytheme-e34938a//976f09b10bf7cf919474bbc0b81fcb61.eot);
