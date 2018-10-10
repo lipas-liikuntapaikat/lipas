@@ -67,7 +67,7 @@
      {:title (-> display-data :name)
 
       :on-close    close
-      :close-label (tr :actions/close)
+      :close-label (tr :actions/back-to-listing)
 
       :bottom-actions
       (lui/edit-actions-list
