@@ -450,7 +450,8 @@
     :submit            "Lähetä"
     :download          "Lataa"
     :browse-to-portal  "Siirry portaaliin"
-    :choose-energy     "Valitse energia"}
+    :choose-energy     "Valitse energia"
+    :back-to-listing   "Takaisin listaukseen"}
 
    :confirm
    {:headline              "Varmistus"
