@@ -566,7 +566,8 @@
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale       (tr)
-        sites        (<== [::subs/sites-list locale])
+        types        #{2510 2520}
+        sites        (<== [::site-subs/sites-list locale types])
         display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
