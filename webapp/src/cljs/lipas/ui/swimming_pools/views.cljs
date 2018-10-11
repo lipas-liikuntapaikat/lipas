@@ -1,6 +1,5 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+  (:require [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as site-events]
@@ -695,12 +694,18 @@
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
 
+(defn reports-tab [tr]
+  [sports-site/contacts-report
+   {:tr    tr
+    :types #{3110 3130}}])
+
 (def tabs
   {0 "/#/uimahalliportaali"
    1 "/#/uimahalliportaali/ilmoita-tiedot"
    2 "/#/uimahalliportaali/hallit"
    3 "/#/uimahalliportaali/hallien-vertailu"
-   4 "/#/uimahalliportaali/energia-info"})
+   4 "/#/uimahalliportaali/energia-info"
+   5 "/#/uimahalliportaali/raportit"})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])]
@@ -734,7 +739,11 @@
 
          ;; 4 Energy info tab
          [mui/tab {:label (tr :swim-energy/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]]]]]
+                   :icon  (r/as-element [mui/icon "info"])}]
+
+         ;; 5 Reports tab
+         [mui/tab {:label (tr :reports/headline)
+                   :icon  (r/as-element [mui/icon "assessment"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
@@ -742,7 +751,8 @@
         1 [energy-form-tab tr]
         2 [swimming-pools-tab tr logged-in?]
         3 [compare-tab]
-        4 [energy-info-tab tr])]]))
+        4 [energy-info-tab tr]
+        5 [reports-tab tr])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
