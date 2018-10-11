@@ -94,3 +94,48 @@
  ::ceiling-structures
  (fn [db _]
    (-> db :ceiling-structures)))
+
+(defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
+                    sports-site]
+  (let [type          (types (-> sports-site :type :type-code))
+        size-category (and
+                       (= 2520 (-> sports-site :type :type-code))
+                       (-> sports-site :type :size-category size-categories locale))
+        admin         (admins (-> sports-site :admin))
+        owner         (owners (-> sports-site :owner))
+        city          (get cities (-> sports-site :location :city :city-code))]
+    {:lipas-id          (-> sports-site :lipas-id)
+     :name              (-> sports-site :name)
+     :type              (or (utils/truncate-size-category size-category)
+                            (-> type :name locale))
+     :address           (-> sports-site :location :address)
+     :postal-code       (-> sports-site :location :postal-code)
+     :postal-office     (-> sports-site :location :postal-office)
+     :city              (-> city :name locale)
+     :construction-year (-> sports-site :construction-year)
+     :renovation-years  (-> sports-site :renovation-years)
+     :owner             (-> owner locale)
+     :admin             (-> admin locale)
+     :www               (-> sports-site :www)
+     :email             (-> sports-site :email)
+     :phone-number      (-> sports-site :phone-number)}))
+
+(re-frame/reg-sub
+ ::sites-list
+ :<- [::latest-sports-site-revs]
+ :<- [::cities-by-city-code]
+ :<- [::admins]
+ :<- [::owners]
+ :<- [::all-types]
+ :<- [:lipas.ui.ice-stadiums.subs/size-categories]
+ (fn [[sites cities admins owners types size-categories] [_ locale type-codes]]
+   (let [data {:locale          locale
+               :cities          cities
+               :admins          admins
+               :owners          owners
+               :types           types
+               :size-categories size-categories}]
+     (->> sites
+          vals
+          (filter (comp type-codes :type-code :type))
+          (map (partial ->list-entry data))))))

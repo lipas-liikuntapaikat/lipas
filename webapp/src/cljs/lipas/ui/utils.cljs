@@ -363,3 +363,10 @@
   (->> (range start (inc end))
        (map (juxt identity str))
        (into {})))
+
+(defn truncate-size-category [s]
+  (when (string? s)
+    (-> s
+        (string/split #"(<|>)")
+        first
+        (string/trim))))

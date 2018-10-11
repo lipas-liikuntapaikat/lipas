@@ -620,33 +620,9 @@
       :draftable-sites draftable-sites})))
 
 (defn reports-tab [tr]
-  (let [locale  (tr)
-        sites   (<== [::subs/sites-list locale])
-        headers [[:name (tr :lipas.sports-site/name)]
-                 [:city (tr :lipas.location/city)]
-                 [:type (tr :lipas.sports-site/type)]
-                 [:address (tr :lipas.location/address)]
-                 [:postal-code (tr :lipas.location/postal-code)]
-                 [:postal-office (tr :lipas.location/postal-office)]
-                 [:email (tr :lipas.sports-site/email-public)]
-                 [:phone-number (tr :lipas.sports-site/phone-number)]
-                 [:www (tr :lipas.sports-site/www)]]]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/paper
-       [mui/typography {:color   :secondary
-                        :style   {:padding "1em"}
-                        :variant :headline}
-        (tr :reports/contacts)]
-       [lui/download-button
-        {:style    {:margin-left "1.5em"}
-         :on-click #(==> [::events/download-contacts-report sites headers])
-         :label    (tr :actions/download)}]
-       [mui/grid {:item true}
-        [lui/table
-         {:headers headers
-          :sort-fn :city
-          :items   sites}]]]]]))
+  [sports-site/contacts-report
+   {:tr    tr
+    :types #{2510 2520}}])
 
 (def tabs
   {0 "/#/jaahalliportaali"
