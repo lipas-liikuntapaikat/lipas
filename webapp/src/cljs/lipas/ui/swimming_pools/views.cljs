@@ -604,7 +604,8 @@
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale       (tr)
-        sites        (<== [::subs/sites-list locale])
+        types        #{3110 3130}
+        sites        (<== [::site-subs/sites-list locale types])
         display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
