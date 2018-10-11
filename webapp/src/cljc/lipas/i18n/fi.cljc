@@ -108,6 +108,7 @@
     :yearly                    "Vuositasolla*"
     :monthly                   "Kuukausitasolla"
     :monthly-readings-in-year  "Kuukausikulutukset vuonna {1}"
+    :not-reported              "Ei energiankulutustietoja"
     :not-reported-monthly      "Ei kuukausikulutustietoja"}
 
    :lipas.energy-stats
@@ -116,6 +117,7 @@
     :energy-mwh          "Sähkö + lämpö MWh"
     :electricity-mwh     "Sähkö MWh"
     :heat-mwh            "Lämpö MWh"
+    :cold-mwh            "Kylmä MWh"
     :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
     :report              "Ilmoita lukemat"
@@ -126,6 +128,7 @@
     :total-count              "Käyttäjämäärä"
     :spectators-count         "Katsojamäärä"
     :monthly-visitors-in-year "Kuukausittaiset kävijämäärät vuonna {1}"
+    :not-reported             "Ei kävijämäärätietoja"
     :not-reported-monthly     "Ei kuukausitason tietoja"}
 
    :lipas.swimming-pool.conditions

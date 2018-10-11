@@ -141,11 +141,13 @@
                 (str y))
        :value y})))
 
-(defn some-energy-data-exists? [{:keys [energy-consumption]}]
+(defn some-energy-data-exists? [{:keys [energy-consumption
+                                        energy-consumption-monthly]}]
   (or (:electricity-mwh energy-consumption)
       (:heat-mwh energy-consumption)
       (:water-m3 energy-consumption)
-      (:cold-mwh energy-consumption)))
+      (:cold-mwh energy-consumption)
+      (not-empty (vals energy-consumption-monthly))))
 
 (defn energy-consumption-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
@@ -156,11 +158,19 @@
          (map #(assoc (:energy-consumption %)
                       :year (resolve-year (:event-date %)))))))
 
+(defn some-visitor-data-exists? [{:keys [visitors visitors-monthly]}]
+  (or (:total-count visitors)
+      (:spectators visitors)
+      (not-empty (vals visitors-monthly))))
+
 (defn visitors-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
         entries (select-keys history (vals by-year))]
-    (map #(assoc (:visitors %)
-                 :year (resolve-year (:event-date %))) (vals entries))))
+    (->> entries
+         vals
+         (filter some-visitor-data-exists?)
+         (map #(assoc (:visitors %)
+                      :year (resolve-year (:event-date %)))))))
 
 (defn find-revision [{:keys [history]} year]
   (let [latest-by-year (latest-by-year history)
@@ -348,3 +358,15 @@
 (defn prod? []
   (-> (base-url)
       (string/includes? "lipas.fi")))
+
+(defn year-labels-map [start end]
+  (->> (range start (inc end))
+       (map (juxt identity str))
+       (into {})))
+
+(defn truncate-size-category [s]
+  (when (string? s)
+    (-> s
+        (string/split #"(<|>)")
+        first
+        (string/trim))))
