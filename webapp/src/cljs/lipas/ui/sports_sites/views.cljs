@@ -1,11 +1,12 @@
 (ns lipas.ui.sports-sites.views
-  (:require [lipas.ui.charts :as charts]
+  (:require [goog.object :as gobj]
+            [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
             [lipas.ui.energy.views :as energy]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
             [lipas.ui.sports-sites.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
@@ -219,7 +220,8 @@
                           :water-m3        (tr :lipas.energy-stats/water-m3)}
                          (utils/year-labels-map 2000 utils/this-year))
               :on-click (fn [^js e]
-                          (reset! selected-year {lipas-id (.-activeLabel e)}))}]]
+                          (let [year (gobj/get e "activeLabel")]
+                            (reset! selected-year {lipas-id year})))}]]
 
          1 [energy/table
             {:read-only? true
@@ -272,7 +274,8 @@
                           :spectators-count (tr :lipas.visitors/spectators-count)}
                          (utils/year-labels-map 2000 utils/this-year))
               :on-click (fn [^js e]
-                          (reset! selected-year {lipas-id (.-activeLabel e)}))}]]
+                          (let [year (gobj/get e "activeLabel")]
+                            (reset! selected-year {lipas-id year})))}]]
 
          1 [lui/table
             {:headers          (make-headers tr spectators?)
