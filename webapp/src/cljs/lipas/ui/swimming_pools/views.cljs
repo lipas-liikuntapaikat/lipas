@@ -1,9 +1,11 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.sports-sites.views :as sports-site]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.saunas :as saunas]
@@ -92,14 +94,15 @@
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
-       [lui/sports-site-form {:tr           tr
-                              :display-data display-data
-                              :edit-data    edit-data
-                              :read-only?   (not editing?)
-                              :types        types
-                              :admins       admins
-                              :owners       owners
-                              :on-change    set-field}]]
+       [sports-site/form
+        {:tr           tr
+         :display-data display-data
+         :edit-data    edit-data
+         :read-only?   (not editing?)
+         :types        types
+         :admins       admins
+         :owners       owners
+         :on-change    set-field}]]
 
       ;;; Building
       (let [display-data (-> display-data :building)
@@ -244,12 +247,13 @@
 
       ;;; Location
       [lui/form-card {:title (tr :lipas.location/headline)}
-       [lui/location-form {:tr           tr
-                           :read-only?   (not editing?)
-                           :cities       cities
-                           :edit-data    (:location edit-data)
-                           :display-data (:location display-data)
-                           :on-change    (partial set-field :location)}]]
+       [sports-site/location-form
+        {:tr           tr
+         :read-only?   (not editing?)
+         :cities       cities
+         :edit-data    (:location edit-data)
+         :display-data (:location display-data)
+         :on-change    (partial set-field :location)}]]
 
       ;;; Water treatment
       (let [display-data (-> display-data :water-treatment)
@@ -579,78 +583,25 @@
             {:value     (-> edit-data :filter-rinse-water-heat-recovery?)
              :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
-      (r/with-let [selected-year (r/atom {})]
+      ;;; Visitors
+      [lui/form-card {:title (tr :lipas.visitors/headline)
+                      :md    12 :lg 12}
+       [sports-site/visitors-view
+        {:tr           tr
+         :lipas-id     lipas-id
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]
 
-        ;;; Visitors
-        [lui/form-card {:title (tr :lipas.visitors/headline)
-                        :md    12 :lg 12}
-         [lui/form-table
-          {:headers          [[:year (tr :time/year)]
-                              [:total-count (tr :lipas.visitors/total-count)]]
-           :items            (-> display-data :visitors-history)
-           :on-select        #(reset! selected-year {lipas-id (:year %)})
-           :key-fn           :year
-           :hide-action-btn? true
-           :read-only?       true}]
-
-         ;; Monthly chart
-         (when-let [year (get @selected-year lipas-id)]
-           [energy/monthly-visitors-chart
-            {:lipas-id lipas-id
-             :year     year
-             :tr       tr}])
-
-         ;; Report readings button
-         (when editing?
-           [mui/button
-            {:style {:margin-top "1em"}
-             :on-click
-             #(==> [:lipas.ui.events/confirm
-                    (tr :confirm/save-basic-data?)
-                    (fn []
-                      (==> [::site-events/save-edits lipas-id])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                    (fn []
-                      (==> [::site-events/discard-edits])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-            [mui/icon "add"]
-            (tr :lipas.user/report-energy-and-visitors)])])
-
-      (r/with-let [selected-year (r/atom {})]
-
-        ;;; Energy consumption
-        [lui/form-card {:title (tr :lipas.energy-consumption/headline)
-                        :md    12 :lg 12}
-         [energy/table {:read-only? true
-                        :tr         tr
-                        :on-select  #(reset! selected-year {lipas-id (:year %)})
-                        :items      (-> display-data :energy-consumption)}]
-
-         (when-let [year (get @selected-year lipas-id)]
-           [energy/monthly-chart
-            {:lipas-id lipas-id
-             :year     year
-             :tr       tr}])
-
-         ;; Report energy consumption button
-         (when editing?
-           [mui/button
-            {:style {:margin-top "1em"}
-             :on-click
-             #(==> [:lipas.ui.events/confirm
-                    (tr :confirm/save-basic-data?)
-                    (fn []
-                      (==> [::site-events/save-edits lipas-id])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                    (fn []
-                      (==> [::site-events/discard-edits])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-            [mui/icon "add"]
-            (tr :lipas.user/report-energy-and-visitors)])])]]))
+      ;;; Energy consumption
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline)
+                      :md    12 :lg 12}
+       [sports-site/energy-consumption-view
+        {:tr           tr
+         :lipas-id     lipas-id
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]]]))
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale       (tr)
