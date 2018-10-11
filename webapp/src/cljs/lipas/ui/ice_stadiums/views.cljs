@@ -7,6 +7,7 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.sports-sites.views :as sports-site]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
@@ -92,15 +93,16 @@
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
-       [lui/sports-site-form {:tr              tr
-                              :display-data    display-data
-                              :edit-data       edit-data
-                              :read-only?      (not editing?)
-                              :types           types
-                              :size-categories size-categories
-                              :admins          admins
-                              :owners          owners
-                              :on-change       set-field}]]
+       [sports-site/form
+        {:tr              tr
+         :display-data    display-data
+         :edit-data       edit-data
+         :read-only?      (not editing?)
+         :types           types
+         :size-categories size-categories
+         :admins          admins
+         :owners          owners
+         :on-change       set-field}]]
 
       ;;; Conditions
       (let [on-change    (partial set-field :conditions)
@@ -255,12 +257,13 @@
 
       ;;; Location
       [lui/form-card {:title (tr :lipas.location/headline)}
-       [lui/location-form {:tr           tr
-                           :read-only?   (not editing?)
-                           :cities       cities
-                           :edit-data    (:location edit-data)
-                           :display-data (:location display-data)
-                           :on-change    (partial set-field :location)}]]
+       [sports-site/location-form
+        {:tr           tr
+         :read-only?   (not editing?)
+         :cities       cities
+         :edit-data    (:location edit-data)
+         :display-data (:location display-data)
+         :on-change    (partial set-field :location)}]]
 
       ;;; Building
       (let [on-change    (partial set-field :building)
@@ -539,82 +542,32 @@
              :value-fn  first
              :on-change #(on-change :heat-pump-type %)}]}]])
 
-      (r/with-let [selected-year (r/atom {})]
+      ;;; Visitors
+      [lui/form-card {:title (tr :lipas.visitors/headline)
+                      :md    12 :lg 12}
+       [sports-site/visitors-view
+        {:tr           tr
+         :lipas-id     lipas-id
+         :spectators?  true
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]
 
-        ;;; Visitors
-        [lui/form-card {:title (tr :lipas.visitors/headline)
-                        :md    12 :lg 12}
-         [lui/form-table
-          {:headers          [[:year (tr :time/year)]
-                              [:total-count (tr :lipas.visitors/total-count)]
-                              [:spectators (tr :lipas.visitors/spectators-count)]]
-           :items            (-> display-data :visitors-history)
-           :on-select        #(reset! selected-year {lipas-id (:year %)})
-           :hide-action-btn? true
-           :key-fn           :year
-           :read-only?       true}]
-
-         ;; Monthly chart
-         (when-let [year (get @selected-year lipas-id)]
-           [energy/monthly-visitors-chart
-            {:lipas-id lipas-id
-             :year     year
-             :tr       tr}])
-
-         ;; Report readings button
-         (when editing?
-           [mui/button
-            {:style {:margin-top "1em"}
-             :on-click
-             #(==> [:lipas.ui.events/confirm
-                    (tr :confirm/save-basic-data?)
-                    (fn []
-                      (==> [::site-events/save-edits lipas-id])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                    (fn []
-                      (==> [::site-events/discard-edits])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-            [mui/icon "add"]
-            (tr :lipas.user/report-energy-and-visitors)])])
-
-      (r/with-let [selected-year (r/atom {})]
-
-        ;;; Energy consumption
-        [lui/form-card {:title (tr :lipas.energy-consumption/headline) :md 12 :lg 12}
-         [energy/table {:read-only? true
-                        :cold?      true
-                        :tr         tr
-                        :on-select  #(reset! selected-year {lipas-id (:year %)})
-                        :items      (:energy-consumption display-data)}]
-
-         (when-let [year (get @selected-year lipas-id)]
-           [energy/monthly-chart {:lipas-id lipas-id
-                                  :year     year
-                                  :tr       tr}])
-
-         ;; Report energy consumption button
-         (when editing?
-           [mui/button
-            {:style {:margin-top "1em"}
-             :on-click
-             #(==> [:lipas.ui.events/confirm
-                    (tr :confirm/save-basic-data?)
-                    (fn []
-                      (==> [::site-events/save-edits lipas-id])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                    (fn []
-                      (==> [::site-events/discard-edits])
-                      (close)
-                      (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-            [mui/icon "add"]
-            (tr :lipas.user/report-energy-consumption)])])]]))
+      ;;; Energy consumption
+      [lui/form-card {:title (tr :lipas.energy-consumption/headline)
+                      :md    12 :lg 12}
+       [sports-site/energy-consumption-view
+        {:tr           tr
+         :cold?        true
+         :lipas-id     lipas-id
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale       (tr)
-        sites        (<== [::subs/sites-list locale])
+        types        #{2510 2520}
+        sites        (<== [::site-subs/sites-list locale types])
         display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
@@ -668,33 +621,9 @@
       :draftable-sites draftable-sites})))
 
 (defn reports-tab [tr]
-  (let [locale  (tr)
-        sites   (<== [::subs/sites-list locale])
-        headers [[:name (tr :lipas.sports-site/name)]
-                 [:city (tr :lipas.location/city)]
-                 [:type (tr :lipas.sports-site/type)]
-                 [:address (tr :lipas.location/address)]
-                 [:postal-code (tr :lipas.location/postal-code)]
-                 [:postal-office (tr :lipas.location/postal-office)]
-                 [:email (tr :lipas.sports-site/email-public)]
-                 [:phone-number (tr :lipas.sports-site/phone-number)]
-                 [:www (tr :lipas.sports-site/www)]]]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/paper
-       [mui/typography {:color   :secondary
-                        :style   {:padding "1em"}
-                        :variant :headline}
-        (tr :reports/contacts)]
-       [lui/download-button
-        {:style    {:margin-left "1.5em"}
-         :on-click #(==> [::events/download-contacts-report sites headers])
-         :label    (tr :actions/download)}]
-       [mui/grid {:item true}
-        [lui/table
-         {:headers headers
-          :sort-fn :city
-          :items   sites}]]]]]))
+  [sports-site/contacts-report
+   {:tr    tr
+    :types #{2510 2520}}])
 
 (def tabs
   {0 "/#/jaahalliportaali"

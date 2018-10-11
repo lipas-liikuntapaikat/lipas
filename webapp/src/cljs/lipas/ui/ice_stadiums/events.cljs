@@ -1,6 +1,5 @@
 (ns lipas.ui.ice-stadiums.events
-  (:require cljsjs.filesaverjs
-            [lipas.ui.utils :as utils]
+  (:require [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -50,15 +49,3 @@
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]
     :lipas.ui.scroll/reset! nil}))
-
-(re-frame/reg-event-fx
- ::download-contacts-report
- (fn [{:keys [db]} [_ data headers]]
-   (let [tr       (:translator db)
-         filename (str (tr :reports/contacts) ".csv")
-         mime     (str "text/plain;charset=" (.-characterSet js/document))
-         blob     (new js/Blob
-                       [(utils/->csv data headers)]
-                       (clj->js {:type mime}))
-         _        (js/saveAs blob filename)]
-     {})))
