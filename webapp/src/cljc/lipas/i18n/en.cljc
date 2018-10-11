@@ -107,6 +107,7 @@
     :contains-other-buildings? "Readings contain also other buildings or spaces"
     :operating-hours           "Operating hours"
     :monthly-readings-in-year  "Monthly energy consumption in {1}"
+    :not-reported              "Energy consumption not reported"
     :not-reported-monthly      "No monthly data available"}
 
    :lipas.energy-stats
@@ -115,6 +116,7 @@
     :energy-mwh          "Energy MWh"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
+    :cold-mwh            "Cold MWh"
     :water-m3            "Water m³"
     :hall-missing?       "Is your data missing from the diagram?"
     :report              "Report consumption"
@@ -125,6 +127,7 @@
     :spectators-count         "Spectators count"
     :total-count              "Visitors count"
     :monthly-visitors-in-year "Monthly visitors in {1}"
+    :not-reported             "Visitors not reported"
     :not-reported-monthly     "No monthly data"}
 
    :lipas.swimming-pool.conditions
