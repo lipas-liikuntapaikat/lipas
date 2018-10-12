@@ -1,11 +1,13 @@
 (ns lipas.ui.utils
-  (:require [cljsjs.date-fns]
-            [cemerick.url :as url]
+  (:require [cemerick.url :as url]
+            [cljsjs.date-fns]
             [clojure.data :as data]
             [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
+            [lipas.utils :as utils]
             [re-frame.core :as re-frame]
             [testdouble.cljs.csv :as csv]))
 
@@ -41,8 +43,7 @@
                                item)])
                           coll))))
 
-(defn index-by [idx-fn coll]
-  (into {} (map (juxt idx-fn identity)) coll))
+(def index-by utils/index-by)
 
 (defn localize-field [tr k prefix m]
   (if (k m)
@@ -133,18 +134,20 @@
   "Highlights years where there exists any energy consumption data."
   [history]
   (let [history (index-by :year history)]
-    (for [y    (range 2000 this-year)
+    (for [y    (range 2000 (inc this-year))
           :let [data-exists? (data-exists? y history)]]
       {:label (if data-exists?
                 (str y " " "✓")
                 (str y))
        :value y})))
 
-(defn some-energy-data-exists? [{:keys [energy-consumption]}]
+(defn some-energy-data-exists? [{:keys [energy-consumption
+                                        energy-consumption-monthly]}]
   (or (:electricity-mwh energy-consumption)
       (:heat-mwh energy-consumption)
       (:water-m3 energy-consumption)
-      (:cold-mwh energy-consumption)))
+      (:cold-mwh energy-consumption)
+      (not-empty (vals energy-consumption-monthly))))
 
 (defn energy-consumption-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
@@ -155,11 +158,19 @@
          (map #(assoc (:energy-consumption %)
                       :year (resolve-year (:event-date %)))))))
 
+(defn some-visitor-data-exists? [{:keys [visitors visitors-monthly]}]
+  (or (:total-count visitors)
+      (:spectators visitors)
+      (not-empty (vals visitors-monthly))))
+
 (defn visitors-history [{:keys [history]}]
   (let [by-year (latest-by-year history)
         entries (select-keys history (vals by-year))]
-    (map #(assoc (:visitors %)
-                 :year (resolve-year (:event-date %))) (vals entries))))
+    (->> entries
+         vals
+         (filter some-visitor-data-exists?)
+         (map #(assoc (:visitors %)
+                      :year (resolve-year (:event-date %)))))))
 
 (defn find-revision [{:keys [history]} year]
   (let [latest-by-year (latest-by-year history)
@@ -188,7 +199,9 @@
                    $
                    (-> $
                        (dissoc :energy-consumption)
-                       (dissoc :visitors))))))))
+                       (dissoc :energy-consumption-monthly)
+                       (dissoc :visitors)
+                       (dissoc :visitors-monthly))))))))
 
 (defn latest-edit [edits]
   (let [latest (first (sort reverse-cmp (keys edits)))]
@@ -207,7 +220,11 @@
 
 (defn- make-comparable [rev]
   (-> rev
-      (dissoc :event-date :energy-consumption :visitors)
+      (dissoc :event-date
+              :energy-consumption
+              :energy-consumption-monthly
+              :visitors
+              :visitors-monthly)
       clean))
 
 (defn different? [rev1 rev2]
@@ -297,6 +314,14 @@
       ;; Ice Stadiums
       (update-in [:rinks] ->indexed-map)))
 
+(defn valid? [sports-site] ;; TODO maybe multimethod?
+  (let [spec (case (-> sports-site :type :type-code)
+               (3110 3120 3130) :lipas.sports-site/swimming-pool
+               (2510 2520)      :lipas.sports-site/ice-stadium
+               :lipas/sports-site)]
+    ; (s/explain spec sports-site)
+    (s/valid? spec sports-site)))
+
 (defn mobile? [width]
   (case width
     ("xs" "sm") true
@@ -333,3 +358,15 @@
 (defn prod? []
   (-> (base-url)
       (string/includes? "lipas.fi")))
+
+(defn year-labels-map [start end]
+  (->> (range start (inc end))
+       (map (juxt identity str))
+       (into {})))
+
+(defn truncate-size-category [s]
+  (when (string? s)
+    (-> s
+        (string/split #"(<|>)")
+        first
+        (string/trim))))

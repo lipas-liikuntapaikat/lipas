@@ -203,6 +203,7 @@
         :phone-number   (-> latest :phone-number)
         :www            (-> latest :www)
         :email          (-> latest :email)
+        :comment        (-> latest :comment)
 
         :construction-year (-> latest :construction-year)
         :renovation-years  (-> latest :renovation-years)
@@ -242,5 +243,5 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
-        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
+        :visitors-history   (sort-by :year visitors-history)
+        :energy-consumption (sort-by :year energy-history)}))))

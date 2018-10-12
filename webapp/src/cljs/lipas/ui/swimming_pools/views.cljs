@@ -2,9 +2,9 @@
   (:require [lipas.ui.components :as lui]
             [lipas.ui.energy.views :as energy]
             [lipas.ui.mui :as mui]
-            [lipas.ui.navbar :as nav]
             [lipas.ui.sports-sites.events :as site-events]
             [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.sports-sites.views :as sports-site]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.saunas :as saunas]
@@ -64,15 +64,11 @@
 
         set-field (partial set-field lipas-id)]
 
-    [lui/full-screen-dialog
-     {:open? (boolean (seq display-data))
-      :title (-> display-data :name)
+    [lui/site-view
+     {:title (-> display-data :name)
 
       :on-close    close
-      :close-label (tr :actions/close)
-
-      :top-actions
-      [[nav/account-menu-button {:tr tr :logged-in? logged-in?}]]
+      :close-label (tr :actions/back-to-listing)
 
       :bottom-actions
       (lui/edit-actions-list
@@ -97,14 +93,15 @@
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}
-       [lui/sports-site-form {:tr           tr
-                              :display-data display-data
-                              :edit-data    edit-data
-                              :read-only?   (not editing?)
-                              :types        types
-                              :admins       admins
-                              :owners       owners
-                              :on-change    set-field}]]
+       [sports-site/form
+        {:tr           tr
+         :display-data display-data
+         :edit-data    edit-data
+         :read-only?   (not editing?)
+         :types        types
+         :admins       admins
+         :owners       owners
+         :on-change    set-field}]]
 
       ;;; Building
       (let [display-data (-> display-data :building)
@@ -249,12 +246,13 @@
 
       ;;; Location
       [lui/form-card {:title (tr :lipas.location/headline)}
-       [lui/location-form {:tr           tr
-                           :read-only?   (not editing?)
-                           :cities       cities
-                           :edit-data    (:location edit-data)
-                           :display-data (:location display-data)
-                           :on-change    (partial set-field :location)}]]
+       [sports-site/location-form
+        {:tr           tr
+         :read-only?   (not editing?)
+         :cities       cities
+         :edit-data    (:location edit-data)
+         :display-data (:location display-data)
+         :on-change    (partial set-field :location)}]]
 
       ;;; Water treatment
       (let [display-data (-> display-data :water-treatment)
@@ -408,17 +406,6 @@
         [lui/form-card {:title (tr :lipas.swimming-pool.facilities/headline)}
          [lui/form {:read-only? (not editing?)}
 
-          ;; Hydro massage spots count
-          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
-           :value (-> display-data :hydro-massage-spots-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :hydro-massage-spots-count)
-             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
-             :on-change #(on-change :hydro-massage-spots-count %)}]}
-
           ;; Hydro neck massage spots count
           {:label (tr :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count)
            :value (-> display-data :hydro-neck-massage-spots-count)
@@ -430,6 +417,17 @@
              :spec      :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
              :on-change #(on-change :hydro-neck-massage-spots-count %)}]}
 
+          ;; Other Hydro massage spots count
+          {:label (tr :lipas.swimming-pool.facilities/hydro-massage-spots-count)
+           :value (-> display-data :hydro-massage-spots-count)
+           :form-field
+           [lui/text-field
+            {:adornment (tr :units/pcs)
+             :type      "number"
+             :value     (-> edit-data :hydro-massage-spots-count)
+             :spec      :lipas.swimming-pool.facilities/hydro-massage-spots-count
+             :on-change #(on-change :hydro-massage-spots-count %)}]}
+
           ;; Kiosk?
           {:label (tr :lipas.swimming-pool.facilities/kiosk?)
            :value (-> display-data :kiosk?)
@@ -437,6 +435,14 @@
            [lui/checkbox
             {:value     (-> edit-data :kiosk?)
              :on-change #(on-change :kiosk? %)}]}
+
+          ;; Gym?
+          {:label (tr :lipas.swimming-pool.facilities/gym?)
+           :value (-> display-data :gym?)
+           :form-field
+           [lui/checkbox
+            {:value     (-> edit-data :gym?)
+             :on-change #(on-change :gym? %)}]}
 
           ;; Showers men count
           {:label (tr :lipas.swimming-pool.facilities/showers-men-count)
@@ -454,11 +460,22 @@
            :value (-> display-data :showers-women-count)
            :form-field
            [lui/text-field
-            {:type        "number"
-             :adornwoment (tr :units/pcs)
-             :value       (-> edit-data :showers-women-count)
-             :spec        :lipas.swimming-pool.facilities/showers-women-count
-             :on-change   #(on-change :showers-women-count %)}]}
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :showers-women-count)
+             :spec      :lipas.swimming-pool.facilities/showers-women-count
+             :on-change #(on-change :showers-women-count %)}]}
+
+          ;; Showers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/showers-unisex-count)
+           :value (-> display-data :showers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :showers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/showers-unisex-count
+             :on-change #(on-change :showers-unisex-count %)}]}
 
           ;; Lockers men count
           {:label (tr :lipas.swimming-pool.facilities/lockers-men-count)
@@ -476,11 +493,22 @@
            :value (-> display-data :lockers-women-count)
            :form-field
            [lui/text-field
-            {:type        "number"
-             :adornwoment (tr :units/pcs)
-             :value       (-> edit-data :lockers-women-count)
-             :spec        :lipas.swimming-pool.facilities/lockers-women-count
-             :on-change   #(on-change :lockers-women-count %)}]}]])
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :lockers-women-count)
+             :spec      :lipas.swimming-pool.facilities/lockers-women-count
+             :on-change #(on-change :lockers-women-count %)}]}
+
+          ;; Lockers unisex count
+          {:label (tr :lipas.swimming-pool.facilities/lockers-unisex-count)
+           :value (-> display-data :lockers-unisex-count)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :adornment (tr :units/pcs)
+             :value     (-> edit-data :lockers-unisex-count)
+             :spec      :lipas.swimming-pool.facilities/lockers-unisex-count
+             :on-change #(on-change :lockers-unisex-count %)}]}]])
 
       ;;; Conditions
       (let [display-data (-> display-data :conditions)
@@ -555,76 +583,51 @@
              :on-change #(on-change :filter-rinse-water-heat-recovery? %)}]}]])
 
       ;;; Visitors
-      [lui/form-card {:title (tr :lipas.swimming-pool.visitors/headline)
+      [lui/form-card {:title (tr :lipas.visitors/headline)
                       :md    12 :lg 12}
-       [lui/form-table
-        {:headers    [[:year (tr :time/year)]
-                      [:total-count (tr :lipas.swimming-pool.visitors/total-count)]]
-         :items      (-> display-data :visitors-history)
-         :key-fn     :year
-         :read-only? true}]
-
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-and-visitors)])]
+       [sports-site/visitors-view
+        {:tr           tr
+         :lipas-id     lipas-id
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]
 
       ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
                       :md    12 :lg 12}
-       [energy/table {:read-only? true
-                      :tr         tr
-                      :items      (-> display-data :energy-consumption)}]
-
-       (when editing?
-         [mui/button
-          {:style {:margin-top "1em"}
-           :on-click
-           #(==> [:lipas.ui.events/confirm
-                  (tr :confirm/save-basic-data?)
-                  (fn []
-                    (==> [::site-events/save-edits lipas-id])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                  (fn []
-                    (==> [::site-events/discard-edits])
-                    (close)
-                    (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-          [mui/icon "add"]
-          (tr :lipas.user/report-energy-and-visitors)])]]]))
+       [sports-site/energy-consumption-view
+        {:tr           tr
+         :lipas-id     lipas-id
+         :editing?     editing?
+         :close        close
+         :display-data display-data}]]]]))
 
 (defn swimming-pools-tab [tr logged-in?]
-  (let [locale (tr)
-        sites  (<== [::subs/sites-list locale])]
+  (let [locale       (tr)
+        types        #{3110 3130}
+        sites        (<== [::site-subs/sites-list locale types])
+        display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
 
-     [site-view {:tr tr :logged-in? logged-in?}]
+     (if display-data
 
-     [mui/grid {:item true :xs 12}
-      [mui/paper
-       [lui/table
-        {:headers
-         [[:name (tr :lipas.sports-site/name)]
-          [:city (tr :lipas.location/city)]
-          [:type (tr :lipas.sports-site/type)]
-          [:construction-year (tr :lipas.sports-site/construction-year)]
-          [:renovation-years (tr :lipas.sports-site/renovation-years)]]
-         :items            sites
-         :sort-fn          :city
-         :on-select        #(==> [::events/display-site %])}]]]]))
+       ;; Display individual site
+       [site-view {:tr tr :logged-in? logged-in?}]
+
+       ;; Display site list
+       [mui/grid {:item true :xs 12}
+        [mui/paper
+         [lui/table
+          {:headers
+           [[:name (tr :lipas.sports-site/name)]
+            [:city (tr :lipas.location/city)]
+            [:type (tr :lipas.sports-site/type)]
+            [:construction-year (tr :lipas.sports-site/construction-year)]
+            [:renovation-years (tr :lipas.sports-site/renovation-years)]]
+           :items     sites
+           :sort-fn   :city
+           :on-select #(==> [::events/display-site %])}]]])]))
 
 (defn compare-tab []
   [mui/grid {:container true}
@@ -643,7 +646,10 @@
      [mui/card-actions
       [mui/button {:color :secondary
                    :href  "https://www.ukty.fi/index.php/ohjepankki"}
-       (str "> " (tr :swim-energy/ukty-link))]]]]])
+       (str "> " (tr :swim-energy/ukty-link))]
+      [mui/button {:color :secondary
+                   :href  "http://www.suh.fi/toiminta/tekninen_neuvonta"}
+       (str "> " (tr :swim-energy/suh-link))]]]]])
 
 (defn energy-form [{:keys [tr year]}]
   (let [data           (<== [::subs/editing-rev])
@@ -685,22 +691,28 @@
     (energy/energy-consumption-form
      {:tr              tr
       :cold?           false
-      :monthly?        false
-      :visitors?       true
+      :spectators?     false
       :draftable-sites draftable-sites
       :editable-sites  editable-sites})))
+
+(defn reports-tab [tr]
+  [sports-site/contacts-report
+   {:tr    tr
+    :types #{3110 3130}}])
 
 (def tabs
   {0 "/#/uimahalliportaali"
    1 "/#/uimahalliportaali/ilmoita-tiedot"
    2 "/#/uimahalliportaali/hallit"
    3 "/#/uimahalliportaali/hallien-vertailu"
-   4 "/#/uimahalliportaali/energia-info"})
+   4 "/#/uimahalliportaali/energia-info"
+   5 "/#/uimahalliportaali/raportit"})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])]
     [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
+     [mui/grid {:item       true :xs 12
+                :class-name :no-print}
       [mui/card {:square true}
        [mui/card-content
         [mui/tabs
@@ -728,7 +740,11 @@
 
          ;; 4 Energy info tab
          [mui/tab {:label (tr :swim-energy/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]]]]]
+                   :icon  (r/as-element [mui/icon "info"])}]
+
+         ;; 5 Reports tab
+         [mui/tab {:label (tr :reports/headline)
+                   :icon  (r/as-element [mui/icon "assessment"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
@@ -736,7 +752,8 @@
         1 [energy-form-tab tr]
         2 [swimming-pools-tab tr logged-in?]
         3 [compare-tab]
-        4 [energy-info-tab tr])]]))
+        4 [energy-info-tab tr]
+        5 [reports-tab tr])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

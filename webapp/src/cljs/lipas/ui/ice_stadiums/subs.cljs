@@ -142,55 +142,6 @@
  (fn [db _]
    (-> db :base-floor-structures)))
 
-(defn- truncate [s]
-  (when (string? s)
-    (-> s
-        (string/split #"(<|>)")
-        first
-        (string/trim))))
-
-(defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
-                    ice-stadium]
-  (let [type          (types (-> ice-stadium :type :type-code))
-        size-category (and
-                       (= 2520 (-> ice-stadium :type :type-code))
-                       (-> ice-stadium :type :size-category size-categories locale))
-        admin         (admins (-> ice-stadium :admin))
-        owner         (owners (-> ice-stadium :owner))
-        city          (get cities (-> ice-stadium :location :city :city-code))]
-    {:lipas-id          (-> ice-stadium :lipas-id)
-     :name              (-> ice-stadium :name)
-     :type              (or (truncate size-category)
-                            (-> type :name locale))
-     :address           (-> ice-stadium :location :address)
-     :postal-code       (-> ice-stadium :location :postal-code)
-     :postal-office     (-> ice-stadium :location :postal-office)
-     :city              (-> city :name locale)
-     :construction-year (-> ice-stadium :construction-year)
-     :renovation-years  (-> ice-stadium :renovation-years)
-     :owner             (-> owner locale)
-     :admin             (-> admin locale)
-     :www               (-> ice-stadium :www)
-     :email             (-> ice-stadium :email)
-     :phone-number      (-> ice-stadium :phone-number)}))
-
-(re-frame/reg-sub
- ::sites-list
- :<- [::latest-ice-stadium-revs]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/admins]
- :<- [:lipas.ui.sports-sites.subs/owners]
- :<- [::types-by-type-code]
- :<- [::size-categories]
- (fn [[sites cities admins owners types size-categories] [_ locale]]
-   (let [data {:locale          locale
-               :cities          cities
-               :admins          admins
-               :owners          owners
-               :types           types
-               :size-categories size-categories}]
-     (map (partial ->list-entry data) (vals sites)))))
-
 (re-frame/reg-sub
  ::display-site-raw
  (fn [db _]
@@ -227,6 +178,7 @@
            admin               (admins (-> latest :admin))
            owner               (owners (-> latest :owner))
            city                (get cities (-> latest :location :city :city-code))
+           visitors-history    (utils/visitors-history site)
            energy-history      (utils/energy-consumption-history site)
            heat-pump-type      (heat-pump-types (-> latest
                                                     :ventilation
@@ -266,6 +218,7 @@
         :phone-number   (-> latest :phone-number)
         :www            (-> latest :www)
         :email          (-> latest :email)
+        :comment        (-> latest :comment)
 
         :construction-year (-> latest :construction-year)
         :renovation-years  (-> latest :renovation-years)
@@ -303,4 +256,5 @@
 
         :rinks              (:rinks latest)
         :renovations        (:renovations latest)
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
         :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

@@ -258,9 +258,9 @@
                          :admin)))))
 
 (deftest get-sports-site-history-test
-  (let [user     (gen-user {:db? true})
+  (let [user     (gen-user {:db? true :admin? true})
         rev1     (-> (gen/generate (s/gen :lipas/sports-site))
-                     (assoc :status "draft"))
+                     (assoc :status "active"))
         rev2     (-> rev1
                      (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
                      (assoc :name "Kissalan kuulahalli"))
