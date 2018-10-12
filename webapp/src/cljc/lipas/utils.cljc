@@ -122,3 +122,13 @@
            (vector? y) (concat x y)
            :else       y))
    a b))
+
+(defn csv-data->maps [csv-data]
+  (map zipmap
+       (->> (first csv-data) ;; First row is the header
+            repeat)
+       (rest csv-data)))
+
+(defn +safe [& args]
+  (if-let [valid-args (not-empty (filter number? args))]
+    (apply + valid-args)))

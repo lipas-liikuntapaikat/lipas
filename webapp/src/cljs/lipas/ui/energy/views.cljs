@@ -7,7 +7,7 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
-(defn form [{:keys [tr data on-change disabled? cold?]}]
+(defn form [{:keys [tr data on-change disabled? spectators? cold?]}]
   [mui/form-group
 
    ;; Electricity Mwh
@@ -15,10 +15,10 @@
     {:label     (tr :lipas.energy-consumption/electricity)
      :disabled  disabled?
      :type      "number"
-     :value     (:electricity-mwh data)
+     :value     (-> data :energy-consumption :electricity-mwh)
      :spec      :lipas.energy-consumption/electricity-mwh
      :adornment (tr :physical-units/mwh)
-     :on-change #(on-change :electricity-mwh %)}]
+     :on-change #(on-change [:energy-consumption :electricity-mwh] %)}]
 
    ;; Heat Mwh
    [lui/text-field
@@ -27,8 +27,8 @@
      :type      "number"
      :spec      :lipas.energy-consumption/heat-mwh
      :adornment (tr :physical-units/mwh)
-     :value     (:heat-mwh data)
-     :on-change #(on-change :heat-mwh %)}]
+     :value     (-> data :energy-consumption :heat-mwh)
+     :on-change #(on-change [:energy-consumption :heat-mwh] %)}]
 
    ;; Cold Mwh
    (when cold?
@@ -38,8 +38,8 @@
        :type      "number"
        :spec      :lipas.energy-consumption/cold-mwh
        :adornment (tr :physical-units/mwh)
-       :value     (:cold-mwh data)
-       :on-change #(on-change :cold-mwh %)}])
+       :value     (-> data :energy-consumption :cold-mwh)
+       :on-change #(on-change [:energy-consumption :cold-mwh] %)}])
 
    ;; Water m³
    [lui/text-field
@@ -48,74 +48,123 @@
      :type      "number"
      :spec      :lipas.energy-consumption/water-m3
      :adornment (tr :physical-units/m3)
-     :value     (:water-m3 data)
-     :on-change #(on-change :water-m3 %)}]
+     :value     (-> data :energy-consumption :water-m3)
+     :on-change #(on-change [:energy-consumption :water-m3] %)}]
 
-   ;; Contains other buildings?
-   [lui/checkbox
-    {:style     {:margin-top "1em"}
-     :label     (tr :lipas.energy-consumption/contains-other-buildings?)
-     :value     (:contains-other-buildings? data)
-     :on-change #(on-change :contains-other-buildings? %)}]])
+   ;; Spectators
+   (when spectators?
+     [lui/text-field
+      {:label     (tr :lipas.visitors/spectators-count)
+       :type      "number"
+       :spec      :lipas.visitors/spectators-count
+       :adornment (tr :units/person)
+       :value     (-> data :visitors :spectators-count)
+       :on-change #(on-change [:visitors :spectators-count] %)}])
 
-(comment ;; Example data grid
-  {:jan {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :feb {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :mar {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :apr {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :may {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :jun {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :jul {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :aug {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :sep {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :oct {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :nov {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}
-   :dec {:electricity-mwh 1233 :heat-mwh 2323 :cold-mwh 2323 :water-m3 5533}})
-(defn form-monthly [{:keys [tr data on-change cold?]}]
+   ;; Visitors
+   [lui/text-field
+    {:label     (tr :lipas.visitors/total-count)
+     :type      "number"
+     :spec      :lipas.visitors/total-count
+     :adornment (tr :units/person)
+     :value     (-> data :visitors :total-count)
+     :on-change #(on-change [:visitors :total-count] %)}]
+
+   ;; Operating hours
+   [lui/text-field
+    {:label     (tr :lipas.energy-consumption/operating-hours)
+     :type      "number"
+     :spec      :lipas.energy-consumption/operating-hours
+     :adornment (tr :duration/hour)
+     :value     (-> data :energy-consumption :operating-hours)
+     :on-change #(on-change [:energy-consumption :operating-hours] %)}]])
+
+(defn form-monthly [{:keys [tr data on-change spectators? cold?]}]
   [mui/form-group
-   [mui/table
-    [mui/table-head
-     [mui/table-row
-      [mui/table-cell (tr :time/month)]
-      [mui/table-cell (tr :lipas.energy-consumption/electricity)]
-      [mui/table-cell (tr :lipas.energy-consumption/heat)]
-      (when cold?
-        [mui/table-cell (tr :lipas.energy-consumption/cold)])
-      [mui/table-cell (tr :lipas.energy-consumption/water)]]]
-    (into [mui/table-body]
-          (for [month [:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec]
-                :let  [month-data (get data month)]]
-            [mui/table-row
-             [mui/table-cell (tr (keyword :month month))]
-             [mui/table-cell
+   [:div {:style {:overflow-x "auto"}}
+    [mui/table
 
-              ;; Electricity Mwh
-              [lui/text-field {:type      "number"
-                               :spec      :lipas.energy-consumption/electricity-mwh
-                               :value     (:electricity-mwh month-data)
-                               :on-change #(on-change month :electricity-mwh %)}]]
+     ;; Headers
+     [mui/table-head
+      [mui/table-row
+       [mui/table-cell (tr :time/month)]
+       [mui/table-cell (tr :lipas.energy-consumption/electricity)]
+       [mui/table-cell (tr :lipas.energy-consumption/heat)]
+       (when cold?
+         [mui/table-cell (tr :lipas.energy-consumption/cold)])
+       [mui/table-cell (tr :lipas.energy-consumption/water)]
+       (when spectators?
+         [mui/table-cell (tr :lipas.visitors/spectators-count)])
+       [mui/table-cell (tr :lipas.visitors/total-count)]
+       [mui/table-cell (tr :lipas.energy-consumption/operating-hours)]]]
 
-             ;; Heat Mwh
-             [mui/table-cell
-              [lui/text-field {:type      "number"
-                               :spec      :lipas.energy-consumption/heat-mwh
-                               :value     (:heat-mwh month-data)
-                               :on-change #(on-change month :heat-mwh %)}]]
+     ;; Body
+     (into [mui/table-body]
+           (for [month [:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec]
+                 :let  [energy-kw :energy-consumption-monthly
+                        visitors-kw :visitors-monthly
+                        energy-data (get-in data [:energy-consumption-monthly month])
+                        visitors-data (get-in data [:visitors-monthly month])]]
+             [mui/table-row
+              [mui/table-cell (tr (keyword :month month))]
+              [mui/table-cell
 
-             ;; Cold Mwh
-             (when cold?
-               [mui/table-cell
-                [lui/text-field {:type      "number"
-                                 :spec      :lipas.energy-consumption/cold-mwh
-                                 :value     (:cold-mwh month-data)
-                                 :on-change #(on-change month :cold-mwh %)}]])
+               ;; Electricity Mwh
+               [lui/text-field
+                {:type      "number"
+                 :spec      :lipas.energy-consumption/electricity-mwh
+                 :value     (:electricity-mwh energy-data)
+                 :on-change #(on-change [energy-kw month :electricity-mwh] %)}]]
 
-             ;; Water m³
-             [mui/table-cell
-              [lui/text-field {:type      "number"
-                               :spec      :lipas.energy-consumption/water-m3
-                               :value     (:water-m3 month-data)
-                               :on-change #(on-change month :water-m3 %)}]]]))]])
+              ;; Heat Mwh
+              [mui/table-cell
+               [lui/text-field
+                {:type      "number"
+                 :spec      :lipas.energy-consumption/heat-mwh
+                 :value     (:heat-mwh energy-data)
+                 :on-change #(on-change [energy-kw month :heat-mwh] %)}]]
+
+              ;; Cold Mwh
+              (when cold?
+                [mui/table-cell
+                 [lui/text-field
+                  {:type      "number"
+                   :spec      :lipas.energy-consumption/cold-mwh
+                   :value     (:cold-mwh energy-data)
+                   :on-change #(on-change [energy-kw month :cold-mwh] %)}]])
+
+              ;; Water m³
+              [mui/table-cell
+               [lui/text-field
+                {:type      "number"
+                 :spec      :lipas.energy-consumption/water-m3
+                 :value     (:water-m3 energy-data)
+                 :on-change #(on-change [energy-kw month :water-m3] %)}]]
+
+              ;; Spectators
+              (when spectators?
+                [mui/table-cell
+                 [lui/text-field
+                  {:type      "number"
+                   :spec      :lipas.visitors/spectators-count
+                   :value     (:spectators-count visitors-data)
+                   :on-change #(on-change [visitors-kw month :spectators-count] %)}]])
+
+              ;; Visitors
+              [mui/table-cell
+               [lui/text-field
+                {:type      "number"
+                 :spec      :lipas.visitors/total-count
+                 :value     (:total-count visitors-data)
+                 :on-change #(on-change [visitors-kw month :total-count] %)}]]
+
+              ;; Operating hours
+              [mui/table-cell
+               [lui/text-field
+                {:type      "number"
+                 :spec      :lipas.energy-consumption/operating-hours
+                 :value     (:operating-hours energy-data)
+                 :on-change #(on-change [energy-kw month :operating-hours] %)}]]]))]]])
 
 (defn make-headers [tr cold?]
   (filter some?
@@ -125,25 +174,31 @@
            (when cold? [:cold-mwh (tr :lipas.energy-consumption/cold)])
            [:water-m3 (tr :lipas.energy-consumption/water)]]))
 
-(defn table [{:keys [tr items read-only? cold?]}]
-  [lui/form-table {:headers    (make-headers tr cold?)
-                   :items      items
-                   :key-fn     :year
-                   :sort-fn    :year
-                   :sort-asc?  true
-                   :read-only? read-only?}])
-
+(defn table [{:keys [tr items read-only? cold? on-select]}]
+  [lui/table {:headers          (make-headers tr cold?)
+              :items            items
+              :key-fn           :year
+              :sort-fn          :year
+              :sort-asc?        true
+              :on-select        on-select
+              :hide-action-btn? true
+              :read-only?       read-only?}])
 
 (defn set-field
-  [lipas-id & args]
-  (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
+  [lipas-id path value]
+  (==> [::events/edit-field lipas-id path value]))
 
-(defn energy-form [{:keys [tr year draft? cold? visitors? monthly?]}]
+(defn tab-container [& children]
+  (into [:div {:style {:margin-top "1em"
+                       :margin-bottom "1em"}}]
+        children))
+
+(defn energy-form [{:keys [tr year draft? cold? spectators?]}]
   (let [data           (<== [::subs/energy-consumption-rev])
         lipas-id       (:lipas-id data)
         energy-history (<== [::subs/energy-consumption-history])
-        edits-valid?   (<== [:lipas.ui.sports-sites.subs/edits-valid? lipas-id])
-
+        edits-valid?   (<== [::subs/edits-valid? lipas-id])
+        ;; monthly-data?  (<== [::subs/monthly-data-exists?])
         set-field      (partial set-field lipas-id)]
 
     (r/with-let [monthly-energy? (r/atom false)]
@@ -152,50 +207,54 @@
 
        ;; Energy consumption
        [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)
-                       :xs 12 :md 12 :lg 12}
+                       :xs    12 :md 12 :lg 12}
 
-        [mui/typography {:variant "subheading"
-                         :style   {:margin-bottom "1em"}}
-         (tr :lipas.energy-consumption/yearly)]
-        [form
-         {:tr        tr
-          :disabled? @monthly-energy?
-          :cold?     cold?
-          :data      (:energy-consumption data)
-          :on-change (partial set-field :energy-consumption)}]
+        ;; Contains other buildings?
 
-        (when monthly?
-          [lui/checkbox
-           {:label     (tr :lipas.energy-consumption/monthly?)
-            :checked   @monthly-energy?
-            :on-change #(swap! monthly-energy? not)}])
+        [mui/tabs {:value     (int @monthly-energy?)
+                   :on-change #(swap! monthly-energy? not)}
+         [mui/tab {:label (tr :lipas.energy-consumption/yearly)}]
+         [mui/tab {:label (tr :lipas.energy-consumption/monthly)}]]
 
-        (when @monthly-energy?
-          [form-monthly
-           {:tr        tr
-            :cold?     cold?
-            :data      (:energy-consumption-monthly data)
-            :on-change #(==> [::events/set-monthly-energy-consumption
-                             lipas-id %1 %2 %3])}])
+        (case @monthly-energy?
+
+          false
+          [tab-container
+           [lui/checkbox
+            {:style     {:margin-bottom "1em"}
+             :label     (tr :lipas.energy-consumption/contains-other-buildings?)
+             :value     (-> data :energy-consumption :contains-other-buildings?)
+             :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
+
+           [form
+            {:tr          tr
+             :disabled?   @monthly-energy?
+             :cold?       cold?
+             :spectators? spectators?
+             :data        (select-keys data [:energy-consumption
+                                             :visitors])
+             :on-change   set-field}]]
+
+          true
+          [tab-container
+           [lui/checkbox
+            {:label     (tr :lipas.energy-consumption/contains-other-buildings?)
+             :value     (-> data :energy-consumption :contains-other-buildings?)
+             :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
+
+           [form-monthly
+            {:tr          tr
+             :cold?       cold?
+             :spectators? spectators?
+             :data        (select-keys data [:energy-consumption-monthly
+                                             :visitors-monthly])
+             :on-change   #(==> [::events/set-monthly-value lipas-id %1 %2])}]])
 
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
          [table {:tr         tr
-                        :cold?      true
-                        :read-only? true
+                 :cold?      true
+                 :read-only? true
                  :items      energy-history}]]]
-
-       (when visitors?
-         [lui/form-card
-          {:title (tr :lipas.swimming-pool.visitors/headline-year year)
-           :xs 12 :md 12 :lg 12}
-          [mui/form-group
-           [lui/text-field
-            {:label     (tr :lipas.swimming-pool.visitors/total-count)
-             :type      "number"
-             :value     (-> data :visitors :total-count)
-             :spec      :lipas.swimming-pool.visitors/total-count
-             :adornment (tr :units/person)
-             :on-change #(set-field :visitors :total-count %)}]]])
 
        ;; Actions
        [lui/form-card {:xs 12 :md 12 :lg 12}
@@ -210,7 +269,7 @@
            (tr :actions/save))]]])))
 
 (defn energy-consumption-form [{:keys [tr editable-sites draftable-sites
-                                       visitors? cold?  monthly?]}]
+                                       spectators? cold?]}]
   (let [logged-in? (<== [:lipas.ui.user.subs/logged-in?])
         site       (<== [::subs/energy-consumption-site])
         years      (<== [::subs/energy-consumption-years-list])
@@ -259,20 +318,19 @@
                          :xs    12 :md 12 :lg 12}
           [mui/form-group
            [lui/select
-            {:label         (tr :actions/select-year)
-             :value         year
-             :items         years
-             :sort-cmp      utils/reverse-cmp
-             :on-change     #(==> [::events/select-energy-consumption-year %])}]]])
+            {:label     (tr :actions/select-year)
+             :value     year
+             :items     years
+             :sort-cmp  utils/reverse-cmp
+             :on-change #(==> [::events/select-energy-consumption-year %])}]]])
 
        (when (and sites site year)
          [energy-form
-          {:tr        tr
-           :year      year
-           :draft?    draft?
-           :visitors? visitors?
-           :monthly?  monthly?
-           :cold?     cold?}])])))
+          {:tr          tr
+           :year        year
+           :draft?      draft?
+           :spectators? spectators?
+           :cold?       cold?}])])))
 
 (defn energy-stats [{:keys [tr year stats link]}]
   (let [energy-type (<== [::subs/chart-energy-type])]
@@ -342,3 +400,50 @@
                    [mui/list-item-text {:variant :body2
                                         :color   :default}
                     (:name m)]]))]]]]]]))
+
+(defn localize-months [tr]
+  (let [months [:jan :feb :mar :apr :may :jun
+                :jul :aug :sep :oct :nov :dec]]
+    (reduce (fn [m k] (assoc m k (tr (keyword :month k))))
+            {}
+            months)))
+
+(defn monthly-chart [{:keys [tr lipas-id year]}]
+  (let [data   (<== [::subs/monthly-chart-data lipas-id year])
+        labels (merge
+                {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
+                 :heat-mwh        (tr :lipas.energy-stats/heat-mwh)
+                 :cold-mwh        (tr :lipas.energy-stats/cold-mwh)
+                 :water-m3        (tr :lipas.energy-stats/water-m3)}
+                (localize-months tr))]
+    [mui/paper {:style     {:margin-top "1em"}
+                :elevation 0}
+     [mui/typography {:variant :title
+                      :color   :secondary}
+      (tr :lipas.energy-consumption/monthly-readings-in-year year)]
+     (if (not-empty data)
+       [:div {:style {:padding-top "1em"}}
+        [charts/monthly-chart
+         {:data   data
+          :labels labels}]]
+       [mui/typography
+        (tr :lipas.energy-consumption/not-reported-monthly)])]))
+
+(defn monthly-visitors-chart [{:keys [tr lipas-id year]}]
+  (let [data   (<== [::subs/monthly-visitors-chart-data lipas-id year])
+        labels (merge
+                {:total-count      (tr :lipas.visitors/total-count)
+                 :spectators-count (tr :lipas.visitors/spectators-count)}
+                (localize-months tr))]
+    [mui/paper {:style     {:margin-top "1em"}
+                :elevation 0}
+     [mui/typography {:variant :title
+                      :color   :secondary}
+      (tr :lipas.visitors/monthly-visitors-in-year year)]
+     (if (not-empty data)
+       [:div {:style {:padding-top "1em"}}
+        [charts/monthly-chart
+         {:data   data
+          :labels labels}]]
+       [mui/typography
+        (tr :lipas.visitors/not-reported-monthly)])]))

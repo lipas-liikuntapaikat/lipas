@@ -19,7 +19,7 @@
 
    :sport
    {:headline          "Sports sites"
-    :description "LIPAS is the national database of sport facilities
+    :description       "LIPAS is the national database of sport facilities
     and their conditions in Finland."
     :legacy-disclaimer "Sports sites are not here yet but they can be
     accessed through existing LIPAS by clicking the link below."
@@ -40,7 +40,8 @@
     :renovation-years  "Renovation years"
     :phone-number      "Phone number"
     :www               "Web-site"
-    :email-public      "Email (public)"}
+    :email-public      "Email (public)"
+    :comment           "More information"}
 
    :type
    {:type-code "Type code"
@@ -56,7 +57,7 @@
     :neighborhood  "Neighborhood"}
 
    :reports
-   {:headline "Reports"
+   {:headline "Contacts report"
     :contacts "Contacts"}
 
    :ice
@@ -69,13 +70,13 @@
     :updating-basic-data  "Updating general information"
 
     :size-category "Size category"
-    :comparison    "Compare"
+    :comparison    "Compare venues"
     :small         "Small competition hall > 500 persons"
     :competition   "Competition hall < 3000 persons"
     :large         "Grand hall > 3000 persons"}
 
    :ice-rinks
-   {:headline "Stadiums"}
+   {:headline "Venue details"}
 
    :ice-energy
    {:headline       "Energy Info"
@@ -87,8 +88,8 @@
    {:headline "Compare"}
 
    :ice-form
-   {:headline       "Report consumption"
-    :headline-short "Report consumption"
+   {:headline       "Report readings"
+    :headline-short "Report readings"
     :select-rink    "Select stadium"}
 
    :lipas.energy-consumption
@@ -98,11 +99,16 @@
     :heat                      "Heat (acquired) MWh"
     :cold                      "Cold energy (acquired) MWh"
     :water                     "Water m³"
-    :yearly                    "Yearly energy consumption"
+    :yearly                    "Yearly"
+    :monthly                   "Monthly"
     :monthly?                  "I want to report monthly energy consumption"
     :reported-for-year         "Energy consumption reported for {1}"
-    :report                    "Report consumption"
-    :contains-other-buildings? "Readings contain also other buildings or spaces"}
+    :report                    "Report readings"
+    :contains-other-buildings? "Readings contain also other buildings or spaces"
+    :operating-hours           "Operating hours"
+    :monthly-readings-in-year  "Monthly energy consumption in {1}"
+    :not-reported              "Energy consumption not reported"
+    :not-reported-monthly      "No monthly data available"}
 
    :lipas.energy-stats
    {:headline            "Energy consumption in {1}"
@@ -110,16 +116,19 @@
     :energy-mwh          "Energy MWh"
     :electricity-mwh     "Electricity MWh"
     :heat-mwh            "Heat MWh"
+    :cold-mwh            "Cold MWh"
     :water-m3            "Water m³"
     :hall-missing?       "Is your data missing from the diagram?"
     :report              "Report consumption"
     :energy-reported-for "Electricity, heat and water consumption reported for {1}"}
 
-
-   :lipas.swimming-pool.visitors
-   {:headline      "Visitors"
-    :headline-year "Visitors in {1}"
-    :total-count   "Total count"}
+   :lipas.visitors
+   {:headline                 "Visitors"
+    :spectators-count         "Spectators count"
+    :total-count              "Visitors count"
+    :monthly-visitors-in-year "Monthly visitors in {1}"
+    :not-reported             "Visitors not reported"
+    :not-reported-monthly     "No monthly data"}
 
    :lipas.swimming-pool.conditions
    {:headline          "Open hours"
@@ -157,8 +166,10 @@
    :swim-energy
    {:headline       "Energy info"
     :headline-short "Info"
-    :description    "Up-to-date information can be found from UKTY  web-site."
-    :ukty-link      "Browse to UKTY web-site"}
+    :description    "Up-to-date information can be found from UKTY and
+    SUH web-sites."
+    :ukty-link      "Browse to UKTY web-site"
+    :suh-link       "Browse to SUH web-site"}
 
    :open-data
    {:headline "Open Data"
@@ -337,13 +348,16 @@
     :platforms-5m-count             "5m platforms count"
     :platforms-7.5m-count           "7.5m platforms count"
     :platforms-10m-count            "10m platforms count"
-    :hydro-massage-spots-count      "Hydro massage spots count"
+    :hydro-massage-spots-count      "Other hydro massage spots count"
     :hydro-neck-massage-spots-count "Neck hydro massage spots count"
     :kiosk?                         "Kiosk / cafeteria"
+    :gym?                           "Gym"
     :showers-men-count              "Mens showers count"
     :showers-women-count            "Womens showers count"
+    :showers-unisex-count           "Unisex showers count"
     :lockers-men-count              "Mens lockers count"
-    :lockers-women-count            "Womens lockers count"}
+    :lockers-women-count            "Womens lockers count"
+    :lockers-unisex-count           "Unisex lockers count"}
 
    :dimensions
    {:volume-m3       "Volume m³"
@@ -376,7 +390,7 @@
 
    :month
    {:jan "January"
-    :feb "Februaru"
+    :feb "February"
     :mar "March"
     :apr "April"
     :may "May"
@@ -427,7 +441,8 @@
     :open-main-menu    "Open main menu"
     :submit            "Submit"
     :download          "Download"
-    :browse-to-portal  "Enter portal"}
+    :browse-to-portal  "Enter portal"
+    :back-to-listing   "Back to list view"}
 
    :confirm
    {:headline              "Confirmation"

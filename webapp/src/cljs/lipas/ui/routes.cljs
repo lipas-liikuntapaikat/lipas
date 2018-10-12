@@ -110,6 +110,10 @@
     (==> [:lipas.ui.events/set-active-panel :swim-panel])
     (==> [:lipas.ui.swimming-pools.events/set-active-tab 4]))
 
+  (defroute "/uimahalliportaali/raportit" []
+    (==> [:lipas.ui.events/set-active-panel :swim-panel])
+    (==> [:lipas.ui.swimming-pools.events/set-active-tab 5]))
+
    ;;; User ;;;
 
   (defroute "/kirjaudu" []

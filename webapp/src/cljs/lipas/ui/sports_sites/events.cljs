@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.events
-  (:require [ajax.core :as ajax]
+  (:require cljsjs.filesaverjs
+            [ajax.core :as ajax]
             [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
@@ -125,3 +126,15 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::get-success]
      :on-failure      [::get-failure]}}))
+
+(re-frame/reg-event-fx
+ ::download-contacts-report
+ (fn [{:keys [db]} [_ data headers]]
+   (let [tr       (:translator db)
+         filename (str (tr :reports/contacts) ".csv")
+         mime     (str "text/plain;charset=" (.-characterSet js/document))
+         blob     (new js/Blob
+                       [(utils/->csv data headers)]
+                       (clj->js {:type mime}))
+         _        (js/saveAs blob filename)]
+     {})))

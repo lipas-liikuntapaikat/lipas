@@ -61,11 +61,10 @@
     "group_add"]
    label])
 
-(defn edit-button [{:keys [on-click active? tooltip] :as props}]
+(defn edit-button [{:keys [on-click tooltip] :as props}]
   (let [btn-props (-> props
                       (dissoc :active?)
-                      (merge {:on-click on-click
-                              :color    (if active? "secondary" "primary")}))]
+                      (merge {:on-click on-click}))]
     [mui/tooltip {:title     (or tooltip "")
                   :placement "top"}
      [mui/button btn-props
@@ -76,8 +75,7 @@
                 :placement "top"}
    [:span
     [mui/button (merge (dissoc props :disabled-tooltip)
-                       {:variant  "contained"
-                        :disabled disabled
+                       {:disabled disabled
                         :on-click on-click
                         :color    "secondary"})
      tooltip
@@ -97,8 +95,7 @@
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title     (or tooltip "")
                 :placement "top"}
-   [mui/button (merge props {:on-click on-click
-                             :color    "primary"})
+   [mui/button (merge props {:on-click on-click})
     [mui/icon "undo"]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
@@ -129,40 +126,6 @@
                         :color :error}
         confirm-tooltip])]))
 
-;; Returns actually a list of components.
-;; TODO think something more intuitive here.
-(defn edit-actions-list [{:keys [editing? valid? logged-in?
-                                 user-can-publish? on-discard
-                                 on-save-draft save-draft-tooltip
-                                 discard-tooltip edit-tooltip
-                                 publish-tooltip on-edit-start
-                                 invalid-message on-edit-end
-                                 on-publish]}]
-  [(when (and editing? user-can-publish?)
-     [save-button
-      {:on-click         on-publish
-       :disabled         (not valid?)
-       :disabled-tooltip invalid-message
-       :tooltip          publish-tooltip}])
-   (when (and editing? (not user-can-publish?))
-     [save-button
-      {:on-click         on-save-draft
-       :disabled         (not valid?)
-       :disabled-tooltip invalid-message
-       :tooltip          save-draft-tooltip}])
-   (when editing?
-     [discard-button
-      {:on-click on-discard
-       :tooltip  discard-tooltip}])
-   (when (and logged-in? (not editing?))
-     [edit-button
-      {:disabled (and editing? (not valid?))
-       :active?  editing?
-       :on-click #(if editing?
-                    (on-edit-end %)
-                    (on-edit-start %))
-       :tooltip  edit-tooltip}])])
-
 (defn checkbox [{:keys [label value on-change disabled style]}]
   [mui/form-control-label
    {:label   label
@@ -189,15 +152,19 @@
                           :or   {empty  ""
                                  links? true}}]
   (cond
-    (link? v) (if links? [:a {:href v} (truncate v)] v)
-    (coll? v) (if (empty? v) empty (string/join ", " v))
-    (true? v) CHECK_MARK
-    (nil? v)  empty
-    :else     v))
+    (link? v)  (if links? [:a {:href v} (truncate v)] v)
+    (coll? v)  (if (empty? v) empty (string/join ", " v))
+    (true? v)  CHECK_MARK
+    (false? v) empty
+    (nil? v)   empty
+    :else      v))
 
-(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp]
-              :or   {sort-cmp  compare
-                     sort-asc? false}}]
+(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
+                     action-icon hide-action-btn?]
+              :or   {sort-cmp         compare
+                     sort-asc?        false
+                     action-icon      "more_horiz"
+                     hide-action-btn? false}}]
   (r/with-let [key-fn*   (or key-fn (constantly nil))
                sort-fn*  (r/atom sort-fn)
                sort-asc? (r/atom sort-asc?)]
@@ -210,7 +177,7 @@
 
         ;; Head
         [mui/table-head
-         (into [mui/table-row (when on-select
+         (into [mui/table-row (when (and on-select (not hide-action-btn?))
                                 [mui/table-cell ""])]
                (for [[key header] headers]
                  [mui/table-cell {:on-click #(reset! sort-fn* key)}
@@ -234,10 +201,10 @@
            [mui/table-row {:key      id
                            :on-click (when on-select #(on-select item))
                            :hover    true}
-            (when on-select
+            (when (and on-select (not hide-action-btn?))
               [mui/table-cell {:padding "checkbox"}
                [mui/icon-button {:on-click #(on-select item)}
-                [mui/icon {:color "primary"} "more_horiz"]]])
+                [mui/icon {:color "primary"} action-icon]]])
 
             ;; Cells
             (for [[k _] headers
@@ -249,7 +216,7 @@
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
                           read-only? on-add on-edit on-delete]
-                   :as props}]
+                   :as   props}]
   (if read-only?
 
     ;; Normal read-only table
@@ -293,7 +260,8 @@
                   (display-value v)])]))]]]]
 
        ;; Editing tools
-       [mui/grid {:item true :xs 10}
+       [mui/grid {:item       true :xs 10
+                  :class-name :no-print}
 
         ;; Edit button
         (when @selected-item
@@ -312,8 +280,9 @@
                                 (reset! selected-item nil))}])]
 
        ;; Add button
-       [mui/grid {:item  true :xs 2
-                  :style {:text-align "right"}}
+       [mui/grid {:item       true :xs 2
+                  :style      {:text-align "right"}
+                  :class-name :no-print}
         [mui/tooltip {:title     (or add-tooltip "")
                       :placement "left"}
          [mui/button {:style    {:margin-top "1em"}
@@ -559,164 +528,6 @@
 ;; (def form table-form)
 (def form form-trad)
 
-(defn sports-site-form [{:keys [tr display-data edit-data types size-categories
-                                admins owners on-change read-only?]}]
-  (let [locale (tr)]
-    [form {:read-only? read-only?}
-
-     ;; Name
-     {:label      (tr :lipas.sports-site/name)
-      :value      (-> display-data :name)
-      :form-field [text-field
-                   {:spec      :lipas.sports-site/name
-                    :required  true
-                    :value     (-> edit-data :name)
-                    :on-change #(on-change :name %)}]}
-
-     ;; Marketing name
-     {:label      (tr :lipas.sports-site/marketing-name)
-      :value      (-> display-data :marketing-name)
-      :form-field [text-field
-                   {:spec      :lipas.sports-site/marketing-name
-                    :value     (-> edit-data :marketing-name)
-                    :on-change #(on-change :marketing-name %)}]}
-
-     ;; Type
-     {:label      (tr :type/name)
-      :value      (-> display-data :type :name)
-      :form-field [select
-                   {:value     (-> edit-data :type :type-code)
-                    :required  true
-                    :items     types
-                    :label-fn  (comp locale :name)
-                    :value-fn  :type-code
-                    :on-change #(on-change :type :type-code %)}]}
-
-     ;; Ice-stadiums get special treatment
-     (when (or (= 2520 (-> edit-data :type :type-code))
-               (and read-only?
-                    (= 2520 (-> display-data :type :type-code))))
-       {:label      (tr :ice/size-category)
-        :value      (-> display-data :type :size-category)
-        :form-field [select
-                     {:value     (-> edit-data :type :size-category)
-                      :items     size-categories
-                      :value-fn  first
-                      :label-fn  (comp locale second)
-                      :on-change #(on-change :type :size-category %)}]})
-
-     ;; Owner
-     {:label      (tr :lipas.sports-site/owner)
-      :value      (-> display-data :owner)
-      :form-field [select
-                   {:value     (-> edit-data :owner)
-                    :required  true
-                    :items     owners
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :owner %)}]}
-
-     ;; Admin
-     {:label      (tr :lipas.sports-site/admin)
-      :value      (-> display-data :admin)
-      :form-field [select
-                   {:value     (-> edit-data :admin)
-                    :required  true
-                    :items     admins
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :admin %)}]}
-
-     ;; Construction year
-     {:label (tr :lipas.sports-site/construction-year)
-      :value (-> display-data :construction-year)
-      :form-field [year-selector
-                   {:value     (-> edit-data :construction-year)
-                    :on-change #(on-change :construction-year %)}]}
-
-     ;; Renovation years
-     {:label (tr :lipas.sports-site/renovation-years)
-      :value (-> display-data :renovation-years)
-      :form-field [year-selector
-                   {:multi?    true
-                    :value     (-> edit-data :renovation-years)
-                    :on-change #(on-change :renovation-years %)}]}
-
-     ;; Phone number
-     {:label      (tr :lipas.sports-site/phone-number)
-      :value      (-> display-data :phone-number)
-      :form-field [text-field
-                   {:value     (-> edit-data :phone-number)
-                    :spec      :lipas.sports-site/phone-number
-                    :on-change #(on-change :phone-number %)}]}
-
-     ;; WWW
-     {:label      (tr :lipas.sports-site/www)
-      :value      (-> display-data :www)
-      :form-field [text-field
-                   {:value     (-> edit-data :www)
-                    :spec      :lipas.sports-site/www
-                    :on-change #(on-change :www %)}]}
-
-     ;; Email
-     {:label      (tr :lipas.sports-site/email-public)
-      :value      (-> display-data :email)
-      :form-field [text-field
-                   {:value     (-> edit-data :email)
-                    :spec      :lipas.sports-site/email
-                    :on-change #(on-change :email %)}]}]))
-
-(defn location-form [{:keys [tr edit-data display-data cities on-change
-                             read-only?]}]
-  (let [locale (tr)]
-    [form
-     {:read-only? read-only?}
-
-     ;; Address
-     {:label      (tr :lipas.location/address)
-      :value      (-> display-data :address)
-      :form-field [text-field
-                   {:value     (-> edit-data :address)
-                    :spec      :lipas.location/address
-                    :required  true
-                    :on-change #(on-change :address %)}]}
-
-     ;; Postal code
-     { :label     (tr :lipas.location/postal-code)
-      :value      (-> display-data :postal-code)
-      :form-field [text-field
-                   {:value     (-> edit-data :postal-code)
-                    :required  true
-                    :spec      :lipas.location/postal-code
-                    :on-change #(on-change :postal-code %)}]}
-
-     ;; Postal office
-     {:label      (tr :lipas.location/postal-office)
-      :value      (-> display-data :postal-office)
-      :form-field [text-field
-                   { :value    (-> edit-data :postal-office)
-                    :spec      :lipas.location/postal-office
-                    :on-change #(on-change :postal-office %)}]}
-
-     ;; City
-     {:label      (tr :lipas.location/city)
-      :value      (-> display-data :city :name)
-      :form-field [select
-                   {:value     (-> edit-data :city :city-code)
-                    :required  true
-                    :items     cities
-                    :label-fn  (comp locale :name)
-                    :value-fn  :city-code
-                    :on-change #(on-change :city :city-code %)}]}
-
-     ;; Neighborhood
-     {:label      (tr :lipas.location/neighborhood)
-      :value      (-> display-data :city :neighborhood)
-      :form-field [text-field
-                   {:value    (-> edit-data :city :neighborhood)
-                    :spec      :lipas.location.city/neighborhood
-                    :on-change #(on-change :city :neighborhood %)}]}]))
-
 (defn expansion-panel [{:keys [label]} & children]
   [mui/expansion-panel {:style {:margin-top "1em"}}
    [mui/expansion-panel-summary {:expand-icon (r/as-element
@@ -762,6 +573,100 @@
       bottom-actions)
      [mui/button {:on-click on-close}
       close-label])]])
+
+(defn floating-container [{:keys [top right bottom left background-color]
+                           :or   [background-color mui/gray2]}
+                          & children]
+  (into
+   [:div.no-print {:style
+                   {:position         :fixed
+                    :z-index          999
+                    :background-color background-color
+                    :top              top
+                    :right            right
+                    :bottom           bottom
+                    :left             left}}]
+   children))
+
+;; Returns actually a list of components.
+;; TODO think something more intuitive here.
+(defn edit-actions-list [{:keys [editing? valid? logged-in?
+                                 user-can-publish? on-discard
+                                 on-save-draft save-draft-tooltip
+                                 discard-tooltip edit-tooltip
+                                 publish-tooltip on-edit-start
+                                 invalid-message on-edit-end
+                                 on-publish]}]
+  [(when (and editing? user-can-publish?)
+     [save-button
+      {:variant          "extendedFab"
+       :on-click         on-publish
+       :disabled         (not valid?)
+       :disabled-tooltip invalid-message
+       :tooltip          publish-tooltip}])
+   (when (and editing? (not user-can-publish?))
+     [save-button
+      {:variant          "extendedFab"
+       :on-click         on-save-draft
+       :disabled         (not valid?)
+       :disabled-tooltip invalid-message
+       :tooltip          save-draft-tooltip}])
+   (when editing?
+     [discard-button
+      {:variant  :fab
+       :on-click on-discard
+       :tooltip  discard-tooltip}])
+   (when (and logged-in? (not editing?))
+     [edit-button
+      {:variant  "fab"
+       :color    "secondary"
+       :disabled (and editing? (not valid?))
+       :active?  editing?
+       :on-click #(if editing?
+                    (on-edit-end %)
+                    (on-edit-start %))
+       :tooltip  edit-tooltip}])])
+
+(defn site-view [{:keys [title on-close close-label bottom-actions]}
+                 & contents]
+  [mui/grid {:container true
+             :style     {:background-color mui/gray1}}
+   [mui/grid {:item  true :xs 12
+              :style {:padding "8px 8px 0px 8px"}}
+    [mui/paper {:style {:background-color "#fff"}}
+
+     ;; Site name
+     [mui/tool-bar {:disable-gutters true}
+      [mui/tooltip {:title (or close-label "")}
+       [mui/icon-button
+        {:on-click on-close
+         :style    {:margin-left  "0.5em"
+                    :margin-right "0.4em"}}
+
+        ;; "back to listing" button
+        [mui/icon {:color :primary}
+         "arrow_back_ios"]]]
+      [mui/typography {:style   {:color mui/primary}
+                       :variant :display1}
+       title]]]]
+
+   ;; Contents
+   (into
+    [mui/grid {:item  true :xs 12
+               :style {:padding 8}}]
+    contents)
+
+   ;; Floating actions
+   (into
+    [floating-container {:right 16 :bottom 16 :background-color "transparent"}]
+    (interpose [:span {:style {:margin-left  "0.25em"
+                               :margin-right "0.25em"}}]
+               bottom-actions))
+
+   ;; Small footer on top of which floating container may scroll
+   [mui/grid {:item  true :xs 12
+              :style {:height           "5em"
+                      :background-color mui/gray1}}]])
 
 (defn confirmation-dialog [{:keys [title message on-cancel on-decline
                                    decline-label cancel-label
