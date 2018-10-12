@@ -113,6 +113,10 @@
      :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
      :compiler     {:main                 lipas.ui.core
                     :npm-deps             false
+                    :infer-externs        true
+                    :foreign-libs         [{:file           "dist/index.bundle.js"
+                                            :provides       ["ol"]
+                                            :global-exports {ol ol}}]
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"
                     :asset-path           "js/compiled/out"
@@ -127,6 +131,10 @@
      :source-paths ["src/cljs" "src/cljc"]
      :compiler     {:main            lipas.ui.core
                     :npm-deps        false
+                    :infer-externs   true
+                    :foreign-libs    [{:file           "dist/index.bundle.js"
+                                       :provides       ["ol"]
+                                       :global-exports {ol ol}}]
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}

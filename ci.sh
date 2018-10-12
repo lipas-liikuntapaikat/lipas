@@ -15,7 +15,13 @@ docker-compose run backend-build
 
 ### Frontend ###
 
-printf "\n *** Compiling frontend *** \n\n"
+printf "\n *** Fetching npm dependencies *** \n\n"
+docker-compose run frontend-npm-deps
+
+printf "\n *** Bundling npm dependencies *** \n\n"
+docker-compose run frontend-npm-bundle
+
+printf "\n *** Compiling cljs frontend *** \n\n"
 docker-compose run frontend-build
 
 ### Integration tests ###

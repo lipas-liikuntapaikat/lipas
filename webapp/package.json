@@ -1,0 +1,22 @@
+{
+  "name": "lipas-webapp",
+  "version": "1.0.0",
+  "description": "Webapp is written in Clojure(script).",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "University of Jyväskylä, Valtteri Harmainen",
+  "license": "ISC",
+  "dependencies": {
+    "ol": "^5.2.0",
+    "webpack": "^4.20.2"
+  },
+  "devDependencies": {
+    "webpack-cli": "^3.1.2"
+  }
+}
