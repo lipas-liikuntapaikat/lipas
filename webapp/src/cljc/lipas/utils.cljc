@@ -15,6 +15,9 @@
 (def this-year #?(:cljs (.getFullYear (js/Date.))
                   :clj  (.getYear (java.time.LocalDate/now))))
 
+(defn this-year? [x]
+  (= (str x) (str this-year)))
+
 (defn timestamp
   "Returns current timestamp in \"2018-07-11T09:38:06.370Z\" format.
   Always UTC."
