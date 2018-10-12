@@ -32,8 +32,6 @@
    :maastokartta (->wmts-url "mml_maastokartta")
    :ortokuva     (->wmts-url "mml_ortokuva")})
 
-(def mml-resolutions
-  #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (js/proj4.defs "EPSG:3067" (str "+proj=utm"
                                 "+zone=35"
@@ -42,9 +40,12 @@
                                 "+units=m"
                                 "+no_defs"))
 
-(def mml-matrix-ids (clj->js (range (count mml-resolutions))))
-
 (js/ol.proj.proj4.register proj4)
+
+(def mml-resolutions
+  #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
+
+(def mml-matrix-ids (clj->js (range (count mml-resolutions))))
 
 (def epsg3067 (js/ol.proj.get "EPSG:3067"))
 (def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
@@ -66,7 +67,7 @@
   (.writeFeaturesObject geoJSON #js[ol-feature]))
 
 (defn ->wmts [{:keys [url layer-name visible?]
-               :or   [visible? false]}]
+               :or   {visible? false}}]
   (js/ol.layer.Tile.
    #js{:visible visible?
        :source
@@ -125,7 +126,8 @@
                                 :resolutions mml-resolutions
                                 :units       "m"})
 
-        overlay (js/ol.Overlay. #js{:element
+        overlay (js/ol.Overlay. #js{:offset #js[-15 0]
+                                    :element
                                     (js/document.getElementById "popup-anchor")})
 
         opts #js {:target   "map"
