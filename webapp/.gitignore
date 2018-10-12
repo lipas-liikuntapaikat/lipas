@@ -6,4 +6,6 @@
 /.cljs_rhino_repl
 /.lein-env
 /.lein-failures
+/node_modules
+/dist
 out

@@ -120,6 +120,22 @@ services:
     links:
       - postgres
 
+  node-base:
+    image: node:10-alpine
+    working_dir: /usr/src/app
+    volumes:
+      - './webapp/:/usr/src/app:z'
+
+  frontend-npm-deps:
+    extends:
+      service: node-base
+    command: npm install --quiet
+
+  frontend-npm-bundle:
+    extends:
+      service: node-base
+    command: npx webpack
+
   frontend-build:
     extends:
       service: backend-base
