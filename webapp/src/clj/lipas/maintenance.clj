@@ -201,7 +201,9 @@
                                               :energy-consumption-monthly
                                               :visitors
                                               :visitors-monthly)))
-                          event-date (str year "-12-31T23:59:59.999Z")
+                          event-date (if (utils/this-year? year)
+                                       (str year "-01-01T00:00:00.000Z")
+                                       (str year "-12-31T23:59:59.999Z"))
                           new-rev (assoc rev :event-date event-date)]]
       (->> entries
            (append-monthly-entries year new-rev)
