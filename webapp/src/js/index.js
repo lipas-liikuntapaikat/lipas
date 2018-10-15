@@ -1,2 +1,2 @@
-import * as ol from "ol";
-window.ol = ol;
+//import * as ol from "ol";
+//window.ol = ol;
