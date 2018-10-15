@@ -1,5 +1,6 @@
 (ns lipas.ui.map.map
   (:require proj4
+            "ol"
             [goog.object :as gobj]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
@@ -40,24 +41,24 @@
                                 "+units=m"
                                 "+no_defs"))
 
-(js/ol.proj.proj4.register proj4)
+(ol.proj.proj4.register proj4)
 
 (def mml-resolutions
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (def mml-matrix-ids (clj->js (range (count mml-resolutions))))
 
-(def epsg3067 (js/ol.proj.get "EPSG:3067"))
+(def epsg3067 (ol.proj.get "EPSG:3067"))
 (def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
 
 (.setExtent epsg3067 epsg3067-extent)
 
-(def epsg3067-top-left (js/ol.extent.getTopLeft (.getExtent epsg3067)))
+(def epsg3067-top-left (ol.extent.getTopLeft (.getExtent epsg3067)))
 
 (def jyvaskyla #js[435047 6901408])
-(def center-wgs84 (js/ol.proj.fromLonLat #js[24 65]))
+(def center-wgs84 (ol.proj.fromLonLat #js[24 65]))
 
-(def geoJSON (js/ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
+(def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                         :featureProjection "EPSG:3067"}))
 
 (defn ->ol-features [geoJSON-features]
@@ -68,15 +69,15 @@
 
 (defn ->wmts [{:keys [url layer-name visible?]
                :or   {visible? false}}]
-  (js/ol.layer.Tile.
+  (ol.layer.Tile.
    #js{:visible visible?
        :source
-       (js/ol.source.WMTS.
+       (ol.source.WMTS.
         #js{:url             url
             :layer           layer-name
             :projection      "EPSG:3067"
             :matrixSet       "mml_grid"
-            :tileGrid        (js/ol.tilegrid.WMTS.
+            :tileGrid        (ol.tilegrid.WMTS.
                               #js{:origin      epsg3067-top-left
                                   :extent      epsg3067-extent
                                   :resolutions mml-resolutions
@@ -87,16 +88,16 @@
 
 (def circle-style (ol.style.Style.
                    #js{:image
-                       (js/ol.style.Circle.
+                       (ol.style.Circle.
                         #js{:radius 10
-                            :stroke (js/ol.style.Stroke
+                            :stroke (ol.style.Stroke
                                      #js{:color mui/primary})
-                            :fill   (js/ol.style.Fill.
+                            :fill   (ol.style.Fill.
                                      #js{:color mui/secondary2})})}))
 
 (def circle-style2 (ol.style.Style.
                     #js{:image
-                        (js/ol.style.Circle.)}))
+                        (ol.style.Circle.)}))
 
 (def blue-marker-style (->marker-style {}))
 (def red-marker-style (->marker-style {:color mui/secondary}))
@@ -109,24 +110,23 @@
     :maastokartta (->wmts {:url        (:maastokartta urls)
                            :layer-name "MML-Maastokartta"})
     :ortokuva     (->wmts {:url        (:ortokuva urls)
-                           :layer-name "MML-Ortokuva"})
-    :osm          (js/ol.layer.Tile. #js{:source (js/ol.source.OSM.)})}
+                           :layer-name "MML-Ortokuva"})}
    :overlays
-   {:vectors (js/ol.layer.Vector.
-              #js{:source (js/ol.source.Vector.)
+   {:vectors (ol.layer.Vector.
+              #js{:source (ol.source.Vector.)
                   })
-    :draw    (js/ol.layer.Vector.
-              #js{:source (js/ol.source.Vector.)})}})
+    :draw    (ol.layer.Vector.
+              #js{:source (ol.source.Vector.)})}})
 
 (defn init-map [{:keys [center zoom]}]
   (let [layers (init-layers)
-        view   (js/ol.View. #js{:center      #js[(:lon center) (:lat center)]
+        view   (ol.View. #js{:center      #js[(:lon center) (:lat center)]
                                 :zoom        zoom
                                 :projection  "EPSG:3067"
                                 :resolutions mml-resolutions
                                 :units       "m"})
 
-        overlay (js/ol.Overlay. #js{:offset #js[-15 0]
+        overlay (ol.Overlay. #js{:offset #js[-15 0]
                                     :element
                                     (js/document.getElementById "popup-anchor")})
 
@@ -138,14 +138,14 @@
                   :overlays #js[overlay]
                   :view     view}
 
-        lmap (js/ol.Map. opts)
+        lmap (ol.Map. opts)
 
-        hover (js/ol.interaction.Select.
+        hover (ol.interaction.Select.
                #js{:layers    [(-> layers :overlays :vectors)]
                    :style     blue-marker-style
-                   :condition js/ol.events.condition.pointerMove})
+                   :condition ol.events.condition.pointerMove})
 
-        select (js/ol.interaction.Select.
+        select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
                     :style  blue-marker-style})]
 
