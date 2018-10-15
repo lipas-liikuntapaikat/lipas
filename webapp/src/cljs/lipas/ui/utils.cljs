@@ -8,8 +8,7 @@
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
             [lipas.utils :as utils]
-            [re-frame.core :as re-frame]
-            [testdouble.cljs.csv :as csv]))
+            [re-frame.core :as re-frame]))
 
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
@@ -348,13 +347,6 @@
       (string/split "?token=")
       second))
 
-(defn ->row [d headers]
-  (let [header-keys (map first headers)]
-    (mapv (fn [k] (get d k)) header-keys)))
-
-(defn ->csv [data headers]
-  (csv/write-csv (mapv #(->row % headers) data) :quote? true))
-
 (defn prod? []
   (-> (base-url)
       (string/includes? "lipas.fi")))
@@ -370,3 +362,24 @@
         (string/split #"(<|>)")
         first
         (string/trim))))
+
+(defn ->excel-row [headers m]
+  (reduce
+   (fn [res [k _]]
+     (let [v (get m k)]
+       (conj res {:value v
+                  :type  (if (number? v)
+                           "number"
+                           "string")})))
+   [] headers))
+
+(defn ->excel-data [headers coll]
+  (let [header-row (->excel-row headers (into {} headers))]
+    (into [header-row]
+          (mapv (partial ->excel-row headers) coll))))
+
+(comment
+  (->excel-data [[:kissa "Kissa"] [:kana "Kana"]]
+                [{:kissa "koira" :kana 12}])
+  (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
+                (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
