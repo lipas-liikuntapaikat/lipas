@@ -351,13 +351,15 @@
    (r/as-element
     [mui/input-adornment s])})
 
+;; TODO maybe one magic regexp needed here?
 (defn coerce [type s]
   (if (= type "number")
     (-> s
         (string/replace "," ".")
         (string/replace #"[^\d.]" "")
         (as-> $ (if (or (string/ends-with? $ ".")
-                        (string/ends-with? $ ".0"))
+                        (and (string/includes? $ ".")
+                             (string/ends-with? $ "0")))
                   $
                   (read-string $))))
     (not-empty s)))
