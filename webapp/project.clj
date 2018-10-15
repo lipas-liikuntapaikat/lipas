@@ -20,8 +20,6 @@
                  [cljsjs/material-ui "3.1.1-0"]
                  [tongue "0.2.4"]
                  [day8.re-frame/http-fx "0.1.6"]
-                 [cljsjs/filesaverjs "1.3.3-0"]
-                 [testdouble/clojurescript.csv "0.3.0"]
                  [cljsjs/google-analytics "2015.04.13-0"]
                  [district0x.re-frame/google-analytics-fx "1.0.0"]
                  [cljsjs/babel-polyfill "6.20.0-2"]
@@ -115,8 +113,10 @@
                     :npm-deps             false
                     :infer-externs        true
                     :foreign-libs         [{:file           "dist/index.bundle.js"
-                                            :provides       ["ol"]
-                                            :global-exports {ol ol}}]
+                                            :provides       ["ol"
+                                                             "zipcelx"]
+                                            :global-exports {ol ol
+                                                             zipcelx zipcelx}}]
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"
                     :asset-path           "js/compiled/out"
@@ -133,8 +133,8 @@
                     :npm-deps        false
                     :infer-externs   true
                     :foreign-libs    [{:file           "dist/index.bundle.js"
-                                       :provides       ["ol"]
-                                       :global-exports {ol ol}}]
+                                       :provides       ["ol" "zipcelx"]
+                                       :global-exports {ol ol zipcelx zipcelx}}]
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
