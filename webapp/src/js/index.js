@@ -1,2 +1,3 @@
-//import * as ol from "ol";
-//window.ol = ol;
+import zipcelx from 'zipcelx';
+
+window.zipcelx = zipcelx;
