@@ -35,8 +35,13 @@
 (defn- calculate-totals [yearly-data monthly-data]
   (merge
    yearly-data
-   (into {} (for [k (into #{} (mapcat keys (vals monthly-data)))]
-              [k (reduce + (map k (vals monthly-data)))]))))
+   (into {} (for [k (into #{} (mapcat keys (vals monthly-data)))
+                  :let [vs (->> monthly-data
+                                vals
+                                (map k)
+                                (remove nil?))]]
+              (when (= 12 (count vs))
+                [k (reduce + vs)])))))
 
 (re-frame/reg-event-db
  ::calculate-total-energy-consumption
