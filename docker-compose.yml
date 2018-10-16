@@ -94,7 +94,7 @@ services:
     environment:
       ICE_STADIUMS_CSV_URL:
       SWIMMING_POOLS_CSV_URL:
-    command: lein run -m lipas.migrate-data
+    entrypoint: lein run -m lipas.migrate-data
     links:
       - postgres
 
