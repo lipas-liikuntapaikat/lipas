@@ -367,18 +367,28 @@
     (not-empty s)))
 
 (defn patched-input [props]
-  [:input (dissoc props :inputRef)])
+  [:input (-> props
+              (assoc :ref (:inputRef props))
+              (dissoc :inputRef))])
+
+(defn patched-text-area [props]
+  [:textarea (-> props
+                 (assoc :ref (:inputRef props))
+                 (dissoc :inputRef))])
 
 (defn text-field-controlled [{:keys [value type on-change spec required
-                                     Input-props adornment]
+                                     Input-props adornment multiline]
                               :as   props} & children]
-  (let [props (-> props
+  (let [input (if multiline
+                patched-text-area
+                patched-input)
+        props (-> props
                   (as-> $ (if (= "number" type) (dissoc $ :type) $))
                   (assoc :error (error? spec value required))
                   (assoc :Input-props
                          (merge Input-props
                                 {:input-component (r/reactify-component
-                                                   patched-input)}
+                                                   input)}
                                 (when adornment
                                   (->adornment adornment))))
                   (assoc :value (or value ""))
@@ -513,9 +523,10 @@
                 [mui/form-group
                  form-field])]]))]])
 
-(defn ->display-tf [{:keys [label value]}]
+(defn ->display-tf [{:keys [label value]} multiline?]
   (let [value (display-value value :empty "-" :links? false)]
     [text-field {:label     label
+                 :multiline multiline?
                  :value     value
                  :disabled  true}]))
 
@@ -526,7 +537,7 @@
               :let  [field (-> d :form-field)
                      props (-> field second)]]
           (if read-only?
-            (->display-tf d)
+            (->display-tf d (:multiline props))
             (assoc field 1 (assoc props :label (:label d)))))))
 
 ;; (def form table-form)
