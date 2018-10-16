@@ -53,10 +53,11 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [[sites permissions cities types] [_ locale]]
-   (->> sites
-        vals
-        (filter (partial permissions/publish? permissions))
-        (map (partial ->list-entry locale cities types)))))
+   (when permissions
+     (->> sites
+          vals
+          (filter (partial permissions/publish? permissions))
+          (map (partial ->list-entry locale cities types))))))
 
 (re-frame/reg-sub
  ::selected-sports-site
