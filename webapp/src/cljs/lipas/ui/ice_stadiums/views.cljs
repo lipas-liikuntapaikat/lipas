@@ -611,7 +611,8 @@
        (str "> " (tr :ice-energy/finhockey-link))]]]]])
 
 (defn energy-form-tab [tr]
-  (let [editable-sites  (<== [::subs/sites-to-edit-list])
+  (let [locale          (tr)
+        editable-sites  (<== [::subs/sites-to-edit-list locale])
         draftable-sites (<== [::subs/sites-to-draft-list])]
     (energy/energy-consumption-form
      {:tr              tr
