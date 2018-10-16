@@ -257,16 +257,23 @@
                  :items      energy-history}]]]
 
        ;; Actions
-       [lui/form-card {:xs 12 :md 12 :lg 12}
-        [mui/button
-         {:full-width true
-          :disabled   (not edits-valid?)
-          :color      "secondary"
-          :variant    "raised"
-          :on-click   #(==> [::events/commit-energy-consumption data draft?])}
-         (if draft?
-           (tr :actions/save-draft)
-           (tr :actions/save))]]])))
+       [lui/floating-container
+        {:right            16
+         :bottom           16
+         :background-color "transparent"}
+        [lui/save-button
+         {:variant  "extendedFab"
+          :disabled (not edits-valid?)
+          :color    "secondary"
+          :on-click #(==> [::events/commit-energy-consumption data draft?])
+          :tooltip  (if draft?
+                      (tr :actions/save-draft)
+                      (tr :actions/save))}]]
+
+       ;; Small footer on top of which floating container may scroll
+       [mui/grid {:item  true :xs 12
+                  :style {:height           "5em"
+                          :background-color mui/gray1}}]])))
 
 (defn energy-consumption-form [{:keys [tr editable-sites draftable-sites
                                        spectators? cold?]}]
