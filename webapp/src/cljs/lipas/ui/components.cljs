@@ -70,14 +70,16 @@
      [mui/button btn-props
       [mui/icon "edit_icon"]]]))
 
-(defn save-button [{:keys [on-click tooltip disabled disabled-tooltip] :as props}]
+(defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
+                    :or   {color "secondary"}
+                    :as   props}]
   [mui/tooltip {:title     (if disabled disabled-tooltip "")
                 :placement "top"}
    [:span
-    [mui/button (merge (dissoc props :disabled-tooltip)
+    [mui/button (merge (dissoc props :disabled-tooltip :color)
                        {:disabled disabled
                         :on-click on-click
-                        :color    "secondary"})
+                        :color    color})
      tooltip
      [mui/icon {:style {:margin-left "0.25em"}}
       "save_icon"]]]])
@@ -351,13 +353,15 @@
    (r/as-element
     [mui/input-adornment s])})
 
+;; TODO maybe one magic regexp needed here?
 (defn coerce [type s]
   (if (= type "number")
     (-> s
         (string/replace "," ".")
         (string/replace #"[^\d.]" "")
         (as-> $ (if (or (string/ends-with? $ ".")
-                        (string/ends-with? $ ".0"))
+                        (and (string/includes? $ ".")
+                             (string/ends-with? $ "0")))
                   $
                   (read-string $))))
     (not-empty s)))
