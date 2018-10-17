@@ -219,11 +219,7 @@
 
 (defn- make-comparable [rev]
   (-> rev
-      (dissoc :event-date
-              :energy-consumption
-              :energy-consumption-monthly
-              :visitors
-              :visitors-monthly)
+      (dissoc :event-date)
       clean))
 
 (defn different? [rev1 rev2]
