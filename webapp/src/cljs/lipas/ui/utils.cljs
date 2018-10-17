@@ -24,8 +24,6 @@
       (update-in db (into [] base-path) dissoc (last path))
       (dissoc db path))))
 
-(def maxc (partial apply max))
-
 (defn next-id [db path]
   (gensym))
 
@@ -49,13 +47,6 @@
     (update m k #(tr (keyword prefix %)))
     m))
 
-(defn ->localized-select-entry [tr prefix k]
-  (->> {:value k :label k}
-       (localize-field tr :label prefix)))
-
-(defn ->select-entries [tr prefix enum-map]
-  (map (partial ->localized-select-entry tr prefix) (keys enum-map)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TODO refactor to use js/dateFns where appropriate ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -78,27 +69,6 @@
 
 (defn ->end-of-year [year]
   (str year "-12-31T23:59:59.999Z"))
-
-(defn pretty-since-kw [s]
-  (let [tz-offset     (.getTimezoneOffset (js/Date.))
-        ts-utc        (.parse js/dateFns s)
-        ts            (.addMinutes js/dateFns ts-utc (- tz-offset))
-        now           (.addMinutes js/dateFns (js/Date.) (- tz-offset))
-        minutes-delta (.differenceInMinutes js/dateFns now ts)
-        hours-delta   (.differenceInHours js/dateFns now ts)
-        years-delta   (.differenceInCalendarYears js/dateFns now ts)]
-    (cond
-      (< minutes-delta 10)         :just-a-moment-ago
-      (< hours-delta 1)            :less-than-hour-ago
-      (.isToday js/dateFns ts)     :today
-      (.isYesterday js/dateFns ts) :yesterday
-      (.isThisWeek js/dateFns ts)  :this-week
-      (.isThisMonth js/dateFns ts) :this-month
-      (.isThisYear js/dateFns ts)  :this-year
-      (= years-delta 1)            :last-year
-      (= years-delta 2)            :two-years-ago
-      (= years-delta 3)            :three-years-ago
-      :else                        :long-time-ago)))
 
 (defn reverse-cmp [a b]
   (compare b a))
@@ -228,56 +198,16 @@
     ;; (prn (data/diff rev1 rev2))
     (not= rev1 rev2)))
 
-(defn save-edits [db rev]
-  (let [lipas-id    (:lipas-id rev)
-        site        (get-in db [:sports-sites lipas-id])
-        original    (get-in site [:history (:latest site)])
-        original?   (not (different? rev original))
-        latest-edit (latest-edit (-> site :edits))
-        dirty?      (different? rev (or latest-edit original))
-        timestamp   (:event-date rev)]
-    (as-> db $
-      (assoc-in $ [:sports-sites lipas-id :editing] nil)
-      (cond
-        original? (assoc-in $ [:sports-sites lipas-id :edits] nil)
-        dirty?    (assoc-in $ [:sports-sites lipas-id :edits timestamp] rev)
-        :else     $))))
-
 (defn latest? [rev history]
   (let [event-date  (:event-date rev)
         event-dates (conj (keys history) event-date)]
     (= event-date (first (sort reverse-cmp event-dates)))))
-
-(defn commit-edits [db rev]
-  (let [lipas-id (:lipas-id rev)
-        history (get-in db [:sports-sites lipas-id :history])]
-    (as-> db $
-        (assoc-in $ [:sports-sites lipas-id :edits] nil)
-        (assoc-in $ [:sports-sites lipas-id :history (:event-date rev)] rev)
-        (if (latest? rev history)
-          (assoc-in $ [:sports-sites lipas-id :latest] (:event-date rev))
-          $))))
-
-(defn discard-edits [db lipas-id]
-  (assoc-in db [:sports-sites lipas-id :editing] nil))
-
-(defn commit-energy-consumption [db rev]
-  (let [lipas-id (:lipas-id rev)
-        ts       (:event-date rev)]
-    ;; TODO Need to update latest maybe?
-    (assoc-in db [:sports-sites lipas-id :history ts] rev)))
 
 (comment (->basic-auth {:username "kissa" :password "koira"}))
 (defn ->basic-auth
   "Creates base64 encoded Authorization header value"
   [{:keys [username password]}]
   (str "Basic " (b64/encodeString (str username ":" password))))
-
-(defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
-  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
-    (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
-      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
-      new-db)))
 
 (defn join-pretty [coll]
   (string/join ", " coll))

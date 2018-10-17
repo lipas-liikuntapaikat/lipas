@@ -20,7 +20,7 @@
 (re-frame/reg-event-db
  ::discard-edits
  (fn [db [_ lipas-id]]
-   (utils/discard-edits db lipas-id)))
+   (assoc-in db [:sports-sites lipas-id :editing] nil)))
 
 (defn- commit-ajax [db data]
   (let [token  (-> db :user :login :token)]
@@ -34,18 +34,33 @@
       :on-success      [::save-success]
       :on-failure      [::save-failure]}}))
 
+(defn- save-edits [db rev]
+  (let [lipas-id    (:lipas-id rev)
+        site        (get-in db [:sports-sites lipas-id])
+        original    (get-in site [:history (:latest site)])
+        original?   (not (utils/different? rev original))
+        latest-edit (utils/latest-edit (-> site :edits))
+        dirty?      (utils/different? rev (or latest-edit original))
+        timestamp   (:event-date rev)]
+    (as-> db $
+      (assoc-in $ [:sports-sites lipas-id :editing] nil)
+      (cond
+        original? (assoc-in $ [:sports-sites lipas-id :edits] nil)
+        dirty?    (assoc-in $ [:sports-sites lipas-id :edits timestamp] rev)
+        :else     $))))
+
 (re-frame/reg-event-fx
  ::commit-rev
  (fn [{:keys [db]} [_ rev]]
    (merge
     (commit-ajax db rev)
-    {:db (utils/save-edits db rev)})))
+    {:db (save-edits db rev)})))
 
 (defn- save-with-status [db lipas-id status]
   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
                    utils/make-saveable
                    (assoc :status status))
-        db     (utils/save-edits db rev) ;; Store temp state client side
+        db     (save-edits db rev) ;; Store temp state client side
         dirty? (some? (get-in db [:sports-sites lipas-id :edits]))]
     (merge
      {:db db}
@@ -64,6 +79,16 @@
    (merge
     (save-with-status db lipas-id "draft"))))
 
+(defn- commit-edits [db rev]
+  (let [lipas-id (:lipas-id rev)
+        history  (get-in db [:sports-sites lipas-id :history])]
+    (as-> db $
+      (assoc-in $ [:sports-sites lipas-id :edits] nil)
+      (assoc-in $ [:sports-sites lipas-id :history (:event-date rev)] rev)
+      (if (utils/latest? rev history)
+        (assoc-in $ [:sports-sites lipas-id :latest] (:event-date rev))
+        $))))
+
 (re-frame/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_ result]]
@@ -71,7 +96,7 @@
          status (:status result)
          type   (-> result :type :type-code)
          year   (dec utils/this-year)]
-     {:db         (utils/commit-edits db result) ;; Clear client side temp state
+     {:db         (commit-edits db result) ;; Clear client side temp state
       :dispatch-n [[:lipas.ui.events/set-active-notification
                     {:message  (tr :notifications/save-success)
                      :success? true}]
@@ -90,10 +115,16 @@
                       :success? false}]
       :ga/exception [(:message error) fatal?]})))
 
+(defn- add-to-db [db {:keys [lipas-id event-date] :as rev}]
+  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
+    (if (utils/latest? rev (get-in db [:sports-sites lipas-id :history]))
+      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
+      new-db)))
+
 (re-frame/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ sites]]
-   {:db (reduce utils/add-to-db db sites)}))
+   {:db (reduce add-to-db db sites)}))
 
 (re-frame/reg-event-fx
  ::get-failure
