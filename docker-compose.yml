@@ -7,7 +7,6 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - './nginx/:/etc/nginx/conf.d:z'
       - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
 
@@ -17,13 +16,19 @@ services:
     links:
       - mapproxy
       - backend
+    volumes:
+      - './nginx/proxy.conf:/etc/nginx/conf.d/proxy.conf:z'
 
+  # Only difference is added X-Robots-tag 'noindex'
+  # to make search engines ignore dev-site(s)
   proxy-dev:
     extends:
       service: proxy-base
     links:
       - mapproxy
-      - backend-dev
+      - backend
+    volumes:
+      - './nginx/proxy_dev.conf:/etc/nginx/conf.d/proxy.conf:z'
 
   mapproxy:
     image: kartoza/mapproxy
@@ -70,6 +75,7 @@ services:
     extends:
       service: backend-base
     command: lein ring server-headless
+    hostname: backend
     ports:
       - '8091:8091'
     links:
