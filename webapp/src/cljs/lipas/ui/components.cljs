@@ -673,7 +673,7 @@
 
    ;; Floating actions
    (into
-    [floating-container {:right 16 :bottom 16 :background-color "transparent"}]
+    [floating-container {:right 24 :bottom 16 :background-color "transparent"}]
     (interpose [:span {:style {:margin-left  "0.25em"
                                :margin-right "0.25em"}}]
                bottom-actions))
