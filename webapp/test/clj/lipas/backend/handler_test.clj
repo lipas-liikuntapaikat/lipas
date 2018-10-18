@@ -3,11 +3,13 @@
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is] :as t]
+            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
             [lipas.schema.core]
+            [lipas.utils :as utils]
             [ring.mock.request :as mock])
   (:import java.util.Base64))
 
@@ -29,7 +31,7 @@
   [req token]
   (mock/header req "Authorization" (str "Token " token)))
 
-(def config (-> system/default-config
+(def config (-> config/default-config
                 (select-keys [:db :app])
                 (assoc-in [:app :emailer] (email/->TestEmailer))))
 (def system (system/start-system! config))
@@ -145,18 +147,34 @@
     (is (= 403 (:status resp)))))
 
 (deftest update-user-permissions-test
+  ;; Updating permissions has side-effect of publshing drafts the user
+  ;; has done earlier to sites where permissions are now being
+  ;; granted
   (let [admin (gen-user {:db? true :admin? true})
         user  (gen-user {:db? true})
+
+        ;; Add 'draft' which is expected to get publshed as side-effect
+        event-date (utils/timestamp)
+        site       (-> (gen/generate (s/gen :lipas/sports-site))
+                       (assoc :event-date event-date)
+                       (assoc :status "draft")
+                       (assoc :lipas-id 123))
+        _          (core/upsert-sports-site! db user site)
+
         perms {:admin? true}
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
                        (mock/content-type "application/json")
                        (mock/body (->json {:id          (:id user)
                                            :permissions perms}))
-                       (token-header token)))]
+                       (token-header token)))
+
+        site-log (->> (core/get-sports-site-history db 123)
+                      (utils/index-by :event-date))]
     (is (= 200 (:status resp)))
     (is (= perms (-> (core/get-user db (:email user))
-                     :permissions)))))
+                     :permissions)))
+    (is (= "active" (:status (get site-log event-date))))))
 
 (deftest update-user-permissions-requires-admin-test
   (let [user  (gen-user {:db? true :admin? false})
