@@ -1,6 +1,5 @@
 (ns lipas.ui.utils
   (:require [cemerick.url :as url]
-            [cljsjs.date-fns]
             [clojure.data :as data]
             [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
@@ -47,12 +46,9 @@
     (update m k #(tr (keyword prefix %)))
     m))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; TODO refactor to use js/dateFns where appropriate ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(comment (resolve-year "2014-12-02"))
-(comment (resolve-year 2014))
+(comment
+  (resolve-year 2014)
+  (resolve-year "2014-12-02"))
 (defn resolve-year [timestamp]
   (read-string (reduce str (take 4 (str timestamp)))))
 
@@ -146,14 +142,9 @@
         timestamp      (get latest-by-year year)]
     (get history timestamp)))
 
-(comment
-  (.getFullYear (.parse js/dateFns "2014-01-01T00:00:00.000Z")) ; This works
-  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999Z")) ; Interesting...
-  (.getFullYear (.parse js/dateFns "2013-12-31T23:59:59.999"))) ; This works
 (defn same-year? [ts1 ts2]
-  (.isSameYear js/dateFns
-               (string/replace ts1 "Z" "")
-               (string/replace ts2 "Z" "")))
+  (= (subs (str ts1) 0 4)
+     (subs (str ts2) 0 4)))
 
 (defn make-revision
   ([site]
