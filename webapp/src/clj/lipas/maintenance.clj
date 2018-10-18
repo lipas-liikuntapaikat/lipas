@@ -3,6 +3,7 @@
             [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [clojure.string :as string]
+            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.system :as backend]
@@ -258,7 +259,7 @@
     (println task)))
 
 (defn run-task! [task-fn args]
-  (let [config   (select-keys backend/default-config [:db])
+  (let [config   (select-keys config/default-config [:db])
         system   (backend/start-system! config)
         db       (:db system)
         user     (core/get-user db "import@lipas.fi")]

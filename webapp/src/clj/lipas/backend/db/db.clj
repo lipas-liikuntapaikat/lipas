@@ -78,3 +78,14 @@
                    db-utils/->snake-case-keywords)]
     (->> (db-fn db-spec params)
          (map sports-site/unmarshall))))
+
+(defn get-users-drafts [db user]
+  (let [params {:author_id (:id user)
+                :status    "draft"}]
+    (->> (sports-site/get-by-author-and-status db params)
+         (map sports-site/unmarshall))))
+
+(comment
+  (require '[lipas.backend.config :as config])
+  (def db-spec (:db config/default-config))
+  (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"}))
