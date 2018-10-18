@@ -12,10 +12,6 @@
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)
 
-(defn ->setter-fn [event]
-  (fn [& args]
-    (==> [event (butlast args) (last args)])))
-
 (defn set-field [db path value]
   (if value
     (assoc-in db path value)
