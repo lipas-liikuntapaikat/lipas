@@ -246,5 +246,5 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :visitors-history   (sort-by :year visitors-history)
-        :energy-consumption (sort-by :year energy-history)}))))
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
+        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
