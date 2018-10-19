@@ -199,6 +199,7 @@
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
 
+    ;; Chart/Table tabs
     (if (empty? (:energy-consumption display-data))
       [mui/typography (tr :lipas.energy-consumption/not-reported)]
       [:div
@@ -209,6 +210,7 @@
 
        (case @selected-tab
 
+         ;; Chart tab
          0 [:div {:style {:margin-top "2em"}}
             [charts/yearly-chart
              {:data     (-> display-data :energy-consumption)
@@ -222,6 +224,7 @@
                           (let [year (gobj/get e "activeLabel")]
                             (reset! selected-year {lipas-id year})))}]]
 
+         ;; Table tab
          1 [energy/table
             {:read-only? true
              :cold?      cold?
@@ -229,12 +232,14 @@
              :on-select  #(reset! selected-year {lipas-id (:year %)})
              :items      (-> display-data :energy-consumption)}])
 
+       ;; Monthly chart
        (when-let [year (get @selected-year lipas-id)]
          [energy/monthly-chart
           {:lipas-id lipas-id
            :year     year
            :tr       tr}])
 
+       ;; Report readings button
        (when editing?
          [report-readings-button
           {:tr       tr
@@ -254,6 +259,7 @@
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
 
+    ;; Chart/Table tabs
     (if (empty? (:visitors-history display-data))
       [mui/typography (tr :lipas.visitors/not-reported)]
 
@@ -265,6 +271,7 @@
 
        (case @selected-tab
 
+         ;; Chart tab
          0 [:div {:style {:margin-top "2em"}}
             [charts/yearly-chart
              {:data     (-> display-data :visitors-history)
@@ -276,6 +283,7 @@
                           (let [year (gobj/get e "activeLabel")]
                             (reset! selected-year {lipas-id year})))}]]
 
+         ;; Table tab
          1 [lui/table
             {:headers          (make-headers tr spectators?)
              :items            (-> display-data :visitors-history)
@@ -293,6 +301,7 @@
            :year     year
            :tr       tr}])
 
+       ;; Report readings button
        (when editing?
          [report-readings-button
           {:tr       tr
