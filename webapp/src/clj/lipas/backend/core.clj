@@ -94,12 +94,15 @@
 
 ;;; Sports-sites ;;;
 
-(defn upsert-sports-site! [db user sports-site draft?]
-  (if (or draft?
-          (permissions/publish? (:permissions user) sports-site))
-    (db/upsert-sports-site! db user sports-site draft?)
-    (throw (ex-info "User doesn't have enough permissions!"
-                    {:type :no-permission}))))
+(defn upsert-sports-site!
+  ([db user sports-site]
+   (upsert-sports-site! db user sports-site false))
+  ([db user sports-site draft?]
+   (if (or draft?
+           (permissions/publish? (:permissions user) sports-site))
+     (db/upsert-sports-site! db user sports-site draft?)
+     (throw (ex-info "User doesn't have enough permissions!"
+                     {:type :no-permission})))))
 
 (defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
