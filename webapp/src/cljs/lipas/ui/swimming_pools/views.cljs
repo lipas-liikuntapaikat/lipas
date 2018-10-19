@@ -596,11 +596,12 @@
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
                       :md    12 :lg 12}
        [sports-site/energy-consumption-view
-        {:tr           tr
-         :lipas-id     lipas-id
-         :editing?     editing?
-         :close        close
-         :display-data display-data}]]]]))
+        {:tr                tr
+         :lipas-id          lipas-id
+         :editing?          editing?
+         :user-can-publish? user-can-publish?
+         :close             close
+         :display-data      display-data}]]]]))
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale       (tr)
