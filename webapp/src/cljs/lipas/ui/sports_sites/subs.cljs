@@ -12,10 +12,11 @@
  ::latest-sports-site-revs
  :<- [::sports-sites]
  (fn [sites _]
-   (reduce-kv (fn [m k v]
-                (assoc m k (get-in v [:history (:latest v)])))
-              {}
-              sites)))
+   (not-empty
+    (reduce-kv (fn [m k v]
+                 (assoc m k (get-in v [:history (:latest v)])))
+               {}
+               sites))))
 
 (re-frame/reg-sub
  ::latest-rev

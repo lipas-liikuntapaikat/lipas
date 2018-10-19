@@ -94,13 +94,10 @@
 
 ;;; Sports-sites ;;;
 
-(defn draft? [sports-site]
-  (= (-> sports-site :status) "draft"))
-
-(defn upsert-sports-site! [db user sports-site]
-  (if (or (draft? sports-site)
+(defn upsert-sports-site! [db user sports-site draft?]
+  (if (or draft?
           (permissions/publish? (:permissions user) sports-site))
-    (db/upsert-sports-site! db user sports-site)
+    (db/upsert-sports-site! db user sports-site draft?)
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 

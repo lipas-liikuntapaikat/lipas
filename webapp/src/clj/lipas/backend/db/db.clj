@@ -42,14 +42,18 @@
 
 ;; Sports Site ;;
 
-(defn upsert-sports-site! [db-spec user sports-site]
-  (jdbc/with-db-transaction [tx db-spec]
-    (let [lipas-id    (or (:lipas-id sports-site)
-                          (:nextval (sports-site/next-lipas-id tx)))
-          sports-site (assoc sports-site :lipas-id lipas-id)]
-      (->> (sports-site/marshall sports-site user)
-           (sports-site/insert-sports-site-rev! tx)
-           (sports-site/unmarshall)))))
+(defn upsert-sports-site!
+  ([db-spec user sports-site]
+   (upsert-sports-site! db-spec user sports-site false))
+  ([db-spec user sports-site draft?]
+   (jdbc/with-db-transaction [tx db-spec]
+     (let [status      (if draft? "draft" "published")
+           lipas-id    (or (:lipas-id sports-site)
+                           (:nextval (sports-site/next-lipas-id tx)))
+           sports-site (assoc sports-site :lipas-id lipas-id)]
+       (->> (sports-site/marshall sports-site user status)
+            (sports-site/insert-sports-site-rev! tx)
+            (sports-site/unmarshall))))))
 
 (defn upsert-sports-sites! [db-spec user sports-sites]
   (jdbc/with-db-transaction [tx db-spec]

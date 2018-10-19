@@ -148,16 +148,14 @@
   ([site event-date]
    (let [history-with-edits (merge (:history site) (:edits site))
          prev-rev           (resolve-prev-rev history-with-edits event-date)
-         same-year?         (same-year? (:event-date prev-rev) event-date)]
-     (-> prev-rev
-         (assoc :event-date event-date)
-         (as-> $ (if same-year?
-                   $
-                   (-> $
-                       (dissoc :energy-consumption)
-                       (dissoc :energy-consumption-monthly)
-                       (dissoc :visitors)
-                       (dissoc :visitors-monthly))))))))
+         new-rev            (assoc prev-rev :event-date event-date)]
+     (if (same-year? (:event-date prev-rev) event-date)
+       new-rev
+       (-> new-rev
+           (dissoc :energy-consumption
+                   :energy-consumption-monthly
+                   :visitors
+                   :visitors-monthly))))))
 
 (defn latest-edit [edits]
   (let [latest (first (sort reverse-cmp (keys edits)))]
