@@ -1,5 +1,6 @@
 (ns lipas.utils
   (:require [clojure.walk :as walk]
+            [clojure.string :as string]
             [clojure.spec.alpha :as s]
             #?(:cljs [cljs.reader :refer [read-string]])
             #?(:cljs [goog.string :as gstring])
@@ -65,6 +66,10 @@
     (string? x) (try (->uuid x) #?(:cljs (catch :default ex)
                                    :clj  (catch Exception e)))
     :else nil))
+
+(defn ->bool [x]
+  #?(:clj (java.lang.Boolean/parseBoolean (str x))
+     :cljs (= "true" (-> x str string/lower-case))))
 
 (defn gen-uuid []
   #?(:clj (java.util.UUID/randomUUID)

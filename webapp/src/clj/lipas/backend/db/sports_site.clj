@@ -2,14 +2,15 @@
   (:require [hugsql.core :as hugsql]
             [lipas.backend.db.utils :as utils]))
 
-(defn marshall [sports-site user]
+(defn marshall [sports-site user status]
   (->
-   {:event-date (-> sports-site :event-date)
-    :lipas-id   (-> sports-site :lipas-id)
-    :status     (-> sports-site :status)
-    :type-code  (-> sports-site :type :type-code)
-    :city-code  (-> sports-site :location :city :city-code)
-    :author-id  (-> user :id)}
+   {:event-date  (-> sports-site :event-date)
+    :lipas-id    (-> sports-site :lipas-id)
+    :status      status
+    :site-status (-> sports-site :status)
+    :type-code   (-> sports-site :type :type-code)
+    :city-code   (-> sports-site :location :city :city-code)
+    :author-id   (-> user :id)}
    utils/->snake-case-keywords
    (assoc :document sports-site)))
 

@@ -755,6 +755,8 @@
 
 (s/def :lipas.api/revs #{"latest" "yearly"})
 (s/def :lipas.api/lang #{"fi" "en" "se"})
+(s/def :lipas.api/draft #{"true" "false"})
 (s/def :lipas.api/query-params
   (s/keys :opt-un [:lipas.api/revs
-                   :lipas.api/lang]))
+                   :lipas.api/lang
+                   :lipas.api/draft]))

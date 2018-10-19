@@ -651,40 +651,6 @@
                    :href  "http://www.suh.fi/toiminta/tekninen_neuvonta"}
        (str "> " (tr :swim-energy/suh-link))]]]]])
 
-(defn energy-form [{:keys [tr year]}]
-  (let [data           (<== [::subs/editing-rev])
-        energy-history (<== [::subs/energy-consumption-history])
-        edits-valid?   (<== [::subs/edits-valid?])
-        lipas-id       (:lipas-id data)
-        set-field      (partial set-field lipas-id)]
-
-    [mui/grid {:container true}
-
-     ;; Energy consumption
-     [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
-
-      [mui/typography {:variant "subheading"
-                       :style   {:margin-bottom "1em"}}
-       (tr :lipas.energy-consumption/yearly)]
-      [energy/form
-       {:tr        tr
-        :data      (:energy-consumption data)
-        :on-change (partial set-field :energy-consumption)}]
-
-      [lui/expansion-panel {:label (tr :actions/show-all-years)}
-       [energy/table {:tr         tr
-                      :read-only? true
-                      :items      energy-history}]]]
-
-     ;; Actions
-     [lui/form-card {}
-      [mui/button {:full-width true
-                   :disabled   (not edits-valid?)
-                   :color      "secondary"
-                   :variant    "raised"
-                   :on-click   #(==> [::events/commit-energy-consumption data])}
-       (tr :actions/save)]]]))
-
 (defn energy-form-tab [tr]
   (let [locale          (tr)
         editable-sites  (<== [::subs/sites-to-edit-list locale])

@@ -4,6 +4,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.schema.core]
+            [lipas.utils :as utils]
             [muuntaja.core :as m]
             [reitit.coercion.spec]
             [reitit.ring :as ring]
@@ -85,10 +86,12 @@
       ["/sports-sites"
        {:post
         {:middleware [mw/token-auth mw/auth]
+         :parameters {:query :lipas.api/query-params}
          :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 201
-            :body   (core/upsert-sports-site! db identity body-params)})}}]
+         (fn [{:keys [body-params identity] :as req}]
+           (let [draft? (-> req :parameters :query :draft utils/->bool)]
+             {:status 201
+              :body   (core/upsert-sports-site! db identity body-params draft?)}))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get

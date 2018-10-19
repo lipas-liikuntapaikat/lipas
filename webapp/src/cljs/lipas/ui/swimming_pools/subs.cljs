@@ -62,7 +62,9 @@
  (fn [[_ locale] _]
    (re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale]))
  (fn [sites-list _]
-   (filter (comp #{3110 3130} :type-code) sites-list)))
+   (->> sites-list
+        (filter (comp #{3110 3130} :type-code))
+        not-empty)))
 
 (re-frame/reg-sub
  ::sites-to-draft-list

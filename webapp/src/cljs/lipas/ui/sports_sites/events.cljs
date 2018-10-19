@@ -22,81 +22,74 @@
  (fn [db [_ lipas-id]]
    (assoc-in db [:sports-sites lipas-id :editing] nil)))
 
-(defn- commit-ajax [db data]
-  (let [token  (-> db :user :login :token)]
+(defn- commit-ajax [db data draft?]
+  (let [token  (-> db :user :login :token)
+        params (when draft? "?draft=true")]
     {:http-xhrio
      {:method          :post
       :headers         {:Authorization (str "Token " token)}
-      :uri             (str (:backend-url db) "/sports-sites")
+      :uri             (str (:backend-url db) (str "/sports-sites" params))
       :params          data
       :format          (ajax/json-request-format)
       :response-format (ajax/json-response-format {:keywords? true})
       :on-success      [::save-success]
       :on-failure      [::save-failure]}}))
 
-(defn- save-edits [db rev]
-  (let [lipas-id    (:lipas-id rev)
-        site        (get-in db [:sports-sites lipas-id])
-        original    (get-in site [:history (:latest site)])
-        original?   (not (utils/different? rev original))
-        latest-edit (utils/latest-edit (-> site :edits))
-        dirty?      (utils/different? rev (or latest-edit original))
-        timestamp   (:event-date rev)]
-    (as-> db $
-      (assoc-in $ [:sports-sites lipas-id :editing] nil)
-      (cond
-        original? (assoc-in $ [:sports-sites lipas-id :edits] nil)
-        dirty?    (assoc-in $ [:sports-sites lipas-id :edits timestamp] rev)
-        :else     $))))
+(defn- dirty? [db rev]
+  (let [lipas-id  (:lipas-id rev)
+        site      (get-in db [:sports-sites lipas-id])
+        year      (utils/resolve-year (:event-date rev))
+        timestamp (if (utils/this-year? year)
+                    (:latest site)
+                    (-> (utils/latest-by-year (:history site))
+                        (get year)))
+        latest    (get-in site [:history timestamp])]
+    (utils/different? rev latest)))
 
 (re-frame/reg-event-fx
  ::commit-rev
- (fn [{:keys [db]} [_ rev]]
-   (merge
-    (commit-ajax db rev)
-    {:db (save-edits db rev)})))
-
-(defn- save-with-status [db lipas-id status]
-  (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
-                   utils/make-saveable
-                   (assoc :status status))
-        db     (save-edits db rev) ;; Store temp state client side
-        dirty? (some? (get-in db [:sports-sites lipas-id :edits]))]
-    (merge
-     {:db db}
-     (if dirty?
-       (commit-ajax db rev) ;; Attempt to save server side
-       {:dispatch [::save-success rev]}))))
+ (fn [{:keys [db]} [_ rev draft?]]
+   (if (dirty? db rev)
+     (commit-ajax db rev draft?)
+     {:dispatch [::save-success rev]})))
 
 (re-frame/reg-event-fx
  ::save-edits
  (fn [{:keys [db]} [_ lipas-id]]
-   (save-with-status db lipas-id "active")))
+   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
+                    utils/make-saveable)
+         draft? false]
+     (if (dirty? db rev)
+       (commit-ajax db rev draft?)
+       {:dispatch [::save-success rev]}))))
 
 (re-frame/reg-event-fx
  ::save-draft
  (fn [{:keys [db]} [_ lipas-id]]
-   (merge
-    (save-with-status db lipas-id "draft"))))
+   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
+                    utils/make-saveable)
+         draft? true]
+     (if (dirty? db rev)
+       (commit-ajax db rev draft?)
+       {:dispatch [::save-success rev]}))))
 
-(defn- commit-edits [db rev]
-  (let [lipas-id (:lipas-id rev)
-        history  (get-in db [:sports-sites lipas-id :history])]
-    (as-> db $
-      (assoc-in $ [:sports-sites lipas-id :edits] nil)
-      (assoc-in $ [:sports-sites lipas-id :history (:event-date rev)] rev)
-      (if (utils/latest? rev history)
-        (assoc-in $ [:sports-sites lipas-id :latest] (:event-date rev))
-        $))))
+(defn- add-to-db [db {:keys [lipas-id event-date] :as rev}]
+  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
+    (if (utils/latest? rev (get-in db [:sports-sites lipas-id :history]))
+      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
+      new-db)))
 
 (re-frame/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_ result]]
-   (let [tr     (:translator db)
-         status (:status result)
-         type   (-> result :type :type-code)
-         year   (dec utils/this-year)]
-     {:db         (commit-edits db result) ;; Clear client side temp state
+   (let [tr       (:translator db)
+         status   (:status result)
+         type     (-> result :type :type-code)
+         lipas-id (:lipas-id result)
+         year     (dec utils/this-year)]
+     {:db         (-> db
+                      (add-to-db result)
+                      (assoc-in [:sports-sites lipas-id :editing] nil))
       :dispatch-n [[:lipas.ui.events/set-active-notification
                     {:message  (tr :notifications/save-success)
                      :success? true}]
@@ -115,12 +108,6 @@
                       :success? false}]
       :ga/exception [(:message error) fatal?]})))
 
-(defn- add-to-db [db {:keys [lipas-id event-date] :as rev}]
-  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
-    (if (utils/latest? rev (get-in db [:sports-sites lipas-id :history]))
-      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
-      new-db)))
-
 (re-frame/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ sites]]
@@ -130,7 +117,7 @@
  ::get-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr (:translator db)]
-     {:db       (assoc-in db [:sports-sites :errors (utils/timestamp)] error)
+     {:db       (assoc-in db [:errors :sports-sites (utils/timestamp)] error)
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/get-failed)
                   :success? false}]})))
