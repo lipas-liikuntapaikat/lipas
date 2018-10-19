@@ -4,6 +4,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [goog.object :as gobj]
+            [goog.functions :as gfun]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -379,27 +380,29 @@
 (defn text-field-controlled [{:keys [value type on-change spec required
                                      Input-props adornment multiline]
                               :as   props} & children]
-  (let [input (if multiline
-                patched-text-area
-                patched-input)
-        props (-> props
-                  (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                  (assoc :error (error? spec value required))
-                  (assoc :Input-props
-                         (merge Input-props
-                                {:input-component (r/reactify-component
-                                                   input)}
-                                (when adornment
-                                  (->adornment adornment))))
-                  (assoc :value (or value ""))
-                  (assoc :on-change #(->> %
-                                          .-target
-                                          .-value
-                                          (coerce type)
-                                          on-change))
-                  (assoc :on-blur #(when (string? value)
-                                     (on-change (trim value)))))]
-    (into [mui/text-field props] children)))
+  (r/with-let [state (r/atom value)]
+    (let [on-change  (gfun/debounce on-change 500)
+          on-change* (fn [e]
+                       (let [new-val (->> e .-target .-value (coerce type))]
+                         (reset! state new-val)
+                         (on-change @state)))
+          input      (if multiline
+                       patched-text-area
+                       patched-input)
+          props      (-> props
+                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                         (assoc :error (error? spec @state required))
+                         (assoc :Input-props
+                                (merge Input-props
+                                       {:input-component (r/reactify-component
+                                                          input)}
+                                       (when adornment
+                                         (->adornment adornment))))
+                         (assoc :value @state)
+                         (assoc :on-change on-change*)
+                         (assoc :on-blur #(when (string? @state)
+                                            (on-change (trim @state)))))]
+      (into [mui/text-field props] children))))
 
 (def text-field text-field-controlled)
 
