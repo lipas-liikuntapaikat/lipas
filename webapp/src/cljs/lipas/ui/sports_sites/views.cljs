@@ -187,14 +187,14 @@
                        (close)
                        (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
                      (fn []
-                       (==> [::events/discard-edits])
+                       (==> [::events/discard-edits lipas-id])
                        (close)
                        (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
    [mui/icon "add"]
    (tr :lipas.user/report-energy-and-visitors)])
 
 (defn energy-consumption-view [{:keys [tr display-data lipas-id
-                                       editing? close cold?]
+                                       editing? close cold? user-can-publish?]
                                 :or   {cold? false}}]
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
@@ -240,7 +240,7 @@
            :tr       tr}])
 
        ;; Report readings button
-       (when editing?
+       (when (and editing? user-can-publish?)
          [report-readings-button
           {:tr       tr
            :lipas-id lipas-id
@@ -253,8 +253,8 @@
            (when spectators?
              [:spectators-count (tr :lipas.visitors/spectators-count)])]))
 
-(defn visitors-view [{:keys [tr display-data lipas-id
-                             editing? close spectators?]
+(defn visitors-view [{:keys [tr display-data lipas-id editing? close
+                             spectators? user-can-publish?]
                       :or   [spectators? false]}]
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
@@ -302,7 +302,7 @@
            :tr       tr}])
 
        ;; Report readings button
-       (when editing?
+       (when (and editing? user-can-publish?)
          [report-readings-button
           {:tr       tr
            :lipas-id lipas-id
