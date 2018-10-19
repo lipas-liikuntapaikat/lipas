@@ -155,11 +155,12 @@
 
         ;; Add 'draft' which is expected to get publshed as side-effect
         event-date (utils/timestamp)
+        draft?     true
         site       (-> (gen/generate (s/gen :lipas/sports-site))
                        (assoc :event-date event-date)
-                       (assoc :status "draft")
+                       (assoc :status "active")
                        (assoc :lipas-id 123))
-        _          (core/upsert-sports-site! db user site)
+        _          (core/upsert-sports-site! db user site draft?)
 
         perms {:admin? true}
         token (jwt/create-token admin)
@@ -201,9 +202,9 @@
   (let [user  (gen-user {:db? true})
         token (jwt/create-token user)
         site  (-> (gen/generate (s/gen :lipas/sports-site))
-                  (assoc :status "draft")
+                  (assoc :status "active")
                   (dissoc :lipas-id))
-        resp  (app (-> (mock/request :post "/api/sports-sites")
+        resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
                        (mock/content-type "application/json")
                        (mock/body (->json site))
                        (token-header token)))]
