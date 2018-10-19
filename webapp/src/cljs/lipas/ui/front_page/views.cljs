@@ -57,13 +57,21 @@
                 :font-size        "1.25em"
                 :opacity          0.95}
                style)}
-    [mui/card-header {:title  title
-                      :action (when link
-                                (r/as-element
-                                 [mui/icon-button
-                                  {:href  link
-                                   :color :secondary}
-                                  [mui/icon "arrow_forward_ios"]]))}]
+    [mui/card-header
+     (merge
+      {:title  title
+       :action (when link
+                 (r/as-element
+                  [mui/icon-button
+                   {:href  link
+                    :color :secondary}
+                   [mui/icon "arrow_forward_ios"]]))}
+      (when link
+        {:titleTypographyProps
+         {:component "a"
+          :href      link
+          :style     {:font-weight     600
+                      :text-decoration "none"}}}))]
     (into [mui/card-content] children)
     [mui/card-actions
      (when link-text
