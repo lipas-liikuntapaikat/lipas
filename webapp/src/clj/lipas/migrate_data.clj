@@ -4,6 +4,7 @@
             [clojure.spec.alpha :as spec]
             [clojure.string :as string]
             [environ.core :refer [env]]
+            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.system :as backend]
@@ -511,7 +512,7 @@
   (let [source                  (first args)
         ice-stadiums-csv-path   (:ice-stadiums-csv-url env)
         swimming-pools-csv-path (:swimming-pools-csv-url env)
-        config                  (select-keys backend/default-config [:db])
+        config                  (select-keys config/default-config [:db])
         {:keys [db]}            (backend/start-system! config)
         user                    (core/get-user db "import@lipas.fi")]
     (case source

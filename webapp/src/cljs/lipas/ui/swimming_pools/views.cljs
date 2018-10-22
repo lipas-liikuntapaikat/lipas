@@ -586,21 +586,23 @@
       [lui/form-card {:title (tr :lipas.visitors/headline)
                       :md    12 :lg 12}
        [sports-site/visitors-view
-        {:tr           tr
-         :lipas-id     lipas-id
-         :editing?     editing?
-         :close        close
-         :display-data display-data}]]
+        {:tr                tr
+         :lipas-id          lipas-id
+         :editing?          editing?
+         :user-can-publish? user-can-publish?
+         :close             close
+         :display-data      display-data}]]
 
       ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
                       :md    12 :lg 12}
        [sports-site/energy-consumption-view
-        {:tr           tr
-         :lipas-id     lipas-id
-         :editing?     editing?
-         :close        close
-         :display-data display-data}]]]]))
+        {:tr                tr
+         :lipas-id          lipas-id
+         :editing?          editing?
+         :user-can-publish? user-can-publish?
+         :close             close
+         :display-data      display-data}]]]]))
 
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale       (tr)
@@ -650,40 +652,6 @@
       [mui/button {:color :secondary
                    :href  "http://www.suh.fi/toiminta/tekninen_neuvonta"}
        (str "> " (tr :swim-energy/suh-link))]]]]])
-
-(defn energy-form [{:keys [tr year]}]
-  (let [data           (<== [::subs/editing-rev])
-        energy-history (<== [::subs/energy-consumption-history])
-        edits-valid?   (<== [::subs/edits-valid?])
-        lipas-id       (:lipas-id data)
-        set-field      (partial set-field lipas-id)]
-
-    [mui/grid {:container true}
-
-     ;; Energy consumption
-     [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)}
-
-      [mui/typography {:variant "subheading"
-                       :style   {:margin-bottom "1em"}}
-       (tr :lipas.energy-consumption/yearly)]
-      [energy/form
-       {:tr        tr
-        :data      (:energy-consumption data)
-        :on-change (partial set-field :energy-consumption)}]
-
-      [lui/expansion-panel {:label (tr :actions/show-all-years)}
-       [energy/table {:tr         tr
-                      :read-only? true
-                      :items      energy-history}]]]
-
-     ;; Actions
-     [lui/form-card {}
-      [mui/button {:full-width true
-                   :disabled   (not edits-valid?)
-                   :color      "secondary"
-                   :variant    "raised"
-                   :on-click   #(==> [::events/commit-energy-consumption data])}
-       (tr :actions/save)]]]))
 
 (defn energy-form-tab [tr]
   (let [locale          (tr)

@@ -546,23 +546,25 @@
       [lui/form-card {:title (tr :lipas.visitors/headline)
                       :md    12 :lg 12}
        [sports-site/visitors-view
-        {:tr           tr
-         :lipas-id     lipas-id
-         :spectators?  true
-         :editing?     editing?
-         :close        close
-         :display-data display-data}]]
+        {:tr                tr
+         :lipas-id          lipas-id
+         :spectators?       true
+         :editing?          editing?
+         :user-can-publish? user-can-publish?
+         :close             close
+         :display-data      display-data}]]
 
       ;;; Energy consumption
       [lui/form-card {:title (tr :lipas.energy-consumption/headline)
                       :md    12 :lg 12}
        [sports-site/energy-consumption-view
-        {:tr           tr
-         :cold?        true
-         :lipas-id     lipas-id
-         :editing?     editing?
-         :close        close
-         :display-data display-data}]]]]))
+        {:tr                tr
+         :cold?             true
+         :lipas-id          lipas-id
+         :editing?          editing?
+         :user-can-publish? user-can-publish?
+         :close             close
+         :display-data      display-data}]]]]))
 
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale       (tr)

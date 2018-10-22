@@ -53,7 +53,7 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [[sites permissions cities types] [_ locale]]
-   (when permissions
+   (when (and permissions sites)
      (->> sites
           vals
           (filter (partial permissions/publish? permissions))

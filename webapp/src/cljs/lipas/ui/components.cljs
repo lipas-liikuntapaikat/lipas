@@ -4,6 +4,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [goog.object :as gobj]
+            [goog.functions :as gfun]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -376,30 +377,36 @@
                  (assoc :ref (:inputRef props))
                  (dissoc :inputRef))])
 
-(defn text-field-controlled [{:keys [value type on-change spec required
-                                     Input-props adornment multiline]
+(defn text-field-controlled [{:keys [value type on-change spec required defer-ms
+                                     Input-props adornment multiline read-only?]
+                              :or   {defer-ms 200}
                               :as   props} & children]
-  (let [input (if multiline
-                patched-text-area
-                patched-input)
-        props (-> props
-                  (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                  (assoc :error (error? spec value required))
-                  (assoc :Input-props
-                         (merge Input-props
-                                {:input-component (r/reactify-component
-                                                   input)}
-                                (when adornment
-                                  (->adornment adornment))))
-                  (assoc :value (or value ""))
-                  (assoc :on-change #(->> %
-                                          .-target
-                                          .-value
-                                          (coerce type)
-                                          on-change))
-                  (assoc :on-blur #(when (string? value)
-                                     (on-change (trim value)))))]
-    (into [mui/text-field props] children)))
+  (r/with-let [read-only*?   (r/atom read-only?)
+               state (r/atom value)]
+    (let [_          (when (not= @read-only*? read-only?)
+                       (do ; fix stale state between read-only? switches
+                         (reset! read-only*? read-only?)
+                         (reset! state value)))
+          on-change  (gfun/debounce on-change defer-ms)
+          on-change* (fn [e]
+                       (let [new-val (->> e .-target .-value (coerce type))]
+                         (reset! state new-val)
+                         (on-change @state)))
+          input      (if multiline
+                       patched-text-area
+                       patched-input)
+          props      (-> (dissoc props :read-only? :defer-ms)
+                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                         (assoc :error (error? spec @state required))
+                         (assoc :Input-props
+                                (merge Input-props
+                                       {:input-component (r/reactify-component
+                                                          input)}
+                                       (when adornment
+                                         (->adornment adornment))))
+                         (assoc :value @state)
+                         (assoc :on-change on-change*))]
+      (into [mui/text-field props] children))))
 
 (def text-field text-field-controlled)
 
@@ -525,10 +532,11 @@
 
 (defn ->display-tf [{:keys [label value]} multiline?]
   (let [value (display-value value :empty "-" :links? false)]
-    [text-field {:label     label
-                 :multiline multiline?
-                 :value     value
-                 :disabled  true}]))
+    [text-field {:label      label
+                 :multiline  multiline?
+                 :value      value
+                 :disabled   true
+                 :read-only? true}]))
 
 (defn form-trad [{:keys [read-only?]} & data]
   (into [mui/form-group]
@@ -673,7 +681,7 @@
 
    ;; Floating actions
    (into
-    [floating-container {:right 16 :bottom 16 :background-color "transparent"}]
+    [floating-container {:right 24 :bottom 16 :background-color "transparent"}]
     (interpose [:span {:style {:margin-left  "0.25em"
                                :margin-right "0.25em"}}]
                bottom-actions))

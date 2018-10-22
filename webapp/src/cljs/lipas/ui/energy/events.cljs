@@ -6,10 +6,12 @@
 (re-frame/reg-event-fx
  ::select-energy-consumption-site
  (fn [{:keys [db]} [_ lipas-id]]
-   {:db       (-> db
-                  (assoc-in [:energy-consumption :lipas-id] lipas-id)
-                  (assoc-in [:energy-consumption :year] nil))
-    :dispatch [:lipas.ui.sports-sites.events/get-history lipas-id]}))
+   (merge
+    {:db (-> db
+             (assoc-in [:energy-consumption :lipas-id] lipas-id)
+             (assoc-in [:energy-consumption :year] nil))}
+    (when lipas-id
+      {:dispatch [:lipas.ui.sports-sites.events/get-history lipas-id]}))))
 
 (re-frame/reg-event-db
  ::select-energy-consumption-year
@@ -79,10 +81,8 @@
 (re-frame/reg-event-fx
  ::commit-energy-consumption
  (fn [_ [_ rev draft?]]
-   (let [status (if draft? "draft" (:status rev))
-         rev    (-> (utils/make-saveable rev)
-                    (assoc :status status))]
-     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev]})))
+   (let [rev (utils/make-saveable rev)]
+     {:dispatch [:lipas.ui.sports-sites.events/commit-rev rev draft?]})))
 
 (re-frame/reg-event-db
  ::fetch-energy-report-success

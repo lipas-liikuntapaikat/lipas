@@ -62,7 +62,9 @@
  (fn [[_ locale] _]
    (re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale]))
  (fn [sites-list _]
-   (filter (comp #{3110 3130} :type-code) sites-list)))
+   (->> sites-list
+        (filter (comp #{3110 3130} :type-code))
+        not-empty)))
 
 (re-frame/reg-sub
  ::sites-to-draft-list
@@ -244,5 +246,5 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :visitors-history   (sort-by :year visitors-history)
-        :energy-consumption (sort-by :year energy-history)}))))
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
+        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
