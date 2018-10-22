@@ -98,8 +98,9 @@
                     close
                     #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
-         [mui/icon "arrow_forward"]]
-        (tr :lipas.user/view-basic-info)]
+         [mui/icon "keyboard_arrow_right"]]
+        [mui/typography {:variant :body2}
+         (tr :lipas.user/view-basic-info)]]
 
        ;; Report energy consumption button
        [mui/list-item
@@ -108,8 +109,9 @@
                     close
                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
-         [mui/icon "arrow_forward"]]
-        (tr :lipas.user/report-energy-and-visitors)]]]
+         [mui/icon "keyboard_arrow_right"]]
+        [mui/typography {:variant :body2}
+         (tr :lipas.user/report-energy-and-visitors)]]]]
 
      [mui/dialog-actions
       [mui/button {:on-click close}

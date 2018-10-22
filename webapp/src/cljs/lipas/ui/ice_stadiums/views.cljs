@@ -673,7 +673,7 @@
 
          ;; 5 Reports tab
          [mui/tab {:label (tr :reports/headline)
-                   :icon  (r/as-element [mui/icon "assessment"])}]]]]]
+                   :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab

@@ -166,7 +166,7 @@
                      action-icon hide-action-btn?]
               :or   {sort-cmp         compare
                      sort-asc?        false
-                     action-icon      "more_horiz"
+                     action-icon      "keyboard_arrow_right"
                      hide-action-btn? false}}]
   (r/with-let [key-fn*   (or key-fn (constantly nil))
                sort-fn*  (r/atom sort-fn)
