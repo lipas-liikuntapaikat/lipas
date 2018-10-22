@@ -287,9 +287,8 @@
 (s/def :lipas/visitors-monthly
   (s/map-of months :lipas/visitors))
 
-(s/def :lipas/sports-site
+(s/def :lipas/new-sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
-                   :lipas.sports-site/lipas-id
                    :lipas.sports-site/status
                    :lipas.sports-site/type
                    :lipas.sports-site/name
@@ -311,6 +310,11 @@
                    :lipas/visitors-monthly
                    ;; :lipas.sports-site/properties
                    ]))
+
+(s/def :lipas/sports-site
+  (s/merge
+   :lipas/new-sports-site
+   (s/keys :req-un [:lipas.sports-site/lipas-id])))
 
 (s/def :lipas/sports-sites (s/coll-of :lipas/sports-site :distinct true :into []))
 
