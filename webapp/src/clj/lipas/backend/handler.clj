@@ -1,5 +1,6 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
@@ -86,10 +87,12 @@
       ["/sports-sites"
        {:post
         {:middleware [mw/token-auth mw/auth]
-         :parameters {:query :lipas.api/query-params}
+         :parameters {:query :lipas.api/query-params
+                      :body  (s/or :new :lipas/new-sports-site
+                                   :existing :lipas/sports-site)}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [draft? (-> req :parameters :query :draft utils/->bool)]
+           (let [draft?      (-> req :parameters :query :draft utils/->bool)]
              {:status 201
               :body   (core/upsert-sports-site! db identity body-params draft?)}))}}]
 
