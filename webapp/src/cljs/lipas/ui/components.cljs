@@ -378,10 +378,15 @@
                  (dissoc :inputRef))])
 
 (defn text-field-controlled [{:keys [value type on-change spec required
-                                     Input-props adornment multiline]
+                                     Input-props adornment multiline read-only?]
                               :as   props} & children]
-  (r/with-let [state (r/atom value)]
-    (let [on-change  (gfun/debounce on-change 500)
+  (r/with-let [read-only*?   (r/atom read-only?)
+               state (r/atom value)]
+    (let [_          (when (not= @read-only*? read-only?)
+                       (do ; fix stale state between read-only? switches
+                         (reset! read-only*? read-only?)
+                         (reset! state value)))
+          on-change  (gfun/debounce on-change 200)
           on-change* (fn [e]
                        (let [new-val (->> e .-target .-value (coerce type))]
                          (reset! state new-val)
@@ -389,7 +394,7 @@
           input      (if multiline
                        patched-text-area
                        patched-input)
-          props      (-> props
+          props      (-> (dissoc props :read-only?)
                          (as-> $ (if (= "number" type) (dissoc $ :type) $))
                          (assoc :error (error? spec @state required))
                          (assoc :Input-props
@@ -399,9 +404,7 @@
                                        (when adornment
                                          (->adornment adornment))))
                          (assoc :value @state)
-                         (assoc :on-change on-change*)
-                         (assoc :on-blur #(when (string? @state)
-                                            (on-change (trim @state)))))]
+                         (assoc :on-change on-change*))]
       (into [mui/text-field props] children))))
 
 (def text-field text-field-controlled)
@@ -528,10 +531,11 @@
 
 (defn ->display-tf [{:keys [label value]} multiline?]
   (let [value (display-value value :empty "-" :links? false)]
-    [text-field {:label     label
-                 :multiline multiline?
-                 :value     value
-                 :disabled  true}]))
+    [text-field {:label      label
+                 :multiline  multiline?
+                 :value      value
+                 :disabled   true
+                 :read-only? true}]))
 
 (defn form-trad [{:keys [read-only?]} & data]
   (into [mui/form-group]
