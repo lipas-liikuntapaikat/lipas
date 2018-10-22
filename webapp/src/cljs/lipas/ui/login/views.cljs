@@ -35,6 +35,10 @@
        :label        (tr :login/password)
        :type         "password"
        :value        (:password form-data)
+       ;; Enter press might occur 'immediately' so we can't afford
+       ;; waiting default 200ms for text-field to update
+       ;; asynchronously.
+       :defer-ms     0
        :on-change    (comp clear-errors #(set-field :password %))
        :on-key-press (fn [e]
                        (when (= 13 (.-charCode e)) ; Enter

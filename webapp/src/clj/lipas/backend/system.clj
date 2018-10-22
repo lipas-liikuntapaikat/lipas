@@ -1,26 +1,10 @@
 (ns lipas.backend.system
-  (:require [environ.core :refer [env]]
-            [clojure.pprint :refer [pprint]]
-            [ring.adapter.jetty :as jetty]
+  (:require [clojure.pprint :refer [pprint]]
             [integrant.core :as ig]
+            [lipas.backend.config :as config]
             [lipas.backend.email :as email]
-            [lipas.backend.handler :as handler]))
-
-(def default-config
-  {:db      {:dbtype   "postgresql"
-             :dbname   (:db-name env)
-             :host     (:db-host env)
-             :user     (:db-user env)
-             :port     (:db-port env)
-             :password (:db-password env)}
-   :emailer {:host (:smtp-host env)
-             :user (:smtp-user env)
-             :pass (:smtp-pass env)
-             :from (:smtp-from env)}
-   :app     {:db      (ig/ref :db)
-             :emailer (ig/ref :emailer)}
-   :server  {:app  (ig/ref :app)
-             :port 8091}})
+            [lipas.backend.handler :as handler]
+            [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
   ;; TODO setup connection pooling
@@ -43,7 +27,7 @@
 
 (defn start-system!
   ([]
-   (start-system! default-config))
+   (start-system! config/default-config))
   ([config]
    (let [system (ig/init config)]
      (prn "System started with config:")
@@ -56,4 +40,4 @@
   (ig/halt! system))
 
 (defn -main [& args]
-  (start-system! default-config))
+  (start-system! config/default-config))

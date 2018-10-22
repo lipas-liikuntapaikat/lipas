@@ -282,7 +282,15 @@
         years      (<== [::subs/energy-consumption-years-list])
         year       (<== [::subs/energy-consumption-year])
 
-        sites  (or editable-sites draftable-sites)
+        sites (or editable-sites draftable-sites)
+
+        lipas-id (get-in site [:history (:latest site) :lipas-id])
+
+        ;; Fix stale data when jumping between swimming-pool and
+        ;; ice-stadium portals
+        _ (when-not (some #{lipas-id} (map :lipas-id sites))
+            (==> [::events/select-energy-consumption-site nil]))
+
         draft? (empty? editable-sites)]
 
     (if-not logged-in?
@@ -314,7 +322,7 @@
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-hall)
-             :value     (get-in site [:history (:latest site) :lipas-id])
+             :value     lipas-id
              :items     sites
              :label-fn  :name
              :value-fn  :lipas-id
