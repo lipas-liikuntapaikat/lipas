@@ -377,8 +377,9 @@
                  (assoc :ref (:inputRef props))
                  (dissoc :inputRef))])
 
-(defn text-field-controlled [{:keys [value type on-change spec required
+(defn text-field-controlled [{:keys [value type on-change spec required defer-ms
                                      Input-props adornment multiline read-only?]
+                              :or   {defer-ms 200}
                               :as   props} & children]
   (r/with-let [read-only*?   (r/atom read-only?)
                state (r/atom value)]
@@ -386,7 +387,7 @@
                        (do ; fix stale state between read-only? switches
                          (reset! read-only*? read-only?)
                          (reset! state value)))
-          on-change  (gfun/debounce on-change 200)
+          on-change  (gfun/debounce on-change defer-ms)
           on-change* (fn [e]
                        (let [new-val (->> e .-target .-value (coerce type))]
                          (reset! state new-val)
@@ -394,7 +395,7 @@
           input      (if multiline
                        patched-text-area
                        patched-input)
-          props      (-> (dissoc props :read-only?)
+          props      (-> (dissoc props :read-only? :defer-ms)
                          (as-> $ (if (= "number" type) (dissoc $ :type) $))
                          (assoc :error (error? spec @state required))
                          (assoc :Input-props
