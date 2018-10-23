@@ -226,6 +226,7 @@
              :value     (-> data :energy-consumption :contains-other-buildings?)
              :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
 
+           ^{:key year}
            [form
             {:tr          tr
              :disabled?   @monthly-energy?
@@ -242,6 +243,7 @@
              :value     (-> data :energy-consumption :contains-other-buildings?)
              :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
 
+           ^{:key year}
            [form-monthly
             {:tr          tr
              :cold?       cold?
