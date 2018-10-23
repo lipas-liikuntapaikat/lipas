@@ -4,8 +4,6 @@
             [lipas.ui.map.map :as ol-map]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
-            [reagent.core :as r]
-            [clojure.set :refer [map-invert]]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn layer-switcher []
@@ -13,27 +11,30 @@
                   :maastokartta "Maastokartta"
                   :ortokuva     "Ortokuva"}
         basemap  (<== [::subs/basemap])]
-    [mui/form-control {:component "fieldset"}
-     (into
-      [mui/radio-group
-       {:value     (get basemaps basemap)
-        :on-change #(==> [::events/select-basemap (get (map-invert basemaps) %2)])}]
-      (for [k (vals basemaps)]
-        [mui/form-control-label {:control (r/as-element [mui/radio])
-                                 :value   k
-                                 :label   k}]))]))
+    [lui/select
+     {:items     basemaps
+      :value     basemap
+      :label-fn  second
+      :value-fn  first
+      :on-change #(==> [::events/select-basemap %])}]))
 
-(defn floating-container [{:keys [top right bottom left]} & children]
+(defn floating-container [{:keys [top right bottom left style elevation]
+                           :or   {elevation 2}}
+                          & children]
   (into
-   [mui/paper {:style {:position         :fixed
-                       :z-index          9999
-                       :background-color mui/gray2
-                       :top              top
-                       :right            right
-                       :bottom           bottom
-                       :left             left
-                       :padding-left     "1em"
-                       :padding-right    "1em"}}]
+   [mui/paper
+    {:elevation elevation
+     :style
+     (merge {:position         :fixed
+             :z-index          999
+             :background-color mui/gray2
+             :top              top
+             :right            right
+             :bottom           bottom
+             :left             left
+             :padding-left     "1em"
+             :padding-right    "1em"}
+            style)}]
    children))
 
 (defn filters []
@@ -95,7 +96,11 @@
   [mui/grid {:container true
              :style     {:flex-direction "column"
                          :flex           "1 0 auto"}}
-   [floating-container {:right 0}
+   [floating-container {:right     0
+                        :elevation 0
+                        :style     {:background-color "transparent"
+                                    :padding-top      "0.5em"
+                                    :padding-right    "0.5em"}}
     [layer-switcher]]
    [floating-container {:bottom 0 :left 0}
     [filters]]
