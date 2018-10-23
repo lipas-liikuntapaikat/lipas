@@ -1,3 +1,4 @@
+// OpenLayers
 import {Map, View, Overlay} from "ol";
 import {get, fromLonLat} from 'ol/proj';
 import {register} from 'ol/proj/proj4';
@@ -52,3 +53,7 @@ window.ol = {
     },
   },
 };
+
+// Zipcelx
+import zipcelx from 'zipcelx';
+window.zipcelx = zipcelx;

@@ -58,3 +58,11 @@ WHERE type_code = :type_code
 SELECT *
 FROM sports_site_by_year
 WHERE type_code = :type_code AND date_part('year', event_date) = :year
+
+-- :name get-by-author-and-status
+-- :command :query
+-- :result :many
+-- :doc Lists sports-sites by given author_id (user) and status
+SELECT *
+FROM sports_site
+WHERE status = :status AND author_id = :author_id ::uuid

@@ -4,7 +4,7 @@
             [day8.re-frame.http-fx]
             [district0x.re-frame.google-analytics-fx]
             [lipas.ui.local-storage]
-            [lipas.ui.scroll]
+            [lipas.ui.effects]
             [lipas.ui.config :as config]
             [lipas.ui.events :as events]
             [lipas.ui.routes :as routes]

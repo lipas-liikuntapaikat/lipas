@@ -42,14 +42,18 @@
 
 ;; Sports Site ;;
 
-(defn upsert-sports-site! [db-spec user sports-site]
-  (jdbc/with-db-transaction [tx db-spec]
-    (let [lipas-id    (or (:lipas-id sports-site)
-                          (:nextval (sports-site/next-lipas-id tx)))
-          sports-site (assoc sports-site :lipas-id lipas-id)]
-      (->> (sports-site/marshall sports-site user)
-           (sports-site/insert-sports-site-rev! tx)
-           (sports-site/unmarshall)))))
+(defn upsert-sports-site!
+  ([db-spec user sports-site]
+   (upsert-sports-site! db-spec user sports-site false))
+  ([db-spec user sports-site draft?]
+   (jdbc/with-db-transaction [tx db-spec]
+     (let [status      (if draft? "draft" "published")
+           lipas-id    (or (:lipas-id sports-site)
+                           (:nextval (sports-site/next-lipas-id tx)))
+           sports-site (assoc sports-site :lipas-id lipas-id)]
+       (->> (sports-site/marshall sports-site user status)
+            (sports-site/insert-sports-site-rev! tx)
+            (sports-site/unmarshall))))))
 
 (defn upsert-sports-sites! [db-spec user sports-sites]
   (jdbc/with-db-transaction [tx db-spec]
@@ -78,3 +82,14 @@
                    db-utils/->snake-case-keywords)]
     (->> (db-fn db-spec params)
          (map sports-site/unmarshall))))
+
+(defn get-users-drafts [db user]
+  (let [params {:author_id (:id user)
+                :status    "draft"}]
+    (->> (sports-site/get-by-author-and-status db params)
+         (map sports-site/unmarshall))))
+
+(comment
+  (require '[lipas.backend.config :as config])
+  (def db-spec (:db config/default-config))
+  (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"}))

@@ -70,4 +70,4 @@
        [:lipas.ui.events/navigate (str "/#/uimahalliportaali/hallit/" lipas-id)])
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/uimahalliportaali/hallit"])]
-    :lipas.ui.scroll/reset! nil}))
+    :lipas.ui.effects/reset-scroll! nil}))

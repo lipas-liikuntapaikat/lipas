@@ -4,6 +4,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :refer [trim] :as string]
             [goog.object :as gobj]
+            [goog.functions :as gfun]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -70,14 +71,16 @@
      [mui/button btn-props
       [mui/icon "edit_icon"]]]))
 
-(defn save-button [{:keys [on-click tooltip disabled disabled-tooltip] :as props}]
+(defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
+                    :or   {color "secondary"}
+                    :as   props}]
   [mui/tooltip {:title     (if disabled disabled-tooltip "")
                 :placement "top"}
    [:span
-    [mui/button (merge (dissoc props :disabled-tooltip)
+    [mui/button (merge (dissoc props :disabled-tooltip :color)
                        {:disabled disabled
                         :on-click on-click
-                        :color    "secondary"})
+                        :color    color})
      tooltip
      [mui/icon {:style {:margin-left "0.25em"}}
       "save_icon"]]]])
@@ -163,7 +166,7 @@
                      action-icon hide-action-btn?]
               :or   {sort-cmp         compare
                      sort-asc?        false
-                     action-icon      "more_horiz"
+                     action-icon      "keyboard_arrow_right"
                      hide-action-btn? false}}]
   (r/with-let [key-fn*   (or key-fn (constantly nil))
                sort-fn*  (r/atom sort-fn)
@@ -351,41 +354,59 @@
    (r/as-element
     [mui/input-adornment s])})
 
+;; TODO maybe one magic regexp needed here?
 (defn coerce [type s]
   (if (= type "number")
     (-> s
         (string/replace "," ".")
         (string/replace #"[^\d.]" "")
         (as-> $ (if (or (string/ends-with? $ ".")
-                        (string/ends-with? $ ".0"))
+                        (and (string/includes? $ ".")
+                             (string/ends-with? $ "0")))
                   $
                   (read-string $))))
     (not-empty s)))
 
 (defn patched-input [props]
-  [:input (dissoc props :inputRef)])
+  [:input (-> props
+              (assoc :ref (:inputRef props))
+              (dissoc :inputRef))])
 
-(defn text-field-controlled [{:keys [value type on-change spec required
-                                     Input-props adornment]
+(defn patched-text-area [props]
+  [:textarea (-> props
+                 (assoc :ref (:inputRef props))
+                 (dissoc :inputRef))])
+
+(defn text-field-controlled [{:keys [value type on-change spec required defer-ms
+                                     Input-props adornment multiline read-only?]
+                              :or   {defer-ms 200}
                               :as   props} & children]
-  (let [props (-> props
-                  (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                  (assoc :error (error? spec value required))
-                  (assoc :Input-props
-                         (merge Input-props
-                                {:input-component (r/reactify-component
-                                                   patched-input)}
-                                (when adornment
-                                  (->adornment adornment))))
-                  (assoc :value (or value ""))
-                  (assoc :on-change #(->> %
-                                          .-target
-                                          .-value
-                                          (coerce type)
-                                          on-change))
-                  (assoc :on-blur #(when (string? value)
-                                     (on-change (trim value)))))]
-    (into [mui/text-field props] children)))
+  (r/with-let [read-only*?   (r/atom read-only?)
+               state (r/atom value)]
+    (let [_          (when (not= @read-only*? read-only?)
+                       (do ; fix stale state between read-only? switches
+                         (reset! read-only*? read-only?)
+                         (reset! state value)))
+          on-change  (gfun/debounce on-change defer-ms)
+          on-change* (fn [e]
+                       (let [new-val (->> e .-target .-value (coerce type))]
+                         (reset! state new-val)
+                         (on-change @state)))
+          input      (if multiline
+                       patched-text-area
+                       patched-input)
+          props      (-> (dissoc props :read-only? :defer-ms)
+                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                         (assoc :error (error? spec @state required))
+                         (assoc :Input-props
+                                (merge Input-props
+                                       {:input-component (r/reactify-component
+                                                          input)}
+                                       (when adornment
+                                         (->adornment adornment))))
+                         (assoc :value @state)
+                         (assoc :on-change on-change*))]
+      (into [mui/text-field props] children))))
 
 (def text-field text-field-controlled)
 
@@ -509,11 +530,13 @@
                 [mui/form-group
                  form-field])]]))]])
 
-(defn ->display-tf [{:keys [label value]}]
+(defn ->display-tf [{:keys [label value]} multiline?]
   (let [value (display-value value :empty "-" :links? false)]
-    [text-field {:label     label
-                 :value     value
-                 :disabled  true}]))
+    [text-field {:label      label
+                 :multiline  multiline?
+                 :value      value
+                 :disabled   true
+                 :read-only? true}]))
 
 (defn form-trad [{:keys [read-only?]} & data]
   (into [mui/form-group]
@@ -522,7 +545,7 @@
               :let  [field (-> d :form-field)
                      props (-> field second)]]
           (if read-only?
-            (->display-tf d)
+            (->display-tf d (:multiline props))
             (assoc field 1 (assoc props :label (:label d)))))))
 
 ;; (def form table-form)
@@ -658,7 +681,7 @@
 
    ;; Floating actions
    (into
-    [floating-container {:right 16 :bottom 16 :background-color "transparent"}]
+    [floating-container {:right 24 :bottom 16 :background-color "transparent"}]
     (interpose [:span {:style {:margin-left  "0.25em"
                                :margin-right "0.25em"}}]
                bottom-actions))

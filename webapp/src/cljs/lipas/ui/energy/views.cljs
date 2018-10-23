@@ -257,16 +257,23 @@
                  :items      energy-history}]]]
 
        ;; Actions
-       [lui/form-card {:xs 12 :md 12 :lg 12}
-        [mui/button
-         {:full-width true
-          :disabled   (not edits-valid?)
-          :color      "secondary"
-          :variant    "raised"
-          :on-click   #(==> [::events/commit-energy-consumption data draft?])}
-         (if draft?
-           (tr :actions/save-draft)
-           (tr :actions/save))]]])))
+       [lui/floating-container
+        {:right            16
+         :bottom           16
+         :background-color "transparent"}
+        [lui/save-button
+         {:variant  "extendedFab"
+          :disabled (not edits-valid?)
+          :color    "secondary"
+          :on-click #(==> [::events/commit-energy-consumption data draft?])
+          :tooltip  (if draft?
+                      (tr :actions/save-draft)
+                      (tr :actions/save))}]]
+
+       ;; Small footer on top of which floating container may scroll
+       [mui/grid {:item  true :xs 12
+                  :style {:height           "5em"
+                          :background-color mui/gray1}}]])))
 
 (defn energy-consumption-form [{:keys [tr editable-sites draftable-sites
                                        spectators? cold?]}]
@@ -275,7 +282,15 @@
         years      (<== [::subs/energy-consumption-years-list])
         year       (<== [::subs/energy-consumption-year])
 
-        sites  (or editable-sites draftable-sites)
+        sites (or editable-sites draftable-sites)
+
+        lipas-id (get-in site [:history (:latest site) :lipas-id])
+
+        ;; Fix stale data when jumping between swimming-pool and
+        ;; ice-stadium portals
+        _ (when-not (some #{lipas-id} (map :lipas-id sites))
+            (==> [::events/select-energy-consumption-site nil]))
+
         draft? (empty? editable-sites)]
 
     (if-not logged-in?
@@ -307,7 +322,7 @@
           [mui/form-group
            [lui/select
             {:label     (tr :actions/select-hall)
-             :value     (get-in site [:history (:latest site) :lipas-id])
+             :value     lipas-id
              :items     sites
              :label-fn  :name
              :value-fn  :lipas-id

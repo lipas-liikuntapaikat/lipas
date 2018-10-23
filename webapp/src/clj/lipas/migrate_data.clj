@@ -4,6 +4,7 @@
             [clojure.spec.alpha :as spec]
             [clojure.string :as string]
             [environ.core :refer [env]]
+            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.system :as backend]
@@ -482,11 +483,45 @@
       (upsert! db user swimming-pools)
       (log/error "Invalid data, check messages in REPL."))))
 
+
+(defn- resolve-transform [data]
+  (case (-> data :type :typeCode)
+    (3110 3130) {:transform-fn (comp utils/clean (partial ->swimming-pool {}))
+                 :spec         :lipas.sports-site/swimming-pool}
+    (2510 2520) {:transform-fn (comp utils/clean (partial ->ice-stadium {}))
+                 :spec         :lipas.sports-site/ice-stadium}
+    {:transform-fn (comp utils/clean (partial ->sports-site {}))
+     :spec         :lipas/sports-site}))
+
+(defn migrate-from-old-lipas [db user lipas-ids]
+  (log/info "Starting to migrate sports-sites" lipas-ids)
+  (doseq [lipas-id lipas-ids]
+    (let [url   (str "http://lipas.cc.jyu.fi/api/sports-places/" lipas-id)
+          data  (-> url slurp (json/decode true))
+          instr (resolve-transform data)
+          data  ((:transform-fn instr) data)]
+      (if (spec/valid? (:spec instr) data)
+        (do
+          (db/upsert-sports-site! db user data)
+          (log/info "Successfully migrated" lipas-id))
+        (do
+          (spec/explain (:spec instr) data)
+          (log/error "Failed to migrate lipas-id" lipas-id))))))
+
 (defn -main [& args]
-  (let [ice-stadiums-csv-path   (:ice-stadiums-csv-url env)
+  (let [source                  (first args)
+        ice-stadiums-csv-path   (:ice-stadiums-csv-url env)
         swimming-pools-csv-path (:swimming-pools-csv-url env)
-        config                  (select-keys backend/default-config [:db])
+        config                  (select-keys config/default-config [:db])
         {:keys [db]}            (backend/start-system! config)
         user                    (core/get-user db "import@lipas.fi")]
-    (migrate-ice-stadiums! db user ice-stadiums-csv-path)
-    (migrate-swimming-pools! db user swimming-pools-csv-path)))
+    (case source
+      "--csv"   (do
+                  (migrate-ice-stadiums! db user ice-stadiums-csv-path)
+                  (migrate-swimming-pools! db user swimming-pools-csv-path))
+      "--lipas" (migrate-from-old-lipas db user (rest args))
+      (log/error "Please provide --csv or --lipas 123 234 ..."))))
+
+(comment
+  (-main "--csv") ;Careful with this one
+  (-main "--lipas" "529736"))

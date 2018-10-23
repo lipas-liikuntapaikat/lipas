@@ -1,10 +1,11 @@
 (ns lipas.seed
-  (:require [lipas.backend.system :as backend]
-            [lipas.backend.core :as core]
-            [environ.core :refer [env]]
-            [lipas.schema.core]
-            [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
+            [environ.core :refer [env]]
+            [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.system :as backend]
+            [lipas.schema.core]
             [taoensso.timbre :as log]))
 
 (def jh-demo
@@ -69,7 +70,7 @@
   (log/info "Seeding done!"))
 
 (defn -main [& args]
-  (let [config (select-keys backend/default-config [:db])
+  (let [config (select-keys config/default-config [:db])
         system (backend/start-system! config)
         db     (:db system)]
     (try
