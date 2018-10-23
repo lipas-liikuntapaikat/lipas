@@ -3,10 +3,11 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
-            [lipas.permissions :as permissions]
             [lipas.i18n.core :as i18n]
+            [lipas.permissions :as permissions]
             [lipas.reports :as reports]
-            [lipas.utils :as utils]))
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log]))
 
 ;;; User ;;;
 
@@ -42,8 +43,17 @@
                                      (dissoc user :password))
   {:status "OK"})
 
+(defn publish-users-drafts! [db {:keys [permissions id] :as user}]
+  (let [drafts (->> (db/get-users-drafts db user)
+                    (filter (partial permissions/publish? permissions)))]
+    (log/info "Publishing" (count drafts) "drafts from user" id)
+    (doseq [draft drafts]
+      (db/upsert-sports-site! db user (assoc draft :status "active")))))
+
+;; TODO send email
 (defn update-user-permissions! [db emailer user]
-  (db/update-user-permissions! db user)) ;; TODO send email
+  (db/update-user-permissions! db user)
+  (publish-users-drafts! db user))
 
 (defn get-user [db identifier]
   (or (db/get-user-by-email db {:email identifier})
@@ -84,15 +94,15 @@
 
 ;;; Sports-sites ;;;
 
-(defn draft? [sports-site]
-  (= (-> sports-site :status) "draft"))
-
-(defn upsert-sports-site! [db user sports-site]
-  (if (or (draft? sports-site)
-          (permissions/publish? (:permissions user) sports-site))
-    (db/upsert-sports-site! db user sports-site)
-    (throw (ex-info "User doesn't have enough permissions!"
-                    {:type :no-permission}))))
+(defn upsert-sports-site!
+  ([db user sports-site]
+   (upsert-sports-site! db user sports-site false))
+  ([db user sports-site draft?]
+   (if (or draft?
+           (permissions/publish? (:permissions user) sports-site))
+     (db/upsert-sports-site! db user sports-site draft?)
+     (throw (ex-info "User doesn't have enough permissions!"
+                     {:type :no-permission})))))
 
 (defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
@@ -108,3 +118,9 @@
 (defn energy-report [db type-code year]
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
+
+(comment
+  (require '[lipas.backend.config :as config])
+  (def db-spec (:db config/default-config))
+  (def admin (get-user db-spec "admin@lipas.fi"))
+  (publish-users-drafts! db-spec admin))

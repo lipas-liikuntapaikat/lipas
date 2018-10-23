@@ -49,19 +49,22 @@
 
 (re-frame/reg-sub
  ::sites-to-edit
- :<- [:lipas.ui.user.subs/access-to-sports-sites]
- :<- [:lipas.ui.user.subs/admin?]
+ :<- [:lipas.ui.user.subs/sports-sites]
  :<- [::latest-swimming-pool-revs]
- (fn [[ids admin? sites] _]
-   (if admin?
-     (not-empty sites)
-     (not-empty (select-keys sites ids)))))
+ (fn [[_ locale] _]
+   [(re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale])
+    (re-frame/subscribe [::latest-ice-stadium-revs])])
+ (fn [[users-sites sites] _]
+   (not-empty (select-keys sites (map :lipas-id users-sites)))))
 
 (re-frame/reg-sub
  ::sites-to-edit-list
- :<- [::sites-to-edit]
- (fn [sites _]
-   (not-empty (sort-by :name (vals sites)))))
+ (fn [[_ locale] _]
+   (re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale]))
+ (fn [sites-list _]
+   (->> sites-list
+        (filter (comp #{3110 3130} :type-code))
+        not-empty)))
 
 (re-frame/reg-sub
  ::sites-to-draft-list
@@ -243,5 +246,5 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :visitors-history   (sort-by :year visitors-history)
-        :energy-consumption (sort-by :year energy-history)}))))
+        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
+        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))

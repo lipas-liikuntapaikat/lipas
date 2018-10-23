@@ -82,7 +82,10 @@
     :text      {:disabled "rgba(0, 0, 0, 0.68)"}}
    :overrides
    {:Mui-card-header
-    {:title {:font-size      "2rem"}}}})
+    {:title
+     {:font-size "2rem"}
+     :action
+     {:margin-top 0}}}})
 
 (def jyu-styles-light
   (utils/deep-merge

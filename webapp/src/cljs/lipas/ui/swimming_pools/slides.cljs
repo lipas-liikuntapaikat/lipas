@@ -4,7 +4,7 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.swimming-pools.events :as events]
             [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.utils :refer [<== ==> localize-field ->setter-fn]]))
+            [lipas.ui.utils :refer [<== ==> localize-field]]))
 
 (defn set-field [dialog field value]
   (#(==> [::events/set-dialog-field dialog field value])))
