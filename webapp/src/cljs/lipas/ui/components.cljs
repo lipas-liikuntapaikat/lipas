@@ -408,7 +408,33 @@
                          (assoc :on-change on-change*))]
       (into [mui/text-field props] children))))
 
-(def text-field text-field-controlled)
+(defn text-field-controlled-slow [{:keys [value type on-change spec required
+                                          Input-props adornment multiline]
+                                   :as        props} & children]
+  (let [input (if multiline
+                patched-text-area
+                patched-input)
+        props (-> (dissoc props :read-only? :defer-ms)
+                  (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                  (assoc :error (error? spec value required))
+                  (assoc :Input-props
+                         (merge Input-props
+                                {:input-component (r/reactify-component
+                                                   input)}
+                                (when adornment
+                                  (->adornment adornment))))
+                  (assoc :value (or value ""))
+                  (assoc :on-change #(->> %
+                                          .-target
+                                          .-value
+                                          (coerce type)
+                                          on-change))
+                  (assoc :on-blur #(when (string? value)
+                                     (on-change (trim value)))))]
+    (into [mui/text-field props] children)))
+
+
+(def text-field text-field-controlled-slow)
 
 (defn select [{:keys [label value items on-change value-fn label-fn
                       sort-fn sort-cmp deselect?]
