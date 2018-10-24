@@ -152,3 +152,9 @@
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
+
+
+(re-frame/reg-event-db
+ ::add
+ (fn [db [_]]
+   (assoc-in db [:new-sports-site :data] {:event-date (utils/timestamp)})))

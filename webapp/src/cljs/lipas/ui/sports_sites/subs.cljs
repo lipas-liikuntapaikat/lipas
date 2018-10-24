@@ -196,3 +196,8 @@
           vals
           (filter (comp type-codes :type-code :type))
           (map (partial ->list-entry data))))))
+
+(re-frame/reg-sub
+ ::new-site-data
+ (fn [db _]
+   (-> db :new-sports-site :data)))
