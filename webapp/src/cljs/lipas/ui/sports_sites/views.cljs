@@ -6,7 +6,6 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
             [lipas.ui.sports-sites.subs :as subs]
-            [lipas.ui.map.views :as map]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -338,8 +337,5 @@
           :sort-fn :city
           :items   sites}]]]]]))
 
-(defn create-panel [tr]
-  [map/map-view])
-
 (defn main [tr]
-  [create-panel tr])
+  [mui/typography "Nothing here"])

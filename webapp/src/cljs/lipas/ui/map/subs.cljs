@@ -43,10 +43,10 @@
  ::selected-sports-site
  (fn [app-db event]
    (ratom/reaction
-    (let [lipas-id (-> @app-db :map :sports-site)
-          site     @(re-frame/subscribe
-                     [:lipas.ui.sports-sites.subs/display-site lipas-id])]
-      site))))
+    (let [lipas-id (-> @app-db :map :sports-site)]
+      (when lipas-id
+        {:display-data @(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])
+         :edit-data    @(re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
 (re-frame/reg-sub
  ::geometries
