@@ -5,7 +5,11 @@
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
+            [lipas.ui.sports-sites.events :as sports-site-events]
+            [lipas.ui.sports-sites.subs :as sports-site-subs]
             [lipas.ui.sports-sites.views :as sports-sites]
+            [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -73,82 +77,112 @@
       [mui/typography {:variant :body2}
        name]]]))
 
-(defn sports-site-info []
-  (let [site     (:display-data (<== [::subs/selected-sports-site]))
-        lipas-id (:lipas-id site)
-        portal   (case (-> site :type :type-code)
+(defn set-field
+  [lipas-id & args]
+  (==> [::sports-site-events/edit-field lipas-id (butlast args) (last args)]))
+
+(defn sports-site-view [{:keys [tr site-data]}]
+  (r/with-let [selected-tab (r/atom 0)]
+    (let [display-data (:display-data site-data)
+          lipas-id     (:lipas-id display-data)
+          edit-data    (:edit-data site-data)
+          types        (<== [::sports-site-subs/types-list])
+          cities       (<== [::sports-site-subs/cities-list])
+          admins       (<== [::sports-site-subs/admins])
+          owners       (<== [::sports-site-subs/owners])
+          editing?     (<== [::sports-site-subs/editing? lipas-id])
+          edits-valid? (<== [::sports-site-subs/edits-valid? lipas-id])
+          can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
+          logged-in?   (<== [::user-subs/logged-in?])
+
+          set-field       (partial set-field lipas-id)
+
+          size-categories (<== [::ice-stadiums-subs/size-categories])
+
+          portal (case (-> display-data :type :type-code)
                    (3110 3130) "uimahalliportaali"
                    (2510 2520) "jaahalliportaali"
-                   "")]
-    (when site
-      [:div {:style {:padding-top "0.5em"}}
-       [mui/typography {:variant :headline}
-        (:name site)]
-
-       ;; [mui/typography {:variant :body2}
-       ;;  (-> site :construction-year)]
-
-       ;; [mui/typography {:variant :body2}
-       ;;  (-> site :type :name)]
-
-       [mui/typography {:variant :body2}
-        (-> site :location :address)]
-       [mui/typography {:variant :body2}
-        (-> site :location :postal-code)]
-       [mui/typography {:variant :body2}
-        (-> site :location :city :name)]
-       [mui/button {:href     (str "/#/" portal "/hallit/" lipas-id)}
-        [mui/icon "arrow_right"] "Kaikki tiedot"]])))
-
-(defn sports-site-info2 [{:keys [tr site-data]}]
-  (r/with-let [selected-tab (r/atom 0)
-               site         (:display-data site-data)
-               lipas-id     (:lipas-id site)]
-
-    [mui/grid {:container true
-               :style     {:flex-direction "column"}}
-     [mui/grid {:item true}
-
-      ;; Headline
-      [mui/grid {:container true}
-       [mui/grid {:item  true
-                  :style {:margin-top "0.5em"
-                          :flex-grow  "1"}}
-        [mui/typography {:variant :headline}
-         (:name site)]]
+                   nil)]
+      [mui/grid {:container true
+                 :style     {:flex-direction "column"}}
        [mui/grid {:item true}
-        [mui/icon-button {:on-click #(==> [::events/show-sports-site nil])
-                          :style {:margin-right "-16px"}}
-         [mui/icon "close"]]]]]
 
-     ;; Tabs
-     [mui/grid {:item true}
-      [mui/tabs {:value     @selected-tab
-                 :on-change #(reset! selected-tab %2)
-                 :style     {:margin-bottom "1em"}}
-       [mui/tab {:label "Yleiset"}]
-       [mui/tab {:label "Osoite"}]
-       [mui/tab {:label "Lisätiedot"}]]
-      (case @selected-tab
+        ;; Headline
+        [mui/grid {:container true}
+         [mui/grid {:item  true :xs 11
+                    :style {:margin-top "0.5em"}}
+          [mui/typography {:variant :headline}
+           (:name display-data)]]
+         [mui/grid {:item true :xs 1}
+          [mui/icon-button {:on-click #(==> [::events/show-sports-site nil])
+                            }
+           [mui/icon "close"]]]]]
 
-        ;; Basic info
-        0 [sports-sites/form
-           (merge
-            {:tr         tr
-             :read-only? true}
-            site-data)]
+       ;; Tabs
+       [mui/grid {:item true}
+        [mui/tabs {:value     @selected-tab
+                   :on-change #(reset! selected-tab %2)
+                   :style     {:margin-bottom "1em"}}
+         [mui/tab {:label "Perustiedot"}]
+         [mui/tab {:label "Lisätiedot"}]
+         [mui/tab {:label "Osoite"}]]
 
-        ;; Location
-        1 [sports-sites/location-form
-           (merge
-            {:tr         tr
-             :read-only? true}
-            {:display-data (-> site-data :display-data :location)
-             :edit-data    (-> site-data :edit-data :location)})]
+        (case @selected-tab
 
-        ;; Properties
-        2 [mui/typography "Ei mitään vielä"]
-        )]]))
+          ;; Basic info
+          0 [sports-sites/form
+             {:tr              tr
+              :display-data    display-data
+              :edit-data       edit-data
+              :read-only?      (not editing?)
+              :types           types
+              :size-categories size-categories
+              :admins          admins
+              :owners          owners
+              :on-change       set-field}]
+
+          ;; Properties
+          1 (if portal
+              [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
+               [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
+              [mui/typography "Ei mitään vielä"])
+
+          ;; Location
+          2 [sports-sites/location-form
+             {:tr           tr
+              :read-only?   (not editing?)
+              :cities       cities
+              :edit-data    (:location edit-data)
+              :display-data (:location display-data)
+              :on-change    (partial set-field :location)}])]
+
+       [mui/grid {:container true
+                  :justify   "flex-end"}
+        (into
+         [mui/grid {:item  true
+                    :style {:padding-top    "1em"
+                            :padding-bottom "1em"}}]
+         (interpose
+          [:span {:style {:margin-left  "0.25em"
+                          :margin-right "0.25em"}}]
+          (lui/edit-actions-list
+           {:editing?           editing?
+            :valid?             edits-valid?
+            :logged-in?         logged-in?
+            :user-can-publish?  can-publish?
+            :on-discard         #(==> [:lipas.ui.events/confirm
+                                       (tr :confirm/discard-changes?)
+                                       (fn []
+                                         (==> [::sports-site-events/discard-edits lipas-id]))])
+            :discard-tooltip    (tr :actions/discard)
+            :on-edit-start      #(==> [::sports-site-events/edit-site lipas-id])
+            :edit-tooltip       (tr :actions/edit)
+            :on-save-draft      #(==> [::sports-site-events/save-draft lipas-id])
+            :save-draft-tooltip (tr :actions/save-draft)
+            :on-publish         #(==> [::sports-site-events/save-edits lipas-id])
+            :publish-tooltip    (tr :actions/save)
+            :invalid-message    (tr :error/invalid-form)})))]
+       ])))
 
 (defn add-btn []
   [mui/button {:variant  :fab
@@ -180,15 +214,17 @@
         [layer-switcher]]]]
 
      ;; Left sidebar
-     [floating-container {:left 0
-                          :top  0}
+     [floating-container {:style {:max-height "100%"
+                                  :overflow-y "scroll"}}
       [mui/grid {:container true
                  :direction :column
-                 :style     {:min-width "400px"}}
+                 :style     {:max-width      "100%"
+                             :min-width      "300px"
+                             :padding-bottom "0.5em"}}
 
        [mui/grid {:item true}
         (if selected-site
-          [sports-site-info2 {:tr tr :site-data selected-site}]
+          [sports-site-view {:tr tr :site-data selected-site}]
           [filters])]]]
 
      ;; Add button
