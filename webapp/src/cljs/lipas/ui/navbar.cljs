@@ -235,7 +235,8 @@
   [mui/icon-button {:id         "main-menu-btn"
                     :aria-label (tr :actions/open-main-menu)
                     :on-click   toggle-drawer}
-   [mui/icon {:color "secondary"} "menu"]])
+   [mui/icon {:color "secondary"
+              :style {:font-weight :bold}} "menu"]])
 
 (defn nav [{:keys [tr active-panel logged-in?]}]
   [mui/app-bar {:position   "static"

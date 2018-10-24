@@ -63,7 +63,7 @@
 (re-frame/reg-sub
  ::cities-list
  :<- [::cities-by-city-code]
- (fn [cities _ _]
+ (fn [cities _]
    (vals cities)))
 
 (re-frame/reg-sub
@@ -80,6 +80,12 @@
  ::all-types
  (fn [db _]
    (-> db :types)))
+
+(re-frame/reg-sub
+ ::types-list
+ :<- [::all-types]
+ (fn [types _]
+   (vals types)))
 
 (re-frame/reg-sub
  ::materials
