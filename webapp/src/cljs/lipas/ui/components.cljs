@@ -544,9 +544,10 @@
               :when (some? d)
               :let  [field (-> d :form-field)
                      props (-> field second)]]
-          (if read-only?
-            (->display-tf d (:multiline props))
-            (assoc field 1 (assoc props :label (:label d)))))))
+          (cond
+            (vector? d) d
+            read-only?  (->display-tf d (:multiline props))
+            :else       (assoc field 1 (assoc props :label (:label d)))))))
 
 ;; (def form table-form)
 (def form form-trad)
@@ -815,3 +816,10 @@
                      :style   {:margin-left "0.5em"
                                :display     :inline}}
      text]]])
+
+(defn sub-heading [{:keys [label]}]
+  [mui/typography {:variant "subheading"
+                   :style   {:margin-top    "1em"
+                             :margin-bottom "1em"
+                             :font-weight   "bold"}}
+   label])

@@ -1,5 +1,7 @@
 (ns lipas.ui.map.events
-  (:require [re-frame.core :as re-frame]))
+  (:require proj4
+            "ol"
+            [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
  ::set-view
@@ -7,6 +9,18 @@
    (-> db
        (assoc-in [:map :center] {:lat lat :lon lon})
        (assoc-in [:map :zoom] zoom))))
+
+(re-frame/reg-event-fx
+ ::zoom-to-site
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [latest     (get-in db [:sports-sites lipas-id :latest])
+         rev        (get-in db [:sports-sites lipas-id :history latest])
+         wgs-coords (-> rev :location :geometries :features first
+                        :geometry :coordinates clj->js)
+         proj       (.get ol.proj "EPSG:3067")
+         [lon lat]  (js->clj (ol.proj.fromLonLat wgs-coords proj))
+         zoom       14]
+     {:dispatch [::set-view lat lon zoom]})))
 
 (re-frame/reg-event-db
  ::set-center
@@ -37,3 +51,23 @@
  ::show-sports-site
  (fn [db [_ lipas-id]]
    (assoc-in db [:map :sports-site] lipas-id)))
+
+(re-frame/reg-event-db
+ ::start-editing
+ (fn [db [_ lipas-id]]
+   (assoc-in db [:map :editing :lipas-id] lipas-id)))
+
+(re-frame/reg-event-db
+ ::stop-editing
+ (fn [db [_]]
+   (assoc-in db [:map :editing :lipas-id] nil)))
+
+(re-frame/reg-event-fx
+ ::update-geometry
+ (fn [_ [_ lipas-id geoJSON]]
+   (let [path [:location :geometries]
+         geom (-> geoJSON
+                  (js->clj :keywordize-keys true)
+                  (as-> $ (update $ :features
+                                  (fn [fs] (map #(dissoc % :properties) fs)))))]
+     {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geom]})))

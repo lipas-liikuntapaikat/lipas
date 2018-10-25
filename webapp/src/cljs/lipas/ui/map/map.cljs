@@ -121,14 +121,14 @@
 (defn init-map [{:keys [center zoom]}]
   (let [layers (init-layers)
         view   (ol.View. #js{:center      #js[(:lon center) (:lat center)]
-                                :zoom        zoom
-                                :projection  "EPSG:3067"
-                                :resolutions mml-resolutions
-                                :units       "m"})
+                             :zoom        zoom
+                             :projection  "EPSG:3067"
+                             :resolutions mml-resolutions
+                             :units       "m"})
 
         overlay (ol.Overlay. #js{:offset #js[-15 0]
-                                    :element
-                                    (js/document.getElementById "popup-anchor")})
+                                 :element
+                                 (js/document.getElementById "popup-anchor")})
 
         opts #js {:target   "map"
                   :layers   #js[(-> layers :basemaps :taustakartta)
@@ -214,11 +214,42 @@
         (.clear)
         (.push feature)))))
 
+(defn start-editing [{:keys [^js lmap layers interactions] :as map-ctx} lipas-id]
+  (let [^js layer   (-> layers :overlays :vectors)
+        ^js source  (.getSource layer)
+        fid         (str lipas-id "-0") ; First feature in coll
+        ^js feature (.getFeatureById source fid)
+        ^js select  (-> interactions :select)
+        ^js modify  (when feature
+                      (ol.interaction.Modify. #js{:features (.getFeatures select)}))]
+    (if modify
+      (do
+        (.addInteraction lmap modify)
+        (.on modify "modifyend"
+             (fn [^js e]
+               (let [f (.getFeatureById source fid)]
+                 (==> [::events/update-geometry lipas-id (->geoJSON f)]))))
+        (update-in map-ctx [:interactions] assoc :modify modify))
+      map-ctx)))
+
+(defn stop-editing [{:keys [^js lmap layers interactions] :as map-ctx}]
+  (let [modify (-> interactions :modify)]
+    (when modify
+      (.removeInteraction lmap modify))
+    (update-in map-ctx [:interactions] dissoc :modify)))
+
+(defn update-view [{:keys [^js view]} {:keys [lon lat zoom]}]
+  (.setCenter view #js[lon lat])
+  (.setZoom view zoom))
+
 (defn map-inner []
   (let [map-ctx*  (atom nil)
         geoms*    (atom nil)
         basemap*  (atom nil)
-        lipas-id* (atom nil)]
+        editing?* (atom false)
+        lipas-id* (atom nil)
+        center*   (atom nil)
+        zoom*     (atom nil)]
 
     (r/create-class
 
@@ -233,7 +264,10 @@
         (let [opts     (r/props comp)
               basemap  (:basemap opts)
               geoms    (:geoms opts)
-              lipas-id (-> opts :site :lipas-id)
+              lipas-id (-> opts :site :display-data :lipas-id)
+              editing? (-> opts :editing?)
+              center   (-> opts :center)
+              zoom     (-> opts :zoom)
 
               map-ctx (init-map opts)]
 
@@ -241,15 +275,25 @@
           (set-basemap map-ctx basemap)
           (select-sports-site map-ctx lipas-id)
 
+          (reset! editing?* editing?)
+          (reset! lipas-id* lipas-id)
           (reset! map-ctx* map-ctx)
-          (reset! basemap* basemap)))
+          (reset! basemap* basemap)
+          (reset! zoom* zoom)
+          (reset! center* center)
+
+          (when editing?
+            (reset! map-ctx* (start-editing map-ctx lipas-id)))))
 
       :component-did-update
       (fn [comp]
         (let [opts     (r/props comp)
               geoms    (:geoms opts)
-              lipas-id (-> opts :site :lipas-id)
-              basemap  (:basemap opts)]
+              lipas-id (-> opts :site :display-data :lipas-id)
+              basemap  (:basemap opts)
+              editing? (:editing? opts)
+              center   (:center opts)
+              zoom     (:zoom opts)]
 
           (when (not= @geoms* geoms)
             (update-geoms @map-ctx* geoms)
@@ -261,7 +305,19 @@
 
           (when (not= @lipas-id* lipas-id)
             (select-sports-site @map-ctx* lipas-id)
-            (reset! lipas-id* lipas-id))))
+            (reset! lipas-id* lipas-id))
+
+          (when (not= @editing?* editing?)
+            (if editing?
+              (reset! map-ctx* (start-editing @map-ctx* @lipas-id*))
+              (reset! map-ctx* (stop-editing @map-ctx*)))
+            (reset! editing?* editing?))
+
+          (when (or (not= @zoom* zoom)
+                    (not= @center* center))
+            (update-view @map-ctx* (merge center {:zoom zoom}))
+            (reset! center* center)
+            (reset! zoom* zoom))))
 
       :display-name "map-inner"})))
 
@@ -270,14 +326,16 @@
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
-  (let [geoms   (re-frame/subscribe [::subs/geometries])
-        basemap (re-frame/subscribe [::subs/basemap])
-        center  (re-frame/subscribe [::subs/center])
-        zoom    (re-frame/subscribe [::subs/zoom])
-        site    (re-frame/subscribe [::subs/selected-sports-site])]
+  (let [geoms    (re-frame/subscribe [::subs/geometries])
+        basemap  (re-frame/subscribe [::subs/basemap])
+        center   (re-frame/subscribe [::subs/center])
+        zoom     (re-frame/subscribe [::subs/zoom])
+        site     (re-frame/subscribe [::subs/selected-sports-site])
+        editing? (re-frame/subscribe [::subs/editing?])]
     (fn []
-      [map-inner {:geoms   @geoms
-                  :basemap @basemap
-                  :center  @center
-                  :zoom    @zoom
-                  :site    @site}])))
+      [map-inner {:geoms    @geoms
+                  :basemap  @basemap
+                  :center   @center
+                  :zoom     @zoom
+                  :site     @site
+                  :editing? @editing?}])))

@@ -8,7 +8,7 @@ import {WMTS as WMTSSource, Vector as VectorSource} from 'ol/source';
 import {getTopLeft} from 'ol/extent';
 import {GeoJSON} from 'ol/format';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
-import {Select} from 'ol/interaction';
+import {Select, Draw, Modify, Snap} from 'ol/interaction';
 import {pointerMove} from 'ol/events/condition';
 
 window.ol = {
@@ -46,6 +46,9 @@ window.ol = {
   },
   interaction: {
     Select,
+    Draw,
+    Modify,
+    Snap,
   },
   events: {
     condition: {

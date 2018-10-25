@@ -10,9 +10,12 @@
             [reagent.core :as r]))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
-                                admins owners on-change read-only?]}]
+                    admins owners on-change read-only? sub-headings?]}]
   (let [locale (tr)]
     [lui/form {:read-only? read-only?}
+
+     (when sub-headings?
+       [lui/sub-heading {:label "Liikuntapaikka"}])
 
      ;; Name
      {:label      (tr :lipas.sports-site/name)
@@ -55,6 +58,34 @@
                       :label-fn  (comp locale second)
                       :on-change #(on-change :type :size-category %)}]})
 
+     ;; Construction year
+     {:label      (tr :lipas.sports-site/construction-year)
+      :value      (-> display-data :construction-year)
+      :form-field [lui/year-selector
+                   {:value     (-> edit-data :construction-year)
+                    :on-change #(on-change :construction-year %)}]}
+
+     ;; Renovation years
+     {:label      (tr :lipas.sports-site/renovation-years)
+      :value      (-> display-data :renovation-years)
+      :form-field [lui/year-selector
+                   {:multi?    true
+                    :value     (-> edit-data :renovation-years)
+                    :on-change #(on-change :renovation-years %)}]}
+
+     ;; Comment
+     {:label (tr :lipas.sports-site/comment)
+      :value (-> display-data :comment)
+      :form-field
+      [lui/text-field
+       {:spec      :lipas.sports-site/comment
+        :value     (-> edit-data :comment)
+        :multiline true
+        :on-change #(on-change :comment %)}]}
+
+     (when sub-headings?
+       [lui/sub-heading {:label "Yhteystiedot"}])
+
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
       :value      (-> display-data :email)
@@ -79,6 +110,9 @@
                     :spec      :lipas.sports-site/www
                     :on-change #(on-change :www %)}]}
 
+     (when sub-headings?
+       [lui/sub-heading {:label "Omistus"}])
+
      ;; Owner
      {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
@@ -99,38 +133,16 @@
                     :items     admins
                     :value-fn  first
                     :label-fn  (comp locale second)
-                    :on-change #(on-change :admin %)}]}
-
-     ;; Construction year
-     {:label      (tr :lipas.sports-site/construction-year)
-      :value      (-> display-data :construction-year)
-      :form-field [lui/year-selector
-                   {:value     (-> edit-data :construction-year)
-                    :on-change #(on-change :construction-year %)}]}
-
-     ;; Renovation years
-     {:label      (tr :lipas.sports-site/renovation-years)
-      :value      (-> display-data :renovation-years)
-      :form-field [lui/year-selector
-                   {:multi?    true
-                    :value     (-> edit-data :renovation-years)
-                    :on-change #(on-change :renovation-years %)}]}
-
-     ;; Comment
-     {:label (tr :lipas.sports-site/comment)
-      :value (-> display-data :comment)
-      :form-field
-      [lui/text-field
-       {:spec      :lipas.sports-site/comment
-        :value     (-> edit-data :comment)
-        :multiline true
-        :on-change #(on-change :comment %)}]}]))
+                    :on-change #(on-change :admin %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
-                             read-only?]}]
+                             read-only? sub-headings?]}]
   (let [locale (tr)]
     [lui/form
      {:read-only? read-only?}
+
+     (when sub-headings?
+       [lui/sub-heading {:label "Osoite"}])
 
      ;; Address
      {:label      (tr :lipas.location/address)

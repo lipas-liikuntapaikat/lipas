@@ -45,8 +45,10 @@
    (ratom/reaction
     (let [lipas-id (-> @app-db :map :sports-site)]
       (when lipas-id
-        {:display-data @(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])
-         :edit-data    @(re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
+        {:display-data @(re-frame/subscribe
+                         [:lipas.ui.sports-sites.subs/display-site lipas-id])
+         :edit-data    @(re-frame/subscribe
+                         [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
 (re-frame/reg-sub
  ::geometries
@@ -61,3 +63,26 @@
           (filter (comp type-codes :type-code :type))
           (map ->feature)
           not-empty))))
+
+(re-frame/reg-sub
+ ::editing?
+ (fn [db _]
+   (-> db :map :editing :lipas-id some?)))
+
+(re-frame/reg-sub
+ ::selected-types
+ (fn [db _]
+   (-> db :map :filters :types set)))
+
+(defn ->type-list-entry [locale selected-types m]
+  (let [type-code (-> m :type-code)]
+    {:type-code type-code
+     :name      (-> m :name locale)
+     :selected? (contains? selected-types type-code)}))
+
+(re-frame/reg-sub
+ ::types-list
+ :<- [:lipas.ui.sports-sites.subs/types-list]
+ :<- [::selected-types]
+ (fn [[types selected-types] [_ locale]]
+   (map (partial ->type-list-entry locale selected-types) types)))
