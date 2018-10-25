@@ -63,6 +63,12 @@
         :label     "Uimahallit"
         :on-change #(toggle :swimming-pool)}]]]))
 
+(defn type-selector [{:keys [tr]}]
+  (let [locale (tr)
+        types  (<== [::subs/types-list locale])]
+    ;; TODO add main and sub categories to data and create selector
+    ))
+
 (defn popup []
   (let [{:keys [data anchor-el]} (<== [::subs/popup])
         {:keys [name]}  (-> data :features first :properties)]
@@ -95,7 +101,7 @@
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
 
-          set-field       (partial set-field lipas-id)
+          set-field (partial set-field lipas-id)
 
           size-categories (<== [::ice-stadiums-subs/size-categories])
 
@@ -125,36 +131,42 @@
                    :style     {:margin-bottom "1em"}}
          [mui/tab {:label "Perustiedot"}]
          [mui/tab {:label "Lisätiedot"}]
-         [mui/tab {:label "Osoite"}]]
+         ;; [mui/tab {:label "Osoite"}]
+         ]
 
         (case @selected-tab
 
           ;; Basic info
-          0 [sports-sites/form
-             {:tr              tr
-              :display-data    display-data
-              :edit-data       edit-data
-              :read-only?      (not editing?)
-              :types           types
-              :size-categories size-categories
-              :admins          admins
-              :owners          owners
-              :on-change       set-field}]
+          0 [mui/grid {:container true}
+             [mui/grid {:item true :xs 12}
+
+              [sports-sites/location-form
+               {:tr            tr
+                :read-only?    (not editing?)
+                :cities        cities
+                :edit-data     (:location edit-data)
+                :display-data  (:location display-data)
+                :on-change     (partial set-field :location)
+                :sub-headings? true}]
+
+              [sports-sites/form
+               {:tr              tr
+                :display-data    display-data
+                :edit-data       edit-data
+                :read-only?      (not editing?)
+                :types           types
+                :size-categories size-categories
+                :admins          admins
+                :owners          owners
+                :on-change       set-field
+                :sub-headings?   true}]
+              ]]
 
           ;; Properties
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
-              [mui/typography "Ei mitään vielä"])
-
-          ;; Location
-          2 [sports-sites/location-form
-             {:tr           tr
-              :read-only?   (not editing?)
-              :cities       cities
-              :edit-data    (:location edit-data)
-              :display-data (:location display-data)
-              :on-change    (partial set-field :location)}])]
+              [mui/typography "Ei mitään vielä"]))]
 
        [mui/grid {:container true
                   :justify   "flex-end"}
@@ -173,13 +185,18 @@
             :on-discard         #(==> [:lipas.ui.events/confirm
                                        (tr :confirm/discard-changes?)
                                        (fn []
-                                         (==> [::sports-site-events/discard-edits lipas-id]))])
+                                         (==> [::sports-site-events/discard-edits lipas-id])
+                                         (==> [::events/stop-editing]))])
             :discard-tooltip    (tr :actions/discard)
-            :on-edit-start      #(==> [::sports-site-events/edit-site lipas-id])
+            :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
+                                     (==> [::events/zoom-to-site lipas-id])
+                                     (==> [::events/start-editing lipas-id]))
             :edit-tooltip       (tr :actions/edit)
-            :on-save-draft      #(==> [::sports-site-events/save-draft lipas-id])
+            :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
+                                     (==> [::events/stop-editing]))
             :save-draft-tooltip (tr :actions/save-draft)
-            :on-publish         #(==> [::sports-site-events/save-edits lipas-id])
+            :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
+                                     (==> [::events/stop-editing]))
             :publish-tooltip    (tr :actions/save)
             :invalid-message    (tr :error/invalid-form)})))]
        ])))
@@ -189,6 +206,12 @@
                :color    :secondary
                :on-click #(js/alert "Trala")}
    [mui/icon "add"]])
+
+(defn map-contents-view [{:keys [tr]}]
+  [mui/grid {:container true}
+   [mui/grid {:item true}
+    [filters]
+    [type-selector {:tr tr}]]])
 
 (defn map-view [{:keys [tr]}]
   (let [logged-in?    (<== [:lipas.ui.subs/logged-in?])
@@ -219,13 +242,13 @@
       [mui/grid {:container true
                  :direction :column
                  :style     {:max-width      "100%"
-                             :min-width      "300px"
+                             :min-width      "350px"
                              :padding-bottom "0.5em"}}
 
        [mui/grid {:item true}
         (if selected-site
           [sports-site-view {:tr tr :site-data selected-site}]
-          [filters])]]]
+          [map-contents-view {:tr tr}])]]]
 
      ;; Add button
      [floating-container {:bottom 0 :right 0 :elevation 0
