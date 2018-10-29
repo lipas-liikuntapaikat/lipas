@@ -10,7 +10,7 @@
                  [com.cemerick/url "0.1.1"]
 
                  ;;; Frontend ;;;
-                 [org.clojure/clojurescript "1.10.312"]
+                 [org.clojure/clojurescript "1.10.339"]
                  [cljsjs/react "16.4.0-0"]
                  [cljsjs/react-dom "16.4.0-0"]
                  [reagent "0.8.1"]
@@ -130,6 +130,7 @@
      :compiler     {:main            lipas.ui.core
                     :npm-deps        false
                     :infer-externs   true
+                    :externs         ["src/js/ol_externs.js"]
                     :foreign-libs    [{:file           "dist/index.bundle.js"
                                        :provides       ["ol" "zipcelx"]
                                        :global-exports {ol ol zipcelx zipcelx}}]
