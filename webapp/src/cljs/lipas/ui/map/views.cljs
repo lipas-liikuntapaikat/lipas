@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
   (:require [lipas.ui.components :as lui]
+            [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.map :as ol-map]
             [lipas.ui.map.subs :as subs]
@@ -8,7 +9,6 @@
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.subs :as sports-site-subs]
             [lipas.ui.sports-sites.views :as sports-sites]
-            [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
@@ -130,13 +130,11 @@
                    :on-change #(reset! selected-tab %2)
                    :style     {:margin-bottom "1em"}}
          [mui/tab {:label "Perustiedot"}]
-         [mui/tab {:label "Lisätiedot"}]
-         ;; [mui/tab {:label "Osoite"}]
-         ]
+         [mui/tab {:label "Lisätiedot"}]]
 
         (case @selected-tab
 
-          ;; Basic info
+          ;; Basic info tab
           0 [mui/grid {:container true}
              [mui/grid {:item true :xs 12}
 
@@ -159,17 +157,25 @@
                 :admins          admins
                 :owners          owners
                 :on-change       set-field
-                :sub-headings?   true}]
-              ]]
+                :sub-headings?   true}]]]
 
-          ;; Properties
+          ;; Properties tab
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
               [mui/typography "Ei mitään vielä"]))]
 
-       [mui/grid {:container true
-                  :justify   "flex-end"}
+       ;; Actions
+       [mui/grid
+        (merge
+         {:container true
+          :justify   "flex-end"}
+         (cond
+           (utils/supports-sticky?)        {:style {:position "sticky"
+                                                    :bottom   0}}
+           (utils/supports-webkit-sticky?) {:style {:position "-webkit-sticky"
+                                                    :bottom   0}}
+           :else                           nil))
         (into
          [mui/grid {:item  true
                     :style {:padding-top    "1em"
