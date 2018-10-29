@@ -41,15 +41,18 @@
                                 "+units=m"
                                 "+no_defs"))
 
-(ol.proj.proj4.register proj4)
+(let [^js/ol ol                  ol
+      ^js/ol.proj ol-proj        (.-proj ol)
+      ^js/ol.proj.proj4 ol-proj4 (.-proj4 ol-proj)]
+  (.register ol-proj4 proj4))
 
 (def mml-resolutions
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (def mml-matrix-ids (clj->js (range (count mml-resolutions))))
 
-(def epsg3067 (ol.proj.get "EPSG:3067"))
-(def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
+(def ^js/ol.proj.Projection epsg3067 (ol.proj.get "EPSG:3067"))
+(def ^js/ol.Extent epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
 
 (.setExtent epsg3067 epsg3067-extent)
 
@@ -59,7 +62,7 @@
 (def center-wgs84 (ol.proj.fromLonLat #js[24 65]))
 
 (def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
-                                        :featureProjection "EPSG:3067"}))
+                                     :featureProjection "EPSG:3067"}))
 
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
@@ -113,8 +116,7 @@
                            :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors (ol.layer.Vector.
-              #js{:source (ol.source.Vector.)
-                  })
+              #js{:source (ol.source.Vector.)})
     :draw    (ol.layer.Vector.
               #js{:source (ol.source.Vector.)})}})
 
@@ -150,7 +152,7 @@
                     :style  blue-marker-style})]
 
     (.on hover "select"
-         (fn [^js e]
+         (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (aget (gobj/get e "selected") 0)]
              (.setPosition overlay coords)
@@ -164,9 +166,9 @@
     (.addInteraction lmap hover)
 
     (.on select "select"
-         (fn [^js e]
-           (let [^js coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 ^js selected (aget (gobj/get e "selected") 0)]
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (aget (gobj/get e "selected") 0)]
              (.setPosition overlay coords)
              (==> [::events/show-sports-site
                    (when selected
@@ -189,8 +191,8 @@
      :layers layers}))
 
 (defn update-geoms [{:keys [layers]} geoms]
-  (let [^js vectors (-> layers :overlays :vectors)
-        ^js source  (.getSource vectors)]
+  (let [vectors (-> layers :overlays :vectors)
+        source  (.getSource vectors)]
     (.clear source)
     (doseq [g    geoms
             :let [f (-> g
@@ -199,28 +201,28 @@
       (.addFeatures source f))))
 
 (defn set-basemap [{:keys [layers]} basemap]
-  (doseq [[k ^js v] (:basemaps layers)
+  (doseq [[k v] (:basemaps layers)
           :let [visible? (= k basemap)]]
     (.setVisible v visible?)))
 
 (defn select-sports-site [{:keys [layers interactions]} lipas-id]
-  (let [^js layer  (-> layers :overlays :vectors)
-        ^js select (-> interactions :select)
-        source     (.getSource layer)
-        fid        (str lipas-id "-0") ; First feature in coll
-        feature    (.getFeatureById source fid)]
+  (let [layer   (-> layers :overlays :vectors)
+        select  (-> interactions :select)
+        source  (.getSource layer)
+        fid     (str lipas-id "-0") ; First feature in coll
+        feature (.getFeatureById source fid)]
     (when feature
       (doto (.getFeatures select)
         (.clear)
         (.push feature)))))
 
 (defn start-editing [{:keys [^js lmap layers interactions] :as map-ctx} lipas-id]
-  (let [^js layer   (-> layers :overlays :vectors)
-        ^js source  (.getSource layer)
+  (let [layer   (-> layers :overlays :vectors)
+        source  (.getSource layer)
         fid         (str lipas-id "-0") ; First feature in coll
-        ^js feature (.getFeatureById source fid)
-        ^js select  (-> interactions :select)
-        ^js modify  (when feature
+        feature (.getFeatureById source fid)
+        select  (-> interactions :select)
+        modify  (when feature
                       (ol.interaction.Modify. #js{:features (.getFeatures select)}))]
     (if modify
       (do
@@ -232,13 +234,13 @@
         (update-in map-ctx [:interactions] assoc :modify modify))
       map-ctx)))
 
-(defn stop-editing [{:keys [^js lmap layers interactions] :as map-ctx}]
+(defn stop-editing [{:keys [^js/ol.Map lmap layers interactions] :as map-ctx}]
   (let [modify (-> interactions :modify)]
     (when modify
       (.removeInteraction lmap modify))
     (update-in map-ctx [:interactions] dissoc :modify)))
 
-(defn update-view [{:keys [^js view]} {:keys [lon lat zoom]}]
+(defn update-view [{:keys [^js/ol.View view]} {:keys [lon lat zoom]}]
   (.setCenter view #js[lon lat])
   (.setZoom view zoom))
 
