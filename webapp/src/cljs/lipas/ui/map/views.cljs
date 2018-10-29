@@ -238,9 +238,7 @@
                  :spacing     24}
 
        [mui/grid {:item true}
-        [nav/mini-nav {:tr tr :logged-in? logged-in?}]]
-       [mui/grid {:item true}
-        [layer-switcher]]]]
+        [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
      ;; Left sidebar
      [floating-container {:style {:max-height "100%"
@@ -256,13 +254,14 @@
           [sports-site-view {:tr tr :site-data selected-site}]
           [map-contents-view {:tr tr}])]]]
 
-     ;; Add button
-     [floating-container {:bottom 0 :right 0 :elevation 0
+     ;; Layer switcher (bottom right)
+     [floating-container {:bottom "0.5em" :right "3em" :elevation 0
                           :style
-                          {:background-color "transparent"
-                           :padding-right    0}}
-      ;;[add-btn]
-      ]
+                          {:background-color "rgba(255,255,255,0.9)"
+                           :margin           "0.5em"
+                           :padding-right    0
+                           :padding-left     0}}
+      [layer-switcher]]
 
      ;; Popup anchor
      [:div {:id "popup-anchor" :display :none}]
