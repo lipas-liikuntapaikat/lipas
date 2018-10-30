@@ -79,5 +79,4 @@
     :zoom     2
     :basemap  :taustakartta
     :filters  {:ice-stadium   true
-               :swimming-pool false}
-    :editing? false}})
+               :swimming-pool false}}})

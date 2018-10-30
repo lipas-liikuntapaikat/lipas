@@ -71,3 +71,18 @@
                   (as-> $ (update $ :features
                                   (fn [fs] (map #(dissoc % :properties) fs)))))]
      {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geom]})))
+
+(re-frame/reg-event-db
+ ::start-drawing
+ (fn [db [_ geom-type]]
+   (assoc-in db [:map :drawing :geom-type] geom-type)))
+
+(re-frame/reg-event-fx
+ ::stop-drawing
+ (fn [{:keys [db]} [_ geoJSON]]
+   (let [geoms     (js->clj geoJSON :keywordize-keys true)
+         type-code (-> db :new-sports-site :type)]
+     {:db (-> db
+              (assoc-in [:map :drawing] nil))
+      :dispatch-n
+      [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
