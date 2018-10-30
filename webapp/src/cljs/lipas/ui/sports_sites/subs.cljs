@@ -41,19 +41,22 @@
  (fn [edit-data _]
    ((complement empty?) edit-data)))
 
+(defn- valid? [sports-site]
+  (let [spec (case (-> sports-site :type :type-code)
+               (3110 3120 3130) :lipas.sports-site/swimming-pool
+               (2510 2520)      :lipas.sports-site/ice-stadium
+               :lipas/sports-site)]
+    (as-> sports-site $
+      (utils/make-saveable $)
+      ;; (do (s/explain spec $) $)
+      (s/valid? spec $))))
+
 (re-frame/reg-sub
  ::edits-valid?
  (fn [[_ lipas-id] _]
    (re-frame/subscribe [::editing-rev lipas-id]))
  (fn [edit-data _]
-   (let [spec (case (-> edit-data :type :type-code)
-                (3110 3120 3130) :lipas.sports-site/swimming-pool
-                (2510 2520)      :lipas.sports-site/ice-stadium
-                :lipas/sports-site)]
-     (as-> edit-data $
-       (utils/make-saveable $)
-       ;; (do (s/explain spec $) $)
-       (s/valid? spec $)))))
+   (valid? edit-data)))
 
 (re-frame/reg-sub
  ::cities-by-city-code
@@ -204,6 +207,24 @@
           (map (partial ->list-entry data))))))
 
 (re-frame/reg-sub
+ ::adding-new-site?
+ (fn [db _]
+   (-> db :new-sports-site :adding?)))
+
+(re-frame/reg-sub
  ::new-site-data
  (fn [db _]
    (-> db :new-sports-site :data)))
+
+(re-frame/reg-sub
+ ::new-site-type
+ (fn [db _]
+   (let [type-code (-> db :new-sports-site :type)]
+     (get-in db [:types type-code]))))
+
+(re-frame/reg-sub
+ ::new-site-valid?
+ (fn [db _]
+   (let [data (-> db :new-sports-site :data)]
+     (s/explain :lipas/new-sports-site data)
+     (s/valid? :lipas/new-sports-site data))))

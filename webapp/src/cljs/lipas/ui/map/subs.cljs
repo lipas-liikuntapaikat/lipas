@@ -70,6 +70,11 @@
    (-> db :map :editing :lipas-id some?)))
 
 (re-frame/reg-sub
+ ::drawing-geom-type
+ (fn [db _]
+   (-> db :map :drawing :geom-type)))
+
+(re-frame/reg-sub
  ::selected-types
  (fn [db _]
    (-> db :map :filters :types set)))

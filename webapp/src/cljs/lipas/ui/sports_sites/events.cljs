@@ -153,8 +153,36 @@
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
 
+(re-frame/reg-event-db
+ ::start-adding-new-site
+ (fn [db [_]]
+   (assoc-in db [:new-sports-site :adding?] true)))
 
 (re-frame/reg-event-db
- ::add
+ ::discard-new-site
  (fn [db [_]]
-   (assoc-in db [:new-sports-site :data] {:event-date (utils/timestamp)})))
+   (-> db
+       (assoc-in [:new-sports-site :adding?] false)
+       (assoc-in [:new-sports-site :type] nil)
+       (assoc-in [:new-sports-site :data] nil))))
+
+(re-frame/reg-event-db
+ ::select-new-site-type
+ (fn [db [_ type-code]]
+   (assoc-in db [:new-sports-site :type] type-code)))
+
+(re-frame/reg-event-fx
+ ::init-new-site
+ (fn [{:keys [db]} [_ type-code geoms]]
+   (let [data {:name       "Uusi liikuntapaikka"
+               :status     "active"
+               :event-date (utils/timestamp)
+               :type       {:type-code type-code}
+               :location   {:geometries geoms}}]
+     {:db (-> db
+              (assoc-in [:new-sports-site :data] data))})))
+
+(re-frame/reg-event-db
+ ::edit-new-site-field
+ (fn [db [_ path value]]
+   (utils/set-field db (into [:new-sports-site :data] path) value)))

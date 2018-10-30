@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
-  (:require [lipas.ui.components :as lui]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
             [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.map :as ol-map]
@@ -63,11 +64,16 @@
         :label     "Uimahallit"
         :on-change #(toggle :swimming-pool)}]]]))
 
-(defn type-selector [{:keys [tr]}]
+(defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         types  (<== [::subs/types-list locale])]
-    ;; TODO add main and sub categories to data and create selector
-    ))
+    [lui/autocomplete
+     {:items     types
+      :value     value
+      :label     "Liikuntapaikkatyyppi"
+      :value-fn  :type-code
+      :label-fn  :name
+      :on-change #(on-change (first %))}]))
 
 (defn popup []
   (let [{:keys [data anchor-el]} (<== [::subs/popup])
@@ -87,6 +93,21 @@
   [lipas-id & args]
   (==> [::sports-site-events/edit-field lipas-id (butlast args) (last args)]))
 
+(defn- sticky-bottom-container [& children]
+  (into
+   [mui/grid
+    (merge
+     {:container true
+      :justify   "flex-end"}
+     (cond
+       (utils/supports-sticky?)        {:style {:position "sticky"
+                                                :bottom   0}}
+       (utils/supports-webkit-sticky?) {:style {:position "-webkit-sticky"
+                                                :bottom   0}}
+       :else                           nil))]
+   children))
+
+;; Works as both display and edit views
 (defn sports-site-view [{:keys [tr site-data]}]
   (r/with-let [selected-tab (r/atom 0)]
     (let [display-data (:display-data site-data)
@@ -109,6 +130,7 @@
                    (3110 3130) "uimahalliportaali"
                    (2510 2520) "jaahalliportaali"
                    nil)]
+
       [mui/grid {:container true
                  :style     {:flex-direction "column"}}
        [mui/grid {:item true}
@@ -166,16 +188,7 @@
               [mui/typography "Ei mitään vielä"]))]
 
        ;; Actions
-       [mui/grid
-        (merge
-         {:container true
-          :justify   "flex-end"}
-         (cond
-           (utils/supports-sticky?)        {:style {:position "sticky"
-                                                    :bottom   0}}
-           (utils/supports-webkit-sticky?) {:style {:position "-webkit-sticky"
-                                                    :bottom   0}}
-           :else                           nil))
+       [sticky-bottom-container
         (into
          [mui/grid {:item  true
                     :style {:padding-top    "1em"
@@ -204,20 +217,131 @@
             :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
                                      (==> [::events/stop-editing]))
             :publish-tooltip    (tr :actions/save)
-            :invalid-message    (tr :error/invalid-form)})))]
-       ])))
+            :invalid-message    (tr :error/invalid-form)})))]])))
 
 (defn add-btn []
   [mui/button {:variant  :fab
+               :mini     true
                :color    :secondary
-               :on-click #(js/alert "Trala")}
+               :on-click #(==> [::events/start-adding-new-site])}
    [mui/icon "add"]])
 
-(defn map-contents-view [{:keys [tr]}]
-  [mui/grid {:container true}
-   [mui/grid {:item true}
-    [filters]
-    [type-selector {:tr tr}]]])
+(defn set-new-site-field [& args]
+  (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
+
+(defn add-site-view [{:keys [tr]}]
+  (r/with-let [selected-tab (r/atom 0)]
+    (let [type   (<== [::sports-site-subs/new-site-type])
+          data   (<== [::sports-site-subs/new-site-data])
+          types  (<== [::sports-site-subs/types-list])
+          cities (<== [::sports-site-subs/cities-list])
+          admins (<== [::sports-site-subs/admins])
+          owners (<== [::sports-site-subs/owners])
+
+          set-field set-new-site-field
+
+          new-site-valid? (<== [::sports-site-subs/new-site-valid?])
+          can-publish?    (and
+                           new-site-valid?
+                           (<== [::user-subs/permission-to-publish-site? data]))
+          logged-in?      (<== [::user-subs/logged-in?])
+          size-categories (<== [::ice-stadiums-subs/size-categories])]
+
+      [mui/grid {:container true}
+       [mui/grid {:item true :xs 12}
+        [mui/typography (str "Valittu: " type)]
+        [mui/grid {:item true :xs 12}
+         [type-selector
+          {:value     (when type [(:type-code type)])
+           :tr        tr
+           :on-change #(==> [::sports-site-events/select-new-site-type %])}]]
+
+        (when type
+          [mui/button
+           {:variant  "extendedFab"
+            :on-click #(==> [::events/start-drawing (:geometry-type type)])}
+           [mui/icon "add_location"]
+           "Lisää sijainti"])
+
+        (when data
+          [mui/grid {:container true
+                     :style     {:flex-direction "column"}}
+           [mui/grid {:item true}
+
+            ;; Headline
+            [mui/grid {:container true}
+             [mui/grid {:item  true :xs 11
+                        :style {:margin-top "0.5em"}}
+              [mui/typography {:variant :headline}
+               (:name data)]]]]
+
+           ;; Tabs
+           [mui/grid {:item true}
+            [mui/tabs {:value     @selected-tab
+                       :on-change #(reset! selected-tab %2)
+                       :style     {:margin-bottom "1em"}}
+             [mui/tab {:label "Perustiedot"}]
+             [mui/tab {:label "Lisätiedot"}]]
+
+            (case @selected-tab
+
+              ;; Basic info tab
+              0 [mui/grid {:container true}
+                 [mui/grid {:item true :xs 12}
+
+                  [sports-sites/location-form
+                   {:tr            tr
+                    :read-only?    false
+                    :cities        cities
+                    :edit-data     (:location data)
+                    :on-change     (partial set-field :location)
+                    :sub-headings? true}]
+
+                  [sports-sites/form
+                   {:tr              tr
+                    :edit-data       data
+                    :read-only?      false
+                    :types           types
+                    :size-categories size-categories
+                    :admins          admins
+                    :owners          owners
+                    :on-change       set-field
+                    :sub-headings?   true}]]]
+
+              ;; Properties tab
+              1 [mui/typography "Ei mitään vielä"])]])
+
+        ;; Actions
+        [sticky-bottom-container
+         [mui/grid {:item  true
+                    :style {:padding-top    "1em"
+                            :padding-bottom "1em"}}
+          [lui/discard-button
+           {:on-click #(==> [::sports-site-events/discard-new-site])
+            :tooltip  (tr :actions/discard)}]
+          [:span
+           {:style
+            {:margin-left  "0.25em"
+             :margin-right "0.25em"}}]
+          (when data
+            [lui/save-button
+             {:tooltip  (tr :actions/save)
+              :variant  "extendedFab"
+              :disabled (not new-site-valid?)
+              :on-click #(==> [::sports-site-events/commit-rev data (not can-publish?)])}])]]]])))
+
+(defn map-contents-view [{:keys [tr logged-in?]}]
+  (let [adding? (<== [::sports-site-subs/adding-new-site?])]
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
+      [filters]
+      ;; [type-selector {:tr tr}]
+      (when logged-in?
+        (if adding?
+          [add-site-view {:tr tr}]
+          [sticky-bottom-container
+           [mui/grid {:item true}
+            [add-btn]]]))]]))
 
 (defn map-view [{:keys [tr]}]
   (let [logged-in?    (<== [:lipas.ui.subs/logged-in?])
@@ -246,18 +370,19 @@
       [mui/grid {:container true
                  :direction :column
                  :style     {:max-width      "100%"
-                             :min-width      "350px"
+                             ;;:min-width      "350px"
                              :padding-bottom "0.5em"}}
 
        [mui/grid {:item true}
         (if selected-site
           [sports-site-view {:tr tr :site-data selected-site}]
-          [map-contents-view {:tr tr}])]]]
+          [map-contents-view {:tr tr :logged-in? logged-in?}])]]]
 
      ;; Layer switcher (bottom right)
      [floating-container {:bottom "0.5em" :right "3em" :elevation 0
                           :style
                           {:background-color "rgba(255,255,255,0.9)"
+                           :z-index          888
                            :margin           "0.5em"
                            :padding-right    0
                            :padding-left     0}}
