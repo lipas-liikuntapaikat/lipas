@@ -94,15 +94,35 @@
 
 ;;; Sports-sites ;;;
 
+(defn- check-permissions! [user sports-site draft?]
+  (when-not (or draft?
+                (permissions/publish? (:permissions user) sports-site))
+    (throw (ex-info "User doesn't have enough permissions!"
+                    {:type :no-permission}))))
+
+;; TODO change to lighter check query
+(defn- check-sports-site-exists! [db lipas-id]
+  (when-not (not-empty (db/get-sports-site-history db lipas-id))
+    (throw (ex-info "Sports site not found"
+                    {:type     :sports-site-not-found
+                     :lipas-id lipas-id}))))
+
+(defn upsert-sports-site!*
+  "Should be used only when data is from trusted sources (migrations
+  etc.). Doesn't check if lipas-ids exist or not."
+  ([db user sports-site]
+   (upsert-sports-site!* db user sports-site false))
+  ([db user sports-site draft?]
+   (db/upsert-sports-site! db user sports-site draft?)))
+
 (defn upsert-sports-site!
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
   ([db user sports-site draft?]
-   (if (or draft?
-           (permissions/publish? (:permissions user) sports-site))
-     (db/upsert-sports-site! db user sports-site draft?)
-     (throw (ex-info "User doesn't have enough permissions!"
-                     {:type :no-permission})))))
+   (check-permissions! user sports-site draft?)
+   (when-let [lipas-id (:lipas-id sports-site)]
+     (check-sports-site-exists! db lipas-id))
+   (upsert-sports-site!* db user sports-site draft?)))
 
 (defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
