@@ -160,7 +160,7 @@
                        (assoc :event-date event-date)
                        (assoc :status "active")
                        (assoc :lipas-id 123))
-        _          (core/upsert-sports-site! db user site draft?)
+        _          (core/upsert-sports-site!* db user site draft?)
 
         perms {:admin? true}
         token (jwt/create-token admin)
@@ -230,7 +230,7 @@
         site (-> (gen/generate (s/gen :lipas/sports-site))
                  (assoc-in [:type :type-code] 3110)
                  (assoc :status "active"))
-        _    (core/upsert-sports-site! db user site)
+        _    (core/upsert-sports-site!* db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
@@ -245,9 +245,9 @@
                  (assoc :event-date "2018-01-01T00:00:00.000Z"))
         rev2 (assoc rev1 :event-date "2018-02-01T00:00:00.000Z")
         rev3 (assoc rev1 :event-date "2017-01-01T00:00:00.000Z")
-        _    (core/upsert-sports-site! db user rev1)
-        _    (core/upsert-sports-site! db user rev2)
-        _    (core/upsert-sports-site! db user rev3)
+        _    (core/upsert-sports-site!* db user rev1)
+        _    (core/upsert-sports-site!* db user rev2)
+        _    (core/upsert-sports-site!* db user rev3)
         id   (:lipas-id rev1)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110?revs=yearly")
                       (mock/content-type "application/json")))
@@ -265,7 +265,7 @@
                  (assoc-in [:type :type-code] 3110)
                  (assoc-in [:admin] "state")
                  (assoc :status "active"))
-        _    (core/upsert-sports-site! db user site)
+        _    (core/upsert-sports-site!* db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110?lang=fi")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
@@ -283,8 +283,8 @@
         rev2     (-> rev1
                      (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
                      (assoc :name "Kissalan kuulahalli"))
-        _        (core/upsert-sports-site! db user rev1)
-        _        (core/upsert-sports-site! db user rev2)
+        _        (core/upsert-sports-site!* db user rev1)
+        _        (core/upsert-sports-site!* db user rev2)
         lipas-id (:lipas-id rev1)
         resp     (app (-> (mock/request :get (str "/api/sports-sites/history/"
                                                   lipas-id))
