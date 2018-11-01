@@ -119,6 +119,7 @@
       :form-field [lui/select
                    {:value     (-> edit-data :owner)
                     :required  true
+                    :spec      :lipas.sports-site/owner
                     :items     owners
                     :value-fn  first
                     :label-fn  (comp locale second)
@@ -130,6 +131,7 @@
       :form-field [lui/select
                    {:value     (-> edit-data :admin)
                     :required  true
+                    :spec      :lipas.sports-site/admin
                     :items     admins
                     :value-fn  first
                     :label-fn  (comp locale second)
@@ -154,7 +156,7 @@
                     :on-change #(on-change :address %)}]}
 
      ;; Postal code
-     { :label     (tr :lipas.location/postal-code)
+     {:label      (tr :lipas.location/postal-code)
       :value      (-> display-data :postal-code)
       :form-field [lui/text-field
                    {:value     (-> edit-data :postal-code)
@@ -176,6 +178,7 @@
       :form-field [lui/select
                    {:value     (-> edit-data :city :city-code)
                     :required  true
+                    :spec      :lipas.location.city/city-code
                     :items     cities
                     :label-fn  (comp locale :name)
                     :value-fn  :city-code
@@ -185,7 +188,7 @@
      {:label      (tr :lipas.location/neighborhood)
       :value      (-> display-data :city :neighborhood)
       :form-field [lui/text-field
-                   {:value    (-> edit-data :city :neighborhood)
+                   {:value     (-> edit-data :city :neighborhood)
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
