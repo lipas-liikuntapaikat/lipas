@@ -411,7 +411,7 @@
 (def text-field text-field-controlled)
 
 (defn select [{:keys [label value items on-change value-fn label-fn
-                      sort-fn sort-cmp deselect?]
+                      sort-fn sort-cmp deselect? spec required]
                :or   {value-fn :value
                       label-fn :label
                       sort-cmp compare}
@@ -426,6 +426,7 @@
         props   (-> props
                     (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
                             :deselect?)
+                    (assoc :error (error? spec value required))
                     ;; Following fixes Chrome scroll issue
                     ;; https://github.com/mui-org/material-ui/pull/12003
                     (assoc :MenuProps
