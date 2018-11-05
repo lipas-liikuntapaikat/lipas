@@ -261,7 +261,7 @@
     (.addInteraction lmap draw)
     (.on draw "drawend"
          (fn [e]
-           (let [f (.-feature e)
+           (let [f (gobj/get e "feature")
                  _ (.setId f (str (gensym)))]
              (on-draw-end (->geoJSON-clj f)))))
     (assoc-in map-ctx [:interactions :draw] draw)))
