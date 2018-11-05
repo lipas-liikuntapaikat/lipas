@@ -1,5 +1,6 @@
 // OpenLayers
 import {Map, View, Overlay} from "ol";
+import Collection from "ol/Collection";
 import {get, fromLonLat} from 'ol/proj';
 import {register} from 'ol/proj/proj4';
 import {Style, Circle, Fill, Stroke, Icon} from 'ol/style';
@@ -12,7 +13,7 @@ import {Select, Draw, Modify, Snap} from 'ol/interaction';
 import {pointerMove} from 'ol/events/condition';
 
 window.ol = {
-  Map, View, Overlay,
+  Map, View, Overlay, Collection,
   layer: {
     Tile: TileLayer,
     Vector: VectorLayer,

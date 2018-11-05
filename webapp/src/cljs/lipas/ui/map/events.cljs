@@ -38,9 +38,17 @@
    (assoc-in db [:map :basemap] basemap)))
 
 (re-frame/reg-event-db
- ::toggle-filter
- (fn [db [_ filter]]
-   (update-in db [:map :filters filter] not)))
+ ::show-types
+ (fn [db [_ type-codes]]
+   (assoc-in db [:map :filters :type-codes] type-codes)))
+
+;; This is a hack to force vector layer re-draw
+(re-frame/reg-event-fx
+ ::refresh-filters
+ (fn [{:keys [db]} _]
+   (let [selected-types (-> db :map :filters :type-codes)]
+     {:dispatch [::show-types nil]
+      :dispatch-later [{:ms 100 :dispatch [::show-types selected-types]}]})))
 
 (re-frame/reg-event-db
  ::show-popup
@@ -50,39 +58,57 @@
 (re-frame/reg-event-db
  ::show-sports-site
  (fn [db [_ lipas-id]]
-   (assoc-in db [:map :sports-site] lipas-id)))
+   (assoc-in db [:map :mode :lipas-id] lipas-id)))
 
 (re-frame/reg-event-db
  ::start-editing
  (fn [db [_ lipas-id]]
-   (assoc-in db [:map :editing :lipas-id] lipas-id)))
+   (-> db
+       (assoc-in [:map :mode] {:name     :editing
+                               :lipas-id lipas-id}))))
 
 (re-frame/reg-event-db
  ::stop-editing
  (fn [db [_]]
-   (assoc-in db [:map :editing :lipas-id] nil)))
+   (assoc-in db [:map :mode :name] :default)))
 
 (re-frame/reg-event-fx
- ::update-geometry
- (fn [_ [_ lipas-id geoJSON]]
-   (let [path [:location :geometries]
-         geom (-> geoJSON
-                  (js->clj :keywordize-keys true)
-                  (as-> $ (update $ :features
-                                  (fn [fs] (map #(dissoc % :properties) fs)))))]
-     {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geom]})))
+ ::update-geometries
+ (fn [_ [_ lipas-id geoms]]
+   (let [path  [:location :geometries]
+         geoms (-> geoms
+                   (as-> $ (update $ :features
+                                   (fn [fs] (map #(dissoc % :properties) fs)))))]
+     {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geoms]})))
 
 (re-frame/reg-event-db
- ::start-drawing
+ ::start-adding-geom
  (fn [db [_ geom-type]]
-   (assoc-in db [:map :drawing :geom-type] geom-type)))
+   (-> db
+       (assoc-in [:map :mode] {:name      :adding
+                               :geom-type geom-type
+                               :sub-mode  :drawing}))))
+
+(re-frame/reg-event-db
+ ::new-geom-drawn
+ (fn [db [_ geom]]
+   (assoc-in db [:map :mode] {:name     :adding
+                              :geom     geom
+                              :sub-mode :editing})))
+
+(re-frame/reg-event-db
+ ::update-new-geom
+ (fn [db [_ geom]]
+   (assoc-in db [:map :mode :geom] geom)))
 
 (re-frame/reg-event-fx
- ::stop-drawing
- (fn [{:keys [db]} [_ geoJSON]]
-   (let [geoms     (js->clj geoJSON :keywordize-keys true)
-         type-code (-> db :new-sports-site :type)]
-     {:db (-> db
-              (assoc-in [:map :drawing] nil))
-      :dispatch-n
-      [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
+ ::discard-drawing
+ (fn [{:keys [db]} _]
+   {:db       (assoc-in db [:map :mode] {:name :default})
+    :dispatch [::refresh-filters]}))
+
+(re-frame/reg-event-fx
+ ::finish-adding-geom
+ (fn [{:keys [db]} [_ geoms type-code]]
+   {:db         (assoc-in db [:map :mode :sub-mode] :finished)
+    :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]}))

@@ -226,5 +226,5 @@
  ::new-site-valid?
  (fn [db _]
    (let [data (-> db :new-sports-site :data)]
-     (s/explain :lipas/new-sports-site data)
+     ;; (s/explain :lipas/new-sports-site data)
      (s/valid? :lipas/new-sports-site data))))

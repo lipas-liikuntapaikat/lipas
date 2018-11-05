@@ -748,10 +748,11 @@
         label-fn)]))
 
 (defn autocomplete [{:keys [label items value value-fn label-fn
-                            suggestion-fn on-change]
+                            suggestion-fn on-change multi?]
                      :or   {suggestion-fn (partial simple-matches items label-fn)
                             label-fn      :label
-                            value-fn      :value}}]
+                            value-fn      :value
+                            multi?        true}}]
 
   (r/with-let [items-m     (utils/index-by value-fn items)
                id          (r/atom (gensym))
@@ -764,9 +765,9 @@
      ;; Input field
      [mui/grid {:item true}
       [:> autosuggest
-       {:id                          @id
-        :suggestions                 @suggs
-        :getSuggestionValue          #(label-fn (js->clj* %1))
+       {:id                 @id
+        :suggestions        @suggs
+        :getSuggestionValue #(label-fn (js->clj* %1))
 
         :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
                                                      (gobj/get % "value")))
@@ -775,24 +776,26 @@
         :renderSuggestion            (partial ac-hack-item label-fn)
         :renderSuggestionsContainer  ac-hack-container
 
-        :onSuggestionSelected        #(let [v (-> %2
-                                                  (gobj/get "suggestion")
-                                                  js->clj*)]
-                                        (swap! value conj (value-fn v))
-                                        (on-change @value)
-                                        (reset! input-value ""))
+        :onSuggestionSelected #(let [v (-> %2
+                                           (gobj/get "suggestion")
+                                           js->clj*)]
+                                 (if multi?
+                                   (swap! value conj (value-fn v))
+                                   (reset! value [(value-fn v)]))
+                                 (on-change @value)
+                                 (reset! input-value ""))
 
-        :renderInputComponent        ac-hack-input
-        :inputProps                  {:label    (or label "")
-                                      :value    (or @input-value "")
+        :renderInputComponent ac-hack-input
+        :inputProps           {:label (or label "")
+                               :value (or @input-value "")
 
-                                      :onChange #(reset! input-value
-                                                         (gobj/get %2 "newValue"))}
+                               :onChange #(reset! input-value
+                                                  (gobj/get %2 "newValue"))}
 
-        :theme                       {:suggestionsList
-                                      {:list-style-type "none"
-                                       :padding         0
-                                       :margin          0}}}]]
+        :theme {:suggestionsList
+                {:list-style-type "none"
+                 :padding         0
+                 :margin          0}}}]]
 
      ;; Selected values chips
      (into
