@@ -20,6 +20,11 @@
    (-> db :map :filters)))
 
 (re-frame/reg-sub
+ ::types-filter
+ (fn [db _]
+   (-> db :map :filters :type-codes set)))
+
+(re-frame/reg-sub
  ::basemap
  (fn [db _]
    (-> db :map :basemap)))
@@ -43,7 +48,7 @@
  ::selected-sports-site
  (fn [app-db event]
    (ratom/reaction
-    (let [lipas-id (-> @app-db :map :sports-site)]
+    (let [lipas-id (-> @app-db :map :mode :lipas-id)]
       (when lipas-id
         {:display-data @(re-frame/subscribe
                          [:lipas.ui.sports-sites.subs/display-site lipas-id])
@@ -55,9 +60,7 @@
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  :<- [::filters]
  (fn [[sites filters] _]
-   (let [type-codes (cond-> #{}
-                      (:ice-stadium filters) (into #{2510 2520})
-                      (:swimming-pool filters) (into #{3110 3130}))]
+   (let [type-codes (-> filters :type-codes set)]
      (->> sites
           vals
           (filter (comp type-codes :type-code :type))
@@ -65,14 +68,26 @@
           not-empty))))
 
 (re-frame/reg-sub
- ::editing?
+ ::mode
  (fn [db _]
-   (-> db :map :editing :lipas-id some?)))
+   (-> db :map :mode)))
+
+(re-frame/reg-sub
+ ::zoomed-for-drawing?
+ :<- [::zoom]
+ (fn [zoom _]
+   (> zoom 12)))
 
 (re-frame/reg-sub
  ::drawing-geom-type
  (fn [db _]
    (-> db :map :drawing :geom-type)))
+
+(re-frame/reg-sub
+ ::new-geom
+ (fn [db _]
+   (when (= :adding (-> db :map :mode :name))
+     (-> db :map :mode :geom))))
 
 (re-frame/reg-sub
  ::selected-types

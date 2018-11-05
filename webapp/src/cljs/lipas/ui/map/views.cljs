@@ -47,33 +47,54 @@
             style)}]
    children))
 
-(defn filters []
-  (let [filters (<== [::subs/filters])
-        toggle  #(==> [::events/toggle-filter %])]
-    [mui/grid {:container true}
-     [mui/grid {:item true}
-      [mui/typography {:variant :headline
-                       :style   {:margin-top "0.5em"}}
-       "LIPAS"]
-      [lui/checkbox
-       {:value     (-> filters :ice-stadium)
-        :label     "Jäähallit"
-        :on-change #(toggle :ice-stadium)}]
-      [lui/checkbox
-       {:value     (-> filters :swimming-pool)
-        :label     "Uimahallit"
-        :on-change #(toggle :swimming-pool)}]]]))
-
 (defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         types  (<== [::subs/types-list locale])]
+    ^{:key value}
     [lui/autocomplete
      {:items     types
       :value     value
-      :label     "Liikuntapaikkatyyppi"
+      :label     "Etsi..."
       :value-fn  :type-code
       :label-fn  :name
-      :on-change #(on-change (first %))}]))
+      :on-change on-change}]))
+
+(defn filters [{:keys [tr]}]
+  (let [type-codes (<== [::subs/types-filter])]
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
+      [mui/typography {:variant :caption}
+       "Valitse kohteet"]]
+     [mui/grid {:item true}
+      [type-selector
+       {:tr        tr
+        :value     type-codes
+        :on-change #(==> [::events/show-types %])}]]]))
+
+(defn type-selector-single [{:keys [tr value on-change]}]
+  (r/with-let [selected-type (r/atom value)]
+    (let [locale (tr)
+          types  (<== [::sports-site-subs/all-types locale])]
+      [mui/grid {:container true}
+       [mui/grid {:item true}
+        [lui/autocomplete
+         {:multi?    false
+          :items     (vals types)
+          :value     value
+          :label     "Liikuntapaikkatyyppi"
+          :value-fn  :type-code
+          :label-fn  (comp locale :name)
+          :on-change #(reset! selected-type (first %))}]
+        (when @selected-type
+          [mui/grid {:item true}
+           [mui/typography {:style
+                            {:margin-top    "1em"
+                             :margin-bottom "1em"}}
+            (get-in types [@selected-type :description locale])]
+           [mui/button {:on-click #(on-change @selected-type)
+                        :variant  "contained"
+                        :color    "secondary"}
+            "OK"]])]])))
 
 (defn popup []
   (let [{:keys [data anchor-el]} (<== [::subs/popup])
@@ -142,8 +163,7 @@
           [mui/typography {:variant :headline}
            (:name display-data)]]
          [mui/grid {:item true :xs 1}
-          [mui/icon-button {:on-click #(==> [::events/show-sports-site nil])
-                            }
+          [mui/icon-button {:on-click #(==> [::events/show-sports-site nil])}
            [mui/icon "close"]]]]]
 
        ;; Tabs
@@ -221,9 +241,8 @@
 
 (defn add-btn []
   [mui/button {:variant  :fab
-               :mini     true
                :color    :secondary
-               :on-click #(==> [::events/start-adding-new-site])}
+               :on-click #(==> [::sports-site-events/start-adding-new-site])}
    [mui/icon "add"]])
 
 (defn set-new-site-field [& args]
@@ -231,7 +250,8 @@
 
 (defn add-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)]
-    (let [type   (<== [::sports-site-subs/new-site-type])
+    (let [locale (tr)
+          type   (<== [::sports-site-subs/new-site-type])
           data   (<== [::sports-site-subs/new-site-data])
           types  (<== [::sports-site-subs/types-list])
           cities (<== [::sports-site-subs/cities-list])
@@ -245,43 +265,80 @@
                            new-site-valid?
                            (<== [::user-subs/permission-to-publish-site? data]))
           logged-in?      (<== [::user-subs/logged-in?])
-          size-categories (<== [::ice-stadiums-subs/size-categories])]
+          size-categories (<== [::ice-stadiums-subs/size-categories])
+
+          zoomed? (<== [::subs/zoomed-for-drawing?])
+          geom    (<== [::subs/new-geom])
+
+          active-step (cond
+                        (some? data) 2
+                        (some? type) 1
+                        :else        0)]
 
       [mui/grid {:container true}
-       [mui/grid {:item true :xs 12}
-        [mui/typography (str "Valittu: " type)]
-        [mui/grid {:item true :xs 12}
-         [type-selector
-          {:value     (when type [(:type-code type)])
-           :tr        tr
-           :on-change #(==> [::sports-site-events/select-new-site-type %])}]]
+       [mui/grid {:item  true :xs 12
+                  :style {:padding-top "1em"}}
+        [mui/typography {:variant :title}
+         (if type
+           (str "Uusi " (-> type :name locale))
+           "Uusi liikuntapaikka")]
+        [mui/stepper
+         {:active-step active-step
+          :orientation "vertical"}
 
-        (when type
-          [mui/button
-           {:variant  "extendedFab"
-            :on-click #(==> [::events/start-drawing (:geometry-type type)])}
-           [mui/icon "add_location"]
-           "Lisää sijainti"])
+         ;; Select type
+         [mui/step
+          [mui/step-label "Valitse tyyppi"]
+          [mui/step-content
+           [mui/grid {:item true :xs 12}
+            [type-selector-single
+             {:value     (when type [(:type-code type)])
+              :tr        tr
+              :on-change (fn [t]
+                           (==> [::sports-site-events/select-new-site-type t]))}]]]]
 
-        (when data
-          [mui/grid {:container true
-                     :style     {:flex-direction "column"}}
-           [mui/grid {:item true}
+         ;; Add to map
+         [mui/step
+          [mui/step-label "Lisää kartalle"]
+          [mui/step-content {:style {:padding-top "1em"}}
+           [mui/typography {:variant :body2}
+            "Kohdista kartta liikuntapaikkaan"]
+           (when (not zoomed?)
+             [mui/typography {:variant :body2
+                              :color   :error}
+              "Zoomaa lähemmäs"])
 
-            ;; Headline
-            [mui/grid {:container true}
-             [mui/grid {:item  true :xs 11
-                        :style {:margin-top "0.5em"}}
-              [mui/typography {:variant :headline}
-               (:name data)]]]]
+           (if geom
+             [mui/button
+              {:on-click #(==> [::events/finish-adding-geom geom (:type-code type)])
+               :variant  "contained"
+               :color    "secondary"}
+              "OK"]
+             [mui/button
+              {:style    {:margin-top "1em"}
+               :disabled (not zoomed?)
+               :color    :secondary
+               :variant  :contained
+               :on-click #(==> [::events/start-adding-geom (:geometry-type type)])}
+              [mui/icon "add_location"]
+              "Lisää kartalle"])]]
 
-           ;; Tabs
-           [mui/grid {:item true}
-            [mui/tabs {:value     @selected-tab
-                       :on-change #(reset! selected-tab %2)
-                       :style     {:margin-bottom "1em"}}
-             [mui/tab {:label "Perustiedot"}]
-             [mui/tab {:label "Lisätiedot"}]]
+         ;; Fill data
+         [mui/step
+          [mui/step-label "Täytä tiedot"]
+          [mui/step-content {:style {:margin-top  "1em"
+                                     :padding     0
+                                     :margin-left "-24px"}}
+           [mui/grid {:container true
+                      :style     {:flex-direction "column"}}
+
+            ;; Tabs
+            [mui/grid {:item true}
+             [mui/tabs {:value     @selected-tab
+                        :on-change #(reset! selected-tab %2)
+                        :style     {:margin-bottom "1em"}}
+              [mui/tab {:label "Perustiedot"}]
+              [mui/tab {:label "Lisätiedot"}]]
 
             (case @selected-tab
 
@@ -309,33 +366,46 @@
                     :sub-headings?   true}]]]
 
               ;; Properties tab
-              1 [mui/typography "Ei mitään vielä"])]])
+              1 [mui/typography "Ei mitään vielä"])]]]]]
 
         ;; Actions
         [sticky-bottom-container
-         [mui/grid {:item  true
-                    :style {:padding-top    "1em"
-                            :padding-bottom "1em"}}
+         [mui/grid {:item true}
           [lui/discard-button
-           {:on-click #(==> [::sports-site-events/discard-new-site])
-            :tooltip  (tr :actions/discard)}]
-          [:span
-           {:style
-            {:margin-left  "0.25em"
-             :margin-right "0.25em"}}]
+           {:on-click #(==> [:lipas.ui.events/confirm
+                             (tr :confirm/discard-changes?)
+                             (fn []
+                               (==> [::sports-site-events/discard-new-site])
+                               (==> [::events/discard-drawing]))])
+            :tooltip  (tr :actions/discard)
+            :variant  "fab"
+            :mini     true}]
           (when data
-            [lui/save-button
-             {:tooltip  (tr :actions/save)
-              :variant  "extendedFab"
-              :disabled (not new-site-valid?)
-              :on-click #(==> [::sports-site-events/commit-rev data (not can-publish?)])}])]]]])))
+            (let [draft? (not can-publish?)]
+              [lui/save-button
+               {:style            {:margin-top    "1em"
+                                   :margin-right  "0em"
+                                   :margin-bottom "1em"
+                                   :margin-left   "1em"}
+                :tooltip          (tr :actions/save)
+                :disabled-tooltip "Täytä pakolliset kentät"
+                :variant          "extendedFab"
+                :disabled         (not new-site-valid?)
+                :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
 (defn map-contents-view [{:keys [tr logged-in?]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
     [mui/grid {:container true}
+
      [mui/grid {:item true :xs 12}
-      [filters]
-      ;; [type-selector {:tr tr}]
+      (when-not adding?
+        [mui/grid {:item true :xs 12}
+         [mui/typography {:style   {:margin-top    "1em"
+                                    :margin-bottom "1em"}
+                          :variant :title}
+          "LIPAS"]
+         [filters {:tr tr}]])
+
       (when logged-in?
         (if adding?
           [add-site-view {:tr tr}]
@@ -370,7 +440,7 @@
       [mui/grid {:container true
                  :direction :column
                  :style     {:max-width      "100%"
-                             ;;:min-width      "350px"
+                             :min-width      "350px"
                              :padding-bottom "0.5em"}}
 
        [mui/grid {:item true}

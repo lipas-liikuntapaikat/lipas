@@ -70,6 +70,11 @@
 (defn ->geoJSON [ol-feature]
   (.writeFeaturesObject geoJSON #js[ol-feature]))
 
+(defn ->clj [x]
+  (js->clj x :keywordize-keys true))
+
+(def ->geoJSON-clj (comp ->clj ->geoJSON))
+
 (defn ->wmts [{:keys [url layer-name visible?]
                :or   {visible? false}}]
   (ol.layer.Tile.
@@ -158,8 +163,7 @@
                    (when selected
                      {:anchor-el (.getElement overlay)
                       :data      (-> selected
-                                     ->geoJSON
-                                     (js->clj :keywordize-keys true))})]))))
+                                     ->geoJSON-clj)})]))))
 
     (.addInteraction lmap hover)
 
@@ -203,87 +207,141 @@
           :let [visible? (= k basemap)]]
     (.setVisible v visible?)))
 
-(defn select-sports-site [{:keys [layers interactions]} lipas-id]
+(defn select-feature [{:keys [interactions] :as map-ctx} feature]
+  (let [select (-> interactions :select)]
+    (doto (.getFeatures select)
+      (.clear)
+      (.push feature)))
+  map-ctx)
+
+(defn select-sports-site [{:keys [layers interactions] :as map-ctx} lipas-id]
   (let [layer   (-> layers :overlays :vectors)
-        select  (-> interactions :select)
         source  (.getSource layer)
         fid     (str lipas-id "-0") ; First feature in coll
         feature (.getFeatureById source fid)]
-    (when feature
-      (doto (.getFeatures select)
-        (.clear)
-        (.push feature)))))
-
-(defn start-editing [{:keys [^js lmap layers interactions] :as map-ctx} lipas-id]
-  (prn "Start editing...")
-  (let [layer   (-> layers :overlays :vectors)
-        source  (.getSource layer)
-        fid         (str lipas-id "-0") ; First feature in coll
-        feature (.getFeatureById source fid)
-        select  (-> interactions :select)
-        modify  (when feature
-                      (ol.interaction.Modify. #js{:features (.getFeatures select)}))]
-    (if modify
-      (do
-        (.addInteraction lmap modify)
-        (.on modify "modifyend"
-             (fn [^js e]
-               (let [f (.getFeatureById source fid)]
-                 (==> [::events/update-geometry lipas-id (->geoJSON f)]))))
-        (update-in map-ctx [:interactions] assoc :modify modify))
+    (if feature
+      (select-feature map-ctx feature)
       map-ctx)))
 
+(defn start-editing [{:keys [^js/ol.Map lmap layers interactions]
+                              :as   map-ctx} geoJSON-feature on-modifyend]
+  (let [layer    (-> layers :overlays :vectors)
+        source   (.getSource layer)
+        fid      (-> geoJSON-feature :features first :id)
+        features (-> geoJSON-feature clj->js ->ol-features)
+        _        (.addFeatures source features)
+        modify   (ol.interaction.Modify. #js{:features features
+                                             :source   source})]
+    (.addInteraction lmap modify)
+    (.on modify "modifyend"
+         (fn [e]
+           (let [f (.getFeatureById source fid)]
+             (on-modifyend (->geoJSON-clj f)))))
+    (assoc-in map-ctx [:interactions :modify] modify)))
+
+(defn start-editing-site [{:keys [layers] :as map-ctx} lipas-id on-modifyend]
+  (let [layer   (-> layers :overlays :vectors)
+        source  (.getSource layer)
+        fid     (str lipas-id "-0") ; First feature in coll
+        feature (.getFeatureById source fid)]
+    (start-editing map-ctx (->geoJSON-clj feature) on-modifyend)))
+
 (defn stop-editing [{:keys [^js/ol.Map lmap layers interactions] :as map-ctx}]
-  (prn "Stop editing...")
   (let [modify (-> interactions :modify)]
     (when modify
       (.removeInteraction lmap modify))
     (update-in map-ctx [:interactions] dissoc :modify)))
 
 (defn start-drawing [{:keys [^js/ol.Map lmap layers interactions]
-                      :as map-ctx} geom-type]
-  (prn "Starting to draw " geom-type)
+                      :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :vectors)
         source (.getSource layer)
         draw   (ol.interaction.Draw. #js{:source source
                                          :type   geom-type})]
-
-    ;; Disable select and hover while drawing
-    (.removeInteraction lmap (-> interactions :select))
-    (.removeInteraction lmap (-> interactions :hover))
-
     (.addInteraction lmap draw)
     (.on draw "drawend"
          (fn [e]
-           (let [f (.-feature e)]
-             (==> [::events/stop-drawing (->geoJSON f)]))))
-    (update-in map-ctx [:interactions] assoc :draw draw)))
+           (let [f (.-feature e)
+                 _ (.setId f (str (gensym)))]
+             (on-draw-end (->geoJSON-clj f)))))
+    (assoc-in map-ctx [:interactions :draw] draw)))
 
 (defn stop-drawing [{:keys [^js/ol.Map lmap layers interactions] :as map-ctx}]
-  (prn "Stop drawing...")
-  (let [draw (-> interactions :draw)]
+  (let [draw   (-> interactions :draw)
+        modify (-> interactions :modify)]
     (when draw
       (.removeInteraction lmap draw))
-
-    ;; Enable select and hover after drawing is done
-    (.addInteraction lmap (-> interactions :select))
-    (.addInteraction lmap (-> interactions :hover))
-
-    (update-in map-ctx [:interactions] dissoc :draw)))
+    (when modify
+      (.removeInteraction lmap modify))
+    (update-in map-ctx [:interactions] dissoc :draw :modify)))
 
 (defn update-view [{:keys [^js/ol.View view]} {:keys [lon lat zoom]}]
   (.setCenter view #js[lon lat])
   (.setZoom view zoom))
 
+(defn clear-interactions [{:keys [^js/ol.Map lmap interactions] :as map-ctx}]
+  (.removeInteraction lmap (-> interactions :select))
+  (.removeInteraction lmap (-> interactions :hover))
+  (when-let [draw (:draw interactions)]
+    (.removeInteraction lmap draw))
+  (when-let [modify (:modify interactions)]
+    (.removeInteraction lmap modify)))
+
+(defn show-feature [{:keys [layers] :as map-ctx} geoJSON-feature]
+  (let [vectors (-> layers :overlays :vectors)
+        source  (.getSource vectors)
+        fs      (-> geoJSON-feature clj->js ->ol-features)]
+    (.addFeatures source fs)
+    map-ctx))
+
+;; Adding new features
+(defn set-adding-mode [map-ctx mode]
+  (clear-interactions map-ctx)
+  (case (:sub-mode mode)
+    :drawing  (start-drawing map-ctx (:geom-type mode)
+                             (fn [f] (==> [::events/new-geom-drawn f])))
+    :editing  (start-editing map-ctx (:geom mode)
+                             (fn [f] (==> [::events/update-new-geom f])))
+    :finished (show-feature map-ctx (:geom mode))))
+
+(defn update-adding-mode [map-ctx mode old-mode]
+  (if (= (:sub-mode mode) (:sub-mode old-mode))
+    map-ctx ;; Noop
+    (set-adding-mode map-ctx mode)))
+
+;; Editing existing features
+(defn set-editing-mode [map-ctx mode]
+  (clear-interactions map-ctx)
+  (let [lipas-id     (:lipas-id mode)
+        on-modifyend (fn [f] (==> [::events/update-geometries lipas-id f]))]
+    (start-editing-site map-ctx lipas-id on-modifyend)))
+
+(defn update-editing-mode [map-ctx mode]
+  map-ctx)
+
+;; Browsing and selecting features
+(defn set-default-mode [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+  (clear-interactions map-ctx)
+  (.addInteraction lmap (-> interactions :select))
+  (.addInteraction lmap (-> interactions :hover))
+  (when-let [lipas-id (:lipas-id mode)]
+    (select-sports-site map-ctx lipas-id))
+  map-ctx)
+
+(defn update-default-mode [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+  (when-let [lipas-id (:lipas-id mode)]
+    (select-sports-site map-ctx lipas-id))
+  map-ctx)
+
 (defn map-inner []
-  (let [map-ctx*  (atom nil)
-        geoms*    (atom nil)
-        basemap*  (atom nil)
-        editing?* (atom false)
-        drawing*  (atom nil)
-        lipas-id* (atom nil)
-        center*   (atom nil)
-        zoom*     (atom nil)]
+
+  ;; Internal state atoms
+  (let [map-ctx* (atom nil)
+        geoms*   (atom nil)
+        basemap* (atom nil)
+        center*  (atom nil)
+        zoom*    (atom nil)
+        mode*    (atom nil)]
 
     (r/create-class
 
@@ -299,30 +357,27 @@
               basemap  (:basemap opts)
               geoms    (:geoms opts)
               lipas-id (-> opts :site :display-data :lipas-id)
-              editing? (-> opts :editing?)
-              drawing  (-> opts :drawing-geom-type)
               center   (-> opts :center)
               zoom     (-> opts :zoom)
+              mode     (-> opts :mode)
 
               map-ctx (init-map opts)]
+
+          (reset! map-ctx* map-ctx)
+
+          (reset! basemap* basemap)
+          (reset! zoom* zoom)
+          (reset! center* center)
+          (reset! mode* mode)
 
           (update-geoms map-ctx geoms)
           (set-basemap map-ctx basemap)
           (select-sports-site map-ctx lipas-id)
 
-          (reset! editing?* editing?)
-          (reset! drawing* drawing)
-          (reset! lipas-id* lipas-id)
-          (reset! map-ctx* map-ctx)
-          (reset! basemap* basemap)
-          (reset! zoom* zoom)
-          (reset! center* center)
-
-          (when editing?
-            (reset! map-ctx* (start-editing @map-ctx* lipas-id)))
-
-          (when drawing
-            (reset! map-ctx* (start-drawing @map-ctx* drawing)))))
+          (case (:name mode)
+            :default (reset! map-ctx* (set-default-mode @map-ctx* mode))
+            :editing (reset! map-ctx* (set-editing-mode @map-ctx* mode))
+            :adding  (reset! map-ctx* (set-adding-mode @map-ctx* mode)))))
 
       :component-did-update
       (fn [comp]
@@ -330,10 +385,9 @@
               geoms    (-> opts :geoms)
               lipas-id (-> opts :site :display-data :lipas-id)
               basemap  (-> opts :basemap)
-              editing? (-> opts :editing?)
-              drawing  (-> opts :drawing-geom-type)
               center   (-> opts :center)
-              zoom     (-> opts :zoom)]
+              zoom     (-> opts :zoom)
+              mode     (-> opts :mode)]
 
           (when (not= @geoms* geoms)
             (update-geoms @map-ctx* geoms)
@@ -343,27 +397,29 @@
             (set-basemap @map-ctx* basemap)
             (reset! basemap* basemap))
 
-          (when (not= @lipas-id* lipas-id)
-            (select-sports-site @map-ctx* lipas-id)
-            (reset! lipas-id* lipas-id))
-
-          (when (not= @editing?* editing?)
-            (if editing?
-              (reset! map-ctx* (start-editing @map-ctx* @lipas-id*))
-              (reset! map-ctx* (stop-editing @map-ctx*)))
-            (reset! editing?* editing?))
-
-          (when (not= @drawing* drawing)
-            (if drawing
-              (reset! map-ctx* (start-drawing @map-ctx* drawing))
-              (reset! map-ctx* (stop-drawing @map-ctx*)))
-            (reset! drawing* drawing))
-
           (when (or (not= @zoom* zoom)
                     (not= @center* center))
             (update-view @map-ctx* (merge center {:zoom zoom}))
             (reset! center* center)
-            (reset! zoom* zoom))))
+            (reset! zoom* zoom))
+
+          (when (not= @mode* mode)
+            ;; (prn "Mode changed from!" @mode* "to" mode)
+            (let [update? (= (:name @mode*) (:name mode))]
+              (case (:name mode)
+                :default (reset! map-ctx*
+                                 (if update?
+                                   (update-default-mode @map-ctx* mode)
+                                   (set-default-mode @map-ctx* mode)))
+                :editing (reset! map-ctx*
+                                 (if update?
+                                   (update-editing-mode @map-ctx* mode)
+                                   (set-editing-mode @map-ctx* mode)))
+                :adding  (reset! map-ctx*
+                                 (if update?
+                                   (update-adding-mode @map-ctx* mode @mode*)
+                                   (set-adding-mode @map-ctx* mode)))))
+            (reset! mode* mode))))
 
       :display-name "map-inner"})))
 
@@ -372,19 +428,17 @@
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
-  (let [geoms             (re-frame/subscribe [::subs/geometries])
-        basemap           (re-frame/subscribe [::subs/basemap])
-        center            (re-frame/subscribe [::subs/center])
-        zoom              (re-frame/subscribe [::subs/zoom])
-        site              (re-frame/subscribe [::subs/selected-sports-site])
-        editing?          (re-frame/subscribe [::subs/editing?])
-        drawing-geom-type (re-frame/subscribe [::subs/drawing-geom-type])]
+  (let [geoms   (re-frame/subscribe [::subs/geometries])
+        basemap (re-frame/subscribe [::subs/basemap])
+        center  (re-frame/subscribe [::subs/center])
+        zoom    (re-frame/subscribe [::subs/zoom])
+        site    (re-frame/subscribe [::subs/selected-sports-site])
+        mode    (re-frame/subscribe [::subs/mode])]
     (fn []
       [map-inner
-       {:geoms             @geoms
-        :basemap           @basemap
-        :center            @center
-        :zoom              @zoom
-        :site              @site
-        :editing?          @editing?
-        :drawing-geom-type @drawing-geom-type}])))
+       {:geoms   @geoms
+        :basemap @basemap
+        :center  @center
+        :zoom    @zoom
+        :site    @site
+        :mode    @mode}])))

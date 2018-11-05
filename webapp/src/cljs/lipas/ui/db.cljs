@@ -75,8 +75,8 @@
 
    ;; Map
    :map
-   {:center   {:lon 435047 :lat 6901408}
-    :zoom     2
-    :basemap  :taustakartta
-    :filters  {:ice-stadium   true
-               :swimming-pool false}}})
+   {:center  {:lon 435047 :lat 6901408}
+    :zoom    2
+    :mode    {:name :default}
+    :basemap :taustakartta
+    :filters {:type-codes [3110 3130]}}})
