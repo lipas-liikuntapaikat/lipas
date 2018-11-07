@@ -192,7 +192,7 @@
       :select select}
      :layers layers}))
 
-(defn update-geoms [{:keys [layers]} geoms]
+(defn update-geoms! [{:keys [layers]} geoms]
   (let [vectors (-> layers :overlays :vectors)
         source  (.getSource vectors)]
     (.clear source)
@@ -202,7 +202,7 @@
                         ->ol-features)]]
       (.addFeatures source f))))
 
-(defn set-basemap [{:keys [layers]} basemap]
+(defn set-basemap! [{:keys [layers]} basemap]
   (doseq [[k v] (:basemaps layers)
           :let [visible? (= k basemap)]]
     (.setVisible v visible?)))
@@ -214,7 +214,7 @@
       (.push feature)))
   map-ctx)
 
-(defn select-sports-site [{:keys [layers interactions] :as map-ctx} lipas-id]
+(defn select-sports-site! [{:keys [layers interactions] :as map-ctx} lipas-id]
   (let [layer   (-> layers :overlays :vectors)
         source  (.getSource layer)
         fid     (str lipas-id "-0") ; First feature in coll
@@ -275,7 +275,7 @@
       (.removeInteraction lmap modify))
     (update-in map-ctx [:interactions] dissoc :draw :modify)))
 
-(defn update-view [{:keys [^js/ol.View view]} {:keys [lon lat zoom]}]
+(defn update-view! [{:keys [^js/ol.View view]} {:keys [lon lat zoom]}]
   (.setCenter view #js[lon lat])
   (.setZoom view zoom))
 
@@ -295,7 +295,7 @@
     map-ctx))
 
 ;; Adding new features
-(defn set-adding-mode [map-ctx mode]
+(defn set-adding-mode! [map-ctx mode]
   (clear-interactions map-ctx)
   (case (:sub-mode mode)
     :drawing  (start-drawing map-ctx (:geom-type mode)
@@ -304,10 +304,10 @@
                              (fn [f] (==> [::events/update-new-geom f])))
     :finished (show-feature map-ctx (:geom mode))))
 
-(defn update-adding-mode [map-ctx mode old-mode]
+(defn update-adding-mode! [map-ctx mode old-mode]
   (if (= (:sub-mode mode) (:sub-mode old-mode))
     map-ctx ;; Noop
-    (set-adding-mode map-ctx mode)))
+    (set-adding-mode! map-ctx mode)))
 
 ;; Editing existing features
 (defn set-editing-mode [map-ctx mode]
@@ -316,21 +316,21 @@
         on-modifyend (fn [f] (==> [::events/update-geometries lipas-id f]))]
     (start-editing-site map-ctx lipas-id on-modifyend)))
 
-(defn update-editing-mode [map-ctx mode]
+(defn update-editing-mode! [map-ctx mode]
   map-ctx)
 
 ;; Browsing and selecting features
-(defn set-default-mode [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+(defn set-default-mode! [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
   (clear-interactions map-ctx)
   (.addInteraction lmap (-> interactions :select))
   (.addInteraction lmap (-> interactions :hover))
   (when-let [lipas-id (:lipas-id mode)]
-    (select-sports-site map-ctx lipas-id))
+    (select-sports-site! map-ctx lipas-id))
   map-ctx)
 
-(defn update-default-mode [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+(defn update-default-mode! [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
   (when-let [lipas-id (:lipas-id mode)]
-    (select-sports-site map-ctx lipas-id))
+    (select-sports-site! map-ctx lipas-id))
   map-ctx)
 
 (defn map-inner []
@@ -370,14 +370,14 @@
           (reset! center* center)
           (reset! mode* mode)
 
-          (update-geoms map-ctx geoms)
-          (set-basemap map-ctx basemap)
-          (select-sports-site map-ctx lipas-id)
+          (update-geoms! map-ctx geoms)
+          (set-basemap! map-ctx basemap)
+          (select-sports-site! map-ctx lipas-id)
 
           (case (:name mode)
-            :default (reset! map-ctx* (set-default-mode @map-ctx* mode))
+            :default (reset! map-ctx* (set-default-mode! @map-ctx* mode))
             :editing (reset! map-ctx* (set-editing-mode @map-ctx* mode))
-            :adding  (reset! map-ctx* (set-adding-mode @map-ctx* mode)))))
+            :adding  (reset! map-ctx* (set-adding-mode! @map-ctx* mode)))))
 
       :component-did-update
       (fn [comp]
@@ -390,36 +390,34 @@
               mode     (-> opts :mode)]
 
           (when (not= @geoms* geoms)
-            (update-geoms @map-ctx* geoms)
+            (update-geoms! @map-ctx* geoms)
             (reset! geoms* geoms))
 
           (when (not= @basemap* basemap)
-            (set-basemap @map-ctx* basemap)
+            (set-basemap! @map-ctx* basemap)
             (reset! basemap* basemap))
 
           (when (or (not= @zoom* zoom)
                     (not= @center* center))
-            (update-view @map-ctx* (merge center {:zoom zoom}))
+            (update-view! @map-ctx* (merge center {:zoom zoom}))
             (reset! center* center)
             (reset! zoom* zoom))
 
           (when (not= @mode* mode)
             ;; (prn "Mode changed from!" @mode* "to" mode)
-            (let [update? (= (:name @mode*) (:name mode))]
-              (case (:name mode)
-                :default (reset! map-ctx*
-                                 (if update?
-                                   (update-default-mode @map-ctx* mode)
-                                   (set-default-mode @map-ctx* mode)))
-                :editing (reset! map-ctx*
-                                 (if update?
-                                   (update-editing-mode @map-ctx* mode)
-                                   (set-editing-mode @map-ctx* mode)))
-                :adding  (reset! map-ctx*
-                                 (if update?
-                                   (update-adding-mode @map-ctx* mode @mode*)
-                                   (set-adding-mode @map-ctx* mode)))))
-            (reset! mode* mode))))
+            (let [update? (= (:name @mode*) (:name mode))
+                  map-ctx (case (:name mode)
+                            :default (if update?
+                                       (update-default-mode! @map-ctx* mode)
+                                       (set-default-mode! @map-ctx* mode))
+                            :editing (if update?
+                                       (update-editing-mode! @map-ctx* mode)
+                                       (set-editing-mode @map-ctx* mode))
+                            :adding  (if update?
+                                       (update-adding-mode! @map-ctx* mode @mode*)
+                                       (set-adding-mode! @map-ctx* mode)))]
+              (reset! map-ctx* map-ctx)
+              (reset! mode* mode)))))
 
       :display-name "map-inner"})))
 
