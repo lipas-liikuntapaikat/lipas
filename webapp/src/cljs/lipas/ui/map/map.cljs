@@ -1,16 +1,33 @@
 (ns lipas.ui.map.map
   (:require proj4
-            "ol"
+            ["ol"]
+            [clojure.string :as string]
             [goog.object :as gobj]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [reagent.core :as r]))
 
 ;; (set! *warn-on-infer* true)
+
+(def temp-fid-prefix "temp")
+
+(def circle-style (ol.style.Style.
+                   #js{:image
+                       (ol.style.Circle.
+                        #js{:radius 10
+                            :stroke (ol.style.Stroke
+                                     #js{:color mui/primary})
+                            :fill   (ol.style.Fill.
+                                     #js{:color mui/secondary2})})}))
+
+
+(def circle-style2 (ol.style.Style.
+                    #js{:image
+                        (ol.style.Circle.)}))
 
 (defn ->marker-style [opts]
   (ol.style.Style.
@@ -23,16 +40,65 @@
             :anchor #js[0.5 0.85]
             :offset #js[0 0]})}))
 
-(defn ->wmts-url [layer-name]
-  (str "/mapproxy/wmts/"
-       layer-name
-       "/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png"))
+(def blue-marker-style (->marker-style {}))
+(def red-marker-style (->marker-style {:color mui/secondary}))
 
-(def urls
-  {:taustakartta (->wmts-url "mml_taustakartta")
-   :maastokartta (->wmts-url "mml_maastokartta")
-   :ortokuva     (->wmts-url "mml_ortokuva")})
+(def default-stroke (ol.style.Stroke. #js{:color "#3399CC" :width 3}))
+(def default-fill (ol.style.Fill. #js{:color "rgba(255,255,0,0.4)"}))
+(def hover-stroke (ol.style.Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
+(def hover-fill (ol.style.Fill. #js{:color "rgba(255,0,0,0.4)"}))
 
+(def vertices-style
+  (ol.style.Style.
+   #js{:image
+       (ol.style.Circle.
+        #js{:radius 5
+            :stroke (ol.style.Stroke
+                     #js{:color mui/primary})
+            :fill   (ol.style.Fill.
+                     #js{:color mui/secondary2})})
+       :geometry (fn [f]
+                   (let [geom-type (-> f .getGeometry .getType)
+                         coords    (case geom-type
+                                     "Polygon"    (-> f .getGeometry .getCoordinates first)
+                                     "LineString" (-> f .getGeometry .getCoordinates)
+                                     nil)]
+                     (when coords
+                       (ol.geom.MultiPoint. coords))))}))
+
+(def edit-style
+  (ol.style.Style.
+   #js{:stroke
+       (ol.style.Stroke.
+        #js{:width 3
+            :color "blue"})
+       :fill default-fill
+       :image
+       (ol.style.Circle.
+        #js{:radius 5
+            :fill   default-fill
+            :stroke default-stroke})}))
+
+(def default-style
+  (ol.style.Style.
+   #js{:stroke default-stroke
+       :fill default-fill
+       :image
+       (ol.style.Circle.
+        #js{:radius 5
+            :fill   default-fill
+            :stroke default-stroke})}))
+
+(def hover-style
+  (ol.style.Style.
+   #js{:stroke hover-stroke
+       :fill   default-fill
+       :image  (ol.style.Circle.
+                #js{:radius 7
+                    :fill   default-fill
+                    :stroke hover-stroke})}))
+
+(def hover-styles #js[hover-style blue-marker-style])
 
 (js/proj4.defs "EPSG:3067" (str "+proj=utm"
                                 "+zone=35"
@@ -67,13 +133,23 @@
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
 
-(defn ->geoJSON [ol-feature]
-  (.writeFeaturesObject geoJSON #js[ol-feature]))
+(defn ->geoJSON [ol-features]
+  (.writeFeaturesObject geoJSON ol-features))
 
 (defn ->clj [x]
   (js->clj x :keywordize-keys true))
 
 (def ->geoJSON-clj (comp ->clj ->geoJSON))
+
+(defn ->wmts-url [layer-name]
+  (str "/mapproxy/wmts/"
+       layer-name
+       "/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png"))
+
+(def urls
+  {:taustakartta (->wmts-url "mml_taustakartta")
+   :maastokartta (->wmts-url "mml_maastokartta")
+   :ortokuva     (->wmts-url "mml_ortokuva")})
 
 (defn ->wmts [{:keys [url layer-name visible?]
                :or   {visible? false}}]
@@ -94,21 +170,6 @@
             :requestEncoding "REST"
             :isBaseLayer     true})}))
 
-(def circle-style (ol.style.Style.
-                   #js{:image
-                       (ol.style.Circle.
-                        #js{:radius 10
-                            :stroke (ol.style.Stroke
-                                     #js{:color mui/primary})
-                            :fill   (ol.style.Fill.
-                                     #js{:color mui/secondary2})})}))
-
-(def circle-style2 (ol.style.Style.
-                    #js{:image
-                        (ol.style.Circle.)}))
-
-(def blue-marker-style (->marker-style {}))
-(def red-marker-style (->marker-style {:color mui/secondary}))
 
 (defn init-layers []
   {:basemaps
@@ -121,7 +182,11 @@
                            :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors (ol.layer.Vector.
-              #js{:source (ol.source.Vector.)})}})
+              #js{:source (ol.source.Vector.)
+                  :style  default-style})
+    :edits   (ol.layer.Vector.
+              #js{:source (ol.source.Vector.)
+                  :style  #js[edit-style vertices-style]})}})
 
 (defn init-map! [{:keys [center zoom]}]
   (let [layers (init-layers)
@@ -139,30 +204,31 @@
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
-                                (-> layers :overlays :vectors)]
+                                (-> layers :overlays :vectors)
+                                (-> layers :overlays :edits)]
                   :overlays #js[popup-overlay]
                   :view     view}
 
         hover (ol.interaction.Select.
                #js{:layers    [(-> layers :overlays :vectors)]
-                   :style     blue-marker-style
+                   ;;:style     blue-marker-style
+                   :style     hover-style
                    :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
-                    :style  blue-marker-style})
+                    :style hover-style})
 
         lmap (ol.Map. opts)]
 
     (.on hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (aget (gobj/get e "selected") 0)]
+                 selected (gobj/get e "selected")]
              (.setPosition popup-overlay coords)
-             (==> [::events/show-popup
-                   (when selected
-                     {:anchor-el (.getElement popup-overlay)
-                      :data      (-> selected ->geoJSON-clj)})]))))
+             (==> [::events/show-popup (when (not-empty selected)
+                                         {:anchor-el (.getElement popup-overlay)
+                                          :data      (-> selected ->geoJSON-clj)})]))))
 
     (.on select "select"
          (fn [e]
@@ -193,6 +259,12 @@
                      :hover  hover}
      :overlays      {:popup popup-overlay}}))
 
+;; Popups are rendered 'outside' OpenLayers by React so we need to
+;; inform the outside world.
+(defn clear-popup! [map-ctx]
+  (==> [::events/show-popup nil])
+  map-ctx)
+
 (defn update-geoms! [{:keys [layers] :as map-ctx} geoms]
   (let [vectors (-> layers :overlays :vectors)
         source  (.getSource vectors)]
@@ -210,60 +282,123 @@
     (.setVisible v visible?))
   map-ctx)
 
-(defn select-feature! [{:keys [interactions] :as map-ctx} feature]
+(defn select-features! [{:keys [interactions] :as map-ctx} features]
   (let [select (-> interactions :select)]
     (doto (.getFeatures select)
       (.clear)
-      (.push feature))
+      (.extend features))
     map-ctx))
 
-(defn find-feature-by-id [{:keys [layers] :as map-ctx} fid]
+(defn find-feature-by-id [{:keys [layers]} fid]
   (let [layer  (-> layers :overlays :vectors)
         source (.getSource layer)]
     (.getFeatureById source fid)))
 
-(defn select-sports-site! [{:keys [layers] :as map-ctx} lipas-id]
-  (let [feature (find-feature-by-id map-ctx lipas-id) ]
-    (if feature
-      (select-feature! map-ctx feature)
-      map-ctx)))
+(defn find-features-by-lipas-id [{:keys [layers]} lipas-id]
+  (let [layer  (-> layers :overlays :vectors)
+        source (.getSource layer)
+        res    #js[]]
+    (.forEachFeature source
+                     (fn [f]
+                       (when (-> (.getId f)
+                                 (string/split "-")
+                                 first
+                                 (= (str lipas-id)))
+                         (.push res f))
+                       ;; Iteration stops if truthy val is returned
+                       ;; but we want to find all matching features so
+                       ;; nil is returned.
+                       nil))
+    res))
 
-(defn start-editing! [{:keys [^js/ol.Map lmap layers interactions]
-                              :as   map-ctx} geoJSON-feature on-modifyend]
-  (let [layer    (-> layers :overlays :vectors)
-        source   (.getSource layer)
-        fid      (-> geoJSON-feature :features first :id)
-        features (-> geoJSON-feature clj->js ->ol-features)
-        _        (.addFeatures source features)
-        modify   (ol.interaction.Modify. #js{:features features
-                                             :source   source})]
-    (.addInteraction lmap modify)
-    (.on modify "modifyend"
-         (fn [e]
-           (let [f (.getFeatureById source fid)]
-             (on-modifyend (->geoJSON-clj f)))))
-    (assoc-in map-ctx [:interactions :modify] modify)))
+(defn select-sports-site! [map-ctx lipas-id]
+  ;; First feature in f-coll has suffix "-0"
+  (if-let [features (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
+    (select-features! map-ctx features)
+    map-ctx))
+
+;; The snap interaction must be added after the Modify and Draw
+;; interactions in order for its map browser event handlers to be
+;; fired first. Its handlers are responsible of doing the snapping.
+(defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+  (prn "Enable snapping!")
+  (let [source (-> layers :overlays :edits .getSource)
+        snap   (ol.interaction.Snap. #js{:source source})]
+    (.addInteraction lmap snap)
+    (assoc-in map-ctx [:interactions :snap] snap)))
+
+(defn enable-splitter! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+  (prn "Not Enabling splitter!")
+  ;; TODO figure out what's wrong
+  ;; (let [source   (-> layers :overlays :edits .getSource)
+  ;;       _ (prn "source...")
+  ;;       _ (js/console.log (.getFeaturesCollection source))
+  ;;       splitter (ol.interaction.Splitter. #js{:source source})]
+  ;;   (.addInteraction lmap splitter)
+  ;;   (assoc-in map-ctx [:interactions :splitter] splitter)
+  ;;   )
+  map-ctx
+  )
+
+(defn start-editing! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
+                      geoJSON-feature on-modifyend]
+  (prn "Start editing")
+  (let [layer     (-> layers :overlays :edits)
+        source    (.getSource layer)
+        features  (-> geoJSON-feature clj->js ->ol-features)
+        _         (.addFeatures source features)
+        modify    (ol.interaction.Modify. #js{:source source})
+        geom-type (-> geoJSON-feature :features first :geometry :type)]
+
+    ;; Splitter needs to be added before other interactions
+    (let [new-ctx (if (#{"LineString" "Polygon"} geom-type)
+                    (enable-splitter! map-ctx)
+                    map-ctx)]
+
+      (.addInteraction lmap modify)
+      (.on modify "modifyend"
+           (fn [e]
+             (on-modifyend (->geoJSON-clj (.getFeatures source)))))
+
+      (-> new-ctx
+          (assoc-in [:interactions :modify] modify)
+          enable-snapping!))))
 
 (defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id on-modifyend]
-  (let [layer   (-> layers :overlays :vectors)
-        source  (.getSource layer)
-        fid     (str lipas-id "-0") ; First feature in coll
-        feature (.getFeatureById source fid)]
-    (start-editing! map-ctx (->geoJSON-clj feature) on-modifyend)))
+  (let [layer    (-> layers :overlays :vectors)
+        source   (.getSource layer)
+        features (find-features-by-lipas-id map-ctx lipas-id)]
+    (js/console.log features)
+    ;; Remove from original source so we won't display duplicate when
+    ;; feature is added to :edits layer.
+    (.forEach features
+              (fn [f]
+                (.removeFeature source f)))
+    (start-editing! map-ctx (->geoJSON-clj features) on-modifyend)))
 
-(defn start-drawing! [{:keys [^js/ol.Map lmap layers interactions]
-                      :as   map-ctx} geom-type on-draw-end]
-  (let [layer  (-> layers :overlays :vectors)
+(defn start-drawing! [{:keys [^js/ol.Map lmap layers]
+                       :as   map-ctx} geom-type on-draw-end]
+  (prn "Start drawing!")
+  (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
         draw   (ol.interaction.Draw. #js{:source source
                                          :type   geom-type})]
-    (.addInteraction lmap draw)
-    (.on draw "drawend"
-         (fn [e]
-           (let [f (gobj/get e "feature")
-                 _ (.setId f (str (gensym)))]
-             (on-draw-end (->geoJSON-clj f)))))
-    (assoc-in map-ctx [:interactions :draw] draw)))
+    ;; Splitter needs to be enabled before other interactions
+    (let [new-ctx (if  (#{"LineString" "Polygon"} geom-type)
+                    (enable-splitter! map-ctx)
+                    map-ctx)]
+
+      (.addInteraction lmap draw)
+      (.on draw "drawend"
+           (fn [e]
+             (let [f (gobj/get e "feature")
+                   _ (.setId f (str (gensym temp-fid-prefix)))]
+               (.addFeature source f)
+               (on-draw-end (->geoJSON-clj (.getFeatures source))))))
+
+      (-> new-ctx
+          (assoc-in [:interactions :draw] draw)
+          enable-snapping!))))
 
 (defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
                       {:keys [lon lat] :as center}]
@@ -275,7 +410,7 @@
   (assoc map-ctx :zoom zoom))
 
 (defn show-feature! [{:keys [layers] :as map-ctx} geoJSON-feature]
-  (let [vectors (-> layers :overlays :vectors)
+  (let [vectors (-> layers :overlays :edits)
         source  (.getSource vectors)
         fs      (-> geoJSON-feature clj->js ->ol-features)]
     (.addFeatures source fs)
@@ -283,6 +418,7 @@
 
 (defn clear-interactions! [{:keys [^js/ol.Map lmap interactions interactions*]
                             :as   map-ctx}]
+  (prn "Clear interactions!")
   ;; Special treatment for 'singleton' interactions*. OpenLayers
   ;; doesn't treat 'copies' identical to original ones. Therefore we
   ;; need to pass the original ones explicitly.
@@ -291,6 +427,23 @@
     (.removeInteraction lmap v))
 
   (assoc map-ctx :interactions {}))
+
+(defn- existing-feature? [f]
+  (-> (.getId f)
+      (string/starts-with? temp-fid-prefix)
+      not))
+
+(defn clear-edits! [{:keys [layers] :as map-ctx}]
+  (let [edits-source (-> layers :overlays :edits .getSource)
+        geoms-source (-> layers :overlays :vectors .getSource)]
+    ;; We add existing features which have been transferred to :edits
+    ;; layer back to :vectors layer.
+    (.forEachFeature edits-source
+                     (fn [f]
+                       (when (existing-feature? f)
+                         (.addFeature geoms-source f))))
+    (.clear edits-source)
+    map-ctx))
 
 ;; Adding new features
 (defn set-adding-mode! [map-ctx mode]
@@ -308,15 +461,34 @@
       map-ctx ;; Noop
       (set-adding-mode! map-ctx mode))))
 
+(defn continue-editing! [{:keys [layers] :as map-ctx} on-modifyend]
+  (prn "Continue editing!")
+  (let [layer (-> layers :overlays :edits)
+        fs    (-> layer .getSource .getFeatures ->geoJSON-clj)]
+    (start-editing! map-ctx fs on-modifyend)))
+
 ;; Editing existing features
-(defn set-editing-mode! [map-ctx mode]
-  (let [map-ctx (clear-interactions! map-ctx)]
-    (let [lipas-id     (:lipas-id mode)
-          on-modifyend (fn [f] (==> [::events/update-geometries lipas-id f]))]
-      (start-editing-site! map-ctx lipas-id on-modifyend))))
+(defn set-editing-mode!
+  ([map-ctx mode]
+   (set-editing-mode! map-ctx mode false))
+  ([map-ctx {:keys [lipas-id geom-type sub-mode]} continue?]
+   (let [map-ctx (clear-interactions! map-ctx)]
+     (let [on-modifyend (fn [f]
+                          (==> [::events/update-geometries lipas-id f])
+                          (when (= :drawing sub-mode)
+                            ;; Switch back to editing mode after drawing
+                            (==> [::events/start-editing lipas-id :editing geom-type])))]
+       (case sub-mode
+         :drawing (start-drawing! map-ctx geom-type on-modifyend)
+         :editing (if continue?
+                    (continue-editing! map-ctx on-modifyend)
+                    (start-editing-site! map-ctx lipas-id on-modifyend)))))))
 
 (defn update-editing-mode! [map-ctx mode]
-  map-ctx)
+  (let [old-mode (:mode map-ctx)]
+    (if (= (:sub-mode mode) (:sub-mode old-mode))
+      map-ctx ;; Noop
+      (set-editing-mode! map-ctx mode :continue))))
 
 (defn enable-hover! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
   (let [hover (:hover interactions*)]
@@ -329,8 +501,9 @@
     (assoc-in map-ctx [:interactions :select] select)))
 
 ;; Browsing and selecting features
-(defn set-default-mode! [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+(defn set-default-mode! [map-ctx mode]
   (let [map-ctx (-> map-ctx
+                    clear-edits!
                     clear-interactions!
                     enable-hover!
                     enable-select!)]
@@ -338,16 +511,16 @@
       (select-sports-site! map-ctx lipas-id)
       map-ctx)))
 
-(defn update-default-mode! [{:keys [^js/ol.Map lmap interactions] :as map-ctx} mode]
+(defn update-default-mode! [map-ctx mode]
   (if-let [lipas-id (:lipas-id mode)]
     (select-sports-site! map-ctx lipas-id)
     map-ctx))
 
 (defn set-mode! [map-ctx mode]
   (let [mode (case (:name mode)
-                   :default (set-default-mode! map-ctx mode)
-                   :editing (set-editing-mode! map-ctx mode)
-                   :adding  (set-adding-mode! map-ctx mode))]
+               :default (set-default-mode! map-ctx mode)
+               :editing (set-editing-mode! map-ctx mode)
+               :adding  (set-adding-mode! map-ctx mode))]
     (assoc map-ctx :mode mode)))
 
 (defn update-mode! [map-ctx mode]
@@ -382,8 +555,6 @@
         (let [opts    (r/props comp)
               basemap (:basemap opts)
               geoms   (:geoms opts)
-              center  (-> opts :center)
-              zoom    (-> opts :zoom)
               mode    (-> opts :mode)
 
               map-ctx (-> (init-map! opts)
@@ -417,6 +588,8 @@
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
   (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
+  (==> [:lipas.ui.sports-sites.events/get-by-type-code 4402])
+  (==> [:lipas.ui.sports-sites.events/get-by-type-code 111])
   (let [geoms   (re-frame/subscribe [::subs/geometries])
         basemap (re-frame/subscribe [::subs/basemap])
         center  (re-frame/subscribe [::subs/center])

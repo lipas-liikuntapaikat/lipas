@@ -1,6 +1,6 @@
 (ns lipas.ui.map.events
   (:require proj4
-            "ol"
+            ["ol"]
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -15,10 +15,14 @@
  (fn [{:keys [db]} [_ lipas-id]]
    (let [latest     (get-in db [:sports-sites lipas-id :latest])
          rev        (get-in db [:sports-sites lipas-id :history latest])
-         wgs-coords (-> rev :location :geometries :features first
-                        :geometry :coordinates clj->js)
+         geom       (-> rev :location :geometries :features first :geometry)
+         _          (prn "GEOM" geom)
+         wgs-coords (case (:type geom)
+                      "Point"      (-> geom :coordinates)
+                      "LineString" (-> geom :coordinates first)
+                      "Polygon"    (-> geom :coordinates first first))
          proj       (.get ol.proj "EPSG:3067")
-         [lon lat]  (js->clj (ol.proj.fromLonLat wgs-coords proj))
+         [lon lat]  (js->clj (ol.proj.fromLonLat (clj->js wgs-coords) proj))
          zoom       14]
      {:dispatch [::set-view lat lon zoom]})))
 
@@ -47,7 +51,7 @@
  ::refresh-filters
  (fn [{:keys [db]} _]
    (let [selected-types (-> db :map :filters :type-codes)]
-     {:dispatch [::show-types nil]
+     {:dispatch       [::show-types nil]
       :dispatch-later [{:ms 100 :dispatch [::show-types selected-types]}]})))
 
 (re-frame/reg-event-db
@@ -62,10 +66,11 @@
 
 (re-frame/reg-event-db
  ::start-editing
- (fn [db [_ lipas-id]]
-   (-> db
-       (assoc-in [:map :mode] {:name     :editing
-                               :lipas-id lipas-id}))))
+ (fn [db [_ lipas-id sub-mode geom-type]]
+   (update-in db [:map :mode] merge {:name      :editing
+                                     :lipas-id  lipas-id
+                                     :sub-mode  sub-mode
+                                     :geom-type geom-type})))
 
 (re-frame/reg-event-db
  ::stop-editing
@@ -85,16 +90,16 @@
  ::start-adding-geom
  (fn [db [_ geom-type]]
    (-> db
-       (assoc-in [:map :mode] {:name      :adding
-                               :geom-type geom-type
-                               :sub-mode  :drawing}))))
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :drawing}))))
 
 (re-frame/reg-event-db
  ::new-geom-drawn
  (fn [db [_ geom]]
-   (assoc-in db [:map :mode] {:name     :adding
-                              :geom     geom
-                              :sub-mode :editing})))
+   (update-in db [:map :mode] merge {:name     :adding
+                                     :geom     geom
+                                     :sub-mode :editing})))
 
 (re-frame/reg-event-db
  ::update-new-geom

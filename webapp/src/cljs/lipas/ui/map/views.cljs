@@ -1,6 +1,5 @@
 (ns lipas.ui.map.views
-  (:require [clojure.spec.alpha :as s]
-            [lipas.ui.components :as lui]
+  (:require [lipas.ui.components :as lui]
             [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.map :as ol-map]
@@ -134,7 +133,7 @@
     (let [display-data (:display-data site-data)
           lipas-id     (:lipas-id display-data)
           edit-data    (:edit-data site-data)
-          types        (<== [::sports-site-subs/types-list])
+          types        (<== [::sports-site-subs/all-types])
           cities       (<== [::sports-site-subs/cities-list])
           admins       (<== [::sports-site-subs/admins])
           owners       (<== [::sports-site-subs/owners])
@@ -143,11 +142,14 @@
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
 
+          type-code (-> display-data :type :type-code)
+          geom-type (get-in types [type-code :geometry-type])
+
           set-field (partial set-field lipas-id)
 
           size-categories (<== [::ice-stadiums-subs/size-categories])
 
-          portal (case (-> display-data :type :type-code)
+          portal (case type-code
                    (3110 3130) "uimahalliportaali"
                    (2510 2520) "jaahalliportaali"
                    nil)]
@@ -194,7 +196,7 @@
                 :display-data    display-data
                 :edit-data       edit-data
                 :read-only?      (not editing?)
-                :types           types
+                :types           (vals types)
                 :size-categories size-categories
                 :admins          admins
                 :owners          owners
@@ -216,28 +218,34 @@
          (interpose
           [:span {:style {:margin-left  "0.25em"
                           :margin-right "0.25em"}}]
-          (lui/edit-actions-list
-           {:editing?           editing?
-            :valid?             edits-valid?
-            :logged-in?         logged-in?
-            :user-can-publish?  can-publish?
-            :on-discard         #(==> [:lipas.ui.events/confirm
-                                       (tr :confirm/discard-changes?)
-                                       (fn []
-                                         (==> [::sports-site-events/discard-edits lipas-id])
-                                         (==> [::events/stop-editing]))])
-            :discard-tooltip    (tr :actions/discard)
-            :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
-                                     (==> [::events/zoom-to-site lipas-id])
-                                     (==> [::events/start-editing lipas-id]))
-            :edit-tooltip       (tr :actions/edit)
-            :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
-                                     (==> [::events/stop-editing]))
-            :save-draft-tooltip (tr :actions/save-draft)
-            :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
-                                     (==> [::events/stop-editing]))
-            :publish-tooltip    (tr :actions/save)
-            :invalid-message    (tr :error/invalid-form)})))]])))
+          (into [(when (and editing? (#{"LineString" "Polygon"} geom-type))
+                   [mui/button
+                    {:on-click #(==> [::events/start-editing lipas-id :drawing geom-type])
+                     :variant  "extendedFab"
+                     :color    "secondary"}
+                    "Lisää pötkö"])]
+           (lui/edit-actions-list
+            {:editing?           editing?
+             :valid?             edits-valid?
+             :logged-in?         logged-in?
+             :user-can-publish?  can-publish?
+             :on-discard         #(==> [:lipas.ui.events/confirm
+                                        (tr :confirm/discard-changes?)
+                                        (fn []
+                                          (==> [::sports-site-events/discard-edits lipas-id])
+                                          (==> [::events/stop-editing]))])
+             :discard-tooltip    (tr :actions/discard)
+             :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
+                                      (==> [::events/zoom-to-site lipas-id])
+                                      (==> [::events/start-editing lipas-id :editing geom-type]))
+             :edit-tooltip       (tr :actions/edit)
+             :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
+                                      (==> [::events/stop-editing]))
+             :save-draft-tooltip (tr :actions/save-draft)
+             :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
+                                      (==> [::events/stop-editing]))
+             :publish-tooltip    (tr :actions/save)
+             :invalid-message    (tr :error/invalid-form)}))))]])))
 
 (defn add-btn []
   [mui/button {:variant  :fab
@@ -264,7 +272,7 @@
           can-publish?    (and
                            new-site-valid?
                            (<== [::user-subs/permission-to-publish-site? data]))
-          logged-in?      (<== [::user-subs/logged-in?])
+
           size-categories (<== [::ice-stadiums-subs/size-categories])
 
           zoomed? (<== [::subs/zoomed-for-drawing?])
@@ -308,20 +316,31 @@
                               :color   :error}
               "Zoomaa lähemmäs"])
 
-           (if geom
-             [mui/button
-              {:on-click #(==> [::events/finish-adding-geom geom (:type-code type)])
-               :variant  "contained"
-               :color    "secondary"}
-              "OK"]
-             [mui/button
-              {:style    {:margin-top "1em"}
-               :disabled (not zoomed?)
-               :color    :secondary
-               :variant  :contained
-               :on-click #(==> [::events/start-adding-geom (:geometry-type type)])}
-              [mui/icon "add_location"]
-              "Lisää kartalle"])]]
+           (let [geom-type (:geometry-type type)
+                 type-code (:type-code type)]
+             (if geom
+               [mui/grid {:container true :spacing 8}
+                (when (#{"LineString" "Polygon"} geom-type)
+                  [mui/grid {:item true}
+                   [mui/button
+                    {:on-click #(==> [::events/start-adding-geom geom-type])
+                     :variant  "contained"
+                     :color    "secondary"}
+                    "Lisää pötkö"]])
+                [mui/grid {:item true}
+                 [mui/button
+                  {:on-click #(==> [::events/finish-adding-geom geom type-code])
+                   :variant  "contained"
+                   :color    "secondary"}
+                  "Valmis"]]]
+               [mui/button
+                {:style    {:margin-top "1em"}
+                 :disabled (not zoomed?)
+                 :color    :secondary
+                 :variant  :contained
+                 :on-click #(==> [::events/start-adding-geom geom-type])}
+                [mui/icon "add_location"]
+                "Lisää kartalle"]))]]
 
          ;; Fill data
          [mui/step
