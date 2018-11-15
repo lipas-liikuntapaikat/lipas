@@ -1,0 +1,9 @@
+{:known-macros              [reagent.core/with-let]
+ :ignored-unused-namespaces [cljsjs.react-autosuggest
+                             cljsjs.babel-polyfill
+                             cljsjs.google-analytics
+                             day8.re-frame.http-fx
+                             district0x.re-frame.google-analytics-fx
+                             lipas.ui.local-storage
+                             lipas.ui.effects
+                             proj4]}
