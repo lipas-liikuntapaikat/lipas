@@ -55,17 +55,21 @@
          :edit-data    @(re-frame/subscribe
                          [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
+(defn apply-filters [{:keys [type-codes]} sites]
+  (let [type-codes (-> type-codes set not-empty)]
+    (cond->> sites
+      type-codes (filter (comp type-codes :type-code :type)))))
+
 (re-frame/reg-sub
  ::geometries
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  :<- [::filters]
  (fn [[sites filters] _]
-   (let [type-codes (-> filters :type-codes set)]
-     (->> sites
-          vals
-          (filter (comp type-codes :type-code :type))
-          (map ->feature)
-          not-empty))))
+   (->> sites
+        vals
+        (apply-filters filters)
+        (map ->feature)
+        not-empty)))
 
 (re-frame/reg-sub
  ::mode
@@ -106,3 +110,8 @@
  :<- [::selected-types]
  (fn [[types selected-types] [_ locale]]
    (map (partial ->type-list-entry locale selected-types) types)))
+
+(re-frame/reg-sub
+ ::drawer-open?
+ (fn [db _]
+   (-> db :map :drawer-open?)))

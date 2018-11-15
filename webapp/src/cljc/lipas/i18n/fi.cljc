@@ -45,7 +45,20 @@
     :phone-number      "Puhelinnumero"
     :www               "Web-sivu"
     :email-public      "Sähköposti (julkinen)"
-    :comment           "Lisätieto"}
+    :comment           "Lisätieto"
+    :properties        "Lisätiedot"
+    :basic-data        "Perustiedot"
+    :details-in-portal (fn [portal]
+                         (str "Kaikki tiedot"
+                              (case portal
+                                "uimahalliportaali" "Uimahalliportaalissa"
+                                "jaahalliportaali"  "Jäähalliportaalissa"
+                                "")))
+    :new-site          (fn [{:keys [type locale]}]
+                         (if (and type locale)
+                           (str "Uusi " (-> type :name locale))
+                           "Uusi liikuntapaikka"))
+    :add-new           "Lisää liikuntapaikka"}
 
    :type
    {:type-code "Tyyppikoodi"
@@ -437,24 +450,29 @@
     :month "kuukautta"}
 
    :actions
-   {:add               "Lisää"
-    :edit              "Muokkaa"
-    :save              "Tallenna"
-    :save-draft        "Tallenna ehdotus"
-    :delete            "Poista"
-    :discard           "Kumoa"
-    :cancel            "Peruuta"
-    :close             "Sulje"
-    :select-hall       "Valitse halli"
-    :select-year       "Valitse vuosi"
-    :show-all-years    "Näytä kaikki vuodet"
-    :show-account-menu "Avaa käyttäjävalikko"
-    :open-main-menu    "Avaa päävalikko"
-    :submit            "Lähetä"
-    :download          "Lataa"
-    :browse-to-portal  "Siirry portaaliin"
-    :choose-energy     "Valitse energia"
-    :back-to-listing   "Takaisin listaukseen"}
+   {:add                  "Lisää"
+    :edit                 "Muokkaa"
+    :save                 "Tallenna"
+    :save-draft           "Tallenna ehdotus"
+    :delete               "Poista"
+    :discard              "Kumoa"
+    :cancel               "Peruuta"
+    :close                "Sulje"
+    :select-hall          "Valitse halli"
+    :select-year          "Valitse vuosi"
+    :show-all-years       "Näytä kaikki vuodet"
+    :show-account-menu    "Avaa käyttäjävalikko"
+    :open-main-menu       "Avaa päävalikko"
+    :submit               "Lähetä"
+    :download             "Lataa"
+    :browse-to-portal     "Siirry portaaliin"
+    :choose-energy        "Valitse energia"
+    :back-to-listing      "Takaisin listaukseen"
+    :fill-data            "Täytä tiedot"
+    :fill-required-fields "Täytä pakolliset kentät"
+    :select-type          "Valitse tyyppi"
+    :select-types         "Valitse tyypit"
+    :select-cities        "Valitse kunnat"}
 
    :confirm
    {:headline              "Varmistus"
@@ -465,7 +483,8 @@
     :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
-   {:headline "Haku"}
+   {:headline "Haku"
+    :search   "Hae..."}
 
    :statuses
    {:edited "{1} (muokattu)"}
@@ -479,7 +498,8 @@
     :structure    "Rakenne"
     :hall         "Halli"
     :updated      "Päivitetty"
-    :reported     "Ilmoitettu"}
+    :reported     "Ilmoitettu"
+    :done         "Valmis"}
 
    :notifications
    {:save-success "Tallennus onnistui"
@@ -491,6 +511,29 @@
     :test-version "Tämä on LIPAS-sovelluksen testiversio ja
     tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan
     Lipakseen."}
+
+   :map
+   {:add-to-map      "Lisää kartalle"
+    :zoom-to-site    "Kohdista kartta liikuntapaikkaan"
+    :zoom-closer     "Zoomaa lähemmäs"
+    :draw            (fn [geom-type]
+                       (case geom-type
+                         "LineString" "Lisää reittiosa"
+                         "Polygon"    "Lisää alue"
+                         "Lisää kartalle"))
+    :modify          (fn [geom-type]
+                       (case geom-type
+                         "LineString" "Muokkaa reittiä"
+                         "Polygon"    "Muokkaa aluetta"
+                         "Point"      "Voit raahata pistettä kartalla"
+                         "-"))
+    :draw-hole       "Lisää reikä"
+    :remove          (fn [geom-type]
+                       (case geom-type
+                         "LineString" "Poista reittiosa"
+                         "Polygon"    "Poista alue"
+                         "Lisää kartalle"))
+    :edit-later-hint "Voit muokata geometriaa myös myöhemmin"}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"

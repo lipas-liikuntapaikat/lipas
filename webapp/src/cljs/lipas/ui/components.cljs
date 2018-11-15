@@ -130,16 +130,22 @@
                         :color :error}
         confirm-tooltip])]))
 
-(defn checkbox [{:keys [label value on-change disabled style]}]
+(defn checkbox [{:keys [label value on-change disabled style icon checked-icon]}]
   [mui/form-control-label
    {:label   label
     :style   (merge {:width :fit-content} style)
     :control (r/as-element
               [mui/checkbox
-               {:value     (str (boolean value))
-                :checked   (boolean value)
-                :disabled  disabled
-                :on-change #(on-change %2)}])}]) ; %2 = checked?
+               (merge
+                {:value        (str (boolean value))
+                 :checked      (boolean value)
+                 :disabled     disabled
+                 ;; %2 = checked?
+                 :on-change    #(on-change %2)}
+                (when icon
+                  {:icon (r/as-element icon)})
+                (when checked-icon
+                  {:checked-icon (r/as-element checked-icon)}))])}])
 
 (defn link? [x]
   (and (string? x)
