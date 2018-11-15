@@ -53,7 +53,7 @@
     [lui/autocomplete
      {:items     types
       :value     value
-      :label     "Etsi..."
+      :label     (tr :search/search)
       :value-fn  :type-code
       :label-fn  :name
       :on-change on-change}]))
@@ -63,7 +63,7 @@
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/typography {:variant :caption}
-       "Valitse kohteet"]]
+       (tr :actions/select-types)]]
      [mui/grid {:item true}
       [type-selector
        {:tr        tr
@@ -80,7 +80,7 @@
          {:multi?    false
           :items     (vals types)
           :value     value
-          :label     "Liikuntapaikkatyyppi"
+          :label     (tr :type/name)
           :value-fn  :type-code
           :label-fn  (comp locale :name)
           :on-change #(reset! selected-type (first %))}]
@@ -90,9 +90,10 @@
                             {:margin-top    "1em"
                              :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
-           [mui/button {:on-click #(on-change @selected-type)
-                        :variant  "contained"
-                        :color    "secondary"}
+           [mui/button {:on-click   #(on-change @selected-type)
+                        :auto-focus true
+                        :variant    "contained"
+                        :color      "secondary"}
             "OK"]])]])))
 
 (defn popup []
@@ -141,6 +142,9 @@
           edits-valid? (<== [::sports-site-subs/edits-valid? lipas-id])
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
+          mode         (<== [::subs/mode])
+
+          sub-mode (-> mode :sub-mode)
 
           type-code (-> display-data :type :type-code)
           geom-type (get-in types [type-code :geometry-type])
@@ -159,22 +163,28 @@
        [mui/grid {:item true}
 
         ;; Headline
-        [mui/grid {:container true}
+        [mui/grid {:container   true
+                   :align-items :center}
+
          [mui/grid {:item  true :xs 11
                     :style {:margin-top "0.5em"}}
-          [mui/typography {:variant :headline}
+          [mui/typography {:style   {}
+                           :variant :headline}
            (:name display-data)]]
+
          [mui/grid {:item true :xs 1}
-          [mui/icon-button {:on-click #(==> [::events/show-sports-site nil])}
-           [mui/icon "close"]]]]]
+          (when (not editing?)
+            [mui/icon-button {:style    {:margin-left "-0.25em"}
+                              :on-click #(==> [::events/show-sports-site nil])}
+             [mui/icon "close"]])]]]
 
        ;; Tabs
        [mui/grid {:item true}
         [mui/tabs {:value     @selected-tab
                    :on-change #(reset! selected-tab %2)
                    :style     {:margin-bottom "1em"}}
-         [mui/tab {:label "Perustiedot"}]
-         [mui/tab {:label "Lisätiedot"}]]
+         [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+         [mui/tab {:label (tr :lipas.sports-site/properties)}]]
 
         (case @selected-tab
 
@@ -207,7 +217,7 @@
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
-              [mui/typography "Ei mitään vielä"]))]
+              [mui/typography "TODO"]))]
 
        ;; Actions
        [sticky-bottom-container
@@ -218,40 +228,84 @@
          (interpose
           [:span {:style {:margin-left  "0.25em"
                           :margin-right "0.25em"}}]
-          (into [(when (and editing? (#{"LineString" "Polygon"} geom-type))
-                   [mui/button
-                    {:on-click #(==> [::events/start-editing lipas-id :drawing geom-type])
-                     :variant  "extendedFab"
-                     :color    "secondary"}
-                    "Lisää pötkö"])]
-           (lui/edit-actions-list
-            {:editing?           editing?
-             :valid?             edits-valid?
-             :logged-in?         logged-in?
-             :user-can-publish?  can-publish?
-             :on-discard         #(==> [:lipas.ui.events/confirm
-                                        (tr :confirm/discard-changes?)
-                                        (fn []
-                                          (==> [::sports-site-events/discard-edits lipas-id])
-                                          (==> [::events/stop-editing]))])
-             :discard-tooltip    (tr :actions/discard)
-             :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
-                                      (==> [::events/zoom-to-site lipas-id])
-                                      (==> [::events/start-editing lipas-id :editing geom-type]))
-             :edit-tooltip       (tr :actions/edit)
-             :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
-                                      (==> [::events/stop-editing]))
-             :save-draft-tooltip (tr :actions/save-draft)
-             :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
-                                      (==> [::events/stop-editing]))
-             :publish-tooltip    (tr :actions/save)
-             :invalid-message    (tr :error/invalid-form)}))))]])))
+          (remove
+           nil?
+           (into
+            ;; Geom tools
 
-(defn add-btn []
-  [mui/button {:variant  :fab
-               :color    :secondary
-               :on-click #(==> [::sports-site-events/start-adding-new-site])}
-   [mui/icon "add"]])
+            [;; Draw hole
+             (when (and editing? (#{"Polygon"} geom-type))
+               [mui/tooltip {:title (tr :map/draw-hole)}
+                [mui/button
+                 {:on-click #(if (= sub-mode :drawing-hole)
+                               (==> [::events/start-editing lipas-id :editing geom-type])
+                               (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
+                  :style    (when (= sub-mode :drawing-hole)
+                              {:border (str "5px solid " mui/secondary)})
+                  :variant  "fab"
+                  :color    "default"}
+                 [mui/icon "vignette"]
+                 ;;[mui/icon "insert_photo"]
+                 ]])
+
+             ;; Add new geom
+             (when (and editing? (#{"LineString" "Polygon"} geom-type))
+               [mui/tooltip {:title (tr :map/draw geom-type)}
+                [mui/button
+                 {:on-click #(if (= sub-mode :drawing)
+                               (==> [::events/start-editing lipas-id :editing geom-type])
+                               (==> [::events/start-editing lipas-id :drawing geom-type]))
+                  :style    (when (= sub-mode :drawing)
+                              {:border (str "5px solid " mui/secondary)})
+                  :variant  "fab"
+                  :color    "default"}
+                 (if (= geom-type "LineString")
+                   [mui/icon "timeline"]
+                   [mui/icon "change_history"])]])
+
+             ;; Delete geom
+             (when (and editing? (#{"LineString" "Polygon"} geom-type))
+               [mui/tooltip {:title (tr :map/remove geom-type)}
+                [mui/button
+                 {:on-click #(if (= sub-mode :deleting)
+                               (==> [::events/start-editing lipas-id :editing geom-type])
+                               (==> [::events/start-editing lipas-id :deleting geom-type]))
+                  :variant  "fab"
+                  :style    (when (= sub-mode :deleting)
+                              {:border (str "5px solid " mui/secondary)})
+                  :color    "default"}
+                 [mui/icon "delete"]]])]
+
+            ;; Save or discard
+            (lui/edit-actions-list
+             {:editing?           editing?
+              :valid?             edits-valid?
+              :logged-in?         logged-in?
+              :user-can-publish?  can-publish?
+              :on-discard         #(==> [:lipas.ui.events/confirm
+                                         (tr :confirm/discard-changes?)
+                                         (fn []
+                                           (==> [::sports-site-events/discard-edits lipas-id])
+                                           (==> [::events/stop-editing]))])
+              :discard-tooltip    (tr :actions/discard)
+              :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
+                                       (==> [::events/zoom-to-site lipas-id])
+                                       (==> [::events/start-editing lipas-id :editing geom-type]))
+              :edit-tooltip       (tr :actions/edit)
+              :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
+                                       (==> [::events/stop-editing]))
+              :save-draft-tooltip (tr :actions/save-draft)
+              :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
+                                       (==> [::events/stop-editing]))
+              :publish-tooltip    (tr :actions/save)
+              :invalid-message    (tr :error/invalid-form)})))))]])))
+
+(defn add-btn [{:keys [tr]}]
+  [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
+   [mui/button {:variant  :fab
+                :color    :secondary
+                :on-click #(==> [::sports-site-events/start-adding-new-site])}
+    [mui/icon "add"]]])
 
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
@@ -283,68 +337,93 @@
                         (some? type) 1
                         :else        0)]
 
-      [mui/grid {:container true}
+      [mui/grid {:container true
+                 :direction "column"
+                 :justify   "space-between"
+                 :style     {:flex   1
+                             :height "100%"}}
        [mui/grid {:item  true :xs 12
-                  :style {:padding-top "1em"}}
+                  :style {:padding-top "1em"
+                          :flex        1}}
         [mui/typography {:variant :title}
-         (if type
-           (str "Uusi " (-> type :name locale))
-           "Uusi liikuntapaikka")]
+         (tr :lipas.sports-site/new-site {:type type :locale locale})]
+
+        ;; Steps
         [mui/stepper
          {:active-step active-step
           :orientation "vertical"}
 
-         ;; Select type
+         ;; Step 1 - Select type
          [mui/step
-          [mui/step-label "Valitse tyyppi"]
+          [mui/step-label (tr :actions/select-type)]
           [mui/step-content
            [mui/grid {:item true :xs 12}
             [type-selector-single
              {:value     (when type [(:type-code type)])
               :tr        tr
-              :on-change (fn [t]
-                           (==> [::sports-site-events/select-new-site-type t]))}]]]]
+              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]]]
 
-         ;; Add to map
+         ;; Step 2 -  Add to map
          [mui/step
-          [mui/step-label "Lisää kartalle"]
+          [mui/step-label (tr :map/draw)]
           [mui/step-content {:style {:padding-top "1em"}}
-           [mui/typography {:variant :body2}
-            "Kohdista kartta liikuntapaikkaan"]
+
            (when (not zoomed?)
              [mui/typography {:variant :body2
                               :color   :error}
-              "Zoomaa lähemmäs"])
+              (tr :map/zoom-closer)])
 
            (let [geom-type (:geometry-type type)
                  type-code (:type-code type)]
-             (if geom
+
+             (if-not geom
+
+               ;; Draw new geom
+               [mui/grid {:container true}
+                [mui/grid {:item true}
+                 [mui/typography {:variant :body2}
+                  (tr :map/zoom-to-site)]]
+                [mui/grid {:item true}
+
+                 ;; Add initial geom button
+                 [mui/button
+                  {:style    {:margin-top "1em"}
+                   :disabled (not zoomed?)
+                   :color    :secondary
+                   :variant  :contained
+                   :on-click #(==> [::events/start-adding-geom geom-type])}
+                  [mui/icon "add_location"]
+                  (tr :map/add-to-map)]]]
+
+               ;; Modify new geom
                [mui/grid {:container true :spacing 8}
+                [mui/grid {:item true}
+                 [mui/typography {:variant "body2"}
+                  (tr :map/modify geom-type)]
+                 [mui/typography {:variant "caption"
+                                  :style   {:margin-top "0.5em"}}
+                  (tr :map/edit-later-hint)]]
+
+                ;; Add additional geom button
                 (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true}
+                  [mui/grid {:item true :xs 12}
                    [mui/button
                     {:on-click #(==> [::events/start-adding-geom geom-type])
                      :variant  "contained"
                      :color    "secondary"}
-                    "Lisää pötkö"]])
-                [mui/grid {:item true}
+                    (tr :map/draw geom-type)]])
+
+                ;; Done button
+                [mui/grid {:item true :xs 12}
                  [mui/button
                   {:on-click #(==> [::events/finish-adding-geom geom type-code])
                    :variant  "contained"
                    :color    "secondary"}
-                  "Valmis"]]]
-               [mui/button
-                {:style    {:margin-top "1em"}
-                 :disabled (not zoomed?)
-                 :color    :secondary
-                 :variant  :contained
-                 :on-click #(==> [::events/start-adding-geom geom-type])}
-                [mui/icon "add_location"]
-                "Lisää kartalle"]))]]
+                  (tr :general/done)]]]))]]
 
-         ;; Fill data
+         ;; Step 3 - Fill data
          [mui/step
-          [mui/step-label "Täytä tiedot"]
+          [mui/step-label (tr :actions/fill-data)]
           [mui/step-content {:style {:margin-top  "1em"
                                      :padding     0
                                      :margin-left "-24px"}}
@@ -356,8 +435,8 @@
              [mui/tabs {:value     @selected-tab
                         :on-change #(reset! selected-tab %2)
                         :style     {:margin-bottom "1em"}}
-              [mui/tab {:label "Perustiedot"}]
-              [mui/tab {:label "Lisätiedot"}]]
+              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+              [mui/tab {:label (tr :lipas.sports-site/properties)}]]
 
             (case @selected-tab
 
@@ -385,11 +464,14 @@
                     :sub-headings?   true}]]]
 
               ;; Properties tab
-              1 [mui/typography "Ei mitään vielä"])]]]]]
+              1 [mui/typography "TODO"])]]]]]]
 
-        ;; Actions
+       ;; Actions
+       [mui/grid {:item true}
         [sticky-bottom-container
          [mui/grid {:item true}
+
+          ;; Discard
           [lui/discard-button
            {:on-click #(==> [:lipas.ui.events/confirm
                              (tr :confirm/discard-changes?)
@@ -397,8 +479,9 @@
                                (==> [::sports-site-events/discard-new-site])
                                (==> [::events/discard-drawing]))])
             :tooltip  (tr :actions/discard)
-            :variant  "fab"
-            :mini     true}]
+            :variant  "fab"}]
+
+          ;; Save
           (when data
             (let [draft? (not can-publish?)]
               [lui/save-button
@@ -407,34 +490,37 @@
                                    :margin-bottom "1em"
                                    :margin-left   "1em"}
                 :tooltip          (tr :actions/save)
-                :disabled-tooltip "Täytä pakolliset kentät"
+                :disabled-tooltip (tr :actions/fill-required-fields)
                 :variant          "extendedFab"
                 :disabled         (not new-site-valid?)
                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
 (defn map-contents-view [{:keys [tr logged-in?]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
-    [mui/grid {:container true}
+    [mui/grid {:container true
+               :style     {:flex 1
+                           :height "100%"}
+               :direction "column"
+               :justify   "space-between"}
+     (when-not adding?
+       [mui/grid {:item true :xs 12 :style {:flex 1}}
+        [mui/typography {:style   {:margin-bottom "0.5em"}
+                         :variant :display1}
+         "LIPAS"]
+        [lui/expansion-panel {:label "Rajaa kohteita"}
+         [filters {:tr tr}]]])
 
-     [mui/grid {:item true :xs 12}
-      (when-not adding?
-        [mui/grid {:item true :xs 12}
-         [mui/typography {:style   {:margin-top    "1em"
-                                    :margin-bottom "1em"}
-                          :variant :title}
-          "LIPAS"]
-         [filters {:tr tr}]])
-
-      (when logged-in?
-        (if adding?
-          [add-site-view {:tr tr}]
-          [sticky-bottom-container
-           [mui/grid {:item true}
-            [add-btn]]]))]]))
+     (when logged-in?
+       (if adding?
+         [add-site-view {:tr tr}]
+         [sticky-bottom-container
+          [mui/grid {:item true}
+           [add-btn {:tr tr}]]]))]))
 
 (defn map-view [{:keys [tr]}]
   (let [logged-in?    (<== [:lipas.ui.subs/logged-in?])
-        selected-site (<== [::subs/selected-sports-site])]
+        selected-site (<== [::subs/selected-sports-site])
+        drawer-open?  (<== [::subs/drawer-open?])]
     [mui/grid {:container true
                :style     {:flex-direction "column"
                            :flex           "1 0 auto"}}
@@ -453,16 +539,49 @@
        [mui/grid {:item true}
         [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
-     ;; Left sidebar
-     [floating-container {:style {:max-height "100%"
-                                  :overflow-y "scroll"}}
+     ;; Open Drawer Button
+     (when-not drawer-open?
+       [mui/grid {:container true
+                  :style     {:position         "fixed"
+                              :left             0
+                              :top              0
+                              :width            "430px"
+                              :z-index          9999
+                              ;; :border           (str "1px solid " mui/gray1)
+                              :background-color "white"}}
+        [mui/grid {:item true :xs 12 :align-content "center"}
+         [mui/button {:full-width true
+                      :on-click   #(==> [::events/toggle-drawer])
+                      :variant    "outlined"
+                      :color      "primary"}
+          [mui/icon "expand_more"]]]])
+
+     ;; Closable left sidebar drawer
+     [mui/drawer {:variant    "persistent"
+                  :SlideProps {:direction "down"}
+                  :open       drawer-open?}
+
+      ;; Close button
+      [mui/button {:on-click #(==> [::events/toggle-drawer])
+                   :style    {:margin-bottom "1em"}
+                   :variant  "outlined"
+                   :color    "primary"}
+       [mui/icon "expand_less"]]
+
+      ;; Content
       [mui/grid {:container true
                  :direction :column
+                 :justify   :space-between
                  :style     {:max-width      "100%"
+                             :width          "430px"
                              :min-width      "350px"
+                             :flex           1
+                             :padding-left   "1em"
+                             :padding-right  "1em"
                              :padding-bottom "0.5em"}}
 
-       [mui/grid {:item true}
+       [mui/grid {:item  true
+                  :style {:flex 1}}
         (if selected-site
           [sports-site-view {:tr tr :site-data selected-site}]
           [map-contents-view {:tr tr :logged-in? logged-in?}])]]]

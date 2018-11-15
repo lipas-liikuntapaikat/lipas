@@ -11,7 +11,7 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-;; (set! *warn-on-infer* true)
+(set! *warn-on-infer* true)
 
 (def temp-fid-prefix "temp")
 
@@ -48,6 +48,7 @@
 (def hover-stroke (ol.style.Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
 (def hover-fill (ol.style.Fill. #js{:color "rgba(255,0,0,0.4)"}))
 
+;; Draw circles to all LineString and Polygon vertices
 (def vertices-style
   (ol.style.Style.
    #js{:image
@@ -60,7 +61,12 @@
        :geometry (fn [f]
                    (let [geom-type (-> f .getGeometry .getType)
                          coords    (case geom-type
-                                     "Polygon"    (-> f .getGeometry .getCoordinates first)
+                                     "Polygon"    (-> f
+                                                      .getGeometry
+                                                      .getCoordinates
+                                                      js->clj
+                                                      (as-> $ (mapcat identity $))
+                                                      clj->js)
                                      "LineString" (-> f .getGeometry .getCoordinates)
                                      nil)]
                      (when coords
@@ -312,7 +318,6 @@
     res))
 
 (defn select-sports-site! [map-ctx lipas-id]
-  ;; First feature in f-coll has suffix "-0"
   (if-let [features (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
     (select-features! map-ctx features)
     map-ctx))
@@ -321,14 +326,13 @@
 ;; interactions in order for its map browser event handlers to be
 ;; fired first. Its handlers are responsible of doing the snapping.
 (defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
-  (prn "Enable snapping!")
   (let [source (-> layers :overlays :edits .getSource)
         snap   (ol.interaction.Snap. #js{:source source})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
+;; Splitter needs to be added before other interactions
 (defn enable-splitter! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
-  (prn "Not Enabling splitter!")
   ;; TODO figure out what's wrong
   ;; (let [source   (-> layers :overlays :edits .getSource)
   ;;       _ (prn "source...")
@@ -337,20 +341,66 @@
   ;;   (.addInteraction lmap splitter)
   ;;   (assoc-in map-ctx [:interactions :splitter] splitter)
   ;;   )
-  map-ctx
-  )
+  map-ctx)
+
+(defn enable-hover! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  (let [hover (:hover interactions*)]
+    (-> hover .getFeatures .clear)
+    (.addInteraction lmap hover)
+    (assoc-in map-ctx [:interactions :hover] hover)))
+
+(defn enable-select! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  (let [select (:select interactions*)]
+    (-> select .getFeatures .clear)
+    (.addInteraction lmap select)
+    (assoc-in map-ctx [:interactions :select] select)))
+
+(defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
+  (let [layer  (-> layers :overlays :edits)
+        delete (ol.interaction.Select. #js{:layers #js[layer]
+                                           :style  hover-style})
+        source (.getSource layer)]
+    (.addInteraction lmap delete)
+    (.on delete "select"
+         (fn [e]
+           (let [selected (gobj/get e "selected")]
+             ;; (.setPosition popup-overlay coords)
+             (when (not-empty selected)
+               (==> [:lipas.ui.events/confirm "Haluatko poistaa??"
+                     (fn []
+                       (doseq [f selected]
+                         (.removeFeature source f))
+                       (doto (.getFeatures delete)
+                         (.clear))
+                       (on-delete (->geoJSON-clj (.getFeatures source))))])))))
+    (assoc-in map-ctx [:interactions :delete] delete)))
+
+(defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
+                           on-modifyend]
+  (let [layer     (-> layers :overlays :edits)
+        draw-hole (ol.interaction.DrawHole. #js{:layers #js[layer]})
+        source    (.getSource layer)]
+    (.addInteraction lmap draw-hole)
+    (.on draw-hole "drawend"
+         (fn [e]
+           (on-modifyend (->geoJSON-clj (.getFeatures source)))))
+    (assoc-in map-ctx [:interactions :draw-hole] draw-hole)))
 
 (defn start-editing! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                       geoJSON-feature on-modifyend]
-  (prn "Start editing")
   (let [layer     (-> layers :overlays :edits)
         source    (.getSource layer)
         features  (-> geoJSON-feature clj->js ->ol-features)
         _         (.addFeatures source features)
         modify    (ol.interaction.Modify. #js{:source source})
-        geom-type (-> geoJSON-feature :features first :geometry :type)]
+        geom-type (-> geoJSON-feature :features first :geometry :type)
+        hover     (ol.interaction.Select.
+                   #js{:layers    #js[layer]
+                       :style     #js[hover-style vertices-style]
+                       :condition ol.events.condition.pointerMove})]
 
-    ;; Splitter needs to be added before other interactions
+    (.addInteraction lmap hover)
+
     (let [new-ctx (if (#{"LineString" "Polygon"} geom-type)
                     (enable-splitter! map-ctx)
                     map-ctx)]
@@ -362,13 +412,13 @@
 
       (-> new-ctx
           (assoc-in [:interactions :modify] modify)
+          (assoc-in [:interactions :hover] hover)
           enable-snapping!))))
 
 (defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id on-modifyend]
   (let [layer    (-> layers :overlays :vectors)
         source   (.getSource layer)
         features (find-features-by-lipas-id map-ctx lipas-id)]
-    (js/console.log features)
     ;; Remove from original source so we won't display duplicate when
     ;; feature is added to :edits layer.
     (.forEach features
@@ -378,12 +428,11 @@
 
 (defn start-drawing! [{:keys [^js/ol.Map lmap layers]
                        :as   map-ctx} geom-type on-draw-end]
-  (prn "Start drawing!")
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
         draw   (ol.interaction.Draw. #js{:source source
                                          :type   geom-type})]
-    ;; Splitter needs to be enabled before other interactions
+
     (let [new-ctx (if  (#{"LineString" "Polygon"} geom-type)
                     (enable-splitter! map-ctx)
                     map-ctx)]
@@ -418,7 +467,6 @@
 
 (defn clear-interactions! [{:keys [^js/ol.Map lmap interactions interactions*]
                             :as   map-ctx}]
-  (prn "Clear interactions!")
   ;; Special treatment for 'singleton' interactions*. OpenLayers
   ;; doesn't treat 'copies' identical to original ones. Therefore we
   ;; need to pass the original ones explicitly.
@@ -438,10 +486,10 @@
         geoms-source (-> layers :overlays :vectors .getSource)]
     ;; We add existing features which have been transferred to :edits
     ;; layer back to :vectors layer.
-    (.forEachFeature edits-source
-                     (fn [f]
-                       (when (existing-feature? f)
-                         (.addFeature geoms-source f))))
+    ;; (.forEachFeature edits-source
+    ;;                  (fn [f]
+    ;;                    (when (existing-feature? f)
+    ;;                      (.addFeature geoms-source f))))
     (.clear edits-source)
     map-ctx))
 
@@ -462,7 +510,6 @@
       (set-adding-mode! map-ctx mode))))
 
 (defn continue-editing! [{:keys [layers] :as map-ctx} on-modifyend]
-  (prn "Continue editing!")
   (let [layer (-> layers :overlays :edits)
         fs    (-> layer .getSource .getFeatures ->geoJSON-clj)]
     (start-editing! map-ctx fs on-modifyend)))
@@ -472,17 +519,21 @@
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
   ([map-ctx {:keys [lipas-id geom-type sub-mode]} continue?]
-   (let [map-ctx (clear-interactions! map-ctx)]
-     (let [on-modifyend (fn [f]
-                          (==> [::events/update-geometries lipas-id f])
-                          (when (= :drawing sub-mode)
-                            ;; Switch back to editing mode after drawing
-                            (==> [::events/start-editing lipas-id :editing geom-type])))]
-       (case sub-mode
-         :drawing (start-drawing! map-ctx geom-type on-modifyend)
-         :editing (if continue?
-                    (continue-editing! map-ctx on-modifyend)
-                    (start-editing-site! map-ctx lipas-id on-modifyend)))))))
+   (let [map-ctx      (clear-interactions! map-ctx)
+         on-modifyend (fn [f]
+                        (==> [::events/update-geometries lipas-id f])
+                        (when (#{:drawing :drawing-hole :deleting} sub-mode)
+                          ;; Switch back to editing normal :editing mode
+                          (==> [::events/start-editing lipas-id :editing geom-type])))]
+     (case sub-mode
+       :drawing      (start-drawing! map-ctx geom-type on-modifyend)
+       :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons
+       :editing      (if continue?
+                       (continue-editing! map-ctx on-modifyend)
+                       (start-editing-site! map-ctx lipas-id on-modifyend))
+       :deleting     (-> map-ctx
+                         ;;(continue-editing! on-modifyend)
+                         (enable-delete! on-modifyend))))))
 
 (defn update-editing-mode! [map-ctx mode]
   (let [old-mode (:mode map-ctx)]
@@ -490,21 +541,11 @@
       map-ctx ;; Noop
       (set-editing-mode! map-ctx mode :continue))))
 
-(defn enable-hover! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
-  (let [hover (:hover interactions*)]
-    (.addInteraction lmap hover)
-    (assoc-in map-ctx [:interactions :hover] hover)))
-
-(defn enable-select! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
-  (let [select (:select interactions*)]
-    (.addInteraction lmap select)
-    (assoc-in map-ctx [:interactions :select] select)))
-
 ;; Browsing and selecting features
 (defn set-default-mode! [map-ctx mode]
   (let [map-ctx (-> map-ctx
-                    clear-edits!
                     clear-interactions!
+                    clear-edits!
                     enable-hover!
                     enable-select!)]
     (if-let [lipas-id (:lipas-id mode)]

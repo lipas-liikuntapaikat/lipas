@@ -11,10 +11,13 @@ import {GeoJSON} from 'ol/format';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import {Select, Draw, Modify, Snap} from 'ol/interaction';
 import {pointerMove} from 'ol/events/condition';
-import MultiPoint from 'ol/geom/MultiPoint.js';
+import Point from 'ol/geom/Point';
+import MultiPoint from 'ol/geom/MultiPoint';
+import GeometryCollection from 'ol/geom/GeometryCollection';
 
 // Openlayers-Extensions
 import Splitter from 'ol-ext/interaction/Splitter';
+import DrawHole from 'ol-ext/interaction/DrawHole';
 
 window.ol = {
   Map, View, Overlay, Collection,
@@ -55,6 +58,7 @@ window.ol = {
     Modify,
     Snap,
     Splitter,
+    DrawHole,
   },
   events: {
     condition: {
@@ -62,7 +66,9 @@ window.ol = {
     },
   },
   geom: {
+    Point,
     MultiPoint,
+    GeometryCollection,
   },
 };
 

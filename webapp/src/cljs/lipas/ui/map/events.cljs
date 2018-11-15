@@ -16,7 +16,6 @@
    (let [latest     (get-in db [:sports-sites lipas-id :latest])
          rev        (get-in db [:sports-sites lipas-id :history latest])
          geom       (-> rev :location :geometries :features first :geometry)
-         _          (prn "GEOM" geom)
          wgs-coords (case (:type geom)
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
@@ -43,8 +42,10 @@
 
 (re-frame/reg-event-db
  ::show-types
- (fn [db [_ type-codes]]
-   (assoc-in db [:map :filters :type-codes] type-codes)))
+ (fn [db [_ type-codes append?]]
+   (if append?
+     (update-in db [:map :filters :type-codes] into type-codes)
+     (assoc-in db [:map :filters :type-codes] type-codes))))
 
 ;; This is a hack to force vector layer re-draw
 (re-frame/reg-event-fx
@@ -62,7 +63,10 @@
 (re-frame/reg-event-db
  ::show-sports-site
  (fn [db [_ lipas-id]]
-   (assoc-in db [:map :mode :lipas-id] lipas-id)))
+   (let [show-drawer? (some? lipas-id)]
+     (-> db
+         (assoc-in [:map :mode :lipas-id] lipas-id)
+         (assoc-in [:map :drawer-open?] show-drawer?)))))
 
 (re-frame/reg-event-db
  ::start-editing
@@ -117,3 +121,8 @@
  (fn [{:keys [db]} [_ geoms type-code]]
    {:db         (assoc-in db [:map :mode :sub-mode] :finished)
     :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]}))
+
+(re-frame/reg-event-db
+ ::toggle-drawer
+ (fn [db _]
+   (update-in db [:map :drawer-open?] not)))
