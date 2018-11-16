@@ -11,7 +11,7 @@
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
-(set! *warn-on-infer* true)
+;;(set! *warn-on-infer* true)
 
 (def temp-fid-prefix "temp")
 
@@ -42,7 +42,6 @@
 
 (def blue-marker-style (->marker-style {}))
 (def red-marker-style (->marker-style {:color mui/secondary}))
-
 (def default-stroke (ol.style.Stroke. #js{:color "#3399CC" :width 3}))
 (def default-fill (ol.style.Fill. #js{:color "rgba(255,255,0,0.4)"}))
 (def hover-stroke (ol.style.Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))

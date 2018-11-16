@@ -535,6 +535,11 @@
                          "Lisää kartalle"))
     :edit-later-hint "Voit muokata geometriaa myös myöhemmin"}
 
+   :map.basemap
+   {:taustakartta "Taustakartta"
+    :maastokartta "Maastokartta"
+    :ortokuva     "Ilmakuva"}
+
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"
     :user-not-found      "Käyttäjää ei löydy."
