@@ -13,18 +13,6 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
-(defn layer-switcher []
-  (let [basemaps {:taustakartta "Taustakartta"
-                  :maastokartta "Maastokartta"
-                  :ortokuva     "Ortokuva"}
-        basemap  (<== [::subs/basemap])]
-    [lui/select
-     {:items     basemaps
-      :value     basemap
-      :label-fn  second
-      :value-fn  first
-      :on-change #(==> [::events/select-basemap %])}]))
-
 (defn floating-container [{:keys [top right bottom left style elevation]
                            :or   {elevation 2}}
                           & children]
@@ -35,7 +23,6 @@
      (merge {:position         :fixed
              :z-index          999
              :background-color "#fff"
-             ;;:background-color mui/gray2
              :top              top
              :right            right
              :bottom           bottom
@@ -45,6 +32,18 @@
              :padding-right    "1em"}
             style)}]
    children))
+
+(defn layer-switcher [{:keys [:tr tr]}]
+  (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
+                  :maastokartta (tr :map.basemap/maastokartta)
+                  :ortokuva     (tr :map.basemap/ortokuva)}
+        basemap  (<== [::subs/basemap])]
+    [lui/select
+     {:items     basemaps
+      :value     basemap
+      :label-fn  second
+      :value-fn  first
+      :on-change #(==> [::events/select-basemap %])}]))
 
 (defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -98,7 +97,7 @@
 
 (defn popup []
   (let [{:keys [data anchor-el]} (<== [::subs/popup])
-        {:keys [name]}  (-> data :features first :properties)]
+        {:keys [name]}           (-> data :features first :properties)]
     [mui/popper {:open      (boolean (seq data))
                  :placement :top-end
                  :anchor-el anchor-el
@@ -172,6 +171,7 @@
                            :variant :headline}
            (:name display-data)]]
 
+         ;; Close button
          [mui/grid {:item true :xs 1}
           (when (not editing?)
             [mui/icon-button {:style    {:margin-left "-0.25em"}
@@ -244,9 +244,7 @@
                               {:border (str "5px solid " mui/secondary)})
                   :variant  "fab"
                   :color    "default"}
-                 [mui/icon "vignette"]
-                 ;;[mui/icon "insert_photo"]
-                 ]])
+                 [mui/icon "vignette"]]])
 
              ;; Add new geom
              (when (and editing? (#{"LineString" "Polygon"} geom-type))
@@ -276,7 +274,7 @@
                   :color    "default"}
                  [mui/icon "delete"]]])]
 
-            ;; Save or discard
+            ;; Save and discard buttons
             (lui/edit-actions-list
              {:editing?           editing?
               :valid?             edits-valid?
@@ -498,10 +496,12 @@
 (defn map-contents-view [{:keys [tr logged-in?]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
     [mui/grid {:container true
-               :style     {:flex 1
+               :style     {:flex   1
                            :height "100%"}
                :direction "column"
                :justify   "space-between"}
+
+     ;; Search, filters etc.
      (when-not adding?
        [mui/grid {:item true :xs 12 :style {:flex 1}}
         [mui/typography {:style   {:margin-bottom "0.5em"}
@@ -510,6 +510,7 @@
         [lui/expansion-panel {:label "Rajaa kohteita"}
          [filters {:tr tr}]]])
 
+     ;; Add new sports-site view or big '+' button
      (when logged-in?
        (if adding?
          [add-site-view {:tr tr}]
@@ -517,16 +518,23 @@
           [mui/grid {:item true}
            [add-btn {:tr tr}]]]))]))
 
-(defn map-view [{:keys [tr]}]
-  (let [logged-in?    (<== [:lipas.ui.subs/logged-in?])
+(defn map-view [{:keys [width]}]
+  (let [tr            (<== [:lipas.ui.subs/translator])
+        logged-in?    (<== [:lipas.ui.subs/logged-in?])
         selected-site (<== [::subs/selected-sports-site])
-        drawer-open?  (<== [::subs/drawer-open?])]
+        drawer-open?  (<== [::subs/drawer-open?])
+        drawer-width  (case width
+                        "xs" "100%"
+                        "430px")]
     [mui/grid {:container true
                :style     {:flex-direction "column"
                            :flex           "1 0 auto"}}
 
      ;; Mini-nav
      [floating-container {:right     0
+                          :top       (case width
+                                       "xs" "2em"
+                                       0)
                           :elevation 0
                           :style     {:background-color "transparent"
                                       :padding-right    0
@@ -545,9 +553,8 @@
                   :style     {:position         "fixed"
                               :left             0
                               :top              0
-                              :width            "430px"
-                              :z-index          9999
-                              ;; :border           (str "1px solid " mui/gray1)
+                              :width            drawer-width
+                              :z-index          1200
                               :background-color "white"}}
         [mui/grid {:item true :xs 12 :align-content "center"}
          [mui/button {:full-width true
@@ -558,6 +565,7 @@
 
      ;; Closable left sidebar drawer
      [mui/drawer {:variant    "persistent"
+                  :PaperProps {:style {:width drawer-width}}
                   :SlideProps {:direction "down"}
                   :open       drawer-open?}
 
@@ -572,10 +580,7 @@
       [mui/grid {:container true
                  :direction :column
                  :justify   :space-between
-                 :style     {:max-width      "100%"
-                             :width          "430px"
-                             :min-width      "350px"
-                             :flex           1
+                 :style     {:flex           1
                              :padding-left   "1em"
                              :padding-right  "1em"
                              :padding-bottom "0.5em"}}
@@ -594,14 +599,14 @@
                            :margin           "0.5em"
                            :padding-right    0
                            :padding-left     0}}
-      [layer-switcher]]
+      [layer-switcher {:tr tr}]]
 
-     ;; Popup anchor
-     [:div {:id "popup-anchor" :display :none}]
+     ;; We use this div to bind Popper to OpenLayers overlay
+     [:div {:id "popup-anchor"}]
      [popup]
 
      ;; The map
      [ol-map/map-outer]]))
 
 (defn main [tr]
-  [map-view {:tr tr}])
+  [:> (mui/with-width* (r/reactify-component map-view))])
