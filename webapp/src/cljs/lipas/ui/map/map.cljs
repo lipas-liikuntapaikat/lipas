@@ -557,10 +557,10 @@
     map-ctx))
 
 (defn set-mode! [map-ctx mode]
-  (let [mode (case (:name mode)
-               :default (set-default-mode! map-ctx mode)
-               :editing (set-editing-mode! map-ctx mode)
-               :adding  (set-adding-mode! map-ctx mode))]
+  (let [map-ctx (case (:name mode)
+                  :default (set-default-mode! map-ctx mode)
+                  :editing (set-editing-mode! map-ctx mode)
+                  :adding  (set-adding-mode! map-ctx mode))]
     (assoc map-ctx :mode mode)))
 
 (defn update-mode! [map-ctx mode]
