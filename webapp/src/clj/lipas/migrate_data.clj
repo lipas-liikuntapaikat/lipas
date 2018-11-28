@@ -3,6 +3,7 @@
             [clojure.data.csv :as csv]
             [clojure.spec.alpha :as spec]
             [clojure.string :as string]
+            [clojure.pprint :as pprint]
             [environ.core :refer [env]]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
@@ -182,6 +183,8 @@
               (sreplace "[at]" "@")
               (as-> $ (if (spec/valid? :lipas/email $) $ ""))
               not-empty)
+
+   :properties (:properties lipas-entry)
 
    :phone-number (-> lipas-entry :phoneNumber trim not-empty)
 
@@ -493,7 +496,7 @@
     {:transform-fn (comp utils/clean (partial ->sports-site {}))
      :spec         :lipas/sports-site}))
 
-(defn migrate-from-old-lipas [db user lipas-ids]
+(defn migrate-from-old-lipas! [db user lipas-ids]
   (log/info "Starting to migrate sports-sites" lipas-ids)
   (doseq [lipas-id lipas-ids]
     (let [url   (str "http://lipas.cc.jyu.fi/api/sports-places/" lipas-id)
@@ -508,6 +511,39 @@
           (spec/explain (:spec instr) data)
           (log/error "Failed to migrate lipas-id" lipas-id))))))
 
+(defn es-dump->sports-site [m]
+  (-> m
+      (assoc :name (-> m :name :fi))
+      (assoc :admin (-> m :admin :fi))
+      (assoc :owner (-> m :owner :fi))
+      (assoc-in [:location :address] (or (-> m :location :address)
+                                               "-"))
+      (assoc-in [:location :postalCode] (or (-> m :location :postalCode)
+                                               "00000"))
+      (assoc-in [:location :neighborhood] (-> m :location :neighborhood :fi))
+      (assoc :lastModified (or (-> m :lastModified not-empty)
+                               "1970-01-01T00:00:00.000"))
+      (as-> $ (->sports-site {} $))
+      utils/clean))
+
+(defn save-invalid! [m path]
+  (with-open [w (clojure.java.io/writer (str path (:lipas-id m)))]
+    (binding [*out* w]
+      (pprint/write (spec/explain :lipas/sports-site m))
+      (pprint/write m))))
+
+(defn migrate-from-es-dump! [db user fpath]
+  (with-open [rdr (clojure.java.io/reader fpath)]
+    (doseq [l     (line-seq rdr)
+            :let  [m (:_source (json/decode l true))]
+            :when (not (#{2510 2520 3110 3130} (-> m :type :typeCode)))]
+      (let [data (es-dump->sports-site m)]
+        (if (utils/validate-noisy :lipas/sports-site data)
+          (db/upsert-sports-site! db user data)
+          ;;(throw (ex-info "Invalid site" {:data data}))
+          (save-invalid! data "/tmp/invalid/")
+          )))))
+
 (defn -main [& args]
   (let [source                  (first args)
         ice-stadiums-csv-path   (:ice-stadiums-csv-url env)
@@ -519,9 +555,25 @@
       "--csv"   (do
                   (migrate-ice-stadiums! db user ice-stadiums-csv-path)
                   (migrate-swimming-pools! db user swimming-pools-csv-path))
-      "--lipas" (migrate-from-old-lipas db user (rest args))
+      "--lipas" (migrate-from-old-lipas! db user (rest args))
       (log/error "Please provide --csv or --lipas 123 234 ..."))))
 
 (comment
   (-main "--csv") ;Careful with this one
-  (-main "--lipas" "529736"))
+  (-main "--lipas" "529736")
+  (def fpath "/Users/vaotjuha/lipas/data_migration/2018-10-19-data.json")
+  (def d (slurp "/Users/vaotjuha/lipas/data_migration/2018-10-19-data.json"))
+  (ns-unmap *ns* 'd)
+  (with-open [rdr (clojure.java.io/reader fpath)]
+    (doseq [line  (line-seq rdr)
+            :let  [m (:_source (json/decode line true))
+                   d (es-dump->sports-site m)]
+            :when (not (#{2510 2520 3110 3130} (-> m :type :typeCode)))]
+      (when-not (spec/valid? :lipas/sports-site d)
+        (spec/explain :lipas/sports-site d))))
+
+  (def config (select-keys config/default-config [:db]))
+  (def db (:db (backend/start-system! config)))
+  (def user (core/get-user db "import@lipas.fi"))
+
+  (migrate-from-es-dump! db user fpath))

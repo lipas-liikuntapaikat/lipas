@@ -34,7 +34,7 @@
                  [buddy "2.0.0"]
                  [com.layerware/hugsql "0.4.8"]
                  [org.postgresql/postgresql  "42.2.2"]
-                 [cc.qbits/spandex "0.6.2"]
+                 [cc.qbits/spandex "0.6.4"]
                  [integrant "0.6.3"]
                  [migratus "1.0.6"]
                  [environ "1.1.0"]

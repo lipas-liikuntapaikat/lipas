@@ -1,12 +1,12 @@
 // OpenLayers
 import {Map, View, Overlay} from "ol";
 import Collection from "ol/Collection";
-import {get, fromLonLat} from 'ol/proj';
+import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {register} from 'ol/proj/proj4';
 import {Style, Circle, Fill, Stroke, Icon} from 'ol/style';
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
 import {WMTS as WMTSSource, Vector as VectorSource} from 'ol/source';
-import {getTopLeft} from 'ol/extent';
+import {getTopLeft, getWidth, getHeight} from 'ol/extent';
 import {GeoJSON} from 'ol/format';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import {Select, Draw, Modify, Snap} from 'ol/interaction';
@@ -38,10 +38,13 @@ window.ol = {
   },
   extent: {
     getTopLeft,
+    getWidth,
+    getHeight,
   },
   proj: {
     get,
     fromLonLat,
+    toLonLat,
     proj4: {
       register,
     },

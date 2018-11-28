@@ -1,14 +1,22 @@
 (ns lipas.ui.map.events
   (:require proj4
             ["ol"]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as re-frame]))
 
-(re-frame/reg-event-db
+;; Width and height are in meters when using EPSG:3067 projection
+(re-frame/reg-event-fx
  ::set-view
- (fn [db [_ lat lon zoom]]
-   (-> db
-       (assoc-in [:map :center] {:lat lat :lon lon})
-       (assoc-in [:map :zoom] zoom))))
+ (fn [{:keys [db]} [_ center lonlat zoom extent width height]]
+   {:db       (-> db
+                  (assoc-in [:map :center] {:lat (aget center 1) :lon (aget center 0)})
+                  (assoc-in [:map :center-wgs84] {:lat (aget lonlat 1) :lon (aget lonlat 0)})
+                  (assoc-in [:map :zoom] zoom)
+                  (assoc-in [:map :extent] extent)
+                  (assoc-in [:map :width] width)
+                  (assoc-in [:map :height] height))
+    :dispatch-n [(when (and extent width)
+                   [:lipas.ui.search.events/submit-search])]}))
 
 (re-frame/reg-event-fx
  ::zoom-to-site
@@ -22,8 +30,11 @@
                       "Polygon"    (-> geom :coordinates first first))
          proj       (.get ol.proj "EPSG:3067")
          [lon lat]  (js->clj (ol.proj.fromLonLat (clj->js wgs-coords) proj))
+         center     {:lon lon :lat lat}
          zoom       14]
-     {:dispatch [::set-view lat lon zoom]})))
+     {:db (-> db
+              (assoc-in [:map :zoom] zoom)
+              (assoc-in [:map :center] center))})))
 
 (re-frame/reg-event-db
  ::set-center
@@ -41,40 +52,30 @@
    (assoc-in db [:map :basemap] basemap)))
 
 (re-frame/reg-event-db
- ::show-types
- (fn [db [_ type-codes append?]]
-   (if append?
-     (update-in db [:map :filters :type-codes] into type-codes)
-     (assoc-in db [:map :filters :type-codes] type-codes))))
-
-;; This is a hack to force vector layer re-draw
-(re-frame/reg-event-fx
- ::refresh-filters
- (fn [{:keys [db]} _]
-   (let [selected-types (-> db :map :filters :type-codes)]
-     {:dispatch       [::show-types nil]
-      :dispatch-later [{:ms 100 :dispatch [::show-types selected-types]}]})))
-
-(re-frame/reg-event-db
  ::show-popup
  (fn [db [_ feature]]
    (assoc-in db [:map :popup] feature)))
 
+(defn- get-latest-rev [db lipas-id]
+  (let [latest (get-in db [:sports-sites lipas-id :latest])]
+    (get-in db [:sports-sites lipas-id :history latest])))
+
 (re-frame/reg-event-db
  ::show-sports-site
  (fn [db [_ lipas-id]]
-   (let [show-drawer? (some? lipas-id)]
-     (-> db
-         (assoc-in [:map :mode :lipas-id] lipas-id)
-         (assoc-in [:map :drawer-open?] show-drawer?)))))
+   (-> db
+       (assoc-in [:map :mode :lipas-id] lipas-id)
+       (assoc-in [:map :drawer-open?] true))))
 
 (re-frame/reg-event-db
  ::start-editing
  (fn [db [_ lipas-id sub-mode geom-type]]
-   (update-in db [:map :mode] merge {:name      :editing
-                                     :lipas-id  lipas-id
-                                     :sub-mode  sub-mode
-                                     :geom-type geom-type})))
+   (let [site (get-latest-rev db lipas-id)]
+     (update-in db [:map :mode] merge {:name      :editing
+                                       :lipas-id  lipas-id
+                                       :geoms     (utils/->feature site)
+                                       :sub-mode  sub-mode
+                                       :geom-type geom-type}))))
 
 (re-frame/reg-event-db
  ::stop-editing

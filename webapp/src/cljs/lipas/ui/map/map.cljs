@@ -196,6 +196,7 @@
 (defn init-map! [{:keys [center zoom]}]
   (let [layers (init-layers)
         view   (ol.View. #js{:center      #js[(:lon center) (:lat center)]
+                             :extent      epsg3067-extent
                              :zoom        zoom
                              :projection  "EPSG:3067"
                              :resolutions mml-resolutions
@@ -215,14 +216,13 @@
                   :view     view}
 
         hover (ol.interaction.Select.
-               #js{:layers    [(-> layers :overlays :vectors)]
-                   ;;:style     blue-marker-style
-                   :style     hover-style
+               #js{:layers    #js[(-> layers :overlays :vectors)]
+                   :style     #js[hover-style]
                    :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
-                    :style hover-style})
+                    :style  #js[hover-style red-marker-style]})
 
         lmap (ol.Map. opts)]
 
@@ -246,10 +246,13 @@
 
     (.on lmap "moveend"
          (fn [e]
-           (let [lon  (aget (.getCenter view) 0)
-                 lat  (aget (.getCenter view) 1)
-                 zoom (.getZoom view)]
-             (==> [::events/set-view lat lon zoom]))))
+           (let [center (.getCenter view)
+                 lonlat (ol.proj.toLonLat center epsg3067)
+                 zoom   (.getZoom view)
+                 extent (.calculateExtent view)
+                 width  (.getWidth ol.extent extent)
+                 height (.getHeight ol.extent extent)]
+             (==> [::events/set-view center lonlat zoom extent width height]))))
 
     {:lmap          lmap
      :view          view
@@ -270,15 +273,24 @@
   (==> [::events/show-popup nil])
   map-ctx)
 
-(defn update-geoms! [{:keys [layers] :as map-ctx} geoms]
+(defn update-geoms! [{:keys [^js/ol.View view ^js.ol.Map lmap layers]
+                      :as   map-ctx} geoms]
   (let [vectors (-> layers :overlays :vectors)
         source  (.getSource vectors)]
+
+    ;; Remove existing features
     (.clear source)
+
+    ;; Add new geoms
     (doseq [g    geoms
-            :let [f (-> g
-                        clj->js
-                        ->ol-features)]]
-      (.addFeatures source f))
+            :let [fs (-> g clj->js ->ol-features)]]
+      (.addFeatures source fs))
+
+    ;; Fit view to features extent
+    (when (and geoms false)
+      (.fit view (.getExtent source) #js{:size    (.getSize lmap)
+                                         :nearest true}))
+
     (assoc map-ctx :geoms geoms)))
 
 (defn set-basemap! [{:keys [layers] :as map-ctx} basemap]
@@ -414,7 +426,8 @@
           (assoc-in [:interactions :hover] hover)
           enable-snapping!))))
 
-(defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id on-modifyend]
+(defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
+                           on-modifyend]
   (let [layer    (-> layers :overlays :vectors)
         source   (.getSource layer)
         features (find-features-by-lipas-id map-ctx lipas-id)]
@@ -423,7 +436,7 @@
     (.forEach features
               (fn [f]
                 (.removeFeature source f)))
-    (start-editing! map-ctx (->geoJSON-clj features) on-modifyend)))
+    (start-editing! map-ctx geoms on-modifyend)))
 
 (defn start-drawing! [{:keys [^js/ol.Map lmap layers]
                        :as   map-ctx} geom-type on-draw-end]
@@ -517,7 +530,7 @@
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geom-type sub-mode]} continue?]
+  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode]} continue?]
    (let [map-ctx      (clear-interactions! map-ctx)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
@@ -529,7 +542,7 @@
        :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons
        :editing      (if continue?
                        (continue-editing! map-ctx on-modifyend)
-                       (start-editing-site! map-ctx lipas-id on-modifyend))
+                       (start-editing-site! map-ctx lipas-id geoms on-modifyend))
        :deleting     (-> map-ctx
                          ;;(continue-editing! on-modifyend)
                          (enable-delete! on-modifyend))))))
@@ -624,12 +637,6 @@
       :display-name "map-inner"})))
 
 (defn map-outer []
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 4402])
-  (==> [:lipas.ui.sports-sites.events/get-by-type-code 111])
   (let [geoms   (re-frame/subscribe [::subs/geometries])
         basemap (re-frame/subscribe [::subs/basemap])
         center  (re-frame/subscribe [::subs/center])
