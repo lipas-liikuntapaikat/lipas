@@ -3,6 +3,7 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
+            [lipas.backend.search :as search]
             [lipas.i18n.core :as i18n]
             [lipas.permissions :as permissions]
             [lipas.reports :as reports]
@@ -102,7 +103,7 @@
 
 ;; TODO change to lighter check query
 (defn- check-sports-site-exists! [db lipas-id]
-  (when-not (not-empty (db/get-sports-site-history db lipas-id))
+  (when (empty? (db/get-sports-site-history db lipas-id))
     (throw (ex-info "Sports site not found"
                     {:type     :sports-site-not-found
                      :lipas-id lipas-id}))))
@@ -124,14 +125,25 @@
      (check-sports-site-exists! db lipas-id))
    (upsert-sports-site!* db user sports-site draft?)))
 
-(defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
-  (let [data (db/get-sports-sites-by-type-code db type-code opts)]
-    (if (#{:fi :en :se} locale)
-      (map (partial i18n/localize locale) data)
-      data)))
+(defn get-sports-sites-by-type-code
+  ([db type-code]
+   (get-sports-sites-by-type-code db type-code {}))
+  ([db type-code {:keys [locale] :as opts}]
+   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
+     (if (#{:fi :en :se} locale)
+       (map (partial i18n/localize locale) data)
+       data))))
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
+
+(defn index! [search sports-site]
+  (let [idx-name "sports_sites_current"]
+    (search/index! search idx-name :lipas-id sports-site)))
+
+(defn search [search params]
+  (let [idx-name "sports_sites_current"]
+    (search/search search idx-name params)))
 
 ;;; Reports ;;;
 

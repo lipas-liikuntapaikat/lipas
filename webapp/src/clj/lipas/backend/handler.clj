@@ -41,7 +41,7 @@
     ;;                     (handler e request))}
     )))
 
-(defn create-app [{:keys [db emailer]}]
+(defn create-app [{:keys [db emailer search]}]
   (ring/ring-handler
    (ring/router
 
@@ -92,9 +92,11 @@
                                    :existing :lipas/sports-site)}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [draft?      (-> req :parameters :query :draft utils/->bool)]
+           (let [draft? (-> req :parameters :query :draft utils/->bool)
+                 resp   (core/upsert-sports-site! db identity body-params draft?)
+                 _      (core/index! search resp)]
              {:status 201
-              :body   (core/upsert-sports-site! db identity body-params draft?)}))}}]
+              :body   resp}))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
@@ -128,6 +130,12 @@
          (fn [_]
            {:status 200
             :body   (core/get-users db)})}}]
+
+      ["/actions/search"
+       {:post
+        {:handler
+         (fn [{:keys [body-params]}]
+           (core/search search body-params))}}]
 
       ["/actions/register"
        {:post

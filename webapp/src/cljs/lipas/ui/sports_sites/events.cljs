@@ -52,7 +52,8 @@
 (defn- on-success-new [{:keys [lipas-id]}]
   [[::discard-new-site]
    [:lipas.ui.map.events/stop-editing]
-   [:lipas.ui.map.events/show-sports-site lipas-id]])
+   [:lipas.ui.map.events/show-sports-site lipas-id]
+   [:lipas.ui.search.events/submit-search]])
 
 (re-frame/reg-event-fx
  ::commit-rev
@@ -87,12 +88,6 @@
        (commit-ajax db rev draft? on-success)
        {:dispatch [::save-success on-success rev]}))))
 
-(defn- add-to-db [db {:keys [lipas-id event-date] :as rev}]
-  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
-    (if (utils/latest? rev (get-in db [:sports-sites lipas-id :history]))
-      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
-      new-db)))
-
 (re-frame/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_ on-success result]]
@@ -104,17 +99,17 @@
          lipas-id        (-> result :lipas-id)
          year            (dec utils/this-year)
          dispatch-extras (when on-success (on-success result))]
-     {:db         (-> db
-                      (add-to-db result)
-                      (assoc-in [:sports-sites lipas-id :editing] nil))
-      :dispatch-n (into
-                   [[:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/save-success)
-                      :success? true}]
-                    (when (#{2510 2520 3110 3130} type)
-                      [:lipas.ui.energy.events/fetch-energy-report year type])]
-                   dispatch-extras)
-      :ga/event   ["save-sports-site" status type]})))
+     {:db             (-> db
+                          (utils/add-to-db result)
+                          (assoc-in [:sports-sites lipas-id :editing] nil))
+      :dispatch-n     (into
+                       [[:lipas.ui.events/set-active-notification
+                         {:message  (tr :notifications/save-success)
+                          :success? true}]
+                        (when (#{2510 2520 3110 3130} type)
+                          [:lipas.ui.energy.events/fetch-energy-report year type])]
+                       dispatch-extras)
+      :ga/event       ["save-sports-site" status type]})))
 
 (re-frame/reg-event-fx
  ::save-failure
@@ -130,7 +125,7 @@
 (re-frame/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ sites]]
-   {:db (reduce add-to-db db sites)}))
+   {:db (reduce utils/add-to-db db sites)}))
 
 (re-frame/reg-event-fx
  ::get-failure
@@ -170,10 +165,11 @@
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::start-adding-new-site
- (fn [db [_]]
-   (assoc-in db [:new-sports-site :adding?] true)))
+ (fn [{:keys [db]} [_]]
+   {:db       (assoc-in db [:new-sports-site :adding?] true)
+    :dispatch [:lipas.ui.search.events/clear-filters]}))
 
 (re-frame/reg-event-db
  ::discard-new-site

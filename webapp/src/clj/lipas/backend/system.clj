@@ -4,6 +4,7 @@
             [lipas.backend.config :as config]
             [lipas.backend.email :as email]
             [lipas.backend.handler :as handler]
+            [lipas.backend.search :as search]
             [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
@@ -13,8 +14,14 @@
 (defmethod ig/init-key :emailer [_ config]
   (email/->SMTPEmailer config))
 
+(defmethod ig/init-key :search [_ config]
+  (search/create-cli config))
+
 (defmethod ig/init-key :app [_ config]
   (handler/create-app config))
+
+(defmethod ig/init-key :server [_ {:keys [app port]}]
+  (jetty/run-jetty app {:port port :join? false}))
 
 (defmethod ig/init-key :server [_ {:keys [app port]}]
   (jetty/run-jetty app {:port port :join? false}))
@@ -33,7 +40,8 @@
      (prn "System started with config:")
      (pprint (-> config
                  (update-in [:db :password] mask)
-                 (update-in [:emailer :pass] mask)))
+                 (update-in [:emailer :pass] mask)
+                 (update-in [:search :pass] mask)))
      system)))
 
 (defn stop-system! [system]

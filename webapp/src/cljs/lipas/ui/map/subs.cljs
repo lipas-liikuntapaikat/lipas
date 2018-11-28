@@ -1,28 +1,7 @@
 (ns lipas.ui.map.subs
-  (:require [re-frame.core :as re-frame]
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as re-frame]
             [reagent.ratom :as ratom]))
-
-(defn ->feature [{:keys [lipas-id name] :as site}]
-  (-> site
-      :location
-      :geometries
-      (update-in [:features]
-                 #(map-indexed (fn [idx f]
-                         (-> f
-                             (assoc-in [:id] (str lipas-id "-" idx))
-                             (assoc-in [:properties :name] name)
-                             (assoc-in [:properties :lipas-id] lipas-id)))
-                       %))))
-
-(re-frame/reg-sub
- ::filters
- (fn [db _]
-   (-> db :map :filters)))
-
-(re-frame/reg-sub
- ::types-filter
- (fn [db _]
-   (-> db :map :filters :type-codes set)))
 
 (re-frame/reg-sub
  ::basemap
@@ -55,26 +34,30 @@
          :edit-data    @(re-frame/subscribe
                          [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
-(defn apply-filters [{:keys [type-codes]} sites]
-  (let [type-codes (-> type-codes set not-empty)]
-    (cond->> sites
-      type-codes (filter (comp type-codes :type-code :type)))))
-
 (re-frame/reg-sub
  ::geometries
+ :<- [:lipas.ui.search.subs/search-results]
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
- :<- [::filters]
- (fn [[sites filters] _]
-   (->> sites
-        vals
-        (apply-filters filters)
-        (map ->feature)
-        not-empty)))
+ :<- [::editing-lipas-id]
+ (fn [[results sites lipas-id] _]
+   (let [ids (map (comp :lipas-id :_source) (-> results :hits :hits))
+         ids (disj (set ids) lipas-id)] ; To avoid displaying
+                                        ; duplicates when editing
+     (->> (select-keys sites ids)
+          vals
+          (map utils/->feature)
+          not-empty))))
 
 (re-frame/reg-sub
  ::mode
  (fn [db _]
    (-> db :map :mode)))
+
+(re-frame/reg-sub
+ ::editing-lipas-id
+ (fn [db _]
+   (when (#{:editing :drawing} (-> db :map :mode :name))
+         (-> db :map :mode :lipas-id))))
 
 (re-frame/reg-sub
  ::zoomed-for-drawing?
@@ -92,24 +75,6 @@
  (fn [db _]
    (when (= :adding (-> db :map :mode :name))
      (-> db :map :mode :geom))))
-
-(re-frame/reg-sub
- ::selected-types
- (fn [db _]
-   (-> db :map :filters :types set)))
-
-(defn ->type-list-entry [locale selected-types m]
-  (let [type-code (-> m :type-code)]
-    {:type-code type-code
-     :name      (-> m :name locale)
-     :selected? (contains? selected-types type-code)}))
-
-(re-frame/reg-sub
- ::types-list
- :<- [:lipas.ui.sports-sites.subs/types-list]
- :<- [::selected-types]
- (fn [[types selected-types] [_ locale]]
-   (map (partial ->type-list-entry locale selected-types) types)))
 
 (re-frame/reg-sub
  ::drawer-open?

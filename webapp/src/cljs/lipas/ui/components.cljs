@@ -560,11 +560,12 @@
 ;; (def form table-form)
 (def form form-trad)
 
-(defn expansion-panel [{:keys [label]} & children]
-  [mui/expansion-panel {:style {:margin-top "1em"}}
+(defn expansion-panel [{:keys [label default-expanded]} & children]
+  [mui/expansion-panel {:default-expanded default-expanded
+                        :style    {:margin-top "1em"}}
    [mui/expansion-panel-summary {:expand-icon (r/as-element
                                                [mui/icon "expand_more"])}
-    [mui/typography {:color "primary"
+    [mui/typography {:color   "primary"
                      :variant "button"}
      label]]
    (into [mui/expansion-panel-details]

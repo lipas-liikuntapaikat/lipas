@@ -11,6 +11,7 @@
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [lipas.ui.search.views :as search]
             [reagent.core :as r]))
 
 (defn floating-container [{:keys [top right bottom left style elevation]
@@ -44,30 +45,6 @@
       :label-fn  second
       :value-fn  first
       :on-change #(==> [::events/select-basemap %])}]))
-
-(defn type-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        types  (<== [::subs/types-list locale])]
-    ^{:key value}
-    [lui/autocomplete
-     {:items     types
-      :value     value
-      :label     (tr :search/search)
-      :value-fn  :type-code
-      :label-fn  :name
-      :on-change on-change}]))
-
-(defn filters [{:keys [tr]}]
-  (let [type-codes (<== [::subs/types-filter])]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:variant :caption}
-       (tr :actions/select-types)]]
-     [mui/grid {:item true}
-      [type-selector
-       {:tr        tr
-        :value     type-codes
-        :on-change #(==> [::events/show-types %])}]]]))
 
 (defn type-selector-single [{:keys [tr value on-change]}]
   (r/with-let [selected-type (r/atom value)]
@@ -291,9 +268,11 @@
                                        (==> [::events/start-editing lipas-id :editing geom-type]))
               :edit-tooltip       (tr :actions/edit)
               :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
+                                       (==> [::events/show-sports-site nil])
                                        (==> [::events/stop-editing]))
               :save-draft-tooltip (tr :actions/save-draft)
               :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
+                                       (==> [::events/show-sports-site nil])
                                        (==> [::events/stop-editing]))
               :publish-tooltip    (tr :actions/save)
               :invalid-message    (tr :error/invalid-form)})))))]])))
@@ -503,12 +482,9 @@
 
      ;; Search, filters etc.
      (when-not adding?
-       [mui/grid {:item true :xs 12 :style {:flex 1}}
-        [mui/typography {:style   {:margin-bottom "0.5em"}
-                         :variant :display1}
-         "LIPAS"]
-        [lui/expansion-panel {:label "Rajaa kohteita"}
-         [filters {:tr tr}]]])
+       [search/search-view
+        {:tr tr
+         :on-result-click #(==> [::events/show-sports-site (:lipas-id %)])}])
 
      ;; Add new sports-site view or big '+' button
      (when logged-in?
@@ -556,7 +532,7 @@
                               :width            drawer-width
                               :z-index          1200
                               :background-color "white"}}
-        [mui/grid {:item true :xs 12 :align-content "center"}
+        [mui/grid {:item true :xs 12}
          [mui/button {:full-width true
                       :on-click   #(==> [::events/toggle-drawer])
                       :variant    "outlined"

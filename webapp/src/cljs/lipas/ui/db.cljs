@@ -73,11 +73,15 @@
    {:login-form        {}
     :registration-form {}}
 
+   ;; Search
+   :search
+   {:filters {:type-codes #{}
+              :city-codes #{}}}
+
    ;; Map
    :map
    {:drawer-open? true
     :center       {:lon 435047 :lat 6901408}
     :zoom         2
     :mode         {:name :default}
-    :basemap      :taustakartta
-    :filters      {:type-codes #{}}}})
+    :basemap      :taustakartta}})

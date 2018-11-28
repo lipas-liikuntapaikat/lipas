@@ -472,7 +472,8 @@
     :fill-required-fields "Täytä pakolliset kentät"
     :select-type          "Valitse tyyppi"
     :select-types         "Valitse tyypit"
-    :select-cities        "Valitse kunnat"}
+    :select-cities        "Valitse kunnat"
+    :filter-area-m2       "Rajaa pinta-ala m²"}
 
    :confirm
    {:headline              "Varmistus"

@@ -313,3 +313,21 @@
 (defn supports-webkit-sticky? []
   (or (gbrowser/isSafari)
       (gbrowser/isIosWebview)))
+
+(defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
+  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
+    (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
+      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
+      new-db)))
+
+(defn ->feature [{:keys [lipas-id name] :as site}]
+  (-> site
+      :location
+      :geometries
+      (update-in [:features]
+                 #(map-indexed (fn [idx f]
+                                 (-> f
+                                     (assoc-in [:id] (str lipas-id "-" idx))
+                                     (assoc-in [:properties :name] name)
+                                     (assoc-in [:properties :lipas-id] lipas-id)))
+                               %))))
