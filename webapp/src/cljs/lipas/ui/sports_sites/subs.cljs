@@ -111,6 +111,28 @@
    (-> db :ceiling-structures)))
 
 (re-frame/reg-sub
+ ::surface-materials
+ (fn [db _]
+   (-> db :surface-materials)))
+
+(re-frame/reg-sub
+ ::prop-types
+ (fn [db _]
+   (-> db :prop-types)))
+
+(re-frame/reg-sub
+ ::types-props
+ :<- [::all-types]
+ :<- [::prop-types]
+ (fn [[types prop-types] [_ type-code]]
+   (let [props (-> (types type-code) :props)]
+     (reduce (fn [res [k v]]
+               (let [prop-type (prop-types k)]
+                 (assoc res k (merge prop-type v))))
+             {}
+             props))))
+
+(re-frame/reg-sub
  ::display-site
  (fn [[_ lipas-id] _]
    [(re-frame/subscribe [:lipas.ui.sports-sites.subs/sports-site lipas-id])
@@ -150,6 +172,10 @@
 
         :construction-year (-> latest :construction-year)
         :renovation-years  (-> latest :renovation-years)
+
+        :properties (-> latest
+                        :properties
+                        (update :surface-material #(map get-material %)))
 
         :location
         {:address       (-> latest :location :address)

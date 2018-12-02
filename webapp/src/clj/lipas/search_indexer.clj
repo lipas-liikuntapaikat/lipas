@@ -54,7 +54,7 @@
     (try
       (let [idx-name (search/gen-idx-name)
             mappings (:sports-sites search/mappings)
-            types    (map :type-code types/all)
+            types    (keys types/all)
             alias    "sports_sites_current"]
         (log/info "Starting to re-index types" types)
         (search/create-index! search idx-name mappings)

@@ -7,6 +7,7 @@
             [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as types]
+            [lipas.data.prop-types :as prop-types]
             [lipas.schema.core :as schema]
             [lipas.i18n.core :as i18n]
             [lipas.ui.utils :as utils]))
@@ -24,12 +25,14 @@
    :admins                admins/all
    :owners                owners/all
    :cities                (utils/index-by :city-code cities/active)
-   :types                 (utils/index-by :type-code types/all)
+   :types                 types/all
    :materials             materials/all
    :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
+   :surface-materials     materials/surface-materials
+   :prop-types            prop-types/all
 
    ;; Ice stadiums
    :ice-stadiums

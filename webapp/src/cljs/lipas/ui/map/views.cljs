@@ -118,12 +118,15 @@
           edits-valid? (<== [::sports-site-subs/edits-valid? lipas-id])
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
-          mode         (<== [::subs/mode])
+
+          mode (<== [::subs/mode])
 
           sub-mode (-> mode :sub-mode)
 
           type-code (-> display-data :type :type-code)
           geom-type (get-in types [type-code :geometry-type])
+
+          types-props (<== [::sports-site-subs/types-props type-code])
 
           set-field (partial set-field lipas-id)
 
@@ -194,7 +197,14 @@
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
-              [mui/typography "TODO"]))]
+              [sports-sites/properties-form
+               {:tr           tr
+                :types-props  types-props
+                :read-only?   (not editing?)
+                :on-change    (partial set-field :properties)
+                :display-data (:properties display-data)
+                :edit-data    (:properties edit-data)
+                :key          type-code}]))]
 
        ;; Actions
        [sticky-bottom-container
@@ -296,6 +306,9 @@
           cities (<== [::sports-site-subs/cities-list])
           admins (<== [::sports-site-subs/admins])
           owners (<== [::sports-site-subs/owners])
+
+          type-code   (:type-code type)
+          types-props (<== [::sports-site-subs/types-props type-code])
 
           set-field set-new-site-field
 
@@ -441,7 +454,13 @@
                     :sub-headings?   true}]]]
 
               ;; Properties tab
-              1 [mui/typography "TODO"])]]]]]]
+              1 [sports-sites/properties-form
+                 {:tr          tr
+                  :types-props types-props
+                  :read-only?  false
+                  :on-change   (partial set-field :properties)
+                  :edit-data   (:properties data)
+                  :key         type}])]]]]]]
 
        ;; Actions
        [mui/grid {:item true}
