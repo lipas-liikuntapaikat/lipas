@@ -29,11 +29,23 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
+(defn surface-material-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
+    [lui/autocomplete
+     {:value     value
+      :label     ""
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
 (defn filters [{:keys [tr]}]
-  (let [type-codes (<== [::subs/types-filter])
-        city-codes (<== [::subs/cities-filter])
-        area-min   (<== [::subs/area-min-filter])
-        area-max   (<== [::subs/area-max-filter])]
+  (let [type-codes        (<== [::subs/types-filter])
+        city-codes        (<== [::subs/cities-filter])
+        area-min          (<== [::subs/area-min-filter])
+        area-max          (<== [::subs/area-max-filter])
+        surface-materials (<== [::subs/surface-materials-filter])]
     [mui/grid {:container true
                :spacing   16}
 
@@ -78,7 +90,17 @@
                          :defer-ms  500
                          :type      "number"
                          :value     area-max
-                         :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
+                         :on-change #(==> [::events/set-area-max-filter %])}]]]]
+
+     ;; Surface materials filter
+     [mui/typography {:variant :caption
+                      :style   {:margin-top "1em"}}
+      (tr :actions/filter-surface-materials)]
+     [mui/grid {:item true :xs 12}
+      [surface-material-selector
+       {:tr        tr
+        :value     surface-materials
+        :on-change #(==> [::events/set-surface-materials-filter %])}]]]))
 
 (defn search-view [{:keys [tr on-result-click]}]
   (let [search-str (<== [::subs/search-string])

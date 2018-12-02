@@ -28,6 +28,11 @@
    (-> db :search :filters :area-max)))
 
 (re-frame/reg-sub
+ ::surface-materials-filter
+ (fn [db _]
+   (-> db :search :filters :surface-materials)))
+
+(re-frame/reg-sub
  ::search-string
  (fn [db _]
    (-> db :search :string)))

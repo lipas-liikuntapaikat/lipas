@@ -16,36 +16,31 @@
         city-codes        (-> filters :city-codes not-empty)
         area-min          (-> filters :area-min)
         area-max          (-> filters :area-max)
+        materials         (-> filters :surface-materials not-empty)
         {:keys [lon lat]} center
-        params            {:size      200
-                           ;; :min_score 1
-                           :_source   {:excludes ["search-meta"]}
-                           :query
-                           {:function_score
-                            {:score_mode "sum"
-                             :query
-                             {:bool
-                              {:must
-                               [{:query_string
-                                 {:query string}}]}}
-                             :functions  [{:gauss
-                                           {:search-meta.location.wgs84-point
-                                            {:origin (str lat "," lon)
-                                             :offset (str distance "m")
-                                             :scale  (str (* 2 distance) "m")}}}]}}}]
+
+        params {:size    200
+                ;; :min_score 1
+                :_source {:excludes ["search-meta"]}
+                :query
+                {:function_score
+                 {:score_mode "sum"
+                  :query
+                  {:bool
+                   {:must
+                    [{:query_string
+                      {:query string}}]}}
+                  :functions  [{:gauss
+                                {:search-meta.location.wgs84-point
+                                 {:origin (str lat "," lon)
+                                  :offset (str distance "m")
+                                  :scale  (str (* 2 distance) "m")}}}]}}}]
     (cond-> params
-      string     (cutils/deep-merge
-                  {:query
-                   {:function_score
-                    {:query
-                     {:bool
-                      {:must
-                       [{:query_string
-                         {:query string}}]}}}}})
       type-codes (add-filter {:terms {:type.type-code type-codes}})
       city-codes (add-filter {:terms {:location.city.city-code city-codes}})
-      area-min   (add-filter {:range {:properties.areaM2 {:gte area-min}}})
-      area-max   (add-filter {:range {:properties.areaM2 {:lte area-max}}}))))
+      area-min   (add-filter {:range {:properties.area-m2 {:gte area-min}}})
+      area-max   (add-filter {:range {:properties.area-m2 {:lte area-max}}})
+      materials  (add-filter {:terms {:properties.surface-material.keyword materials}}))))
 
 (re-frame/reg-event-fx
  ::search
@@ -117,6 +112,12 @@
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
+    :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::set-surface-materials-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :surface-materials] v)
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
