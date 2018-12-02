@@ -215,7 +215,7 @@
 (s/def :lipas.sports-site/comment (str-in 1 1024))
 
 (s/def :lipas.sports-site.type/type-code
-  (into #{} (map :type-code) sports-site-types/all))
+  (into #{} (keys sports-site-types/all)))
 
 (s/def :lipas.sports-site/construction-year
   (into #{} (range 1850 (inc utils/this-year))))
@@ -224,7 +224,320 @@
   (s/coll-of (s/int-in 1900 (inc utils/this-year))
              :distinct true :into []))
 
+;;;; Additional properties ;;;;
+
+(s/def :lipas.sports-site.properties/surface-material
+  (s/coll-of (into #{} (keys materials/surface-materials))
+             :min-count 0
+             :max-count (count materials/surface-materials)
+             :distinct true
+             :into []))
+
+(s/def :lipas.sports-site.properties/height-m number?)
+(s/def :lipas.sports-site.properties/heating? boolean?)
+(s/def :lipas.sports-site.properties/field-2-area-m2 number?)
+(s/def :lipas.sports-site.properties/ski-track? boolean?)
+(s/def :lipas.sports-site.properties/basketball-fields-count number?)
+(s/def :lipas.sports-site.properties/surface-material-info string?)
+(s/def :lipas.sports-site.properties/holes-count number?)
+(s/def :lipas.sports-site.properties/skijump-hill-type string?)
+(s/def :lipas.sports-site.properties/lifts-count number?)
+(s/def :lipas.sports-site.properties/field-3-length-m number?)
+(s/def :lipas.sports-site.properties/pool-tracks-count number?)
+(s/def :lipas.sports-site.properties/field-2-length-m number?)
+(s/def :lipas.sports-site.properties/plastic-outrun? boolean?)
+(s/def :lipas.sports-site.properties/automated-timing? boolean?)
+(s/def :lipas.sports-site.properties/freestyle-slope? boolean?)
+(s/def :lipas.sports-site.properties/kiosk? boolean?)
+(s/def :lipas.sports-site.properties/summer-usage? boolean?)
+(s/def :lipas.sports-site.properties/stand-capacity-person number?)
+(s/def :lipas.sports-site.properties/pier? boolean?)
+(s/def :lipas.sports-site.properties/may-be-shown-in-excursion-map-fi? boolean?)
+(s/def :lipas.sports-site.properties/sprint-lanes-count number?)
+(s/def :lipas.sports-site.properties/javelin-throw-places-count number?)
+(s/def :lipas.sports-site.properties/tennis-courts-count number?)
+(s/def :lipas.sports-site.properties/ski-service? boolean?)
+(s/def :lipas.sports-site.properties/field-1-length-m number?)
+(s/def :lipas.sports-site.properties/finish-line-camera? boolean?)
+(s/def :lipas.sports-site.properties/parking-place? boolean?)
+(s/def :lipas.sports-site.properties/climbing-routes-count number?)
+(s/def :lipas.sports-site.properties/outdoor-exercise-machines? boolean?)
+(s/def :lipas.sports-site.properties/automated-scoring? boolean?)
+(s/def :lipas.sports-site.properties/track-width-m number?)
+(s/def :lipas.sports-site.properties/ice-climbing? boolean?)
+(s/def :lipas.sports-site.properties/field-length-m number?)
+(s/def :lipas.sports-site.properties/skijump-hill-material string?)
+(s/def :lipas.sports-site.properties/longest-slope-m number?)
+(s/def :lipas.sports-site.properties/circular-lanes-count number?)
+(s/def :lipas.sports-site.properties/boat-launching-spot? boolean?)
+(s/def :lipas.sports-site.properties/ski-track-traditional? boolean?)
+(s/def :lipas.sports-site.properties/winter-swimming? boolean?)
+(s/def :lipas.sports-site.properties/altitude-difference number?)
+(s/def :lipas.sports-site.properties/climbing-wall-height-m number?)
+(s/def :lipas.sports-site.properties/route-width-m number?)
+(s/def :lipas.sports-site.properties/beach-length-m number?)
+(s/def :lipas.sports-site.properties/match-clock? boolean?)
+(s/def :lipas.sports-site.properties/sprint-track-length-m number?)
+(s/def :lipas.sports-site.properties/archery? boolean?)
+(s/def :lipas.sports-site.properties/throwing-sports-spots-count number?)
+(s/def :lipas.sports-site.properties/radio-and-tv-capabilities? boolean?)
+(s/def :lipas.sports-site.properties/inner-lane-length-m number?)
+(s/def :lipas.sports-site.properties/discus-throw-places number?)
+(s/def :lipas.sports-site.properties/fields-count number?)
+(s/def :lipas.sports-site.properties/field-1-width-m number?)
+(s/def :lipas.sports-site.properties/field-3-width-m number?)
+(s/def :lipas.sports-site.properties/field-2-width-m number?)
+(s/def :lipas.sports-site.properties/badminton-courts-count number?)
+(s/def :lipas.sports-site.properties/hammer-throw-places-count number?)
+(s/def :lipas.sports-site.properties/horse-carriage-allowed? boolean?)
+(s/def :lipas.sports-site.properties/pool-width-m number?)
+(s/def :lipas.sports-site.properties/pool-min-depth-m number?)
+(s/def :lipas.sports-site.properties/ice-rinks-count number?)
+(s/def :lipas.sports-site.properties/field-1-area-m2 number?)
+(s/def :lipas.sports-site.properties/k-point number?)
+(s/def :lipas.sports-site.properties/polevault-places-count number?)
+(s/def :lipas.sports-site.properties/group-exercise-rooms-count number?)
+(s/def :lipas.sports-site.properties/snowpark-or-street? boolean?)
+(s/def :lipas.sports-site.properties/max-vertical-difference number?)
+(s/def :lipas.sports-site.properties/bowling-lanes-count number?)
+(s/def :lipas.sports-site.properties/air-gun-shooting? boolean?)
+(s/def :lipas.sports-site.properties/gymnastic-routines-count number?)
+(s/def :lipas.sports-site.properties/toilet? boolean?)
+(s/def :lipas.sports-site.properties/gymnastics-space? boolean?)
+(s/def :lipas.sports-site.properties/show-jumping? boolean?)
+(s/def :lipas.sports-site.properties/shower? boolean?)
+(s/def :lipas.sports-site.properties/rest-places-count number?)
+(s/def :lipas.sports-site.properties/changing-rooms? boolean?)
+(s/def :lipas.sports-site.properties/pistol-shooting? boolean?)
+(s/def :lipas.sports-site.properties/halfpipe-count number?)
+(s/def :lipas.sports-site.properties/shooting-positions-count number?)
+(s/def :lipas.sports-site.properties/running-track-surface-material string?)
+(s/def :lipas.sports-site.properties/tatamis-count number?)
+(s/def :lipas.sports-site.properties/lit-route-length-km number?)
+(s/def :lipas.sports-site.properties/area-m2 number?)
+(s/def :lipas.sports-site.properties/field-width-m number?)
+(s/def :lipas.sports-site.properties/cosmic-bowling? boolean?)
+(s/def :lipas.sports-site.properties/wrestling-mats-count number?)
+(s/def :lipas.sports-site.properties/eu-beach? boolean?)
+(s/def :lipas.sports-site.properties/hall-length-m number?)
+(s/def :lipas.sports-site.properties/rifle-shooting? boolean?)
+(s/def :lipas.sports-site.properties/swimming-pool-count number?)
+(s/def :lipas.sports-site.properties/pool-water-area-m2 number?)
+(s/def :lipas.sports-site.properties/curling-lanes-count number?)
+(s/def :lipas.sports-site.properties/climbing-wall-width-m number?)
+(s/def :lipas.sports-site.properties/area-km2 number?)
+(s/def :lipas.sports-site.properties/scoreboard? boolean?)
+(s/def :lipas.sports-site.properties/futsal-fields-count number?)
+(s/def :lipas.sports-site.properties/training-wall? boolean?)
+(s/def :lipas.sports-site.properties/shotput-count number?)
+(s/def :lipas.sports-site.properties/longjump-places-count number?)
+(s/def :lipas.sports-site.properties/football-fields-count number?)
+(s/def :lipas.sports-site.properties/floorball-fields-count number?)
+(s/def :lipas.sports-site.properties/equipment-rental? boolean?)
+(s/def :lipas.sports-site.properties/slopes-count number?)
+(s/def :lipas.sports-site.properties/old-lipas-typecode int?)
+(s/def :lipas.sports-site.properties/other-pools-count number?)
+(s/def :lipas.sports-site.properties/shortest-slope-m number?)
+(s/def :lipas.sports-site.properties/adp-readiness? boolean?)
+(s/def :lipas.sports-site.properties/squash-courts-count number?)
+(s/def :lipas.sports-site.properties/boxing-rings-count number?)
+(s/def :lipas.sports-site.properties/ice-reduction? boolean?)
+(s/def :lipas.sports-site.properties/fencing-bases-count number?)
+(s/def :lipas.sports-site.properties/classified-route string?)
+(s/def :lipas.sports-site.properties/weight-lifting-spots-count number?)
+(s/def :lipas.sports-site.properties/landing-places-count number?)
+(s/def :lipas.sports-site.properties/toboggan-run? boolean?)
+(s/def :lipas.sports-site.properties/sauna? boolean?)
+(s/def :lipas.sports-site.properties/jumps-count number?)
+(s/def :lipas.sports-site.properties/table-tennis-count number?)
+(s/def :lipas.sports-site.properties/pool-max-depth-m number?)
+(s/def :lipas.sports-site.properties/loudspeakers? boolean?)
+(s/def :lipas.sports-site.properties/shotgun-shooting? boolean?)
+(s/def :lipas.sports-site.properties/lit-slopes-count number?)
+(s/def :lipas.sports-site.properties/green? boolean?)
+(s/def :lipas.sports-site.properties/free-rifle-shooting? boolean?)
+(s/def :lipas.sports-site.properties/winter-usage? boolean?)
+(s/def :lipas.sports-site.properties/ligthing? boolean?)
+(s/def :lipas.sports-site.properties/field-3-area-m2 number?)
+(s/def :lipas.sports-site.properties/accessibility-info string?)
+(s/def :lipas.sports-site.properties/covered-stand-person-count number?)
+(s/def :lipas.sports-site.properties/playground? boolean?)
+(s/def :lipas.sports-site.properties/handball-fields-count number?)
+(s/def :lipas.sports-site.properties/p-point number?)
+(s/def :lipas.sports-site.properties/inruns-material string?)
+(s/def :lipas.sports-site.properties/basketball-field-type string?)
+(s/def :lipas.sports-site.properties/volleyball-fields-count number?)
+(s/def :lipas.sports-site.properties/boat-places-count number?)
+(s/def :lipas.sports-site.properties/pool-temperature-c number?)
+(s/def :lipas.sports-site.properties/hall-width-m number?)
+(s/def :lipas.sports-site.properties/climbing-wall? boolean?)
+(s/def :lipas.sports-site.properties/ski-track-freestyle? boolean?)
+(s/def :lipas.sports-site.properties/spinning-hall? boolean?)
+(s/def :lipas.sports-site.properties/other-platforms? boolean?)
+(s/def :lipas.sports-site.properties/highjump-places-count number?)
+(s/def :lipas.sports-site.properties/light-roof? boolean?)
+(s/def :lipas.sports-site.properties/pool-length-m number?)
+(s/def :lipas.sports-site.properties/route-length-km number?)
+(s/def :lipas.sports-site.properties/exercise-machines-count number?)
+(s/def :lipas.sports-site.properties/track-type string?)
+(s/def :lipas.sports-site.properties/training-spot-surface-material string?)
+(s/def :lipas.sports-site.properties/range? boolean?)
+(s/def :lipas.sports-site.properties/track-length-m number?)
+
 (s/def :lipas.sports-site/properties
+  (s/keys :opt-un [:lipas.sports-site.properties/height-m
+                   :lipas.sports-site.properties/heating?
+                   :lipas.sports-site.properties/field-2-area-m2
+                   :lipas.sports-site.properties/surface-material
+                   :lipas.sports-site.properties/ski-track?
+                   :lipas.sports-site.properties/basketball-fields-count
+                   :lipas.sports-site.properties/surface-material-info
+                   :lipas.sports-site.properties/holes-count
+                   :lipas.sports-site.properties/skijump-hill-type
+                   :lipas.sports-site.properties/lifts-count
+                   :lipas.sports-site.properties/field-3-length-m
+                   :lipas.sports-site.properties/pool-tracks-count
+                   :lipas.sports-site.properties/field-2-length-m
+                   :lipas.sports-site.properties/plastic-outrun?
+                   :lipas.sports-site.properties/automated-timing?
+                   :lipas.sports-site.properties/freestyle-slope?
+                   :lipas.sports-site.properties/kiosk?
+                   :lipas.sports-site.properties/summer-usage?
+                   :lipas.sports-site.properties/stand-capacity-person
+                   :lipas.sports-site.properties/pier?
+                   :lipas.sports-site.properties/may-be-shown-in-excursion-map-fi?
+                   :lipas.sports-site.properties/sprint-lanes-count
+                   :lipas.sports-site.properties/javelin-throw-places-count
+                   :lipas.sports-site.properties/tennis-courts-count
+                   :lipas.sports-site.properties/ski-service?
+                   :lipas.sports-site.properties/field-1-length-m
+                   :lipas.sports-site.properties/finish-line-camera?
+                   :lipas.sports-site.properties/parking-place?
+                   :lipas.sports-site.properties/climbing-routes-count
+                   :lipas.sports-site.properties/outdoor-exercise-machines?
+                   :lipas.sports-site.properties/automated-scoring?
+                   :lipas.sports-site.properties/track-width-m
+                   :lipas.sports-site.properties/ice-climbing?
+                   :lipas.sports-site.properties/field-length-m
+                   :lipas.sports-site.properties/skijump-hill-material
+                   :lipas.sports-site.properties/longest-slope-m
+                   :lipas.sports-site.properties/circular-lanes-count
+                   :lipas.sports-site.properties/boat-launching-spot?
+                   :lipas.sports-site.properties/ski-track-traditional?
+                   :lipas.sports-site.properties/winter-swimming?
+                   :lipas.sports-site.properties/altitude-difference
+                   :lipas.sports-site.properties/climbing-wall-height-m
+                   :lipas.sports-site.properties/route-width-m
+                   :lipas.sports-site.properties/beach-length-m
+                   :lipas.sports-site.properties/match-clock?
+                   :lipas.sports-site.properties/sprint-track-length-m
+                   :lipas.sports-site.properties/archery?
+                   :lipas.sports-site.properties/throwing-sports-spots-count
+                   :lipas.sports-site.properties/radio-and-tv-capabilities?
+                   :lipas.sports-site.properties/inner-lane-length-m
+                   :lipas.sports-site.properties/discus-throw-places
+                   :lipas.sports-site.properties/fields-count
+                   :lipas.sports-site.properties/field-1-width-m
+                   :lipas.sports-site.properties/field-3-width-m
+                   :lipas.sports-site.properties/field-2-width-m
+                   :lipas.sports-site.properties/badminton-courts-count
+                   :lipas.sports-site.properties/hammer-throw-places-count
+                   :lipas.sports-site.properties/horse-carriage-allowed?
+                   :lipas.sports-site.properties/pool-width-m
+                   :lipas.sports-site.properties/pool-min-depth-m
+                   :lipas.sports-site.properties/ice-rinks-count
+                   :lipas.sports-site.properties/field-1-area-m2
+                   :lipas.sports-site.properties/k-point
+                   :lipas.sports-site.properties/polevault-places-count
+                   :lipas.sports-site.properties/group-exercise-rooms-count
+                   :lipas.sports-site.properties/snowpark-or-street?
+                   :lipas.sports-site.properties/max-vertical-difference
+                   :lipas.sports-site.properties/bowling-lanes-count
+                   :lipas.sports-site.properties/air-gun-shooting?
+                   :lipas.sports-site.properties/gymnastic-routines-count
+                   :lipas.sports-site.properties/toilet?
+                   :lipas.sports-site.properties/gymnastics-space?
+                   :lipas.sports-site.properties/show-jumping?
+                   :lipas.sports-site.properties/shower?
+                   :lipas.sports-site.properties/rest-places-count
+                   :lipas.sports-site.properties/changing-rooms?
+                   :lipas.sports-site.properties/pistol-shooting?
+                   :lipas.sports-site.properties/halfpipe-count
+                   :lipas.sports-site.properties/shooting-positions-count
+                   :lipas.sports-site.properties/running-track-surface-material
+                   :lipas.sports-site.properties/tatamis-count
+                   :lipas.sports-site.properties/lit-route-length-km
+                   :lipas.sports-site.properties/area-m2
+                   :lipas.sports-site.properties/field-width-m
+                   :lipas.sports-site.properties/cosmic-bowling?
+                   :lipas.sports-site.properties/wrestling-mats-count
+                   :lipas.sports-site.properties/eu-beach?
+                   :lipas.sports-site.properties/hall-length-m
+                   :lipas.sports-site.properties/rifle-shooting?
+                   :lipas.sports-site.properties/swimming-pool-count
+                   :lipas.sports-site.properties/pool-water-area-m2
+                   :lipas.sports-site.properties/curling-lanes-count
+                   :lipas.sports-site.properties/climbing-wall-width-m
+                   :lipas.sports-site.properties/area-km2
+                   :lipas.sports-site.properties/scoreboard?
+                   :lipas.sports-site.properties/futsal-fields-count
+                   :lipas.sports-site.properties/training-wall?
+                   :lipas.sports-site.properties/shotput-count
+                   :lipas.sports-site.properties/longjump-places-count
+                   :lipas.sports-site.properties/football-fields-count
+                   :lipas.sports-site.properties/floorball-fields-count
+                   :lipas.sports-site.properties/equipment-rental?
+                   :lipas.sports-site.properties/slopes-count
+                   :lipas.sports-site.properties/old-lipas-typecode
+                   :lipas.sports-site.properties/pool-length-m
+                   :lipas.sports-site.properties/other-pools-count
+                   :lipas.sports-site.properties/shortest-slope-m
+                   :lipas.sports-site.properties/adp-readiness?
+                   :lipas.sports-site.properties/squash-courts-count
+                   :lipas.sports-site.properties/boxing-rings-count
+                   :lipas.sports-site.properties/ice-reduction?
+                   :lipas.sports-site.properties/fencing-bases-count
+                   :lipas.sports-site.properties/classified-route
+                   :lipas.sports-site.properties/weight-lifting-spots-count
+                   :lipas.sports-site.properties/landing-places-count
+                   :lipas.sports-site.properties/toboggan-run?
+                   :lipas.sports-site.properties/sauna?
+                   :lipas.sports-site.properties/jumps-count
+                   :lipas.sports-site.properties/table-tennis-count
+                   :lipas.sports-site.properties/pool-max-depth-m
+                   :lipas.sports-site.properties/loudspeakers?
+                   :lipas.sports-site.properties/shotgun-shooting?
+                   :lipas.sports-site.properties/lit-slopes-count
+                   :lipas.sports-site.properties/green?
+                   :lipas.sports-site.properties/free-rifle-shooting?
+                   :lipas.sports-site.properties/winter-usage?
+                   :lipas.sports-site.properties/ligthing?
+                   :lipas.sports-site.properties/field-3-area-m2
+                   :lipas.sports-site.properties/accessibility-info
+                   :lipas.sports-site.properties/covered-stand-person-count
+                   :lipas.sports-site.properties/playground?
+                   :lipas.sports-site.properties/handball-fields-count
+                   :lipas.sports-site.properties/p-point
+                   :lipas.sports-site.properties/inruns-material
+                   :lipas.sports-site.properties/basketball-field-type
+                   :lipas.sports-site.properties/volleyball-fields-count
+                   :lipas.sports-site.properties/boat-places-count
+                   :lipas.sports-site.properties/pool-temperature-c
+                   :lipas.sports-site.properties/hall-width-m
+                   :lipas.sports-site.properties/climbing-wall?
+                   :lipas.sports-site.properties/ski-track-freestyle?
+                   :lipas.sports-site.properties/spinning-hall?
+                   :lipas.sports-site.properties/other-platforms?
+                   :lipas.sports-site.properties/highjump-places-count
+                   :lipas.sports-site.properties/light-roof?
+                   :lipas.sports-site.properties/route-length-km
+                   :lipas.sports-site.properties/exercise-machines-count
+                   :lipas.sports-site.properties/track-type
+                   :lipas.sports-site.properties/training-spot-surface-material
+                   :lipas.sports-site.properties/range?
+                   :lipas.sports-site.properties/track-length-m]))
+
+(s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)
                            :number? number?
                            :boolean? boolean?)))

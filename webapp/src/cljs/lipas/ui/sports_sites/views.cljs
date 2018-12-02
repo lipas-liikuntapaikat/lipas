@@ -168,7 +168,7 @@
      {:label      (tr :lipas.location/postal-office)
       :value      (-> display-data :postal-office)
       :form-field [lui/text-field
-                   { :value    (-> edit-data :postal-office)
+                   {:value    (-> edit-data :postal-office)
                     :spec      :lipas.location/postal-office
                     :on-change #(on-change :postal-office %)}]}
 
@@ -191,6 +191,53 @@
                    {:value     (-> edit-data :city :neighborhood)
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
+
+(defn surface-material-selector [{:keys [tr value on-change label]}]
+  (let [locale (tr)
+        items  (<== [::subs/surface-materials])]
+    [lui/multi-select
+     {:value     value
+      :label     label
+      :spec      :lipas.sports-site.properties/surface-material
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn properties-form [{:keys [tr edit-data display-data types-props
+                               on-change read-only? key]}]
+  (let [locale (tr)]
+    (into
+     [lui/form
+      {:key        key
+       :read-only? read-only?}]
+     (sort-by
+      (juxt (comp - :priority) :label)
+      (for [[k v] types-props
+            :let  [label     (-> types-props k :name locale)
+                   data-type (:data-type v)
+                   spec      (keyword :lipas.sports-site.properties k)
+                   value     (-> edit-data k)
+                   on-change #(on-change k %)]]
+        {:label    label
+         :value    (-> display-data k)
+         :priority (:priority v)
+         :form-field
+         (cond
+           (= :surface-material k) [surface-material-selector
+                                    {:tr        tr
+                                     :label     label
+                                     :value     value
+                                     :on-change on-change}]
+           (= "boolean" data-type) [lui/checkbox
+                                    {:value     value
+                                     :on-change on-change}]
+           :else                   [lui/text-field
+                                    {:value     value
+                                     :spec      spec
+                                     :type      (when (#{"numeric" "integer"} data-type)
+                                                  "number")
+                                     :on-change on-change}])})))))
 
 (defn report-readings-button [{:keys [tr lipas-id close]}]
   [mui/button
