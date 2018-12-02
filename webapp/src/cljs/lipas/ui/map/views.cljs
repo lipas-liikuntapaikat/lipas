@@ -211,7 +211,7 @@
         (into
          [mui/grid {:item  true
                     :style {:padding-top    "1em"
-                            :padding-bottom "1em"}}]
+                            :padding-bottom "0.5em"}}]
          (interpose
           [:span {:style {:margin-left  "0.25em"
                           :margin-right "0.25em"}}]
@@ -290,6 +290,7 @@
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
    [mui/button {:variant  :fab
+                :style {:margin-bottom "0.5em"}
                 :color    :secondary
                 :on-click #(==> [::sports-site-events/start-adding-new-site])}
     [mui/icon "add"]]])
