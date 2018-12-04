@@ -3,7 +3,7 @@ import {Map, View, Overlay} from "ol";
 import Collection from "ol/Collection";
 import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {register} from 'ol/proj/proj4';
-import {Style, Circle, Fill, Stroke, Icon} from 'ol/style';
+import {Style, Circle, Fill, Stroke, Icon, RegularShape} from 'ol/style';
 import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
 import {WMTS as WMTSSource, Vector as VectorSource} from 'ol/source';
 import {getTopLeft, getWidth, getHeight} from 'ol/extent';
@@ -35,6 +35,7 @@ window.ol = {
     Fill,
     Stroke,
     Icon,
+    RegularShape,
   },
   extent: {
     getTopLeft,

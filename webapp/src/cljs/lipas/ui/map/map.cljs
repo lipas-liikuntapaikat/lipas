@@ -2,12 +2,16 @@
   (:require proj4
             ["ol"]
             [clojure.string :as string]
+            [goog.color :as gcolor]
+            [goog.color.alpha :as gcolora]
             [goog.object :as gobj]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [lipas.utils :as cutils]
+            [lipas.data.styles :as styles]
             [re-frame.core :as re-frame]
             [reagent.core :as r]))
 
@@ -105,6 +109,129 @@
 
 (def hover-styles #js[hover-style blue-marker-style])
 
+(defn ->alpha [opacity]
+  (.toString (int (* 255 opacity)) 16))
+
+(defn ->style [m]
+  (let [fill-alpha   0.7
+        fill-color   (str (-> m :fill :color) (->alpha fill-alpha))
+        fill         (ol.style.Fill. #js{:color fill-color})
+        stroke-alpha 0.5
+        stroke-color (str (-> m :stroke :color) (->alpha stroke-alpha))
+        stroke       (ol.style.Stroke. #js{:color stroke-color :width 3})
+        stroke-light (ol.style.Stroke. #js{:color stroke-color :width 1})]
+    (ol.style.Style.
+     #js{:stroke stroke
+         :fill   fill
+         :image  (case (:shape m)
+                   "circle"   (ol.style.Circle.
+                               #js{:radius 7
+                                   :fill   fill
+                                   :stroke stroke-light})
+                   "triangle" (ol.style.RegularShape.
+                               #js{:fill   fill
+                                   :stroke stroke-light
+                                   :points 3
+                                   :radius 7})
+                   "square"   (ol.style.RegularShape.
+                               #js{:fill   fill
+                                   :stroke stroke-light
+                                   :points 4
+                                   :angle  (/ js/Math.PI 4)
+                                   :radius 7})
+                   "star"     (ol.style.RegularShape.
+                               #js{:fill    fill
+                                   :stroke  stroke-light
+                                   :points  5
+                                   :radius  10
+                                   :radius2 4})
+                   nil)})))
+
+(defn ->style2 [m & {hover? :hover}]
+  (let [fill-alpha   (case (:shape m)
+                       "polygon" (if hover? 0.5 0.3)
+                       0.4)
+        fill-color   (str (-> m :fill :color) (->alpha fill-alpha))
+        fill         (ol.style.Fill. #js{:color fill-color})
+        stroke-alpha (case (:shape m)
+                       "polygon" 0.1
+                       0.9)
+        stroke-color (str (-> m :stroke :color) (->alpha stroke-alpha))
+        stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
+        stroke       (ol.style.Stroke. #js{:color stroke-color :width (if hover? 5 3)})]
+    (ol.style.Style.
+     #js{:stroke stroke
+         :fill   fill
+         :image  (when-not (#{"polygon" "linestring"} (:shape m))
+                   (ol.style.Circle.
+                    #js{:radius (if hover? 8 7)
+                        :fill   fill
+                        :stroke (if hover? hover-stroke stroke-black)}))})))
+
+(def symbols (reduce (fn [m [k v]] (assoc m k (->style v))) {} styles/all))
+(def symbols2 (reduce (fn [m [k v]] (assoc m k (->style2 v))) {} styles/all))
+(def hovers (reduce (fn [m [k v]] (assoc m k (->style2 v :hover true))) {} styles/all))
+
+(defn feature-style [f]
+  (let [type-code (.get f "type-code")]
+    (get symbols type-code)))
+
+(defn feature-style1 [f]
+  (let [type-code (.get f "type-code")]
+    (get symbols2 type-code)))
+
+(defn normalize [n]
+  (if (> n 0)
+    (int (/ 255 n))
+    0))
+
+(defn type-code->rgb [type-code]
+  (let [parts (-> type-code (cutils/zero-left-pad 4))
+        parts (into [] (map int) parts)
+        r (normalize (parts 0))
+        g (normalize (parts 1))
+        b (normalize (parts 2))]
+    [r g b]))
+
+(defn type-code->rgba [type-code a]
+  (let [rgb (type-code->rgb type-code)]
+    (gcolora/rgbaArrayToRgbaStyle (clj->js (conj rgb a)))))
+
+(defn feature-style1-hover [f]
+  (let [type-code (.get f "type-code")]
+    (get hovers type-code)))
+
+(defn feature-style2 [f]
+  (let [type-code (.get f "type-code")
+        fill      (ol.style.Fill. #js{:color (type-code->rgba type-code 0.4)})
+        stroke    (ol.style.Stroke. #js{:color "#00000" :width 1})]
+    (ol.style.Style.
+     #js{:stroke stroke
+         :fill   fill
+         :image
+         (ol.style.Circle.
+          #js{:radius 7
+              :fill   fill
+              :stroke stroke})})))
+
+(defn feature-style3 [f]
+  (let [type-code (.get f "type-code")
+        rgb       (type-code->rgb type-code)
+        rgba      (clj->js (conj rgb 0.4))
+        rgb-dark  (gcolor/darken (clj->js rgb) 0.9)
+        rgba-dark (clj->js (conj (js->clj rgb-dark) 0.4))
+        fill      (ol.style.Fill. #js{:color (gcolora/rgbaArrayToRgbaStyle rgba)})
+        stroke    (ol.style.Stroke. #js{:color (gcolora/rgbaArrayToRgbaStyle rgba-dark)
+                                        :width 3})]
+    (ol.style.Style.
+     #js{:stroke stroke
+         :fill   fill
+         :image
+         (ol.style.Circle.
+          #js{:radius 7
+              :fill   fill
+              :stroke stroke})})))
+
 (js/proj4.defs "EPSG:3067" (str "+proj=utm"
                                 "+zone=35"
                                 "+ellps=GRS80"
@@ -188,7 +315,9 @@
    :overlays
    {:vectors (ol.layer.Vector.
               #js{:source (ol.source.Vector.)
-                  :style  default-style})
+                  ;;:style  default-style
+                  :style  feature-style1
+                  })
     :edits   (ol.layer.Vector.
               #js{:source (ol.source.Vector.)
                   :style  #js[edit-style vertices-style]})}})
@@ -217,7 +346,8 @@
 
         hover (ol.interaction.Select.
                #js{:layers    #js[(-> layers :overlays :vectors)]
-                   :style     #js[hover-style]
+                   ;;:style     #js[hover-style]
+                   :style     feature-style1-hover
                    :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.

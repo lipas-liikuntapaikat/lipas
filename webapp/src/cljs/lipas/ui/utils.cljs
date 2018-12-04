@@ -320,14 +320,16 @@
       (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
       new-db)))
 
-(defn ->feature [{:keys [lipas-id name] :as site}]
-  (-> site
-      :location
-      :geometries
-      (update-in [:features]
-                 #(map-indexed (fn [idx f]
-                                 (-> f
-                                     (assoc-in [:id] (str lipas-id "-" idx))
-                                     (assoc-in [:properties :name] name)
-                                     (assoc-in [:properties :lipas-id] lipas-id)))
-                               %))))
+(defn ->feature [{:keys [lipas-id name type] :as site}]
+  (let [type-code (-> type :type-code)]
+    (-> site
+        :location
+        :geometries
+        (update-in [:features]
+                   #(map-indexed (fn [idx f]
+                                   (-> f
+                                       (assoc-in [:id] (str lipas-id "-" idx))
+                                       (assoc-in [:properties :name] name)
+                                       (assoc-in [:properties :lipas-id] lipas-id)
+                                       (assoc-in [:properties :type-code] type-code)))
+                                 %)))))
