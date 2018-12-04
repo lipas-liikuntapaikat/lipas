@@ -56,6 +56,9 @@ services:
       SMTP_USER:
       SMTP_PASS:
       SMTP_FROM:
+      SEARCH_HOST:
+      SEARCH_USER:
+      SEARCH_PASS:
       ADMIN_PASSWORD:
       LEIN_SILENT: 'true'
     volumes:
