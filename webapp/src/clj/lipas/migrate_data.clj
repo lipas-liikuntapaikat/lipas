@@ -747,10 +747,11 @@
         {:keys [db]}            (backend/start-system! config)
         user                    (core/get-user db "import@lipas.fi")]
     (case source
-      "--csv"   (do
-                  (migrate-ice-stadiums! db user ice-stadiums-csv-path)
-                  (migrate-swimming-pools! db user swimming-pools-csv-path))
-      "--lipas" (migrate-from-old-lipas! db user (rest args))
+      "--csv"     (do
+                    (migrate-ice-stadiums! db user ice-stadiums-csv-path)
+                    (migrate-swimming-pools! db user swimming-pools-csv-path))
+      "--lipas"   (migrate-from-old-lipas! db user (rest args))
+      "--es-dump" (migrate-from-es-dump! db user (first (rest args)))
       (log/error "Please provide --csv or --lipas 123 234 ..."))))
 
 (comment

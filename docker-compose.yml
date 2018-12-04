@@ -127,6 +127,14 @@ services:
     links:
       - postgres
 
+  backend-index-search:
+    extends:
+      service: backend-base
+    entrypoint: lein run -m lipas.search-indexer
+    links:
+      - postgres
+      - elasticsearch
+
   node-base:
     image: node:10-alpine
     working_dir: /usr/src/app
