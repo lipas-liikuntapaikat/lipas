@@ -766,7 +766,7 @@
                id          (r/atom (gensym))
                value       (r/atom (or value []))
                input-value (r/atom "")
-               suggs       (r/atom items)]
+               suggs       (r/atom (map value-fn items))]
 
     [mui/grid {:container true}
 
