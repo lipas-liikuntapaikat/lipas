@@ -83,7 +83,8 @@
                     :search
                     (select-keys [:string :filters])
                     (assoc :center (-> db :map :center-wgs84))
-                    (assoc :distance (/ (-> db :map :width) 2)))]
+                    (assoc :distance (/ (max (-> db :map :width)
+                                             (-> db :map :height)) 2)))]
      {:dispatch [::search params]})))
 
 (re-frame/reg-event-fx
