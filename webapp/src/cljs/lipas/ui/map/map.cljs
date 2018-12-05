@@ -147,16 +147,23 @@
                                    :radius2 4})
                    nil)})))
 
+(defn ->rgba [hex alpha]
+  (when (and hex alpha)
+    (let [rgb  (gcolor/hexToRgb hex)
+          rgba (doto rgb
+                 (.push alpha))]
+      (gcolora/rgbaArrayToRgbaStyle rgba))))
+
 (defn ->style2 [m & {hover? :hover}]
   (let [fill-alpha   (case (:shape m)
                        "polygon" (if hover? 0.5 0.3)
                        0.4)
-        fill-color   (str (-> m :fill :color) (->alpha fill-alpha))
+        fill-color   (-> m :fill :color (->rgba fill-alpha))
         fill         (ol.style.Fill. #js{:color fill-color})
         stroke-alpha (case (:shape m)
                        "polygon" 0.1
                        0.9)
-        stroke-color (str (-> m :stroke :color) (->alpha stroke-alpha))
+        stroke-color (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
         stroke       (ol.style.Stroke. #js{:color stroke-color :width (if hover? 5 3)})]
     (ol.style.Style.
