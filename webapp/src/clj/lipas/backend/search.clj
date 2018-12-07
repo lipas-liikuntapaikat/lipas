@@ -125,7 +125,6 @@
 
 (defn search
   [client idx-name params]
-  (prn params)
   (es/request client {:method :get
                       :url    (es-utils/url [idx-name :_doc :_search])
                       :body   params}))
