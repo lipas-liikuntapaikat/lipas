@@ -3,7 +3,7 @@
             [qbits.spandex.utils :as es-utils]
             [clojure.core.async :as async]))
 
-(def *es-type* "_doc") ; See https://bit.ly/2wslBqY
+(def es-type "_doc") ; See https://bit.ly/2wslBqY
 
 (defn create-cli
   [{:keys [hosts user password]}]
@@ -49,13 +49,13 @@
 (defn index!
   [client idx-name id-fn data]
   (es/request client {:method :put
-                      :url    (es-utils/url [idx-name *es-type* (id-fn data)])
+                      :url    (es-utils/url [idx-name es-type (id-fn data)])
                       :body   data}))
 
 (defn delete!
   [client idx-name id]
   (es/request client {:method :delete
-                      :url    (es-utils/url [idx-name *es-type* id])}))
+                      :url    (es-utils/url [idx-name es-type id])}))
 
 (defn bulk-index!
   ([client data]
@@ -148,4 +148,4 @@
    entry])
 
 (defn ->bulk [es-index id-fn data]
-  (reduce into (map (partial wrap-es-bulk es-index *es-type* id-fn) data)))
+  (reduce into (map (partial wrap-es-bulk es-index es-type id-fn) data)))
