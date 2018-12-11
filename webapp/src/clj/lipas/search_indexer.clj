@@ -83,5 +83,4 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"
-                           :search-string "kissa*"})
-    ))
+                           :search-string "kissa*"})))

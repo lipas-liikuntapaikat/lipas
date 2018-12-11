@@ -1,6 +1,7 @@
 (ns lipas.migrate-data
   (:require [cheshire.core :as json]
             [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
             [clojure.pprint :as pprint]
             [clojure.set :as set]
             [clojure.spec.alpha :as spec]
@@ -347,7 +348,7 @@
     [mat2 (or info (when-not mat2 mat1))]))
 
 (defn ->sports-site [portal-entry lipas-entry]
-  (let [props          (:properties lipas-entry)]
+  (let [props (:properties lipas-entry)]
     {:lipas-id (-> lipas-entry :sportsPlaceId)
      :hall-id  (get portal-entry "Halli_ID")
 
@@ -376,6 +377,8 @@
      :properties (-> props
                      (select-keys (keys prop-mappings))
                      (set/rename-keys prop-mappings)
+                     (assoc :school-use? (-> lipas-entry :schoolUse))
+                     (assoc :free-use? (-> lipas-entry :freeUse))
                      (assoc :surface-material
                             (first (resolve-surface-material props)))
                      (assoc :surface-material-info
@@ -727,7 +730,8 @@
       (pprint/write (spec/explain :lipas/sports-site m))
       (pprint/write m))))
 
-(defn migrate-from-es-dump! [db user fpath]
+(defn migrate-from-es-dump! [db user fpath err-path]
+  (io/make-parents (str err-path "foo"))
   (with-open [rdr (clojure.java.io/reader fpath)]
     (doseq [l     (line-seq rdr)
             :let  [m (:_source (json/decode l true))]
@@ -736,7 +740,7 @@
         (if (utils/validate-noisy :lipas/sports-site data)
           (db/upsert-sports-site! db user data)
           ;;(throw (ex-info "Invalid site" {:data data}))
-          (save-invalid! data "/tmp/invalid/")
+          (save-invalid! data err-path)
           )))))
 
 (defn -main [& args]
@@ -751,7 +755,9 @@
                     (migrate-ice-stadiums! db user ice-stadiums-csv-path)
                     (migrate-swimming-pools! db user swimming-pools-csv-path))
       "--lipas"   (migrate-from-old-lipas! db user (rest args))
-      "--es-dump" (migrate-from-es-dump! db user (first (rest args)))
+      "--es-dump" (migrate-from-es-dump! db user
+                                         (first (rest args))
+                                         (second (rest args)))
       (log/error "Please provide --csv or --lipas 123 234 ..."))))
 
 (comment
@@ -772,4 +778,4 @@
   (def db (:db (backend/start-system! config)))
   (def user (core/get-user db "import@lipas.fi"))
 
-  (migrate-from-es-dump! db user fpath))
+  (migrate-from-es-dump! db user fpath "/tmp/invalid/"))
