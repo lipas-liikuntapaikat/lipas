@@ -1359,4 +1359,24 @@
     :description
     {:fi "Juoksuradan, pyöräilyradan tms. pituus metreinä",
      :se "Löpbanans, rundbanans el.dyl. längd i meter",
+     :en ""}}
+   :school-use?
+   {:name
+    {:fi "Koululiikuntapaikka",
+     :se "Idrottsanläggning för skola",
+     :en "Sport facility in school use"},
+    :data-type "boolean",
+    :description
+    {:fi "Liikuntapaikka on koulun käytettävissä.",
+     :se "",
+     :en ""}}
+   :free-use?
+   {:name
+    {:fi "Vapaa käyttö",
+     :se "Fritt tillträde",
+     :en "Free usage"},
+    :data-type "boolean",
+    :description {:fi "Liikuntapaikka on kenen tahansa vapaasti
+    käytettävissä ilman vuoron varausta tai pääsymaksua.",
+     :se "",
      :en ""}}})

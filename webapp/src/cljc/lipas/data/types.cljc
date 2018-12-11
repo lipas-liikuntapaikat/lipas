@@ -17,6 +17,7 @@
     {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :match-clock?          {:priority 0},
      :ice-rinks-count       {:priority 0},
@@ -25,6 +26,7 @@
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
      :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
      :light-roof?           {:priority 0}}},
    1520
    {:name
@@ -46,6 +48,7 @@
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :match-clock?          {:priority 0},
      :fields-count          {:priority 0},
@@ -54,6 +57,7 @@
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
      :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
      :light-roof?           {:priority 0}}},
    2320
    {:name
@@ -73,7 +77,9 @@
      :surface-material         {:priority 1},
      :area-m2                  {:priority 1},
      :height-m                 {:priority 0},
-     :gymnastic-routines-count {:priority 0}}},
+     :gymnastic-routines-count {:priority 0},
+     :school-use?              {:priority 0},
+     :free-use?                {:priority 0}}},
    6130
    {:name
     {:fi "Esteratsastuskenttä",
@@ -87,14 +93,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:surface-material-info {:priority 0},
-     :area-m2               {:priority 1},
-     :ligthing?             {:priority 1},
-     :field-width-m         {:priority 1},
+    {:surface-material      {:priority 1},
+     :surface-material-info {:priority 0},
+     :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :toilet?               {:priority 0},
-     :kiosk?                {:priority 0},
-     :surface-material      {:priority 1}}},
+     :area-m2               {:priority 1},
+     :field-width-m         {:priority 1},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0}}},
    6210
    {:name
     {:fi "Koiraurheilualue",
@@ -111,14 +119,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:track-length-m        {:priority 0},
-     :toilet?               {:priority 0},
-     :field-width-m         {:priority 0},
-     :area-m2               {:priority 1},
-     :ligthing?             {:priority 1},
-     :surface-material      {:priority 1},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :field-length-m        {:priority 0}}},
+     :free-use?             {:priority 0},
+     :field-length-m        {:priority 0},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 1},
+     :field-width-m         {:priority 0},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
+     :track-length-m        {:priority 0}}},
    1370
    {:name
     {:fi "Tenniskenttäalue",
@@ -138,6 +148,7 @@
     {:heating?              {:priority 0},
      :surface-material      {:priority 1},
      :surface-material-info {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :fields-count          {:priority 1},
      :toilet?               {:priority 0},
@@ -145,6 +156,7 @@
      :field-width-m         {:priority 1},
      :training-wall?        {:priority 0},
      :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
      :light-roof?           {:priority 0}}},
    1360
    {:name
@@ -165,6 +177,7 @@
      :surface-material-info      {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :field-length-m             {:priority 1},
      :match-clock?               {:priority 0},
      :fields-count               {:priority 0},
@@ -175,7 +188,8 @@
      :scoreboard?                {:priority 0},
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 1},
-     :covered-stand-person-count {:priority 0}}},
+     :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0}}},
    110
    {:name
     {:fi "Erämaa-alue", :se "Vildmarksområde", :en "Wilderness area"},
@@ -189,7 +203,10 @@
     :type-code     110,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    2360
    {:name
     {:fi "Sisäampumarata",
@@ -206,15 +223,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:free-rifle-shooting?     {:priority 0},
-     :track-length-m           {:priority 1},
+    {:surface-material         {:priority 0},
+     :surface-material-info    {:priority 0},
+     :free-use?                {:priority 0},
      :air-gun-shooting?        {:priority 0},
-     :surface-material         {:priority 0},
      :pistol-shooting?         {:priority 0},
-     :rifle-shooting?          {:priority 0},
      :shooting-positions-count {:priority 1},
      :area-m2                  {:priority 1},
-     :surface-material-info    {:priority 0}}},
+     :rifle-shooting?          {:priority 0},
+     :free-rifle-shooting?     {:priority 0},
+     :school-use?              {:priority 0},
+     :track-length-m           {:priority 1}}},
    5310
    {:name
     {:fi "Moottoriurheilukeskus",
@@ -236,6 +255,7 @@
      :automated-timing?          {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :finish-line-camera?        {:priority 0},
      :track-width-m              {:priority 0},
      :toilet?                    {:priority 0},
@@ -244,6 +264,7 @@
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 0},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :track-length-m             {:priority 1}}},
    1560
    {:name
@@ -258,14 +279,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:lifts-count           {:priority nil},
-     :toilet?               {:priority 0},
-     :track-width-m         {:priority 0},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :surface-material      {:priority 1},
+     :lifts-count           {:priority nil},
+     :free-use?             {:priority 0},
+     :track-width-m         {:priority 0},
      :altitude-difference   {:priority 1},
-     :track-length-m        {:priority 1},
-     :ligthing?             {:priority 1}}},
+     :toilet?               {:priority 0},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
+     :track-length-m        {:priority 1}}},
    205
    {:name
     {:fi "Rantautumispaikka",
@@ -284,7 +307,9 @@
     {:toilet?                           {:priority 0},
      :boat-launching-spot?              {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :pier?                             {:priority 0}}},
+     :pier?                             {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    2150
    {:name
     {:fi "Liikuntasali", :se "Idrottssal", :en "Gymnastics hall"},
@@ -303,6 +328,7 @@
      :surface-material        {:priority 1},
      :basketball-fields-count {:priority 0},
      :surface-material-info   {:priority 0},
+     :free-use?               {:priority 0},
      :tennis-courts-count     {:priority 0},
      :field-length-m          {:priority 1},
      :match-clock?            {:priority 0},
@@ -315,7 +341,8 @@
      :floorball-fields-count  {:priority 0},
      :handball-fields-count   {:priority 0},
      :volleyball-fields-count {:priority 0},
-     :spinning-hall?          {:priority 0}}},
+     :spinning-hall?          {:priority 0},
+     :school-use?             {:priority 0}}},
    2210
    {:name          {:fi "Liikuntahalli", :se "Idrottshall", :en "Sports hall "},
     :description
@@ -335,6 +362,7 @@
      :surface-material-info          {:priority 0},
      :kiosk?                         {:priority 0},
      :stand-capacity-person          {:priority 0},
+     :free-use?                      {:priority 0},
      :sprint-lanes-count             {:priority 0},
      :javelin-throw-places-count     {:priority 0},
      :tennis-courts-count            {:priority 0},
@@ -363,6 +391,7 @@
      :handball-fields-count          {:priority 0},
      :volleyball-fields-count        {:priority 0},
      :climbing-wall?                 {:priority 0},
+     :school-use?                    {:priority 0},
      :highjump-places-count          {:priority 0}}},
    101
    {:name          {:fi "Lähipuisto", :se "Närpark", :en "Neighbourhood park"},
@@ -376,7 +405,11 @@
     :type-code     101,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:playground? {:priority 0}, :area-km2 {:priority 0}}},
+    :props
+    {:playground? {:priority 0},
+     :area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    102
    {:name
     {:fi "Ulkoilupuisto", :se "Friluftspark", :en "Leisure park"},
@@ -393,7 +426,9 @@
     :props
     {:playground?                       {:priority 0},
      :area-km2                          {:priority 0},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    7000
    {:name
     {:fi "Huoltorakennukset",
@@ -408,14 +443,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:toilet?           {:priority 0},
-     :area-m2           {:priority 0},
+    {:kiosk?            {:priority 0},
+     :free-use?         {:priority 0},
+     :ski-service?      {:priority 0},
+     :toilet?           {:priority 0},
      :shower?           {:priority 0},
      :changing-rooms?   {:priority 0},
-     :ski-service?      {:priority 0},
+     :area-m2           {:priority 0},
+     :equipment-rental? {:priority 0},
      :sauna?            {:priority 0},
-     :kiosk?            {:priority 0},
-     :equipment-rental? {:priority 0}}},
+     :school-use?       {:priority 0}}},
    1110
    {:name          {:fi "Liikuntapuisto", :se "Idrottspark", :en "Sports park"},
     :description
@@ -433,7 +470,9 @@
      :playground?        {:priority 0},
      :accessibility-info {:priority nil},
      :ligthing?          {:priority 1},
-     :fields-count       {:priority 0}}},
+     :fields-count       {:priority 0},
+     :school-use?        {:priority 0},
+     :free-use?          {:priority 0}}},
    6220
    {:name
     {:fi "Koiraurheiluhalli",
@@ -450,15 +489,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:toilet?               {:priority 0},
-     :field-width-m         {:priority 0},
-     :field-length-m        {:priority 0},
-     :area-m2               {:priority 1},
-     :kiosk?                {:priority 0},
-     :ligthing?             {:priority 0},
-     :heating?              {:priority 0},
+    {:heating?              {:priority 0},
      :surface-material      {:priority 1},
-     :surface-material-info {:priority 0}}},
+     :surface-material-info {:priority 0},
+     :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
+     :field-length-m        {:priority 0},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 1},
+     :field-width-m         {:priority 0},
+     :ligthing?             {:priority 0},
+     :school-use?           {:priority 0}}},
    4530
    {:name
     {:fi "Pyöräsuunnistusalue",
@@ -471,7 +512,10 @@
     :type-code     4530,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4720
    {:name
     {:fi "Kiipeilykallio", :se "Klätterberg", :en "Climbing rock"},
@@ -486,15 +530,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:ligthing?                         {:priority 0},
+    {:surface-material                  {:priority 0},
+     :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
      :climbing-routes-count             {:priority 0},
-     :surface-material                  {:priority 0},
      :ice-climbing?                     {:priority 0},
      :climbing-wall-height-m            {:priority 1},
-     :surface-material-info             {:priority 0},
+     :area-m2                           {:priority 1},
      :climbing-wall-width-m             {:priority 1},
-     :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :area-m2                           {:priority 1}}},
+     :ligthing?                         {:priority 0},
+     :school-use?                       {:priority 0}}},
    1330
    {:name
     {:fi "Beachvolleykenttä",
@@ -517,7 +563,9 @@
      :ligthing?             {:priority 1},
      :area-m2               {:priority 1},
      :surface-material-info {:priority 0},
-     :toilet?               {:priority 0}}},
+     :toilet?               {:priority 0},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    206
    {:name
     {:fi "Ruoanlaittopaikka",
@@ -532,7 +580,9 @@
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
-     :toilet?                           {:priority 0}}},
+     :toilet?                           {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4830
    {:name
     {:fi "Jousiammuntarata", :se "Bågskyttebana", :en "Archery range"},
@@ -551,7 +601,9 @@
      :track-width-m            {:priority 0},
      :area-m2                  {:priority 0},
      :kiosk?                   {:priority 0},
-     :shooting-positions-count {:priority 1}}},
+     :shooting-positions-count {:priority 1},
+     :school-use?              {:priority 0},
+     :free-use?                {:priority 0}}},
    1180
    {:name
     {:fi "Frisbeegolfrata",
@@ -564,7 +616,7 @@
     :type-code     1180,
     :status        "active",
     :geometry-type "Point",
-    :props         {}},
+    :props         {:school-use? {:priority 0}, :free-use? {:priority 0}}},
    4422
    {:name
     {:fi "Moottorikelkkaura",
@@ -581,7 +633,9 @@
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
      :route-width-m                     {:priority 0},
      :route-length-km                   {:priority 1},
-     :rest-places-count                 {:priority 0}}},
+     :rest-places-count                 {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4430
    {:name          {:fi "Hevosreitti", :se "Hästled", :en "Horse track"},
     :description
@@ -600,7 +654,9 @@
      :lit-route-length-km   {:priority 1},
      :surface-material-info {:priority 0},
      :route-width-m         {:priority 1},
-     :route-length-km       {:priority 1}}},
+     :route-length-km       {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    204
    {:name
     {:fi "Luontotorni",
@@ -618,7 +674,9 @@
     :geometry-type "Point",
     :props
     {:toilet?                           {:priority nil},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    106
    {:name
     {:fi "Monikäyttöalue, jolla on virkistyspalveluita",
@@ -637,7 +695,9 @@
     :props
     {:area-km2                          {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :playground?                       {:priority 0}}},
+     :playground?                       {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4610
    {:name
     {:fi "Ampumahiihdon harjoittelualue",
@@ -658,6 +718,7 @@
      :kiosk?                   {:priority 0},
      :summer-usage?            {:priority 0},
      :stand-capacity-person    {:priority 0},
+     :free-use?                {:priority 0},
      :ski-service?             {:priority 0},
      :finish-line-camera?      {:priority 0},
      :ski-track-traditional?   {:priority 0},
@@ -669,6 +730,7 @@
      :scoreboard?              {:priority 0},
      :loudspeakers?            {:priority 0},
      :ski-track-freestyle?     {:priority 0},
+     :school-use?              {:priority 0},
      :route-length-km          {:priority 0}}},
    2610
    {:name          {:fi "Keilahalli", :se "Bowlinghall", :en "Bowling alley"},
@@ -682,14 +744,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:cosmic-bowling?     {:priority 0},
-     :loudspeakers?       {:priority 0},
-     :kiosk?              {:priority 0},
-     :scoreboard?         {:priority 0},
-     :area-m2             {:priority 0},
+    {:kiosk?              {:priority 0},
+     :free-use?           {:priority 0},
      :automated-scoring?  {:priority 0},
      :bowling-lanes-count {:priority 1},
-     :toilet?             {:priority 0}}},
+     :toilet?             {:priority 0},
+     :area-m2             {:priority 0},
+     :cosmic-bowling?     {:priority 0},
+     :scoreboard?         {:priority 0},
+     :loudspeakers?       {:priority 0},
+     :school-use?         {:priority 0}}},
    2110
    {:name
     {:fi "Kuntokeskus", :se "Motionscenter", :en "Fitness centre"},
@@ -704,15 +768,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:spinning-hall?             {:priority 0},
-     :area-m2                    {:priority 1},
-     :group-exercise-rooms-count {:priority 0},
-     :weight-lifting-spots-count {:priority 0},
-     :surface-material           {:priority 1},
-     :exercise-machines-count    {:priority 0},
-     :boxing-rings-count         {:priority 0},
+    {:surface-material           {:priority 1},
      :surface-material-info      {:priority 0},
-     :kiosk?                     {:priority 0}}},
+     :kiosk?                     {:priority 0},
+     :free-use?                  {:priority 0},
+     :group-exercise-rooms-count {:priority 0},
+     :area-m2                    {:priority 1},
+     :boxing-rings-count         {:priority 0},
+     :weight-lifting-spots-count {:priority 0},
+     :spinning-hall?             {:priority 0},
+     :school-use?                {:priority 0},
+     :exercise-machines-count    {:priority 0}}},
    3120
    {:name          {:fi "Uima-allas", :se "Simbassäng", :en "Swimming pool"},
     :description
@@ -726,15 +792,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:swimming-pool-count {:priority 0},
+    {:pool-tracks-count   {:priority 0},
+     :free-use?           {:priority 0},
+     :pool-width-m        {:priority 0},
+     :pool-min-depth-m    {:priority 0},
+     :swimming-pool-count {:priority 0},
      :pool-water-area-m2  {:priority 1},
      :pool-length-m       {:priority 1},
-     :pool-min-depth-m    {:priority 0},
-     :pool-temperature-c  {:priority 0},
      :pool-max-depth-m    {:priority 0},
-     :pool-tracks-count   {:priority 0},
-     :pool-width-m        {:priority 0},
-     :accessibility-info  {:priority 0}}},
+     :accessibility-info  {:priority 0},
+     :pool-temperature-c  {:priority 0},
+     :school-use?         {:priority 0}}},
    104
    {:name
     {:fi "Retkeilyalue", :se "Utflyktsområde", :en "Hiking area"},
@@ -750,7 +818,9 @@
     :geometry-type "Polygon",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
-     :area-km2                          {:priority 0}}},
+     :area-km2                          {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    2330
    {:name
     {:fi "Pöytätennistila",
@@ -769,7 +839,9 @@
      :height-m              {:priority 0},
      :kiosk?                {:priority 0},
      :area-m2               {:priority 1},
-     :table-tennis-count    {:priority 1}}},
+     :table-tennis-count    {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    2280
    {:name          {:fi "Tennishalli", :se "Tennishall", :en "Tennis hall"},
     :description
@@ -785,6 +857,7 @@
      :surface-material-info   {:priority 0},
      :kiosk?                  {:priority 0},
      :stand-capacity-person   {:priority 0},
+     :free-use?               {:priority 0},
      :tennis-courts-count     {:priority 1},
      :field-length-m          {:priority 0},
      :badminton-courts-count  {:priority 0},
@@ -794,7 +867,8 @@
      :scoreboard?             {:priority 0},
      :floorball-fields-count  {:priority 0},
      :squash-courts-count     {:priority 0},
-     :volleyball-fields-count {:priority 0}}},
+     :volleyball-fields-count {:priority 0},
+     :school-use?             {:priority 0}}},
    6140
    {:name          {:fi "Ravirata", :se "Travbana", :en "Horse racing track"},
     :description
@@ -810,6 +884,7 @@
      :automated-timing?          {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :finish-line-camera?        {:priority 0},
      :track-width-m              {:priority 1},
      :toilet?                    {:priority 0},
@@ -817,6 +892,7 @@
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 1},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :track-length-m             {:priority 1}}},
    2140
    {:name
@@ -837,12 +913,14 @@
     {:surface-material           {:priority 1},
      :surface-material-info      {:priority 0},
      :kiosk?                     {:priority 0},
+     :free-use?                  {:priority 0},
      :group-exercise-rooms-count {:priority 0},
      :tatamis-count              {:priority 0},
      :area-m2                    {:priority 1},
      :wrestling-mats-count       {:priority 0},
      :boxing-rings-count         {:priority 0},
      :weight-lifting-spots-count {:priority 0},
+     :school-use?                {:priority 0},
      :exercise-machines-count    {:priority 0}}},
    4220
    {:name          {:fi "Hiihtotunneli", :se "Skidtunnel", :en "Ski tunnel"},
@@ -860,6 +938,7 @@
     {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
      :ski-service?          {:priority 0},
      :altitude-difference   {:priority 1},
      :route-width-m         {:priority 0},
@@ -867,6 +946,7 @@
      :area-m2               {:priority 0},
      :equipment-rental?     {:priority 0},
      :accessibility-info    {:priority 0},
+     :school-use?           {:priority 0},
      :route-length-km       {:priority 1}}},
    2230
    {:name
@@ -889,6 +969,7 @@
      :surface-material-info   {:priority 0},
      :kiosk?                  {:priority 0},
      :stand-capacity-person   {:priority 0},
+     :free-use?               {:priority 0},
      :tennis-courts-count     {:priority 0},
      :field-length-m          {:priority 1},
      :match-clock?            {:priority 0},
@@ -900,7 +981,8 @@
      :scoreboard?             {:priority 0},
      :football-fields-count   {:priority 0},
      :loudspeakers?           {:priority 0},
-     :volleyball-fields-count {:priority 0}}},
+     :volleyball-fields-count {:priority 0},
+     :school-use?             {:priority 0}}},
    1350
    {:name
     {:fi "Jalkapallostadion",
@@ -922,6 +1004,7 @@
      :surface-material-info      {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :finish-line-camera?        {:priority 0},
      :field-length-m             {:priority 1},
      :match-clock?               {:priority 0},
@@ -933,6 +1016,7 @@
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 1},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :light-roof?                {:priority 0}}},
    4840
    {:name
@@ -950,7 +1034,9 @@
     {:shooting-positions-count {:priority 1},
      :toilet?                  {:priority nil},
      :track-length-m           {:priority 1},
-     :ligthing?                {:priority 1}}},
+     :ligthing?                {:priority 1},
+     :school-use?              {:priority 0},
+     :free-use?                {:priority 0}}},
    1510
    {:name
     {:fi "Tekojääkenttä",
@@ -971,6 +1057,7 @@
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :match-clock?          {:priority 0},
      :fields-count          {:priority 0},
@@ -980,6 +1067,7 @@
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
      :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
      :light-roof?           {:priority 0}}},
    5350
    {:name          {:fi "Kiihdytysrata", :se "Dragracingbana", :en "Dragstrip"},
@@ -996,12 +1084,14 @@
      :automated-timing?          {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :track-width-m              {:priority 0},
      :area-m2                    {:priority 0},
      :scoreboard?                {:priority 0},
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 0},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :track-length-m             {:priority 1}}},
    4440
    {:name
@@ -1019,15 +1109,17 @@
     :status        "active",
     :geometry-type "LineString",
     :props
-    {:ski-track-freestyle?   {:priority 0},
-     :lit-route-length-km    {:priority 1},
-     :toilet?                {:priority 0},
-     :route-length-km        {:priority 1},
-     :route-width-m          {:priority 0},
+    {:surface-material       {:priority 1},
      :surface-material-info  {:priority 0},
-     :surface-material       {:priority 1},
+     :free-use?              {:priority 0},
+     :ski-track-traditional? {:priority 0},
+     :route-width-m          {:priority 0},
+     :toilet?                {:priority 0},
      :rest-places-count      {:priority 0},
-     :ski-track-traditional? {:priority 0}}},
+     :lit-route-length-km    {:priority 1},
+     :ski-track-freestyle?   {:priority 0},
+     :school-use?            {:priority 0},
+     :route-length-km        {:priority 1}}},
    2520
    {:name
     {:fi "Kilpajäähalli",
@@ -1057,6 +1149,7 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-1-length-m      {:priority 0},
      :finish-line-camera?   {:priority 0},
      :match-clock?          {:priority 0},
@@ -1070,7 +1163,8 @@
      :curling-lanes-count   {:priority 0},
      :scoreboard?           {:priority 0},
      :loudspeakers?         {:priority 0},
-     :field-3-area-m2       {:priority 0}}},
+     :field-3-area-m2       {:priority 0},
+     :school-use?           {:priority 0}}},
    4710
    {:name
     {:fi "Ulkokiipeilyseinä",
@@ -1087,14 +1181,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:area-m2                {:priority 1},
-     :climbing-routes-count  {:priority 0},
-     :climbing-wall-width-m  {:priority 1},
-     :ice-climbing?          {:priority 0},
-     :surface-material       {:priority 0},
-     :climbing-wall-height-m {:priority 1},
+    {:surface-material       {:priority 0},
      :surface-material-info  {:priority 0},
-     :ligthing?              {:priority 0}}},
+     :free-use?              {:priority 0},
+     :climbing-routes-count  {:priority 0},
+     :ice-climbing?          {:priority 0},
+     :climbing-wall-height-m {:priority 1},
+     :area-m2                {:priority 1},
+     :climbing-wall-width-m  {:priority 1},
+     :ligthing?              {:priority 0},
+     :school-use?            {:priority 0}}},
    304
    {:name
     {:fi "Ulkoilumaja/hiihtomaja",
@@ -1109,7 +1205,9 @@
     :geometry-type "Point",
     :props
     {:toilet?                           {:priority 0},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4412
    {:name          {:fi "Pyöräilyreitti", :se "Cykelled", :en "Biking route"},
     :description
@@ -1120,14 +1218,16 @@
     :status        "active",
     :geometry-type "LineString",
     :props
-    {:route-width-m                     {:priority 0},
+    {:surface-material                  {:priority 1},
+     :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :route-length-km                   {:priority 1},
-     :lit-route-length-km               {:priority 1},
-     :surface-material                  {:priority 1},
-     :rest-places-count                 {:priority 0},
+     :route-width-m                     {:priority 0},
      :toilet?                           {:priority 0},
-     :surface-material-info             {:priority 0}}},
+     :rest-places-count                 {:priority 0},
+     :lit-route-length-km               {:priority 1},
+     :school-use?                       {:priority 0},
+     :route-length-km                   {:priority 1}}},
    4820
    {:name
     {:fi "Ampumaurheilukeskus",
@@ -1145,6 +1245,7 @@
     :props
     {:kiosk?                   {:priority 0},
      :stand-capacity-person    {:priority 0},
+     :free-use?                {:priority 0},
      :track-width-m            {:priority 0},
      :air-gun-shooting?        {:priority 0},
      :toilet?                  {:priority 0},
@@ -1159,6 +1260,7 @@
      :winter-usage?            {:priority 0},
      :ligthing?                {:priority 1},
      :accessibility-info       {:priority 0},
+     :school-use?              {:priority 0},
      :track-length-m           {:priority 1}}},
    1170
    {:name          {:fi "Pyöräilyrata", :se "Cykelbana", :en "Velodrome"},
@@ -1175,7 +1277,9 @@
      :area-m2               {:priority 0},
      :surface-material-info {:priority 0},
      :ligthing?             {:priority 1},
-     :surface-material      {:priority 1}}},
+     :surface-material      {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    4404
    {:name          {:fi "Luontopolku", :se "Naturstig", :en "Nature trail"},
     :description
@@ -1189,14 +1293,16 @@
     :status        "active",
     :geometry-type "LineString",
     :props
-    {:lit-route-length-km               {:priority 0},
+    {:surface-material                  {:priority 0},
      :surface-material-info             {:priority 0},
-     :surface-material                  {:priority 0},
-     :accessibility-info                {:priority 0},
-     :rest-places-count                 {:priority 0},
+     :free-use?                         {:priority 0},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
      :route-width-m                     {:priority 0},
-     :route-length-km                   {:priority 1},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :rest-places-count                 {:priority 0},
+     :lit-route-length-km               {:priority 0},
+     :accessibility-info                {:priority 0},
+     :school-use?                       {:priority 0},
+     :route-length-km                   {:priority 1}}},
    108
    {:name
     {:fi "Virkistysmetsä",
@@ -1212,7 +1318,10 @@
     :type-code     108,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4401
    {:name          {:fi "Kuntorata", :se "Konditionsbana", :en "Jogging track"},
     :description
@@ -1228,6 +1337,7 @@
     :props
     {:surface-material                  {:priority 1},
      :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
      :outdoor-exercise-machines?        {:priority 0},
      :route-width-m                     {:priority 0},
@@ -1236,6 +1346,7 @@
      :shooting-positions-count          {:priority 0},
      :lit-route-length-km               {:priority 1},
      :accessibility-info                {:priority 0},
+     :school-use?                       {:priority 0},
      :route-length-km                   {:priority 1}}},
    2350
    {:name
@@ -1254,7 +1365,9 @@
      :area-m2                    {:priority 1},
      :surface-material-info      {:priority 0},
      :kiosk?                     {:priority 0},
-     :height-m                   {:priority 0}}},
+     :height-m                   {:priority 0},
+     :school-use?                {:priority 0},
+     :free-use?                  {:priority 0}}},
    2340
    {:name
     {:fi "Miekkailutila",
@@ -1273,7 +1386,9 @@
      :surface-material-info {:priority 0},
      :height-m              {:priority 0},
      :kiosk?                {:priority 0},
-     :fencing-bases-count   {:priority 1}}},
+     :fencing-bases-count   {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    2120
    {:name          {:fi "Kuntosali", :se "Gym", :en "Gym"},
     :description
@@ -1285,14 +1400,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:group-exercise-rooms-count {:priority 0},
-     :weight-lifting-spots-count {:priority 0},
-     :exercise-machines-count    {:priority 0},
+    {:surface-material           {:priority 1},
      :surface-material-info      {:priority 0},
+     :kiosk?                     {:priority 0},
+     :free-use?                  {:priority 0},
+     :group-exercise-rooms-count {:priority 0},
      :area-m2                    {:priority 1},
+     :weight-lifting-spots-count {:priority 0},
      :spinning-hall?             {:priority 0},
-     :surface-material           {:priority 1},
-     :kiosk?                     {:priority 0}}},
+     :school-use?                {:priority 0},
+     :exercise-machines-count    {:priority 0}}},
    109
    {:name
     {:fi "Valtion retkeilyalue",
@@ -1308,7 +1425,10 @@
     :type-code     109,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    5160
    {:name
     {:fi "Soudun ja melonnan sisäharjoittelutila",
@@ -1321,7 +1441,10 @@
     :type-code     5160,
     :status        "active",
     :geometry-type "Point",
-    :props         {:area-m2 {:priority 0}}},
+    :props
+    {:area-m2     {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    1550
    {:name
     {:fi "Luistelureitti", :se "Skridskoled", :en "Ice-skating route"},
@@ -1336,14 +1459,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:equipment-rental?                 {:priority 0},
-     :kiosk?                            {:priority 0},
-     :surface-material                  {:priority 1},
-     :ligthing?                         {:priority 1},
-     :toilet?                           {:priority 0},
-     :track-width-m                     {:priority 1},
-     :may-be-shown-in-excursion-map-fi? {:priority 0},
+    {:surface-material                  {:priority 1},
      :surface-material-info             {:priority 0},
+     :kiosk?                            {:priority 0},
+     :free-use?                         {:priority 0},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :track-width-m                     {:priority 1},
+     :toilet?                           {:priority 0},
+     :equipment-rental?                 {:priority 0},
+     :ligthing?                         {:priority 1},
+     :school-use?                       {:priority 0},
      :track-length-m                    {:priority 1}}},
    3230
    {:name
@@ -1358,15 +1483,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:changing-rooms?                   {:priority 0},
-     :kiosk?                            {:priority 0},
-     :other-platforms?                  {:priority 0},
-     :shower?                           {:priority 0},
+    {:kiosk?                            {:priority 0},
+     :free-use?                         {:priority 0},
      :pier?                             {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :sauna?                            {:priority 0},
+     :beach-length-m                    {:priority 1},
      :toilet?                           {:priority 0},
-     :beach-length-m                    {:priority 1}}},
+     :shower?                           {:priority 0},
+     :changing-rooms?                   {:priority 0},
+     :sauna?                            {:priority 0},
+     :other-platforms?                  {:priority 0},
+     :school-use?                       {:priority 0}}},
    5130
    {:name
     {:fi "Moottoriveneurheilualue",
@@ -1382,7 +1509,9 @@
     :props
     {:pier?             {:priority 0},
      :area-km2          {:priority 0},
-     :boat-places-count {:priority 0}}},
+     :boat-places-count {:priority 0},
+     :school-use?       {:priority 0},
+     :free-use?         {:priority 0}}},
    5110
    {:name
     {:fi "Soutustadion", :se "Roddstadion", :en "Rowing stadium"},
@@ -1403,7 +1532,9 @@
      :automated-timing?     {:priority 0},
      :area-m2               {:priority 0},
      :scoreboard?           {:priority 0},
-     :track-length-m        {:priority 1}}},
+     :track-length-m        {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    3240
    {:name
     {:fi "Talviuintipaikka",
@@ -1423,7 +1554,9 @@
      :ice-reduction?  {:priority 0},
      :changing-rooms? {:priority 0},
      :toilet?         {:priority 0},
-     :shower?         {:priority 0}}},
+     :shower?         {:priority 0},
+     :school-use?     {:priority 0},
+     :free-use?       {:priority 0}}},
    4510
    {:name
     {:fi "Suunnistusalue",
@@ -1438,7 +1571,10 @@
     :type-code     4510,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4240
    {:name
     {:fi "Lasketteluhalli",
@@ -1455,15 +1591,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:altitude-difference   {:priority 1},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :area-m2               {:priority 0},
-     :toilet?               {:priority 0},
-     :route-length-km       {:priority 1},
-     :ski-service?          {:priority 0},
      :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
+     :ski-service?          {:priority 0},
+     :altitude-difference   {:priority 1},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 0},
      :equipment-rental?     {:priority 0},
-     :surface-material      {:priority 1}}},
+     :school-use?           {:priority 0},
+     :route-length-km       {:priority 1}}},
    2270
    {:name          {:fi "Squash-halli", :se "Squashhall", :en "Squash hall"},
     :description
@@ -1482,6 +1620,7 @@
      :surface-material-info   {:priority 0},
      :kiosk?                  {:priority 0},
      :stand-capacity-person   {:priority 0},
+     :free-use?               {:priority 0},
      :tennis-courts-count     {:priority 0},
      :field-length-m          {:priority 0},
      :badminton-courts-count  {:priority 0},
@@ -1491,7 +1630,8 @@
      :scoreboard?             {:priority 0},
      :floorball-fields-count  {:priority 0},
      :squash-courts-count     {:priority 1},
-     :volleyball-fields-count {:priority 0}}},
+     :volleyball-fields-count {:priority 0},
+     :school-use?             {:priority 0}}},
    4210
    {:name          {:fi "Curlingrata", :se "Curlingbana", :en "Curling sheet"},
     :description
@@ -1507,7 +1647,9 @@
      :toilet?               {:priority 0},
      :surface-material-info {:priority 0},
      :area-m2               {:priority 1},
-     :fields-count          {:priority 1}}},
+     :fields-count          {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    301
    {:name
     {:fi "Laavu, kota tai kammi",
@@ -1522,7 +1664,9 @@
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
-     :toilet?                           {:priority nil}}},
+     :toilet?                           {:priority nil},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    111
    {:name
     {:fi "Kansallispuisto", :se "Nationalpark", :en "National park"},
@@ -1536,7 +1680,10 @@
     :type-code     111,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4630
    {:name
     {:fi "Kilpahiihtokeskus",
@@ -1553,6 +1700,7 @@
     {:automated-timing?      {:priority 0},
      :kiosk?                 {:priority 0},
      :stand-capacity-person  {:priority 0},
+     :free-use?              {:priority 0},
      :ski-service?           {:priority 0},
      :finish-line-camera?    {:priority 0},
      :ski-track-traditional? {:priority 0},
@@ -1567,6 +1715,7 @@
      :loudspeakers?          {:priority 0},
      :accessibility-info     {:priority 0},
      :ski-track-freestyle?   {:priority 0},
+     :school-use?            {:priority 0},
      :route-length-km        {:priority 0}}},
    4810
    {:name
@@ -1581,6 +1730,7 @@
     :props
     {:kiosk?                   {:priority 0},
      :stand-capacity-person    {:priority 0},
+     :free-use?                {:priority 0},
      :track-width-m            {:priority 0},
      :air-gun-shooting?        {:priority 0},
      :toilet?                  {:priority 0},
@@ -1595,6 +1745,7 @@
      :winter-usage?            {:priority 0},
      :ligthing?                {:priority 1},
      :accessibility-info       {:priority 0},
+     :school-use?              {:priority 0},
      :track-length-m           {:priority 1}}},
    1540
    {:name
@@ -1609,15 +1760,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:stand-capacity-person {:priority 0},
-     :kiosk?                {:priority 0},
-     :toilet?               {:priority 0},
-     :track-length-m        {:priority 1},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :ligthing?             {:priority 1},
+     :kiosk?                {:priority 0},
+     :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :track-width-m         {:priority 1},
-     :surface-material      {:priority 1},
-     :area-m2               {:priority 0}}},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 0},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
+     :track-length-m        {:priority 1}}},
    5320
    {:name
     {:fi "Moottoripyöräilyalue",
@@ -1639,12 +1792,14 @@
      :automated-timing?          {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :track-width-m              {:priority 0},
      :area-m2                    {:priority 0},
      :scoreboard?                {:priority 0},
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 0},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :track-length-m             {:priority 1}}},
    3210
    {:name          {:fi "Maauimala", :se "Utebassäng", :en "Open-air pool "},
@@ -1659,6 +1814,7 @@
     {:pool-tracks-count     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :pool-width-m          {:priority 0},
      :pool-min-depth-m      {:priority 0},
      :toilet?               {:priority 0},
@@ -1668,7 +1824,8 @@
      :other-pools-count     {:priority 0},
      :pool-max-depth-m      {:priority 0},
      :loudspeakers?         {:priority 0},
-     :pool-temperature-c    {:priority 0}}},
+     :pool-temperature-c    {:priority 0},
+     :school-use?           {:priority 0}}},
    4640
    {:name
     {:fi "Hiihtomaa", :se "Skidland", :en "Cross-country ski park"},
@@ -1682,6 +1839,7 @@
     :geometry-type "Point",
     :props
     {:kiosk?                 {:priority 0},
+     :free-use?              {:priority 0},
      :ski-service?           {:priority 0},
      :ski-track-traditional? {:priority 0},
      :toilet?                {:priority 0},
@@ -1692,6 +1850,7 @@
      :loudspeakers?          {:priority 0},
      :accessibility-info     {:priority 0},
      :ski-track-freestyle?   {:priority 0},
+     :school-use?            {:priority 0},
      :route-length-km        {:priority 0}}},
    1150
    {:name
@@ -1712,7 +1871,9 @@
     {:area-m2               {:priority 1},
      :surface-material-info {:priority 0},
      :surface-material      {:priority 1},
-     :ligthing?             {:priority 1}}},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    2310
    {:name
     {:fi "Yksittäinen yleisurheilun suorituspaikka",
@@ -1732,6 +1893,7 @@
     {:height-m                   {:priority 0},
      :surface-material           {:priority 1},
      :surface-material-info      {:priority 0},
+     :free-use?                  {:priority 0},
      :javelin-throw-places-count {:priority 0},
      :sprint-track-length-m      {:priority 0},
      :inner-lane-length-m        {:priority 0},
@@ -1741,6 +1903,7 @@
      :area-m2                    {:priority 0},
      :shotput-count              {:priority 0},
      :longjump-places-count      {:priority 0},
+     :school-use?                {:priority 0},
      :highjump-places-count      {:priority 0}}},
    5210
    {:name
@@ -1756,7 +1919,9 @@
      :area-m2               {:priority 0},
      :surface-material-info {:priority nil},
      :surface-material      {:priority nil},
-     :track-width-m         {:priority 0}}},
+     :track-width-m         {:priority 0},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    2380
    {:name          {:fi "Parkour-sali", :se "Parkoursal", :en "Parkour hall"},
     :description
@@ -1767,15 +1932,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:landing-places-count     {:priority 0},
+    {:height-m                 {:priority 0},
+     :surface-material         {:priority 0},
      :surface-material-info    {:priority 0},
-     :height-m                 {:priority 0},
-     :gymnastic-routines-count {:priority 0},
+     :kiosk?                   {:priority 0},
+     :free-use?                {:priority 0},
      :climbing-routes-count    {:priority 0},
      :climbing-wall-height-m   {:priority 0},
-     :kiosk?                   {:priority 0},
-     :surface-material         {:priority 0},
-     :area-m2                  {:priority 1}}},
+     :gymnastic-routines-count {:priority 0},
+     :area-m2                  {:priority 1},
+     :landing-places-count     {:priority 0},
+     :school-use?              {:priority 0}}},
    103
    {:name
     {:fi "Ulkoilualue", :se "Friluftsområde", :en "Outdoor area"},
@@ -1792,7 +1959,9 @@
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
      :playground?                       {:priority 0},
-     :area-km2                          {:priority 0}}},
+     :area-km2                          {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    201
    {:name
     {:fi "Kalastusalue/-paikka",
@@ -1808,7 +1977,10 @@
     :type-code     201,
     :status        "active",
     :geometry-type "Point",
-    :props         {:toilet? {:priority nil}}},
+    :props
+    {:toilet?     {:priority nil},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    1220
    {:name
     {:fi "Yleisurheilukenttä",
@@ -1831,6 +2003,7 @@
      :automated-timing?              {:priority 0},
      :kiosk?                         {:priority 0},
      :stand-capacity-person          {:priority 0},
+     :free-use?                      {:priority 0},
      :sprint-lanes-count             {:priority 0},
      :javelin-throw-places-count     {:priority 0},
      :finish-line-camera?            {:priority 0},
@@ -1852,6 +2025,7 @@
      :loudspeakers?                  {:priority 0},
      :ligthing?                      {:priority 1},
      :covered-stand-person-count     {:priority 0},
+     :school-use?                    {:priority 0},
      :highjump-places-count          {:priority 0},
      :training-spot-surface-material {:priority 0}}},
    4411
@@ -1867,14 +2041,16 @@
     :status        "active",
     :geometry-type "LineString",
     :props
-    {:lit-route-length-km               {:priority 1},
-     :route-length-km                   {:priority 1},
-     :surface-material                  {:priority 1},
+    {:surface-material                  {:priority 1},
      :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :rest-places-count                 {:priority 0},
+     :route-width-m                     {:priority 0},
      :toilet?                           {:priority 0},
-     :route-width-m                     {:priority 0}}},
+     :rest-places-count                 {:priority 0},
+     :lit-route-length-km               {:priority 1},
+     :school-use?                       {:priority 0},
+     :route-length-km                   {:priority 1}}},
    1140
    {:name
     {:fi "Parkour-alue", :se "Parkourområde", :en "Parkour area"},
@@ -1889,7 +2065,9 @@
     {:area-m2               {:priority 1},
      :surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :ligthing?             {:priority 1}}},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    4520
    {:name
     {:fi "Hiihtosuunnistusalue",
@@ -1904,7 +2082,10 @@
     :type-code     4520,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    107
    {:name
     {:fi "Matkailupalveluiden alue",
@@ -1920,7 +2101,10 @@
     :type-code     107,
     :status        "active",
     :geometry-type "Polygon",
-    :props         {:area-km2 {:priority 0}}},
+    :props
+    {:area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    6110
    {:name
     {:fi "Ratsastuskenttä", :se "Ridbana", :en "Equestrian field"},
@@ -1933,15 +2117,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:show-jumping?         {:priority 0},
-     :kiosk?                {:priority 0},
-     :toilet?               {:priority 0},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
+     :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
+     :field-length-m        {:priority 1},
+     :toilet?               {:priority 0},
+     :show-jumping?         {:priority 0},
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
-     :field-length-m        {:priority 1},
      :ligthing?             {:priority 1},
-     :surface-material      {:priority 1}}},
+     :school-use?           {:priority 0}}},
    1120
    {:name
     {:fi "Lähiliikuntapaikka",
@@ -1959,14 +2145,16 @@
     :geometry-type "Point",
     :props
     {:surface-material        {:priority 1},
-     :ligthing?               {:priority 1},
-     :area-m2                 {:priority 1},
+     :surface-material-info   {:priority 0},
+     :free-use?               {:priority 0},
      :fields-count            {:priority 0},
      :ice-rinks-count         {:priority 0},
-     :playground?             {:priority 0},
-     :exercise-machines-count {:priority 0},
+     :area-m2                 {:priority 1},
+     :ligthing?               {:priority 1},
      :accessibility-info      {:priority 0},
-     :surface-material-info   {:priority 0}}},
+     :playground?             {:priority 0},
+     :school-use?             {:priority 0},
+     :exercise-machines-count {:priority 0}}},
    5340
    {:name          {:fi "Karting-rata", :se "Kartingbana", :en "Kart circuit"},
     :description
@@ -1983,7 +2171,9 @@
      :automated-timing?     {:priority 0},
      :track-width-m         {:priority 0},
      :ligthing?             {:priority 0},
-     :surface-material-info {:priority 0}}},
+     :surface-material-info {:priority 0},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    302
    {:name          {:fi "Tupa", :se "Stuga", :en "Hut"},
     :description
@@ -1998,7 +2188,9 @@
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
-     :toilet?                           {:priority nil}}},
+     :toilet?                           {:priority nil},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4405
    {:name
     {:fi "Retkeilyreitti", :se "Utflyktsled", :en "Hiking route"},
@@ -2013,14 +2205,16 @@
     :status        "active",
     :geometry-type "LineString",
     :props
-    {:toilet?                           {:priority 0},
+    {:surface-material                  {:priority 0},
+     :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :route-width-m                     {:priority 0},
+     :toilet?                           {:priority 0},
      :rest-places-count                 {:priority 0},
      :lit-route-length-km               {:priority 1},
      :accessibility-info                {:priority 0},
-     :surface-material-info             {:priority 0},
-     :surface-material                  {:priority 0},
-     :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :route-width-m                     {:priority 0},
+     :school-use?                       {:priority 0},
      :route-length-km                   {:priority 1}}},
    6120
    {:name
@@ -2038,12 +2232,14 @@
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :toilet?               {:priority 0},
      :show-jumping?         {:priority 0},
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
-     :ligthing?             {:priority 1}}},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0}}},
    1310
    {:name
     {:fi "Koripallokenttä", :se "Basketplan", :en "Basketball court"},
@@ -2060,6 +2256,7 @@
     :props
     {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :match-clock?          {:priority 0},
      :fields-count          {:priority 0},
@@ -2068,7 +2265,8 @@
      :field-width-m         {:priority 1},
      :scoreboard?           {:priority 0},
      :ligthing?             {:priority 1},
-     :basketball-field-type {:priority 0}}},
+     :basketball-field-type {:priority 0},
+     :school-use?           {:priority 0}}},
    202
    {:name
     {:fi "Telttailu ja leiriytyminen",
@@ -2083,7 +2281,9 @@
     :geometry-type "Point",
     :props
     {:toilet?                           {:priority 0},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    1620
    {:name          {:fi "Golfkenttä", :se "Golfbana", :en "Golf course"},
     :description
@@ -2100,7 +2300,9 @@
      :holes-count {:priority 1},
      :ligthing?   {:priority 1},
      :toilet?     {:priority 0},
-     :green?      {:priority 0}}},
+     :green?      {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    2250
    {:name
     {:fi "Skeittihalli", :se "Skateboardhall", :en "Indoor skatepark"},
@@ -2121,7 +2323,9 @@
      :surface-material-info {:priority 0},
      :area-m2               {:priority 1},
      :surface-material      {:priority 1},
-     :toilet?               {:priority 0}}},
+     :toilet?               {:priority 0},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    2530
    {:name
     {:fi "Pikaluisteluhalli",
@@ -2145,6 +2349,7 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-1-length-m      {:priority 0},
      :finish-line-camera?   {:priority 0},
      :match-clock?          {:priority 0},
@@ -2157,7 +2362,8 @@
      :area-m2               {:priority 1},
      :scoreboard?           {:priority 0},
      :loudspeakers?         {:priority 0},
-     :field-3-area-m2       {:priority 0}}},
+     :field-3-area-m2       {:priority 0},
+     :school-use?           {:priority 0}}},
    112
    {:name
     {:fi "Muu luonnonsuojelualue, jolla on virkistyspalveluita",
@@ -2175,7 +2381,9 @@
     :geometry-type "Polygon",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
-     :area-km2                          {:priority 0}}},
+     :area-km2                          {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    2130
    {:name
     {:fi "Voimailusali",
@@ -2195,12 +2403,14 @@
     {:surface-material           {:priority 1},
      :surface-material-info      {:priority 0},
      :kiosk?                     {:priority 0},
+     :free-use?                  {:priority 0},
      :group-exercise-rooms-count {:priority 0},
      :tatamis-count              {:priority 0},
      :area-m2                    {:priority 1},
      :wrestling-mats-count       {:priority 0},
      :boxing-rings-count         {:priority 0},
      :weight-lifting-spots-count {:priority 0},
+     :school-use?                {:priority 0},
      :exercise-machines-count    {:priority 0}}},
    3220
    {:name          {:fi "Uimaranta", :se "Badstrand", :en "Supervised beach"},
@@ -2216,6 +2426,7 @@
     :geometry-type "Point",
     :props
     {:kiosk?                            {:priority 0},
+     :free-use?                         {:priority 0},
      :pier?                             {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
      :beach-length-m                    {:priority 1},
@@ -2224,7 +2435,8 @@
      :changing-rooms?                   {:priority 0},
      :eu-beach?                         {:priority 0},
      :sauna?                            {:priority 0},
-     :other-platforms?                  {:priority 0}}},
+     :other-platforms?                  {:priority 0},
+     :school-use?                       {:priority 0}}},
    5330
    {:name
     {:fi "Moottorirata", :se "Motorbana", :en "Formula race track"},
@@ -2241,11 +2453,13 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :finish-line-camera?   {:priority 0},
      :track-width-m         {:priority 0},
      :scoreboard?           {:priority 0},
      :loudspeakers?         {:priority 0},
      :ligthing?             {:priority 0},
+     :school-use?           {:priority 0},
      :track-length-m        {:priority 1}}},
    4230
    {:name
@@ -2267,12 +2481,14 @@
      :surface-material      {:priority 1},
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
+     :free-use?             {:priority 0},
      :ski-service?          {:priority 0},
      :altitude-difference   {:priority 1},
      :route-width-m         {:priority 0},
      :toilet?               {:priority 0},
      :area-m2               {:priority 0},
      :equipment-rental?     {:priority 0},
+     :school-use?           {:priority 0},
      :route-length-km       {:priority 1}}},
    4320
    {:name          {:fi "Hyppyrimäki", :se "Hoppbacke", :en "Ski jumping hill"},
@@ -2291,12 +2507,14 @@
      :lifts-count           {:priority 0},
      :plastic-outrun?       {:priority 0},
      :summer-usage?         {:priority 0},
+     :free-use?             {:priority 0},
      :ski-service?          {:priority 0},
      :skijump-hill-material {:priority 0},
      :k-point               {:priority 1},
      :toilet?               {:priority 0},
      :p-point               {:priority 0},
-     :inruns-material       {:priority 0}}},
+     :inruns-material       {:priority 0},
+     :school-use?           {:priority 0}}},
    3130
    {:name          {:fi "Kylpylä", :se "Badinrättning", :en "Spa"},
     :description
@@ -2312,6 +2530,7 @@
     :props
     {:pool-tracks-count   {:priority 0},
      :kiosk?              {:priority 0},
+     :free-use?           {:priority 0},
      :pool-width-m        {:priority 0},
      :pool-min-depth-m    {:priority 0},
      :toilet?             {:priority 0},
@@ -2321,7 +2540,8 @@
      :other-pools-count   {:priority 0},
      :pool-max-depth-m    {:priority 0},
      :accessibility-info  {:priority 0},
-     :pool-temperature-c  {:priority 0}}},
+     :pool-temperature-c  {:priority 0},
+     :school-use?         {:priority 0}}},
    3110
    {:name
     {:fi "Uimahalli",
@@ -2342,6 +2562,7 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :finish-line-camera?   {:priority 0},
      :match-clock?          {:priority 0},
      :pool-width-m          {:priority 0},
@@ -2355,7 +2576,8 @@
      :pool-max-depth-m      {:priority 0},
      :loudspeakers?         {:priority 0},
      :accessibility-info    {:priority 0},
-     :pool-temperature-c    {:priority 0}}},
+     :pool-temperature-c    {:priority 0},
+     :school-use?           {:priority 0}}},
    203
    {:name
     {:fi "Veneilyn palvelupaikka",
@@ -2372,7 +2594,9 @@
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
      :boat-launching-spot?              {:priority 0},
      :toilet?                           {:priority 0},
-     :pier?                             {:priority 0}}},
+     :pier?                             {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4620
    {:name
     {:fi "Ampumahiihtokeskus",
@@ -2389,6 +2613,7 @@
     {:automated-timing?        {:priority 0},
      :kiosk?                   {:priority 0},
      :stand-capacity-person    {:priority 0},
+     :free-use?                {:priority 0},
      :ski-service?             {:priority 0},
      :finish-line-camera?      {:priority 0},
      :ski-track-traditional?   {:priority 0},
@@ -2404,6 +2629,7 @@
      :loudspeakers?            {:priority 0},
      :accessibility-info       {:priority 0},
      :ski-track-freestyle?     {:priority 0},
+     :school-use?              {:priority 0},
      :route-length-km          {:priority 0}}},
    5360
    {:name
@@ -2423,6 +2649,7 @@
      :automated-timing?          {:priority 0},
      :kiosk?                     {:priority 0},
      :stand-capacity-person      {:priority 0},
+     :free-use?                  {:priority 0},
      :finish-line-camera?        {:priority 0},
      :track-width-m              {:priority 0},
      :toilet?                    {:priority 0},
@@ -2431,6 +2658,7 @@
      :loudspeakers?              {:priority 0},
      :ligthing?                  {:priority 0},
      :covered-stand-person-count {:priority 0},
+     :school-use?                {:priority 0},
      :track-length-m             {:priority 1}}},
    2290
    {:name
@@ -2445,14 +2673,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:area-m2               {:priority 1},
+    {:height-m              {:priority 0},
+     :surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :height-m              {:priority 0},
-     :fields-count          {:priority 0},
-     :scoreboard?           {:priority 0},
-     :toilet?               {:priority 0},
      :kiosk?                {:priority 0},
-     :surface-material      {:priority 1}}},
+     :free-use?             {:priority 0},
+     :fields-count          {:priority 0},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 1},
+     :scoreboard?           {:priority 0},
+     :school-use?           {:priority 0}}},
    2260
    {:name
     {:fi "Sulkapallohalli", :se "Badmintonhall", :en "Badminton hall"},
@@ -2469,6 +2699,7 @@
      :surface-material-info   {:priority 0},
      :kiosk?                  {:priority 0},
      :stand-capacity-person   {:priority 0},
+     :free-use?               {:priority 0},
      :tennis-courts-count     {:priority 0},
      :field-length-m          {:priority 0},
      :badminton-courts-count  {:priority 1},
@@ -2478,7 +2709,8 @@
      :scoreboard?             {:priority 0},
      :floorball-fields-count  {:priority 0},
      :squash-courts-count     {:priority 0},
-     :volleyball-fields-count {:priority 0}}},
+     :volleyball-fields-count {:priority 0},
+     :school-use?             {:priority 0}}},
    1160
    {:name          {:fi "Pyöräilyalue", :se "Cykelområde", :en "Cycling area"},
     :description
@@ -2494,7 +2726,9 @@
     {:ligthing?             {:priority 1},
      :surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :area-m2               {:priority 1}}},
+     :area-m2               {:priority 1},
+     :school-use?           {:priority 0},
+     :free-use?             {:priority 0}}},
    1210
    {:name
     {:fi "Yleisurheilun harjoitusalue",
@@ -2514,6 +2748,7 @@
     {:heating?                       {:priority 0},
      :surface-material               {:priority 1},
      :surface-material-info          {:priority 0},
+     :free-use?                      {:priority 0},
      :sprint-lanes-count             {:priority 0},
      :javelin-throw-places-count     {:priority 0},
      :field-length-m                 {:priority 0},
@@ -2530,6 +2765,7 @@
      :shotput-count                  {:priority 0},
      :longjump-places-count          {:priority 0},
      :ligthing?                      {:priority 1},
+     :school-use?                    {:priority 0},
      :highjump-places-count          {:priority 0},
      :training-spot-surface-material {:priority 0}}},
    5140
@@ -2545,7 +2781,11 @@
     :type-code     5140,
     :status        "active",
     :geometry-type "Point",
-    :props         {:pier? {:priority 0}, :area-km2 {:priority 0}}},
+    :props
+    {:pier?       {:priority 0},
+     :area-km2    {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4310
    {:name
     {:fi "Harjoitushyppyrimäki",
@@ -2566,12 +2806,14 @@
      :lifts-count           {:priority 0},
      :plastic-outrun?       {:priority 0},
      :summer-usage?         {:priority 0},
+     :free-use?             {:priority 0},
      :ski-service?          {:priority 0},
      :skijump-hill-material {:priority 0},
      :k-point               {:priority 1},
      :toilet?               {:priority 0},
      :p-point               {:priority 0},
-     :inruns-material       {:priority 0}}},
+     :inruns-material       {:priority 0},
+     :school-use?           {:priority 0}}},
    207
    {:name          {:fi "Opastuspiste", :se "Informationspunkt", :en "Info"},
     :description
@@ -2584,7 +2826,7 @@
     :type-code     207,
     :status        "active",
     :geometry-type "Point",
-    :props         {}},
+    :props         {:school-use? {:priority 0}, :free-use? {:priority 0}}},
    1130
    {:name
     {:fi "Ulkokuntoilupaikka",
@@ -2606,7 +2848,9 @@
      :ligthing?               {:priority 1},
      :surface-material-info   {:priority 0},
      :surface-material        {:priority 1},
-     :playground?             {:priority 0}}},
+     :playground?             {:priority 0},
+     :school-use?             {:priority 0},
+     :free-use?               {:priority 0}}},
    5120
    {:name
     {:fi "Purjehdusalue", :se "Seglingsområde", :en "Sailing area"},
@@ -2620,7 +2864,9 @@
     :props
     {:area-km2          {:priority 0},
      :pier?             {:priority 0},
-     :boat-places-count {:priority 0}}},
+     :boat-places-count {:priority 0},
+     :school-use?       {:priority 0},
+     :free-use?         {:priority 0}}},
    4110
    {:name
     {:fi "Laskettelun suorituspaikka",
@@ -2638,6 +2884,7 @@
     {:lifts-count             {:priority 1},
      :freestyle-slope?        {:priority 0},
      :kiosk?                  {:priority 0},
+     :free-use?               {:priority 0},
      :ski-service?            {:priority 0},
      :longest-slope-m         {:priority 0},
      :snowpark-or-street?     {:priority 0},
@@ -2650,7 +2897,8 @@
      :toboggan-run?           {:priority 0},
      :jumps-count             {:priority 0},
      :lit-slopes-count        {:priority 1},
-     :accessibility-info      {:priority 0}}},
+     :accessibility-info      {:priority 0},
+     :school-use?             {:priority 0}}},
    4452
    {:name
     {:fi "Vesiretkeilyreitti",
@@ -2669,7 +2917,9 @@
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
      :route-length-km                   {:priority 1},
-     :rest-places-count                 {:priority 0}}},
+     :rest-places-count                 {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    5370
    {:name
     {:fi "Jääspeedway-rata",
@@ -2688,11 +2938,13 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :finish-line-camera?   {:priority 0},
      :track-width-m         {:priority 0},
      :scoreboard?           {:priority 0},
      :loudspeakers?         {:priority 0},
      :ligthing?             {:priority 0},
+     :school-use?           {:priority 0},
      :track-length-m        {:priority 1}}},
    2240
    {:name
@@ -2713,13 +2965,15 @@
      :surface-material-info  {:priority 0},
      :kiosk?                 {:priority 0},
      :stand-capacity-person  {:priority 0},
+     :free-use?              {:priority 0},
      :field-length-m         {:priority 1},
      :badminton-courts-count {:priority 0},
      :toilet?                {:priority 0},
      :area-m2                {:priority 1},
      :field-width-m          {:priority 1},
      :scoreboard?            {:priority 0},
-     :floorball-fields-count {:priority 1}}},
+     :floorball-fields-count {:priority 1},
+     :school-use?            {:priority 0}}},
    2510
    {:name
     {:fi "Harjoitusjäähalli",
@@ -2745,6 +2999,7 @@
      :automated-timing?     {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-1-length-m      {:priority 0},
      :finish-line-camera?   {:priority 0},
      :match-clock?          {:priority 0},
@@ -2758,7 +3013,8 @@
      :curling-lanes-count   {:priority 0},
      :scoreboard?           {:priority 0},
      :loudspeakers?         {:priority 0},
-     :field-3-area-m2       {:priority 0}}},
+     :field-3-area-m2       {:priority 0},
+     :school-use?           {:priority 0}}},
    1640
    {:name          {:fi "Ratagolf", :se "Bangolf", :en "Minigolf course"},
     :description
@@ -2775,7 +3031,9 @@
      :holes-count {:priority 1},
      :ligthing?   {:priority 1},
      :green?      {:priority 0},
-     :toilet?     {:priority 0}}},
+     :toilet?     {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    1380
    {:name
     {:fi "Rullakiekkokenttä",
@@ -2789,15 +3047,17 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:ligthing?             {:priority 1},
-     :match-clock?          {:priority 0},
+    {:surface-material      {:priority 1},
      :surface-material-info {:priority 0},
-     :surface-material      {:priority 1},
-     :field-width-m         {:priority 1},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
+     :match-clock?          {:priority 0},
      :fields-count          {:priority 0},
      :toilet?               {:priority 0},
-     :area-m2               {:priority 1}}},
+     :area-m2               {:priority 1},
+     :field-width-m         {:priority 1},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0}}},
    4451
    {:name          {:fi "Melontareitti", :se "Paddlingsled", :en "Canoe route"},
     :description
@@ -2813,7 +3073,9 @@
     :props
     {:route-length-km                   {:priority 1},
      :rest-places-count                 {:priority 0},
-     :may-be-shown-in-excursion-map-fi? {:priority 0}}},
+     :may-be-shown-in-excursion-map-fi? {:priority 0},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    4403
    {:name
     {:fi "Kävelyreitti/ulkoilureitti",
@@ -2832,6 +3094,7 @@
     :props
     {:surface-material                  {:priority 1},
      :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
      :outdoor-exercise-machines?        {:priority 0},
      :route-width-m                     {:priority 0},
@@ -2839,6 +3102,7 @@
      :rest-places-count                 {:priority 0},
      :lit-route-length-km               {:priority 1},
      :accessibility-info                {:priority 0},
+     :school-use?                       {:priority 0},
      :route-length-km                   {:priority 1}}},
    5150
    {:name
@@ -2855,7 +3119,9 @@
     :props
     {:equipment-rental?   {:priority 0},
      :pier?               {:priority 0},
-     :altitude-difference {:priority 0}}},
+     :altitude-difference {:priority 0},
+     :school-use?         {:priority 0},
+     :free-use?           {:priority 0}}},
    1630
    {:name
     {:fi "Golfin harjoitushalli",
@@ -2878,7 +3144,9 @@
      :height-m    {:priority 1},
      :holes-count {:priority 0},
      :green?      {:priority 0},
-     :range?      {:priority 0}}},
+     :range?      {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    2370
    {:name
     {:fi "Sisäkiipeilyseinä",
@@ -2900,7 +3168,9 @@
      :kiosk?                 {:priority 0},
      :surface-material       {:priority 0},
      :climbing-routes-count  {:priority 0},
-     :climbing-wall-height-m {:priority 1}}},
+     :climbing-wall-height-m {:priority 1},
+     :school-use?            {:priority 0},
+     :free-use?              {:priority 0}}},
    1340
    {:name          {:fi "Pallokenttä", :se "Bollplan", :en "Ball field"},
     :description
@@ -2919,6 +3189,7 @@
      :surface-material-info {:priority 0},
      :kiosk?                {:priority 0},
      :stand-capacity-person {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
      :fields-count          {:priority 0},
      :toilet?               {:priority 0},
@@ -2926,6 +3197,7 @@
      :area-m2               {:priority 1},
      :field-width-m         {:priority 1},
      :ligthing?             {:priority 1},
+     :school-use?           {:priority 0},
      :light-roof?           {:priority 0}}},
    1610
    {:name
@@ -2946,7 +3218,9 @@
      :ligthing?   {:priority 1},
      :toilet?     {:priority 0},
      :range?      {:priority 0},
-     :green?      {:priority 0}}},
+     :green?      {:priority 0},
+     :school-use? {:priority 0},
+     :free-use?   {:priority 0}}},
    4421
    {:name
     {:fi "Moottorikelkkareitti",
@@ -2964,7 +3238,9 @@
     {:rest-places-count                 {:priority 0},
      :route-width-m                     {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
-     :route-length-km                   {:priority 1}}},
+     :route-length-km                   {:priority 1},
+     :school-use?                       {:priority 0},
+     :free-use?                         {:priority 0}}},
    2220
    {:name
     {:fi "Monitoimihalli/areena",
@@ -2986,6 +3262,7 @@
      :automated-timing?              {:priority 0},
      :kiosk?                         {:priority 0},
      :stand-capacity-person          {:priority 0},
+     :free-use?                      {:priority 0},
      :sprint-lanes-count             {:priority 0},
      :javelin-throw-places-count     {:priority 0},
      :tennis-courts-count            {:priority 0},
@@ -3014,6 +3291,7 @@
      :handball-fields-count          {:priority 0},
      :volleyball-fields-count        {:priority 0},
      :climbing-wall?                 {:priority 0},
+     :school-use?                    {:priority 0},
      :highjump-places-count          {:priority 0}}},
    1320
    {:name
@@ -3030,14 +3308,16 @@
     :status        "active",
     :geometry-type "Point",
     :props
-    {:surface-material-info {:priority 0},
-     :ligthing?             {:priority 1},
-     :field-width-m         {:priority 1},
+    {:surface-material      {:priority 1},
+     :surface-material-info {:priority 0},
+     :free-use?             {:priority 0},
      :field-length-m        {:priority 1},
-     :surface-material      {:priority 1},
-     :area-m2               {:priority 1},
      :fields-count          {:priority 0},
-     :toilet?               {:priority 0}}},
+     :toilet?               {:priority 0},
+     :area-m2               {:priority 1},
+     :field-width-m         {:priority 1},
+     :ligthing?             {:priority 1},
+     :school-use?           {:priority 0}}},
    4402
    {:name          {:fi "Latu", :se "Skidspår", :en "Ski track"},
     :description
@@ -3053,6 +3333,7 @@
     :props
     {:surface-material                  {:priority 1},
      :surface-material-info             {:priority 0},
+     :free-use?                         {:priority 0},
      :may-be-shown-in-excursion-map-fi? {:priority 0},
      :outdoor-exercise-machines?        {:priority 0},
      :ski-track-traditional?            {:priority 0},
@@ -3062,4 +3343,14 @@
      :shooting-positions-count          {:priority 0},
      :lit-route-length-km               {:priority 1},
      :ski-track-freestyle?              {:priority 0},
+     :school-use?                       {:priority 0},
      :route-length-km                   {:priority 1}}}})
+
+(comment
+  (set! *print-length* 100000)
+  (reduce (fn [res [k v]]
+            (assoc res k (-> v
+                             (assoc-in [:props :school-use?] {:priority 0})
+                             (assoc-in [:props :free-use?] {:priority 0}))))
+          {}
+          all))
