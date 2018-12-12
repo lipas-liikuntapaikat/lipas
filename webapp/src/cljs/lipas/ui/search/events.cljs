@@ -14,6 +14,7 @@
         area-min          (-> filters :area-min)
         area-max          (-> filters :area-max)
         materials         (-> filters :surface-materials not-empty)
+        retkikartta?      (-> filters :retkikartta?)
         {:keys [lon lat]} center
 
         params {:size    200
@@ -33,11 +34,12 @@
                                   :offset (str distance "m")
                                   :scale  (str (* 2 distance) "m")}}}]}}}]
     (cond-> params
-      type-codes (add-filter {:terms {:type.type-code type-codes}})
-      city-codes (add-filter {:terms {:location.city.city-code city-codes}})
-      area-min   (add-filter {:range {:properties.area-m2 {:gte area-min}}})
-      area-max   (add-filter {:range {:properties.area-m2 {:lte area-max}}})
-      materials  (add-filter {:terms {:properties.surface-material.keyword materials}}))))
+      type-codes   (add-filter {:terms {:type.type-code type-codes}})
+      city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
+      area-min     (add-filter {:range {:properties.area-m2 {:gte area-min}}})
+      area-max     (add-filter {:range {:properties.area-m2 {:lte area-max}}})
+      materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
+      retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}}))))
 
 (re-frame/reg-event-fx
  ::search
@@ -116,6 +118,12 @@
  ::set-surface-materials-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :surface-materials] v)
+    :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::set-retkikartta-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :retkikartta?] v)
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
