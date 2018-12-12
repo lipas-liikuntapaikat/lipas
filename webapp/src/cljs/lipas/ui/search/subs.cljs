@@ -33,6 +33,11 @@
    (-> db :search :filters :surface-materials)))
 
 (re-frame/reg-sub
+ ::retkikartta-filter
+ (fn [db _]
+   (-> db :search :filters :retkikartta?)))
+
+(re-frame/reg-sub
  ::search-string
  (fn [db _]
    (-> db :search :string)))

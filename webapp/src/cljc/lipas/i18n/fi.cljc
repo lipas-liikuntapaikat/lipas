@@ -493,8 +493,9 @@
     :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
-   {:headline "Haku"
-    :search   "Hae..."}
+   {:headline           "Haku"
+    :search             "Hae..."
+    :retkikartta-filter "Retkikartta.fi kohteet"}
 
    :statuses
    {:edited "{1} (muokattu)"}

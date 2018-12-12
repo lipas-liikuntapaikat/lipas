@@ -47,7 +47,8 @@
         city-codes        (<== [::subs/cities-filter])
         area-min          (<== [::subs/area-min-filter])
         area-max          (<== [::subs/area-max-filter])
-        surface-materials (<== [::subs/surface-materials-filter])]
+        surface-materials (<== [::subs/surface-materials-filter])
+        retkikartta?      (<== [::subs/retkikartta-filter])]
     [mui/grid {:container true
                :spacing   16}
 
@@ -102,7 +103,13 @@
       [surface-material-selector
        {:tr        tr
         :value     surface-materials
-        :on-change #(==> [::events/set-surface-materials-filter %])}]]]))
+        :on-change #(==> [::events/set-surface-materials-filter %])}]]
+
+     ;; Retkikartta.fi filter
+     [lui/checkbox
+      {:value     retkikartta?
+       :label     (tr :search/retkikartta-filter)
+       :on-change #(==> [::events/set-retkikartta-filter %])}]]))
 
 (defn search-view [{:keys [tr on-result-click]}]
   (let [search-str (<== [::subs/search-string])
