@@ -134,9 +134,9 @@
      [reports/dialog {:tr tr}]
 
      [into [mui/list]
-      (for [{:keys [type city score name] :as result} results]
+      (for [{:keys [type city name] :as result} results]
         [mui/list-item
          {:button   true
           :on-click #(on-result-click result)}
          [mui/list-item-text {:primary   name
-                              :secondary (str type ", " city ", " score)}]])]]))
+                              :secondary (str type ", " city)}]])]]))
