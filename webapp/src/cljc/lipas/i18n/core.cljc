@@ -6,6 +6,7 @@
             [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as pools]
             [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
             [lipas.i18n.en :as en]
             [lipas.i18n.fi :as fi]
             [lipas.i18n.se :as se]
@@ -17,6 +18,7 @@
                (assoc res k (-> v locale))) {} m))
 
 (def cities (utils/index-by :city-code cities/all))
+(def types types/all)
 
 (defn- append-data! [locale m]
   (->>
@@ -109,13 +111,24 @@
    {:path         [:owner]
     :translations owners/all}
 
-   ;; Location
+   ;; Type
+   {:path         [:type]
+    :translate-fn (fn [locale {:keys [type-code] :as type}]
+                    (assoc type :type-name (-> (get types type-code)
+                                               :name
+                                               locale)))}
 
-   {:path [:location :city]
+   ;; Location
+   {:path         [:location :city]
     :translate-fn (fn [locale {:keys [city-code] :as city}]
                     (assoc city :city-name (-> (get cities city-code)
                                                :name
                                                locale)))}
+
+   ;; Proerties->surface-material
+   {:path         [:properties :surface-material]
+    :translations materials/surface-materials
+    :many?        true}
 
    ;; Ice stadiums
    {:path         [:type :size-category]
@@ -132,7 +145,7 @@
     :translations ice/heat-recovery-types}
    {:path         [:refrigeration :condensate-energy-main-targets]
     :translations ice/condensate-energy-targets
-    :coll?        true}
+    :many?        true}
    {:path         [:refrigeration :refrigerant]
     :translations ice/refrigerants}
    {:path         [:refrigeration :refrigerant-solution]
@@ -180,5 +193,6 @@
    sports-site
    localizations))
 
-(localize :fi {:admin "state"
-               :building {:supporting-structures ["concrete"]}})
+(comment
+  (localize :fi {:admin "state"
+                 :building {:supporting-structures ["concrete"]}}))

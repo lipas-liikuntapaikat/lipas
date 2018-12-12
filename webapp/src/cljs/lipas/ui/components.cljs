@@ -301,11 +301,7 @@
                       :color    "secondary"}
           [mui/icon "add"]]]]])))
 
-(defn dialog [{:keys [title
-                      on-save
-                      on-close
-                      save-label
-                      save-enabled?
+(defn dialog [{:keys [title on-save on-close save-label save-enabled?
                       cancel-label]} content]
   [mui/dialog {:open true
                :full-width true
@@ -756,11 +752,13 @@
         label-fn)]))
 
 (defn autocomplete [{:keys [label items value value-fn label-fn
-                            suggestion-fn on-change multi?]
+                            suggestion-fn on-change multi? spacing
+                            items-label]
                      :or   {suggestion-fn (partial simple-matches items label-fn)
                             label-fn      :label
                             value-fn      :value
-                            multi?        true}}]
+                            multi?        true
+                            spacing       0}}]
 
   (r/with-let [items-m     (utils/index-by value-fn items)
                id          (r/atom (gensym))
@@ -768,7 +766,8 @@
                input-value (r/atom "")
                suggs       (r/atom (map value-fn items))]
 
-    [mui/grid {:container true}
+    [mui/grid {:container true
+               :spacing   spacing}
 
      ;; Input field
      [mui/grid {:item true}
@@ -807,15 +806,22 @@
 
      ;; Selected values chips
      (into
-      [mui/grid {:item  true
-                 :style {:margin-top :auto}}]
-      (for [v @value]
-        [mui/chip
-         {:label     (label-fn (get items-m v))
-          :on-delete #(do (swap! value (fn [old-value]
-                                         (into (empty old-value)
-                                               (remove #{v} old-value))))
-                          (on-change @value))}]))]))
+      [mui/grid {:container true
+                 :spacing   spacing
+                 :style     {:margin-top :auto}}
+       (when items-label
+         [mui/grid {:item true :xs 12}
+          [mui/typography {:variant "caption"}
+           items-label]])]
+      (for [item (sort-by label-fn (vals (select-keys items-m @value)))
+            :let [v (value-fn item)]]
+        [mui/grid {:item true}
+         [mui/chip
+          {:label     (label-fn item)
+           :on-delete #(do (swap! value (fn [old-value]
+                                          (into (empty old-value)
+                                                (remove #{v} old-value))))
+                           (on-change @value))}]]))]))
 
 (defn icon-text [{:keys [icon text icon-color]}]
   [mui/grid {:container true :align-items :center

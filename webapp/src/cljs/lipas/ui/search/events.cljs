@@ -1,14 +1,11 @@
 (ns lipas.ui.search.events
-  (:require [ajax.core :as ajax]
-            [lipas.utils :as cutils]
-            [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [ajax.core :as ajax]
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (defn- add-filter [m filter]
-  (-> m
-      (update-in [:query :function_score :query :bool :filter] conj filter)
-      ;;(update-in [:query :function_score :functions 0 :filter] conj filter)
-      ))
+  (update-in m [:query :function_score :query :bool :filter] conj filter))
 
 (defn ->es-search-body [{:keys [filters string center distance]}]
   (let [string            (or (not-empty string) "*")
@@ -126,3 +123,17 @@
  (fn [{:keys [db]} _]
    {:db       (assoc-in db [:search :filters] {})
     :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::create-report-from-current-search
+ (fn [{:keys [db]} _]
+   (let [params (-> db
+                    :search
+                    (select-keys [:string :filters])
+                    (assoc :center (-> db :map :center-wgs84))
+                    (assoc :distance (/ (max (-> db :map :width)
+                                             (-> db :map :height)) 2))
+                    ->es-search-body
+                    (assoc-in [:_source :excludes] ["location.geometries"]))
+         fields (-> db :reports :selected-fields)]
+     {:dispatch [:lipas.ui.reports.events/create-report params fields]})))

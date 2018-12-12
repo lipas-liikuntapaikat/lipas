@@ -175,5 +175,5 @@
 (def zoom (mui->reagent "Zoom"))
 (def fade (mui->reagent "Fade"))
 (def grow (mui->reagent "Grow"))
-
+(def circular-progress (mui->reagent "CircularProgress"))
 (def with-width* (.withWidth js/MaterialUI))

@@ -1,9 +1,11 @@
 (ns lipas.ui.search.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.search.events :as events]
-            [lipas.ui.search.subs :as subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require
+   [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.reports.views :as reports]
+   [lipas.ui.search.events :as events]
+   [lipas.ui.search.subs :as subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -118,14 +120,19 @@
         [mui/icon "search"]
         "Hae"]]]
      [lui/expansion-panel {:label            "Rajaa hakua"
-                           :default-expanded true}
+                           :default-expanded false}
       [filters {:tr tr}]]
+
      (when-not (empty? results)
        [mui/typography {:variant "body2"
                         :style   {:margin-top  "1em"
                                   :margin-left "1em"}}
         (str total " hakutulosta")])
+
      [mui/divider]
+
+     [reports/dialog {:tr tr}]
+
      [into [mui/list]
       (for [{:keys [type city score name] :as result} results]
         [mui/list-item

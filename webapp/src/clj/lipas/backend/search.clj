@@ -129,6 +129,12 @@
                       :url    (es-utils/url [idx-name :_doc :_search])
                       :body   params}))
 
+(defn scroll
+  [client idx-name params]
+  (es/scroll-chan client {:method :get
+                          :url    (es-utils/url [idx-name :_doc :_search])
+                          :body   params}))
+
 (defn more?
   "Returns true if result set was limited considering
   page-size and requested page, otherwise false."

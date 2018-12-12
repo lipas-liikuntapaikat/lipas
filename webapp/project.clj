@@ -40,7 +40,8 @@
                  [environ "1.1.0"]
                  [com.draines/postal "2.0.2"]
                  [ring/ring-jetty-adapter "1.6.3"]
-                 [org.clojure/data.csv "0.1.4"]]
+                 [org.clojure/data.csv "0.1.4"]
+                 [dk.ative/docjure "1.12.0"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.5"]
@@ -113,8 +114,10 @@
                     :npm-deps             false
                     :infer-externs        true
                     :foreign-libs         [{:file           "dist/index.bundle.js"
-                                            :provides       ["ol" "zipcelx"]
-                                            :global-exports {ol ol zipcelx zipcelx}}]
+                                            :provides       ["ol" "zipcelx" "filesaver"]
+                                            :global-exports {ol        ol
+                                                             zipcelx   zipcelx
+                                                             filesaver filesaver}}]
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"
                     :asset-path           "js/compiled/out"
@@ -132,8 +135,10 @@
                     :infer-externs   true
                     :externs         ["src/js/ol_externs.js"]
                     :foreign-libs    [{:file           "dist/index.bundle.js"
-                                       :provides       ["ol" "zipcelx"]
-                                       :global-exports {ol ol zipcelx zipcelx}}]
+                                       :provides       ["ol" "zipcelx" "filesaver"]
+                                       :global-exports {ol        ol
+                                                        zipcelx   zipcelx
+                                                        filesaver filesaver}}]
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
