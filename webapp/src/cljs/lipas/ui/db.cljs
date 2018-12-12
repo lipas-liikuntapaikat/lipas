@@ -8,6 +8,7 @@
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as types]
             [lipas.data.prop-types :as prop-types]
+            [lipas.reports :as reports]
             [lipas.schema.core :as schema]
             [lipas.i18n.core :as i18n]
             [lipas.ui.utils :as utils]))
@@ -80,6 +81,11 @@
    :search
    {:filters {:type-codes #{}
               :city-codes #{}}}
+
+   ;; Reports
+   :reports
+   {:fields          reports/fields
+    :selected-fields (keys reports/default-fields)}
 
    ;; Map
    :map

@@ -58,7 +58,8 @@
                          (if (and type locale)
                            (str "Uusi " (-> type :name locale))
                            "Uusi liikuntapaikka"))
-    :add-new           "Lisää liikuntapaikka"}
+    :add-new           "Lisää liikuntapaikka"
+    :surface-materials "Pintamateriaalit"}
 
    :type
    {:type-code "Tyyppikoodi"
@@ -74,8 +75,13 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline (str "Yhteys" ZWSP "tiedot")
-    :contacts "Yhteystiedot"}
+   {:headline          (str "Yhteys" ZWSP "tiedot")
+    :contacts          "Yhteystiedot"
+    :select-fields     "Valitse raportin kentät"
+    :selected-fields   "Valitut kentät"
+    :shortcuts         "Pikavalinnat"
+    :download-as-excel "Lataa Excel-tiedostona"
+    :download-excel    "Lataa Excel"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -475,7 +481,8 @@
     :select-types             "Valitse tyypit"
     :select-cities            "Valitse kunnat"
     :filter-area-m2           "Rajaa pinta-ala m²"
-    :filter-surface-materials "Rajaa pintamateriaalit"}
+    :filter-surface-materials "Rajaa pintamateriaalit"
+    :clear-selections         "Poista valinnat"}
 
    :confirm
    {:headline              "Varmistus"
@@ -502,7 +509,8 @@
     :hall         "Halli"
     :updated      "Päivitetty"
     :reported     "Ilmoitettu"
-    :done         "Valmis"}
+    :done         "Valmis"
+    :measures     "Mitat"}
 
    :notifications
    {:save-success "Tallennus onnistui"

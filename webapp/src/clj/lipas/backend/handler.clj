@@ -14,7 +14,8 @@
             [reitit.ring.middleware.muuntaja :as muuntaja]
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
-            [ring.middleware.params :as params]))
+            [ring.middleware.params :as params]
+            [ring.util.io :as ring-io]))
 
 (defn exception-handler [status type]
   (fn [^Exception e request]
@@ -224,7 +225,22 @@
            (let [type-code (-> parameters :body :type-code)
                  year      (-> parameters :body :year)]
              {:status 200
-              :body   (core/energy-report db type-code year)}))}}]]]
+              :body   (core/energy-report db type-code year)}))}}]
+
+      ["/actions/create-sports-sites-report"
+       {:post
+        {:parameters {:body :lipas.api.sports-site-report/req}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [query  (-> parameters :body :search-query)
+                 fields (-> parameters :body :fields)]
+             {:status  200
+              :headers {"Content-Type"        (-> utils/content-type :xlsx)
+                        "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+              :body
+              (ring-io/piped-input-stream
+               (fn [out]
+                 (core/sports-sites-report search query fields out)))}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

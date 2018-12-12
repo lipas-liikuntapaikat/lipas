@@ -1,14 +1,17 @@
 (ns lipas.backend.core
-  (:require [buddy.hashers :as hashers]
-            [lipas.backend.db.db :as db]
-            [lipas.backend.email :as email]
-            [lipas.backend.jwt :as jwt]
-            [lipas.backend.search :as search]
-            [lipas.i18n.core :as i18n]
-            [lipas.permissions :as permissions]
-            [lipas.reports :as reports]
-            [lipas.utils :as utils]
-            [taoensso.timbre :as log]))
+  (:require
+   [buddy.hashers :as hashers]
+   [clojure.core.async :as async]
+   [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.backend.db.db :as db]
+   [lipas.backend.email :as email]
+   [lipas.backend.jwt :as jwt]
+   [lipas.backend.search :as search]
+   [lipas.i18n.core :as i18n]
+   [lipas.permissions :as permissions]
+   [lipas.reports :as reports]
+   [lipas.utils :as utils]
+   [taoensso.timbre :as log]))
 
 ;;; User ;;;
 
@@ -151,8 +154,55 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
+;; TODO support :se and :en locales
+(defn sports-sites-report [search params fields out]
+  (let [idx-name  "sports_sites_current"
+        in-chan   (search/scroll search idx-name params)
+        locale    :fi
+        headers   (mapv #(get-in reports/fields [% locale]) fields)
+        data-chan (async/go
+                    (loop [res [headers]]
+                      (if-let [page (async/<! in-chan)]
+                        (recur (-> page :body :hits :hits
+                                   (->>
+                                    (map (comp (partial reports/->row fields)
+                                               (partial i18n/localize locale)
+                                               :_source))
+                                    (into res))))
+                        res)))]
+    (->> (async/<!! data-chan)
+         (excel/create-workbook "lipas")
+         (excel/save-workbook-into-stream! out))))
+
 (comment
+  (let [wb (excel/create-workbook "dada" res)]
+    (excel/save-workbook-into-stream! out wb))
+
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (publish-users-drafts! db-spec admin))
+  (publish-users-drafts! db-spec admin)
+
+  (def search (search/create-cli {:hosts    ["localhost:9200"]
+                                  :user     "elastic"
+                                  :password "changeme"}))
+  (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
+               "location.city.city-code"])
+  (sports-sites-report search {:query  {:match_all {}}
+                               :_source {:excludes ["location.geometries"]}
+                               :size    100}
+                      fields)
+
+  (sports-sites-report search {:query  {:bool {:must [{:query_string {:query "mursu*"}}]}}
+                               :_source {:excludes ["location.geometries"]}
+                               :size    100}
+                      fields)
+
+  (with-open [out (io/output-stream "kissa.xlsx")]
+    (let [query {:query   {:bool
+                           {:must
+                            [{:query_string
+                              {:query "mursu*"}}]}}
+                 :_source {:excludes ["location.geometries"]}
+                 :size    100}
+          ch    (sports-sites-report search query fields out)])))

@@ -76,6 +76,10 @@ window.ol = {
   },
 };
 
+// Filesaver
+import saveAs from 'file-saver';
+window.filesaver = { saveAs };
+
 // Zipcelx
 import zipcelx from 'zipcelx-es5-cjs';
 window.zipcelx = zipcelx;

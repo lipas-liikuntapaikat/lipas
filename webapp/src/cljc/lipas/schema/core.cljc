@@ -1,16 +1,18 @@
 (ns lipas.schema.core
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [hiposfer.geojson.specs :as geojson]
-            [lipas.data.admins :as admins]
-            [lipas.data.cities :as cities]
-            [lipas.data.ice-stadiums :as ice-stadiums]
-            [lipas.data.materials :as materials]
-            [lipas.data.owners :as owners]
-            [lipas.data.sports-sites :as sports-sites]
-            [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.data.types :as sports-site-types]
-            [lipas.utils :as utils]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [clojure.spec.gen.alpha :as gen]
+   [hiposfer.geojson.specs :as geojson]
+   [lipas.data.admins :as admins]
+   [lipas.data.cities :as cities]
+   [lipas.data.ice-stadiums :as ice-stadiums]
+   [lipas.data.materials :as materials]
+   [lipas.data.owners :as owners]
+   [lipas.data.sports-sites :as sports-sites]
+   [lipas.data.swimming-pools :as swimming-pools]
+   [lipas.data.types :as sports-site-types]
+   [lipas.reports :as reports]
+   [lipas.utils :as utils]))
 
 ;;; Utils ;;;
 
@@ -383,6 +385,8 @@
 (s/def :lipas.sports-site.properties/training-spot-surface-material string?)
 (s/def :lipas.sports-site.properties/range? boolean?)
 (s/def :lipas.sports-site.properties/track-length-m number?)
+(s/def :lipas.sports-site.properties/school-use? boolean?)
+(s/def :lipas.sports-site.properties/free-use? boolean?)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -1077,3 +1081,17 @@
   (s/keys :opt-un [:lipas.api/revs
                    :lipas.api/lang
                    :lipas.api/draft]))
+
+(s/def :lipas.report/field (into #{} (keys reports/fields)))
+
+(s/def :lipas.api.sports-site-report.req/search-query map?)
+(s/def :lipas.api.sports-site-report.req/fields
+  (s/coll-of :lipas.report/field
+             :distinct true
+             :min-count 0
+             :max-count (count (keys reports/fields))
+             :into []))
+
+(s/def :lipas.api.sports-site-report/req
+  (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
+                   :lipas.api.sports-site-report.req/fields]))

@@ -140,3 +140,13 @@
 (defn +safe [& args]
   (if-let [valid-args (not-empty (filter number? args))]
     (apply + valid-args)))
+
+(defn get-in-path [m s]
+  (let [ks (map keyword (string/split s #"\."))]
+    (get-in m ks)))
+
+(defn join [coll]
+  (string/join "," coll))
+
+(def content-type
+  {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})

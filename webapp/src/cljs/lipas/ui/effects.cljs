@@ -1,6 +1,7 @@
 (ns lipas.ui.effects
   (:require [re-frame.core :as re-frame]
-            ["zipcelx"]))
+            ["zipcelx"]
+            ["filesaver"]))
 
 (re-frame/reg-fx
  ::reset-scroll!
@@ -11,3 +12,8 @@
  ::download-excel!
  (fn  [config]
    (zipcelx (clj->js config))))
+
+(re-frame/reg-fx
+ ::save-as!
+ (fn [{:keys [blob filename]}]
+   (filesaver/saveAs blob filename)))
