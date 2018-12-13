@@ -1,4 +1,6 @@
-(ns lipas.data.prop-types)
+(ns lipas.data.prop-types
+  (:require
+   [lipas.data.types :as types]))
 
 (def all
   {:height-m
@@ -1301,7 +1303,7 @@
     {:fi "Voidaanko kenttään asentaa kevytkate, kupla tms.",
      :se "Kan man installera ett lätt tak på planen",
      :en ""}},
-   :pool-length-mm
+   :pool-length-m
    {:name
     {:fi "1. altaan pituus m",
      :se "1a bassängens längd",
@@ -1380,3 +1382,19 @@
     käytettävissä ilman vuoron varausta tai pääsymaksua.",
      :se "",
      :en ""}}})
+
+(def used
+  (let [used (set (mapcat (comp keys :props second) types/all))]
+    (select-keys all used)))
+
+(comment
+  (require '[clojure.set :as cset])
+  (cset/difference (keys all) (keys used))
+  (cset/difference (keys used) (keys all))
+
+  ;; Unused?
+  #{:ski-track? :winter-swimming? :archery?
+    :throwing-sports-spots-count :radio-and-tv-capabilities?
+    :horse-carriage-allowed? :hall-length-m :old-lipas-typecode
+    :adp-readiness? :classified-route :hall-width-m :info-fi
+    :pool-length-mm})

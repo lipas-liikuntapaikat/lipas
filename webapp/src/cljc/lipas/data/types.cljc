@@ -616,7 +616,18 @@
     :type-code     1180,
     :status        "active",
     :geometry-type "Point",
-    :props         {:school-use? {:priority 0}, :free-use? {:priority 0}}},
+    :props         {:holes-count                       {:priority 1}
+                    :accessibility-info                {:priority 0},
+                    :altitude-difference               {:priority 0},
+                    :surface-material                  {:priority 0},
+                    :surface-material-info             {:priority 0},
+                    :track-length-m                    {:priority 0},
+                    :range?                            {:priority 0},
+                    :track-type                        {:priority 0},
+                    :may-be-shown-in-excursion-map-fi? {:priority 0},
+                    :ligthing?                         {:priority 0},
+                    :school-use?                       {:priority 0},
+                    :free-use?                         {:priority 0}}},
    4422
    {:name
     {:fi "Moottorikelkkaura",
@@ -2826,7 +2837,11 @@
     :type-code     207,
     :status        "active",
     :geometry-type "Point",
-    :props         {:school-use? {:priority 0}, :free-use? {:priority 0}}},
+    :props         {:parking-place?                    {:priority 0}
+                    :may-be-shown-in-excursion-map-fi? {:priority 0}
+                    :toilet?                           {:priority 0}
+                    :school-use?                       {:priority 0},
+                    :free-use?                         {:priority 0}}},
    1130
    {:name
     {:fi "Ulkokuntoilupaikka",
@@ -3353,4 +3368,7 @@
                              (assoc-in [:props :school-use?] {:priority 0})
                              (assoc-in [:props :free-use?] {:priority 0}))))
           {}
+          all)
+  (filter (fn [[k v]]
+            (= #{:free-use? :school-use?} (-> v :props keys set)))
           all))

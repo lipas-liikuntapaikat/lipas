@@ -33,7 +33,7 @@
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
    :surface-materials     materials/surface-materials
-   :prop-types            prop-types/all
+   :prop-types            prop-types/used
 
    ;; Ice stadiums
    :ice-stadiums
