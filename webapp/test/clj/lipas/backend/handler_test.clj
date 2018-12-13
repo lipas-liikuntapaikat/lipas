@@ -296,21 +296,25 @@
     (is (s/valid? :lipas/sports-sites body))))
 
 (deftest search-test
-  (let [resp     (app (-> (mock/request :post "/api/actions/search")
-                          (mock/content-type "application/json")
-                          (mock/body (->json {:query
-                                              {:bool
-                                               {:must
-                                                [{:query_string
-                                                  {:query "*"}}]}}}))))
-        body     (<-json (:body resp))
-        sites    (map :_source (-> body :hits :hits))]
+  (let [site  (gen/generate (s/gen :lipas/sports-site))
+        _     (core/index! search site)
+        resp  (app (-> (mock/request :post "/api/actions/search")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:query
+                                           {:bool
+                                            {:must
+                                             [{:query_string
+                                               {:query "*"}}]}}}))))
+        body  (<-json (:body resp))
+        sites (map :_source (-> body :hits :hits))]
     (is (= 200 (:status resp)))
     (is (not (empty? sites)))
     (is (s/valid? :lipas/sports-sites sites))))
 
 (deftest sports-sites-report-test
-  (let [path     "/api/actions/create-sports-sites-report"
+  (let [site     (gen/generate (s/gen :lipas/sports-site))
+        _        (core/index! search site)
+        path     "/api/actions/create-sports-sites-report"
         resp     (app (-> (mock/request :post path)
                           (mock/content-type "application/json")
                           (mock/body (->json
