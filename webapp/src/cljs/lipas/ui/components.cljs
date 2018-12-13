@@ -809,9 +809,9 @@
       [mui/grid {:container true
                  :spacing   spacing
                  :style     {:margin-top :auto}}
-       (when items-label
+       (when (and items-label (not-empty @value))
          [mui/grid {:item true :xs 12}
-          [mui/typography {:variant "caption"}
+          [mui/typography {:variant "body2"}
            items-label]])]
       (for [item (sort-by label-fn (vals (select-keys items-m @value)))
             :let [v (value-fn item)]]
