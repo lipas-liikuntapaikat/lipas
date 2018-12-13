@@ -76,4 +76,6 @@
     (try
       (seed-default-users! db)
       (seed-demo-users! db)
+      (let [user (core/get-user db (:email admin))]
+        (seed-sports-sites! db user :lipas/sports-site 10))
       (finally (backend/stop-system! system)))))
