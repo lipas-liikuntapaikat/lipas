@@ -84,7 +84,8 @@
 
    ;; Reports
    :reports
-   {:fields          reports/fields
+   {:dialog-open?    false
+    :fields          reports/fields
     :selected-fields (keys reports/default-fields)}
 
    ;; Map

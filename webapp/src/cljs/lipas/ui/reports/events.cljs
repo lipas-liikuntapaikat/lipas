@@ -2,9 +2,13 @@
   (:require
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
-   [lipas.reports :as reports]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
+
+(re-frame/reg-event-db
+ ::toggle-dialog
+ (fn [db _]
+   (update-in db [:reports :dialog-open?] not)))
 
 (re-frame/reg-event-db
  ::set-selected-fields
@@ -12,24 +16,6 @@
    (if append?
      (update-in db [:reports :selected-fields] (comp set into) v)
      (assoc-in db [:reports :selected-fields] v))))
-
-(re-frame/reg-event-fx
- ::select-basic-fields
- (fn [_ [_ append?]]
-   (let [vs  (keys reports/basic-fields)]
-     {:dispatch [::set-selected-fields vs append?]})))
-
-(re-frame/reg-event-fx
- ::select-measure-fields
- (fn [_ [_ append?]]
-   (let [vs  (keys reports/common-measure-fields)]
-     {:dispatch [::set-selected-fields vs append?]})))
-
-(re-frame/reg-event-fx
- ::select-surface-material-fields
- (fn [_ [_ append?]]
-   (let [vs  (keys reports/surface-material-fields)]
-     {:dispatch [::set-selected-fields vs append?]})))
 
 (re-frame/reg-event-fx
  ::create-report

@@ -3,6 +3,11 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
+ ::dialog-open?
+ (fn [db _]
+   (-> db :reports :dialog-open?)))
+
+(re-frame/reg-sub
  ::selected-fields
  (fn [db _]
    (-> db :reports :selected-fields)))

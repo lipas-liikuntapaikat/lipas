@@ -43,7 +43,7 @@
    fields))
 
 (def basic-fields
-  {"lipas-id"                   {:fi "ID"}
+  {"lipas-id"                   {:fi "Lipas-id"}
    "name"                       {:fi "Nimi"}
    "marketing-name"             {:fi "Markkinointinimi"}
    "owner"                      {:fi "Omistaja"}
@@ -75,23 +75,18 @@
 (def area-fields
   (select-keys prop-fields ["properties.area-m2"
                             "properties.area-km2"
-                            "properties.field-1-area-m2"
-                            "properties.field-2-area-m2"
-                            "properties.field-3-area-m2"
                             "properties.pool-water-area-m2"]))
 
 (def surface-material-fields
   (select-keys prop-fields ["properties.surface-material"
                             "properties.surface-material-info"
                             "properties.running-track-surface-material"
-                            "properties.training-spot-surface-material"]))
+                            "properties.training-spot-surface-material"
+                            "properties.inruns-material"
+                            "properties.skijump-hill-material"]))
 
 (def length-fields
-  (select-keys prop-fields ["properties.length-m"
-                            "properties.field-length-m"
-                            "properties.field-1-length-m"
-                            "properties.field-2-length-m"
-                            "properties.field-3-length-m"
+  (select-keys prop-fields ["properties.field-length-m"
                             "properties.hall-length-m"
                             "properties.inner-lane-length-m"
                             "properties.route-length-km"
@@ -99,14 +94,12 @@
                             "properties.pool-length-m"
                             "properties.sprint-track-length-m"
                             "properties.track-length-m"
-                            "properties.beach-length-m"]))
+                            "properties.beach-length-m"
+                            "properties.longest-slope-m"
+                            "properties.shortest-slope-m"]))
 
 (def width-fields
-  (select-keys prop-fields ["properties.width-m"
-                            "properties.field-width-m"
-                            "properties.field-1-width-m"
-                            "properties.field-2-width-m"
-                            "properties.field-3-width-m"
+  (select-keys prop-fields ["properties.field-width-m"
                             "properties.climbing-wall-width-m"
                             "properties.hall-width-m"
                             "properties.pool-width-m"
@@ -117,13 +110,126 @@
   (select-keys prop-fields ["properties.height-m"
                             "properties.climbing-wall-height-m"]))
 
-(def common-measure-fields
-  (select-keys prop-fields ["properties.field-length-m"
-                            "properties.field-width-m"
-                            "properties.height-m"
-                            "properties.area-m2"
-                            "properties.area-km2"
-                            "properties.route-length-km"]))
+(def other-measures
+  (select-keys prop-fields ["properties.p-point"
+                            "properties.k-point"
+                            "properties.altitude-difference"]))
+
+(def measure-fields
+  (merge
+   area-fields
+   length-fields
+   width-fields
+   height-fields
+   other-measures))
+
+(def service-fields
+  (select-keys prop-fields ["properties.equipment-rental?"
+                            "properties.ski-service?"
+                            "properties.kiosk?"
+                            "properties.shower?"
+                            "properties.parking-place?"
+                            "properties.playground?"
+                            "properties.pier?"
+                            "properties.rest-places-count"
+                            "properties.toilet?"
+                            "properties.changing-rooms?"
+                            "properties.sauna?"]))
+
+(def activity-fields
+  (select-keys prop-fields ["properties.rifle-shooting?"
+                            "properties.shotgun-shooting?"
+                            "properties.pistol-shooting?"
+                            "properties.free-rifle-shooting?"
+                            "properties.air-gun-shooting?"
+                            "properties.shooting-positions-count"
+                            "properties.tatamis-count"
+                            "properties.badminton-courts-count"
+                            "properties.hammer-throw-places-count"
+                            "properties.landing-places-count"
+                            "properties.weight-lifting-spots-count"
+                            "properties.exercise-machines-count"
+                            "properties.ice-rinks-count"
+                            "properties.futsal-fields-count"
+                            "properties.training-wall?"
+                            "properties.winter-swimming?"
+                            "properties.ski-track-traditional?"
+                            "properties.gymnastics-space?"
+                            "properties.shotput-count"
+                            "properties.fencing-bases-count"
+                            "properties.basketball-fields-count"
+                            "properties.freestyle-slope?"
+                            "properties.throwing-sports-spots-count"
+                            "properties.range?"
+                            "properties.green?"
+                            "properties.longjump-places-count"
+                            "properties.holes-count"
+                            "properties.boat-places-count"
+                            "properties.outdoor-exercise-machines?"
+                            "properties.cosmic-bowling?"
+                            "properties.spinning-hall?"
+                            "properties.climbing-routes-count"
+                            "properties.handball-fields-count"
+                            "properties.javelin-throw-places-count"
+                            "properties.lit-slopes-count"
+                            "properties.fields-count"
+                            "properties.table-tennis-count"
+                            "properties.volleyball-fields-count"
+                            "properties.gymnastic-routines-count"
+                            "properties.boxing-rings-count"
+                            "properties.football-fields-count"
+                            "properties.polevault-places-count"
+                            "properties.climbing-wall?"
+                            "properties.archery?"
+                            "properties.jumps-count"
+                            "properties.discus-throw-places"
+                            "properties.wrestling-mats-count"
+                            "properties.show-jumping?"
+                            "properties.curling-lanes-count"
+                            "properties.bowling-lanes-count"
+                            "properties.floorball-fields-count"
+                            "properties.highjump-places-count"
+                            "properties.other-platforms?"
+                            "properties.toboggan-run?"
+                            "properties.halfpipe-count"
+                            "properties.tennis-courts-count"
+                            "properties.slopes-count"
+                            "properties.snowpark-or-street?"
+                            "properties.circular-lanes-count"
+                            "properties.boat-launching-spot?"
+                            "properties.plastic-outrun?"
+                            "properties.ice-climbing?"
+                            "properties.squash-courts-count"
+                            "properties.group-exercise-rooms-count"
+                            "properties.sprint-lanes-count"]))
+
+(def other-fields
+  (select-keys prop-fields ["properties.accessibility-info"
+                            "properties.basketball-field-type"
+                            "properties.summer-usage?"
+                            "properties.winter-usage?"
+                            "properties.ice-reduction?"
+                            "properties.ligthing?"
+                            "properties.lifts-count"
+                            "properties.school-use?"
+                            "properties.skijump-hill-type"
+                            "properties.track-type"
+                            "properties.covered-stand-person-count"
+                            "properties.stand-capacity-person"
+                            "properties.eu-beach?"
+                            "properties.may-be-shown-in-excursion-map-fi?"
+                            "properties.ski-track-freestyle?"
+                            "properties.free-use?"
+                            "properties.heating?"]))
+
+(def competition-fields
+  (select-keys prop-fields ["properties.match-clock?"
+                            "properties.automated-timing?"
+                            "properties.automated-scoring?"
+                            "properties.scoreboard?"
+                            "properties.loudspeakers?"
+                            "properties.finish-line-camera?"]))
+
 
 (def fields
   (merge
