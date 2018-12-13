@@ -114,7 +114,7 @@ services:
     command: lein test
     links:
       - postgres
-      # - elasticsearch
+      - elasticsearch
 
   backend-seed:
     extends:
