@@ -44,7 +44,7 @@ services:
       - '8080:8080'
 
   backend-base:
-    image: clojure:lein-2.8.0
+    image: clojure:lein
     working_dir: /usr/src/app
     environment:
       DB_HOST:
