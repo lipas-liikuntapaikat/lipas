@@ -140,9 +140,12 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
-(defn index! [search sports-site]
-  (let [idx-name "sports_sites_current"]
-    (search/index! search idx-name :lipas-id sports-site)))
+(defn index!
+  ([search sports-site]
+   (index! search sports-site false))
+  ([search sports-site sync?]
+   (let [idx-name "sports_sites_current"]
+     (search/index! search idx-name :lipas-id sports-site sync?))))
 
 (defn search [search params]
   (let [idx-name "sports_sites_current"]
