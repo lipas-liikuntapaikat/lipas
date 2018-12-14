@@ -63,18 +63,21 @@
         (index-all! db search user idx-name types)
         (log/info "Indexing data done!")
         (log/info "Swapping alias" alias "to point to index" idx-name)
-        (search/swap-alias! search {:new-idx idx-name :alias alias})
+        (let [old-idxs (search/swap-alias! search {:new-idx idx-name :alias alias})]
+          (doseq [idx old-idxs]
+            (log/info "Deleting old index" idx)
+            (search/delete-index! search idx)))
         (log/info "All done!"))
       (finally (backend/stop-system! system)))))
 
 (comment
   (-main)
-
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
   (def db (:db system))
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
+  (search/delete-index! search "2018-*")
   (let [idx-name (search/gen-idx-name)
         mappings (:sports_sites search/mappings)]
     (search/create-index! search "test" (:sports-sites search/mappings))
