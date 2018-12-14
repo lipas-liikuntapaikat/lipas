@@ -129,7 +129,9 @@
 (re-frame/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
-   {:db       (assoc-in db [:search :filters] {})
+   {:db       (-> db
+                  (assoc-in [:search :filters] {})
+                  (assoc-in [:search :string] nil))
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
