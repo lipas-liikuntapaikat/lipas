@@ -471,6 +471,7 @@
     :open-main-menu           "Avaa päävalikko"
     :submit                   "Lähetä"
     :download                 "Lataa"
+    :browse                   "siirry"
     :browse-to-portal         "Siirry portaaliin"
     :choose-energy            "Valitse energia"
     :back-to-listing          "Takaisin listaukseen"
