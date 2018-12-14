@@ -179,14 +179,13 @@
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
-;; TODO maybe narrow down coords to Finland extent?
-(s/def :lipas.location.coordinates/lat (s/double-in :min -90.0
-                                                    :max 90.0
+(s/def :lipas.location.coordinates/lat (s/double-in :min 59.846373196
+                                                    :max 70.1641930203
                                                     :NaN? false
                                                     :infinite? false))
 
-(s/def :lipas.location.coordinates/lon (s/double-in :min -180.0
-                                                    :max 180.0
+(s/def :lipas.location.coordinates/lon (s/double-in :min 20.6455928891
+                                                    :max 31.5160921567
                                                     :NaN? false
                                                     :infinite? false))
 
