@@ -86,9 +86,8 @@
  ::update-geometries
  (fn [_ [_ lipas-id geoms]]
    (let [path  [:location :geometries]
-         geoms (-> geoms
-                   (as-> $ (update $ :features
-                                   (fn [fs] (map #(dissoc % :properties) fs)))))]
+         geoms (update geoms :features
+                       (fn [fs] (map #(dissoc % :properties :id) fs)))]
      {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geoms]})))
 
 (re-frame/reg-event-db
@@ -120,8 +119,10 @@
 (re-frame/reg-event-fx
  ::finish-adding-geom
  (fn [{:keys [db]} [_ geoms type-code]]
-   {:db         (assoc-in db [:map :mode :sub-mode] :finished)
-    :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]}))
+   (let [geoms (update geoms :features
+                       (fn [fs] (map #(dissoc % :properties :id) fs)))]
+     {:db         (assoc-in db [:map :mode :sub-mode] :finished)
+      :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
 
 (re-frame/reg-event-db
  ::toggle-drawer
