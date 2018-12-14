@@ -47,10 +47,13 @@
                       :url    (es-utils/url [index])}))
 
 (defn index!
-  [client idx-name id-fn data]
-  (es/request client {:method :put
-                      :url    (es-utils/url [idx-name es-type (id-fn data)])
-                      :body   data}))
+  ([client idx-name id-fn data]
+   (index! client idx-name id-fn data false))
+  ([client idx-name id-fn data sync?]
+   (es/request client {:method       :put
+                       :url          (es-utils/url [idx-name es-type (id-fn data)])
+                       :body         data
+                       :query-string (when sync? {:refresh "wait_for"})})))
 
 (defn delete!
   [client idx-name id]

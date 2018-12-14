@@ -296,24 +296,36 @@
     (is (s/valid? :lipas/sports-sites body))))
 
 (deftest search-test
-  (let [site  (gen/generate (s/gen :lipas/sports-site))
-        _     (core/index! search site)
-        resp  (app (-> (mock/request :post "/api/actions/search")
-                       (mock/content-type "application/json")
-                       (mock/body (->json {:query
-                                           {:bool
-                                            {:must
-                                             [{:query_string
-                                               {:query "*"}}]}}}))))
-        body  (<-json (:body resp))
-        sites (map :_source (-> body :hits :hits))]
+  (let [site     (gen/generate (s/gen :lipas/sports-site))
+        lipas-id (:lipas-id site)
+        _        (core/index! search site :sync)
+        resp     (app (-> (mock/request :post "/api/actions/search")
+                          (mock/content-type "application/json")
+                          (mock/body (->json {:query
+                                              {:bool
+                                               {:must
+                                                [{:query_string
+                                                  {:query (str lipas-id)}}]}}}))))
+        body     (<-json (:body resp))
+        sites    (map :_source (-> body :hits :hits))]
     (is (= 200 (:status resp)))
-    (is (not (empty? sites)))
+    (is (some? (first (filter (comp #{lipas-id} :lipas-id) sites))))
     (is (s/valid? :lipas/sports-sites sites))))
+
+(comment
+  (<-json
+   (:body
+    (app (-> (mock/request :post "/api/actions/search")
+             (mock/content-type "application/json")
+             (mock/body (->json {:query
+                                 {:bool
+                                  {:must
+                                   [{:query_string
+                                     {:query (str 258083685)}}]}}})))))))
 
 (deftest sports-sites-report-test
   (let [site     (gen/generate (s/gen :lipas/sports-site))
-        _        (core/index! search site)
+        _        (core/index! search site :sync)
         path     "/api/actions/create-sports-sites-report"
         resp     (app (-> (mock/request :post path)
                           (mock/content-type "application/json")
