@@ -1,4 +1,5 @@
-{:known-macros              [reagent.core/with-let]
+{:known-macros              [reagent.core/with-let
+                             clojure.java.jdbc/with-db-transaction]
  :ignored-unused-namespaces [cljsjs.react-autosuggest
                              cljsjs.babel-polyfill
                              cljsjs.google-analytics
