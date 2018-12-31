@@ -95,6 +95,8 @@
          (fn [{:keys [body-params identity] :as req}]
            (let [draft? (-> req :parameters :query :draft utils/->bool)
                  resp   (core/upsert-sports-site! db identity body-params draft?)
+                 _      (when-not draft?
+                          (core/add-to-integration-out-queue! db resp))
                  _      (core/index! search resp :sync)]
              {:status 201
               :body   resp}))}}]

@@ -2,6 +2,7 @@
   (:require [clojure.java.jdbc :as jdbc]
             [lipas.backend.db.sports-site :as sports-site]
             [lipas.backend.db.user :as user]
+            [lipas.backend.db.integration :as integration]
             [lipas.utils :as utils]
             [lipas.backend.db.utils :as db-utils]))
 
@@ -84,12 +85,64 @@
          (map sports-site/unmarshall))))
 
 (defn get-users-drafts [db user]
-  (let [params {:author_id (:id user)
-                :status    "draft"}]
-    (->> (sports-site/get-by-author-and-status db params)
+  (let [params {:author-id (:id user) :status "draft"}]
+    (->> params
+         utils/->snake-case-keywords
+         (sports-site/get-by-author-and-status db)
          (map sports-site/unmarshall))))
+
+(defn get-last-modified [db lipas-ids]
+  (if (empty? lipas-ids)
+    lipas-ids
+    (sports-site/get-last-modified db {:lipas_ids lipas-ids})))
+
+(defn get-sports-sites-modified-since [db timestamp]
+  (->> (sports-site/get-modified-since db {:timestamp timestamp})
+       (map sports-site/unmarshall)))
+
+(defn get-sports-sites-by-lipas-ids [db lipas-ids]
+  (->> {:lipas-ids lipas-ids}
+       utils/->snake-case-keywords
+       (sports-site/get-latest-by-ids db)
+       (map sports-site/unmarshall)))
+
+;; Integration ;;
+
+(defn get-last-integration-timestamp [db-spec name]
+  (let [params {:name name :status "success"}]
+    (-> (integration/get-last-timestamp-by-name-and-status db-spec params)
+        :result
+        (as-> $ (when $ (str (.toInstant $)))))))
+
+(defn add-integration-entry! [db-spec entry]
+  (->> (integration/marshall entry)
+       (integration/insert-entry! db-spec)))
+
+(defn get-integration-out-queue [db-spec]
+  (->> db-spec
+       integration/get-out-queue
+       (map integration/unmarshall)))
+
+(defn add-to-integration-out-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       utils/->snake-case-keywords
+       (integration/add-to-out-queue! db-spec)))
+
+(defn add-all-to-integration-out-queue! [db-spec lipas-ids]
+  (jdbc/with-db-transaction [tx db-spec]
+    (doseq [lipas-id lipas-ids]
+      (add-to-integration-out-queue! tx lipas-id))))
+
+(defn delete-from-integration-out-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       utils/->snake-case-keywords
+       (integration/delete-from-out-queue! db-spec)))
 
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
-  (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"}))
+  (get-last-integration-timestamp db-spec "old-lipas")
+  (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"})
+  (add-to-integration-out-queue db-spec 234)
+  (get-integration-out-queue db-spec)
+  (delete-from-integration-out-queue db-spec 234))

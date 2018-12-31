@@ -34,3 +34,8 @@ export SEARCH_PASS=***FILL_THIS***
 MML_USERNAME=***FILL_THIS***
 MML_PASSWORD=***FILL_THIS***
 export MML_AUTH=`echo -n $MML_USERNAME:$MML_PASSWORD | base64`
+
+# Integrations
+export OLD_LIPAS_URL=http://lipas-kehitys.cc.jyu.fi
+export OLD_LIPAS_USER=***FILL_THIS***
+export OLD_LIPAS_PASS=***FILL_THIS***

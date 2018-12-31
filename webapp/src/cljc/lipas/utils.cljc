@@ -2,6 +2,8 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
+            [camel-snake-kebab.core :as csk]
+            [camel-snake-kebab.extras :as csk-extras]
             #?(:cljs [cljs.reader :refer [read-string]])
             #?(:cljs [goog.string :as gstring])
             #?(:cljs [goog.string.format]))
@@ -25,6 +27,23 @@
   []
   #?(:cljs (.toISOString (js/Date.))
      :clj  (.toString (java.time.Instant/now))))
+
+(string/join (take 23 "kissa koira kana mursu heppa"))
+
+(defn ->ISO-timestamp
+  "Converts timestamps from old LIPAS to ISO string format.
+  Example: '2018-12-01 00:00:00.000' => '2018-12-01T00:00:00.000Z'
+  "
+  [s]
+  (when (not-empty s)
+    (-> (take 23 s) string/join (string/replace " " "T") (str "Z"))))
+
+(defn ->old-lipas-timestamp
+  "Converts timestamps from ISO string format to old LIPAS format.
+  Example: '2018-12-01T00:00:00.000Z' => '2018-12-01 00:00:00.000'"
+  [s]
+  (when (not-empty s)
+    (-> s (subs 0 23) (string/replace "T" " "))))
 
 (defn zero-left-pad
   [s len]
@@ -150,3 +169,12 @@
 
 (def content-type
   {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+
+(defn ->kebab-case-keywords [m]
+  (csk-extras/transform-keys csk/->kebab-case m))
+
+(defn ->camel-case-keywords [m]
+  (csk-extras/transform-keys csk/->camelCase m))
+
+(defn ->snake-case-keywords [m]
+  (csk-extras/transform-keys csk/->snake_case m))

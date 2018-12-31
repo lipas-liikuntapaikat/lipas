@@ -151,6 +151,9 @@
   (let [idx-name "sports_sites_current"]
     (search/search search idx-name params)))
 
+(defn add-to-integration-out-queue! [db sports-site]
+  (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
+
 ;;; Reports ;;;
 
 (defn energy-report [db type-code year]
@@ -178,34 +181,23 @@
          (excel/save-workbook-into-stream! out))))
 
 (comment
-  (let [wb (excel/create-workbook "dada" res)]
-    (excel/save-workbook-into-stream! out wb))
-
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
   (publish-users-drafts! db-spec admin)
 
-  (def search (search/create-cli {:hosts    ["localhost:9200"]
-                                  :user     "elastic"
-                                  :password "changeme"}))
+  (def search (search/create-cli (:search config/default-config)))
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
-  (sports-sites-report search {:query  {:match_all {}}
-                               :_source {:excludes ["location.geometries"]}
-                               :size    100}
-                      fields)
 
-  (sports-sites-report search {:query  {:bool {:must [{:query_string {:query "mursu*"}}]}}
-                               :_source {:excludes ["location.geometries"]}
-                               :size    100}
-                      fields)
-
+  (require '[clojure.java.io :as io])
   (with-open [out (io/output-stream "kissa.xlsx")]
-    (let [query {:query   {:bool
-                           {:must
-                            [{:query_string
-                              {:query "mursu*"}}]}}
-                 :_source {:excludes ["location.geometries"]}
-                 :size    100}
-          ch    (sports-sites-report search query fields out)])))
+    (let [query {:query
+                 {:bool
+                  {:must
+                   [{:query_string
+                     {:query "mursu*"}}]}}
+                 :_source
+                 {:excludes ["location.geometries"]}
+                 :size 100}]
+      (sports-sites-report search query fields out))))
