@@ -172,6 +172,7 @@
           0 [mui/grid {:container true}
              [mui/grid {:item true :xs 12}
 
+              ^{:key (str "location-" lipas-id)}
               [sports-sites/location-form
                {:tr            tr
                 :read-only?    (not editing?)
@@ -181,6 +182,7 @@
                 :on-change     (partial set-field :location)
                 :sub-headings? true}]
 
+              ^{:key (str "basic-data-" lipas-id)}
               [sports-sites/form
                {:tr              tr
                 :display-data    display-data
