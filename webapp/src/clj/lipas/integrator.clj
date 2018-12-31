@@ -7,6 +7,7 @@
    [lipas.backend.db.db :as db]
    [lipas.backend.system :as backend]
    [lipas.migrate-data :as migrate]
+   [lipas.integration.old-lipas.core :as old-lipas]
    [lipas.utils :as utils]
    [taoensso.timbre :as log]
    [tea-time.core :as tt]))
@@ -72,8 +73,8 @@
                          (initial-timestamps name))]
     (log/info "Starting to push changes to old Lipas since" last-success)
     (try
-      (migrate/add-changed-to-out-queue! db last-success)
-      (->> (migrate/process-integration-out-queue! db)
+      (old-lipas/add-changed-to-out-queue! db last-success)
+      (->> (old-lipas/process-integration-out-queue! db)
            (handle-success db name))
       (catch Exception e
         (handle-error db name e)))))

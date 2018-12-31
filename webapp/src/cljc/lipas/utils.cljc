@@ -178,3 +178,15 @@
 
 (defn ->snake-case-keywords [m]
   (csk-extras/transform-keys csk/->snake_case m))
+
+(def trim (fnil string/trim ""))
+(def sreplace (fnil string/replace ""))
+
+;; (prn {:ts1     ts1 :ts2 ts2
+;;       :update? (> (compare ts1 ts2) 0)})
+(defn filter-newer [m1 ts-fn1 m2 ts-fn2]
+  (select-keys m1 (filter (fn [k]
+                            (let [ts1 (-> k m1 ts-fn1)
+                                  ts2 (-> k m2 ts-fn2)]
+                              (> (compare ts1 ts2) 0)))
+                          (keys m1))))
