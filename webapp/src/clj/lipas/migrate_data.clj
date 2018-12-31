@@ -1,22 +1,27 @@
 (ns lipas.migrate-data
-  (:require [cheshire.core :as json]
-            [clojure.data.csv :as csv]
-            [clojure.java.io :as io]
-            [clojure.pprint :as pprint]
-            [clojure.set :as set]
-            [clojure.spec.alpha :as spec]
-            [clojure.string :as string]
-            [environ.core :refer [env]]
-            [lipas.backend.config :as config]
-            [lipas.backend.core :as core]
-            [lipas.backend.db.db :as db]
-            [lipas.backend.system :as backend]
-            [lipas.data.admins :as admins]
-            [lipas.data.ice-stadiums :as ice-stadiums]
-            [lipas.data.owners :as owners]
-            [lipas.schema.core]
-            [lipas.utils :as utils]
-            [taoensso.timbre :as log]))
+  (:require
+   [cheshire.core :as json]
+   [clj-http.client :as client]
+   [clojure.data.csv :as csv]
+   [clojure.java.io :as io]
+   [clojure.pprint :as pprint]
+   [clojure.set :as set]
+   [clojure.spec.alpha :as spec]
+   [clojure.string :as string]
+   [environ.core :refer [env]]
+   [lipas.backend.config :as config]
+   [lipas.backend.core :as core]
+   [lipas.backend.db.db :as db]
+   [lipas.backend.search :as search]
+   [lipas.backend.system :as backend]
+   [lipas.data.admins :as admins]
+   [lipas.data.ice-stadiums :as ice-stadiums]
+   [lipas.data.owners :as owners]
+   [lipas.data.types :as types]
+   [lipas.schema.core]
+   [lipas.utils :as utils]
+   [ring.util.codec :as codec]
+   [taoensso.timbre :as log]))
 
 ;; Data migrations from ice-stadium/swimming-pool portals (VTT) and
 ;; old Lipas to new LIPAS.
@@ -28,7 +33,7 @@
 ;; data again from legacy systems (portals, 'old' Lipas).
 
 (def fixed-mappings
- ;; Halli-ID  Lipas-ID
+  ;; Halli-ID  Lipas-ID
   {"47400II1" 76276    ; Iitin jäähalli
    "43500KA1" 518758   ; Karstula-Areena
    "29900ME1" 520708   ; Merikarvian jäähalli
@@ -64,51 +69,33 @@
    "UU058000" ; Lapinjärven uimahalli (closed 2012)
    ])
 
-(def lipas-url (str "http://lipas.cc.jyu.fi/api/sports-places?"
-                    "fields=properties"
-                    "&fields=schoolUse"
-                    "&fields=email"
-                    "&fields=type.name"
-                    "&fields=location.sportsPlaces"
-                    "&fields=renovationYears"
-                    "&fields=admin"
-                    "&fields=www"
-                    "&fields=location.geometries"
-                    "&fields=name"
-                    "&fields=type.typeCode"
-                    "&fields=location.locationId"
-                    "&fields=freeUse"
-                    "&fields=location.city.name"
-                    "&fields=lastModified"
-                    "&fields=location.postalCode"
-                    "&fields=location.postalOffice"
-                    "&fields=location.city.cityCode"
-                    "&fields=phoneNumber"
-                    "&fields=location.neighborhood"
-                    "&fields=owner"
-                    "&fields=location.address"
-                    "&pageSize=100"))
+(def old-lipas-fields
+  ["properties" "schoolUse" "email" "type.name" "location.sportsPlaces"
+   "renovationYears" "admin" "www" "location.geometries" "name"
+   "type.typeCode" "location.locationId" "freeUse" "location.city.name"
+   "lastModified" "location.postalCode" "location.postalOffice"
+   "location.city.cityCode" "phoneNumber" "location.neighborhood"
+   "owner" "location.address"])
 
-(defn get-lipas-data* [url]
-  (as-> url $
-    (slurp $)
-    (json/decode $ true)
-    (utils/index-by :sportsPlaceId $)))
+(def old-lipas-url (:old-lipas-url env))
+
+(defn- query [results url {:keys [page pageSize] :as params
+                           :or   {page 1 pageSize 100}}]
+  (let [params (assoc params :page page :pageSize pageSize)
+        url*   (str url "?" (codec/form-encode params))]
+    (if-let [data (-> url* slurp (json/decode true) not-empty)]
+      (recur (into results data) url (update params :page inc))
+      results)))
 
 (defn get-lipas-ice-stadiums []
-  (let [url (str lipas-url "&typeCodes=2520" "&typeCodes=2510")]
-    (merge
-     (get-lipas-data* (str url "&page=1")) ; n=233, page-size=100
-     (get-lipas-data* (str url "&page=2"))
-     (get-lipas-data* (str url "&page=3")))))
+  (let [url    (str old-lipas-url "/api/sports-places")
+        params {:typeCodes [2520 2510]}]
+    (query [] url params)))
 
 (defn get-lipas-swimming-pools []
-  (let [url (str lipas-url "&typeCodes=3110" "&typeCodes=3130")]
-    (merge
-     (get-lipas-data* (str url "&page=1")) ; n=305, page-size=100
-     (get-lipas-data* (str url "&page=2"))
-     (get-lipas-data* (str url "&page=3"))
-     (get-lipas-data* (str url "&page=4")))))
+  (let [url    (str old-lipas-url "/api/sports-places")
+        params {:typeCodes [3110 3130]}]
+    (query [] url params)))
 
 (defn get-portal-data [path]
   (as-> path $
@@ -314,6 +301,8 @@
    :pool1MinDepthM              :pool-min-depth-m,
    :inrunsMaterial              :inruns-material,
    :skijumpHillType             :skijump-hill-type})
+
+(def prop-mappings-reverse (set/map-invert prop-mappings))
 
 (defn resolve-surface-material [props]
   (let [mat1 (-> props :surfaceMaterial (as-> $ (when $ (string/lower-case $))))
@@ -697,7 +686,7 @@
 (defn migrate-from-old-lipas! [db user lipas-ids]
   (log/info "Starting to migrate sports-sites" lipas-ids)
   (doseq [lipas-id lipas-ids]
-    (let [url   (str "http://lipas.cc.jyu.fi/api/sports-places/" lipas-id)
+    (let [url   (str old-lipas-url "/api/sports-places/" lipas-id)
           data  (-> url slurp (json/decode true))
           instr (resolve-transform data)
           data  ((:transform-fn instr) data)]
@@ -760,6 +749,204 @@
                                          (second (rest args)))
       (log/error "Please provide --csv or --lipas 123 234 ..."))))
 
+(defn query-changed [since]
+  (let [url    (str old-lipas-url "/api/sports-places")
+        params {:modifiedAfter since
+                :fields        old-lipas-fields}]
+    (query [] url params)))
+
+(defn query-timestamps [lipas-ids]
+  (let [url    (str old-lipas-url "/api/sports-places")
+        params {:searchString (string/join "|" lipas-ids)
+                :fields       ["lastModified"]}]
+    (->> (query [] url params)
+         (filter (comp (set lipas-ids) :sportsPlaceId)))))
+
+;; (prn {:ts1     ts1 :ts2 ts2
+;;       :update? (> (compare ts1 ts2) 0)})
+(defn- filter-newer [m1 ts-fn1 m2 ts-fn2]
+  (select-keys m1 (filter (fn [k]
+                            (let [ts1 (-> k m1 ts-fn1)
+                                  ts2 (-> k m2 ts-fn2)]
+                              (> (compare ts1 ts2) 0)))
+                          (keys m1))))
+
+(defn migrate-changed-since! [db search user since]
+  (let [since   (utils/->old-lipas-timestamp since)
+        changed (query-changed since)
+
+        ;; Get last modification dates from db for all update
+        ;; candidates.
+        timestamps (->> (db/get-last-modified db (map :sportsPlaceId changed))
+                        (utils/index-by :lipas_id))
+
+        updates (->>
+                 ;; Filter entries where newer modifications
+                 ;; exists in this system.
+                 (filter-newer (utils/index-by :sportsPlaceId changed)
+                               #(-> % :lastModified utils/->ISO-timestamp)
+                               timestamps
+                               #(when-let [ts (:created_at %)]
+                                  (-> ts .toInstant str)))
+
+                 vals
+
+                 ;; Ignore swimming pools and ice stadiums
+                 ;; because this system has richer data model
+                 ;; for them and we can't integrate data in a
+                 ;; sensible way.
+                 (remove (comp #{3110 3130 2510 2520} :typeCode :type)))
+
+        ignores     (set/difference (set changed) (set updates))
+        sites       (->> updates
+                         (map (partial ->sports-site {}))
+                         (map utils/clean))
+        valid-sites (filter (partial utils/validate-noisy :lipas/sports-site) sites)
+        invalid     (set/difference (set sites) (set valid-sites))
+        idx-name    "sports_sites_current"]
+
+    (db/upsert-sports-sites! db user valid-sites)
+
+    (->> valid-sites
+         (search/->bulk idx-name :lipas-id)
+         (search/bulk-index! search))
+
+    {:total   (count changed)
+     :updated (map :lipas-id valid-sites)
+     :failed (map :lipas-id invalid)
+     :ignored (map :sportsPlaceId ignores)
+     ;; Timestamp from where we will query next time.
+     :latest  (->> changed (map :lastModified) sort last utils/->ISO-timestamp)}))
+
+(def old-surface-materials
+  {"gravel"                        "Sora",
+   "fiberglass"                    "Lasikuitu",
+   "brick-crush"                   "Tiilimurska",
+   "water"                         "Vesi",
+   "concrete"                      "Betoni",
+   "textile"                       "Tekstiili",
+   "asphalt"                       "Asfaltti",
+   "ceramic"                       "Keraaminen",
+   "rock-dust"                     "Kivituhka",
+   "deinked-pulp"                  "Siistausmassa",
+   "stone"                         "Kivi",
+   "metal"                         "Metalli",
+   "soil"                          "Maa",
+   "woodchips"                     "Hake",
+   "grass"                         "Nurmi",
+   "synthetic"                     "Muovi / synteettinen",
+   "sand"                          "Hiekka",
+   "artificial-turf"               "Tekonurmi",
+   "wood"                          "Puu",
+   "sawdust"                       "Sahanpuru",
+   "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
+
+(defn- add-point-props [fs]
+  (map-indexed
+   (fn [idx f]
+     (assoc f :properties {:pointId 123})) fs))
+
+(defn- add-route-props [fs]
+  (map-indexed
+   (fn [idx f]
+     (assoc f :properties {:routeCollName    "routeColl_1"
+                           :routeName        "route_1"
+                           :routeSegmentName (str "segment_" idx)})) fs))
+
+(defn- add-area-props [fs]
+  (map-indexed
+   (fn [idx f]
+     (assoc f :properties {:areaName        "area_1"
+                           :areaSegmentName (str "segment_" idx)})) fs))
+
+(defn- adapt-geoms [s]
+  (let [geom-type (-> s :type :type-code types/all :geometry-type)
+        path      [:location :geometries :features]]
+    (case geom-type
+      "Point"      (update-in s path add-point-props)
+      "Polygon"    (update-in s path add-area-props)
+      "LineString" (update-in s path add-route-props))))
+
+(defn ->old-lipas-sports-site [s]
+  (-> s
+      (select-keys [:name :email :www :phone-umber :renovation-years
+                    :construction-year :type :location :properties])
+      (assoc :admin (if (= "unknown" (:admin s)) "no-information" (:admin s))
+             :owner (if (= "unknown" (:owner s)) "no-information" (:owner s))
+             :school-use (-> s :properties :school-use?)
+             :free-use (-> s :properties :free-use?))
+      (update :properties #(-> %
+                               (dissoc :school-use? :free-use?)
+                               (update :surface-material
+                                       (comp old-surface-materials first))
+                               (set/rename-keys prop-mappings-reverse)))
+      adapt-geoms
+      utils/clean
+      utils/->camel-case-keywords))
+
+(defn- push-to-old-lipas! [m]
+  (let [default-params {:basic-auth
+                        [(:old-lipas-user env) (:old-lipas-pass env)]
+                        :content-type     :json
+                        :accept           :json
+                        :socket-timeout   10000
+                        :conn-timeout     10000
+                        :throw-exceptions true}
+
+        url (str old-lipas-url "/api/integration/doc")
+
+        lipas-id (:lipas-id m)
+
+        doc {:op   (if (= "active" (:status m)) "upsert" "delete")
+             :id   lipas-id
+             :data (->old-lipas-sports-site m)}
+
+        params (merge default-params {:body (json/encode doc)})]
+    (client/post url params)))
+
+;; Get changed entries since last integration.
+(defn add-changed-to-out-queue! [db since]
+  (->> since
+       (db/get-sports-sites-modified-since db)
+       (map :lipas-id)
+       (db/add-all-to-integration-out-queue! db)))
+
+(defn process-integration-out-queue! [db]
+  (let [changed (->> (db/get-integration-out-queue db)
+                     (map :lipas-id)
+                     (db/get-sports-sites-by-lipas-ids db)
+                     (utils/index-by :lipas-id))
+
+        ;; Query timestamps from old Lipas.
+        timestamps (->> (query-timestamps (keys changed))
+                        (utils/index-by :sportsPlaceId))
+
+        ;; Select only entries that are newer in this system.
+        updates (filter-newer changed
+                              :event-date
+                              timestamps
+                              #(-> % :lastModified utils/->ISO-timestamp))
+
+        ignores (map :lipas-id (set/difference (set changed) (set updates)))
+
+        ;; Attempt to push each change individually
+        resps (reduce (fn [res [lipas-id m]]
+                        (let [resp (push-to-old-lipas! m)]
+                          (if (>= 200 (:status resp))
+                            (update res :updated conj lipas-id)
+                            (update res :failed conj lipas-id))))
+                      {}
+                      updates)]
+
+    ;; Delete successfully integrated and ignored entries from queue
+    (doseq [lipas-id (into ignores (:updated resps))]
+      (db/delete-from-integration-out-queue! db lipas-id))
+
+    (merge resps
+           {:total   (count changed)
+            :ignored ignores
+            :latest  (->> changed (map :event-date) sort last)})))
+
 (comment
   (-main "--csv") ;Careful with this one
   (-main "--lipas" "529736")
@@ -778,4 +965,32 @@
   (def db (:db (backend/start-system! config)))
   (def user (core/get-user db "import@lipas.fi"))
 
-  (migrate-from-es-dump! db user fpath "/tmp/invalid/"))
+
+  (add-changed-to-out-queue! db "2018-12-18T00:00:00.000")
+  (process-integration-out-queue! db)
+
+  (def sites (db/get-sports-sites-modified-since db "2018-12-14T00:00:00.000"))
+  (->> sites
+       (map ->old-lipas-sports-site))
+
+  (filter-newer-2 {1 {:a 1} 3 {:a 3}} :a {1 {:a 2}} :a)
+
+  (migrate-from-es-dump! db user fpath "/tmp/invalid/")
+
+  (->> (query-changed "2018-12-14 00:00:00.000" [] 1)
+       (remove (comp #{3110 3130 2510 2520} :typeCode :type)))
+
+  (db/get-last-modified db [74538])
+
+  (query [] "http://lipas.cc.jyu.fi/api/sports-places"
+         {:modifiedAfter "2018-12-14 00:00:00.000"
+          :pageSize      100
+          :fields        ["lastModified"]})
+
+  (count (get-lipas-ice-stadiums))
+  (count (get-lipas-swimming-pools))
+
+  (with-redefs [old-lipas-url "http://lipas.cc.jyu.fi"]
+    (count (get-lipas-ice-stadiums)))
+
+  )

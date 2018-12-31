@@ -66,3 +66,27 @@ WHERE type_code = :type_code AND date_part('year', event_date) = :year
 SELECT *
 FROM sports_site
 WHERE status = :status AND author_id = :author_id ::uuid
+
+-- :name get-last-modified
+-- :command :query
+-- :result :many
+-- :doc Lists latest timestamps for given lipas_ids
+SELECT lipas_id, created_at, event_date
+FROM sports_site_current
+WHERE lipas_id IN (:v*:lipas_ids)
+
+-- :name get-modified-since
+-- :command :query
+-- :result :many
+-- :doc Lists latest revisions of sports-sites modified after given timestamp
+SELECT *
+FROM sports_site_current
+WHERE created_at > :timestamp ::timestamptz
+
+-- :name get-latest-by-ids
+-- :command :query
+-- :result :many
+-- :doc Lists latest revisions of sports-sites by lipas-ids
+SELECT *
+FROM sports_site_current
+WHERE lipas_id IN (:v*:lipas_ids)
