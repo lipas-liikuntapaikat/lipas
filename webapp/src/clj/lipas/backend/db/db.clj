@@ -101,10 +101,11 @@
        (map sports-site/unmarshall)))
 
 (defn get-sports-sites-by-lipas-ids [db lipas-ids]
-  (->> {:lipas-ids lipas-ids}
-       utils/->snake-case-keywords
-       (sports-site/get-latest-by-ids db)
-       (map sports-site/unmarshall)))
+  (when-not (empty? lipas-ids)
+    (->> {:lipas-ids lipas-ids}
+         utils/->snake-case-keywords
+         (sports-site/get-latest-by-ids db)
+         (map sports-site/unmarshall))))
 
 ;; Integration ;;
 

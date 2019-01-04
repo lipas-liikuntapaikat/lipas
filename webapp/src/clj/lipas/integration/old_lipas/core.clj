@@ -31,11 +31,11 @@
 
         ;; Select only entries that are newer in this system.
         updates (utils/filter-newer changed
-                              :event-date
-                              timestamps
-                              #(-> % :lastModified utils/->ISO-timestamp))
+                                    :event-date
+                                    timestamps
+                                    #(-> % :lastModified transform/last-modified->UTC))
 
-        ignores (map :lipas-id (set/difference (set changed) (set updates)))
+        ignores (map first (set/difference (set changed) (set updates)))
 
         ;; Attempt to push each change individually
         resps (reduce (fn [res [lipas-id m]]
@@ -53,4 +53,4 @@
     (merge resps
            {:total   (count changed)
             :ignored ignores
-            :latest  (->> changed (map :event-date) sort last)})))
+            :latest  (->> changed vals (map :event-date) sort last)})))

@@ -63,8 +63,7 @@
 (defn ->end-of-year [year]
   (str year "-12-31T23:59:59.999Z"))
 
-(defn reverse-cmp [a b]
-  (compare b a))
+(def reverse-cmp utils/reverse-cmp)
 
 (comment (prev-or-first [1 3 5] 4))
 (comment (prev-or-first ["2005" "2012" "2001"] "2006"))

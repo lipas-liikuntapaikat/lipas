@@ -81,7 +81,7 @@ WHERE lipas_id IN (:v*:lipas_ids)
 -- :doc Lists latest revisions of sports-sites modified after given timestamp
 SELECT *
 FROM sports_site_current
-WHERE created_at > :timestamp ::timestamptz
+WHERE event_date > :timestamp ::timestamptz
 
 -- :name get-latest-by-ids
 -- :command :query

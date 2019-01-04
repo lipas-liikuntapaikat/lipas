@@ -1,20 +1,63 @@
 (ns lipas.integration.old-lipas.transform
   (:require
    [clojure.set :as set]
-   [clojure.string :as string]
    [clojure.spec.alpha :as spec]
    [lipas.integration.old-lipas.sports-site :as old]
    [lipas.utils :as utils :refer [sreplace trim]]))
 
-(defn ->old-lipas-sports-site [s]
-  (-> s
+(def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
+
+(def df-in (java.time.format.DateTimeFormatter/ofPattern
+            "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
+
+(def df-out (java.time.format.DateTimeFormatter/ofPattern
+             "yyyy-MM-dd HH:mm:ss.SSS"))
+
+(defn UTC->last-modified
+  "Converts UTC ISO 8601 string to old Lipas last modified timestamp string.
+
+  Old Lipas uses Europe/Helsinki TZ and format 'yyyy-MM-dd
+  HH:mm:ss.SSS'."
+  [s]
+  (when s
+    (-> (java.time.Instant/parse s)
+        (.atZone helsinki-tz)
+        (.toLocalDateTime)
+        (.format df-out))))
+
+(defn last-modified->UTC
+  "Converts old Lipas last modified timestamp string to UTC ISO 8601 string.
+
+  Old Lipas uses Europe/Helsinki TZ and format 'yyyy-MM-dd
+  HH:mm:ss.SSS'."
+  [s]
+  (when s
+    (-> (java.time.LocalDateTime/parse s df-in)
+        (java.time.ZonedDateTime/of helsinki-tz)
+        (.withZoneSameInstant java.time.ZoneOffset/UTC)
+        str)))
+
+(defn ->old-lipas-sports-site*
+  "Transforms new LIPAS sports-site m to old Lipas sports-site."
+  [m]
+  (-> m
+
       (select-keys [:name :email :www :phone-umber :renovation-years
-                    :construction-year :type :location :properties])
-      (assoc :admin (if (= "unknown" (:admin s)) "no-information" (:admin s))
-             :owner (if (= "unknown" (:owner s)) "no-information" (:owner s))
-             :school-use (-> s :properties :school-use?)
-             :free-use (-> s :properties :free-use?))
+                    :construction-year :location :properties])
+
+      (assoc :last-modified (-> m :event-date UTC->last-modified)
+             :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
+             :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
+             :school-use (-> m :properties :school-use?)
+             :free-use (-> m :properties :free-use?)
+             :type (select-keys (:type m) [:type-code]))
+
+      (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
+
+      (update-in [:location :city] dissoc :neighborhood)
+
       (update :properties #(-> %
+                               (assoc :info-fi (-> m :comment))
                                (dissoc :school-use? :free-use?)
                                (update :surface-material
                                        (comp old/surface-materials first))
@@ -23,50 +66,88 @@
       utils/clean
       utils/->camel-case-keywords))
 
-(defn ->sports-site [lipas-entry]
-  (let [props (:properties lipas-entry)]
-    {:lipas-id          (-> lipas-entry :sportsPlaceId)
-     :event-date        (-> lipas-entry :lastModified (string/replace " " "T") (str "Z"))
+(defmulti ->old-lipas-sports-site
+  "Transforms New LIPAS sports-site to old Lipas sports-site. Details
+  may depend on sports-sites :type-code and therefore each type-code
+  can have their own implementation."
+  (comp :type-code :type))
+
+(defmethod ->old-lipas-sports-site :default
+  [m]
+  (->old-lipas-sports-site* m))
+
+(defmethod ->old-lipas-sports-site 2510
+  [m]
+  (-> m
+      old/add-ice-stadium-props
+      ->old-lipas-sports-site*))
+
+(defmethod ->old-lipas-sports-site 2520
+  [m]
+  (-> m
+      old/add-ice-stadium-props
+      ->old-lipas-sports-site*))
+
+(defmethod ->old-lipas-sports-site 3110
+  [m]
+  (-> m
+      old/add-swimming-pool-props
+      ->old-lipas-sports-site*))
+
+(defmethod ->old-lipas-sports-site 3130
+  [m]
+  (-> m
+      old/add-swimming-pool-props
+      ->old-lipas-sports-site*))
+
+(defn ->sports-site
+  "Transforms old lipas sports-site m to new LIPAS sports-site."
+  [m]
+  (let [props (:properties m)]
+    {:lipas-id          (-> m :sportsPlaceId)
+     :event-date        (-> m :lastModified last-modified->UTC)
      :status            "active"
-     :name              (-> lipas-entry :name)
+     :name              (-> m :name)
      :marketing-name    nil
-     :admin             (get old/admins (:admin lipas-entry))
-     :owner             (get old/owners (:owner lipas-entry))
-     :www               (-> lipas-entry :www trim not-empty)
-     :email             (-> lipas-entry :email trim
+     :admin             (get old/admins (:admin m))
+     :owner             (get old/owners (:owner m))
+     :www               (-> m :www trim not-empty)
+     :email             (-> m :email trim
                             (sreplace " " "")
                             (sreplace "(at)" "@")
                             (sreplace "[at]" "@")
                             (as-> $ (if (spec/valid? :lipas/email $) $ ""))
                             not-empty)
-     :comment           (-> lipas-entry :properties :infoFi trim not-empty)
+     :comment           (-> m :properties :infoFi trim not-empty)
      :properties        (-> props
                             (select-keys (keys old/prop-mappings))
                             (set/rename-keys old/prop-mappings)
-                            (assoc :school-use? (-> lipas-entry :schoolUse))
-                            (assoc :free-use? (-> lipas-entry :freeUse))
+                            (assoc :school-use? (-> m :schoolUse))
+                            (assoc :free-use? (-> m :freeUse))
                             (assoc :surface-material
                                    (first (old/resolve-surface-material props)))
                             (assoc :surface-material-info
                                    (second (old/resolve-surface-material props))))
-     :phone-number      (-> lipas-entry :phoneNumber trim not-empty)
-     :construction-year (-> lipas-entry :constructionYear)
-     :renovation-years  (-> lipas-entry :renovationYears)
+     :phone-number      (-> m :phoneNumber trim not-empty)
+     :construction-year (-> m :constructionYear)
+     :renovation-years  (-> m :renovationYears)
      :location
-     {:address       (-> lipas-entry :location :address trim not-empty)
-      :geometries    (-> lipas-entry :location :geometries
+     {:address       (-> m :location :address trim not-empty)
+      :geometries    (-> m :location :geometries
                          (update :features
                                  (fn [fs] (mapv #(dissoc % :properties) fs))))
-      :postal-code   (-> lipas-entry :location :postalCode trim not-empty)
-      :postal-office (-> lipas-entry :location :postalOffice trim not-empty)
+      :postal-code   (-> m :location :postalCode trim not-empty)
+      :postal-office (-> m :location :postalOffice trim not-empty)
       :city
-      {:city-code    (-> lipas-entry :location :city :cityCode)
-       :neighborhood (-> lipas-entry :location :neighborhood trim not-empty)}}
+      {:city-code    (-> m :location :city :cityCode)
+       :neighborhood (-> m :location :neighborhood trim not-empty)}}
      :type
-     {:type-code (-> lipas-entry :type :typeCode)}}))
+     {:type-code (-> m :type :typeCode)}}))
 
-;; 'es' refers here to Old Lipas Elasticsearch
-(defn es-dump->sports-site [m]
+(defn es-dump->sports-site
+  "Transforms old Lipas sports site m from old Lipas ElasticSearch dump
+  to new LIPAS sports site."
+  [m]
   (-> m
       (assoc :name (-> m :name :fi))
       (assoc :admin (-> m :admin :fi))
@@ -77,6 +158,11 @@
                                             "00000"))
       (assoc-in [:location :neighborhood] (-> m :location :neighborhood :fi))
       (assoc :lastModified (or (-> m :lastModified not-empty)
-                               "1970-01-01T00:00:00.000"))
+                               "1970-01-01 00:00:00.000"))
       ->sports-site
       utils/clean))
+
+(comment
+  (UTC->last-modified "2019-01-03T12:03:48.552Z")
+  (UTC->last-modified "2019-01-03T08:39:08.070Z")
+  (last-modified->UTC "2019-01-03 08:39:08.070"))
