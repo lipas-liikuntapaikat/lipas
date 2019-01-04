@@ -556,12 +556,26 @@
 ;; (def form table-form)
 (def form form-trad)
 
-(defn expansion-panel [{:keys [label default-expanded]} & children]
+(defn icon-text [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items :center
+             :style     {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:color (or icon-color "inherit")}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography {:variant :body2
+                     :style   {:margin-left "0.5em"
+                               :display     :inline}}
+     text]]])
+
+(defn expansion-panel [{:keys [label label-color default-expanded]
+                        :or   {label-color "default"}} & children]
   [mui/expansion-panel {:default-expanded default-expanded
-                        :style    {:margin-top "1em"}}
+                        :style            {:margin-top "1em"}}
    [mui/expansion-panel-summary {:expand-icon (r/as-element
                                                [mui/icon "expand_more"])}
-    [mui/typography {:color   "primary"
+
+    [mui/typography {:color   label-color
                      :variant "button"}
      label]]
    (into [mui/expansion-panel-details]
@@ -822,18 +836,6 @@
                                           (into (empty old-value)
                                                 (remove #{v} old-value))))
                            (on-change @value))}]]))]))
-
-(defn icon-text [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items :center
-             :style     {:padding "0.5em"}}
-   [mui/grid {:item true}
-    [mui/icon {:color (or icon-color "inherit")}
-     icon]]
-   [mui/grid {:item true}
-    [mui/typography {:variant :body2
-                     :style   {:margin-left "0.5em"
-                               :display     :inline}}
-     text]]])
 
 (defn sub-heading [{:keys [label]}]
   [mui/typography {:variant "subheading"
