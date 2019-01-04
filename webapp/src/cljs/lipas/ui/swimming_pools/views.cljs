@@ -729,6 +729,6 @@
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
-    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3110])
-    (==> [:lipas.ui.energy.events/fetch-energy-report 2017 3130])
+    (==> [:lipas.ui.energy.events/fetch-energy-report (dec utils/this-year) 3110])
+    (==> [:lipas.ui.energy.events/fetch-energy-report (dec utils/this-year) 3130])
     [create-panel tr logged-in?]))
