@@ -79,7 +79,7 @@
    {:type      "dark"
     :primary   {:main primary}
     :secondary {:main secondary}
-    :text      {:disabled "rgba(0, 0, 0, 0.68)"}}
+    :text      {:disabled "rgba(255, 255, 255, 0.88)"}}
    :overrides
    {:Mui-card-header
     {:title
@@ -91,7 +91,8 @@
   (utils/deep-merge
    jyu-styles-dark
    {:palette
-    {:type "light"}
+    {:type "light"
+     :text {:disabled "rgba(0, 0, 0, 0.88)"}}
     :typography
     {:body1 {:color primary}
      :body2 {:color primary}}

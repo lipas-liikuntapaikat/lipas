@@ -120,13 +120,18 @@
                       :variant :display1}
       "LIPAS"]
      [mui/grid {:container true}
-      [mui/grid {:item true :xs 12}
-       [lui/text-field {:value     search-str
-                        :on-change #(==> [::events/update-search-string %])}]
+      [mui/grid {:item true :xs 9}
+       [lui/text-field {:value       search-str
+                        :placeholder "Etsi..."
+                        :full-width  true
+                        :on-change   #(==> [::events/update-search-string %])}]]
+      [mui/grid {:item true :xs 3}
        [mui/button {:on-click #(==> [::events/submit-search])}
         [mui/icon "search"]
         "Hae"]]]
+
      [lui/expansion-panel {:label            "Rajaa hakua"
+                           :label-color      "default"
                            :default-expanded false}
       [filters {:tr tr}]]
 

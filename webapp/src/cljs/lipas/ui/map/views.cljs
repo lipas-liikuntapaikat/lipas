@@ -160,9 +160,10 @@
 
        ;; Tabs
        [mui/grid {:item true}
-        [mui/tabs {:value     @selected-tab
-                   :on-change #(reset! selected-tab %2)
-                   :style     {:margin-bottom "1em"}}
+        [mui/tabs {:value      @selected-tab
+                   :on-change  #(reset! selected-tab %2)
+                   :style      {:margin-bottom "1em"}
+                   :text-color "secondary"}
          [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
          [mui/tab {:label (tr :lipas.sports-site/properties)}]]
 
@@ -199,6 +200,8 @@
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
+
+              ^{:key (str "props-" lipas-id)}
               [sports-sites/properties-form
                {:tr           tr
                 :types-props  types-props
@@ -545,49 +548,50 @@
        [mui/grid {:item true}
         [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
-     ;; Open Drawer Button
-     (when-not drawer-open?
+     [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+
+      (when-not drawer-open?
+        ;; Open Drawer Button
+        [mui/grid {:container true
+                   :style     {:position         "fixed"
+                               :left             0
+                               :top              0
+                               :width            drawer-width
+                               :z-index          1200}}
+         [mui/grid {:item true :xs 12}
+          [mui/paper {:square true}
+           [mui/button {:full-width true
+                        :on-click   #(==> [::events/toggle-drawer])
+                        :variant    "outlined"}
+            [mui/icon "expand_more"]]]]])
+
+      ;; Closable left sidebar drawer
+      [mui/drawer {:variant    "persistent"
+                   :PaperProps {:style {:width drawer-width}}
+                   :SlideProps {:direction "down"}
+                   :open       drawer-open?}
+
+       ;; Close button
+       [mui/button {:on-click #(==> [::events/toggle-drawer])
+                    :style    {:margin-bottom "1em"}
+                    :variant  "outlined"
+                    :color    "default"}
+        [mui/icon "expand_less"]]
+
+       ;; Content
        [mui/grid {:container true
-                  :style     {:position         "fixed"
-                              :left             0
-                              :top              0
-                              :width            drawer-width
-                              :z-index          1200
-                              :background-color "white"}}
-        [mui/grid {:item true :xs 12}
-         [mui/button {:full-width true
-                      :on-click   #(==> [::events/toggle-drawer])
-                      :variant    "outlined"
-                      :color      "primary"}
-          [mui/icon "expand_more"]]]])
+                  :direction :column
+                  :justify   :space-between
+                  :style     {:flex           1
+                              :padding-left   "1em"
+                              :padding-right  "1em"
+                              :padding-bottom "0.5em"}}
 
-     ;; Closable left sidebar drawer
-     [mui/drawer {:variant    "persistent"
-                  :PaperProps {:style {:width drawer-width}}
-                  :SlideProps {:direction "down"}
-                  :open       drawer-open?}
-
-      ;; Close button
-      [mui/button {:on-click #(==> [::events/toggle-drawer])
-                   :style    {:margin-bottom "1em"}
-                   :variant  "outlined"
-                   :color    "primary"}
-       [mui/icon "expand_less"]]
-
-      ;; Content
-      [mui/grid {:container true
-                 :direction :column
-                 :justify   :space-between
-                 :style     {:flex           1
-                             :padding-left   "1em"
-                             :padding-right  "1em"
-                             :padding-bottom "0.5em"}}
-
-       [mui/grid {:item  true
-                  :style {:flex 1}}
-        (if selected-site
-          [sports-site-view {:tr tr :site-data selected-site}]
-          [map-contents-view {:tr tr :logged-in? logged-in?}])]]]
+        [mui/grid {:item  true
+                   :style {:flex 1}}
+         (if selected-site
+           [sports-site-view {:tr tr :site-data selected-site}]
+           [map-contents-view {:tr tr :logged-in? logged-in?}])]]]]
 
      ;; Layer switcher (bottom right)
      [floating-container {:bottom "0.5em" :right "3em" :elevation 0
