@@ -52,8 +52,7 @@
           (save-invalid! data err-path))))))
 
 (defn migrate-changed-since! [db search user since]
-  (let [since   (utils/->old-lipas-timestamp since)
-        changed (old-lipas-api/query-changed since)
+  (let [changed (old-lipas-api/query-changed (old-lipas/UTC->last-modified since))
 
         ;; Get last modification dates from db for all update
         ;; candidates.
@@ -64,7 +63,7 @@
                  ;; Filter entries where newer modifications
                  ;; exists in this system.
                  (utils/filter-newer (utils/index-by :sportsPlaceId changed)
-                                     #(-> % :lastModified utils/->ISO-timestamp)
+                                     #(-> % :lastModified old-lipas/last-modified->UTC)
                                      timestamps
                                      #(when-let [ts (:created_at %)]
                                         (-> ts .toInstant str)))
@@ -96,7 +95,11 @@
      :failed  (map :lipas-id invalid)
      :ignored (map :sportsPlaceId ignores)
      ;; Timestamp from where we will query next time.
-     :latest  (->> changed (map :lastModified) sort last utils/->ISO-timestamp)}))
+     :latest  (->> changed
+                   (map :lastModified)
+                   sort
+                   last
+                   old-lipas/last-modified->UTC)}))
 
 (defn -main [& args]
   (let [source       (first args)

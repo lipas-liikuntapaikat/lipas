@@ -161,7 +161,39 @@
    :range                       :range?,
    :pool1MinDepthM              :pool-min-depth-m,
    :inrunsMaterial              :inruns-material,
-   :skijumpHillType             :skijump-hill-type})
+   :skijumpHillType             :skijump-hill-type
+   :7m5PlatformsCount           :platforms-7.5m-count,
+   :waterslidesTotalLengthM     :waterslides-total-length-m,
+   :10mPlatformsCount           :platforms-10m-count,
+   :pool4TemperatureC           :pool-4-temperature-c,
+   :pool5LengthM                :pool-5-length-m,
+   :5mPlatformsCount            :platforms-5m-count,
+   :pool5WidthM                 :pool-5-width-m,
+   :3mPlatformsCount            :platforms-3m-count,
+   :pool5MinDepthM              :pool-5-min-depth-m,
+   :pool4MinDepthM              :pool-4-min-depth-m,
+   :waterSlidesCount            :water-slides-count,
+   :pool5MaxDepthM              :pool-5-max-depth-m,
+   :pool2LengthM                :pool-2-length-m,
+   :infoFi                      :info-fi,
+   :pool3TracksCount            :pool-3-tracks-count,
+   :pool2MinDepthM              :pool-2-min-depth-m,
+   :pool5TemperatureC           :pool-5-temperature-c,
+   :pool3WidthM                 :pool-3-width-m,
+   :pool3LengthM                :pool-3-length-m,
+   :pool2TracksCount            :pool-2-tracks-count,
+   :pool3MinDepthM              :pool-3-min-depth-m,
+   :pool5TracksCount            :pool-5-tracks-count,
+   :pool4WidthM                 :pool-4-width-m,
+   :pool4MaxDepthM              :pool-4-max-depth-m,
+   :1mPlatformsCount            :platforms-1m-count,
+   :pool3TemperatureC           :pool-3-temperature-c,
+   :pool2WidthM                 :pool-2-width-m,
+   :pool4TracksCount            :pool-4-tracks-count,
+   :pool3MaxDepthM              :pool-3-max-depth-m,
+   :pool2MaxDepthM              :pool-2-max-depth-m,
+   :pool4LengthM                :pool-4-length-m,
+   :pool2TemperatureC           :pool-2-temperature-c})
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 
@@ -221,19 +253,19 @@
    "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
 
 (defn- add-point-props [fs]
-  (map-indexed
+  (utils/mapv-indexed
    (fn [idx f]
      (assoc f :properties {:pointId 123})) fs))
 
 (defn- add-route-props [fs]
-  (map-indexed
+  (utils/mapv-indexed
    (fn [idx f]
-     (assoc f :properties {:routeCollName    "routeColl_1"
-                           :routeName        "route_1"
-                           :routeSegmentName (str "segment_" idx)})) fs))
+     (assoc f :properties {:routeCollectionName "routeColl_1"
+                           :routeName           "route_1"
+                           :routeSegmentName    (str "segment_" idx)})) fs))
 
 (defn- add-area-props [fs]
-  (map-indexed
+  (utils/mapv-indexed
    (fn [idx f]
      (assoc f :properties {:areaName        "area_1"
                            :areaSegmentName (str "segment_" idx)})) fs))
@@ -245,3 +277,68 @@
       "Point"      (update-in s path add-point-props)
       "Polygon"    (update-in s path add-area-props)
       "LineString" (update-in s path add-route-props))))
+
+(defn add-ice-stadium-props
+  "Extracts old Lipas ice stadium props from new LIPAS sport site m and
+  merges them into existing :properties of m."
+  [m]
+  (->>  (:rinks m)
+        (take 3)
+        (map-indexed
+         (fn [idx rink]
+           (let [n      (inc idx)
+                 length (:length-m rink)
+                 width  (:width-m rink)]
+             {(keyword (str "field-" n "-length-m")) length
+              (keyword (str "field-" n "-width-m"))  width
+              (keyword (str "field-" n "-area-m2"))  (when (and length width)
+                                                       (* length width))})))
+        (apply merge)
+        (merge
+         {:ice-rinks-count       (-> m :rinks count)
+          :area-m2               (-> m :building :total-surface-area-m2)
+          :stand-capacity-person (-> m :building :seating-capacity)
+          :surface-material      (-> m :building :envelope :base-floor-structure)})
+        (update m :properties merge)))
+
+(defn add-swimming-pool-props
+  "Extracts old Lipas swimming pool props from new LIPAS sport site m
+  and merges them into existing :properties of m."
+  [m]
+  (->>  (:pools m)
+        (sort-by :length-m utils/reverse-cmp)
+        (take 5)
+        (map-indexed
+         (fn [idx pool]
+           (let [n          (inc idx)
+                 ;; There's a typo in old-lipas pool 1 length prop and
+                 ;; we 'fix' it here. Seriously.
+                 length-key (str "-length-m" (when (= 1 n) "-m"))]
+             {(keyword (str "pool-" n length-key))       (:length-m pool)
+              (keyword (str "pool-" n "-width-m"))       (:width-m pool)
+              (keyword (str "pool-" n "-temperature-c")) (:temperature-c pool)
+              (keyword (str "pool-" n "-max-depth-m"))   (:max-depth-m pool)
+              (keyword (str "pool-" n "-min-depth-m"))   (:min-depth-m pool)})))
+        (apply merge)
+        (merge
+         {:swimming-pool-count        (-> m :pools count)
+          :pool-water-area-m2         (-> m :building :total-water-area-m2)
+          :area-m2                    (-> m :building :total-surface-area-m2)
+          :stand-capacity-person      (-> m :building :seating-capacity)
+          :kiosk?                     (-> m :facilities :kiosk?)
+          :platforms-1m-count         (-> m :facilities :platforms-1m-count)
+          :platforms-3m-count         (-> m :facilities :platforms-3m-count)
+          :platforms-5m-count         (-> m :facilities :platforms-5m-count)
+          :platforms-7m5-count        (-> m :facilities :platforms-7.5m-count)
+          :platforms-10m-count        (-> m :facilities :platforms-10m-count)
+          :water-slides-count         (-> m :slides count)
+          :waterslides-total-length-m (->> (:slides m)
+                                           (map :length-m)
+                                           (reduce utils/+safe))})
+        (update m :properties merge)))
+
+(comment
+  (add-ice-stadium-props {:properties {:info-fi "Kiskis"}
+                          :rinks
+                          [{:width-m 20 :length-m 50}
+                           {:width-m 25 :length-m 55}]}))

@@ -23,10 +23,10 @@
    "new->old" "2018-12-14T00:00:00.000Z"})
 
 (defn handle-error [db name e]
-  (let [data (or (ex-data e)
-                 {:msg   (.getMessage e)
-                  :error (with-out-str (stacktrace/print-stack-trace e))})]
-    (log/error "Integration failed!" data)
+  (let [data {:msg   (.getMessage e)
+              :resp  (-> e ex-data :body)
+              :stack (with-out-str (stacktrace/print-stack-trace e))}]
+    (log/error e)
     (db/add-integration-entry! db {:status     "failure"
                                    :name       name
                                    :event-date (utils/timestamp)
@@ -47,9 +47,7 @@
               "Ignored:" (-> res :ignored count)
               "Failed:"  (-> res :failed count))))
 
-;;;;;;;;;;;;;
 ;; INBOUND ;;
-;;;;;;;;;;;;;
 
 (defn old->new [db search user]
   (let [name         "old->new"
@@ -63,9 +61,7 @@
       (catch Exception e
         (handle-error db name e)))))
 
-;;;;;;;;;;;;;;
 ;; OUTBOUND ;;
-;;;;;;;;;;;;;;
 
 (defn new->old [db]
   (let [name         "new->old"
@@ -79,21 +75,23 @@
       (catch Exception e
         (handle-error db name e)))))
 
-;; TODO
+;; Tasks ;;
 
 (def tasks (atom {}))
 
 (defn -main [& args]
   (let [config              (select-keys config/default-config [:db :search])
         {:keys [db search]} (backend/start-system! config)
-        user                (core/get-user db "import@lipas.fi")
-        task                (tt/every! 30 (bound-fn [] (old->new db search user)))]
-    (swap! tasks assoc :old->new task)
+        user                (core/get-user db "import@lipas.fi")]
+    (reset! tasks {:old->new (tt/every! 60 (bound-fn [] (old->new db search user)))
+                   :new->old (tt/every! 60 30 (bound-fn [] (new->old db)))})
     (tt/start!)))
 
 (comment
   (-main)
+  (:new->old @tasks)
   (tt/cancel! (-> @tasks :old->new))
+  (tt/cancel! (-> @tasks :new->old))
   (tt/stop!)
 
   (def config (select-keys config/default-config [:db :search]))
@@ -101,4 +99,8 @@
   (def db (:db system))
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
-  (old->new db search user))
+  (new->old db)
+  (old->new db search user)
+  (old-lipas/add-changed-to-out-queue! db "2018-12-31T00:00:00.000Z")
+  (old-lipas/process-integration-out-queue! db)
+  )

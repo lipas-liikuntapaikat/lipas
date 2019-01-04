@@ -28,8 +28,6 @@
   #?(:cljs (.toISOString (js/Date.))
      :clj  (.toString (java.time.Instant/now))))
 
-(string/join (take 23 "kissa koira kana mursu heppa"))
-
 (defn ->ISO-timestamp
   "Converts timestamps from old LIPAS to ISO string format.
   Example: '2018-12-01 00:00:00.000' => '2018-12-01T00:00:00.000Z'
@@ -182,11 +180,17 @@
 (def trim (fnil string/trim ""))
 (def sreplace (fnil string/replace ""))
 
-;; (prn {:ts1     ts1 :ts2 ts2
-;;       :update? (> (compare ts1 ts2) 0)})
+ ;; (prn {:ts1     ts1 :ts2 ts2
+ ;;       :update? (> (compare ts1 ts2) 0)})
 (defn filter-newer [m1 ts-fn1 m2 ts-fn2]
   (select-keys m1 (filter (fn [k]
                             (let [ts1 (-> k m1 ts-fn1)
                                   ts2 (-> k m2 ts-fn2)]
                               (> (compare ts1 ts2) 0)))
                           (keys m1))))
+
+(defn mapv-indexed [& args]
+  (into [] (apply map-indexed args)))
+
+(defn reverse-cmp [a b]
+  (compare b a))

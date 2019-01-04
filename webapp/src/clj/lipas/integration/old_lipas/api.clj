@@ -7,6 +7,8 @@
    [ring.util.codec :as codec]))
 
 (def url (:old-lipas-url env))
+(def user (:old-lipas-user env))
+(def pass (:old-lipas-pass env))
 
 (def fields
   ["properties" "schoolUse" "email" "type.name" "location.sportsPlaces"
@@ -31,7 +33,7 @@
 (defn query-changed [since]
   (let [url    (str url "/api/sports-places")
         params {:modifiedAfter since
-                :fields fields}]
+                :fields        fields}]
     (query [] url params)))
 
 (defn query-timestamps [lipas-ids]
@@ -54,14 +56,13 @@
     (query [] url params)))
 
 (defn post-integration-doc! [doc]
-  (let [params {:basic-auth
-                [(:old-lipas-user env) (:old-lipas-pass env)]
+  (let [params {:basic-auth       [user pass]
                 :content-type     :json
                 :accept           :json
                 :socket-timeout   10000
                 :conn-timeout     10000
                 :throw-exceptions true
-                :body (json/encode doc)}
+                :body             (json/encode doc)}
 
         url (str url "/api/integration/doc")]
     (client/post url params)))
