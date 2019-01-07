@@ -59,6 +59,9 @@ services:
       SEARCH_HOST:
       SEARCH_USER:
       SEARCH_PASS:
+      OLD_LIPAS_URL:
+      OLD_LIPAS_USER:
+      OLD_LIPAS_PASS:
       ADMIN_PASSWORD:
       LEIN_SILENT: 'true'
     volumes:
@@ -134,6 +137,14 @@ services:
     extends:
       service: backend-base
     entrypoint: lein run -m lipas.search-indexer
+    links:
+      - postgres
+      - elasticsearch
+
+  backend-integrations:
+    extends:
+      service: backend-base
+    entrypoint: lein trampoline run -m lipas.integrator "new->old" "old->new"
     links:
       - postgres
       - elasticsearch
