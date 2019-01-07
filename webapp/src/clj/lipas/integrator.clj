@@ -19,8 +19,8 @@
 
 ;; TODO initial timestamps from env vars
 (def initial-timestamps
-  {"old->new" "2018-12-14T00:00:00.000Z"
-   "new->old" "2018-12-14T00:00:00.000Z"})
+  {"old->new" "2019-01-01T00:00:00.000Z"
+   "new->old" "2019-01-01T00:00:00.000Z"})
 
 (defn handle-error [db name e]
   (let [data {:msg   (.getMessage e)
@@ -38,14 +38,13 @@
         entry {:status     "success"
                :name       name
                :event-date (:latest res)
-               :document   res}]
+               :document   (select-keys res [:updated :ignored])}]
 
     (when (> total 0) (db/add-integration-entry! db entry))
 
     (log/info "Total:"   (-> res :total)
               "Updated:" (-> res :updated count)
-              "Ignored:" (-> res :ignored count)
-              "Failed:"  (-> res :failed count))))
+              "Ignored:" (-> res :ignored count))))
 
 ;; INBOUND ;;
 
@@ -70,8 +69,11 @@
     (log/info "Starting to push changes to old Lipas since" last-success)
     (try
       (old-lipas/add-changed-to-out-queue! db last-success)
-      (->> (old-lipas/process-integration-out-queue! db)
-           (handle-success db name))
+      (let [res (old-lipas/process-integration-out-queue! db)]
+        (handle-success db name res)
+        (doseq [[lipas-id e] (:errors res)
+                :let         [msg (str "Pushing " lipas-id " to old Lipas failed!")]]
+          (handle-error db name (ex-info msg (ex-data e) e))))
       (catch Exception e
         (handle-error db name e)))))
 
@@ -82,13 +84,26 @@
 (defn -main [& args]
   (let [config              (select-keys config/default-config [:db :search])
         {:keys [db search]} (backend/start-system! config)
-        user                (core/get-user db "import@lipas.fi")]
-    (reset! tasks {:old->new (tt/every! 60 (bound-fn [] (old->new db search user)))
-                   :new->old (tt/every! 60 30 (bound-fn [] (new->old db)))})
-    (tt/start!)))
+        user                (core/get-user db "import@lipas.fi")
+        task-ks             (mapv keyword args)]
+
+    (log/info "Starting to run tasks:" task-ks)
+
+    (tt/with-threadpool
+
+      (when (some #{:new->old} task-ks)
+        (let [task (tt/every! 60 (fn [] (new->old db)))]
+          (swap! tasks assoc :new->old task)))
+
+      (when (some #{:old->new} task-ks)
+        (let [task (tt/every! 60 30 (fn [] (old->new db search user)))]
+          (swap! tasks assoc :old->new task)))
+
+      ;; Keep running forever
+      (while true (Thread/sleep 1000)))))
 
 (comment
-  (-main)
+  (-main "new->old")
   (:new->old @tasks)
   (tt/cancel! (-> @tasks :old->new))
   (tt/cancel! (-> @tasks :new->old))
