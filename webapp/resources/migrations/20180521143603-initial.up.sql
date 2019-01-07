@@ -1,4 +1,4 @@
-CREATE TABLE public.account (
+CREATE TABLE IF NOT EXISTS public.account (
   id                uuid NOT NULL DEFAULT uuid_generate_v4(),
   created_at        timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
   email             text COLLATE pg_catalog."default" NOT NULL,
@@ -22,7 +22,7 @@ TABLESPACE pg_default;
 ALTER TABLE public.account
 OWNER to lipas;
 
-CREATE TABLE public.sports_site (
+CREATE TABLE IF NOT EXISTS public.sports_site (
   id         uuid NOT NULL DEFAULT uuid_generate_v4(),
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   event_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,

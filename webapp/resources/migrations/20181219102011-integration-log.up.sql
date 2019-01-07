@@ -1,4 +1,4 @@
-CREATE TABLE public.integration_log (
+CREATE TABLE IF NOT EXISTS public.integration_log (
   created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   event_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
   name       text COLLATE pg_catalog."default" NOT NULL,
