@@ -7,11 +7,17 @@
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
-(def df-in (java.time.format.DateTimeFormatter/ofPattern
-            "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
+(def df-in "Loose date format for inputs from old Lipas."
+  (java.time.format.DateTimeFormatter/ofPattern
+   "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
 
-(def df-out (java.time.format.DateTimeFormatter/ofPattern
-             "yyyy-MM-dd HH:mm:ss.SSS"))
+(def df-out "Strict date format for outputs to old Lipas."
+  (java.time.format.DateTimeFormatter/ofPattern
+   "yyyy-MM-dd HH:mm:ss.SSS"))
+
+(def df-iso "Strict ISO date format with fixed precision (used in new LIPAS)."
+  (java.time.format.DateTimeFormatter/ofPattern
+   "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
 
 (defn UTC->last-modified
   "Converts UTC ISO 8601 string to old Lipas last modified timestamp string.
@@ -35,7 +41,7 @@
     (-> (java.time.LocalDateTime/parse s df-in)
         (java.time.ZonedDateTime/of helsinki-tz)
         (.withZoneSameInstant java.time.ZoneOffset/UTC)
-        str)))
+        (.format df-iso))))
 
 (defn ->old-lipas-sports-site*
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
@@ -122,6 +128,7 @@
      :properties        (-> props
                             (select-keys (keys old/prop-mappings))
                             (set/rename-keys old/prop-mappings)
+                            (dissoc :info-fi)
                             (assoc :school-use? (-> m :schoolUse))
                             (assoc :free-use? (-> m :freeUse))
                             (assoc :surface-material
@@ -136,7 +143,9 @@
       :geometries    (-> m :location :geometries
                          (update :features
                                  (fn [fs] (mapv #(dissoc % :properties) fs))))
-      :postal-code   (-> m :location :postalCode trim not-empty)
+      :postal-code   (-> m :location :postalCode trim (->>
+                                                       (take 5)
+                                                       (reduce str)) not-empty)
       :postal-office (-> m :location :postalOffice trim not-empty)
       :city
       {:city-code    (-> m :location :city :cityCode)
@@ -158,11 +167,14 @@
                                             "00000"))
       (assoc-in [:location :neighborhood] (-> m :location :neighborhood :fi))
       (assoc :lastModified (or (-> m :lastModified not-empty)
-                               "1970-01-01 00:00:00.000"))
+                               "1980-01-01 02:00:00.000"))
       ->sports-site
       utils/clean))
 
 (comment
-  (UTC->last-modified "2019-01-03T12:03:48.552Z")
-  (UTC->last-modified "2019-01-03T08:39:08.070Z")
-  (last-modified->UTC "2019-01-03 08:39:08.070"))
+  (map last-modified->UTC ["2019-01-03 00:00:00.000"
+                           "2019-01-03 00:00:00.00"
+                           "2019-01-03 00:00:00"])
+  (map UTC->last-modified ["2019-01-03T00:00:00.000Z"
+                           "2019-01-03T00:00:00.00Z"
+                           "2019-01-03T00:00:00Z"]))
