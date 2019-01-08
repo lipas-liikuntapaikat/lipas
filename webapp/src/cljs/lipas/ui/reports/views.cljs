@@ -13,7 +13,7 @@
     ^{:key value}
     [lui/autocomplete
      {:value       value
-      :label       (tr :search/search)
+      :label       (tr :search/search-more)
       :items       items
       :label-fn    (comp locale second)
       :value-fn    first
@@ -28,28 +28,28 @@
         downloading?    (<== [::subs/downloading?])
         results-count   (<== [:lipas.ui.search.subs/search-results-total-count])
 
-        quick-selects [{:label  "Perustiedot"
+        quick-selects [{:label  (tr :lipas.sports-site/basic-data)
                         :fields ["lipas-id" "name" "marketing-name" "comment"
                                  "construction-year" "renovation-years"]}
-                       {:label  "Omistus"
+                       {:label  (tr :lipas.sports-site/ownership)
                         :fields ["admin" "owner"]}
-                       {:label  "Yhteystiedot"
+                       {:label  (tr :lipas.sports-site/contact)
                         :fields ["email" "phone-number" "www"]}
-                       {:label  "Osoitetiedot"
+                       {:label  (tr :lipas.sports-site/address)
                         :fields ["location.address" "location.postal-code"
                                  "location.postal-office"
                                  "location.city.city-name"
                                  "location.city.neighborhood"]}
-                       {:label  "Mitat"
+                       {:label  (tr :general/measures)
                         :fields ["properties.field-length-m"
                                  "properties.field-width-m"
                                  "properties.area-m2"]}
-                       {:label  "Pintamateriaalit"
+                       {:label  (tr :lipas.sports-site/surface-materials)
                         :fields ["properties.surface-material"
                                  "properties.surface-material-info"]}
-                       {:label  "Liikuntapaikkatyyppi"
+                       {:label  (tr :type/name)
                         :fields ["type.type-name"]}
-                       {:label  "Kunta"
+                       {:label  (tr :lipas.location/city)
                         :fields ["location.city.city-name"]}]]
     [:<>
      ;; Open Dialog button
@@ -105,7 +105,7 @@
          [mui/circular-progress])
        [mui/button {:on-click toggle
                     :disabled downloading?}
-        "Peruuta"]
+        (tr :actions/cancel)]
        [mui/button
         {:disabled (or downloading? (empty? selected-fields))
          ;;:variant  ""

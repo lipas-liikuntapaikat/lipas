@@ -199,7 +199,8 @@
           ;; Properties tab
           1 (if portal
               [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
-               [mui/icon "arrow_right"] (str "Kaikki tiedot " portal "ssa")]
+               [mui/icon "arrow_right"]
+               (tr :lipas.sports-site/details-in-portal portal)]
 
               ^{:key (str "props-" lipas-id)}
               [sports-sites/properties-form
@@ -268,6 +269,8 @@
 
             ;; Save and discard buttons
             (lui/edit-actions-list
+             ;; TODO refactor (do ..) blocks to dispatch single event
+             ;; according to user intention.
              {:editing?           editing?
               :valid?             edits-valid?
               :logged-in?         logged-in?

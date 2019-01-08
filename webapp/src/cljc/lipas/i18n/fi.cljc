@@ -48,8 +48,11 @@
     :comment           "Lisätieto"
     :properties        "Lisätiedot"
     :basic-data        "Perustiedot"
+    :contact           "Yhteystiedot"
+    :ownership         "Omistus"
+    :address           "Osoite"
     :details-in-portal (fn [portal]
-                         (str "Kaikki tiedot"
+                         (str "Kaikki tiedot "
                               (case portal
                                 "uimahalliportaali" "Uimahalliportaalissa"
                                 "jaahalliportaali"  "Jäähalliportaalissa"
@@ -495,8 +498,12 @@
 
    :search
    {:headline           "Haku"
-    :search             "Hae..."
-    :retkikartta-filter "Retkikartta.fi kohteet"}
+    :search             "Hae"
+    :search-more        "Hae lisää..."
+    :placeholder        "Etsi..."
+    :filters            "Rajaa hakua"
+    :retkikartta-filter "Retkikartta.fi kohteet"
+    :results-count      "{1} hakutulosta"}
 
    :statuses
    {:edited "{1} (muokattu)"}
