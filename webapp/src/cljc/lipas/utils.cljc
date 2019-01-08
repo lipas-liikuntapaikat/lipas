@@ -2,6 +2,8 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
+            [camel-snake-kebab.core :as csk]
+            [camel-snake-kebab.extras :as csk-extras]
             #?(:cljs [cljs.reader :refer [read-string]])
             #?(:cljs [goog.string :as gstring])
             #?(:cljs [goog.string.format]))
@@ -25,6 +27,21 @@
   []
   #?(:cljs (.toISOString (js/Date.))
      :clj  (.toString (java.time.Instant/now))))
+
+(defn ->ISO-timestamp
+  "Converts timestamps from old LIPAS to ISO string format.
+  Example: '2018-12-01 00:00:00.000' => '2018-12-01T00:00:00.000Z'
+  "
+  [s]
+  (when (not-empty s)
+    (-> (take 23 s) string/join (string/replace " " "T") (str "Z"))))
+
+(defn ->old-lipas-timestamp
+  "Converts timestamps from ISO string format to old LIPAS format.
+  Example: '2018-12-01T00:00:00.000Z' => '2018-12-01 00:00:00.000'"
+  [s]
+  (when (not-empty s)
+    (-> s (subs 0 23) (string/replace "T" " "))))
 
 (defn zero-left-pad
   [s len]
@@ -140,3 +157,40 @@
 (defn +safe [& args]
   (if-let [valid-args (not-empty (filter number? args))]
     (apply + valid-args)))
+
+(defn get-in-path [m s]
+  (let [ks (map keyword (string/split s #"\."))]
+    (get-in m ks)))
+
+(defn join [coll]
+  (string/join "," coll))
+
+(def content-type
+  {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+
+(defn ->kebab-case-keywords [m]
+  (csk-extras/transform-keys csk/->kebab-case m))
+
+(defn ->camel-case-keywords [m]
+  (csk-extras/transform-keys csk/->camelCase m))
+
+(defn ->snake-case-keywords [m]
+  (csk-extras/transform-keys csk/->snake_case m))
+
+(def trim (fnil string/trim ""))
+(def sreplace (fnil string/replace ""))
+
+ ;; (prn {:ts1     ts1 :ts2 ts2
+ ;;       :update? (> (compare ts1 ts2) 0)})
+(defn filter-newer [m1 ts-fn1 m2 ts-fn2]
+  (select-keys m1 (filter (fn [k]
+                            (let [ts1 (-> k m1 ts-fn1)
+                                  ts2 (-> k m2 ts-fn2)]
+                              (> (compare ts1 ts2) 0)))
+                          (keys m1))))
+
+(defn mapv-indexed [& args]
+  (into [] (apply map-indexed args)))
+
+(defn reverse-cmp [a b]
+  (compare b a))

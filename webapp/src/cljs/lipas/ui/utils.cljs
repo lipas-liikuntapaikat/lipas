@@ -6,6 +6,7 @@
             [clojure.string :as string]
             [clojure.walk :as walk]
             [goog.crypt.base64 :as b64]
+            [goog.labs.userAgent.browser :as gbrowser]
             [lipas.utils :as utils]
             [re-frame.core :as re-frame]))
 
@@ -62,8 +63,7 @@
 (defn ->end-of-year [year]
   (str year "-12-31T23:59:59.999Z"))
 
-(defn reverse-cmp [a b]
-  (compare b a))
+(def reverse-cmp utils/reverse-cmp)
 
 (comment (prev-or-first [1 3 5] 4))
 (comment (prev-or-first ["2005" "2012" "2001"] "2006"))
@@ -294,3 +294,41 @@
                 [{:kissa "koira" :kana 12}])
   (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
                 (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
+
+;; https://caniuse.com/#search=position%3Asticky
+(defn supports-sticky? []
+  (cond
+    (and
+     (gbrowser/isEdge)
+     (gbrowser/isVersionOrHigher 16)) true
+    (gbrowser/isChrome)               true
+    (gbrowser/isFirefox)              true
+    (gbrowser/isSilk)                 true
+    (gbrowser/isCoast)                true
+    (gbrowser/isOpera)                true
+    (gbrowser/isAndroidBrowser)       true
+    :else                             false))
+
+(defn supports-webkit-sticky? []
+  (or (gbrowser/isSafari)
+      (gbrowser/isIosWebview)))
+
+(defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
+  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
+    (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
+      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
+      new-db)))
+
+(defn ->feature [{:keys [lipas-id name type] :as site}]
+  (let [type-code (-> type :type-code)]
+    (-> site
+        :location
+        :geometries
+        (update-in [:features]
+                   #(map-indexed (fn [idx f]
+                                   (-> f
+                                       (assoc-in [:id] (str lipas-id "-" idx))
+                                       (assoc-in [:properties :name] name)
+                                       (assoc-in [:properties :lipas-id] lipas-id)
+                                       (assoc-in [:properties :type-code] type-code)))
+                                 %)))))

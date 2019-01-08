@@ -9,6 +9,11 @@
    (-> db :sports-sites)))
 
 (re-frame/reg-sub
+ ::sports-site
+ (fn [db [_ lipas-id]]
+   (get-in db [:sports-sites lipas-id])))
+
+(re-frame/reg-sub
  ::latest-sports-site-revs
  :<- [::sports-sites]
  (fn [sites _]
@@ -36,19 +41,22 @@
  (fn [edit-data _]
    ((complement empty?) edit-data)))
 
+(defn- valid? [sports-site]
+  (let [spec (case (-> sports-site :type :type-code)
+               (3110 3120 3130) :lipas.sports-site/swimming-pool
+               (2510 2520)      :lipas.sports-site/ice-stadium
+               :lipas/sports-site)]
+    (as-> sports-site $
+      (utils/make-saveable $)
+      ;; (do (s/explain spec $) $)
+      (s/valid? spec $))))
+
 (re-frame/reg-sub
  ::edits-valid?
  (fn [[_ lipas-id] _]
    (re-frame/subscribe [::editing-rev lipas-id]))
  (fn [edit-data _]
-   (let [spec (case (-> edit-data :type :type-code)
-                (3110 3120 3130) :lipas.sports-site/swimming-pool
-                (2510 2520)      :lipas.sports-site/ice-stadium
-                :lipas/sports-site)]
-     (as-> edit-data $
-       (utils/make-saveable $)
-       ;; (do (s/explain spec $) $)
-       (s/valid? spec $)))))
+   (valid? edit-data)))
 
 (re-frame/reg-sub
  ::cities-by-city-code
@@ -58,7 +66,7 @@
 (re-frame/reg-sub
  ::cities-list
  :<- [::cities-by-city-code]
- (fn [cities _ _]
+ (fn [cities _]
    (vals cities)))
 
 (re-frame/reg-sub
@@ -75,6 +83,12 @@
  ::all-types
  (fn [db _]
    (-> db :types)))
+
+(re-frame/reg-sub
+ ::types-list
+ :<- [::all-types]
+ (fn [types _]
+   (vals types)))
 
 (re-frame/reg-sub
  ::materials
@@ -95,6 +109,84 @@
  ::ceiling-structures
  (fn [db _]
    (-> db :ceiling-structures)))
+
+(re-frame/reg-sub
+ ::surface-materials
+ (fn [db _]
+   (-> db :surface-materials)))
+
+(re-frame/reg-sub
+ ::prop-types
+ (fn [db _]
+   (-> db :prop-types)))
+
+(re-frame/reg-sub
+ ::types-props
+ :<- [::all-types]
+ :<- [::prop-types]
+ (fn [[types prop-types] [_ type-code]]
+   (let [props (-> (types type-code) :props)]
+     (reduce (fn [res [k v]]
+               (let [prop-type (prop-types k)]
+                 (assoc res k (merge prop-type v))))
+             {}
+             props))))
+
+(re-frame/reg-sub
+ ::display-site
+ (fn [[_ lipas-id] _]
+   [(re-frame/subscribe [:lipas.ui.sports-sites.subs/sports-site lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/all-types])
+    (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/materials])
+    (re-frame/subscribe [:lipas.ui.subs/translator])])
+ (fn [[site cities admins owners types size-categories
+       materials translator] _]
+   (when site
+     (let [locale        (translator)
+           latest        (or (utils/latest-edit (:edits site))
+                             (get-in site [:history (:latest site)]))
+           type          (types (-> latest :type :type-code))
+           size-category (size-categories (-> latest :type :size-category))
+           admin         (admins (-> latest :admin))
+           owner         (owners (-> latest :owner))
+           city          (get cities (-> latest :location :city :city-code))
+
+           get-material #(get-in materials [% locale])]
+
+       {:lipas-id       (-> latest :lipas-id)
+        :name           (-> latest :name)
+        :marketing-name (-> latest :marketing-name)
+        :type
+        {:name          (-> type :name locale)
+         :type-code     (-> latest :type :type-code)
+         :size-category (-> size-category locale)}
+        :owner          (-> owner locale)
+        :admin          (-> admin locale)
+        :phone-number   (-> latest :phone-number)
+        :www            (-> latest :www)
+        :email          (-> latest :email)
+        :comment        (-> latest :comment)
+
+        :construction-year (-> latest :construction-year)
+        :renovation-years  (-> latest :renovation-years)
+
+        :properties (-> latest
+                        :properties
+                        (update :surface-material #(map get-material %)))
+
+        :location
+        {:address       (-> latest :location :address)
+         :postal-code   (-> latest :location :postal-code)
+         :postal-office (-> latest :location :postal-office)
+         :city
+         {:name         (-> city :name locale)
+          :neighborhood (-> latest :location :city :neighborhood)}}
+
+        :building (:building latest)}))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]
@@ -140,3 +232,26 @@
           vals
           (filter (comp type-codes :type-code :type))
           (map (partial ->list-entry data))))))
+
+(re-frame/reg-sub
+ ::adding-new-site?
+ (fn [db _]
+   (-> db :new-sports-site :adding?)))
+
+(re-frame/reg-sub
+ ::new-site-data
+ (fn [db _]
+   (-> db :new-sports-site :data)))
+
+(re-frame/reg-sub
+ ::new-site-type
+ (fn [db _]
+   (let [type-code (-> db :new-sports-site :type)]
+     (get-in db [:types type-code]))))
+
+(re-frame/reg-sub
+ ::new-site-valid?
+ (fn [db _]
+   (let [data (-> db :new-sports-site :data)]
+     ;; (s/explain :lipas/new-sports-site data)
+     (s/valid? :lipas/new-sports-site data))))

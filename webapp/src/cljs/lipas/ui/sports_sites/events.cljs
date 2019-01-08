@@ -22,7 +22,7 @@
  (fn [db [_ lipas-id]]
    (assoc-in db [:sports-sites lipas-id :editing] nil)))
 
-(defn- commit-ajax [db data draft?]
+(defn- commit-ajax [db data draft? on-success]
   (let [token  (-> db :user :login :token)
         params (when draft? "?draft=true")]
     {:http-xhrio
@@ -32,7 +32,7 @@
       :params          data
       :format          (ajax/json-request-format)
       :response-format (ajax/json-response-format {:keywords? true})
-      :on-success      [::save-success]
+      :on-success      [::save-success on-success]
       :on-failure      [::save-failure]}}))
 
 (defn- dirty? [db rev]
@@ -46,56 +46,70 @@
         latest    (get-in site [:history timestamp])]
     (utils/different? rev latest)))
 
+(defn- new-site? [rev]
+  (nil? (:lipas-id rev)))
+
+(defn- on-success-new [{:keys [lipas-id]}]
+  [[::discard-new-site]
+   [:lipas.ui.map.events/stop-editing]
+   [:lipas.ui.map.events/show-sports-site lipas-id]
+   [:lipas.ui.search.events/submit-search]])
+
 (re-frame/reg-event-fx
  ::commit-rev
  (fn [{:keys [db]} [_ rev draft?]]
-   (if (dirty? db rev)
-     (commit-ajax db rev draft?)
-     {:dispatch [::save-success rev]})))
+   (let [new?       (new-site? rev)
+         on-success (when new? on-success-new)]
+     (if (or new? (dirty? db rev))
+       (commit-ajax db rev draft? on-success)
+       {:dispatch [::save-success on-success rev]}))))
 
 (re-frame/reg-event-fx
  ::save-edits
  (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
-                    utils/make-saveable)
-         draft? false]
-     (if (dirty? db rev)
-       (commit-ajax db rev draft?)
-       {:dispatch [::save-success rev]}))))
+   (let [rev        (-> (get-in db [:sports-sites lipas-id :editing])
+                        utils/make-saveable)
+         draft?     false
+         new?       (new-site? rev)
+         on-success (when new? on-success-new)]
+     (if (or new? (dirty? db rev))
+       (commit-ajax db rev draft? on-success)
+       {:dispatch [::save-success on-success rev]}))))
 
 (re-frame/reg-event-fx
  ::save-draft
  (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
-                    utils/make-saveable)
-         draft? true]
+   (let [rev        (-> (get-in db [:sports-sites lipas-id :editing])
+                        utils/make-saveable)
+         draft?     true
+         new?       (new-site? rev)
+         on-success (when new? on-success-new)]
      (if (dirty? db rev)
-       (commit-ajax db rev draft?)
-       {:dispatch [::save-success rev]}))))
-
-(defn- add-to-db [db {:keys [lipas-id event-date] :as rev}]
-  (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
-    (if (utils/latest? rev (get-in db [:sports-sites lipas-id :history]))
-      (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
-      new-db)))
+       (commit-ajax db rev draft? on-success)
+       {:dispatch [::save-success on-success rev]}))))
 
 (re-frame/reg-event-fx
  ::save-success
- (fn [{:keys [db]} [_ result]]
-   (let [tr       (:translator db)
-         status   (:status result)
-         type     (-> result :type :type-code)
-         lipas-id (:lipas-id result)
-         year     (dec utils/this-year)]
-     {:db         (-> db
-                      (add-to-db result)
-                      (assoc-in [:sports-sites lipas-id :editing] nil))
-      :dispatch-n [[:lipas.ui.events/set-active-notification
-                    {:message  (tr :notifications/save-success)
-                     :success? true}]
-                   (when (#{2510 2520 3110 3130} type)
-                     [:lipas.ui.energy.events/fetch-energy-report year type])]
-      :ga/event   ["save-sports-site" status type]})))
+ (fn [{:keys [db]} [_ on-success result]]
+   ;; `on-success` is a function that returns vector of events to be
+   ;; dispatched.
+   (let [tr              (-> db :translator)
+         status          (-> result :status)
+         type            (-> result :type :type-code)
+         lipas-id        (-> result :lipas-id)
+         year            (dec utils/this-year)
+         dispatch-extras (when on-success (on-success result))]
+     {:db             (-> db
+                          (utils/add-to-db result)
+                          (assoc-in [:sports-sites lipas-id :editing] nil))
+      :dispatch-n     (into
+                       [[:lipas.ui.events/set-active-notification
+                         {:message  (tr :notifications/save-success)
+                          :success? true}]
+                        (when (#{2510 2520 3110 3130} type)
+                          [:lipas.ui.energy.events/fetch-energy-report year type])]
+                       dispatch-extras)
+      :ga/event       ["save-sports-site" status type]})))
 
 (re-frame/reg-event-fx
  ::save-failure
@@ -111,7 +125,7 @@
 (re-frame/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ sites]]
-   {:db (reduce add-to-db db sites)}))
+   {:db (reduce utils/add-to-db db sites)}))
 
 (re-frame/reg-event-fx
  ::get-failure
@@ -125,7 +139,6 @@
 (re-frame/reg-event-fx
  ::get-by-type-code
  (fn [{:keys [db]} [_ type-code]]
-   ;; (prn "Get by type-code!")
    {:http-xhrio
     {:method          :get
      :uri             (str (:backend-url db) "/sports-sites/type/" type-code)
@@ -136,7 +149,6 @@
 (re-frame/reg-event-fx
  ::get-history
  (fn [{:keys [db]} [_ lipas-id]]
-   ;; (prn "Get history!")
    {:http-xhrio
     {:method          :get
      :uri             (str (:backend-url db) "/sports-sites/history/" lipas-id)
@@ -152,3 +164,37 @@
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
+
+(re-frame/reg-event-fx
+ ::start-adding-new-site
+ (fn [{:keys [db]} [_]]
+   {:db       (assoc-in db [:new-sports-site :adding?] true)
+    :dispatch [:lipas.ui.search.events/clear-filters]}))
+
+(re-frame/reg-event-db
+ ::discard-new-site
+ (fn [db [_]]
+   (-> db
+       (assoc-in [:new-sports-site :adding?] false)
+       (assoc-in [:new-sports-site :type] nil)
+       (assoc-in [:new-sports-site :data] nil))))
+
+(re-frame/reg-event-db
+ ::select-new-site-type
+ (fn [db [_ type-code]]
+   (assoc-in db [:new-sports-site :type] type-code)))
+
+(re-frame/reg-event-fx
+ ::init-new-site
+ (fn [{:keys [db]} [_ type-code geoms]]
+   (let [data {:status     "active"
+               :event-date (utils/timestamp)
+               :type       {:type-code type-code}
+               :location   {:geometries geoms}}]
+     {:db (-> db
+              (assoc-in [:new-sports-site :data] data))})))
+
+(re-frame/reg-event-db
+ ::edit-new-site-field
+ (fn [db [_ path value]]
+   (utils/set-field db (into [:new-sports-site :data] path) value)))

@@ -66,7 +66,7 @@
 (defn seed-sports-sites! [db user spec n]
   (log/info "Seeding" n "generated" spec)
   (doseq [_ (range n)]
-    (core/upsert-sports-site! db user (gen/generate (s/gen spec))))
+    (core/upsert-sports-site!* db user (gen/generate (s/gen spec))))
   (log/info "Seeding done!"))
 
 (defn -main [& args]
@@ -76,4 +76,6 @@
     (try
       (seed-default-users! db)
       (seed-demo-users! db)
+      (let [user (core/get-user db (:email admin))]
+        (seed-sports-sites! db user :lipas/sports-site 10))
       (finally (backend/stop-system! system)))))

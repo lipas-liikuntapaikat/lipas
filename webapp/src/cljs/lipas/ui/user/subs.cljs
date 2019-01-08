@@ -36,6 +36,13 @@
    (when (and permissions sports-site)
      (permissions/publish? permissions sports-site))))
 
+(re-frame/reg-sub
+ ::permission-to-publish-site?
+ :<- [::permissions]
+ (fn [permissions [_ sports-site]]
+   (when (and permissions sports-site)
+     (permissions/publish? permissions sports-site))))
+
 (defn ->list-entry [locale cities types sports-site]
   (let [city-code (-> sports-site :location :city :city-code)
         type-code (-> sports-site :type :type-code)]

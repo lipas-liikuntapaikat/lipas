@@ -14,7 +14,8 @@
             [reitit.ring.middleware.muuntaja :as muuntaja]
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
-            [ring.middleware.params :as params]))
+            [ring.middleware.params :as params]
+            [ring.util.io :as ring-io]))
 
 (defn exception-handler [status type]
   (fn [^Exception e request]
@@ -41,7 +42,7 @@
     ;;                     (handler e request))}
     )))
 
-(defn create-app [{:keys [db emailer]}]
+(defn create-app [{:keys [db emailer search]}]
   (ring/ring-handler
    (ring/router
 
@@ -92,9 +93,13 @@
                                    :existing :lipas/sports-site)}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [draft?      (-> req :parameters :query :draft utils/->bool)]
+           (let [draft? (-> req :parameters :query :draft utils/->bool)
+                 resp   (core/upsert-sports-site! db identity body-params draft?)
+                 _      (when-not draft?
+                          (core/add-to-integration-out-queue! db resp))
+                 _      (core/index! search resp :sync)]
              {:status 201
-              :body   (core/upsert-sports-site! db identity body-params draft?)}))}}]
+              :body   resp}))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
@@ -128,6 +133,12 @@
          (fn [_]
            {:status 200
             :body   (core/get-users db)})}}]
+
+      ["/actions/search"
+       {:post
+        {:handler
+         (fn [{:keys [body-params]}]
+           (core/search search body-params))}}]
 
       ["/actions/register"
        {:post
@@ -216,7 +227,22 @@
            (let [type-code (-> parameters :body :type-code)
                  year      (-> parameters :body :year)]
              {:status 200
-              :body   (core/energy-report db type-code year)}))}}]]]
+              :body   (core/energy-report db type-code year)}))}}]
+
+      ["/actions/create-sports-sites-report"
+       {:post
+        {:parameters {:body :lipas.api.sports-site-report/req}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [query  (-> parameters :body :search-query)
+                 fields (-> parameters :body :fields)]
+             {:status  200
+              :headers {"Content-Type"        (-> utils/content-type :xlsx)
+                        "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+              :body
+              (ring-io/piped-input-stream
+               (fn [out]
+                 (core/sports-sites-report search query fields out)))}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

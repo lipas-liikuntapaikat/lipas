@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is] :as t]
+            [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
@@ -32,11 +33,12 @@
   (mock/header req "Authorization" (str "Token " token)))
 
 (def config (-> config/default-config
-                (select-keys [:db :app])
+                (select-keys [:db :app :search])
                 (assoc-in [:app :emailer] (email/->TestEmailer))))
 (def system (system/start-system! config))
 (def db (:db system))
 (def app (:app system))
+(def search (:search system))
 
 (defn gen-user
   ([]
@@ -160,7 +162,7 @@
                        (assoc :event-date event-date)
                        (assoc :status "active")
                        (assoc :lipas-id 123))
-        _          (core/upsert-sports-site! db user site draft?)
+        _          (core/upsert-sports-site!* db user site draft?)
 
         perms {:admin? true}
         token (jwt/create-token admin)
@@ -230,7 +232,7 @@
         site (-> (gen/generate (s/gen :lipas/sports-site))
                  (assoc-in [:type :type-code] 3110)
                  (assoc :status "active"))
-        _    (core/upsert-sports-site! db user site)
+        _    (core/upsert-sports-site!* db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
@@ -245,9 +247,9 @@
                  (assoc :event-date "2018-01-01T00:00:00.000Z"))
         rev2 (assoc rev1 :event-date "2018-02-01T00:00:00.000Z")
         rev3 (assoc rev1 :event-date "2017-01-01T00:00:00.000Z")
-        _    (core/upsert-sports-site! db user rev1)
-        _    (core/upsert-sports-site! db user rev2)
-        _    (core/upsert-sports-site! db user rev3)
+        _    (core/upsert-sports-site!* db user rev1)
+        _    (core/upsert-sports-site!* db user rev2)
+        _    (core/upsert-sports-site!* db user rev3)
         id   (:lipas-id rev1)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110?revs=yearly")
                       (mock/content-type "application/json")))
@@ -265,7 +267,7 @@
                  (assoc-in [:type :type-code] 3110)
                  (assoc-in [:admin] "state")
                  (assoc :status "active"))
-        _    (core/upsert-sports-site! db user site)
+        _    (core/upsert-sports-site!* db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110?lang=fi")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
@@ -283,8 +285,8 @@
         rev2     (-> rev1
                      (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
                      (assoc :name "Kissalan kuulahalli"))
-        _        (core/upsert-sports-site! db user rev1)
-        _        (core/upsert-sports-site! db user rev2)
+        _        (core/upsert-sports-site!* db user rev1)
+        _        (core/upsert-sports-site!* db user rev2)
         lipas-id (:lipas-id rev1)
         resp     (app (-> (mock/request :get (str "/api/sports-sites/history/"
                                                   lipas-id))
@@ -292,6 +294,59 @@
         body     (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (s/valid? :lipas/sports-sites body))))
+
+(deftest search-test
+  (let [site     (gen/generate (s/gen :lipas/sports-site))
+        lipas-id (:lipas-id site)
+        _        (core/index! search site :sync)
+        resp     (app (-> (mock/request :post "/api/actions/search")
+                          (mock/content-type "application/json")
+                          (mock/body (->json {:query
+                                              {:bool
+                                               {:must
+                                                [{:query_string
+                                                  {:query (str lipas-id)}}]}}}))))
+        body     (<-json (:body resp))
+        sites    (map :_source (-> body :hits :hits))]
+    (is (= 200 (:status resp)))
+    (is (some? (first (filter (comp #{lipas-id} :lipas-id) sites))))
+    (is (s/valid? :lipas/sports-sites sites))))
+
+(comment
+  (<-json
+   (:body
+    (app (-> (mock/request :post "/api/actions/search")
+             (mock/content-type "application/json")
+             (mock/body (->json {:query
+                                 {:bool
+                                  {:must
+                                   [{:query_string
+                                     {:query (str 258083685)}}]}}})))))))
+
+(deftest sports-sites-report-test
+  (let [site     (gen/generate (s/gen :lipas/sports-site))
+        _        (core/index! search site :sync)
+        path     "/api/actions/create-sports-sites-report"
+        resp     (app (-> (mock/request :post path)
+                          (mock/content-type "application/json")
+                          (mock/body (->json
+                                      {:search-query
+                                       {:query
+                                        {:bool
+                                         {:must
+                                          [{:query_string
+                                            {:query "*"}}]}}}
+                                       :fields ["lipas-id"
+                                                "name"
+                                                "location.city.city-code"]}))))
+        body     (:body resp)
+        wb       (excel/load-workbook body)
+        header-1 (excel/read-cell
+                  (->> wb
+                       (excel/select-sheet "lipas")
+                       (excel/select-cell "A1")))]
+    (is (= 200 (:status resp)))
+    (is (= "Lipas-id" header-1))))
 
 (deftest create-energy-report-test
   (let [resp (app (-> (mock/request :post "/api/actions/create-energy-report")

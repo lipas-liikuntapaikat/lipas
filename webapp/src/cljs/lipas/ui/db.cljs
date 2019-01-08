@@ -7,6 +7,8 @@
             [lipas.data.owners :as owners]
             [lipas.data.swimming-pools :as swimming-pools]
             [lipas.data.types :as types]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.reports :as reports]
             [lipas.schema.core :as schema]
             [lipas.i18n.core :as i18n]
             [lipas.ui.utils :as utils]))
@@ -24,12 +26,14 @@
    :admins                admins/all
    :owners                owners/all
    :cities                (utils/index-by :city-code cities/active)
-   :types                 (utils/index-by :type-code types/all)
+   :types                 types/all
    :materials             materials/all
    :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
+   :surface-materials     materials/surface-materials
+   :prop-types            prop-types/used
 
    ;; Ice stadiums
    :ice-stadiums
@@ -71,4 +75,23 @@
    ;; User
    :user
    {:login-form        {}
-    :registration-form {}}})
+    :registration-form {}}
+
+   ;; Search
+   :search
+   {:filters {:type-codes #{}
+              :city-codes #{}}}
+
+   ;; Reports
+   :reports
+   {:dialog-open?    false
+    :fields          reports/fields
+    :selected-fields (keys reports/default-fields)}
+
+   ;; Map
+   :map
+   {:drawer-open? true
+    :center       {:lon 435047 :lat 6901408}
+    :zoom         2
+    :mode         {:name :default}
+    :basemap      :taustakartta}})
