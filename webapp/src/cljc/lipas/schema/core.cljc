@@ -213,7 +213,7 @@
 (s/def :lipas.sports-site/www (str-in 1 200))
 (s/def :lipas.sports-site/email :lipas/email)
 
-(s/def :lipas.sports-site/comment (str-in 1 1024))
+(s/def :lipas.sports-site/comment (str-in 1 2048))
 
 (s/def :lipas.sports-site.type/type-code
   (into #{} (keys sports-site-types/all)))
@@ -896,7 +896,7 @@
              :into []))
 
 ;; TODO maybe get rid of this?
-(s/def :lipas.swimming-pool.water-treatment/comment (str-in 1 1024))
+(s/def :lipas.swimming-pool.water-treatment/comment (str-in 1 2048))
 
 (s/def :lipas.swimming-pool/water-treatment
   (s/keys :opt-un [:lipas.swimming-pool.water-treatment/filtering-methods
