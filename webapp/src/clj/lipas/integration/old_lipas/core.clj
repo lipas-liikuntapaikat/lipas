@@ -8,8 +8,8 @@
    [taoensso.timbre :as log]))
 
 (defn add-changed-to-out-queue!
-  "Gets changed entries since last siccessful integration and adds them
-  to integration out queue."
+  "Gets changed entries since last successful integration and adds
+  them to integration out queue."
   [db since]
   (->> since
        (db/get-sports-sites-modified-since db)
