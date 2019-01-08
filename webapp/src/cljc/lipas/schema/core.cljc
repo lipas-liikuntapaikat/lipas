@@ -36,9 +36,18 @@
 
 ;;; Generators ;;;
 
-(defn gen-str [min max]
-  (gen/fmap #(apply str %)
-            (gen/vector (gen/char-alpha) (+ min (rand-int max)))))
+(def default-chars
+  (str "abcdefghijklmnopqrstuvwxyz"
+       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+       "0123456789"))
+
+(defn gen-str
+  ([min max]
+   (gen-str min max default-chars))
+  ([min max chars]
+   (gen/fmap (fn [n]
+               (apply str (repeatedly n #(rand-nth chars))))
+             (s/gen (s/int-in min max)))))
 
 (defn email-gen []
   "Function that returns a Generator for email addresses"
@@ -48,7 +57,7 @@
    (gen/tuple
     (gen-str 1 15)
     (gen-str 1 15)
-    (gen-str 2 63))))
+    (gen-str 2 5))))
 
 (defn postal-code-gen []
   "Function that returns a Generator for Finnish postal codes"
