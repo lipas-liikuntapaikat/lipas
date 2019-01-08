@@ -122,15 +122,15 @@
      [mui/grid {:container true}
       [mui/grid {:item true :xs 9}
        [lui/text-field {:value       search-str
-                        :placeholder "Etsi..."
+                        :placeholder (tr :search/placeholder)
                         :full-width  true
                         :on-change   #(==> [::events/update-search-string %])}]]
       [mui/grid {:item true :xs 3}
        [mui/button {:on-click #(==> [::events/submit-search])}
         [mui/icon "search"]
-        "Hae"]]]
+        (tr :search/search)]]]
 
-     [lui/expansion-panel {:label            "Rajaa hakua"
+     [lui/expansion-panel {:label            (tr :search/filters)
                            :label-color      "default"
                            :default-expanded false}
       [filters {:tr tr}]]
@@ -139,7 +139,7 @@
        [mui/typography {:variant "body2"
                         :style   {:margin-top  "1em"
                                   :margin-left "1em"}}
-        (str total " hakutulosta")])
+        (tr :search/results-count total)])
 
      [mui/divider]
 

@@ -15,7 +15,7 @@
     [lui/form {:read-only? read-only?}
 
      (when sub-headings?
-       [lui/sub-heading {:label "Liikuntapaikka"}])
+       [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Name
      {:label      (tr :lipas.sports-site/name)
@@ -84,7 +84,7 @@
         :on-change #(on-change :comment %)}]}
 
      (when sub-headings?
-       [lui/sub-heading {:label "Yhteystiedot"}])
+       [lui/sub-heading {:label (tr :lipas.sports-site/contact)}])
 
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
@@ -111,7 +111,7 @@
                     :on-change #(on-change :www %)}]}
 
      (when sub-headings?
-       [lui/sub-heading {:label "Omistus"}])
+       [lui/sub-heading {:label (tr :lipas.sports-site/ownership)}])
 
      ;; Owner
      {:label      (tr :lipas.sports-site/owner)
@@ -144,7 +144,7 @@
      {:read-only? read-only?}
 
      (when sub-headings?
-       [lui/sub-heading {:label "Osoite"}])
+       [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
 
      ;; Address
      {:label      (tr :lipas.location/address)
