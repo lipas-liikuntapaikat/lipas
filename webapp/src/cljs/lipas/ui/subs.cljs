@@ -55,3 +55,9 @@
  (fn [{:keys [firstname lastname]} _ _]
    (let [initial (comp (fnil upper-case "?") first)]
      (str (initial firstname) (initial lastname)))))
+
+(re-frame/reg-sub
+ ::show-nav?
+ :<- [::active-panel]
+ (fn [active-panel _]
+   (not= active-panel :map-panel)))
