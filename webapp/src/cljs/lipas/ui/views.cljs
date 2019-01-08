@@ -38,7 +38,7 @@
         notification (<== [::subs/active-notification])
         confirmation (<== [::subs/active-confirmation])
         disclaimer   (<== [::subs/active-disclaimer])
-        show-nav?    (not= active-panel :map-panel)
+        show-nav?    (<== [::subs/show-nav?])
         tr           (<== [::subs/translator])]
 
     [mui/css-baseline
