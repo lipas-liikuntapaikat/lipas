@@ -17,7 +17,7 @@ services:
       - mapproxy
       - backend
     volumes:
-      - './nginx/proxy.conf:/etc/nginx/conf.d/proxy.conf:z'
+      - './nginx/proxy.conf:/etc/nginx/conf.d/default.conf:z'
 
   # Only difference is added X-Robots-tag 'noindex'
   # to make search engines ignore dev-site(s)
@@ -28,7 +28,7 @@ services:
       - mapproxy
       - backend
     volumes:
-      - './nginx/proxy_dev.conf:/etc/nginx/conf.d/proxy.conf:z'
+      - './nginx/proxy_dev.conf:/etc/nginx/conf.d/default.conf:z'
 
   mapproxy:
     image: kartoza/mapproxy
@@ -56,6 +56,12 @@ services:
       SMTP_USER:
       SMTP_PASS:
       SMTP_FROM:
+      SEARCH_HOST:
+      SEARCH_USER:
+      SEARCH_PASS:
+      OLD_LIPAS_URL:
+      OLD_LIPAS_USER:
+      OLD_LIPAS_PASS:
       ADMIN_PASSWORD:
       LEIN_SILENT: 'true'
     volumes:
@@ -65,11 +71,12 @@ services:
   backend:
     extends:
       service: backend-base
-    command: java -Duser.timezone=UTC -jar backend.jar
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar
     ports:
       - '8091:8091'
     links:
       - postgres
+      - elasticsearch
 
   backend-dev:
     extends:
@@ -80,7 +87,7 @@ services:
       - '8091:8091'
     links:
       - postgres
-      # - elasticsearch
+      - elasticsearch
 
   backend-build:
     extends:
@@ -110,7 +117,7 @@ services:
     command: lein test
     links:
       - postgres
-      # - elasticsearch
+      - elasticsearch
 
   backend-seed:
     extends:
@@ -125,6 +132,22 @@ services:
     entrypoint: lein run -m lipas.maintenance
     links:
       - postgres
+
+  backend-index-search:
+    extends:
+      service: backend-base
+    entrypoint: lein run -m lipas.search-indexer
+    links:
+      - postgres
+      - elasticsearch
+
+  backend-integrations:
+    extends:
+      service: backend-base
+    entrypoint: lein trampoline run -m lipas.integrator "new->old" "old->new"
+    links:
+      - postgres
+      - elasticsearch
 
   node-base:
     image: node:10-alpine
@@ -180,7 +203,7 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
     ports:
       - '9200:9200'
     environment:
@@ -190,11 +213,12 @@ services:
       - xpack.ml.enabled=false
       - xpack.graph.enabled=false
       - xpack.watcher.enabled=false
+      - discovery.type=single-node
     volumes:
       - esdata:/usr/share/elasticsearch/data
 
 volumes:
-    pgdata: {}
-    esdata: {}
-    mvn_cache: {}
-    mapproxy_cache: {}
+  pgdata: {}
+  esdata: {}
+  mvn_cache: {}
+  mapproxy_cache: {}

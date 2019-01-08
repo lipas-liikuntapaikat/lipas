@@ -46,7 +46,7 @@
   ;;; Sports sites ;;;
 
   (defroute "/liikuntapaikat" []
-    (==> [:lipas.ui.events/set-active-panel :sports-panel]))
+    (==> [:lipas.ui.events/set-active-panel :map-panel]))
 
   ;;; Ice stadiums
 

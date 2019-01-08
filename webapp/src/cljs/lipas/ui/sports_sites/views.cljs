@@ -10,9 +10,12 @@
             [reagent.core :as r]))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
-                                admins owners on-change read-only?]}]
+                    admins owners on-change read-only? sub-headings?]}]
   (let [locale (tr)]
     [lui/form {:read-only? read-only?}
+
+     (when sub-headings?
+       [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Name
      {:label      (tr :lipas.sports-site/name)
@@ -55,6 +58,34 @@
                       :label-fn  (comp locale second)
                       :on-change #(on-change :type :size-category %)}]})
 
+     ;; Construction year
+     {:label      (tr :lipas.sports-site/construction-year)
+      :value      (-> display-data :construction-year)
+      :form-field [lui/year-selector
+                   {:value     (-> edit-data :construction-year)
+                    :on-change #(on-change :construction-year %)}]}
+
+     ;; Renovation years
+     {:label      (tr :lipas.sports-site/renovation-years)
+      :value      (-> display-data :renovation-years)
+      :form-field [lui/year-selector
+                   {:multi?    true
+                    :value     (-> edit-data :renovation-years)
+                    :on-change #(on-change :renovation-years %)}]}
+
+     ;; Comment
+     {:label (tr :lipas.sports-site/comment)
+      :value (-> display-data :comment)
+      :form-field
+      [lui/text-field
+       {:spec      :lipas.sports-site/comment
+        :value     (-> edit-data :comment)
+        :multiline true
+        :on-change #(on-change :comment %)}]}
+
+     (when sub-headings?
+       [lui/sub-heading {:label (tr :lipas.sports-site/contact)}])
+
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
       :value      (-> display-data :email)
@@ -79,12 +110,16 @@
                     :spec      :lipas.sports-site/www
                     :on-change #(on-change :www %)}]}
 
+     (when sub-headings?
+       [lui/sub-heading {:label (tr :lipas.sports-site/ownership)}])
+
      ;; Owner
      {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
       :form-field [lui/select
                    {:value     (-> edit-data :owner)
                     :required  true
+                    :spec      :lipas.sports-site/owner
                     :items     owners
                     :value-fn  first
                     :label-fn  (comp locale second)
@@ -96,41 +131,20 @@
       :form-field [lui/select
                    {:value     (-> edit-data :admin)
                     :required  true
+                    :spec      :lipas.sports-site/admin
                     :items     admins
                     :value-fn  first
                     :label-fn  (comp locale second)
-                    :on-change #(on-change :admin %)}]}
-
-     ;; Construction year
-     {:label      (tr :lipas.sports-site/construction-year)
-      :value      (-> display-data :construction-year)
-      :form-field [lui/year-selector
-                   {:value     (-> edit-data :construction-year)
-                    :on-change #(on-change :construction-year %)}]}
-
-     ;; Renovation years
-     {:label      (tr :lipas.sports-site/renovation-years)
-      :value      (-> display-data :renovation-years)
-      :form-field [lui/year-selector
-                   {:multi?    true
-                    :value     (-> edit-data :renovation-years)
-                    :on-change #(on-change :renovation-years %)}]}
-
-     ;; Comment
-     {:label (tr :lipas.sports-site/comment)
-      :value (-> display-data :comment)
-      :form-field
-      [lui/text-field
-       {:spec      :lipas.sports-site/comment
-        :value     (-> edit-data :comment)
-        :multiline true
-        :on-change #(on-change :comment %)}]}]))
+                    :on-change #(on-change :admin %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
-                             read-only?]}]
+                             read-only? sub-headings?]}]
   (let [locale (tr)]
     [lui/form
      {:read-only? read-only?}
+
+     (when sub-headings?
+       [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
 
      ;; Address
      {:label      (tr :lipas.location/address)
@@ -142,7 +156,7 @@
                     :on-change #(on-change :address %)}]}
 
      ;; Postal code
-     { :label     (tr :lipas.location/postal-code)
+     {:label      (tr :lipas.location/postal-code)
       :value      (-> display-data :postal-code)
       :form-field [lui/text-field
                    {:value     (-> edit-data :postal-code)
@@ -154,7 +168,7 @@
      {:label      (tr :lipas.location/postal-office)
       :value      (-> display-data :postal-office)
       :form-field [lui/text-field
-                   { :value    (-> edit-data :postal-office)
+                   {:value    (-> edit-data :postal-office)
                     :spec      :lipas.location/postal-office
                     :on-change #(on-change :postal-office %)}]}
 
@@ -164,6 +178,7 @@
       :form-field [lui/select
                    {:value     (-> edit-data :city :city-code)
                     :required  true
+                    :spec      :lipas.location.city/city-code
                     :items     cities
                     :label-fn  (comp locale :name)
                     :value-fn  :city-code
@@ -173,9 +188,56 @@
      {:label      (tr :lipas.location/neighborhood)
       :value      (-> display-data :city :neighborhood)
       :form-field [lui/text-field
-                   {:value    (-> edit-data :city :neighborhood)
+                   {:value     (-> edit-data :city :neighborhood)
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
+
+(defn surface-material-selector [{:keys [tr value on-change label]}]
+  (let [locale (tr)
+        items  (<== [::subs/surface-materials])]
+    [lui/multi-select
+     {:value     value
+      :label     label
+      :spec      :lipas.sports-site.properties/surface-material
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn properties-form [{:keys [tr edit-data display-data types-props
+                               on-change read-only? key]}]
+  (let [locale (tr)]
+    (into
+     [lui/form
+      {:key        key
+       :read-only? read-only?}]
+     (sort-by
+      (juxt (comp - :priority) :label)
+      (for [[k v] types-props
+            :let  [label     (-> types-props k :name locale)
+                   data-type (:data-type v)
+                   spec      (keyword :lipas.sports-site.properties k)
+                   value     (-> edit-data k)
+                   on-change #(on-change k %)]]
+        {:label    label
+         :value    (-> display-data k)
+         :priority (:priority v)
+         :form-field
+         (cond
+           (= :surface-material k) [surface-material-selector
+                                    {:tr        tr
+                                     :label     label
+                                     :value     value
+                                     :on-change on-change}]
+           (= "boolean" data-type) [lui/checkbox
+                                    {:value     value
+                                     :on-change on-change}]
+           :else                   [lui/text-field
+                                    {:value     value
+                                     :spec      spec
+                                     :type      (when (#{"numeric" "integer"} data-type)
+                                                  "number")
+                                     :on-change on-change}])})))))
 
 (defn report-readings-button [{:keys [tr lipas-id close]}]
   [mui/button
@@ -337,19 +399,5 @@
           :sort-fn :city
           :items   sites}]]]]]))
 
-(defn create-panel [tr]
-  [:div {:style {:padding "1em"}}
-   [mui/grid {:container true
-              :spacing 16}
-    [mui/grid {:item true :xs 12}
-     [mui/card {:square true}
-      [mui/card-header {:title (tr :sport/headline)}]
-      [mui/card-content
-       [mui/typography (tr :sport/legacy-disclaimer)]]
-      [mui/card-actions
-       [mui/button {:color "secondary"
-                    :href "http://www.lipas.fi/"}
-        "> lipas.fi"]]]]]])
-
 (defn main [tr]
-  (create-panel tr))
+  [mui/typography "Nothing here"])

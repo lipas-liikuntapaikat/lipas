@@ -13,7 +13,11 @@
              :user (:smtp-user env)
              :pass (:smtp-pass env)
              :from (:smtp-from env)}
+   :search  {:hosts [(:search-host env)] ; Notice vector!
+             :user  (:search-user env)
+             :pass  (:search-pass env)}
    :app     {:db      (ig/ref :db)
-             :emailer (ig/ref :emailer)}
+             :emailer (ig/ref :emailer)
+             :search  (ig/ref :search)}
    :server  {:app  (ig/ref :app)
              :port 8091}})

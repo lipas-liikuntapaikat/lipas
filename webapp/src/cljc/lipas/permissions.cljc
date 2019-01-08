@@ -11,7 +11,8 @@
 
 (defn- access-to-sports-site? [{:keys [sports-sites]} sports-site]
   (let [lipas-id (-> sports-site :lipas-id)]
-    (some #{lipas-id} sports-sites)))
+    (when lipas-id
+      (some #{lipas-id} sports-sites))))
 
 (defn- access-to-city? [{:keys [cities all-cities?]} sports-site]
   (let [city-code (-> sports-site :location :city :city-code)]
@@ -43,7 +44,7 @@
   [permissions sports-site]
 
   {:pre [(s/valid? :lipas.user/permissions permissions)
-         (s/valid? :lipas/sports-site sports-site)]}
+         (s/valid? :lipas/new-sports-site sports-site)]}
 
   (let [{:keys [admin?]} permissions]
 

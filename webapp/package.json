@@ -13,7 +13,9 @@
   "author": "University of Jyväskylä, Valtteri Harmainen",
   "license": "ISC",
   "dependencies": {
+    "file-saver": "^2.0.0",
     "ol": "^5.2.0",
+    "ol-ext": "^3.0.2",
     "webpack": "^4.20.2",
     "zipcelx-es5-cjs": "^1.6.0"
   },

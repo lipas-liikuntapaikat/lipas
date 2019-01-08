@@ -109,22 +109,22 @@
 
        [mui/grid {:item true :xs 12}
         [mui/typography {:variant :display2
-                         :style   {:color   :white}}
+                         :style   {:color :white}}
          "LIPAS"]]
 
        [mui/grid {:item true}
         [mui/typography {:variant :title
-                         :style   {:color   :white}}
+                         :style   {:color :white}}
          (tr :sport/headline)]]
 
        [mui/grid {:item true}
         [mui/typography {:variant :title
-                         :style   {:color   :white}}
+                         :style   {:color :white}}
          (tr :ice/headline)]]
 
        [mui/grid {:item true}
         [mui/typography {:variant :title
-                         :style   {:color   :white}}
+                         :style   {:color :white}}
          (tr :swim/headline)]]]]]]
 
    ;; Main section with background image
@@ -146,8 +146,8 @@
 
           ;; Sports sites
           [grid-card {:title     (tr :sport/headline)
-                      :link      "http://www.lipas.fi"
-                      :link-text "lipas.fi"}
+                      :link      "/#/liikuntapaikat"
+                      :link-text (tr :actions/browse)}
            [mui/typography (tr :sport/description)]
            [:ul
             [lui/li (tr :sport/up-to-date-information)]

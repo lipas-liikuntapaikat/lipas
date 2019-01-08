@@ -1,13 +1,17 @@
 (ns lipas.backend.core
-  (:require [buddy.hashers :as hashers]
-            [lipas.backend.db.db :as db]
-            [lipas.backend.email :as email]
-            [lipas.backend.jwt :as jwt]
-            [lipas.i18n.core :as i18n]
-            [lipas.permissions :as permissions]
-            [lipas.reports :as reports]
-            [lipas.utils :as utils]
-            [taoensso.timbre :as log]))
+  (:require
+   [buddy.hashers :as hashers]
+   [clojure.core.async :as async]
+   [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.backend.db.db :as db]
+   [lipas.backend.email :as email]
+   [lipas.backend.jwt :as jwt]
+   [lipas.backend.search :as search]
+   [lipas.i18n.core :as i18n]
+   [lipas.permissions :as permissions]
+   [lipas.reports :as reports]
+   [lipas.utils :as utils]
+   [taoensso.timbre :as log]))
 
 ;;; User ;;;
 
@@ -94,24 +98,61 @@
 
 ;;; Sports-sites ;;;
 
+(defn- check-permissions! [user sports-site draft?]
+  (when-not (or draft?
+                (permissions/publish? (:permissions user) sports-site))
+    (throw (ex-info "User doesn't have enough permissions!"
+                    {:type :no-permission}))))
+
+;; TODO change to lighter check query
+(defn- check-sports-site-exists! [db lipas-id]
+  (when (empty? (db/get-sports-site-history db lipas-id))
+    (throw (ex-info "Sports site not found"
+                    {:type     :sports-site-not-found
+                     :lipas-id lipas-id}))))
+
+(defn upsert-sports-site!*
+  "Should be used only when data is from trusted sources (migrations
+  etc.). Doesn't check if lipas-ids exist or not."
+  ([db user sports-site]
+   (upsert-sports-site!* db user sports-site false))
+  ([db user sports-site draft?]
+   (db/upsert-sports-site! db user sports-site draft?)))
+
 (defn upsert-sports-site!
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
   ([db user sports-site draft?]
-   (if (or draft?
-           (permissions/publish? (:permissions user) sports-site))
-     (db/upsert-sports-site! db user sports-site draft?)
-     (throw (ex-info "User doesn't have enough permissions!"
-                     {:type :no-permission})))))
+   (check-permissions! user sports-site draft?)
+   (when-let [lipas-id (:lipas-id sports-site)]
+     (check-sports-site-exists! db lipas-id))
+   (upsert-sports-site!* db user sports-site draft?)))
 
-(defn get-sports-sites-by-type-code [db type-code {:keys [locale] :as opts}]
-  (let [data (db/get-sports-sites-by-type-code db type-code opts)]
-    (if (#{:fi :en :se} locale)
-      (map (partial i18n/localize locale) data)
-      data)))
+(defn get-sports-sites-by-type-code
+  ([db type-code]
+   (get-sports-sites-by-type-code db type-code {}))
+  ([db type-code {:keys [locale] :as opts}]
+   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
+     (if (#{:fi :en :se} locale)
+       (map (partial i18n/localize locale) data)
+       data))))
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
+
+(defn index!
+  ([search sports-site]
+   (index! search sports-site false))
+  ([search sports-site sync?]
+   (let [idx-name "sports_sites_current"]
+     (search/index! search idx-name :lipas-id sports-site sync?))))
+
+(defn search [search params]
+  (let [idx-name "sports_sites_current"]
+    (search/search search idx-name params)))
+
+(defn add-to-integration-out-queue! [db sports-site]
+  (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
 ;;; Reports ;;;
 
@@ -119,8 +160,44 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
+;; TODO support :se and :en locales
+(defn sports-sites-report [search params fields out]
+  (let [idx-name  "sports_sites_current"
+        in-chan   (search/scroll search idx-name params)
+        locale    :fi
+        headers   (mapv #(get-in reports/fields [% locale]) fields)
+        data-chan (async/go
+                    (loop [res [headers]]
+                      (if-let [page (async/<! in-chan)]
+                        (recur (-> page :body :hits :hits
+                                   (->>
+                                    (map (comp (partial reports/->row fields)
+                                               (partial i18n/localize locale)
+                                               :_source))
+                                    (into res))))
+                        res)))]
+    (->> (async/<!! data-chan)
+         (excel/create-workbook "lipas")
+         (excel/save-workbook-into-stream! out))))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (publish-users-drafts! db-spec admin))
+  (publish-users-drafts! db-spec admin)
+
+  (def search (search/create-cli (:search config/default-config)))
+  (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
+               "location.city.city-code"])
+
+  (require '[clojure.java.io :as io])
+  (with-open [out (io/output-stream "kissa.xlsx")]
+    (let [query {:query
+                 {:bool
+                  {:must
+                   [{:query_string
+                     {:query "mursu*"}}]}}
+                 :_source
+                 {:excludes ["location.geometries"]}
+                 :size 100}]
+      (sports-sites-report search query fields out))))

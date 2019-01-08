@@ -27,10 +27,12 @@
      [avatar]
      [mui/icon "account_circle"])])
 
-(defn menu [tr anchor logged-in?]
-  (let [close  #(==> [::events/show-account-menu nil])]
+(defn account-menu [{:keys [tr logged-in?]}]
+  (let [anchor     (<== [::subs/account-menu-anchor])
+        close      #(==> [::events/show-account-menu nil])]
+
     [mui/menu {:anchor-el anchor
-               :open      true
+               :open      (some? anchor)
                :on-close  close}
 
      ;; Login
@@ -103,7 +105,7 @@
 (defn toggle-drawer [_]
   (==> [::events/toggle-drawer]))
 
-(defn drawer [tr logged-in?]
+(defn drawer [{:keys [tr logged-in?]}]
   (let [open?              (<== [::subs/drawer-open?])
         admin?             (<== [:lipas.ui.user.subs/admin?])
         hide-and-navigate! (comp toggle-drawer navigate!)]
@@ -229,89 +231,92 @@
                            :href "/#/passu-hukassa"}
     {:text "" :href ""}))
 
-(defn nav [tr active-panel logged-in?]
-  (let [menu-anchor (<== [::subs/account-menu-anchor])]
-    [mui/app-bar {:position   "static"
-                  :color      "primary"
-                  :style      {:border-box "1px solid black"}
-                  :class-name :no-print}
+(defn menu-button [{:keys [tr]}]
+  [mui/icon-button {:id         "main-menu-btn"
+                    :aria-label (tr :actions/open-main-menu)
+                    :on-click   toggle-drawer}
+   [mui/icon {:color "secondary"
+              :style {:font-weight :bold}} "menu"]])
 
-     [mui/tool-bar {:disable-gutters true}
+(defn nav [{:keys [tr active-panel logged-in?]}]
+  [mui/app-bar {:position   "static"
+                :color      "primary"
+                :style      {:border-box "1px solid black"}
+                :class-name :no-print}
 
-      (when menu-anchor
-        [menu tr menu-anchor logged-in?])
-
-      [drawer tr logged-in?]
+   [mui/tool-bar {:disable-gutters true}
 
       ;;; JYU logo
-      [:a {:href "https://www.jyu.fi"}
-       [mui/svg-icon {:view-box "0 0 132.54 301.95"
-                      :style    {:height "2em"
-                                 :margin "0.45em"}}
-        [svg/jyu-logo]]]
+    [:a {:href "https://www.jyu.fi"}
+     [mui/svg-icon {:view-box "0 0 132.54 301.95"
+                    :style    {:height "2em"
+                               :margin "0.45em"}}
+      [svg/jyu-logo]]]
 
       ;;; Header text
-      [mui/typography {:variant "title"
-                       :style   {:flex        1
-                                 :font-size   "1em"
-                                 :font-weight "bold"}}
+    [mui/typography {:variant "title"
+                     :style   {:flex        1
+                               :font-size   "1em"
+                               :font-weight "bold"}}
 
-       ;; University of Jyväskylä
-       [mui/hidden {:sm-down true}
-        [mui/typography {:component "a"
-                         :variant   "title"
-                         :href      "https://www.jyu.fi"
-                         :style
-                         (merge mui/headline-aleo
-                                {:display         :inline
-                                 :font-size       "1em"
-                                 :text-transform  :none
-                                 :text-decoration :none})}
-         (tr :menu/jyu)]
+     ;; University of Jyväskylä
+     [mui/hidden {:sm-down true}
+      [mui/typography {:component "a"
+                       :variant   "title"
+                       :href      "https://www.jyu.fi"
+                       :style
+                       (merge mui/headline-aleo
+                              {:display         :inline
+                               :font-size       "1em"
+                               :text-transform  :none
+                               :text-decoration :none})}
+       (tr :menu/jyu)]
 
-        [separator]]
+      [separator]]
 
-       ;; LIPAS
-       [mui/typography {:component "a"
-                        :variant   "title"
-                        :href      "/#/etusivu"
-                        :style
-                        (merge mui/headline-aleo
-                               {:display         :inline
-                                :font-size       "1em"
-                                :text-transform  :none
-                                :text-decoration :none})}
+     ;; LIPAS
+     [mui/typography {:component "a"
+                      :variant   "title"
+                      :href      "/#/etusivu"
+                      :style
+                      (merge mui/headline-aleo
+                             {:display         :inline
+                              :font-size       "1em"
+                              :text-transform  :none
+                              :text-decoration :none})}
 
-        (tr :menu/headline)]
+      (tr :menu/headline)]
 
-       [separator]
+     [separator]
 
-       [mui/typography {:component "a"
-                        :variant   "title"
-                        :href      (:href (get-sub-page active-panel tr))
-                        :style
-                        (merge mui/headline-aleo
-                               {:display         :inline
-                                :font-size       "1em"
-                                :text-transform  :none
-                                :text-decoration :none})}
+     [mui/typography {:component "a"
+                      :variant   "title"
+                      :href      (:href (get-sub-page active-panel tr))
+                      :style
+                      (merge mui/headline-aleo
+                             {:display         :inline
+                              :font-size       "1em"
+                              :text-transform  :none
+                              :text-decoration :none})}
 
-        ;; Sub page header
-        (:text (get-sub-page active-panel tr))]]
+      ;; Sub page header
+      (:text (get-sub-page active-panel tr))]]
 
-      [mui/hidden {:sm-down true}
-       [lang-selector]]
+    [mui/hidden {:sm-down true}
+     [lang-selector]]
 
     ;;; Search button
-      ;; [mui/icon-button {:id         "search-btn"
-      ;;                   :aria-label (tr :actions/open-search)}
-      ;;  [mui/icon "search"]]
+    ;; [mui/icon-button {:id         "search-btn"
+    ;;                   :aria-label (tr :actions/open-search)}
+    ;;  [mui/icon "search"]]
 
       ;;; Account menu button
-      [account-menu-button {:tr tr :logged-in? logged-in?}]
+    [account-menu-button {:tr tr :logged-in? logged-in?}]
 
       ;;; Main menu (drawer) button
-      [mui/icon-button {:id         "main-menu-btn"
-                        :aria-label (tr :actions/open-main-menu)
-                        :on-click   toggle-drawer}
-       [mui/icon {:color "secondary"} "menu"]]]]))
+    [menu-button {:tr tr}]]])
+
+(defn mini-nav [{:keys [tr logged-in?]}]
+  [mui/tool-bar {:disable-gutters true}
+   [account-menu-button {:tr tr :logged-in? logged-in?}]
+   [menu-button {:tr tr}]])

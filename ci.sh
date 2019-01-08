@@ -26,8 +26,11 @@ docker-compose run frontend-build
 
 ### Integration tests ###
 
-printf "\n *** Seeding test data *** \n\n"
+printf "\n *** Seeding test data to db *** \n\n"
 docker-compose run backend-seed
+
+#printf "\n *** Indexing test data to search engine *** \n\n"
+#docker-compose run backend-index-search
 
 printf "\n *** Generating self-signed SSL certificate *** \n\n"
 openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \

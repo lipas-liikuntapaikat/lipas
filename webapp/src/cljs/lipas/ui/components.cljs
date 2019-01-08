@@ -105,6 +105,7 @@
   (r/with-let [timeout  10000
                clicked? (r/atom false)
                timeout* (r/atom nil)]
+
     [:span
      [mui/tooltip {:style     {:color :yellow}
                    :title     (or tooltip "")
@@ -129,16 +130,22 @@
                         :color :error}
         confirm-tooltip])]))
 
-(defn checkbox [{:keys [label value on-change disabled style]}]
+(defn checkbox [{:keys [label value on-change disabled style icon checked-icon]}]
   [mui/form-control-label
    {:label   label
     :style   (merge {:width :fit-content} style)
     :control (r/as-element
               [mui/checkbox
-               {:value     (str (boolean value))
-                :checked   (boolean value)
-                :disabled  disabled
-                :on-change #(on-change %2)}])}]) ; %2 = checked?
+               (merge
+                {:value        (str (boolean value))
+                 :checked      (boolean value)
+                 :disabled     disabled
+                 ;; %2 = checked?
+                 :on-change    #(on-change %2)}
+                (when icon
+                  {:icon (r/as-element icon)})
+                (when checked-icon
+                  {:checked-icon (r/as-element checked-icon)}))])}])
 
 (defn link? [x]
   (and (string? x)
@@ -294,11 +301,7 @@
                       :color    "secondary"}
           [mui/icon "add"]]]]])))
 
-(defn dialog [{:keys [title
-                      on-save
-                      on-close
-                      save-label
-                      save-enabled?
+(defn dialog [{:keys [title on-save on-close save-label save-enabled?
                       cancel-label]} content]
   [mui/dialog {:open true
                :full-width true
@@ -411,7 +414,7 @@
 (def text-field text-field-controlled)
 
 (defn select [{:keys [label value items on-change value-fn label-fn
-                      sort-fn sort-cmp deselect?]
+                      sort-fn sort-cmp deselect? spec required]
                :or   {value-fn :value
                       label-fn :label
                       sort-cmp compare}
@@ -426,6 +429,7 @@
         props   (-> props
                     (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
                             :deselect?)
+                    (assoc :error (error? spec value required))
                     ;; Following fixes Chrome scroll issue
                     ;; https://github.com/mui-org/material-ui/pull/12003
                     (assoc :MenuProps
@@ -544,18 +548,34 @@
               :when (some? d)
               :let  [field (-> d :form-field)
                      props (-> field second)]]
-          (if read-only?
-            (->display-tf d (:multiline props))
-            (assoc field 1 (assoc props :label (:label d)))))))
+          (cond
+            (vector? d) d
+            read-only?  (->display-tf d (:multiline props))
+            :else       (assoc field 1 (assoc props :label (:label d)))))))
 
 ;; (def form table-form)
 (def form form-trad)
 
-(defn expansion-panel [{:keys [label]} & children]
-  [mui/expansion-panel {:style {:margin-top "1em"}}
+(defn icon-text [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items :center
+             :style     {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:color (or icon-color "inherit")}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography {:variant :body2
+                     :style   {:margin-left "0.5em"
+                               :display     :inline}}
+     text]]])
+
+(defn expansion-panel [{:keys [label label-color default-expanded]
+                        :or   {label-color "default"}} & children]
+  [mui/expansion-panel {:default-expanded default-expanded
+                        :style            {:margin-top "1em"}}
    [mui/expansion-panel-summary {:expand-icon (r/as-element
                                                [mui/icon "expand_more"])}
-    [mui/typography {:color "primary"
+
+    [mui/typography {:color   label-color
                      :variant "button"}
      label]]
    (into [mui/expansion-panel-details]
@@ -746,25 +766,29 @@
         label-fn)]))
 
 (defn autocomplete [{:keys [label items value value-fn label-fn
-                            suggestion-fn on-change]
+                            suggestion-fn on-change multi? spacing
+                            items-label]
                      :or   {suggestion-fn (partial simple-matches items label-fn)
                             label-fn      :label
-                            value-fn      :value}}]
+                            value-fn      :value
+                            multi?        true
+                            spacing       0}}]
 
   (r/with-let [items-m     (utils/index-by value-fn items)
                id          (r/atom (gensym))
                value       (r/atom (or value []))
                input-value (r/atom "")
-               suggs       (r/atom items)]
+               suggs       (r/atom (map value-fn items))]
 
-    [mui/grid {:container true}
+    [mui/grid {:container true
+               :spacing   spacing}
 
      ;; Input field
      [mui/grid {:item true}
       [:> autosuggest
-       {:id                          @id
-        :suggestions                 @suggs
-        :getSuggestionValue          #(label-fn (js->clj* %1))
+       {:id                 @id
+        :suggestions        @suggs
+        :getSuggestionValue #(label-fn (js->clj* %1))
 
         :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
                                                      (gobj/get % "value")))
@@ -773,45 +797,49 @@
         :renderSuggestion            (partial ac-hack-item label-fn)
         :renderSuggestionsContainer  ac-hack-container
 
-        :onSuggestionSelected        #(let [v (-> %2
-                                                  (gobj/get "suggestion")
-                                                  js->clj*)]
-                                        (swap! value conj (value-fn v))
-                                        (on-change @value)
-                                        (reset! input-value ""))
+        :onSuggestionSelected #(let [v (-> %2
+                                           (gobj/get "suggestion")
+                                           js->clj*)]
+                                 (if multi?
+                                   (swap! value conj (value-fn v))
+                                   (reset! value [(value-fn v)]))
+                                 (on-change @value)
+                                 (reset! input-value ""))
 
-        :renderInputComponent        ac-hack-input
-        :inputProps                  {:label    (or label "")
-                                      :value    (or @input-value "")
+        :renderInputComponent ac-hack-input
+        :inputProps           {:label (or label "")
+                               :value (or @input-value "")
 
-                                      :onChange #(reset! input-value
-                                                         (gobj/get %2 "newValue"))}
+                               :onChange #(reset! input-value
+                                                  (gobj/get %2 "newValue"))}
 
-        :theme                       {:suggestionsList
-                                      {:list-style-type "none"
-                                       :padding         0
-                                       :margin          0}}}]]
+        :theme {:suggestionsList
+                {:list-style-type "none"
+                 :padding         0
+                 :margin          0}}}]]
 
      ;; Selected values chips
      (into
-      [mui/grid {:item  true
-                 :style {:margin-top :auto}}]
-      (for [v @value]
-        [mui/chip
-         {:label     (label-fn (get items-m v))
-          :on-delete #(do (swap! value (fn [old-value]
-                                         (into (empty old-value)
-                                               (remove #{v} old-value))))
-                          (on-change @value))}]))]))
+      [mui/grid {:container true
+                 :spacing   spacing
+                 :style     {:margin-top :auto}}
+       (when (and items-label (not-empty @value))
+         [mui/grid {:item true :xs 12}
+          [mui/typography {:variant "body2"}
+           items-label]])]
+      (for [item (sort-by label-fn (vals (select-keys items-m @value)))
+            :let [v (value-fn item)]]
+        [mui/grid {:item true}
+         [mui/chip
+          {:label     (label-fn item)
+           :on-delete #(do (swap! value (fn [old-value]
+                                          (into (empty old-value)
+                                                (remove #{v} old-value))))
+                           (on-change @value))}]]))]))
 
-(defn icon-text [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items :center
-             :style     {:padding "0.5em"}}
-   [mui/grid {:item true}
-    [mui/icon {:color (or icon-color "inherit")}
-     icon]]
-   [mui/grid {:item true}
-    [mui/typography {:variant :body2
-                     :style   {:margin-left "0.5em"
-                               :display     :inline}}
-     text]]])
+(defn sub-heading [{:keys [label]}]
+  [mui/typography {:variant "subheading"
+                   :style   {:margin-top    "1em"
+                             :margin-bottom "1em"
+                             :font-weight   "bold"}}
+   label])

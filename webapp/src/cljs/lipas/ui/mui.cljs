@@ -79,7 +79,7 @@
    {:type      "dark"
     :primary   {:main primary}
     :secondary {:main secondary}
-    :text      {:disabled "rgba(0, 0, 0, 0.68)"}}
+    :text      {:disabled "rgba(255, 255, 255, 0.88)"}}
    :overrides
    {:Mui-card-header
     {:title
@@ -91,7 +91,8 @@
   (utils/deep-merge
    jyu-styles-dark
    {:palette
-    {:type "light"}
+    {:type "light"
+     :text {:disabled "rgba(0, 0, 0, 0.88)"}}
     :typography
     {:body1 {:color primary}
      :body2 {:color primary}}
@@ -134,6 +135,8 @@
 (def divider (mui->reagent "Divider"))
 (def swipeable-drawer (mui->reagent "SwipeableDrawer"))
 (def tabs (mui->reagent "Tabs"))
+(def radio (mui->reagent "Radio"))
+(def radio-group (mui->reagent "RadioGroup"))
 (def tab (mui->reagent "Tab"))
 (def input-adornment (mui->reagent "InputAdornment"))
 (def form-control (mui->reagent "FormControl"))
@@ -162,11 +165,16 @@
 (def expansion-panel-actions (mui->reagent "ExpansionPanelActions"))
 (def expansion-panel-details (mui->reagent "ExpansionPanelDetails"))
 (def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
+(def stepper (mui->reagent "Stepper"))
+(def step (mui->reagent "Step"))
+(def step-label (mui->reagent "StepLabel"))
+(def step-content (mui->reagent "StepContent"))
 (def input-label (mui->reagent "InputLabel"))
+(def popper (mui->reagent "Popper"))
 (def select (mui->reagent "Select"))
 (def slide (mui->reagent "Slide"))
 (def zoom (mui->reagent "Zoom"))
 (def fade (mui->reagent "Fade"))
 (def grow (mui->reagent "Grow"))
-
+(def circular-progress (mui->reagent "CircularProgress"))
 (def with-width* (.withWidth js/MaterialUI))
