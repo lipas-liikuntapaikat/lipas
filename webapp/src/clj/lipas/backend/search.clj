@@ -88,44 +88,6 @@
                         :body   {:actions actions}})
     old-idxs))
 
-(defn create-geo-filter
-  "Creates geo_distance filter:
-  :geo_distance {:distance ... }
-                 :point {:lon ... :lat ... }}"
-  [geo-params]
-  (when geo-params {:geo_distance geo-params}))
-
-(defn create-filter
-  [k coll]
-  (when (seq coll) {:terms {k coll}}))
-
-(defn create-filters
-  [{city-codes :city-codes type-codes :type-codes close-to :close-to}]
-  (not-empty (remove nil? [(create-filter :location.city.city-code city-codes)
-                           (create-filter :type.type-code type-codes)
-                           (create-geo-filter close-to)])))
-
-(defn append-filters
-  [params query-map]
-  (if-let [filters (create-filters params)]
-    (assoc-in query-map [:bool] {:filter filters})
-    query-map))
-
-(defn append-search-string
-  [params query-map]
-  (if-let [qs (:search-string params)]
-    (assoc-in query-map [:bool :must] [{:query_string {:query qs}}])
-    query-map))
-
-(defn resolve-query
-  [params]
-  (if-let [query (->> {}
-                      (append-filters params)
-                      (append-search-string params)
-                      not-empty)]
-    query
-    {:match_all {}}))
-
 (defn search
   [client idx-name params]
   (es/request client {:method :get
