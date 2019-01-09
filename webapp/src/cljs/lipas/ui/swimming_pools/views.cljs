@@ -16,13 +16,14 @@
 
 (defn stats-tab []
   (let [tr    (<== [:lipas.ui.subs/translator])
-        year  (dec utils/this-year)
+        year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
-    (energy/energy-stats
-     {:tr    tr
-      :year  year
-      :link  "/#/uimahalliportaali/ilmoita-tiedot"
-      :stats stats})))
+    [energy/energy-stats
+     {:tr             tr
+      :year           year
+      :link           "/#/uimahalliportaali/ilmoita-tiedot"
+      :stats          stats
+      :on-year-change #(==> [::events/display-stats %])}]))
 
 (defn toggle-dialog
   ([dialog]
@@ -729,6 +730,5 @@
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
     (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
-    (==> [:lipas.ui.energy.events/fetch-energy-report (dec utils/this-year) 3110])
-    (==> [:lipas.ui.energy.events/fetch-energy-report (dec utils/this-year) 3130])
+    (==> [::events/display-stats (dec utils/this-year)])
     [create-panel tr logged-in?]))

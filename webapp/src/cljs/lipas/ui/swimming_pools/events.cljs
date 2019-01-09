@@ -71,3 +71,11 @@
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/uimahalliportaali/hallit"])]
     :lipas.ui.effects/reset-scroll! nil}))
+
+(re-frame/reg-event-fx
+ ::display-stats
+ (fn [{:keys [db]} [_ year]]
+   {:db (assoc-in db [:swimming-pools :stats-year] year)
+    :dispatch-n
+    [[:lipas.ui.energy.events/fetch-energy-report year 3110]
+     [:lipas.ui.energy.events/fetch-energy-report year 3130]]}))
