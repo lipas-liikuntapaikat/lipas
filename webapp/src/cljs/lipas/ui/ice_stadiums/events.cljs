@@ -49,3 +49,11 @@
      (when-not lipas-id
        [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]
     :lipas.ui.effects/reset-scroll! nil}))
+
+(re-frame/reg-event-fx
+ ::display-stats
+ (fn [{:keys [db]} [_ year]]
+   {:db (assoc-in db [:ice-stadiums :stats-year] year)
+    :dispatch-n
+    [[:lipas.ui.energy.events/fetch-energy-report year 2510]
+     [:lipas.ui.energy.events/fetch-energy-report year 2520]]}))

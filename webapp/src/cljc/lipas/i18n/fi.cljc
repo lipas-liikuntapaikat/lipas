@@ -565,4 +565,5 @@
     :user-not-found      "Käyttäjää ei löydy."
     :email-not-found     "Sähköpostiosoitetta ei ole rekisteröity."
     :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."
-    :invalid-form        "Korjaa punaisella merkityt kohdat"}})
+    :invalid-form        "Korjaa punaisella merkityt kohdat"
+    :no-data             "Ei tietoja"}})
