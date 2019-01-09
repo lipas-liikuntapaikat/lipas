@@ -26,6 +26,11 @@
         (reduce-kv (fn [m k v] (assoc m k (count v))) {}))))
 
 (re-frame/reg-sub
+ ::stats-year
+ (fn [db _]
+   (-> db :ice-stadiums :stats-year)))
+
+(re-frame/reg-sub
  ::stats
  (fn [[_ year] _]
    [(re-frame/subscribe [::total-counts])

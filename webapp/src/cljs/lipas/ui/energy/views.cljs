@@ -232,8 +232,7 @@
              :disabled?   @monthly-energy?
              :cold?       cold?
              :spectators? spectators?
-             :data        (select-keys data [:energy-consumption
-                                             :visitors])
+             :data        (select-keys data [:energy-consumption :visitors])
              :on-change   set-field}]]
 
           true
@@ -349,7 +348,7 @@
            :spectators? spectators?
            :cold?       cold?}])])))
 
-(defn energy-stats [{:keys [tr year stats link]}]
+(defn energy-stats [{:keys [tr year on-year-change stats link]}]
   (let [energy-type (<== [::subs/chart-energy-type])]
     [mui/grid {:container true}
 
@@ -358,30 +357,44 @@
       [mui/card {:square true}
        [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
        [mui/card-content
-        [mui/form-group {:style {:min-width     120
-                                 :max-width     200
-                                 :margin-bottom "2em"}}
+
+        [mui/grid {:container true :spacing 16
+                   :style     {:margin-bottom "1em"}}
+
+         ;; Select year for stats
+         [mui/grid {:item true}
+          [lui/year-selector
+           {:style     {:min-width "100px"}
+            :label     (tr :actions/select-year)
+            :years     (range 2000 utils/this-year)
+            :value     year
+            :on-change on-year-change}]]
 
          ;; Select energy to display in the chart
-         [lui/select
-          {:label     (tr :actions/choose-energy)
-           :items     [{:value :energy-mwh
-                        :label (tr :lipas.energy-stats/energy-mwh)}
-                       {:value :electricity-mwh
-                        :label (tr :lipas.energy-stats/electricity-mwh)}
-                       {:value :heat-mwh
-                        :label (tr :lipas.energy-stats/heat-mwh)}
-                       {:value :water-m3
-                        :label (tr :lipas.energy-stats/water-m3)}]
-           :value     energy-type
-           :on-change #(==> [::events/select-energy-type %])}]]
+         [mui/grid {:item true}
+          [lui/select
+           {:style     {:min-width "150px"}
+            :label     (tr :actions/choose-energy)
+            :items     [{:value :energy-mwh
+                         :label (tr :lipas.energy-stats/energy-mwh)}
+                        {:value :electricity-mwh
+                         :label (tr :lipas.energy-stats/electricity-mwh)}
+                        {:value :heat-mwh
+                         :label (tr :lipas.energy-stats/heat-mwh)}
+                        {:value :water-m3
+                         :label (tr :lipas.energy-stats/water-m3)}]
+            :value     energy-type
+            :on-change #(==> [::events/select-energy-type %])}]]]
+
+        (when-not (seq (:data-points stats))
+          [mui/typography {:color "error"}
+           (tr :error/no-data)])
 
         ;; The Chart
-        (when (seq (:data-points stats))
-          [charts/energy-chart
-           {:energy       energy-type
-            :energy-label (tr (keyword :lipas.energy-stats energy-type))
-            :data         (:data-points stats)}])
+        [charts/energy-chart
+         {:energy       energy-type
+          :energy-label (tr (keyword :lipas.energy-stats energy-type))
+          :data         (:data-points stats)}]
 
         ;; Is your hall missing from the chart? -> Report consumption
         [mui/typography {:style   {:margin-top "0.5em"}
