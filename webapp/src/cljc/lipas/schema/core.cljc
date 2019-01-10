@@ -181,7 +181,7 @@
                        postal-code-gen))
 
 (s/def :lipas.location/postal-office (str-in 0 50))
-(s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/active))
+(s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/all))
 (s/def :lipas.location.city/neighborhood (str-in 1 100))
 
 (s/def :lipas.location/city
