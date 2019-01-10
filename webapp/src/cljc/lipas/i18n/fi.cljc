@@ -37,6 +37,7 @@
     :name-short        "Nimi"
     :name              "Virallinen nimi"
     :marketing-name    "Markkinointinimi"
+    :event-date        "Muokattu"
     :owner             "Omistaja"
     :admin             "Ylläpitäjä"
     :type              "Tyyppi"
@@ -484,6 +485,8 @@
     :select-type              "Valitse tyyppi"
     :select-types             "Valitse tyypit"
     :select-cities            "Valitse kunnat"
+    :select-admins            "Valitse ylläpitäjät"
+    :select-owners            "Valitse omistajat"
     :filter-area-m2           "Rajaa pinta-ala m²"
     :filter-surface-materials "Rajaa pintamateriaalit"
     :clear-selections         "Poista valinnat"}

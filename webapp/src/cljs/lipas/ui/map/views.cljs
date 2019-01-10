@@ -527,9 +527,11 @@
         logged-in?    (<== [:lipas.ui.subs/logged-in?])
         selected-site (<== [::subs/selected-sports-site])
         drawer-open?  (<== [::subs/drawer-open?])
-        drawer-width  (case width
-                        "xs" "100%"
-                        "430px")]
+        result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        drawer-width  (cond
+                        (= width "xs")         "100%"
+                        (= :table result-view) "1200px"
+                        :else                  "430px")]
     [mui/grid {:container true
                :style     {:flex-direction "column"
                            :flex           "1 0 auto"}}
@@ -556,11 +558,11 @@
       (when-not drawer-open?
         ;; Open Drawer Button
         [mui/grid {:container true
-                   :style     {:position         "fixed"
-                               :left             0
-                               :top              0
-                               :width            drawer-width
-                               :z-index          1200}}
+                   :style     {:position "fixed"
+                               :left     0
+                               :top      0
+                               :width    drawer-width
+                               :z-index  1200}}
          [mui/grid {:item true :xs 12}
           [mui/paper {:square true}
            [mui/button {:full-width true
