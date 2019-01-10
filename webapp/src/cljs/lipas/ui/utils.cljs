@@ -332,3 +332,14 @@
                                        (assoc-in [:properties :lipas-id] lipas-id)
                                        (assoc-in [:properties :type-code] type-code)))
                                  %)))))
+
+(defn ->short-date [s]
+  (-> s (string/split #"T") first))
+
+(defn ->human-date [s]
+  (-> s
+      (string/split #"T")
+      first
+      (string/split "-")
+      reverse
+      (->> (string/join "."))))
