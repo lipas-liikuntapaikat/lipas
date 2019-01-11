@@ -53,7 +53,7 @@
                         :fields ["location.city.city-name"]}]]
     [:<>
      ;; Open Dialog button
-     (when (< 0 results-count )
+     (when (< 0 results-count)
        [mui/button {:style    {:margin-top "1em"}
                     :on-click toggle}
         [mui/icon "arrow_right"]
