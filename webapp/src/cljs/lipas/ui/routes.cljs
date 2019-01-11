@@ -31,8 +31,9 @@
 
   (defroute "/" []
     (case (utils/domain)
-      "uimahallit.lipas.fi" (navigate! "/#/uimahalliportaali")
-      "jaahallit.lipas.fi"  (navigate! "/#/jaahalliportaali")
+      "uimahallit.lipas.fi"     (navigate! "/#/uimahalliportaali")
+      "jaahallit.lipas.fi"      (navigate! "/#/jaahalliportaali")
+      "liikuntapaikat.lipas.fi" (navigate! "/#/liikuntapaikat")
       (navigate! "/#/etusivu")))
 
   (defroute "/etusivu" []
