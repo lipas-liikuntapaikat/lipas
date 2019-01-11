@@ -279,7 +279,7 @@
             [mui/list-item-text
              {:primary   (-> result :name)
               :secondary (str (-> result :type.name) ", "
-                              (-> result :city.name))}]])]]
+                              (-> result :location.city.name))}]])]]
 
        ;; Results table
        [mui/grid {:container true}
