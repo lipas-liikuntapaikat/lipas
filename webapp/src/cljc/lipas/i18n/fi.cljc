@@ -500,13 +500,14 @@
     :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
-   {:headline           "Haku"
-    :search             "Hae"
-    :search-more        "Hae lisää..."
-    :placeholder        "Etsi..."
-    :filters            "Rajaa hakua"
-    :retkikartta-filter "Retkikartta.fi kohteet"
-    :results-count      "{1} hakutulosta"}
+   {:headline              "Haku"
+    :search                "Hae"
+    :search-more           "Hae lisää..."
+    :placeholder           "Etsi..."
+    :filters               "Rajaa hakua"
+    :retkikartta-filter    "Retkikartta.fi kohteet"
+    :results-count         "{1} hakutulosta"
+    :display-closest-first "Näytä lähimmät kohteet ensin"}
 
    :statuses
    {:edited "{1} (muokattu)"}

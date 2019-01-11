@@ -168,26 +168,58 @@
         result-view (<== [::subs/search-results-view])
         sort-opts   (<== [::subs/sort-opts])
         pagination  (<== [::subs/pagination])]
+
     [mui/grid {:item true :xs 12 :style {:flex 1}}
-     [mui/typography {:style   {:margin-bottom "0.5em"}
-                      :variant :display1}
-      "LIPAS"]
+
+     ;; First row: LIPAS-text and view selector
      [mui/grid {:container true}
-      [mui/grid {:item true :xs 9}
+
+      [mui/grid {:item true :style {:flex-grow 1}}
+       [mui/typography {:variant :display1}
+        "LIPAS"]]
+
+      ;; Change result view (list | table)
+      [mui/grid {:item true}
+
+       [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
+        [mui/icon {:color (if (= :list result-view)
+                            "secondary"
+                            "default")}
+         "view_stream"]]
+
+       [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
+        [mui/icon {:color (if-not (= :list result-view)
+                            "secondary"
+                            "default")}
+         "view_column"]]
+
+       ;; [mui/button {:on-click #(==> [::events/toggle-results-view])}
+       ;;  [mui/icon (if (= :list result-view)
+       ;;              "arrow_forward_ios"
+       ;;              "arrow_back_ios")]]
+
+       ]]
+
+     ;; Second row: Search input and button
+     [mui/grid {:container true :style {:margin-top    "2em"
+                                        :margin-bottom "1em"}}
+      [mui/grid {:item true :style {:flex-grow 1}}
        [lui/text-field {:value       search-str
                         :placeholder (tr :search/placeholder)
                         :full-width  true
                         :on-change   #(==> [::events/update-search-string %])}]]
-      [mui/grid {:item true :xs 3}
+      [mui/grid {:item true}
        [mui/button {:on-click #(==> [::events/submit-search])}
         [mui/icon "search"]
         (tr :search/search)]]]
 
+     ;; Third row: filters expansion panel
      [lui/expansion-panel {:label            (tr :search/filters)
                            :label-color      "default"
                            :default-expanded false}
       [filters {:tr tr}]]
 
+     ;; Results count
      [mui/typography {:variant "body2"
                       :style   {:margin-top  "1em"
                                 :margin-left "1em"}}
@@ -195,21 +227,11 @@
 
      [mui/divider]
 
-     [reports/dialog {:tr tr}]
+     ;; Excel export
+     (when (not= :list result-view)
+       [reports/dialog {:tr tr}])
 
-     ;; Results
-
-     ;; Rank results close to map center higher
-     [lui/checkbox
-      {:label     "Hae kartan alueelta"
-       :value     (:score? sort-opts)
-       :on-change #(==> [::events/toggle-sorting-by-distance])}]
-
-     ;; Change result view (list | table)
-     [mui/button {:on-click #(==> [::events/toggle-results-view])}
-      [mui/icon (if (= :list result-view)
-                  "arrow_forward_ios"
-                  "arrow_back_ios")]]
+     ;;; Results
 
      (if (= :list result-view)
 
@@ -220,32 +242,46 @@
            {:button   true
             :divider  true
             :on-click #(on-result-click result)}
-           [mui/list-item-text {:primary   (-> result :name)
-                                :secondary (str (-> result :type.name) ", "
-                                                (-> result :city.name))}]])]
+           [mui/list-item-text
+            {:primary   (-> result :name)
+             :secondary (str (-> result :type.name) ", "
+                             (-> result :city.name))}]])]
 
        ;; Results table
-       [:<>
-        [mui/table-pagination
-         {:rows-per-page         200
-          :rows-per-page-options #js[200]
-          :count                 total
-          :on-change-page        #(==> [::events/change-result-page %2])
-          :page                  (:page pagination)}]
+       [mui/grid {:container true}
 
-        [lui/table
-         {:items            results
-          :hide-action-btn? true
-          :on-select        #(on-result-click %)
-          :sort-fn          (or (:sort-fn sort-opts) :score)
-          :sort-asc?        (:asc? sort-opts)
-          :on-sort-change   #(==> [::events/change-sort-order %])
-          :headers          [[:score "score" :hidden]
-                             [:name (tr :lipas.sports-site/name)]
-                             [:type.name (tr :type/name)]
-                             [:admin (tr :lipas.sports-site/admin)]
-                             [:owner (tr :lipas.sports-site/owner)]
-                             [:location.city.name (tr :lipas.location/city)]
-                             [:event-date (tr :lipas.sports-site/event-date)]]}]
+        ;; Pagination
+        [mui/grid {:item true :style {:flex-grow 1}}
+         [mui/table-pagination
+          {:rows-per-page         200
+           :rows-per-page-options #js[200]
+           :count                 total
+           :on-change-page        #(==> [::events/change-result-page %2])
+           :page                  (:page pagination)}]]
+
+        ;; Rank results close to map center higher
+        [mui/grid {:item true}
+         [lui/checkbox
+          {:style {:height "100%"}
+           :label     (tr :search/display-closest-first)
+           :value     (:score? sort-opts)
+           :on-change #(==> [::events/toggle-sorting-by-distance])}]]
+
+        ;; The table
+        [mui/grid {:item true}
+         [lui/table
+          {:items            results
+           :hide-action-btn? true
+           :on-select        #(on-result-click %)
+           :sort-fn          (or (:sort-fn sort-opts) :score)
+           :sort-asc?        (:asc? sort-opts)
+           :on-sort-change   #(==> [::events/change-sort-order %])
+           :headers          [[:score "score" :hidden]
+                              [:name (tr :lipas.sports-site/name)]
+                              [:type.name (tr :type/name)]
+                              [:admin (tr :lipas.sports-site/admin)]
+                              [:owner (tr :lipas.sports-site/owner)]
+                              [:location.city.name (tr :lipas.location/city)]
+                              [:event-date (tr :lipas.sports-site/event-date)]]}]]
 
         ])]))
