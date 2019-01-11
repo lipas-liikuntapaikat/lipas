@@ -190,6 +190,16 @@
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
 
+  (search/search search "sports_sites_current" {:sort [:search-meta.type.name.fi.keyword]
+                                                :query
+                                                {:bool
+                                                 {:must
+                                                  [{:query_string
+                                                    {:query "*"}}]}}
+                                                :_source
+                                                {:excludes ["location.geometries"]}
+                                                :size 100})
+
   (require '[clojure.java.io :as io])
   (with-open [out (io/output-stream "kissa.xlsx")]
     (let [query {:query

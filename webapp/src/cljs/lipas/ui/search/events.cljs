@@ -7,7 +7,30 @@
 (defn- add-filter [m filter]
   (update-in m [:query :function_score :query :bool :filter] conj filter))
 
-(defn ->es-search-body [{:keys [filters string center distance]}]
+(defn ->sort-key [k locale]
+  (case k
+    (:location.city.name :type.name) (-> k name
+                                         (->> (str "search-meta."))
+                                         (str "." (name locale) ".keyword")
+                                         keyword)
+    (:event-date)                    :event-date
+    (keyword (str (name k) ".keyword"))))
+
+(defn resolve-sort [{:keys [sort-fn asc?]} locale]
+  {:sort
+   (filterv some?
+            [(cond
+               (= sort-fn :score) :_score
+               sort-fn            {(->sort-key sort-fn locale)
+                                   {:order (if asc? "asc" "desc")}}
+               :else              nil)])})
+
+(defn resolve-pagination [{:keys [page page-size]}]
+  {:from (* page page-size)
+   :size page-size})
+
+(defn ->es-search-body [{:keys [filters string center distance sort
+                                locale pagination]}]
   (let [string            (or (not-empty string) "*")
         type-codes        (-> filters :type-codes not-empty)
         city-codes        (-> filters :city-codes not-empty)
@@ -15,30 +38,36 @@
         area-max          (-> filters :area-max)
         materials         (-> filters :surface-materials not-empty)
         retkikartta?      (-> filters :retkikartta?)
+        admins            (-> filters :admins not-empty)
+        owners            (-> filters :owners not-empty)
         {:keys [lon lat]} center
 
-        params {:size    200
-                ;; :min_score 1
-                :_source {:excludes ["search-meta"]}
-                :query
-                {:function_score
-                 {:score_mode "sum"
-                  :query
-                  {:bool
-                   {:must
-                    [{:query_string
-                      {:query string}}]}}
-                  :functions  [{:gauss
-                                {:search-meta.location.wgs84-point
-                                 {:origin (str lat "," lon)
-                                  :offset (str distance "m")
-                                  :scale  (str (* 2 distance) "m")}}}]}}}]
+        params (merge
+                (resolve-sort sort locale)
+                (resolve-pagination pagination)
+                {;; :min_score 1
+                 :_source {:excludes ["search-meta"]}
+                 :query
+                 {:function_score
+                  {:score_mode "sum"
+                   :query
+                   {:bool
+                    {:must
+                     [{:query_string
+                       {:query string}}]}}
+                   :functions  [{:gauss
+                                 {:search-meta.location.wgs84-point
+                                  {:origin (str lat "," lon)
+                                   :offset (str distance "m")
+                                   :scale  (str (* 2 distance) "m")}}}]}}})]
     (cond-> params
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
       area-min     (add-filter {:range {:properties.area-m2 {:gte area-min}}})
       area-max     (add-filter {:range {:properties.area-m2 {:lte area-max}}})
       materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
+      admins       (add-filter {:terms {:admin.keyword admins}})
+      owners       (add-filter {:terms {:owner.keyword owners}})
       retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}}))))
 
 (re-frame/reg-event-fx
@@ -58,8 +87,8 @@
  (fn [{:keys [db]} [_ resp]]
    (let [hits  (-> resp :hits :hits)
          sites (map :_source hits)]
-     {:db (-> (reduce utils/add-to-db db sites)
-              (assoc-in [:search :results] resp))})))
+     {:db       (-> (reduce utils/add-to-db db sites)
+                    (assoc-in [:search :results] resp))})))
 
 (re-frame/reg-event-fx
  ::search-failure
@@ -80,11 +109,18 @@
  (fn [{:keys [db]} _]
    (let [params (-> db
                     :search
-                    (select-keys [:string :filters])
+                    (select-keys [:string :filters :sort :pagination])
+                    (assoc :locale ((-> db :translator)))
                     (assoc :center (-> db :map :center-wgs84))
                     (assoc :distance (/ (max (-> db :map :width)
                                              (-> db :map :height)) 2)))]
      {:dispatch [::search params]})))
+
+(re-frame/reg-event-fx
+ ::filters-updated
+ (fn [_ _]
+   {:dispatch-n [[::submit-search]
+                 [::change-result-page 0]]}))
 
 (re-frame/reg-event-fx
  ::set-type-filter
@@ -92,7 +128,7 @@
    {:db       (if append?
                 (update-in db [:search :filters :type-codes] into type-codes)
                 (assoc-in db [:search :filters :type-codes] type-codes))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-city-filter
@@ -100,39 +136,52 @@
    {:db       (if append?
                 (update-in db [:search :filters :city-codes] into city-codes)
                 (assoc-in db [:search :filters :city-codes] city-codes))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-area-min-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-min] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-surface-materials-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :surface-materials] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
+
+(re-frame/reg-event-fx
+ ::set-admins-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :admins] v)
+    :dispatch [::filters-updated]}))
+
+(re-frame/reg-event-fx
+ ::set-owners-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :owners] v)
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
    {:db       (-> db
                   (assoc-in [:search :filters] {})
+                  (assoc-in [:search :sort] {:sort-fn :score :asc? true})
                   (assoc-in [:search :string] nil))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::create-report-from-current-search
@@ -147,3 +196,36 @@
                     (assoc-in [:_source :excludes] ["location.geometries"]))
          fields (-> db :reports :selected-fields)]
      {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
+
+(re-frame/reg-event-fx
+ ::set-results-view
+ (fn [{:keys [db]} [_ view]]
+   {:db         (assoc-in db [:search :results-view] view)
+    :dispatch-n [(when (= :list view) [::reset-sort-order])]}))
+
+(re-frame/reg-event-fx
+ ::reset-sort-order
+ (fn [{:keys [db]} _]
+   {:db       (assoc-in db [:search :sort] {:asc? true :sort-fn :score})
+    :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::change-sort-order
+ (fn [{:keys [db]} [_ sort]]
+   {:db       (update-in db [:search :sort] merge sort)
+    :dispatch [::submit-search]}))
+
+;; This can be combined with other sort options
+(re-frame/reg-event-fx
+ ::toggle-sorting-by-distance
+ (fn [{:keys [db]} _]
+   {:db       (update-in db [:search :sort :sort-fn] #(if (= % :score)
+                                                        :name
+                                                        :score))
+    :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::change-result-page
+ (fn [{:keys [db]} [_ page]]
+   {:db       (assoc-in db [:search :pagination :page] page)
+    :dispatch [::submit-search]}))

@@ -181,7 +181,7 @@
                        postal-code-gen))
 
 (s/def :lipas.location/postal-office (str-in 0 50))
-(s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/active))
+(s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/all))
 (s/def :lipas.location.city/neighborhood (str-in 1 100))
 
 (s/def :lipas.location/city
@@ -228,7 +228,7 @@
   (into #{} (keys sports-site-types/all)))
 
 (s/def :lipas.sports-site/construction-year
-  (into #{} (range 1850 (inc utils/this-year))))
+  (into #{} (range 1800 (inc utils/this-year))))
 
 (s/def :lipas.sports-site/renovation-years
   (s/coll-of (s/int-in 1900 (inc utils/this-year))

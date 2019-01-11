@@ -79,8 +79,16 @@
 
    ;; Search
    :search
-   {:filters {:type-codes #{}
-              :city-codes #{}}}
+   {:filters
+    {:type-codes #{}
+     :city-codes #{}}
+    :sort
+    {:asc?    true
+     :sort-fn :score}
+    :results-view :list
+    :pagination
+    {:page      0
+     :page-size 200}}
 
    ;; Reports
    :reports

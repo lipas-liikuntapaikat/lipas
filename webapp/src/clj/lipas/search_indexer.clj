@@ -9,7 +9,7 @@
             [taoensso.timbre :as log]))
 
 (def cities (utils/index-by :city-code cities/all))
-(def types (utils/index-by :type-code types/all))
+(def types types/all)
 
 (defn enrich [sports-site]
   (let [geom      (-> sports-site :location :geometries :features first :geometry)

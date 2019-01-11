@@ -114,7 +114,7 @@
  ::discard-drawing
  (fn [{:keys [db]} _]
    {:db       (assoc-in db [:map :mode] {:name :default})
-    :dispatch [::refresh-filters]}))
+    :dispatch [:lipas.ui.search.events/submit-search]}))
 
 (re-frame/reg-event-fx
  ::finish-adding-geom

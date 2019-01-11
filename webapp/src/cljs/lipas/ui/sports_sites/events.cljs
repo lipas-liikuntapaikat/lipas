@@ -169,7 +169,8 @@
  ::start-adding-new-site
  (fn [{:keys [db]} [_]]
    {:db       (assoc-in db [:new-sports-site :adding?] true)
-    :dispatch [:lipas.ui.search.events/clear-filters]}))
+    :dispatch-n [[:lipas.ui.search.events/clear-filters]
+                 [:lipas.ui.search.events/set-results-view :list]]}))
 
 (re-frame/reg-event-db
  ::discard-new-site

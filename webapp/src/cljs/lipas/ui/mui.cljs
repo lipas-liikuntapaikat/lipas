@@ -155,6 +155,7 @@
 (def table-row (mui->reagent "TableRow"))
 (def table-cell (mui->reagent "TableCell"))
 (def table-sort-label (mui->reagent "TableSortLabel"))
+(def table-pagination (mui->reagent "TablePagination"))
 (def dialog (mui->reagent "Dialog"))
 (def dialog-title (mui->reagent "DialogTitle"))
 (def dialog-content (mui->reagent "DialogContent"))
