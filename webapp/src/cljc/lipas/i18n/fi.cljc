@@ -539,7 +539,7 @@
 
    :map
    {:add-to-map      "Lisää kartalle"
-    :zoom-to-site    "Kohdista kartta liikuntapaikkaan"
+    :zoom-to-site    "Näytä kartalla"
     :zoom-closer     "Zoomaa lähemmäs"
     :draw            (fn [geom-type]
                        (case geom-type
