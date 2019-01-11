@@ -14,19 +14,16 @@
                                          (str "." (name locale) ".keyword")
                                          keyword)
     (:event-date)                    :event-date
-    (:score)                         :_score
     (keyword (str (name k) ".keyword"))))
 
-(defn resolve-sort [{:keys [score? sort-fn asc?]} locale]
+(defn resolve-sort [{:keys [sort-fn asc?]} locale]
   {:sort
    (filterv some?
-            [(when score? (->sort-key :score locale))
-             (when sort-fn
-               {(->sort-key sort-fn locale)
-                {:order (if asc? "asc" "desc")}})])})
-
-(comment
-  (resolve-sort {:score? :score :sort-fn :name :asc? true} :fi))
+            [(cond
+               (= sort-fn :score) :_score
+               sort-fn            {(->sort-key sort-fn locale)
+                                   {:order (if asc? "asc" "desc")}}
+               :else              nil)])})
 
 (defn resolve-pagination [{:keys [page page-size]}]
   {:from (* page page-size)
@@ -182,7 +179,7 @@
  (fn [{:keys [db]} _]
    {:db       (-> db
                   (assoc-in [:search :filters] {})
-                  (assoc-in [:search :sort] {:score? true})
+                  (assoc-in [:search :sort] {:sort-fn :score :asc? true})
                   (assoc-in [:search :string] nil))
     :dispatch [::filters-updated]}))
 
@@ -213,7 +210,7 @@
 (re-frame/reg-event-fx
  ::reset-sort-order
  (fn [{:keys [db]} _]
-   {:db       (assoc-in db [:search :sort] {:asc? true :score? true})
+   {:db       (assoc-in db [:search :sort] {:asc? true :sort-fn :score})
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
@@ -226,7 +223,9 @@
 (re-frame/reg-event-fx
  ::toggle-sorting-by-distance
  (fn [{:keys [db]} _]
-   {:db       (update-in db [:search :sort :score?] not)
+   {:db       (update-in db [:search :sort :sort-fn] #(if (= % :score)
+                                                        :name
+                                                        :score))
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx

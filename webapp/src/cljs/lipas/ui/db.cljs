@@ -84,8 +84,7 @@
      :city-codes #{}}
     :sort
     {:asc?    true
-     :score?  true
-     :sort-fn nil}
+     :sort-fn :score}
     :results-view :list
     :pagination
     {:page      0

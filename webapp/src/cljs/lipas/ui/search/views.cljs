@@ -305,13 +305,14 @@
          [lui/checkbox
           {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)
-           :value     (:score? sort-opts)
+           :value     (= :score (:sort-fn sort-opts))
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
         ;; The table
         [mui/grid {:item true}
          [lui/table
-          {:items            results
+          {:key              (:sort-fn sort-opts)
+           :items            results
            :hide-action-btn? true
            :on-select        #(on-result-click %)
            :sort-fn          (or (:sort-fn sort-opts) :score)
