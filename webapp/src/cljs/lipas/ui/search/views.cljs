@@ -218,7 +218,7 @@
      ;; Third row: filters expansion panel
      [lui/expansion-panel {:label            (tr :search/filters)
                            :label-color      "default"
-                           :default-expanded true}
+                           :default-expanded false}
       [filters {:tr tr}]]
 
      ;; 4th row: Results count and clear filters button
