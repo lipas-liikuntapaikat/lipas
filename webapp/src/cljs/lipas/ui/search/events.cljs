@@ -198,14 +198,10 @@
      {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
 
 (re-frame/reg-event-fx
- ::toggle-results-view
- (fn [{:keys [db]} _]
-   (let [path    [:search :results-view]
-         current (get-in db path)
-         new     (if (= :list current) :table :list)]
-     {:db (update-in db path [:results-view] new)
-      :dispatch-n [(when (= :list new)
-                     [::reset-sort-order])]})))
+ ::set-results-view
+ (fn [{:keys [db]} [_ view]]
+   {:db         (assoc-in db [:search :results-view] view)
+    :dispatch-n [(when (= :list view) [::reset-sort-order])]}))
 
 (re-frame/reg-event-fx
  ::reset-sort-order

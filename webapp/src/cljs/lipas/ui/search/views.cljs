@@ -199,13 +199,13 @@
       ;; Change result view (list | table)
       [mui/grid {:item true}
 
-       [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
+       [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
         [mui/icon {:color (if (= :list result-view)
                             "secondary"
                             "inherit")}
          "view_stream"]]
 
-       [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
+       [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
         [mui/icon {:color (if-not (= :list result-view)
                             "secondary"
                             "inherit")}
