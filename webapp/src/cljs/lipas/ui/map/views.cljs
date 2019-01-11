@@ -139,20 +139,21 @@
 
       [mui/grid {:container true
                  :style     {:flex-direction "column"}}
-       [mui/grid {:item true}
+       [mui/grid {:item true :xs 12}
 
         ;; Headline
         [mui/grid {:container   true
+                   :style       {:flex-wrap "nowrap"}
                    :align-items :center}
 
-         [mui/grid {:item  true :xs 11
-                    :style {:margin-top "0.5em"}}
-          [mui/typography {:style   {}
+         [mui/grid {:item  true
+                    :style {:margin-top "0.5em" :flex-grow 1}}
+          [mui/typography {:style   {:display "inline"}
                            :variant :headline}
            (:name display-data)]]
 
          ;; Close button
-         [mui/grid {:item true :xs 1}
+         [mui/grid {:item true}
           (when (not editing?)
             [mui/icon-button {:style    {:margin-left "-0.25em"}
                               :on-click #(==> [::events/show-sports-site nil])}
