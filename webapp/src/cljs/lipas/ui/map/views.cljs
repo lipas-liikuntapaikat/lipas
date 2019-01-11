@@ -529,18 +529,22 @@
         drawer-open?  (<== [::subs/drawer-open?])
         result-view   (<== [:lipas.ui.search.subs/search-results-view])
         drawer-width  (cond
-                        (= width "xs")         "100%"
-                        (= :table result-view) "1200px"
-                        :else                  "430px")]
+                        (#{"xs"} width)              "100%"
+                        (and (#{"sm" "md"} width)
+                             (= :table result-view)) "100%"
+                        (= :table result-view)       "1200px"
+                        :else                        "430px")]
     [mui/grid {:container true
                :style     {:flex-direction "column"
                            :flex           "1 0 auto"}}
 
      ;; Mini-nav
      [floating-container {:right     0
-                          :top       (case width
-                                       "xs" "2em"
-                                       0)
+                          :top       (cond
+                                       (#{"xs"} width)              "2em"
+                                       (and (#{"sm" "md"} width)
+                                            (= :table result-view)) "2em"
+                                       :else                        nil)
                           :elevation 0
                           :style     {:background-color "transparent"
                                       :padding-right    0
