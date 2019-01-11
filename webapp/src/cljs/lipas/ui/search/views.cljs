@@ -198,7 +198,7 @@
        [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
         [mui/icon {:color (if (= :list result-view)
                             "secondary"
-                            "default")}
+                            "inherit")}
          "view_stream"]]
 
        [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
