@@ -90,8 +90,8 @@
  (fn [{:keys [db]} [_ resp]]
    (let [hits  (-> resp :hits :hits)
          sites (map :_source hits)]
-     {:db (-> (reduce utils/add-to-db db sites)
-              (assoc-in [:search :results] resp))})))
+     {:db       (-> (reduce utils/add-to-db db sites)
+                    (assoc-in [:search :results] resp))})))
 
 (re-frame/reg-event-fx
  ::search-failure
@@ -120,12 +120,18 @@
      {:dispatch [::search params]})))
 
 (re-frame/reg-event-fx
+ ::filters-updated
+ (fn [_ _]
+   {:dispatch-n [[::submit-search]
+                 [::change-result-page 0]]}))
+
+(re-frame/reg-event-fx
  ::set-type-filter
  (fn [{:keys [db]} [_ type-codes append?]]
    {:db       (if append?
                 (update-in db [:search :filters :type-codes] into type-codes)
                 (assoc-in db [:search :filters :type-codes] type-codes))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-city-filter
@@ -133,43 +139,43 @@
    {:db       (if append?
                 (update-in db [:search :filters :city-codes] into city-codes)
                 (assoc-in db [:search :filters :city-codes] city-codes))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-area-min-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-min] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-surface-materials-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :surface-materials] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-admins-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :admins] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::set-owners-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :owners] v)
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::clear-filters
@@ -178,7 +184,7 @@
                   (assoc-in [:search :filters] {})
                   (assoc-in [:search :sort] {:score? true})
                   (assoc-in [:search :string] nil))
-    :dispatch [::submit-search]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::create-report-from-current-search
