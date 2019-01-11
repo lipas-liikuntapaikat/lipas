@@ -508,7 +508,8 @@
     :retkikartta-filter    "Retkikartta.fi kohteet"
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
-    :clear-filters         "Poista rajaukset"}
+    :clear-filters         "Poista rajaukset"
+    :pagination            "Näytetään tulokset {1} - {2}"}
 
    :statuses
    {:edited "{1} (muokattu)"}

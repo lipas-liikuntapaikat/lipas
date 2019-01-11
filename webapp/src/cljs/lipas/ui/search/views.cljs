@@ -1,5 +1,6 @@
 (ns lipas.ui.search.views
   (:require
+   [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.reports.views :as reports]
@@ -258,7 +259,14 @@
          [mui/table-pagination
           {:rows-per-page         200
            :rows-per-page-options #js[200]
-           :count                 total
+           :label-displayed-rows
+           (fn [props]
+             (let [from  (gobj/get props "from")
+                   to    (gobj/get props "to")
+                   total (gobj/get props "count")
+                   page  (gobj/get props "page")]
+               (tr :search/pagination from to total page)))
+           :count                 (or total 0)
            :on-change-page        #(==> [::events/change-result-page %2])
            :page                  (:page pagination)}]]
 
@@ -281,7 +289,14 @@
          [mui/table-pagination
           {:rows-per-page         200
            :rows-per-page-options #js[200]
-           :count                 total
+           :label-displayed-rows
+           (fn [props]
+             (let [from  (gobj/get props "from")
+                   to    (gobj/get props "to")
+                   total (gobj/get props "count")
+                   page  (gobj/get props "page")]
+               (tr :search/pagination from to total page)))
+           :count                 (or total 0)
            :on-change-page        #(==> [::events/change-result-page %2])
            :page                  (:page pagination)}]]
 
