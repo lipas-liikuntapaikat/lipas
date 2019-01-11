@@ -14,6 +14,7 @@
     [lui/autocomplete
      {:items     types
       :value     value
+      :show-all? true
       :label     (tr :search/search)
       :value-fn  :type-code
       :label-fn  (comp locale :name)
@@ -26,6 +27,7 @@
     [lui/autocomplete
      {:items     types
       :value     value
+      :show-all? true
       :label     (tr :search/search)
       :value-fn  :city-code
       :label-fn  (comp locale :name)
@@ -36,7 +38,8 @@
         items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
     [lui/autocomplete
      {:value     value
-      :label     ""
+      :label     (tr :search/search)
+      :show-all? true
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
@@ -45,11 +48,12 @@
 (defn admin-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/admins])]
-    [lui/multi-select
+    [lui/autocomplete
      {:style     {:min-width "150px"}
       :value     value
       :deselect? true
-      :label     ""
+      :show-all? true
+      :label     (tr :search/search)
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
@@ -58,11 +62,12 @@
 (defn owner-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
-    [lui/multi-select
+    [lui/autocomplete
      {:style     {:min-width "150px"}
       :value     value
+      :show-all? true
       :deselect? true
-      :label     ""
+      :label     (tr :search/search)
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
