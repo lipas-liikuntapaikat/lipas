@@ -225,9 +225,18 @@
           (remove
            nil?
            (into
+
             ;; Geom tools
 
-            [;; Draw hole
+            [(when-not editing?
+               [mui/tooltip {:title (tr :map/zoom-to-site)}
+                [mui/button
+                 {:on-click #(==> [::events/zoom-to-site lipas-id])
+                  :variant  "fab"
+                  :color    "default"}
+                 [mui/icon "my_location"]]])
+
+             ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
                [mui/tooltip {:title (tr :map/draw-hole)}
                 [mui/button
