@@ -37,6 +37,7 @@
 (defn surface-material-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
+    ^{:key value}
     [lui/autocomplete
      {:value     value
       :label     (tr :search/search)
@@ -49,6 +50,7 @@
 (defn admin-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/admins])]
+    ^{:key value}
     [lui/autocomplete
      {:style     {:min-width "150px"}
       :value     value
@@ -63,6 +65,7 @@
 (defn owner-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
+    ^{:key value}
     [lui/autocomplete
      {:style     {:min-width "150px"}
       :value     value
