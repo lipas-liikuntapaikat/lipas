@@ -228,7 +228,7 @@
   (into #{} (keys sports-site-types/all)))
 
 (s/def :lipas.sports-site/construction-year
-  (into #{} (range 1850 (inc utils/this-year))))
+  (into #{} (range 1800 (inc utils/this-year))))
 
 (s/def :lipas.sports-site/renovation-years
   (s/coll-of (s/int-in 1900 (inc utils/this-year))
