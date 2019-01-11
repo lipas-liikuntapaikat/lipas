@@ -773,7 +773,7 @@
 
 (defn autocomplete [{:keys [label items value value-fn label-fn
                             suggestion-fn on-change multi? spacing
-                            items-label]
+                            items-label show-all?]
                      :or   {suggestion-fn (partial simple-matches items label-fn)
                             label-fn      :label
                             value-fn      :value
@@ -792,11 +792,16 @@
      ;; Input field
      [mui/grid {:item true}
       [:> autosuggest
-       {:id                 @id
-        :suggestions        @suggs
-        :getSuggestionValue #(label-fn (js->clj* %1))
+       {:id                      @id
+        :suggestions             @suggs
+        :getSuggestionValue      #(label-fn (js->clj* %1))
 
-        :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
+        :shouldRenderSuggestions (if show-all?
+                                   (constantly true)
+                                   (comp boolean not-empty))
+
+
+       :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
                                                      (gobj/get % "value")))
 
         :onSuggestionsClearRequested #(reset! suggs [])
