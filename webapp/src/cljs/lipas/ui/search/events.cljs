@@ -176,6 +176,7 @@
  (fn [{:keys [db]} _]
    {:db       (-> db
                   (assoc-in [:search :filters] {})
+                  (assoc-in [:search :sort] {:score? true})
                   (assoc-in [:search :string] nil))
     :dispatch [::submit-search]}))
 
@@ -193,10 +194,21 @@
          fields (-> db :reports :selected-fields)]
      {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::toggle-results-view
- (fn [db _]
-   (update-in db [:search :results-view] #(if (= :list %) :table :list))))
+ (fn [{:keys [db]} _]
+   (let [path    [:search :results-view]
+         current (get-in db path)
+         new     (if (= :list current) :table :list)]
+     {:db (update-in db path [:results-view] new)
+      :dispatch-n [(when (= :list new)
+                     [::reset-sort-order])]})))
+
+(re-frame/reg-event-fx
+ ::reset-sort-order
+ (fn [{:keys [db]} _]
+   {:db       (assoc-in db [:search :sort] {:asc? true :score? true})
+    :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
  ::change-sort-order

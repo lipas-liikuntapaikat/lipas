@@ -68,6 +68,14 @@
       :value-fn  first
       :on-change on-change}]))
 
+(defn- filter-layout [props & children]
+  [mui/grid {:item true :style {:min-width "350px"}}
+   [mui/paper {:style {:padding "1em"}}
+    (into [mui/grid {:container true :direction "column"}]
+          (for [c children]
+            [mui/grid {:item true}
+             c]))]])
+
 (defn filters [{:keys [tr]}]
   (let [type-codes        (<== [::subs/types-filter])
         city-codes        (<== [::subs/cities-filter])
@@ -77,56 +85,72 @@
         area-max          (<== [::subs/area-max-filter])
         surface-materials (<== [::subs/surface-materials-filter])
         retkikartta?      (<== [::subs/retkikartta-filter])]
+
     [mui/grid {:container true
                :spacing   16}
 
      ;; Types filter
-     [mui/typography {:variant :caption}
-      (tr :actions/select-types)]
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/select-types)]
 
-     [mui/grid {:item true :xs 12}
       [type-selector
        {:tr        tr
         :value     type-codes
         :on-change #(==> [::events/set-type-filter %])}]]
 
      ;; Cities filter
-     [mui/typography {:variant :caption :xs 12
-                      :style   {:margin-top "1em"}}
-      (tr :actions/select-cities)]
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/select-cities)]
 
-     [mui/grid {:item true :xs 12}
       [city-selector
        {:tr        tr
         :value     city-codes
         :on-change #(==> [::events/set-city-filter %])}]]
 
      ;; Admins filter
-     [mui/typography {:variant :caption :xs 12
-                      :style   {:margin-top "1em"}}
-      (tr :actions/select-admins)]
-     [mui/grid {:item true :xs 12}
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/select-admins)]
+
       [admin-selector
        {:tr        tr
         :value     admins
         :on-change #(==> [::events/set-admins-filter %])}]]
 
      ;; Owners filter
-     [mui/typography {:variant :caption :xs 12
-                      :style   {:margin-top "1em"}}
-      (tr :actions/select-owners)]
-     [mui/grid {:item true :xs 12}
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/select-owners)]
+
       [owner-selector
        {:tr        tr
         :value     owners
         :on-change #(==> [::events/set-owners-filter %])}]]
 
-     ;; Area filters
-     [mui/typography {:variant :caption
-                      :style   {:margin-top "1em"}}
-      (tr :actions/filter-area-m2)]
+     ;; Surface materials filter
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/filter-surface-materials)]
 
-     [mui/grid {:item true :xs 12}
+      [surface-material-selector
+       {:tr        tr
+        :value     surface-materials
+        :on-change #(==> [::events/set-surface-materials-filter %])}]]
+
+     ;; Retkikartta.fi filter
+     [filter-layout {}
+      [lui/checkbox
+       {:value     retkikartta?
+        :label     (tr :search/retkikartta-filter)
+        :on-change #(==> [::events/set-retkikartta-filter %])}]]
+
+     ;; Area filters
+     [filter-layout {}
+      [mui/typography {:variant :caption}
+       (tr :actions/filter-area-m2)]
+
       [mui/grid {:container true :spacing 16}
 
        ;; Area min filter
@@ -143,31 +167,16 @@
                          :defer-ms  500
                          :type      "number"
                          :value     area-max
-                         :on-change #(==> [::events/set-area-max-filter %])}]]]]
-
-     ;; Surface materials filter
-     [mui/typography {:variant :caption
-                      :style   {:margin-top "1em"}}
-      (tr :actions/filter-surface-materials)]
-     [mui/grid {:item true :xs 12}
-      [surface-material-selector
-       {:tr        tr
-        :value     surface-materials
-        :on-change #(==> [::events/set-surface-materials-filter %])}]]
-
-     ;; Retkikartta.fi filter
-     [lui/checkbox
-      {:value     retkikartta?
-       :label     (tr :search/retkikartta-filter)
-       :on-change #(==> [::events/set-retkikartta-filter %])}]]))
+                         :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [search-str  (<== [::subs/search-string])
-        results     (<== [::subs/search-results-list])
-        total       (<== [::subs/search-results-total-count])
-        result-view (<== [::subs/search-results-view])
-        sort-opts   (<== [::subs/sort-opts])
-        pagination  (<== [::subs/pagination])]
+  (let [search-str      (<== [::subs/search-string])
+        results         (<== [::subs/search-results-list])
+        total           (<== [::subs/search-results-total-count])
+        result-view     (<== [::subs/search-results-view])
+        sort-opts       (<== [::subs/sort-opts])
+        pagination      (<== [::subs/pagination])
+        filters-active? (<== [::subs/filters-active?])]
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
@@ -190,15 +199,8 @@
        [mui/icon-button {:on-click #(==> [::events/toggle-results-view])}
         [mui/icon {:color (if-not (= :list result-view)
                             "secondary"
-                            "default")}
-         "view_column"]]
-
-       ;; [mui/button {:on-click #(==> [::events/toggle-results-view])}
-       ;;  [mui/icon (if (= :list result-view)
-       ;;              "arrow_forward_ios"
-       ;;              "arrow_back_ios")]]
-
-       ]]
+                            "inherit")}
+         "view_column"]]]]
 
      ;; Second row: Search input and button
      [mui/grid {:container true :style {:margin-top    "2em"
@@ -216,22 +218,32 @@
      ;; Third row: filters expansion panel
      [lui/expansion-panel {:label            (tr :search/filters)
                            :label-color      "default"
-                           :default-expanded false}
+                           :default-expanded true}
       [filters {:tr tr}]]
 
-     ;; Results count
-     [mui/typography {:variant "body2"
-                      :style   {:margin-top  "1em"
-                                :margin-left "1em"}}
-      (tr :search/results-count total)]
+     ;; 4th row: Results count and clear filters button
+     [mui/grid {:container true}
+      [mui/grid {:item true :style {:flex-grow 1}}
+       [mui/typography {:variant "body2"
+                        :style   {:margin-top  "1em"
+                                  :margin-left "1em"}}
+        (tr :search/results-count total)]]
+
+      (when filters-active?
+        [mui/grid {:item true}
+         [mui/button {:style    {:margin "0.5em"}
+                      :color    "secondary"
+                      :size     "small"
+                      :on-click #(==> [::events/clear-filters])}
+          (tr :search/clear-filters)]])]
 
      [mui/divider]
 
-     ;; Excel export
+     ;; 5th row: Excel export
      (when (not= :list result-view)
        [reports/dialog {:tr tr}])
 
-     ;;; Results
+     ;; Remaining rows: Results
 
      (if (= :list result-view)
 
@@ -262,7 +274,7 @@
         ;; Rank results close to map center higher
         [mui/grid {:item true}
          [lui/checkbox
-          {:style {:height "100%"}
+          {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)
            :value     (:score? sort-opts)
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
@@ -282,6 +294,4 @@
                               [:admin (tr :lipas.sports-site/admin)]
                               [:owner (tr :lipas.sports-site/owner)]
                               [:location.city.name (tr :lipas.location/city)]
-                              [:event-date (tr :lipas.sports-site/event-date)]]}]]
-
-        ])]))
+                              [:event-date (tr :lipas.sports-site/event-date)]]}]]])]))

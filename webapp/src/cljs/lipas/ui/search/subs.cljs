@@ -8,6 +8,12 @@
    (-> db :search :filters)))
 
 (re-frame/reg-sub
+ ::filters-active?
+ :<- [::filters]
+ (fn [filters _]
+   (some (comp some? not-empty second) filters)))
+
+(re-frame/reg-sub
  ::types-filter
  (fn [db _]
    (-> db :search :filters :type-codes set)))
