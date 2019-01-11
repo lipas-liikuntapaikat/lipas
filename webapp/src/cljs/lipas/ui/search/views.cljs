@@ -253,16 +253,25 @@
      (if (= :list result-view)
 
        ;; Results list
-       [into [mui/list]
-        (for [result results]
-          [mui/list-item
-           {:button   true
-            :divider  true
-            :on-click #(on-result-click result)}
-           [mui/list-item-text
-            {:primary   (-> result :name)
-             :secondary (str (-> result :type.name) ", "
-                             (-> result :city.name))}]])]
+       [:<>
+        [mui/grid {:item true :style {:flex-grow 1}}
+         [mui/table-pagination
+          {:rows-per-page         200
+           :rows-per-page-options #js[200]
+           :count                 total
+           :on-change-page        #(==> [::events/change-result-page %2])
+           :page                  (:page pagination)}]]
+
+        [into [mui/list]
+         (for [result results]
+           [mui/list-item
+            {:button   true
+             :divider  true
+             :on-click #(on-result-click result)}
+            [mui/list-item-text
+             {:primary   (-> result :name)
+              :secondary (str (-> result :type.name) ", "
+                              (-> result :city.name))}]])]]
 
        ;; Results table
        [mui/grid {:container true}
