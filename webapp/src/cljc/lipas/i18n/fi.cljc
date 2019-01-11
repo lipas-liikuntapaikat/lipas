@@ -539,27 +539,28 @@
     Lipakseen."}
 
    :map
-   {:add-to-map      "Lisää kartalle"
-    :zoom-to-site    "Näytä kartalla"
-    :zoom-closer     "Zoomaa lähemmäs"
-    :draw            (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Lisää reittiosa"
-                         "Polygon"    "Lisää alue"
-                         "Lisää kartalle"))
-    :modify          (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Muokkaa reittiä"
-                         "Polygon"    "Muokkaa aluetta"
-                         "Point"      "Voit raahata pistettä kartalla"
-                         "-"))
-    :draw-hole       "Lisää reikä"
-    :remove          (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Poista reittiosa"
-                         "Polygon"    "Poista alue"
-                         "Lisää kartalle"))
-    :edit-later-hint "Voit muokata geometriaa myös myöhemmin"}
+   {:add-to-map         "Lisää kartalle"
+    :zoom-to-site       "Näytä kartalla"
+    :center-map-to-site "Kohdista kartta liikuntapaikkaan"
+    :zoom-closer        "Zoomaa lähemmäs"
+    :draw               (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Lisää reittiosa"
+                            "Polygon"    "Lisää alue"
+                            "Lisää kartalle"))
+    :modify             (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Muokkaa reittiä"
+                            "Polygon"    "Muokkaa aluetta"
+                            "Point"      "Voit raahata pistettä kartalla"
+                            "-"))
+    :draw-hole          "Lisää reikä"
+    :remove             (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Poista reittiosa"
+                            "Polygon"    "Poista alue"
+                            "Lisää kartalle"))
+    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"}
 
    :map.basemap
    {:taustakartta "Taustakartta"

@@ -391,7 +391,7 @@
                [mui/grid {:container true}
                 [mui/grid {:item true}
                  [mui/typography {:variant :body2}
-                  (tr :map/zoom-to-site)]]
+                  (tr :map/center-map-to-site)]]
                 [mui/grid {:item true}
 
                  ;; Add initial geom button
