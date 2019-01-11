@@ -37,6 +37,7 @@
     :name-short        "Nimi"
     :name              "Virallinen nimi"
     :marketing-name    "Markkinointinimi"
+    :event-date        "Muokattu"
     :owner             "Omistaja"
     :admin             "Ylläpitäjä"
     :type              "Tyyppi"
@@ -484,6 +485,8 @@
     :select-type              "Valitse tyyppi"
     :select-types             "Valitse tyypit"
     :select-cities            "Valitse kunnat"
+    :select-admins            "Valitse ylläpitäjät"
+    :select-owners            "Valitse omistajat"
     :filter-area-m2           "Rajaa pinta-ala m²"
     :filter-surface-materials "Rajaa pintamateriaalit"
     :clear-selections         "Poista valinnat"}
@@ -497,13 +500,16 @@
     :save-basic-data?      "Haluatko tallentaa perustiedot?"}
 
    :search
-   {:headline           "Haku"
-    :search             "Hae"
-    :search-more        "Hae lisää..."
-    :placeholder        "Etsi..."
-    :filters            "Rajaa hakua"
-    :retkikartta-filter "Retkikartta.fi kohteet"
-    :results-count      "{1} hakutulosta"}
+   {:headline              "Haku"
+    :search                "Hae"
+    :search-more           "Hae lisää..."
+    :placeholder           "Etsi..."
+    :filters               "Rajaa hakua"
+    :retkikartta-filter    "Retkikartta.fi kohteet"
+    :results-count         "{1} hakutulosta"
+    :display-closest-first "Näytä lähimmät kohteet ensin"
+    :clear-filters         "Poista rajaukset"
+    :pagination            "Näytetään tulokset {1} - {2}"}
 
    :statuses
    {:edited "{1} (muokattu)"}
@@ -533,27 +539,28 @@
     Lipakseen."}
 
    :map
-   {:add-to-map      "Lisää kartalle"
-    :zoom-to-site    "Kohdista kartta liikuntapaikkaan"
-    :zoom-closer     "Zoomaa lähemmäs"
-    :draw            (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Lisää reittiosa"
-                         "Polygon"    "Lisää alue"
-                         "Lisää kartalle"))
-    :modify          (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Muokkaa reittiä"
-                         "Polygon"    "Muokkaa aluetta"
-                         "Point"      "Voit raahata pistettä kartalla"
-                         "-"))
-    :draw-hole       "Lisää reikä"
-    :remove          (fn [geom-type]
-                       (case geom-type
-                         "LineString" "Poista reittiosa"
-                         "Polygon"    "Poista alue"
-                         "Lisää kartalle"))
-    :edit-later-hint "Voit muokata geometriaa myös myöhemmin"}
+   {:add-to-map         "Lisää kartalle"
+    :zoom-to-site       "Näytä kartalla"
+    :center-map-to-site "Kohdista kartta liikuntapaikkaan"
+    :zoom-closer        "Zoomaa lähemmäs"
+    :draw               (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Lisää reittiosa"
+                            "Polygon"    "Lisää alue"
+                            "Lisää kartalle"))
+    :modify             (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Muokkaa reittiä"
+                            "Polygon"    "Muokkaa aluetta"
+                            "Point"      "Voit raahata pistettä kartalla"
+                            "-"))
+    :draw-hole          "Lisää reikä"
+    :remove             (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Poista reittiosa"
+                            "Polygon"    "Poista alue"
+                            "Lisää kartalle"))
+    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"}
 
    :map.basemap
    {:taustakartta "Taustakartta"

@@ -139,20 +139,21 @@
 
       [mui/grid {:container true
                  :style     {:flex-direction "column"}}
-       [mui/grid {:item true}
+       [mui/grid {:item true :xs 12}
 
         ;; Headline
         [mui/grid {:container   true
+                   :style       {:flex-wrap "nowrap"}
                    :align-items :center}
 
-         [mui/grid {:item  true :xs 11
-                    :style {:margin-top "0.5em"}}
-          [mui/typography {:style   {}
+         [mui/grid {:item  true
+                    :style {:margin-top "0.5em" :flex-grow 1}}
+          [mui/typography {:style   {:display "inline"}
                            :variant :headline}
            (:name display-data)]]
 
          ;; Close button
-         [mui/grid {:item true :xs 1}
+         [mui/grid {:item true}
           (when (not editing?)
             [mui/icon-button {:style    {:margin-left "-0.25em"}
                               :on-click #(==> [::events/show-sports-site nil])}
@@ -224,9 +225,18 @@
           (remove
            nil?
            (into
+
             ;; Geom tools
 
-            [;; Draw hole
+            [(when-not editing?
+               [mui/tooltip {:title (tr :map/zoom-to-site)}
+                [mui/button
+                 {:on-click #(==> [::events/zoom-to-site lipas-id])
+                  :variant  "fab"
+                  :color    "default"}
+                 [mui/icon "my_location"]]])
+
+             ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
                [mui/tooltip {:title (tr :map/draw-hole)}
                 [mui/button
@@ -381,7 +391,7 @@
                [mui/grid {:container true}
                 [mui/grid {:item true}
                  [mui/typography {:variant :body2}
-                  (tr :map/zoom-to-site)]]
+                  (tr :map/center-map-to-site)]]
                 [mui/grid {:item true}
 
                  ;; Add initial geom button
@@ -527,18 +537,24 @@
         logged-in?    (<== [:lipas.ui.subs/logged-in?])
         selected-site (<== [::subs/selected-sports-site])
         drawer-open?  (<== [::subs/drawer-open?])
-        drawer-width  (case width
-                        "xs" "100%"
-                        "430px")]
+        result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        drawer-width  (cond
+                        (#{"xs"} width)              "100%"
+                        (and (#{"sm" "md"} width)
+                             (= :table result-view)) "100%"
+                        (= :table result-view)       "1200px"
+                        :else                        "430px")]
     [mui/grid {:container true
                :style     {:flex-direction "column"
                            :flex           "1 0 auto"}}
 
      ;; Mini-nav
      [floating-container {:right     0
-                          :top       (case width
-                                       "xs" "2em"
-                                       0)
+                          :top       (cond
+                                       (#{"xs"} width)              "2em"
+                                       (and (#{"sm" "md"} width)
+                                            (= :table result-view)) "2em"
+                                       :else                        nil)
                           :elevation 0
                           :style     {:background-color "transparent"
                                       :padding-right    0
@@ -556,11 +572,11 @@
       (when-not drawer-open?
         ;; Open Drawer Button
         [mui/grid {:container true
-                   :style     {:position         "fixed"
-                               :left             0
-                               :top              0
-                               :width            drawer-width
-                               :z-index          1200}}
+                   :style     {:position "fixed"
+                               :left     0
+                               :top      0
+                               :width    drawer-width
+                               :z-index  1200}}
          [mui/grid {:item true :xs 12}
           [mui/paper {:square true}
            [mui/button {:full-width true
