@@ -323,7 +323,7 @@
         (merge
          {:swimming-pool-count        (-> m :pools count)
           :pool-water-area-m2         (-> m :building :total-water-area-m2)
-          :area-m2                    (-> m :building :total-surface-area-m2)
+          ;;:area-m2                    (-> m :building :total-surface-area-m2)
           :stand-capacity-person      (-> m :building :seating-capacity)
           :kiosk?                     (-> m :facilities :kiosk?)
           :platforms-1m-count         (-> m :facilities :platforms-1m-count)
