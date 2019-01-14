@@ -55,11 +55,13 @@
                     {:must
                      [{:query_string
                        {:query string}}]}}
-                   :functions  [{:gauss
-                                 {:search-meta.location.wgs84-point
-                                  {:origin (str lat "," lon)
-                                   :offset (str distance "m")
-                                   :scale  (str (* 2 distance) "m")}}}]}}})]
+                   :functions  (filterv some?
+                                        [(when (and lat lon distance)
+                                           {:gauss
+                                            {:search-meta.location.wgs84-point
+                                             {:origin (str lat "," lon)
+                                              :offset (str distance "m")
+                                              :scale  (str (* 2 distance) "m")}}})])}}})]
     (cond-> params
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
