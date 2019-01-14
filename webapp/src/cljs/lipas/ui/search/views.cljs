@@ -218,7 +218,7 @@
      [mui/grid {:container true}
 
       [mui/grid {:item true :style {:flex-grow 1}}
-       [mui/typography {:variant :display1}
+       [mui/typography {:variant :display3}
         "LIPAS"]]
 
       ;; Change result view (list | table)

@@ -84,7 +84,7 @@
     :select-fields     "Valitse raportin kentät"
     :selected-fields   "Valitut kentät"
     :shortcuts         "Pikavalinnat"
-    :download-as-excel "Lataa Excel-tiedostona"
+    :download-as-excel "Luo raportti"
     :download-excel    "Lataa Excel"}
 
    :ice

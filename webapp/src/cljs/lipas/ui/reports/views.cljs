@@ -55,6 +55,8 @@
      ;; Open Dialog button
      (when (< 0 results-count)
        [mui/button {:style    {:margin-top "1em"}
+                    :variant  "extendedFab"
+                    :color    "secondary"
                     :on-click toggle}
         [mui/icon "arrow_right"]
         (tr :reports/download-as-excel)])
