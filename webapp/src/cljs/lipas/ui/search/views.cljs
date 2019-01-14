@@ -178,14 +178,39 @@
                          :value     area-max
                          :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
 
+(defn pagination [{:keys [tr page page-size page-sizes total change-page-size?]}]
+  [mui/table-pagination
+   (merge
+    {:rows-per-page         page-size
+     :rows-per-page-options #js[page-size]
+     :label-displayed-rows
+     (fn [props]
+       (let [from  (gobj/get props "from")
+             to    (gobj/get props "to")
+             total (gobj/get props "count")
+             page  (gobj/get props "page")]
+         (tr :search/pagination from to total page)))
+     :count                 (or total 0)
+     :on-change-page        #(==> [::events/change-result-page %2])
+
+     :page page}
+    (when change-page-size?
+      {:rows-per-page-options   (clj->js page-sizes)
+       :on-change-rows-per-page #(==> [::events/change-result-page-size
+                                       (-> %1 .-target .-value)])
+       :label-rows-per-page     (tr :search/page-size)}))])
+
 (defn search-view [{:keys [tr on-result-click]}]
   (let [search-str      (<== [::subs/search-string])
         results         (<== [::subs/search-results-list])
         total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
         sort-opts       (<== [::subs/sort-opts])
-        pagination      (<== [::subs/pagination])
-        filters-active? (<== [::subs/filters-active?])]
+        filters-active? (<== [::subs/filters-active?])
+        pagination-opts (<== [::subs/pagination])
+        page-sizes      (-> pagination-opts :page-sizes)
+        page-size       (-> pagination-opts :page-size)
+        page            (-> pagination-opts :page)]
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
@@ -259,19 +284,13 @@
        ;; Results list
        [:<>
         [mui/grid {:item true :style {:flex-grow 1}}
-         [mui/table-pagination
-          {:rows-per-page         200
-           :rows-per-page-options #js[200]
-           :label-displayed-rows
-           (fn [props]
-             (let [from  (gobj/get props "from")
-                   to    (gobj/get props "to")
-                   total (gobj/get props "count")
-                   page  (gobj/get props "page")]
-               (tr :search/pagination from to total page)))
-           :count                 (or total 0)
-           :on-change-page        #(==> [::events/change-result-page %2])
-           :page                  (:page pagination)}]]
+         [pagination
+          {:tr                tr
+           :total             total
+           :page              page
+           :page-size         page-size
+           :page-sizes        page-sizes
+           :change-page-size? true}]]
 
         [into [mui/list]
          (for [result results]
@@ -289,19 +308,13 @@
 
         ;; Pagination
         [mui/grid {:item true :style {:flex-grow 1}}
-         [mui/table-pagination
-          {:rows-per-page         200
-           :rows-per-page-options #js[200]
-           :label-displayed-rows
-           (fn [props]
-             (let [from  (gobj/get props "from")
-                   to    (gobj/get props "to")
-                   total (gobj/get props "count")
-                   page  (gobj/get props "page")]
-               (tr :search/pagination from to total page)))
-           :count                 (or total 0)
-           :on-change-page        #(==> [::events/change-result-page %2])
-           :page                  (:page pagination)}]]
+         [pagination
+          {:tr                tr
+           :total             total
+           :page              page
+           :page-size         page-size
+           :page-sizes        page-sizes
+           :change-page-size? true}]]
 
         ;; Rank results close to map center higher
         [mui/grid {:item true}
