@@ -15,21 +15,23 @@
 
 (def logos
   [{:img "img/partners/okm.png"}
-   {:img "img/partners/jaakiekkoliitto.svg"}
+   {:img "img/partners/jaakiekkoliitto.svg" :full-height? true}
    {:img "img/partners/kuntaliitto.png"}
    {:img "img/partners/metsahallitus.svg"}
    {:img "img/partners/sport_venue.png"}
    {:img "img/partners/suh.png"}
-   {:img "img/partners/syke.svg"}
+   {:img "img/partners/syke.svg" :full-height? true}
    {:img "img/partners/ukty.png"}
    {:img "img/partners/vtt.svg"}
    {:img "img/partners/avi.png"}])
 
-(defn ->logo [{:keys [img]}]
-  [:img {:style {:flex 1
-                 :margin     "1em"
-                 :max-width  "200px"
-                 :max-height "100px"}
+(defn ->logo [{:keys [img full-height?]}]
+  [:img {:style (merge
+                 {:margin     "1em"
+                  :max-width  "200px"
+                  :max-height "100px"}
+                 (when full-height? ;; For IE11.
+                   {:height "100%"}))
          :src   img}])
 
 (defn footer [tr]
