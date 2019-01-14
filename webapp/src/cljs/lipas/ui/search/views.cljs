@@ -312,7 +312,7 @@
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
         ;; The table
-        [mui/grid {:item true}
+        [mui/grid {:item true :xs 12}
          [lui/table
           {:key              (:sort-fn sort-opts)
            :items            results
