@@ -73,7 +73,7 @@
   :repl-options
   {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
 
-  :jvm-opts ["-Duser.timezone=UTC"]
+  :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
 
   :migratus
   {:store         :database
