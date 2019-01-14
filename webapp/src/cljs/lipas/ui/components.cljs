@@ -793,7 +793,7 @@
      [mui/grid {:item true}
       [:> autosuggest
        {:id                      @id
-        :suggestions             @suggs
+        :suggestions             (sort-by label-fn @suggs)
         :getSuggestionValue      #(label-fn (js->clj* %1))
 
         :shouldRenderSuggestions (if show-all?
