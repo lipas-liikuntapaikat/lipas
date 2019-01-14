@@ -87,8 +87,9 @@
      :sort-fn :score}
     :results-view :list
     :pagination
-    {:page      0
-     :page-size 200}}
+    {:page       0
+     :page-size  250
+     :page-sizes [100 250 500]}}
 
    ;; Reports
    :reports

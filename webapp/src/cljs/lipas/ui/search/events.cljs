@@ -55,11 +55,13 @@
                     {:must
                      [{:query_string
                        {:query string}}]}}
-                   :functions  [{:gauss
-                                 {:search-meta.location.wgs84-point
-                                  {:origin (str lat "," lon)
-                                   :offset (str distance "m")
-                                   :scale  (str (* 2 distance) "m")}}}]}}})]
+                   :functions  (filterv some?
+                                        [(when (and lat lon distance)
+                                           {:gauss
+                                            {:search-meta.location.wgs84-point
+                                             {:origin (str lat "," lon)
+                                              :offset (str distance "m")
+                                              :scale  (str (* 2 distance) "m")}}})])}}})]
     (cond-> params
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
@@ -104,16 +106,19 @@
  (fn [db [_ s]]
    (assoc-in db [:search :string] s)))
 
+(defn- collect-search-data [db]
+  (-> db
+      :search
+      (select-keys [:string :filters :sort :pagination])
+      (assoc :locale ((-> db :translator)))
+      (assoc :center (-> db :map :center-wgs84))
+      (assoc :distance (/ (max (-> db :map :width)
+                               (-> db :map :height)) 2))))
+
 (re-frame/reg-event-fx
  ::submit-search
  (fn [{:keys [db]} _]
-   (let [params (-> db
-                    :search
-                    (select-keys [:string :filters :sort :pagination])
-                    (assoc :locale ((-> db :translator)))
-                    (assoc :center (-> db :map :center-wgs84))
-                    (assoc :distance (/ (max (-> db :map :width)
-                                             (-> db :map :height)) 2)))]
+   (let [params (collect-search-data db)]
      {:dispatch [::search params]})))
 
 (re-frame/reg-event-fx
@@ -187,11 +192,7 @@
  ::create-report-from-current-search
  (fn [{:keys [db]} _]
    (let [params (-> db
-                    :search
-                    (select-keys [:string :filters])
-                    (assoc :center (-> db :map :center-wgs84))
-                    (assoc :distance (/ (max (-> db :map :width)
-                                             (-> db :map :height)) 2))
+                    collect-search-data
                     ->es-search-body
                     (assoc-in [:_source :excludes] ["location.geometries"]))
          fields (-> db :reports :selected-fields)]
@@ -228,4 +229,10 @@
  ::change-result-page
  (fn [{:keys [db]} [_ page]]
    {:db       (assoc-in db [:search :pagination :page] page)
+    :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::change-result-page-size
+ (fn [{:keys [db]} [_ page-size]]
+   {:db       (assoc-in db [:search :pagination :page-size] page-size)
     :dispatch [::submit-search]}))

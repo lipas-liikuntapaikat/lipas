@@ -137,8 +137,7 @@
                    (2510 2520) "jaahalliportaali"
                    nil)]
 
-      [mui/grid {:container true
-                 :style     {:flex-direction "column"}}
+      [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
 
         ;; Headline
@@ -146,10 +145,8 @@
                    :style       {:flex-wrap "nowrap"}
                    :align-items :center}
 
-         [mui/grid {:item  true
-                    :style {:margin-top "0.5em" :flex-grow 1}}
-          [mui/typography {:style   {:display "inline"}
-                           :variant :headline}
+         [mui/grid {:item  true :style {:margin-top "0.5em" :flex-grow 1}}
+          [mui/typography {:variant "headline"}
            (:name display-data)]]
 
          ;; Close button

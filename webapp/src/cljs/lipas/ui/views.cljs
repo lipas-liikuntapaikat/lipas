@@ -46,8 +46,10 @@
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
       [mui/grid {:container true
-                 :style     {:min-height     "100%"
-                             :flex-direction "column"}}
+                 :style     (merge
+                             {:flex-direction "column"}
+                             (when-not show-nav?
+                               {:height "100%"}))}
 
        ;; Drawer
        [nav/drawer {:tr tr :logged-in? logged-in?}]
