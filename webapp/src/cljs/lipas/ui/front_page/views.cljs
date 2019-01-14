@@ -1,10 +1,10 @@
 (ns lipas.ui.front-page.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.routes :refer [navigate!]]
-            [lipas.ui.svg :as svg]
-            [lipas.ui.utils :as utils]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.routes :refer [navigate!]]
+   [lipas.ui.svg :as svg]
+   [reagent.core :as r]))
 
 (def links
   {:github    "https://github.com/lipas-liikuntapaikat"
@@ -26,7 +26,8 @@
    {:img "img/partners/avi.png"}])
 
 (defn ->logo [{:keys [img]}]
-  [:img {:style {:margin     "1em"
+  [:img {:style {:flex 1
+                 :margin     "1em"
                  :max-width  "200px"
                  :max-height "100px"}
          :src   img}])
