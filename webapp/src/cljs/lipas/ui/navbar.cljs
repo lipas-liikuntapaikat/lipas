@@ -1,10 +1,12 @@
 (ns lipas.ui.navbar
-  (:require [lipas.ui.events :as events]
-            [lipas.ui.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.routes :refer [navigate!]]
-            [lipas.ui.svg :as svg]
-            [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require
+   [clojure.string :as string]
+   [lipas.ui.events :as events]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.routes :refer [navigate!]]
+   [lipas.ui.subs :as subs]
+   [lipas.ui.svg :as svg]
+   [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
@@ -14,8 +16,7 @@
 
 (defn avatar []
   (let [initials (<== [::subs/user-initials])]
-    [mui/avatar {:style {:font-size "0.65em"
-                         :color     "#fff"}}
+    [mui/avatar {:style {:font-size "0.65em" :color "#fff"}}
      initials]))
 
 (defn account-menu-button [{:keys [tr logged-in?]}]
@@ -87,12 +88,11 @@
    "|"])
 
 (defn lang-btn [locale]
-  [mui/button {:style
-               {:min-width "0px"
-                :padding   0
-                :font-size "1em"}
-               :on-click #(==> [::events/set-translator locale])}
-   (name locale)])
+  [mui/icon-button
+   {:style {:font-size "1em"}
+    :on-click #(==> [::events/set-translator locale])}
+   [mui/typography {:variant "body2"}
+    (-> locale name string/upper-case)]])
 
 (defn lang-selector []
   [mui/grid {:item true :style {:margin "1em"}}
