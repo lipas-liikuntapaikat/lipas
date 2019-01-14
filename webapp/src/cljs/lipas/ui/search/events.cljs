@@ -231,3 +231,9 @@
  (fn [{:keys [db]} [_ page]]
    {:db       (assoc-in db [:search :pagination :page] page)
     :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::change-result-page-size
+ (fn [{:keys [db]} [_ page-size]]
+   {:db       (assoc-in db [:search :pagination :page-size] page-size)
+    :dispatch [::submit-search]}))

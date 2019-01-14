@@ -509,7 +509,8 @@
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
     :clear-filters         "Poista rajaukset"
-    :pagination            "Näytetään tulokset {1} - {2}"}
+    :page-size             "Näytä kerralla"
+    :pagination            "Tulokset {1}-{2}"}
 
    :statuses
    {:edited "{1} (muokattu)"}
