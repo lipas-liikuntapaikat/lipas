@@ -41,7 +41,8 @@ SELECT
   permissions
 FROM
   account
-WHERE  username = :username;
+WHERE
+  LOWER(username) = LOWER(:username);
 
 -- :name get-user-by-email
 -- :command :query
@@ -57,7 +58,7 @@ SELECT
 FROM
   account
 WHERE
-  email = :email;
+  LOWER(email) = LOWER(:email);
 
 -- :name insert-user!
 -- :command :insert
