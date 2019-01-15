@@ -82,21 +82,25 @@
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::search-success]
-     :on-failure      [::search-failure]}}))
+     :on-failure      [::search-failure]}
+    :db (assoc-in db [:search :in-progress?] true)}))
 
 (re-frame/reg-event-fx
  ::search-success
  (fn [{:keys [db]} [_ resp]]
    (let [hits  (-> resp :hits :hits)
          sites (map :_source hits)]
-     {:db       (-> (reduce utils/add-to-db db sites)
-                    (assoc-in [:search :results] resp))})))
+     {:db (-> (reduce utils/add-to-db db sites)
+              (assoc-in [:search :results] resp)
+              (assoc-in [:search :in-progress?] false))})))
 
 (re-frame/reg-event-fx
  ::search-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr (:translator db)]
-     {:db       (assoc-in db [:errors :search (utils/timestamp)] error)
+     {:db       (-> db
+                    (assoc-in [:errors :search (utils/timestamp)] error)
+                    (assoc-in [:search :in-progress?] false))
       :dispatch [:lipas.ui.events/set-active-notification
                  {:message  (tr :notifications/get-failed)
                   :success? false}]})))

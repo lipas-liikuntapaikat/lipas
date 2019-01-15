@@ -201,7 +201,8 @@
        :label-rows-per-page     (tr :search/page-size)}))])
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [search-str      (<== [::subs/search-string])
+  (let [in-progress?    (<== [::subs/in-progress?])
+        search-str      (<== [::subs/search-string])
         results         (<== [::subs/search-results-list])
         total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
@@ -292,16 +293,18 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        [into [mui/list]
-         (for [result results]
-           [mui/list-item
-            {:button   true
-             :divider  true
-             :on-click #(on-result-click result)}
-            [mui/list-item-text
-             {:primary   (-> result :name)
-              :secondary (str (-> result :type.name) ", "
-                              (-> result :location.city.name))}]])]]
+        (if in-progress?
+          [mui/circular-progress]
+          [into [mui/list]
+           (for [result results]
+             [mui/list-item
+              {:button   true
+               :divider  true
+               :on-click #(on-result-click result)}
+              [mui/list-item-text
+               {:primary   (-> result :name)
+                :secondary (str (-> result :type.name) ", "
+                                (-> result :location.city.name))}]])])]
 
        ;; Results table
        [mui/grid {:container true}
@@ -326,18 +329,20 @@
 
         ;; The table
         [mui/grid {:item true :xs 12}
-         [lui/table
-          {:key              (:sort-fn sort-opts)
-           :items            results
-           :hide-action-btn? true
-           :on-select        #(on-result-click %)
-           :sort-fn          (or (:sort-fn sort-opts) :score)
-           :sort-asc?        (:asc? sort-opts)
-           :on-sort-change   #(==> [::events/change-sort-order %])
-           :headers          [[:score "score" :hidden]
-                              [:name (tr :lipas.sports-site/name)]
-                              [:type.name (tr :type/name)]
-                              [:admin (tr :lipas.sports-site/admin)]
-                              [:owner (tr :lipas.sports-site/owner)]
-                              [:location.city.name (tr :lipas.location/city)]
-                              [:event-date (tr :lipas.sports-site/event-date)]]}]]])]))
+         (if in-progress?
+           [mui/circular-progress]
+           [lui/table
+            {:key              (:sort-fn sort-opts)
+             :items            results
+             :hide-action-btn? true
+             :on-select        #(on-result-click %)
+             :sort-fn          (or (:sort-fn sort-opts) :score)
+             :sort-asc?        (:asc? sort-opts)
+             :on-sort-change   #(==> [::events/change-sort-order %])
+             :headers          [[:score "score" :hidden]
+                                [:name (tr :lipas.sports-site/name)]
+                                [:type.name (tr :type/name)]
+                                [:admin (tr :lipas.sports-site/admin)]
+                                [:owner (tr :lipas.sports-site/owner)]
+                                [:location.city.name (tr :lipas.location/city)]
+                                [:event-date (tr :lipas.sports-site/event-date)]]}])]])]))
