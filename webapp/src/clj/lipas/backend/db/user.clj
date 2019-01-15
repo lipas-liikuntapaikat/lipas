@@ -1,6 +1,7 @@
 (ns lipas.backend.db.user
-  (:require [hugsql.core :as hugsql]
-            [lipas.backend.db.utils :as utils]))
+  (:require
+   [hugsql.core :as hugsql]
+   [lipas.backend.db.utils :as utils]))
 
 (comment (marshall {:kissa_koira "Kana"}))
 (defn marshall [user]

@@ -1,17 +1,18 @@
 (ns lipas.ui.db
-  (:require [clojure.spec.alpha :as s]
-            [lipas.data.admins :as admins]
-            [lipas.data.cities :as cities]
-            [lipas.data.ice-stadiums :as ice-stadiums]
-            [lipas.data.materials :as materials]
-            [lipas.data.owners :as owners]
-            [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.data.types :as types]
-            [lipas.data.prop-types :as prop-types]
-            [lipas.reports :as reports]
-            [lipas.schema.core :as schema]
-            [lipas.i18n.core :as i18n]
-            [lipas.ui.utils :as utils]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [lipas.data.admins :as admins]
+   [lipas.data.cities :as cities]
+   [lipas.data.ice-stadiums :as ice-stadiums]
+   [lipas.data.materials :as materials]
+   [lipas.data.owners :as owners]
+   [lipas.data.swimming-pools :as swimming-pools]
+   [lipas.data.types :as types]
+   [lipas.data.prop-types :as prop-types]
+   [lipas.reports :as reports]
+   [lipas.schema.core :as schema]
+   [lipas.i18n.core :as i18n]
+   [lipas.ui.utils :as utils]))
 
 (def default-db
   {:active-panel :main-panel
@@ -19,6 +20,13 @@
    :logged-in?   false
    :drawer-open? false
    :translator   (i18n/->tr-fn :fi)
+
+   ;; Admin
+   :admin
+   {:magic-link-dialog-open?     false
+    :magic-link-variants         [{:value "lipas" :label "Lipas"}
+                                  {:value "portal" :label "Portaali"}]
+    :selected-magic-link-variant "lipas"}
 
    ;; Sports sites
    :sports-sites {}
@@ -74,7 +82,9 @@
 
    ;; User
    :user
-   {:login-form        {}
+   {:login-mode        :password
+    :login-form        {}
+    :magic-link-form   {}
     :registration-form {}}
 
    ;; Search

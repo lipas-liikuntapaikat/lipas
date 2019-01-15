@@ -85,8 +85,9 @@
      ;; Error messages
      (when error
        [mui/typography {:color "error"}
-        (case (-> error :response :error)
-          "Not authorized" (tr :login/bad-credentials)
+        (case (-> error :response :type)
+          "email-conflict"    (tr :error/email-conflict)
+          "username-conflict" (tr :error/username-conflict)
           (tr :error/unknown))])]))
 
 (defn create-panel [tr form-data]

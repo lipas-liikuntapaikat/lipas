@@ -2,6 +2,7 @@
   (:require
    [clojure.spec.alpha :as s]
    [clojure.spec.gen.alpha :as gen]
+   [clojure.string :as string]
    [hiposfer.geojson.specs :as geojson]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
@@ -1103,3 +1104,13 @@
 (s/def :lipas.api.sports-site-report/req
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
                    :lipas.api.sports-site-report.req/fields]))
+
+(s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
+(s/def :lipas.magic-link/login-url
+  (s/or :local #(string/starts-with? % "https://localhost")
+        :dev   #(string/starts-with? % "https://lipas-dev.cc.jyu.fi")
+        :prod1 #(string/starts-with? % "https://uimahallit.lipas.fi")
+        :prod2 #(string/starts-with? % "https://jaahallit.lipas.fi")
+        :prod3 #(string/starts-with? % "https://liikuntapaikat.lipas.fi")
+        :prod4 #(string/starts-with? % "https://www.lipas.fi")
+        :prod5 #(string/starts-with? % "https://lipas.fi")))

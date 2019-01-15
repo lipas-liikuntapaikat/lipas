@@ -75,22 +75,19 @@
 
 (defn create-magic-link [url user]
   (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
-    (str url "?token=" token)))
+    {:link       (str url "?token=" token)
+     :valid-days 7}))
 
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
-    (let [reset-link (create-magic-link reset-url user)]
-      (email/send-reset-password-email! emailer email reset-link))
-    (throw (ex-info "User not found"
-                    {:type :email-not-found}))))
+    (let [params (create-magic-link reset-url user)]
+      (email/send-reset-password-email! emailer email params))
+    (throw (ex-info "User not found" {:type :email-not-found}))))
 
-(defn send-magic-link! [db emailer {:keys [user login-url]}]
+(defn send-magic-link! [db emailer {:keys [user login-url variant]}]
   (let [email      (-> user :email)
-        user       (or (db/get-user-by-email db {:email email})
-                       (do (add-user! db user)
-                           (db/get-user-by-email db {:email email})))
-        reset-link (create-magic-link login-url user)]
-    (email/send-magic-login-email! emailer email reset-link)))
+        magic-link (create-magic-link login-url user)]
+    (email/send-magic-login-email! emailer email variant magic-link)))
 
 (defn reset-password! [db user password]
   (db/reset-user-password! db (assoc user :password
