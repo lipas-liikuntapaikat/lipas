@@ -112,3 +112,8 @@
  ::pagination
  (fn [db _]
    (-> db :search :pagination)))
+
+(re-frame/reg-sub
+ ::in-progress?
+ (fn [db _]
+   (-> db :search :in-progress?)))
