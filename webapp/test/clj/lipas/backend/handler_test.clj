@@ -144,7 +144,7 @@
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
                        (mock/content-type "application/json")
                        (mock/body (->json {:user      user
-                                           :login-url "http://localhost"
+                                           :login-url "https://localhost"
                                            :variant   "lipas"}))
                        (token-header token)))]
     (is (= 403 (:status resp)))))
@@ -197,10 +197,27 @@
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
                        (mock/content-type "application/json")
                        (mock/body (->json {:user      user
-                                           :login-url "http://localhost"
+                                           :login-url "https://localhost"
                                            :variant   "lipas"}))
                        (token-header token)))]
     (is (= 200 (:status resp)))))
+
+(deftest order-magic-link-test
+  (let [user  (gen-user {:db? true})
+        resp  (app (-> (mock/request :post "/api/actions/order-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:email     (:email user)
+                                           :login-url "https://localhost"
+                                           :variant   "lipas"}))))]
+    (is (= 200 (:status resp)))))
+
+(deftest order-magic-link-login-url-whitelist-test
+  (let [resp  (app (-> (mock/request :post "/api/actions/order-magic-link")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:email     (:email "kissa@koira.fi")
+                                           :login-url "https://bad-attacker.fi"
+                                           :variant   "lipas"}))))]
+    (is (= 400 (:status resp)))))
 
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})
