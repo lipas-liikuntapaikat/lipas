@@ -1,10 +1,35 @@
 (ns lipas.ui.admin.views
-  (:require [clojure.spec.alpha :as s]
-            [lipas.ui.admin.events :as events]
-            [lipas.ui.admin.subs :as subs]
-            [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [lipas.ui.admin.events :as events]
+   [lipas.ui.admin.subs :as subs]
+   [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.utils :refer [<== ==>] :as utils]))
+
+(defn magic-link-dialog [{:keys [tr]}]
+  (let [open?    (<== [::subs/magic-link-dialog-open?])
+        variants (<== [::subs/magic-link-variants])
+        variant  (<== [::subs/selected-magic-link-variant])
+        user     (<== [::subs/editing-user])]
+    [mui/dialog {:open open?}
+     [mui/dialog-title
+      (tr :lipas.admin/send-magic-link (:email user))]
+     [mui/dialog-content
+      [mui/form-group
+       [lui/select
+        {:label     (tr :lipas.admin/select-magic-link-template)
+         :items     variants
+         :value     variant
+         :on-change #(==> [::events/select-magic-link-variant %])}]
+       [mui/button
+        {:style    {:margin-top "1em"}
+         :on-click #(==> [::events/send-magic-link user variant])}
+        (tr :actions/submit)]
+       [mui/button
+        {:style    {:margin-top "1em"}
+         :on-click #(==> [::events/close-magic-link-dialog])}
+        (tr :actions/cancel)]]]]))
 
 (defn user-dialog [tr]
   (let [locale    (tr)
@@ -24,15 +49,16 @@
       [[lui/email-button
         {:label    (tr :lipas.admin/magic-link)
          :disabled (not (s/valid? :lipas/new-user user))
-         :on-click #(==> [:lipas.ui.events/confirm
-                          (tr :lipas.admin/confirm-magic-link (:email user))
-                          (fn [] (==> [::events/send-magic-link user]))])}]
+         :on-click #(==> [::events/open-magic-link-dialog])}]
        (when existing?
          [lui/save-button
-          {:tooltip  (tr :actions/save)
+          {:color    "default"
+           :tooltip  (tr :actions/save)
            :on-click #(==> [::events/save-user user])}])]}
 
      [mui/grid {:container true :spacing 8}
+
+      [magic-link-dialog {:tr tr}]
 
       ;;; Contact info
       [lui/form-card {:title (tr :lipas.user/contact-info)}

@@ -70,15 +70,32 @@
 
 (re-frame/reg-event-fx
  ::send-magic-link
- (fn [{:keys [db]} [_ user]]
+ (fn [{:keys [db]} [_ user variant]]
    (let [token (-> db :user :login :token)]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/send-magic-link")
        :headers         {:Authorization (str "Token " token)}
        :params          {:user      user
-                         :login-url (str (utils/base-url) "/#/kirjaudu")}
+                         :login-url (str (utils/base-url) "/#/kirjaudu")
+                         :variant   variant}
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::save-user-success user]
-       :on-failure      [::failure]}})))
+       :on-failure      [::failure]}
+      :dispatch [::close-magic-link-dialog]})))
+
+(re-frame/reg-event-db
+ ::open-magic-link-dialog
+ (fn [db [_ _]]
+   (assoc-in db [:admin :magic-link-dialog-open?] true)))
+
+(re-frame/reg-event-db
+ ::close-magic-link-dialog
+ (fn [db [_ _]]
+   (assoc-in db [:admin :magic-link-dialog-open?] false)))
+
+(re-frame/reg-event-db
+ ::select-magic-link-variant
+ (fn [db [_ v]]
+   (assoc-in db [:admin :selected-magic-link-variant] v)))

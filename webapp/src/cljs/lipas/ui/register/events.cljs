@@ -1,9 +1,10 @@
 (ns lipas.ui.register.events
-  (:require [re-frame.core :as re-frame]
-            [clojure.string :as string]
-            [lipas.ui.db :refer [default-db]]
-            [lipas.ui.login.events :as login-events]
-            [ajax.core :as ajax]))
+  (:require
+   [re-frame.core :as re-frame]
+   [clojure.string :as string]
+   [lipas.ui.db :refer [default-db]]
+   [lipas.ui.login.events :as login-events]
+   [ajax.core :as ajax]))
 
 (re-frame/reg-event-db
  ::clear-errors
@@ -47,10 +48,11 @@
 (re-frame/reg-event-fx
  ::submit-registration-form
  (fn [{:keys [db]} [_ form-data]]
-   {:http-xhrio {:method          :post
-                 :uri             (str (:backend-url db) "/actions/register")
-                 :params          form-data
-                 :format          (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success      [::registration-success]
-                 :on-failure      [::registration-failure]}}))
+   {:http-xhrio
+    {:method          :post
+     :uri             (str (:backend-url db) "/actions/register")
+     :params          form-data
+     :format          (ajax/json-request-format)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::registration-success]
+     :on-failure      [::registration-failure]}}))

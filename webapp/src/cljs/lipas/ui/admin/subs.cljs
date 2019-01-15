@@ -60,3 +60,18 @@
    (->> sites
         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
         (sort-by :label))))
+
+(re-frame/reg-sub
+ ::magic-link-dialog-open?
+ (fn [db _]
+   (-> db :admin :magic-link-dialog-open?)))
+
+(re-frame/reg-sub
+ ::magic-link-variants
+ (fn [db _]
+   (-> db :admin :magic-link-variants)))
+
+(re-frame/reg-sub
+ ::selected-magic-link-variant
+ (fn [db _]
+   (-> db :admin :selected-magic-link-variant)))

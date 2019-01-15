@@ -36,10 +36,10 @@
    (merge
     exception/default-handlers
     exception-handlers
-    ;; Prints all stack traces
-    ;; {::exception/wrap (fn [handler e request]
-    ;;                     (.printStackTrace e)
-    ;;                     (handler e request))}
+    ;;Prints all stack traces
+    {::exception/wrap (fn [handler e request]
+                        (.printStackTrace e)
+                        (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
@@ -203,20 +203,43 @@
              {:status 200
               :body   {:status "OK"}}))}}]
 
+      ["/actions/order-magic-link"
+       {:post
+        {:parameters
+         {:body
+          {:email     :lipas/email
+           :login-url :lipas.magic-link/login-url
+           :variant   :lipas.magic-link/email-variant}}
+         :handler
+         (fn [req]
+           (let [email   (-> req :parameters :body :email)
+                 variant (-> req :parameters :body :variant keyword)
+                 user    (core/get-user! db email)
+                 url     (-> req :parameters :body :login-url)
+                 _       (core/send-magic-link! db emailer {:user      user
+                                                            :login-url url
+                                                            :variant   variant})]
+             {:status 200 :body {:status "OK"}}))}}]
+
       ["/actions/send-magic-link"
        {:post
         {:middleware [mw/token-auth mw/auth mw/admin]
          :parameters {:body
                       {:login-url string?
+                       :variant   :lipas.magic-link/email-variant
                        :user      :lipas/new-user}}
          :handler
          (fn [req]
-           (let [user (-> req :parameters :body :user)
-                 url  (-> req :parameters :body :login-url)
-                 _    (core/send-magic-link! db emailer {:user      user
-                                                         :login-url url})]
-             {:status 200
-              :body   {:status "OK"}}))}}]
+           (let [user    (-> req :parameters :body :user)
+                 variant (-> req :parameters :body :variant keyword)
+                 user    (or (core/get-user db (:email user))
+                             (do (core/add-user! db user)
+                                 (core/get-user db (:email user))))
+                 url     (-> req :parameters :body :login-url)
+                 _       (core/send-magic-link! db emailer {:user      user
+                                                            :variant   variant
+                                                            :login-url url})]
+             {:status 200 :body {:status "OK"}}))}}]
 
       ["/actions/create-energy-report"
        {:post
