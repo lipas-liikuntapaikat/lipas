@@ -144,7 +144,8 @@
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
                        (mock/content-type "application/json")
                        (mock/body (->json {:user      user
-                                           :login-url "http://www.kissa.fi"}))
+                                           :login-url "http://localhost"
+                                           :variant   "lipas"}))
                        (token-header token)))]
     (is (= 403 (:status resp)))))
 
@@ -196,7 +197,8 @@
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
                        (mock/content-type "application/json")
                        (mock/body (->json {:user      user
-                                           :login-url "http://www.kissa.fi"}))
+                                           :login-url "http://localhost"
+                                           :variant   "lipas"}))
                        (token-header token)))]
     (is (= 200 (:status resp)))))
 
