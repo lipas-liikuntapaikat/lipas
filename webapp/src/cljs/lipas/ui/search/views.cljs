@@ -288,8 +288,8 @@
      (if (= :list result-view)
 
        ;; Results list
-       [:<>
-        [mui/grid {:item true :style {:flex-grow 1}}
+       [mui/grid {:container true :direction "column" :align-items "center"}
+        [mui/grid {:item true}
          [pagination
           {:tr                tr
            :total             total
@@ -298,18 +298,19 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        (if in-progress?
-          [mui/circular-progress]
-          [into [mui/list]
-           (for [result results]
-             [mui/list-item
-              {:button   true
-               :divider  true
-               :on-click #(on-result-click result)}
-              [mui/list-item-text
-               {:primary   (-> result :name)
-                :secondary (str (-> result :type.name) ", "
-                                (-> result :location.city.name))}]])])]
+        [mui/grid {:item true}
+         (if in-progress?
+           [mui/circular-progress {:style {:margin-top "1em"}}]
+           [into [mui/list]
+            (for [result results]
+              [mui/list-item
+               {:button   true
+                :divider  true
+                :on-click #(on-result-click result)}
+               [mui/list-item-text
+                {:primary   (-> result :name)
+                 :secondary (str (-> result :type.name) ", "
+                                 (-> result :location.city.name))}]])])]]
 
        ;; Results table
        [mui/grid {:container true}
