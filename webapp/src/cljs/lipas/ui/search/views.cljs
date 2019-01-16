@@ -241,10 +241,15 @@
      [mui/grid {:container true :style {:margin-top    "2em"
                                         :margin-bottom "1em"}}
       [mui/grid {:item true :style {:flex-grow 1}}
-       [lui/text-field {:value       search-str
-                        :placeholder (tr :search/placeholder)
-                        :full-width  true
-                        :on-change   #(==> [::events/update-search-string %])}]]
+       [lui/text-field
+        {:value        search-str
+         :placeholder  (tr :search/placeholder)
+         :full-width   true
+         :defer-ms     10
+         :on-change    #(==> [::events/update-search-string %])
+         :on-key-press (fn [e]
+                         (when (= 13 (.-charCode e)) ; Enter
+                           (==> [::events/submit-search])))}]]
       [mui/grid {:item true}
        [mui/button {:on-click #(==> [::events/submit-search])}
         [mui/icon "search"]
