@@ -233,7 +233,9 @@
                   (display-value v)]])])])]
 
        (when in-progress?
-         [mui/circular-progress])]]]))
+         [mui/grid {:container true :direction "column" :align-items "center"}
+          [mui/grid {:item true}
+           [mui/circular-progress {:style {:margin-top "1em"}}]]])]]]))
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
