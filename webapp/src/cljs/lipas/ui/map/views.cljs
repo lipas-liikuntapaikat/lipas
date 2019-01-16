@@ -157,7 +157,7 @@
              [mui/icon "close"]])]]]
 
        ;; Tabs
-       [mui/grid {:item true}
+       [mui/grid {:item true :xs 12}
         [mui/tabs {:value      @selected-tab
                    :on-change  #(reset! selected-tab %2)
                    :style      {:margin-bottom "1em"}
