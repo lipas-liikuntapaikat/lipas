@@ -141,13 +141,12 @@
          {:items     cities
           :label     (tr :lipas.user.permissions/cities)
           :value     (-> user :permissions :cities)
-          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]
-       ]]]))
-
+          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]]]))
 
 (defn admin-panel []
-  (let [tr    (<== [:lipas.ui.subs/translator])
-        users (<== [::subs/users-list])]
+  (let [tr           (<== [:lipas.ui.subs/translator])
+        users        (<== [::subs/users-list])
+        users-filter (<== [::subs/users-filter])]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/card {:square true}
@@ -158,13 +157,24 @@
         ;; Full-screen user dialog
         [user-dialog tr]
 
-        ;; Magic link button
-        [mui/button {:variant  :fab
-                     :color    :secondary
-                     :mini     true
-                     :style {:margin-top "1em"}
-                     :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-         [mui/icon "add"]]
+        [mui/grid {:container true :spacing 32}
+
+         ;; Add user button
+         [mui/grid {:item true :style {:flex-grow 1}}
+          [mui/button
+           {:variant  :fab
+            :color    :secondary
+            :mini     true
+            :style    {:margin-top "1em"}
+            :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
+           [mui/icon "add"]]]
+
+         ;; Users filter
+         [mui/grid {:item true}
+          [lui/text-field
+           {:label (tr :search/search)
+            :on-change #(==> [::events/filter-users %])
+            :value     users-filter}]]]
 
         ;; Users table
         [lui/table

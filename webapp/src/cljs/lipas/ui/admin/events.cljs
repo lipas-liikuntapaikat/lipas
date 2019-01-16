@@ -4,6 +4,11 @@
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
+ ::filter-users
+ (fn [db [_ s]]
+   (assoc-in db [:admin :users-filter] s)))
+
+(re-frame/reg-event-db
  ::get-users-success
  (fn [db [_ users]]
    (assoc-in db [:admin :users] (utils/index-by :id users))))
