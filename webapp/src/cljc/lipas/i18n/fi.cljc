@@ -576,7 +576,8 @@
    :map.basemap
    {:taustakartta "Taustakartta"
     :maastokartta "Maastokartta"
-    :ortokuva     "Ilmakuva"}
+    :ortokuva     "Ilmakuva"
+    :copyright "© Maanmittauslaitos"}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"

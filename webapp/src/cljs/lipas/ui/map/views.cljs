@@ -39,12 +39,17 @@
                   :maastokartta (tr :map.basemap/maastokartta)
                   :ortokuva     (tr :map.basemap/ortokuva)}
         basemap  (<== [::subs/basemap])]
-    [lui/select
-     {:items     basemaps
-      :value     basemap
-      :label-fn  second
-      :value-fn  first
-      :on-change #(==> [::events/select-basemap %])}]))
+    [mui/grid {:container true :direction "column"}
+     [mui/grid {:item true}
+      [lui/select
+       {:items     basemaps
+        :value     basemap
+        :label-fn  second
+        :value-fn  first
+        :on-change #(==> [::events/select-basemap %])}]]
+     [mui/grid {:item true}
+      [mui/typography {:variant "caption"}
+       (tr :map.basemap/copyright)]]]))
 
 (defn type-selector-single [{:keys [tr value on-change]}]
   (r/with-let [selected-type (r/atom value)]
@@ -618,7 +623,8 @@
                           :style
                           {:background-color "rgba(255,255,255,0.9)"
                            :z-index          888
-                           :margin           "0.5em"
+                           :margin           "0"
+                           :padding          "0.25em"
                            :padding-right    0
                            :padding-left     0}}
       [layer-switcher {:tr tr}]]
