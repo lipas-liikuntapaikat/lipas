@@ -215,27 +215,12 @@
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
-     ;; First row: LIPAS-text and view selector
+     ;; First row: LIPAS-text
      [mui/grid {:container true}
 
       [mui/grid {:item true :style {:flex-grow 1}}
        [mui/typography {:variant :display3}
-        "LIPAS"]]
-
-      ;; Change result view (list | table)
-      [mui/grid {:item true}
-
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
-        [mui/icon {:color (if (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_stream"]]
-
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
-        [mui/icon {:color (if-not (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_column"]]]]
+        "LIPAS"]]]
 
      ;; Second row: Search input and button
      [mui/grid {:container true :style {:margin-top    "2em"
@@ -261,21 +246,37 @@
                            :default-expanded false}
       [filters {:tr tr}]]
 
-     ;; 4th row: Results count and clear filters button
-     [mui/grid {:container true}
-      [mui/grid {:item true :style {:flex-grow 1}}
+     ;; 4th row: Results count, clear filters button and result view selectors
+     [mui/grid {:container true :justify "space-between" :align-items "center"
+                :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
+      [mui/grid {:item true}
        [mui/typography {:variant "body2"
-                        :style   {:margin-top  "1em"
-                                  :margin-left "1em"}}
+                        :style   {:font-size "0.9rem" :margin-left "0.5em"}}
         (tr :search/results-count total)]]
 
+      ;; Clear filters button
       (when filters-active?
         [mui/grid {:item true}
          [mui/button {:style    {:margin "0.5em"}
                       :color    "secondary"
                       :size     "small"
                       :on-click #(==> [::events/clear-filters])}
-          (tr :search/clear-filters)]])]
+          (tr :search/clear-filters)]])
+
+      ;; Change result view (list | table)
+      [mui/grid {:item true}
+
+       [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
+        [mui/icon {:color (if (= :list result-view)
+                            "secondary"
+                            "inherit")}
+         "view_stream"]]
+
+       [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
+        [mui/icon {:color (if-not (= :list result-view)
+                            "secondary"
+                            "inherit")}
+         "view_column"]]]]
 
      [mui/divider]
 
