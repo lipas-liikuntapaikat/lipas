@@ -230,10 +230,10 @@
                 [mui/table-cell {:style (when hidden? {:display :none})
                                  :key   (str id k)}
                  [mui/typography {:no-wrap false}
-                  (display-value v)]])])])
+                  (display-value v)]])])])]
 
-        (when in-progress?
-          [mui/circular-progress])]]]]))
+       (when in-progress?
+         [mui/circular-progress])]]]))
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
