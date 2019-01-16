@@ -110,7 +110,6 @@
     (let [display-data (:display-data site-data)
           lipas-id     (:lipas-id display-data)
           edit-data    (:edit-data site-data)
-          types        (<== [::sports-site-subs/all-types])
           cities       (<== [::sports-site-subs/cities-list])
           admins       (<== [::sports-site-subs/admins])
           owners       (<== [::sports-site-subs/owners])
@@ -124,7 +123,10 @@
           sub-mode (-> mode :sub-mode)
 
           type-code (-> display-data :type :type-code)
-          geom-type (get-in types [type-code :geometry-type])
+          type      (<== [::sports-site-subs/type-by-type-code type-code])
+          geom-type (:geometry-type type)
+
+          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
 
           types-props (<== [::sports-site-subs/types-props type-code])
 
@@ -145,7 +147,7 @@
                    :style       {:flex-wrap "nowrap"}
                    :align-items :center}
 
-         [mui/grid {:item  true :style {:margin-top "0.5em" :flex-grow 1}}
+         [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
           [mui/typography {:variant "headline"}
            (:name display-data)]]
 
@@ -187,7 +189,7 @@
                 :display-data    display-data
                 :edit-data       edit-data
                 :read-only?      (not editing?)
-                :types           (vals types)
+                :types           (vals allowed-types)
                 :size-categories size-categories
                 :admins          admins
                 :owners          owners
@@ -313,12 +315,11 @@
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
 
-(defn add-site-view [{:keys [tr]}]
+(defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)]
     (let [locale (tr)
           type   (<== [::sports-site-subs/new-site-type])
           data   (<== [::sports-site-subs/new-site-data])
-          types  (<== [::sports-site-subs/types-list])
           cities (<== [::sports-site-subs/cities-list])
           admins (<== [::sports-site-subs/admins])
           owners (<== [::sports-site-subs/owners])
@@ -337,6 +338,9 @@
 
           zoomed? (<== [::subs/zoomed-for-drawing?])
           geom    (<== [::subs/new-geom])
+
+          geom-type     (:geometry-type type)
+          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
 
           active-step (cond
                         (some? data) 2
@@ -462,7 +466,7 @@
                    {:tr              tr
                     :edit-data       data
                     :read-only?      false
-                    :types           types
+                    :types           (vals allowed-types)
                     :size-categories size-categories
                     :admins          admins
                     :owners          owners
@@ -524,7 +528,7 @@
      ;; Add new sports-site view or big '+' button
      (when logged-in?
        (if adding?
-         [add-site-view {:tr tr}]
+         [add-sports-site-view {:tr tr}]
          [sticky-bottom-container
           [mui/grid {:item true}
            [add-btn {:tr tr}]]]))]))
