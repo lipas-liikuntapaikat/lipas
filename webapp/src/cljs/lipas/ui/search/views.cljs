@@ -299,7 +299,7 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        [mui/grid {:item true}
+        [mui/grid {:item true :xs 12}
          (if in-progress?
            [mui/circular-progress {:style {:margin-top "1em"}}]
            [into [mui/list]
