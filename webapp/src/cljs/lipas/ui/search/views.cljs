@@ -329,20 +329,19 @@
 
         ;; The table
         [mui/grid {:item true :xs 12}
-         (if in-progress?
-           [mui/circular-progress]
-           [lui/table
-            {:key              (:sort-fn sort-opts)
-             :items            results
-             :hide-action-btn? true
-             :on-select        #(on-result-click %)
-             :sort-fn          (or (:sort-fn sort-opts) :score)
-             :sort-asc?        (:asc? sort-opts)
-             :on-sort-change   #(==> [::events/change-sort-order %])
-             :headers          [[:score "score" :hidden]
-                                [:name (tr :lipas.sports-site/name)]
-                                [:type.name (tr :type/name)]
-                                [:admin (tr :lipas.sports-site/admin)]
-                                [:owner (tr :lipas.sports-site/owner)]
-                                [:location.city.name (tr :lipas.location/city)]
-                                [:event-date (tr :lipas.sports-site/event-date)]]}])]])]))
+         [lui/table
+          {:key              (:sort-fn sort-opts)
+           :in-progress?     in-progress?
+           :items            results
+           :hide-action-btn? true
+           :on-select        #(on-result-click %)
+           :sort-fn          (or (:sort-fn sort-opts) :score)
+           :sort-asc?        (:asc? sort-opts)
+           :on-sort-change   #(==> [::events/change-sort-order %])
+           :headers          [[:score "score" :hidden]
+                              [:name (tr :lipas.sports-site/name)]
+                              [:type.name (tr :type/name)]
+                              [:admin (tr :lipas.sports-site/admin)]
+                              [:owner (tr :lipas.sports-site/owner)]
+                              [:location.city.name (tr :lipas.location/city)]
+                              [:event-date (tr :lipas.sports-site/event-date)]]}]]])]))
