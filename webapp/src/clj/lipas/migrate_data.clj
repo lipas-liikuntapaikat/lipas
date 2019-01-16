@@ -10,8 +10,8 @@
    [lipas.backend.db.db :as db]
    [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
-   [lipas.integration.old-lipas.transform :as old-lipas]
    [lipas.integration.old-lipas.api :as old-lipas-api]
+   [lipas.integration.old-lipas.transform :as old-lipas]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [taoensso.timbre :as log]))
@@ -101,6 +101,15 @@
                    last
                    old-lipas/last-modified->UTC)}))
 
+(defn migrate-users! [db fpath]
+  (let [users (-> fpath slurp read-string)]
+    (doseq [user  users]
+      (try
+        (core/add-user! db user)
+        (log/info "Added user" (:email user))
+        (catch Exception e
+          (log/error "Adding user" (:email user) "failed!" e))))))
+
 (defn -main [& args]
   (let [source       (first args)
         config       (select-keys config/default-config [:db])
@@ -111,6 +120,7 @@
       "--es-dump"   (migrate-from-es-dump! db user
                                            (first (rest args))
                                            (second (rest args)))
+      "--users"     (migrate-users! db (second args))
       (log/error "Please provide --es-dump dump-path err-path or
       --old-lipas 123 234 ..."))))
 
@@ -130,6 +140,8 @@
   (def config (select-keys config/default-config [:db]))
   (def db (:db (backend/start-system! config)))
   (def user (core/get-user db "import@lipas.fi"))
+
+  (migrate-users db "/Users/vaotjuha/lipas/data_migration/2019-01-09-lipas-users-filtered.edn")
 
   (def sites (db/get-sports-sites-modified-since db "2018-12-14T00:00:00.000"))
   (->> sites
