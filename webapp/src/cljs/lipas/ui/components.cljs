@@ -1,13 +1,14 @@
 (ns lipas.ui.components
-  (:require cljsjs.react-autosuggest
-            [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
-            [clojure.string :refer [trim] :as string]
-            [goog.object :as gobj]
-            [goog.functions :as gfun]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.utils :as utils]
-            [reagent.core :as r]))
+  (:require
+   [cljsjs.react-autosuggest]
+   [clojure.reader :refer [read-string]]
+   [clojure.spec.alpha :as s]
+   [clojure.string :refer [trim] :as string]
+   [goog.functions :as gfun]
+   [goog.object :as gobj]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.utils :as utils]
+   [reagent.core :as r]))
 
 (def autosuggest js/Autosuggest)
 
