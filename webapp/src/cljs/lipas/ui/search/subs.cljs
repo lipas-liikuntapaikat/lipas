@@ -7,11 +7,17 @@
  (fn [db _]
    (-> db :search :filters)))
 
+(defn filter-enabled? [x]
+  (cond
+    (seqable? x) (not-empty x)
+    (false? x)   nil
+    :else        x))
+
 (re-frame/reg-sub
  ::filters-active?
  :<- [::filters]
  (fn [filters _]
-   (some (comp some? not-empty second) filters)))
+   (some (comp some? filter-enabled?  second) filters)))
 
 (re-frame/reg-sub
  ::types-filter
