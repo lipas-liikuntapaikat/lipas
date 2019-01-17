@@ -20,7 +20,9 @@
 (re-frame/reg-event-db
  ::set-comeback-path
  (fn [db [_ path]]
-   (assoc db :comeback-path path)))
+   (if (= "/#/kirjaudu" path)
+     (assoc db :comeback-path "/#/profiili")
+     (assoc db :comeback-path path))))
 
 (re-frame/reg-event-fx
  ::login-success

@@ -239,8 +239,16 @@
     :permissions-help           "Kerro, mitä tietoja haluat päivittää Lipaksessa"
     :requested-permissions      "Pyydetyt oikeudet"
     :sports-sites               "Omat kohteet"
+    :permission-to-cities       "Sinulla on käyttöoikeus seuraaviin kuntiin:"
+    :permission-to-types        "Sinulla on käyttöoikeus seuraaviin
+    liikuntapaikkatyyppeihin:"
+    :permission-to-all-cities   "Sinulla on käyttöoikeus kaikkiin kuntiin"
+    :permission-to-all-types    "Sinulla on käyttöoikeus kaikkiin
+    liikuntapaikkatyyppeihin"
     :no-permissions             "Sinulle ei ole myönnetty käyttöoikeuksia
     julkaista muutoksia yhteenkään kohteeseen. "
+    :permission-to-portal-sites "Sinulla on käyttöoikeus seuraaviin
+    jää- ja uimahalleihin:"
     :draft-encouragement        "Voit kuitenkin tallentaa muutosehdotuksia,
     jotka lähetetään ylläpidon hyväksyttäväksi."
     :view-basic-info            "Tarkista perustiedot"
@@ -270,7 +278,7 @@
     :forgot-password?      "Unohtuiko salasana?"
     :login-with-password   "Kirjaudu salasanalla"
     :login-with-magic-link "Kirjaudu sähköpostilla"
-    :magic-link-help "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
+    :magic-link-help       "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
      sisäänkirjautumislinkin sähköpostiisi. Linkkiä käyttämällä sinun
      ei tarvitse muistaa salasanaasi."
     :login-help            "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
@@ -523,6 +531,7 @@
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
     :clear-filters         "Poista rajaukset"
+    :permissions-filter    "Näytä kohteet joita voin muokata"
     :page-size             "Näytä kerralla"
     :pagination            "Tulokset {1}-{2}"}
 

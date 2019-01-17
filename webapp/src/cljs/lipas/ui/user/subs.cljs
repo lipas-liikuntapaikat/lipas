@@ -28,6 +28,24 @@
    (-> db :user :login :permissions)))
 
 (re-frame/reg-sub
+ ::permission-to-cities
+ :<- [::permissions]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ (fn [[{:keys [all-cities? cities]} all-cities] _]
+   (if all-cities?
+     all-cities
+     (select-keys all-cities cities))))
+
+(re-frame/reg-sub
+ ::permission-to-types
+ :<- [::permissions]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ (fn [[{:keys [all-types? types]} all-types] _]
+   (if all-types?
+     all-types
+     (select-keys all-types types))))
+
+(re-frame/reg-sub
  ::permission-to-publish?
  (fn [[_ lipas-id]]
    [(re-frame/subscribe [::permissions])
