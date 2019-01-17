@@ -170,19 +170,23 @@
 
        ;; Area min filter
        [mui/grid {:item true :xs 6}
-        [lui/text-field {:label     "Min"
-                         :defer-ms  500
-                         :type      "number"
-                         :value     area-min
-                         :on-change #(==> [::events/set-area-min-filter %])}]]
+        ^{:key area-min}
+        [lui/text-field
+         {:label     "Min"
+          :defer-ms  500
+          :type      "number"
+          :value     area-min
+          :on-change #(==> [::events/set-area-min-filter %])}]]
 
        ;; Area max filter
        [mui/grid {:item true :xs 6}
-        [lui/text-field {:label     "Max"
-                         :defer-ms  500
-                         :type      "number"
-                         :value     area-max
-                         :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
+        ^{:key area-max}
+        [lui/text-field
+         {:label     "Max"
+          :defer-ms  500
+          :type      "number"
+          :value     area-max
+          :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
 
 (defn pagination [{:keys [tr page page-size page-sizes total change-page-size?]}]
   [mui/table-pagination
