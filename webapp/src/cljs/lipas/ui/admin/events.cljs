@@ -104,3 +104,26 @@
  ::select-magic-link-variant
  (fn [db [_ v]]
    (assoc-in db [:admin :selected-magic-link-variant] v)))
+
+(re-frame/reg-event-db
+ ::select-color
+ (fn [db [_ type-code k v]]
+   (assoc-in db [:admin :color-picker type-code k] v)))
+
+(re-frame/reg-event-db
+ ::select-tab
+ (fn [db [_ v]]
+   (assoc-in db [:admin :selected-tab] v)))
+
+(re-frame/reg-event-fx
+ ::download-new-colors-excel
+ (fn [{:keys [db]} _]
+   (let [headers [[:type-code "type-code"] [:fill "fill"] [:stroke "stroke"]]
+         data    (reduce (fn [res [k v] ]
+                           (conj res (assoc v :type-code k)))
+                         []
+                         (-> db :admin :color-picker))
+         config  {:filename "lipas_symbols"
+                  :sheet
+                  {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config})))

@@ -1,17 +1,20 @@
 (ns lipas.ui.admin.views
   (:require
    [clojure.spec.alpha :as s]
+   [lipas.data.styles :as styles]
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open?    (<== [::subs/magic-link-dialog-open?])
         variants (<== [::subs/magic-link-variants])
         variant  (<== [::subs/selected-magic-link-variant])
         user     (<== [::subs/editing-user])]
+
     [mui/dialog {:open open?}
      [mui/dialog-title
       (tr :lipas.admin/send-magic-link (:email user))]
@@ -143,51 +146,123 @@
           :value     (-> user :permissions :cities)
           :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]]]))
 
+(defn color-picker [{:keys [value on-change]}]
+  [:input
+   {:type      "color"
+    :value     value
+    :on-change #(on-change (-> % .-target .-value))}])
+
+(defn color-selector []
+  (let [new-colors (<== [::subs/selected-colors])
+        pick-color (fn [k1 k2 v] (==> [::events/select-color k1 k2 v]))
+        types      (<== [:lipas.ui.sports-sites.subs/all-types])]
+    [mui/table
+     [mui/table-head
+      [mui/table-row
+       [mui/table-cell "Type-code"]
+       [mui/table-cell "Type-name"]
+       [mui/table-cell "Geometry"]
+       [mui/table-cell "Old-fill"]
+       [mui/table-cell "New-fill"]
+       [mui/table-cell "Old-stroke"]
+       [mui/table-cell "New-stroke"]]]
+
+     (into
+      [mui/table-body]
+      (for [[type-code type] (sort-by first types)
+            :let             [shape (-> type-code styles/all :shape)
+                              fill (-> type-code styles/all :fill :color)
+                              stroke (-> type-code styles/all :stroke :color)]]
+        [mui/table-row
+         [mui/table-cell type-code]
+         [mui/table-cell (-> type :name :fi)]
+         [mui/table-cell shape]
+         [mui/table-cell
+          [color-picker {:value fill :on-change #()}]]
+         [mui/table-cell
+          [color-picker
+           {:value     (-> (new-colors type-code) :fill)
+            :on-change (partial pick-color type-code :fill)}]
+          [mui/button
+           {:size :small :on-click #(pick-color type-code :fill fill)}
+           "reset"]]
+         [mui/table-cell
+          [color-picker {:value stroke :on-change #()}]]
+         [mui/table-cell
+          [color-picker
+           {:value     (-> (new-colors type-code) :stroke)
+            :on-change (partial pick-color type-code :stroke)}]
+          [mui/button
+           {:size :small :on-click #(pick-color type-code :stroke stroke)}
+           "reset"]]]))]))
+
 (defn admin-panel []
   (let [tr           (<== [:lipas.ui.subs/translator])
         users        (<== [::subs/users-list])
-        users-filter (<== [::subs/users-filter])]
+        users-filter (<== [::subs/users-filter])
+        selected-tab (<== [::subs/selected-tab])]
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
-      [mui/card {:square true}
-       [mui/card-content
-        [mui/typography {:variant :headline}
-         (tr :lipas.admin/users)]
+      [mui/tool-bar
+       [mui/tabs
+        {:value     selected-tab
+         :on-change #(==> [::events/select-tab %2])}
+        [mui/tab {:label (tr :lipas.admin/users)}]
+        [mui/tab {:label "Symbolityökalu"}]]]
 
-        ;; Full-screen user dialog
-        [user-dialog tr]
+      (when (= 1 selected-tab)
+        [:<>
+         [color-selector]
+         [mui/button
+          {:style    {:position "sticky"
+                      :bottom   "1em"
+                      :left     "1em"}
+           :variant  "extendedFab"
+           :color    "secondary"
+           :on-click #(==> [::events/download-new-colors-excel])}
+          [mui/icon "save"]
+          "Lataa"]])
 
-        [mui/grid {:container true :spacing 32}
+      (when (= 0 selected-tab)
+        [mui/card {:square true}
+         [mui/card-content
+          [mui/typography {:variant :headline}
+           (tr :lipas.admin/users)]
 
-         ;; Add user button
-         [mui/grid {:item true :style {:flex-grow 1}}
-          [mui/button
-           {:variant  :fab
-            :color    :secondary
-            :mini     true
-            :style    {:margin-top "1em"}
-            :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-           [mui/icon "add"]]]
+          ;; Full-screen user dialog
+          [user-dialog tr]
 
-         ;; Users filter
-         [mui/grid {:item true}
-          [lui/text-field
-           {:label (tr :search/search)
-            :on-change #(==> [::events/filter-users %])
-            :value     users-filter}]]]
+          [mui/grid {:container true :spacing 32}
 
-        ;; Users table
-        [lui/table
-         {:headers
-          [[:email (tr :lipas.user/email)]
-           [:firstname (tr :lipas.user/firstname)]
-           [:lastname (tr :lipas.user/lastname)]
-           [:sports-sites (tr :lipas.user.permissions/sports-sites)]
-           [:cities (tr :lipas.user.permissions/cities)]
-           [:types (tr :lipas.user.permissions/types)]]
-          :sort-fn   :email
-          :items     users
-          :on-select #(==> [::events/set-user-to-edit %])}]]]]]))
+           ;; Add user button
+           [mui/grid {:item true :style {:flex-grow 1}}
+            [mui/button
+             {:variant  :fab
+              :color    :secondary
+              :mini     true
+              :style    {:margin-top "1em"}
+              :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
+             [mui/icon "add"]]]
+
+           ;; Users filter
+           [mui/grid {:item true}
+            [lui/text-field
+             {:label     (tr :search/search)
+              :on-change #(==> [::events/filter-users %])
+              :value     users-filter}]]]
+
+          ;; Users table
+          [lui/table
+           {:headers
+            [[:email (tr :lipas.user/email)]
+             [:firstname (tr :lipas.user/firstname)]
+             [:lastname (tr :lipas.user/lastname)]
+             [:sports-sites (tr :lipas.user.permissions/sports-sites)]
+             [:cities (tr :lipas.user.permissions/cities)]
+             [:types (tr :lipas.user.permissions/types)]]
+            :sort-fn   :email
+            :items     users
+            :on-select #(==> [::events/set-user-to-edit %])}]]])]]))
 
 (defn main []
   (let [admin? (<== [:lipas.ui.user.subs/admin?])]
