@@ -78,15 +78,16 @@
       :on-change on-change}]))
 
 (defn- filter-layout [props & children]
-  [mui/grid {:item true :style {:min-width "350px"}}
-   [mui/paper {:style {:padding "1em"}}
+  [mui/grid {:item true :style {:min-width  "350px"}}
+   [mui/paper {:style {:padding "1em" :height "100%"}}
     (into [mui/grid {:container true :direction "column"}]
           (for [c children]
             [mui/grid {:item true}
              c]))]])
 
 (defn filters [{:keys [tr]}]
-  (let [type-codes        (<== [::subs/types-filter])
+  (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
+        type-codes        (<== [::subs/types-filter])
         city-codes        (<== [::subs/cities-filter])
         admins            (<== [::subs/admins-filter])
         owners            (<== [::subs/owners-filter])
@@ -95,8 +96,13 @@
         surface-materials (<== [::subs/surface-materials-filter])
         retkikartta?      (<== [::subs/retkikartta-filter])]
 
-    [mui/grid {:container true
-               :spacing   16}
+    [mui/grid {:container true :spacing 16}
+
+     ;; Permissions filter
+     (when logged-in?
+       [filter-layout ()
+        [mui/button {:on-click #(==> [::events/set-filters-by-permissions])}
+         (tr :search/permissions-filter)]])
 
      ;; Types filter
      [filter-layout {}

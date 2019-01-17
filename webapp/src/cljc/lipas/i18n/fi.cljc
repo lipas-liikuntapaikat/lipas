@@ -531,6 +531,7 @@
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
     :clear-filters         "Poista rajaukset"
+    :permissions-filter    "Näytä kohteet joita voin muokata"
     :page-size             "Näytä kerralla"
     :pagination            "Tulokset {1}-{2}"}
 

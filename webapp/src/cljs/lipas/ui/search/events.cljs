@@ -240,3 +240,11 @@
  (fn [{:keys [db]} [_ page-size]]
    {:db       (assoc-in db [:search :pagination :page-size] page-size)
     :dispatch [::submit-search]}))
+
+(re-frame/reg-event-fx
+ ::set-filters-by-permissions
+ (fn [{:keys [db]} _]
+   (let [permissions (-> db :user :login :permissions)]
+     {:db (assoc-in db [:search :filters] {:type-codes (-> permissions :types)
+                                           :city-codes (-> permissions :cities)})
+      :dispatch [::submit-search]})))
