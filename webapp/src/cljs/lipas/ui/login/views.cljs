@@ -50,8 +50,9 @@
                                           :padding-bottom "1em"}}
       [mui/paper {:style
                   {:background-color mui/gray3
-                   :padding          "0.5em"}}
-       [lui/icon-text {:icon "help_outline" :text (tr :login/magic-link-help)}]]]
+                   :padding          "1em"}}
+       [mui/typography {:variant "body2"}
+        (tr :login/magic-link-help)]]]
 
      ;; Form
      [mui/grid {:item true :xs 12}
@@ -88,7 +89,7 @@
 
        ;; Success messages
        (when link-ordered?
-         [mui/typography {:style {:margin-top "1em"}
+         [mui/typography {:style   {:margin-top "1em"}
                           :variant "body2"}
           (tr :login/magic-link-ordered)])]]]))
 

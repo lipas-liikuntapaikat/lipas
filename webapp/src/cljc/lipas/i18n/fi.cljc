@@ -270,10 +270,11 @@
     :forgot-password?      "Unohtuiko salasana?"
     :login-with-password   "Kirjaudu salasanalla"
     :login-with-magic-link "Kirjaudu sähköpostilla"
-    :magic-link-help       "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
-     sisäänkirjautumislinkin sähköpostiisi."
+    :magic-link-help "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
+     sisäänkirjautumislinkin sähköpostiisi. Linkkiä käyttämällä sinun
+     ei tarvitse muistaa salasanaasi."
     :login-help            "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
-     sisäänkirjautumislinkin sähköpostiisi"
+     sisäänkirjautumislinkin sähköpostiisi."
     :login-here            "täältä"
     :order-magic-link      "Lähetä linkki sähköpostiini"
     :magic-link-ordered    "Linkki on lähetetty ja sen pitäisi saapua
