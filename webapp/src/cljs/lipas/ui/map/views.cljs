@@ -548,7 +548,8 @@
                         (#{"xs"} width)              "100%"
                         (and (#{"sm" "md"} width)
                              (= :table result-view)) "100%"
-                        (= :table result-view)       "1200px"
+                        (and (= :table result-view)
+                             (empty? selected-site)) "1200px"
                         :else                        "430px")]
     [mui/grid {:container true
                :style     {:flex-direction "column"
