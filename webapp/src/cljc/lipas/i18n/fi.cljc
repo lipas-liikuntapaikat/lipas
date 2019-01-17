@@ -272,6 +272,9 @@
     :login-with-magic-link "Kirjaudu sähköpostilla"
     :magic-link-help       "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
      sisäänkirjautumislinkin sähköpostiisi."
+    :login-help            "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
+     sisäänkirjautumislinkin sähköpostiisi"
+    :login-here            "täältä"
     :order-magic-link      "Lähetä linkki sähköpostiini"
     :magic-link-ordered    "Linkki on lähetetty ja sen pitäisi saapua
     sähköpostiisi parin minuutin sisällä. Tarkistathan myös
@@ -577,7 +580,7 @@
    {:taustakartta "Taustakartta"
     :maastokartta "Maastokartta"
     :ortokuva     "Ilmakuva"
-    :copyright "© Maanmittauslaitos"}
+    :copyright    "© Maanmittauslaitos"}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"
