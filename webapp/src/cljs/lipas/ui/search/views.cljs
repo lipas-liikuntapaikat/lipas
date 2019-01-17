@@ -201,7 +201,8 @@
        :label-rows-per-page     (tr :search/page-size)}))])
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [search-str      (<== [::subs/search-string])
+  (let [in-progress?    (<== [::subs/in-progress?])
+        search-str      (<== [::subs/search-string])
         results         (<== [::subs/search-results-list])
         total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
@@ -214,12 +215,53 @@
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
-     ;; First row: LIPAS-text and view selector
+     ;; First row: LIPAS-text
      [mui/grid {:container true}
 
       [mui/grid {:item true :style {:flex-grow 1}}
        [mui/typography {:variant :display3}
-        "LIPAS"]]
+        "LIPAS"]]]
+
+     ;; Second row: Search input and button
+     [mui/grid {:container true :style {:margin-top    "2em"
+                                        :margin-bottom "1em"}}
+      [mui/grid {:item true :style {:flex-grow 1}}
+       [lui/text-field
+        {:value        search-str
+         :placeholder  (tr :search/placeholder)
+         :full-width   true
+         :defer-ms     10
+         :on-change    #(==> [::events/update-search-string %])
+         :on-key-press (fn [e]
+                         (when (= 13 (.-charCode e)) ; Enter
+                           (==> [::events/submit-search])))}]]
+      [mui/grid {:item true}
+       [mui/button {:on-click #(==> [::events/submit-search])}
+        [mui/icon "search"]
+        (tr :search/search)]]]
+
+     ;; Third row: filters expansion panel
+     [lui/expansion-panel {:label            (tr :search/filters)
+                           :label-color      "default"
+                           :default-expanded false}
+      [filters {:tr tr}]]
+
+     ;; 4th row: Results count, clear filters button and result view selectors
+     [mui/grid {:container true :justify "space-between" :align-items "center"
+                :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
+      [mui/grid {:item true}
+       [mui/typography {:variant "body2"
+                        :style   {:font-size "0.9rem" :margin-left "0.5em"}}
+        (tr :search/results-count total)]]
+
+      ;; Clear filters button
+      (when filters-active?
+        [mui/grid {:item true}
+         [mui/button {:style    {:margin "0.5em"}
+                      :color    "secondary"
+                      :size     "small"
+                      :on-click #(==> [::events/clear-filters])}
+          (tr :search/clear-filters)]])
 
       ;; Change result view (list | table)
       [mui/grid {:item true}
@@ -236,41 +278,6 @@
                             "inherit")}
          "view_column"]]]]
 
-     ;; Second row: Search input and button
-     [mui/grid {:container true :style {:margin-top    "2em"
-                                        :margin-bottom "1em"}}
-      [mui/grid {:item true :style {:flex-grow 1}}
-       [lui/text-field {:value       search-str
-                        :placeholder (tr :search/placeholder)
-                        :full-width  true
-                        :on-change   #(==> [::events/update-search-string %])}]]
-      [mui/grid {:item true}
-       [mui/button {:on-click #(==> [::events/submit-search])}
-        [mui/icon "search"]
-        (tr :search/search)]]]
-
-     ;; Third row: filters expansion panel
-     [lui/expansion-panel {:label            (tr :search/filters)
-                           :label-color      "default"
-                           :default-expanded false}
-      [filters {:tr tr}]]
-
-     ;; 4th row: Results count and clear filters button
-     [mui/grid {:container true}
-      [mui/grid {:item true :style {:flex-grow 1}}
-       [mui/typography {:variant "body2"
-                        :style   {:margin-top  "1em"
-                                  :margin-left "1em"}}
-        (tr :search/results-count total)]]
-
-      (when filters-active?
-        [mui/grid {:item true}
-         [mui/button {:style    {:margin "0.5em"}
-                      :color    "secondary"
-                      :size     "small"
-                      :on-click #(==> [::events/clear-filters])}
-          (tr :search/clear-filters)]])]
-
      [mui/divider]
 
      ;; 5th row: Excel export
@@ -282,8 +289,8 @@
      (if (= :list result-view)
 
        ;; Results list
-       [:<>
-        [mui/grid {:item true :style {:flex-grow 1}}
+       [mui/grid {:container true :direction "column" :align-items "center"}
+        [mui/grid {:item true}
          [pagination
           {:tr                tr
            :total             total
@@ -292,16 +299,19 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        [into [mui/list]
-         (for [result results]
-           [mui/list-item
-            {:button   true
-             :divider  true
-             :on-click #(on-result-click result)}
-            [mui/list-item-text
-             {:primary   (-> result :name)
-              :secondary (str (-> result :type.name) ", "
-                              (-> result :location.city.name))}]])]]
+        [mui/grid {:item true :xs 12}
+         (if in-progress?
+           [mui/circular-progress {:style {:margin-top "1em"}}]
+           [into [mui/list]
+            (for [result results]
+              [mui/list-item
+               {:button   true
+                :divider  true
+                :on-click #(on-result-click result)}
+               [mui/list-item-text
+                {:primary   (-> result :name)
+                 :secondary (str (-> result :type.name) ", "
+                                 (-> result :location.city.name))}]])])]]
 
        ;; Results table
        [mui/grid {:container true}
@@ -328,6 +338,7 @@
         [mui/grid {:item true :xs 12}
          [lui/table
           {:key              (:sort-fn sort-opts)
+           :in-progress?     in-progress?
            :items            results
            :hide-action-btn? true
            :on-select        #(on-result-click %)

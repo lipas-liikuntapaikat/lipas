@@ -215,18 +215,20 @@
     :swimming-pools-link "Uimahalliportaali"}
 
    :lipas.admin
-   {:headline           "Admin"
-    :users              "Käyttäjät"
-    :magic-link         "Taikalinkki"
-    :confirm-magic-link "Haluatko varmasti lähettää taikalinkin
+   {:headline                   "Admin"
+    :users                      "Käyttäjät"
+    :magic-link                 "Taikalinkki"
+    :send-magic-link            "Taikalinkki käyttäjälle {1}"
+    :select-magic-link-template "Valitse saatekirje"
+    :confirm-magic-link         "Haluatko varmasti lähettää taikalinkin
     käyttäjälle {1}?"
-    :access-all-sites   "Sinulla on pääkäyttäjän oikeudet. Voit muokata
+    :access-all-sites           "Sinulla on pääkäyttäjän oikeudet. Voit muokata
     kaikkia liikuntapaikkoja."}
 
    :lipas.user
    {:contact-info               "Yhteystiedot"
     :email                      "Sähköposti"
-    :email-example              "email@example.com"
+    :email-example              "kalle.kayttaja@kunta.fi"
     :username                   "Käyttäjätunnus"
     :username-example           "tane12"
     :firstname                  "Etunimi"
@@ -258,14 +260,26 @@
    {:headline "Rekisteröidy"}
 
    :login
-   {:headline         "Kirjaudu"
-    :username         "Sähköposti / käyttäjätunnus"
-    :username-example "paavo.paivittaja@kunta.fi"
-    :password         "Salasana"
-    :login            "Kirjaudu"
-    :logout           "Kirjaudu ulos"
-    :bad-credentials  "Käyttäjätunnus tai salasana ei kelpaa"
-    :forgot-password? "Unohtuiko salasana?"}
+   {:headline              "Kirjaudu"
+    :username              "Sähköposti / käyttäjätunnus"
+    :username-example      "paavo.paivittaja@kunta.fi"
+    :password              "Salasana"
+    :login                 "Kirjaudu"
+    :logout                "Kirjaudu ulos"
+    :bad-credentials       "Käyttäjätunnus tai salasana ei kelpaa"
+    :forgot-password?      "Unohtuiko salasana?"
+    :login-with-password   "Kirjaudu salasanalla"
+    :login-with-magic-link "Kirjaudu sähköpostilla"
+    :magic-link-help "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
+     sisäänkirjautumislinkin sähköpostiisi. Linkkiä käyttämällä sinun
+     ei tarvitse muistaa salasanaasi."
+    :login-help            "Jos olet jo LIPAS-käyttäjä, voit tilata suoran
+     sisäänkirjautumislinkin sähköpostiisi."
+    :login-here            "täältä"
+    :order-magic-link      "Lähetä linkki sähköpostiini"
+    :magic-link-ordered    "Linkki on lähetetty ja sen pitäisi saapua
+    sähköpostiisi parin minuutin sisällä. Tarkistathan myös
+    roskapostin!"}
 
    :reset-password
    {:headline             "Unohtuiko salasana?"
@@ -566,12 +580,15 @@
    :map.basemap
    {:taustakartta "Taustakartta"
     :maastokartta "Maastokartta"
-    :ortokuva     "Ilmakuva"}
+    :ortokuva     "Ilmakuva"
+    :copyright    "© Maanmittauslaitos"}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"
     :user-not-found      "Käyttäjää ei löydy."
     :email-not-found     "Sähköpostiosoitetta ei ole rekisteröity."
+    :email-conflict      "Sähköpostiosoite on jo käytössä"
+    :username-conflict   "Käyttäjätunnus on jo käytössä"
     :reset-token-expired "Salasanan vaihto peäonnistui. Linkki on vanhentunut."
     :invalid-form        "Korjaa punaisella merkityt kohdat"
     :no-data             "Ei tietoja"}})

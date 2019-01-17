@@ -4,6 +4,11 @@
             [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
+ ::filter-users
+ (fn [db [_ s]]
+   (assoc-in db [:admin :users-filter] s)))
+
+(re-frame/reg-event-db
  ::get-users-success
  (fn [db [_ users]]
    (assoc-in db [:admin :users] (utils/index-by :id users))))
@@ -70,15 +75,55 @@
 
 (re-frame/reg-event-fx
  ::send-magic-link
- (fn [{:keys [db]} [_ user]]
+ (fn [{:keys [db]} [_ user variant]]
    (let [token (-> db :user :login :token)]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/send-magic-link")
        :headers         {:Authorization (str "Token " token)}
        :params          {:user      user
-                         :login-url (str (utils/base-url) "/#/kirjaudu")}
+                         :login-url (str (utils/base-url) "/#/kirjaudu")
+                         :variant   variant}
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::save-user-success user]
-       :on-failure      [::failure]}})))
+       :on-failure      [::failure]}
+      :dispatch [::close-magic-link-dialog]})))
+
+(re-frame/reg-event-db
+ ::open-magic-link-dialog
+ (fn [db [_ _]]
+   (assoc-in db [:admin :magic-link-dialog-open?] true)))
+
+(re-frame/reg-event-db
+ ::close-magic-link-dialog
+ (fn [db [_ _]]
+   (assoc-in db [:admin :magic-link-dialog-open?] false)))
+
+(re-frame/reg-event-db
+ ::select-magic-link-variant
+ (fn [db [_ v]]
+   (assoc-in db [:admin :selected-magic-link-variant] v)))
+
+(re-frame/reg-event-db
+ ::select-color
+ (fn [db [_ type-code k v]]
+   (assoc-in db [:admin :color-picker type-code k] v)))
+
+(re-frame/reg-event-db
+ ::select-tab
+ (fn [db [_ v]]
+   (assoc-in db [:admin :selected-tab] v)))
+
+(re-frame/reg-event-fx
+ ::download-new-colors-excel
+ (fn [{:keys [db]} _]
+   (let [headers [[:type-code "type-code"] [:fill "fill"] [:stroke "stroke"]]
+         data    (reduce (fn [res [k v] ]
+                           (conj res (assoc v :type-code k)))
+                         []
+                         (-> db :admin :color-picker))
+         config  {:filename "lipas_symbols"
+                  :sheet
+                  {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config})))

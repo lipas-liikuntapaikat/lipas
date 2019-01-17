@@ -10,13 +10,21 @@
 (def templates
   {:fi
    {:magic-link
-    {:html (slurp (io/resource "email_templates/magic_link_fi.html"))
-     :text (slurp (io/resource "email_templates/magic_link_fi.txt"))}}})
+    {:portal
+     {:subject "Jää- ja uimahalliportaalit ovat nyt Lipaksessa"
+      :html    (slurp (io/resource "email_templates/magic_link_portal_fi.html"))
+      :text    (slurp (io/resource "email_templates/magic_link_portal_fi.txt"))}
+     :lipas
+     {:subject "LIPAS sisäänkirjautumislinkki"
+      :html    (slurp (io/resource "email_templates/magic_link_lipas_fi.html"))
+      :text    (slurp (io/resource "email_templates/magic_link_lipas_fi.txt"))}}}})
+
+
 
 (defn send*!
   "Thin wrapper for postal."
   [{:keys [host user pass from]}
-   {:keys [to subject plain html]}]
+   {:keys [to subject plain html] :as msg}]
   (postal/send-message
    {:host host
     :user user
@@ -29,25 +37,29 @@
               {:type "text/plain" :content plain}
               {:type "text/html;charset=utf-8" :content html}]}))
 
-(defn send-reset-password-email! [emailer to reset-link]
+(defn send-reset-password-email! [emailer to {:keys [link]}]
   (.send! emailer {:subject "Salasanan vaihtolinkki"
                    :to      to
-                   :plain   (str reset-link)
-                   :html    (str "<html><body>" reset-link "</body></html>")}))
+                   :plain   (str link)
+                   :html    (str "<html><body>" link "</body></html>")}))
 
-(defn send-magic-login-email! [emailer to link]
-  (.send! emailer {:subject "Jää- ja uimahalliportaalit ovat nyt Lipaksessa"
+(defn send-magic-login-email! [emailer to variant {:keys [link valid-days]}]
+  (.send! emailer {:subject (-> templates :fi :magic-link variant :subject)
                    :to      to
                    :plain   (-> templates
                                 :fi
                                 :magic-link
+                                variant
                                 :text
-                                (str/replace "{{link}}" link))
+                                (str/replace "{{link}}" link)
+                                (str/replace "{{valid-days}}" (str valid-days)))
                    :html    (-> templates
                                 :fi
                                 :magic-link
+                                variant
                                 :html
-                                (str/replace "{{link}}" link))}))
+                                (str/replace "{{link}}" link)
+                                (str/replace "{{valid-days}}" (str valid-days)))}))
 
 (defn send-register-notification! [emailer to user]
   (.send! emailer {:subject "Uusi rekisteröitynyt käyttäjä"

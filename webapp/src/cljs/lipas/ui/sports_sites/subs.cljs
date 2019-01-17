@@ -85,6 +85,18 @@
    (-> db :types)))
 
 (re-frame/reg-sub
+ ::type-by-type-code
+ :<- [::all-types]
+ (fn [types [_ type-code]]
+   (types type-code)))
+
+(re-frame/reg-sub
+ ::types-by-geom-type
+ :<- [::all-types]
+ (fn [types [_ geom-type]]
+   (filter (comp #{geom-type} :geometry-type second) types)))
+
+(re-frame/reg-sub
  ::types-list
  :<- [::all-types]
  (fn [types _]

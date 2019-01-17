@@ -1,27 +1,49 @@
 (ns lipas.ui.admin.subs
-  (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [clojure.string :as string]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::users
  (fn [db _]
    (-> db :admin :users)))
 
-(defn ->users-list-entry [user]
+(re-frame/reg-sub
+ ::users-filter
+ (fn [db _]
+   (-> db :admin :users-filter)))
+
+(defn- ->names-list [ks coll]
+  (->> (select-keys coll ks)
+       vals
+       (map (comp :fi :name))
+       (string/join ",")))
+
+(defn ->users-list-entry [cities types user]
   {:id           (-> user :id)
    :email        (-> user :email)
    :firstname    (-> user :user-data :firstname)
    :lastname     (-> user :user-data :lastname)
    :admin?       (-> user :permissions :admin?)
    :sports-sites (-> user :permissions :sports-sites)
-   :cities       (-> user :permissions :cities)
-   :types        (-> user :permissions :types)})
+   :cities       (-> user :permissions :cities (->names-list cities))
+   :types        (-> user :permissions :types (->names-list types))})
 
 (re-frame/reg-sub
  ::users-list
  :<- [::users]
- (fn [users _]
-   (map ->users-list-entry (vals users))))
+ :<- [::users-filter]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ (fn [[users filter-text cities types] _]
+   (let [users (->> users vals (map (partial ->users-list-entry cities types)))]
+     (if (not-empty filter-text)
+       (filter
+        #(-> %
+             str
+             string/lower-case
+             (string/includes? filter-text)) users)
+       users))))
 
 (re-frame/reg-sub
  ::selected-user
@@ -34,8 +56,7 @@
    (get-in db [:admin :editing-user])))
 
 (defn ->list-entry [locale [k v]]
-  {:value k
-   :label (str (get-in v [:name locale]) " " k)})
+  {:value k :label (str (get-in v [:name locale]) " " k)})
 
 (re-frame/reg-sub
  ::types-list
@@ -60,3 +81,28 @@
    (->> sites
         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
         (sort-by :label))))
+
+(re-frame/reg-sub
+ ::magic-link-dialog-open?
+ (fn [db _]
+   (-> db :admin :magic-link-dialog-open?)))
+
+(re-frame/reg-sub
+ ::magic-link-variants
+ (fn [db _]
+   (-> db :admin :magic-link-variants)))
+
+(re-frame/reg-sub
+ ::selected-magic-link-variant
+ (fn [db _]
+   (-> db :admin :selected-magic-link-variant)))
+
+(re-frame/reg-sub
+ ::selected-colors
+ (fn [db _]
+   (-> db :admin :color-picker)))
+
+(re-frame/reg-sub
+ ::selected-tab
+ (fn [db _]
+   (-> db :admin :selected-tab)))
