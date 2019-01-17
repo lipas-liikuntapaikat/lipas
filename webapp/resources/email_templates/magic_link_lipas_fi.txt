@@ -1,0 +1,17 @@
+Hyvä LIPAS-käyttäjä!
+
+Alla henkilökohtainen sisäänkirjautumislinkkisi:
+
+{{link}}
+
+Linkki on voimassa {{valid-days}} päivää. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
+
+Palaute ja kommentit:
+
+Toivomme runsaasti palautetta ja kehittämisehdotuksia LIPAS-palvelun toiminnasta. Kerro ajatuksesi sähköpostilla tai puhelimitse! Alla yhteystiedot.
+
+Jyväskylän yliopisto
+LIPAS-projekti
+
+Kirsi Vehkakoski, puh. 0400 247 980
+s-posti: lipasinfo@jyu.fi

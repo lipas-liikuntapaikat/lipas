@@ -1,10 +1,11 @@
 (ns lipas.backend.db.db
-  (:require [clojure.java.jdbc :as jdbc]
-            [lipas.backend.db.sports-site :as sports-site]
-            [lipas.backend.db.user :as user]
-            [lipas.backend.db.integration :as integration]
-            [lipas.utils :as utils]
-            [lipas.backend.db.utils :as db-utils]))
+  (:require
+   [clojure.java.jdbc :as jdbc]
+   [lipas.backend.db.sports-site :as sports-site]
+   [lipas.backend.db.user :as user]
+   [lipas.backend.db.integration :as integration]
+   [lipas.utils :as utils]
+   [lipas.backend.db.utils :as db-utils]))
 
 ;; User ;;
 

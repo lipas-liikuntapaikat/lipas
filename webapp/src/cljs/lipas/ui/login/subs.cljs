@@ -1,10 +1,21 @@
 (ns lipas.ui.login.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::login-form
  (fn [db _]
    (-> db :user :login-form)))
+
+(re-frame/reg-sub
+ ::magic-link-form
+ (fn [db _]
+   (-> db :user :magic-link-form)))
+
+(re-frame/reg-sub
+ ::login-mode
+ (fn [db _]
+   (-> db :user :login-mode)))
 
 (re-frame/reg-sub
  ::logged-in?
@@ -20,3 +31,8 @@
  ::comeback-path
  (fn [db _]
    (:comeback-path db)))
+
+(re-frame/reg-sub
+ ::magic-link-ordered?
+ (fn [db _]
+   (-> db :user :magic-link-ordered?)))

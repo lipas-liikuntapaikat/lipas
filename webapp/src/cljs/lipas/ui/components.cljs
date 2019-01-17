@@ -1,13 +1,14 @@
 (ns lipas.ui.components
-  (:require cljsjs.react-autosuggest
-            [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
-            [clojure.string :refer [trim] :as string]
-            [goog.object :as gobj]
-            [goog.functions :as gfun]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.utils :as utils]
-            [reagent.core :as r]))
+  (:require
+   [cljsjs.react-autosuggest]
+   [clojure.reader :refer [read-string]]
+   [clojure.spec.alpha :as s]
+   [clojure.string :refer [trim] :as string]
+   [goog.functions :as gfun]
+   [goog.object :as gobj]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.utils :as utils]
+   [reagent.core :as r]))
 
 (def autosuggest js/Autosuggest)
 
@@ -170,11 +171,12 @@
     :else      v))
 
 (defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
-                     action-icon hide-action-btn? on-sort-change]
+                     action-icon hide-action-btn? on-sort-change in-progress?]
               :or   {sort-cmp         compare
                      sort-asc?        false
                      action-icon      "keyboard_arrow_right"
                      hide-action-btn? false
+                     in-progress?     false
                      on-sort-change   :default}}]
   (r/with-let [key-fn*         (or key-fn (constantly nil))
                sort-fn*        (r/atom sort-fn)
@@ -203,31 +205,37 @@
                    header]]))]
 
         ;; Body
-        [mui/table-body
+        (when-not in-progress?
+          [mui/table-body
 
-         ;; Rows
-         (for [item (if @sort-fn*
-                      (sort-by @sort-fn* (if @sort-asc?
-                                           sort-cmp
-                                           utils/reverse-cmp)
-                               items)
-                      items)
-               :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
-           [mui/table-row {:key      id
-                           :on-click (when on-select #(on-select item))
-                           :hover    true}
-            (when (and on-select (not hide-action-btn?))
-              [mui/table-cell {:padding "checkbox"}
-               [mui/icon-button {:on-click #(on-select item)}
-                [mui/icon {:color "primary"} action-icon]]])
+           ;; Rows
+           (for [item (if @sort-fn*
+                        (sort-by @sort-fn* (if @sort-asc?
+                                             sort-cmp
+                                             utils/reverse-cmp)
+                                 items)
+                        items)
+                 :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
+             [mui/table-row {:key      id
+                             :on-click (when on-select #(on-select item))
+                             :hover    true}
+              (when (and on-select (not hide-action-btn?))
+                [mui/table-cell {:padding "checkbox"}
+                 [mui/icon-button {:on-click #(on-select item)}
+                  [mui/icon {:color "primary"} action-icon]]])
 
-            ;; Cells
-            (for [[k _ hidden?] headers
-                  :let          [v (get item k)]]
-              [mui/table-cell {:style (when hidden? {:display :none})
-                               :key   (str id k)}
-               [mui/typography {:no-wrap false}
-                (display-value v)]])])]]]]]))
+              ;; Cells
+              (for [[k _ hidden?] headers
+                    :let          [v (get item k)]]
+                [mui/table-cell {:style (when hidden? {:display :none})
+                                 :key   (str id k)}
+                 [mui/typography {:no-wrap false}
+                  (display-value v)]])])])]
+
+       (when in-progress?
+         [mui/grid {:container true :direction "column" :align-items "center"}
+          [mui/grid {:item true}
+           [mui/circular-progress {:style {:margin-top "1em"}}]]])]]]))
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip

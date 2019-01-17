@@ -1,13 +1,12 @@
 (ns lipas.ui.user.reset-password
-  (:require [clojure.spec.alpha :as s]
-            [clojure.string :as string]
-            [cemerick.url :as url]
-            [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.user.events :as events]
-            [lipas.ui.user.subs :as subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.user.events :as events]
+   [lipas.ui.user.subs :as subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn request-reset-link-form [{:keys [tr]}]
   (r/with-let [email (r/atom nil)]
