@@ -93,60 +93,78 @@
           (tr :login/magic-link-ordered)])]]]))
 
 (defn login-form [{:keys [tr]}]
-  (let [form-data  (<== [::subs/login-form])
-        error      (<== [::subs/login-error])]
+  (let [form-data (<== [::subs/login-form])
+        error     (<== [::subs/login-error])]
 
-    [mui/form-group
+    [mui/grid {:container true :spacing 16}
 
-     ;; Username
-     [lui/text-field
-      {:id          "login-username-input"
-       :label       (tr :login/username)
-       :auto-focus  true
-       :value       (:username form-data)
-       :on-change   (comp clear-errors #(set-field :username %))
-       :required    true
-       :placeholder (tr :login/username-example)}]
+     ;; Helper text
+     [mui/grid {:item true :xs 12 :style {:padding-top    "1em"
+                                          :padding-bottom "1em"}}
+      [mui/paper {:style
+                  {:background-color mui/gray3
+                   :padding          "0.5em 1em 0.5em 1em"}}
 
-     ;; Password
-     [lui/text-field
-      {:id           "login-password-input"
-       :label        (tr :login/password)
-       :type         "password"
-       :value        (:password form-data)
-       ;; Enter press might occur 'immediately' so we can't afford
-       ;; waiting default 200ms for text-field to update
-       ;; asynchronously.
-       :defer-ms     0
-       :on-change    (comp clear-errors #(set-field :password %))
-       :on-key-press (fn [e]
-                       (when (= 13 (.-charCode e)) ; Enter
-                         (==> [::events/submit-login-form form-data])))
-       :required     true}]
+       [mui/typography {:variant "body2" :style {:display "inline"}}
+        (tr :login/login-help)]
+       [mui/button {:style    {:padding 0 :margin-bottom "0.25em"}
+                    :color    "secondary"
+                    :on-click #(==> [::events/select-login-mode :magic-link])}
+        (tr :login/login-here)]]]
 
-     ;; Login button
-     [mui/button
-      {:id         "login-submit-btn"
-       :color      "secondary"
-       :style      {:margin-top "1em"}
-       :full-width true
-       :size       "large"
-       :variant    "raised"
-       :on-click   #(==> [::events/submit-login-form form-data])}
-      (tr :login/login)]
+     ;; Form
+     [mui/grid {:item true :xs 12}
+      [mui/form-group
 
-     ;; Error messages
-     (when error
-       [error-msg {:tr tr :error error}])
+       ;; Username
+       [lui/text-field
+        {:id          "login-username-input"
+         :label       (tr :login/username)
+         :auto-focus  true
+         :value       (:username form-data)
+         :on-change   (comp clear-errors #(set-field :username %))
+         :required    true
+         :placeholder (tr :login/username-example)}]
 
-     ;; Forgot password
-     [mui/button {:style {:margin-top "2em"}
-                  :href  "/#/passu-hukassa"}
-      (tr :login/forgot-password?)]
+       ;; Password
+       [lui/text-field
+        {:id           "login-password-input"
+         :label        (tr :login/password)
+         :type         "password"
+         :value        (:password form-data)
+         ;; Enter press might occur 'immediately' so we can't afford
+         ;; waiting default 200ms for text-field to update
+         ;; asynchronously.
+         :defer-ms     0
+         :on-change    (comp clear-errors #(set-field :password %))
+         :on-key-press (fn [e]
+                         (when (= 13 (.-charCode e)) ; Enter
+                           (==> [::events/submit-login-form form-data])))
+         :required     true}]
 
-     ;; Register
-     [mui/button {:href "/#/rekisteroidy"}
-      (tr :register/headline)]]))
+       ;; Login button
+       [mui/button
+        {:id         "login-submit-btn"
+         :color      "secondary"
+         :style      {:margin-top "1em"}
+         :full-width true
+         :size       "large"
+         :variant    "raised"
+         :on-click   #(==> [::events/submit-login-form form-data])}
+        (tr :login/login)]
+
+       ;; Error messages
+       (when error
+         [error-msg {:tr tr :error error}])
+
+       ;; Forgot password
+       [mui/button {:style {:margin-top "2em"}
+                    :href  "/#/passu-hukassa"}
+        (tr :login/forgot-password?)]
+
+       ;; Register
+       [mui/button {:href "/#/rekisteroidy"}
+        (tr :register/headline)]]]]))
 
 (defn register-btn [{:keys [tooltip]}]
   [mui/tooltip
