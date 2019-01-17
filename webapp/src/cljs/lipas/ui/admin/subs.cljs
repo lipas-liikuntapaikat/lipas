@@ -38,7 +38,11 @@
  (fn [[users filter-text cities types] _]
    (let [users (->> users vals (map (partial ->users-list-entry cities types)))]
      (if (not-empty filter-text)
-       (filter #(string/includes? (str %) filter-text) users)
+       (filter
+        #(-> %
+             str
+             string/lower-case
+             (string/includes? filter-text)) users)
        users))))
 
 (re-frame/reg-sub
@@ -92,3 +96,13 @@
  ::selected-magic-link-variant
  (fn [db _]
    (-> db :admin :selected-magic-link-variant)))
+
+(re-frame/reg-sub
+ ::selected-colors
+ (fn [db _]
+   (-> db :admin :color-picker)))
+
+(re-frame/reg-sub
+ ::selected-tab
+ (fn [db _]
+   (-> db :admin :selected-tab)))

@@ -6,13 +6,21 @@
    [lipas.data.ice-stadiums :as ice-stadiums]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
+   [lipas.data.prop-types :as prop-types]
+   [lipas.data.styles :as styles]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as types]
-   [lipas.data.prop-types :as prop-types]
+   [lipas.i18n.core :as i18n]
    [lipas.reports :as reports]
    [lipas.schema.core :as schema]
-   [lipas.i18n.core :as i18n]
    [lipas.ui.utils :as utils]))
+
+(defn make-color-list []
+  (reduce
+   (fn [m [k v]]
+     (assoc m k {:fill   (-> v :fill :color)
+                 :stroke (-> v :stroke :color)}))
+   {} styles/all))
 
 (def default-db
   {:active-panel :main-panel
@@ -23,10 +31,13 @@
 
    ;; Admin
    :admin
-   {:magic-link-dialog-open?     false
+   {:selected-tab                0
+    :magic-link-dialog-open?     false
     :magic-link-variants         [{:value "lipas" :label "Lipas"}
                                   {:value "portal" :label "Portaali"}]
-    :selected-magic-link-variant "lipas"}
+    :selected-magic-link-variant "lipas"
+    :color-picker                (make-color-list)
+    :color-picker-init           (make-color-list)}
 
    ;; Sports sites
    :sports-sites {}
