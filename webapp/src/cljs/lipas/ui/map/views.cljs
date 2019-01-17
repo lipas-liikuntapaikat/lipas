@@ -165,12 +165,13 @@
 
        ;; Tabs
        [mui/grid {:item true :xs 12}
-        [mui/tabs {:value      @selected-tab
-                   :on-change  #(reset! selected-tab %2)
-                   :style      {:margin-bottom "1em"}
-                   :text-color "secondary"}
-         [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-         [mui/tab {:label (tr :lipas.sports-site/properties)}]]
+        [mui/tool-bar
+         [mui/tabs {:value      @selected-tab
+                    :on-change  #(reset! selected-tab %2)
+                    :style      {:margin-bottom "1em"}
+                    :text-color "secondary"}
+          [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+          [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
 
         (case @selected-tab
 
@@ -447,11 +448,12 @@
 
             ;; Tabs
             [mui/grid {:item true}
-             [mui/tabs {:value     @selected-tab
-                        :on-change #(reset! selected-tab %2)
-                        :style     {:margin-bottom "1em"}}
-              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-              [mui/tab {:label (tr :lipas.sports-site/properties)}]]
+             [mui/tool-bar
+              [mui/tabs {:value     @selected-tab
+                         :on-change #(reset! selected-tab %2)
+                         :style     {:margin-bottom "1em"}}
+               [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+               [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
 
             (case @selected-tab
 
