@@ -21,8 +21,10 @@
       {:location.geometries.features
        {:type "nested"
         :properties
-        {:geometry {:type "geo_shape"}
-         :type     {:type "keyword"}}}
+        {:geometry
+         {:type             "geo_shape"
+          :ignore_malformed true}
+         :type {:type "keyword"}}}
        :search-meta.location.wgs84-point
        {:type "geo_point"}}}}}})
 
