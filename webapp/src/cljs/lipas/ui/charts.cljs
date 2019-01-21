@@ -1,7 +1,8 @@
 (ns lipas.ui.charts
-  (:require ["recharts" :as rc]
-            [lipas.ui.mui :as mui]
-            [clojure.set :refer [rename-keys map-invert]]))
+  (:require
+   ["recharts" :as rc]
+   [clojure.set :refer [rename-keys map-invert]]
+   [lipas.ui.mui :as mui]))
 
 (def colors
   {:energy-mwh       "orange"
@@ -93,5 +94,5 @@
       :dataKey     :value}
      [:> rc/Cell {:fill (colors energy-type)}]
      [:> rc/Cell] {:fill mui/gray1}]
-    [:> rc/Legend {:wrapperStyle font-styles}]
-    [:> rc/Tooltip tooltip-styles]]])
+    [:> rc/Legend
+     {:wrapperStyle font-styles}]]])
