@@ -396,21 +396,40 @@
           :energy-label (tr (keyword :lipas.energy-stats energy-type))
           :data         (:data-points stats)}]
 
-        ;; Is your hall missing from the chart? -> Report consumption
-        [mui/typography {:style   {:margin-top "0.5em"}
-                         :variant :display1}
-         (tr :lipas.energy-stats/hall-missing?)]
-        [mui/button {:color   :secondary
-                     :size    :large
-                     :variant :flat
-                     :href    link}
-         (str "> " (tr :lipas.energy-stats/report))]]]]
+        [mui/grid {:container true :spacing 16 :align-items "center" :justify "flex-start"}
+         [mui/grid {:item true :xs 12}
+
+          ;; Is your hall missing from the chart? -> Report consumption
+          [mui/typography {:style   {:margin-top "0.5em"}
+                           :variant "display1"}
+           (tr :lipas.energy-stats/hall-missing?)]]
+
+         [mui/grid {:item true :xs 12 :sm 6 :md 4 :lg 4}
+          [charts/energy-totals-gauge
+           (let [total        (-> stats :counts :sites)
+                 reported     (get-in stats [:counts energy-type])
+                 not-reported (- total reported)]
+             {:energy-type energy-type
+              :data
+              [{:name  (tr :lipas.energy-stats/reported reported)
+                :value reported}
+               {:name  (tr :lipas.energy-stats/not-reported not-reported)
+                :value not-reported}]})]]
+
+         ;; Report conssumption button
+         [mui/grid {:item true :xs 12 :sm 6 :lg 4}
+          [mui/button
+           {:color   "secondary"
+            :size    "large"
+            :variant "extendedFab"
+            :href    link}
+           [mui/icon {:style {:margin-right "0.25em"}} "edit"]
+           (tr :lipas.energy-stats/report)]]]]]]
 
      ;;; Hall of Fame (all energy info for previous year reported)
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
       [mui/grid  {:item true :xs 12 :md 12 :lg 12}
-       [mui/card {:square true
-                  :style  {:background-color mui/primary}}
+       [mui/card {:square true :style {:background-color mui/primary}}
         [mui/card-content
          [mui/typography {:variant :display3
                           :style   {:color mui/gold}}
