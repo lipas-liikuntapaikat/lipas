@@ -1,18 +1,19 @@
 (ns lipas.ui.swimming-pools.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.energy.views :as energy]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.sports-sites.events :as site-events]
-            [lipas.ui.sports-sites.subs :as site-subs]
-            [lipas.ui.sports-sites.views :as sports-site]
-            [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.swimming-pools.pools :as pools]
-            [lipas.ui.swimming-pools.saunas :as saunas]
-            [lipas.ui.swimming-pools.slides :as slides]
-            [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.user.subs :as user-subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.components :as lui]
+   [lipas.ui.energy.views :as energy]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.sports-sites.events :as site-events]
+   [lipas.ui.sports-sites.subs :as site-subs]
+   [lipas.ui.sports-sites.views :as sports-site]
+   [lipas.ui.swimming-pools.events :as events]
+   [lipas.ui.swimming-pools.pools :as pools]
+   [lipas.ui.swimming-pools.saunas :as saunas]
+   [lipas.ui.swimming-pools.slides :as slides]
+   [lipas.ui.swimming-pools.subs :as subs]
+   [lipas.ui.user.subs :as user-subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn stats-tab []
   (let [tr    (<== [:lipas.ui.subs/translator])
