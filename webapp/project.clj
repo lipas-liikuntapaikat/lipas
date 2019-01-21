@@ -17,7 +17,7 @@
    [re-frame "0.10.5"]
    [secretary "1.2.3"]
    [ns-tracker "0.3.0"]
-   [cljsjs/material-ui "3.1.1-0"]
+   [cljsjs/material-ui "3.2.0-0"]
    [tongue "0.2.4"]
    [day8.re-frame/http-fx "0.1.6"]
    [cljsjs/google-analytics "2015.04.13-0"]
