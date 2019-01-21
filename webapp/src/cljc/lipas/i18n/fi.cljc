@@ -107,9 +107,10 @@
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline       (str "Energia" ZWSP "info")
-    :description    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
-    :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
+   {:headline          (str "Energia" ZWSP "info")
+    :description       "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
+    :finhockey-link    "Siirry Jääkiekkoliiton sivuille"
+    :energy-calculator "Jäähallin energialaskuri"}
 
    :ice-comparison
    {:headline "Hallien vertailu"}
