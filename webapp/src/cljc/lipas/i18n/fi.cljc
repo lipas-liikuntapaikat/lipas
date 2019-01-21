@@ -144,7 +144,9 @@
     :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
     :report              "Ilmoita lukemat"
-    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
+    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"
+    :reported            "Ilmoitettu {1}"
+    :not-reported        "Ei tietoa {1}"}
 
    :lipas.visitors
    {:headline                 "Kävijämäärät"

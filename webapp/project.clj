@@ -1,7 +1,7 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.9.0"]
+   [org.clojure/clojure "1.10.0"]
    [camel-snake-kebab "0.4.0"]
    [etaoin "0.2.8-SNAPSHOT"]
    [hiposfer/geojson.specs "0.2.0"]
@@ -10,7 +10,7 @@
    [com.cemerick/url "0.1.1"]
 
    ;;; Frontend ;;;
-   [org.clojure/clojurescript "1.10.339"]
+   [org.clojure/clojurescript "1.10.439"]
    [cljsjs/react "16.4.0-0"]
    [cljsjs/react-dom "16.4.0-0"]
    [reagent "0.8.1"]
