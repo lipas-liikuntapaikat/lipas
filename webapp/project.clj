@@ -11,10 +11,10 @@
 
    ;;; Frontend ;;;
    [org.clojure/clojurescript "1.10.339"]
-   [cljsjs/react "16.4.0-0"]
-   [cljsjs/react-dom "16.4.0-0"]
+   [cljsjs/react "16.6.0-0"]
+   [cljsjs/react-dom "16.6.0-0"]
    [reagent "0.8.1"]
-   [re-frame "0.10.5"]
+   [re-frame "0.10.6"]
    [secretary "1.2.3"]
    [ns-tracker "0.3.0"]
    [cljsjs/material-ui "3.2.0-0"]
