@@ -1,11 +1,12 @@
 (ns lipas.ui.energy.views
-  (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
-            [lipas.ui.energy.events :as events]
-            [lipas.ui.energy.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.charts :as charts]
+   [lipas.ui.components :as lui]
+   [lipas.ui.energy.events :as events]
+   [lipas.ui.energy.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn form [{:keys [tr data on-change disabled? spectators? cold?]}]
   [mui/form-group
