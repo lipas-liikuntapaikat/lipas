@@ -36,21 +36,33 @@
     (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3110])
     (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3130])])
  (fn [[total-counts stats-3110 stats-3130] _]
-   {:counts
-    {:sites       (+ (get total-counts 3110)
-                     (get total-counts 3130))
-     :electricity (+ (-> stats-3110 :electricity-mwh :count)
-                     (-> stats-3130 :electricity-mwh :count))
-     :heat        (+ (-> stats-3110 :heat-mwh :count)
-                     (-> stats-3130 :heat-mwh :count))
-     :water       (+ (-> stats-3110 :water-m3 :count)
-                     (-> stats-3130 :water-m3 :count))}
-    :data-points  (sort-by :name (concat
-                                  (:data-points stats-3110)
-                                  (:data-points stats-3130)))
-    :hall-of-fame (sort-by :name (concat
-                                  (:hall-of-fame stats-3110)
-                                  (:hall-of-fame stats-3130)))}))
+   (let [total-count (+ (get total-counts 3110)
+                        (get total-counts 3130))
+         hof         (sort-by :name (concat
+                                     (:hall-of-fame stats-3110)
+                                     (:hall-of-fame stats-3130)))]
+     {:counts
+      {:sites           total-count
+       :reported        (count hof)
+       :not-reported    (- total-count (count hof))
+       :energy-mwh      (+ (->> stats-3110
+                                :data-points
+                                (filter (comp some? :energy-mwh))
+                                count)
+                           (->> stats-3130
+                                :data-points
+                                (filter (comp some? :energy-mwh))
+                                count))
+       :electricity-mwh (+ (-> stats-3110 :electricity-mwh :count)
+                           (-> stats-3130 :electricity-mwh :count))
+       :heat-mwh        (+ (-> stats-3110 :heat-mwh :count)
+                           (-> stats-3130 :heat-mwh :count))
+       :water-m3        (+ (-> stats-3110 :water-m3 :count)
+                           (-> stats-3130 :water-m3 :count))}
+      :data-points  (sort-by :name (concat
+                                    (:data-points stats-3110)
+                                    (:data-points stats-3130)))
+      :hall-of-fame hof})))
 
 (re-frame/reg-sub
  ::sites-to-edit

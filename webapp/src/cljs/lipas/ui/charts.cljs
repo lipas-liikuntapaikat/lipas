@@ -1,5 +1,6 @@
 (ns lipas.ui.charts
   (:require ["recharts" :as rc]
+            [lipas.ui.mui :as mui]
             [clojure.set :refer [rename-keys map-invert]]))
 
 (def colors
@@ -79,3 +80,18 @@
       (for [k data-keys]
         (when (some #(get % k) data)
           [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
+
+(defn energy-totals-gauge [{:keys [data energy-type]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 150}
+   [:> rc/PieChart {:data data}
+    [:> rc/Pie
+     {:startAngle  180
+      :endAngle    0
+      :data        data
+      :cy          110
+      :outerRadius 100
+      :dataKey     :value}
+     [:> rc/Cell {:fill (colors energy-type)}]
+     [:> rc/Cell] {:fill mui/gray1}]
+    [:> rc/Legend {:wrapperStyle font-styles}]
+    [:> rc/Tooltip tooltip-styles]]])
