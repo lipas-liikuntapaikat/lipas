@@ -19,7 +19,7 @@
    "owner" "location.address"])
 
 (defn get [lipas-id]
-  (let [url (url "/api/sports-places/" lipas-id)]
+  (let [url (str url "/api/sports-places/" lipas-id)]
     (-> url slurp (json/decode true))))
 
 (defn- query [results url {:keys [page pageSize] :as params
