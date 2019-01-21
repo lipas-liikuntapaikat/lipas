@@ -1,14 +1,15 @@
 (ns lipas.ui.utils
-  (:require [cemerick.url :as url]
-            [clojure.data :as data]
-            [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
-            [clojure.string :as string]
-            [clojure.walk :as walk]
-            [goog.crypt.base64 :as b64]
-            [goog.labs.userAgent.browser :as gbrowser]
-            [lipas.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [cemerick.url :as url]
+   ;;[clojure.data :as data]
+   [clojure.reader :refer [read-string]]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [clojure.walk :as walk]
+   [goog.crypt.base64 :as b64]
+   [goog.labs.userAgent.browser :as gbrowser]
+   [lipas.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (def <== (comp deref re-frame/subscribe))
 (def ==> re-frame/dispatch)

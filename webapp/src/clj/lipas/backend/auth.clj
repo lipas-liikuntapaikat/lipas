@@ -1,10 +1,11 @@
 (ns lipas.backend.auth
-  (:require [buddy.auth.backends :refer [jws]]
-            [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
-            [buddy.hashers :as hashers]
-            [environ.core :refer [env]]
-            [lipas.backend.jwt :as jwt]
-            [lipas.backend.core :as core]))
+  (:require
+   [buddy.auth.backends :refer [jws]]
+   [buddy.auth.backends.httpbasic :refer [http-basic-backend]]
+   [buddy.hashers :as hashers]
+   [environ.core :refer [env]]
+   [lipas.backend.jwt :as jwt]
+   [lipas.backend.core :as core]))
 
 (defn basic-auth
   [db request {:keys [username password]}]

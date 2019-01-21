@@ -1,6 +1,7 @@
 (ns lipas.ui.subs
-  (:require [re-frame.core :as re-frame]
-            [clojure.string :refer [upper-case]]))
+  (:require
+   [re-frame.core :as re-frame]
+   [clojure.string :refer [upper-case]]))
 
 (re-frame/reg-sub
  ::active-panel

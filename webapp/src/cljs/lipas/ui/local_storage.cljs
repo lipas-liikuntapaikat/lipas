@@ -1,6 +1,7 @@
 (ns lipas.ui.local-storage
-  (:require [cljs.reader :as reader]
-            [re-frame.core :as re-frame]))
+  (:require
+   [cljs.reader :as reader]
+   [re-frame.core :as re-frame]))
 
 (defn ls-set! [k v]
   (.setItem js/localStorage (pr-str k) (pr-str v)))

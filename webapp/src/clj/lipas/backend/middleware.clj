@@ -1,8 +1,9 @@
 (ns lipas.backend.middleware
-  (:require [buddy.auth :refer [authenticated?]]
-            [buddy.auth.middleware :refer [wrap-authentication]]
-            [lipas.backend.auth :as auth]
-            [ring.util.http-response :as resp]))
+  (:require
+   [buddy.auth :refer [authenticated?]]
+   [buddy.auth.middleware :refer [wrap-authentication]]
+   [lipas.backend.auth :as auth]
+   [ring.util.http-response :as resp]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not

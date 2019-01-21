@@ -1,11 +1,12 @@
 (ns lipas.backend.system
-  (:require [clojure.pprint :refer [pprint]]
-            [integrant.core :as ig]
-            [lipas.backend.config :as config]
-            [lipas.backend.email :as email]
-            [lipas.backend.handler :as handler]
-            [lipas.backend.search :as search]
-            [ring.adapter.jetty :as jetty]))
+  (:require
+   [clojure.pprint :refer [pprint]]
+   [integrant.core :as ig]
+   [lipas.backend.config :as config]
+   [lipas.backend.email :as email]
+   [lipas.backend.handler :as handler]
+   [lipas.backend.search :as search]
+   [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
   ;; TODO setup connection pooling

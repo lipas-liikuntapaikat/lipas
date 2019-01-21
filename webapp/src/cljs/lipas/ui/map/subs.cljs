@@ -1,7 +1,8 @@
 (ns lipas.ui.map.subs
-  (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]
-            [reagent.ratom :as ratom]))
+  (:require
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]
+   [reagent.ratom :as ratom]))
 
 (re-frame/reg-sub
  ::basemap

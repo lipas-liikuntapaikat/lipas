@@ -1,6 +1,7 @@
 (ns lipas.backend.jwt
-  (:require [buddy.sign.jwt :as jwt]
-            [environ.core :refer [env]]))
+  (:require
+   [buddy.sign.jwt :as jwt]
+   [environ.core :refer [env]]))
 
 (def sign #(jwt/sign % (env :auth-key) {:alg :hs512}))
 (def unsign #(jwt/unsign % (env :auth-key) {:alg :hs512}))

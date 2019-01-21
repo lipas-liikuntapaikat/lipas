@@ -1,10 +1,11 @@
 (ns lipas.ui.routes
   (:require-macros [secretary.core :refer [defroute]])
   (:import goog.History)
-  (:require [goog.events :as gevents]
-            [goog.history.EventType :as EventType]
-            [lipas.ui.utils :refer [==>] :as utils]
-            [secretary.core :as secretary]))
+  (:require
+   [goog.events :as gevents]
+   [goog.history.EventType :as EventType]
+   [lipas.ui.utils :refer [==>] :as utils]
+   [secretary.core :as secretary]))
 
 (defn navigate!
   ([path]

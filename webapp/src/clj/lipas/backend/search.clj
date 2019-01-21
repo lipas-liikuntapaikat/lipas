@@ -1,7 +1,8 @@
 (ns lipas.backend.search
-  (:require [qbits.spandex :as es]
-            [qbits.spandex.utils :as es-utils]
-            [clojure.core.async :as async]))
+  (:require
+   [qbits.spandex :as es]
+   [qbits.spandex.utils :as es-utils]
+   [clojure.core.async :as async]))
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 

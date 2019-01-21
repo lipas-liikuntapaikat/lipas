@@ -193,5 +193,4 @@
    6140 (->point-style "circle" "#725339" "#ee0000")
    6210 (->point-style "square" "#664a33" "#456d3a")
    6220 (->point-style "square" "#664a33" "#456d3a")
-   7000 (->point-style "triangle" "#f8ffa0")
-   })
+   7000 (->point-style "triangle" "#f8ffa0")})
