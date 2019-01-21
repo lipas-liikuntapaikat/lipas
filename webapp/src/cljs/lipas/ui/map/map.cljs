@@ -631,7 +631,7 @@
      {:reagent-render
       (fn [] [mui/grid {:id    "map"
                         :item  true
-                        :style {:flex "1 0 0"}
+                        :style {:height "100%" :width "100%"}
                         :xs    12}])
 
       :component-did-mount
