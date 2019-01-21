@@ -1,18 +1,19 @@
 (ns lipas.ui.map.map
-  (:require proj4
-            ["ol"]
-            [clojure.string :as string]
-            [goog.color :as gcolor]
-            [goog.color.alpha :as gcolora]
-            [goog.object :as gobj]
-            [lipas.ui.map.events :as events]
-            [lipas.ui.map.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.svg :as svg]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [lipas.data.styles :as styles]
-            [re-frame.core :as re-frame]
-            [reagent.core :as r]))
+  (:require
+   proj4
+   ["ol"]
+   [clojure.string :as string]
+   [goog.color :as gcolor]
+   [goog.color.alpha :as gcolora]
+   [goog.object :as gobj]
+   [lipas.ui.map.events :as events]
+   [lipas.ui.map.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.svg :as svg]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.data.styles :as styles]
+   [re-frame.core :as re-frame]
+   [reagent.core :as r]))
 
 ;;(set! *warn-on-infer* true)
 

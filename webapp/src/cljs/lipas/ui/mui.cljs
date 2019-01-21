@@ -1,12 +1,13 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
-  (:require [material-ui]
-            [goog.object :as gobj]
-            [clojure.string :as s]
-            [reagent.core :as r]
-            [camel-snake-kebab.core :refer [convert-case]]
-            [camel-snake-kebab.extras :refer [transform-keys]]
-            [lipas.utils :as utils]))
+  (:require
+   [material-ui]
+   [goog.object :as gobj]
+   [clojure.string :as s]
+   [reagent.core :as r]
+   [camel-snake-kebab.core :refer [convert-case]]
+   [camel-snake-kebab.extras :refer [transform-keys]]
+   [lipas.utils :as utils]))
 
 (comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
 (comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))

@@ -1,6 +1,7 @@
 (ns lipas.ui.user.subs
-  (:require [re-frame.core :as re-frame]
-            [lipas.permissions :as permissions]))
+  (:require
+   [re-frame.core :as re-frame]
+   [lipas.permissions :as permissions]))
 
 (re-frame/reg-sub
  ::logged-in?
