@@ -554,8 +554,7 @@
                              (empty? selected-site)) "1200px"
                         :else                        "430px")]
     [mui/grid {:container true
-               :style     {:flex-direction "column"
-                           :flex           "1 0 auto"}}
+               :style     {:height "100%" :width "100%"}}
 
      ;; Mini-nav
      [floating-container {:right     0
