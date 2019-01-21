@@ -1,7 +1,8 @@
 (ns lipas.ui.effects
-  (:require [re-frame.core :as re-frame]
-            ["zipcelx"]
-            ["filesaver"]))
+  (:require
+   [re-frame.core :as re-frame]
+   ["zipcelx"]
+   ["filesaver"]))
 
 (re-frame/reg-fx
  ::reset-scroll!

@@ -1,20 +1,21 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.admin.views :as admin]
-            [lipas.ui.components :as lui]
-            [lipas.ui.events :as events]
-            [lipas.ui.front-page.views :as front-page]
-            [lipas.ui.ice-stadiums.views :as ice-stadiums]
-            [lipas.ui.login.views :as login]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.navbar :as nav]
-            [lipas.ui.register.views :as register]
-            [lipas.ui.map.views :as map]
-            [lipas.ui.subs :as subs]
-            [lipas.ui.swimming-pools.views :as swimming-pools]
-            [lipas.ui.user.reset-password :as reset-password]
-            [lipas.ui.user.views :as user]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.admin.views :as admin]
+   [lipas.ui.components :as lui]
+   [lipas.ui.events :as events]
+   [lipas.ui.front-page.views :as front-page]
+   [lipas.ui.ice-stadiums.views :as ice-stadiums]
+   [lipas.ui.login.views :as login]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.navbar :as nav]
+   [lipas.ui.register.views :as register]
+   [lipas.ui.map.views :as map]
+   [lipas.ui.subs :as subs]
+   [lipas.ui.swimming-pools.views :as swimming-pools]
+   [lipas.ui.user.reset-password :as reset-password]
+   [lipas.ui.user.views :as user]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name

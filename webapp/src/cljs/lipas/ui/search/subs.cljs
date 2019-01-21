@@ -1,6 +1,7 @@
 (ns lipas.ui.search.subs
-  (:require [re-frame.core :as re-frame]
-            [lipas.ui.utils :as utils]))
+  (:require
+   [re-frame.core :as re-frame]
+   [lipas.ui.utils :as utils]))
 
 (re-frame/reg-sub
  ::filters

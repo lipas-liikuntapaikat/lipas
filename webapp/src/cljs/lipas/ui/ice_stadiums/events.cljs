@@ -1,6 +1,7 @@
 (ns lipas.ui.ice-stadiums.events
-  (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
  ::set-active-tab

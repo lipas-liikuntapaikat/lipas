@@ -1,8 +1,9 @@
 (ns lipas.backend.db.utils
-  (:require [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
-            [camel-snake-kebab.extras :refer [transform-keys]]
-            [cheshire.core :as j]
-            [clojure.java.jdbc :as jdbc])
+  (:require
+   [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
+   [camel-snake-kebab.extras :refer [transform-keys]]
+   [cheshire.core :as j]
+   [clojure.java.jdbc :as jdbc])
   (:import [org.postgresql.util PGobject]))
 
 (comment (<-json (->json {:kissa "koira"})))

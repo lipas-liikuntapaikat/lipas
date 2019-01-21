@@ -1,6 +1,7 @@
 (ns lipas.backend.config
-  (:require [environ.core :refer [env]]
-            [integrant.core :as ig]))
+  (:require
+   [environ.core :refer [env]]
+   [integrant.core :as ig]))
 
 (def default-config
   {:db      {:dbtype   "postgresql"

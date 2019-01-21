@@ -1,16 +1,17 @@
 (ns lipas.ui.ice-stadiums.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.energy.views :as energy]
-            [lipas.ui.ice-stadiums.events :as events]
-            [lipas.ui.ice-stadiums.rinks :as rinks]
-            [lipas.ui.ice-stadiums.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.sports-sites.events :as site-events]
-            [lipas.ui.sports-sites.subs :as site-subs]
-            [lipas.ui.sports-sites.views :as sports-site]
-            [lipas.ui.user.subs :as user-subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.components :as lui]
+   [lipas.ui.energy.views :as energy]
+   [lipas.ui.ice-stadiums.events :as events]
+   [lipas.ui.ice-stadiums.rinks :as rinks]
+   [lipas.ui.ice-stadiums.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.sports-sites.events :as site-events]
+   [lipas.ui.sports-sites.subs :as site-subs]
+   [lipas.ui.sports-sites.views :as sports-site]
+   [lipas.ui.user.subs :as user-subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn stats-tab []
   (let [tr    (<== [:lipas.ui.subs/translator])
@@ -609,9 +610,17 @@
       [mui/typography
        (tr :ice-energy/description)]]
      [mui/card-actions
-      [mui/button {:color   :secondary
-                   :href    "http://www.finhockey.fi/index.php/info/jaeaehallit"}
-       (str "> " (tr :ice-energy/finhockey-link))]]]]])
+      [mui/button
+       {:color "secondary"
+        :href  "http://www.finhockey.fi/index.php/info/jaeaehallit"}
+       (str "> " (tr :ice-energy/finhockey-link))]
+      [mui/button
+       {:color "secondary"
+        :href  (str "https://jyu-my.sharepoint.com/"
+                    ":x:/g/personal/vaotjuha_jyu_fi/"
+                    "EYBaJ4HG1PdNpcLN3j9lSEkBkfRhirWmNPvD6lufrAUWUw?e=CwAIvn"
+                    "&download=1")}
+       (str "> " (tr :ice-energy/energy-calculator))]]]]])
 
 (defn energy-form-tab [tr]
   (let [locale          (tr)

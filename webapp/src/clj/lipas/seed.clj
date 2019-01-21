@@ -1,12 +1,13 @@
 (ns lipas.seed
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [environ.core :refer [env]]
-            [lipas.backend.config :as config]
-            [lipas.backend.core :as core]
-            [lipas.backend.system :as backend]
-            [lipas.schema.core]
-            [taoensso.timbre :as log]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [clojure.spec.gen.alpha :as gen]
+   [environ.core :refer [env]]
+   [lipas.backend.config :as config]
+   [lipas.backend.core :as core]
+   [lipas.backend.system :as backend]
+   [lipas.schema.core]
+   [taoensso.timbre :as log]))
 
 (def jh-demo
   {:email    "jh@lipas.fi"

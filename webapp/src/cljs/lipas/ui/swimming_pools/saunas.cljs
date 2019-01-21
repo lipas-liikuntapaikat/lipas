@@ -1,10 +1,11 @@
 (ns lipas.ui.swimming-pools.saunas
-  (:require [clojure.spec.alpha :as s]
-            [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.swimming-pools.subs :as subs]
-            [lipas.ui.utils :refer [<== ==> localize-field]]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.swimming-pools.events :as events]
+   [lipas.ui.swimming-pools.subs :as subs]
+   [lipas.ui.utils :refer [<== ==> localize-field]]))
 
 (defn set-field [dialog field value]
   (#(==> [::events/set-dialog-field dialog field value])))

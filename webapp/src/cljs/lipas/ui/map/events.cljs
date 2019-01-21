@@ -1,8 +1,9 @@
 (ns lipas.ui.map.events
-  (:require proj4
-            ["ol"]
-            [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   proj4
+   ["ol"]
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 ;; Width and height are in meters when using EPSG:3067 projection
 (re-frame/reg-event-fx

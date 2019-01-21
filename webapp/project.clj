@@ -1,7 +1,7 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.9.0"]
+   [org.clojure/clojure "1.10.0"]
    [camel-snake-kebab "0.4.0"]
    [etaoin "0.2.8-SNAPSHOT"]
    [hiposfer/geojson.specs "0.2.0"]
@@ -10,20 +10,20 @@
    [com.cemerick/url "0.1.1"]
 
    ;;; Frontend ;;;
-   [org.clojure/clojurescript "1.10.339"]
-   [cljsjs/react "16.4.0-0"]
-   [cljsjs/react-dom "16.4.0-0"]
+   [org.clojure/clojurescript "1.10.439"]
+   [cljsjs/react "16.6.0-0"]
+   [cljsjs/react-dom "16.6.0-0"]
    [reagent "0.8.1"]
-   [re-frame "0.10.5"]
+   [re-frame "0.10.6"]
    [secretary "1.2.3"]
    [ns-tracker "0.3.0"]
-   [cljsjs/material-ui "3.1.1-0"]
+   [cljsjs/material-ui "3.2.0-0"]
    [tongue "0.2.4"]
    [day8.re-frame/http-fx "0.1.6"]
    [cljsjs/google-analytics "2015.04.13-0"]
    [district0x.re-frame/google-analytics-fx "1.0.0"]
    [cljsjs/babel-polyfill "6.20.0-2"]
-   [cljsjs/recharts "1.1.0-3"]
+   [cljsjs/recharts "1.4.2-0"]
    [cljsjs/react-autosuggest "9.3.4-0"]
    [cljsjs/proj4 "2.5.0-0"]
 

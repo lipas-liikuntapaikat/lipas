@@ -1,6 +1,7 @@
 (ns lipas.permissions
-  (:require [clojure.spec.alpha :as s]
-            [lipas.schema.core]))
+  (:require
+   [clojure.spec.alpha :as s]
+   [lipas.schema.core]))
 
 (def default-permissions {:draft? true})
 

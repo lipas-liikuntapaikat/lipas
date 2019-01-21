@@ -1,13 +1,14 @@
 (ns lipas.ui.sports-sites.views
-  (:require [goog.object :as gobj]
-            [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
-            [lipas.ui.energy.views :as energy]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.sports-sites.events :as events]
-            [lipas.ui.sports-sites.subs :as subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+  (:require
+   [goog.object :as gobj]
+   [lipas.ui.charts :as charts]
+   [lipas.ui.components :as lui]
+   [lipas.ui.energy.views :as energy]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.sports-sites.events :as events]
+   [lipas.ui.sports-sites.subs :as subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
                     admins owners on-change read-only? sub-headings?]}]

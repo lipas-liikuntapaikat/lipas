@@ -1,17 +1,18 @@
 (ns lipas.i18n.core
-  (:require [clojure.string :as s]
-            [lipas.data.admins :as admins]
-            [lipas.data.ice-stadiums :as ice]
-            [lipas.data.materials :as materials]
-            [lipas.data.owners :as owners]
-            [lipas.data.swimming-pools :as pools]
-            [lipas.data.cities :as cities]
-            [lipas.data.types :as types]
-            [lipas.i18n.en :as en]
-            [lipas.i18n.fi :as fi]
-            [lipas.i18n.se :as se]
-            [lipas.utils :as utils]
-            [tongue.core :as tongue]))
+  (:require
+   [clojure.string :as s]
+   [lipas.data.admins :as admins]
+   [lipas.data.ice-stadiums :as ice]
+   [lipas.data.materials :as materials]
+   [lipas.data.owners :as owners]
+   [lipas.data.swimming-pools :as pools]
+   [lipas.data.cities :as cities]
+   [lipas.data.types :as types]
+   [lipas.i18n.en :as en]
+   [lipas.i18n.fi :as fi]
+   [lipas.i18n.se :as se]
+   [lipas.utils :as utils]
+   [tongue.core :as tongue]))
 
 (defn- ->translations [locale m]
   (reduce-kv (fn [res k v]

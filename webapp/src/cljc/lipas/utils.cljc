@@ -1,12 +1,13 @@
 (ns lipas.utils
-  (:require [clojure.walk :as walk]
-            [clojure.string :as string]
-            [clojure.spec.alpha :as s]
-            [camel-snake-kebab.core :as csk]
-            [camel-snake-kebab.extras :as csk-extras]
-            #?(:cljs [cljs.reader :refer [read-string]])
-            #?(:cljs [goog.string :as gstring])
-            #?(:cljs [goog.string.format]))
+  (:require
+   [clojure.walk :as walk]
+   [clojure.string :as string]
+   [clojure.spec.alpha :as s]
+   [camel-snake-kebab.core :as csk]
+   [camel-snake-kebab.extras :as csk-extras]
+   #?(:cljs [cljs.reader :refer [read-string]])
+   #?(:cljs [goog.string :as gstring])
+   #?(:cljs [goog.string.format]))
   (:import [java.util.UUID]))
 
 (defn index-by
