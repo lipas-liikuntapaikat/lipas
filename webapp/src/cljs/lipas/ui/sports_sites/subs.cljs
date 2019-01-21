@@ -1,7 +1,8 @@
 (ns lipas.ui.sports-sites.subs
-  (:require [lipas.ui.utils :as utils]
-            [clojure.spec.alpha :as s]
-            [re-frame.core :as re-frame]))
+  (:require
+   [lipas.ui.utils :as utils]
+   [clojure.spec.alpha :as s]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::sports-sites

@@ -1,9 +1,10 @@
 (ns lipas.ui.events
-  (:require [lipas.i18n.core :as i18n]
-            [lipas.ui.db :as db]
-            [lipas.ui.routes :as routes]
-            [lipas.ui.utils :refer [==>]]
-            [re-frame.core :as re-frame]))
+  (:require
+   [lipas.i18n.core :as i18n]
+   [lipas.ui.db :as db]
+   [lipas.ui.routes :as routes]
+   [lipas.ui.utils :refer [==>]]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
  ::initialize-db

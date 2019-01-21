@@ -1,17 +1,18 @@
 (ns lipas.maintenance
-  (:require [clojure.data.csv :as csv]
-            [clojure.edn :as edn]
-            [clojure.spec.alpha :as s]
-            [clojure.string :as string]
-            [lipas.backend.config :as config]
-            [lipas.backend.core :as core]
-            [lipas.backend.db.db :as db]
-            [lipas.backend.system :as backend]
-            [lipas.data.materials :as materials]
-            [lipas.data.swimming-pools :as swimming-pools]
-            [lipas.schema.core]
-            [lipas.utils :as utils]
-            [taoensso.timbre :as log])
+  (:require
+   [clojure.data.csv :as csv]
+   [clojure.edn :as edn]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [lipas.backend.config :as config]
+   [lipas.backend.core :as core]
+   [lipas.backend.db.db :as db]
+   [lipas.backend.system :as backend]
+   [lipas.data.materials :as materials]
+   [lipas.data.swimming-pools :as swimming-pools]
+   [lipas.schema.core]
+   [lipas.utils :as utils]
+   [taoensso.timbre :as log])
   (:import java.lang.Math))
 
 (defn upsert-all!

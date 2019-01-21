@@ -107,9 +107,10 @@
    {:headline "Hallien tiedot"}
 
    :ice-energy
-   {:headline       (str "Energia" ZWSP "info")
-    :description    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
-    :finhockey-link "Siirry Jääkiekkoliiton sivuille"}
+   {:headline          (str "Energia" ZWSP "info")
+    :description       "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta."
+    :finhockey-link    "Siirry Jääkiekkoliiton sivuille"
+    :energy-calculator "Jäähallin energialaskuri"}
 
    :ice-comparison
    {:headline "Hallien vertailu"}
@@ -144,7 +145,9 @@
     :water-m3            "Vesi m³"
     :hall-missing?       "Puuttuvatko hallisi tiedot kuvasta?"
     :report              "Ilmoita lukemat"
-    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"}
+    :energy-reported-for "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}"
+    :reported            "Ilmoitettu {1}"
+    :not-reported        "Ei tietoa {1}"}
 
    :lipas.visitors
    {:headline                 "Kävijämäärät"

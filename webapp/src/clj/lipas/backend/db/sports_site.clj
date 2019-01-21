@@ -1,6 +1,7 @@
 (ns lipas.backend.db.sports-site
-  (:require [hugsql.core :as hugsql]
-            [lipas.backend.db.utils :as utils]))
+  (:require
+   [hugsql.core :as hugsql]
+   [lipas.backend.db.utils :as utils]))
 
 (defn marshall
   ([sports-site user]

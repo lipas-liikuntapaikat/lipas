@@ -1,18 +1,19 @@
 (ns lipas.ui.map.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
-            [lipas.ui.map.events :as events]
-            [lipas.ui.map.map :as ol-map]
-            [lipas.ui.map.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.navbar :as nav]
-            [lipas.ui.sports-sites.events :as sports-site-events]
-            [lipas.ui.sports-sites.subs :as sports-site-subs]
-            [lipas.ui.sports-sites.views :as sports-sites]
-            [lipas.ui.user.subs :as user-subs]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [lipas.ui.search.views :as search]
-            [reagent.core :as r]))
+  (:require
+   [lipas.ui.components :as lui]
+   [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
+   [lipas.ui.map.events :as events]
+   [lipas.ui.map.map :as ol-map]
+   [lipas.ui.map.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.navbar :as nav]
+   [lipas.ui.sports-sites.events :as sports-site-events]
+   [lipas.ui.sports-sites.subs :as sports-site-subs]
+   [lipas.ui.sports-sites.views :as sports-sites]
+   [lipas.ui.user.subs :as user-subs]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.search.views :as search]
+   [reagent.core :as r]))
 
 (defn floating-container [{:keys [top right bottom left style elevation]
                            :or   {elevation 2}}
@@ -554,8 +555,7 @@
                              (empty? selected-site)) "1200px"
                         :else                        "430px")]
     [mui/grid {:container true
-               :style     {:flex-direction "column"
-                           :flex           "1 0 auto"}}
+               :style     {:height "100%" :width "100%"}}
 
      ;; Mini-nav
      [floating-container {:right     0

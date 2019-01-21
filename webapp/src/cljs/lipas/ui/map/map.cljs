@@ -1,18 +1,19 @@
 (ns lipas.ui.map.map
-  (:require proj4
-            ["ol"]
-            [clojure.string :as string]
-            [goog.color :as gcolor]
-            [goog.color.alpha :as gcolora]
-            [goog.object :as gobj]
-            [lipas.ui.map.events :as events]
-            [lipas.ui.map.subs :as subs]
-            [lipas.ui.mui :as mui]
-            [lipas.ui.svg :as svg]
-            [lipas.ui.utils :refer [<== ==>] :as utils]
-            [lipas.data.styles :as styles]
-            [re-frame.core :as re-frame]
-            [reagent.core :as r]))
+  (:require
+   proj4
+   ["ol"]
+   [clojure.string :as string]
+   [goog.color :as gcolor]
+   [goog.color.alpha :as gcolora]
+   [goog.object :as gobj]
+   [lipas.ui.map.events :as events]
+   [lipas.ui.map.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.svg :as svg]
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.data.styles :as styles]
+   [re-frame.core :as re-frame]
+   [reagent.core :as r]))
 
 ;;(set! *warn-on-infer* true)
 
@@ -42,7 +43,7 @@
    #js{:image
        (ol.style.Circle.
         #js{:radius 5
-            :stroke (ol.style.Stroke
+            :stroke (ol.style.Stroke.
                      #js{:color mui/primary})
             :fill   (ol.style.Fill.
                      #js{:color mui/secondary2})})
@@ -631,7 +632,7 @@
      {:reagent-render
       (fn [] [mui/grid {:id    "map"
                         :item  true
-                        :style {:flex "1 0 0"}
+                        :style {:height "100%" :width "100%"}
                         :xs    12}])
 
       :component-did-mount

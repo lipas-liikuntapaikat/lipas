@@ -18,16 +18,18 @@
 
 ;; Lipas-data is fetched from JSON REST-API
 
-(defn migrate-from-old-lipas! [db user lipas-ids]
+(defn migrate-from-old-lipas! [db search user lipas-ids]
   (log/info "Starting to migrate sports-sites" lipas-ids)
   (doseq [lipas-id lipas-ids]
     (let [data (->> lipas-id
                     old-lipas-api/get
-                    old-lipas/->sports-site)
+                    old-lipas/->sports-site
+                    utils/clean)
           spec :lipas/sports-site]
-      (if (spec/valid? spec  data)
+      (if (spec/valid? spec data)
         (do
-          (db/upsert-sports-site! db user data)
+          (->> (db/upsert-sports-site! db user data)
+               (core/index! search))
           (log/info "Successfully migrated" lipas-id))
         (do
           (spec/explain spec data)
@@ -111,12 +113,12 @@
           (log/error "Adding user" (:email user) "failed!" e))))))
 
 (defn -main [& args]
-  (let [source       (first args)
-        config       (select-keys config/default-config [:db])
-        {:keys [db]} (backend/start-system! config)
-        user         (core/get-user db "import@lipas.fi")]
+  (let [source              (first args)
+        config              (select-keys config/default-config [:db])
+        {:keys [db search]} (backend/start-system! config)
+        user                (core/get-user db "import@lipas.fi")]
     (case source
-      "--old-lipas" (migrate-from-old-lipas! db user (rest args))
+      "--old-lipas" (migrate-from-old-lipas! db search user (rest args))
       "--es-dump"   (migrate-from-es-dump! db user
                                            (first (rest args))
                                            (second (rest args)))
@@ -137,9 +139,13 @@
       (when-not (spec/valid? :lipas/sports-site d)
         (spec/explain :lipas/sports-site d))))
 
-  (def config (select-keys config/default-config [:db]))
-  (def db (:db (backend/start-system! config)))
+  (def config (select-keys config/default-config [:db :search]))
+  (def system (backend/start-system! config))
+  (def db (:db system))
+  (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
+
+  (migrate-from-old-lipas! db search user [72348])
 
   (migrate-users db "/Users/vaotjuha/lipas/data_migration/2019-01-09-lipas-users-filtered.edn")
 

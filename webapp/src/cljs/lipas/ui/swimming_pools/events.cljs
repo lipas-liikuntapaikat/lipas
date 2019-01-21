@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.events
-  (:require [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
  ::set-active-tab

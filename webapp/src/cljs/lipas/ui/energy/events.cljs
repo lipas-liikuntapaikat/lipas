@@ -1,7 +1,8 @@
 (ns lipas.ui.energy.events
-  (:require [ajax.core :as ajax]
-            [lipas.ui.utils :as utils]
-            [re-frame.core :as re-frame]))
+  (:require
+   [ajax.core :as ajax]
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
  ::select-energy-consumption-site
