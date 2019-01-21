@@ -618,7 +618,8 @@
        {:color "secondary"
         :href  (str "https://jyu-my.sharepoint.com/"
                     ":x:/g/personal/vaotjuha_jyu_fi/"
-                    "EYBaJ4HG1PdNpcLN3j9lSEkBkfRhirWmNPvD6lufrAUWUw?e=CwAIvn")}
+                    "EYBaJ4HG1PdNpcLN3j9lSEkBkfRhirWmNPvD6lufrAUWUw?e=CwAIvn"
+                    "&download=1")}
        (str "> " (tr :ice-energy/energy-calculator))]]]]])
 
 (defn energy-form-tab [tr]
