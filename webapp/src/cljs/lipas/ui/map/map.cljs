@@ -42,7 +42,7 @@
    #js{:image
        (ol.style.Circle.
         #js{:radius 5
-            :stroke (ol.style.Stroke
+            :stroke (ol.style.Stroke.
                      #js{:color mui/primary})
             :fill   (ol.style.Fill.
                      #js{:color mui/secondary2})})

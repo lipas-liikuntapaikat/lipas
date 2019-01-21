@@ -10,7 +10,7 @@
    [com.cemerick/url "0.1.1"]
 
    ;;; Frontend ;;;
-   [org.clojure/clojurescript "1.10.339"]
+   [org.clojure/clojurescript "1.10.439"]
    [cljsjs/react "16.6.0-0"]
    [cljsjs/react-dom "16.6.0-0"]
    [reagent "0.8.1"]
