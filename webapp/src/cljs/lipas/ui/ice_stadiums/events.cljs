@@ -3,6 +3,14 @@
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
+(re-frame/reg-event-fx
+ ::init
+ (fn [_ _]
+   {:dispatch-n
+    [[:lipas.ui.sports-sites.events/get-by-type-code 2510]
+     [:lipas.ui.sports-sites.events/get-by-type-code 2520]
+     [::display-stats (dec utils/this-year)]]}))
+
 (re-frame/reg-event-db
  ::set-active-tab
  (fn [db [_ active-tab]]
@@ -46,9 +54,10 @@
     [(when lipas-id
        [:lipas.ui.sports-sites.events/get-history lipas-id])
      (when lipas-id
-       [:lipas.ui.events/navigate (str "/#/jaahalliportaali/hallit/" lipas-id)])
+       [:lipas.ui.events/navigate
+        :lipas.ui.routes.ice-stadiums/details-view {:lipas-id lipas-id}])
      (when-not lipas-id
-       [:lipas.ui.events/navigate "/#/jaahalliportaali/hallit"])]
+       [:lipas.ui.events/navigate :lipas.ui.routes.ice-stadiums/list-view])]
     :lipas.ui.effects/reset-scroll! nil}))
 
 (re-frame/reg-event-fx

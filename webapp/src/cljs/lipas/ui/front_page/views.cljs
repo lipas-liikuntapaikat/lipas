@@ -2,8 +2,8 @@
   (:require
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
-   [lipas.ui.routes :refer [navigate!]]
    [lipas.ui.svg :as svg]
+   [lipas.ui.utils :refer [==> navigate!]]
    [reagent.core :as r]))
 
 (def links

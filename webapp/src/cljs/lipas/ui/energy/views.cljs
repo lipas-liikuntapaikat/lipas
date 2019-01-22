@@ -308,13 +308,12 @@
         [mui/grid {:item true :xs 12}
          [lui/login-button
           {:label    (tr :login/headline)
-           :on-click #(==> [:lipas.ui.events/navigate "/#/kirjaudu"
-                            :comeback? true])}]]
+           :on-click #(utils/navigate! "/#/kirjaudu" :comeback? true)}]]
 
         [mui/grid {:item true}
          [lui/register-button
           {:label    (tr :register/headline)
-           :on-click #(==> [:lipas.ui.events/navigate "/#/rekisteroidy"])}]]]]
+           :on-click #(utils/navigate! "/#/rekisteroidy")}]]]]
 
       [mui/grid {:container true}
 

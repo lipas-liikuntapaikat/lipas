@@ -19,11 +19,11 @@
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
-    :home-panel           [front-page/main tr]
+    :front-page-panel     [front-page/main tr]
     :admin-panel          [admin/main]
     :map-panel            [map/main tr]
-    :ice-panel            [ice-stadiums/main]
-    :swim-panel           [swimming-pools/main]
+    :ice-stadiums-panel   [ice-stadiums/main]
+    :swimming-pools-panel [swimming-pools/main]
     :login-panel          [login/main tr]
     :reset-password-panel [reset-password/main tr]
     :register-panel       [register/main tr]
