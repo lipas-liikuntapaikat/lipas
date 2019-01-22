@@ -5,8 +5,7 @@
    [lipas.ui.login.events :as events]
    [lipas.ui.login.subs :as subs]
    [lipas.ui.mui :as mui]
-   [lipas.ui.routes :refer [navigate!]]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
    [reagent.core :as r]))
 
 (defn set-field [& args]

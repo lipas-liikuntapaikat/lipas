@@ -3,10 +3,9 @@
    [clojure.string :as string]
    [lipas.ui.events :as events]
    [lipas.ui.mui :as mui]
-   [lipas.ui.routes :refer [navigate!]]
    [lipas.ui.subs :as subs]
    [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
@@ -211,15 +210,15 @@
 
 (defn get-sub-page [panel tr]
   (case panel
-    :home-panel           {:text (tr :home-page/headline)
+    :front-page-panel     {:text (tr :home-page/headline)
                            :href "/#/etusivu"}
     :admin-panel          {:text (tr :lipas.admin/headline)
                            :href "/#/admin"}
     :sports-panel         {:text (tr :sport/headline)
                            :href "/#/liikuntapaikat"}
-    :ice-panel            {:text (tr :ice/headline)
+    :ice-stadiums-panel   {:text (tr :ice/headline)
                            :href "/#/jaahalliportaali"}
-    :swim-panel           {:text (tr :swim/headline)
+    :swimming-pools-panel {:text (tr :swim/headline)
                            :href "/#/uimahalliportaali"}
     :login-panel          {:text (tr :login/headline)
                            :href "/#/kirjaudu"}

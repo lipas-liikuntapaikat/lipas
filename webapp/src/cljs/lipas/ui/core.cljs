@@ -51,7 +51,7 @@
 
 (defn ^:export init []
   (track!)
-  (routes/app-routes)
+  (routes/init!)
   (re-frame/dispatch-sync [::events/initialize-db])
   (dev-setup)
   (qa-setup)

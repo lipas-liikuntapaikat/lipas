@@ -59,7 +59,8 @@
 
 (def jyu-styles-dark
   {:typography
-   {:font-family "Lato, sans-serif"
+   {:use-next-variants false
+    :font-family "Lato, sans-serif"
     :headline    headline-common
     :display1    headline-common
     :display2    headline-common

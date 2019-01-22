@@ -6,8 +6,7 @@
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open?    (<== [::subs/magic-link-dialog-open?])

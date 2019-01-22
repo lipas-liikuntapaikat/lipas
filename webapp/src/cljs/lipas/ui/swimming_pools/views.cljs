@@ -672,12 +672,12 @@
     :types #{3110 3130}}])
 
 (def tabs
-  {0 "/#/uimahalliportaali"
-   1 "/#/uimahalliportaali/ilmoita-tiedot"
-   2 "/#/uimahalliportaali/hallit"
-   3 "/#/uimahalliportaali/hallien-vertailu"
-   4 "/#/uimahalliportaali/energia-info"
-   5 "/#/uimahalliportaali/raportit"})
+  {0 :lipas.ui.routes.swimming-pools/front-page
+   1 :lipas.ui.routes.swimming-pools/report-consumption
+   2 :lipas.ui.routes.swimming-pools/list-view
+   3 :lipas.ui.routes.swimming-pools/visualizations
+   4 :lipas.ui.routes.swimming-pools/energy-info
+   5 :lipas.ui.routes.swimming-pools/reports})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])]

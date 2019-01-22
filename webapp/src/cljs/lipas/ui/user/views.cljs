@@ -4,8 +4,7 @@
    [lipas.ui.components :as lui]
    [lipas.ui.user.subs :as subs]
    [lipas.ui.user.events :as events]
-   [lipas.ui.routes :refer [navigate!]]
-   [lipas.ui.utils :refer [<== ==>]]))
+   [lipas.ui.utils :refer [<== ==> navigate!]]))
 
 (defn user-form [tr data]
   [mui/form-group

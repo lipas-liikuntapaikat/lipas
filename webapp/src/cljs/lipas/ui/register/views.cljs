@@ -5,8 +5,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.register.events :as events]
    [lipas.ui.register.subs :as subs]
-   [lipas.ui.routes :refer [navigate!]]
-   [lipas.ui.utils :refer [<== ==>]]))
+   [lipas.ui.utils :refer [<== ==> navigate!]]))
 
 (defn set-field [& args]
   (==> [::events/set-registration-form-field (butlast args) (last args)]))

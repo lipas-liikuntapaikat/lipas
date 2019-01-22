@@ -3,7 +3,7 @@
    [lipas.i18n.core :as i18n]
    [lipas.ui.db :as db]
    [lipas.ui.routes :as routes]
-   [lipas.ui.utils :refer [==>]]
+   [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
@@ -79,8 +79,7 @@
 (re-frame/reg-event-fx
  ::navigate
  (fn [_ [_ path & opts]]
-   (apply routes/navigate! (into [path] opts))
-   {}))
+   (apply routes/navigate! (into [path] (remove nil?) opts))))
 
 (re-frame/reg-event-fx
  ::display
