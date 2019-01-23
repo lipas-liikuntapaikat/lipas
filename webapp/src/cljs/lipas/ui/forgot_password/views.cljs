@@ -1,10 +1,10 @@
-(ns lipas.ui.user.reset-password
+(ns lipas.ui.forgot-password.views
   (:require
    [clojure.spec.alpha :as s]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
-   [lipas.ui.user.events :as events]
-   [lipas.ui.user.subs :as subs]
+   [lipas.ui.forgot-password.events :as events]
+   [lipas.ui.forgot-password.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
@@ -21,7 +21,7 @@
 
      ;; Submit
      [mui/button
-      {:on-click #(==> [::events/send-reset-password-request @email])
+      {:on-click #(==> [::events/request-password-reset @email])
        :variant  "raised"
        :color    "secondary"
        :style    {:margin-top "1em"}
@@ -29,14 +29,12 @@
       (tr :actions/submit)]]))
 
 (defn panel [{:keys [tr title helper-text form form-props]}]
-  (let [error   (<== [::subs/reset-password-request-error])
-        success (<== [::subs/reset-password-request-success])]
-    [mui/grid {:container true
-               :justify   "center"
-               :style     {:padding "1em"}}
+  (let [error   (<== [::subs/error])
+        success (<== [::subs/success])]
+
+    [mui/grid {:container true :justify "center" :style {:padding "1em"}}
      [mui/grid {:item true :xs 12 :md 8 :lg 6}
-      [mui/card {:square true
-                 :style  {:height "100%"}}
+      [mui/card {:square true :style {:height "100%"}}
 
        ;; Header
        [mui/card-header {:title title}]
@@ -53,13 +51,19 @@
             {:variant "body1"
              :style   {:margin-bottom "1em" :font-weight "bold"}}
             (tr (keyword :reset-password success))])
+
+         ;; Error message
          (when error
            [mui/typography {:color :error :style {:margin-bottom "1em"}}
             (tr (keyword :error error))])
+
+         ;; Register button
          (when (= error :email-not-found)
            [lui/register-button
             {:label (tr :register/headline)
              :href  "/#/rekisteroidy"}])
+
+         ;; Forgot password button
          (when (= error :reset-token-expired)
            [mui/button
             {:color :primary
@@ -91,7 +95,7 @@
   (==> [::events/clear-feedback])
   (let [tr    (<== [:lipas.ui.subs/translator])
         token (or (utils/parse-token (-> js/window .-location .-href))
-                  (:token (<== [::subs/user-data])))]
+                  (:token (<== [:lipas.ui.user.subs/user-data])))]
     (if token
       ;; Reset password
       [panel {:tr          tr
