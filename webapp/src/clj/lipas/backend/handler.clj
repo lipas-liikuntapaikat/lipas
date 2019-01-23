@@ -1,7 +1,6 @@
 (ns lipas.backend.handler
   (:require
    [clojure.java.io :as io]
-   [clojure.spec.alpha :as s]
    [lipas.backend.core :as core]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
@@ -9,6 +8,7 @@
    [lipas.utils :as utils]
    [muuntaja.core :as m]
    [reitit.coercion.spec]
+   [spec-tools.data-spec :as ds]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
@@ -38,9 +38,10 @@
     exception/default-handlers
     exception-handlers
     ;;Prints all stack traces
-    ;; {::exception/wrap (fn [handler e request]
-    ;;                     (.printStackTrace e)
-    ;;                     (handler e request))}
+    ;; {::exception/wrap
+    ;;  (fn [handler e request]
+    ;;    (.printStackTrace e)
+    ;;    (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
@@ -89,9 +90,10 @@
       ["/sports-sites"
        {:post
         {:middleware [mw/token-auth mw/auth]
-         :parameters {:query :lipas.api/query-params
-                      :body  (s/or :new :lipas/new-sports-site
-                                   :existing :lipas/sports-site)}
+         :parameters
+         {:query :lipas.api/query-params
+          :body  (ds/or :new :lipas/new-sports-site
+                        :existing :lipas/sports-site)}
          :handler
          (fn [{:keys [body-params identity] :as req}]
            (let [draft? (-> req :parameters :query :draft utils/->bool)
@@ -112,8 +114,9 @@
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:parameters {:path  {:type-code int?}
-                      :query :lipas.api/query-params}
+        {:parameters
+         {:path  {:type-code int?}
+          :query :lipas.api/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
@@ -244,8 +247,10 @@
 
       ["/actions/create-energy-report"
        {:post
-        {:parameters {:body {:year      int?
-                             :type-code int?}}
+        {:parameters
+         {:body
+          {:year      int?
+           :type-code int?}}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :body :type-code)
