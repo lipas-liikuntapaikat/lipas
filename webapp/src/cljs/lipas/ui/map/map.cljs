@@ -123,11 +123,14 @@
                         :fill   fill
                         :stroke (if hover? hover-stroke stroke-black)}))})))
 
+(def styleset styles/adapted-temp-symbols)
+;;(def symbols-set styles/all)
+
 (def symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styles/all))
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
 
 (def hover-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styles/all))
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styleset))
 
 (defn feature-style [f]
   (let [type-code (.get f "type-code")]
