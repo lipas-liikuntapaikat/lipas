@@ -12,7 +12,7 @@
    [lipas.ui.map.views :as map]
    [lipas.ui.subs :as subs]
    [lipas.ui.swimming-pools.views :as swimming-pools]
-   [lipas.ui.user.reset-password :as reset-password]
+   [lipas.ui.forgot-password.views :as forgot-password]
    [lipas.ui.user.views :as user]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -25,7 +25,7 @@
     :ice-stadiums-panel   [ice-stadiums/main]
     :swimming-pools-panel [swimming-pools/main]
     :login-panel          [login/main tr]
-    :reset-password-panel [reset-password/main tr]
+    :reset-password-panel [forgot-password/main tr]
     :register-panel       [register/main tr]
     :user-panel           [user/main tr]
     [front-page/main tr]))

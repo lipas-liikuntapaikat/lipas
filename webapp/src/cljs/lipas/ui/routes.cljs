@@ -2,9 +2,12 @@
   (:require
    [clojure.string :as string]
    [lipas.ui.admin.routes :as admin]
+   [lipas.ui.forgot-password.routes :as forgot-password]
    [lipas.ui.front-page.routes :as front-page]
    [lipas.ui.ice-stadiums.routes :as ice-stadiums]
+   [lipas.ui.login.routes :as login]
    [lipas.ui.map.routes :as lmap]
+   [lipas.ui.register.routes :as register]
    [lipas.ui.swimming-pools.routes :as swimming-pools]
    [lipas.ui.user.routes :as user]
    [lipas.ui.utils :refer [==>] :as utils]
@@ -35,10 +38,10 @@
   (rf/router
    ["/"
     root-route
-    user/login-route
-    user/forgot-password-route
-    user/register-route
-    user/profile-route
+    login/routes
+    user/routes
+    forgot-password/routes
+    register/routes
     lmap/routes
     front-page/routes
     admin/routes
