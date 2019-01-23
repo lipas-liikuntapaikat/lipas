@@ -11,7 +11,8 @@
    :lipas-api "http://lipas.cc.jyu.fi/api/index.html"
    :geoserver "http://lipas.cc.jyu.fi/geoserver"
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
-   :open-data "https://bit.ly/2v6wE9t"})
+   :open-data "https://bit.ly/2v6wE9t"
+   :youtube   "https://www.youtube.com/channel/UC-QFmRIY1qYPXX79m23JC4g"})
 
 (def logos
   [{:img "img/partners/okm.png"}
@@ -220,22 +221,26 @@
            [mui/list
 
             ;; Lipasinfo
-            [mui/list-item {:button   true
-                            :on-click #(navigate! (:lipasinfo links))}
+            [mui/list-item {:button true :on-click #(navigate! (:lipasinfo links))}
              [mui/list-item-icon
               [mui/icon "library_books"]]
              [mui/list-item-text "lipasinfo.fi"]]
 
+            ;; Youtube
+            [mui/list-item {:button true :on-click #(navigate! (:lipasinfo links))}
+             [mui/list-item-icon
+              ;;[mui/icon "play_circle_filled"]
+              [mui/icon "video_library"]]
+             [mui/list-item-text "Youtube"]]
+
             ;; Email
-            [mui/list-item {:button   true
-                            :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
+            [mui/list-item {:button true :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
              [mui/list-item-icon
               [mui/icon "email"]]
              [mui/list-item-text "lipasinfo@jyu.fi"]]
 
             ;; Phone
-            [mui/list-item {:button   true
-                            :on-click #(navigate! "tel:+358400247980")}
+            [mui/list-item {:button true :on-click #(navigate! "tel:+358400247980")}
              [mui/list-item-icon
               [mui/icon "phone"]]
              [mui/list-item-text "0400 247 980"]]]]]]]]]]]
