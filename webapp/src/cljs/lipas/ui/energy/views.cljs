@@ -301,8 +301,7 @@
        [mui/grid {:container true :spacing 16}
 
         [mui/grid {:item true}
-         [mui/typography {:variant "headline"
-                          :color   "secondary"}
+         [mui/typography {:variant "h5" :color "secondary"}
           (tr :restricted/login-or-register)]]
 
         [mui/grid {:item true :xs 12}
@@ -400,8 +399,7 @@
          [mui/grid {:item true :xs 12}
 
           ;; Is your hall missing from the chart? -> Report consumption
-          [mui/typography {:style   {:margin-top "0.5em"}
-                           :variant "display1"}
+          [mui/typography {:style {:margin-top "0.5em" :opacity 0.7} :variant "h3"}
            (tr :lipas.energy-stats/hall-missing?)]]
 
          [mui/grid {:item true :xs 12 :sm 6 :md 4 :lg 4}
@@ -431,12 +429,10 @@
       [mui/grid  {:item true :xs 12 :md 12 :lg 12}
        [mui/card {:square true :style {:background-color mui/primary}}
         [mui/card-content
-         [mui/typography {:variant :display3
-                          :style   {:color mui/gold}}
+         [mui/typography {:variant "h2" :style {:color mui/gold}}
           "Hall of Fame"]
          [mui/typography {:variant :title
-                          :style   {:margin-top "0.75em"
-                                    :color      mui/gray1}}
+                          :style   {:margin-top "0.75em" :color mui/gray1}}
           (tr :lipas.energy-stats/energy-reported-for year)]
          [:div {:style {:margin-top "1em"}}
           (into [mui/list {:dense true
@@ -467,8 +463,7 @@
                 (localize-months tr))]
     [mui/paper {:style     {:margin-top "1em"}
                 :elevation 0}
-     [mui/typography {:variant :title
-                      :color   :secondary}
+     [mui/typography {:variant "h6" :color :secondary}
       (tr :lipas.energy-consumption/monthly-readings-in-year year)]
      (if (not-empty data)
        [:div {:style {:padding-top "1em"}}
@@ -484,10 +479,8 @@
                 {:total-count      (tr :lipas.visitors/total-count)
                  :spectators-count (tr :lipas.visitors/spectators-count)}
                 (localize-months tr))]
-    [mui/paper {:style     {:margin-top "1em"}
-                :elevation 0}
-     [mui/typography {:variant :title
-                      :color   :secondary}
+    [mui/paper {:style {:margin-top "1em"} :elevation 0}
+     [mui/typography {:variant "h6" :color :secondary}
       (tr :lipas.visitors/monthly-visitors-in-year year)]
      (if (not-empty data)
        [:div {:style {:padding-top "1em"}}

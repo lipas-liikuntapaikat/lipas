@@ -50,23 +50,25 @@
   {:font-family    "Aleo, serif"
    :font-weight    700
    :letter-spacing "+0.025em"
-   :text-transform :uppercase})
+   :text-transform "uppercase"})
 
 (def headline-common
   {:font-family    "Lato, serif"
    :font-weight    700
-   :text-transform :uppercase})
+   :text-transform "uppercase"})
 
 (def jyu-styles-dark
   {:typography
-   {:use-next-variants false
-    :font-family "Lato, sans-serif"
-    :headline    headline-common
-    :display1    headline-common
-    :display2    headline-common
-    :display3    headline-common
-    :display4    headline-common
-    :title       headline-common
+   {:use-next-variants true
+    :font-family       "Lato, sans-serif"
+
+    :h1 headline-common
+    :h2 headline-common
+    :h3 headline-common
+    :h4 headline-common
+    :h5 headline-common
+    :h6 headline-common
+
     :body1
     {:font-weight    400
      :line-height    1.4

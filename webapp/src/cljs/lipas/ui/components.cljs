@@ -127,8 +127,7 @@
          [mui/icon "delete_forever"]
          [mui/icon "delete"])]]
      (when @clicked?
-       [mui/typography {:style {:display :inline}
-                        :color :error}
+       [mui/typography {:style {:display "inline"} :color :error}
         confirm-tooltip])]))
 
 (defn checkbox [{:keys [label value on-change disabled style icon checked-icon]}]
@@ -229,7 +228,7 @@
                     :let          [v (get item k)]]
                 [mui/table-cell {:style (when hidden? {:display :none})
                                  :key   (str id k)}
-                 [mui/typography {:no-wrap false}
+                 [mui/typography {:variant "body1" :no-wrap false}
                   (display-value v)]])])])]
 
        (when in-progress?
@@ -577,9 +576,10 @@
     [mui/icon {:color (or icon-color "inherit")}
      icon]]
    [mui/grid {:item true}
-    [mui/typography {:variant :body2
-                     :style   {:margin-left "0.5em"
-                               :display     :inline}}
+    [mui/typography
+     {:variant "body2"
+      :style
+      {:margin-left "0.5em" :display "inline"}}
      text]]])
 
 (defn expansion-panel [{:keys [label label-color default-expanded]
@@ -589,8 +589,7 @@
    [mui/expansion-panel-summary {:expand-icon (r/as-element
                                                [mui/icon "expand_more"])}
 
-    [mui/typography {:color   label-color
-                     :variant "button"}
+    [mui/typography {:color label-color :variant "button"}
      label]]
    (into [mui/expansion-panel-details]
          children)])
@@ -703,8 +702,7 @@
         ;; "back to listing" button
         [mui/icon {:color :primary}
          "arrow_back_ios"]]]
-      [mui/typography {:style   {:color mui/primary}
-                       :variant :display1}
+      [mui/typography {:style {:color mui/primary} :variant "h4"}
        title]]]]
 
    ;; Contents
@@ -742,9 +740,9 @@
 
 (defn li [text & children]
   (into
-   [:li [mui/typography {:variant :body2
-                         :color   :default}
-         text]]
+   [:li
+    [mui/typography {:variant "body2" :color :default}
+     text]]
    children))
 
 
@@ -857,8 +855,10 @@
                            (on-change @value))}]]))]))
 
 (defn sub-heading [{:keys [label]}]
-  [mui/typography {:variant "subheading"
-                   :style   {:margin-top    "1em"
-                             :margin-bottom "1em"
-                             :font-weight   "bold"}}
+  [mui/typography
+   {:variant "subtitle1"
+    :style
+    {:margin-top    "1em"
+     :margin-bottom "1em"
+     :font-weight   "bold"}}
    label])

@@ -225,7 +225,7 @@
       (when (= 0 selected-tab)
         [mui/card {:square true}
          [mui/card-content
-          [mui/typography {:variant :headline}
+          [mui/typography {:variant "h5"}
            (tr :lipas.admin/users)]
 
           ;; Full-screen user dialog

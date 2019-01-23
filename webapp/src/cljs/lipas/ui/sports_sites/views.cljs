@@ -386,9 +386,7 @@
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [mui/paper
-       [mui/typography {:color   :secondary
-                        :style   {:padding "1em"}
-                        :variant :headline}
+       [mui/typography {:color "secondary" :style {:padding "1em"} :variant "h5"}
         (tr :reports/contacts)]
        [lui/download-button
         {:style    {:margin-left "1.5em"}
