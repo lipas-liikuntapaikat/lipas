@@ -109,7 +109,7 @@
         fill-color   (-> m :fill :color (->rgba fill-alpha))
         fill         (ol.style.Fill. #js{:color fill-color})
         stroke-alpha (case (:shape m)
-                       "polygon" 0.1
+                       "polygon" 0.5
                        0.9)
         stroke-color (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
