@@ -106,7 +106,7 @@
 
      ;; Types filter
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/select-types)]
 
       [type-selector
@@ -116,7 +116,7 @@
 
      ;; Cities filter
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/select-cities)]
 
       [city-selector
@@ -126,7 +126,7 @@
 
      ;; Admins filter
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/select-admins)]
 
       [admin-selector
@@ -136,7 +136,7 @@
 
      ;; Owners filter
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/select-owners)]
 
       [owner-selector
@@ -146,7 +146,7 @@
 
      ;; Surface materials filter
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/filter-surface-materials)]
 
       [surface-material-selector
@@ -163,7 +163,7 @@
 
      ;; Area filters
      [filter-layout {}
-      [mui/typography {:variant :caption}
+      [mui/typography {:variant "caption"}
        (tr :actions/filter-area-m2)]
 
       [mui/grid {:container true :spacing 16}
@@ -191,7 +191,8 @@
 (defn pagination [{:keys [tr page page-size page-sizes total change-page-size?]}]
   [mui/table-pagination
    (merge
-    {:rows-per-page         page-size
+    {:component             "div"
+     :rows-per-page         page-size
      :rows-per-page-options #js[page-size]
      :label-displayed-rows
      (fn [props]
@@ -229,7 +230,7 @@
      [mui/grid {:container true}
 
       [mui/grid {:item true :style {:flex-grow 1}}
-       [mui/typography {:variant :display3}
+       [mui/typography {:variant "h2" :style {:opacity 0.7}}
         "LIPAS"]]]
 
      ;; Second row: Search input and button
@@ -300,7 +301,7 @@
 
        ;; Results list
        [mui/grid {:container true :direction "column" :align-items "center"}
-        [mui/grid {:item true}
+        [mui/grid {:item true :xs 12}
          [pagination
           {:tr                tr
            :total             total
@@ -327,7 +328,7 @@
        [mui/grid {:container true}
 
         ;; Pagination
-        [mui/grid {:item true :style {:flex-grow 1}}
+        [mui/grid {:item true}
          [pagination
           {:tr                tr
            :total             total
@@ -337,7 +338,7 @@
            :change-page-size? true}]]
 
         ;; Rank results close to map center higher
-        [mui/grid {:item true}
+        [mui/grid {:item true :style {:margin-left "3em"}}
          [lui/checkbox
           {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)

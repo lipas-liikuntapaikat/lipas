@@ -49,20 +49,21 @@
         ;;; Successess & errors box
         [:div {:style {:margin-top "1em"}}
          (when success
-           [mui/typography {:style   {:margin-bottom "1em"
-                                      :font-weight   :bold}
-                            :variant :body1}
+           [mui/typography
+            {:variant "body1"
+             :style   {:margin-bottom "1em" :font-weight "bold"}}
             (tr (keyword :reset-password success))])
          (when error
-           [mui/typography {:color :error
-                            :style {:margin-bottom "1em"}}
+           [mui/typography {:color :error :style {:margin-bottom "1em"}}
             (tr (keyword :error error))])
          (when (= error :email-not-found)
-           [lui/register-button {:label (tr :register/headline)
-                                 :href  "/#/rekisteroidy"}])
+           [lui/register-button
+            {:label (tr :register/headline)
+             :href  "/#/rekisteroidy"}])
          (when (= error :reset-token-expired)
-           [mui/button {:color :primary
-                        :href  "/#/passu-hukassa"}
+           [mui/button
+            {:color :primary
+             :href  "/#/passu-hukassa"}
             (tr :reset-password/get-new-link)])]]]]]))
 
 (defn reset-password-form [{:keys [tr token]}]

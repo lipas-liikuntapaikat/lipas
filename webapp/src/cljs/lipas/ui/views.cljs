@@ -79,7 +79,7 @@
                           {:on-click #(==> [::events/set-active-disclaimer nil])}
                           [mui/icon "close"]])}]
               [mui/card-content
-               [mui/typography {:variant :body2}
+               [mui/typography {:variant "body2"}
                 disclaimer]]]])])
 
        [mui/mui-theme-provider {:theme mui/jyu-theme-light}

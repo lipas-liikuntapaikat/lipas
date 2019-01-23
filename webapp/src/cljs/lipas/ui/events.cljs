@@ -79,7 +79,8 @@
 (re-frame/reg-event-fx
  ::navigate
  (fn [_ [_ path & opts]]
-   (apply routes/navigate! (into [path] (remove nil?) opts))))
+   (apply routes/navigate! (into [path] (remove nil?) opts))
+   {}))
 
 (re-frame/reg-event-fx
  ::display

@@ -71,9 +71,7 @@
 
         ;; Quick selects
         [mui/grid {:item true :xs 12}
-         [mui/typography
-          {:variant "body2"
-           :style   {:margin-top "1em"}}
+         [mui/typography {:variant "body2" :style {:margin-top "1em"}}
           (tr :reports/shortcuts)]]
 
         (into [:<>]
