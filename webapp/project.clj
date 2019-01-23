@@ -15,7 +15,6 @@
    [cljsjs/react-dom "16.6.0-0"]
    [reagent "0.8.1"]
    [re-frame "0.10.6"]
-   ;; [clj-commons/secretary "1.2.4"]
    [ns-tracker "0.3.0"]
    [cljsjs/material-ui "3.2.0-0"]
    [tongue "0.2.4"]
