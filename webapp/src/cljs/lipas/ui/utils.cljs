@@ -350,5 +350,5 @@
    (navigate! path :comeback? false))
   ([path & {:keys [comeback?]}]
    (when comeback?
-     (==> [:lipas.ui.login.events/set-comeback-path (utils/current-path)]))
+     (==> [:lipas.ui.login.events/set-comeback-path (current-path)]))
    (==> [:lipas.ui.events/navigate path])))
