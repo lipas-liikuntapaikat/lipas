@@ -105,7 +105,7 @@
 (defn ->symbol-style [m & {hover? :hover}]
   (let [fill-alpha   (case (:shape m)
                        "polygon" (if hover? 0.5 0.3)
-                       0.4)
+                       0.8)
         fill-color   (-> m :fill :color (->rgba fill-alpha))
         fill         (ol.style.Fill. #js{:color fill-color})
         stroke-alpha (case (:shape m)
