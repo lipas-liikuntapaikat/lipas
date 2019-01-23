@@ -642,6 +642,11 @@
    :lipas/new-sports-site
    (s/keys :req-un [:lipas.sports-site/lipas-id])))
 
+(s/def :lipas/new-or-existing-sports-site
+  (s/merge
+   :lipas/new-sports-site
+   (s/keys :opt-un [:lipas.sports-site/lipas-id])))
+
 (s/def :lipas/sports-sites (s/coll-of :lipas/sports-site :distinct true :into []))
 
 ;;; Building ;;;

@@ -1,6 +1,7 @@
 (ns lipas.backend.handler
   (:require
    [clojure.java.io :as io]
+   [clojure.spec.alpha :as s]
    [lipas.backend.core :as core]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
@@ -8,7 +9,6 @@
    [lipas.utils :as utils]
    [muuntaja.core :as m]
    [reitit.coercion.spec]
-   [spec-tools.data-spec :as ds]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
@@ -92,17 +92,20 @@
         {:middleware [mw/token-auth mw/auth]
          :parameters
          {:query :lipas.api/query-params
-          :body  (ds/or :new :lipas/new-sports-site
-                        :existing :lipas/sports-site)}
+          :body  map?}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [draft? (-> req :parameters :query :draft utils/->bool)
-                 resp   (core/upsert-sports-site! db identity body-params draft?)
-                 _      (when-not draft?
-                          (core/add-to-integration-out-queue! db resp))
-                 _      (core/index! search resp :sync)]
-             {:status 201
-              :body   resp}))}}]
+           (let [spec   :lipas/new-or-existing-sports-site
+                 draft? (-> req :parameters :query :draft utils/->bool)
+                 valid? (s/valid? spec body-params)]
+             (if valid?
+               (let [resp (core/upsert-sports-site! db identity body-params draft?)]
+                 (when-not draft?
+                   (core/add-to-integration-out-queue! db resp))
+                 {:status 201
+                  :body   resp})
+               {:status 400
+                :body   (s/explain-data spec body-params)})))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
@@ -197,9 +200,10 @@
       ["/actions/update-user-permissions"
        {:post
         {:middleware [mw/token-auth mw/auth mw/admin]
-         :parameters {:body
-                      {:id          string?
-                       :permissions :lipas.user/permissions}}
+         :parameters
+         {:body
+          {:id          string?
+           :permissions :lipas.user/permissions}}
          :handler
          (fn [req]
            (let [params (-> req :parameters :body)
