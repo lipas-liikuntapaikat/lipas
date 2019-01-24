@@ -499,6 +499,7 @@
     :download                 "Lataa"
     :browse                   "siirry"
     :browse-to-portal         "Siirry portaaliin"
+    :browse-to-map            "Siirry kartalle"
     :choose-energy            "Valitse energia"
     :back-to-listing          "Takaisin listaukseen"
     :fill-data                "Täytä tiedot"

@@ -136,7 +136,7 @@
      [grid-card
       {:title     (tr :sport/headline)
        :link      "/#/liikuntapaikat"
-       :link-text (tr :actions/browse)}
+       :link-text (tr :actions/browse-to-map)}
       [mui/typography {:variant "body1"}
        (tr :sport/description)]
       [:ul
