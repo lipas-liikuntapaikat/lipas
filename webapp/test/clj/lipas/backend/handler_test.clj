@@ -231,6 +231,19 @@
                        (token-header token)))]
     (is (= 201 (:status resp)))))
 
+(deftest upsert-invalid-sports-site-test
+  (let [user  (gen-user {:db? true})
+        token (jwt/create-token user)
+        site  (-> (gen/generate (s/gen :lipas/sports-site))
+                  (assoc :status "kebab")
+                  (dissoc :lipas-id))
+        resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
+                       (mock/content-type "application/json")
+                       (mock/body (->json site))
+                       (token-header token)))
+        _     (prn (<-json (:body resp)))]
+    (is (= 400 (:status resp)))))
+
 (deftest upsert-sports-site-no-permissions-test
   (let [user  (gen-user)
         _     (as-> user $
