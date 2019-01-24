@@ -106,7 +106,7 @@
                     {:type :no-permission}))))
 
 (defn- check-sports-site-exists! [db lipas-id]
-  (when (empty? (db/get-sports-site-db lipas-id))
+  (when (empty? (db/get-sports-site db lipas-id))
     (throw (ex-info "Sports site not found"
                     {:type     :sports-site-not-found
                      :lipas-id lipas-id}))))
