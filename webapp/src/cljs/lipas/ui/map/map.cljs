@@ -111,7 +111,7 @@
         stroke-alpha (case (:shape m)
                        "polygon" 0.6
                        0.9)
-        stroke-width (if ((comp #{"polygon"} :shape) m) 1.5 2)
+        stroke-width (if ((comp #{"polygon"} :shape) m) 1.5 3)
         stroke-hover-width (if ((comp #{"polygon"} :shape) m) 3 5)
         stroke-color (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
