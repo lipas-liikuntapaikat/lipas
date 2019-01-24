@@ -62,11 +62,20 @@
     (get-in db [:sports-sites lipas-id :history latest])))
 
 (re-frame/reg-event-db
- ::show-sports-site
+ ::show-sports-site*
  (fn [db [_ lipas-id]]
    (-> db
        (assoc-in [:map :mode :lipas-id] lipas-id)
        (assoc-in [:map :drawer-open?] true))))
+
+(re-frame/reg-event-fx
+ ::show-sports-site
+ (fn [db [_ lipas-id]]
+   {:dispatch-n
+    [(if lipas-id
+       (let [params {:lipas-id lipas-id}]
+         [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])
+       [:lipas.ui.events/navigate :lipas.ui.routes.map/map])]}))
 
 (re-frame/reg-event-db
  ::start-editing
