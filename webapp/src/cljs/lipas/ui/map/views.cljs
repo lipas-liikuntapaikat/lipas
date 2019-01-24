@@ -68,9 +68,7 @@
           :on-change #(reset! selected-type (first %))}]
         (when @selected-type
           [mui/grid {:item true}
-           [mui/typography {:style
-                            {:margin-top    "1em"
-                             :margin-bottom "1em"}}
+           [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
            [mui/button {:on-click   #(on-change @selected-type)
                         :auto-focus true
@@ -89,7 +87,7 @@
                              {:enabled true
                               :offset  "0px,10px"}}}
      [mui/paper {:style {:padding "0.5em"}}
-      [mui/typography {:variant :body2}
+      [mui/typography {:variant "body2"}
        name]]]))
 
 (defn set-field
@@ -154,14 +152,15 @@
                    :align-items :center}
 
          [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
-          [mui/typography {:variant "headline"}
+          [mui/typography {:variant "h5"}
            (:name display-data)]]
 
          ;; Close button
          [mui/grid {:item true}
           (when (not editing?)
-            [mui/icon-button {:style    {:margin-left "-0.25em"}
-                              :on-click #(==> [::events/show-sports-site nil])}
+            [mui/icon-button
+             {:style    {:margin-left "-0.25em"}
+              :on-click #(==> [::events/show-sports-site nil])}
              [mui/icon "close"]])]]]
 
        ;; Tabs
@@ -359,10 +358,9 @@
                  :justify   "space-between"
                  :style     {:flex   1
                              :height "100%"}}
-       [mui/grid {:item  true :xs 12
-                  :style {:padding-top "1em"
-                          :flex        1}}
-        [mui/typography {:variant :title}
+
+       [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
+        [mui/typography {:variant "h6"}
          (tr :lipas.sports-site/new-site {:type type :locale locale})]
 
         ;; Steps
@@ -386,8 +384,7 @@
           [mui/step-content {:style {:padding-top "1em"}}
 
            (when (not zoomed?)
-             [mui/typography {:variant :body2
-                              :color   :error}
+             [mui/typography {:variant "body2" :color :error}
               (tr :map/zoom-closer)])
 
            (let [geom-type (:geometry-type type)
@@ -398,7 +395,7 @@
                ;; Draw new geom
                [mui/grid {:container true}
                 [mui/grid {:item true}
-                 [mui/typography {:variant :body2}
+                 [mui/typography {:variant "body2"}
                   (tr :map/center-map-to-site)]]
                 [mui/grid {:item true}
 
@@ -417,8 +414,7 @@
                 [mui/grid {:item true}
                  [mui/typography {:variant "body2"}
                   (tr :map/modify geom-type)]
-                 [mui/typography {:variant "caption"
-                                  :style   {:margin-top "0.5em"}}
+                 [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
                   (tr :map/edit-later-hint)]]
 
                 ;; Add additional geom button

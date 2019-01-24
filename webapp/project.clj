@@ -5,9 +5,9 @@
    [camel-snake-kebab "0.4.0"]
    [etaoin "0.2.8-SNAPSHOT"]
    [hiposfer/geojson.specs "0.2.0"]
-   [metosin/spec-tools "0.7.1"]
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
+   [metosin/reitit "0.2.12"]
 
    ;;; Frontend ;;;
    [org.clojure/clojurescript "1.10.439"]
@@ -15,7 +15,6 @@
    [cljsjs/react-dom "16.6.0-0"]
    [reagent "0.8.1"]
    [re-frame "0.10.6"]
-   [secretary "1.2.3"]
    [ns-tracker "0.3.0"]
    [cljsjs/material-ui "3.2.0-0"]
    [tongue "0.2.4"]
@@ -28,7 +27,6 @@
    [cljsjs/proj4 "2.5.0-0"]
 
    ;;; Backend ;;;
-   [metosin/reitit "0.2.2"]
    [metosin/ring-http-response "0.9.0"]
    [cheshire "5.8.0"]
    [buddy "2.0.0"]

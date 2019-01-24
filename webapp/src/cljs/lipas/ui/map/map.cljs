@@ -104,16 +104,21 @@
 
 (defn ->symbol-style [m & {hover? :hover}]
   (let [fill-alpha   (case (:shape m)
-                       "polygon" (if hover? 0.5 0.3)
-                       0.4)
+                       "polygon" (if hover? 0.5 0.4)
+                       0.85)
         fill-color   (-> m :fill :color (->rgba fill-alpha))
         fill         (ol.style.Fill. #js{:color fill-color})
         stroke-alpha (case (:shape m)
-                       "polygon" 0.1
+                       "polygon" 0.6
                        0.9)
+        stroke-width (if ((comp #{"polygon"} :shape) m) 1.5 2)
+        stroke-hover-width (if ((comp #{"polygon"} :shape) m) 3 5)
         stroke-color (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
-        stroke       (ol.style.Stroke. #js{:color stroke-color :width (if hover? 5 3)})]
+        stroke       (ol.style.Stroke. #js{:color stroke-color
+                                           :width (if hover?
+                                                    stroke-hover-width
+                                                    stroke-width)})]
     (ol.style.Style.
      #js{:stroke stroke
          :fill   fill
@@ -123,11 +128,14 @@
                         :fill   fill
                         :stroke (if hover? hover-stroke stroke-black)}))})))
 
+(def styleset styles/adapted-temp-symbols)
+;;(def symbols-set styles/all)
+
 (def symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styles/all))
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
 
 (def hover-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styles/all))
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styleset))
 
 (defn feature-style [f]
   (let [type-code (.get f "type-code")]

@@ -36,8 +36,7 @@
     :magic-link-variants         [{:value "lipas" :label "Lipas"}
                                   {:value "portal" :label "Portaali"}]
     :selected-magic-link-variant "lipas"
-    :color-picker                (make-color-list)
-    :color-picker-init           (make-color-list)}
+    :color-picker                styles/temp-symbols}
 
    ;; Sports sites
    :sports-sites {}

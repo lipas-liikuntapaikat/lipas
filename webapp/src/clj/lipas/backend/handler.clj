@@ -38,9 +38,10 @@
     exception/default-handlers
     exception-handlers
     ;;Prints all stack traces
-    ;; {::exception/wrap (fn [handler e request]
-    ;;                     (.printStackTrace e)
-    ;;                     (handler e request))}
+    ;; {::exception/wrap
+    ;;  (fn [handler e request]
+    ;;    (.printStackTrace e)
+    ;;    (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
@@ -89,18 +90,21 @@
       ["/sports-sites"
        {:post
         {:middleware [mw/token-auth mw/auth]
-         :parameters {:query :lipas.api/query-params
-                      :body  (s/or :new :lipas/new-sports-site
-                                   :existing :lipas/sports-site)}
+         :parameters
+         {:query :lipas.api/query-params
+          :body  map?}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [draft? (-> req :parameters :query :draft utils/->bool)
-                 resp   (core/upsert-sports-site! db identity body-params draft?)
-                 _      (when-not draft?
-                          (core/add-to-integration-out-queue! db resp))
-                 _      (core/index! search resp :sync)]
-             {:status 201
-              :body   resp}))}}]
+           (let [spec   :lipas/new-or-existing-sports-site
+                 draft? (-> req :parameters :query :draft utils/->bool)
+                 valid? (s/valid? spec body-params)]
+             (if valid?
+               (let [resp (core/upsert-sports-site! db identity body-params draft?)]
+                 (when-not draft?
+                   (core/add-to-integration-out-queue! db resp))
+                 {:status 201 :body resp})
+               {:status 400
+                :body   (s/explain-data spec body-params)})))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
@@ -112,8 +116,9 @@
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:parameters {:path  {:type-code int?}
-                      :query :lipas.api/query-params}
+        {:parameters
+         {:path  {:type-code int?}
+          :query :lipas.api/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
@@ -194,9 +199,10 @@
       ["/actions/update-user-permissions"
        {:post
         {:middleware [mw/token-auth mw/auth mw/admin]
-         :parameters {:body
-                      {:id          string?
-                       :permissions :lipas.user/permissions}}
+         :parameters
+         {:body
+          {:id          string?
+           :permissions :lipas.user/permissions}}
          :handler
          (fn [req]
            (let [params (-> req :parameters :body)
@@ -244,8 +250,10 @@
 
       ["/actions/create-energy-report"
        {:post
-        {:parameters {:body {:year      int?
-                             :type-code int?}}
+        {:parameters
+         {:body
+          {:year      int?
+           :type-code int?}}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :body :type-code)

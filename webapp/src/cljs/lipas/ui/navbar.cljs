@@ -3,10 +3,9 @@
    [clojure.string :as string]
    [lipas.ui.events :as events]
    [lipas.ui.mui :as mui]
-   [lipas.ui.routes :refer [navigate!]]
    [lipas.ui.subs :as subs]
    [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
@@ -77,14 +76,15 @@
         [mui/list-item-text {:primary (tr :login/logout)}]])]))
 
 (defn separator []
-  [mui/typography {:component "span"
-                   :color "secondary"
-                   :variant "title"
-                   :style
-                   {:display "inline"
-                    :font-weight "bold"
-                    :font-size "1em"
-                    :margin "0.5em"}}
+  [mui/typography
+   {:component "span"
+    :color     "secondary"
+    :variant   "h6"
+    :style
+    {:display     "inline"
+     :font-weight "bold"
+     :font-size   "1em"
+     :margin      "0.5em"}}
    "|"])
 
 (defn lang-btn [locale]
@@ -119,7 +119,7 @@
       ;; Close btn
       [mui/list-item {:button   true
                       :on-click toggle-drawer}
-       [mui/typography {:variant :title}
+       [mui/typography {:variant "h6"}
         (tr :menu/headline)]
        [mui/list-item-secondary-action
         [mui/icon-button {:on-click toggle-drawer}
@@ -211,15 +211,15 @@
 
 (defn get-sub-page [panel tr]
   (case panel
-    :home-panel           {:text (tr :home-page/headline)
+    :front-page-panel     {:text (tr :home-page/headline)
                            :href "/#/etusivu"}
     :admin-panel          {:text (tr :lipas.admin/headline)
                            :href "/#/admin"}
     :sports-panel         {:text (tr :sport/headline)
                            :href "/#/liikuntapaikat"}
-    :ice-panel            {:text (tr :ice/headline)
+    :ice-stadiums-panel   {:text (tr :ice/headline)
                            :href "/#/jaahalliportaali"}
-    :swim-panel           {:text (tr :swim/headline)
+    :swimming-pools-panel {:text (tr :swim/headline)
                            :href "/#/uimahalliportaali"}
     :login-panel          {:text (tr :login/headline)
                            :href "/#/kirjaudu"}
@@ -254,50 +254,53 @@
       [svg/jyu-logo]]]
 
       ;;; Header text
-    [mui/typography {:variant "title"
-                     :style   {:flex        1
-                               :font-size   "1em"
-                               :font-weight "bold"}}
+    [mui/typography
+     {:variant "h6"
+      :style
+      {:flex        1
+       :font-size   "1em"
+       :font-weight "bold"}}
 
      ;; University of Jyväskylä
      [mui/hidden {:sm-down true}
-      [mui/typography {:component "a"
-                       :variant   "title"
-                       :href      "https://www.jyu.fi"
-                       :style
-                       (merge mui/headline-aleo
-                              {:display         :inline
-                               :font-size       "1em"
-                               :text-transform  :none
-                               :text-decoration :none})}
+      [mui/typography
+       {:component "a"
+        :variant   "h6"
+        :href      "https://www.jyu.fi"
+        :style
+        (merge mui/headline-aleo
+               {:display         "inline"
+                :font-size       "1em"
+                :text-transform  "none"
+                :text-decoration "none"})}
        (tr :menu/jyu)]
 
       [separator]]
 
      ;; LIPAS
      [mui/typography {:component "a"
-                      :variant   "title"
+                      :variant   "h6"
                       :href      "/#/etusivu"
                       :style
                       (merge mui/headline-aleo
-                             {:display         :inline
+                             {:display         "inline"
                               :font-size       "1em"
-                              :text-transform  :none
-                              :text-decoration :none})}
+                              :text-transform  "none"
+                              :text-decoration "none"})}
 
       (tr :menu/headline)]
 
      [separator]
 
      [mui/typography {:component "a"
-                      :variant   "title"
+                      :variant   "h6"
                       :href      (:href (get-sub-page active-panel tr))
                       :style
                       (merge mui/headline-aleo
-                             {:display         :inline
+                             {:display         "inline"
                               :font-size       "1em"
-                              :text-transform  :none
-                              :text-decoration :none})}
+                              :text-transform  "none"
+                              :text-decoration "none"})}
 
       ;; Sub page header
       (:text (get-sub-page active-panel tr))]]

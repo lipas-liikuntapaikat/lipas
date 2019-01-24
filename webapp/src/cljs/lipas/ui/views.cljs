@@ -12,20 +12,20 @@
    [lipas.ui.map.views :as map]
    [lipas.ui.subs :as subs]
    [lipas.ui.swimming-pools.views :as swimming-pools]
-   [lipas.ui.user.reset-password :as reset-password]
+   [lipas.ui.forgot-password.views :as forgot-password]
    [lipas.ui.user.views :as user]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
 (defn- panels [panel-name tr logged-in?]
   (case panel-name
-    :home-panel           [front-page/main tr]
+    :front-page-panel     [front-page/main tr]
     :admin-panel          [admin/main]
     :map-panel            [map/main tr]
-    :ice-panel            [ice-stadiums/main]
-    :swim-panel           [swimming-pools/main]
+    :ice-stadiums-panel   [ice-stadiums/main]
+    :swimming-pools-panel [swimming-pools/main]
     :login-panel          [login/main tr]
-    :reset-password-panel [reset-password/main tr]
+    :reset-password-panel [forgot-password/main tr]
     :register-panel       [register/main tr]
     :user-panel           [user/main tr]
     [front-page/main tr]))
@@ -79,7 +79,7 @@
                           {:on-click #(==> [::events/set-active-disclaimer nil])}
                           [mui/icon "close"]])}]
               [mui/card-content
-               [mui/typography {:variant :body2}
+               [mui/typography {:variant "body2"}
                 disclaimer]]]])])
 
        [mui/mui-theme-provider {:theme mui/jyu-theme-light}
