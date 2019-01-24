@@ -239,7 +239,8 @@
                  {:on-click #(==> [::events/zoom-to-site lipas-id])
                   :variant  "fab"
                   :color    "default"}
-                 [mui/icon "my_location"]]])
+                 [mui/icon {:color "secondary"}
+                  "place"]]])
 
              ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
