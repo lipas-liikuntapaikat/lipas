@@ -106,6 +106,15 @@
                {:status 400
                 :body   (s/explain-data spec body-params)})))}}]
 
+      ["/sports-sites/:lipas-id"
+       {:get
+        {:parameters {:path {:lipas-id int?}}
+         :handler
+         (fn [{{{:keys [lipas-id]} :path} :parameters}]
+           (if-let [res (core/get-sports-site db lipas-id)]
+             {:status 200 :body res}
+             {:status 404 :body {:message "Not found"}}))}}]
+
       ["/sports-sites/history/:lipas-id"
        {:get
         {:parameters {:path {:lipas-id int?}}

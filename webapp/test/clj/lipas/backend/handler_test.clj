@@ -310,6 +310,24 @@
                          first
                          :admin)))))
 
+(deftest get-sports-site-test
+  (let [user     (gen-user {:db? true :admin? true})
+        rev1     (-> (gen/generate (s/gen :lipas/sports-site))
+                     (assoc :status "active"))
+        _        (core/upsert-sports-site!* db user rev1)
+        lipas-id (:lipas-id rev1)
+        resp     (app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                          (mock/content-type "application/json")))
+        body     (<-json (:body resp))]
+    (is (= 200 (:status resp)))
+    (is (s/valid? :lipas/sports-site body))))
+
+(deftest get-non-existing-sports-site-test
+  (let [lipas-id 9999999999
+        resp     (app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                          (mock/content-type "application/json")))]
+    (is (= 404 (:status resp)))))
+
 (deftest get-sports-site-history-test
   (let [user     (gen-user {:db? true :admin? true})
         rev1     (-> (gen/generate (s/gen :lipas/sports-site))
