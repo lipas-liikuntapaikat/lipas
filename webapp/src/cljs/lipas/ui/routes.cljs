@@ -58,10 +58,14 @@
   ([path]
    (navigate! path []))
   ([path & args]
-   (let [kw (cond
-              (keyword? path) path
-              (string? path) (find-name path))]
-     (apply rfe/push-state (into [kw] (remove nil?) args)))))
+   (if (and (string? path) (or (string/starts-with? path "http")
+                               (string/starts-with? path "tel:")
+                               (string/starts-with? path "mailto:")))
+     (set! (.-location js/window) path)
+     (let [kw (cond
+                (keyword? path) path
+                (string? path) (find-name path))]
+       (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
 (defonce match (atom nil))
 
