@@ -5,8 +5,7 @@
    [lipas.ui.login.events :as events]
    [lipas.ui.login.subs :as subs]
    [lipas.ui.mui :as mui]
-   [lipas.ui.routes :refer [navigate!]]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
    [reagent.core :as r]))
 
 (defn set-field [& args]
@@ -46,11 +45,9 @@
     [mui/grid {:container true :spacing 16}
 
      ;; Helper text
-     [mui/grid {:item true :xs 12 :style {:padding-top    "1em"
-                                          :padding-bottom "1em"}}
-      [mui/paper {:style
-                  {:background-color mui/gray3
-                   :padding          "1em"}}
+     [mui/grid
+      {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
+      [mui/paper {:style {:background-color mui/gray3 :padding "1em"}}
        [mui/typography {:variant "body2"}
         (tr :login/magic-link-help)]]]
 
@@ -89,8 +86,7 @@
 
        ;; Success messages
        (when link-ordered?
-         [mui/typography {:style   {:margin-top "1em"}
-                          :variant "body2"}
+         [mui/typography {:style {:margin-top "1em"} :variant "body2"}
           (tr :login/magic-link-ordered)])]]]))
 
 (defn login-form [{:keys [tr]}]

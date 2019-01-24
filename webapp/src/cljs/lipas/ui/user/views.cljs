@@ -4,8 +4,7 @@
    [lipas.ui.components :as lui]
    [lipas.ui.user.subs :as subs]
    [lipas.ui.user.events :as events]
-   [lipas.ui.routes :refer [navigate!]]
-   [lipas.ui.utils :refer [<== ==>]]))
+   [lipas.ui.utils :refer [<== ==> navigate!]]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -100,7 +99,7 @@
                     #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
-        [mui/typography {:variant :body2}
+        [mui/typography {:variant "body2"}
          (tr :lipas.user/view-basic-info)]]
 
        ;; Report energy consumption button
@@ -111,7 +110,7 @@
                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
-        [mui/typography {:variant :body2}
+        [mui/typography {:variant "body2"}
          (tr :lipas.user/report-energy-and-visitors)]]]]
 
      [mui/dialog-actions

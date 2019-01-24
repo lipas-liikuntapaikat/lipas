@@ -639,12 +639,12 @@
     :types #{2510 2520}}])
 
 (def tabs
-  {0 "/#/jaahalliportaali"
-   1 "/#/jaahalliportaali/ilmoita-tiedot"
-   2 "/#/jaahalliportaali/hallit"
-   3 "/#/jaahalliportaali/hallien-vertailu"
-   4 "/#/jaahalliportaali/energia-info"
-   5 "/#/jaahalliportaali/raportit"})
+  {0 :lipas.ui.routes.ice-stadiums/front-page
+   1 :lipas.ui.routes.ice-stadiums/report-consumption
+   2 :lipas.ui.routes.ice-stadiums/list-view
+   3 :lipas.ui.routes.ice-stadiums/visualizations
+   4 :lipas.ui.routes.ice-stadiums/energy-info
+   5 :lipas.ui.routes.ice-stadiums/reports})
 
 (defn create-panel [tr logged-in?]
   (let [active-tab (<== [::subs/active-tab])
@@ -697,7 +697,4 @@
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
-    (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
-    (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
-    (==> [::events/display-stats (dec utils/this-year)])
     [create-panel tr logged-in?]))
