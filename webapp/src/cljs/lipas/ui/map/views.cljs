@@ -179,16 +179,6 @@
           0 [mui/grid {:container true}
              [mui/grid {:item true :xs 12}
 
-              ^{:key (str "location-" lipas-id)}
-              [sports-sites/location-form
-               {:tr            tr
-                :read-only?    (not editing?)
-                :cities        cities
-                :edit-data     (:location edit-data)
-                :display-data  (:location display-data)
-                :on-change     (partial set-field :location)
-                :sub-headings? true}]
-
               ^{:key (str "basic-data-" lipas-id)}
               [sports-sites/form
                {:tr              tr
@@ -200,7 +190,17 @@
                 :admins          admins
                 :owners          owners
                 :on-change       set-field
-                :sub-headings?   true}]]]
+                :sub-headings?   true}]
+
+              ^{:key (str "location-" lipas-id)}
+              [sports-sites/location-form
+               {:tr            tr
+                :read-only?    (not editing?)
+                :cities        cities
+                :edit-data     (:location edit-data)
+                :display-data  (:location display-data)
+                :on-change     (partial set-field :location)
+                :sub-headings? true}]]]
 
           ;; Properties tab
           1 (if portal
@@ -459,14 +459,6 @@
               0 [mui/grid {:container true}
                  [mui/grid {:item true :xs 12}
 
-                  [sports-sites/location-form
-                   {:tr            tr
-                    :read-only?    false
-                    :cities        cities
-                    :edit-data     (:location data)
-                    :on-change     (partial set-field :location)
-                    :sub-headings? true}]
-
                   [sports-sites/form
                    {:tr              tr
                     :edit-data       data
@@ -476,7 +468,15 @@
                     :admins          admins
                     :owners          owners
                     :on-change       set-field
-                    :sub-headings?   true}]]]
+                    :sub-headings?   true}]
+
+                  [sports-sites/location-form
+                   {:tr            tr
+                    :read-only?    false
+                    :cities        cities
+                    :edit-data     (:location data)
+                    :on-change     (partial set-field :location)
+                    :sub-headings? true}]]]
 
               ;; Properties tab
               1 [sports-sites/properties-form
