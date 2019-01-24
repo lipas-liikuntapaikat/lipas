@@ -215,9 +215,8 @@
         [mui/list-item-text "lipasinfo.fi"]]
 
        ;; Youtube
-       [mui/list-item {:button true :on-click #(navigate! (:lipasinfo links))}
+       [mui/list-item {:button true :on-click #(navigate! (:youtube links))}
         [mui/list-item-icon
-         ;;[mui/icon "play_circle_filled"]
          [mui/icon "video_library"]]
         [mui/list-item-text "Youtube"]]
 
