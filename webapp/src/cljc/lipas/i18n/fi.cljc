@@ -20,12 +20,9 @@
    {:headline "Etusivu"}
 
    :sport
-   {:headline          "Liikuntapaikat"
-    :description       "LIPAS-järjestelmä tarjoaa ajantasaisen tiedon Suomen
-    julkisista liikuntapaikoista avoimessa tietokannassa."
-    :legacy-disclaimer "Liikuntapaikat sijaitsevat toistaiseksi
-    nykyisessä LIPAS-järjestelmässä. Pääset sinne alla olevasta
-    linkistä."
+   {:headline    "Liikuntapaikat"
+    :description "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista
+    liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa."
 
     :up-to-date-information "Ajantasainen tieto Suomen liikuntapaikoista"
     :updating-tools         "Päivitystyökalut tiedontuottajille"
