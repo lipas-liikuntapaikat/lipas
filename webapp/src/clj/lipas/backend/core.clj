@@ -95,15 +95,18 @@
 
 ;;; Sports-sites ;;;
 
+(defn get-sports-site [db lipas-id]
+  (-> (db/get-sports-site db lipas-id)
+      not-empty))
+
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
                 (permissions/publish? (:permissions user) sports-site))
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
-;; TODO change to lighter check query
 (defn- check-sports-site-exists! [db lipas-id]
-  (when (empty? (db/get-sports-site-history db lipas-id))
+  (when (empty? (db/get-sports-site db lipas-id))
     (throw (ex-info "Sports site not found"
                     {:type     :sports-site-not-found
                      :lipas-id lipas-id}))))

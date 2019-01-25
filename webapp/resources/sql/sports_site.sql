@@ -27,6 +27,14 @@ VALUES (
   :city_code
 );
 
+-- :name get
+-- :command :query
+-- :result :one
+-- :doc Returns current revision of sports-site with given lipas-id
+SELECT *
+FROM sports_site_current
+WHERE lipas_id = :lipas_id
+
 -- :name get-latest-by-type-code
 -- :command :query
 -- :result :many

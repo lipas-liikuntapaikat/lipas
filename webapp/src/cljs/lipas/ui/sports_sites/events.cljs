@@ -148,6 +148,25 @@
      :on-failure      [::get-failure]}}))
 
 (re-frame/reg-event-fx
+ ::get-success-single
+ (fn [{:keys [db]} [_ on-success site]]
+   {:db         (utils/add-to-db db site)
+    :dispatch-n on-success}))
+
+(re-frame/reg-event-fx
+ ::get
+ (fn [{:keys [db]} [_ lipas-id on-success]]
+   (let [latest (get-in db [:sports-sites lipas-id :latest])]
+     (if latest
+       {:dispatch-n on-success} ;; No need for get if we already have the data
+       {:http-xhrio
+        {:method          :get
+         :uri             (str (:backend-url db) "/sports-sites/" lipas-id)
+         :response-format (ajax/json-response-format {:keywords? true})
+         :on-success      [::get-success-single on-success]
+         :on-failure      [::get-failure]}}))))
+
+(re-frame/reg-event-fx
  ::get-history
  (fn [{:keys [db]} [_ lipas-id]]
    {:http-xhrio
