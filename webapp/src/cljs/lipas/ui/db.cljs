@@ -7,6 +7,7 @@
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
    [lipas.data.prop-types :as prop-types]
+   [lipas.data.sports-sites :as sports-sites]
    [lipas.data.styles :as styles]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as types]
@@ -34,6 +35,12 @@
    ;; Sports sites
    :sports-sites {}
 
+   :delete-dialog
+   {:selected-status "out-of-service-permanently"
+    :selected-year   utils/this-year}
+
+   :statuses              sports-sites/statuses
+   :document-statuses     sports-sites/document-statuses
    :admins                admins/all
    :owners                owners/all
    :cities                (utils/index-by :city-code cities/active)

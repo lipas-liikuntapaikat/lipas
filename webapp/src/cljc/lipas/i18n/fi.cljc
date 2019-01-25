@@ -60,6 +60,9 @@
                            (str "Uusi " (-> type :name locale))
                            "Uusi liikuntapaikka"))
     :add-new           "Lisää liikuntapaikka"
+    :delete            "Poista {1}"
+    :delete-reason     "Poiston syy"
+
     :surface-materials "Pintamateriaalit"}
 
    :type

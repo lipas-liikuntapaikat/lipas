@@ -138,3 +138,8 @@
  ::toggle-drawer
  (fn [db _]
    (update-in db [:map :drawer-open?] not)))
+
+(re-frame/reg-event-db
+ ::toggle-delete-dialog
+ (fn [db _]
+   (update-in db [:map :delete-dialog-open?] not)))
