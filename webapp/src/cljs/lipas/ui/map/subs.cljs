@@ -81,8 +81,3 @@
  ::drawer-open?
  (fn [db _]
    (-> db :map :drawer-open?)))
-
-(re-frame/reg-sub
- ::delete-dialog-open?
- (fn [db _]
-   (-> db :map :delete-dialog-open?)))

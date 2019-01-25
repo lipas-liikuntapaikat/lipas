@@ -221,6 +221,11 @@
    (utils/set-field db (into [:new-sports-site :data] path) value)))
 
 (re-frame/reg-event-db
+ ::toggle-delete-dialog
+ (fn [db _]
+   (update-in db [:delete-dialog :open?] not)))
+
+(re-frame/reg-event-db
  ::select-delete-status
  (fn [db [_ status]]
    (assoc-in db [:delete-dialog :selected-status] status)))

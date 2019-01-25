@@ -20,7 +20,10 @@
  (fn [sites _]
    (not-empty
     (reduce-kv (fn [m k v]
-                 (assoc m k (get-in v [:history (:latest v)])))
+                 (let [site (get-in v [:history (:latest v)])]
+                   (if (= "active" (:status site))
+                     (assoc m k site)
+                     {})))
                {}
                sites))))
 
@@ -281,6 +284,11 @@
    (select-keys statuses ["out-of-service-temporarily"
                           "out-of-service-permanently"
                           "incorrect-data"])))
+
+(re-frame/reg-sub
+ ::delete-dialog-open?
+ (fn [db _]
+   (-> db :delete-dialog :open?)))
 
 (re-frame/reg-sub
  ::selected-delete-status
