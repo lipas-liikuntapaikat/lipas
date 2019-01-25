@@ -15,13 +15,6 @@
    [lipas.schema.core :as schema]
    [lipas.ui.utils :as utils]))
 
-(defn make-color-list []
-  (reduce
-   (fn [m [k v]]
-     (assoc m k {:fill   (-> v :fill :color)
-                 :stroke (-> v :stroke :color)}))
-   {} styles/all))
-
 (def default-db
   {:active-panel :main-panel
    :backend-url  "/api"
