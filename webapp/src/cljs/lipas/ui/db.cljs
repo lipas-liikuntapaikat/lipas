@@ -7,6 +7,7 @@
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
    [lipas.data.prop-types :as prop-types]
+   [lipas.data.sports-sites :as sports-sites]
    [lipas.data.styles :as styles]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as types]
@@ -14,13 +15,6 @@
    [lipas.reports :as reports]
    [lipas.schema.core :as schema]
    [lipas.ui.utils :as utils]))
-
-(defn make-color-list []
-  (reduce
-   (fn [m [k v]]
-     (assoc m k {:fill   (-> v :fill :color)
-                 :stroke (-> v :stroke :color)}))
-   {} styles/all))
 
 (def default-db
   {:active-panel :main-panel
@@ -41,6 +35,13 @@
    ;; Sports sites
    :sports-sites {}
 
+   :delete-dialog
+   {:open?           false
+    :selected-status "out-of-service-permanently"
+    :selected-year   utils/this-year}
+
+   :statuses              sports-sites/statuses
+   :document-statuses     sports-sites/document-statuses
    :admins                admins/all
    :owners                owners/all
    :cities                (utils/index-by :city-code cities/active)

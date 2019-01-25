@@ -12,9 +12,9 @@
  ::latest-ice-stadium-revs
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
-   (as-> sites $
-     (into {} (filter (comp #{2510 2520} :type-code :type second)) $)
-     (not-empty $))))
+   (->> sites
+     (into {} (filter (comp #{2510 2520} :type-code :type second)))
+     not-empty)))
 
 (re-frame/reg-sub
  ::total-counts
