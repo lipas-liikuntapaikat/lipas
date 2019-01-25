@@ -432,5 +432,53 @@
           :value     year
           :on-change #(==> [::events/select-delete-year])}])]]))
 
+(defn site-view [{:keys [title on-close close-label bottom-actions lipas-id]}
+                 & contents]
+  (let [tr                  (<== [:lipas.ui.subs/translator])
+        delete-dialog-open? (<== [::subs/delete-dialog-open?])]
+
+    [mui/grid {:container true :style {:background-color mui/gray1}}
+     [mui/grid {:item true :xs 12 :style {:padding "8px 8px 0px 8px"}}
+
+      (when delete-dialog-open?
+        [delete-dialog
+         {:tr       tr
+          :lipas-id lipas-id
+          :on-close #(==> [::events/toggle-delete-dialog])}])
+
+      [mui/paper {:style {:background-color "#fff"}}
+
+       ;; Site name
+       [mui/tool-bar {:disable-gutters true}
+        [mui/tooltip {:title (or close-label "")}
+         [mui/icon-button
+          {:on-click on-close
+           :style    {:margin-left  "0.5em"
+                      :margin-right "0.4em"}}
+
+          ;; "back to listing" button
+          [mui/icon {:color :primary}
+           "arrow_back_ios"]]]
+        [mui/typography {:style {:color mui/primary} :variant "h4"}
+         title]]]]
+
+     ;; Contents
+     (into
+      [mui/grid {:item  true :xs 12
+                 :style {:padding 8}}]
+      contents)
+
+     ;; Floating actions
+     (into
+      [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}]
+      (interpose [:span {:style {:margin-left  "0.25em"
+                                 :margin-right "0.25em"}}]
+                 bottom-actions))
+
+     ;; Small footer on top of which floating container may scroll
+     [mui/grid {:item  true :xs 12
+                :style {:height           "5em"
+                        :background-color mui/gray1}}]]))
+
 (defn main [tr]
   [mui/typography "Nothing here"])

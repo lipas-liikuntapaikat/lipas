@@ -254,47 +254,52 @@
     ;; actions
     (r/with-let [selected-item (r/atom nil)
                  key-fn (or key-fn (constantly nil))]
-      [mui/grid {:container   true
-                 :spacing     8
-                 :justify     "flex-end"
-                 :align-items "center"}
+      [mui/grid
+       {:container   true
+        :spacing     8
+        :justify     "flex-end"
+        :align-items "center"}
 
        ;; Table
        [mui/grid {:item true :xs 12}
+
+        ;; Handle horizontal overflow with scrollbar
         [:div {:style {:overflow-x "auto"}}
          [mui/table
 
+          ;; Headear row
           [mui/table-head
            (into [mui/table-row {:hover true}
                   [mui/table-cell ""]]
                  (for [[_ header] headers]
                    [mui/table-cell header]))]
 
+          ;; Body
           [mui/table-body
            (doall
+            ;; Rows
             (for [item items
                   :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
-              [mui/table-row {:key   id
-                              :hover true}
+              [mui/table-row {:key id :hover true}
                [mui/table-cell {:padding "checkbox"}
-                [mui/checkbox {:checked   (= item @selected-item)
-                               :on-change (fn [_ checked?]
-                                            (let [v (when checked? item)]
-                                              (reset! selected-item v)))}]]
+                [mui/checkbox
+                 {:checked   (= item @selected-item)
+                  :on-change (fn [_ checked?]
+                               (let [v (when checked? item)]
+                                 (reset! selected-item v)))}]]
+
+               ;; Cells
                (for [[k _] headers
                      :let  [v (get item k)]]
-                 [mui/table-cell {:key     (str id k)
-                                  :padding "dense"}
+                 [mui/table-cell {:key (str id k) :padding "dense"}
                   (display-value v)])]))]]]]
 
        ;; Editing tools
-       [mui/grid {:item       true :xs 10
-                  :class-name :no-print}
+       [mui/grid {:item true :xs 10 :class-name :no-print}
 
         ;; Edit button
         (when @selected-item
-          [mui/tooltip {:title     (or edit-tooltip "")
-                        :placement "top"}
+          [mui/tooltip {:title (or edit-tooltip "") :placement "top"}
            [mui/icon-button {:on-click #(on-edit @selected-item)}
             [mui/icon "edit"]]])
 
@@ -308,57 +313,52 @@
                                 (reset! selected-item nil))}])]
 
        ;; Add button
-       [mui/grid {:item       true :xs 2
-                  :style      {:text-align "right"}
-                  :class-name :no-print}
-        [mui/tooltip {:title     (or add-tooltip "")
-                      :placement "left"}
-         [mui/button {:style    {:margin-top "1em"}
-                      :on-click on-add
-                      :variant  "fab"
-                      :color    "secondary"}
+       [mui/grid
+        {:item       true :xs 2
+         :style      {:text-align "right"}
+         :class-name :no-print}
+        [mui/tooltip {:title (or add-tooltip "") :placement "left"}
+         [mui/button
+          {:style    {:margin-top "1em"}
+           :on-click on-add
+           :variant  "fab"
+           :color    "secondary"}
           [mui/icon "add"]]]]])))
 
 (defn dialog [{:keys [title on-save on-close save-label save-enabled?
                       cancel-label]} content]
-  [mui/dialog {:open true
-               :full-width true
-               :on-close on-close}
+  [mui/dialog {:open true :full-width true :on-close on-close}
    [mui/dialog-title title]
    [mui/dialog-content content]
    [mui/dialog-actions
     [mui/button {:on-click on-close}
      cancel-label]
-    [mui/button {:on-click on-save
-                 :disabled (not save-enabled?)}
+    [mui/button {:on-click on-save :disabled (not save-enabled?)}
      save-label]]])
 
-(defn form-card [{:keys [title xs md lg]
-                  :or   {xs 12 md 6}} & content]
-  [mui/grid {:item true
-             :xs   xs
-             :md   md
-             :lg   lg}
-   [mui/card {:square true
-              :style  {:height "100%"}}
+(defn form-card [{:keys [title xs md lg] :or {xs 12 md 6}} & content]
+  [mui/grid {:item true :xs xs :md md :lg lg}
+   [mui/card {:square true :style {:height "100%"}}
     [mui/card-header {:title title}]
     (into [mui/card-content] content)]])
 
 (defn notification [{:keys [notification on-close]}]
-  [mui/snackbar {:key (gensym)
-                 :auto-hide-duration 5000
-                 :open true
-                 :anchor-origin {:vertical "top"
-                                 :horizontal "right"}
-                 :on-close on-close}
-   [mui/snackbar-content {:message (:message notification)
-                          :action (r/as-element
-                                   [mui/icon-button {:key "close"
-                                                     :on-click on-close
-                                                     :color "secondary"}
-                                    (if (:success? notification)
-                                      [mui/icon "done"]
-                                      [mui/icon "warning"])])}]])
+  [mui/snackbar
+   {:key                (gensym)
+    :auto-hide-duration 5000
+    :open               true
+    :anchor-origin      {:vertical "top" :horizontal "right"}
+    :on-close           on-close}
+   [mui/snackbar-content
+    {:message (:message notification)
+     :action  (r/as-element
+               [mui/icon-button
+                {:key      "close"
+                 :on-click on-close
+                 :color    "secondary"}
+                (if (:success? notification)
+                  [mui/icon "done"]
+                  [mui/icon "warning"])])}]])
 
 (defn trim-safe [s]
   (if (string? s)
@@ -657,7 +657,7 @@
                                  discard-tooltip edit-tooltip
                                  publish-tooltip on-edit-start
                                  invalid-message on-edit-end
-                                 remove-tooltip on-remove
+                                 delete-tooltip on-delete
                                  on-publish]}]
 
   [(when (and editing? user-can-publish?)
@@ -668,11 +668,11 @@
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
-   (when (not editing?)
+   (when (and on-delete logged-in? (not editing?))
      [delete-button
-      {:variant          "fab"
-       :on-click         on-remove
-       :tooltip          remove-tooltip}])
+      {:variant  "fab"
+       :on-click on-delete
+       :tooltip  delete-tooltip}])
 
    (when (and editing? (not user-can-publish?))
      [save-button
@@ -698,46 +698,6 @@
                     (on-edit-end %)
                     (on-edit-start %))
        :tooltip  edit-tooltip}])])
-
-(defn site-view [{:keys [title on-close close-label bottom-actions]}
-                 & contents]
-  [mui/grid {:container true
-             :style     {:background-color mui/gray1}}
-   [mui/grid {:item  true :xs 12
-              :style {:padding "8px 8px 0px 8px"}}
-    [mui/paper {:style {:background-color "#fff"}}
-
-     ;; Site name
-     [mui/tool-bar {:disable-gutters true}
-      [mui/tooltip {:title (or close-label "")}
-       [mui/icon-button
-        {:on-click on-close
-         :style    {:margin-left  "0.5em"
-                    :margin-right "0.4em"}}
-
-        ;; "back to listing" button
-        [mui/icon {:color :primary}
-         "arrow_back_ios"]]]
-      [mui/typography {:style {:color mui/primary} :variant "h4"}
-       title]]]]
-
-   ;; Contents
-   (into
-    [mui/grid {:item  true :xs 12
-               :style {:padding 8}}]
-    contents)
-
-   ;; Floating actions
-   (into
-    [floating-container {:right 24 :bottom 16 :background-color "transparent"}]
-    (interpose [:span {:style {:margin-left  "0.25em"
-                               :margin-right "0.25em"}}]
-               bottom-actions))
-
-   ;; Small footer on top of which floating container may scroll
-   [mui/grid {:item  true :xs 12
-              :style {:height           "5em"
-                      :background-color mui/gray1}}]])
 
 (defn confirmation-dialog [{:keys [title message on-cancel on-decline
                                    decline-label cancel-label

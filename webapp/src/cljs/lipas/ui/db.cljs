@@ -36,7 +36,8 @@
    :sports-sites {}
 
    :delete-dialog
-   {:selected-status "out-of-service-permanently"
+   {:open?           false
+    :selected-status "out-of-service-permanently"
     :selected-year   utils/this-year}
 
    :statuses              sports-sites/statuses

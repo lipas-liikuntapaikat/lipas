@@ -66,9 +66,9 @@
 
         set-field (partial set-field lipas-id)]
 
-    [lui/site-view
-     {:title (-> display-data :name)
-
+    [sports-site/site-view
+     {:title       (-> display-data :name)
+      :lipas-id    lipas-id
       :on-close    close
       :close-label (tr :actions/back-to-listing)
 
@@ -89,6 +89,8 @@
         :save-draft-tooltip (tr :actions/save-draft)
         :on-publish         #(==> [::site-events/save-edits lipas-id])
         :publish-tooltip    (tr :actions/save)
+        ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
+        ;;:delete-tooltip     (tr :actions/delete)
         :invalid-message    (tr :error/invalid-form)})}
 
      [mui/grid {:container true :spacing 8}
