@@ -428,9 +428,9 @@
 
       (when (= "out-of-service-permanently" status)
         [lui/year-selector
-         {:label     "Vuosi"
+         {:label     (tr :time/year)
           :value     year
-          :on-change #(==> [::events/select-delete-year])}])]]))
+          :on-change #(==> [::events/select-delete-year %])}])]]))
 
 (defn site-view [{:keys [title on-close close-label bottom-actions lipas-id]}
                  & contents]
