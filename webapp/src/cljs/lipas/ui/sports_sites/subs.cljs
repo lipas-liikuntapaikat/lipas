@@ -20,7 +20,10 @@
  (fn [sites _]
    (not-empty
     (reduce-kv (fn [m k v]
-                 (assoc m k (get-in v [:history (:latest v)])))
+                 (let [site (get-in v [:history (:latest v)])]
+                   (if (= "active" (:status site))
+                     (assoc m k site)
+                     {})))
                {}
                sites))))
 
@@ -268,3 +271,31 @@
    (let [data (-> db :new-sports-site :data)]
      ;; (s/explain :lipas/new-sports-site data)
      (s/valid? :lipas/new-sports-site data))))
+
+(re-frame/reg-sub
+ ::statuses
+ (fn [db _]
+   (-> db :statuses)))
+
+(re-frame/reg-sub
+ ::delete-statuses
+ :<- [::statuses]
+ (fn [statuses _]
+   (select-keys statuses ["out-of-service-temporarily"
+                          "out-of-service-permanently"
+                          "incorrect-data"])))
+
+(re-frame/reg-sub
+ ::delete-dialog-open?
+ (fn [db _]
+   (-> db :delete-dialog :open?)))
+
+(re-frame/reg-sub
+ ::selected-delete-status
+ (fn [db _]
+   (-> db :delete-dialog :selected-status)))
+
+(re-frame/reg-sub
+ ::selected-delete-year
+ (fn [db _]
+   (-> db :delete-dialog :selected-year)))

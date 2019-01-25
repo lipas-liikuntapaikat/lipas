@@ -49,22 +49,26 @@
     swimming-pools/routes]
    {:data {:coercion rss/coercion}}))
 
-(defn find-name [path]
-  (let [path  (string/replace path #"/#" "")
-        match (rf/match-by-path routes path)]
-    (-> match :data :name)))
+(defn match-by-path [path]
+  (let [path (string/replace path #"/#" "")]
+    (rf/match-by-path routes path)))
 
 (defn navigate!
   ([path]
-   (navigate! path []))
+   (navigate! path nil))
   ([path & args]
    (if (and (string? path) (or (string/starts-with? path "http")
                                (string/starts-with? path "tel:")
                                (string/starts-with? path "mailto:")))
+     ;; External link
      (set! (.-location js/window) path)
-     (let [kw (cond
-                (keyword? path) path
-                (string? path) (find-name path))]
+
+     ;; Internal link
+     (let [match (when (string? path) (-> path match-by-path))
+           kw    (cond
+                   (keyword? path) path
+                   (string? path)  (-> match :data :name))
+           args  (conj args (-> match :parameters :path))]
        (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
 (defonce match (atom nil))

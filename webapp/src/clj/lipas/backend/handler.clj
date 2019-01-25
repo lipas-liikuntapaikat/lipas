@@ -101,6 +101,7 @@
              (if valid?
                (let [resp (core/upsert-sports-site! db identity body-params draft?)]
                  (when-not draft?
+                   (core/index! search resp :sync)
                    (core/add-to-integration-out-queue! db resp))
                  {:status 201 :body resp})
                {:status 400

@@ -122,6 +122,8 @@
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
 
+          delete-dialog-open? (<== [::sports-site-subs/delete-dialog-open?])
+
           mode (<== [::subs/mode])
 
           sub-mode (-> mode :sub-mode)
@@ -172,6 +174,12 @@
                     :text-color "secondary"}
           [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
           [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
+
+        (when delete-dialog-open?
+          [sports-sites/delete-dialog
+           {:tr       tr
+            :lipas-id lipas-id
+            :on-close #(==> [::sports-site-events/toggle-delete-dialog])}])
 
         (case @selected-tab
 
@@ -309,7 +317,9 @@
                                        (==> [::events/show-sports-site nil])
                                        (==> [::events/stop-editing]))
               :publish-tooltip    (tr :actions/save)
-              :invalid-message    (tr :error/invalid-form)})))))]])))
+              :invalid-message    (tr :error/invalid-form)
+              :on-delete          #(==> [::sports-site-events/toggle-delete-dialog])
+              :delete-tooltip     (tr :actions/delete)})))))]])))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}

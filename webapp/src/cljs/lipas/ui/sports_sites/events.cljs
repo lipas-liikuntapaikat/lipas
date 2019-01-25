@@ -58,9 +58,9 @@
 
 (re-frame/reg-event-fx
  ::commit-rev
- (fn [{:keys [db]} [_ rev draft?]]
+ (fn [{:keys [db]} [_ rev draft? on-success]]
    (let [new?       (new-site? rev)
-         on-success (when new? on-success-new)]
+         on-success (or on-success (when new? on-success-new))]
      (if (or new? (dirty? db rev))
        (commit-ajax db rev draft? on-success)
        {:dispatch [::save-success on-success rev]}))))
@@ -219,3 +219,29 @@
  ::edit-new-site-field
  (fn [db [_ path value]]
    (utils/set-field db (into [:new-sports-site :data] path) value)))
+
+(re-frame/reg-event-db
+ ::toggle-delete-dialog
+ (fn [db _]
+   (update-in db [:delete-dialog :open?] not)))
+
+(re-frame/reg-event-db
+ ::select-delete-status
+ (fn [db [_ status]]
+   (assoc-in db [:delete-dialog :selected-status] status)))
+
+(re-frame/reg-event-db
+ ::select-delete-year
+ (fn [db [_ year]]
+   (assoc-in db [:delete-dialog :selected-year] year)))
+
+(re-frame/reg-event-fx
+ ::delete
+ (fn [db [_ data status year draft?]]
+   (let [event-date (if (utils/this-year? year)
+                      (utils/timestamp)
+                      (utils/->end-of-year year))
+         data       (assoc data :event-date event-date :status status)
+         on-success (fn [] [[:lipas.ui.map.events/show-sports-site nil]
+                            [:lipas.ui.search.events/submit-search]])]
+     {:dispatch [::commit-rev data draft? on-success]})))

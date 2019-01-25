@@ -63,6 +63,7 @@
                                               :offset (str distance "m")
                                               :scale  (str (* 2 distance) "m")}}})])}}})]
     (cond-> params
+      true         (add-filter {:terms {:status.keyword ["active"]}})
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
       area-min     (add-filter {:range {:properties.area-m2 {:gte area-min}}})
