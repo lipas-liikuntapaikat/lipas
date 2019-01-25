@@ -300,7 +300,7 @@
      (if (= :list result-view)
 
        ;; Results list
-       [mui/grid {:container true :direction "column" :align-items "center"}
+       [mui/grid {:container true :direction "row" :align-items "center"}
         [mui/grid {:item true :xs 12}
          [pagination
           {:tr                tr

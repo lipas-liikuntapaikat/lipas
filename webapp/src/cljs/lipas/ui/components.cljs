@@ -231,9 +231,12 @@
               ;; Cells
               (for [[k _ hidden?] headers
                     :let          [v (get item k)]]
-                [mui/table-cell {:style (when hidden? {:display :none})
-                                 :key   (str id k)}
-                 [mui/typography {:variant "body1" :no-wrap false}
+                [mui/table-cell
+                 {:style (when hidden? {:display :none})
+                  :key   (str id k)}
+                 [mui/typography
+                  {:style   {:font-size "1em"}
+                   :variant "body1" :no-wrap false}
                   (display-value v)]])])])]
 
        (when in-progress?
