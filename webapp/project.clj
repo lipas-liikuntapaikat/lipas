@@ -9,6 +9,7 @@
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.2.12"]
 
+
    ;;; Frontend ;;;
    [org.clojure/clojurescript "1.10.439"]
    [cljsjs/react "16.6.0-0"]

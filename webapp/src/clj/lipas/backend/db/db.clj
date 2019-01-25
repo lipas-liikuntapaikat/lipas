@@ -66,6 +66,12 @@
         (->> (sports-site/marshall sports-site user)
              (sports-site/insert-sports-site-rev! tx))))))
 
+(defn get-sports-site [db-spec lipas-id]
+  (let [params (-> {:lipas-id lipas-id}
+                   db-utils/->snake-case-keywords)]
+    (-> (sports-site/get db-spec params)
+         sports-site/unmarshall)))
+
 (defn get-sports-site-history [db-spec lipas-id]
   (let [params (-> {:lipas-id lipas-id}
                    db-utils/->snake-case-keywords)]
