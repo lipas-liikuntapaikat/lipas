@@ -173,31 +173,25 @@
       [mui/list
 
        ;; info
-       [mui/list-item {:button   true
-                       :on-click #(navigate! (:open-data links))}
+       [mui/list-item {:button true :component "a" :href (:open-data links)}
         [mui/list-item-icon
          [mui/icon "info"]]
         [mui/list-item-text {:primary "Info"}]]
 
        ;; Lipas-API
-       [mui/list-item {:button   true
-                       :on-click #(navigate! (:lipas-api links))}
+       [mui/list-item {:button true :component "a" :href (:lipas-api links)}
         [mui/list-item-icon
-         [:img {:height "24px"
-                :src    "/img/swagger_logo.svg"}]]
+         [:img {:height "24px" :src "/img/swagger_logo.svg"}]]
         [mui/list-item-text {:primary "Lipas API"}]]
 
        ;; Geoserver
-       [mui/list-item {:button   true
-                       :on-click #(navigate! (:geoserver links))}
+       [mui/list-item {:button true :component "a" :href (:geoserver links)}
         [mui/list-item-icon
-         [:img {:height "24px"
-                :src    "/img/geoserver_logo.svg"}]]
+         [:img {:height "24px" :src "/img/geoserver_logo.svg"}]]
         [mui/list-item-text "Geoserver"]]
 
        ;; Github
-       [mui/list-item {:button   true
-                       :on-click #(navigate! (:github links))}
+       [mui/list-item {:button true :component "a" :href (:github links)}
         [mui/list-item-icon
          [mui/svg-icon
           [svg/github-icon]]]
@@ -209,25 +203,25 @@
       [mui/list
 
        ;; Lipasinfo
-       [mui/list-item {:button true :on-click #(navigate! (:lipasinfo links))}
+       [mui/list-item {:button true :component "a" :href (:lipasinfo links)}
         [mui/list-item-icon
          [mui/icon "library_books"]]
         [mui/list-item-text "lipasinfo.fi"]]
 
        ;; Youtube
-       [mui/list-item {:button true :on-click #(navigate! (:youtube links))}
+       [mui/list-item {:button true :component "a" :href (:youtube links)}
         [mui/list-item-icon
          [mui/icon "video_library"]]
         [mui/list-item-text "Youtube"]]
 
        ;; Email
-       [mui/list-item {:button true :on-click #(navigate! "mailto:lipasinfo@jyu.fi")}
+       [mui/list-item {:button true :component "a" :href "mailto:lipasinfo@jyu.fi"}
         [mui/list-item-icon
          [mui/icon "email"]]
         [mui/list-item-text "lipasinfo@jyu.fi"]]
 
        ;; Phone
-       [mui/list-item {:button true :on-click #(navigate! "tel:+358400247980")}
+       [mui/list-item {:button true :component "a" :href "tel:+358400247980"}
         [mui/list-item-icon
          [mui/icon "phone"]]
         [mui/list-item-text "0400 247 980"]]]]]]
