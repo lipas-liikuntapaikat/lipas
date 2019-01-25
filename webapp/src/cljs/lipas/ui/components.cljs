@@ -102,6 +102,11 @@
    [mui/button (merge props {:on-click on-click})
     [mui/icon "undo"]]])
 
+(defn delete-button [{:keys [on-click tooltip] :as props}]
+  [mui/tooltip {:title (or tooltip "") :placement "top"}
+   [mui/button (merge props {:on-click on-click})
+    [mui/icon "delete"]]])
+
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
   (r/with-let [timeout  10000
                clicked? (r/atom false)
@@ -652,7 +657,9 @@
                                  discard-tooltip edit-tooltip
                                  publish-tooltip on-edit-start
                                  invalid-message on-edit-end
+                                 remove-tooltip on-remove
                                  on-publish]}]
+
   [(when (and editing? user-can-publish?)
      [save-button
       {:variant          "extendedFab"
@@ -660,6 +667,13 @@
        :disabled         (not valid?)
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
+
+   (when (not editing?)
+     [delete-button
+      {:variant          "fab"
+       :on-click         on-remove
+       :tooltip          remove-tooltip}])
+
    (when (and editing? (not user-can-publish?))
      [save-button
       {:variant          "extendedFab"
@@ -667,11 +681,13 @@
        :disabled         (not valid?)
        :disabled-tooltip invalid-message
        :tooltip          save-draft-tooltip}])
+
    (when editing?
      [discard-button
       {:variant  :fab
        :on-click on-discard
        :tooltip  discard-tooltip}])
+
    (when (and logged-in? (not editing?))
      [edit-button
       {:variant  "fab"

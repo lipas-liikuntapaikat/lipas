@@ -398,5 +398,39 @@
           :sort-fn :city
           :items   sites}]]]]]))
 
+(defn delete-dialog [{:keys [tr lipas-id on-close]}]
+  (let [locale       (tr)
+        data         (<== [::subs/latest-rev lipas-id])
+        statuses     (<== [::subs/delete-statuses])
+        status       (<== [::subs/selected-delete-status])
+        year         (<== [::subs/selected-delete-year])
+        can-publish? (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
+        draft?       (not can-publish?)]
+
+    [lui/dialog
+     {:title         (tr :lipas.sports-site/delete (:name data))
+      :cancel-label  (tr :actions/cancel)
+      :on-close      on-close
+      :save-enabled? true
+      :on-save       (fn []
+                       (==> [::events/delete data status year draft?])
+                       (on-close))
+      :save-label    (tr :actions/delete)}
+
+     [mui/form-group
+      [lui/select
+       {:label     (tr :lipas.sports-site/delete-reason)
+        :value     status
+        :items     statuses
+        :on-change #(==> [::events/select-delete-status %])
+        :value-fn  first
+        :label-fn  (comp locale second)}]
+
+      (when (= "out-of-service-permanently" status)
+        [lui/year-selector
+         {:label     "Vuosi"
+          :value     year
+          :on-change #(==> [::events/select-delete-year])}])]]))
+
 (defn main [tr]
   [mui/typography "Nothing here"])
