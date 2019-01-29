@@ -47,7 +47,7 @@
           (==> [::events/display-site {:lipas-id lipas-id}]))}]}]]
 
    ["/hallien-vertailu"
-    {:name :lipas.ui.routes.swimming-pools/visualizatios
+    {:name :lipas.ui.routes.swimming-pools/visualizations
      :controllers
      [{:start
        (fn [& params]

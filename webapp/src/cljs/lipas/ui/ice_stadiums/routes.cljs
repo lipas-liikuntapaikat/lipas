@@ -47,7 +47,7 @@
           (==> [::events/display-site {:lipas-id lipas-id}]))}]}]]
 
    ["/hallien-vertailu"
-    {:name :lipas.ui.routes.ice-stadiums/visualizatios
+    {:name :lipas.ui.routes.ice-stadiums/visualizations
      :controllers
      [{:start
        (fn [& params]
