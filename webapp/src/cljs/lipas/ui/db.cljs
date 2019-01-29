@@ -17,7 +17,7 @@
    [lipas.ui.utils :as utils]))
 
 (def default-db
-  {:active-panel :main-panel
+  {:active-panel :front-page-panel
    :backend-url  "/api"
    :logged-in?   false
    :drawer-open? false
