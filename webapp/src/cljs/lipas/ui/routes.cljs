@@ -8,6 +8,7 @@
    [lipas.ui.login.routes :as login]
    [lipas.ui.map.routes :as lmap]
    [lipas.ui.register.routes :as register]
+   [lipas.ui.reports.routes :as reports]
    [lipas.ui.swimming-pools.routes :as swimming-pools]
    [lipas.ui.user.routes :as user]
    [lipas.ui.utils :refer [==>] :as utils]
@@ -38,13 +39,14 @@
   (rf/router
    ["/"
     root-route
+    front-page/routes
     login/routes
     user/routes
     forgot-password/routes
     register/routes
     lmap/routes
-    front-page/routes
     admin/routes
+    reports/routes
     ice-stadiums/routes
     swimming-pools/routes]
    {:data {:coercion rss/coercion}}))

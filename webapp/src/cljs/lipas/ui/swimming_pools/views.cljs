@@ -716,7 +716,7 @@
                    :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
-         [mui/tab {:label (tr :reports/headline)
+         [mui/tab {:label (tr :reports/contacts)
                    :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}

@@ -1106,9 +1106,25 @@
              :max-count (count (keys reports/fields))
              :into []))
 
+(s/def :lipas.api.energy-report.req/year
+  (s/int-in 2000 (inc utils/this-year)))
+
+(s/def :lipas.api.energy-report/req
+  (s/keys :req-un [:lipas.sports-site.type/type-code
+                   :lipas.api.energy-report.req/year]))
+
 (s/def :lipas.api.sports-site-report/req
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
                    :lipas.api.sports-site-report.req/fields]))
+
+(s/def :lipas.api.cities-report.req/city-codes
+  (s/coll-of :lipas.location.city/city-code
+             :min-count 0
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.cities-report/req
+  (s/keys :req-un [:lipas.api.cities-report.req/city-codes]))
 
 (s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
 (s/def :lipas.magic-link/login-url

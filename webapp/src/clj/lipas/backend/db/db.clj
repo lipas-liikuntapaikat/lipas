@@ -1,11 +1,12 @@
 (ns lipas.backend.db.db
   (:require
    [clojure.java.jdbc :as jdbc]
+   [lipas.backend.db.city :as city]
+   [lipas.backend.db.integration :as integration]
    [lipas.backend.db.sports-site :as sports-site]
    [lipas.backend.db.user :as user]
-   [lipas.backend.db.integration :as integration]
-   [lipas.utils :as utils]
-   [lipas.backend.db.utils :as db-utils]))
+   [lipas.backend.db.utils :as db-utils]
+   [lipas.utils :as utils]))
 
 ;; User ;;
 
@@ -145,6 +146,22 @@
   (->> {:lipas-id lipas-id}
        utils/->snake-case-keywords
        (integration/delete-from-out-queue! db-spec)))
+
+;; City ;;
+
+(defn add-city! [db-spec city]
+  (->> (city/marshall city)
+       (city/insert! db-spec)))
+
+(defn get-cities [db-spec]
+  (->> (city/get-all db-spec)
+       (map city/unmarshall)))
+
+(defn get-cities-by-type-codes [db-spec city-codes]
+  (->> {:city-codes city-codes}
+       utils/->snake-case-keywords
+       (city/get-by-city-codes db-spec)
+       (map city/unmarshall)))
 
 (comment
   (require '[lipas.backend.config :as config])

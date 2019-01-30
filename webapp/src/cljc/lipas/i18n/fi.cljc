@@ -79,13 +79,24 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline          (str "Yhteys" ZWSP "tiedot")
-    :contacts          "Yhteystiedot"
-    :select-fields     "Valitse raportin kentät"
-    :selected-fields   "Valitut kentät"
-    :shortcuts         "Pikavalinnat"
-    :download-as-excel "Luo raportti"
-    :download-excel    "Lataa Excel"}
+   {:headline            "Raportit"
+    :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
+    nuorisotoimien osalta. Kunta voi seurata oman toiminnan
+    menokehitystä ja vertailla sitä muihin kuntiin."
+    :browse-to           "Siirry raportteihin"
+    :contacts            (str "Yhteys" ZWSP "tiedot")
+    :stats               "Talousraportti"
+    :select-city         "Valitse kunta"
+    :select-cities       "Valitse kunnat"
+    :select-metrics      "Valitse suureet"
+    :select-city-service "Valitse toimi"
+    :select-fields       "Valitse raportin kentät"
+    :select-unit         "Valitse yksikkö"
+    :select-years        "Valitse vuodet"
+    :selected-fields     "Valitut kentät"
+    :shortcuts           "Pikavalinnat"
+    :download-as-excel   "Luo raportti"
+    :download-excel      "Lataa Excel"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")

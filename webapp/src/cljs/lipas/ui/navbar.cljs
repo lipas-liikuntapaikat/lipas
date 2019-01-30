@@ -229,6 +229,8 @@
                            :href "/#/profiili"}
     :reset-password-panel {:text (tr :reset-password/headline)
                            :href "/#/passu-hukassa"}
+    :reports-panel        {:text (tr :reports/headline)
+                           :href "/#/raportit"}
     {:text "" :href ""}))
 
 (defn menu-button [{:keys [tr]}]

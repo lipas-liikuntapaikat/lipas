@@ -114,9 +114,17 @@
 
    ;; Reports
    :reports
-   {:dialog-open?    false
-    :fields          reports/fields
-    :selected-fields (keys reports/default-fields)}
+   {:dialog-open?          false
+    :fields                reports/fields
+    :selected-fields       (keys reports/default-fields)
+    :selected-cities       #{992}
+    :stats-metrics         reports/stats-metrics
+    :selected-metrics      ["net-costs" "investments"]
+    :city-services         reports/city-services
+    :selected-city-service "sports-services"
+    :stats-units           reports/stats-units
+    :selected-unit         "1000-euros"
+    :selected-years        (range 2000 (dec utils/this-year))}
 
    ;; Map
    :map
