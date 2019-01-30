@@ -1,5 +1,6 @@
 (ns lipas.ui.reports.views
   (:require
+   [lipas.reports :as reports]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
@@ -192,7 +193,8 @@
         metrics (<== [::subs/selected-metrics])
         service (<== [::subs/selected-city-service])
         years   (<== [::subs/selected-years])
-        data    (<== [::subs/cities-stats])]
+        data    (<== [::subs/cities-stats])
+        labels  (<== [::subs/stats-labels])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -234,14 +236,12 @@
 
         ;; Years selector
         [years-selector
-         {:tr tr :value years :on-change #(==> [::events/select-years %])}]
-        ]]]
+         {:tr tr :value years :on-change #(==> [::events/select-years %])}]]]]
 
      ;; Chart
      [mui/grid {:item true :xs 12}
       [charts/city-stats-chart
-       {:metrics metrics
-        :data    data}]]]))
+       {:metrics metrics :data data :labels labels}]]]))
 
 (defn create-panel []
   [mui/grid {:container true}

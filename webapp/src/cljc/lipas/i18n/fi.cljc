@@ -94,6 +94,7 @@
     :select-unit         "Valitse yksikkö"
     :select-years        "Valitse vuodet"
     :selected-fields     "Valitut kentät"
+    :country-avg         "Maan keskiarvo"
     :shortcuts           "Pikavalinnat"
     :download-as-excel   "Luo raportti"
     :download-excel      "Lataa Excel"}
