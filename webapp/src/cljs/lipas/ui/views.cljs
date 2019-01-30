@@ -3,16 +3,17 @@
    [lipas.ui.admin.views :as admin]
    [lipas.ui.components :as lui]
    [lipas.ui.events :as events]
+   [lipas.ui.forgot-password.views :as forgot-password]
    [lipas.ui.front-page.views :as front-page]
    [lipas.ui.ice-stadiums.views :as ice-stadiums]
    [lipas.ui.login.views :as login]
+   [lipas.ui.map.views :as map]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
    [lipas.ui.register.views :as register]
-   [lipas.ui.map.views :as map]
+   [lipas.ui.reports.views :as reports]
    [lipas.ui.subs :as subs]
    [lipas.ui.swimming-pools.views :as swimming-pools]
-   [lipas.ui.forgot-password.views :as forgot-password]
    [lipas.ui.user.views :as user]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -28,6 +29,7 @@
     :reset-password-panel [forgot-password/main tr]
     :register-panel       [register/main tr]
     :user-panel           [user/main tr]
+    :reports-panel        [reports/main tr]
     [front-page/main tr]))
 
 (defn show-panel [panel-name tr logged-in?]

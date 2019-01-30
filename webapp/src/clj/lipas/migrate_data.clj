@@ -112,6 +112,15 @@
         (catch Exception e
           (log/error "Adding user" (:email user) "failed!" e))))))
 
+(defn migrate-city-data! [db fpath]
+  (let [city-stats (-> fpath slurp read-string)]
+    (doseq [[city-code stats] city-stats]
+      (try
+        (db/add-city! db {:city-code city-code :stats stats})
+        (log/info "City data added for" city-code)
+        (catch Exception e
+          (log/error "Adding stats for" city-code "failed!" e))))))
+
 (defn -main [& args]
   (let [source              (first args)
         config              (select-keys config/default-config [:db])
@@ -123,44 +132,16 @@
                                            (first (rest args))
                                            (second (rest args)))
       "--users"     (migrate-users! db (second args))
+      "--city-data" (migrate-city-data! db (second args))
       (log/error "Please provide --es-dump dump-path err-path or
       --old-lipas 123 234 ..."))))
 
 (comment
-  (-main "--lipas" "529736")
-  (def fpath "/Users/vaotjuha/lipas/data_migration/2018-10-19-data.json")
-  (def d (slurp "/Users/vaotjuha/lipas/data_migration/2018-10-19-data.json"))
-  (ns-unmap *ns* 'd)
-  (with-open [rdr (clojure.java.io/reader fpath)]
-    (doseq [line  (line-seq rdr)
-            :let  [m (:_source (json/decode line true))
-                   d (es-dump->sports-site m)]
-            :when (not (#{2510 2520 3110 3130} (-> m :type :typeCode)))]
-      (when-not (spec/valid? :lipas/sports-site d)
-        (spec/explain :lipas/sports-site d))))
-
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
   (def db (:db system))
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
+  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats4.edn")
 
-  (migrate-from-old-lipas! db search user [72348])
-
-  (migrate-users db "/Users/vaotjuha/lipas/data_migration/2019-01-09-lipas-users-filtered.edn")
-
-  (def sites (db/get-sports-sites-modified-since db "2018-12-14T00:00:00.000"))
-  (->> sites
-       (map ->old-lipas-sports-site))
-
-  (migrate-from-es-dump! db user fpath "/tmp/invalid/")
-
-  (->> (query-changed "2018-12-14 00:00:00.000" [] 1)
-       (remove (comp #{3110 3130 2510 2520} :typeCode :type)))
-
-  (db/get-last-modified db [74538])
-
-  (query [] "http://lipas.cc.jyu.fi/api/sports-places"
-         {:modifiedAfter "2018-12-14 00:00:00.000"
-          :pageSize      100
-          :fields        ["lastModified"]}))
+  )
