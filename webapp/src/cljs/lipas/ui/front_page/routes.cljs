@@ -4,7 +4,7 @@
 
 (def routes
   ["etusivu"
-   {:name :lipas.ui.front-page/front-page
+   {:name :lipas.ui.routes/front-page
     :controllers
     [{:start
       (fn []
