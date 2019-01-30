@@ -102,6 +102,15 @@
              {:city-code (-> m :city-code)
               :year      year})))))
 
+(defn round-vals [m]
+  (reduce
+   (fn [m [k v]]
+     (assoc m k (if (and (number? v) (not= :year k))
+                  (.toFixed v 2)
+                  v)))
+   {}
+   m))
+
 (re-frame/reg-sub
  ::cities-stats
  :<- [::stats-data]
@@ -118,4 +127,5 @@
      (->> cities
           vals
           (reduce (partial ->entries avgs service years) [])
+          (map round-vals)
           (sort-by :year)))))
