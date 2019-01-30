@@ -9,6 +9,7 @@
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
+            [lipas.seed :as seed]
             [lipas.schema.core]
             [lipas.utils :as utils]
             [ring.mock.request :as mock])
@@ -398,13 +399,13 @@
     (is (= 200 (:status resp)))
     (is (= "Lipas-id" header-1))))
 
-;; See lipas.seed ns for test-data
 (deftest cities-report-test
-  (let [path     "/api/actions/create-cities-report"
-        resp     (app (-> (mock/request :post path)
-                          (mock/content-type "application/json")
-                          (mock/body (->json {:city-codes [275 972]}))))
-        body     (-> resp :body <-json)]
+  (let [_    (seed/seed-city-data! db)
+        path "/api/actions/create-cities-report"
+        resp (app (-> (mock/request :post path)
+                      (mock/content-type "application/json")
+                      (mock/body (->json {:city-codes [275 972]}))))
+        body (-> resp :body <-json)]
     (is (= 200 (:status resp)))
     (is (contains? body :country-averages))
     (is (= '(:275 :972) (-> body :data-points keys)))))

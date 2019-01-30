@@ -9,7 +9,8 @@ INSERT INTO city (
 VALUES (
   :city_code,
   :stats
-);
+) ON CONFLICT (city_code) DO
+  UPDATE SET stats = :stats;
 
 -- :name get-all
 -- :command :query
