@@ -1,6 +1,5 @@
 (ns lipas.ui.reports.subs
   (:require
-   [clojure.set :as cset]
    [lipas.reports :as reports]
    [re-frame.core :as re-frame]))
 
@@ -69,6 +68,19 @@
  (fn [db _]
    (-> db :reports :stats)))
 
+(re-frame/reg-sub
+ ::stats-labels
+ (fn [db _]
+   (let [tr     (-> db :translator)
+         locale (tr)]
+     (reduce
+      (fn [res [k v]]
+        (let [k2 (str k "-avg")
+              v2 (tr :reports/country-avg)]
+          (assoc res (keyword k) (locale v) (keyword k2) v2)))
+      {}
+      reports/stats-metrics))))
+
 (defn get-averages [avgs service fields]
   (reduce
    (fn [m k]
@@ -107,8 +119,3 @@
           vals
           (reduce (partial ->entries avgs service years) [])
           (sort-by :year)))))
-
-(re-frame/reg-sub
- ::country-averages
- (fn [db _]
-   (-> db :reports :stats :country-averages)))

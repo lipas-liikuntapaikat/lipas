@@ -101,19 +101,24 @@
     [:> rc/Legend
      {:wrapperStyle font-styles}]]])
 
-(defn city-stats-chart [{:keys [data metrics on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 500}
-   (-> [:> rc/ComposedChart {:data data :on-click on-click}
-        [:> rc/Legend {:wrapperStyle font-styles}]
-        [:> rc/Tooltip tooltip-styles]
-        [:> rc/YAxis {:tick font-styles}]
-        [:> rc/XAxis {:dataKey :year :tick font-styles}]]
-    (into
-     (for [m    metrics
-           :let [k (keyword m)]]
-       [:> rc/Bar {:dataKey k :label false :fill (get colors k)}]))
-    (into
-     (for [m    metrics
-           :let [k1 (keyword m)
-                 k2 (keyword (str m "-avg"))]]
-       [:> rc/Line {:type "monotone" :dataKey k2 :stroke (get colors k1)}])))])
+(defn city-stats-chart [{:keys [data metrics labels on-click]}]
+  (let [lookup (map-invert labels)
+        data   (->> data (map #(rename-keys % labels)))]
+    [:> rc/ResponsiveContainer {:width "100%" :height 500}
+     (-> [:> rc/ComposedChart {:data data :on-click on-click}
+          [:> rc/Legend {:wrapperStyle font-styles}]
+          [:> rc/Tooltip tooltip-styles]
+          [:> rc/YAxis {:tick font-styles}]
+          [:> rc/XAxis {:dataKey :year :tick font-styles}]]
+         (into
+          (for [m    metrics
+                :let [k ((keyword m) labels)]]
+            [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}]))
+         (into
+          (for [m    metrics
+                :let [k1 ((keyword m) labels)
+                      k2 ((keyword (str m "-avg")) labels)]]
+            [:> rc/Line
+             {:type    "monotone"
+              :dataKey k2
+              :stroke  (get colors (get lookup k1))}])))]))
