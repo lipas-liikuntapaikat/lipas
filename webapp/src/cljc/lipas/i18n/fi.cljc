@@ -79,7 +79,7 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline            "Raportit"
+   {:headline            "Tilastot"
     :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
     nuorisotoimien osalta. Kunta voi seurata oman toiminnan
     menokehitystä ja vertailla sitä muihin kuntiin."
