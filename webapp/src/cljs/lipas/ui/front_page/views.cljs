@@ -177,8 +177,7 @@
        (tr :reports/description)]
       [:ul
        [lui/li "Jotain"]
-       [lui/li "Lisää"]
-       [lui/li "Blababla"]]]
+       [lui/li "Lisää"]]]
 
      ;; Open Data
      [grid-card {:title (tr :open-data/headline)}
