@@ -354,11 +354,14 @@
      ;;; Energy chart
      [mui/grid {:item true :xs 12 :md 12}
       [mui/card {:square true}
-       [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
+       ;; [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
        [mui/card-content
 
-        [mui/grid {:container true :spacing 16
-                   :style     {:margin-bottom "1em"}}
+        [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+
+         [mui/grid {:item true :xs 12 :style {:margin-top "1em"}}
+          [mui/typography {:variant "h3" :color "secondary"}
+           (tr :lipas.energy-stats/headline year)]]
 
          ;; Select year for stats
          [mui/grid {:item true}

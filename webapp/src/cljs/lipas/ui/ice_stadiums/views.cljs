@@ -17,12 +17,28 @@
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
-    [energy/energy-stats
-     {:tr   tr
-      :year year
-      :link           "/#/jaahalliportaali/ilmoita-tiedot"
-      :stats          stats
-      :on-year-change #(==> [::events/display-stats %])}]))
+    [:<>
+
+     [mui/grid {:container true}
+
+      [lui/youtube {:urls ["https://www.youtube.com/embed/-tIpUzQXZB8"
+                           ;;"https://www.youtube.com/embed/buqNpJnFEpU"
+                           ]}]
+
+      ;; [mui/grid {:item true :xs 12}
+      ;;  [mui/paper {:square true :style {:padding "1em 1em 1em 1em"}}
+      ;;   [mui/typography {:variant "h2" :style {:color "mui/primary" :opacity 0.7}}
+      ;;    (tr :ice/headline)]]]
+      ]
+
+     [energy/energy-stats
+      {:tr             tr
+       :year           year
+       :link           "/#/jaahalliportaali/ilmoita-tiedot"
+       :stats          stats
+       :on-year-change #(==> [::events/display-stats %])}]
+
+     ]))
 
 (defn toggle-dialog
   ([dialog]
@@ -654,8 +670,7 @@
         card-props {:square true}]
     [mui/grid {:container true}
 
-     [mui/grid {:item       true :xs 12
-                :class-name :no-print}
+     [mui/grid {:item true :xs 12 :class-name :no-print}
       [mui/card card-props
        [mui/card-content
         [mui/tabs {:scrollable true
