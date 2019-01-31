@@ -112,7 +112,10 @@
     :comparison           "Hallien vertailu"
     :small                "Pieni kilpahalli > 500 hlö"
     :competition          "Kilpahalli < 3000 hlö"
-    :large                "Suurhalli > 3000 hlö"}
+    :large                "Suurhalli > 3000 hlö"
+    :watch                "Katso"
+    :video                "Video"
+    :video-description    "Pihlajalinna Areena on energiatehokas jäähalli"}
 
 
    :ice-rinks

@@ -841,33 +841,3 @@
      :margin-bottom "2em"
      :font-weight   "bold"}}
    label])
-
-(defn youtube [{:keys [urls]}]
-  (into
-   [mui/grid
-    {:container   true
-     :justify     "space-around"
-     :align-items "center"
-     :style       {:background-color mui/primary}}]
-   (for [url urls]
-     [:<>
-
-      [mui/hidden {:md-down true}
-
-       [mui/grid {:item true :style {:padding "1em 0 1em 0"}}
-        [mui/typography {:variant "h2" :color "secondary"}
-         "Katso"]
-        [mui/typography {:variant "h2" :color "secondary"}
-         "Video"]
-        [mui/typography {:variant "subtitle1" :style {:margin "0.5em 0 0 0" :color "#fff"}}
-         "Pihlajalinna Areena on energiatehokas jäähalli"]]]
-
-      [mui/grid {:item true :style {}}
-       [:iframe
-        {:src              url
-         :width            560
-         :height           315
-         :frameborder      0
-         :allow            (str "accelerometer; autoplay; encrypted-media; "
-                                "gyroscope; picture-in-picture")
-         :allow-fullscreen true}]]])))
