@@ -20,35 +20,43 @@
         year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
 
-    [mui/grid {:container true :justify "center" :style {:background-color "#fff"}}
-
-     [mui/grid {:item true :style {}}
-      [:iframe
-       {:src              "https://www.youtube.com/embed/-tIpUzQXZB8"
-        :width            (case width
-                            "xl" 1920
-                            "lg" 1280
-                            "md" 960
-                            "sm" 640
-                            480)
-        :height           (case width
-                            "xl" 1080
-                            "lg" 720
-                            "md" 540
-                            "sm" 360
-                            270)
-        :frameborder      0
-        :allow            (str "accelerometer; autoplay; encrypted-media; "
-                               "gyroscope; picture-in-picture")
-        :allow-fullscreen true}]]
-
+    [mui/grid {:container true :style {:background-color "#fff"}}
 
      [energy/energy-stats
       {:tr             tr
        :year           year
        :link           "/#/jaahalliportaali/ilmoita-tiedot"
        :stats          stats
-       :on-year-change #(==> [::events/display-stats %])}]]))
+       :on-year-change #(==> [::events/display-stats %])}]
+
+     [mui/grid {:item true :xs 12 :style {:padding "1em"}}
+      [mui/typography {:variant "h4" :style {:margin "0.5em 0 0 0" :opacity 0.7}}
+       (str(tr :ice/video-description) " - " (str (tr :ice/watch) " " (tr :ice/video)))]]
+
+     [mui/grid {:item true :style {:padding "1em"}}
+      [:iframe
+       {:src              "https://www.youtube.com/embed/-tIpUzQXZB8"
+        :width            (case width
+                            ;;"xl" 1920
+                            "xl" 1280
+                            "lg" 960
+                            "md" 640
+                            480)
+        :height           (case width
+                            ;;"xl" 1080
+                            "xl" 720
+                            "lg" 540
+                            "md" 360
+                            270)
+        :frameborder      0
+        :allow            (str "accelerometer; autoplay; encrypted-media; "
+                               "gyroscope; picture-in-picture")
+        :allow-fullscreen true}]]
+
+     [energy/hof
+      {:tr    tr
+       :year  year
+       :stats stats}]]))
 
 (defn stats-tab []
   [:> (mui/with-width* (r/reactify-component stats-tab*))])
@@ -630,36 +638,9 @@
 (defn compare-tab []
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
-              :style {:min-height "800px" :width "100%"}}]]])
-
-(defn youtube [{:keys [url tr]}]
-  [mui/grid
-   {:container   true
-    :justify     "space-around"
-    :align-items "center"
-    :style       {:background-color mui/primary}}
-   [:<>
-
-    [mui/hidden {:md-down true}
-
-     [mui/grid {:item true :style {:padding "1em 0 1em 0"}}
-      [mui/typography {:variant "h2" :color "secondary"}
-       (tr :ice/watch)]
-      [mui/typography {:variant "h2" :color "secondary"}
-       (tr :ice/video)]
-      [mui/typography {:variant "subtitle1" :style {:margin "0.5em 0 0 0" :color "#fff"}}
-       (tr :ice/video-description)]]]
-
-    [mui/grid {:item true :style {}}
-     [:iframe
-      {:src              url
-       :width            560
-       :height           315
-       :frameborder      0
-       :allow            (str "accelerometer; autoplay; encrypted-media; "
-                              "gyroscope; picture-in-picture")
-       :allow-fullscreen true}]]]])
+    [:iframe
+     {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
+      :style {:min-height "800px" :width "100%"}}]]])
 
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
@@ -685,11 +666,7 @@
                     ":x:/g/personal/vaotjuha_jyu_fi/"
                     "EYBaJ4HG1PdNpcLN3j9lSEkBkfRhirWmNPvD6lufrAUWUw?e=CwAIvn"
                     "&download=1")}
-       (str "> " (tr :ice-energy/energy-calculator))]]]
-
-    ;; Inspirational video
-    [mui/grid {:item true :xs 12}
-     [youtube {:url "https://www.youtube.com/embed/-tIpUzQXZB8" :tr tr}]]]])
+       (str "> " (tr :ice-energy/energy-calculator))]]]]])
 
 (defn energy-form-tab [tr]
   (let [locale          (tr)
