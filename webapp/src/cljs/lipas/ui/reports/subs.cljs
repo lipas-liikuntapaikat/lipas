@@ -76,7 +76,7 @@
      (reduce
       (fn [res [k v]]
         (let [k2 (str k "-avg")
-              v2 (tr :reports/country-avg)]
+              v2 (str (locale v) " " (tr :reports/country-avg))]
           (assoc res (keyword k) (locale v) (keyword k2) v2)))
       {}
       reports/stats-metrics))))
