@@ -130,6 +130,7 @@
 (def menu (mui->reagent "Menu"))
 (def menu-item (mui->reagent "MenuItem"))
 (def menu-list (mui->reagent "MenuList"))
+(def link (mui->reagent "Link"))
 (def list (mui->reagent "List"))
 (def list-item (mui->reagent "ListItem"))
 (def list-item-icon (mui->reagent "ListItemIcon"))

@@ -13,32 +13,45 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn stats-tab []
+
+
+(defn stats-tab* [{:keys [width]}]
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
-    [:<>
 
-     [mui/grid {:container true}
+    [mui/grid {:container true :justify "center" :style {:background-color "#fff"}}
 
-      [lui/youtube {:urls ["https://www.youtube.com/embed/-tIpUzQXZB8"
-                           ;;"https://www.youtube.com/embed/buqNpJnFEpU"
-                           ]}]
+     [mui/grid {:item true :style {}}
+      [:iframe
+       {:src              "https://www.youtube.com/embed/-tIpUzQXZB8"
+        :width            (case width
+                            "xl" 1920
+                            "lg" 1280
+                            "md" 960
+                            "sm" 640
+                            480)
+        :height           (case width
+                            "xl" 1080
+                            "lg" 720
+                            "md" 540
+                            "sm" 360
+                            270)
+        :frameborder      0
+        :allow            (str "accelerometer; autoplay; encrypted-media; "
+                               "gyroscope; picture-in-picture")
+        :allow-fullscreen true}]]
 
-      ;; [mui/grid {:item true :xs 12}
-      ;;  [mui/paper {:square true :style {:padding "1em 1em 1em 1em"}}
-      ;;   [mui/typography {:variant "h2" :style {:color "mui/primary" :opacity 0.7}}
-      ;;    (tr :ice/headline)]]]
-      ]
 
      [energy/energy-stats
       {:tr             tr
        :year           year
        :link           "/#/jaahalliportaali/ilmoita-tiedot"
        :stats          stats
-       :on-year-change #(==> [::events/display-stats %])}]
+       :on-year-change #(==> [::events/display-stats %])}]]))
 
-     ]))
+(defn stats-tab []
+  [:> (mui/with-width* (r/reactify-component stats-tab*))])
 
 (defn toggle-dialog
   ([dialog]
@@ -620,26 +633,63 @@
     [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
               :style {:min-height "800px" :width "100%"}}]]])
 
+(defn youtube [{:keys [url tr]}]
+  [mui/grid
+   {:container   true
+    :justify     "space-around"
+    :align-items "center"
+    :style       {:background-color mui/primary}}
+   [:<>
+
+    [mui/hidden {:md-down true}
+
+     [mui/grid {:item true :style {:padding "1em 0 1em 0"}}
+      [mui/typography {:variant "h2" :color "secondary"}
+       (tr :ice/watch)]
+      [mui/typography {:variant "h2" :color "secondary"}
+       (tr :ice/video)]
+      [mui/typography {:variant "subtitle1" :style {:margin "0.5em 0 0 0" :color "#fff"}}
+       (tr :ice/video-description)]]]
+
+    [mui/grid {:item true :style {}}
+     [:iframe
+      {:src              url
+       :width            560
+       :height           315
+       :frameborder      0
+       :allow            (str "accelerometer; autoplay; encrypted-media; "
+                              "gyroscope; picture-in-picture")
+       :allow-fullscreen true}]]]])
+
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
+
     [mui/card {:square true}
      [mui/card-header {:title (tr :ice-energy/headline)}]
      [mui/card-content
       [mui/typography
        (tr :ice-energy/description)]]
+
+     ;; Finnhockey link
      [mui/card-actions
       [mui/button
        {:color "secondary"
         :href  "http://www.finhockey.fi/index.php/info/jaeaehallit"}
        (str "> " (tr :ice-energy/finhockey-link))]
+
+      ;; Energy calculator excel link
       [mui/button
        {:color "secondary"
         :href  (str "https://jyu-my.sharepoint.com/"
                     ":x:/g/personal/vaotjuha_jyu_fi/"
                     "EYBaJ4HG1PdNpcLN3j9lSEkBkfRhirWmNPvD6lufrAUWUw?e=CwAIvn"
                     "&download=1")}
-       (str "> " (tr :ice-energy/energy-calculator))]]]]])
+       (str "> " (tr :ice-energy/energy-calculator))]]]
+
+    ;; Inspirational video
+    [mui/grid {:item true :xs 12}
+     [youtube {:url "https://www.youtube.com/embed/-tIpUzQXZB8" :tr tr}]]]])
 
 (defn energy-form-tab [tr]
   (let [locale          (tr)
