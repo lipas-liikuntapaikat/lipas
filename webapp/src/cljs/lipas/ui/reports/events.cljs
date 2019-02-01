@@ -2,6 +2,7 @@
   (:require
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
+   [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
@@ -104,3 +105,12 @@
      (-> db
          (update-in [:reports :stats :cities] merge cities)
          (assoc-in [:reports :stats :country] (:country-averages data))))))
+
+(re-frame/reg-event-fx
+ ::download-stats-excel
+ (fn [{:keys [db]} [_ data headers]]
+   (let [tr     (:translator db)
+         config {:filename (tr :reports/stats)
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config})))

@@ -6,7 +6,8 @@
    [lipas.ui.reports.events :as events]
    [lipas.ui.reports.subs :as subs]
    [lipas.ui.search.events :as search-events]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
 
@@ -185,6 +186,25 @@
          :on-click #(==> [::search-events/create-report-from-current-search])}
         (tr :reports/download-excel)]]]]))
 
+(defn- make-headers [tr]
+  [[:year (tr :time/year)]
+   [:city-code (tr :lipas.location/city-code)]
+   [:investments (tr :stats-metrics/investments)]
+   [:investments-avg (str (tr :stats-metrics/investments) " "
+                          (tr :reports/country-avg))]
+   [:net-costs (tr :stats-metrics/net-costs)]
+   [:net-costs-avg (str (tr :stats-metrics/net-costs) " "
+                        (tr :reports/country-avg))]
+   [:operating-expenses (tr :stats-metrics/operating-expenses)]
+   [:operating-expenses-avg (str (tr :stats-metrics/operating-expenses) " "
+                                 (tr :reports/country-avg))]
+   [:operating-incomes (tr :stats-metrics/operating-incomes)]
+   [:operating-incomes-avg (str (tr :stats-metrics/operating-incomes) " "
+                                (tr :reports/country-avg))]
+   [:subsidies (tr :stats-metrics/subsidies)]
+   [:subsidies-avg (str (tr :stats-metrics/subsidies) " "
+                        (tr :reports/country-avg))]])
+
 (defn stats-report []
   (let [tr      (<== [:lipas.ui.subs/translator])
         unit    (<== [::subs/selected-unit])
@@ -193,7 +213,9 @@
         service (<== [::subs/selected-city-service])
         years   (<== [::subs/selected-years])
         data    (<== [::subs/cities-stats])
-        labels  (<== [::subs/stats-labels])]
+        labels  (<== [::subs/stats-labels])
+
+        headers (make-headers tr)]
 
     [mui/grid {:container true :spacing 16}
 
@@ -237,10 +259,29 @@
         [years-selector
          {:tr tr :value years :on-change #(==> [::events/select-years %])}]]]]
 
+     ;; [mui/grid {:item true :xs 12}
+     ;;  [mui/tabs {:value     0
+     ;;             :on-change #(==> [::events/select-stats-tab %])}
+     ;;   [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
+     ;;   [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]]
+
      ;; Chart
      [mui/grid {:item true :xs 12}
       [charts/city-stats-chart
-       {:metrics metrics :data data :labels labels}]]]))
+       {:metrics metrics :data data :labels labels}]]
+
+     ;; Download Excel button
+     [mui/fab
+      {:style    {:margin "1em"}
+       :variant  "extended"
+       :color    "secondary"
+       :on-click #(==> [::events/download-stats-excel data headers])}
+      (tr :reports/download-excel)]
+
+     ;; Table
+     [mui/grid {:item true :xs 12}
+      [lui/table
+       {:headers headers :items data}]]]))
 
 (defn create-panel []
   [mui/grid {:container true}

@@ -258,9 +258,6 @@
    "net-costs"          {:fi "Nettokustannukset"
                          :en "Net costs"}})
 
-(def per-capita-keys
-  )
-
 (def city-services
   {"sports-services" {:fi "Liikuntatoimi"
                       :en "Sports services"}
