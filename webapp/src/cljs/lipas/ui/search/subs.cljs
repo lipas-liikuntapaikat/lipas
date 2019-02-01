@@ -17,8 +17,10 @@
 (re-frame/reg-sub
  ::filters-active?
  :<- [::filters]
- (fn [filters _]
-   (some (comp some? filter-enabled?  second) filters)))
+ :<- [::search-string]
+ (fn [[filters search-str] _]
+   (or (not-empty search-str)
+       (some (comp some? filter-enabled? second) filters))))
 
 (re-frame/reg-sub
  ::types-filter

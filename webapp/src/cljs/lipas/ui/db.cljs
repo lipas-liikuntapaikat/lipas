@@ -128,7 +128,8 @@
     :selected-city-service "sports-services"
     :stats-units           reports/stats-units
     :selected-unit         "1000-euros"
-    :selected-years        (range 2000 (dec utils/this-year))}
+    :selected-years        (range 2000 (dec utils/this-year))
+    :stats-tab             "chart"}
 
    ;; Map
    :map

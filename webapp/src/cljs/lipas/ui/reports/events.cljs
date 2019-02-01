@@ -84,6 +84,11 @@
  (fn [db [_ v]]
    (assoc-in db [:reports :selected-years] v)))
 
+(re-frame/reg-event-db
+ ::select-stats-tab
+ (fn [db [_ v]]
+   (assoc-in db [:reports :stats-tab] v)))
+
 (re-frame/reg-event-fx
  ::create-cities-report
  (fn [{:keys [db]} [_ city-codes]]
