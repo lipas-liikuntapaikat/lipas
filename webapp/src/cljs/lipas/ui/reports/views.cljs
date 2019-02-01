@@ -214,6 +214,7 @@
         years   (<== [::subs/selected-years])
         data    (<== [::subs/cities-stats])
         labels  (<== [::subs/stats-labels])
+        tab     (<== [::subs/stats-tab])
 
         headers (make-headers tr)]
 
@@ -259,29 +260,30 @@
         [years-selector
          {:tr tr :value years :on-change #(==> [::events/select-years %])}]]]]
 
-     ;; [mui/grid {:item true :xs 12}
-     ;;  [mui/tabs {:value     0
-     ;;             :on-change #(==> [::events/select-stats-tab %])}
-     ;;   [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
-     ;;   [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]]
-
      ;; Chart
-     [mui/grid {:item true :xs 12}
-      [charts/city-stats-chart
-       {:metrics metrics :data data :labels labels}]]
-
-     ;; Download Excel button
-     [mui/fab
-      {:style    {:margin "1em"}
-       :variant  "extended"
-       :color    "secondary"
-       :on-click #(==> [::events/download-stats-excel data headers])}
-      (tr :reports/download-excel)]
+     (when (= tab "chart")
+       [mui/grid {:item true :xs 12}
+        [charts/city-stats-chart
+         {:metrics metrics :data data :labels labels}]])
 
      ;; Table
-     [mui/grid {:item true :xs 12}
-      [lui/table
-       {:headers headers :items data}]]]))
+     (when (= tab "table")
+       [mui/grid {:item true :xs 12}
+        [lui/table
+         {:headers headers :items data}]])
+
+     [mui/grid {:item true}
+      [mui/tabs {:value tab :on-change #(==> [::events/select-stats-tab %2])}
+       [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
+       [mui/tab {:value "table" :icon (r/as-element [mui/icon "table_chart"])}]]]
+
+     ;; Download Excel button
+     [mui/button
+      {:style    {:margin "1em"}
+       :variant  "outlined"
+       :color    "secondary"
+       :on-click #(==> [::events/download-stats-excel data headers])}
+      (tr :reports/download-excel)]]))
 
 (defn create-panel []
   [mui/grid {:container true}

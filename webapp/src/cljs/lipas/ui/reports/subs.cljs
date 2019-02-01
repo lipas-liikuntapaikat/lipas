@@ -69,6 +69,11 @@
    (-> db :reports :stats)))
 
 (re-frame/reg-sub
+ ::stats-tab
+ (fn [db _]
+   (-> db :reports :stats-tab)))
+
+(re-frame/reg-sub
  ::stats-labels
  (fn [db _]
    (let [tr     (-> db :translator)
