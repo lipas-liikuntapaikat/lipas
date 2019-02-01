@@ -176,8 +176,8 @@
       [mui/typography {:variant "body1"}
        (tr :reports/description)]
       [:ul
-       [lui/li "Jotain"]
-       [lui/li "Lisää"]]]
+       [lui/li (tr :reports/bullet1)]
+       [lui/li (tr :reports/bullet2)]]]
 
      ;; Open Data
      [grid-card {:title (tr :open-data/headline)}
