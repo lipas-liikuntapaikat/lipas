@@ -121,7 +121,7 @@
    {:dialog-open?          false
     :fields                reports/fields
     :selected-fields       (keys reports/default-fields)
-    :selected-cities       #{992}
+    :selected-cities       #{179}
     :stats-metrics         reports/stats-metrics
     :selected-metrics      ["net-costs" "investments"]
     :city-services         reports/city-services
