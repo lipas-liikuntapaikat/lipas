@@ -91,7 +91,7 @@
       :on-change on-change}]))
 
 (defn- filter-layout [props & children]
-  [mui/grid {:item true :style {:min-width  "350px"}}
+  [mui/grid {:item true :style {:min-width  "365px"}}
    [mui/paper {:style {:padding "1em" :height "100%"}}
     (into [mui/grid {:container true :direction "column"}]
           (for [c children]
