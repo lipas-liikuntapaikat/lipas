@@ -121,6 +121,7 @@
 (def text-field (mui->reagent "TextField"))
 (def grid (mui->reagent "Grid"))
 (def paper (mui->reagent "Paper"))
+(def fab (mui->reagent "Fab"))
 (def card (mui->reagent "Card"))
 (def card-content (mui->reagent "CardContent"))
 (def card-header (mui->reagent "CardHeader"))

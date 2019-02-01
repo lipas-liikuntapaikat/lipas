@@ -105,7 +105,7 @@
 (defn round-vals [m]
   (reduce
    (fn [m [k v]]
-     (assoc m k (if (and (number? v) (not= :year k))
+     (assoc m k (if (and (number? v) (not= :year k) (not= :city-code k))
                   (.toFixed v 2)
                   v)))
    {}
