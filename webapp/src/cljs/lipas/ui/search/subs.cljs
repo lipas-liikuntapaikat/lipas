@@ -31,6 +31,12 @@
    (-> db :search :filters :city-codes set)))
 
 (re-frame/reg-sub
+ ::regions-filter
+ :<- [::cities-filter]
+ (fn [city-codes _]
+   (into #{} (map (partial str "city-")) city-codes)))
+
+(re-frame/reg-sub
  ::admins-filter
  (fn [db _]
    (-> db :search :filters :admins set)))

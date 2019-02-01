@@ -62,6 +62,8 @@
  (fn [edit-data _]
    (valid? edit-data)))
 
+;; TODO maybe refactor region related subs to other ns
+
 (re-frame/reg-sub
  ::cities-by-city-code
  (fn [db _]
@@ -72,6 +74,30 @@
  :<- [::cities-by-city-code]
  (fn [cities _]
    (vals cities)))
+
+(re-frame/reg-sub
+ ::avi-areas
+ (fn [db _]
+   (-> db :avi-areas)))
+
+(re-frame/reg-sub
+ ::provinces
+ (fn [db _]
+   (-> db :provinces)))
+
+(re-frame/reg-sub
+ ::regions
+ :<- [::cities-by-city-code]
+ :<- [::avi-areas]
+ :<- [::provinces]
+ (fn [[cities avis provinces] _]
+   (concat
+    (for [[k v] cities]
+      (assoc v :region-id (str "city-" k)))
+    (for [[k v] avis]
+      (assoc v :region-id (str "avi-" k)))
+    (for [[k v] provinces]
+      (assoc v :region-id (str "province-" k))))))
 
 (re-frame/reg-sub
  ::admins

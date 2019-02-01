@@ -23,14 +23,27 @@
 
 (defn city-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
-        types  (<== [:lipas.ui.sports-sites.subs/cities-list])]
+        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
     ^{:key value}
     [lui/autocomplete
-     {:items     types
+     {:items     cities
       :value     value
       :show-all? true
       :label     (tr :search/search)
       :value-fn  :city-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn region-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        regions (<== [:lipas.ui.sports-sites.subs/regions])]
+    ^{:key value}
+    [lui/autocomplete
+     {:items     regions
+      :value     value
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :region-id
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
@@ -88,7 +101,8 @@
 (defn filters [{:keys [tr]}]
   (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
         type-codes        (<== [::subs/types-filter])
-        city-codes        (<== [::subs/cities-filter])
+        ;; city-codes        (<== [::subs/cities-filter])
+        region-ids        (<== [::subs/regions-filter])
         admins            (<== [::subs/admins-filter])
         owners            (<== [::subs/owners-filter])
         area-min          (<== [::subs/area-min-filter])
@@ -114,15 +128,25 @@
         :value     type-codes
         :on-change #(==> [::events/set-type-filter %])}]]
 
-     ;; Cities filter
+     ;; Regions filter (cities, avis, provinces)
      [filter-layout {}
       [mui/typography {:variant "caption"}
        (tr :actions/select-cities)]
 
-      [city-selector
+      [region-selector
        {:tr        tr
-        :value     city-codes
-        :on-change #(==> [::events/set-city-filter %])}]]
+        :value     region-ids
+        :on-change #(==> [::events/select-regions %])}]]
+
+     ;; Cities filter
+     ;; [filter-layout {}
+     ;;  [mui/typography {:variant "caption"}
+     ;;   (tr :actions/select-cities)]
+
+     ;;  [city-selector
+     ;;   {:tr        tr
+     ;;    :value     city-codes
+     ;;    :on-change #(==> [::events/set-city-filter %])}]]
 
      ;; Admins filter
      [filter-layout {}
