@@ -87,7 +87,7 @@
     :bullet2             "Liikuntapaikkatilastot (tulossa)"
     :browse-to           "Siirry raportteihin"
     :contacts            (str "Yhteys" ZWSP "tiedot")
-    :stats               "Talousraportti"
+    :stats               "Taloustiedot"
     :select-city         "Valitse kunta"
     :select-cities       "Valitse kunnat"
     :select-metrics      "Valitse suureet"

@@ -171,7 +171,7 @@
      ;; Reports
      [grid-card
       {:title     (tr :reports/headline)
-       :link      "/#/raportit"
+       :link      "/#/tilastot"
        :link-text (tr :reports/browse-to)}
       [mui/typography {:variant "body1"}
        (tr :reports/description)]
