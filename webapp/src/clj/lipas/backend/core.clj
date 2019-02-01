@@ -13,6 +13,9 @@
    [lipas.utils :as utils]
    [taoensso.timbre :as log]))
 
+(def cache "Simple atom cache for things that (hardly) never change."
+  (atom {}))
+
 ;;; User ;;;
 
 (defn username-exists? [db user]
@@ -180,34 +183,22 @@
          (excel/create-workbook "lipas")
          (excel/save-workbook-into-stream! out))))
 
+(defn cities-report [db city-codes]
+  (let [data (or
+              (:all-cities @cache)
+              (->> (db/get-cities db)
+                   (swap! cache assoc :all-cities)
+                   :all-cities))]
+    (reports/cities-report city-codes data)))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (publish-users-drafts! db-spec admin)
-
   (def search (search/create-cli (:search config/default-config)))
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
-
-  (search/search search "sports_sites_current" {:sort [:search-meta.type.name.fi.keyword]
-                                                :query
-                                                {:bool
-                                                 {:must
-                                                  [{:query_string
-                                                    {:query "*"}}]}}
-                                                :_source
-                                                {:excludes ["location.geometries"]}
-                                                :size 100})
-
-  (require '[clojure.java.io :as io])
-  (with-open [out (io/output-stream "kissa.xlsx")]
-    (let [query {:query
-                 {:bool
-                  {:must
-                   [{:query_string
-                     {:query "mursu*"}}]}}
-                 :_source
-                 {:excludes ["location.geometries"]}
-                 :size 100}]
-      (sports-sites-report search query fields out))))
+  (reset! cache {})
+  (:all-cities @cache)
+  (time (first (:all-cities @cache)))
+  (time (cities-report db-spec [992])) )

@@ -17,8 +17,10 @@
 (re-frame/reg-sub
  ::filters-active?
  :<- [::filters]
- (fn [filters _]
-   (some (comp some? filter-enabled?  second) filters)))
+ :<- [::search-string]
+ (fn [[filters search-str] _]
+   (or (not-empty search-str)
+       (some (comp some? filter-enabled? second) filters))))
 
 (re-frame/reg-sub
  ::types-filter
@@ -29,6 +31,12 @@
  ::cities-filter
  (fn [db _]
    (-> db :search :filters :city-codes set)))
+
+(re-frame/reg-sub
+ ::regions-filter
+ :<- [::cities-filter]
+ (fn [city-codes _]
+   (into #{} (map (partial str "city-")) city-codes)))
 
 (re-frame/reg-sub
  ::admins-filter

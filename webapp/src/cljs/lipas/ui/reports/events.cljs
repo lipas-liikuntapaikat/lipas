@@ -2,6 +2,7 @@
   (:require
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
+   [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
@@ -46,4 +47,75 @@
  ::report-failure
  (fn [{:keys [db]} [_ error]]
    ;; TODO display error msg
-   {:db (assoc-in db [:reports :downloading?] false)}))
+   (let [fatal? false]
+     {:db           (assoc-in db [:reports :downloading?] false)
+      :ga/exception [(:message error) fatal?]})))
+
+(re-frame/reg-event-fx
+ ::select-cities
+ (fn [{:keys [db]} [_ v append?]]
+   (let [path   [:reports :selected-cities]
+         new-db (if append?
+                  (update-in db path (comp set into) v)
+                  (assoc-in db path v))]
+     {:db         new-db
+      :dispatch-n [(when-let [city-codes (not-empty (get-in new-db path))]
+                     [::create-cities-report city-codes])]})))
+
+(re-frame/reg-event-db
+ ::select-metrics
+ (fn [db [_ v append?]]
+   (if append?
+     (update-in db [:reports :selected-metrics] (comp set into) v)
+     (assoc-in db [:reports :selected-metrics] v))))
+
+(re-frame/reg-event-db
+ ::select-city-service
+ (fn [db [_ v]]
+   (assoc-in db [:reports :selected-city-service] v)))
+
+(re-frame/reg-event-db
+ ::select-unit
+ (fn [db [_ v]]
+   (assoc-in db [:reports :selected-unit] v)))
+
+(re-frame/reg-event-db
+ ::select-years
+ (fn [db [_ v]]
+   (assoc-in db [:reports :selected-years] v)))
+
+(re-frame/reg-event-db
+ ::select-stats-tab
+ (fn [db [_ v]]
+   (assoc-in db [:reports :stats-tab] v)))
+
+(re-frame/reg-event-fx
+ ::create-cities-report
+ (fn [{:keys [db]} [_ city-codes]]
+   {:http-xhrio
+    {:method          :post
+     :uri             (str (:backend-url db) "/actions/create-cities-report")
+     :params          {:city-codes city-codes}
+     ;;:format          (ajax/json-request-format)
+     ;;:response-format (ajax/json-response-format {:keywords? true})
+     :format          (ajax/transit-request-format)
+     :response-format (ajax/transit-response-format)
+     :on-success      [::cities-report-success]
+     :on-failure      [::report-failure]}}))
+
+(re-frame/reg-event-db
+ ::cities-report-success
+ (fn [db [_ data]]
+   (let [cities (-> data :data-points vals (->> (cutils/index-by :city-code)))]
+     (-> db
+         (update-in [:reports :stats :cities] merge cities)
+         (assoc-in [:reports :stats :country] (:country-averages data))))))
+
+(re-frame/reg-event-fx
+ ::download-stats-excel
+ (fn [{:keys [db]} [_ data headers]]
+   (let [tr     (:translator db)
+         config {:filename (tr :reports/stats)
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config})))

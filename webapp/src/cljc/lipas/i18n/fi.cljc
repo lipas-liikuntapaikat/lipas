@@ -79,13 +79,27 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
-   {:headline          (str "Yhteys" ZWSP "tiedot")
-    :contacts          "Yhteystiedot"
-    :select-fields     "Valitse raportin kentät"
-    :selected-fields   "Valitut kentät"
-    :shortcuts         "Pikavalinnat"
-    :download-as-excel "Luo raportti"
-    :download-excel    "Lataa Excel"}
+   {:headline            "Tilastot"
+    :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
+    nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
+    vertailla sitä muihin kuntiin."
+    :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
+    :bullet2             "Liikuntapaikkatilastot (tulossa)"
+    :browse-to           "Siirry tilastoihin"
+    :contacts            (str "Yhteys" ZWSP "tiedot")
+    :stats               "Taloustiedot"
+    :select-city         "Valitse kunta"
+    :select-cities       "Valitse kunnat"
+    :select-metrics      "Valitse suureet"
+    :select-city-service "Valitse toimi"
+    :select-fields       "Valitse raportin kentät"
+    :select-unit         "Valitse yksikkö"
+    :select-years        "Valitse vuodet"
+    :selected-fields     "Valitut kentät"
+    :country-avg         "(maan keskiarvo)"
+    :shortcuts           "Pikavalinnat"
+    :download-as-excel   "Luo raportti"
+    :download-excel      "Lataa Excel"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -100,7 +114,10 @@
     :comparison           "Hallien vertailu"
     :small                "Pieni kilpahalli > 500 hlö"
     :competition          "Kilpahalli < 3000 hlö"
-    :large                "Suurhalli > 3000 hlö"}
+    :large                "Suurhalli > 3000 hlö"
+    :watch                "Katso"
+    :video                "Video"
+    :video-description    "Pihlajalinna Areena on energiatehokas jäähalli"}
 
 
    :ice-rinks

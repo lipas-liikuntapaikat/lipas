@@ -241,10 +241,11 @@
       ["/actions/send-magic-link"
        {:post
         {:middleware [mw/token-auth mw/auth mw/admin]
-         :parameters {:body
-                      {:login-url string?
-                       :variant   :lipas.magic-link/email-variant
-                       :user      :lipas/new-user}}
+         :parameters
+         {:body
+          {:login-url string?
+           :variant   :lipas.magic-link/email-variant
+           :user      :lipas/new-user}}
          :handler
          (fn [req]
            (let [user    (-> req :parameters :body :user)
@@ -253,17 +254,14 @@
                              (do (core/add-user! db user)
                                  (core/get-user db (:email user))))
                  url     (-> req :parameters :body :login-url)
-                 _       (core/send-magic-link! db emailer {:user      user
-                                                            :variant   variant
-                                                            :login-url url})]
+                 params  {:user user :variant variant :login-url url}
+                 _       (core/send-magic-link! db emailer params)]
              {:status 200 :body {:status "OK"}}))}}]
 
       ["/actions/create-energy-report"
        {:post
         {:parameters
-         {:body
-          {:year      int?
-           :type-code int?}}
+         {:body :lipas.api.energy-report/req}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :body :type-code)
@@ -273,7 +271,8 @@
 
       ["/actions/create-sports-sites-report"
        {:post
-        {:parameters {:body :lipas.api.sports-site-report/req}
+        {:parameters
+         {:body :lipas.api.sports-site-report/req}
          :handler
          (fn [{:keys [parameters]}]
            (let [query  (-> parameters :body :search-query)
@@ -284,7 +283,17 @@
               :body
               (ring-io/piped-input-stream
                (fn [out]
-                 (core/sports-sites-report search query fields out)))}))}}]]]
+                 (core/sports-sites-report search query fields out)))}))}}]
+
+      ["/actions/create-cities-report"
+       {:post
+        {:parameters
+         {:body :lipas.api.cities-report/req}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [city-codes (-> parameters :body :city-codes)]
+             {:status 200
+              :body   (core/cities-report db city-codes)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

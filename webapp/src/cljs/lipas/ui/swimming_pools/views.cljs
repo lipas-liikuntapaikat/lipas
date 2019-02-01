@@ -19,12 +19,19 @@
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
-    [energy/energy-stats
-     {:tr             tr
-      :year           year
-      :link           "/#/uimahalliportaali/ilmoita-tiedot"
-      :stats          stats
-      :on-year-change #(==> [::events/display-stats %])}]))
+
+    [:<>
+     [energy/energy-stats
+      {:tr             tr
+       :year           year
+       :link           "/#/uimahalliportaali/ilmoita-tiedot"
+       :stats          stats
+       :on-year-change #(==> [::events/display-stats %])}]
+
+     [energy/hof
+      {:tr             tr
+       :year           year
+       :stats          stats}]]))
 
 (defn toggle-dialog
   ([dialog]
@@ -716,7 +723,7 @@
                    :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
-         [mui/tab {:label (tr :reports/headline)
+         [mui/tab {:label (tr :reports/contacts)
                    :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}

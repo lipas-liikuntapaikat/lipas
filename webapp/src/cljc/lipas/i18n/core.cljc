@@ -8,6 +8,7 @@
    [lipas.data.swimming-pools :as pools]
    [lipas.data.cities :as cities]
    [lipas.data.types :as types]
+   [lipas.reports :as reports]
    [lipas.i18n.en :as en]
    [lipas.i18n.fi :as fi]
    [lipas.i18n.se :as se]
@@ -42,7 +43,8 @@
     :ice-resurfacer-fuels      (->translations locale ice/ice-resurfacer-fuels)
     :refrigerant-solutions     (->translations locale ice/refrigerant-solutions)
     :refrigerants              (->translations locale ice/refrigerants)
-    :size-categories           (->translations locale ice/size-categories)}
+    :size-categories           (->translations locale ice/size-categories)
+    :stats-metrics             (->translations locale reports/stats-metrics)}
    (merge m)))
 
 (def dicts

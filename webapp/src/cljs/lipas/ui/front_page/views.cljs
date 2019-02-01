@@ -168,6 +168,17 @@
        [lui/li (tr :swim/entering-energy-data)]
        [lui/li (tr :swim/updating-basic-data)]]]
 
+     ;; Reports
+     [grid-card
+      {:title     (tr :reports/headline)
+       :link      "/#/tilastot"
+       :link-text (tr :reports/browse-to)}
+      [mui/typography {:variant "body1"}
+       (tr :reports/description)]
+      [:ul
+       [lui/li (tr :reports/bullet1)]
+       [lui/li (tr :reports/bullet2)]]]
+
      ;; Open Data
      [grid-card {:title (tr :open-data/headline)}
       [mui/list
@@ -229,4 +240,4 @@
    [footer tr]])
 
 (defn main [tr]
-  (create-panel tr))
+  [create-panel tr])

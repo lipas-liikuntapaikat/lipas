@@ -837,7 +837,7 @@
   [mui/typography
    {:variant "subtitle1"
     :style
-    {:margin-top    "1em"
-     :margin-bottom "1em"
+    {:margin-top    "2em"
+     :margin-bottom "2em"
      :font-weight   "bold"}}
    label])
