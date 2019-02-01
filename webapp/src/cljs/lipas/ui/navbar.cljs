@@ -158,6 +158,14 @@
        [mui/list-item-icon
         [mui/icon "pool"]]
        [mui/list-item-text {:primary (tr :swim/headline)}]]
+
+      ;; Reports
+      [mui/list-item {:button   true
+                      :on-click #(hide-and-navigate! "/#/tilastot")}
+       [mui/list-item-icon
+        [mui/icon "insert_chart_outlined"]]
+       [mui/list-item-text {:primary (tr :reports/headline)}]]
+
       [mui/divider]
 
       ;; Admin

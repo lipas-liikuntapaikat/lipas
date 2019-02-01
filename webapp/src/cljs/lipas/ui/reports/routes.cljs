@@ -3,7 +3,7 @@
    [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
-  ["raportit"
+  ["tilastot"
    {:name :lipas.ui.routes.reports/front-page
     :controllers
     [{:start
