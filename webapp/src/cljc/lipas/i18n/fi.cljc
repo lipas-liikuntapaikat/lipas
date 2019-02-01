@@ -81,11 +81,11 @@
    :reports
    {:headline            "Tilastot"
     :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
-    nuorisotoimien osalta. Kunta voi seurata oman toiminnan
-    menokehitystä ja vertailla sitä muihin kuntiin."
+    nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
+    vertailla sitä muihin kuntiin."
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
     :bullet2             "Liikuntapaikkatilastot (tulossa)"
-    :browse-to           "Siirry raportteihin"
+    :browse-to           "Siirry tilastoihin"
     :contacts            (str "Yhteys" ZWSP "tiedot")
     :stats               "Taloustiedot"
     :select-city         "Valitse kunta"

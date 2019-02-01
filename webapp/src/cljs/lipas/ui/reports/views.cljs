@@ -1,6 +1,5 @@
 (ns lipas.ui.reports.views
   (:require
-   [lipas.reports :as reports]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
