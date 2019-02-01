@@ -45,6 +45,10 @@
    :admins                admins/all
    :owners                owners/all
    :cities                (utils/index-by :city-code cities/active)
+   :cities-by-avi-id      (group-by :avi-id cities/active)
+   :cities-by-province-id (group-by :province-id cities/active)
+   :provinces             cities/provinces
+   :avi-areas             cities/avi-areas
    :types                 types/all
    :materials             materials/all
    :building-materials    materials/building-materials
@@ -114,9 +118,18 @@
 
    ;; Reports
    :reports
-   {:dialog-open?    false
-    :fields          reports/fields
-    :selected-fields (keys reports/default-fields)}
+   {:dialog-open?          false
+    :fields                reports/fields
+    :selected-fields       (keys reports/default-fields)
+    :selected-cities       #{179}
+    :stats-metrics         reports/stats-metrics
+    :selected-metrics      ["net-costs" "investments"]
+    :city-services         reports/city-services
+    :selected-city-service "sports-services"
+    :stats-units           reports/stats-units
+    :selected-unit         "1000-euros"
+    :selected-years        (range 2000 (dec utils/this-year))
+    :stats-tab             "chart"}
 
    ;; Map
    :map

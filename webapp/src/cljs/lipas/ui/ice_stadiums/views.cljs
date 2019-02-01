@@ -13,16 +13,53 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn stats-tab []
+
+
+(defn stats-tab* [{:keys [width]}]
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
         stats (<== [::subs/stats year])]
-    [energy/energy-stats
-     {:tr   tr
-      :year year
-      :link           "/#/jaahalliportaali/ilmoita-tiedot"
-      :stats          stats
-      :on-year-change #(==> [::events/display-stats %])}]))
+
+    [mui/grid {:container true :style {:background-color "#fff"}}
+
+     [energy/energy-stats
+      {:tr             tr
+       :year           year
+       :link           "/#/jaahalliportaali/ilmoita-tiedot"
+       :stats          stats
+       :on-year-change #(==> [::events/display-stats %])}]
+
+     [mui/grid {:item true :xs 12 :style {:padding "1em"}}
+      [mui/typography {:variant "h4" :style {:margin "0.5em 0 0 0" :opacity 0.7}}
+       (str(tr :ice/video-description) " - " (str (tr :ice/watch) " " (tr :ice/video)))]]
+
+     [mui/grid {:item true :style {:padding "1em"}}
+      [:iframe
+       {:src              "https://www.youtube.com/embed/-tIpUzQXZB8"
+        :width            (case width
+                            ;;"xl" 1920
+                            "xl" 1280
+                            "lg" 960
+                            "md" 640
+                            480)
+        :height           (case width
+                            ;;"xl" 1080
+                            "xl" 720
+                            "lg" 540
+                            "md" 360
+                            270)
+        :frameborder      0
+        :allow            (str "accelerometer; autoplay; encrypted-media; "
+                               "gyroscope; picture-in-picture")
+        :allow-fullscreen true}]]
+
+     [energy/hof
+      {:tr    tr
+       :year  year
+       :stats stats}]]))
+
+(defn stats-tab []
+  [:> (mui/with-width* (r/reactify-component stats-tab*))])
 
 (defn toggle-dialog
   ([dialog]
@@ -601,22 +638,28 @@
 (defn compare-tab []
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
-    [:iframe {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
-              :style {:min-height "800px" :width "100%"}}]]])
+    [:iframe
+     {:src "https://liikuntaportaalit.sportvenue.net/Jaahalli"
+      :style {:min-height "800px" :width "100%"}}]]])
 
 (defn energy-info-tab [tr]
   [mui/grid {:container true}
    [mui/grid {:item true :xs 12}
+
     [mui/card {:square true}
      [mui/card-header {:title (tr :ice-energy/headline)}]
      [mui/card-content
       [mui/typography
        (tr :ice-energy/description)]]
+
+     ;; Finnhockey link
      [mui/card-actions
       [mui/button
        {:color "secondary"
         :href  "http://www.finhockey.fi/index.php/info/jaeaehallit"}
        (str "> " (tr :ice-energy/finhockey-link))]
+
+      ;; Energy calculator excel link
       [mui/button
        {:color "secondary"
         :href  (str "https://jyu-my.sharepoint.com/"
@@ -654,8 +697,7 @@
         card-props {:square true}]
     [mui/grid {:container true}
 
-     [mui/grid {:item       true :xs 12
-                :class-name :no-print}
+     [mui/grid {:item true :xs 12 :class-name :no-print}
       [mui/card card-props
        [mui/card-content
         [mui/tabs {:scrollable true
@@ -685,7 +727,7 @@
                    :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
-         [mui/tab {:label (tr :reports/headline)
+         [mui/tab {:label (tr :reports/contacts)
                    :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}

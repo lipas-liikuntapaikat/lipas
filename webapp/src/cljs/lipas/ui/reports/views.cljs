@@ -1,11 +1,15 @@
 (ns lipas.ui.reports.views
   (:require
+   [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.reports.events :as events]
    [lipas.ui.reports.subs :as subs]
    [lipas.ui.search.events :as search-events]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
+
+(def select-style {:min-width "170px"})
 
 (defn fields-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -15,11 +19,80 @@
      {:value       value
       :label       (tr :search/search-more)
       :items       items
+      :style       select-style
       :label-fn    (comp locale second)
       :value-fn    first
       :spacing     8
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
+
+(defn city-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
+    ^{:key value}
+    [lui/select
+     {:items     cities
+      :value     value
+      :style     select-style
+      :label     (tr :reports/select-city)
+      :value-fn  :city-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn service-selector [{:keys [tr value on-change]}]
+  (let [locale   (tr)
+        services (<== [::subs/city-services])]
+    ^{:key value}
+    [lui/select
+     {:items     services
+      :value     value
+      :style     select-style
+      :label     (tr :reports/select-city-service)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
+(defn metrics-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        metrics (<== [::subs/stats-metrics])]
+    ^{:key value}
+    [lui/multi-select
+     {:items        metrics
+      :value        value
+      :style        select-style
+      :label        (tr :reports/select-metrics)
+      :value-fn     first
+      :label-fn     (comp locale second)
+      :on-change    on-change}]))
+
+(defn unit-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        units  (<== [::subs/stats-units])]
+    ^{:key value}
+    [lui/select
+     {:items     units
+      :value     value
+      :style     select-style
+      :label     (tr :reports/select-unit)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
+(defn years-selector [{:keys [tr value on-change]}]
+  [lui/year-selector
+   {:label        (tr :reports/select-years)
+    :multi?       true
+    :render-value (fn [vs]
+                    (let [vs (sort vs)]
+                      (condp = (count vs)
+                        0 "-"
+                        1 (first vs)
+                        2 (str (first vs) ", " (second vs))
+                        (str (first vs) " ... " (last vs)))))
+    :value        value
+    :style        select-style
+    :years        (range 2000 utils/this-year)
+    :on-change    on-change}])
 
 (defn dialog [{:keys [tr]}]
   (let [open?           (<== [::subs/dialog-open?])
@@ -112,3 +185,111 @@
          :color    "secondary"
          :on-click #(==> [::search-events/create-report-from-current-search])}
         (tr :reports/download-excel)]]]]))
+
+(defn- make-headers [tr]
+  [[:year (tr :time/year)]
+   [:city-code (tr :lipas.location/city-code)]
+   [:investments (tr :stats-metrics/investments)]
+   [:investments-avg (str (tr :stats-metrics/investments) " "
+                          (tr :reports/country-avg))]
+   [:net-costs (tr :stats-metrics/net-costs)]
+   [:net-costs-avg (str (tr :stats-metrics/net-costs) " "
+                        (tr :reports/country-avg))]
+   [:operating-expenses (tr :stats-metrics/operating-expenses)]
+   [:operating-expenses-avg (str (tr :stats-metrics/operating-expenses) " "
+                                 (tr :reports/country-avg))]
+   [:operating-incomes (tr :stats-metrics/operating-incomes)]
+   [:operating-incomes-avg (str (tr :stats-metrics/operating-incomes) " "
+                                (tr :reports/country-avg))]
+   [:subsidies (tr :stats-metrics/subsidies)]
+   [:subsidies-avg (str (tr :stats-metrics/subsidies) " "
+                        (tr :reports/country-avg))]])
+
+(defn stats-report []
+  (let [tr      (<== [:lipas.ui.subs/translator])
+        unit    (<== [::subs/selected-unit])
+        cities  (<== [::subs/selected-cities])
+        metrics (<== [::subs/selected-metrics])
+        service (<== [::subs/selected-city-service])
+        years   (<== [::subs/selected-years])
+        data    (<== [::subs/cities-stats])
+        labels  (<== [::subs/stats-labels])
+        tab     (<== [::subs/stats-tab])
+
+        headers (make-headers tr)]
+
+    [mui/grid {:container true :spacing 16}
+
+     ;; Headline
+     [mui/grid {:item true}
+      [mui/typography {:variant "h2"}
+       (tr :reports/stats)]
+
+      ;; Selectors
+      [mui/grid {:container true :style {:margin-top "1em"}}
+
+       [mui/form-group {:row true}
+
+        ;; Unit selector
+        [unit-selector
+         {:tr tr :value unit :on-change #(==> [::events/select-unit %])}]
+
+        [:span {:style {:margin "0.5em"}}]
+
+        ;; City selector
+        [city-selector
+         {:tr        tr
+          :value     (first cities)
+          :on-change #(==> [::events/select-cities [%]])}]
+
+        [:span {:style {:margin "0.5em"}}]
+
+        ;; Metrics selector
+        [metrics-selector
+         {:tr tr :value metrics :on-change #(==> [::events/select-metrics %])}]
+
+        [:span {:style {:margin "0.5em"}}]
+
+        ;; City service selector
+        [service-selector
+         {:tr tr :value service :on-change #(==> [::events/select-city-service %])}]
+
+        [:span {:style {:margin "0.5em"}}]
+
+        ;; Years selector
+        [years-selector
+         {:tr tr :value years :on-change #(==> [::events/select-years %])}]]]]
+
+     ;; Chart
+     (when (= tab "chart")
+       [mui/grid {:item true :xs 12}
+        [charts/city-stats-chart
+         {:metrics metrics :data data :labels labels}]])
+
+     ;; Table
+     (when (= tab "table")
+       [mui/grid {:item true :xs 12}
+        [lui/table
+         {:headers headers :items data}]])
+
+     [mui/grid {:item true}
+      [mui/tabs {:value tab :on-change #(==> [::events/select-stats-tab %2])}
+       [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
+       [mui/tab {:value "table" :icon (r/as-element [mui/icon "table_chart"])}]]]
+
+     ;; Download Excel button
+     [mui/button
+      {:style    {:margin "1em"}
+       :variant  "outlined"
+       :color    "secondary"
+       :on-click #(==> [::events/download-stats-excel data headers])}
+      (tr :reports/download-excel)]]))
+
+(defn create-panel []
+  [mui/grid {:container true}
+   [mui/grid {:item true :xs 12}
+    [mui/paper {:square true :style {:padding "1em"}}
+     [stats-report]]]])
+
+(defn main [tr]
+  [create-panel])

@@ -1,7 +1,9 @@
 (ns lipas.ui.search.events
   (:require
    [ajax.core :as ajax]
+   [clojure.string :as string]
    [lipas.ui.utils :as utils]
+   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
 (defn- add-filter [m filter]
@@ -139,6 +141,30 @@
                 (update-in db [:search :filters :type-codes] into type-codes)
                 (assoc-in db [:search :filters :type-codes] type-codes))
     :dispatch [::filters-updated]}))
+
+(defn- id-parser [prefix]
+  (comp
+   (filter #(string/starts-with? % prefix))
+   (map #(string/replace % prefix ""))
+   (map cutils/->int)))
+
+(re-frame/reg-event-fx
+ ::select-regions
+ (fn [{:keys [db]} [_ region-ids]]
+   (let [avi-ids      (into [] (id-parser "avi-") region-ids)
+         province-ids (into [] (id-parser "province-") region-ids)
+         city-codes*  (into [] (id-parser "city-") region-ids)
+         city-codes   (into [] cat
+                            [(->> avi-ids
+                                  (select-keys (:cities-by-avi-id db))
+                                  (mapcat second)
+                                  (map :city-code))
+                             (->> province-ids
+                                  (select-keys (:cities-by-province-id db))
+                                  (mapcat second)
+                                  (map :city-code))
+                             city-codes*])]
+     {:dispatch [::set-city-filter city-codes]})))
 
 (re-frame/reg-event-fx
  ::set-city-filter

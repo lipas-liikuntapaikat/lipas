@@ -354,11 +354,14 @@
      ;;; Energy chart
      [mui/grid {:item true :xs 12 :md 12}
       [mui/card {:square true}
-       [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
+       ;; [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
        [mui/card-content
 
-        [mui/grid {:container true :spacing 16
-                   :style     {:margin-bottom "1em"}}
+        [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+
+         [mui/grid {:item true :xs 12 :style {:margin-top "1em"}}
+          [mui/typography {:variant "h3" :color "secondary"}
+           (tr :lipas.energy-stats/headline year)]]
 
          ;; Select year for stats
          [mui/grid {:item true}
@@ -422,29 +425,30 @@
             :variant "extendedFab"
             :href    link}
            [mui/icon {:style {:margin-right "0.25em"}} "edit"]
-           (tr :lipas.energy-stats/report)]]]]]]
+           (tr :lipas.energy-stats/report)]]]]]]]))
 
-     ;;; Hall of Fame (all energy info for previous year reported)
-     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-      [mui/grid  {:item true :xs 12 :md 12 :lg 12}
-       [mui/card {:square true :style {:background-color mui/primary}}
-        [mui/card-content
-         [mui/typography {:variant "h2" :style {:color mui/gold}}
-          "Hall of Fame"]
-         [mui/typography {:variant :title
-                          :style   {:margin-top "0.75em" :color mui/gray1}}
-          (tr :lipas.energy-stats/energy-reported-for year)]
-         [:div {:style {:margin-top "1em"}}
-          (into [mui/list {:dense true
-                           :style {:column-width "300px"}}]
-                (for [m (:hall-of-fame stats)]
-                  [mui/list-item {:style {:break-inside :avoid}}
-                   [mui/list-item-icon {:style {:margin-right 0
-                                                :color        mui/gold}}
-                    [mui/icon "star"]]
-                   [mui/list-item-text {:variant :body2
-                                        :color   :default}
-                    (:name m)]]))]]]]]]))
+(defn hof [{:keys [tr stats year]}]
+  ;;; Hall of Fame (all energy info for previous year reported)
+  [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+   [mui/grid  {:item true :xs 12 :md 12 :lg 12}
+    [mui/card {:square true :style {:background-color mui/primary}}
+     [mui/card-content
+      [mui/typography {:variant "h2" :style {:color mui/gold}}
+       "Hall of Fame"]
+      [mui/typography {:variant :title
+                       :style   {:margin-top "0.75em" :color mui/gray1}}
+       (tr :lipas.energy-stats/energy-reported-for year)]
+      [:div {:style {:margin-top "1em"}}
+       (into [mui/list {:dense true
+                        :style {:column-width "300px"}}]
+             (for [m (:hall-of-fame stats)]
+               [mui/list-item {:style {:break-inside :avoid}}
+                [mui/list-item-icon {:style {:margin-right 0
+                                             :color        mui/gold}}
+                 [mui/icon "star"]]
+                [mui/list-item-text {:variant :body2
+                                     :color   :default}
+                 (:name m)]]))]]]]])
 
 (defn localize-months [tr]
   (let [months [:jan :feb :mar :apr :may :jun

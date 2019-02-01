@@ -245,3 +245,72 @@
                        "location.city.city-name"
                        "properties.surface-material"
                        "properties.area-m2"]))
+
+(def stats-metrics
+  {"investments"        {:fi "Investoinnit"
+                         :en "Investments"}
+   "operating-expenses" {:fi "Käyttökustannukset"
+                         :en "Operating expenses"}
+   "operating-incomes"  {:fi "Käyttötuotot"
+                         :en "Operating incomes"}
+   "subsidies"          {:fi "Myönnetyt avustukset"
+                         :en "Subsidies"}
+   "net-costs"          {:fi "Nettokustannukset"
+                         :en "Net costs"}})
+
+(def city-services
+  {"sports-services" {:fi "Liikuntatoimi"
+                      :en "Sports services"}
+   "youth-services"  {:fi "Nuorisotoimi"
+                      :en "Youth services"}})
+
+(def stats-units
+  {"1000-euros"       {:fi "Tuhatta €"
+                       :en "€1000"}
+   "euros-per-capita" {:fi "€ / Asukas"
+                       :en "€ / Capita"}})
+
+(defn- service-avgs [service year cities]
+  (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
+        ks (-> stats-metrics keys (->> (map keyword)))]
+    (reduce
+     (fn [res k]
+       (assoc res k (->> ms
+                         (map k)
+                         (remove nil?)
+                         utils/simple-stats)))
+     {}
+     ks)))
+
+(defn calc-avgs [year cities]
+  {:population (->> cities
+                    (map (comp :population #(get % year) :stats))
+                    (remove nil?)
+                    utils/simple-stats)
+   :services
+   {:youth-services     (service-avgs :youth-services year cities)
+    :sports-services    (service-avgs :sports-services year cities)
+    :youth-services-pc  (service-avgs :youth-services-pc year cities)
+    :sports-services-pc (service-avgs :sports-services-pc year cities)}})
+
+(def calc-avgs-memo (memoize calc-avgs))
+
+(defn calc-stats [years cities]
+  (reduce
+   (fn [res year]
+     (assoc res year (calc-avgs-memo year cities)))
+   {}
+   years))
+
+(defn calc-per-capita [population m]
+  (reduce
+   (fn [m [k v]]
+     (assoc m k (/ (* 1000 v) population)))
+   {}
+   m))
+
+(defn cities-report [city-codes all-cities]
+  (let [cities (utils/index-by :city-code all-cities)
+        years  (into #{} (mapcat (comp keys :stats)) all-cities)]
+    {:country-averages (calc-stats years all-cities)
+     :data-points      (select-keys cities city-codes)}))
