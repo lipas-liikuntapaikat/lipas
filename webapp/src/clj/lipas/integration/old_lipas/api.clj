@@ -36,19 +36,26 @@
                 :fields        fields}]
     (query [] url params)))
 
-(defn- query-timestamps* [lipas-ids]
+(defn- query-by-ids [lipas-ids fields]
   (let [url    (str url "/api/sports-places")
         params {:searchString (string/join "|" lipas-ids)
-                :fields       ["lastModified"]}]
+                :fields       fields}]
     (->> (query [] url params)
          (filter (comp (set lipas-ids) :sportsPlaceId)))))
 
 (defn query-timestamps [lipas-ids]
   (reduce
    (fn [res lipas-ids]
-     (into res (query-timestamps* lipas-ids)))
-          []
-          (partition 100 100 nil lipas-ids)))
+     (into res (query-by-ids lipas-ids ["lastModified"])))
+   []
+   (partition 100 100 nil lipas-ids)))
+
+(defn query-all-data [lipas-ids]
+  (reduce
+   (fn [res lipas-ids]
+     (into res (query-by-ids lipas-ids fields)))
+   []
+   (partition 100 100 nil lipas-ids)))
 
 (defn get-ice-stadiums []
   (let [url    (str url "/api/sports-places")
