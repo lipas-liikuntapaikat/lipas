@@ -103,6 +103,11 @@
                    last
                    old-lipas/last-modified->UTC)}))
 
+(defn migrate-changed-since!* [db search user since]
+  (log/info "Starting to migrate sports-sites from old lipas since" since)
+  (-> (migrate-changed-since! db search user since)
+      log/info))
+
 (defn migrate-users! [db fpath]
   (let [users (-> fpath slurp read-string)]
     (doseq [user  users]
@@ -128,7 +133,7 @@
         user                (core/get-user db "import@lipas.fi")]
     (case source
       "--old-lipas"       (migrate-from-old-lipas! db search user (rest args))
-      "--old-lipas-since" (migrate-changed-since! db search user (second args))
+      "--old-lipas-since" (migrate-changed-since!* db search user (second args))
       "--es-dump"         (migrate-from-es-dump! db user
                                                  (first (rest args))
                                                  (second (rest args)))
@@ -143,5 +148,5 @@
   (def db (:db system))
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
-  (-main "--old-lipas-since" "2017-01-01T00:00:00.000Z")
+  (-main "--old-lipas-since" "2019-01-01T00:00:00.000Z")
   (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn"))
