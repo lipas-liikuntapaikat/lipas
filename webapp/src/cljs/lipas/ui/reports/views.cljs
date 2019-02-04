@@ -226,37 +226,32 @@
        (tr :reports/stats)]
 
       ;; Selectors
-      [mui/grid {:container true :style {:margin-top "1em"}}
+      [mui/grid {:container true :spacing 16 :style {:margin-top "1em"}}
 
-       [mui/form-group {:row true}
-
-        ;; Unit selector
+       ;; Unit selector
+       [mui/grid {:item true}
         [unit-selector
-         {:tr tr :value unit :on-change #(==> [::events/select-unit %])}]
+         {:tr tr :value unit :on-change #(==> [::events/select-unit %])}]]
 
-        [:span {:style {:margin "0.5em"}}]
-
-        ;; City selector
+       ;; City selector
+       [mui/grid {:item true}
         [city-selector
          {:tr        tr
           :value     (first cities)
-          :on-change #(==> [::events/select-cities [%]])}]
+          :on-change #(==> [::events/select-cities [%]])}]]
 
-        [:span {:style {:margin "0.5em"}}]
-
-        ;; Metrics selector
+       ;; Metrics selector
+       [mui/grid {:item true}
         [metrics-selector
-         {:tr tr :value metrics :on-change #(==> [::events/select-metrics %])}]
+         {:tr tr :value metrics :on-change #(==> [::events/select-metrics %])}]]
 
-        [:span {:style {:margin "0.5em"}}]
-
-        ;; City service selector
+       ;; City service selector
+       [mui/grid {:item true}
         [service-selector
-         {:tr tr :value service :on-change #(==> [::events/select-city-service %])}]
+         {:tr tr :value service :on-change #(==> [::events/select-city-service %])}]]
 
-        [:span {:style {:margin "0.5em"}}]
-
-        ;; Years selector
+       ;; Years selector
+       [mui/grid {:item true}
         [years-selector
          {:tr tr :value years :on-change #(==> [::events/select-years %])}]]]]
 
@@ -272,6 +267,7 @@
         [lui/table
          {:headers headers :items data}]])
 
+     ;; Tabs for choosing between chart/table views
      [mui/grid {:item true}
       [mui/tabs {:value tab :on-change #(==> [::events/select-stats-tab %2])}
        [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
