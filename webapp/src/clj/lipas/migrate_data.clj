@@ -127,12 +127,13 @@
         {:keys [db search]} (backend/start-system! config)
         user                (core/get-user db "import@lipas.fi")]
     (case source
-      "--old-lipas" (migrate-from-old-lipas! db search user (rest args))
-      "--es-dump"   (migrate-from-es-dump! db user
-                                           (first (rest args))
-                                           (second (rest args)))
-      "--users"     (migrate-users! db (second args))
-      "--city-data" (migrate-city-data! db (second args))
+      "--old-lipas"       (migrate-from-old-lipas! db search user (rest args))
+      "--old-lipas-since" (migrate-changed-since! db search user (second args))
+      "--es-dump"         (migrate-from-es-dump! db user
+                                                 (first (rest args))
+                                                 (second (rest args)))
+      "--users"           (migrate-users! db (second args))
+      "--city-data"       (migrate-city-data! db (second args))
       (log/error "Please provide --es-dump dump-path err-path or
       --old-lipas 123 234 ..."))))
 
@@ -142,6 +143,5 @@
   (def db (:db system))
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
-  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats4.edn")
-
-  )
+  (-main "--old-lipas-since" "2017-01-01T00:00:00.000Z")
+  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn"))
