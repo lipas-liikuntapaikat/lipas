@@ -18,7 +18,10 @@
 
 ;; Lipas-data is fetched from JSON REST-API
 
-(defn migrate-from-old-lipas! [db search user lipas-ids]
+(defn migrate-from-old-lipas!
+  "Fetches sites one by one from old Lipas and upserts to db without any
+  timestamp checks."
+  [db search user lipas-ids]
   (log/info "Starting to migrate sports-sites" lipas-ids)
   (doseq [lipas-id lipas-ids]
     (let [data (->> lipas-id
@@ -53,18 +56,18 @@
           ;;(throw (ex-info "Invalid site" {:data data}))
           (save-invalid! data err-path))))))
 
-(defn migrate-changed-since! [db search user since]
-  (let [changed (old-lipas-api/query-changed (old-lipas/UTC->last-modified since))
-
-        ;; Get last modification dates from db for all update
+(defn- migrate-changed!
+  "Migrates modifications from data if they're newer than data in db."
+  [db search user data]
+  (let [;; Get last modification dates from db for all update
         ;; candidates.
-        timestamps (->> (db/get-last-modified db (map :sportsPlaceId changed))
+        timestamps (->> (db/get-last-modified db (map :sportsPlaceId data))
                         (utils/index-by :lipas_id))
 
         updates (->>
                  ;; Filter entries where newer modifications
                  ;; exists in this system.
-                 (utils/filter-newer (utils/index-by :sportsPlaceId changed)
+                 (utils/filter-newer (utils/index-by :sportsPlaceId data)
                                      #(-> % :lastModified old-lipas/last-modified->UTC)
                                      timestamps
                                      #(when-let [ts (:created_at %)]
@@ -78,7 +81,7 @@
                  ;; sensible way.
                  (remove (comp #{3110 3130 2510 2520} :typeCode :type)))
 
-        ignores     (set/difference (set changed) (set updates))
+        ignores     (set/difference (set data) (set updates))
         sites       (->> updates
                          (map (partial old-lipas/->sports-site))
                          (map utils/clean))
@@ -92,21 +95,30 @@
          (search/->bulk idx-name :lipas-id)
          (search/bulk-index! search))
 
-    {:total   (count changed)
+    {:total   (count data)
      :updated (map :lipas-id valid-sites)
      :failed  (map :lipas-id invalid)
      :ignored (map :sportsPlaceId ignores)
      ;; Timestamp from where we will query next time.
-     :latest  (->> changed
+     :latest  (->> data
                    (map :lastModified)
                    sort
                    last
                    old-lipas/last-modified->UTC)}))
 
-(defn migrate-changed-since!* [db search user since]
-  (log/info "Starting to migrate sports-sites from old lipas since" since)
-  (-> (migrate-changed-since! db search user since)
-      log/info))
+(defn migrate-changed-since! [db search user since]
+  (let [data (old-lipas-api/query-changed (old-lipas/UTC->last-modified since))]
+    (migrate-changed! db search user data)))
+
+(defn migrate-changed-by-ids! [db search user ids]
+  (let [data (old-lipas-api/query-all-data ids)]
+    (migrate-changed! db search user data)))
+
+(defn migrate-changed-by-ids-edn [db search user fpath]
+  (log/info "Starting to migrate changed data by lipas ids from " fpath)
+  (let [ids (->> fpath slurp read-string (map (comp utils/->int :lipas-id)))]
+    (->> (migrate-changed-by-ids! db search user ids)
+         log/info)))
 
 (defn migrate-users! [db fpath]
   (let [users (-> fpath slurp read-string)]
@@ -128,12 +140,13 @@
 
 (defn -main [& args]
   (let [source              (first args)
-        config              (select-keys config/default-config [:db])
+        config              (select-keys config/default-config [:db :search])
         {:keys [db search]} (backend/start-system! config)
         user                (core/get-user db "import@lipas.fi")]
     (case source
       "--old-lipas"       (migrate-from-old-lipas! db search user (rest args))
-      "--old-lipas-since" (migrate-changed-since!* db search user (second args))
+      "--old-lipas-edn"   (migrate-changed-by-ids-edn db search user (second args))
+      "--old-lipas-since" (migrate-changed-since! db search user (second args))
       "--es-dump"         (migrate-from-es-dump! db user
                                                  (first (rest args))
                                                  (second (rest args)))
@@ -149,4 +162,6 @@
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
   (-main "--old-lipas-since" "2019-01-01T00:00:00.000Z")
-  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn"))
+  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn")
+  (-main "--old-lipas" "79534")
+  (-main "--old-lipas-edn" "/Users/vaotjuha/lipas/data_migration/missing-ids.edn"))
