@@ -7,6 +7,8 @@
    [lipas.backend.email :as email]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.search :as search]
+   [lipas.data.cities :as cities]
+   [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
@@ -15,6 +17,9 @@
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
+
+(def cities (utils/index-by :city-code cities/all))
+(def types types/all)
 
 ;;; User ;;;
 
@@ -143,12 +148,31 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
+(defn enrich
+  "Enriches sports-site map with :search-meta key where we add data that
+  is useful for searching."
+  [sports-site]
+  (let [geom      (-> sports-site :location :geometries :features first :geometry)
+        coords    (case (:type geom)
+                    "Point"      (-> geom :coordinates)
+                    "LineString" (-> geom :coordinates first)
+                    "Polygon"    (-> geom :coordinates first first))
+        city-code (-> sports-site :location :city :city-code)
+        type-code (-> sports-site :type :type-code)]
+    (assoc sports-site :search-meta {:location
+                                     {:wgs84-point coords
+                                      :city
+                                      {:name (-> city-code cities :name)}}
+                                     :type
+                                     {:name (-> type-code types :name)}})))
+
 (defn index!
   ([search sports-site]
    (index! search sports-site false))
   ([search sports-site sync?]
    (let [idx-name "sports_sites_current"]
-     (search/index! search idx-name :lipas-id sports-site sync?))))
+     (let [data (enrich sports-site)]
+       (search/index! search idx-name :lipas-id data sync?)))))
 
 (defn search [search params]
   (let [idx-name "sports_sites_current"]
@@ -330,4 +354,40 @@
   (s distinct-type-codes-in-city)
   (s area-m2-stats-in-city)
   (s rings-around-city)
+
+  ;; orig
+  (s {:explain true
+      :sort [:_score],
+      :from 0,
+      :size 15,
+      :_source {:excludes ["search-meta"]},
+      :query
+      {:function_score
+       {:score_mode "sum",
+        :query
+        {:bool
+         {:must [{:query_string {:query "*"}}],
+          :filter [{:terms {:status.keyword ["active"]}}]}},
+        :functions
+        [{:gauss
+          {:search-meta.location.wgs84-point
+           {:origin "63.75018578583665,25.304613947374467",
+            :offset "2880m",
+            :scale "5760m"}}}]}}})
+
+  ;; new
+  (s {:explain true
+      :sort [:_score],
+      :from 0,
+      :size 150,
+      :_source {:excludes []},
+      :query
+      {:function_score
+       {:functions
+        [{:gauss
+          {:search-meta.location.wgs84-point
+           {:origin "63.75018578583665,25.304613947374467",
+            :offset "0m",
+            :scale "1000m"}}}]}}})
+
   )
