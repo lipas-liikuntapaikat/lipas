@@ -3,28 +3,13 @@
             [lipas.backend.core :as core]
             [lipas.backend.search :as search]
             [lipas.backend.system :as backend]
-            [lipas.data.types :as types]
             [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
 
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
-
-(defn enrich [sports-site]
-  (let [geom      (-> sports-site :location :geometries :features first :geometry)
-        coords    (case (:type geom)
-                    "Point"      (-> geom :coordinates)
-                    "LineString" (-> geom :coordinates first)
-                    "Polygon"    (-> geom :coordinates first first))
-        city-code (-> sports-site :location :city :city-code)
-        type-code (-> sports-site :type :type-code)]
-    (assoc sports-site :search-meta {:location
-                                     {:wgs84-point coords
-                                      :city
-                                      {:name (-> city-code cities :name)}}
-                                     :type
-                                     {:name (-> type-code types :name)}})))
 
 (defn index-all!
   ([db search user idx-name types]
@@ -35,7 +20,7 @@
      (if type-code
        (->> type-code
             (core/get-sports-sites-by-type-code db)
-            (map enrich)
+            (map core/enrich)
             (search/->bulk idx-name :lipas-id)
             (search/bulk-index! search)
             (conj futures)
