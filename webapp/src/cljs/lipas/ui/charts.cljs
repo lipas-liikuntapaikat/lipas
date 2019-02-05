@@ -4,22 +4,45 @@
    [clojure.set :refer [rename-keys map-invert]]
    [lipas.ui.mui :as mui]))
 
-(def colors
-  {:energy-mwh       "orange"
-   ;; :electricity-mwh  "#ffd400"
-   :electricity-mwh  "#efc700"       ; yellow
-   :heat-mwh         "#ff503c"       ; red-orange
-   :water-m3         "#0a9bff"       ; blue
-   ;; :total-count      "#8ce614"
-   :total-count      "#3367d6"       ; darker blue
-   ;; :spectators-count "#05cdaa"
-   :spectators-count "#72a4f7"       ; lighter blue
+;; Tip: enable rainbow-mode in emacs.
 
-   :investments        "#1e6ed6"     ; blue
-   :operating-expenses "#ff503c"     ; orange
-   :operating-incomes  "#3ba12f"     ; green
-   :subsidies          "#8ce614"     ; light green
-   :net-costs          "#d51a0d"     ; red
+(def colors
+  {;; Energy
+
+   :energy-mwh       "orange"
+   :electricity-mwh  "#efc700"
+   :heat-mwh         "#ff503c"
+   :water-m3         "#0a9bff"
+   :total-count      "#3367d6"
+   :spectators-count "#72a4f7"
+
+   ;; City finance
+   :investments        "#1e6ed6"
+   :operating-expenses "#ff503c"
+   :operating-incomes  "#3ba12f"
+   :subsidies          "#8ce614"
+   :net-costs          "#d51a0d"
+
+   ;;; Age structure
+
+   ;; Owners
+   "other"                  mui/gray1
+   "city"                   "#D35400"
+   "city-main-owner"        "#DC7633"
+   "registered-association" "#2980B9"
+   "company-ltd"            "#8E44AD"
+   "state"                  "#1ABC9C"
+   "foundation"             "#27AE60"
+   "unknown"                "#283747"
+
+   ;; Admins
+   "city-sports"             "#D35400"
+   "city-education"          "#BA4A00"
+   "city-technical-services" "#A04000"
+   "city-other"              "#873600"
+   "private-association"     "#2980B9"
+   "private-company"         "#8E44AD"
+   "private-foundation"      "#27AE60"
    })
 
 (def font-styles
@@ -101,7 +124,7 @@
     [:> rc/Legend
      {:wrapperStyle font-styles}]]])
 
-(defn city-stats-chart [{:keys [data metrics labels on-click]}]
+(defn finance-chart [{:keys [data metrics labels on-click]}]
   (let [lookup (map-invert labels)
         data   (->> data (map #(rename-keys % labels)))]
     [:> rc/ResponsiveContainer {:width "100%" :height 500}
@@ -122,3 +145,18 @@
              {:type    "monotone"
               :dataKey k2
               :stroke  (get colors (get lookup k1))}])))]))
+
+(defn age-structure-chart [{:keys [data]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+   (into
+    [:> rc/BarChart {:data data}
+     [:> rc/Legend {:wrapperStyle font-styles}]
+     [:> rc/Tooltip tooltip-styles]
+     [:> rc/YAxis {:tick font-styles}]
+     [:> rc/XAxis {:dataKey :construction-year :tick font-styles}]]
+    (for [k (->> data
+                 (mapcat keys)
+                 set
+                 (remove #(= :construction-year %))
+                 sort)]
+      [:> rc/Bar {:stackId "kissa" :dataKey k :label false :fill (get colors k)}]))])

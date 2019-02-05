@@ -270,6 +270,12 @@
    "euros-per-capita" {:fi "€ / Asukas"
                        :en "€ / Capita"}})
 
+(def groupings
+  {"owner" {:fi "Omistaja"
+            :en "Owner"}
+   "admin" {:fi "Ylläpitäjä"
+            :en "Administrator"}})
+
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
         ks (-> stats-metrics keys (->> (map keyword)))]
@@ -309,7 +315,7 @@
    {}
    m))
 
-(defn cities-report [city-codes all-cities]
+(defn finance-report [city-codes all-cities]
   (let [cities (utils/index-by :city-code all-cities)
         years  (into #{} (mapcat (comp keys :stats)) all-cities)]
     {:country-averages (calc-stats years all-cities)

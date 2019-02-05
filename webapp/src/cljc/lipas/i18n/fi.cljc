@@ -79,6 +79,12 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
+   {:select-fields     "Valitse raportin kentät"
+    :selected-fields   "Valitut kentät"
+    :shortcuts         "Pikavalinnat"
+    :download-as-excel "Luo raportti"}
+
+   :stats
    {:headline            "Tilastot"
     :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
     nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
@@ -87,19 +93,18 @@
     :bullet2             "Liikuntapaikkatilastot (tulossa)"
     :browse-to           "Siirry tilastoihin"
     :contacts            (str "Yhteys" ZWSP "tiedot")
-    :stats               (str "Talous" ZWSP "tiedot")
+    :city-stats          (str "Kunta" ZWSP "tilastot")
+    :finance-stats       (str "Talous" ZWSP "tiedot")
+    :age-structure       (str "Liikunta" ZWSP "paikkojen rakennus" ZWSP "vuodet")
+    :sports-stats        (str "Liikunta" ZWSP "paikat")
     :select-city         "Valitse kunta"
     :select-cities       "Valitse kunnat"
     :select-metrics      "Valitse suureet"
     :select-city-service "Valitse toimi"
-    :select-fields       "Valitse raportin kentät"
     :select-unit         "Valitse yksikkö"
     :select-years        "Valitse vuodet"
-    :selected-fields     "Valitut kentät"
-    :country-avg         "(maan keskiarvo)"
-    :shortcuts           "Pikavalinnat"
-    :download-as-excel   "Luo raportti"
-    :download-excel      "Lataa Excel"}
+    :select-grouping     "Ryhmittely"
+    :country-avg         "(maan keskiarvo)"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -532,7 +537,8 @@
     :select-owners            "Valitse omistajat"
     :filter-area-m2           "Rajaa pinta-ala m²"
     :filter-surface-materials "Rajaa pintamateriaalit"
-    :clear-selections         "Poista valinnat"}
+    :clear-selections         "Poista valinnat"
+    :download-excel           "Lataa Excel"}
 
    :confirm
    {:headline              "Varmistus"

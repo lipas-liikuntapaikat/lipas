@@ -8,7 +8,7 @@
    [lipas.ui.login.routes :as login]
    [lipas.ui.map.routes :as lmap]
    [lipas.ui.register.routes :as register]
-   [lipas.ui.reports.routes :as reports]
+   [lipas.ui.stats.routes :as stats]
    [lipas.ui.swimming-pools.routes :as swimming-pools]
    [lipas.ui.user.routes :as user]
    [lipas.ui.utils :refer [==>] :as utils]
@@ -46,7 +46,7 @@
     register/routes
     lmap/routes
     admin/routes
-    reports/routes
+    stats/routes
     ice-stadiums/routes
     swimming-pools/routes]
    {:data {:coercion rss/coercion}}))

@@ -118,18 +118,26 @@
 
    ;; Reports
    :reports
-   {:dialog-open?          false
-    :fields                reports/fields
-    :selected-fields       (keys reports/default-fields)
-    :selected-cities       #{179}
-    :stats-metrics         reports/stats-metrics
-    :selected-metrics      ["net-costs" "investments"]
-    :city-services         reports/city-services
-    :selected-city-service "sports-services"
-    :stats-units           reports/stats-units
-    :selected-unit         "1000-euros"
-    :selected-years        (range 2000 (dec utils/this-year))
-    :stats-tab             "chart"}
+   {:dialog-open?    false
+    :fields          reports/fields
+    :selected-fields (keys reports/default-fields)}
+
+   ;; Stats
+   :stats
+   {:selected-tab    "city-stats"
+    :selected-cities #{179}
+    :finance
+    {:metrics               reports/stats-metrics
+     :selected-metrics      ["net-costs" "investments"]
+     :city-services         reports/city-services
+     :selected-city-service "sports-services"
+     :units                 reports/stats-units
+     :selected-unit         "1000-euros"
+     :selected-years        (range 2000 (dec utils/this-year))
+     :view-type             "chart"}
+    :age-structure
+    {:groupings         reports/groupings
+     :selected-grouping "owner"}}
 
    ;; Map
    :map
