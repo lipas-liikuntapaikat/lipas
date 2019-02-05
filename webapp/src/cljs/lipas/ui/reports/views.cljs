@@ -111,7 +111,6 @@
         (tr :actions/cancel)]
        [mui/button
         {:disabled (or downloading? (empty? selected-fields))
-         ;;:variant  ""
          :color    "secondary"
          :on-click #(==> [::search-events/create-report-from-current-search])}
-        (tr :reports/download-excel)]]]]))
+        (tr :actions/download-excel)]]]]))
