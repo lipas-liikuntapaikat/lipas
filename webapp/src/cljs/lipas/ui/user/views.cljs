@@ -133,10 +133,25 @@
         firstname (-> user :user-data :firstname)
         lastname  (-> user :user-data :lastname)]
 
-    [mui/grid {:container true
-               :spacing   8
-               :style     {:padding 8}}
+    [mui/grid {:container true :spacing 8 :style {:padding 8}}
      [mui/grid {:item true :xs 12 :md 6}
+
+      ;; Promo card
+      [mui/card card-props
+       [mui/card-header {:title "Joku promo-otsikko"}]
+       [mui/card-content
+        [mui/typography {:variant "h5"}
+         "Liikuntasalien päivitys"]
+        [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+         "blablaba tähän tietoa siitä mitä varten nämä on nyt tärkeitä"]
+        [mui/button
+         {:variant  "contained"
+          :color    "secondary"
+          :on-click (fn []
+                      (==> [:lipas.ui.search.events/set-filters-by-permissions])
+                      (==> [:lipas.ui.search.events/set-type-filter [2150]])
+                      (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
+         "Näytä liikuntasalit jotka voin päivittää"]]]
 
       ;; Profile card
       [mui/card card-props
