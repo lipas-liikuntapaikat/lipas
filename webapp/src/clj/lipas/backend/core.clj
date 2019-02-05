@@ -183,13 +183,13 @@
          (excel/create-workbook "lipas")
          (excel/save-workbook-into-stream! out))))
 
-(defn cities-report [db city-codes]
+(defn finance-report [db city-codes]
   (let [data (or
               (:all-cities @cache)
               (->> (db/get-cities db)
                    (swap! cache assoc :all-cities)
                    :all-cities))]
-    (reports/cities-report city-codes data)))
+    (reports/finance-report city-codes data)))
 
 (comment
   (require '[lipas.backend.config :as config])
@@ -201,4 +201,133 @@
   (reset! cache {})
   (:all-cities @cache)
   (time (first (:all-cities @cache)))
-  (time (cities-report db-spec [992])) )
+  (time (cities-report db-spec [992]))
+
+  ;; ES queries ;;
+
+  (defn s [q] (search/search search "sports_sites_current" q))
+
+
+  (def active
+    {:size 0
+     :query
+     {:bool
+      {:filter
+       [{:terms {:status.keyword ["active"]}}]}}})
+
+  (def city-query
+    {:size 0
+     :query
+     {:bool
+      {:filter
+       [{:terms {:status.keyword ["active"]}}
+        {:terms {:location.city.city-code [992]}}]}}})
+
+  (def distinct-type-codes-in-city
+    (merge
+     city-query
+     {:aggs
+      {:type_count
+       {:cardinality
+        {:field :type.type-code}}}}))
+
+  (def area-m2-stats-in-city
+    (merge
+     city-query
+     {:aggs
+      {:aream2_stats
+       {:stats
+        {:field :properties.area-m2}}}}))
+
+  (def rings-around-city
+    (merge
+     city-query
+     {:aggs
+      {:rings_around_city
+       {:geo_distance
+        {:field  :search-meta.location.wgs84-point
+         :origin {:lat 62.6028024 :lon 25.7184043}
+         :ranges [{:from 0 :to 500}
+                  {:from 500 :to 1000}
+                  {:from 1000 :to 5000}
+                  {:from 5000 :to 10000}]}
+        :aggs
+        {:tiptop
+         {:top_hits {:size 1}}}}}}))
+
+  (def sports-site-counts-per-city-naive
+    (merge
+     active
+     {:aggs
+      {:cities
+       {:terms {:field :location.city.city-code}}}}))
+
+  (def sports-site-counts-per-city
+    (merge
+     active
+     {:aggs
+      {:cities
+       {:composite
+        {:size    400
+         :sources [{:city-code {:terms {:field :location.city.city-code}}}]}}}}))
+
+  (def sports-site-counts-per-city-and-type
+    (merge
+     active
+     {:aggs
+      {:cities
+       {:composite
+        {:size    (* 462 140)
+         :sources [{:city-code {:terms {:field :location.city.city-code}}}
+                   {:type-code {:terms {:field :type.type-code}}}]}}}}))
+
+  (def construction-year-histogram
+    (merge
+     active
+     {:aggs
+      {:cities
+       {:composite
+        {:size    100
+         :sources
+         [{:construction-year
+           {:histogram
+            {:field :construction-year :interval 10}}}]}}}}))
+
+  (def construction-year-histogram-by-owner
+    (merge
+     active
+     {:aggs
+      {:years
+       {:composite
+        {:size    100
+         :sources
+         [{:construction-year
+           {:histogram
+            {:field :construction-year :interval 10}}}
+          {:owner {:terms {:field :owner.keyword}}}]}}}}))
+  (s construction-year-histogram-by-owner)
+
+  (def construction-year-histogram-by-type
+    (merge
+     active
+     {:aggs
+      {:years
+       {:composite
+        {:size    1000
+         :sources
+         [{:construction-year
+           {:histogram
+            {:field :construction-year :interval 10}}}
+          {:type {:terms {:field :type.type-code}}}]}}}}))
+
+  (s construction-year-histogram-by-type)
+
+  (s construction-year-histogram)
+
+  (s sports-site-counts-per-city)
+  (s sports-site-counts-per-city-and-type)
+  (s city-query)
+  (s distinct-type-codes-in-city)
+  (s area-m2-stats-in-city)
+  (s rings-around-city)
+  )

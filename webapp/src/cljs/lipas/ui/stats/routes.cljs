@@ -1,4 +1,4 @@
-(ns lipas.ui.reports.routes
+(ns lipas.ui.stats.routes
   (:require
    [lipas.ui.utils :as utils :refer [==>]]))
 
@@ -8,5 +8,5 @@
     :controllers
     [{:start
       (fn []
-        (==> [:lipas.ui.events/set-active-panel :reports-panel])
-        (==> [:lipas.ui.reports.events/select-cities [992]]))}]}])
+        (==> [:lipas.ui.events/set-active-panel :stats-panel])
+        (==> [:lipas.ui.stats.events/select-cities [179]]))}]}])

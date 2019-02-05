@@ -399,9 +399,9 @@
     (is (= 200 (:status resp)))
     (is (= "Lipas-id" header-1))))
 
-(deftest cities-report-test
+(deftest finance-report-test
   (let [_    (seed/seed-city-data! db)
-        path "/api/actions/create-cities-report"
+        path "/api/actions/create-finance-report"
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/json")
                       (mock/body (->json {:city-codes [275 972]}))))

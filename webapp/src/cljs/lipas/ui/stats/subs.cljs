@@ -1,4 +1,4 @@
-(ns lipas.ui.reports.subs
+(ns lipas.ui.stats.subs
   (:require
    [lipas.reports :as reports]
    [re-frame.core :as re-frame]))
@@ -6,87 +6,67 @@
 (re-frame/reg-sub
  ::selected-tab
  (fn [db _]
-   (-> db :reports :selected-tab)))
-
-(re-frame/reg-sub
- ::dialog-open?
- (fn [db _]
-   (-> db :reports :dialog-open?)))
-
-(re-frame/reg-sub
- ::downloading?
- (fn [db _]
-   (-> db :reports :downloading?)))
-
-(re-frame/reg-sub
- ::fields
- (fn [db _]
-   (-> db :reports :fields)))
-
-(re-frame/reg-sub
- ::selected-fields
- (fn [db _]
-   (-> db :reports :selected-fields)))
-
-(re-frame/reg-sub
- ::city-services
- (fn [db _]
-   (-> db :reports :city-services)))
-
-(re-frame/reg-sub
- ::selected-city-service
- (fn [db _]
-   (-> db :reports :selected-city-service)))
+   (-> db :stats :selected-tab)))
 
 (re-frame/reg-sub
  ::selected-cities
  (fn [db _]
-   (-> db :reports :selected-cities)))
+   (-> db :stats :selected-cities)))
 
 (re-frame/reg-sub
- ::stats-metrics
+ ::finance-city-services
  (fn [db _]
-   (-> db :reports :stats-metrics)))
+   (-> db :stats :finance :city-services)))
 
 (re-frame/reg-sub
- ::selected-metrics
+ ::selected-finance-city-service
  (fn [db _]
-   (-> db :reports :selected-metrics)))
+   (-> db :stats :finance :selected-city-service)))
 
 (re-frame/reg-sub
- ::stats-units
+ ::finance-metrics
  (fn [db _]
-   (-> db :reports :stats-units)))
+   (-> db :stats :finance :metrics)))
 
 (re-frame/reg-sub
- ::selected-unit
+ ::selected-finance-metrics
  (fn [db _]
-   (-> db :reports :selected-unit)))
+   (-> db :stats :finance :selected-metrics)))
 
 (re-frame/reg-sub
- ::selected-years
+ ::finance-units
  (fn [db _]
-   (-> db :reports :selected-years)))
+   (-> db :stats :finance :units)))
 
 (re-frame/reg-sub
- ::stats-data
+ ::selected-finance-unit
  (fn [db _]
-   (-> db :reports :stats)))
+   (-> db :stats :finance :selected-unit)))
 
 (re-frame/reg-sub
- ::view-type
+ ::selected-finance-years
  (fn [db _]
-   (-> db :reports :view-type)))
+   (-> db :stats :finance :selected-years)))
 
 (re-frame/reg-sub
- ::stats-labels
+ ::finance-data*
+ (fn [db _]
+   (-> db :stats :finance :data)))
+
+(re-frame/reg-sub
+ ::finance-view-type
+ (fn [db _]
+   (-> db :stats :finance :view-type)))
+
+(re-frame/reg-sub
+ ::finance-labels
  (fn [db _]
    (let [tr     (-> db :translator)
          locale (tr)]
      (reduce
       (fn [res [k v]]
         (let [k2 (str k "-avg")
-              v2 (str (locale v) " " (tr :reports/country-avg))]
+              v2 (str (locale v) " " (tr :stats/country-avg))]
           (assoc res (keyword k) (locale v) (keyword k2) v2)))
       {}
       reports/stats-metrics))))
@@ -122,12 +102,12 @@
    m))
 
 (re-frame/reg-sub
- ::cities-stats
- :<- [::stats-data]
+ ::finance-data
+ :<- [::finance-data*]
  :<- [::selected-cities]
- :<- [::selected-city-service]
- :<- [::selected-unit]
- :<- [::selected-years]
+ :<- [::selected-finance-city-service]
+ :<- [::selected-finance-unit]
+ :<- [::selected-finance-years]
  (fn [[data city-codes service unit years] _]
    (let [cities  (-> data :cities (select-keys city-codes))
          avgs    (-> data :country)
@@ -143,21 +123,21 @@
 (re-frame/reg-sub
  ::age-structure-groupings
  (fn [db _]
-   (-> db :reports :age-structure :groupings)))
+   (-> db :stats :age-structure :groupings)))
 
 (re-frame/reg-sub
  ::selected-age-structure-grouping
  (fn [db _]
-   (-> db :reports :age-structure :selected-grouping)))
+   (-> db :stats :age-structure :selected-grouping)))
+
+(re-frame/reg-sub
+ ::age-structure-data*
+ (fn [db _]
+   (-> db :stats :age-structure :data)))
 
 (re-frame/reg-sub
  ::age-structure-data
- (fn [db _]
-   (-> db :reports :age-structure)))
-
-(re-frame/reg-sub
- ::age-structure-stats
- :<- [::age-structure-data]
+ :<- [::age-structure-data*]
  (fn [data _]
    (let [data (-> data :years :buckets)]
      (->> data

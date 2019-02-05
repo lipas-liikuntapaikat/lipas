@@ -38,10 +38,10 @@
     exception/default-handlers
     exception-handlers
     ;;Prints all stack traces
-    ;; {::exception/wrap
-    ;;  (fn [handler e request]
-    ;;    (.printStackTrace e)
-    ;;    (handler e request))}
+    {::exception/wrap
+     (fn [handler e request]
+       (.printStackTrace e)
+       (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
@@ -285,7 +285,7 @@
                (fn [out]
                  (core/sports-sites-report search query fields out)))}))}}]
 
-      ["/actions/create-cities-report"
+      ["/actions/create-finance-report"
        {:post
         {:parameters
          {:body :lipas.api.cities-report/req}
@@ -293,7 +293,7 @@
          (fn [{:keys [parameters]}]
            (let [city-codes (-> parameters :body :city-codes)]
              {:status 200
-              :body   (core/cities-report db city-codes)}))}}]]]
+              :body   (core/finance-report db city-codes)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
