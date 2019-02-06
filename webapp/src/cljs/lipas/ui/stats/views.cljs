@@ -276,11 +276,12 @@
           :on-change #(==> [::events/select-age-structure-types %])}]]
 
        ;; Clear filters button
-       [mui/grid {:item true :xs 12}
-        [mui/button
-         {:color "secondary"
-          :on-click #(==> [::events/clear-age-structure-filters])}
-         (tr :search/clear-filters)]]
+       (when (or (not-empty types) (not-empty regions))
+         [mui/grid {:item true :xs 12}
+          [mui/button
+           {:color "secondary"
+            :on-click #(==> [::events/clear-age-structure-filters])}
+           (tr :search/clear-filters)]])
 
        ;; Interval selector
        [mui/grid {:item true}
