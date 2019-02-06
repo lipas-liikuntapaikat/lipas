@@ -96,6 +96,7 @@
     :city-stats          (str "Kunta" ZWSP "tilastot")
     :finance-stats       (str "Talous" ZWSP "tiedot")
     :age-structure       (str "Liikunta" ZWSP "paikkojen rakennus" ZWSP "vuodet")
+    :age-structure-stats (str "Rakennus" ZWSP "vuodet")
     :sports-stats        (str "Liikunta" ZWSP "paikat")
     :select-city         "Valitse kunta"
     :select-cities       "Valitse kunnat"

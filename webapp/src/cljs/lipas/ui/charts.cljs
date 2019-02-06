@@ -159,7 +159,7 @@
          :label
          {:value    (:y-axis labels)
           :angle    -90
-          :offset   15
+          :offset   10
           :position "insideBottomLeft"}}]
        [:> rc/XAxis {:dataKey :construction-year :tick font-styles}]]
       (for [k (->> data (mapcat keys) set (remove #(= :construction-year %)) sort)]

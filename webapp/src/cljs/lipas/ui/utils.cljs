@@ -352,3 +352,24 @@
    (when comeback?
      (==> [:lipas.ui.login.events/set-comeback-path (current-path)]))
    (==> [:lipas.ui.events/navigate path])))
+
+(defn- id-parser [prefix]
+  (comp
+   (filter #(string/starts-with? % prefix))
+   (map #(string/replace % prefix ""))
+   (map utils/->int)))
+
+(defn regions->city-codes [cities-by-avis cities-by-province region-ids]
+  (let [avi-ids      (into [] (id-parser "avi-") region-ids)
+        province-ids (into [] (id-parser "province-") region-ids)
+        city-codes*  (into [] (id-parser "city-") region-ids)]
+    (into [] (comp cat (remove nil?))
+          [(->> avi-ids
+                (select-keys cities-by-avis)
+                (mapcat second)
+                (map :city-code))
+           (->> province-ids
+                (select-keys cities-by-province)
+                (mapcat second)
+                (map :city-code))
+           city-codes*])))

@@ -23,6 +23,32 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
+(defn region-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        regions (<== [:lipas.ui.sports-sites.subs/regions])]
+    ^{:key value}
+    [lui/autocomplete
+     {:items     regions
+      :value     value
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :region-id
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn types-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
+    ^{:key value}
+    [lui/autocomplete
+     {:items     types
+      :value     value
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :type-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/finance-city-services])]
@@ -130,12 +156,7 @@
         finance-data (<== [::subs/finance-data])
         labels       (<== [::subs/finance-labels])
         view         (<== [::subs/finance-view-type])
-        headers      (make-finance-headers tr)
-
-        age-structure-data   (<== [::subs/age-structure-data])
-        age-structure-labels (<== [::subs/age-structure-labels])
-        grouping             (<== [::subs/selected-age-structure-grouping])
-        interval             (<== [::subs/selected-age-structure-interval])]
+        headers      (make-finance-headers tr)]
 
     [mui/grid {:container true :spacing 16}
 
@@ -210,15 +231,56 @@
        :variant  "outlined"
        :color    "secondary"
        :on-click #(==> [::events/download-finance-excel finance-data headers])}
-      (tr :actions/download-excel)]
+      (tr :actions/download-excel)]]))
+
+(defn sports-stats []
+  (let [tr (<== [:lipas.ui.subs/translator])]
+    [mui/grid {:container true}
+     [mui/grid {:item true :style {:margin-top "1em"}}
+      [mui/typography {:variant "h3"}
+       (tr :stats/sports-stats)]]]))
+
+(defn age-structure-stats []
+  (let [tr                   (<== [:lipas.ui.subs/translator])
+        age-structure-data   (<== [::subs/age-structure-data])
+        age-structure-labels (<== [::subs/age-structure-labels])
+        regions              (<== [::subs/selected-age-structure-regions])
+        types                (<== [::subs/selected-age-structure-regions])
+        grouping             (<== [::subs/selected-age-structure-grouping])
+        interval             (<== [::subs/selected-age-structure-interval])]
+
+    [mui/grid {:container true :spacing 16}
 
      ;; Headline
-     [mui/grid {:item true :xs 12 :style {:margin-top "1em" :margin-bottom "1em"}}
+     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
       [mui/typography {:variant "h4"}
        (tr :stats/age-structure)]]
 
      [mui/grid {:item true}
       [mui/grid {:container true :spacing 16}
+
+       ;; Region selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :actions/select-cities)]
+        [region-selector
+         {:tr        tr
+          :value     regions
+          :on-change #(==> [::events/select-age-structure-regions %])}]]
+
+       ;; Type selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :actions/select-types)]
+        [types-selector
+         {:tr        tr
+          :value     types
+          :on-change #(==> [::events/select-age-structure-types %])}]]
+
+       ;; Clear filters button
+       [mui/grid {:item true :xs 12}
+        [mui/button
+         {:color "secondary"
+          :on-click #(==> [::events/clear-age-structure-filters])}
+         (tr :search/clear-filters)]]
 
        ;; Interval selector
        [mui/grid {:item true}
@@ -240,13 +302,6 @@
        {:data   age-structure-data
         :labels age-structure-labels}]]]))
 
-(defn sports-stats []
-  (let [tr (<== [:lipas.ui.subs/translator])]
-    [mui/grid {:container true}
-     [mui/grid {:item true :style {:margin-top "1em"}}
-      [mui/typography {:variant "h3"}
-       (tr :stats/sports-stats)]]]))
-
 (defn create-panel []
   (let [tr  (<== [:lipas.ui.subs/translator])
         tab (<== [::subs/selected-tab])]
@@ -258,16 +313,15 @@
        ;; Tabs for choosing between different stats pages
        [mui/grid {:item true}
         [mui/tabs {:value tab :on-change #(==> [::events/select-tab %2])}
+         [mui/tab {:value "age-structure-stats" :label (tr :stats/age-structure-stats)}]
          [mui/tab {:value "city-stats" :label (tr :stats/city-stats)}]
          [mui/tab {:value "sports-stats" :label (tr :stats/sports-stats)}]]]
 
        [mui/grid {:item true}
-
-        (when (= "sports-stats" tab)
-          [sports-stats])
-
-        (when (= "city-stats" tab)
-          [city-stats])]]]]))
+        (condp = tab
+          "age-structure-stats" [age-structure-stats]
+          "sports-stats"        [sports-stats]
+          "city-stats"          [city-stats])]]]]))
 
 (defn main [tr]
   [create-panel])
