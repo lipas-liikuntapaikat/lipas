@@ -82,7 +82,7 @@
    (let [cities (-> data :data-points vals (->> (cutils/index-by :city-code)))]
      (-> db
          (update-in [:stats :finance :data :cities] merge cities)
-         (assoc-in [:stats  ::finance :data :country] (:country-averages data))))))
+         (assoc-in [:stats :finance :data :country] (:country-averages data))))))
 
 (re-frame/reg-event-fx
  ::download-finance-excel
