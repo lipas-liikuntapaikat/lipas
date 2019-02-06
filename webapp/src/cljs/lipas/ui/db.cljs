@@ -137,7 +137,8 @@
      :view-type             "chart"}
     :age-structure
     {:groupings         reports/groupings
-     :selected-grouping "owner"}}
+     :selected-grouping "owner"
+     :selected-interval 10}}
 
    ;; Map
    :map

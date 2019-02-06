@@ -146,17 +146,25 @@
               :dataKey k2
               :stroke  (get colors (get lookup k1))}])))]))
 
-(defn age-structure-chart [{:keys [data]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
-   (into
-    [:> rc/BarChart {:data data}
-     [:> rc/Legend {:wrapperStyle font-styles}]
-     [:> rc/Tooltip tooltip-styles]
-     [:> rc/YAxis {:tick font-styles}]
-     [:> rc/XAxis {:dataKey :construction-year :tick font-styles}]]
-    (for [k (->> data
-                 (mapcat keys)
-                 set
-                 (remove #(= :construction-year %))
-                 sort)]
-      [:> rc/Bar {:stackId "kissa" :dataKey k :label false :fill (get colors k)}]))])
+(defn age-structure-chart [{:keys [data labels]}]
+  (let [lookup (map-invert labels)
+        data   (->> data (map #(rename-keys % labels)))]
+    [:> rc/ResponsiveContainer {:width "100%" :height 300}
+     (into
+      [:> rc/BarChart {:data data}
+       [:> rc/Legend {:wrapperStyle font-styles}]
+       [:> rc/Tooltip tooltip-styles]
+       [:> rc/YAxis
+        {:tick font-styles
+         :label
+         {:value    (:y-axis labels)
+          :angle    -90
+          :offset   15
+          :position "insideBottomLeft"}}]
+       [:> rc/XAxis {:dataKey :construction-year :tick font-styles}]]
+      (for [k (->> data (mapcat keys) set (remove #(= :construction-year %)) sort)]
+        [:> rc/Bar
+         {:stackId "a"
+          :dataKey k
+          :label   false
+          :fill    (get colors (get lookup k))}]))]))

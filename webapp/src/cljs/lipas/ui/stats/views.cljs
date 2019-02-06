@@ -79,17 +79,27 @@
     :on-change    on-change}])
 
 (defn grouping-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        units  (<== [::subs/age-structure-groupings])]
+  (let [locale    (tr)
+        groupings (<== [::subs/age-structure-groupings])]
     ^{:key value}
     [lui/select
-     {:items     units
+     {:items     groupings
       :value     value
       :style     select-style
       :label     (tr :stats/select-grouping)
       :value-fn  first
       :label-fn  (comp locale second)
       :on-change on-change}]))
+
+(defn interval-selector [{:keys [tr value on-change]}]
+  ^{:key value}
+  [lui/number-selector
+   {:items     [1 5 10]
+    :value     value
+    :style     select-style
+    :unit      (tr :duration/years-short)
+    :label     (tr :stats/select-interval)
+    :on-change on-change}])
 
 (defn- make-finance-headers [tr]
   [[:year (tr :time/year)]
@@ -122,8 +132,10 @@
         view         (<== [::subs/finance-view-type])
         headers      (make-finance-headers tr)
 
-        ages     (<== [::subs/age-structure-data])
-        grouping (<== [::subs/selected-age-structure-grouping])]
+        age-structure-data   (<== [::subs/age-structure-data])
+        age-structure-labels (<== [::subs/age-structure-labels])
+        grouping             (<== [::subs/selected-age-structure-grouping])
+        interval             (<== [::subs/selected-age-structure-interval])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -208,6 +220,13 @@
      [mui/grid {:item true}
       [mui/grid {:container true :spacing 16}
 
+       ;; Interval selector
+       [mui/grid {:item true}
+        [interval-selector
+         {:tr        tr
+          :value     interval
+          :on-change #(==> [::events/select-age-structure-interval %])}]]
+
        ;; Grouping selector
        [mui/grid {:item true}
         [grouping-selector
@@ -215,8 +234,11 @@
           :value     grouping
           :on-change #(==> [::events/select-age-structure-grouping %])}]]]]
 
+     ;; Chart
      [mui/grid {:item true :xs 12}
-      [charts/age-structure-chart {:data ages}]]]))
+      [charts/age-structure-chart
+       {:data   age-structure-data
+        :labels age-structure-labels}]]]))
 
 (defn sports-stats []
   (let [tr (<== [:lipas.ui.subs/translator])]

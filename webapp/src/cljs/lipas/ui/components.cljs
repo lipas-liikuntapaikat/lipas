@@ -506,17 +506,14 @@
                        :value     value
                        :required  required})]))
 
-(defn number-selector [{:keys [value on-change items unit label deselect?]}]
+(defn number-selector [{:keys [unit] :as props}]
   [select
-   {:label     label
-    :items     items
-    :sort-fn   identity
-    :sort-cmp  utils/reverse-cmp
-    :value-fn  identity
-    :label-fn  #(str % unit)
-    :value     value
-    :deselect? deselect?
-    :on-change on-change}])
+   (merge
+    {:sort-fn   identity
+     :sort-cmp  utils/reverse-cmp
+     :value-fn  identity
+     :label-fn  #(str % unit)}
+    props)])
 
 (defn date-picker [{:keys [label value on-change]}]
   [mui/text-field

@@ -104,7 +104,9 @@
     :select-unit         "Valitse yksikkö"
     :select-years        "Valitse vuodet"
     :select-grouping     "Ryhmittely"
-    :country-avg         "(maan keskiarvo)"}
+    :select-interval     "Valitse aikaväli"
+    :country-avg         "(maan keskiarvo)"
+    :sports-sites-count  "Liikuntapaikkojen lkm"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -503,8 +505,10 @@
     :long-time-ago      "Kauan sitten"}
 
    :duration
-   {:hour  "tuntia"
-    :month "kuukautta"}
+   {:hour        "tuntia"
+    :month       "kuukautta"
+    :years       "vuotta"
+    :years-short "v"}
 
    :actions
    {:add                      "Lisää"

@@ -97,11 +97,16 @@
 (re-frame/reg-event-fx
  ::select-age-structure-grouping
  (fn [{:keys [db]} [_ v]]
-   (let [city-codes (-> db :stats :selected-cities)]
-     {:db       (assoc-in db [:stats :age-structure :selected-grouping] v)
-      :dispatch [::create-age-structure-report city-codes v]})))
+   {:db       (assoc-in db [:stats :age-structure :selected-grouping] v)
+    :dispatch [::create-age-structure-report]}))
 
-(defn ->age-structure-query [city-codes grouping]
+(re-frame/reg-event-fx
+ ::select-age-structure-interval
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:stats :age-structure :selected-interval] v)
+    :dispatch [::create-age-structure-report]}))
+
+(defn ->age-structure-query [city-codes grouping interval]
   {:size 0,
    :query
    {:bool
@@ -114,7 +119,7 @@
      {:size 100,
       :sources
       [{:construction-year
-        {:histogram {:field :construction-year, :interval 10}}}
+        {:histogram {:field :construction-year, :interval interval}}}
        {:owner
         {:terms
          {:field (condp = grouping
@@ -125,16 +130,17 @@
  ::create-age-structure-report
  (fn [{:keys [db]} _]
    (let [city-codes (-> db :stats :selected-cities)
-         grouping   (-> db :stats :age-structure :selected-grouping)]
-     {:dispatch [::create-age-structure-report* city-codes grouping]})))
+         grouping   (-> db :stats :age-structure :selected-grouping)
+         interval   (-> db :stats :age-structure :selected-interval)]
+     {:dispatch [::create-age-structure-report* city-codes grouping interval]})))
 
 (re-frame/reg-event-fx
  ::create-age-structure-report*
- (fn [{:keys [db]} [_ city-codes grouping]]
+ (fn [{:keys [db]} [_ city-codes grouping interval]]
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/search")
-     :params          (->age-structure-query city-codes grouping)
+     :params          (->age-structure-query city-codes grouping interval)
      ;;:format          (ajax/transit-request-format)
      ;;:response-format (ajax/transit-response-format)
      :format          (ajax/json-request-format)
