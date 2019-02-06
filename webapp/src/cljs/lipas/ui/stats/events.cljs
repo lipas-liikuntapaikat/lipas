@@ -27,8 +27,7 @@
                   (assoc-in db path v))]
      {:db         new-db
       :dispatch-n (when (not-empty (get-in new-db path))
-                    [[::create-finance-report]
-                     [::create-age-structure-report]])})))
+                    [[::create-finance-report]])})))
 
 (re-frame/reg-event-db
  ::select-finance-metrics
@@ -95,6 +94,29 @@
 
 
 (re-frame/reg-event-fx
+ ::select-age-structure-regions
+ (fn [{:keys [db]} [_ v append?]]
+   (let [avis       (:cities-by-avi-id db)
+         provinces  (:cities-by-province-id db)
+         city-codes (utils/regions->city-codes avis provinces v)
+         path       [:stats :age-structure :selected-cities]
+         new-db     (if append?
+                      (update-in db path (comp set into) city-codes)
+                      (assoc-in db path city-codes))]
+     {:db         new-db
+      :dispatch-n [[::create-age-structure-report]]})))
+
+(re-frame/reg-event-fx
+ ::select-age-structure-types
+ (fn [{:keys [db]} [_ v append?]]
+   (let [path   [:stats :age-structure :selected-types]
+         new-db (if append?
+                  (update-in db path (comp set into) v)
+                  (assoc-in db path v))]
+     {:db         new-db
+      :dispatch-n [[::create-age-structure-report]]})))
+
+(re-frame/reg-event-fx
  ::select-age-structure-grouping
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:stats :age-structure :selected-grouping] v)
@@ -106,17 +128,21 @@
    {:db       (assoc-in db [:stats :age-structure :selected-interval] v)
     :dispatch [::create-age-structure-report]}))
 
-(defn ->age-structure-query [city-codes grouping interval]
+(defn ->age-structure-query [city-codes type-codes grouping interval]
   {:size 0,
    :query
    {:bool
     {:filter
-     [{:terms {:status.keyword ["active"]}}
-      {:terms {:location.city.city-code city-codes}}]}}
+     (remove nil?
+             [{:terms {:status.keyword ["active"]}}
+              (when (not-empty city-codes)
+                {:terms {:location.city.city-code city-codes}})
+              (when (not-empty type-codes)
+                {:terms {:type.type-code type-codes}})])}}
    :aggs
    {:years
     {:composite
-     {:size 100,
+     {:size 1000,
       :sources
       [{:construction-year
         {:histogram {:field :construction-year, :interval interval}}}
@@ -129,24 +155,35 @@
 (re-frame/reg-event-fx
  ::create-age-structure-report
  (fn [{:keys [db]} _]
-   (let [city-codes (-> db :stats :selected-cities)
+   (let [city-codes (-> db :stats :age-structure :selected-cities)
+         type-codes (-> db :stats :age-structure :selected-types)
          grouping   (-> db :stats :age-structure :selected-grouping)
          interval   (-> db :stats :age-structure :selected-interval)]
-     {:dispatch [::create-age-structure-report* city-codes grouping interval]})))
+     {:dispatch
+      [::create-age-structure-report* city-codes type-codes grouping interval]})))
+
+(re-frame/reg-event-fx
+ ::clear-age-structure-filters
+ (fn [_]
+   {:dispatch-n
+    [[::select-age-structure-regions []]
+     [::select-age-structure-types []]
+     [::create-age-structure-report]]}))
 
 (re-frame/reg-event-fx
  ::create-age-structure-report*
- (fn [{:keys [db]} [_ city-codes grouping interval]]
-   {:http-xhrio
-    {:method          :post
-     :uri             (str (:backend-url db) "/actions/search")
-     :params          (->age-structure-query city-codes grouping interval)
-     ;;:format          (ajax/transit-request-format)
-     ;;:response-format (ajax/transit-response-format)
-     :format          (ajax/json-request-format)
-     :response-format (ajax/json-response-format {:keywords? true})
-     :on-success      [::age-structure-report-success]
-     :on-failure      [::report-failure]}}))
+ (fn [{:keys [db]} [_ city-codes type-codes grouping interval]]
+   (let [query (->age-structure-query city-codes type-codes grouping interval)]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/search")
+       :params          query
+       ;;:format          (ajax/transit-request-format)
+       ;;:response-format (ajax/transit-response-format)
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::age-structure-report-success]
+       :on-failure      [::report-failure]}})))
 
 (re-frame/reg-event-db
  ::age-structure-report-success

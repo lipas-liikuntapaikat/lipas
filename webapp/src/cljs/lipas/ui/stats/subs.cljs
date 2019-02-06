@@ -121,6 +121,12 @@
           (sort-by :year)))))
 
 (re-frame/reg-sub
+ ::selected-age-structure-regions
+ (fn [db _]
+   (let [city-codes (-> db :stats :age-structure :selected-cities)]
+     (map (partial str "city-") city-codes))))
+
+(re-frame/reg-sub
  ::age-structure-groupings
  (fn [db _]
    (-> db :stats :age-structure :groupings)))

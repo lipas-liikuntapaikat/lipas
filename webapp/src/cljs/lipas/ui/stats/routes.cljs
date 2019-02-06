@@ -9,4 +9,5 @@
     [{:start
       (fn []
         (==> [:lipas.ui.events/set-active-panel :stats-panel])
-        (==> [:lipas.ui.stats.events/select-cities [179]]))}]}])
+        (==> [:lipas.ui.stats.events/select-cities [179]])
+        (==> [:lipas.ui.stats.events/create-age-structure-report]))}]}])
