@@ -131,6 +131,11 @@
    (-> db :stats :age-structure :selected-grouping)))
 
 (re-frame/reg-sub
+ ::selected-age-structure-interval
+ (fn [db _]
+   (-> db :stats :age-structure :selected-interval)))
+
+(re-frame/reg-sub
  ::age-structure-data*
  (fn [db _]
    (-> db :stats :age-structure :data)))
@@ -152,3 +157,15 @@
            {})
           vals
           (sort-by :construction-year)))))
+
+(re-frame/reg-sub
+ ::age-structure-labels
+ :<- [:lipas.ui.subs/translator]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
+ (fn [[tr admins owners] _]
+   (let [locale (tr)]
+     (merge
+      (into {} (map (juxt first (comp locale second)) admins))
+      (into {} (map (juxt first (comp locale second)) owners))
+      {:y-axis (tr :stats/sports-sites-count)}))))
