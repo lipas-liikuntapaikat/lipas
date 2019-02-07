@@ -86,7 +86,7 @@
  ::navigated
  (fn [_ [_ new-path]]
    (if new-path
-     {:ga/page-view new-path}
+     {:ga/page-view [new-path]}
      {})))
 
 (re-frame/reg-event-fx
