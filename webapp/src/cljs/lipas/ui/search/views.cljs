@@ -8,88 +8,6 @@
    [lipas.ui.search.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(defn type-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
-    ^{:key value}
-    [lui/autocomplete
-     {:items     types
-      :value     value
-      :show-all? true
-      :label     (tr :search/search)
-      :value-fn  :type-code
-      :label-fn  (comp locale :name)
-      :on-change on-change}]))
-
-(defn city-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
-    ^{:key value}
-    [lui/autocomplete
-     {:items     cities
-      :value     value
-      :show-all? true
-      :label     (tr :search/search)
-      :value-fn  :city-code
-      :label-fn  (comp locale :name)
-      :on-change on-change}]))
-
-(defn region-selector [{:keys [tr value on-change]}]
-  (let [locale  (tr)
-        regions (<== [:lipas.ui.sports-sites.subs/regions])]
-    ^{:key value}
-    [lui/autocomplete
-     {:items     regions
-      :value     value
-      :show-all? true
-      :label     (tr :search/search)
-      :value-fn  :region-id
-      :label-fn  (comp locale :name)
-      :on-change on-change}]))
-
-(defn surface-material-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
-    ^{:key value}
-    [lui/autocomplete
-     {:value     value
-      :label     (tr :search/search)
-      :show-all? true
-      :items     items
-      :label-fn  (comp locale second)
-      :value-fn  first
-      :on-change on-change}]))
-
-(defn admin-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        items  (<== [:lipas.ui.sports-sites.subs/admins])]
-    ^{:key value}
-    [lui/autocomplete
-     {:style     {:min-width "150px"}
-      :value     value
-      :deselect? true
-      :show-all? true
-      :label     (tr :search/search)
-      :items     items
-      :label-fn  (comp locale second)
-      :value-fn  first
-      :on-change on-change}]))
-
-(defn owner-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
-        items  (<== [:lipas.ui.sports-sites.subs/owners])]
-    ^{:key value}
-    [lui/autocomplete
-     {:style     {:min-width "150px"}
-      :value     value
-      :show-all? true
-      :deselect? true
-      :label     (tr :search/search)
-      :items     items
-      :label-fn  (comp locale second)
-      :value-fn  first
-      :on-change on-change}]))
-
 (defn- filter-layout [props & children]
   [mui/grid {:item true :style {:min-width  "365px"}}
    [mui/paper {:style {:padding "1em" :height "100%"}}
@@ -101,8 +19,7 @@
 (defn filters [{:keys [tr]}]
   (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
         type-codes        (<== [::subs/types-filter])
-        ;; city-codes        (<== [::subs/cities-filter])
-        region-ids        (<== [::subs/regions-filter])
+        city-codes        (<== [::subs/cities-filter])
         admins            (<== [::subs/admins-filter])
         owners            (<== [::subs/owners-filter])
         area-min          (<== [::subs/area-min-filter])
@@ -123,7 +40,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/select-types)]
 
-      [type-selector
+      [lui/type-selector
        {:tr        tr
         :value     type-codes
         :on-change #(==> [::events/set-type-filter %])}]]
@@ -133,10 +50,9 @@
       [mui/typography {:variant "caption"}
        (tr :actions/select-cities)]
 
-      [region-selector
-       {:tr        tr
-        :value     region-ids
-        :on-change #(==> [::events/select-regions %])}]]
+      [lui/region-selector
+       {:value     city-codes
+        :on-change #(==> [::events/set-city-filter %])}]]
 
      ;; Cities filter
      ;; [filter-layout {}
@@ -153,7 +69,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/select-admins)]
 
-      [admin-selector
+      [lui/admin-selector
        {:tr        tr
         :value     admins
         :on-change #(==> [::events/set-admins-filter %])}]]
@@ -163,7 +79,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/select-owners)]
 
-      [owner-selector
+      [lui/owner-selector
        {:tr        tr
         :value     owners
         :on-change #(==> [::events/set-owners-filter %])}]]
@@ -173,7 +89,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/filter-surface-materials)]
 
-      [surface-material-selector
+      [lui/surface-material-selector
        {:tr        tr
         :value     surface-materials
         :on-change #(==> [::events/set-surface-materials-filter %])}]]

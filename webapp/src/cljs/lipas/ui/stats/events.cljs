@@ -6,6 +6,8 @@
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
+;;; General ;;;
+
 (re-frame/reg-event-db
  ::select-tab
  (fn [db [_ v]]
@@ -18,8 +20,10 @@
    (let [fatal? false]
      {:ga/exception [(:message error) fatal?]})))
 
+;;; Finance ;;;
+
 (re-frame/reg-event-fx
- ::select-cities
+ ::select-finance-cities
  (fn [{:keys [db]} [_ v append?]]
    (let [path   [:stats :selected-cities]
          new-db (if append?
@@ -90,19 +94,18 @@
          config {:filename (tr :stats/city-stats)
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
-     {:lipas.ui.effects/download-excel! config})))
+     {:lipas.ui.effects/download-excel! config
+      :ga/event                         ["stats" "download-excel" "finance"]})))
 
+;;; Age structure ;;;
 
 (re-frame/reg-event-fx
- ::select-age-structure-regions
+ ::select-age-structure-cities
  (fn [{:keys [db]} [_ v append?]]
-   (let [avis       (:cities-by-avi-id db)
-         provinces  (:cities-by-province-id db)
-         city-codes (utils/regions->city-codes avis provinces v)
-         path       [:stats :age-structure :selected-cities]
-         new-db     (if append?
-                      (update-in db path (comp set into) city-codes)
-                      (assoc-in db path city-codes))]
+   (let [path   [:stats :age-structure :selected-cities]
+         new-db (if append?
+                  (update-in db path (comp set into) v)
+                  (assoc-in db path v))]
      {:db         new-db
       :dispatch-n [[::create-age-structure-report]]})))
 
@@ -127,6 +130,14 @@
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:stats :age-structure :selected-interval] v)
     :dispatch [::create-age-structure-report]}))
+
+(re-frame/reg-event-fx
+ ::clear-age-structure-filters
+ (fn [_]
+   {:dispatch-n
+    [[::select-age-structure-cities []]
+     [::select-age-structure-types []]
+     [::create-age-structure-report]]}))
 
 (defn ->age-structure-query [city-codes type-codes grouping interval]
   {:size 0,
@@ -163,14 +174,6 @@
       [::create-age-structure-report* city-codes type-codes grouping interval]})))
 
 (re-frame/reg-event-fx
- ::clear-age-structure-filters
- (fn [_]
-   {:dispatch-n
-    [[::select-age-structure-regions []]
-     [::select-age-structure-types []]
-     [::create-age-structure-report]]}))
-
-(re-frame/reg-event-fx
  ::create-age-structure-report*
  (fn [{:keys [db]} [_ city-codes type-codes grouping interval]]
    (let [query (->age-structure-query city-codes type-codes grouping interval)]
@@ -190,3 +193,54 @@
  (fn [db [_ resp]]
    (let [stats (-> resp :aggregations)]
      (assoc-in db [:stats :age-structure :data] stats))))
+
+;;; Sports stats ;;;
+
+(re-frame/reg-event-fx
+ ::select-sports-stats-cities
+ (fn [{:keys [db]} [_ v append?]]
+   (let [ path  [:stats :sports-stats :selected-cities]
+         new-db (if append?
+                  (update-in db path (comp set into) v)
+                  (assoc-in db path v))]
+     {:db         new-db
+      :dispatch-n [[::create-sports-stats-report]]})))
+
+(re-frame/reg-event-fx
+ ::select-sports-stats-types
+ (fn [{:keys [db]} [_ v append?]]
+   (let [path   [:stats :sports-stats :selected-types]
+         new-db (if append?
+                  (update-in db path (comp set into) v)
+                  (assoc-in db path v))]
+     {:db         new-db
+      :dispatch-n [[::create-sports-stats-report]]})))
+
+(re-frame/reg-event-fx
+ ::create-sports-stats-report
+ (fn [{:keys [db]} _]
+   {:dispatch [::create-sporsts-stats-report*]}))
+
+(defn ->sports-stats-query [city-codes type-codes]
+  )
+
+(re-frame/reg-event-fx
+ ::create-sports-stats-report*
+ (fn [{:keys [db]} [_ city-codes type-codes]]
+   (let [query (->sports-stats-query city-codes type-codes)]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/search")
+       :params          query
+       ;;:format          (ajax/transit-request-format)
+       ;;:response-format (ajax/transit-response-format)
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::sports-stats-report-success]
+       :on-failure      [::report-failure]}})))
+
+(re-frame/reg-event-db
+ ::sports-stats-report-success
+ (fn [db [_ resp]]
+   (let [stats (-> resp :aggregations)]
+     (assoc-in db [:stats :sports-stats :data] stats))))

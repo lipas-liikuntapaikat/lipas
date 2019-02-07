@@ -143,14 +143,6 @@
     :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
- ::select-regions
- (fn [{:keys [db]} [_ region-ids]]
-   (let [avis       (:cities-by-avi-id db)
-         provinces  (:cities-by-province-id db)
-         city-codes (utils/regions->city-codes avis provinces region-ids)]
-     {:dispatch [::set-city-filter city-codes]})))
-
-(re-frame/reg-event-fx
  ::set-city-filter
  (fn [{:keys [db]} [_ city-codes append?]]
    {:db       (if append?
