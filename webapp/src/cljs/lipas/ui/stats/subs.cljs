@@ -121,10 +121,14 @@
           (sort-by :year)))))
 
 (re-frame/reg-sub
- ::selected-age-structure-regions
+ ::selected-age-structure-cities
  (fn [db _]
-   (let [city-codes (-> db :stats :age-structure :selected-cities)]
-     (map (partial str "city-") city-codes))))
+   (-> db :stats :age-structure :selected-cities)))
+
+(re-frame/reg-sub
+ ::selected-age-structure-types
+ (fn [db _]
+   (-> db :stats :age-structure :selected-types)))
 
 (re-frame/reg-sub
  ::age-structure-groupings
@@ -175,3 +179,30 @@
       (into {} (map (juxt first (comp locale second)) admins))
       (into {} (map (juxt first (comp locale second)) owners))
       {:y-axis (tr :stats/sports-sites-count)}))))
+
+(re-frame/reg-sub
+ ::selected-sports-stats-cities
+ (fn [db _]
+   (-> db :stats :sports-stats :selected-cities)))
+
+(re-frame/reg-sub
+ ::selected-sports-stats-types
+ (fn [db _]
+   (-> db :stats :sports-stats :selected-types)))
+
+(re-frame/reg-sub
+ ::sports-stats-data*
+ (fn [db _]
+   (-> db :stats :sports-stats :data)))
+
+(re-frame/reg-sub
+ ::sports-stats-data
+ :<- [::sports-stats-data*]
+ (fn [data _]
+   ;;TODO
+   data))
+
+(re-frame/reg-sub
+ ::sports-stats-labels
+ (fn [db _]
+   {}))

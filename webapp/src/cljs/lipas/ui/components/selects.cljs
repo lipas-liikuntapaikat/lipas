@@ -3,8 +3,14 @@
    [cljsjs.react-autosuggest]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
+   [clojure.string :as string]
+   [lipas.data.cities :as cities]
+   [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :as utils]))
+   [lipas.ui.utils :refer [<==] :as utils]
+   [lipas.utils :as cutils]))
+
+(def select-style {:min-width "170px"})
 
 (defn error? [spec value required]
   (if (and spec (or value required))
@@ -100,3 +106,126 @@
     :Input-label-props
     {:shrink true} ; This makes the label show actually
     :on-change #(on-change (-> % .-target .-value))}])
+
+(defn- id-parser [prefix]
+  (comp
+   (filter #(string/starts-with? % prefix))
+   (map #(string/replace % prefix ""))
+   (map cutils/->int)))
+
+(def parse-avis (id-parser "avi-"))
+(def parse-provinces (id-parser "province-"))
+(def parse-cities (id-parser "city-"))
+
+(defn ->city-codes [cities-by-avis cities-by-province region-ids]
+  (let [avi-ids      (into [] parse-avis region-ids)
+        province-ids (into [] parse-provinces region-ids)
+        city-codes   (into [] parse-cities region-ids)]
+    (into [] (comp cat (remove nil?))
+          [(->> avi-ids
+                (select-keys cities-by-avis)
+                (mapcat second)
+                (map :city-code))
+           (->> province-ids
+                (select-keys cities-by-province)
+                (mapcat second)
+                (map :city-code))
+           city-codes])))
+
+(defn region-selector [{:keys [value on-change]}]
+  (let [regions   (<== [:lipas.ui.sports-sites.subs/regions])
+        tr        (<== [:lipas.ui.subs/translator])
+        locale    (tr)
+        avis      cities/by-avi-id
+        provinces cities/by-province-id]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:items     regions
+      :value     (map (partial str "city-") value)
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :region-id
+      :label-fn  (comp locale :name)
+      :on-change (comp on-change (partial ->city-codes avis provinces))}]))
+
+(defn type-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:items     types
+      :value     value
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :type-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn city-selector-single [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
+    ^{:key value}
+    [select
+     {:items     cities
+      :value     value
+      :style     select-style
+      :label     (tr :stats/select-city)
+      :value-fn  :city-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn city-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:items     cities
+      :value     value
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :city-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn surface-material-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:value     value
+      :label     (tr :search/search)
+      :show-all? true
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn admin-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/admins])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:style     {:min-width "150px"}
+      :value     value
+      :deselect? true
+      :show-all? true
+      :label     (tr :search/search)
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn owner-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/owners])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:style     {:min-width "150px"}
+      :value     value
+      :show-all? true
+      :deselect? true
+      :label     (tr :search/search)
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
