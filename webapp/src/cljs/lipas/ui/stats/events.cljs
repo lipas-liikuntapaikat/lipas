@@ -217,30 +217,47 @@
       :dispatch-n [[::create-sports-stats-report]]})))
 
 (re-frame/reg-event-fx
+ ::select-sports-stats-metric
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:stats :sports-stats :selected-metric] v)
+    ;;:dispatch [::create-sports-stats-report]
+    }))
+
+(re-frame/reg-event-fx
+ ::clear-sports-stats-filters
+ (fn [_]
+   {:dispatch-n
+    [[::select-sports-stats-cities []]
+     [::select-sports-stats-types []]
+     [::create-sports-stats-report]]}))
+
+(re-frame/reg-event-fx
  ::create-sports-stats-report
  (fn [{:keys [db]} _]
-   {:dispatch [::create-sporsts-stats-report*]}))
+   (let [city-codes (-> db :stats :sports-stats :selected-cities)
+         type-codes (-> db :stats :sports-stats :selected-types)]
+     {:dispatch [::create-sports-stats-report* city-codes type-codes]})))
 
 (defn ->sports-stats-query [city-codes type-codes]
-  )
+  (cond-> {}
+    city-codes (assoc :city-codes city-codes)
+    type-codes (assoc :type-codes type-codes)))
 
 (re-frame/reg-event-fx
  ::create-sports-stats-report*
  (fn [{:keys [db]} [_ city-codes type-codes]]
-   (let [query (->sports-stats-query city-codes type-codes)]
+   (let [query (->sports-stats-query city-codes type-codes)
+         url   (str (:backend-url db) "/actions/create-m2-per-capita-report")]
      {:http-xhrio
       {:method          :post
-       :uri             (str (:backend-url db) "/actions/search")
+       :uri             url
        :params          query
-       ;;:format          (ajax/transit-request-format)
-       ;;:response-format (ajax/transit-response-format)
-       :format          (ajax/json-request-format)
-       :response-format (ajax/json-response-format {:keywords? true})
+       :format          (ajax/transit-request-format)
+       :response-format (ajax/transit-response-format)
        :on-success      [::sports-stats-report-success]
        :on-failure      [::report-failure]}})))
 
 (re-frame/reg-event-db
  ::sports-stats-report-success
  (fn [db [_ resp]]
-   (let [stats (-> resp :aggregations)]
-     (assoc-in db [:stats :sports-stats :data] stats))))
+   (assoc-in db [:stats :sports-stats :data] resp)))

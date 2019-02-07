@@ -13,6 +13,8 @@
  (fn [db _]
    (-> db :stats :selected-cities)))
 
+;;; Finance ;;;
+
 (re-frame/reg-sub
  ::finance-city-services
  (fn [db _]
@@ -92,11 +94,18 @@
              {:city-code (-> m :city-code)
               :year      year})))))
 
+(defn round-safe
+  ([x]
+   (round-safe x 2))
+  ([x precision]
+   (if (number? x)
+     (.toFixed x precision))))
+
 (defn round-vals [m]
   (reduce
    (fn [m [k v]]
-     (assoc m k (if (and (number? v) (not= :year k) (not= :city-code k))
-                  (.toFixed v 2)
+     (assoc m k (if (and (not= :year k) (not= :city-code k))
+                  (round-safe v)
                   v)))
    {}
    m))
@@ -119,6 +128,8 @@
           (reduce (partial ->entries avgs service years) [])
           (map round-vals)
           (sort-by :year)))))
+
+;;; Age structure ;;;
 
 (re-frame/reg-sub
  ::selected-age-structure-cities
@@ -180,6 +191,18 @@
       (into {} (map (juxt first (comp locale second)) owners))
       {:y-axis (tr :stats/sports-sites-count)}))))
 
+;;; Sports stats ;;;
+
+(re-frame/reg-sub
+ ::sports-stats-metrics
+ (fn [db _]
+   (-> db :stats :sports-stats :metrics)))
+
+(re-frame/reg-sub
+ ::selected-sports-stats-metric
+ (fn [db _]
+   (-> db :stats :sports-stats :selected-metric)))
+
 (re-frame/reg-sub
  ::selected-sports-stats-cities
  (fn [db _]
@@ -198,11 +221,26 @@
 (re-frame/reg-sub
  ::sports-stats-data
  :<- [::sports-stats-data*]
- (fn [data _]
-   ;;TODO
-   data))
+ :<- [:lipas.ui.subs/translator]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [::selected-sports-stats-metric]
+ (fn [[data tr cities metric] _]
+   (let [locale (tr)]
+     (->> data
+          (reduce
+           (fn [res [k v]]
+             (let [city-name (get-in cities [k :name locale])]
+               (conj res (assoc v :city-code k :city-name city-name))))
+           [])
+          (sort-by (keyword metric))
+          (map (fn [m](-> m
+                          (update :m2-pc round-safe)
+                          (update :sites-count-p1000c #(round-safe % 5)))))))))
 
 (re-frame/reg-sub
  ::sports-stats-labels
- (fn [db _]
-   {}))
+ :<- [:lipas.ui.subs/translator]
+ :<- [::sports-stats-metrics]
+ (fn [[tr metrics] _]
+   (let [locale (tr)]
+     (into {} (map (juxt (comp keyword first) (comp locale second)) metrics)))))

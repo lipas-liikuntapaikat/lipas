@@ -124,7 +124,7 @@
 
    ;; Stats
    :stats
-   {:selected-tab    "city-stats"
+   {:selected-tab    "sports-stats"
     :selected-cities #{179}
     :finance
     {:metrics               reports/stats-metrics
@@ -138,7 +138,10 @@
     :age-structure
     {:groupings         reports/groupings
      :selected-grouping "owner"
-     :selected-interval 10}}
+     :selected-interval 10}
+    :sports-stats
+    {:metrics         reports/sports-stats-metrics
+     :selected-metric "sites-count"}}
 
    ;; Map
    :map
