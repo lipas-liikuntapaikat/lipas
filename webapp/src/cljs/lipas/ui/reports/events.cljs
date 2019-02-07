@@ -2,10 +2,8 @@
   (:require
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
-   [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
-
 
 (re-frame/reg-event-db
  ::toggle-dialog

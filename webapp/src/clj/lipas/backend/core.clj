@@ -181,6 +181,24 @@
 (defn add-to-integration-out-queue! [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
+;;; Cities ;;;
+
+(defn get-cities [db]
+  (or
+   (:all-cities @cache)
+   (->> (db/get-cities db)
+        (swap! cache assoc :all-cities)
+        :all-cities)))
+
+(defn get-populations [db year]
+  (->> (get-cities db)
+       (reduce
+        (fn [res m]
+          (if-let [v (get-in m [:stats year :population])]
+            (assoc res (:city-code m) v)
+            res))
+        {})))
+
 ;;; Reports ;;;
 
 (defn energy-report [db type-code year]
@@ -208,28 +226,47 @@
          (excel/save-workbook-into-stream! out))))
 
 (defn finance-report [db city-codes]
-  (let [data (or
-              (:all-cities @cache)
-              (->> (db/get-cities db)
-                   (swap! cache assoc :all-cities)
-                   :all-cities))]
+  (let [data (get-cities db)]
     (reports/finance-report city-codes data)))
+
+(defn m2-per-capita-report [db search* city-codes type-codes]
+  (let [pop-data (get-populations db 2017)
+        query    {:size 0,
+                  :query
+                  {:bool
+                   {:filter
+                    (into [] (remove nil?)
+                          [{:terms {:status.keyword ["active"]}}
+                           (when (not-empty type-codes)
+                             {:terms {:type.type-code type-codes}})
+                           (when (not-empty city-codes)
+                             {:terms {:location.city.city-code city-codes}})])}},
+                  :aggs
+                  {:by_cities
+                   {:terms {:field :location.city.city-code, :size 400},
+                    :aggs  {:area_m2_sum {:sum {:field :properties.area-m2}}}}}}
+        _ (prn query)
+        m2-data  (-> (search search* query) :body :aggregations :by_cities :buckets)]
+    (reports/m2-per-capita-report m2-data pop-data)))
 
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (def search (search/create-cli (:search config/default-config)))
+  (def search2 (search/create-cli (:search config/default-config)))
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
-  (time (first (:all-cities @cache)))
-  (time (cities-report db-spec [992]))
 
+  (first (get-cities db-spec))
+  (time (get-populations db-spec 2017))
+  (time (:all-cities @cache))
+  (time (cities-report db-spec [992]))
+  (time (m2-per-capita-report db-spec search2 [] []))
   ;; ES queries ;;
 
-  (defn s [q] (search/search search "sports_sites_current" q))
+  (defn s [q] (search/search search2 "sports_sites_current" q))
 
 
   (def active
@@ -262,6 +299,18 @@
       {:aream2_stats
        {:stats
         {:field :properties.area-m2}}}}))
+
+  (s area-m2-stats-in-city)
+  (s (merge
+      active
+      {:aggs
+       {:by_cities
+        {:terms {:field :location.city.city-code :size 400}
+         :aggs
+         {:area_m2_sum
+          {:sum {:field :properties.area-m2}}}}}}))
+
+  ;; m2/capita
 
   (def rings-around-city
     (merge
@@ -311,7 +360,7 @@
      {:aggs
       {:cities
        {:composite
-        {:size    100
+        {:size 100
          :sources
          [{:construction-year
            {:histogram
@@ -323,7 +372,7 @@
      {:aggs
       {:years
        {:composite
-        {:size    100
+        {:size 100
          :sources
          [{:construction-year
            {:histogram
@@ -337,7 +386,7 @@
      {:aggs
       {:years
        {:composite
-        {:size    1000
+        {:size 1000
          :sources
          [{:construction-year
            {:histogram
@@ -357,37 +406,24 @@
 
   ;; orig
   (s {:explain true
-      :sort [:_score],
-      :from 0,
-      :size 15,
+      :sort    [:_score],
+      :from    0,
+      :size    15,
       :_source {:excludes ["search-meta"]},
       :query
       {:function_score
        {:score_mode "sum",
         :query
         {:bool
-         {:must [{:query_string {:query "*"}}],
+         {:must   [{:query_string {:query "*"}}],
           :filter [{:terms {:status.keyword ["active"]}}]}},
         :functions
         [{:gauss
           {:search-meta.location.wgs84-point
            {:origin "63.75018578583665,25.304613947374467",
             :offset "2880m",
-            :scale "5760m"}}}]}}})
+            :scale  "5760m"}}}]}}})
 
-  ;; new
-  (s {:explain true
-      :sort [:_score],
-      :from 0,
-      :size 150,
-      :_source {:excludes []},
-      :query
-      {:function_score
-       {:functions
-        [{:gauss
-          {:search-meta.location.wgs84-point
-           {:origin "63.75018578583665,25.304613947374467",
-            :offset "0m",
-            :scale "1000m"}}}]}}})
+
 
   )

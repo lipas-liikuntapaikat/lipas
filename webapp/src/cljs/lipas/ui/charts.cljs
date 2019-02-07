@@ -168,3 +168,15 @@
           :dataKey k
           :label   false
           :fill    (get colors (get lookup k))}]))]))
+
+(defn sports-stats-chart [{:keys [data labels metric]}]
+  (let [lookup (map-invert labels)
+        data   (->> data (map #(rename-keys % labels)))
+        margin {:top 5 :right 5 :bottom 5 :left 50}]
+    [:> rc/ResponsiveContainer {:width "100%" :height (* 30 (count data))}
+     [:> rc/BarChart {:data data :layout "vertical" :margin margin}
+      [:> rc/Legend {:wrapperStyle font-styles}]
+      [:> rc/Tooltip tooltip-styles]
+      [:> rc/XAxis {:tick font-styles :type "number"}]
+      [:> rc/YAxis {:dataKey :city-name :type "category" :tick font-styles}]
+      [:> rc/Bar {:dataKey (labels (keyword metric)) :label false :fill "orange"}]]]))

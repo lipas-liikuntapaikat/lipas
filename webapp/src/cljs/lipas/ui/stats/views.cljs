@@ -23,7 +23,7 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
-(defn metrics-selector [{:keys [tr value on-change]}]
+(defn finance-metrics-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/finance-metrics])]
     ^{:key value}
@@ -88,6 +88,19 @@
     :label     (tr :stats/select-interval)
     :on-change on-change}])
 
+(defn sports-stats-metrics-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        metrics (<== [::subs/sports-stats-metrics])]
+    ^{:key value}
+    [lui/select
+     {:items        metrics
+      :value        value
+      :style        select-style
+      :label        (tr :stats/select-metrics)
+      :value-fn     first
+      :label-fn     (comp locale second)
+      :on-change    on-change}]))
+
 (defn- make-finance-headers [tr]
   [[:year (tr :time/year)]
    [:city-code (tr :lipas.location/city-code)]
@@ -149,7 +162,7 @@
 
        ;; Metrics selector
        [mui/grid {:item true}
-        [metrics-selector
+        [finance-metrics-selector
          {:tr        tr
           :value     metrics
           :on-change #(==> [::events/select-finance-metrics %])}]]
@@ -198,6 +211,7 @@
   (let [tr     (<== [:lipas.ui.subs/translator])
         cities (<== [::subs/selected-sports-stats-cities])
         types  (<== [::subs/selected-sports-stats-types])
+        metric (<== [::subs/selected-sports-stats-metric])
         data   (<== [::subs/sports-stats-data])
         labels (<== [::subs/sports-stats-labels])]
     [mui/grid {:container true :spacing 16}
@@ -233,10 +247,17 @@
             :on-click #(==> [::events/clear-sports-stats-filters])}
            (tr :search/clear-filters)]])]]
 
+     ;; Metrics selector
+     [mui/grid {:item true :xs 12}
+      [sports-stats-metrics-selector
+       {:tr        tr
+        :value     metric
+        :on-change #(==> [::events/select-sports-stats-metric %])}]]
+
      ;; Chart
      [mui/grid {:item true :xs 12}
-      [charts/age-structure-chart
-       {:data data :labels labels}]]]))
+      [charts/sports-stats-chart
+       {:data data :labels labels :metric metric}]]]))
 
 (defn age-structure-stats []
   (let [tr                   (<== [:lipas.ui.subs/translator])
@@ -311,14 +332,14 @@
        ;; Tabs for choosing between different stats pages
        [mui/grid {:item true}
         [mui/tabs {:value tab :on-change #(==> [::events/select-tab %2])}
+         [mui/tab {:value "sports-stats" :label (tr :stats/sports-stats)}]
          [mui/tab {:value "age-structure-stats" :label (tr :stats/age-structure-stats)}]
-         [mui/tab {:value "city-stats" :label (tr :stats/city-stats)}]
-         [mui/tab {:value "sports-stats" :label (tr :stats/sports-stats)}]]]
+         [mui/tab {:value "city-stats" :label (tr :stats/city-stats)}]]]
 
        [mui/grid {:item true}
         (condp = tab
-          "age-structure-stats" [age-structure-stats]
           "sports-stats"        [sports-stats]
+          "age-structure-stats" [age-structure-stats]
           "city-stats"          [city-stats])]]]]))
 
 (defn main [tr]

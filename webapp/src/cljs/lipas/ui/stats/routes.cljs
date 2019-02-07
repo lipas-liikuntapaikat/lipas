@@ -9,5 +9,6 @@
     [{:start
       (fn []
         (==> [:lipas.ui.events/set-active-panel :stats-panel])
+        (==> [:lipas.ui.stats.events/create-sports-stats-report])
         (==> [:lipas.ui.stats.events/select-finance-cities [179]])
         (==> [:lipas.ui.stats.events/create-age-structure-report]))}]}])

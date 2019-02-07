@@ -276,6 +276,16 @@
    "admin" {:fi "Ylläpitäjä"
             :en "Administrator"}})
 
+(def sports-stats-metrics
+  {"sites-count"        {:fi "Liikuntapaikkojen lkm"
+                         :en "Sports-sites count"}
+   "sites-count-p1000c" {:fi "Liikuntapaikkojen lkm/1000 asukasta"
+                         :en "Sports-sites count/1000 people"}
+   "m2-total"           {:fi "Liikuntapinta-ala m²"
+                         :en "Operating expenses"}
+   "m2-pc"              {:fi "Liikuntapinta-ala m²/asukas"
+                         :en "Surface area m²/capita"}})
+
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
         ks (-> stats-metrics keys (->> (map keyword)))]
@@ -320,3 +330,23 @@
         years  (into #{} (mapcat (comp keys :stats)) all-cities)]
     {:country-averages (calc-stats years all-cities)
      :data-points      (select-keys cities city-codes)}))
+
+(defn m2-per-capita-report [m2-data pop-data]
+  (reduce
+   (fn [res m]
+     (let [city-code   (:key m)
+           population  (pop-data city-code)
+           m2-total    (-> m :area_m2_sum :value)
+           sites-count (:doc_count m)
+           entry       {:population         population
+                        :m2-total           m2-total
+                        :sites-count        sites-count
+                        :sites-count-p1000c (when (and population sites-count)
+                                              (double
+                                               (/ sites-count
+                                                  (/ population 1000))))
+                        :m2-pc              (when (and population m2-total)
+                                              (double (/ m2-total population)))}]
+       (assoc res city-code entry)))
+   {}
+   m2-data))
