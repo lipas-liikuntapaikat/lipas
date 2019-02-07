@@ -82,7 +82,8 @@
    {:select-fields     "Valitse raportin kentät"
     :selected-fields   "Valitut kentät"
     :shortcuts         "Pikavalinnat"
-    :download-as-excel "Luo raportti"}
+    :download-as-excel "Luo raportti"
+    :contacts          (str "Yhteys" ZWSP "tiedot")}
 
    :stats
    {:headline            "Tilastot"
@@ -92,7 +93,6 @@
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
     :bullet2             "Liikuntapaikkatilastot (tulossa)"
     :browse-to           "Siirry tilastoihin"
-    :contacts            (str "Yhteys" ZWSP "tiedot")
     :city-stats          (str "Kunta" ZWSP "tilastot")
     :finance-stats       (str "Talous" ZWSP "tiedot")
     :age-structure       (str "Liikunta" ZWSP "paikkojen rakennus" ZWSP "vuodet")
