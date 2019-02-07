@@ -79,6 +79,7 @@
   (rfe/start!
    routes
    (fn [new-match]
+     (==> [:lipas.ui.events/navigated (:path match)])
      (swap! match (fn [old-match]
                     (if new-match
                       (assoc new-match :controllers
