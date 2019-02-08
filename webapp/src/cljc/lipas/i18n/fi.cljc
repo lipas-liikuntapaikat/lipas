@@ -100,6 +100,7 @@
     :sports-stats        (str "Liikunta" ZWSP "paikat")
     :select-city         "Valitse kunta"
     :select-cities       "Valitse kunnat"
+    :select-metric       "Valitse suure"
     :select-metrics      "Valitse suureet"
     :select-city-service "Valitse toimi"
     :select-unit         "Valitse yksikkö"
