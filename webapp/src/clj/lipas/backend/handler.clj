@@ -38,10 +38,10 @@
     exception/default-handlers
     exception-handlers
     ;;Prints all stack traces
-    {::exception/wrap
-     (fn [handler e request]
-       (.printStackTrace e)
-       (handler e request))}
+    ;; {::exception/wrap
+    ;;  (fn [handler e request]
+    ;;    (.printStackTrace e)
+    ;;    (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
