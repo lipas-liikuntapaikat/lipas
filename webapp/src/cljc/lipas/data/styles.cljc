@@ -230,7 +230,7 @@
    2110 {:type-code 2110, :fill "#be55ff", :stroke "#000000"},
    3120 {:type-code 3120, :fill "#7aaffe", :stroke "#000000"},
    104  {:type-code 104, :fill "#39db3e", :stroke "#000000"},
-   2330 {:type-code 2330, :fill "#c7f101", :stroke "#000000"},
+   2330 {:type-code 2330, :fill "#d0f971", :stroke "#000000"},
    2280 {:type-code 2280, :fill "#d8dc23", :stroke "#000000"},
    6140 {:type-code 6140, :fill "#9b7986", :stroke "#ee0000"},
    2140 {:type-code 2140, :fill "#6635a2", :stroke "#000000"},
@@ -268,7 +268,7 @@
    111  {:type-code 111, :fill "#68c613", :stroke "#000000"},
    4630 {:type-code 4630, :fill "#cf65a8", :stroke "#000000"},
    4810 {:type-code 4810, :fill "#ffb02d", :stroke "#aa0000"},
-   1540 {:type-code 1540, :fill "#00b6ea", :stroke "#000000"},
+   1540 {:type-code 1540, :fill "#ddf8ff", :stroke "#000000"},
    5320 {:type-code 5320, :fill "#9c997e", :stroke "#aa00ff"},
    3210 {:type-code 3210, :fill "#4392f1", :stroke "#000000"},
    4640 {:type-code 4640, :fill "#ed50fe", :stroke "#000000"},
@@ -302,7 +302,7 @@
    4230 {:type-code 4230, :fill "#ffdd1c", :stroke "#000000"},
    4320 {:type-code 4320, :fill "#9672d8", :stroke "#000000"},
    3130 {:type-code 3130, :fill "#0077fb", :stroke "#000000"},
-   3110 {:type-code 3110, :fill "#11bdff", :stroke "#000000"},
+   3110 {:type-code 3110, :fill "#00abec", :stroke "#000000"},
    203  {:type-code 203, :fill "#4aa6a2", :stroke "#0055ff"},
    4620 {:type-code 4620, :fill "#9f0000", :stroke "#000000"},
    5360 {:type-code 5360, :fill "#867e60", :stroke "#aa00ff"},
@@ -332,7 +332,7 @@
    4421 {:type-code 4421, :fill "", :stroke "#961275"},
    2220 {:type-code 2220, :fill "#ac6c46", :stroke "#000000"},
    1320 {:type-code 1320, :fill "#aaaaff", :stroke "#707172"},
-   4402 {:type-code 4402, :fill "", :stroke "#8be4fe"}})
+   4402 {:type-code 4402, :fill "", :stroke "#6cf7f7"}})
 
 (def adapted-temp-symbols
   (reduce

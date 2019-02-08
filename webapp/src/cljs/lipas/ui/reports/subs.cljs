@@ -4,6 +4,11 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
+ ::selected-tab
+ (fn [db _]
+   (-> db :reports :selected-tab)))
+
+(re-frame/reg-sub
  ::dialog-open?
  (fn [db _]
    (-> db :reports :dialog-open?)))
@@ -69,9 +74,9 @@
    (-> db :reports :stats)))
 
 (re-frame/reg-sub
- ::stats-tab
+ ::view-type
  (fn [db _]
-   (-> db :reports :stats-tab)))
+   (-> db :reports :view-type)))
 
 (re-frame/reg-sub
  ::stats-labels
@@ -134,3 +139,36 @@
           (reduce (partial ->entries avgs service years) [])
           (map round-vals)
           (sort-by :year)))))
+
+(re-frame/reg-sub
+ ::age-structure-groupings
+ (fn [db _]
+   (-> db :reports :age-structure :groupings)))
+
+(re-frame/reg-sub
+ ::selected-age-structure-grouping
+ (fn [db _]
+   (-> db :reports :age-structure :selected-grouping)))
+
+(re-frame/reg-sub
+ ::age-structure-data
+ (fn [db _]
+   (-> db :reports :age-structure)))
+
+(re-frame/reg-sub
+ ::age-structure-stats
+ :<- [::age-structure-data]
+ (fn [data _]
+   (let [data (-> data :years :buckets)]
+     (->> data
+          (reduce
+           (fn [m v]
+             (let [year  (-> v :key :construction-year)
+                   owner (-> v :key :owner)
+                   count (-> v :doc_count)]
+               (-> m
+                   (assoc-in [year owner] count)
+                   (assoc-in [year :construction-year] year))))
+           {})
+          vals
+          (sort-by :construction-year)))))
