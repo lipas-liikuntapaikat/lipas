@@ -8,6 +8,12 @@
 
 ;;; General ;;;
 
+(re-frame/reg-event-fx
+ ::navigate
+ (fn [_ [_ v]]
+   (let [route (keyword :lipas.ui.routes.stats v)]
+     {:dispatch [:lipas.ui.events/navigate route]})))
+
 (re-frame/reg-event-db
  ::select-tab
  (fn [db [_ v]]
