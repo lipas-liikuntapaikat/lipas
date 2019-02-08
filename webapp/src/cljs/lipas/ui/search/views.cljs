@@ -40,7 +40,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/select-types)]
 
-      [lui/type-selector
+      [lui/type-category-selector
        {:tr        tr
         :value     type-codes
         :on-change #(==> [::events/set-type-filter %])}]]

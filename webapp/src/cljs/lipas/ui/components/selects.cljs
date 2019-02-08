@@ -5,6 +5,7 @@
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.cities :as cities]
+   [lipas.data.types :as types]
    [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<==] :as utils]
@@ -147,6 +148,41 @@
       :value-fn  :region-id
       :label-fn  (comp locale :name)
       :on-change (comp on-change (partial ->city-codes avis provinces))}]))
+
+(def parse-main-cats (id-parser "main-cat-"))
+(def parse-sub-cats (id-parser "sub-cat-"))
+(def parse-types (id-parser "type-"))
+
+(defn ->type-codes [types-by-main-cats types-by-sub-cats cat-ids]
+  (let [main-cats  (into [] parse-main-cats cat-ids)
+        sub-cats   (into [] parse-sub-cats cat-ids)
+        type-codes (into [] parse-types cat-ids)]
+    (into [] (comp cat (remove nil?))
+          [(->> main-cats
+                (select-keys types-by-main-cats)
+                (mapcat second)
+                (map :type-code))
+           (->> sub-cats
+                (select-keys types-by-sub-cats)
+                (mapcat second)
+                (map :type-code))
+           type-codes])))
+
+(defn type-category-selector [{:keys [value on-change]}]
+  (let [regions      (<== [:lipas.ui.sports-sites.subs/type-categories])
+        tr           (<== [:lipas.ui.subs/translator])
+        locale       (tr)
+        by-main-cats types/by-main-category
+        by-sub-cats  types/by-sub-category]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:items     regions
+      :value     (map (partial str "type-") value)
+      :show-all? true
+      :label     (tr :search/search)
+      :value-fn  :cat-id
+      :label-fn  (comp locale :name)
+      :on-change (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
 (defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)

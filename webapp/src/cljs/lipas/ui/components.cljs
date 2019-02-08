@@ -31,6 +31,7 @@
 (def number-selector selects/number-selector)
 (def region-selector selects/region-selector)
 (def type-selector selects/type-selector)
+(def type-category-selector selects/type-category-selector)
 (def city-selector selects/city-selector)
 (def city-selector-single selects/city-selector-single)
 (def admin-selector selects/admin-selector)

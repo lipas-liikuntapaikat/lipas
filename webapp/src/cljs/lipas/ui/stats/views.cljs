@@ -101,6 +101,121 @@
       :label-fn     (comp locale second)
       :on-change    on-change}]))
 
+(defn sports-stats []
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        cities (<== [::subs/selected-sports-stats-cities])
+        types  (<== [::subs/selected-sports-stats-types])
+        metric (<== [::subs/selected-sports-stats-metric])
+        data   (<== [::subs/sports-stats-data])
+        labels (<== [::subs/sports-stats-labels])]
+    [mui/grid {:container true :spacing 16}
+
+     ;; Headline
+     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
+      [mui/typography {:variant "h4"}
+       (tr :stats/sports-stats)]]
+
+     [mui/grid {:item true :xs 12}
+
+      [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+
+       ;; Region selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :stats/filter-cities)]
+        [lui/region-selector
+         {:value     cities
+          :on-change #(==> [::events/select-sports-stats-cities %])}]]
+
+       ;; Type selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :stats/filter-types)]
+        [lui/type-category-selector
+         {:tr        tr
+          :value     types
+          :on-change #(==> [::events/select-sports-stats-types %])}]]
+
+       ;; Clear filters button
+       (when (or (not-empty types) (not-empty cities))
+         [mui/grid {:item true :xs 12}
+          [mui/button
+           {:color    "secondary"
+            :on-click #(==> [::events/clear-sports-stats-filters])}
+           (tr :search/clear-filters)]])]
+
+      ;; Metrics selector
+      [mui/grid {:item true}
+       [sports-stats-metrics-selector
+        {:tr        tr
+         :value     metric
+         :on-change #(==> [::events/select-sports-stats-metric %])}]]]
+
+     ;; Chart
+     [mui/grid {:item true :xs 12}
+      [charts/sports-stats-chart
+       {:data data :labels labels :metric metric}]]]))
+
+(defn age-structure-stats []
+  (let [tr                   (<== [:lipas.ui.subs/translator])
+        age-structure-data   (<== [::subs/age-structure-data])
+        age-structure-labels (<== [::subs/age-structure-labels])
+        regions              (<== [::subs/selected-age-structure-cities])
+        types                (<== [::subs/selected-age-structure-types])
+        grouping             (<== [::subs/selected-age-structure-grouping])
+        interval             (<== [::subs/selected-age-structure-interval])]
+
+    [mui/grid {:container true :spacing 16}
+
+     ;; Headline
+     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
+      [mui/typography {:variant "h4"}
+       (tr :stats/age-structure)]]
+
+     [mui/grid {:item true}
+      [mui/grid {:container true :spacing 16}
+
+       ;; Region selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :actions/select-cities)]
+        [lui/region-selector
+         {:value     regions
+          :on-change #(==> [::events/select-age-structure-cities %])}]]
+
+       ;; Type selector
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2"} (tr :actions/select-types)]
+        [lui/type-category-selector
+         {:tr        tr
+          :value     types
+          :on-change #(==> [::events/select-age-structure-types %])}]]
+
+       ;; Clear filters button
+       (when (or (not-empty types) (not-empty regions))
+         [mui/grid {:item true :xs 12}
+          [mui/button
+           {:color "secondary"
+            :on-click #(==> [::events/clear-age-structure-filters])}
+           (tr :search/clear-filters)]])
+
+       ;; Interval selector
+       [mui/grid {:item true}
+        [interval-selector
+         {:tr        tr
+          :value     interval
+          :on-change #(==> [::events/select-age-structure-interval %])}]]
+
+       ;; Grouping selector
+       [mui/grid {:item true}
+        [grouping-selector
+         {:tr        tr
+          :value     grouping
+          :on-change #(==> [::events/select-age-structure-grouping %])}]]]]
+
+     ;; Chart
+     [mui/grid {:item true :xs 12}
+      [charts/age-structure-chart
+       {:data   age-structure-data
+        :labels age-structure-labels}]]]))
+
 (defn- make-finance-headers [tr]
   [[:year (tr :time/year)]
    [:city-code (tr :lipas.location/city-code)]
@@ -206,120 +321,6 @@
        :color    "secondary"
        :on-click #(==> [::events/download-finance-excel finance-data headers])}
       (tr :actions/download-excel)]]))
-
-(defn sports-stats []
-  (let [tr     (<== [:lipas.ui.subs/translator])
-        cities (<== [::subs/selected-sports-stats-cities])
-        types  (<== [::subs/selected-sports-stats-types])
-        metric (<== [::subs/selected-sports-stats-metric])
-        data   (<== [::subs/sports-stats-data])
-        labels (<== [::subs/sports-stats-labels])]
-    [mui/grid {:container true :spacing 16}
-
-     ;; Headline
-     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h4"}
-       (tr :stats/sports-stats)]]
-
-     [mui/grid {:item true}
-      [mui/grid {:container true :spacing 16}
-
-       ;; Region selector
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :actions/select-cities)]
-        [lui/region-selector
-         {:value     cities
-          :on-change #(==> [::events/select-sports-stats-cities %])}]]
-
-       ;; Type selector
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :actions/select-types)]
-        [lui/type-selector
-         {:tr        tr
-          :value     types
-          :on-change #(==> [::events/select-sports-stats-types %])}]]
-
-       ;; Clear filters button
-       (when (or (not-empty types) (not-empty cities))
-         [mui/grid {:item true :xs 12}
-          [mui/button
-           {:color    "secondary"
-            :on-click #(==> [::events/clear-sports-stats-filters])}
-           (tr :search/clear-filters)]])]]
-
-     ;; Metrics selector
-     [mui/grid {:item true :xs 12}
-      [sports-stats-metrics-selector
-       {:tr        tr
-        :value     metric
-        :on-change #(==> [::events/select-sports-stats-metric %])}]]
-
-     ;; Chart
-     [mui/grid {:item true :xs 12}
-      [charts/sports-stats-chart
-       {:data data :labels labels :metric metric}]]]))
-
-(defn age-structure-stats []
-  (let [tr                   (<== [:lipas.ui.subs/translator])
-        age-structure-data   (<== [::subs/age-structure-data])
-        age-structure-labels (<== [::subs/age-structure-labels])
-        regions              (<== [::subs/selected-age-structure-cities])
-        types                (<== [::subs/selected-age-structure-types])
-        grouping             (<== [::subs/selected-age-structure-grouping])
-        interval             (<== [::subs/selected-age-structure-interval])]
-
-    [mui/grid {:container true :spacing 16}
-
-     ;; Headline
-     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h4"}
-       (tr :stats/age-structure)]]
-
-     [mui/grid {:item true}
-      [mui/grid {:container true :spacing 16}
-
-       ;; Region selector
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :actions/select-cities)]
-        [lui/region-selector
-         {:value     regions
-          :on-change #(==> [::events/select-age-structure-cities %])}]]
-
-       ;; Type selector
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :actions/select-types)]
-        [lui/type-selector
-         {:tr        tr
-          :value     types
-          :on-change #(==> [::events/select-age-structure-types %])}]]
-
-       ;; Clear filters button
-       (when (or (not-empty types) (not-empty regions))
-         [mui/grid {:item true :xs 12}
-          [mui/button
-           {:color "secondary"
-            :on-click #(==> [::events/clear-age-structure-filters])}
-           (tr :search/clear-filters)]])
-
-       ;; Interval selector
-       [mui/grid {:item true}
-        [interval-selector
-         {:tr        tr
-          :value     interval
-          :on-change #(==> [::events/select-age-structure-interval %])}]]
-
-       ;; Grouping selector
-       [mui/grid {:item true}
-        [grouping-selector
-         {:tr        tr
-          :value     grouping
-          :on-change #(==> [::events/select-age-structure-grouping %])}]]]]
-
-     ;; Chart
-     [mui/grid {:item true :xs 12}
-      [charts/age-structure-chart
-       {:data   age-structure-data
-        :labels age-structure-labels}]]]))
 
 (defn create-panel []
   (let [tr  (<== [:lipas.ui.subs/translator])
