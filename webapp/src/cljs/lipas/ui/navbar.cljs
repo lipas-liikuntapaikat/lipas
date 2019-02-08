@@ -159,12 +159,12 @@
         [mui/icon "pool"]]
        [mui/list-item-text {:primary (tr :swim/headline)}]]
 
-      ;; Reports
+      ;; Stats
       [mui/list-item {:button   true
                       :on-click #(hide-and-navigate! "/#/tilastot")}
        [mui/list-item-icon
         [mui/icon "insert_chart_outlined"]]
-       [mui/list-item-text {:primary (tr :reports/headline)}]]
+       [mui/list-item-text {:primary (tr :stats/headline)}]]
 
       [mui/divider]
 
@@ -237,8 +237,8 @@
                            :href "/#/profiili"}
     :reset-password-panel {:text (tr :reset-password/headline)
                            :href "/#/passu-hukassa"}
-    :reports-panel        {:text (tr :reports/headline)
-                           :href "/#/raportit"}
+    :stats-panel          {:text (tr :stats/headline)
+                           :href "/#/tilastot"}
     {:text "" :href ""}))
 
 (defn menu-button [{:keys [tr]}]

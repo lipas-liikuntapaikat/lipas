@@ -79,6 +79,13 @@
     :neighborhood  "Kuntaosa"}
 
    :reports
+   {:select-fields     "Valitse raportin kentät"
+    :selected-fields   "Valitut kentät"
+    :shortcuts         "Pikavalinnat"
+    :download-as-excel "Luo raportti"
+    :contacts          (str "Yhteys" ZWSP "tiedot")}
+
+   :stats
    {:headline            "Tilastot"
     :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
     nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
@@ -86,20 +93,24 @@
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
     :bullet2             "Liikuntapaikkatilastot (tulossa)"
     :browse-to           "Siirry tilastoihin"
-    :contacts            (str "Yhteys" ZWSP "tiedot")
-    :stats               (str "Talous" ZWSP "tiedot")
+    :city-stats          (str "Kunta" ZWSP "tilastot")
+    :finance-stats       (str "Talous" ZWSP "tiedot")
+    :age-structure       (str "Liikunta" ZWSP "paikkojen rakennus" ZWSP "vuodet")
+    :age-structure-stats (str "Rakennus" ZWSP "vuodet")
+    :sports-stats        (str "Liikunta" ZWSP "paikat")
     :select-city         "Valitse kunta"
     :select-cities       "Valitse kunnat"
+    :select-metric       "Valitse suure"
     :select-metrics      "Valitse suureet"
     :select-city-service "Valitse toimi"
-    :select-fields       "Valitse raportin kentät"
     :select-unit         "Valitse yksikkö"
     :select-years        "Valitse vuodet"
-    :selected-fields     "Valitut kentät"
+    :select-grouping     "Ryhmittely"
+    :select-interval     "Valitse aikaväli"
     :country-avg         "(maan keskiarvo)"
-    :shortcuts           "Pikavalinnat"
-    :download-as-excel   "Luo raportti"
-    :download-excel      "Lataa Excel"}
+    :sports-sites-count  "Liikuntapaikkojen lkm"
+    :filter-cities       "Rajaa kunnat"
+    :filter-types        "Rajaa tyypit"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -232,7 +243,14 @@
     :front-page-link     "Siirry etusivulle"
     :admin-page-link     "Siirry admin-sivulle"
     :ice-stadiums-link   "Jäähalliportaali"
-    :swimming-pools-link "Uimahalliportaali"}
+    :swimming-pools-link "Uimahalliportaali"
+    :promo-headline      "Ajankohtaista"
+    :promo1-topic        "Liikuntasalien päivitys"
+    :promo1-text         "Tarkista koulujen liikuntasalien tiedot
+    Lipas-järjestelmässä toukokuuhun 2019 mennessä! Uusia kouluja on
+    rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on koulujen
+    liikuntasalien tilanne kunnassasi?"
+    :promo1-link         "Näytä liikuntasalit jotka voin päivittää"}
 
    :lipas.admin
    {:headline                   "Admin"
@@ -498,8 +516,10 @@
     :long-time-ago      "Kauan sitten"}
 
    :duration
-   {:hour  "tuntia"
-    :month "kuukautta"}
+   {:hour        "tuntia"
+    :month       "kuukautta"
+    :years       "vuotta"
+    :years-short "v"}
 
    :actions
    {:add                      "Lisää"
@@ -532,7 +552,8 @@
     :select-owners            "Valitse omistajat"
     :filter-area-m2           "Rajaa pinta-ala m²"
     :filter-surface-materials "Rajaa pintamateriaalit"
-    :clear-selections         "Poista valinnat"}
+    :clear-selections         "Poista valinnat"
+    :download-excel           "Lataa Excel"}
 
    :confirm
    {:headline              "Varmistus"

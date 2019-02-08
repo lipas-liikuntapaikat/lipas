@@ -6,6 +6,13 @@ Alla henkilökohtainen sisäänkirjautumislinkkisi:
 
 Linkki on voimassa {{valid-days}} päivää. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
 
+Ajankohtaista:
+
+Tarkista koulujen liikuntasalien tiedot Lipas-järjestelmässä
+toukokuuhun 2019 mennessä! Uusia kouluja on rakennettu ja vanhoja
+lakkautettu koko Suomessa. Mikä on koulujen liikuntasalien tilanne
+kunnassasi?
+
 Palaute ja kommentit:
 
 Toivomme runsaasti palautetta ja kehittämisehdotuksia LIPAS-palvelun toiminnasta. Kerro ajatuksesi sähköpostilla tai puhelimitse! Alla yhteystiedot.

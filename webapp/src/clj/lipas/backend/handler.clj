@@ -285,7 +285,7 @@
                (fn [out]
                  (core/sports-sites-report search query fields out)))}))}}]
 
-      ["/actions/create-cities-report"
+      ["/actions/create-finance-report"
        {:post
         {:parameters
          {:body :lipas.api.cities-report/req}
@@ -293,7 +293,18 @@
          (fn [{:keys [parameters]}]
            (let [city-codes (-> parameters :body :city-codes)]
              {:status 200
-              :body   (core/cities-report db city-codes)}))}}]]]
+              :body   (core/finance-report db city-codes)}))}}]
+
+      ["/actions/create-m2-per-capita-report"
+       {:post
+        {:parameters ;;:body :lipas.api.m2-per-capita-report/req
+         {}
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [city-codes (-> body-params :city-codes)
+                 type-codes (-> body-params :type-codes)]
+             {:status 200
+              :body   (core/m2-per-capita-report db search city-codes type-codes)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

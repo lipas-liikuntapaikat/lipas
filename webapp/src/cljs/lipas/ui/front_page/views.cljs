@@ -170,14 +170,14 @@
 
      ;; Reports
      [grid-card
-      {:title     (tr :reports/headline)
+      {:title     (tr :stats/headline)
        :link      "/#/tilastot"
-       :link-text (tr :reports/browse-to)}
+       :link-text (tr :stats/browse-to)}
       [mui/typography {:variant "body1"}
-       (tr :reports/description)]
+       (tr :stats/description)]
       [:ul
-       [lui/li (tr :reports/bullet1)]
-       [lui/li (tr :reports/bullet2)]]]
+       [lui/li (tr :stats/bullet1)]
+       [lui/li (tr :stats/bullet2)]]]
 
      ;; Open Data
      [grid-card {:title (tr :open-data/headline)}

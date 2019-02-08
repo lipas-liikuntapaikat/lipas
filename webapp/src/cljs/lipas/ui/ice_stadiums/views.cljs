@@ -13,8 +13,6 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-
-
 (defn stats-tab* [{:keys [width]}]
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
@@ -35,23 +33,23 @@
 
      [mui/grid {:item true :style {:padding "1em"}}
       [:iframe
-       {:src              "https://www.youtube.com/embed/-tIpUzQXZB8"
-        :width            (case width
-                            ;;"xl" 1920
-                            "xl" 1280
-                            "lg" 960
-                            "md" 640
-                            480)
-        :height           (case width
-                            ;;"xl" 1080
-                            "xl" 720
-                            "lg" 540
-                            "md" 360
-                            270)
-        :frameborder      0
-        :allow            (str "accelerometer; autoplay; encrypted-media; "
-                               "gyroscope; picture-in-picture")
-        :allow-fullscreen true}]]
+       {:src               "https://www.youtube.com/embed/-tIpUzQXZB8"
+        :width             (case width
+                             ;;"xl" 1920
+                             "xl" 1280
+                             "lg" 960
+                             "md" 640
+                             480)
+        :height            (case width
+                             ;;"xl" 1080
+                             "xl" 720
+                             "lg" 540
+                             "md" 360
+                             270)
+        :frameBorder       0
+        :allow             (str "accelerometer; autoplay; encrypted-media; "
+                                "gyroscope; picture-in-picture")
+        :allow-full-screen true}]]
 
      [energy/hof
       {:tr    tr
@@ -700,8 +698,7 @@
      [mui/grid {:item true :xs 12 :class-name :no-print}
       [mui/card card-props
        [mui/card-content
-        [mui/tabs {:scrollable true
-                   :full-width true
+        [mui/tabs {:variant    "fullWidth"
                    :text-color "secondary"
                    :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
                    :value      active-tab}
