@@ -121,8 +121,7 @@
   (let [admin? (<== [::subs/admin?])
         cities (<== [::subs/permission-to-cities])
         types  (<== [::subs/permission-to-types])
-
-        sites (<== [::subs/sports-sites (tr)])
+        sites  (<== [::subs/sports-sites (tr)])
 
         all-types?  (-> user :permissions :all-types?)
         all-cities? (-> user :permissions :all-cities?)
@@ -137,21 +136,22 @@
      [mui/grid {:item true :xs 12 :md 6}
 
       ;; Promo card
-      [mui/card card-props
-       [mui/card-header {:title "Joku promo-otsikko"}]
-       [mui/card-content
-        [mui/typography {:variant "h5"}
-         "Liikuntasalien päivitys"]
-        [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
-         "blablaba tähän tietoa siitä mitä varten nämä on nyt tärkeitä"]
-        [mui/button
-         {:variant  "contained"
-          :color    "secondary"
-          :on-click (fn []
-                      (==> [:lipas.ui.search.events/set-filters-by-permissions])
-                      (==> [:lipas.ui.search.events/set-type-filter [2150]])
-                      (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
-         "Näytä liikuntasalit jotka voin päivittää"]]]
+      (when (or admin? all-types? (some #{2150} (keys types)))
+        [mui/card card-props
+         [mui/card-header {:title (tr :user/promo-headline)}]
+         [mui/card-content
+          [mui/typography {:variant "h5"}
+           (tr :user/promo1-topic)]
+          [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+           (tr :user/promo1-text)]
+          [mui/button
+           {:variant  "contained"
+            :color    "secondary"
+            :on-click (fn []
+                        (==> [:lipas.ui.search.events/set-filters-by-permissions])
+                        (==> [:lipas.ui.search.events/set-type-filter [2150]])
+                        (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
+           (tr :user/promo1-link)]]])
 
       ;; Profile card
       [mui/card card-props
