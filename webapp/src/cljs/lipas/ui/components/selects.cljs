@@ -133,6 +133,9 @@
                 (map :city-code))
            city-codes])))
 
+(defn strong1 [text] [:strong text])
+(defn strong2 [text] [:strong {:style {:text-transform "uppercase"}} text])
+
 (defn region-selector [{:keys [value on-change]}]
   (let [regions   (<== [:lipas.ui.sports-sites.subs/regions])
         tr        (<== [:lipas.ui.subs/translator])
@@ -141,13 +144,19 @@
         provinces cities/by-province-id]
     ^{:key value}
     [autocompletes/autocomplete
-     {:items     regions
-      :value     (map (partial str "city-") value)
-      :show-all? true
-      :label     (tr :search/search)
-      :value-fn  :region-id
-      :label-fn  (comp locale :name)
-      :on-change (comp on-change (partial ->city-codes avis provinces))}]))
+     {:items          regions
+      :value          (map (partial str "city-") value)
+      :show-all?      true
+      :label          (tr :search/search)
+      :value-fn       :region-id
+      :label-fn       (comp locale :name)
+      :label-style-fn (fn [item label]
+                        (let [id (get item :region-id "")]
+                          (cond
+                            (string/includes? id "province-") (strong1 label)
+                            (string/includes? id "avi-")      (strong2 label)
+                            :else                             label)))
+      :on-change      (comp on-change (partial ->city-codes avis provinces))}]))
 
 (def parse-main-cats (id-parser "main-cat-"))
 (def parse-sub-cats (id-parser "sub-cat-"))
@@ -169,20 +178,32 @@
            type-codes])))
 
 (defn type-category-selector [{:keys [value on-change]}]
-  (let [regions      (<== [:lipas.ui.sports-sites.subs/type-categories])
+  (let [cats         (<== [:lipas.ui.sports-sites.subs/type-categories])
         tr           (<== [:lipas.ui.subs/translator])
         locale       (tr)
         by-main-cats types/by-main-category
         by-sub-cats  types/by-sub-category]
+
     ^{:key value}
     [autocompletes/autocomplete
-     {:items     regions
-      :value     (map (partial str "type-") value)
-      :show-all? true
-      :label     (tr :search/search)
-      :value-fn  :cat-id
-      :label-fn  (comp locale :name)
-      :on-change (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
+     {:items          cats
+      :value          (map (partial str "type-") value)
+      :show-all?      true
+      :label          (tr :search/search)
+      :value-fn       :cat-id
+      :label-fn       (fn [item] (str (:type-code item) " " (-> item :name locale)))
+      :label-style-fn (fn [item label]
+                        (let [cat-id (get item :cat-id "")]
+                          (cond
+                            (string/includes? cat-id "sub-cat")  (strong1 label)
+                            (string/includes? cat-id "main-cat") (strong2 label)
+                            :else                                label)))
+      :sort-fn        (fn [{:keys [type-code]}]
+                        (case type-code
+                          (1 2) (* 100 type-code)
+                          type-code))
+      :on-change      (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
+
 
 (defn type-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
