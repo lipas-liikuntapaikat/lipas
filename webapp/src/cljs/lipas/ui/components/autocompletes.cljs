@@ -31,22 +31,24 @@
    [mui/paper (merge (js->clj* (gobj/get opts "containerProps")))
     (gobj/get opts "children")]))
 
-(defn hack-item [label-fn item]
-  (r/as-element
-   [mui/menu-item {:component "div"}
-    (-> item
-        (js->clj*)
-        label-fn)]))
+(defn hack-item [label-fn label-style-fn item]
+  (let [item  (js->clj* item)
+        label (label-fn item)]
+    (r/as-element
+     [mui/menu-item {:component "div"}
+      (label-style-fn item label)])))
 
 (defn autocomplete
   [{:keys [label items value value-fn label-fn
            suggestion-fn on-change multi? spacing
-           items-label show-all?]
-    :or   {suggestion-fn (partial simple-matches items label-fn)
-           label-fn      :label
-           value-fn      :value
-           multi?        true
-           spacing       0}}]
+           items-label show-all? label-style-fn sort-fn]
+    :or   {suggestion-fn  (partial simple-matches items label-fn)
+           label-fn       :label
+           label-style-fn (fn [item label] label)
+           sort-fn        label-fn
+           value-fn       :value
+           multi?         true
+           spacing        0}}]
 
   (r/with-let [items-m     (utils/index-by value-fn items)
                id          (r/atom (gensym))
@@ -60,20 +62,20 @@
      ;; Input field
      [mui/grid {:item true}
       [:> js/Autosuggest
-       {:id                      @id
-        :suggestions             (sort-by label-fn @suggs)
-        :getSuggestionValue      #(label-fn (js->clj* %1))
+       {:id                 @id
+        :suggestions        (sort-by sort-fn @suggs)
+        :getSuggestionValue #(label-fn (js->clj* %1))
 
         :shouldRenderSuggestions (if show-all?
                                    (constantly true)
                                    (comp boolean not-empty))
 
 
-       :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
+        :onSuggestionsFetchRequested #(reset! suggs (suggestion-fn
                                                      (gobj/get % "value")))
 
         :onSuggestionsClearRequested #(reset! suggs [])
-        :renderSuggestion            (partial hack-item label-fn)
+        :renderSuggestion            (partial hack-item label-fn label-style-fn)
         :renderSuggestionsContainer  hack-container
 
         :onSuggestionSelected #(let [v (-> %2
