@@ -352,3 +352,28 @@
    (when comeback?
      (==> [:lipas.ui.login.events/set-comeback-path (current-path)]))
    (==> [:lipas.ui.events/navigate path])))
+
+(def check-mark "✓")
+
+
+(defn link? [x]
+  (and (string? x)
+       (or
+        (string/starts-with? x "http")
+        (string/starts-with? x "www"))))
+
+(defn truncate [s]
+  (if (> (count s) 30)
+    (str (subs s 0 27) "...")
+    s))
+
+(defn display-value [v & {:keys [empty links?]
+                          :or   {empty  ""
+                                 links? true}}]
+  (cond
+    (link? v)  (if links? [:a {:href v} (truncate v)] v)
+    (coll? v)  (if (empty? v) empty (string/join ", " v))
+    (true? v)  check-mark
+    (false? v) empty
+    (nil? v)   empty
+    :else      v))

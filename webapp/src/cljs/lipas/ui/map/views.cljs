@@ -109,7 +109,7 @@
    children))
 
 ;; Works as both display and edit views
-(defn sports-site-view [{:keys [tr site-data]}]
+(defn sports-site-view [{:keys [tr site-data width]}]
   (r/with-let [selected-tab (r/atom 0)]
     (let [display-data (:display-data site-data)
           lipas-id     (:lipas-id display-data)
@@ -241,10 +241,11 @@
 
             ;; Geom tools
 
-            [(when-not editing?
+            [;; Zoom to site
+             (when-not editing?
                [mui/tooltip {:title (tr :map/zoom-to-site)}
                 [mui/button
-                 {:on-click #(==> [::events/zoom-to-site lipas-id])
+                 {:on-click #(==> [::events/zoom-to-site lipas-id width])
                   :variant  "fab"
                   :color    "default"}
                  [mui/icon {:color "secondary"}
@@ -625,7 +626,7 @@
         [mui/grid {:item  true
                    :style {:flex 1}}
          (if selected-site
-           [sports-site-view {:tr tr :site-data selected-site}]
+           [sports-site-view {:tr tr :site-data selected-site :width width}]
            [map-contents-view {:tr tr :logged-in? logged-in?}])]]]]
 
      ;; Layer switcher (bottom right)

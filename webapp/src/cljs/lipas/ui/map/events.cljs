@@ -21,7 +21,7 @@
 
 (re-frame/reg-event-fx
  ::zoom-to-site
- (fn [{:keys [db]} [_ lipas-id]]
+ (fn [{:keys [db]} [_ lipas-id width]]
    (let [latest     (get-in db [:sports-sites lipas-id :latest])
          rev        (get-in db [:sports-sites lipas-id :history latest])
          geom       (-> rev :location :geometries :features first :geometry)
@@ -33,9 +33,10 @@
          [lon lat]  (js->clj (ol.proj.fromLonLat (clj->js wgs-coords) proj))
          center     {:lon lon :lat lat}
          zoom       14]
-     {:db (-> db
-              (assoc-in [:map :zoom] zoom)
-              (assoc-in [:map :center] center))})))
+     {:db         (-> db
+                      (assoc-in [:map :zoom] zoom)
+                      (assoc-in [:map :center] center))
+      :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
 (re-frame/reg-event-db
  ::set-center

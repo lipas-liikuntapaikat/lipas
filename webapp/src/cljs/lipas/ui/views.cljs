@@ -11,7 +11,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
    [lipas.ui.register.views :as register]
-   [lipas.ui.reports.views :as reports]
+   [lipas.ui.stats.views :as stats]
    [lipas.ui.subs :as subs]
    [lipas.ui.swimming-pools.views :as swimming-pools]
    [lipas.ui.user.views :as user]
@@ -29,7 +29,7 @@
     :reset-password-panel [forgot-password/main tr]
     :register-panel       [register/main tr]
     :user-panel           [user/main tr]
-    :reports-panel        [reports/main tr]
+    :stats-panel          [stats/main tr]
     [front-page/main tr]))
 
 (defn show-panel [panel-name tr logged-in?]

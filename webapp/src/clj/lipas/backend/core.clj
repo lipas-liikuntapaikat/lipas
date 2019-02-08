@@ -7,6 +7,8 @@
    [lipas.backend.email :as email]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.search :as search]
+   [lipas.data.cities :as cities]
+   [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
@@ -15,6 +17,9 @@
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
+
+(def cities (utils/index-by :city-code cities/all))
+(def types types/all)
 
 ;;; User ;;;
 
@@ -143,12 +148,31 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
+(defn enrich
+  "Enriches sports-site map with :search-meta key where we add data that
+  is useful for searching."
+  [sports-site]
+  (let [geom      (-> sports-site :location :geometries :features first :geometry)
+        coords    (case (:type geom)
+                    "Point"      (-> geom :coordinates)
+                    "LineString" (-> geom :coordinates first)
+                    "Polygon"    (-> geom :coordinates first first))
+        city-code (-> sports-site :location :city :city-code)
+        type-code (-> sports-site :type :type-code)]
+    (assoc sports-site :search-meta {:location
+                                     {:wgs84-point coords
+                                      :city
+                                      {:name (-> city-code cities :name)}}
+                                     :type
+                                     {:name (-> type-code types :name)}})))
+
 (defn index!
   ([search sports-site]
    (index! search sports-site false))
   ([search sports-site sync?]
    (let [idx-name "sports_sites_current"]
-     (search/index! search idx-name :lipas-id sports-site sync?))))
+     (let [data (enrich sports-site)]
+       (search/index! search idx-name :lipas-id data sync?)))))
 
 (defn search [search params]
   (let [idx-name "sports_sites_current"]
@@ -156,6 +180,24 @@
 
 (defn add-to-integration-out-queue! [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
+
+;;; Cities ;;;
+
+(defn get-cities [db]
+  (or
+   (:all-cities @cache)
+   (->> (db/get-cities db)
+        (swap! cache assoc :all-cities)
+        :all-cities)))
+
+(defn get-populations [db year]
+  (->> (get-cities db)
+       (reduce
+        (fn [res m]
+          (if-let [v (get-in m [:stats year :population])]
+            (assoc res (:city-code m) v)
+            res))
+        {})))
 
 ;;; Reports ;;;
 
@@ -183,22 +225,41 @@
          (excel/create-workbook "lipas")
          (excel/save-workbook-into-stream! out))))
 
-(defn cities-report [db city-codes]
-  (let [data (or
-              (:all-cities @cache)
-              (->> (db/get-cities db)
-                   (swap! cache assoc :all-cities)
-                   :all-cities))]
-    (reports/cities-report city-codes data)))
+(defn finance-report [db city-codes]
+  (let [data (get-cities db)]
+    (reports/finance-report city-codes data)))
+
+(defn m2-per-capita-report [db search* city-codes type-codes]
+  (let [pop-data (get-populations db 2017)
+        query    {:size 0,
+                  :query
+                  {:bool
+                   {:filter
+                    (into [] (remove nil?)
+                          [{:terms {:status.keyword ["active"]}}
+                           (when (not-empty type-codes)
+                             {:terms {:type.type-code type-codes}})
+                           (when (not-empty city-codes)
+                             {:terms {:location.city.city-code city-codes}})])}},
+                  :aggs
+                  {:by_cities
+                   {:terms {:field :location.city.city-code, :size 400},
+                    :aggs  {:area_m2_sum {:sum {:field :properties.area-m2}}}}}}
+        m2-data  (-> (search search* query) :body :aggregations :by_cities :buckets)]
+    (reports/m2-per-capita-report m2-data pop-data)))
 
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (def search (search/create-cli (:search config/default-config)))
+  (def search2 (search/create-cli (:search config/default-config)))
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
-  (time (first (:all-cities @cache)))
-  (time (cities-report db-spec [992])) )
+
+  (first (get-cities db-spec))
+  (time (get-populations db-spec 2017))
+  (time (:all-cities @cache))
+  (time (cities-report db-spec [992]))
+  (time (m2-per-capita-report db-spec search2 [] [])))

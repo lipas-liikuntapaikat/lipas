@@ -1123,8 +1123,18 @@
              :distinct true
              :into []))
 
+(s/def :lipas.api.cities-report.req/type-codes
+  (s/coll-of :lipas.type/type-code
+             :min-count 0
+             :distinct true
+             :into []))
+
 (s/def :lipas.api.cities-report/req
   (s/keys :req-un [:lipas.api.cities-report.req/city-codes]))
+
+(s/def :lipas.api.m2-per-capita-report/req
+  (s/keys :opt-un [:lipas.api.cities-report.req/city-codes
+                   :lipas.api.cities-report.req/type-codes]))
 
 (s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
 (s/def :lipas.magic-link/login-url

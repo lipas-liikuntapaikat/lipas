@@ -1,7 +1,8 @@
 (ns lipas.ui.sports-sites.subs
   (:require
-   [lipas.ui.utils :as utils]
    [clojure.spec.alpha :as s]
+   [lipas.data.types :as types]
+   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -98,6 +99,19 @@
       (assoc v :region-id (str "avi-" k)))
     (for [[k v] provinces]
       (assoc v :region-id (str "province-" k))))))
+
+
+(re-frame/reg-sub
+ ::type-categories
+ :<- [::all-types]
+ (fn [types _]
+   (concat
+    (for [[k v] types]
+      (assoc v :cat-id (str "type-" k)))
+    (for [[k v] types/main-categories]
+      (assoc v :cat-id (str "main-cat-" k)))
+    (for [[k v] types/sub-categories]
+      (assoc v :cat-id (str "sub-cat-" k))))))
 
 (re-frame/reg-sub
  ::admins

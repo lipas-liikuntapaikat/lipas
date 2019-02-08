@@ -3,20 +3,32 @@
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.test :refer [deftest testing is] :as t]
+            [cognitect.transit :as transit]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.system :as system]
-            [lipas.seed :as seed]
             [lipas.schema.core]
+            [lipas.seed :as seed]
             [lipas.utils :as utils]
             [ring.mock.request :as mock])
-  (:import java.util.Base64))
+  (:import java.util.Base64
+           [java.io ByteArrayInputStream ByteArrayOutputStream]))
 
 (def <-json #(j/parse-string (slurp %) true))
 (def ->json j/generate-string)
+
+(defn ->transit [x]
+  (let [out (ByteArrayOutputStream. 4096)
+        writer (transit/writer out :json)]
+    (transit/write writer x)
+    (.toString out)))
+
+(defn <-transit [in]
+  (let [reader (transit/reader in :json)]
+    (transit/read reader)))
 
 (defn ->base64
   "Encodes a string as base64."
@@ -399,9 +411,9 @@
     (is (= 200 (:status resp)))
     (is (= "Lipas-id" header-1))))
 
-(deftest cities-report-test
+(deftest finance-report-test
   (let [_    (seed/seed-city-data! db)
-        path "/api/actions/create-cities-report"
+        path "/api/actions/create-finance-report"
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/json")
                       (mock/body (->json {:city-codes [275 972]}))))
@@ -409,6 +421,24 @@
     (is (= 200 (:status resp)))
     (is (contains? body :country-averages))
     (is (= '(:275 :972) (-> body :data-points keys)))))
+
+(deftest m2-per-capita-report-test
+  (let [_    (seed/seed-city-data! db)
+        user (gen-user {:db? true :admin? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc :status "active")
+                 (assoc-in [:location :city :city-code] 275)
+                 (assoc-in [:properties :area-m2] 100))
+        _    (core/upsert-sports-site!* db user site)
+        _    (core/index! search site :sync)
+        path "/api/actions/create-m2-per-capita-report"
+        resp (app (-> (mock/request :post path)
+                      (mock/content-type "application/transit+json")
+                      (mock/header "Accept" "application/transit+json")
+                      (mock/body (->transit {:city-codes [275 972]}))))
+        body (-> resp :body <-transit)]
+    (is (= 200 (:status resp)))
+    (is (number? (get-in body [275 :m2-pc])))))
 
 (deftest create-energy-report-test
   (let [resp (app (-> (mock/request :post "/api/actions/create-energy-report")
