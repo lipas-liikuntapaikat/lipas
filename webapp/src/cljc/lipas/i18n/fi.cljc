@@ -243,7 +243,14 @@
     :front-page-link     "Siirry etusivulle"
     :admin-page-link     "Siirry admin-sivulle"
     :ice-stadiums-link   "Jäähalliportaali"
-    :swimming-pools-link "Uimahalliportaali"}
+    :swimming-pools-link "Uimahalliportaali"
+    :promo-headline      "Ajankohtaista"
+    :promo1-topic        "Liikuntasalien päivitys"
+    :promo1-text         "Tarkista koulujen liikuntasalien tiedot
+    Lipas-järjestelmässä toukokuuhun 2019 mennessä! Uusia kouluja on
+    rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on koulujen
+    liikuntasalien tilanne kunnassasi?"
+    :promo1-link         "Näytä liikuntasalit jotka voin päivittää"}
 
    :lipas.admin
    {:headline                   "Admin"
