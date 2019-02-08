@@ -96,7 +96,7 @@
      {:items        metrics
       :value        value
       :style        select-style
-      :label        (tr :stats/select-metrics)
+      :label        (tr :stats/select-metric)
       :value-fn     first
       :label-fn     (comp locale second)
       :on-change    on-change}]))
@@ -142,7 +142,7 @@
             :on-click #(==> [::events/clear-sports-stats-filters])}
            (tr :search/clear-filters)]])]
 
-      ;; Metrics selector
+      ;; Metric selector
       [mui/grid {:item true}
        [sports-stats-metrics-selector
         {:tr        tr
