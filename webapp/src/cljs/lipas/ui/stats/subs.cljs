@@ -1,7 +1,8 @@
 (ns lipas.ui.stats.subs
   (:require
    [lipas.reports :as reports]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as re-frame]
+   [lipas.ui.utils :as utils]))
 
 (re-frame/reg-sub
  ::selected-tab
@@ -232,7 +233,7 @@
              (let [city-name (get-in cities [k :name locale])]
                (conj res (assoc v :city-code k :city-name city-name))))
            [])
-          (sort-by (keyword metric))
+          (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
                           (update :m2-pc round-safe)
                           (update :sites-count-p1000c #(round-safe % 5)))))))))

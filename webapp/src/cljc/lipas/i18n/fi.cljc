@@ -107,7 +107,9 @@
     :select-grouping     "Ryhmittely"
     :select-interval     "Valitse aikaväli"
     :country-avg         "(maan keskiarvo)"
-    :sports-sites-count  "Liikuntapaikkojen lkm"}
+    :sports-sites-count  "Liikuntapaikkojen lkm"
+    :filter-cities       "Rajaa kunnat"
+    :filter-types        "Rajaa tyypit"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
