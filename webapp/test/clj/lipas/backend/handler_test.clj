@@ -424,6 +424,13 @@
 
 (deftest m2-per-capita-report-test
   (let [_    (seed/seed-city-data! db)
+        user (gen-user {:db? true :admin? true})
+        site (-> (gen/generate (s/gen :lipas/sports-site))
+                 (assoc :status "active")
+                 (assoc-in [:location :city :city-code] 275)
+                 (assoc-in [:properties :area-m2] 100))
+        _    (core/upsert-sports-site!* db user site)
+        _    (core/index! search site :sync)
         path "/api/actions/create-m2-per-capita-report"
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/transit+json")
