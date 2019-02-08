@@ -331,7 +331,7 @@
 
        ;; Tabs for choosing between different stats pages
        [mui/grid {:item true}
-        [mui/tabs {:value tab :on-change #(==> [::events/select-tab %2])}
+        [mui/tabs {:value tab :on-change #(==> [::events/navigate %2])}
          [mui/tab {:value "sports-stats" :label (tr :stats/sports-stats)}]
          [mui/tab {:value "age-structure-stats" :label (tr :stats/age-structure-stats)}]
          [mui/tab {:value "city-stats" :label (tr :stats/city-stats)}]]]
