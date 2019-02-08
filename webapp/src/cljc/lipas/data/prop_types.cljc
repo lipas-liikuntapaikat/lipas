@@ -736,10 +736,10 @@
      :en ""}},
    :area-m2
    {:name
-    {:fi "Pinta-ala m2", :se "Areal m2", :en "Area in square meters"},
+    {:fi "Liikuntapinta-ala m2", :se "Areal m2", :en "Area in square meters"},
     :data-type "numeric",
     :description
-    {:fi "Liikuntapaikan pinta-ala, neliömetrejä",
+    {:fi "Liikuntapaikan liikuntapinta-ala, neliömetreinä",
      :se "Idrottsplatsens areal i kvadratmeter",
      :en ""}},
    :field-width-m
