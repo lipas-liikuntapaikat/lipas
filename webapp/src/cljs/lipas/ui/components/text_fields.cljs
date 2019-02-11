@@ -30,20 +30,21 @@
                   (read-string $))))
     (not-empty s)))
 
-(defn patched-input [props]
-  [:input (-> props
-              (assoc :ref (:inputRef props))
-              (dissoc :inputRef))])
-
-(defn patched-text-area [props]
-  [:textarea (-> props
+(defn- patch-input [component]
+  (r/reactify-component
+   (fn [props]
+     [component (-> props
                  (assoc :ref (:inputRef props))
-                 (dissoc :inputRef))])
+                 (dissoc :inputRef))])))
 
-(defn text-field-controlled [{:keys [value type on-change spec required defer-ms
-                                     Input-props adornment multiline read-only?]
-                              :or   {defer-ms 200}
-                              :as   props} & children]
+(def patched-input (patch-input :input))
+(def patched-textarea (patch-input :textarea))
+
+(defn text-field-controlled
+  [{:keys [value type on-change spec required defer-ms Input-props
+           adornment multiline read-only?]
+    :or   {defer-ms 200}
+    :as   props} & children]
   (r/with-let [read-only*?   (r/atom read-only?)
                state (r/atom value)]
     (let [_          (when (not= @read-only*? read-only?)
@@ -56,15 +57,14 @@
                          (reset! state new-val)
                          (on-change @state)))
           input      (if multiline
-                       patched-text-area
+                       patched-textarea
                        patched-input)
           props      (-> (dissoc props :read-only? :defer-ms)
                          (as-> $ (if (= "number" type) (dissoc $ :type) $))
                          (assoc :error (error? spec @state required))
                          (assoc :Input-props
                                 (merge Input-props
-                                       {:input-component (r/reactify-component
-                                                          input)}
+                                       {:input-component input}
                                        (when adornment
                                          (->adornment adornment))))
                          (assoc :value @state)
