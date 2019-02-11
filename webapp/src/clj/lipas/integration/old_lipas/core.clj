@@ -20,7 +20,7 @@
   (let [doc {:op   (if (= "active" (:status m)) "upsert" "delete")
              :id   (:lipas-id m)
              :data (transform/->old-lipas-sports-site m)}]
-    (log/info "Pushing sports-site" (:lipas-id m) "to old Lipas...")
+    (log/info "Pushing sports-site" (:lipas-id m) (:op doc) "to old Lipas...")
     (let [resp   (api/post-integration-doc! doc)
           status (:status resp)]
       (log/info "Status" status "from old Lipas!")
