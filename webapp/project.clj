@@ -45,9 +45,9 @@
    [clj-http "3.9.1"]]
 
   :plugins [[lein-environ "1.1.0"]
-            [lein-cljsbuild "1.1.5"]
+            [lein-cljsbuild "1.1.7"]
             [lein-ring "0.12.4"]
-            [migratus-lein "0.5.7"]]
+            [migratus-lein "0.7.0"]]
 
   :ring {:handler      lipas.dev/dev-handler
          :port         8091
@@ -69,9 +69,6 @@
 
   :figwheel {:css-dirs ["resources/public/css"]}
 
-  :repl-options
-  {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-
   :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
 
   :migratus
@@ -86,19 +83,20 @@
 
   :profiles
   {:dev
-   {:dependencies
+   {:repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+    :dependencies
     [;;; Frontend ;;;
      [binaryage/devtools "0.9.10"]
      [day8.re-frame/re-frame-10x "0.3.3"]
-     [figwheel-sidecar "0.5.16"]
-     [cider/piggieback "0.3.6"]
+     [figwheel-sidecar "0.5.18"]
+     [cider/piggieback "0.4.0"]
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
      [org.clojure/test.check "0.9.0"]]
 
-    :plugins [[lein-figwheel "0.5.16"]
-              [lein-doo "0.1.8"]]}
+    :plugins [[lein-figwheel "0.5.18"]
+              [lein-doo "0.1.10"]]}
    :uberjar
    {:main         lipas.aot
     :aot          [lipas.aot]
