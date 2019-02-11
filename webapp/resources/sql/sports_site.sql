@@ -98,3 +98,11 @@ WHERE event_date > :timestamp ::timestamptz
 SELECT *
 FROM sports_site_current
 WHERE lipas_id IN (:v*:lipas_ids)
+
+-- :name invalidate-since!
+-- :command :execute
+-- :result :affected
+-- :doc Changes status to 'incorrect-data' for all revs of :lipas-id after :event-date
+UPDATE public.sports_site
+SET document = jsonb_set(document, '{status}', '"incorrect-data"')
+WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz

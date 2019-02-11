@@ -45,6 +45,13 @@
 
 ;; Sports Site ;;
 
+(defn- invalidate-revs-since-this!
+  "Invalidate changes made since site hasn't been active."
+  [db-spec {:keys [lipas-id event-date]}]
+  (let [params (-> {:event-date event-date :lipas-id lipas-id}
+                   utils/->snake-case-keywords) ]
+    (sports-site/invalidate-since! db-spec params)))
+
 (defn upsert-sports-site!
   ([db-spec user sports-site]
    (upsert-sports-site! db-spec user sports-site false))
@@ -54,6 +61,14 @@
            lipas-id    (or (:lipas-id sports-site)
                            (:nextval (sports-site/next-lipas-id tx)))
            sports-site (assoc sports-site :lipas-id lipas-id)]
+
+       ;; It's possible to posthumously say "this site was actually
+       ;; abolished in 2017". It's also possible that someone has made
+       ;; changes to site data since 2017 and therefore we have to
+       ;; invalidate those revisions.
+       (when (= "out-of-service-permanently" (:status sports-site))
+         (invalidate-revs-since-this! tx sports-site))
+
        (->> (sports-site/marshall sports-site user status)
             (sports-site/insert-sports-site-rev! tx)
             (sports-site/unmarshall))))))
