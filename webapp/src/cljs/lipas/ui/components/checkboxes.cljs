@@ -5,7 +5,7 @@
 
 (defn checkbox [{:keys [label value on-change disabled style icon checked-icon]}]
   [mui/form-control-label
-   {:label   label
+   {:label   (r/as-element [mui/typography {:variant "body1"} label])
     :style   (merge {:width :fit-content} style)
     :control (r/as-element
               [mui/checkbox
