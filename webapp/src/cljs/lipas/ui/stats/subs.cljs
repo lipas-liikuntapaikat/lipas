@@ -57,9 +57,9 @@
    (-> db :stats :finance :data)))
 
 (re-frame/reg-sub
- ::finance-view-type
+ ::selected-finance-view
  (fn [db _]
-   (-> db :stats :finance :view-type)))
+   (-> db :stats :finance :selected-view)))
 
 (re-frame/reg-sub
  ::finance-labels
@@ -130,6 +130,28 @@
           (map round-vals)
           (sort-by :year)))))
 
+(re-frame/reg-sub
+ ::finance-headers
+ :<- [:lipas.ui.subs/translator]
+ (fn [tr _]
+   [[:year (tr :time/year)]
+    [:city-code (tr :lipas.location/city-code)]
+    [:investments (tr :stats-metrics/investments)]
+    [:investments-avg (str (tr :stats-metrics/investments) " "
+                           (tr :stats/country-avg))]
+    [:net-costs (tr :stats-metrics/net-costs)]
+    [:net-costs-avg (str (tr :stats-metrics/net-costs) " "
+                         (tr :stats/country-avg))]
+    [:operating-expenses (tr :stats-metrics/operating-expenses)]
+    [:operating-expenses-avg (str (tr :stats-metrics/operating-expenses) " "
+                                  (tr :stats/country-avg))]
+    [:operating-incomes (tr :stats-metrics/operating-incomes)]
+    [:operating-incomes-avg (str (tr :stats-metrics/operating-incomes) " "
+                                 (tr :stats/country-avg))]
+    [:subsidies (tr :stats-metrics/subsidies)]
+    [:subsidies-avg (str (tr :stats-metrics/subsidies) " "
+                         (tr :stats/country-avg))]]))
+
 ;;; Age structure ;;;
 
 (re-frame/reg-sub
@@ -192,6 +214,24 @@
       (into {} (map (juxt first (comp locale second)) owners))
       {:y-axis (tr :stats/sports-sites-count)}))))
 
+(re-frame/reg-sub
+ ::age-structure-headers
+ :<- [:lipas.ui.subs/translator]
+ :<- [:lipas.ui.sports-sites.subs/admins]
+ :<- [:lipas.ui.sports-sites.subs/owners]
+ :<- [::selected-age-structure-grouping]
+ (fn [[tr admins owners grouping] _]
+   (let [locale (tr)
+         coll   (case grouping "admin" admins owners)]
+     (into [[:construction-year (tr :lipas.sports-site/construction-year)]]
+           (for [[k v] (sort-by (comp locale second) coll)]
+             [k (locale v)])))))
+
+(re-frame/reg-sub
+ ::selected-age-structure-view
+ (fn [db _]
+   (-> db :stats :age-structure :selected-view)))
+
 ;;; Sports stats ;;;
 
 (re-frame/reg-sub
@@ -245,3 +285,17 @@
  (fn [[tr metrics] _]
    (let [locale (tr)]
      (into {} (map (juxt (comp keyword first) (comp locale second)) metrics)))))
+
+(re-frame/reg-sub
+ ::sports-stats-headers
+ :<- [:lipas.ui.subs/translator]
+ :<- [::sports-stats-metrics]
+ (fn [[tr metrics] _]
+   (let [locale (tr)]
+     (into [[:city-name (tr :lipas.location/city)]]
+           (map (juxt (comp keyword first) (comp locale second)) metrics)))))
+
+(re-frame/reg-sub
+ ::selected-sports-stats-view
+ (fn [db _]
+   (-> db :stats :sports-stats :selected-view)))
