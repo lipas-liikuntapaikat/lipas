@@ -276,7 +276,7 @@
           (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
                           (update :m2-pc round-safe)
-                          (update :sites-count-p1000c #(round-safe % 5)))))))))
+                          (update :sites-count-p1000c round-safe))))))))
 
 (re-frame/reg-sub
  ::sports-stats-labels

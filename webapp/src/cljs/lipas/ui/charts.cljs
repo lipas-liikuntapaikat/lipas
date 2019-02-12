@@ -178,4 +178,5 @@
       [:> rc/Tooltip tooltip-styles]
       [:> rc/XAxis {:tick font-styles :type "number"}]
       [:> rc/YAxis {:dataKey :city-name :type "category" :tick font-styles}]
-      [:> rc/Bar {:dataKey (labels (keyword metric)) :label false :fill "orange"}]]]))
+      [:> rc/Bar {:dataKey (labels (keyword metric)) :fill "orange"}
+       [:> rc/LabelList {:position "right"}]]]]))
