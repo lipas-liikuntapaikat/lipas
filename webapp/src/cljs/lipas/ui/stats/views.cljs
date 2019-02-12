@@ -10,6 +10,19 @@
 
 (def select-style {:min-width "170px"})
 
+(defn view-tabs [{:keys [value on-change]}]
+  [mui/tabs {:value value :on-change on-change}
+   [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
+   [mui/tab {:value "table" :icon (r/as-element [mui/icon "table_chart"])}]])
+
+(defn download-excel-button [{:keys [tr on-click]}]
+  [mui/button
+   {:style    {:margin "1em"}
+    :variant  "outlined"
+    :color    "secondary"
+    :on-click on-click}
+   (tr :actions/download-excel)])
+
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/finance-city-services])]
@@ -102,12 +115,15 @@
       :on-change    on-change}]))
 
 (defn sports-stats []
-  (let [tr     (<== [:lipas.ui.subs/translator])
-        cities (<== [::subs/selected-sports-stats-cities])
-        types  (<== [::subs/selected-sports-stats-types])
-        metric (<== [::subs/selected-sports-stats-metric])
-        data   (<== [::subs/sports-stats-data])
-        labels (<== [::subs/sports-stats-labels])]
+  (let [tr      (<== [:lipas.ui.subs/translator])
+        cities  (<== [::subs/selected-sports-stats-cities])
+        types   (<== [::subs/selected-sports-stats-types])
+        metric  (<== [::subs/selected-sports-stats-metric])
+        view    (<== [::subs/selected-sports-stats-view])
+        data    (<== [::subs/sports-stats-data])
+        labels  (<== [::subs/sports-stats-labels])
+        headers (<== [::subs/sports-stats-headers])]
+
     [mui/grid {:container true :spacing 16}
 
      ;; Headline
@@ -149,19 +165,39 @@
          :value     metric
          :on-change #(==> [::events/select-sports-stats-metric %])}]]]
 
+     ;; Table
+     (when (= view "table")
+       [mui/grid {:item true :xs 12}
+        [lui/table
+         {:headers headers :items data}]])
+
      ;; Chart
-     [mui/grid {:item true :xs 12}
-      [charts/sports-stats-chart
-       {:data data :labels labels :metric metric}]]]))
+     (when (= view "chart")
+       [mui/grid {:item true :xs 12}
+        [charts/sports-stats-chart
+         {:data data :labels labels :metric metric}]])
+
+     ;; Tabs for choosing between chart/table views
+     [mui/grid {:item true}
+      [view-tabs
+       {:value     view
+        :on-change #(==> [::events/select-sports-stats-view %2])}]]
+
+     ;; Download Excel button
+     [download-excel-button
+      {:tr       tr
+       :on-click #(==> [::events/download-sports-stats-excel data headers])}]]))
 
 (defn age-structure-stats []
-  (let [tr                   (<== [:lipas.ui.subs/translator])
-        age-structure-data   (<== [::subs/age-structure-data])
-        age-structure-labels (<== [::subs/age-structure-labels])
-        regions              (<== [::subs/selected-age-structure-cities])
-        types                (<== [::subs/selected-age-structure-types])
-        grouping             (<== [::subs/selected-age-structure-grouping])
-        interval             (<== [::subs/selected-age-structure-interval])]
+  (let [tr       (<== [:lipas.ui.subs/translator])
+        regions  (<== [::subs/selected-age-structure-cities])
+        types    (<== [::subs/selected-age-structure-types])
+        grouping (<== [::subs/selected-age-structure-grouping])
+        interval (<== [::subs/selected-age-structure-interval])
+        view     (<== [::subs/selected-age-structure-view])
+        data     (<== [::subs/age-structure-data])
+        labels   (<== [::subs/age-structure-labels])
+        headers  (<== [::subs/age-structure-headers])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -192,7 +228,7 @@
        (when (or (not-empty types) (not-empty regions))
          [mui/grid {:item true :xs 12}
           [mui/button
-           {:color "secondary"
+           {:color    "secondary"
             :on-click #(==> [::events/clear-age-structure-filters])}
            (tr :search/clear-filters)]])
 
@@ -210,30 +246,27 @@
           :value     grouping
           :on-change #(==> [::events/select-age-structure-grouping %])}]]]]
 
-     ;; Chart
-     [mui/grid {:item true :xs 12}
-      [charts/age-structure-chart
-       {:data   age-structure-data
-        :labels age-structure-labels}]]]))
+     ;; Table
+     (when (= view "table")
+       [mui/grid {:item true :xs 12}
+        [lui/table
+         {:headers headers :items data}]])
 
-(defn- make-finance-headers [tr]
-  [[:year (tr :time/year)]
-   [:city-code (tr :lipas.location/city-code)]
-   [:investments (tr :stats-metrics/investments)]
-   [:investments-avg (str (tr :stats-metrics/investments) " "
-                          (tr :stats/country-avg))]
-   [:net-costs (tr :stats-metrics/net-costs)]
-   [:net-costs-avg (str (tr :stats-metrics/net-costs) " "
-                        (tr :stats/country-avg))]
-   [:operating-expenses (tr :stats-metrics/operating-expenses)]
-   [:operating-expenses-avg (str (tr :stats-metrics/operating-expenses) " "
-                                 (tr :stats/country-avg))]
-   [:operating-incomes (tr :stats-metrics/operating-incomes)]
-   [:operating-incomes-avg (str (tr :stats-metrics/operating-incomes) " "
-                                (tr :stats/country-avg))]
-   [:subsidies (tr :stats-metrics/subsidies)]
-   [:subsidies-avg (str (tr :stats-metrics/subsidies) " "
-                        (tr :stats/country-avg))]])
+     ;; Chart
+     (when (= view "chart")
+       [mui/grid {:item true :xs 12}
+        [charts/age-structure-chart {:data data :labels labels}]])
+
+     ;; Tabs for choosing between chart/table views
+     [mui/grid {:item true}
+      [view-tabs
+       {:value     view
+        :on-change #(==> [::events/select-age-structure-view %2])}]]
+
+     ;; Download Excel button
+     [download-excel-button
+      {:tr       tr
+       :on-click #(==> [::events/download-age-structure-excel data headers])}]]))
 
 (defn city-stats []
   (let [tr           (<== [:lipas.ui.subs/translator])
@@ -242,13 +275,12 @@
         metrics      (<== [::subs/selected-finance-metrics])
         service      (<== [::subs/selected-finance-city-service])
         years        (<== [::subs/selected-finance-years])
+        view         (<== [::subs/selected-finance-view])
         finance-data (<== [::subs/finance-data])
         labels       (<== [::subs/finance-labels])
-        view         (<== [::subs/finance-view-type])
-        headers      (make-finance-headers tr)]
+        headers      (<== [::subs/finance-headers])]
 
     [mui/grid {:container true :spacing 16}
-
 
      [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
       [mui/typography {:variant "h3"}
@@ -310,17 +342,14 @@
 
      ;; Tabs for choosing between chart/table views
      [mui/grid {:item true}
-      [mui/tabs {:value view :on-change #(==> [::events/select-finance-view-type %2])}
-       [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
-       [mui/tab {:value "table" :icon (r/as-element [mui/icon "table_chart"])}]]]
+      [view-tabs
+       {:value     view
+        :on-change #(==> [::events/select-finance-view %2])}]]
 
      ;; Download Excel button
-     [mui/button
-      {:style    {:margin "1em"}
-       :variant  "outlined"
-       :color    "secondary"
-       :on-click #(==> [::events/download-finance-excel finance-data headers])}
-      (tr :actions/download-excel)]]))
+     [download-excel-button
+      {:tr       tr
+       :on-click #(==> [::events/download-finance-excel finance-data headers])}]]))
 
 (defn create-panel []
   (let [tr  (<== [:lipas.ui.subs/translator])

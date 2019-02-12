@@ -134,14 +134,16 @@
      :units                 reports/stats-units
      :selected-unit         "1000-euros"
      :selected-years        (range 2000 (dec utils/this-year))
-     :view-type             "chart"}
+     :selected-view         "chart"}
     :age-structure
     {:groupings         reports/groupings
      :selected-grouping "owner"
-     :selected-interval 10}
+     :selected-interval 10
+     :selected-view     "chart"}
     :sports-stats
     {:metrics         reports/sports-stats-metrics
-     :selected-metric "sites-count"}}
+     :selected-metric "sites-count"
+     :selected-view   "chart"}}
 
    ;; Map
    :map

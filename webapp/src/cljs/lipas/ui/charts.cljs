@@ -173,7 +173,7 @@
   (let [lookup (map-invert labels)
         data   (->> data (map #(rename-keys % labels)))
         margin {:top 5 :right 5 :bottom 5 :left 50}]
-    [:> rc/ResponsiveContainer {:width "100%" :height (* 30 (count data))}
+    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart {:data data :layout "vertical" :margin margin}
       [:> rc/Legend {:wrapperStyle font-styles}]
       [:> rc/Tooltip tooltip-styles]

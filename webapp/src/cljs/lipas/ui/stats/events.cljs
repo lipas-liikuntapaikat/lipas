@@ -62,9 +62,9 @@
    (assoc-in db [:stats :finance :selected-years] v)))
 
 (re-frame/reg-event-db
- ::select-finance-view-type
+ ::select-finance-view
  (fn [db [_ v]]
-   (assoc-in db [:stats :finance :view-type] v)))
+   (assoc-in db [:stats :finance :selected-view] v)))
 
 (re-frame/reg-event-fx
  ::create-finance-report
@@ -200,6 +200,21 @@
    (let [stats (-> resp :aggregations)]
      (assoc-in db [:stats :age-structure :data] stats))))
 
+(re-frame/reg-event-fx
+ ::download-age-structure-excel
+ (fn [{:keys [db]} [_ data headers]]
+   (let [tr     (:translator db)
+         config {:filename (tr :stats/age-structure-stats)
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config
+      :ga/event                         ["stats" "download-excel" "age-structure"]})))
+
+(re-frame/reg-event-db
+ ::select-age-structure-view
+ (fn [db [_ v]]
+   (assoc-in db [:stats :age-structure :selected-view] v)))
+
 ;;; Sports stats ;;;
 
 (re-frame/reg-event-fx
@@ -267,3 +282,18 @@
  ::sports-stats-report-success
  (fn [db [_ resp]]
    (assoc-in db [:stats :sports-stats :data] resp)))
+
+(re-frame/reg-event-fx
+ ::download-sports-stats-excel
+ (fn [{:keys [db]} [_ data headers]]
+   (let [tr     (:translator db)
+         config {:filename (tr :stats/sports-stats)
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+     {:lipas.ui.effects/download-excel! config
+      :ga/event                         ["stats" "download-excel" "sports-stats"]})))
+
+(re-frame/reg-event-db
+ ::select-sports-stats-view
+ (fn [db [_ v]]
+   (assoc-in db [:stats :sports-stats :selected-view] v)))
