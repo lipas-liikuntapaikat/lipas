@@ -170,9 +170,8 @@
           :fill    (get colors (get lookup k))}]))]))
 
 (defn sports-stats-chart [{:keys [data labels metric]}]
-  (let [lookup (map-invert labels)
-        data   (->> data (map #(rename-keys % labels)))
-        margin {:top 5 :right 5 :bottom 5 :left 50}]
+  (let [data   (->> data (map #(rename-keys % labels)))
+        margin {:top 5 :right 50 :bottom 5 :left 50}]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart {:data data :layout "vertical" :margin margin}
       [:> rc/Legend {:wrapperStyle font-styles}]
