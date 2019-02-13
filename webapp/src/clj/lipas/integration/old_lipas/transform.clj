@@ -2,6 +2,7 @@
   (:require
    [clojure.set :as set]
    [clojure.spec.alpha :as spec]
+   [lipas.data.types :as types]
    [lipas.integration.old-lipas.sports-site :as old]
    [lipas.utils :as utils :refer [sreplace trim]]))
 
@@ -46,31 +47,33 @@
 (defn ->old-lipas-sports-site*
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
   [m]
-  (-> m
+  (let [type-code (-> m :type :type-code)]
+    (-> m
 
-      (select-keys [:name :email :www :phone-umber :renovation-years
-                    :construction-year :location :properties])
+        (select-keys [:name :email :www :phone-umber :renovation-years
+                      :construction-year :location :properties])
 
-      (assoc :last-modified (-> m :event-date UTC->last-modified)
-             :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
-             :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
-             :school-use (-> m :properties :school-use?)
-             :free-use (-> m :properties :free-use?)
-             :type (select-keys (:type m) [:type-code]))
+        (assoc :last-modified (-> m :event-date UTC->last-modified)
+               :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
+               :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
+               :school-use (-> m :properties :school-use?)
+               :free-use (-> m :properties :free-use?)
+               :type (select-keys (:type m) [:type-code]))
 
-      (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
+        (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
 
-      (update-in [:location :city] dissoc :neighborhood)
+        (update-in [:location :city] dissoc :neighborhood)
 
-      (update :properties #(-> %
-                               (assoc :info-fi (-> m :comment))
-                               (dissoc :school-use? :free-use?)
-                               (update :surface-material
-                                       (comp old/surface-materials first))
-                               (set/rename-keys old/prop-mappings-reverse)))
-      old/adapt-geoms
-      utils/clean
-      utils/->camel-case-keywords))
+        (update :properties #(-> %
+                                 (assoc :info-fi (-> m :comment))
+                                 (dissoc :school-use? :free-use?)
+                                 (update :surface-material
+                                         (comp old/surface-materials first))
+                                 (select-keys (-> type-code types/all :props keys))
+                                 (set/rename-keys old/prop-mappings-reverse)))
+        old/adapt-geoms
+        utils/clean
+        utils/->camel-case-keywords)))
 
 (defmulti ->old-lipas-sports-site
   "Transforms New LIPAS sports-site to old Lipas sports-site. Details
