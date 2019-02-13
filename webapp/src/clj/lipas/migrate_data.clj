@@ -92,6 +92,7 @@
     (db/upsert-sports-sites! db user valid-sites)
 
     (->> valid-sites
+         (map core/enrich)
          (search/->bulk idx-name :lipas-id)
          (search/bulk-index! search))
 
@@ -163,5 +164,5 @@
   (def user (core/get-user db "import@lipas.fi"))
   (-main "--old-lipas-since" "2019-01-01T00:00:00.000Z")
   (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn")
-  (-main "--old-lipas" "79534")
+  (-main "--old-lipas" "527986")
   (-main "--old-lipas-edn" "/Users/vaotjuha/lipas/data_migration/missing-ids.edn"))
