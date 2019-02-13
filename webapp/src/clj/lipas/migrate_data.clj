@@ -144,17 +144,20 @@
         config              (select-keys config/default-config [:db :search])
         {:keys [db search]} (backend/start-system! config)
         user                (core/get-user db "import@lipas.fi")]
-    (case source
-      "--old-lipas"       (migrate-from-old-lipas! db search user (rest args))
-      "--old-lipas-edn"   (migrate-changed-by-ids-edn db search user (second args))
-      "--old-lipas-since" (migrate-changed-since! db search user (second args))
-      "--es-dump"         (migrate-from-es-dump! db user
-                                                 (first (rest args))
-                                                 (second (rest args)))
-      "--users"           (migrate-users! db (second args))
-      "--city-data"       (migrate-city-data! db (second args))
-      (log/error "Please provide --es-dump dump-path err-path or
-      --old-lipas 123 234 ..."))))
+
+    (log/info "Starting to run" source "with args" (rest args))
+    (log/info
+     (case source
+       "--old-lipas"       (migrate-from-old-lipas! db search user (rest args))
+       "--old-lipas-edn"   (migrate-changed-by-ids-edn db search user (second args))
+       "--old-lipas-since" (migrate-changed-since! db search user (second args))
+       "--es-dump"         (migrate-from-es-dump! db user
+                                                  (first (rest args))
+                                                  (second (rest args)))
+       "--users"           (migrate-users! db (second args))
+       "--city-data"       (migrate-city-data! db (second args))
+       (log/error "Please provide --es-dump dump-path err-path or
+      --old-lipas 123 234 ...")))))
 
 (comment
   (def config (select-keys config/default-config [:db :search]))
