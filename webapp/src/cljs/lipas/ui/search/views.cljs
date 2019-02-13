@@ -54,16 +54,6 @@
        {:value     city-codes
         :on-change #(==> [::events/set-city-filter %])}]]
 
-     ;; Cities filter
-     ;; [filter-layout {}
-     ;;  [mui/typography {:variant "caption"}
-     ;;   (tr :actions/select-cities)]
-
-     ;;  [city-selector
-     ;;   {:tr        tr
-     ;;    :value     city-codes
-     ;;    :on-change #(==> [::events/set-city-filter %])}]]
-
      ;; Admins filter
      [filter-layout {}
       [mui/typography {:variant "caption"}
@@ -240,7 +230,7 @@
      (if (= :list result-view)
 
        ;; Results list
-       [mui/grid {:container true :direction "row" :align-items "center"}
+       [mui/grid {:container true :direction "row" :justify "center"}
         [mui/grid {:item true :xs 12}
          [pagination
           {:tr                tr
@@ -250,9 +240,13 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        [mui/grid {:item true :xs 12}
-         (if in-progress?
-           [mui/circular-progress {:style {:margin-top "1em"}}]
+        (if in-progress?
+          ;; Spinner
+          [mui/grid {:item true}
+           [mui/circular-progress {:style {:margin-top "1em"}}]]
+
+          ;; Results
+          [mui/grid {:item true :xs 12}
            [into [mui/list]
             (for [result results]
               [mui/list-item
@@ -262,7 +256,7 @@
                [mui/list-item-text
                 {:primary   (-> result :name)
                  :secondary (str (-> result :type.name) ", "
-                                 (-> result :location.city.name))}]])])]]
+                                 (-> result :location.city.name))}]])]])]
 
        ;; Results table
        [mui/grid {:container true}
