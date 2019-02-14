@@ -311,7 +311,8 @@
                              (->> item
                                   (reduce
                                    (fn [res [k v]]
-                                     (if-let [spec (and (-> k specs :required?)
+                                     (if-let [spec (and (or (-> k specs :required?)
+                                                            (some? v))
                                                         (-> k specs :spec))]
                                        (conj res (s/valid? spec v))
                                        (conj res true)))
