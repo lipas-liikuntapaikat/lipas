@@ -154,71 +154,64 @@
    (-> db :search :selected-results-table-columns set)))
 
 (re-frame/reg-sub
+ ::results-table-specs
+ (fn [_]
+   {:email                  {:spec :lipas.sports-site/email}
+    :phone-number           {:spec :lipas.sports-site/phone-number}
+    :www                    {:spec :lipas.sports-site/www}
+    :name                   {:spec :lipas.sports-site/name :required? true}
+    :location.postal-office {:spec :lipas.location/postal-office}
+    :location.postal-code   {:spec :lipas.location/postal-code :required? true}
+    :marketing-name         {:spec :lipas.sports-site/marketing-name}
+    :location.address       {:spec :lipas.location/address :required? true}}))
+
+(re-frame/reg-sub
  ::results-table-headers
  :<- [:lipas.ui.subs/translator]
  :<- [::selected-results-table-columns]
- (fn [[tr selected-cols] _]
+ :<- [::results-table-specs]
+ (fn [[tr selected-cols specs] _]
    (->>
     [[:score                  {:label "score"}]
      [:name                   {:label (tr :lipas.sports-site/name)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:required true
-                                 :spec     :lipas.sports-site/name}}}]
+                               :form  {:component lui/text-field}}]
      [:marketing-name         {:label (tr :lipas.sports-site/marketing-name)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:spec :lipas.sports-site/marketing-name}}}]
+                               :form  {:component lui/text-field}}]
      [:type.name              {:label (tr :type/name)
-                               :form  {:component lui/type-selector-single
-                                       :value-key :type.type-code}}]
+                               :form
+                               {:component lui/type-selector-single
+                                :value-key :type.type-code}}]
      [:admin.name             {:label (tr :lipas.sports-site/admin)
-                               :form  {:component lui/admin-selector-single
-                                       :value-key :admin}}]
+                               :form
+                               {:component lui/admin-selector-single
+                                :value-key :admin}}]
      [:owner.name             {:label (tr :lipas.sports-site/owner)
-                               :form  {:component lui/owner-selector-single
-                                       :value-key :owner}}]
+                               :form
+                               {:component lui/owner-selector-single
+                                :value-key :owner}}]
      [:location.city.name     {:label (tr :lipas.location/city)
-                               :form  {:component lui/city-selector-single
-                                       :value-key :location.city.city-code}}]
+                               :form
+                               {:component lui/city-selector-single
+                                :value-key :location.city.city-code}}]
      [:location.address       {:label (tr :lipas.location/address)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:rqeuired true
-                                 :spec     :lipas.location/address}}}]
+                               :form  {:component lui/text-field}}]
      [:location.postal-code   {:label (tr :lipas.location/postal-code)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:required true
-                                 :spec     :lipas.location/postal-code}}}]
+                               :form  {:component lui/text-field}}]
      [:location.postal-office {:label (tr :lipas.location/postal-office)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:spec :lipas.location/postal-office}}}]
+                               :form  {:component lui/text-field}}]
      [:www                    {:label (tr :lipas.sports-site/www)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:spec :lipas.sports-site/www}}}]
+                               :form  {:component lui/text-field}}]
      [:email                  {:label (tr :lipas.sports-site/email-public)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:spec :lipas.sports-site/email}}}]
+                               :form  {:component lui/text-field}}]
      [:phone-number           {:label (tr :lipas.sports-site/phone-number)
-                               :form
-                               {:component lui/text-field
-                                :props
-                                {:spec :lipas.sports-site/phone-number}}}]
+                               :form  {:component lui/text-field}}]
      [:event-date             {:label (tr :lipas.sports-site/event-date)}]]
     (reduce
      (fn [res [k v]]
-       (conj res [k (assoc v :hidden? (not (some? (selected-cols k))))]))
+       (conj res [k (-> v
+                        (assoc :hidden? (not (some? (selected-cols k))))
+                        (assoc-in [:form :props :spec] (-> k specs :spec))
+                        (assoc-in [:form :props :required] (-> k specs :required?)))]))
      []))))
 
 (re-frame/reg-sub
