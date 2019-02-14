@@ -211,6 +211,11 @@
    {:db         (assoc-in db [:search :results-view] view)
     :dispatch-n [(when (= :list view) [::reset-sort-order])]}))
 
+(re-frame/reg-event-db
+ ::select-results-table-columns
+ (fn [db [_ v]]
+   (assoc-in db [:search :selected-results-table-columns] v)))
+
 (re-frame/reg-event-fx
  ::reset-sort-order
  (fn [{:keys [db]} _]
@@ -251,3 +256,26 @@
      {:db (assoc-in db [:search :filters] {:type-codes (-> permissions :types)
                                            :city-codes (-> permissions :cities)})
       :dispatch [::submit-search]})))
+
+(defn- kw->path [kw]
+  (-> kw
+      name
+      (string/split #"\.")
+      (->>
+       (mapv keyword))))
+
+(def data-keys
+  [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
+   :location.address :location.postal-code :location.postal-office
+   :location.city.city-code])
+
+(re-frame/reg-event-fx
+ ::save-edits
+ (fn [{:keys [db]} [_ {:keys [lipas-id] :as data}]]
+   (let [d  (->> (select-keys data data-keys)
+                 (reduce (fn [res [k v]] (assoc-in res (kw->path k) v)) {}))
+         s  (get-in db [:sports-sites lipas-id])
+         r  (-> (utils/make-revision s) (cutils/deep-merge d) utils/clean)
+         cb (fn [] [[::submit-search]])]
+     {:dispatch-n
+      [[:lipas.ui.sports-sites.events/commit-rev r false cb]]})))

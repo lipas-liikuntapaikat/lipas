@@ -111,6 +111,8 @@
     {:asc?    true
      :sort-fn :score}
     :results-view :list
+    :selected-results-table-columns
+    [:name :event-date :admin.name :owner.name :type.name :location.city.name]
     :pagination
     {:page       0
      :page-size  250
