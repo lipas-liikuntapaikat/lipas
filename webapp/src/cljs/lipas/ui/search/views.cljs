@@ -168,8 +168,7 @@
         "LIPAS"]]]
 
      ;; Second row: Search input and button
-     [mui/grid {:container true :style {:margin-top    "2em"
-                                        :margin-bottom "1em"}}
+     [mui/grid {:container true :style {:margin-top "2em" :margin-bottom "1em"}}
       [mui/grid {:item true :style {:flex-grow 1}}
        [lui/text-field
         {:value        search-str
@@ -186,17 +185,19 @@
         (tr :search/search)]]]
 
      ;; Third row: filters expansion panel
-     [lui/expansion-panel {:label            (tr :search/filters)
-                           :label-color      "default"
-                           :default-expanded false}
+     [lui/expansion-panel
+      {:label            (tr :search/filters)
+       :label-color      "default"
+       :default-expanded false}
       [filters {:tr tr}]]
 
      ;; 4th row: Results count, clear filters button and result view selectors
-     [mui/grid {:container true :justify "space-between" :align-items "center"
-                :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
+     [mui/grid
+      {:container true :justify "space-between" :align-items "center"
+       :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
       [mui/grid {:item true}
-       [mui/typography {:variant "body2"
-                        :style   {:font-size "0.9rem" :margin-left "0.5em"}}
+       [mui/typography
+        {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
         (tr :search/results-count total)]]
 
       ;; Clear filters button
@@ -275,11 +276,12 @@
            :change-page-size? true}]]
 
         [mui/grid {:item true}
-         (when in-progress?
-           [mui/circular-progress {:style {:margin-left "1em" :margin-right "1em"}}])]
+         (if in-progress?
+           [mui/circular-progress {:style {:margin-left "1em" :margin-right "1em"}}]
+           [:div {:style {:width "72px"}}])]
 
         ;; Rank results close to map center higher
-        [mui/grid {:item true :style {:margin-left "3em" :flex-grow 1}}
+        [mui/grid {:item true :style {:flex-grow 1}}
          [lui/checkbox
           {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)
