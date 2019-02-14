@@ -28,9 +28,16 @@
    (-> db :user :login-error)))
 
 (re-frame/reg-sub
- ::comeback-path
+ ::comeback-path*
  (fn [db _]
    (:comeback-path db)))
+
+(re-frame/reg-sub
+ ::comeback-path
+ :<- [::comeback-path*]
+ (fn [path _]
+   (when-not (#{"/#/login" :lipas.ui.routes/login} path)
+     path)))
 
 (re-frame/reg-sub
  ::magic-link-ordered?
