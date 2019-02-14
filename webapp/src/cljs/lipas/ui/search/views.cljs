@@ -6,7 +6,8 @@
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.events :as events]
    [lipas.ui.search.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn- filter-layout [props & children]
   [mui/grid {:item true :style {:min-width  "365px"}}
@@ -142,17 +143,19 @@
        :label-rows-per-page     (tr :search/page-size)}))])
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [in-progress?    (<== [::subs/in-progress?])
-        search-str      (<== [::subs/search-string])
-        results         (<== [::subs/search-results-list])
-        total           (<== [::subs/search-results-total-count])
-        result-view     (<== [::subs/search-results-view])
-        sort-opts       (<== [::subs/sort-opts])
-        filters-active? (<== [::subs/filters-active?])
-        pagination-opts (<== [::subs/pagination])
-        page-sizes      (-> pagination-opts :page-sizes)
-        page-size       (-> pagination-opts :page-size)
-        page            (-> pagination-opts :page)]
+  (let [in-progress?     (<== [::subs/in-progress?])
+        search-str       (<== [::subs/search-string])
+        results          (<== [::subs/search-results-list])
+        total            (<== [::subs/search-results-total-count])
+        result-view      (<== [::subs/search-results-view])
+        sort-opts        (<== [::subs/sort-opts])
+        filters-active?  (<== [::subs/filters-active?])
+        pagination-opts  (<== [::subs/pagination])
+        selected-columns (<== [::subs/selected-results-table-columns])
+        headers          (<== [::subs/results-table-headers])
+        page-sizes       (-> pagination-opts :page-sizes)
+        page-size        (-> pagination-opts :page-size)
+        page             (-> pagination-opts :page)]
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
@@ -272,16 +275,22 @@
            :change-page-size? true}]]
 
         ;; Rank results close to map center higher
-        [mui/grid {:item true :style {:margin-left "3em"}}
+        [mui/grid {:item true :style {:margin-left "3em" :flex-grow 1}}
          [lui/checkbox
           {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)
            :value     (= :score (:sort-fn sort-opts))
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
+        ;; Select table columns
+        [mui/grid {:item true}
+         [lui/search-results-column-selector
+          {:value     selected-columns
+           :on-change #(==> [::events/select-results-table-columns %])}]]
+
         ;; The table
         [mui/grid {:item true :xs 12}
-         [lui/table
+         [lui/table-v2
           {:key              (:sort-fn sort-opts)
            :in-progress?     in-progress?
            :items            results
@@ -289,11 +298,7 @@
            :on-select        #(on-result-click %)
            :sort-fn          (or (:sort-fn sort-opts) :score)
            :sort-asc?        (:asc? sort-opts)
+           :allow-editing?   :permission?
+           :on-item-save     #(==> [::events/save-edits %])
            :on-sort-change   #(==> [::events/change-sort-order %])
-           :headers          [[:score "score" :hidden]
-                              [:name (tr :lipas.sports-site/name)]
-                              [:type.name (tr :type/name)]
-                              [:admin (tr :lipas.sports-site/admin)]
-                              [:owner (tr :lipas.sports-site/owner)]
-                              [:location.city.name (tr :lipas.location/city)]
-                              [:event-date (tr :lipas.sports-site/event-date)]]}]]])]))
+           :headers          headers}]]])]))

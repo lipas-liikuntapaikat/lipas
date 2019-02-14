@@ -205,8 +205,9 @@
       :on-change      (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
 
-(defn type-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn type-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
     ^{:key value}
     [autocompletes/autocomplete
@@ -218,8 +219,21 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
-(defn city-selector-single [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn type-selector-single [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
+        types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
+    ^{:key value}
+    [select
+     {:items     types
+      :value     value
+      :value-fn  :type-code
+      :label-fn  (comp locale :name)
+      :on-change on-change}]))
+
+(defn city-selector-single [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
     ^{:key value}
     [select
@@ -231,8 +245,9 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
-(defn city-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn city-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
     ^{:key value}
     [autocompletes/autocomplete
@@ -244,8 +259,9 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
-(defn surface-material-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn surface-material-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/surface-materials])]
     ^{:key value}
     [autocompletes/autocomplete
@@ -257,8 +273,9 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn admin-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn admin-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/admins])]
     ^{:key value}
     [autocompletes/autocomplete
@@ -272,8 +289,21 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn owner-selector [{:keys [tr value on-change]}]
-  (let [locale (tr)
+(defn admin-selector-single [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/admins])]
+    ^{:key value}
+    [select
+     {:value     value
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn owner-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
     ^{:key value}
     [autocompletes/autocomplete
@@ -286,3 +316,28 @@
       :label-fn  (comp locale second)
       :value-fn  first
       :on-change on-change}]))
+
+(defn owner-selector-single [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
+        items  (<== [:lipas.ui.sports-sites.subs/owners])]
+    ^{:key value}
+    [select
+     {:value     value
+      :items     items
+      :label-fn  (comp locale second)
+      :value-fn  first
+      :on-change on-change}]))
+
+(defn search-results-column-selector [{:keys [value on-change]}]
+  (let [tr    (<== [:lipas.ui.subs/translator])
+        items (<== [:lipas.ui.search.subs/results-table-columns])]
+    [multi-select
+     {:value        value
+      :items        items
+      :style        {:min-width "150px"}
+      :label-fn     (comp :label second)
+      :value-fn     first
+      :label        (tr :actions/select-columns)
+      :render-value (fn [v] (tr :actions/select-hint))
+      :on-change    on-change}]))

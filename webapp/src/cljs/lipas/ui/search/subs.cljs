@@ -1,7 +1,9 @@
 (ns lipas.ui.search.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils]))
+   [lipas.permissions :as permissions]
+   [lipas.ui.components :as lui]
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::filters
@@ -78,18 +80,32 @@
  (fn [results _]
    (-> results :hits :total)))
 
-(defn ->search-result [{:keys [locale types cities admins owners]} hit]
+(defn ->search-result
+  [{:keys [locale types cities admins owners logged-in? permissions]} hit]
   (let [site      (:_source hit)
         type-code (-> site :type :type-code)
         city-code (-> site :location :city :city-code)]
-    {:lipas-id           (-> site :lipas-id)
-     :score              (-> hit :_score)
-     :name               (-> site :name)
-     :event-date         (-> site :event-date utils/->short-date)
-     :admin              (-> site :admin admins locale)
-     :owner              (-> site :owner owners locale)
-     :type.name          (get-in types [type-code :name locale])
-     :location.city.name (get-in cities [city-code :name locale])}))
+    {:lipas-id                (-> site :lipas-id)
+     :score                   (-> hit :_score)
+     :name                    (-> site :name)
+     :event-date              (-> site :event-date utils/->short-date)
+     :admin                   (-> site :admin)
+     :owner                   (-> site :owner)
+     :www                     (-> site :www)
+     :email                   (-> site :email)
+     :phone-number            (-> site :phone-number)
+     :admin.name              (-> site :admin admins locale)
+     :owner.name              (-> site :owner owners locale)
+     :type.type-code          type-code
+     :type.name               (get-in types [type-code :name locale])
+     :location.address        (-> site :location :address)
+     :location.postal-code    (-> site :location :postal-code)
+     :location.postal-office  (-> site :location :postal-office)
+     :location.city.city-code city-code
+     :location.city.name      (get-in cities [city-code :name locale])
+     :permission?             (if logged-in?
+                                (permissions/publish? permissions site)
+                                false)}))
 
 (re-frame/reg-sub
  ::search-results-list
@@ -99,10 +115,13 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
- (fn [[results tr types cities admins owners] _]
+ :<- [:lipas.ui.user.subs/logged-in?]
+ :<- [:lipas.ui.user.subs/permissions]
+ (fn [[results tr types cities admins owners logged-in? permissions] _]
    (let [locale (tr)
-         data   {:types  types  :cities cities :locale locale
-                 :admins admins :owners owners}]
+         data   {:types       types  :cities cities :locale     locale
+                 :admins      admins :owners owners :logged-in? logged-in?
+                 :permissions permissions}]
      (->> (-> results :hits :hits)
           (map (partial ->search-result data))
           (sort-by :score utils/reverse-cmp)))))
@@ -111,6 +130,96 @@
  ::search-results-view
  (fn [db _]
    (-> db :search :results-view)))
+
+(re-frame/reg-sub
+ ::results-table-columns
+ :<- [:lipas.ui.subs/translator]
+ (fn [tr _]
+   [[:name                   {:label (tr :lipas.sports-site/name)}]
+    [:type.name              {:label (tr :type/name)}]
+    [:admin.name             {:label (tr :lipas.sports-site/admin)}]
+    [:owner.name             {:label (tr :lipas.sports-site/owner)}]
+    [:location.city.name     {:label (tr :lipas.location/city)}]
+    [:location.address       {:label (tr :lipas.location/address)}]
+    [:location.postal-code   {:label (tr :lipas.location/postal-code)}]
+    [:location.postal-office {:label (tr :lipas.location/postal-office)}]
+    [:www                    {:label (tr :lipas.sports-site/www)}]
+    [:email                  {:label (tr :lipas.sports-site/email-public)}]
+    [:phone-number           {:label (tr :lipas.sports-site/phone-number)}]
+    [:event-date             {:label (tr :lipas.sports-site/event-date)}]]))
+
+(re-frame/reg-sub
+ ::selected-results-table-columns
+ (fn [db _]
+   (-> db :search :selected-results-table-columns set)))
+
+(re-frame/reg-sub
+ ::results-table-headers
+ :<- [:lipas.ui.subs/translator]
+ :<- [::selected-results-table-columns]
+ (fn [[tr selected-cols] _]
+   (->>
+    [[:score                  {:label "score"}]
+     [:name                   {:label (tr :lipas.sports-site/name)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:required true
+                                 :spec     :lipas.sports-site/name}}}]
+     [:marketing-name         {:label (tr :lipas.sports-site/marketing-name)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:spec :lipas.sports-site/marketing-name}}}]
+     [:type.name              {:label (tr :type/name)
+                               :form  {:component lui/type-selector-single
+                                       :value-key :type.type-code}}]
+     [:admin.name             {:label (tr :lipas.sports-site/admin)
+                               :form  {:component lui/admin-selector-single
+                                       :value-key :admin}}]
+     [:owner.name             {:label (tr :lipas.sports-site/owner)
+                               :form  {:component lui/owner-selector-single
+                                       :value-key :owner}}]
+     [:location.city.name     {:label (tr :lipas.location/city)
+                               :form  {:component lui/city-selector-single
+                                       :value-key :location.city.city-code}}]
+     [:location.address       {:label (tr :lipas.location/address)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:rqeuired true
+                                 :spec     :lipas.location/address}}}]
+     [:location.postal-code   {:label (tr :lipas.location/postal-code)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:required true
+                                 :spec     :lipas.location/postal-code}}}]
+     [:location.postal-office {:label (tr :lipas.location/postal-office)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:spec :lipas.location/postal-office}}}]
+     [:www                    {:label (tr :lipas.sports-site/www)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:spec :lipas.sports-site/www}}}]
+     [:email                  {:label (tr :lipas.sports-site/email-public)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:spec :lipas.sports-site/email}}}]
+     [:phone-number           {:label (tr :lipas.sports-site/phone-number)
+                               :form
+                               {:component lui/text-field
+                                :props
+                                {:spec :lipas.sports-site/phone-number}}}]
+     [:event-date             {:label (tr :lipas.sports-site/event-date)}]]
+    (reduce
+     (fn [res [k v]]
+       (conj res [k (assoc v :hidden? (not (some? (selected-cols k))))]))
+     []))))
 
 (re-frame/reg-sub
  ::sort-opts
