@@ -1,13 +1,13 @@
 (ns lipas.ui.search.views
   (:require
+   [clojure.spec.alpha :as s]
    [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.events :as events]
    [lipas.ui.search.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn- filter-layout [props & children]
   [mui/grid {:item true :style {:min-width  "365px"}}
@@ -153,6 +153,7 @@
         pagination-opts  (<== [::subs/pagination])
         selected-columns (<== [::subs/selected-results-table-columns])
         headers          (<== [::subs/results-table-headers])
+        specs            (<== [::subs/results-table-specs])
         page-sizes       (-> pagination-opts :page-sizes)
         page-size        (-> pagination-opts :page-size)
         page             (-> pagination-opts :page)]
@@ -231,7 +232,6 @@
      ;; Remaining rows: Results
 
      (if (= :list result-view)
-
        ;; Results list
        [mui/grid {:container true :direction "row" :justify "center"}
         [mui/grid {:item true :xs 12}
@@ -274,6 +274,10 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
+        [mui/grid {:item true}
+         (when in-progress?
+           [mui/circular-progress {:style {:margin-left "1em" :margin-right "1em"}}])]
+
         ;; Rank results close to map center higher
         [mui/grid {:item true :style {:margin-left "3em" :flex-grow 1}}
          [lui/checkbox
@@ -291,14 +295,28 @@
         ;; The table
         [mui/grid {:item true :xs 12}
          [lui/table-v2
-          {:key              (:sort-fn sort-opts)
-           :in-progress?     in-progress?
-           :items            results
-           :hide-action-btn? true
-           :on-select        #(on-result-click %)
-           :sort-fn          (or (:sort-fn sort-opts) :score)
-           :sort-asc?        (:asc? sort-opts)
-           :allow-editing?   :permission?
-           :on-item-save     #(==> [::events/save-edits %])
-           :on-sort-change   #(==> [::events/change-sort-order %])
-           :headers          headers}]]])]))
+          {:key            (:sort-fn sort-opts)
+           :in-progress?   in-progress?
+           :items          results
+           :action-icon    "location_on"
+           :action-label   (tr :map/zoom-to-site)
+           :edit-label     (tr :actions/edit)
+           :save-label     (tr :actions/save)
+           :discard-label  (tr :actions/discard)
+           :on-select      #(on-result-click %)
+           :sort-fn        (or (:sort-fn sort-opts) :score)
+           :sort-asc?      (:asc? sort-opts)
+           :allow-editing? :permission?
+           :allow-saving?  (fn [item]
+                             (->> item
+                                  (reduce
+                                   (fn [res [k v]]
+                                     (if-let [spec (and (-> k specs :required?)
+                                                        (-> k specs :spec))]
+                                       (conj res (s/valid? spec v))
+                                       (conj res true)))
+                                   [])
+                                  (every? true?)))
+           :on-item-save   #(==> [::events/save-edits %])
+           :on-sort-change #(==> [::events/change-sort-order %])
+           :headers        headers}]]])]))

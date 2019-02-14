@@ -60,6 +60,7 @@
        [mui/grid {:item true}
         [lui/autocomplete
          {:multi?    false
+          :show-all? true
           :items     (vals types)
           :value     value
           :label     (tr :type/name)
@@ -244,9 +245,8 @@
             [;; Zoom to site
              (when-not editing?
                [mui/tooltip {:title (tr :map/zoom-to-site)}
-                [mui/button
+                [mui/fab
                  {:on-click #(==> [::events/zoom-to-site lipas-id width])
-                  :variant  "fab"
                   :color    "default"}
                  [mui/icon {:color "secondary"}
                   "place"]]])
@@ -254,26 +254,24 @@
              ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
                [mui/tooltip {:title (tr :map/draw-hole)}
-                [mui/button
+                [mui/fab
                  {:on-click #(if (= sub-mode :drawing-hole)
                                (==> [::events/start-editing lipas-id :editing geom-type])
                                (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
                   :style    (when (= sub-mode :drawing-hole)
                               {:border (str "5px solid " mui/secondary)})
-                  :variant  "fab"
                   :color    "default"}
                  [mui/icon "vignette"]]])
 
              ;; Add new geom
              (when (and editing? (#{"LineString" "Polygon"} geom-type))
                [mui/tooltip {:title (tr :map/draw geom-type)}
-                [mui/button
+                [mui/fab
                  {:on-click #(if (= sub-mode :drawing)
                                (==> [::events/start-editing lipas-id :editing geom-type])
                                (==> [::events/start-editing lipas-id :drawing geom-type]))
                   :style    (when (= sub-mode :drawing)
                               {:border (str "5px solid " mui/secondary)})
-                  :variant  "fab"
                   :color    "default"}
                  (if (= geom-type "LineString")
                    [mui/icon "timeline"]
@@ -282,11 +280,10 @@
              ;; Delete geom
              (when (and editing? (#{"LineString" "Polygon"} geom-type))
                [mui/tooltip {:title (tr :map/remove geom-type)}
-                [mui/button
+                [mui/fab
                  {:on-click #(if (= sub-mode :deleting)
                                (==> [::events/start-editing lipas-id :editing geom-type])
                                (==> [::events/start-editing lipas-id :deleting geom-type]))
-                  :variant  "fab"
                   :style    (when (= sub-mode :deleting)
                               {:border (str "5px solid " mui/secondary)})
                   :color    "default"}
@@ -324,10 +321,10 @@
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
-   [mui/button {:variant  :fab
-                :style {:margin-bottom "0.5em"}
-                :color    :secondary
-                :on-click #(==> [::sports-site-events/start-adding-new-site])}
+   [mui/fab
+    {:style    {:margin-bottom "0.5em"}
+     :color    "secondary"
+     :on-click #(==> [::sports-site-events/start-adding-new-site])}
     [mui/icon "add"]]])
 
 (defn set-new-site-field [& args]
@@ -510,8 +507,7 @@
                              (fn []
                                (==> [::sports-site-events/discard-new-site])
                                (==> [::events/discard-drawing]))])
-            :tooltip  (tr :actions/discard)
-            :variant  "fab"}]
+            :tooltip  (tr :actions/discard)}]
 
           ;; Save
           (when data
@@ -523,15 +519,13 @@
                                    :margin-left   "1em"}
                 :tooltip          (tr :actions/save)
                 :disabled-tooltip (tr :actions/fill-required-fields)
-                :variant          "extendedFab"
                 :disabled         (not new-site-valid?)
                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
 (defn map-contents-view [{:keys [tr logged-in?]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
     [mui/grid {:container true
-               :style     {:flex   1
-                           :height "100%"}
+               :style     {:height "100%"}
                :direction "column"
                :justify   "space-between"}
 
@@ -560,7 +554,7 @@
                         (and (#{"sm" "md"} width)
                              (= :table result-view)) "100%"
                         (and (= :table result-view)
-                             (empty? selected-site)) "1200px"
+                             (empty? selected-site)) "100%"
                         :else                        "430px")]
     [mui/grid {:container true
                :style     {:height "100%" :width "100%"}}
@@ -592,7 +586,7 @@
                    :style     {:position "fixed"
                                :left     0
                                :top      0
-                               :width    drawer-width
+                               :width    "430px"
                                :z-index  1200}}
          [mui/grid {:item true :xs 12}
           [mui/paper {:square true}
@@ -623,8 +617,7 @@
                               :padding-right  "1em"
                               :padding-bottom "0.5em"}}
 
-        [mui/grid {:item  true
-                   :style {:flex 1}}
+        [mui/grid {:item true :xs 12}
          (if selected-site
            [sports-site-view {:tr tr :site-data selected-site :width width}]
            [map-contents-view {:tr tr :logged-in? logged-in?}])]]]]
