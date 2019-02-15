@@ -119,7 +119,8 @@
           :value     area-max
           :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
 
-(defn pagination [{:keys [tr page page-size page-sizes total change-page-size?]}]
+(defn pagination
+  [{:keys [tr page page-size page-sizes total change-page-size?] :as props}]
   [mui/table-pagination
    (merge
     {:component             "div"
@@ -140,7 +141,8 @@
       {:rows-per-page-options   (clj->js page-sizes)
        :on-change-rows-per-page #(==> [::events/change-result-page-size
                                        (-> %1 .-target .-value)])
-       :label-rows-per-page     (tr :search/page-size)}))])
+       :label-rows-per-page     (tr :search/page-size)})
+    props)])
 
 (defn search-view [{:keys [tr on-result-click]}]
   (let [in-progress?     (<== [::subs/in-progress?])
@@ -273,12 +275,8 @@
            :page              page
            :page-size         page-size
            :page-sizes        page-sizes
-           :change-page-size? true}]]
-
-        [mui/grid {:item true}
-         (if in-progress?
-           [mui/circular-progress {:style {:margin-left "1em" :margin-right "1em"}}]
-           [:div {:style {:width "72px"}}])]
+           :change-page-size? true
+           :style             {:margin-right "2em"}}]]
 
         ;; Rank results close to map center higher
         [mui/grid {:item true :style {:flex-grow 1}}
