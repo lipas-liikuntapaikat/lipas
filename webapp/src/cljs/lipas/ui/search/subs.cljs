@@ -93,6 +93,8 @@
      :owner                   (-> site :owner)
      :www                     (-> site :www)
      :email                   (-> site :email)
+     :construction-year       (-> site :construction-year)
+     :renovation-years        (-> site :renovation-years)
      :phone-number            (-> site :phone-number)
      :admin.name              (-> site :admin admins locale)
      :owner.name              (-> site :owner owners locale)
@@ -139,6 +141,8 @@
     [:type.name              {:label (tr :type/name)}]
     [:admin.name             {:label (tr :lipas.sports-site/admin)}]
     [:owner.name             {:label (tr :lipas.sports-site/owner)}]
+    [:construction-year      {:label (tr :lipas.sports-site/construction-year)}]
+    [:renovation-years       {:label (tr :lipas.sports-site/renovation-years)}]
     [:location.city.name     {:label (tr :lipas.location/city)}]
     [:location.address       {:label (tr :lipas.location/address)}]
     [:location.postal-code   {:label (tr :lipas.location/postal-code)}]
@@ -159,6 +163,8 @@
    {:email                  {:spec :lipas.sports-site/email}
     :phone-number           {:spec :lipas.sports-site/phone-number}
     :www                    {:spec :lipas.sports-site/www}
+    :construction-year      {:spec :lipas.sports-site/construction-year}
+    :renovation-years       {:spec :lipas.sports-site/renovation-years}
     :name                   {:spec :lipas.sports-site/name :required? true}
     :location.postal-office {:spec :lipas.location/postal-office}
     :location.postal-code   {:spec :lipas.location/postal-code :required? true}
@@ -189,6 +195,12 @@
                                :form
                                {:component lui/owner-selector-single
                                 :value-key :owner}}]
+     [:construction-year      {:label (tr :lipas.sports-site/construction-year)
+                               :form  {:component lui/year-selector}}]
+     [:renovation-years       {:label (tr :lipas.sports-site/renovation-years)
+                               :form
+                               {:component lui/year-selector
+                                :props     {:multi? true}}}]
      [:location.city.name     {:label (tr :lipas.location/city)
                                :form
                                {:component lui/city-selector-single

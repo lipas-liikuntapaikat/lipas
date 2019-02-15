@@ -277,8 +277,8 @@
 
 (def data-keys
   [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
-   :location.address :location.postal-code :location.postal-office
-   :location.city.city-code])
+   :renovation-years :construction-year :location.address :location.postal-code
+   :location.postal-office :location.city.city-code])
 
 (re-frame/reg-event-fx
  ::save-edits
