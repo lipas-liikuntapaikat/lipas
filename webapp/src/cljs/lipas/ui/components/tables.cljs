@@ -104,6 +104,15 @@
        {:style
         {:width "100%" :overflow-x "scroll" :margin-top "0.5em" :margin-bottom "1em"}}
 
+       (when in-progress?
+         [:div
+          {:style
+           {:position         "absolute" :width "100%" :height "100%"
+            :background-color "rgba(0, 0, 0, 0.2)"}}
+          [mui/circular-progress
+           {:size  "120px"
+            :style {:display "block" :margin-left "auto" :margin-right "auto"}}]])
+
        [mui/table
 
         ;; Head
@@ -140,6 +149,7 @@
 
             [mui/table-row {:key id :hover true}
 
+             ;; First cell
              (when (or (and on-select (not hide-action-btn?)) any-editable?)
                [mui/table-cell {:padding "checkbox"}
                 (if editing-this?
@@ -174,14 +184,15 @@
                         {:on-click #(swap! editing? assoc id item)}
                         [mui/icon "edit"]]]])])])
 
-             ;; Cells
+             ;; Remaining Cells
              (doall
               (for [[k {:keys [hidden? form]}] headers
                     :let                       [v (get item k)]]
 
                 [mui/table-cell
-                 {:style (when hidden? {:display :none})
-                  :key   (str id k editing-this?)}
+                 {:style    (when hidden? {:display :none})
+                  :on-click #(when-not editing-this? (on-select item))
+                  :key      (str id k editing-this?)}
 
                  (if (and editing-this? (:component form))
 
