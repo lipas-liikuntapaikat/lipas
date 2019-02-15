@@ -335,7 +335,7 @@
     [multi-select
      {:value        value
       :items        items
-      :style        {:min-width "150px"}
+      :style        {:min-width "170px"}
       :label-fn     (comp :label second)
       :value-fn     first
       :label        (tr :actions/select-columns)

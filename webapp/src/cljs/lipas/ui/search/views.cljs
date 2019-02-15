@@ -289,7 +289,7 @@
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
         ;; Select table columns
-        [mui/grid {:item true}
+        [mui/grid {:item true :style {:padding-right "2px"}}
          [lui/search-results-column-selector
           {:value     selected-columns
            :on-change #(==> [::events/select-results-table-columns %])}]]
