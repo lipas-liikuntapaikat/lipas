@@ -31,9 +31,17 @@
   {:from (* page page-size)
    :size page-size})
 
+(defn resolve-query-string [s]
+  (if (empty? s)
+    "*"
+    (-> s
+        (string/split #" ")
+        (->> (mapv #(str % "*"))
+             (string/join " ")))))
+
 (defn ->es-search-body [{:keys [filters string center distance sort
                                 locale pagination]}]
-  (let [string            (or (not-empty string) "*")
+  (let [string            (resolve-query-string string)
         type-codes        (-> filters :type-codes not-empty)
         city-codes        (-> filters :city-codes not-empty)
         area-min          (-> filters :area-min)
@@ -56,7 +64,8 @@
                    {:bool
                     {:must
                      [{:query_string
-                       {:query string}}]}}
+                       {:query            string
+                        :default_operator "AND"}}]}}
                    :functions  (filterv some?
                                         [(when (and lat lon distance)
                                            {:gauss
