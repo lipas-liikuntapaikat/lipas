@@ -176,7 +176,9 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::selected-results-table-columns]
  :<- [::results-table-specs]
- (fn [[tr selected-cols specs] _]
+ :<- [:lipas.ui.user.subs/permission-to-types]
+ :<- [:lipas.ui.user.subs/permission-to-cities]
+ (fn [[tr selected-cols specs types cities] _]
    (->>
     [[:score                  {:label "score"}]
      [:name                   {:label (tr :lipas.sports-site/name)
@@ -186,7 +188,8 @@
      [:type.name              {:label (tr :type/name)
                                :form
                                {:component lui/type-selector-single
-                                :value-key :type.type-code}}]
+                                :value-key :type.type-code
+                                :props     {:types types}}}]
      [:admin.name             {:label (tr :lipas.sports-site/admin)
                                :form
                                {:component lui/admin-selector-single
@@ -204,6 +207,7 @@
      [:location.city.name     {:label (tr :lipas.location/city)
                                :form
                                {:component lui/city-selector-single
+                                :props     {:cities cities}
                                 :value-key :location.city.city-code}}]
      [:location.address       {:label (tr :lipas.location/address)
                                :form  {:component lui/text-field}}]
