@@ -45,7 +45,7 @@
     ;; there's a wrapper component. Therefore :span is here.
     [:span
      [mui/tooltip {:title (or tooltip "") :placement "top"}
-      [mui/button btn-props
+      [mui/fab btn-props
        [mui/icon "edit_icon"]]]]))
 
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
@@ -78,7 +78,7 @@
 
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/button (merge props {:on-click on-click})
+   [mui/fab (merge props {:on-click on-click})
     [mui/icon "delete"]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
