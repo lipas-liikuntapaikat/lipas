@@ -4,10 +4,12 @@
    [reagent.core :as r]))
 
 (defn email-button [{:keys [on-click label] :as props}]
-  [mui/button (merge {:color    "secondary"
-                      :variant  "contained"
-                      :on-click on-click}
-                     props)
+  [mui/button
+   (merge
+    {:color    "secondary"
+     :variant  "contained"
+     :on-click on-click}
+    props)
    [mui/icon {:style {:margin-right "0.25em"}}
     "email"]
    label])
@@ -20,18 +22,17 @@
    label])
 
 (defn login-button [{:keys [on-click label]}]
-  [mui/button {:variant  "contained"
-               :color    "secondary"
-               :on-click on-click}
+  [mui/button {:variant "contained" :color "secondary" :on-click on-click}
    [mui/icon {:style {:margin-right "0.25em"}}
     "lock"]
    label])
 
 (defn register-button [{:keys [href on-click label]}]
-  [mui/button {:variant  "contained"
-               :color    "secondary"
-               :href     href
-               :on-click on-click}
+  [mui/button
+   {:variant  "contained"
+    :color    "secondary"
+    :href     href
+    :on-click on-click}
    [mui/icon {:style {:margin-right "0.25em"}}
     "group_add"]
    label])
@@ -40,44 +41,44 @@
   (let [btn-props (-> props
                       (dissoc :active?)
                       (merge {:on-click on-click}))]
-    [mui/tooltip {:title     (or tooltip "")
-                  :placement "top"}
-     [mui/button btn-props
-      [mui/icon "edit_icon"]]]))
+    ;; Mui will complain if tooltip is bound to disabled button unless
+    ;; there's a wrapper component. Therefore :span is here.
+    [:span
+     [mui/tooltip {:title (or tooltip "") :placement "top"}
+      [mui/fab btn-props
+       [mui/icon "edit_icon"]]]]))
 
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
                     :or   {color "secondary"}
                     :as   props}]
-  [mui/tooltip {:title     (if disabled disabled-tooltip "")
-                :placement "top"}
-   [:span
-    [mui/button (merge (dissoc props :disabled-tooltip :color)
-                       {:disabled disabled
-                        :on-click on-click
-                        :color    color})
-     tooltip
-     [mui/icon {:style {:margin-left "0.25em"}}
-      "save_icon"]]]])
+  [mui/tooltip {:title (if disabled disabled-tooltip "") :placement "top"}
+   [mui/fab
+    (merge
+     (dissoc props :disabled-tooltip :color)
+     {:disabled disabled
+      :on-click on-click
+      :variant  "extended"
+      :color    color})
+    tooltip
+    [mui/icon {:style {:margin-left "0.25em"}}
+     "save_icon"]]])
 
 (defn publish-button [{:keys [on-click tooltip] :as props}]
-  [mui/tooltip {:title     ""
-                :placement "top"}
-   [mui/button (merge props {:variant  "contained"
-                             :on-click on-click
-                             :color    "secondary"})
+  [mui/tooltip {:title "" :placement "top"}
+   [mui/button
+    (merge props {:variant "contained" :on-click on-click :color "secondary"})
     tooltip
     [mui/icon {:style {:margin-left "0.25em"}}
      "cloud_upload"]]])
 
 (defn discard-button [{:keys [on-click tooltip] :as props}]
-  [mui/tooltip {:title     (or tooltip "")
-                :placement "top"}
-   [mui/button (merge props {:on-click on-click})
+  [mui/tooltip {:title (or tooltip "") :placement "top"}
+   [mui/fab (merge props {:on-click on-click})
     [mui/icon "undo"]]])
 
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/button (merge props {:on-click on-click})
+   [mui/fab (merge props {:on-click on-click})
     [mui/icon "delete"]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
@@ -86,9 +87,10 @@
                timeout* (r/atom nil)]
 
     [:span
-     [mui/tooltip {:style     {:color :yellow}
-                   :title     (or tooltip "")
-                   :placement "top"}
+     [mui/tooltip
+      {:style     {:color :yellow}
+       :title     (or tooltip "")
+       :placement "top"}
       [mui/icon-button
        {:on-click #(if @clicked?
                      (do

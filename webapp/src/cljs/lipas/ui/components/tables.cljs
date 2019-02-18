@@ -5,14 +5,15 @@
    [lipas.ui.utils :as utils]
    [reagent.core :as r]))
 
-(defn table [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
-                     action-icon hide-action-btn? on-sort-change in-progress?]
-              :or   {sort-cmp         compare
-                     sort-asc?        false
-                     action-icon      "keyboard_arrow_right"
-                     hide-action-btn? false
-                     in-progress?     false
-                     on-sort-change   :default}}]
+(defn table
+  [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
+           action-icon hide-action-btn? on-sort-change in-progress? ]
+    :or   {sort-cmp         compare
+           sort-asc?        false
+           action-icon      "keyboard_arrow_right"
+           hide-action-btn? false
+           in-progress?     false
+           on-sort-change   :default}}]
   (r/with-let [key-fn*         (or key-fn (constantly nil))
                sort-fn*        (r/atom sort-fn)
                sort-asc?       (r/atom sort-asc?)
@@ -74,6 +75,144 @@
          [mui/grid {:container true :direction "column" :align-items "center"}
           [mui/grid {:item true}
            [mui/circular-progress {:style {:margin-top "1em"}}]]])]]]))
+
+(defn table-v2
+  [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
+           action-icon hide-action-btn? action-label on-sort-change
+           in-progress?  allow-editing? on-item-save edit-label
+           save-label discard-label allow-saving?]
+    :or   {sort-cmp         compare
+           sort-asc?        false
+           action-icon      "keyboard_arrow_right"
+           hide-action-btn? false
+           in-progress?     false
+           on-sort-change   :default
+           on-item-save     #(prn "Item save clicked!" %)
+           allow-editing?   (constantly false)
+           allow-saving?    (constantly false)}}]
+
+  (r/with-let [key-fn*         (or key-fn (constantly nil))
+               sort-fn*        (r/atom sort-fn)
+               sort-asc?       (r/atom sort-asc?)
+               on-sort-change* #(on-sort-change {:sort-fn @sort-fn*
+                                                 :asc?    @sort-asc?})
+               editing?        (r/atom nil)]
+
+    (let [any-editable? (some allow-editing? items)]
+
+      [mui/paper
+       {:style
+        {:width "100%" :overflow-x "scroll" :margin-top "0.5em" :margin-bottom "1em"}}
+
+       (when in-progress?
+         [:div
+          {:style
+           {:position         "absolute" :width "100%" :height "100%"
+            :background-color "rgba(0, 0, 0, 0.2)"}}
+          [mui/circular-progress
+           {:size  "120px"
+            :style {:display "block" :margin-left "auto" :margin-right "auto"}}]])
+
+       [mui/table
+
+        ;; Head
+        [mui/table-head
+         (into [mui/table-row
+
+                (when (or (and on-select (not hide-action-btn?)) any-editable?)
+                  [mui/table-cell ""])]
+
+               (for [[key {:keys [label hidden?]}] headers]
+                 [mui/table-cell {:style    (when hidden? {:display :none})
+                                  :on-click #(do (reset! sort-fn* key)
+                                                 (on-sort-change*))}
+                  [mui/table-sort-label
+                   {:active    (= key @sort-fn*)
+                    :direction (if @sort-asc? "asc" "desc")
+                    :on-click  #(swap! sort-asc? not)}
+                   label]]))]
+
+        ;; Body
+        ;; (when-not in-progress?)
+        [mui/table-body
+
+         ;; Rows
+         (doall
+          (for [item (if @sort-fn*
+                       (sort-by @sort-fn* (if @sort-asc?
+                                            sort-cmp
+                                            utils/reverse-cmp)
+                                items)
+                       items)
+                :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))
+                      editing-this? (contains? @editing? id)]]
+
+            [mui/table-row {:key id :hover true}
+
+             ;; First cell
+             (when (or (and on-select (not hide-action-btn?)) any-editable?)
+               [mui/table-cell {:padding "checkbox"}
+                (if editing-this?
+                  [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+
+                   [mui/grid {:item true}
+                    [mui/tooltip {:title save-label}
+                     [mui/icon-button {:disabled (not (allow-saving? (@editing? id)))
+                                       :on-click (fn []
+                                                   (on-item-save (@editing? id))
+                                                   (swap! editing? dissoc id))}
+                      [mui/icon "save"]]]]
+
+                   [mui/grid {:item true}
+                    [mui/tooltip {:title discard-label}
+                     [mui/icon-button {:on-click #(swap! editing? dissoc id)}
+                      [mui/icon "undo"]]]]]
+
+                  [mui/grid {:container true :wrap "nowrap"}
+
+                   (when (and on-select (not hide-action-btn?))
+                     [mui/grid {:item true}
+                      [mui/tooltip {:title action-label}
+                       [mui/icon-button
+                        {:on-click #(on-select item)}
+                        [mui/icon action-icon]]]])
+
+                   (when (allow-editing? item)
+                     [mui/grid {:item true}
+                      [mui/tooltip {:title edit-label}
+                       [mui/icon-button
+                        {:on-click #(swap! editing? assoc id item)}
+                        [mui/icon "edit"]]]])])])
+
+             ;; Remaining Cells
+             (doall
+              (for [[k {:keys [hidden? form]}] headers
+                    :let                       [v (get item k)]]
+
+                [mui/table-cell
+                 {:style    (when hidden? {:display :none})
+                  :on-click #(when-not editing-this? (on-select item))
+                  :key      (str id k editing-this?)}
+
+                 (if (and editing-this? (:component form))
+
+                   ;; form field
+                   (let [value-key (or (:value-key form) k)
+                         path      [id value-key]]
+                     [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+                      [mui/grid {:item true}
+                       [(:component form)
+                        (-> form
+                            :props
+                            (assoc :value (get-in @editing? [id value-key])
+                                   :on-change #(swap! editing? assoc-in path %)))]]])
+
+                   ;; display value
+                   [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+                    [mui/grid {:item true}
+                     [mui/typography
+                      {:style {:font-size "1em"} :variant "body1" :no-wrap false}
+                      (utils/display-value v)]]])]))]))]]])))
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip

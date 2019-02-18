@@ -16,16 +16,14 @@
 
   [(when (and editing? user-can-publish?)
      [buttons/save-button
-      {:variant          "extendedFab"
-       :on-click         on-publish
+      {:on-click         on-publish
        :disabled         (not valid?)
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
    (when (and on-delete logged-in? (not editing?))
      [buttons/delete-button
-      {:variant  "fab"
-       :on-click on-delete
+      {:on-click on-delete
        :tooltip  delete-tooltip}])
 
    (when (and editing? (not user-can-publish?))
@@ -38,14 +36,11 @@
 
    (when editing?
      [buttons/discard-button
-      {:variant  :fab
-       :on-click on-discard
-       :tooltip  discard-tooltip}])
+      {:on-click on-discard :tooltip discard-tooltip}])
 
    (when (and logged-in? (not editing?))
      [buttons/edit-button
-      {:variant  "fab"
-       :color    "secondary"
+      {:color    "secondary"
        :disabled (and editing? (not valid?))
        :active?  editing?
        :on-click #(if editing?
@@ -54,16 +49,13 @@
        :tooltip  edit-tooltip}])])
 
 (defn icon-text [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items :center
-             :style     {:padding "0.5em"}}
+  [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
    [mui/grid {:item true}
     [mui/icon {:color (or icon-color "inherit")}
      icon]]
    [mui/grid {:item true}
     [mui/typography
-     {:variant "body2"
-      :style
-      {:margin-left "0.5em" :display "inline"}}
+     {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
      text]]])
 
 (defn li [text & children]

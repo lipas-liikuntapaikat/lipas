@@ -1,5 +1,6 @@
 (ns lipas.ui.search.views
   (:require
+   [clojure.spec.alpha :as s]
    [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
@@ -53,16 +54,6 @@
       [lui/region-selector
        {:value     city-codes
         :on-change #(==> [::events/set-city-filter %])}]]
-
-     ;; Cities filter
-     ;; [filter-layout {}
-     ;;  [mui/typography {:variant "caption"}
-     ;;   (tr :actions/select-cities)]
-
-     ;;  [city-selector
-     ;;   {:tr        tr
-     ;;    :value     city-codes
-     ;;    :on-change #(==> [::events/set-city-filter %])}]]
 
      ;; Admins filter
      [filter-layout {}
@@ -128,7 +119,8 @@
           :value     area-max
           :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
 
-(defn pagination [{:keys [tr page page-size page-sizes total change-page-size?]}]
+(defn pagination
+  [{:keys [tr page page-size page-sizes total change-page-size?] :as props}]
   [mui/table-pagination
    (merge
     {:component             "div"
@@ -149,20 +141,24 @@
       {:rows-per-page-options   (clj->js page-sizes)
        :on-change-rows-per-page #(==> [::events/change-result-page-size
                                        (-> %1 .-target .-value)])
-       :label-rows-per-page     (tr :search/page-size)}))])
+       :label-rows-per-page     (tr :search/page-size)})
+    props)])
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [in-progress?    (<== [::subs/in-progress?])
-        search-str      (<== [::subs/search-string])
-        results         (<== [::subs/search-results-list])
-        total           (<== [::subs/search-results-total-count])
-        result-view     (<== [::subs/search-results-view])
-        sort-opts       (<== [::subs/sort-opts])
-        filters-active? (<== [::subs/filters-active?])
-        pagination-opts (<== [::subs/pagination])
-        page-sizes      (-> pagination-opts :page-sizes)
-        page-size       (-> pagination-opts :page-size)
-        page            (-> pagination-opts :page)]
+  (let [in-progress?     (<== [::subs/in-progress?])
+        search-str       (<== [::subs/search-string])
+        results          (<== [::subs/search-results-list])
+        total            (<== [::subs/search-results-total-count])
+        result-view      (<== [::subs/search-results-view])
+        sort-opts        (<== [::subs/sort-opts])
+        filters-active?  (<== [::subs/filters-active?])
+        pagination-opts  (<== [::subs/pagination])
+        selected-columns (<== [::subs/selected-results-table-columns])
+        headers          (<== [::subs/results-table-headers])
+        specs            (<== [::subs/results-table-specs])
+        page-sizes       (-> pagination-opts :page-sizes)
+        page-size        (-> pagination-opts :page-size)
+        page             (-> pagination-opts :page)]
 
     [mui/grid {:item true :xs 12 :style {:flex 1}}
 
@@ -174,8 +170,7 @@
         "LIPAS"]]]
 
      ;; Second row: Search input and button
-     [mui/grid {:container true :style {:margin-top    "2em"
-                                        :margin-bottom "1em"}}
+     [mui/grid {:container true :style {:margin-top "2em" :margin-bottom "1em"}}
       [mui/grid {:item true :style {:flex-grow 1}}
        [lui/text-field
         {:value        search-str
@@ -192,17 +187,19 @@
         (tr :search/search)]]]
 
      ;; Third row: filters expansion panel
-     [lui/expansion-panel {:label            (tr :search/filters)
-                           :label-color      "default"
-                           :default-expanded false}
+     [lui/expansion-panel
+      {:label            (tr :search/filters)
+       :label-color      "default"
+       :default-expanded false}
       [filters {:tr tr}]]
 
      ;; 4th row: Results count, clear filters button and result view selectors
-     [mui/grid {:container true :justify "space-between" :align-items "center"
-                :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
+     [mui/grid
+      {:container true :justify "space-between" :align-items "center"
+       :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
       [mui/grid {:item true}
-       [mui/typography {:variant "body2"
-                        :style   {:font-size "0.9rem" :margin-left "0.5em"}}
+       [mui/typography
+        {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
         (tr :search/results-count total)]]
 
       ;; Clear filters button
@@ -238,9 +235,8 @@
      ;; Remaining rows: Results
 
      (if (= :list result-view)
-
        ;; Results list
-       [mui/grid {:container true :direction "row" :align-items "center"}
+       [mui/grid {:container true :direction "row" :justify "center"}
         [mui/grid {:item true :xs 12}
          [pagination
           {:tr                tr
@@ -250,9 +246,13 @@
            :page-sizes        page-sizes
            :change-page-size? true}]]
 
-        [mui/grid {:item true :xs 12}
-         (if in-progress?
-           [mui/circular-progress {:style {:margin-top "1em"}}]
+        (if in-progress?
+          ;; Spinner
+          [mui/grid {:item true}
+           [mui/circular-progress {:style {:margin-top "1em"}}]]
+
+          ;; Results
+          [mui/grid {:item true :xs 12}
            [into [mui/list]
             (for [result results]
               [mui/list-item
@@ -262,7 +262,7 @@
                [mui/list-item-text
                 {:primary   (-> result :name)
                  :secondary (str (-> result :type.name) ", "
-                                 (-> result :location.city.name))}]])])]]
+                                 (-> result :location.city.name))}]])]])]
 
        ;; Results table
        [mui/grid {:container true}
@@ -275,31 +275,49 @@
            :page              page
            :page-size         page-size
            :page-sizes        page-sizes
-           :change-page-size? true}]]
+           :change-page-size? true
+           :style             {:margin-right "2em"}}]]
 
         ;; Rank results close to map center higher
-        [mui/grid {:item true :style {:margin-left "3em"}}
+        [mui/grid {:item true :style {:flex-grow 1}}
          [lui/checkbox
           {:style     {:height "100%"}
            :label     (tr :search/display-closest-first)
            :value     (= :score (:sort-fn sort-opts))
            :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
+        ;; Select table columns
+        [mui/grid {:item true :style {:padding-right "2px"}}
+         [lui/search-results-column-selector
+          {:value     selected-columns
+           :on-change #(==> [::events/select-results-table-columns %])}]]
+
         ;; The table
         [mui/grid {:item true :xs 12}
-         [lui/table
-          {:key              (:sort-fn sort-opts)
-           :in-progress?     in-progress?
-           :items            results
-           :hide-action-btn? true
-           :on-select        #(on-result-click %)
-           :sort-fn          (or (:sort-fn sort-opts) :score)
-           :sort-asc?        (:asc? sort-opts)
-           :on-sort-change   #(==> [::events/change-sort-order %])
-           :headers          [[:score "score" :hidden]
-                              [:name (tr :lipas.sports-site/name)]
-                              [:type.name (tr :type/name)]
-                              [:admin (tr :lipas.sports-site/admin)]
-                              [:owner (tr :lipas.sports-site/owner)]
-                              [:location.city.name (tr :lipas.location/city)]
-                              [:event-date (tr :lipas.sports-site/event-date)]]}]]])]))
+         [lui/table-v2
+          {:key            (:sort-fn sort-opts)
+           :in-progress?   in-progress?
+           :items          results
+           :action-icon    "location_on"
+           :action-label   (tr :map/zoom-to-site)
+           :edit-label     (tr :actions/edit)
+           :save-label     (tr :actions/save)
+           :discard-label  (tr :actions/discard)
+           :on-select      #(on-result-click %)
+           :sort-fn        (or (:sort-fn sort-opts) :score)
+           :sort-asc?      (:asc? sort-opts)
+           :allow-editing? :permission?
+           :allow-saving?  (fn [item]
+                             (->> item
+                                  (reduce
+                                   (fn [res [k v]]
+                                     (if-let [spec (and (or (-> k specs :required?)
+                                                            (some? v))
+                                                        (-> k specs :spec))]
+                                       (conj res (s/valid? spec v))
+                                       (conj res true)))
+                                   [])
+                                  (every? true?)))
+           :on-item-save   #(==> [::events/save-edits %])
+           :on-sort-change #(==> [::events/change-sort-order %])
+           :headers        headers}]]])]))
