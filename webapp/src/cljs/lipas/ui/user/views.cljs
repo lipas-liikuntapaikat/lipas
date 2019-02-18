@@ -123,8 +123,8 @@
         types  (<== [::subs/permission-to-types])
         sites  (<== [::subs/sports-sites (tr)])
 
-        all-types?  (-> user :permissions :all-types?)
-        all-cities? (-> user :permissions :all-cities?)
+        all-types?  (or admin? (-> user :permissions :all-types?))
+        all-cities? (or admin? (-> user :permissions :all-cities?))
 
         locale     (tr)
         card-props {:square true}

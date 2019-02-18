@@ -30,46 +30,49 @@
         [mui/table-head
          (into [mui/table-row (when (and on-select (not hide-action-btn?))
                                 [mui/table-cell ""])]
-               (for [[key header hidden?] headers]
-                 [mui/table-cell {:style    (when hidden? {:display :none})
-                                  :on-click #(do (reset! sort-fn* key)
-                                                 (on-sort-change*))}
-                  [mui/table-sort-label
-                   {:active    (= key @sort-fn*)
-                    :direction (if @sort-asc? "asc" "desc")
-                    :on-click  #(swap! sort-asc? not)}
-                   header]]))]
+               (doall
+                (for [[key header hidden?] headers]
+                  [mui/table-cell {:style    (when hidden? {:display :none})
+                                   :on-click #(do (reset! sort-fn* key)
+                                                  (on-sort-change*))}
+                   [mui/table-sort-label
+                    {:active    (= key @sort-fn*)
+                     :direction (if @sort-asc? "asc" "desc")
+                     :on-click  #(swap! sort-asc? not)}
+                    header]])))]
 
         ;; Body
         (when-not in-progress?
           [mui/table-body
 
            ;; Rows
-           (for [item (if @sort-fn*
-                        (sort-by @sort-fn* (if @sort-asc?
-                                             sort-cmp
-                                             utils/reverse-cmp)
-                                 items)
-                        items)
-                 :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
-             [mui/table-row {:key      id
-                             :on-click (when on-select #(on-select item))
-                             :hover    true}
-              (when (and on-select (not hide-action-btn?))
-                [mui/table-cell {:padding "checkbox"}
-                 [mui/icon-button {:on-click #(on-select item)}
-                  [mui/icon {:color "primary"} action-icon]]])
+           (doall
+            (for [item (if @sort-fn*
+                         (sort-by @sort-fn* (if @sort-asc?
+                                              sort-cmp
+                                              utils/reverse-cmp)
+                                  items)
+                         items)
+                  :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
+              [mui/table-row {:key      id
+                              :on-click (when on-select #(on-select item))
+                              :hover    true}
+               (when (and on-select (not hide-action-btn?))
+                 [mui/table-cell {:padding "checkbox"}
+                  [mui/icon-button {:on-click #(on-select item)}
+                   [mui/icon {:color "primary"} action-icon]]])
 
-              ;; Cells
-              (for [[k _ hidden?] headers
-                    :let          [v (get item k)]]
-                [mui/table-cell
-                 {:style (when hidden? {:display :none})
-                  :key   (str id k)}
-                 [mui/typography
-                  {:style   {:font-size "1em"}
-                   :variant "body1" :no-wrap false}
-                  (utils/display-value v)]])])])]
+               ;; Cells
+               (doall
+                (for [[k _ hidden?] headers
+                      :let          [v (get item k)]]
+                  [mui/table-cell
+                   {:style (when hidden? {:display :none})
+                    :key   (str id k)}
+                   [mui/typography
+                    {:style   {:font-size "1em"}
+                     :variant "body1" :no-wrap false}
+                    (utils/display-value v)]]))]))])]
 
        (when in-progress?
          [mui/grid {:container true :direction "column" :align-items "center"}

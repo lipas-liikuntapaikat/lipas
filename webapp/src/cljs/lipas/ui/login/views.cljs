@@ -76,7 +76,7 @@
          :style      {:margin-top "1em"}
          :full-width true
          :size       "large"
-         :variant    "raised"
+         :variant    "contained"
          :on-click   #(==> [::events/order-magic-link form-data])}
         (tr :login/order-magic-link)]
 
@@ -96,8 +96,7 @@
     [mui/grid {:container true :spacing 16}
 
      ;; Helper text
-     [mui/grid {:item true :xs 12 :style {:padding-top    "1em"
-                                          :padding-bottom "1em"}}
+     [mui/grid {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
       [mui/paper {:style
                   {:background-color mui/gray3
                    :padding          "0.5em 1em 0.5em 1em"}}
@@ -146,7 +145,7 @@
          :style      {:margin-top "1em"}
          :full-width true
          :size       "large"
-         :variant    "raised"
+         :variant    "contained"
          :on-click   #(==> [::events/submit-login-form form-data])}
         (tr :login/login)]
 
