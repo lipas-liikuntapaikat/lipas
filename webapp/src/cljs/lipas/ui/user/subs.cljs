@@ -32,8 +32,8 @@
  ::permission-to-cities
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- (fn [[{:keys [all-cities? cities]} all-cities] _]
-   (if all-cities?
+ (fn [[{:keys [admin? all-cities? cities]} all-cities] _]
+   (if (or admin? all-cities?)
      all-cities
      (select-keys all-cities cities))))
 
@@ -41,8 +41,8 @@
  ::permission-to-types
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.subs/all-types]
- (fn [[{:keys [all-types? types]} all-types] _]
-   (if all-types?
+ (fn [[{:keys [admin? all-types? types]} all-types] _]
+   (if (or admin? all-types?)
      all-types
      (select-keys all-types types))))
 

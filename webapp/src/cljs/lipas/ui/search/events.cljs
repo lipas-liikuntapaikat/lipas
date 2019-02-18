@@ -31,9 +31,22 @@
   {:from (* page page-size)
    :size page-size})
 
+(defn resolve-query-string
+  "`s` is users input to search field. Goal is to transform `s` into ES
+  query-string that returns relevant results for the user. Current
+  implementation appends '*' wildcard after each word. Nil and Empty
+  string generates a match-all query."
+  [s]
+  (if (empty? s)
+    "*"
+    (-> s
+        (string/split #" ")
+        (->> (map #(str % "*"))
+             (string/join " ")))))
+
 (defn ->es-search-body [{:keys [filters string center distance sort
                                 locale pagination]}]
-  (let [string            (or (not-empty string) "*")
+  (let [string            (resolve-query-string string)
         type-codes        (-> filters :type-codes not-empty)
         city-codes        (-> filters :city-codes not-empty)
         area-min          (-> filters :area-min)
@@ -56,7 +69,8 @@
                    {:bool
                     {:must
                      [{:query_string
-                       {:query string}}]}}
+                       {:query            string
+                        :default_operator "AND"}}]}}
                    :functions  (filterv some?
                                         [(when (and lat lon distance)
                                            {:gauss
@@ -209,7 +223,14 @@
  ::set-results-view
  (fn [{:keys [db]} [_ view]]
    {:db         (assoc-in db [:search :results-view] view)
-    :dispatch-n [(when (= :list view) [::reset-sort-order])]}))
+    :dispatch-n [(when (= :list view) [::reset-sort-order])
+                 (when (= :list view) [::change-result-page-size 250])
+                 (when (= :table view) [::change-result-page-size 100])]}))
+
+(re-frame/reg-event-db
+ ::select-results-table-columns
+ (fn [db [_ v]]
+   (assoc-in db [:search :selected-results-table-columns] v)))
 
 (re-frame/reg-event-fx
  ::reset-sort-order
@@ -227,10 +248,9 @@
 (re-frame/reg-event-fx
  ::toggle-sorting-by-distance
  (fn [{:keys [db]} _]
-   {:db       (update-in db [:search :sort :sort-fn] #(if (= % :score)
-                                                        :name
-                                                        :score))
-    :dispatch [::submit-search]}))
+   (let [path [:search :sort :sort-fn]]
+     {:db       (update-in db path #(if (= % :score) :name :score))
+      :dispatch [::submit-search]})))
 
 (re-frame/reg-event-fx
  ::change-result-page
@@ -251,3 +271,22 @@
      {:db (assoc-in db [:search :filters] {:type-codes (-> permissions :types)
                                            :city-codes (-> permissions :cities)})
       :dispatch [::submit-search]})))
+
+(defn- kw->path [kw]
+  (-> kw name (string/split #"\.") (->> (mapv keyword))))
+
+(def data-keys
+  [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
+   :renovation-years :construction-year :location.address :location.postal-code
+   :location.postal-office :location.city.city-code])
+
+(re-frame/reg-event-fx
+ ::save-edits
+ (fn [{:keys [db]} [_ {:keys [lipas-id] :as data}]]
+   (let [d  (->> (select-keys data data-keys)
+                 (reduce (fn [res [k v]] (assoc-in res (kw->path k) v)) {}))
+         s  (get-in db [:sports-sites lipas-id])
+         r  (-> (utils/make-revision s) (cutils/deep-merge d) utils/clean)
+         cb (fn [] [[::submit-search]])]
+     {:dispatch-n
+      [[:lipas.ui.sports-sites.events/commit-rev r false cb]]})))
