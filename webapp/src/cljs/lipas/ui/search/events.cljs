@@ -31,12 +31,17 @@
   {:from (* page page-size)
    :size page-size})
 
-(defn resolve-query-string [s]
+(defn resolve-query-string
+  "`s` is users input to search field. Goal is to transform `s` into ES
+  query-string that returns relevant results for the user. Current
+  implementation appends '*' wildcard after each word. Nil and Empty
+  string generates a match-all query."
+  [s]
   (if (empty? s)
     "*"
     (-> s
         (string/split #" ")
-        (->> (mapv #(str % "*"))
+        (->> (map #(str % "*"))
              (string/join " ")))))
 
 (defn ->es-search-body [{:keys [filters string center distance sort
@@ -243,10 +248,9 @@
 (re-frame/reg-event-fx
  ::toggle-sorting-by-distance
  (fn [{:keys [db]} _]
-   {:db       (update-in db [:search :sort :sort-fn] #(if (= % :score)
-                                                        :name
-                                                        :score))
-    :dispatch [::submit-search]}))
+   (let [path [:search :sort :sort-fn]]
+     {:db       (update-in db path #(if (= % :score) :name :score))
+      :dispatch [::submit-search]})))
 
 (re-frame/reg-event-fx
  ::change-result-page
@@ -269,11 +273,7 @@
       :dispatch [::submit-search]})))
 
 (defn- kw->path [kw]
-  (-> kw
-      name
-      (string/split #"\.")
-      (->>
-       (mapv keyword))))
+  (-> kw name (string/split #"\.") (->> (mapv keyword))))
 
 (def data-keys
   [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
