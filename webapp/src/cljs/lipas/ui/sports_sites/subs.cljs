@@ -24,7 +24,7 @@
                  (let [site (get-in v [:history (:latest v)])]
                    (if (= "active" (:status site))
                      (assoc m k site)
-                     {})))
+                     m)))
                {}
                sites))))
 

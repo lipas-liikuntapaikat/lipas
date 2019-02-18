@@ -76,7 +76,7 @@
      [mui/button
       {:style    {:margin-top "1em"}
        :color    "secondary"
-       :variant  "raised"
+       :variant  "contained"
        :disabled (not (s/valid? :lipas/new-user form-data))
        :size     "large"
        :on-click #(==> [::events/submit-registration-form form-data])}

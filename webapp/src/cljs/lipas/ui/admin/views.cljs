@@ -212,11 +212,9 @@
       (when (= 1 selected-tab)
         [:<>
          [color-selector]
-         [mui/button
-          {:style    {:position "sticky"
-                      :bottom   "1em"
-                      :left     "1em"}
-           :variant  "extendedFab"
+         [mui/fab
+          {:style    {:position "sticky" :bottom "1em" :left "1em"}
+           :variant  "extended"
            :color    "secondary"
            :on-click #(==> [::events/download-new-colors-excel])}
           [mui/icon "save"]
@@ -235,10 +233,9 @@
 
            ;; Add user button
            [mui/grid {:item true :style {:flex-grow 1}}
-            [mui/button
-             {:variant  :fab
-              :color    :secondary
-              :mini     true
+            [mui/fab
+             {:color    "secondary"
+              :size     "small"
               :style    {:margin-top "1em"}
               :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
              [mui/icon "add"]]]
