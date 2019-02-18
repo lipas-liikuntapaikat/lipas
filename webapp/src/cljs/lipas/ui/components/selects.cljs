@@ -219,30 +219,32 @@
       :label-fn  (comp locale :name)
       :on-change on-change}]))
 
-(defn type-selector-single [{:keys [value on-change]}]
+(defn type-selector-single [{:keys [value on-change types]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
-        types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
+        types  (or types
+                   (<== [:lipas.ui.sports-sites.subs/types-by-type-code]))]
     ^{:key value}
     [select
      {:items     types
       :value     value
-      :value-fn  :type-code
-      :label-fn  (comp locale :name)
+      :value-fn  first
+      :label-fn  (comp locale :name second)
       :on-change on-change}]))
 
-(defn city-selector-single [{:keys [value on-change]}]
+(defn city-selector-single [{:keys [value on-change cities]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
-        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
+        cities (or cities
+                   (<== [:lipas.ui.sports-sites.subs/cities-by-city-code]))]
     ^{:key value}
     [select
      {:items     cities
       :value     value
       :style     select-style
       :label     (tr :stats/select-city)
-      :value-fn  :city-code
-      :label-fn  (comp locale :name)
+      :value-fn  first
+      :label-fn  (comp locale :name second)
       :on-change on-change}]))
 
 (defn city-selector [{:keys [value on-change]}]
