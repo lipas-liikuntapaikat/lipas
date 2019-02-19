@@ -83,3 +83,15 @@ window.filesaver = { saveAs };
 // Zipcelx
 import zipcelx from 'zipcelx-es5-cjs';
 window.zipcelx = zipcelx;
+
+// jszip
+import JSZip from './jszip';
+window.JSZip = JSZip;
+
+// jszip-utils
+import JSZipUtils from './jszip_utils';
+window.JSZipUtils = JSZipUtils;
+
+// shp2geojson
+import { loadshp } from './shp2geojson';
+window.shp2geojson = { loadshp };

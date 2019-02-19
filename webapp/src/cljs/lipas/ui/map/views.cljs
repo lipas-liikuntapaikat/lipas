@@ -15,9 +15,76 @@
    [lipas.ui.search.views :as search]
    [reagent.core :as r]))
 
-(defn floating-container [{:keys [top right bottom left style elevation]
-                           :or   {elevation 2}}
-                          & children]
+(defn import-geoms-view []
+  (let [tr       (<== [:lipas.ui.subs/translator])
+        open?    (<== [::subs/import-dialog-open?])
+        encoding (<== [::subs/selected-import-file-encoding])
+        data     (<== [::subs/import-candidates])
+        headers  (<== [::subs/import-candidates-headers])
+        selected (<== [::subs/selected-import-items])]
+
+    [lui/dialog
+     {:title         "Import geoms"
+      :open?         open?
+      :on-save       #(==> [::events/import-geoms (select-keys data selected)])
+      :save-label    "Tuo!"
+      :save-enabled? true
+      :cancel-label  (tr :actions/cancel)
+      :on-close      #(==> [::events/toggle-import-dialog])}
+
+     [mui/grid {:container true :align-items "center"}
+
+      [mui/grid {:item true :xs 6}
+       [:input
+        {:type      "file"
+         :on-change #(==> [::events/import-geoms-from-shape-file (-> %
+                                                                     .-target
+                                                                     .-files)])}]]
+
+      [mui/grid {:item true :xs 6}
+       [lui/select
+        {:items     ["utf-8" "ISO-8859-1"]
+         :label     "Select encoding"
+         :style     {:min-width "120px"}
+         :value     encoding
+         :value-fn  identity
+         :label-fn  identity
+         :on-change #(==> [::events/select-import-file-encoding %])}]]
+
+      [mui/grid {:item true}
+       [mui/table
+
+        ;; Head
+        [mui/table-head
+         (into
+          [mui/table-row
+           [mui/table-cell ""]]
+          (for [[_ label] headers]
+            [mui/table-cell label]))]
+
+        ;; Body
+        (into
+         [mui/table-body]
+
+         ;; Rows
+         (for [[id item] data]
+           (into
+            [mui/table-row
+
+             ;; Fixed checbox column
+             [mui/table-cell
+              [lui/checkbox
+               {:value     (contains? selected id)
+                :on-change #(==> [::events/toggle-import-item id])}]]]
+
+            ;; Rest columns
+            (for [[k _] headers]
+              [mui/table-cell (-> item :properties k)]))))]]]]))
+
+(defn floating-container
+  [{:keys [top right bottom left style elevation]
+    :or   {elevation 2}}
+   & children]
   (into
    [mui/paper
     {:elevation elevation
@@ -35,7 +102,7 @@
             style)}]
    children))
 
-(defn layer-switcher [{:keys [:tr tr]}]
+(defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
                   :maastokartta (tr :map.basemap/maastokartta)
                   :ortokuva     (tr :map.basemap/ortokuva)}
@@ -147,6 +214,9 @@
                    nil)]
 
       [mui/grid {:container true}
+
+       [import-geoms-view]
+
        [mui/grid {:item true :xs 12}
 
         ;; Headline
@@ -250,6 +320,14 @@
                   :color    "default"}
                  [mui/icon {:color "secondary"}
                   "place"]]])
+
+             ;; Import geom
+             (when (and editing? (#{"LineString"} geom-type))
+               [mui/tooltip {:title (tr :map/import-geom)}
+                [mui/fab
+                 {:on-click #(==> [::events/toggle-import-dialog])
+                  :color    "default"}
+                 ".shp"]])
 
              ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))

@@ -7,7 +7,7 @@
 
 (defn table
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
-           action-icon hide-action-btn? on-sort-change in-progress? ]
+           action-icon hide-action-btn? on-sort-change in-progress?]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
