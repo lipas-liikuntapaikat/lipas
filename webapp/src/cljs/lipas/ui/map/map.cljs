@@ -619,15 +619,16 @@
 (defn update-mode! [map-ctx mode]
   (let [update? (= (-> map-ctx :mode :name) (:name mode))
         map-ctx (case (:name mode)
-                  :default (if update?
-                             (update-default-mode! map-ctx mode)
-                             (set-default-mode! map-ctx mode))
-                  :editing (if update?
-                             (update-editing-mode! map-ctx mode)
-                             (set-editing-mode! map-ctx mode))
-                  :adding  (if update?
-                             (update-adding-mode! map-ctx mode)
-                             (set-adding-mode! map-ctx mode)))]
+                  :default   (if update?
+                               (update-default-mode! map-ctx mode)
+                               (set-default-mode! map-ctx mode))
+                  :editing   (if update?
+                               (update-editing-mode! map-ctx mode)
+                               (set-editing-mode! map-ctx mode))
+                  :adding    (if update?
+                               (update-adding-mode! map-ctx mode)
+                               (set-adding-mode! map-ctx mode))
+                  :importing map-ctx)]
     (assoc map-ctx :mode mode)))
 
 (defn map-inner []

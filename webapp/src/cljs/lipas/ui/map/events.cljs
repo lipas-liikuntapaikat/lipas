@@ -2,7 +2,7 @@
   (:require
    proj4
    ["ol"]
-   [lipas.ui.utils :as utils]
+   [lipas.ui.utils :refer [==>] :as utils]
    [re-frame.core :as re-frame]))
 
 ;; Width and height are in meters when using EPSG:3067 projection
@@ -139,3 +139,49 @@
  ::toggle-drawer
  (fn [db _]
    (update-in db [:map :drawer-open?] not)))
+
+;; Import geoms ;;
+
+(re-frame/reg-event-db
+ ::toggle-import-dialog
+ (fn [db _]
+   (let [close? (-> db :map :import :dialog-open?)]
+     (-> db
+         (update-in [:map :import :dialog-open?] not)
+         (assoc-in [:map :mode :name] (if close? :editing :importing))))))
+
+(re-frame/reg-event-db
+ ::select-import-file-encoding
+ (fn [db [_ encoding]]
+   (assoc-in db [:map :import :selected-encoding] encoding)))
+
+(re-frame/reg-event-db
+ ::set-import-candidates
+ (fn [db [_ geoJSON]]
+   (assoc-in db [:map :import :data] (js->clj geoJSON :keywordize-keys true))))
+
+(re-frame/reg-event-fx
+ ::import-geoms-from-shape-file
+ (fn [{:keys [db]} [_ files]]
+   (let [enc (-> db :map :import :selected-encoding)
+         f   (aget files 0)
+         cb  (fn [data] (==> [::set-import-candidates data]))]
+     (js/shp2geojson.loadshp #js{:url f :encoding enc} cb))
+   {:dispatch [::toggle-import-dialog]}))
+
+(re-frame/reg-event-db
+ ::toggle-import-item
+ (fn [db [_ id]]
+   (let [path [:map :import :selected-items]
+         selected (set (get-in db path))
+         op       (if (contains? selected id) disj conj)]
+     (assoc-in db path (op selected id)))))
+
+(re-frame/reg-event-fx
+ ::import-geoms
+ (fn [{:keys [db]} [_ data]]
+   (let [lipas-id (-> db :map :mode :lipas-id)
+         fcoll    {:type     "FeatureCollection"
+                   :features (into [] (->> data vals (map #(dissoc % :properties))))}]
+     {:db         (assoc-in db [:map :mode :geoms] fcoll)
+      :dispatch-n [[::update-geometries lipas-id fcoll]]})))

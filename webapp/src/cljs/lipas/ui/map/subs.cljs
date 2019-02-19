@@ -81,3 +81,43 @@
  ::drawer-open?
  (fn [db _]
    (-> db :map :drawer-open?)))
+
+
+;; Import geoms ;;
+
+(re-frame/reg-sub
+ ::import-dialog-open?
+ (fn [db _]
+   (-> db :map :import :dialog-open?)))
+
+(re-frame/reg-sub
+ ::selected-import-file-encoding
+ (fn [db _]
+   (-> db :map :import :selected-encoding)))
+
+(re-frame/reg-sub
+ ::import-data
+ (fn [db _]
+   (-> db :map :import :data)))
+
+(re-frame/reg-sub
+ ::import-candidates
+ :<- [::import-data]
+ (fn [data _]
+   (reduce
+    (fn [res f]
+      (assoc res (gensym) f))
+    {}
+    (:features data))))
+
+(re-frame/reg-sub
+ ::import-candidates-headers
+ :<- [::import-data]
+ (fn [data _]
+   (-> data :features first :properties
+       (->> (mapv (juxt first (comp name first)))))))
+
+(re-frame/reg-sub
+ ::selected-import-items
+ (fn [db _]
+   (-> db :map :import :selected-items)))
