@@ -12,6 +12,9 @@
           "city-main-owner"        {:fi "Kuntaenemmistöinen yritys"
                                     :en "City main owner"
                                     :se nil}
+          "municipal-consortium"   {:fi "Kuntayhtymä"
+                                    :en "Municipal consortium"
+                                    :se "Samkommun"}
           "foundation"             {:fi "Säätiö"
                                     :en "Foundation"
                                     :se nil}
