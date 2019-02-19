@@ -46,7 +46,7 @@
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
-            [lein-ring "0.12.4"]
+            [lein-ring "0.12.5"]
             [migratus-lein "0.7.0"]]
 
   :ring {:handler      lipas.dev/dev-handler
