@@ -142,7 +142,7 @@
        :on-change-rows-per-page #(==> [::events/change-result-page-size
                                        (-> %1 .-target .-value)])
        :label-rows-per-page     (tr :search/page-size)})
-    props)])
+    (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
 
 (defn search-view [{:keys [tr on-result-click]}]
   (let [in-progress?     (<== [::subs/in-progress?])
