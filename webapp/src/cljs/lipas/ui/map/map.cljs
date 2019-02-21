@@ -308,16 +308,11 @@
      :interactions* {:select select :hover hover}
      :overlays      {:popup popup-overlay}}))
 
-(defn- resolve-padding [screen-size]
-  (case screen-size
-    ("xs") #js[0 0 0 0]
-    #js[0 0 0 430]))
-
 (defn fit-to-extent!
   [{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent]
-  (let [screen-size (-> map-ctx :mode :screen-size)]
+  (let [padding (-> map-ctx :mode :content-padding)]
     (.fit view extent #js{:size                (.getSize lmap)
-                          :padding             (resolve-padding screen-size)
+                          :padding             (clj->js padding)
                           :constrainResolution false
                           :nearest             false}))
   map-ctx)
