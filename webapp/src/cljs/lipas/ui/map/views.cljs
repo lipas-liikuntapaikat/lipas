@@ -40,13 +40,17 @@
       [mui/grid {:container true :align-items "center"}
 
        ;; File selector
-       [mui/grid {:item true :xs 6}
+       [mui/grid {:item true :xs 12 :md 6 :lg 4}
         [:input
          {:type      "file"
           :on-change #(==> [::events/load-shape-file (-> % .-target .-files)])}]]
 
+       [mui/grid {:item true :xs 12 :md 6 :lg 4}
+        [mui/typography
+         (tr :map.import/supported-formats ["Shapefile (.zip)" "kml" "gpx"])]]
+
        ;; File encoding selector
-       [mui/grid {:item true :xs 6}
+       [mui/grid {:item true :xs 12 :md 6 :lg 4}
         [lui/select
          {:items     ["utf-8" "ISO-8859-1"]
           :label     (tr :map.import/select-encoding)
@@ -530,7 +534,8 @@
                      ;; Supported formats helper text
                      [mui/grid {:item true :xs 12}
                       [mui/typography {:variant "body2"}
-                       (tr :map.import/supported-formats ["Shapefile"])]]
+                       (tr :map.import/supported-formats ["Shapefile (.zip)"
+                                                          ".kml" ".gpx"])]]
 
                      ;; Open import dialog button
                      [mui/grid {:item true}

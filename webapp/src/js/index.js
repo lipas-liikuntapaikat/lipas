@@ -95,3 +95,7 @@ window.JSZipUtils = JSZipUtils;
 // shp2geojson
 import { loadshp } from './shp2geojson';
 window.shp2geojson = { loadshp };
+
+// togeojson (KML,GPX)
+import toGeoJSON from '@mapbox/togeojson';
+window.toGeoJSON = toGeoJSON;
