@@ -13,6 +13,7 @@
   "author": "University of Jyväskylä, Valtteri Harmainen",
   "license": "ISC",
   "dependencies": {
+    "@mapbox/togeojson": "^0.16.0",
     "file-saver": "^2.0.0",
     "ol": "^5.3.0",
     "ol-ext": "^3.0.2",

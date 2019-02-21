@@ -640,7 +640,8 @@
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
     :select-encoding   "Valitse merkistö"
     :replace-existing? "Korvaa nykyiset geometriat"
-    :import-selected   "Tuo valitut"}
+    :import-selected   "Tuo valitut"
+    :unknown-format    "Tuntematon tiedostopääte '{1}'"}
 
    :map.basemap
    {:taustakartta "Taustakartta"

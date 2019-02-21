@@ -1,8 +1,11 @@
 (ns lipas.ui.map.events
   (:require
-   proj4
    ["ol"]
+   [clojure.string :as string]
+   [goog.object :as gobj]
+   [goog.string.path :as gpath]
    [lipas.ui.utils :refer [==>] :as utils]
+   proj4
    [re-frame.core :as re-frame]))
 
 ;; Width and height are in meters when using EPSG:3067 projection
@@ -179,14 +182,38 @@
                      {}))]
      (assoc-in db [:map :import :data] fs))))
 
+(defn- xml->GeoJSON [file ext enc cb]
+  (let [reader (js/FileReader.)
+        parser (js/DOMParser.)
+        cb     (fn [e]
+                 (let [text (-> e .-target .-result)
+                       dom  (.parseFromString parser text "text/xml")
+                       fun  (if (= "gpx" ext) js/toGeoJSON.gpx js/toGeoJSON.kml)]
+                   (cb (fun dom))))]
+    (set! (.-onload reader) cb)
+    (.readAsText reader file enc)))
+
 (re-frame/reg-event-fx
  ::load-shape-file
  (fn [{:keys [db]} [_ files]]
    (let [enc  (-> db :map :import :selected-encoding)
          file (aget files 0)
+         ext  (-> file
+                  (gobj/get "name" "")
+                  gpath/extension
+                  string/lower-case)
          cb   (fn [data] (==> [::set-import-candidates data]))]
-     (js/shp2geojson.loadshp #js{:url file :encoding enc} cb))
-   {}))
+     (prn ext)
+     (if (#{"zip" "kml" "gpx"} ext)
+         (do
+           (case ext
+             "zip"         (js/shp2geojson.loadshp #js{:url file :encoding enc} cb)
+             ("kml" "gpx") (xml->GeoJSON file ext enc cb))
+           {})
+         {:dispatch-n [(let [tr (-> db :translator)]
+                         [:lipas.ui.events/set-active-notification
+                          {:message  (tr :map.import/unknown-format ext)
+                           :success? false}])]}))))
 
 (re-frame/reg-event-db
  ::select-import-items
