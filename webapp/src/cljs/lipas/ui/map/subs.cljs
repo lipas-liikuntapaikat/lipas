@@ -54,9 +54,10 @@
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
  (fn [[screen-size drawer-open?] _]
-   (if (and (#{"xs"} screen-size) (not drawer-open?))
-     [0 0 0 0]
-     [0 0 0 430])))
+   (let [margin 20]
+     (if (and (#{"xs"} screen-size) (not drawer-open?))
+       [margin margin margin margin]
+       [margin margin margin (+ margin 430)])))) ;; drawer width is 430px
 
 (re-frame/reg-sub
  ::mode*
