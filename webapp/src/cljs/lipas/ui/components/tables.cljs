@@ -1,6 +1,7 @@
 (ns lipas.ui.components.tables
   (:require
    [lipas.ui.components.buttons :as buttons]
+   [lipas.ui.components.checkboxes :as checkboxes]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :as utils]
    [reagent.core :as r]))
@@ -83,7 +84,7 @@
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
            action-icon hide-action-btn? action-label on-sort-change
            in-progress?  allow-editing? on-item-save edit-label
-           save-label discard-label allow-saving?]
+           save-label discard-label allow-saving? multi-select?]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
@@ -92,9 +93,11 @@
            on-sort-change   :default
            on-item-save     #(prn "Item save clicked!" %)
            allow-editing?   (constantly false)
-           allow-saving?    (constantly false)}}]
+           allow-saving?    (constantly false)
+           multi-select?    false}}]
 
   (r/with-let [key-fn*         (or key-fn (constantly nil))
+               selected        (r/atom {})
                sort-fn*        (r/atom sort-fn)
                sort-asc?       (r/atom sort-asc?)
                on-sort-change* #(on-sort-change {:sort-fn @sort-fn*
@@ -136,7 +139,6 @@
                    label]]))]
 
         ;; Body
-        ;; (when-not in-progress?)
         [mui/table-body
 
          ;; Rows
@@ -173,12 +175,25 @@
 
                   [mui/grid {:container true :wrap "nowrap"}
 
-                   (when (and on-select (not hide-action-btn?))
+                   (if multi-select?
+
                      [mui/grid {:item true}
-                      [mui/tooltip {:title action-label}
-                       [mui/icon-button
-                        {:on-click #(on-select item)}
-                        [mui/icon action-icon]]]])
+                      [checkboxes/checkbox
+                       {:value     (@selected id)
+                        :on-change (fn []
+                                     (let [vs (swap! selected update id not)]
+                                       (on-select (reduce
+                                                   (fn [res [k v]]
+                                                     (if v (conj res k) res))
+                                                   #{}
+                                                   vs))))}]]
+
+                     (when (and on-select (not hide-action-btn?))
+                       [mui/grid {:item true}
+                        [mui/tooltip {:title action-label}
+                         [mui/icon-button
+                          {:on-click #(on-select item)}
+                          [mui/icon action-icon]]]]))
 
                    (when (allow-editing? item)
                      [mui/grid {:item true}

@@ -104,20 +104,22 @@
  ::import-candidates
  :<- [::import-data]
  (fn [data _]
-   (reduce
-    (fn [res f]
-      (assoc res (gensym) f))
-    {}
-    (:features data))))
+   data))
 
 (re-frame/reg-sub
  ::import-candidates-headers
  :<- [::import-data]
  (fn [data _]
-   (-> data :features first :properties
-       (->> (mapv (juxt first (comp name first)))))))
+   (when (not-empty data)
+         (-> data keys first data :properties
+             (->> (mapv (juxt first (comp #(assoc {} :label %)  name first))))))))
 
 (re-frame/reg-sub
  ::selected-import-items
  (fn [db _]
    (-> db :map :import :selected-items)))
+
+(re-frame/reg-sub
+ ::replace-existing-geoms?
+ (fn [db _]
+   (-> db :map :import :replace-existing?)))

@@ -41,27 +41,23 @@
   (let [btn-props (-> props
                       (dissoc :active?)
                       (merge {:on-click on-click}))]
-    ;; Mui will complain if tooltip is bound to disabled button unless
-    ;; there's a wrapper component. Therefore :span is here.
-    [:span
-     [mui/tooltip {:title (or tooltip "") :placement "top"}
-      [mui/fab btn-props
-       [mui/icon "edit_icon"]]]]))
+    [mui/tooltip {:title (or tooltip "") :placement "top"}
+     [mui/fab btn-props
+      [mui/icon "edit_icon"]]]))
 
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
-                    :or   {color "secondary"}
-                    :as   props}]
+                    :or   {color "secondary"} :as props}]
   [mui/tooltip {:title (if disabled disabled-tooltip "") :placement "top"}
-   [mui/fab
-    (merge
-     (dissoc props :disabled-tooltip :color)
-     {:disabled disabled
-      :on-click on-click
-      :variant  "extended"
-      :color    color})
-    tooltip
-    [mui/icon {:style {:margin-left "0.25em"}}
-     "save_icon"]]])
+   ;; Mui will complain if tooltip is bound to disabled button unless
+   ;; there's a wrapper component. Therefore :span is here.
+   [:span
+    [mui/fab
+     (merge
+      (dissoc props :disabled-tooltip :color)
+      {:disabled disabled :on-click on-click :variant "extended" :color color})
+     tooltip
+     [mui/icon {:style {:margin-left "0.25em"}}
+      "save_icon"]]]])
 
 (defn publish-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title "" :placement "top"}
