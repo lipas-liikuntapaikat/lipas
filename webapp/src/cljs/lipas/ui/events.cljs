@@ -113,3 +113,8 @@
      {:dispatch-n
       [[::navigate (str "/#/" path)]
        [:lipas.ui.energy.events/select-energy-consumption-site lipas-id]]})))
+
+(re-frame/reg-event-db
+ ::set-screen-size
+ (fn [db [_ screen-size]]
+   (assoc db :screen-size screen-size)))

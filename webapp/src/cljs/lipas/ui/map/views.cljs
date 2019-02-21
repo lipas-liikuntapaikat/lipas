@@ -688,6 +688,7 @@
                         (and (= :table result-view)
                              (empty? selected-site)) "100%"
                         :else                        "430px")]
+
     [mui/grid {:container true
                :style     {:height "100%" :width "100%"}}
 

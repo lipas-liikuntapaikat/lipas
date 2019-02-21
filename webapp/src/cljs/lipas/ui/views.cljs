@@ -35,7 +35,7 @@
 (defn show-panel [panel-name tr logged-in?]
   [panels panel-name tr logged-in?])
 
-(defn main-panel []
+(defn main-panel [{:keys [width]}]
   (let [active-panel (<== [::subs/active-panel])
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
@@ -43,6 +43,8 @@
         disclaimer   (<== [::subs/active-disclaimer])
         show-nav?    (<== [::subs/show-nav?])
         tr           (<== [::subs/translator])]
+
+    (==> [::events/set-screen-size width])
 
     [mui/css-baseline
 

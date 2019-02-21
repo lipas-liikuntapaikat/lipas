@@ -50,9 +50,25 @@
           not-empty))))
 
 (re-frame/reg-sub
- ::mode
+ ::content-padding
+ :<- [:lipas.ui.subs/screen-size]
+ :<- [::drawer-open?]
+ (fn [[screen-size drawer-open?] _]
+   (if (and (#{"xs"} screen-size) (not drawer-open?))
+     [0 0 0 0]
+     [0 0 0 430])))
+
+(re-frame/reg-sub
+ ::mode*
  (fn [db _]
    (-> db :map :mode)))
+
+(re-frame/reg-sub
+ ::mode
+ :<- [::content-padding]
+ :<- [::mode*]
+ (fn [[content-padding mode] _]
+   (assoc mode :content-padding content-padding)))
 
 (re-frame/reg-sub
  ::editing-lipas-id
