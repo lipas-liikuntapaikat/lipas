@@ -9,15 +9,23 @@
 (re-frame/reg-event-fx
  ::set-view
  (fn [{:keys [db]} [_ center lonlat zoom extent width height]]
-   {:db       (-> db
-                  (assoc-in [:map :center] {:lat (aget center 1) :lon (aget center 0)})
-                  (assoc-in [:map :center-wgs84] {:lat (aget lonlat 1) :lon (aget lonlat 0)})
-                  (assoc-in [:map :zoom] zoom)
-                  (assoc-in [:map :extent] extent)
-                  (assoc-in [:map :width] width)
-                  (assoc-in [:map :height] height))
-    :dispatch-n [(when (and extent width)
-                   [:lipas.ui.search.events/submit-search])]}))
+   (let [center       {:lat (aget center 1) :lon (aget center 0)}
+         center-wgs84 {:lat (aget lonlat 1) :lon (aget lonlat 0)}]
+     {:db (-> db
+              (assoc-in [:map :center] center)
+              (assoc-in [:map :center-wgs84] center-wgs84)
+              (assoc-in [:map :zoom] zoom)
+              (assoc-in [:map :extent] extent)
+              (assoc-in [:map :width] width)
+              (assoc-in [:map :height] height))
+      :dispatch-n
+      [(when (and extent width)
+         [:lipas.ui.search.events/submit-search])]})))
+
+(re-frame/reg-event-db
+ ::fit-to-current-vectors
+ (fn [db _]
+   (assoc-in db [:map :mode :fit-nonce] (gensym))))
 
 (re-frame/reg-event-fx
  ::zoom-to-site
@@ -89,17 +97,22 @@
                                        :geom-type geom-type}))))
 
 (re-frame/reg-event-db
+ ::continue-editing
+ (fn [db _]
+   (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})))
+
+(re-frame/reg-event-db
  ::stop-editing
  (fn [db [_]]
    (assoc-in db [:map :mode :name] :default)))
 
 (re-frame/reg-event-fx
  ::update-geometries
- (fn [_ [_ lipas-id geoms]]
-   (let [path  [:location :geometries]
+ (fn [{:keys [db]} [_ lipas-id geoms]]
+   (let [path  [:sports-sites lipas-id :editing :location :geometries]
          geoms (update geoms :features
                        (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geoms]})))
+     {:db (assoc-in db path geoms)})))
 
 (re-frame/reg-event-db
  ::start-adding-geom
@@ -145,10 +158,7 @@
 (re-frame/reg-event-db
  ::toggle-import-dialog
  (fn [db _]
-   (let [close? (-> db :map :import :dialog-open?)]
-     (-> db
-         (update-in [:map :import :dialog-open?] not)
-         (assoc-in [:map :mode :name] (if close? :editing :importing))))))
+   (update-in db [:map :import :dialog-open?] not)))
 
 (re-frame/reg-event-db
  ::select-import-file-encoding
@@ -158,30 +168,61 @@
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON]]
-   (assoc-in db [:map :import :data] (js->clj geoJSON :keywordize-keys true))))
+   (let [fcoll (js->clj geoJSON :keywordize-keys true)
+         fs    (->> fcoll
+                    :features
+                    (filter (comp #{"LineString"} :type :geometry))
+                    (reduce
+                     (fn [res f]
+                       (let [id (gensym)]
+                         (assoc res id (assoc-in f [:properties :id] id))))
+                     {}))]
+     (assoc-in db [:map :import :data] fs))))
 
 (re-frame/reg-event-fx
- ::import-geoms-from-shape-file
+ ::load-shape-file
  (fn [{:keys [db]} [_ files]]
-   (let [enc (-> db :map :import :selected-encoding)
-         f   (aget files 0)
-         cb  (fn [data] (==> [::set-import-candidates data]))]
-     (js/shp2geojson.loadshp #js{:url f :encoding enc} cb))
-   {:dispatch [::toggle-import-dialog]}))
+   (let [enc  (-> db :map :import :selected-encoding)
+         file (aget files 0)
+         cb   (fn [data] (==> [::set-import-candidates data]))]
+     (js/shp2geojson.loadshp #js{:url file :encoding enc} cb))
+   {}))
 
 (re-frame/reg-event-db
- ::toggle-import-item
- (fn [db [_ id]]
-   (let [path [:map :import :selected-items]
-         selected (set (get-in db path))
-         op       (if (contains? selected id) disj conj)]
-     (assoc-in db path (op selected id)))))
+ ::select-import-items
+ (fn [db [_ ids]]
+   (assoc-in db [:map :import :selected-items] (set ids))))
+
+(re-frame/reg-event-db
+ ::toggle-replace-existing-selection
+ (fn [db _]
+   (update-in db [:map :import :replace-existing?] not)))
 
 (re-frame/reg-event-fx
- ::import-geoms
- (fn [{:keys [db]} [_ data]]
-   (let [lipas-id (-> db :map :mode :lipas-id)
+ ::import-selected-geoms
+ (fn [{:keys [db]} _]
+   (let [ids      (-> db :map :import :selected-items)
+         replace? (-> db :map :import :replace-existing?)
+         data     (select-keys (-> db :map :import :data) ids)
+         fcoll    {:type     "FeatureCollection"
+                   :features (into [] cat
+                                   [(when-not replace?
+                                      (-> db :map :mode :geoms :features))
+                                    (->> data vals (map #(dissoc % :properties)))])}]
+     {:db         (-> db
+                      (assoc-in [:map :mode :geoms] fcoll)
+                      (assoc-in [:map :mode :sub-mode] :importing))
+      :dispatch-n [[::toggle-import-dialog]
+                   [::select-import-items #{}]]})))
+
+(re-frame/reg-event-fx
+ ::import-selected-geoms-to-new
+ (fn [{:keys [db]} _]
+   (let [ids      (-> db :map :import :selected-items)
+         data     (select-keys (-> db :map :import :data) ids)
          fcoll    {:type     "FeatureCollection"
                    :features (into [] (->> data vals (map #(dissoc % :properties))))}]
      {:db         (assoc-in db [:map :mode :geoms] fcoll)
-      :dispatch-n [[::update-geometries lipas-id fcoll]]})))
+      :dispatch-n [[::new-geom-drawn fcoll]
+                   [::toggle-import-dialog]
+                   [::select-import-items #{}]]})))

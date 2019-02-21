@@ -180,9 +180,9 @@
          :on-change    #(==> [::events/update-search-string %])
          :on-key-press (fn [e]
                          (when (= 13 (.-charCode e)) ; Enter
-                           (==> [::events/submit-search])))}]]
+                           (==> [::events/submit-search :fit-view])))}]]
       [mui/grid {:item true}
-       [mui/button {:on-click #(==> [::events/submit-search])}
+       [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
         [mui/icon "search"]
         (tr :search/search)]]]
 

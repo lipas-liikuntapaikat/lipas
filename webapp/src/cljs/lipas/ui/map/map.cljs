@@ -227,11 +227,13 @@
                            :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors (ol.layer.Vector.
-              #js{:source (ol.source.Vector.)
-                  :style  feature-style})
+              #js{:source     (ol.source.Vector.)
+                  :style      feature-style
+                  :renderMode "image"})
     :edits   (ol.layer.Vector.
               #js{:source (ol.source.Vector.)
-                  :style  #js[edit-style vertices-style]})}})
+                  :style  #js[edit-style vertices-style]
+                  :renderMode "vector"})}})
 
 (defn init-map! [{:keys [center zoom]}]
   (let [layers (init-layers)
@@ -303,9 +305,22 @@
      ;; them because it causes buggy behavior. We keep refs to
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
-     :interactions* {:select select
-                     :hover  hover}
+     :interactions* {:select select :hover hover}
      :overlays      {:popup popup-overlay}}))
+
+(defn- resolve-padding [screen-size]
+  (case screen-size
+    ("xs") #js[0 0 0 0]
+    #js[0 0 0 430]))
+
+(defn fit-to-extent!
+  [{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent]
+  (let [screen-size (-> map-ctx :mode :screen-size)]
+    (.fit view extent #js{:size                (.getSize lmap)
+                          :padding             (resolve-padding screen-size)
+                          :constrainResolution false
+                          :nearest             false}))
+  map-ctx)
 
 ;; Popups are rendered 'outside' OpenLayers by React so we need to
 ;; inform the outside world.
@@ -313,8 +328,7 @@
   (==> [::events/show-popup nil])
   map-ctx)
 
-(defn update-geoms! [{:keys [^js/ol.View view ^js.ol.Map lmap layers]
-                      :as   map-ctx} geoms]
+(defn update-geoms! [{:keys [layers] :as map-ctx} geoms]
   (let [vectors (-> layers :overlays :vectors)
         source  (.getSource vectors)]
 
@@ -325,11 +339,6 @@
     (doseq [g    geoms
             :let [fs (-> g clj->js ->ol-features)]]
       (.addFeatures source fs))
-
-    ;; Fit view to features extent
-    (when (and geoms false)
-      (.fit view (.getExtent source) #js{:size    (.getSize lmap)
-                                         :nearest true}))
 
     (assoc map-ctx :geoms geoms)))
 
@@ -464,7 +473,8 @@
       (-> new-ctx
           (assoc-in [:interactions :modify] modify)
           (assoc-in [:interactions :hover] hover)
-          enable-snapping!))))
+          enable-snapping!
+          (fit-to-extent! (.getExtent source))))))
 
 (defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
                            on-modifyend]
@@ -549,11 +559,11 @@
 (defn set-adding-mode! [map-ctx mode]
   (let [map-ctx (clear-interactions! map-ctx)]
     (case (:sub-mode mode)
-      :drawing  (start-drawing! map-ctx (:geom-type mode)
-                                (fn [f] (==> [::events/new-geom-drawn f])))
-      :editing  (start-editing! map-ctx (:geom mode)
-                                (fn [f] (==> [::events/update-new-geom f])))
-      :finished (show-feature! map-ctx (:geom mode)))))
+      :drawing   (start-drawing! map-ctx (:geom-type mode)
+                                 (fn [f] (==> [::events/new-geom-drawn f])))
+      :editing   (start-editing! map-ctx (:geom mode)
+                                 (fn [f] (==> [::events/update-new-geom f])))
+      :finished  (show-feature! map-ctx (:geom mode)))))
 
 (defn update-adding-mode! [map-ctx mode]
   (let [old-mode (:mode map-ctx)]
@@ -564,13 +574,31 @@
 (defn continue-editing! [{:keys [layers] :as map-ctx} on-modifyend]
   (let [layer (-> layers :overlays :edits)
         fs    (-> layer .getSource .getFeatures ->geoJSON-clj)]
-    (start-editing! map-ctx fs on-modifyend)))
+    (-> map-ctx
+        clear-edits!
+        (start-editing! fs on-modifyend))))
+
+(defn refresh-edits!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id geoms]}]
+  (let [source   (-> layers :overlays :edits .getSource)
+        features (-> geoms clj->js ->ol-features)]
+
+    ;; Remove existing features
+    (doseq [f (.getFeatures source)]
+      (.removeFeature source f))
+
+    ;; Add geoms from props
+    (.addFeatures source features)
+    (==> [::events/update-geometries lipas-id geoms])
+    (==> [:lipas.ui.map.events/continue-editing])
+    map-ctx))
 
 ;; Editing existing features
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode]} continue?]
+  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode] :as mode} continue?]
    (let [map-ctx      (clear-interactions! map-ctx)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
@@ -585,7 +613,8 @@
                        (start-editing-site! map-ctx lipas-id geoms on-modifyend))
        :deleting     (-> map-ctx
                          ;;(continue-editing! on-modifyend)
-                         (enable-delete! on-modifyend))))))
+                         (enable-delete! on-modifyend))
+       :importing    (refresh-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx mode]
   (let [old-mode (:mode map-ctx)]
@@ -604,16 +633,18 @@
       (select-sports-site! map-ctx lipas-id)
       map-ctx)))
 
-(defn update-default-mode! [map-ctx mode]
-  (if-let [lipas-id (:lipas-id mode)]
-    (select-sports-site! map-ctx lipas-id)
-    map-ctx))
+(defn update-default-mode!
+  [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce]}]
+  (let [fit? (not= fit-nonce (-> map-ctx :mode :fit-nonce))]
+    (cond-> map-ctx
+      lipas-id (select-sports-site! lipas-id)
+      fit?     (fit-to-extent! (-> layers :overlays :vectors .getSource .getExtent)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)
-                  :default (set-default-mode! map-ctx mode)
-                  :editing (set-editing-mode! map-ctx mode)
-                  :adding  (set-adding-mode! map-ctx mode))]
+                  :default   (set-default-mode! map-ctx mode)
+                  :editing   (set-editing-mode! map-ctx mode)
+                  :adding    (set-adding-mode! map-ctx mode))]
     (assoc map-ctx :mode mode)))
 
 (defn update-mode! [map-ctx mode]
@@ -627,8 +658,7 @@
                                (set-editing-mode! map-ctx mode))
                   :adding    (if update?
                                (update-adding-mode! map-ctx mode)
-                               (set-adding-mode! map-ctx mode))
-                  :importing map-ctx)]
+                               (set-adding-mode! map-ctx mode)))]
     (assoc map-ctx :mode mode)))
 
 (defn map-inner []

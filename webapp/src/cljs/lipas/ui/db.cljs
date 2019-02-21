@@ -157,4 +157,5 @@
     :import
     {:dialog-open?      false
      :selected-encoding "ISO-8859-1"
-     :selected-items    #{}}}})
+     :selected-items    #{}
+     :replace-existing? true}}})

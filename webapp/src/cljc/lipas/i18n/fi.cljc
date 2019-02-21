@@ -1,4 +1,6 @@
-(ns lipas.i18n.fi)
+(ns lipas.i18n.fi
+  (:require
+   [clojure.string :as string]))
 
 ;; Use "Zero-width space" to define where to split long words for
 ;; mobile displays. This is mainly needed in headlines with such words
@@ -611,6 +613,7 @@
     :zoom-to-site       "Näytä kartalla"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
     :zoom-closer        "Zoomaa lähemmäs"
+    :draw-geoms         "Piirrä"
     :draw               (fn [geom-type]
                           (case geom-type
                             "LineString" "Lisää reittiosa"
@@ -627,8 +630,17 @@
                           (case geom-type
                             "LineString" "Poista reittiosa"
                             "Polygon"    "Poista alue"
-                            "Lisää kartalle"))
+                            "Poista osa"))
     :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"}
+
+   :map.import
+   {:headline          "Tuo geometriat"
+    :tooltip           "Tuo tiedostosta"
+    :supported-formats (fn [ss]
+                         (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
+    :select-encoding   "Valitse merkistö"
+    :replace-existing? "Korvaa nykyiset geometriat"
+    :import-selected   "Tuo valitut"}
 
    :map.basemap
    {:taustakartta "Taustakartta"
