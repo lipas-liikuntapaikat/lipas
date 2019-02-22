@@ -631,7 +631,8 @@
                             "LineString" "Poista reittiosa"
                             "Polygon"    "Poista alue"
                             "Poista osa"))
-    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"}
+    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"
+    :download-gpx       "Lataa GPX"}
 
    :map.import
    {:headline          "Tuo geometriat"

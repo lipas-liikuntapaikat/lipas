@@ -3,6 +3,7 @@
    ["ol"]
    [clojure.string :as string]
    [goog.object :as gobj]
+   [goog.string :as gstring]
    [goog.string.path :as gpath]
    [lipas.ui.utils :refer [==>] :as utils]
    proj4
@@ -269,3 +270,28 @@
       :dispatch-n [[::new-geom-drawn fcoll]
                    [::toggle-import-dialog]
                    [::select-import-items #{}]]})))
+
+(defn- add-gpx-props [{:keys [locale types cities site]} feature]
+  (let [city-code (-> site :location :city :city-code)
+        type-code (-> site :type :type-code)
+        props     {:name        (-> site :name)
+                   :type        (get-in types [type-code :name locale])
+                   :city        (get-in cities [city-code :name locale])}]
+    (assoc feature :properties props)))
+
+(re-frame/reg-event-fx
+ ::download-gpx
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [locale  (-> db :translator (apply []))
+         latest  (get-in db [:sports-sites lipas-id :latest])
+         site    (get-in db [:sports-sites lipas-id :history latest])
+         data    {:site   site
+                  :cities (-> db :cities)
+                  :types  (-> db :types)
+                  :locale locale}
+         fname   (gstring/urlEncode (str (:name site) ".gpx"))
+         xml-str (-> site :location :geometries
+                     (update :features #(mapv (partial add-gpx-props data) %))
+                     clj->js
+                     (js/togpx #js{:creator "LIPAS"}))]
+     {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
