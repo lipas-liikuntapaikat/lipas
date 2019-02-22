@@ -267,8 +267,9 @@
 
           ;; Body
           [mui/table-body
+
+           ;; Rows
            (doall
-            ;; Rows
             (for [item items
                   :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
               [mui/table-row {:key id :hover true}
@@ -280,10 +281,11 @@
                                  (reset! selected-item v)))}]]
 
                ;; Cells
-               (for [[k _] headers
-                     :let  [v (get item k)]]
-                 [mui/table-cell {:key (str id k) :padding "dense"}
-                  (utils/display-value v)])]))]]]]
+               (doall
+                (for [[k _] headers
+                      :let  [v (get item k)]]
+                  [mui/table-cell {:key (str id k) :padding "dense"}
+                   (utils/display-value v)]))]))]]]]
 
        ;; Editing tools
        [mui/grid {:item true :xs 10 :class-name :no-print}
@@ -309,10 +311,9 @@
          :style      {:text-align "right"}
          :class-name :no-print}
         [mui/tooltip {:title (or add-tooltip "") :placement "left"}
-         [mui/button
+         [mui/fab
           {:style    {:margin-top "1em"}
            :on-click on-add
-           :variant  "fab"
            :color    "secondary"}
           [mui/icon "add"]]]]])))
 
