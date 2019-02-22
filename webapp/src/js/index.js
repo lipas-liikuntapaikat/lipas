@@ -99,3 +99,7 @@ window.shp2geojson = { loadshp };
 // togeojson (KML,GPX)
 import toGeoJSON from '@mapbox/togeojson';
 window.toGeoJSON = toGeoJSON;
+
+// togpx
+import togpx from 'togpx';
+window.togpx = togpx;

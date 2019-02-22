@@ -44,11 +44,11 @@
 
      [mui/dialog-content
 
-      [mui/grid {:container true}
+      [mui/grid {:container true :spacing 8}
 
        ;; File selector, helpers and encoding selector
        [mui/grid {:item true :xs 12}
-        [mui/grid {:container true :spacing 16 :align-items "center"}
+        [mui/grid {:container true :spacing 16 :align-items "flex-end" :justify "space-between"}
 
          ;; File selector
          [mui/grid {:item true}
@@ -57,23 +57,24 @@
             :accept    (string/join "," import-formats)
             :on-change #(==> [::events/load-geoms-from-file (-> % .-target .-files)])}]]
 
-         ;; File encoding selector
-         [mui/grid {:item true}
-          [lui/select
-           {:items     ["utf-8" "ISO-8859-1"]
-            :style     {:min-width "120px" :margin-right "2em"}
-            :value     encoding
-            :value-fn  identity
-            :label-fn  identity
-            :on-change #(==> [::events/select-import-file-encoding %])}]]
-
          ;; Helper texts
          [mui/grid {:item true}
           [mui/typography {:inline true} (str (tr :help/headline) ":")]
           [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
           [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
           [helper {:label "GPX" :tooltip (tr :map.import/gpx)}]
-          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
+          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]
+
+         ;; File encoding selector
+        [mui/grid {:item true}
+         [lui/select
+          {:items     ["utf-8" "ISO-8859-1"]
+           :label     (tr :map.import/select-encoding)
+           :style     {:min-width "120px"}
+           :value     encoding
+           :value-fn  identity
+           :label-fn  identity
+           :on-change #(==> [::events/select-import-file-encoding %])}]]]]
 
        [mui/grid {:item true :xs 12}
         (when (not-empty data)
@@ -333,7 +334,15 @@
 
             ;; Geom tools
 
-            [;; Zoom to site
+            [;; Download GPX
+             (when (and (not editing?) (#{"LineString"} geom-type))
+               [mui/tooltip {:title (tr :map/download-gpx)}
+                [mui/fab
+                 {:on-click #(==> [::events/download-gpx lipas-id])
+                  :color    "default"}
+                 ".gpx"]])
+
+             ;; Zoom to site
              (when-not editing?
                [mui/tooltip {:title (tr :map/zoom-to-site)}
                 [mui/fab
@@ -348,7 +357,7 @@
                 [mui/fab
                  {:on-click #(==> [::events/toggle-import-dialog])
                   :color    "default"}
-                 ".shp"]])
+                 [mui/icon "cloud_upload"]]])
 
              ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
