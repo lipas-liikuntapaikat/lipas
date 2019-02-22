@@ -308,13 +308,16 @@
      :interactions* {:select select :hover hover}
      :overlays      {:popup popup-overlay}}))
 
+(def finite? (complement infinite?))
+
 (defn fit-to-extent!
   [{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent]
   (let [padding (-> map-ctx :mode :content-padding)]
-    (.fit view extent #js{:size                (.getSize lmap)
-                          :padding             (clj->js padding)
-                          :constrainResolution false
-                          :nearest             false}))
+    (when (every? finite? extent)
+      (.fit view extent #js{:size                (.getSize lmap)
+                            :padding             (clj->js padding)
+                            :constrainResolution false
+                            :nearest             false})))
   map-ctx)
 
 ;; Popups are rendered 'outside' OpenLayers by React so we need to
