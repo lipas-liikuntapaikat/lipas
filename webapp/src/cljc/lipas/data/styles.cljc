@@ -196,8 +196,8 @@
    7000 (->point-style "triangle" "#f8ffa0")})
 
 (def temp-symbols
-  {1530 {:type-code 1530, :fill "#78fefe", :stroke "#000000"},
-   1520 {:type-code 1520, :fill "#d6fef4", :stroke "#707172"},
+  {1530 {:type-code 1530, :fill "#64ffff", :stroke "#000000"},
+   1520 {:type-code 1520, :fill "#c7fef1", :stroke "#707172"},
    2320 {:type-code 2320, :fill "#aaaaff", :stroke "#000000"},
    6130 {:type-code 6130, :fill "#98713d", :stroke "#ee0000"},
    6210 {:type-code 6210, :fill "#d9a440", :stroke "#456d3a"},
@@ -240,8 +240,8 @@
    4840 {:type-code 4840, :fill "#dcc210", :stroke "#aa0000"},
    1510 {:type-code 1510, :fill "#aafbe4", :stroke "#000000"},
    5350 {:type-code 5350, :fill "#5a6561", :stroke "#aa00ff"},
-   4440 {:type-code 4440, :fill "", :stroke "#5fc599"},
-   2520 {:type-code 2520, :fill "#3cd3ff", :stroke "#000000"},
+   4440 {:type-code 4440, :fill "", :stroke "#73c8c6"},
+   2520 {:type-code 2520, :fill "#5edbff", :stroke "#000000"},
    4710 {:type-code 4710, :fill "#7d8860", :stroke "#000000"},
    304  {:type-code 304, :fill "#c4b7a7", :stroke "#004800"},
    4412 {:type-code 4412, :fill "", :stroke "#b366ff"},
@@ -274,7 +274,7 @@
    4640 {:type-code 4640, :fill "#ed50fe", :stroke "#000000"},
    1150 {:type-code 1150, :fill "#637666", :stroke "#000000"},
    2310 {:type-code 2310, :fill "#db5311", :stroke "#000000"},
-   5210 {:type-code 5210, :fill "#1752ff", :stroke "#0055ff"},
+   5210 {:type-code 5210, :fill "#0443ff", :stroke "#0055ff"},
    2380 {:type-code 2380, :fill "#c0c2c3", :stroke "#000000"},
    103  {:type-code 103, :fill "#57fba0", :stroke "#000000"},
    201  {:type-code 201, :fill "#8397de", :stroke "#0055ff"},
