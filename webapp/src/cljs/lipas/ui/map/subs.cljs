@@ -123,13 +123,17 @@
  (fn [data _]
    data))
 
+(def ignored-headers #{"id" "coordTimes"})
+
 (re-frame/reg-sub
  ::import-candidates-headers
  :<- [::import-data]
  (fn [data _]
-   (when (not-empty data)
-         (-> data keys first data :properties
-             (->> (mapv (juxt first (comp #(assoc {} :label %)  name first))))))))
+   (let [->entry (fn [s]
+                   (assoc {} :label s :hidden? (contains? ignored-headers s)))]
+     (when (not-empty data)
+       (-> data keys first data :properties
+           (->> (mapv (juxt first (comp ->entry name first)))))))))
 
 (re-frame/reg-sub
  ::selected-import-items
