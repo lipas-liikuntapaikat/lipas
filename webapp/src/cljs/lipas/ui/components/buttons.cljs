@@ -84,8 +84,7 @@
 
     [:span
      [mui/tooltip
-      {:style     {:color :yellow}
-       :title     (or tooltip "")
+      {:title     (or tooltip "")
        :placement "top"}
       [mui/icon-button
        {:on-click #(if @clicked?
