@@ -182,38 +182,54 @@
                      {}))]
      (assoc-in db [:map :import :data] fs))))
 
-(defn- xml->GeoJSON [file ext enc cb]
+(defn parse-dom [text]
+  (let [parser (js/DOMParser.)]
+    (.parseFromString parser text "text/xml")))
+
+(defn- text->geoJSON [{:keys [file ext enc cb]}]
   (let [reader (js/FileReader.)
-        parser (js/DOMParser.)
         cb     (fn [e]
-                 (let [text (-> e .-target .-result)
-                       dom  (.parseFromString parser text "text/xml")
-                       fun  (if (= "gpx" ext) js/toGeoJSON.gpx js/toGeoJSON.kml)]
-                   (cb (fun dom))))]
+                 (let [text   (-> e .-target .-result)
+                       parsed (condp = ext
+                                "json" (js/JSON.parse text)
+                                "kml"  (-> text parse-dom js/toGeoJSON.kml)
+                                "gpx"  (-> text parse-dom js/toGeoJSON.gpx))]
+                   (cb parsed)))]
     (set! (.-onload reader) cb)
-    (.readAsText reader file enc)))
+    (.readAsText reader file enc)
+    {}))
+
+(defmulti file->geoJSON :ext)
+
+(defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
+  (js/shp2geojson.loadshp #js{:url file :encoding enc} cb))
+
+(defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
+(defmethod file->geoJSON "kml" [params] (text->geoJSON params))
+(defmethod file->geoJSON "json" [params] (text->geoJSON params))
+(defmethod file->geoJSON :default [params] {:unknown (:ext params)})
+
+(defn parse-ext [file]
+  (-> file
+      (gobj/get "name" "")
+      gpath/extension
+      string/lower-case))
 
 (re-frame/reg-event-fx
- ::load-shape-file
+ ::load-geoms-from-file
  (fn [{:keys [db]} [_ files]]
-   (let [enc  (-> db :map :import :selected-encoding)
-         file (aget files 0)
-         ext  (-> file
-                  (gobj/get "name" "")
-                  gpath/extension
-                  string/lower-case)
-         cb   (fn [data] (==> [::set-import-candidates data]))]
-     (prn ext)
-     (if (#{"zip" "kml" "gpx"} ext)
-         (do
-           (case ext
-             "zip"         (js/shp2geojson.loadshp #js{:url file :encoding enc} cb)
-             ("kml" "gpx") (xml->GeoJSON file ext enc cb))
-           {})
-         {:dispatch-n [(let [tr (-> db :translator)]
-                         [:lipas.ui.events/set-active-notification
-                          {:message  (tr :map.import/unknown-format ext)
-                           :success? false}])]}))))
+   (let [file   (aget files 0)
+         params {:enc  (-> db :map :import :selected-encoding)
+                 :file file
+                 :ext  (parse-ext file)
+                 :cb   (fn [data] (==> [::set-import-candidates data]))}]
+
+     (if-let [ext (:unknown (file->geoJSON params))]
+       {:dispatch-n [(let [tr (-> db :translator)]
+                       [:lipas.ui.events/set-active-notification
+                        {:message  (tr :map.import/unknown-format ext)
+                         :success? false}])]}
+       {}))))
 
 (re-frame/reg-event-db
  ::select-import-items

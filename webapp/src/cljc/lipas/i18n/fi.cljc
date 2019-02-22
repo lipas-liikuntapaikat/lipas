@@ -638,6 +638,11 @@
     :tooltip           "Tuo tiedostosta"
     :supported-formats (fn [ss]
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
+    :shapefile         "Tuo .shp .dbf ja .prj tiedostot pakattuna .zip-muotoon."
+    :geoJSON           "Tuo .json tiedosto joka sisältää GeoJSON FeatureCollection
+    objektin. Lähtaineiston pitää olla WGS84 koordinaatistossa."
+    :gpx               "Lähtöaineiston pitää olla WGS84 koordinaatistossa."
+    :kml               "Lähtöaineiston pitää olla WGS84 koordinaatistossa."
     :select-encoding   "Valitse merkistö"
     :replace-existing? "Korvaa nykyiset geometriat"
     :import-selected   "Tuo valitut"

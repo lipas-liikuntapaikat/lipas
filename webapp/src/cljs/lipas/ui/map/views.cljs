@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
   (:require
+   [clojure.string :as string]
    [lipas.ui.components :as lui]
    [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
    [lipas.ui.map.events :as events]
@@ -7,13 +8,19 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.subs :as sports-site-subs]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.ui.search.views :as search]
    [reagent.core :as r]))
+
+(def import-formats [".zip" ".kml" ".gpx" ".json"])
+
+(defn helper [{:keys [label tooltip]}]
+  [mui/tooltip {:title tooltip}
+   [mui/link {:style {:margin "0.5em"} :underline "always"} label]])
 
 (defn import-geoms-view [{:keys [on-import show-replace?]
                           :or   {show-replace? true}}]
@@ -37,32 +44,38 @@
 
      [mui/dialog-content
 
-      [mui/grid {:container true :align-items "center"}
+      [mui/grid {:container true}
 
-       ;; File selector
-       [mui/grid {:item true :xs 12 :md 6 :lg 4}
-        [:input
-         {:type      "file"
-          :on-change #(==> [::events/load-shape-file (-> % .-target .-files)])}]]
+       ;; File selector, helpers and encoding selector
+       [mui/grid {:item true :xs 12}
+        [mui/grid {:container true :spacing 16 :align-items "center"}
 
-       [mui/grid {:item true :xs 12 :md 6 :lg 4}
-        [mui/typography
-         (tr :map.import/supported-formats ["Shapefile (.zip)" "kml" "gpx"])]]
+         ;; File selector
+         [mui/grid {:item true}
+          [:input
+           {:type      "file"
+            :accept    (string/join "," import-formats)
+            :on-change #(==> [::events/load-geoms-from-file (-> % .-target .-files)])}]]
 
-       ;; File encoding selector
-       [mui/grid {:item true :xs 12 :md 6 :lg 4}
-        [lui/select
-         {:items     ["utf-8" "ISO-8859-1"]
-          :label     (tr :map.import/select-encoding)
-          :style     {:min-width "120px"}
-          :value     encoding
-          :value-fn  identity
-          :label-fn  identity
-          :on-change #(==> [::events/select-import-file-encoding %])}]]
+         ;; File encoding selector
+         [mui/grid {:item true}
+          [lui/select
+           {:items     ["utf-8" "ISO-8859-1"]
+            :style     {:min-width "120px" :margin-right "2em"}
+            :value     encoding
+            :value-fn  identity
+            :label-fn  identity
+            :on-change #(==> [::events/select-import-file-encoding %])}]]
 
-       [mui/grid {:item true}
+         ;; Helper texts
+         [mui/grid {:item true}
+          [mui/typography {:inline true} (str (tr :help/headline) ":")]
+          [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
+          [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
+          [helper {:label "GPX" :tooltip (tr :map.import/gpx)}]
+          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
 
-        ;; Import candidates table
+       [mui/grid {:item true :xs 12}
         (when (not-empty data)
           [lui/table-v2
            {:items         (->> data vals (map :properties))
@@ -534,8 +547,7 @@
                      ;; Supported formats helper text
                      [mui/grid {:item true :xs 12}
                       [mui/typography {:variant "body2"}
-                       (tr :map.import/supported-formats ["Shapefile (.zip)"
-                                                          ".kml" ".gpx"])]]
+                       (tr :map.import/supported-formats import-formats)]]
 
                      ;; Open import dialog button
                      [mui/grid {:item true}
