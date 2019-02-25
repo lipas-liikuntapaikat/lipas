@@ -128,7 +128,7 @@
                          filesaver filesaver react              React
                          react-dom ReactDOM  "react-dom/server" ReactDOMServer
                          mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosugges"}}]
+                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "js/compiled/out"
@@ -141,7 +141,7 @@
      :source-paths ["src/cljs" "src/cljc"]
      :compiler
      {:main            lipas.ui.core
-      :verbose         false
+      :verbose         true
       :npm-deps        false
       :infer-externs   true
       :externs         ["src/js/ol_externs.js"]
@@ -155,7 +155,7 @@
                          filesaver filesaver react              React
                          react-dom ReactDOM  "react-dom/server" ReactDOMServer
                          mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosugges"}}]
+                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
       :output-to       "resources/public/js/compiled/app.js"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}
