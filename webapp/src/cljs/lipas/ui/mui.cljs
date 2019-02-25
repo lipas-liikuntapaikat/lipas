@@ -1,7 +1,6 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
   (:require
-   [material-ui]
    [goog.object :as gobj]
    [clojure.string :as s]
    [reagent.core :as r]
@@ -17,7 +16,7 @@
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
-(def create-mui-theme (gobj/get js/MaterialUI "createMuiTheme"))
+(def create-mui-theme (gobj/get js/mui "createMuiTheme"))
 
 (defn ->mui-theme [opts]
   (->> opts
@@ -36,7 +35,7 @@
   [& args]
   (->> args
        (mapv name)
-       (apply (partial gobj/getValueByKeys js/MaterialUI "colors"))))
+       (apply (partial gobj/getValueByKeys js/mui "colors"))))
 
 (def primary "#002957")
 (def secondary "#f1563f")
@@ -108,7 +107,7 @@
 (def jyu-theme-light (->mui-theme jyu-styles-light))
 
 (defn mui->reagent [mui-name]
-  (r/adapt-react-class (gobj/get js/MaterialUI mui-name)))
+  (r/adapt-react-class (gobj/get js/mui mui-name)))
 
 (def css-baseline (mui->reagent "CssBaseline"))
 (def mui-theme-provider (mui->reagent "MuiThemeProvider"))
@@ -184,4 +183,5 @@
 (def fade (mui->reagent "Fade"))
 (def grow (mui->reagent "Grow"))
 (def circular-progress (mui->reagent "CircularProgress"))
-(def with-width* (.withWidth js/MaterialUI))
+
+(def with-width* (.withWidth js/mui))

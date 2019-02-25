@@ -8,6 +8,11 @@
  *
  */
 
+// var proj4 = require('proj4');
+// console.log(proj4);
+
+var proj4 = require('proj4').default;
+
 var geojsonData = {};
 
 // Shapefile parser, following the specification at
