@@ -312,8 +312,8 @@
 
 (defn fit-to-extent!
   [{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent]
-  (let [padding (-> map-ctx :mode :content-padding)]
-    (when (every? finite? extent)
+  (let [padding (or (-> map-ctx :mode :content-padding) #js[0 0 0 0])]
+    (when (and view lmap (some finite? extent))
       (.fit view extent #js{:size                (.getSize lmap)
                             :padding             (clj->js padding)
                             :constrainResolution false
