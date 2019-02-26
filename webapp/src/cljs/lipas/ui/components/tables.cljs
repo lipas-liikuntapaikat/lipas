@@ -209,7 +209,8 @@
 
                 [mui/table-cell
                  {:style    (when hidden? {:display :none})
-                  :on-click #(when-not editing-this? (on-select item))
+                  :on-click #(when (and on-select (not editing-this?))
+                               (on-select item))
                   :key      (str id k editing-this?)}
 
                  (if (and editing-this? (:component form))
