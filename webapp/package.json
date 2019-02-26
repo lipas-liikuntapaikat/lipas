@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "json-loader": "^0.5.7",
+    "webpack-bundle-analyzer": "^3.0.4",
     "webpack-cli": "^3.1.2"
   }
 }

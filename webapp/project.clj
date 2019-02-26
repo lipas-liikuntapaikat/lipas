@@ -15,18 +15,13 @@
                                  [cljsjs/react-dom]
                                  [cljsjs/create-react-class]
                                  [cljsjs/react-dom-server]]]
-
    [re-frame "0.10.6"]
    ;; [ns-tracker "0.3.0"]
    [tongue "0.2.4"]
    [day8.re-frame/http-fx "0.1.6"]
    [cljsjs/google-analytics "2015.04.13-0"]
    [district0x.re-frame/google-analytics-fx "1.0.0"]
-
-   ;; [cljsjs/babel-polyfill "6.20.0-2"]
-   ;; [cljsjs/recharts "1.4.2-0" :exclusions [[cljsjs/react] [cljsjs/react-dom]]]
-   ;; [cljsjs/react-autosuggest "9.3.4-0" :exclusions [[cljsjs/react] [cljsjs/react-dom]]]
-   ;; [cljsjs/proj4 "2.5.0-0"]
+   [cljsjs/babel-polyfill "6.20.0-2"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
@@ -141,7 +136,7 @@
      :source-paths ["src/cljs" "src/cljc"]
      :compiler
      {:main            lipas.ui.core
-      :verbose         true
+      :verbose         false
       :npm-deps        false
       :infer-externs   true
       :externs         ["src/js/ol_externs.js"]
@@ -167,5 +162,4 @@
      {:main          lipas.ui.runner
       :output-to     "resources/public/js/compiled/test.js"
       :output-dir    "resources/public/js/compiled/test/out"
-      :optimizations :none}}]}
-  )
+      :optimizations :none}}]})
