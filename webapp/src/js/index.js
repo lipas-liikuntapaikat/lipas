@@ -1,6 +1,6 @@
 // Proj4
-const _proj4 = require('proj4');
-window.proj4 = _proj4.default;
+import proj4 from 'proj4';
+window.proj4 = proj4;
 
 // OpenLayers
 import {Map, View, Overlay} from 'ol';
@@ -299,9 +299,13 @@ window.recharts = {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  ComposedChart,
   LabelList,
   Legend,
+  Line,
   LineChart,
+  Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
