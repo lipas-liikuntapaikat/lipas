@@ -236,6 +236,15 @@
    :partners
    {:headline (str "Kehittä" ZWSP "misessä mukana")}
 
+   :data-users
+   {:headline      "Lipasta hyödyntävät"
+    :data-user?    "Käytätkö LIPAS-dataa?"
+    :tell-us       "Kerro siitä meille"
+    :email-subject "Mekin käytämme LIPAS-dataa"
+    :email-body    (str "Mukavaa että hyödynnät LIPAS-dataa! "
+                        "Kirjoita tähän kuka olet ja miten hyödynnät lipasta. "
+                        "Käytätkö mahdollisesti jotain rajapinnoistamme?")}
+
    :help
    {:headline "Ohjeet"}
 

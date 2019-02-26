@@ -3,7 +3,7 @@
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [==> navigate!]]
+   [lipas.ui.utils :refer [==> navigate!] :as utils]
    [reagent.core :as r]))
 
 (def links
@@ -26,28 +26,51 @@
    {:img "img/partners/vtt.svg"}
    {:img "img/partners/avi.png"}])
 
-(defn ->logo [{:keys [img full-height?]}]
-  [:img
-   {:style
-    (merge
-     {:margin     "1em"
-      :max-width  "200px"
-      :max-height "100px"}
-     (when full-height? ;; For IE11.
-       {:height "100%"}))
-    :src   img}])
+(def known-users
+  [{:label "Retkikartta.fi" :href "https://www.retkikartta.fi/"}
+   {:label "Paikkatietoikkuna" :href "https://www.paikkatietoikkuna.fi/"}
+   {:label "palvelukartta.hel.fi" :href "https://palvelukartta.hel.fi/"}
+   {:label "Finterest" :href "https://finterest.fi/"}
+   {:label "likiliikkuja.fi" :href "https://likiliikkuja.fi/"}
+   {:label "liiteri" :href "https://liiteri.ymparisto.fi/"}
+   {:label "TEAviisari" :href "https://teaviisari.fi"}
+   {:label "Uimaan.fi" :href "https://uimaan.fi/"}
+   {:label "Me-säätiö" :href "http://data.mesaatio.fi/harrastaminen/"}
+   {:label "kuopio.fi" :href "https://www.kuopio.fi/liikunta-ja-ulkoilukartat"}
+   {:label "Tässä.fi" :href "https://tassa.fi/"}
+   {:label "OKM" :href "https://minedu.fi/liikuntapaikkarakentaminen"}
+   {:label "Tulikartta.fi" :href "https://www.tulikartta.fi/"}
+   {:label "SportVenue" :href "https://www.sportvenue.fi/"}
+   {:label "FCG" :href "http://www.fcg.fi/shvk"}])
 
-(defn footer [tr]
+(defn ->logo [{:keys [img full-height?]}]
+  [mui/grid {:item true}
+   [:img
+    {:style
+     (merge
+      {:margin "1em" :max-width "200px" :max-height "100px"}
+      (when full-height? ;; For IE11.
+        {:height "100%"}))
+     :src img}]])
+
+(defn ->link [{:keys [label href]}]
+  [mui/grid {:item true :md 6 :lg 4}
+   [mui/link {:href href :variant "h5"}
+    label]])
+
+(defn footer [{:keys [title]} & contents]
   (into
-   [mui/grid {:item  true :xs 12
-              :style {:padding "2em" :background-color mui/gray1}}
-    [mui/hidden {:smUp true}
-     [mui/typography {:variant "h4" :style {:opacity 0.7}}
-      (tr :partners/headline)]]
-    [mui/hidden {:xsDown true}
-     [mui/typography {:variant "h3" :style {:opacity 0.7}}
-      (tr :partners/headline)]]]
-   (map ->logo logos)))
+   [mui/grid
+    {:container true :spacing 8 :align-items "center"
+     :style     {:background-color mui/gray1 :padding "2em"}}
+    [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+     [mui/hidden {:smUp true}
+      [mui/typography {:variant "h4" :style {:opacity 0.7}}
+       title]]
+     [mui/hidden {:xsDown true}
+      [mui/typography {:variant "h3" :style {:opacity 0.7}}
+       title]]]]
+   contents))
 
 (defn grid-card [{:keys [title style link link-text xs md lg]
                   :or   {xs 12 md 6 lg 4}} & children]
@@ -237,7 +260,33 @@
          [mui/icon "phone"]]
         [mui/list-item-text "0400 247 980"]]]]]]
 
-   [footer tr]])
+   ;; LIPAS-data users list
+   [footer {:title (tr :data-users/headline)}
+
+    ;; List items
+    (into [:<>] (map ->link known-users))
+
+    ;; Are you also data user? text
+    [mui/grid {:container true :xs 12 :style {:margin-top "2em"}}
+     [mui/grid {:item true :xs 12}
+      [mui/typography {:color "secondary" :variant "h4"}
+       (tr :data-users/data-user?)]]
+
+     ;; Tell us mailto link
+     [mui/grid {:item true :xs 12}
+      [mui/link
+       {:underline "always"
+        :variant   "h6"
+        :href
+        (utils/->mailto
+         {:email   "lipasinfo@jyu.fi"
+          :subject (tr :data-users/email-subject)
+          :body    (tr :data-users/email-body)})}
+       (tr :data-users/tell-us)]]]]
+
+   ;; Partner logos
+   [footer {:title (tr :partners/headline)}
+    (into [:<>] (map ->logo logos))]])
 
 (defn main [tr]
   [create-panel tr])
