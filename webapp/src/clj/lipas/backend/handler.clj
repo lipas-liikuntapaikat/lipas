@@ -172,8 +172,8 @@
         {:middleware [(mw/basic-auth db) mw/auth]
          :handler
          (fn [{:keys [identity]}]
-           {:status 200
-            :body   identity})}}]
+           (core/login! db identity)
+           {:status 200 :body identity})}}]
 
       ["/actions/refresh-login"
        {:get

@@ -48,6 +48,18 @@
     (db/add-user! db user)
     {:status "OK"}))
 
+(defn- add-user-event!
+  ([db user evt-name]
+   (add-user-event! db user evt-name {}))
+  ([db user evt-name data]
+   (let [defaults {:event-date (utils/timestamp) :event evt-name}
+         evt      (merge defaults data)
+         user     (update-in user [:history :events] conj evt)]
+     (db/update-user-history! db user))))
+
+(defn login! [db user]
+  (add-user-event! db user "login"))
+
 (defn register! [db emailer user]
   (add-user! db user)
   (email/send-register-notification! emailer
@@ -61,11 +73,6 @@
     (log/info "Publishing" (count drafts) "drafts from user" id)
     (doseq [draft drafts]
       (db/upsert-sports-site! db user (assoc draft :status "active")))))
-
-;; TODO send email
-(defn update-user-permissions! [db emailer user]
-  (db/update-user-permissions! db user)
-  (publish-users-drafts! db user))
 
 (defn get-user [db identifier]
   (or (db/get-user-by-email db {:email identifier})
@@ -81,6 +88,16 @@
 (defn get-users [db]
   (db/get-users db))
 
+;; TODO send email
+(defn update-user-permissions! [db emailer {:keys [id permissions]}]
+  (let [user      (get-user! db id)
+        old-perms (-> user :permissions)
+        new-user  (assoc user :permissions permissions)]
+    (db/update-user-permissions! db new-user)
+    (publish-users-drafts! db new-user)
+    (add-user-event! db new-user "permissions-updated"
+                     {:from old-perms :to permissions})))
+
 (defn create-magic-link [url user]
   (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
     {:link       (str url "?token=" token)
@@ -89,17 +106,20 @@
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
     (let [params (create-magic-link reset-url user)]
-      (email/send-reset-password-email! emailer email params))
+      (email/send-reset-password-email! emailer email params)
+      (add-user-event! db user "password-reset-link-sent"))
     (throw (ex-info "User not found" {:type :email-not-found}))))
 
 (defn send-magic-link! [db emailer {:keys [user login-url variant]}]
   (let [email      (-> user :email)
         magic-link (create-magic-link login-url user)]
-    (email/send-magic-login-email! emailer email variant magic-link)))
+    (email/send-magic-login-email! emailer email variant magic-link)
+    (add-user-event! db user "magic-link-sent")))
 
 (defn reset-password! [db user password]
   (db/reset-user-password! db (assoc user :password
-                                    (hashers/encrypt password))))
+                                     (hashers/encrypt password)))
+  (add-user-event! db user "password-reset"))
 
 ;;; Sports-sites ;;;
 
