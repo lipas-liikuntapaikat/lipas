@@ -121,7 +121,7 @@
 
 (defn upsert-sports-site!*
   "Should be used only when data is from trusted sources (migrations
-  etc.). Doesn't check if lipas-ids exist or not."
+  etc.). Doesn't check users permissions or if lipas-id exists."
   ([db user sports-site]
    (upsert-sports-site!* db user sports-site false))
   ([db user sports-site draft?]
@@ -148,23 +148,43 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
-(defn enrich
+(defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
   [sports-site]
-  (let [geom      (-> sports-site :location :geometries :features first :geometry)
-        coords    (case (:type geom)
-                    "Point"      (-> geom :coordinates)
-                    "LineString" (-> geom :coordinates first)
-                    "Polygon"    (-> geom :coordinates first first))
-        city-code (-> sports-site :location :city :city-code)
-        type-code (-> sports-site :type :type-code)]
-    (assoc sports-site :search-meta {:location
-                                     {:wgs84-point coords
-                                      :city
-                                      {:name (-> city-code cities :name)}}
-                                     :type
-                                     {:name (-> type-code types :name)}})))
+  (let [geom        (-> sports-site :location :geometries :features first :geometry)
+        coords      (case (:type geom)
+                      "Point"      (-> geom :coordinates)
+                      "LineString" (-> geom :coordinates first)
+                      "Polygon"    (-> geom :coordinates first first))
+        city-code   (-> sports-site :location :city :city-code)
+        type-code   (-> sports-site :type :type-code)
+        search-meta {:location
+                     {:wgs84-point coords
+                      :city        {:name (-> city-code cities :name)}}
+                     :type
+                     {:name (-> type-code types :name)}}]
+    (assoc sports-site :search-meta search-meta)))
+
+(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
+  (-> ice-stadium
+      (assoc-in [:properties :surface-material] [(-> envelope :base-floor-structure)])
+      (assoc-in [:properties :area-m2] (-> building :total-ice-area-m2))
+      utils/clean
+      enrich*))
+
+(defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
+  (-> swimming-pool
+      (assoc-in [:properties :area-m2] (-> building :total-water-area-m2))
+      utils/clean
+      enrich*))
+
+(defmulti enrich (comp :type-code :type))
+(defmethod enrich :default [sports-site] (enrich* sports-site))
+(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
+(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
+(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
+(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
   ([search sports-site]
