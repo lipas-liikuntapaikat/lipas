@@ -1,6 +1,7 @@
 (ns lipas.ui.admin.subs
   (:require
    [clojure.string :as string]
+   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -54,6 +55,20 @@
  ::editing-user
  (fn [db _]
    (get-in db [:admin :editing-user])))
+
+(defn prettify-timestamp [s]
+  (-> s
+      (string/replace "T" " ")
+      (string/split ".")
+      first))
+
+(re-frame/reg-sub
+ ::user-history
+ :<- [::editing-user]
+ (fn [user _]
+   (->> user :history :events
+        (map #(update % :event-date prettify-timestamp))
+        (sort-by :event-date cutils/reverse-cmp))))
 
 (defn ->list-entry [locale [k v]]
   {:value k :label (str (get-in v [:name locale]) " " k)})

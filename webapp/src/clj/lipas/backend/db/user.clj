@@ -3,16 +3,17 @@
    [hugsql.core :as hugsql]
    [lipas.backend.db.utils :as utils]))
 
-(comment (marshall {:kissa_koira "Kana"}))
-(defn marshall [user]
+(defn marshall [{:keys [history] :as user}]
   (-> user
-      (utils/->snake-case-keywords)))
+      (dissoc :history)
+      (utils/->snake-case-keywords)
+      (assoc :history history)))
 
-(comment (unmarshall {:kissa_koira "Kana"}))
-(comment (unmarshall nil))
-(comment (unmarshall {}))
-(defn unmarshall [user]
-  (some-> (not-empty user)
-          (utils/->kebab-case-keywords)))
+(defn unmarshall [{:keys [history] :as user}]
+  (when (not-empty user)
+    (-> user
+        (dissoc :history)
+        (utils/->kebab-case-keywords)
+        (assoc :history history))))
 
 (hugsql/def-db-fns "sql/user.sql")

@@ -293,7 +293,8 @@
     jotka lähetetään ylläpidon hyväksyttäväksi."
     :view-basic-info            "Tarkista perustiedot"
     :report-energy-consumption  "Ilmoita energiankulutus"
-    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"}
+    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"
+    :history                    "Historia"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
@@ -499,7 +500,8 @@
     :dec "Joulukuu"}
 
    :time
-   {:year               "Vuosi"
+   {:time               "Aika"
+    :year               "Vuosi"
     :hour               "Tunti"
     :month              "Kuukausi"
     :start              "Alkoi"
@@ -588,6 +590,7 @@
    {:name         "Nimi"
     :type         "Tyyppi"
     :description  "Kuvaus"
+    :event        "Tapahtuma"
     :general-info "Yleiset tiedot"
     :comment      "Kommentti"
     :structure    "Rakenne"
