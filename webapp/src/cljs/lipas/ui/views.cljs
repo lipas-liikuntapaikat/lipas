@@ -50,18 +50,16 @@
 
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
-      [mui/grid {:container true
-                 :style     (merge
-                             {:flex-direction "column"}
-                             (when-not show-nav?
-                               {:height "100%"}))}
+      [mui/grid
+       {:container true
+        :style (merge {:flex-direction "column" :background-color mui/gray3}
+                      (when-not show-nav? {:height "100%"}))}
 
        ;; Drawer
        [nav/drawer {:tr tr :logged-in? logged-in?}]
 
        ;; Account menu
        [nav/account-menu {:tr tr :logged-in? logged-in?}]
-
 
        ;; Navbar
        (when show-nav?
