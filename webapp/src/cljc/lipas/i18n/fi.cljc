@@ -242,7 +242,7 @@
     :tell-us       "Kerro siitä meille"
     :email-subject "Mekin käytämme LIPAS-dataa"
     :email-body    (str "Mukavaa että hyödynnät LIPAS-dataa! "
-                        "Kirjoita tähän kuka olet ja miten hyödynnät lipasta. "
+                        "Kirjoita tähän kuka olet ja miten hyödynnät Lipasta. "
                         "Käytätkö mahdollisesti jotain rajapinnoistamme?")}
 
    :help

@@ -24,22 +24,12 @@
        clj->js
        create-mui-theme))
 
-(comment (get-color "blue"))
-(comment (get-color :blue "300"))
-(defn get-color
-  "Args can be strings or keywords. Returns all colors if no args are given.
-
-  (get-color)
-  (get-color \"blue\")
-  (get-color :blue \"300\")"
-  [& args]
-  (->> args
-       (mapv name)
-       (apply (partial gobj/getValueByKeys js/mui "colors"))))
-
-(def primary "#002957")
+(def primary "#002957 ")
+(def primary2 "rgb(0, 41, 87, 0.5)")
+(def primary3 "rgb(0, 41, 87, 0.3)")
 (def secondary "#f1563f")
 (def secondary2 "rgba(241, 86, 63, 0.9)")
+(def secondary3 "rgba(241, 86, 63, 0.5)")
 (def gold "#C29A5B")
 (def gray1 "rgba(199, 201, 200, 1.0)")
 (def gray2 "rgba(199, 201, 200, 0.5)")
