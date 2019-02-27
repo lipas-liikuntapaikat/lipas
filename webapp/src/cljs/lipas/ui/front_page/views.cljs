@@ -53,24 +53,26 @@
         {:height "100%"}))
      :src img}]])
 
-(defn ->link [{:keys [label href]}]
+(defn ->link [{:keys [label href color] :or {color "default"}}]
   [mui/grid {:item true :md 6 :lg 4}
-   [mui/link {:href href :variant "h5"}
+   [mui/link {:href href :variant "h5" :color color}
     label]])
 
-(defn footer [{:keys [title]} & contents]
-  (into
-   [mui/grid
-    {:container true :spacing 8 :align-items "center"
-     :style     {:background-color mui/gray1 :padding "2em"}}
-    [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
-     [mui/hidden {:smUp true}
-      [mui/typography {:variant "h4" :style {:opacity 0.7}}
-       title]]
-     [mui/hidden {:xsDown true}
-      [mui/typography {:variant "h3" :style {:opacity 0.7}}
-       title]]]]
-   contents))
+(defn footer
+  [{:keys [title bg-color] :or {bg-color mui/gray1}} & contents]
+  (let [title-style {:opacity 0.7}]
+    (into
+     [mui/grid
+      {:container true :spacing 8 :align-items "center"
+       :style     {:background-color bg-color :padding "2em"}}
+      [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+       [mui/hidden {:smUp true}
+        [mui/typography {:variant "h4" :style title-style}
+         title]]
+       [mui/hidden {:xsDown true}
+        [mui/typography {:variant "h3" :style title-style}
+         title]]]]
+     contents)))
 
 (defn grid-card [{:keys [title style link link-text xs md lg]
                   :or   {xs 12 md 6 lg 4}} & children]
@@ -262,27 +264,22 @@
 
    ;; LIPAS-data users list
    [footer {:title (tr :data-users/headline)}
+    (into [:<>] (map ->link known-users))]
 
-    ;; List items
-    (into [:<>] (map ->link known-users))
-
-    ;; Are you also data user? text
-    [mui/grid {:container true :xs 12 :style {:margin-top "2em"}}
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:color "secondary" :variant "h4"}
-       (tr :data-users/data-user?)]]
-
-     ;; Tell us mailto link
-     [mui/grid {:item true :xs 12}
-      [mui/link
-       {:underline "always"
-        :variant   "h6"
-        :href
-        (utils/->mailto
-         {:email   "lipasinfo@jyu.fi"
-          :subject (tr :data-users/email-subject)
-          :body    (tr :data-users/email-body)})}
-       (tr :data-users/tell-us)]]]]
+   ;; Do you also use LIPAS-data?
+   [footer {:title (tr :data-users/data-user?) :bg-color mui/gray2}
+    ;; Tell us mailto link
+    [mui/grid {:item true :xs 12}
+     [mui/link
+      {:underline "always"
+       :variant   "h6"
+       :color     "secondary"
+       :href
+       (utils/->mailto
+        {:email   "lipasinfo@jyu.fi"
+         :subject (tr :data-users/email-subject)
+         :body    (tr :data-users/email-body)})}
+      (tr :data-users/tell-us)]]]
 
    ;; Partner logos
    [footer {:title (tr :partners/headline)}
