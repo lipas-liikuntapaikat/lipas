@@ -3,29 +3,25 @@
   [;;; Common ;;;
    [org.clojure/clojure "1.10.0"]
    [camel-snake-kebab "0.4.0"]
-   [etaoin "0.2.8-SNAPSHOT"]
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.2.12"]
 
-
    ;;; Frontend ;;;
-   [org.clojure/clojurescript "1.10.439"]
-   [cljsjs/react "16.6.0-0"]
-   [cljsjs/react-dom "16.6.0-0"]
-   [reagent "0.8.1"]
+   [org.clojure/clojurescript "1.10.520"]
+   [cljsjs/create-react-class "15.6.0-2"]
+   [reagent "0.8.1" :exclusions [[cljsjs/react]
+                                 [cljsjs/react-dom]
+                                 [cljsjs/create-react-class]
+                                 [cljsjs/react-dom-server]]]
    [re-frame "0.10.6"]
-   [ns-tracker "0.3.0"]
-   [cljsjs/material-ui "3.9.1-0"]
+   ;; [ns-tracker "0.3.0"]
    [tongue "0.2.4"]
    [day8.re-frame/http-fx "0.1.6"]
    [cljsjs/google-analytics "2015.04.13-0"]
    [district0x.re-frame/google-analytics-fx "1.0.0"]
    [cljsjs/babel-polyfill "6.20.0-2"]
-   [cljsjs/recharts "1.4.2-0"]
-   [cljsjs/react-autosuggest "9.3.4-0"]
-   [cljsjs/proj4 "2.5.0-0"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
@@ -42,11 +38,12 @@
    [org.clojure/data.csv "0.1.4"]
    [dk.ative/docjure "1.12.0"]
    [tea-time "1.0.0"]
+   [etaoin "0.2.8-SNAPSHOT"]
    [clj-http "3.9.1"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
-            [lein-ring "0.12.4"]
+            [lein-ring "0.12.5"]
             [migratus-lein "0.7.0"]]
 
   :ring {:handler      lipas.dev/dev-handler
@@ -87,7 +84,7 @@
     :dependencies
     [;;; Frontend ;;;
      [binaryage/devtools "0.9.10"]
-     [day8.re-frame/re-frame-10x "0.3.3"]
+     [day8.re-frame/re-frame-10x "0.3.7-react16"]
      [figwheel-sidecar "0.5.18"]
      [cider/piggieback "0.4.0"]
 
@@ -119,8 +116,14 @@
       :infer-externs        true
       :foreign-libs
       [{:file           "dist/index.bundle.js"
-        :provides       ["ol" "zipcelx" "filesaver"]
-        :global-exports {ol ol zipcelx zipcelx filesaver filesaver}}]
+        :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
+                         "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
+                         "recharts" "proj4" "cljsjs.react-autosuggest"]
+        :global-exports {ol        ol        zipcelx            zipcelx
+                         filesaver filesaver react              React
+                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
+                         mui       mui       proj4              proj4
+                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "js/compiled/out"
@@ -133,13 +136,21 @@
      :source-paths ["src/cljs" "src/cljc"]
      :compiler
      {:main            lipas.ui.core
+      :verbose         false
       :npm-deps        false
       :infer-externs   true
       :externs         ["src/js/ol_externs.js"]
+      :parallel-build  true
       :foreign-libs
       [{:file           "dist/index.bundle.js"
-        :provides       ["ol" "zipcelx" "filesaver"]
-        :global-exports {ol ol zipcelx zipcelx filesaver filesaver}}]
+        :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
+                         "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
+                         "recharts" "proj4" "cljsjs.react-autosuggest"]
+        :global-exports {ol        ol        zipcelx            zipcelx
+                         filesaver filesaver react              React
+                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
+                         mui       mui       proj4              proj4
+                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
       :output-to       "resources/public/js/compiled/app.js"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}
@@ -151,5 +162,4 @@
      {:main          lipas.ui.runner
       :output-to     "resources/public/js/compiled/test.js"
       :output-dir    "resources/public/js/compiled/test/out"
-      :optimizations :none}}]}
-  )
+      :optimizations :none}}]})

@@ -8,6 +8,7 @@ SELECT
   username,
   password,
   user_data,
+  history,
   permissions
 FROM
   account;
@@ -22,6 +23,7 @@ SELECT
   username,
   password,
   user_data,
+  history,
   permissions
 FROM
   account
@@ -38,6 +40,7 @@ SELECT
   username,
   password,
   user_data,
+  history,
   permissions
 FROM
   account
@@ -54,6 +57,7 @@ SELECT
   username,
   password,
   user_data,
+  history,
   permissions
 FROM
   account
@@ -82,9 +86,17 @@ VALUES (
 -- :name update-user-permissions!
 -- :command :execute
 -- :result :affected
--- :doc Update user permissions and user-data with given id
+-- :doc Update user permissions with given id
 UPDATE account
 SET    permissions = :permissions
+WHERE  id = :id ::uuid;
+
+-- :name update-user-history!
+-- :command :execute
+-- :result :affected
+-- :doc Update user history
+UPDATE account
+SET    history = :history
 WHERE  id = :id ::uuid;
 
 -- :name update-user-password!

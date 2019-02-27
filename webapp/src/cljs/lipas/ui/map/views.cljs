@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
   (:require
+   [clojure.string :as string]
    [lipas.ui.components :as lui]
    [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
    [lipas.ui.map.events :as events]
@@ -7,17 +8,104 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.subs :as sports-site-subs]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.ui.search.views :as search]
    [reagent.core :as r]))
 
-(defn floating-container [{:keys [top right bottom left style elevation]
-                           :or   {elevation 2}}
-                          & children]
+(def import-formats [".zip" ".kml" ".gpx" ".json"])
+
+(defn helper [{:keys [label tooltip]}]
+  [mui/tooltip {:title tooltip}
+   [mui/link {:style {:margin "0.5em"} :underline "always"} label]])
+
+(defn import-geoms-view [{:keys [on-import show-replace?]
+                          :or   {show-replace? true}}]
+  (let [tr       (<== [:lipas.ui.subs/translator])
+        open?    (<== [::subs/import-dialog-open?])
+        encoding (<== [::subs/selected-import-file-encoding])
+        data     (<== [::subs/import-candidates])
+        headers  (<== [::subs/import-candidates-headers])
+        selected (<== [::subs/selected-import-items])
+        replace? (<== [::subs/replace-existing-geoms?])
+
+        on-close #(==> [::events/toggle-import-dialog])]
+
+    [mui/dialog
+     {:open       open?
+      :full-width true
+      :max-width  "xl"
+      :on-close   on-close}
+
+     [mui/dialog-title (tr :map.import/headline)]
+
+     [mui/dialog-content
+
+      [mui/grid {:container true :spacing 8}
+
+       ;; File selector, helpers and encoding selector
+       [mui/grid {:item true :xs 12}
+        [mui/grid {:container true :spacing 16 :align-items "flex-end" :justify "space-between"}
+
+         ;; File selector
+         [mui/grid {:item true}
+          [:input
+           {:type      "file"
+            :accept    (string/join "," import-formats)
+            :on-change #(==> [::events/load-geoms-from-file (-> % .-target .-files)])}]]
+
+         ;; Helper texts
+         [mui/grid {:item true}
+          [mui/typography {:inline true} (str (tr :help/headline) ":")]
+          [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
+          [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
+          [helper {:label "GPX" :tooltip (tr :map.import/gpx)}]
+          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]
+
+         ;; File encoding selector
+        [mui/grid {:item true}
+         [lui/select
+          {:items     ["utf-8" "ISO-8859-1"]
+           :label     (tr :map.import/select-encoding)
+           :style     {:min-width "120px"}
+           :value     encoding
+           :value-fn  identity
+           :label-fn  identity
+           :on-change #(==> [::events/select-import-file-encoding %])}]]]]
+
+       [mui/grid {:item true :xs 12}
+        (when (not-empty data)
+          [lui/table-v2
+           {:items         (->> data vals (map :properties))
+            :key-fn        :id
+            :multi-select? true
+            :on-select     #(==> [::events/select-import-items %])
+            :headers       headers}])]]]
+
+     [mui/dialog-actions
+
+      ;; Replace existing feature checkbox
+      (when show-replace?
+        [lui/checkbox
+         {:label     (tr :map.import/replace-existing?)
+          :value     replace?
+          :on-change #(==> [::events/toggle-replace-existing-selection])}])
+
+      ;; Cancel button
+      [mui/button {:on-click on-close}
+       (tr :actions/cancel)]
+
+      ;; Import button
+      [mui/button {:on-click on-import :disabled (empty? selected)}
+       (tr :map.import/import-selected)]]]))
+
+(defn floating-container
+  [{:keys [top right bottom left style elevation]
+    :or   {elevation 2}}
+   & children]
   (into
    [mui/paper
     {:elevation elevation
@@ -35,7 +123,7 @@
             style)}]
    children))
 
-(defn layer-switcher [{:keys [:tr tr]}]
+(defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
                   :maastokartta (tr :map.basemap/maastokartta)
                   :ortokuva     (tr :map.basemap/ortokuva)}
@@ -147,6 +235,10 @@
                    nil)]
 
       [mui/grid {:container true}
+
+       (when editing?
+         [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
+
        [mui/grid {:item true :xs 12}
 
         ;; Headline
@@ -242,7 +334,15 @@
 
             ;; Geom tools
 
-            [;; Zoom to site
+            [;; Download GPX
+             (when (and (not editing?) (#{"LineString"} geom-type))
+               [mui/tooltip {:title (tr :map/download-gpx)}
+                [mui/fab
+                 {:on-click #(==> [::events/download-gpx lipas-id])
+                  :color    "default"}
+                 ".gpx"]])
+
+             ;; Zoom to site
              (when-not editing?
                [mui/tooltip {:title (tr :map/zoom-to-site)}
                 [mui/fab
@@ -250,6 +350,14 @@
                   :color    "default"}
                  [mui/icon {:color "secondary"}
                   "place"]]])
+
+             ;; Import geom
+             (when (and editing? (#{"LineString"} geom-type))
+               [mui/tooltip {:title (tr :map.import/tooltip)}
+                [mui/fab
+                 {:on-click #(==> [::events/toggle-import-dialog])
+                  :color    "default"}
+                 [mui/icon "cloud_upload"]]])
 
              ;; Draw hole
              (when (and editing? (#{"Polygon"} geom-type))
@@ -331,7 +439,8 @@
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
 
 (defn add-sports-site-view [{:keys [tr]}]
-  (r/with-let [selected-tab (r/atom 0)]
+  (r/with-let [selected-tab (r/atom 0)
+               geom-tab     (r/atom 0)]
     (let [locale (tr)
           type   (<== [::sports-site-subs/new-site-type])
           data   (<== [::sports-site-subs/new-site-data])
@@ -368,7 +477,13 @@
                  :style     {:flex   1
                              :height "100%"}}
 
+
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
+
+        [import-geoms-view
+         {:on-import     #(==> [::events/import-selected-geoms-to-new])
+          :show-replace? false}]
+
         [mui/typography {:variant "h6"}
          (tr :lipas.sports-site/new-site {:type type :locale locale})]
 
@@ -392,34 +507,73 @@
           [mui/step-label (tr :map/draw)]
           [mui/step-content {:style {:padding-top "1em"}}
 
-           (when (not zoomed?)
-             [mui/typography {:variant "body2" :color :error}
-              (tr :map/zoom-closer)])
-
            (let [geom-type (:geometry-type type)
                  type-code (:type-code type)]
 
              (if-not geom
 
                ;; Draw new geom
-               [mui/grid {:container true}
-                [mui/grid {:item true}
-                 [mui/typography {:variant "body2"}
-                  (tr :map/center-map-to-site)]]
-                [mui/grid {:item true}
+               [mui/grid {:container true :spacing 16}
 
-                 ;; Add initial geom button
-                 [mui/button
-                  {:style    {:margin-top "1em"}
-                   :disabled (not zoomed?)
-                   :color    :secondary
-                   :variant  :contained
-                   :on-click #(==> [::events/start-adding-geom geom-type])}
-                  [mui/icon "add_location"]
-                  (tr :map/add-to-map)]]]
+                ;; Tabs for selecting btw drawing and importing geoms
+                (when (#{"LineString"} geom-type)
+                  [mui/grid {:item true}
+
+                   [mui/tabs {:value      @geom-tab
+                              :on-change  #(reset! geom-tab %2)
+                              :style      {:margin-bottom "1em"}
+                              :text-color "secondary"}
+                    [mui/tab {:label (tr :map/draw-geoms)}]
+                    [mui/tab {:label (tr :map.import/tooltip)}]]])
+
+                ;; Draw
+                (when (= 0 @geom-tab)
+                  [:<>
+                   ;; Helper text
+                   [mui/grid {:item true :xs 12}
+                    [mui/typography {:variant "body2"}
+                     (tr :map/center-map-to-site)]]
+
+                   ;; Zoom closer info text
+                   (when (not zoomed?)
+                     [mui/grid {:item true :xs 12}
+                      [mui/typography {:variant "body2" :color :error}
+                       (tr :map/zoom-closer)]])
+
+                   ;; Add initial geom button
+                   [mui/grid {:item true}
+                    [mui/button
+                     {:disabled (not zoomed?)
+                      :color    "secondary"
+                      :variant  "contained"
+                      :on-click #(==> [::events/start-adding-geom geom-type])}
+                     [mui/icon "add_location"]
+                     (tr :map/add-to-map)]]])
+
+                (when (= 1 @geom-tab)
+                  (when (#{"LineString"} geom-type)
+                    [:<>
+                     ;; Supported formats helper text
+                     [mui/grid {:item true :xs 12}
+                      [mui/typography {:variant "body2"}
+                       (tr :map.import/supported-formats import-formats)]]
+
+                     ;; Open import dialog button
+                     [mui/grid {:item true}
+                      [mui/button
+                       {:color    "secondary"
+                        :variant  "contained"
+                        :on-click #(==> [::events/toggle-import-dialog])}
+                       (tr :map.import/tooltip)]]]))]
 
                ;; Modify new geom
                [mui/grid {:container true :spacing 8}
+
+                [mui/grid {:item true}
+                 (when (not zoomed?)
+                   [mui/typography {:variant "body2" :color :error}
+                    (tr :map/zoom-closer)])]
+
                 [mui/grid {:item true}
                  [mui/typography {:variant "body2"}
                   (tr :map/modify geom-type)]
@@ -522,18 +676,22 @@
                 :disabled         (not new-site-valid?)
                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
-(defn map-contents-view [{:keys [tr logged-in?]}]
+(defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
-    [mui/grid {:container true
-               :style     {:height "100%"}
-               :direction "column"
-               :justify   "space-between"}
+
+    [mui/grid
+     {:container true
+      :style     {:height "100%"}
+      :direction "column"
+      :justify   "space-between"}
 
      ;; Search, filters etc.
      (when-not adding?
        [search/search-view
-        {:tr tr
-         :on-result-click #(==> [::events/show-sports-site (:lipas-id %)])}])
+        {:tr              tr
+         :on-result-click (fn [{:keys [lipas-id]}]
+                            (==> [::events/show-sports-site lipas-id])
+                            (==> [::events/zoom-to-site lipas-id width]))}])
 
      ;; Add new sports-site view or big '+' button
      (when logged-in?
@@ -556,6 +714,7 @@
                         (and (= :table result-view)
                              (empty? selected-site)) "100%"
                         :else                        "430px")]
+
     [mui/grid {:container true
                :style     {:height "100%" :width "100%"}}
 
@@ -620,7 +779,7 @@
         [mui/grid {:item true :xs 12}
          (if selected-site
            [sports-site-view {:tr tr :site-data selected-site :width width}]
-           [map-contents-view {:tr tr :logged-in? logged-in?}])]]]]
+           [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
 
      ;; Layer switcher (bottom right)
      [floating-container {:bottom "0.5em" :right "3em" :elevation 0

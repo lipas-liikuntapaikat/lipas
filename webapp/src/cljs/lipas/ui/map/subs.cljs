@@ -50,9 +50,26 @@
           not-empty))))
 
 (re-frame/reg-sub
- ::mode
+ ::content-padding
+ :<- [:lipas.ui.subs/screen-size]
+ :<- [::drawer-open?]
+ (fn [[screen-size drawer-open?] _]
+   (let [margin 20]
+     (if (and (#{"xs"} screen-size) (not drawer-open?))
+       [margin margin margin margin]
+       [margin margin margin (+ margin 430)])))) ;; drawer width is 430px
+
+(re-frame/reg-sub
+ ::mode*
  (fn [db _]
    (-> db :map :mode)))
+
+(re-frame/reg-sub
+ ::mode
+ :<- [::content-padding]
+ :<- [::mode*]
+ (fn [[content-padding mode] _]
+   (assoc mode :content-padding content-padding)))
 
 (re-frame/reg-sub
  ::editing-lipas-id
@@ -81,3 +98,49 @@
  ::drawer-open?
  (fn [db _]
    (-> db :map :drawer-open?)))
+
+
+;; Import geoms ;;
+
+(re-frame/reg-sub
+ ::import-dialog-open?
+ (fn [db _]
+   (-> db :map :import :dialog-open?)))
+
+(re-frame/reg-sub
+ ::selected-import-file-encoding
+ (fn [db _]
+   (-> db :map :import :selected-encoding)))
+
+(re-frame/reg-sub
+ ::import-data
+ (fn [db _]
+   (-> db :map :import :data)))
+
+(re-frame/reg-sub
+ ::import-candidates
+ :<- [::import-data]
+ (fn [data _]
+   data))
+
+(def ignored-headers #{"id" "coordTimes"})
+
+(re-frame/reg-sub
+ ::import-candidates-headers
+ :<- [::import-data]
+ (fn [data _]
+   (let [->entry (fn [s]
+                   (assoc {} :label s :hidden? (contains? ignored-headers s)))]
+     (when (not-empty data)
+       (-> data keys first data :properties
+           (->> (mapv (juxt first (comp ->entry name first)))))))))
+
+(re-frame/reg-sub
+ ::selected-import-items
+ (fn [db _]
+   (-> db :map :import :selected-items)))
+
+(re-frame/reg-sub
+ ::replace-existing-geoms?
+ (fn [db _]
+   (-> db :map :import :replace-existing?)))

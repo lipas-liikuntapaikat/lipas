@@ -48,6 +48,18 @@
     (db/add-user! db user)
     {:status "OK"}))
 
+(defn- add-user-event!
+  ([db user evt-name]
+   (add-user-event! db user evt-name {}))
+  ([db user evt-name data]
+   (let [defaults {:event-date (utils/timestamp) :event evt-name}
+         evt      (merge defaults data)
+         user     (update-in user [:history :events] conj evt)]
+     (db/update-user-history! db user))))
+
+(defn login! [db user]
+  (add-user-event! db user "login"))
+
 (defn register! [db emailer user]
   (add-user! db user)
   (email/send-register-notification! emailer
@@ -61,11 +73,6 @@
     (log/info "Publishing" (count drafts) "drafts from user" id)
     (doseq [draft drafts]
       (db/upsert-sports-site! db user (assoc draft :status "active")))))
-
-;; TODO send email
-(defn update-user-permissions! [db emailer user]
-  (db/update-user-permissions! db user)
-  (publish-users-drafts! db user))
 
 (defn get-user [db identifier]
   (or (db/get-user-by-email db {:email identifier})
@@ -81,6 +88,16 @@
 (defn get-users [db]
   (db/get-users db))
 
+;; TODO send email
+(defn update-user-permissions! [db emailer {:keys [id permissions]}]
+  (let [user      (get-user! db id)
+        old-perms (-> user :permissions)
+        new-user  (assoc user :permissions permissions)]
+    (db/update-user-permissions! db new-user)
+    (publish-users-drafts! db new-user)
+    (add-user-event! db new-user "permissions-updated"
+                     {:from old-perms :to permissions})))
+
 (defn create-magic-link [url user]
   (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
     {:link       (str url "?token=" token)
@@ -89,17 +106,20 @@
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
     (let [params (create-magic-link reset-url user)]
-      (email/send-reset-password-email! emailer email params))
+      (email/send-reset-password-email! emailer email params)
+      (add-user-event! db user "password-reset-link-sent"))
     (throw (ex-info "User not found" {:type :email-not-found}))))
 
 (defn send-magic-link! [db emailer {:keys [user login-url variant]}]
   (let [email      (-> user :email)
         magic-link (create-magic-link login-url user)]
-    (email/send-magic-login-email! emailer email variant magic-link)))
+    (email/send-magic-login-email! emailer email variant magic-link)
+    (add-user-event! db user "magic-link-sent")))
 
 (defn reset-password! [db user password]
   (db/reset-user-password! db (assoc user :password
-                                    (hashers/encrypt password))))
+                                     (hashers/encrypt password)))
+  (add-user-event! db user "password-reset"))
 
 ;;; Sports-sites ;;;
 
@@ -121,7 +141,7 @@
 
 (defn upsert-sports-site!*
   "Should be used only when data is from trusted sources (migrations
-  etc.). Doesn't check if lipas-ids exist or not."
+  etc.). Doesn't check users permissions or if lipas-id exists."
   ([db user sports-site]
    (upsert-sports-site!* db user sports-site false))
   ([db user sports-site draft?]
@@ -148,23 +168,43 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
-(defn enrich
+(defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
   [sports-site]
-  (let [geom      (-> sports-site :location :geometries :features first :geometry)
-        coords    (case (:type geom)
-                    "Point"      (-> geom :coordinates)
-                    "LineString" (-> geom :coordinates first)
-                    "Polygon"    (-> geom :coordinates first first))
-        city-code (-> sports-site :location :city :city-code)
-        type-code (-> sports-site :type :type-code)]
-    (assoc sports-site :search-meta {:location
-                                     {:wgs84-point coords
-                                      :city
-                                      {:name (-> city-code cities :name)}}
-                                     :type
-                                     {:name (-> type-code types :name)}})))
+  (let [geom        (-> sports-site :location :geometries :features first :geometry)
+        coords      (case (:type geom)
+                      "Point"      (-> geom :coordinates)
+                      "LineString" (-> geom :coordinates first)
+                      "Polygon"    (-> geom :coordinates first first))
+        city-code   (-> sports-site :location :city :city-code)
+        type-code   (-> sports-site :type :type-code)
+        search-meta {:location
+                     {:wgs84-point coords
+                      :city        {:name (-> city-code cities :name)}}
+                     :type
+                     {:name (-> type-code types :name)}}]
+    (assoc sports-site :search-meta search-meta)))
+
+(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
+  (-> ice-stadium
+      (assoc-in [:properties :surface-material] [(-> envelope :base-floor-structure)])
+      (assoc-in [:properties :area-m2] (-> building :total-ice-area-m2))
+      utils/clean
+      enrich*))
+
+(defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
+  (-> swimming-pool
+      (assoc-in [:properties :area-m2] (-> building :total-water-area-m2))
+      utils/clean
+      enrich*))
+
+(defmulti enrich (comp :type-code :type))
+(defmethod enrich :default [sports-site] (enrich* sports-site))
+(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
+(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
+(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
+(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
   ([search sports-site]

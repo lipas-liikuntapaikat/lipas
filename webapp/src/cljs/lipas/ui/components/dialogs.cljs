@@ -3,9 +3,12 @@
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))
 
-(defn dialog [{:keys [title on-save on-close save-label save-enabled?
-                      cancel-label]} content]
-  [mui/dialog {:open true :full-width true :on-close on-close}
+(defn dialog
+  [{:keys [title on-save on-close save-label save-enabled?
+           cancel-label open? max-width]
+    :or   {open? true max-width "sm"}} content]
+  [mui/dialog
+   {:open open? :full-width true :on-close on-close :max-width max-width}
    [mui/dialog-title title]
    [mui/dialog-content content]
    [mui/dialog-actions

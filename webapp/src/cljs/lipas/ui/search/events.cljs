@@ -91,25 +91,26 @@
 
 (re-frame/reg-event-fx
  ::search
- (fn [{:keys [db]} [_ params]]
+ (fn [{:keys [db]} [_ params fit-view?]]
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/search")
      :params          (->es-search-body params)
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
-     :on-success      [::search-success]
+     :on-success      [::search-success fit-view?]
      :on-failure      [::search-failure]}
     :db (assoc-in db [:search :in-progress?] true)}))
 
 (re-frame/reg-event-fx
  ::search-success
- (fn [{:keys [db]} [_ resp]]
+ (fn [{:keys [db]} [_ fit-view? resp]]
    (let [hits  (-> resp :hits :hits)
          sites (map :_source hits)]
-     {:db (-> (reduce utils/add-to-db db sites)
-              (assoc-in [:search :results] resp)
-              (assoc-in [:search :in-progress?] false))})))
+     {:db         (-> (reduce utils/add-to-db db sites)
+                      (assoc-in [:search :results] resp)
+                      (assoc-in [:search :in-progress?] false))
+      :dispatch-n [(when fit-view? [:lipas.ui.map.events/fit-to-current-vectors])]})))
 
 (re-frame/reg-event-fx
  ::search-failure
@@ -138,15 +139,16 @@
 
 (re-frame/reg-event-fx
  ::submit-search
- (fn [{:keys [db]} _]
+ (fn [{:keys [db]} [_ fit-view?]]
    (let [params (collect-search-data db)]
-     {:dispatch [::search params]})))
+     {:dispatch [::search params fit-view?]})))
 
 (re-frame/reg-event-fx
  ::filters-updated
- (fn [_ _]
-   {:dispatch-n [[::submit-search]
-                 [::change-result-page 0]]}))
+ (fn [_ [_ fit-view?]]
+   {:dispatch-n
+    [[::submit-search fit-view?]
+     [::change-result-page 0]]}))
 
 (re-frame/reg-event-fx
  ::set-type-filter
@@ -154,7 +156,7 @@
    {:db       (if append?
                 (update-in db [:search :filters :type-codes] into type-codes)
                 (assoc-in db [:search :filters :type-codes] type-codes))
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-city-filter
@@ -162,52 +164,53 @@
    {:db       (if append?
                 (update-in db [:search :filters :city-codes] into city-codes)
                 (assoc-in db [:search :filters :city-codes] city-codes))
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-area-min-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-min] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-surface-materials-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :surface-materials] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-admins-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :admins] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::set-owners-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :owners] v)
-    :dispatch [::filters-updated]}))
+    :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
-   {:db       (-> db
-                  (assoc-in [:search :filters] {})
-                  (assoc-in [:search :sort] {:sort-fn :score :asc? true})
-                  (assoc-in [:search :string] nil))
-    :dispatch [::filters-updated]}))
+   (let [fit-view? false]
+     {:db       (-> db
+                    (assoc-in [:search :filters] {})
+                    (assoc-in [:search :sort] {:sort-fn :score :asc? true})
+                    (assoc-in [:search :string] nil))
+      :dispatch [::filters-updated fit-view?]})))
 
 (re-frame/reg-event-fx
  ::create-report-from-current-search
