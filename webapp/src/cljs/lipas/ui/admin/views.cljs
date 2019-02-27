@@ -39,12 +39,12 @@
         types     (<== [::subs/types-list locale])
         sites     (<== [::subs/sites-list])
         user      (<== [::subs/editing-user])
+        history   (<== [::subs/user-history])
         existing? (some? (:id user))]
 
     [lui/full-screen-dialog
      {:open?       (boolean (seq user))
-      :title       (or (:username user)
-                       (:email user))
+      :title       (or (:username user) (:email user))
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/set-user-to-edit nil])
       :bottom-actions
@@ -53,10 +53,11 @@
          :disabled (not (s/valid? :lipas/new-user user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
        (when existing?
-         [lui/save-button
-          {:color    "default"
-           :tooltip  (tr :actions/save)
-           :on-click #(==> [::events/save-user user])}])]}
+         [mui/button
+          {:variant  "contained"
+           :color    "secondary"
+           :on-click #(==> [::events/save-user user])}
+          (tr :actions/save)])]}
 
      [mui/grid {:container true :spacing 8}
 
@@ -93,6 +94,7 @@
           :value     (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
           :disabled  existing?}]]]
+
 
       ;;; Permissions
       [lui/form-card {:title (tr :lipas.user/permissions)}
@@ -143,7 +145,15 @@
          {:items     cities
           :label     (tr :lipas.user.permissions/cities)
           :value     (-> user :permissions :cities)
-          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]]]))
+          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]
+
+      ;;; History
+      [lui/form-card {:title (tr :lipas.user/history)}
+       [lui/table-v2
+        {:items history
+         :headers
+         {:event      {:label (tr :general/event)}
+          :event-date {:label (tr :time/time)}}}]]]]))
 
 (defn color-picker [{:keys [value on-change]}]
   [:input

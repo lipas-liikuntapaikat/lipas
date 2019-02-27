@@ -1,23 +1,35 @@
 (ns lipas.ui.map.events
   (:require
-   proj4
    ["ol"]
-   [lipas.ui.utils :as utils]
+   [clojure.string :as string]
+   [goog.object :as gobj]
+   [goog.string :as gstring]
+   [goog.string.path :as gpath]
+   [lipas.ui.utils :refer [==>] :as utils]
+   proj4
    [re-frame.core :as re-frame]))
 
 ;; Width and height are in meters when using EPSG:3067 projection
 (re-frame/reg-event-fx
  ::set-view
  (fn [{:keys [db]} [_ center lonlat zoom extent width height]]
-   {:db       (-> db
-                  (assoc-in [:map :center] {:lat (aget center 1) :lon (aget center 0)})
-                  (assoc-in [:map :center-wgs84] {:lat (aget lonlat 1) :lon (aget lonlat 0)})
-                  (assoc-in [:map :zoom] zoom)
-                  (assoc-in [:map :extent] extent)
-                  (assoc-in [:map :width] width)
-                  (assoc-in [:map :height] height))
-    :dispatch-n [(when (and extent width)
-                   [:lipas.ui.search.events/submit-search])]}))
+   (let [center       {:lat (aget center 1) :lon (aget center 0)}
+         center-wgs84 {:lat (aget lonlat 1) :lon (aget lonlat 0)}]
+     {:db (-> db
+              (assoc-in [:map :center] center)
+              (assoc-in [:map :center-wgs84] center-wgs84)
+              (assoc-in [:map :zoom] zoom)
+              (assoc-in [:map :extent] extent)
+              (assoc-in [:map :width] width)
+              (assoc-in [:map :height] height))
+      :dispatch-n
+      [(when (and extent width)
+         [:lipas.ui.search.events/submit-search])]})))
+
+(re-frame/reg-event-db
+ ::fit-to-current-vectors
+ (fn [db _]
+   (assoc-in db [:map :mode :fit-nonce] (gensym))))
 
 (re-frame/reg-event-fx
  ::zoom-to-site
@@ -89,17 +101,22 @@
                                        :geom-type geom-type}))))
 
 (re-frame/reg-event-db
+ ::continue-editing
+ (fn [db _]
+   (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})))
+
+(re-frame/reg-event-db
  ::stop-editing
  (fn [db [_]]
    (assoc-in db [:map :mode :name] :default)))
 
 (re-frame/reg-event-fx
  ::update-geometries
- (fn [_ [_ lipas-id geoms]]
-   (let [path  [:location :geometries]
+ (fn [{:keys [db]} [_ lipas-id geoms]]
+   (let [path  [:sports-sites lipas-id :editing :location :geometries]
          geoms (update geoms :features
                        (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id path geoms]})))
+     {:db (assoc-in db path geoms)})))
 
 (re-frame/reg-event-db
  ::start-adding-geom
@@ -139,3 +156,142 @@
  ::toggle-drawer
  (fn [db _]
    (update-in db [:map :drawer-open?] not)))
+
+;; Import geoms ;;
+
+(re-frame/reg-event-db
+ ::toggle-import-dialog
+ (fn [db _]
+   (update-in db [:map :import :dialog-open?] not)))
+
+(re-frame/reg-event-db
+ ::select-import-file-encoding
+ (fn [db [_ encoding]]
+   (assoc-in db [:map :import :selected-encoding] encoding)))
+
+(re-frame/reg-event-db
+ ::set-import-candidates
+ (fn [db [_ geoJSON]]
+   (let [fcoll (js->clj geoJSON :keywordize-keys true)
+         fs    (->> fcoll
+                    :features
+                    (filter (comp #{"LineString"} :type :geometry))
+                    (reduce
+                     (fn [res f]
+                       (let [id (gensym)]
+                         (assoc res id (assoc-in f [:properties :id] id))))
+                     {}))]
+     (assoc-in db [:map :import :data] fs))))
+
+(defn parse-dom [text]
+  (let [parser (js/DOMParser.)]
+    (.parseFromString parser text "text/xml")))
+
+(defn- text->geoJSON [{:keys [file ext enc cb]}]
+  (let [reader (js/FileReader.)
+        cb     (fn [e]
+                 (let [text   (-> e .-target .-result)
+                       parsed (condp = ext
+                                "json" (js/JSON.parse text)
+                                "kml"  (-> text parse-dom js/toGeoJSON.kml)
+                                "gpx"  (-> text parse-dom js/toGeoJSON.gpx))]
+                   (cb parsed)))]
+    (set! (.-onload reader) cb)
+    (.readAsText reader file enc)
+    {}))
+
+(defmulti file->geoJSON :ext)
+
+(defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
+  (js/shp2geojson.loadshp #js{:url file :encoding enc} cb))
+
+(defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
+(defmethod file->geoJSON "kml" [params] (text->geoJSON params))
+(defmethod file->geoJSON "json" [params] (text->geoJSON params))
+(defmethod file->geoJSON :default [params] {:unknown (:ext params)})
+
+(defn parse-ext [file]
+  (-> file
+      (gobj/get "name" "")
+      gpath/extension
+      string/lower-case))
+
+(re-frame/reg-event-fx
+ ::load-geoms-from-file
+ (fn [{:keys [db]} [_ files]]
+   (let [file   (aget files 0)
+         params {:enc  (-> db :map :import :selected-encoding)
+                 :file file
+                 :ext  (parse-ext file)
+                 :cb   (fn [data] (==> [::set-import-candidates data]))}]
+
+     (if-let [ext (:unknown (file->geoJSON params))]
+       {:dispatch-n [(let [tr (-> db :translator)]
+                       [:lipas.ui.events/set-active-notification
+                        {:message  (tr :map.import/unknown-format ext)
+                         :success? false}])]}
+       {}))))
+
+(re-frame/reg-event-db
+ ::select-import-items
+ (fn [db [_ ids]]
+   (assoc-in db [:map :import :selected-items] (set ids))))
+
+(re-frame/reg-event-db
+ ::toggle-replace-existing-selection
+ (fn [db _]
+   (update-in db [:map :import :replace-existing?] not)))
+
+(re-frame/reg-event-fx
+ ::import-selected-geoms
+ (fn [{:keys [db]} _]
+   (let [ids      (-> db :map :import :selected-items)
+         replace? (-> db :map :import :replace-existing?)
+         data     (select-keys (-> db :map :import :data) ids)
+         fcoll    {:type     "FeatureCollection"
+                   :features (into [] cat
+                                   [(when-not replace?
+                                      (-> db :map :mode :geoms :features))
+                                    (->> data vals (map #(dissoc % :properties)))])}]
+     {:db         (-> db
+                      (assoc-in [:map :mode :geoms] fcoll)
+                      (assoc-in [:map :mode :sub-mode] :importing))
+      :dispatch-n [[::toggle-import-dialog]
+                   [::select-import-items #{}]]})))
+
+(re-frame/reg-event-fx
+ ::import-selected-geoms-to-new
+ (fn [{:keys [db]} _]
+   (let [ids      (-> db :map :import :selected-items)
+         data     (select-keys (-> db :map :import :data) ids)
+         fcoll    {:type     "FeatureCollection"
+                   :features (into [] (->> data vals (map #(dissoc % :properties))))}]
+     {:db         (assoc-in db [:map :mode :geoms] fcoll)
+      :dispatch-n [[::new-geom-drawn fcoll]
+                   [::toggle-import-dialog]
+                   [::select-import-items #{}]]})))
+
+(defn- add-gpx-props [{:keys [locale types cities site]} feature]
+  (let [city-code (-> site :location :city :city-code)
+        type-code (-> site :type :type-code)
+        props     {:name        (-> site :name)
+                   :type        (get-in types [type-code :name locale])
+                   :city        (get-in cities [city-code :name locale])}]
+    (assoc feature :properties props)))
+
+(re-frame/reg-event-fx
+ ::download-gpx
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [locale  (-> db :translator (apply []))
+         latest  (get-in db [:sports-sites lipas-id :latest])
+         site    (get-in db [:sports-sites lipas-id :history latest])
+         data    {:site   site
+                  :cities (-> db :cities)
+                  :types  (-> db :types)
+                  :locale locale}
+         fname   (gstring/urlEncode (str (:name site) ".gpx"))
+         xml-str (-> site :location :geometries
+                     (update :features #(mapv (partial add-gpx-props data) %))
+                     clj->js
+                     (js/togpx #js{:creator "LIPAS"}))]
+     {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))

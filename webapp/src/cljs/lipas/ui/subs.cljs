@@ -62,3 +62,8 @@
  :<- [::active-panel]
  (fn [active-panel _]
    (not= active-panel :map-panel)))
+
+(re-frame/reg-sub
+ ::screen-size
+ (fn [db _]
+   (-> db :screen-size)))

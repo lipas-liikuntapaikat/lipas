@@ -377,3 +377,6 @@
     (false? v) empty
     (nil? v)   empty
     :else      v))
+
+(defn ->mailto [{:keys [email subject body]}]
+  (str "mailto:" email "?" (url/map->query {:subject subject :body body})))

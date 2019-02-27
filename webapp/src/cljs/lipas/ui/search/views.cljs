@@ -142,7 +142,7 @@
        :on-change-rows-per-page #(==> [::events/change-result-page-size
                                        (-> %1 .-target .-value)])
        :label-rows-per-page     (tr :search/page-size)})
-    props)])
+    (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
 
 (defn search-view [{:keys [tr on-result-click]}]
   (let [in-progress?     (<== [::subs/in-progress?])
@@ -180,9 +180,9 @@
          :on-change    #(==> [::events/update-search-string %])
          :on-key-press (fn [e]
                          (when (= 13 (.-charCode e)) ; Enter
-                           (==> [::events/submit-search])))}]]
+                           (==> [::events/submit-search :fit-view])))}]]
       [mui/grid {:item true}
-       [mui/button {:on-click #(==> [::events/submit-search])}
+       [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
         [mui/icon "search"]
         (tr :search/search)]]]
 

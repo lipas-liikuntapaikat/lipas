@@ -3,4 +3,4 @@ module.exports = {
   output: {
     filename: 'index.bundle.js'
   }
-}
+};

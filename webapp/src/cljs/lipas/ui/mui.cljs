@@ -1,7 +1,6 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
   (:require
-   [material-ui]
    [goog.object :as gobj]
    [clojure.string :as s]
    [reagent.core :as r]
@@ -17,7 +16,7 @@
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
-(def create-mui-theme (gobj/get js/MaterialUI "createMuiTheme"))
+(def create-mui-theme (gobj/get js/mui "createMuiTheme"))
 
 (defn ->mui-theme [opts]
   (->> opts
@@ -25,22 +24,12 @@
        clj->js
        create-mui-theme))
 
-(comment (get-color "blue"))
-(comment (get-color :blue "300"))
-(defn get-color
-  "Args can be strings or keywords. Returns all colors if no args are given.
-
-  (get-color)
-  (get-color \"blue\")
-  (get-color :blue \"300\")"
-  [& args]
-  (->> args
-       (mapv name)
-       (apply (partial gobj/getValueByKeys js/MaterialUI "colors"))))
-
-(def primary "#002957")
+(def primary "#002957 ")
+(def primary2 "rgb(0, 41, 87, 0.5)")
+(def primary3 "rgb(0, 41, 87, 0.3)")
 (def secondary "#f1563f")
 (def secondary2 "rgba(241, 86, 63, 0.9)")
+(def secondary3 "rgba(241, 86, 63, 0.5)")
 (def gold "#C29A5B")
 (def gray1 "rgba(199, 201, 200, 1.0)")
 (def gray2 "rgba(199, 201, 200, 0.5)")
@@ -108,7 +97,7 @@
 (def jyu-theme-light (->mui-theme jyu-styles-light))
 
 (defn mui->reagent [mui-name]
-  (r/adapt-react-class (gobj/get js/MaterialUI mui-name)))
+  (r/adapt-react-class (gobj/get js/mui mui-name)))
 
 (def css-baseline (mui->reagent "CssBaseline"))
 (def mui-theme-provider (mui->reagent "MuiThemeProvider"))
@@ -184,4 +173,5 @@
 (def fade (mui->reagent "Fade"))
 (def grow (mui->reagent "Grow"))
 (def circular-progress (mui->reagent "CircularProgress"))
-(def with-width* (.withWidth js/MaterialUI))
+
+(def with-width* (.withWidth js/mui))

@@ -153,4 +153,9 @@
     :center       {:lon 435047 :lat 6901408}
     :zoom         2
     :mode         {:name :default}
-    :basemap      :taustakartta}})
+    :basemap      :taustakartta
+    :import
+    {:dialog-open?      false
+     :selected-encoding "ISO-8859-1"
+     :selected-items    #{}
+     :replace-existing? true}}})

@@ -1,4 +1,6 @@
-(ns lipas.i18n.fi)
+(ns lipas.i18n.fi
+  (:require
+   [clojure.string :as string]))
 
 ;; Use "Zero-width space" to define where to split long words for
 ;; mobile displays. This is mainly needed in headlines with such words
@@ -234,6 +236,15 @@
    :partners
    {:headline (str "Kehittä" ZWSP "misessä mukana")}
 
+   :data-users
+   {:headline      "Lipasta hyödyntävät"
+    :data-user?    "Käytätkö LIPAS-dataa?"
+    :tell-us       "Kerro siitä meille"
+    :email-subject "Mekin käytämme LIPAS-dataa"
+    :email-body    (str "Mukavaa että hyödynnät LIPAS-dataa! "
+                        "Kirjoita tähän kuka olet ja miten hyödynnät Lipasta. "
+                        "Käytätkö mahdollisesti jotain rajapinnoistamme?")}
+
    :help
    {:headline "Ohjeet"}
 
@@ -291,7 +302,8 @@
     jotka lähetetään ylläpidon hyväksyttäväksi."
     :view-basic-info            "Tarkista perustiedot"
     :report-energy-consumption  "Ilmoita energiankulutus"
-    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"}
+    :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"
+    :history                    "Historia"}
 
    :lipas.user.permissions
    {:admin?       "Admin"
@@ -497,7 +509,8 @@
     :dec "Joulukuu"}
 
    :time
-   {:year               "Vuosi"
+   {:time               "Aika"
+    :year               "Vuosi"
     :hour               "Tunti"
     :month              "Kuukausi"
     :start              "Alkoi"
@@ -586,6 +599,7 @@
    {:name         "Nimi"
     :type         "Tyyppi"
     :description  "Kuvaus"
+    :event        "Tapahtuma"
     :general-info "Yleiset tiedot"
     :comment      "Kommentti"
     :structure    "Rakenne"
@@ -611,6 +625,7 @@
     :zoom-to-site       "Näytä kartalla"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
     :zoom-closer        "Zoomaa lähemmäs"
+    :draw-geoms         "Piirrä"
     :draw               (fn [geom-type]
                           (case geom-type
                             "LineString" "Lisää reittiosa"
@@ -627,8 +642,24 @@
                           (case geom-type
                             "LineString" "Poista reittiosa"
                             "Polygon"    "Poista alue"
-                            "Lisää kartalle"))
-    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"}
+                            "Poista osa"))
+    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"
+    :download-gpx       "Lataa GPX"}
+
+   :map.import
+   {:headline          "Tuo geometriat"
+    :tooltip           "Tuo tiedostosta"
+    :supported-formats (fn [ss]
+                         (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
+    :shapefile         "Tuo .shp .dbf ja .prj tiedostot pakattuna .zip-muotoon."
+    :geoJSON           "Tuo .json tiedosto joka sisältää GeoJSON FeatureCollection
+    objektin. Lähtaineiston pitää olla WGS84 koordinaatistossa."
+    :gpx               "Lähtöaineiston pitää olla WGS84 koordinaatistossa."
+    :kml               "Lähtöaineiston pitää olla WGS84 koordinaatistossa."
+    :select-encoding   "Valitse merkistö"
+    :replace-existing? "Korvaa nykyiset geometriat"
+    :import-selected   "Tuo valitut"
+    :unknown-format    "Tuntematon tiedostopääte '{1}'"}
 
    :map.basemap
    {:taustakartta "Taustakartta"

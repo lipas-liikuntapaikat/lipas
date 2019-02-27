@@ -4,10 +4,11 @@
    [cljsjs.google-analytics]
    [day8.re-frame.http-fx]
    [district0x.re-frame.google-analytics-fx]
-   [lipas.ui.local-storage]
-   [lipas.ui.effects]
    [lipas.ui.config :as config]
+   [lipas.ui.effects]
    [lipas.ui.events :as events]
+   [lipas.ui.local-storage]
+   [lipas.ui.mui :as mui]
    [lipas.ui.routes :as routes]
    [lipas.ui.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -46,8 +47,9 @@
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
-  (reagent/render [views/main-panel]
-                  (.getElementById js/document "app")))
+  (reagent/render
+   [:> (mui/with-width* (reagent/reactify-component views/main-panel))]
+   (.getElementById js/document "app")))
 
 (defn ^:export init []
   (track!)

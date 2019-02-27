@@ -35,7 +35,7 @@
 (defn show-panel [panel-name tr logged-in?]
   [panels panel-name tr logged-in?])
 
-(defn main-panel []
+(defn main-panel [{:keys [width]}]
   (let [active-panel (<== [::subs/active-panel])
         logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
@@ -44,22 +44,22 @@
         show-nav?    (<== [::subs/show-nav?])
         tr           (<== [::subs/translator])]
 
+    (==> [::events/set-screen-size width])
+
     [mui/css-baseline
 
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
 
-      [mui/grid {:container true
-                 :style     (merge
-                             {:flex-direction "column"}
-                             (when-not show-nav?
-                               {:height "100%"}))}
+      [mui/grid
+       {:container true
+        :style (merge {:flex-direction "column" :background-color mui/gray3}
+                      (when-not show-nav? {:height "100%"}))}
 
        ;; Drawer
        [nav/drawer {:tr tr :logged-in? logged-in?}]
 
        ;; Account menu
        [nav/account-menu {:tr tr :logged-in? logged-in?}]
-
 
        ;; Navbar
        (when show-nav?
