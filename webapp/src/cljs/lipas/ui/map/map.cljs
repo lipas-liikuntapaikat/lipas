@@ -15,7 +15,7 @@
    [re-frame.core :as re-frame]
    [reagent.core :as r]))
 
-;;(set! *warn-on-infer* true)
+;; (set! *warn-on-infer* true)
 
 (def temp-fid-prefix "temp")
 
@@ -436,7 +436,7 @@
 (defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                            on-modifyend]
   (let [layer     (-> layers :overlays :edits)
-        draw-hole (ol.interaction.DrawHole. #js{:layers #js[layer]})
+        draw-hole (js/ol.interaction.DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
