@@ -163,18 +163,15 @@
   (==> [::sports-site-events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn- sticky-bottom-container [& children]
-  (into
-   [mui/grid
-    (merge
-     {:container true
-      :justify   "flex-end"}
-     (cond
-       (utils/supports-sticky?)        {:style {:position "sticky"
-                                                :bottom   0}}
-       (utils/supports-webkit-sticky?) {:style {:position "-webkit-sticky"
-                                                :bottom   0}}
-       :else                           nil))]
-   children))
+  (let [sticky (cond
+                 (utils/supports-sticky?)        "sticky"
+                 (utils/supports-webkit-sticky?) "webkit-sticky"
+                 :else                           nil)]
+    (into
+     [mui/grid
+      {:container true :direction "row"
+       :style     {:position sticky :bottom (when sticky 0)}}]
+     children)))
 
 ;; Works as both display and edit views
 (defn sports-site-view [{:keys [tr site-data width]}]
@@ -192,21 +189,18 @@
 
           delete-dialog-open? (<== [::sports-site-subs/delete-dialog-open?])
 
-          mode (<== [::subs/mode])
-
+          mode     (<== [::subs/mode])
           sub-mode (-> mode :sub-mode)
 
           type-code (-> display-data :type :type-code)
           type      (<== [::sports-site-subs/type-by-type-code type-code])
           geom-type (:geometry-type type)
 
-          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
-
-          types-props (<== [::sports-site-subs/types-props type-code])
+          allowed-types   (<== [::sports-site-subs/types-by-geom-type geom-type])
+          types-props     (<== [::sports-site-subs/types-props type-code])
+          size-categories (<== [::ice-stadiums-subs/size-categories])
 
           set-field (partial set-field lipas-id)
-
-          size-categories (<== [::ice-stadiums-subs/size-categories])
 
           portal (case type-code
                    (3110 3130) "uimahalliportaali"
@@ -301,12 +295,9 @@
        ;; Actions
        [sticky-bottom-container
         (into
-         [mui/grid {:item  true
-                    :style {:padding-top    "1em"
-                            :padding-bottom "0.5em"}}]
+         [mui/grid {:item true :style {:padding-top "1em" :padding-bottom "0.5em"}}]
          (interpose
-          [:span {:style {:margin-left  "0.25em"
-                          :margin-right "0.25em"}}]
+          [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}]
           (remove
            nil?
            (into
