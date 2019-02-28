@@ -565,7 +565,9 @@
     :select-admins            "Valitse ylläpitäjät"
     :select-owners            "Valitse omistajat"
     :select-columns           "Valitse tietokentät"
-    :filter-area-m2           "Rajaa pinta-ala m²"
+    :select-statuses          "Liikuntapaikan tila"
+    :filter-area-m2           "Rajaa liikuntapinta-ala m²"
+    :filter-construction-year "Rajaa rakennusvuodet"
     :filter-surface-materials "Rajaa pintamateriaalit"
     :clear-selections         "Poista valinnat"
     :download-excel           "Lataa Excel"}
