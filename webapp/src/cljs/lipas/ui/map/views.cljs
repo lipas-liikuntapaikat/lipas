@@ -102,27 +102,6 @@
       [mui/button {:on-click on-import :disabled (empty? selected)}
        (tr :map.import/import-selected)]]]))
 
-(defn floating-container
-  [{:keys [top right bottom left style elevation]
-    :or   {elevation 2}}
-   & children]
-  (into
-   [mui/paper
-    {:elevation elevation
-     :style
-     (merge {:position         :fixed
-             :z-index          999
-             :background-color "#fff"
-             :top              top
-             :right            right
-             :bottom           bottom
-             :left             left
-             :margin           "0.5em"
-             :padding-left     "1em"
-             :padding-right    "1em"}
-            style)}]
-   children))
-
 (defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
                   :maastokartta (tr :map.basemap/maastokartta)
@@ -715,25 +694,13 @@
                              (empty? selected-site)) "100%"
                         :else                        "430px")]
 
-    [mui/grid {:container true
-               :style     {:height "100%" :width "100%"}}
+    [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
      ;; Mini-nav
-     [floating-container {:right     0
-                          :top       (cond
-                                       (#{"xs"} width)              "2em"
-                                       (and (#{"sm" "md"} width)
-                                            (= :table result-view)) "2em"
-                                       :else                        nil)
-                          :elevation 0
-                          :style     {:background-color "transparent"
-                                      :padding-right    0
-                                      :padding-top      0}}
-      [mui/grid {:container   true
-                 :direction   :column
-                 :align-items :flex-end
-                 :spacing     24}
-
+     [lui/floating-container
+      {:right 0 :background-color "transparent"}
+      [mui/grid
+       {:container true :direction "column" :align-items "flex-end" :spacing 24}
        [mui/grid {:item true}
         [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
@@ -741,40 +708,34 @@
 
       (when-not drawer-open?
         ;; Open Drawer Button
-        [mui/grid {:container true
-                   :style     {:position "fixed"
-                               :left     0
-                               :top      0
-                               :width    "430px"
-                               :z-index  1200}}
-         [mui/grid {:item true :xs 12}
-          [mui/paper {:square true}
-           [mui/button {:full-width true
-                        :on-click   #(==> [::events/toggle-drawer])
-                        :variant    "outlined"}
-            [mui/icon "expand_more"]]]]])
+        [lui/floating-container {:background-color "transparent"}
+         [mui/tool-bar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
+          [mui/fab
+           {:size     (if (utils/mobile? width) "small" "medium")
+            :on-click #(==> [::events/toggle-drawer])
+            :variant  "contained"
+            :color    "secondary"}
+           [mui/icon "expand_more"]]]])
 
       ;; Closable left sidebar drawer
-      [mui/drawer {:variant    "persistent"
-                   :PaperProps {:style {:width drawer-width}}
-                   :SlideProps {:direction "down"}
-                   :open       drawer-open?}
+      [mui/drawer
+       {:variant    "persistent"
+        :PaperProps {:style {:width drawer-width}}
+        :SlideProps {:direction "down"}
+        :open       drawer-open?}
 
        ;; Close button
-       [mui/button {:on-click #(==> [::events/toggle-drawer])
-                    :style    {:margin-bottom "1em"}
-                    :variant  "outlined"
-                    :color    "default"}
+       [mui/button
+        {:on-click #(==> [::events/toggle-drawer])
+         :style    {:margin-bottom "1em"}
+         :variant  "outlined"
+         :color    "default"}
         [mui/icon "expand_less"]]
 
        ;; Content
-       [mui/grid {:container true
-                  :direction :column
-                  :justify   :space-between
-                  :style     {:flex           1
-                              :padding-left   "1em"
-                              :padding-right  "1em"
-                              :padding-bottom "0.5em"}}
+       [mui/grid
+        {:container true :direction "column" :justify "space-between"
+         :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}
 
         [mui/grid {:item true :xs 12}
          (if selected-site
@@ -782,15 +743,13 @@
            [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
 
      ;; Layer switcher (bottom right)
-     [floating-container {:bottom "0.5em" :right "3em" :elevation 0
-                          :style
-                          {:background-color "rgba(255,255,255,0.9)"
-                           :z-index          888
-                           :margin           "0"
-                           :padding          "0.25em"
-                           :padding-right    0
-                           :padding-left     0}}
-      [layer-switcher {:tr tr}]]
+     [lui/floating-container {:bottom "0.5em" :right "2.75em"}
+      [mui/paper
+       {:elevation 1
+        :style
+        {:background-color "rgba(255,255,255,0.9)"
+         :margin           "0.25em" :padding-left "0.5em" :padding-right "0.5em"}}
+       [layer-switcher {:tr tr}]]]
 
      ;; We use this div to bind Popper to OpenLayers overlay
      [:div {:id "popup-anchor"}]

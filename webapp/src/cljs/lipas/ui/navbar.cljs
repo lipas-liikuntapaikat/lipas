@@ -332,6 +332,6 @@
     [menu-button {:tr tr}]]])
 
 (defn mini-nav [{:keys [tr logged-in?]}]
-  [mui/tool-bar {:disable-gutters true}
+  [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
    [account-menu-button {:tr tr :logged-in? logged-in?}]
    [menu-button {:tr tr}]])
