@@ -4,6 +4,7 @@
    [clojure.string :as string]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
+   [lipas.ui.db :as db]
    [re-frame.core :as re-frame]))
 
 (defn- add-filter [m filter]
@@ -51,10 +52,13 @@
         city-codes        (-> filters :city-codes not-empty)
         area-min          (-> filters :area-min)
         area-max          (-> filters :area-max)
+        year-min          (-> filters :construction-year-min)
+        year-max          (-> filters :construction-year-max)
         materials         (-> filters :surface-materials not-empty)
         retkikartta?      (-> filters :retkikartta?)
         admins            (-> filters :admins not-empty)
         owners            (-> filters :owners not-empty)
+        statuses          (-> filters :statuses not-empty)
         {:keys [lon lat]} center
 
         params (merge
@@ -79,11 +83,13 @@
                                               :offset (str distance "m")
                                               :scale  (str (* 2 distance) "m")}}})])}}})]
     (cond-> params
-      true         (add-filter {:terms {:status.keyword ["active"]}})
+      statuses     (add-filter {:terms {:status.keyword statuses}})
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
       area-min     (add-filter {:range {:properties.area-m2 {:gte area-min}}})
       area-max     (add-filter {:range {:properties.area-m2 {:lte area-max}}})
+      year-min     (add-filter {:range {:construction-year {:gte year-min}}})
+      year-max     (add-filter {:range {:construction-year {:lte year-max}}})
       materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
       admins       (add-filter {:terms {:admin.keyword admins}})
       owners       (add-filter {:terms {:owner.keyword owners}})
@@ -151,6 +157,14 @@
      [::change-result-page 0]]}))
 
 (re-frame/reg-event-fx
+ ::set-status-filter
+ (fn [{:keys [db]} [_ statuses append?]]
+   {:db       (if append?
+                (update-in db [:search :filters :statuses] into statuses)
+                (assoc-in db [:search :filters :statuses] statuses))
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
  ::set-type-filter
  (fn [{:keys [db]} [_ type-codes append?]]
    {:db       (if append?
@@ -176,6 +190,18 @@
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
+ ::set-construction-year-min-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :construction-year-min] v)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
+ ::set-construction-year-max-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :construction-year-max] v)
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
@@ -205,11 +231,11 @@
 (re-frame/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
-   (let [fit-view? false]
-     {:db       (-> db
-                    (assoc-in [:search :filters] {})
-                    (assoc-in [:search :sort] {:sort-fn :score :asc? true})
-                    (assoc-in [:search :string] nil))
+   (let [defaults  (-> db/default-db
+                       :search
+                       (select-keys [:filters :sort :string]))
+         fit-view? false]
+     {:db       (update db :search merge defaults)
       :dispatch [::filters-updated fit-view?]})))
 
 (re-frame/reg-event-fx

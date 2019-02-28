@@ -7,7 +7,8 @@
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.events :as events]
    [lipas.ui.search.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn- filter-layout [props & children]
   [mui/grid {:item true :style {:min-width  "365px"}}
@@ -17,17 +18,26 @@
             [mui/grid {:item true}
              c]))]])
 
+;; Text-fields are nasty to reset and filters contain many of
+;; them. Therefore we use this ugly hack to change react-key for the
+;; filter container component when "clear filters" button is clicked.
+(def ugly-forcer (r/atom 0))
+
 (defn filters [{:keys [tr]}]
   (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
+        statuses          (<== [::subs/statuses-filter])
         type-codes        (<== [::subs/types-filter])
         city-codes        (<== [::subs/cities-filter])
         admins            (<== [::subs/admins-filter])
         owners            (<== [::subs/owners-filter])
         area-min          (<== [::subs/area-min-filter])
         area-max          (<== [::subs/area-max-filter])
+        year-min          (<== [::subs/construction-year-min-filter])
+        year-max          (<== [::subs/construction-year-max-filter])
         surface-materials (<== [::subs/surface-materials-filter])
         retkikartta?      (<== [::subs/retkikartta-filter])]
 
+    ^{:key @ugly-forcer}
     [mui/grid {:container true :spacing 16}
 
      ;; Permissions filter
@@ -101,7 +111,6 @@
 
        ;; Area min filter
        [mui/grid {:item true :xs 6}
-        ^{:key area-min}
         [lui/text-field
          {:label     "Min"
           :defer-ms  500
@@ -111,13 +120,46 @@
 
        ;; Area max filter
        [mui/grid {:item true :xs 6}
-        ^{:key area-max}
         [lui/text-field
          {:label     "Max"
           :defer-ms  500
           :type      "number"
           :value     area-max
-          :on-change #(==> [::events/set-area-max-filter %])}]]]]]))
+          :on-change #(==> [::events/set-area-max-filter %])}]]]]
+
+     ;; Construction year filters
+     [filter-layout {}
+      [mui/typography {:variant "caption"}
+       (tr :actions/filter-construction-year)]
+
+      [mui/grid {:container true :spacing 16}
+
+       ;; Construction year min filter
+       [mui/grid {:item true :xs 6}
+        [lui/text-field
+         {:label     "Min"
+          :defer-ms  500
+          :type      "number"
+          :value     year-min
+          :on-change #(==> [::events/set-construction-year-min-filter %])}]]
+
+       ;; Construction year max
+       [mui/grid {:item true :xs 6}
+        [lui/text-field
+         {:label     "Max"
+          :defer-ms  500
+          :type      "number"
+          :value     year-max
+          :on-change #(==> [::events/set-construction-year-max-filter %])}]]]]
+
+     ;; Statuses filter
+     [filter-layout {}
+      [mui/typography {:variant "caption"}
+       (tr :actions/select-statuses)]
+      [lui/status-selector
+       {:multi?    true
+        :value     statuses
+        :on-change #(==> [::events/set-status-filter %])}]]]))
 
 (defn pagination
   [{:keys [tr page page-size page-sizes total change-page-size?] :as props}]
@@ -205,10 +247,13 @@
       ;; Clear filters button
       (when filters-active?
         [mui/grid {:item true}
-         [mui/button {:style    {:margin "0.5em"}
-                      :color    "secondary"
-                      :size     "small"
-                      :on-click #(==> [::events/clear-filters])}
+         [mui/button
+          {:style    {:margin "0.5em"}
+           :color    "secondary"
+           :size     "small"
+           :on-click (fn []
+                       (==> [::events/clear-filters])
+                       (swap! ugly-forcer inc))}
           (tr :search/clear-filters)]])
 
       ;; Change result view (list | table)

@@ -24,6 +24,12 @@
    (:translator db)))
 
 (re-frame/reg-sub
+ ::locale
+ :<- [::translator]
+ (fn [tr _]
+   (tr)))
+
+(re-frame/reg-sub
  ::active-notification
  (fn [db _]
    (:active-notification db)))

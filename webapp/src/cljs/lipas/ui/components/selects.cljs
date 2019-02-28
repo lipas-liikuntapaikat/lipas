@@ -343,3 +343,19 @@
       :label        (tr :actions/select-columns)
       :render-value (fn [v] (tr :actions/select-hint))
       :on-change    on-change}]))
+
+(defn status-selector [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (<== [:lipas.ui.subs/locale])
+        items  (<== [:lipas.ui.search.subs/statuses])]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:value        value
+      :items        items
+      :show-all?    true
+      :style        {:min-width "170px"}
+      :label-fn     (comp locale second)
+      :value-fn     first
+      :label        (tr :actions/select-statuses)
+      :render-value (fn [v] (tr :actions/select-hint))
+      :on-change    on-change}]))
