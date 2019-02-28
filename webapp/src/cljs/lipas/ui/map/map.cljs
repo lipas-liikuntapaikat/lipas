@@ -294,7 +294,9 @@
                  extent (.calculateExtent view)
                  width  (.getWidth ol.extent extent)
                  height (.getHeight ol.extent extent)]
-             (==> [::events/set-view center lonlat zoom extent width height]))))
+
+             (when (and (> width 0) (> height 0))
+               (==> [::events/set-view center lonlat zoom extent width height])))))
 
     {:lmap          lmap
      :view          view
