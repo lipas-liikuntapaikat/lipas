@@ -932,6 +932,16 @@
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
 (s/def :lipas.swimming-pool.pool/outdoor-pool? boolean?)
 
+(s/def :lipas.swimming-pool.pool/accessibility-feature
+  (into #{} (keys swimming-pools/accessibility-features)))
+
+(s/def :lipas.swimming-pool.pool/accessibility-features
+  (s/coll-of :lipas.swimming-pool.pool/accessibility-feature
+             :min-count 0
+             :max-count (count swimming-pools/accessibility-features)
+             :distinct true
+             :into []))
+
 (s/def :lipas.swimming-pool/pool
   (s/keys :opt-un [:lipas.swimming-pool.pool/type
                    :lipas.swimming-pool.pool/outdoor-pool?
@@ -941,7 +951,8 @@
                    :lipas.swimming-pool.pool/length-m
                    :lipas.swimming-pool.pool/width-m
                    :lipas.swimming-pool.pool/depth-min-m
-                   :lipas.swimming-pool.pool/depth-max-m]))
+                   :lipas.swimming-pool.pool/depth-max-m
+                   :lipas.swimming-pool.pool/accessibility-features]))
 
 (s/def :lipas.swimming-pool/pools
   (s/coll-of :lipas.swimming-pool/pool

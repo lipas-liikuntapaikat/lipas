@@ -427,7 +427,8 @@
     :filtering-methods "Suodatustapa"}
 
    :lipas.swimming-pool.pool
-   {:outdoor-pool? "Ulkoallas"}
+   {:outdoor-pool?          "Ulkoallas"
+    :accessibility-features "Saavutettavuus"}
 
    :lipas.swimming-pool.pools
    {:headline  "Altaat"
@@ -464,7 +465,7 @@
     :showers-unisex-count           "Unisex suihkut lkm"
     :lockers-men-count              "Miesten pukukaapit lkm"
     :lockers-women-count            "Naisten pukukaapit lkm"
-    :lockers-unisex-count           "Unisex pukukaapit lkm"}
+    :lockers-unisex-count           "Unisex pukuhuoneet lkm"}
 
    :dimensions
    {:volume-m3       "Tilavuus m³"
