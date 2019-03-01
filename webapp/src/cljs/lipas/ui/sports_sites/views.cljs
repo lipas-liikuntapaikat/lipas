@@ -211,10 +211,11 @@
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
-(defn surface-material-selector [{:keys [tr value on-change label]}]
-  (let [locale (tr)
-        items  (<== [::subs/surface-materials])]
-    [lui/multi-select
+(defn surface-material-selector [{:keys [tr value on-change label multi?]}]
+  (let [locale    (tr)
+        items     (<== [::subs/surface-materials])
+        component (if multi? lui/multi-select lui/select)]
+    [component
      {:value     value
       :label     label
       :spec      :lipas.sports-site.properties/surface-material
@@ -222,6 +223,11 @@
       :label-fn  (comp locale second)
       :value-fn  first
       :on-change on-change}]))
+
+(defn material-field? [k]
+  (contains? #{:surface-material
+               :training-spot-surface-material
+               :running-track-surface-material} k))
 
 (defn properties-form [{:keys [tr edit-data display-data types-props
                                on-change read-only? key]}]
@@ -243,8 +249,9 @@
          :priority (:priority v)
          :form-field
          (cond
-           (= :surface-material k) [surface-material-selector
+           (material-field? k)     [surface-material-selector
                                     {:tr        tr
+                                     :multi?    (= :surface-material k)
                                      :label     label
                                      :value     value
                                      :on-change on-change}]
@@ -470,9 +477,7 @@
        [mui/tool-bar {:disable-gutters true}
         [mui/tooltip {:title (or close-label "")}
          [mui/icon-button
-          {:on-click on-close
-           :style    {:margin-left  "0.5em"
-                      :margin-right "0.4em"}}
+          {:on-click on-close :style {:margin-left "0.5em" :margin-right "0.4em"}}
 
           ;; "back to listing" button
           [mui/icon {:color :primary}
@@ -489,14 +494,12 @@
      ;; Floating actions
      (into
       [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}]
-      (interpose [:span {:style {:margin-left  "0.25em"
-                                 :margin-right "0.25em"}}]
+      (interpose [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}]
                  bottom-actions))
 
      ;; Small footer on top of which floating container may scroll
-     [mui/grid {:item  true :xs 12
-                :style {:height           "5em"
-                        :background-color mui/gray1}}]]))
+     [mui/grid
+      {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]]))
 
 (defn main [tr]
   [mui/typography "Nothing here"])
