@@ -30,6 +30,7 @@
     :owner                     (->translations locale owners/all)
     :pool-types                (->translations locale pools/pool-types)
     :sauna-types               (->translations locale pools/sauna-types)
+    :accessibility             (->translations locale pools/accessibility-features)
     :heat-sources              (->translations locale pools/heat-sources)
     :filtering-methods         (->translations locale pools/filtering-methods)
     :pool-structures           (->translations locale materials/pool-structures)

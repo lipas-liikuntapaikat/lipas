@@ -11,10 +11,11 @@
   (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field       (partial set-field :pool)
-        pool-types      (<== [::subs/pool-types])
-        pool-structures (<== [::subs/pool-structures])
-        locale          (tr)]
+  (let [set-field              (partial set-field :pool)
+        pool-types             (<== [::subs/pool-types])
+        pool-structures        (<== [::subs/pool-structures])
+        accessibility-features (<== [::subs/accessibility-features])
+        locale                 (tr)]
     [mui/form-group
 
      ;; Outdoor pool?
@@ -104,7 +105,16 @@
        :adornment (tr :physical-units/m)
        :value     (:depth-max-m data)
        :spec      :lipas.swimming-pool.pool/depth-max-m
-       :on-change #(set-field :depth-max-m %)}]]))
+       :on-change #(set-field :depth-max-m %)}]
+
+     ;; Accessibility features
+     [lui/multi-select
+      {:label     (tr :lipas.swimming-pool.pool/accessibility-features)
+       :items     accessibility-features
+       :value     (:accessibility-features data)
+       :value-fn  first
+       :label-fn  (comp locale second)
+       :on-change #(set-field :accessibility-features %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data (<== [::subs/pool-form])
@@ -133,16 +143,23 @@
    [:width-m (tr :dimensions/width-m)]
    [:depth-min-m (tr :dimensions/depth-min-m)]
    [:depth-max-m (tr :dimensions/depth-max-m)]
-   [:structure (tr :general/structure)]])
+   [:structure (tr :general/structure)]
+   [:accessibility-features (tr :lipas.swimming-pool.pool/accessibility-features)]])
+
+(defn- localize-accessibility [tr pool]
+  (update pool :accessibility-features
+          #(map (fn [f] (tr (keyword :accessibility f))) %)))
 
 (defn table [{:keys [tr items lipas-id]}]
   (let [localize (partial utils/localize-field tr)]
     [lui/form-table
      {:headers         (make-headers tr)
-      :items           (->> (vals items)
-                            (map (partial localize :type :pool-types))
-                            (map (partial localize :structure :pool-structures))
-                            (sort-by :length-m utils/reverse-cmp))
+      :items
+      (->> (vals items)
+           (map (partial localize :type :pool-types))
+           (map (partial localize :structure :pool-structures))
+           (map (partial localize-accessibility tr))
+           (sort-by :length-m utils/reverse-cmp))
       :add-tooltip     (tr :lipas.swimming-pool.pools/add-pool)
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)

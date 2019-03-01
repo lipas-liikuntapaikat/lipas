@@ -82,3 +82,13 @@
    "district-heating"      {:fi "Kaukolämpö"
                             :se nil
                             :en "District heating"}})
+
+(def accessibility-features
+  {"lift"            {:fi "Allasnostin"
+                      :en "Pool lift"}
+   "mobile-lift"     {:fi "Siirrettävä allasnostin"
+                      :en "Mobile pool lift"}
+   "slope"           {:fi "Luiska"
+                      :en "Slope"}
+   "low-rise-stairs" {:fi "Loivat portaat"
+                      :en "Low rise stairs"}})

@@ -123,6 +123,11 @@
    (vals types)))
 
 (re-frame/reg-sub
+ ::accessibility-features
+ (fn [db _]
+   (-> db :swimming-pools :accessibility-features)))
+
+(re-frame/reg-sub
  ::pool-types
  (fn [db _]
    (-> db :swimming-pools :pool-types)))
@@ -196,8 +201,9 @@
  :<- [::heat-sources]
  :<- [::pool-types]
  :<- [::sauna-types]
+ :<- [::accessibility-features]
  (fn [[site cities admins owners types materials filtering-methods
-       heat-sources pool-types sauna-types] [_ locale]]
+       heat-sources pool-types sauna-types accessibility-features] [_ locale]]
    (when site
      (let [latest               (or (utils/latest-edit (:edits site))
                                     (get-in site [:history (:latest site)]))
@@ -211,7 +217,8 @@
            get-filtering-method #(get-in filtering-methods [% locale])
            get-heat-source      #(get-in heat-sources [% locale])
            get-pool-type        #(get-in pool-types [% locale])
-           get-sauna-type       #(get-in sauna-types [% locale])]
+           get-sauna-type       #(get-in sauna-types [% locale])
+           get-accessibility    #(get-in accessibility-features [% locale])]
 
        {:lipas-id       (-> latest :lipas-id)
         :name           (-> latest :name)
@@ -254,7 +261,9 @@
         :pools
         (->> (:pools latest)
              (map #(update % :type get-pool-type))
-             (map #(update % :structure get-material)))
+             (map #(update % :structure get-material))
+             (map #(update % :accessibility-features
+                           (fn [f] (map get-accessibility f)))))
 
         :slides (:slides latest)
 
