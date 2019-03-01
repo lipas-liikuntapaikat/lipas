@@ -294,7 +294,9 @@
                  extent (.calculateExtent view)
                  width  (.getWidth ol.extent extent)
                  height (.getHeight ol.extent extent)]
-             (==> [::events/set-view center lonlat zoom extent width height]))))
+
+             (when (and (> width 0) (> height 0))
+               (==> [::events/set-view center lonlat zoom extent width height])))))
 
     {:lmap          lmap
      :view          view
@@ -316,8 +318,7 @@
     (when (and view lmap (some finite? extent))
       (.fit view extent #js{:size                (.getSize lmap)
                             :padding             (clj->js padding)
-                            :constrainResolution false
-                            :nearest             false})))
+                            :constrainResolution true})))
   map-ctx)
 
 ;; Popups are rendered 'outside' OpenLayers by React so we need to

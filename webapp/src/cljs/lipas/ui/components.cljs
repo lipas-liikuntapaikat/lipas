@@ -41,6 +41,8 @@
 (def owner-selector-single selects/owner-selector-single)
 (def surface-material-selector selects/surface-material-selector)
 (def search-results-column-selector selects/search-results-column-selector)
+(def status-selector selects/status-selector)
+(def status-selector-single selects/status-selector-single)
 (def date-picker selects/date-picker)
 (def autocomplete autocompletes/autocomplete)
 (def table tables/table)
