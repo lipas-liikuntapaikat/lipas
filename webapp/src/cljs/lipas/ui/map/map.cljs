@@ -318,8 +318,7 @@
     (when (and view lmap (some finite? extent))
       (.fit view extent #js{:size                (.getSize lmap)
                             :padding             (clj->js padding)
-                            :constrainResolution false
-                            :nearest             false})))
+                            :constrainResolution true})))
   map-ctx)
 
 ;; Popups are rendered 'outside' OpenLayers by React so we need to
