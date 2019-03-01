@@ -233,7 +233,9 @@
 
         :properties (-> latest
                         :properties
-                        (update :surface-material #(map get-material %)))
+                        (update :surface-material #(map get-material %))
+                        (update :running-track-surface-material get-material)
+                        (update :training-spot-surface-material get-material))
 
         :location
         {:address       (-> latest :location :address)
