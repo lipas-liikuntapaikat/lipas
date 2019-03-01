@@ -33,6 +33,7 @@
    :lipas.sports-site
    {:headline          "Liikuntapaikka"
     :id                "LIPAS-ID"
+    :status            "Liikuntapaikan tila"
     :name-short        "Nimi"
     :name              "Virallinen nimi"
     :marketing-name    "Markkinointinimi"
