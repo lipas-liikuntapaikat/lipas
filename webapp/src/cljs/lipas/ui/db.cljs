@@ -104,8 +104,10 @@
 
    ;; Search
    :search
-   {:filters
-    {:type-codes #{}
+   {:string       nil
+    :filters
+    {:statuses   #{"active" "out-of-service-temporarily"}
+     :type-codes #{}
      :city-codes #{}}
     :sort
     {:asc?    true

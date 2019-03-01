@@ -20,9 +20,9 @@
 (defn slide [props]
   [mui/slide props])
 
-(defn full-screen-dialog [{:keys [open? title on-close close-label top-actions
-                                  bottom-actions]}
-                          & contents]
+(defn full-screen-dialog
+  [{:keys [open? title on-close close-label top-actions
+           bottom-actions]} & contents]
   [mui/dialog {:open                 open?
                :full-screen          true
                :Transition-component (r/reactify-component slide)
@@ -56,9 +56,9 @@
      [mui/button {:on-click on-close}
       close-label])]])
 
-(defn confirmation-dialog [{:keys [title message on-cancel on-decline
-                                   decline-label cancel-label
-                                   on-confirm confirm-label]}]
+(defn confirmation-dialog
+  [{:keys [title message on-cancel on-decline decline-label
+           cancel-label on-confirm confirm-label]}]
   [mui/dialog {:open                    true
                :disable-backdrop-click  true
                :disable-escape-key-down true}

@@ -1,9 +1,9 @@
 (ns lipas.ui.stats.events
   (:require
    [ajax.core :as ajax]
-   [ajax.protocols :as ajaxp]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
+   [lipas.ui.db :as db]
    [re-frame.core :as re-frame]))
 
 ;;; General ;;;
@@ -146,28 +146,29 @@
      [::create-age-structure-report]]}))
 
 (defn ->age-structure-query [city-codes type-codes grouping interval]
-  {:size 0,
-   :query
-   {:bool
-    {:filter
-     (remove nil?
-             [{:terms {:status.keyword ["active"]}}
-              (when (not-empty city-codes)
-                {:terms {:location.city.city-code city-codes}})
-              (when (not-empty type-codes)
-                {:terms {:type.type-code type-codes}})])}}
-   :aggs
-   {:years
-    {:composite
-     {:size 1000,
-      :sources
-      [{:construction-year
-        {:histogram {:field :construction-year, :interval interval}}}
-       {:owner
-        {:terms
-         {:field (condp = grouping
-                   "owner" :owner.keyword
-                   "admin" :admin.keyword)}}}]}}}})
+  (let [default-statuses (-> db/default-db :search :filters :statuses)]
+    {:size 0,
+     :query
+     {:bool
+      {:filter
+       (remove nil?
+               [{:terms {:status.keyword default-statuses}}
+                (when (not-empty city-codes)
+                  {:terms {:location.city.city-code city-codes}})
+                (when (not-empty type-codes)
+                  {:terms {:type.type-code type-codes}})])}}
+     :aggs
+     {:years
+      {:composite
+       {:size 1000,
+        :sources
+        [{:construction-year
+          {:histogram {:field :construction-year, :interval interval}}}
+         {:owner
+          {:terms
+           {:field (condp = grouping
+                     "owner" :owner.keyword
+                     "admin" :admin.keyword)}}}]}}}}))
 
 (re-frame/reg-event-fx
  ::create-age-structure-report

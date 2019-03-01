@@ -271,12 +271,13 @@
 
 (defn m2-per-capita-report [db search* city-codes type-codes]
   (let [pop-data (get-populations db 2017)
+        statuses ["active" "out-of-service-temporarily"]
         query    {:size 0,
                   :query
                   {:bool
                    {:filter
                     (into [] (remove nil?)
-                          [{:terms {:status.keyword ["active"]}}
+                          [{:terms {:status.keyword statuses}}
                            (when (not-empty type-codes)
                              {:terms {:type.type-code type-codes}})
                            (when (not-empty city-codes)

@@ -1,6 +1,7 @@
 (ns lipas.i18n.core
   (:require
    [clojure.string :as s]
+   [lipas.data.sports-sites :as sports-sites]
    [lipas.data.admins :as admins]
    [lipas.data.ice-stadiums :as ice]
    [lipas.data.materials :as materials]
@@ -24,7 +25,8 @@
 
 (defn- append-data! [locale m]
   (->>
-   {:admin                     (->translations locale admins/all)
+   {:status                    (->translations locale sports-sites/statuses)
+    :admin                     (->translations locale admins/all)
     :owner                     (->translations locale owners/all)
     :pool-types                (->translations locale pools/pool-types)
     :sauna-types               (->translations locale pools/sauna-types)

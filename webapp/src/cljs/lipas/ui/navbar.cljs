@@ -242,25 +242,28 @@
     {:text "" :href ""}))
 
 (defn menu-button [{:keys [tr]}]
-  [mui/icon-button {:id         "main-menu-btn"
-                    :aria-label (tr :actions/open-main-menu)
-                    :on-click   toggle-drawer}
-   [mui/icon {:color "secondary"
-              :style {:font-weight :bold}} "menu"]])
+  [mui/icon-button
+   {:id         "main-menu-btn"
+    :aria-label (tr :actions/open-main-menu)
+    :on-click   toggle-drawer}
+   [mui/icon
+    {:color "secondary"
+     :style {:font-weight :bold}} "menu"]])
 
 (defn nav [{:keys [tr active-panel logged-in?]}]
-  [mui/app-bar {:position   "static"
-                :color      "primary"
-                :style      {:border-box "1px solid black"}
-                :class-name :no-print}
+  [mui/app-bar
+   {:position   "static"
+    :color      "primary"
+    :style      {:border-box "1px solid black"}
+    :class-name :no-print}
 
    [mui/tool-bar {:disable-gutters true}
 
       ;;; JYU logo
     [:a {:href "https://www.jyu.fi"}
-     [mui/svg-icon {:view-box "0 0 132.54 301.95"
-                    :style    {:height "2em"
-                               :margin "0.45em"}}
+     [mui/svg-icon
+      {:view-box "0 0 132.54 301.95"
+       :style    {:height "2em" :margin "0.45em"}}
       [svg/jyu-logo]]]
 
       ;;; Header text
@@ -278,58 +281,57 @@
         :variant   "h6"
         :href      "https://www.jyu.fi"
         :style
-        (merge mui/headline-aleo
-               {:display         "inline"
-                :font-size       "1em"
-                :text-transform  "none"
-                :text-decoration "none"})}
+        (merge
+         mui/headline-aleo
+         {:display         "inline"
+          :font-size       "1em"
+          :text-transform  "none"
+          :text-decoration "none"})}
        (tr :menu/jyu)]
 
       [separator]]
 
      ;; LIPAS
-     [mui/typography {:component "a"
-                      :variant   "h6"
-                      :href      "/#/etusivu"
-                      :style
-                      (merge mui/headline-aleo
-                             {:display         "inline"
-                              :font-size       "1em"
-                              :text-transform  "none"
-                              :text-decoration "none"})}
-
+     [mui/typography
+      {:component "a"
+       :variant   "h6"
+       :href      "/#/etusivu"
+       :style
+       (merge
+        mui/headline-aleo
+        {:display         "inline"
+         :font-size       "1em"
+         :text-transform  "none"
+         :text-decoration "none"})}
       (tr :menu/headline)]
 
      [separator]
 
-     [mui/typography {:component "a"
-                      :variant   "h6"
-                      :href      (:href (get-sub-page active-panel tr))
-                      :style
-                      (merge mui/headline-aleo
-                             {:display         "inline"
-                              :font-size       "1em"
-                              :text-transform  "none"
-                              :text-decoration "none"})}
-
-      ;; Sub page header
+     ;; Sub page header
+     [mui/typography
+      {:component "a"
+       :variant   "h6"
+       :href      (:href (get-sub-page active-panel tr))
+       :style
+       (merge
+        mui/headline-aleo
+        {:display         "inline"
+         :font-size       "1em"
+         :text-transform  "none"
+         :text-decoration "none"})}
       (:text (get-sub-page active-panel tr))]]
 
+    ;; Lang selector
     [mui/hidden {:sm-down true}
      [lang-selector]]
 
-    ;;; Search button
-    ;; [mui/icon-button {:id         "search-btn"
-    ;;                   :aria-label (tr :actions/open-search)}
-    ;;  [mui/icon "search"]]
-
-      ;;; Account menu button
+    ;;; Account menu button
     [account-menu-button {:tr tr :logged-in? logged-in?}]
 
-      ;;; Main menu (drawer) button
+    ;;; Main menu (drawer) button
     [menu-button {:tr tr}]]])
 
 (defn mini-nav [{:keys [tr logged-in?]}]
-  [mui/tool-bar {:disable-gutters true}
+  [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
    [account-menu-button {:tr tr :logged-in? logged-in?}]
    [menu-button {:tr tr}]])

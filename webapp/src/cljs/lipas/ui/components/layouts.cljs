@@ -9,7 +9,7 @@
   (into
    [:div.no-print
     {:style
-     {:position         :fixed
+     {:position         "fixed"
       :z-index          999
       :background-color background-color
       :top              top
@@ -24,11 +24,11 @@
     [mui/card-header {:title title}]
     (into [mui/card-content] content)]])
 
-(defn expansion-panel [{:keys [label label-color default-expanded]
-                        :or   {label-color "default"}} & children]
+(defn expansion-panel
+  [{:keys [label label-color default-expanded]
+    :or   {label-color "default"}} & children]
   [mui/expansion-panel
-   {:default-expanded default-expanded
-    :style            {:margin-top "1em"}}
+   {:default-expanded default-expanded :style {:margin-top "1em"}}
    [mui/expansion-panel-summary
     {:expand-icon (r/as-element [mui/icon "expand_more"])}
 

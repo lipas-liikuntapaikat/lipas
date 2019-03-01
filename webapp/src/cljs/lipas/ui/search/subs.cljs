@@ -2,6 +2,7 @@
   (:require
    [lipas.permissions :as permissions]
    [lipas.ui.components :as lui]
+   [lipas.ui.db :as db]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -22,7 +23,19 @@
  :<- [::search-string]
  (fn [[filters search-str] _]
    (or (not-empty search-str)
-       (some (comp some? filter-enabled? second) filters))))
+       (some (comp some? filter-enabled? second) (dissoc filters :statuses))
+       (not= (-> db/default-db :search :filters :statuses) (:statuses filters)))))
+
+(re-frame/reg-sub
+ ::statuses
+ :<- [:lipas.ui.sports-sites.subs/statuses]
+ (fn [statuses _]
+   (dissoc statuses "incorrect-data")))
+
+(re-frame/reg-sub
+ ::statuses-filter
+ (fn [db _]
+   (-> db :search :filters :statuses set)))
 
 (re-frame/reg-sub
  ::types-filter
@@ -53,6 +66,16 @@
  ::area-max-filter
  (fn [db _]
    (-> db :search :filters :area-max)))
+
+(re-frame/reg-sub
+ ::construction-year-min-filter
+ (fn [db _]
+   (-> db :search :filters :construction-year-min)))
+
+(re-frame/reg-sub
+ ::construction-year-max-filter
+ (fn [db _]
+   (-> db :search :filters :construction-year-max)))
 
 (re-frame/reg-sub
  ::surface-materials-filter
