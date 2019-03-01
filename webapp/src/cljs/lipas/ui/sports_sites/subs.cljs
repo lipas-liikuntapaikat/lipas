@@ -196,9 +196,10 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/all-types])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/materials])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/statuses])
     (re-frame/subscribe [:lipas.ui.subs/translator])])
  (fn [[site cities admins owners types size-categories
-       materials translator] _]
+       materials statuses translator] _]
    (when site
      (let [locale        (translator)
            latest        (or (utils/latest-edit (:edits site))
@@ -208,10 +209,12 @@
            admin         (admins (-> latest :admin))
            owner         (owners (-> latest :owner))
            city          (get cities (-> latest :location :city :city-code))
+           status        (statuses (-> latest :status))
 
            get-material #(get-in materials [% locale])]
 
-       {:lipas-id       (-> latest :lipas-id)
+       {:status         (-> status locale)
+        :lipas-id       (-> latest :lipas-id)
         :name           (-> latest :name)
         :marketing-name (-> latest :marketing-name)
         :type
@@ -322,6 +325,12 @@
    (select-keys statuses ["out-of-service-temporarily"
                           "out-of-service-permanently"
                           "incorrect-data"])))
+
+(re-frame/reg-sub
+ ::resurrect-statuses
+ :<- [::statuses]
+ (fn [statuses _]
+   (select-keys statuses ["out-of-service-temporarily" "active"])))
 
 (re-frame/reg-sub
  ::delete-dialog-open?

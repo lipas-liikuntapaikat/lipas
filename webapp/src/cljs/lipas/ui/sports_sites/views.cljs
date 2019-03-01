@@ -10,13 +10,31 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+(defn- show-status?
+  "Status field is displayed only if latest saved status is
+  'out-of-service-temporarily'. Applies to both display and edit
+  views."
+  [tr display-data]
+  (= (:status display-data) (tr (keyword :status "out-of-service-temporarily"))))
+
 (defn form [{:keys [tr display-data edit-data types size-categories
                     admins owners on-change read-only? sub-headings?]}]
+
   (let [locale (tr)]
+
     [lui/form {:read-only? read-only?}
 
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
+
+     ;; Status
+     (when (show-status? tr display-data)
+       {:label      (tr :lipas.sports-site/status)
+        :value      (-> display-data :status)
+        :form-field [lui/status-selector-single
+                     {:required  true
+                      :value     (-> edit-data :status)
+                      :on-change #(on-change :status %)}]})
 
      ;; Name
      {:label      (tr :lipas.sports-site/name)

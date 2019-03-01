@@ -359,3 +359,16 @@
       :label        (tr :actions/select-statuses)
       :render-value (fn [v] (tr :actions/select-hint))
       :on-change    on-change}]))
+
+(defn status-selector-single [{:keys [value on-change]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (<== [:lipas.ui.subs/locale])
+        items  (<== [:lipas.ui.sports-sites.subs/resurrect-statuses])]
+    [select
+     {:value        value
+      :items        items
+      :style        {:min-width "170px"}
+      :label-fn     (comp locale second)
+      :value-fn     first
+      :label        (tr :actions/select-statuses)
+      :on-change    on-change}]))
