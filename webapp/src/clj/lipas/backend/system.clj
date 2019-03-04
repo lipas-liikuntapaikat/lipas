@@ -3,14 +3,17 @@
    [clojure.pprint :refer [pprint]]
    [integrant.core :as ig]
    [lipas.backend.config :as config]
+   [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
    [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
-  ;; TODO setup connection pooling
-  db-spec)
+  (db/setup-connection-pool db-spec))
+
+(defmethod ig/halt-key! :db [_ pool]
+  (db/stop-connection-pool pool))
 
 (defmethod ig/init-key :emailer [_ config]
   (email/->SMTPEmailer config))
