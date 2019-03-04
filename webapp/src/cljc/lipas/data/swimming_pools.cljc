@@ -83,7 +83,7 @@
                             :se nil
                             :en "District heating"}})
 
-(def accessibility-features
+(def accessibility
   {"lift"            {:fi "Allasnostin"
                       :en "Pool lift"}
    "mobile-lift"     {:fi "Siirrettävä allasnostin"

@@ -3,6 +3,7 @@
    [clojure.spec.alpha :as s]
    [lipas.data.types :as types]
    [lipas.ui.utils :as utils]
+   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -272,6 +273,11 @@
      :email             (-> sports-site :email)
      :phone-number      (-> sports-site :phone-number)}))
 
+(defn filter-matching [s coll]
+  (if (empty? s)
+    coll
+    (filter (partial cutils/str-matches? s) coll)))
+
 (re-frame/reg-sub
  ::sites-list
  :<- [::latest-sports-site-revs]
@@ -280,7 +286,8 @@
  :<- [::owners]
  :<- [::all-types]
  :<- [:lipas.ui.ice-stadiums.subs/size-categories]
- (fn [[sites cities admins owners types size-categories] [_ locale type-codes]]
+ (fn [[sites cities admins owners types size-categories]
+      [_ locale type-codes sites-filter]]
    (let [data {:locale          locale
                :cities          cities
                :admins          admins
@@ -290,7 +297,8 @@
      (->> sites
           vals
           (filter (comp type-codes :type-code :type))
-          (map (partial ->list-entry data))))))
+          (map (partial ->list-entry data))
+          (filter-matching sites-filter)))))
 
 (re-frame/reg-sub
  ::adding-new-site?

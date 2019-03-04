@@ -353,7 +353,7 @@
    :lipas.building
    {:headline                    "Rakennus"
     :main-designers              "Pääsuunnittelijat"
-    :total-surface-area-m2       "Bruttopinta-ala m²"
+    :total-surface-area-m2       "Bruttopinta-ala m² (kokonaisala)"
     :total-volume-m3             "Bruttotilavuus m³"
     :total-pool-room-area-m2     "Allashuoneen pinta-ala m²"
     :total-water-area-m2         "Vesipinta-ala m²"
@@ -372,7 +372,8 @@
     :base-floor-structure    "Alapohjan laatan rakenne"
     :insulated-exterior?     "Ulkoseinä lämpöeristetty"
     :insulated-ceiling?      "Yläpohja lämpöeristetty"
-    :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnoite"}
+    :low-emissivity-coating? "Yläpohjassa
+    matalaemissiiviteettipinnoite (heijastus/säteily)"}
 
    :lipas.ice-stadium.rinks
    {:headline  "Radat"
@@ -383,17 +384,17 @@
    {:headline                       "Kylmätekniikka"
     :original?                      "Alkuperäinen"
     :individual-metering?           "Alamittaroitu"
-    :power-kw                       "Kylmäkoneen teho (kW)"
+    :power-kw                       "Kylmäkoneen sähköteho (kW)"
     :condensate-energy-recycling?   "Lauhde-energia hyötykäytetty"
     :condensate-energy-main-targets "Lauhdelämmön pääkäyttökohde"
     :refrigerant                    "Kylmäaine"
     :refrigerant-amount-kg          "Kylmäaineen määrä (kg)"
-    :refrigerant-solution           "Kylmäliuos"
-    :refrigerant-solution-amount-l  "Kylmäliuoksen määrä (l)"}
+    :refrigerant-solution           "Rataliuos"
+    :refrigerant-solution-amount-l  "Rataliuoksen määrä (l)"}
 
    :lipas.ice-stadium.conditions
    {:headline                        "Käyttöolosuhteet"
-    :daily-open-hours                "Aukiolotunnit päivässä"
+    :daily-open-hours                "Käyttötunnit päivässä"
     :open-months                     "Aukiolokuukaudet vuodessa"
     :air-humidity-min                "Ilman suhteellinen kosteus % min"
     :air-humidity-max                "Ilman suhteellinen kosteus % max"
@@ -427,8 +428,8 @@
     :filtering-methods "Suodatustapa"}
 
    :lipas.swimming-pool.pool
-   {:outdoor-pool?          "Ulkoallas"
-    :accessibility-features "Saavutettavuus"}
+   {:outdoor-pool? "Ulkoallas"
+    :accessibility "Saavutettavuus"}
 
    :lipas.swimming-pool.pools
    {:headline  "Altaat"

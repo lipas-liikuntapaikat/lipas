@@ -341,9 +341,10 @@
            (when spectators?
              [:spectators-count (tr :lipas.visitors/spectators-count)])]))
 
-(defn visitors-view [{:keys [tr display-data lipas-id editing? close
-                             spectators? user-can-publish?]
-                      :or   [spectators? false]}]
+(defn visitors-view
+  [{:keys [tr display-data lipas-id editing? close spectators?
+           user-can-publish?]
+    :or   [spectators? false]}]
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
 
@@ -352,8 +353,7 @@
       [mui/typography (tr :lipas.visitors/not-reported)]
 
       [:div
-       [mui/tabs {:value     @selected-tab
-                  :on-change #(reset! selected-tab %2)}
+       [mui/tabs {:value @selected-tab :on-change #(reset! selected-tab %2)}
         [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
         [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
 

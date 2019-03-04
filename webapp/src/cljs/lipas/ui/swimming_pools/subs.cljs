@@ -123,9 +123,9 @@
    (vals types)))
 
 (re-frame/reg-sub
- ::accessibility-features
+ ::accessibility
  (fn [db _]
-   (-> db :swimming-pools :accessibility-features)))
+   (-> db :swimming-pools :accessibility)))
 
 (re-frame/reg-sub
  ::pool-types
@@ -201,9 +201,9 @@
  :<- [::heat-sources]
  :<- [::pool-types]
  :<- [::sauna-types]
- :<- [::accessibility-features]
+ :<- [::accessibility]
  (fn [[site cities admins owners types materials filtering-methods
-       heat-sources pool-types sauna-types accessibility-features] [_ locale]]
+       heat-sources pool-types sauna-types accessibility] [_ locale]]
    (when site
      (let [latest               (or (utils/latest-edit (:edits site))
                                     (get-in site [:history (:latest site)]))
@@ -218,7 +218,7 @@
            get-heat-source      #(get-in heat-sources [% locale])
            get-pool-type        #(get-in pool-types [% locale])
            get-sauna-type       #(get-in sauna-types [% locale])
-           get-accessibility    #(get-in accessibility-features [% locale])]
+           get-accessibility    #(get-in accessibility [% locale])]
 
        {:lipas-id       (-> latest :lipas-id)
         :name           (-> latest :name)
@@ -262,8 +262,7 @@
         (->> (:pools latest)
              (map #(update % :type get-pool-type))
              (map #(update % :structure get-material))
-             (map #(update % :accessibility-features
-                           (fn [f] (map get-accessibility f)))))
+             (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))
 
         :slides (:slides latest)
 
@@ -273,5 +272,10 @@
 
         :facilities         (:facilities latest)
         :visitors           (:visitors latest)
-        :visitors-history   (sort-by :year utils/reverse-cmp visitors-history)
-        :energy-consumption (sort-by :year utils/reverse-cmp energy-history)}))))
+        :visitors-history   (sort-by :year visitors-history)
+        :energy-consumption (sort-by :year energy-history)}))))
+
+(re-frame/reg-sub
+ ::sites-filter
+ (fn [db _]
+   (-> db :swimming-pools :sites-filter)))

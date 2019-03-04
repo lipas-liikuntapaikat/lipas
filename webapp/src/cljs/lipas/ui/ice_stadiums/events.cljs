@@ -67,3 +67,8 @@
     :dispatch-n
     [[:lipas.ui.energy.events/fetch-energy-report year 2510]
      [:lipas.ui.energy.events/fetch-energy-report year 2520]]}))
+
+(re-frame/reg-event-db
+ ::filter-sites
+ (fn [db [_ s]]
+   (assoc-in db [:ice-stadiums :sites-filter] s)))

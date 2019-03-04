@@ -11,11 +11,11 @@
   (#(==> [::events/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field              (partial set-field :pool)
-        pool-types             (<== [::subs/pool-types])
-        pool-structures        (<== [::subs/pool-structures])
-        accessibility-features (<== [::subs/accessibility-features])
-        locale                 (tr)]
+  (let [set-field       (partial set-field :pool)
+        pool-types      (<== [::subs/pool-types])
+        pool-structures (<== [::subs/pool-structures])
+        accessibility   (<== [::subs/accessibility])
+        locale          (tr)]
     [mui/form-group
 
      ;; Outdoor pool?
@@ -109,12 +109,12 @@
 
      ;; Accessibility features
      [lui/multi-select
-      {:label     (tr :lipas.swimming-pool.pool/accessibility-features)
-       :items     accessibility-features
-       :value     (:accessibility-features data)
+      {:label     (tr :lipas.swimming-pool.pool/accessibility)
+       :items     accessibility
+       :value     (:accessibility data)
        :value-fn  first
        :label-fn  (comp locale second)
-       :on-change #(set-field :accessibility-features %)}]]))
+       :on-change #(set-field :accessibility %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data (<== [::subs/pool-form])
@@ -144,10 +144,10 @@
    [:depth-min-m (tr :dimensions/depth-min-m)]
    [:depth-max-m (tr :dimensions/depth-max-m)]
    [:structure (tr :general/structure)]
-   [:accessibility-features (tr :lipas.swimming-pool.pool/accessibility-features)]])
+   [:accessibility (tr :lipas.swimming-pool.pool/accessibility)]])
 
 (defn- localize-accessibility [tr pool]
-  (update pool :accessibility-features
+  (update pool :accessibility
           #(map (fn [f] (tr (keyword :accessibility f))) %)))
 
 (defn table [{:keys [tr items lipas-id]}]
