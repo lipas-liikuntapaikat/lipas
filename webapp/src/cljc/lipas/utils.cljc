@@ -195,3 +195,6 @@
 
 (defn reverse-cmp [a b]
   (compare b a))
+
+(defn str-matches? [s x]
+  (-> x str string/lower-case (string/includes? s)))

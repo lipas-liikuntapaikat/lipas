@@ -190,9 +190,27 @@
   (==> [::events/edit-field lipas-id path value]))
 
 (defn tab-container [& children]
-  (into [:div {:style {:margin-top "1em"
-                       :margin-bottom "1em"}}]
+  (into [:div {:style {:margin-top "1em" :margin-bottom "1em"}}]
         children))
+
+(defn contains-other-buildings-form [{:keys [tr set-field data]}]
+  [mui/grid {:container true :style {:margin-bottom "1em"}}
+
+   [mui/grid {:item true :xs 12}
+    [lui/checkbox
+     {:label     (tr :lipas.energy-consumption/contains-other-buildings?)
+      :value     (-> data :energy-consumption :contains-other-buildings?)
+      :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]]
+
+   (when (-> data :energy-consumption :contains-other-buildings?)
+     [mui/grid {:item true :xs 12}
+      [lui/text-field
+       {:style     {:width "100%"}
+        :spec      :lipas.sports-site/comment
+        :label     (tr :lipas.sports-site/comment)
+        :value     (-> data :energy-consumption :comment)
+        :multiline false
+        :on-change #(set-field [:energy-consumption :comment] %)}]])])
 
 (defn energy-form [{:keys [tr year draft? cold? spectators?]}]
   (let [data           (<== [::subs/energy-consumption-rev])
@@ -200,20 +218,21 @@
         energy-history (<== [::subs/energy-consumption-history])
         edits-valid?   (<== [::subs/edits-valid? lipas-id])
         ;; monthly-data?  (<== [::subs/monthly-data-exists?])
-        set-field      (partial set-field lipas-id)]
+        set-field      (partial set-field lipas-id)
+        ]
 
     (r/with-let [monthly-energy? (r/atom false)]
 
       [mui/grid {:container true}
 
        ;; Energy consumption
-       [lui/form-card {:title (tr :lipas.energy-consumption/headline-year year)
-                       :xs    12 :md 12 :lg 12}
+       [lui/form-card
+        {:title (tr :lipas.energy-consumption/headline-year year)
+         :xs    12 :md 12 :lg 12}
 
-        ;; Contains other buildings?
-
-        [mui/tabs {:value     (int @monthly-energy?)
-                   :on-change #(swap! monthly-energy? not)}
+        [mui/tabs
+         {:value     (int @monthly-energy?)
+          :on-change #(swap! monthly-energy? not)}
          [mui/tab {:label (tr :lipas.energy-consumption/yearly)}]
          [mui/tab {:label (tr :lipas.energy-consumption/monthly)}]]
 
@@ -221,11 +240,8 @@
 
           false
           [tab-container
-           [lui/checkbox
-            {:style     {:margin-bottom "1em"}
-             :label     (tr :lipas.energy-consumption/contains-other-buildings?)
-             :value     (-> data :energy-consumption :contains-other-buildings?)
-             :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
+           [contains-other-buildings-form
+            {:tr tr :data data :set-field set-field}]
 
            ^{:key year}
            [form
@@ -238,10 +254,8 @@
 
           true
           [tab-container
-           [lui/checkbox
-            {:label     (tr :lipas.energy-consumption/contains-other-buildings?)
-             :value     (-> data :energy-consumption :contains-other-buildings?)
-             :on-change #(set-field [:energy-consumption :contains-other-buildings?] %)}]
+           [contains-other-buildings-form
+            {:tr tr :data data :set-field set-field}]
 
            ^{:key year}
            [form-monthly
@@ -253,10 +267,8 @@
              :on-change   #(==> [::events/set-monthly-value lipas-id %1 %2])}]])
 
         [lui/expansion-panel {:label (tr :actions/show-all-years)}
-         [table {:tr         tr
-                 :cold?      true
-                 :read-only? true
-                 :items      energy-history}]]]
+         [table
+          {:tr tr :cold? true :read-only? true :items energy-history}]]]
 
        ;; Actions
        [lui/floating-container
@@ -273,9 +285,8 @@
                       (tr :actions/save))}]]
 
        ;; Small footer on top of which floating container may scroll
-       [mui/grid {:item  true :xs 12
-                  :style {:height           "5em"
-                          :background-color mui/gray1}}]])))
+       [mui/grid
+        {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]])))
 
 (defn energy-consumption-form [{:keys [tr editable-sites draftable-sites
                                        spectators? cold?]}]

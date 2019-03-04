@@ -69,9 +69,14 @@
   [lipas-id & args]
   (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
+(defn show-on-map [lipas-id]
+  (let [params {:lipas-id lipas-id}]
+    (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])))
+
 (defn site-view [{:keys [tr logged-in?]}]
   (let [locale       (tr)
         display-data (<== [::subs/display-site locale])
+        width        (<== [:lipas.ui.subs/screen-size])
 
         lipas-id (:lipas-id display-data)
 
@@ -109,25 +114,34 @@
       :on-close    close
 
       :bottom-actions
-      (lui/edit-actions-list
-       {:editing?           editing?
-        :valid?             edits-valid?
-        :logged-in?         logged-in?
-        :user-can-publish?  user-can-publish?
-        :on-discard         #(==> [:lipas.ui.events/confirm
-                                   (tr :confirm/discard-changes?)
-                                   (fn []
-                                     (==> [::site-events/discard-edits lipas-id]))])
-        :discard-tooltip    (tr :actions/discard)
-        :on-edit-start      #(==> [::site-events/edit-site lipas-id])
-        :edit-tooltip       (tr :actions/edit)
-        :on-save-draft      #(==> [::site-events/save-draft lipas-id])
-        :save-draft-tooltip (tr :actions/save-draft)
-        :on-publish         #(==> [::site-events/save-edits lipas-id])
-        :publish-tooltip    (tr :actions/save)
-        ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
-        ;;:delete-tooltip     (tr :actions/delete)
-        :invalid-message    (tr :error/invalid-form)})}
+      (conj
+       (lui/edit-actions-list
+        {:editing?           editing?
+         :valid?             edits-valid?
+         :logged-in?         logged-in?
+         :user-can-publish?  user-can-publish?
+         :on-discard         #(==> [:lipas.ui.events/confirm
+                                    (tr :confirm/discard-changes?)
+                                    (fn []
+                                      (==> [::site-events/discard-edits lipas-id]))])
+         :discard-tooltip    (tr :actions/discard)
+         :on-edit-start      #(==> [::site-events/edit-site lipas-id])
+         :edit-tooltip       (tr :actions/edit)
+         :on-save-draft      #(==> [::site-events/save-draft lipas-id])
+         :save-draft-tooltip (tr :actions/save-draft)
+         :on-publish         #(==> [::site-events/save-edits lipas-id])
+         :publish-tooltip    (tr :actions/save)
+         ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
+         ;;:delete-tooltip     (tr :actions/delete)
+         :invalid-message    (tr :error/invalid-form)})
+
+       (when-not editing?
+         [mui/tooltip {:title (tr :map/zoom-to-site)}
+          [mui/fab
+           {:color    "default"
+            :on-click #(show-on-map lipas-id)}
+           [mui/icon {:color "secondary"}
+            "place"]]]))}
 
      [mui/grid {:container true :spacing 8}
 
@@ -271,6 +285,17 @@
              :adornment (tr :physical-units/l)
              :value     (-> edit-data :average-water-consumption-l)
              :on-change #(on-change :average-water-consumption-l %)}]}
+
+          ;; Maintenance water temperature c
+          {:label (tr :lipas.ice-stadium.conditions/maintenance-water-temperature-c)
+           :value (-> display-data :maintenance-water-temperature-c)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.ice-stadium.conditions/maintenance-water-temperature-c
+             :adornment (tr :physical-units/celsius)
+             :value     (-> edit-data :maintenance-water-temperature-c)
+             :on-change #(on-change :maintenance-water-temperature-c %)}]}
 
           ;; Ice resurfacer fuel
           {:label (tr :lipas.ice-stadium.conditions/ice-resurfacer-fuel)
@@ -416,9 +441,10 @@
                         :lipas-id lipas-id}])
 
        (if editing?
-         [rinks/table {:tr       tr
-                       :lipas-id lipas-id
-                       :items    (-> edit-data :rinks vals)}]
+         [rinks/table
+          {:tr       tr
+           :lipas-id lipas-id
+           :items    (-> edit-data :rinks vals)}]
          [rinks/read-only-table {:tr tr :items (-> display-data :rinks)}])]
 
       ;;; Refrigeration
@@ -535,16 +561,17 @@
              :value-fn  first
              :on-change #(on-change :heat-recovery-type %)}]}
 
+          ;; NOTE: Removed from form 4.3.2019 but still valid in data
           ;; Heat recovery thermal efficiency percent
-          {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-efficiency)
-           :value (-> display-data :heat-recovery-efficiency)
-           :form-field
-           [lui/text-field
-            {:type      "number"
-             :spec      :lipas.ice-stadium.ventilation/heat-recovery-efficiency
-             :adornment (tr :units/percent)
-             :value     (-> edit-data :heat-recovery-efficiency)
-             :on-change #(on-change :heat-recovery-efficiency %)}]}
+          ;; {:label (tr :lipas.ice-stadium.ventilation/heat-recovery-efficiency)
+          ;;  :value (-> display-data :heat-recovery-efficiency)
+          ;;  :form-field
+          ;;  [lui/text-field
+          ;;   {:type      "number"
+          ;;    :spec      :lipas.ice-stadium.ventilation/heat-recovery-efficiency
+          ;;    :adornment (tr :units/percent)
+          ;;    :value     (-> edit-data :heat-recovery-efficiency)
+          ;;    :on-change #(on-change :heat-recovery-efficiency %)}]}
 
           ;; Dryer type
           {:label (tr :lipas.ice-stadium.ventilation/dryer-type)
@@ -609,7 +636,8 @@
 (defn ice-stadiums-tab [tr logged-in?]
   (let [locale       (tr)
         types        #{2510 2520}
-        sites        (<== [::site-subs/sites-list locale types])
+        sites-filter (<== [::subs/sites-filter])
+        sites        (<== [::site-subs/sites-list locale types sites-filter])
         display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
@@ -622,6 +650,15 @@
        ;; Display site list
        [mui/grid {:item true :xs 12}
         [mui/paper
+
+         ;; Sites filter
+         [mui/grid {:container true :justify "flex-end"}
+          [mui/grid {:item true :style {:padding "1em 1em 0em 0em"}}
+           [lui/text-field
+            {:label     (tr :search/search)
+             :on-change #(==> [::events/filter-sites %])
+             :value     sites-filter}]]]
+
          [lui/table
           {:headers
            [[:name (tr :lipas.sports-site/name)]
@@ -631,6 +668,7 @@
             [:renovation-years (tr :lipas.sports-site/renovation-years)]]
            :items     sites
            :sort-fn   :city
+           :sort-asc? true
            :on-select #(==> [::events/display-site %])}]]])]))
 
 (defn compare-tab []

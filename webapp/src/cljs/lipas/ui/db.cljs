@@ -77,15 +77,15 @@
 
    ;; Swimming pools
    :swimming-pools
-   {:active-tab             0
-    :pool-types             swimming-pools/pool-types
-    :sauna-types            swimming-pools/sauna-types
-    :filtering-methods      swimming-pools/filtering-methods
-    :heat-sources           swimming-pools/heat-sources
-    :accessibility-features swimming-pools/accessibility-features
-    :pool-structures        materials/pool-structures
-    :editing                nil
-    :editing?               false
+   {:active-tab        0
+    :pool-types        swimming-pools/pool-types
+    :sauna-types       swimming-pools/sauna-types
+    :filtering-methods swimming-pools/filtering-methods
+    :heat-sources      swimming-pools/heat-sources
+    :accessibility     swimming-pools/accessibility
+    :pool-structures   materials/pool-structures
+    :editing           nil
+    :editing?          false
     :dialogs
     {:pool   {:open? false}
      :slide  {:open? false}
