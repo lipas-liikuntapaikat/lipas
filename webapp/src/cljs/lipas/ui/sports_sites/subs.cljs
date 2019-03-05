@@ -135,7 +135,7 @@
 
 (re-frame/reg-sub
  ::types-by-geom-type
- :<- [::all-types]
+ :<- [:lipas.ui.user.subs/permission-to-types]
  (fn [types [_ geom-type]]
    (filter (comp #{geom-type} :geometry-type second) types)))
 
