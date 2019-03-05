@@ -63,6 +63,7 @@
                            (str "Uusi " (-> type :name locale))
                            "Uusi liikuntapaikka"))
     :add-new           "Lisää liikuntapaikka"
+    :delete-tooltip    "Poista liikuntapaikka..."
     :delete            "Poista {1}"
     :delete-reason     "Poiston syy"
 
@@ -353,7 +354,7 @@
    :lipas.building
    {:headline                    "Rakennus"
     :main-designers              "Pääsuunnittelijat"
-    :total-surface-area-m2       "Bruttopinta-ala m²"
+    :total-surface-area-m2       "Bruttopinta-ala m² (kokonaisala)"
     :total-volume-m3             "Bruttotilavuus m³"
     :total-pool-room-area-m2     "Allashuoneen pinta-ala m²"
     :total-water-area-m2         "Vesipinta-ala m²"
@@ -372,7 +373,8 @@
     :base-floor-structure    "Alapohjan laatan rakenne"
     :insulated-exterior?     "Ulkoseinä lämpöeristetty"
     :insulated-ceiling?      "Yläpohja lämpöeristetty"
-    :low-emissivity-coating? "Yläpohjassa matalaemissiiviteettipinnoite"}
+    :low-emissivity-coating? "Yläpohjassa
+    matalaemissiiviteettipinnoite (heijastus/säteily)"}
 
    :lipas.ice-stadium.rinks
    {:headline  "Radat"
@@ -383,17 +385,17 @@
    {:headline                       "Kylmätekniikka"
     :original?                      "Alkuperäinen"
     :individual-metering?           "Alamittaroitu"
-    :power-kw                       "Kylmäkoneen teho (kW)"
+    :power-kw                       "Kylmäkoneen sähköteho (kW)"
     :condensate-energy-recycling?   "Lauhde-energia hyötykäytetty"
     :condensate-energy-main-targets "Lauhdelämmön pääkäyttökohde"
     :refrigerant                    "Kylmäaine"
     :refrigerant-amount-kg          "Kylmäaineen määrä (kg)"
-    :refrigerant-solution           "Kylmäliuos"
-    :refrigerant-solution-amount-l  "Kylmäliuoksen määrä (l)"}
+    :refrigerant-solution           "Rataliuos"
+    :refrigerant-solution-amount-l  "Rataliuoksen määrä (l)"}
 
    :lipas.ice-stadium.conditions
    {:headline                        "Käyttöolosuhteet"
-    :daily-open-hours                "Aukiolotunnit päivässä"
+    :daily-open-hours                "Käyttötunnit päivässä"
     :open-months                     "Aukiolokuukaudet vuodessa"
     :air-humidity-min                "Ilman suhteellinen kosteus % min"
     :air-humidity-max                "Ilman suhteellinen kosteus % max"
@@ -427,7 +429,8 @@
     :filtering-methods "Suodatustapa"}
 
    :lipas.swimming-pool.pool
-   {:outdoor-pool? "Ulkoallas"}
+   {:outdoor-pool? "Ulkoallas"
+    :accessibility "Saavutettavuus"}
 
    :lipas.swimming-pool.pools
    {:headline  "Altaat"
@@ -464,7 +467,7 @@
     :showers-unisex-count           "Unisex suihkut lkm"
     :lockers-men-count              "Miesten pukukaapit lkm"
     :lockers-women-count            "Naisten pukukaapit lkm"
-    :lockers-unisex-count           "Unisex pukukaapit lkm"}
+    :lockers-unisex-count           "Unisex pukuhuoneet lkm"}
 
    :dimensions
    {:volume-m3       "Tilavuus m³"
@@ -599,18 +602,19 @@
    {:edited "{1} (muokattu)"}
 
    :general
-   {:name         "Nimi"
-    :type         "Tyyppi"
-    :description  "Kuvaus"
-    :event        "Tapahtuma"
-    :general-info "Yleiset tiedot"
-    :comment      "Kommentti"
-    :structure    "Rakenne"
-    :hall         "Halli"
-    :updated      "Päivitetty"
-    :reported     "Ilmoitettu"
-    :done         "Valmis"
-    :measures     "Mitat"}
+   {:name          "Nimi"
+    :type          "Tyyppi"
+    :description   "Kuvaus"
+    :event         "Tapahtuma"
+    :general-info  "Yleiset tiedot"
+    :comment       "Kommentti"
+    :structure     "Rakenne"
+    :hall          "Halli"
+    :updated       "Päivitetty"
+    :reported      "Ilmoitettu"
+    :done          "Valmis"
+    :measures      "Mitat"
+    :last-modified "Muokattu viimeksi"}
 
    :notifications
    {:save-success "Tallennus onnistui"
@@ -627,12 +631,12 @@
    {:add-to-map         "Lisää kartalle"
     :zoom-to-site       "Näytä kartalla"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
-    :zoom-closer        "Zoomaa lähemmäs"
+    :zoom-closer        "Kartta täytyy zoomata lähemmäs"
     :draw-geoms         "Piirrä"
     :draw               (fn [geom-type]
                           (case geom-type
-                            "LineString" "Lisää reittiosa"
-                            "Polygon"    "Lisää alue"
+                            "LineString" "Piirrä reittiosa"
+                            "Polygon"    "Piirrä alue"
                             "Lisää kartalle"))
     :modify             (fn [geom-type]
                           (case geom-type
@@ -651,7 +655,7 @@
 
    :map.import
    {:headline          "Tuo geometriat"
-    :tooltip           "Tuo tiedostosta"
+    :tooltip           "Tuo reittiosia tiedostosta"
     :supported-formats (fn [ss]
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
     :shapefile         "Tuo .shp .dbf ja .prj tiedostot pakattuna .zip-muotoon."

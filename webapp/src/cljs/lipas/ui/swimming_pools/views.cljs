@@ -43,6 +43,10 @@
   [lipas-id & args]
   (==> [::site-events/edit-field lipas-id (butlast args) (last args)]))
 
+(defn show-on-map [lipas-id]
+  (let [params {:lipas-id lipas-id}]
+    (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])))
+
 (defn site-view []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])
@@ -80,25 +84,33 @@
       :close-label (tr :actions/back-to-listing)
 
       :bottom-actions
-      (lui/edit-actions-list
-       {:editing?           editing?
-        :valid?             edits-valid?
-        :logged-in?         logged-in?
-        :user-can-publish?  user-can-publish?
-        :on-discard         #(==> [:lipas.ui.events/confirm
-                                   (tr :confirm/discard-changes?)
-                                   (fn []
-                                     (==> [::site-events/discard-edits lipas-id]))])
-        :discard-tooltip    (tr :actions/discard)
-        :on-edit-start      #(==> [::site-events/edit-site lipas-id])
-        :edit-tooltip       (tr :actions/edit)
-        :on-save-draft      #(==> [::site-events/save-draft lipas-id])
-        :save-draft-tooltip (tr :actions/save-draft)
-        :on-publish         #(==> [::site-events/save-edits lipas-id])
-        :publish-tooltip    (tr :actions/save)
-        ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
-        ;;:delete-tooltip     (tr :actions/delete)
-        :invalid-message    (tr :error/invalid-form)})}
+      (conj
+       (lui/edit-actions-list
+        {:editing?           editing?
+         :valid?             edits-valid?
+         :logged-in?         logged-in?
+         :user-can-publish?  user-can-publish?
+         :on-discard         #(==> [:lipas.ui.events/confirm
+                                    (tr :confirm/discard-changes?)
+                                    (fn []
+                                      (==> [::site-events/discard-edits lipas-id]))])
+         :discard-tooltip    (tr :actions/discard)
+         :on-edit-start      #(==> [::site-events/edit-site lipas-id])
+         :edit-tooltip       (tr :actions/edit)
+         :on-save-draft      #(==> [::site-events/save-draft lipas-id])
+         :save-draft-tooltip (tr :actions/save-draft)
+         :on-publish         #(==> [::site-events/save-edits lipas-id])
+         :publish-tooltip    (tr :actions/save)
+         ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
+         ;;:delete-tooltip     (tr :actions/delete)
+         :invalid-message    (tr :error/invalid-form)})
+       (when-not editing?
+         [mui/tooltip {:title (tr :map/zoom-to-site)}
+          [mui/fab
+           {:color    "default"
+            :on-click #(show-on-map lipas-id)}
+           [mui/icon {:color "secondary"}
+            "place"]]]))}
 
      [mui/grid {:container true :spacing 8}
 
@@ -528,44 +540,44 @@
 
         [lui/form-card {:title (tr :lipas.swimming-pool.conditions/headline)}
 
-         (into
-          [lui/form {:read-only? (not editing?)}
+         [lui/form {:read-only? (not editing?)}
 
-           ;; Open days in year
-           {:label (tr :lipas.swimming-pool.conditions/open-days-in-year)
-            :value (-> display-data :open-days-in-year)
-            :form-field
-            [lui/text-field
-             {:type      "number"
-              :value     (-> edit-data :open-days-in-year)
-              :spec      :lipas.swimming-pool.conditions/open-days-in-year
-              :adornment (tr :units/days-in-year)
-              :on-change #(on-change :open-days-in-year %)}]}
+          ;; Open days in year
+          {:label (tr :lipas.swimming-pool.conditions/open-days-in-year)
+           :value (-> display-data :open-days-in-year)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :value     (-> edit-data :open-days-in-year)
+             :spec      :lipas.swimming-pool.conditions/open-days-in-year
+             :adornment (tr :units/days-in-year)
+             :on-change #(on-change :open-days-in-year %)}]}
 
-           ;; Daily open hours total
-           {:label (tr :lipas.swimming-pool.conditions/daily-open-hours)
-            :value (-> display-data :daily-open-hours)
-            :form-field
-            [lui/text-field
-             {:type      "number"
-              :spec      :lipas.swimming-pool.conditions/daily-open-hours
-              :adornment (tr :units/hours-per-day)
-              :value     (-> edit-data :daily-open-hours)
-              :on-change #(on-change :daily-open-hours %)}]}]
+          ;; Daily open hours total
+          {:label (tr :lipas.swimming-pool.conditions/daily-open-hours)
+           :value (-> display-data :daily-open-hours)
+           :form-field
+           [lui/text-field
+            {:type      "number"
+             :spec      :lipas.swimming-pool.conditions/daily-open-hours
+             :adornment (tr :units/hours-per-day)
+             :value     (-> edit-data :daily-open-hours)
+             :on-change #(on-change :daily-open-hours %)}]}]
 
-          ;; Daily open hours for each day
-          (for [day  ["mon" "tue" "wed" "thu" "fri" "sat" "sun"]
-                :let [kw (keyword (str "open-hours-" day))]]
+         ;; Daily open hours for each day
+         ;; (for [day  ["mon" "tue" "wed" "thu" "fri" "sat" "sun"]
+         ;;       :let [kw (keyword (str "open-hours-" day))]]
 
-            {:label (tr (keyword :lipas.swimming-pool.conditions kw))
-             :value (-> display-data kw)
-             :form-field
-             [lui/text-field
-              {:type      "number"
-               :spec      (keyword :lipas.swimming-pool.conditions kw)
-               :adornment (tr :duration/hour)
-               :value     (-> edit-data kw)
-               :on-change #(on-change kw %)}]}))])
+         ;;   {:label (tr (keyword :lipas.swimming-pool.conditions kw))
+         ;;    :value (-> display-data kw)
+         ;;    :form-field
+         ;;    [lui/text-field
+         ;;     {:type      "number"
+         ;;      :spec      (keyword :lipas.swimming-pool.conditions kw)
+         ;;      :adornment (tr :duration/hour)
+         ;;      :value     (-> edit-data kw)
+         ;;      :on-change #(on-change kw %)}]})
+         ])
 
       ;;; Energy saving
       (let [display-data (-> display-data :energy-saving)
@@ -618,7 +630,8 @@
 (defn swimming-pools-tab [tr logged-in?]
   (let [locale       (tr)
         types        #{3110 3130}
-        sites        (<== [::site-subs/sites-list locale types])
+        sites-filter (<== [::subs/sites-filter])
+        sites        (<== [::site-subs/sites-list locale types sites-filter])
         display-data (<== [::subs/display-site locale])]
 
     [mui/grid {:container true}
@@ -631,6 +644,15 @@
        ;; Display site list
        [mui/grid {:item true :xs 12}
         [mui/paper
+
+         ;; Sites filter
+         [mui/grid {:container true :justify "flex-end"}
+          [mui/grid {:item true :style {:padding "1em 1em 0em 0em"}}
+           [lui/text-field
+            {:label     (tr :search/search)
+             :on-change #(==> [::events/filter-sites %])
+             :value     sites-filter}]]]
+
          [lui/table
           {:headers
            [[:name (tr :lipas.sports-site/name)]
@@ -640,6 +662,7 @@
             [:renovation-years (tr :lipas.sports-site/renovation-years)]]
            :items     sites
            :sort-fn   :city
+           :sort-asc? true
            :on-select #(==> [::events/display-site %])}]]])]))
 
 (defn compare-tab []
@@ -738,7 +761,4 @@
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
-    (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
-    (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
-    (==> [::events/display-stats (dec utils/this-year)])
     [create-panel tr logged-in?]))

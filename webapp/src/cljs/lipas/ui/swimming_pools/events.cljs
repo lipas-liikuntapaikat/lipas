@@ -3,6 +3,14 @@
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
+(re-frame/reg-event-fx
+ ::init
+ (fn [_ _]
+   {:dispatch-n
+    [[:lipas.ui.sports-sites.events/get-by-type-code 3110]
+     [:lipas.ui.sports-sites.events/get-by-type-code 3130]
+     [::display-stats (dec utils/this-year)]]}))
+
 (re-frame/reg-event-db
  ::set-active-tab
  (fn [db [_ active-tab]]
@@ -80,3 +88,8 @@
     :dispatch-n
     [[:lipas.ui.energy.events/fetch-energy-report year 3110]
      [:lipas.ui.energy.events/fetch-energy-report year 3130]]}))
+
+(re-frame/reg-event-db
+ ::filter-sites
+ (fn [db [_ s]]
+   (assoc-in db [:swimming-pools :sites-filter] s)))

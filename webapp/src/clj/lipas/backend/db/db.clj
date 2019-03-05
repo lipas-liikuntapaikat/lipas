@@ -1,6 +1,7 @@
 (ns lipas.backend.db.db
   (:require
    [clojure.java.jdbc :as jdbc]
+   [hikari-cp.core :as hikari]
    [lipas.backend.db.city :as city]
    [lipas.backend.db.integration :as integration]
    [lipas.backend.db.sports-site :as sports-site]
@@ -183,6 +184,22 @@
        (city/get-by-city-codes db-spec)
        (map city/unmarshall)))
 
+;; DB connection pooling ;;
+
+(defn- ->hikari-opts [{:keys [dbtype dbname host user port password]}]
+  {:adapter       dbtype
+   :username      user
+   :password      password
+   :database-name dbname
+   :server-name   host
+   :port-number   port})
+
+(defn setup-connection-pool [db-spec]
+  {:datasource (hikari/make-datasource (->hikari-opts db-spec))})
+
+(defn stop-connection-pool [{:keys [datasource]}]
+  (hikari/close-datasource datasource))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
@@ -190,4 +207,7 @@
   (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"})
   (add-to-integration-out-queue db-spec 234)
   (get-integration-out-queue db-spec)
-  (delete-from-integration-out-queue db-spec 234))
+  (delete-from-integration-out-queue db-spec 234)
+  (hikari/validate-options (->hikari-opts db-spec))
+  (def cp1 (setup-connection-pool db-spec))
+  (get-user-by-email cp1 {:email "admin@lipas.fi"}))

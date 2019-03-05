@@ -27,6 +27,5 @@
        (fn [{:keys [lipas-id]}]
          (let [on-success [[:lipas.ui.map.events/show-sports-site* lipas-id]
                            ;; Not sure if zooming is good UX-wise...
-                           ;;[:lipas.ui.map.events/zoom-to-site lipas-id]
-                           ]]
+                           [:lipas.ui.map.events/zoom-to-site lipas-id]]]
            (==> [:lipas.ui.sports-sites.events/get lipas-id on-success])))}]}]])
