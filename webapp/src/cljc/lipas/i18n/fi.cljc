@@ -63,6 +63,7 @@
                            (str "Uusi " (-> type :name locale))
                            "Uusi liikuntapaikka"))
     :add-new           "Lisää liikuntapaikka"
+    :delete-tooltip    "Poista liikuntapaikka..."
     :delete            "Poista {1}"
     :delete-reason     "Poiston syy"
 
@@ -629,12 +630,12 @@
    {:add-to-map         "Lisää kartalle"
     :zoom-to-site       "Näytä kartalla"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
-    :zoom-closer        "Zoomaa lähemmäs"
+    :zoom-closer        "Kartta täytyy zoomata lähemmäs"
     :draw-geoms         "Piirrä"
     :draw               (fn [geom-type]
                           (case geom-type
-                            "LineString" "Lisää reittiosa"
-                            "Polygon"    "Lisää alue"
+                            "LineString" "Piirrä reittiosa"
+                            "Polygon"    "Piirrä alue"
                             "Lisää kartalle"))
     :modify             (fn [geom-type]
                           (case geom-type
@@ -653,7 +654,7 @@
 
    :map.import
    {:headline          "Tuo geometriat"
-    :tooltip           "Tuo tiedostosta"
+    :tooltip           "Tuo reittiosia tiedostosta"
     :supported-formats (fn [ss]
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
     :shapefile         "Tuo .shp .dbf ja .prj tiedostot pakattuna .zip-muotoon."
