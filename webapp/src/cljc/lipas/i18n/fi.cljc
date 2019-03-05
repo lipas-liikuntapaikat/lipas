@@ -602,18 +602,19 @@
    {:edited "{1} (muokattu)"}
 
    :general
-   {:name         "Nimi"
-    :type         "Tyyppi"
-    :description  "Kuvaus"
-    :event        "Tapahtuma"
-    :general-info "Yleiset tiedot"
-    :comment      "Kommentti"
-    :structure    "Rakenne"
-    :hall         "Halli"
-    :updated      "Päivitetty"
-    :reported     "Ilmoitettu"
-    :done         "Valmis"
-    :measures     "Mitat"}
+   {:name          "Nimi"
+    :type          "Tyyppi"
+    :description   "Kuvaus"
+    :event         "Tapahtuma"
+    :general-info  "Yleiset tiedot"
+    :comment       "Kommentti"
+    :structure     "Rakenne"
+    :hall          "Halli"
+    :updated       "Päivitetty"
+    :reported      "Ilmoitettu"
+    :done          "Valmis"
+    :measures      "Mitat"
+    :last-modified "Muokattu viimeksi"}
 
    :notifications
    {:save-success "Tallennus onnistui"

@@ -46,6 +46,7 @@
   {"lipas-id"                   {:fi "Lipas-id"}
    "name"                       {:fi "Nimi"}
    "marketing-name"             {:fi "Markkinointinimi"}
+   "event-date"                 {:fi "Muokattu viimeksi"}
    "owner"                      {:fi "Omistaja"}
    "admin"                      {:fi "Ylläpitäjä"}
    "construction-year"          {:fi "Rakennusvuosi"}
