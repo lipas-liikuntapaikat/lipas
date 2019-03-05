@@ -119,10 +119,9 @@
       [mui/typography {:variant "caption"}
        (tr :map.basemap/copyright)]]]))
 
-(defn type-selector-single [{:keys [tr value on-change]}]
+(defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)]
-    (let [locale (tr)
-          types  (<== [::sports-site-subs/all-types locale])]
+    (let [locale (tr)]
       [mui/grid {:container true}
        [mui/grid {:item true}
         [lui/autocomplete
@@ -147,13 +146,12 @@
 (defn popup []
   (let [{:keys [data anchor-el]} (<== [::subs/popup])
         {:keys [name]}           (-> data :features first :properties)]
-    [mui/popper {:open      (boolean (seq data))
-                 :placement :top-end
-                 :anchor-el anchor-el
-                 :container anchor-el
-                 :modifiers {:offset
-                             {:enabled true
-                              :offset  "0px,10px"}}}
+    [mui/popper
+     {:open      (boolean (seq data))
+      :placement "top-end"
+      :anchor-el anchor-el
+      :container anchor-el
+      :modifiers {:offset {:enabled true :offset "0px,10px"}}}
      [mui/paper {:style {:padding "0.5em"}}
       [mui/typography {:variant "body2"}
        name]]]))
@@ -179,7 +177,7 @@
     (let [display-data (:display-data site-data)
           lipas-id     (:lipas-id display-data)
           edit-data    (:edit-data site-data)
-          cities       (<== [::sports-site-subs/cities-list])
+          cities       (<== [:lipas.ui.user.subs/permission-to-cities])
           admins       (<== [::sports-site-subs/admins])
           owners       (<== [::sports-site-subs/owners])
           editing?     (<== [::sports-site-subs/editing? lipas-id])
@@ -196,6 +194,7 @@
           type      (<== [::sports-site-subs/type-by-type-code type-code])
           geom-type (:geometry-type type)
 
+          ;; TODO types the user has access to
           allowed-types   (<== [::sports-site-subs/types-by-geom-type geom-type])
           types-props     (<== [::sports-site-subs/types-props type-code])
           size-categories (<== [::ice-stadiums-subs/size-categories])
@@ -270,7 +269,7 @@
               [sports-sites/location-form
                {:tr            tr
                 :read-only?    (not editing?)
-                :cities        cities
+                :cities        (vals cities)
                 :edit-data     (:location edit-data)
                 :display-data  (:location display-data)
                 :on-change     (partial set-field :location)
@@ -296,106 +295,72 @@
        [sticky-bottom-container
         (into
          [mui/grid {:item true :style {:padding-top "1em" :padding-bottom "0.5em"}}]
-         (interpose
-          [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}]
-          (remove
-           nil?
-           (into
+         (->>
+          [;; Download GPX
+           (when (and (not editing?) (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map/download-gpx)}
+              [mui/fab
+               {:on-click #(==> [::events/download-gpx lipas-id])
+                :color    "default"}
+               ".gpx"]])
 
-            ;; Geom tools
+           ;; Zoom to site
+           (when-not editing?
+             [mui/tooltip {:title (tr :map/zoom-to-site)}
+              [mui/fab
+               {:on-click #(==> [::events/zoom-to-site lipas-id width])
+                :color    "default"}
+               [mui/icon {:color "secondary"}
+                "place"]]])
 
-            [;; Download GPX
-             (when (and (not editing?) (#{"LineString"} geom-type))
-               [mui/tooltip {:title (tr :map/download-gpx)}
-                [mui/fab
-                 {:on-click #(==> [::events/download-gpx lipas-id])
-                  :color    "default"}
-                 ".gpx"]])
+           ;; Import geom
+           (when (and editing? (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map.import/tooltip)}
+              [mui/fab
+               {:on-click #(==> [::events/toggle-import-dialog])
+                :color    "default"}
+               [mui/icon "cloud_upload"]]])
 
-             ;; Zoom to site
-             (when-not editing?
-               [mui/tooltip {:title (tr :map/zoom-to-site)}
-                [mui/fab
-                 {:on-click #(==> [::events/zoom-to-site lipas-id width])
-                  :color    "default"}
-                 [mui/icon {:color "secondary"}
-                  "place"]]])
+           ;; Draw hole
+           (when (and editing? (#{"Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/draw-hole)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :drawing-hole)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
+                :style    (when (= sub-mode :drawing-hole)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [mui/icon "vignette"]]])
 
-             ;; Import geom
-             (when (and editing? (#{"LineString"} geom-type))
-               [mui/tooltip {:title (tr :map.import/tooltip)}
-                [mui/fab
-                 {:on-click #(==> [::events/toggle-import-dialog])
-                  :color    "default"}
-                 [mui/icon "cloud_upload"]]])
+           ;; Add new geom
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/draw geom-type)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :drawing)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :drawing geom-type]))
+                :style    (when (= sub-mode :drawing)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               (if (= geom-type "LineString")
+                 [mui/icon "timeline"]
+                 [mui/icon "change_history"])]])
 
-             ;; Draw hole
-             (when (and editing? (#{"Polygon"} geom-type))
-               [mui/tooltip {:title (tr :map/draw-hole)}
-                [mui/fab
-                 {:on-click #(if (= sub-mode :drawing-hole)
-                               (==> [::events/start-editing lipas-id :editing geom-type])
-                               (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
-                  :style    (when (= sub-mode :drawing-hole)
-                              {:border (str "5px solid " mui/secondary)})
-                  :color    "default"}
-                 [mui/icon "vignette"]]])
+           ;; Delete geom
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/remove geom-type)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :deleting)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :deleting geom-type]))
+                :style    (when (= sub-mode :deleting)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [mui/icon "delete"]]])]
 
-             ;; Add new geom
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-               [mui/tooltip {:title (tr :map/draw geom-type)}
-                [mui/fab
-                 {:on-click #(if (= sub-mode :drawing)
-                               (==> [::events/start-editing lipas-id :editing geom-type])
-                               (==> [::events/start-editing lipas-id :drawing geom-type]))
-                  :style    (when (= sub-mode :drawing)
-                              {:border (str "5px solid " mui/secondary)})
-                  :color    "default"}
-                 (if (= geom-type "LineString")
-                   [mui/icon "timeline"]
-                   [mui/icon "change_history"])]])
-
-             ;; Delete geom
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-               [mui/tooltip {:title (tr :map/remove geom-type)}
-                [mui/fab
-                 {:on-click #(if (= sub-mode :deleting)
-                               (==> [::events/start-editing lipas-id :editing geom-type])
-                               (==> [::events/start-editing lipas-id :deleting geom-type]))
-                  :style    (when (= sub-mode :deleting)
-                              {:border (str "5px solid " mui/secondary)})
-                  :color    "default"}
-                 [mui/icon "delete"]]])]
-
-            ;; Save and discard buttons
-            (lui/edit-actions-list
-             ;; TODO refactor (do ..) blocks to dispatch single event
-             ;; according to user intention.
-             {:editing?           editing?
-              :valid?             edits-valid?
-              :logged-in?         logged-in?
-              :user-can-publish?  can-publish?
-              :on-discard         #(==> [:lipas.ui.events/confirm
-                                         (tr :confirm/discard-changes?)
-                                         (fn []
-                                           (==> [::sports-site-events/discard-edits lipas-id])
-                                           (==> [::events/stop-editing]))])
-              :discard-tooltip    (tr :actions/discard)
-              :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
-                                       (==> [::events/zoom-to-site lipas-id])
-                                       (==> [::events/start-editing lipas-id :editing geom-type]))
-              :edit-tooltip       (tr :actions/edit)
-              :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
-                                       (==> [::events/show-sports-site nil])
-                                       (==> [::events/stop-editing]))
-              :save-draft-tooltip (tr :actions/save-draft)
-              :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
-                                       (==> [::events/show-sports-site nil])
-                                       (==> [::events/stop-editing]))
-              :publish-tooltip    (tr :actions/save)
-              :invalid-message    (tr :error/invalid-form)
-              :on-delete          #(==> [::sports-site-events/toggle-delete-dialog])
-              :delete-tooltip     (tr :actions/delete)})))))]])))
+          (remove nil?)
+          (interpose [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}])))]])))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
@@ -414,10 +379,11 @@
     (let [locale (tr)
           type   (<== [::sports-site-subs/new-site-type])
           data   (<== [::sports-site-subs/new-site-data])
-          cities (<== [::sports-site-subs/cities-list])
+          cities (<== [:lipas.ui.user.subs/permission-to-cities])
           admins (<== [::sports-site-subs/admins])
           owners (<== [::sports-site-subs/owners])
 
+          types       (<== [:lipas.ui.user.subs/permission-to-types])
           type-code   (:type-code type)
           types-props (<== [::sports-site-subs/types-props type-code])
 
@@ -470,6 +436,7 @@
             [type-selector-single
              {:value     (when type [(:type-code type)])
               :tr        tr
+              :types     types
               :on-change #(==> [::sports-site-events/select-new-site-type %])}]]]]
 
          ;; Step 2 -  Add to map
@@ -605,7 +572,7 @@
                   [sports-sites/location-form
                    {:tr            tr
                     :read-only?    false
-                    :cities        cities
+                    :cities        (vals cities)
                     :edit-data     (:location data)
                     :on-change     (partial set-field :location)
                     :sub-headings? true}]]]
