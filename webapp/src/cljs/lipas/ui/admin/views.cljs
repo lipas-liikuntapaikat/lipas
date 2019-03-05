@@ -273,11 +273,5 @@
 (defn main []
   (let [admin? (<== [:lipas.ui.user.subs/admin?])]
     (if admin?
-      (do
-        (==> [::events/get-users])
-        (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
-        (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
-        (==> [:lipas.ui.sports-sites.events/get-by-type-code 2510])
-        (==> [:lipas.ui.sports-sites.events/get-by-type-code 2520])
-        [admin-panel])
+      [admin-panel]
       (==> [:lipas.ui.events/navigate "/#/"]))))
