@@ -31,20 +31,21 @@
                                   (as-> $ (if (and deselect? (= $ value))
                                             nil ; toggle
                                             $))))
-        props   (-> props
-                    (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
-                            :deselect?)
-                    (assoc :error (error? spec value required))
-                    ;; Following fixes Chrome scroll issue
-                    ;; https://github.com/mui-org/material-ui/pull/12003
-                    (assoc :MenuProps
-                           {:PaperProps
-                            {:style
-                             {:transform "translate2(0)"}}})
-                    (assoc :value (if value (pr-str value) ""))
-                    (assoc :on-change on-change))
-        sort-fn (or sort-fn label-fn)]
+        props     (-> props
+                      (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
+                              :deselect?)
+                      ;; Following fixes Chrome scroll issue
+                      ;; https://github.com/mui-org/material-ui/pull/12003
+                      (assoc :MenuProps
+                             {:PaperProps
+                              {:style
+                               {:transform "translate2(0)"}}})
+                      (assoc :value (if value (pr-str value) ""))
+                      (assoc :on-change on-change))
+        sort-fn   (or sort-fn label-fn)]
     [mui/form-control
+     {:required required
+      :error    (error? spec value required)}
      (when label [mui/input-label label])
      (into [mui/select props]
            (for [i (sort-by sort-fn sort-cmp items)]
