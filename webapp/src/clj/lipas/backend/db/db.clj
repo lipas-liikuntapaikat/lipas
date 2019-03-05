@@ -197,8 +197,8 @@
 (defn setup-connection-pool [db-spec]
   {:datasource (hikari/make-datasource (->hikari-opts db-spec))})
 
-(defn stop-connection-pool [pool]
-  (hikari/close-datasource pool))
+(defn stop-connection-pool [{:keys [datasource]}]
+  (hikari/close-datasource datasource))
 
 (comment
   (require '[lipas.backend.config :as config])
