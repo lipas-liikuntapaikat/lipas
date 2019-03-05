@@ -3,17 +3,29 @@ import proj4 from 'proj4';
 window.proj4 = proj4;
 
 // OpenLayers
-import {Map, View, Overlay} from 'ol';
+import Map from 'ol/Map';
+import View from 'ol/View';
+import Overlay from 'ol/Overlay';
 import Collection from 'ol/Collection';
 import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {register} from 'ol/proj/proj4';
-import {Style, Circle, Fill, Stroke, Icon, RegularShape} from 'ol/style';
-import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
-import {WMTS as WMTSSource, Vector as VectorSource} from 'ol/source';
+import Style from 'ol/style/Style';
+import CircleStyle from 'ol/style/Circle';
+import Fill from 'ol/style/Fill';
+import Stroke from 'ol/style/Stroke';
+import Icon from 'ol/style/Icon';
+import RegularShape from 'ol/style/RegularShape';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import WMTS from 'ol/source/WMTS';
+import VectorSource from 'ol/source/Vector';
 import {getTopLeft, getWidth, getHeight} from 'ol/extent';
-import {GeoJSON} from 'ol/format';
+import GeoJSON from 'ol/format/GeoJSON';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
-import {Select, Draw, Modify, Snap} from 'ol/interaction';
+import Draw from 'ol/interaction/Draw';
+import Select from 'ol/interaction/Select';
+import Modify from 'ol/interaction/Modify';
+import Snap from 'ol/interaction/Snap';
 import {pointerMove} from 'ol/events/condition';
 import Point from 'ol/geom/Point';
 import MultiPoint from 'ol/geom/MultiPoint';
@@ -30,12 +42,12 @@ window.ol = {
     Vector: VectorLayer,
   },
   source: {
-    WMTS: WMTSSource,
+    WMTS,
     Vector: VectorSource,
   },
   style: {
     Style,
-    Circle,
+    Circle: CircleStyle,
     Fill,
     Stroke,
     Icon,
@@ -316,3 +328,12 @@ window.recharts = {
 // React-autosuggest
 import Autosuggest from 'react-autosuggest';
 window.Autosuggest = Autosuggest;
+
+// Material Design Icons
+import Eraser from 'mdi-material-ui/Eraser';
+import FileUpload from 'mdi-material-ui/FileUpload';
+
+window.materialIcons = {
+  Eraser,
+  FileUpload,
+};
