@@ -30,6 +30,7 @@
     :owner                     (->translations locale owners/all)
     :pool-types                (->translations locale pools/pool-types)
     :sauna-types               (->translations locale pools/sauna-types)
+    :accessibility             (->translations locale pools/accessibility)
     :heat-sources              (->translations locale pools/heat-sources)
     :filtering-methods         (->translations locale pools/filtering-methods)
     :pool-structures           (->translations locale materials/pool-structures)
@@ -97,10 +98,15 @@
      (-> (apply translate (into [locale kw] (filter (complement keyword?) args)))
          (fmt args)))))
 
+(defn- localize-accessibility [locale pool]
+  (update pool :accessibility
+          #(map (fn [s] (get-in pools/accessibility [s locale])) %)))
+
 (defn localize-pool [locale pool]
   (-> pool
       (update-in [:type] #(locale (get pools/pool-types %)))
       (update-in [:structure] #(locale (get materials/all %)))
+      (update-in [:accessibility] (partial localize-accessibility locale))
       utils/clean))
 
 (defn localize-sauna [locale sauna]

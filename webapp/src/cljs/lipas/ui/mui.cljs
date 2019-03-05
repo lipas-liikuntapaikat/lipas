@@ -78,7 +78,10 @@
     {:title
      {:font-size "2rem"}
      :action
-     {:margin-top 0}}}})
+     {:margin-top 0}}
+    :Mui-tooltip
+    {:tooltip
+     {:font-size "0.8rem"}}}})
 
 (def jyu-styles-light
   (utils/deep-merge

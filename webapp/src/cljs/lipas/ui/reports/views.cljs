@@ -30,7 +30,9 @@
    {:label  (tr :type/name)
     :fields ["type.type-name"]}
    {:label  (tr :lipas.location/city)
-    :fields ["location.city.city-name"]}])
+    :fields ["location.city.city-name"]}
+   {:label  (tr :general/last-modified)
+    :fields ["event-date"]}])
 
 (defn fields-selector [{:keys [tr value on-change]}]
   (let [locale (tr)

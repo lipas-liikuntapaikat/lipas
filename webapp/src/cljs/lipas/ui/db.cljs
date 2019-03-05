@@ -82,6 +82,7 @@
     :sauna-types       swimming-pools/sauna-types
     :filtering-methods swimming-pools/filtering-methods
     :heat-sources      swimming-pools/heat-sources
+    :accessibility     swimming-pools/accessibility
     :pool-structures   materials/pool-structures
     :editing           nil
     :editing?          false

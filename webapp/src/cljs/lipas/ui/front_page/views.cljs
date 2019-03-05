@@ -41,7 +41,8 @@
    {:label "Tässä.fi" :href "https://tassa.fi/"}
    {:label "Tulikartta.fi" :href "https://www.tulikartta.fi/"}
    {:label "SportVenue" :href "https://www.sportvenue.fi/"}
-   {:label "FCG" :href "http://www.fcg.fi/shvk"}])
+   {:label "FCG" :href "http://www.fcg.fi/shvk"}
+   {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :md "auto" :lg "auto"}

@@ -587,6 +587,7 @@
 (s/def :lipas.energy-consumption/water-m3 (number-in :min 0 :max 500000))
 (s/def :lipas.energy-consumption/contains-other-buildings? boolean?)
 (s/def :lipas.energy-consumption/operating-hours (number-in :min 0 :max (* 24 7 365)))
+(s/def :lipas.energy-consumption/comment :lipas.sports-site/comment)
 
 (s/def :lipas/energy-consumption
   (s/keys :opt-un [:lipas.energy-consumption/electricity-mwh
@@ -594,7 +595,8 @@
                    :lipas.energy-consumption/heat-mwh
                    :lipas.energy-consumption/water-m3
                    :lipas.energy-consumption/contains-other-buildings?
-                   :lipas.energy-consumption/operating-hours]))
+                   :lipas.energy-consumption/operating-hours
+                   :lipas.energy-consumption/comment]))
 
 (def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
 
@@ -932,6 +934,16 @@
 (s/def :lipas.swimming-pool.pool/type (into #{} (keys swimming-pools/pool-types)))
 (s/def :lipas.swimming-pool.pool/outdoor-pool? boolean?)
 
+(s/def :lipas.swimming-pool.pool/accessibility-feature
+  (into #{} (keys swimming-pools/accessibility)))
+
+(s/def :lipas.swimming-pool.pool/accessibility
+  (s/coll-of :lipas.swimming-pool.pool/accessibility-feature
+             :min-count 0
+             :max-count (count swimming-pools/accessibility)
+             :distinct true
+             :into []))
+
 (s/def :lipas.swimming-pool/pool
   (s/keys :opt-un [:lipas.swimming-pool.pool/type
                    :lipas.swimming-pool.pool/outdoor-pool?
@@ -941,7 +953,8 @@
                    :lipas.swimming-pool.pool/length-m
                    :lipas.swimming-pool.pool/width-m
                    :lipas.swimming-pool.pool/depth-min-m
-                   :lipas.swimming-pool.pool/depth-max-m]))
+                   :lipas.swimming-pool.pool/depth-max-m
+                   :lipas.swimming-pool.pool/accessibility]))
 
 (s/def :lipas.swimming-pool/pools
   (s/coll-of :lipas.swimming-pool/pool
