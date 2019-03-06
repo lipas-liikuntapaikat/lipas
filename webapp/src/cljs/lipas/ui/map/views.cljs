@@ -8,6 +8,7 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.subs :as sports-site-subs]
@@ -395,8 +396,7 @@
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
    [mui/fab
-    {:style    {:margin-bottom "0.5em"}
-     :color    "secondary"
+    {:color    "secondary"
      :on-click #(==> [::sports-site-events/start-adding-new-site])}
     [mui/icon "add"]]])
 
@@ -643,6 +643,18 @@
                 :disabled         (not new-site-valid?)
                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
+(defn default-tools [{:keys [tr logged-in?]}]
+  (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
+    [lui/floating-container {:bottom 0 :background "transparent"}
+     [mui/grid {:container true :align-items "center" :spacing 8
+                :style {:padding-bottom "0.5em"}}
+      (when logged-in?
+        [mui/grid {:item true}
+         [add-btn {:tr tr}]])
+      (when (= :list result-view)
+        [mui/grid {:item true}
+         [reports/dialog {:tr tr :btn-variant :fab}]])]]))
+
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
 
@@ -660,12 +672,7 @@
                             (==> [::events/show-sports-site lipas-id])
                             (==> [::events/zoom-to-site lipas-id width]))}])
 
-     ;; Add new sports-site view or big '+' button
-     (when logged-in?
-       (if adding?
-         [add-sports-site-view {:tr tr}]
-         [lui/floating-container {:bottom 0 :background "transparent"}
-          [add-btn {:tr tr}]]))]))
+     [default-tools {:tr tr :logged-in? logged-in?}]]))
 
 (defn map-view [{:keys [width]}]
   (let [tr            (<== [:lipas.ui.subs/translator])

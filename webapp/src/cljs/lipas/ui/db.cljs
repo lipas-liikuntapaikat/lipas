@@ -119,7 +119,7 @@
     :pagination
     {:page       0
      :page-size  250
-     :page-sizes [100 250 500]}}
+     :page-sizes [25 50 100 250 500]}}
 
    ;; Reports
    :reports
