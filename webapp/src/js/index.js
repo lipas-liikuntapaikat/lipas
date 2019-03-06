@@ -337,3 +337,14 @@ window.materialIcons = {
   Eraser,
   FileUpload,
 };
+
+// React virtualized
+import VirtualizedList from 'react-virtualized/dist/commonjs/List';
+import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
+import InfiniteLoader from 'react-virtualized/dist/commonjs/InfiniteLoader';
+
+window.reactVirtualized = {
+  AutoSizer,
+  InfiniteLoader,
+  List: VirtualizedList,
+};
