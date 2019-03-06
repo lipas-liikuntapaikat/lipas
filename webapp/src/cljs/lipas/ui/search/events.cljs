@@ -81,7 +81,7 @@
                                             {:search-meta.location.wgs84-point
                                              {:origin (str lat "," lon)
                                               :offset (str distance "m")
-                                              :scale  (str (* 2 distance) "m")}}})])}}})]
+                                              :scale  (str distance "m")}}})])}}})]
     (cond-> params
       statuses     (add-filter {:terms {:status.keyword statuses}})
       type-codes   (add-filter {:terms {:type.type-code type-codes}})

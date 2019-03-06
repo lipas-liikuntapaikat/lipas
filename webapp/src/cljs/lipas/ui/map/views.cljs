@@ -664,9 +664,8 @@
      (when logged-in?
        (if adding?
          [add-sports-site-view {:tr tr}]
-         [sticky-bottom-container
-          [mui/grid {:item true}
-           [add-btn {:tr tr}]]]))]))
+         [lui/floating-container {:bottom 0 :background "transparent"}
+          [add-btn {:tr tr}]]))]))
 
 (defn map-view [{:keys [width]}]
   (let [tr            (<== [:lipas.ui.subs/translator])
