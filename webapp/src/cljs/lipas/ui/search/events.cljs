@@ -254,7 +254,7 @@
    {:db         (assoc-in db [:search :results-view] view)
     :dispatch-n [(when (= :list view) [::reset-sort-order])
                  (when (= :list view) [::change-result-page-size 250])
-                 (when (= :table view) [::change-result-page-size 100])]}))
+                 (when (= :table view) [::change-result-page-size 25])]}))
 
 (re-frame/reg-event-db
  ::select-results-table-columns

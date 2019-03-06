@@ -201,7 +201,7 @@
         page-size        (-> pagination-opts :page-size)
         page             (-> pagination-opts :page)]
 
-    [mui/grid {:container true}
+    [mui/grid {:container true :align-items "center" :justify "space-between"}
 
      ;; Pagination
      [mui/grid {:item true}
@@ -214,8 +214,11 @@
         :change-page-size? true
         :style             {:margin-right "2em"}}]]
 
+     [mui/grid {:item true}
+      [reports/dialog {:tr tr}]]
+
      ;; Rank results close to map center higher
-     [mui/grid {:item true :style {:flex-grow 1}}
+     [mui/grid {:item true}
       [lui/checkbox
        {:style     {:height "100%"}
         :label     (tr :search/display-closest-first)
@@ -223,7 +226,7 @@
         :on-change #(==> [::events/toggle-sorting-by-distance])}]]
 
      ;; Select table columns
-     [mui/grid {:item true :style {:padding-right "2px"}}
+     [mui/grid {:item true :style {:padding-right "0.5em"}}
       [lui/search-results-column-selector
        {:value     selected-columns
         :on-change #(==> [::events/select-results-table-columns %])}]]
@@ -285,56 +288,54 @@
        [mui/grid {:item true}
         [mui/circular-progress {:style {:margin-top "1em"}}]]
 
-       ;;Results
+       ;; Results
        [mui/grid {:item true :style {:flex-grow 1}}
         [lists/virtualized-list
          {:items         results
           :label-fn      :name
           :label2-fn     #(str (-> % :type.name) ", "
                                (-> % :location.city.name))
-          :on-item-click on-result-click}]]
-       ;; [mui/grid {:item true :xs 12}
-       ;;  [into [mui/list]
-       ;;   (for [result results]
-       ;;     [mui/list-item
-       ;;      {:button   true
-       ;;       :divider  true
-       ;;       :on-click #(on-result-click result)}
-       ;;      [mui/list-item-text
-       ;;       {:primary   (-> result :name)
-       ;;        :secondary (str (-> result :type.name) ", "
-       ;;                        (-> result :location.city.name))}]])]]
-       )]))
+          :on-item-click on-result-click}]])]))
+
+(defn search-input [{:keys []}]
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        search-str (<== [::subs/search-string])]
+
+    [mui/grid {:container true}
+     [mui/grid {:item true :style {:flex-grow 1}}
+      [lui/text-field
+       {:value        search-str
+        :placeholder  (tr :search/placeholder)
+        :full-width   true
+        :defer-ms     10
+        :on-change    #(==> [::events/update-search-string %])
+        :on-key-press (fn [e]
+                        (when (= 13 (.-charCode e)) ; Enter
+                          (==> [::events/submit-search :fit-view])))}]]
+     [mui/grid {:item true}
+      [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
+       [mui/icon "search"]
+       (tr :search/search)]]]))
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [search-str      (<== [::subs/search-string])
-        total           (<== [::subs/search-results-total-count])
+  (let [ total          (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
         filters-active? (<== [::subs/filters-active?])]
 
     [mui/grid {:container true :direction "column" :style {:flex 1} :justify "flex-start"}
 
-     ;; First row: LIPAS-text
-     [mui/grid {:item true}
-      [mui/typography {:variant "h2" :style {:opacity 0.7}}
-       "LIPAS"]]
+     ;; Search input and button
+     (if (= :list result-view)
+       [search-input]
+       [mui/grid {:container true :direction "row" :align-items "flex-end"}
 
-     ;; Second row: Search input and button
-     [mui/grid {:container true :item true :style {:margin "2em 0em 1em 0em"}}
-      [mui/grid {:item true :style {:flex-grow 1}}
-       [lui/text-field
-        {:value        search-str
-         :placeholder  (tr :search/placeholder)
-         :full-width   true
-         :defer-ms     10
-         :on-change    #(==> [::events/update-search-string %])
-         :on-key-press (fn [e]
-                         (when (= 13 (.-charCode e)) ; Enter
-                           (==> [::events/submit-search :fit-view])))}]]
-      [mui/grid {:item true}
-       [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
-        [mui/icon "search"]
-        (tr :search/search)]]]
+        ;; LIPAS-text
+        [mui/grid {:item true :xs 12 :md 6}
+         [mui/typography {:variant "h2" :style {:opacity 0.7}}
+          "LIPAS"]]
+
+        [mui/grid {:item true :xs 12 :md 6}
+         [search-input]]])
 
      ;; Third row: filters expansion panel
      [lui/expansion-panel
@@ -367,30 +368,24 @@
       ;; Change result view (list | table)
       [mui/grid {:item true}
 
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
-        [mui/icon {:color (if (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_stream"]]
+       [mui/tooltip {:title (tr :search/list-view)}
+        [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
+         [mui/icon {:color (if (= :list result-view)
+                             "secondary"
+                             "inherit")}
+          "view_stream"]]]
 
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
-        [mui/icon {:color (if-not (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_column"]]]]
+       [mui/tooltip {:title (tr :search/table-view)}
+        [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
+         [mui/icon {:color (if-not (= :list result-view)
+                             "secondary"
+                             "inherit")}
+          "view_column"]]]]]
 
      [mui/grid {:item true}
       [mui/divider]]
 
-     ;; 5th row: Excel export
-     (when (not= :list result-view)
-       [reports/dialog {:tr tr}])
-
-     ;; Remaining rows: Results
-
+     ;; Results
      (if (= :list result-view)
-       ;; Results list
        [results-list {:on-result-click on-result-click}]
-
-       ;; Results table
        [results-table {:on-result-click on-result-click}])]))
