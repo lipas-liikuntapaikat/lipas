@@ -47,8 +47,7 @@
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
                       "Polygon"    (-> geom :coordinates first first))
-         [lon lat]  (wgs84->epsg3067 wgs-coords)
-         center     {:lon lon :lat lat}
+         center     (wgs84->epsg3067 wgs-coords)
          zoom       14]
      {:db         (-> db
                       (assoc-in [:map :zoom] zoom)
