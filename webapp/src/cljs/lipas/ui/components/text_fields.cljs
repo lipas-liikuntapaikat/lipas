@@ -46,12 +46,12 @@
     :or   {defer-ms 200}
     :as   props} & children]
   (r/with-let [read-only*?   (r/atom read-only?)
-               state (r/atom value)]
+               state         (r/atom value)
+               on-change     (gfun/debounce on-change defer-ms)]
     (let [_          (when (not= @read-only*? read-only?)
                        (do ; fix stale state between read-only? switches
                          (reset! read-only*? read-only?)
                          (reset! state value)))
-          on-change  (gfun/debounce on-change defer-ms)
           on-change* (fn [e]
                        (let [new-val (->> e .-target .-value (coerce type))]
                          (reset! state new-val)
