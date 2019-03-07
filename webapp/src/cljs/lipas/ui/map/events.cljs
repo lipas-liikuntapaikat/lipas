@@ -1,6 +1,7 @@
 (ns lipas.ui.map.events
   (:require
    ["ol"]
+   [ajax.core :as ajax]
    [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
@@ -31,6 +32,11 @@
  (fn [db _]
    (assoc-in db [:map :mode :fit-nonce] (gensym))))
 
+(defn wgs84->epsg3067 [wgs84-coords]
+  (let [proj      (.get js/ol.proj "EPSG:3067")
+        [lon lat] (js->clj (ol.proj.fromLonLat (clj->js wgs84-coords) proj))]
+    {:lon lon :lat lat}))
+
 (re-frame/reg-event-fx
  ::zoom-to-site
  (fn [{:keys [db]} [_ lipas-id width]]
@@ -41,8 +47,7 @@
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
                       "Polygon"    (-> geom :coordinates first first))
-         proj       (.get ol.proj "EPSG:3067")
-         [lon lat]  (js->clj (ol.proj.fromLonLat (clj->js wgs-coords) proj))
+         [lon lat]  (wgs84->epsg3067 wgs-coords)
          center     {:lon lon :lat lat}
          zoom       14]
      {:db         (-> db
@@ -295,3 +300,52 @@
                      clj->js
                      (js/togpx #js{:creator "LIPAS"}))]
      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
+
+(re-frame/reg-event-db
+ ::toggle-address-search-dialog
+ (fn [db _]
+   (update-in db [:map :address-search :dialog-open?] not)))
+
+(re-frame/reg-event-db
+ ::clear-address-search-results
+ (fn [db _]
+   (assoc-in db [:map :address-search :results] [])))
+
+(re-frame/reg-event-fx
+ ::update-address-search-keyword
+ (fn [{:keys [db]} [_ s]]
+   {:db         (assoc-in db [:map :address-search :keyword] s)
+    :dispatch-n [[::search-address s]]}))
+
+(re-frame/reg-event-fx
+ ::search-address
+ (fn [{:keys [db]} [_ s]]
+   (let [base-url (-> db :map :address-search :base-url)]
+     (if (not-empty s)
+       {:http-xhrio
+        {:method          :get
+         :uri             (str base-url "/autocomplete?text=" s)
+         :response-format (ajax/json-response-format {:keywords? true})
+         :on-success      [::address-search-success]
+         :on-failure      [::address-search-failure]}}
+       {:dispatch [::clear-address-search-results]}))))
+
+(re-frame/reg-event-fx
+ ::address-search-success
+ (fn [{:keys [db]} [_ resp]]
+   {:db (assoc-in db [:map :address-search :results] resp)}))
+
+(re-frame/reg-event-fx
+ ::address-search-failure
+ (fn [{:keys [db]} [_ resp]]
+   (js/alert "FIXME")
+   (js/console.log resp)))
+
+(re-frame/reg-event-fx
+ ::zoom-to-geom
+ (fn [{:keys []} [_ {:keys [coordinates]}]]
+   (let [{:keys [lon lat]} (wgs84->epsg3067 coordinates)]
+     {:dispatch-n
+      [[::set-center lat lon]
+       [::set-zoom 14]
+       [::toggle-address-search-dialog]]})))

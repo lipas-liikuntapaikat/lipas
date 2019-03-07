@@ -643,17 +643,53 @@
                 :disabled         (not new-site-valid?)
                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
 
+(defn address-search-dialog []
+  (let [tr      (<== [:lipas.ui.subs/translator])
+        open?   (<== [::subs/address-search-dialog-open?])
+        value   (<== [::subs/address-search-keyword])
+        toggle  (fn [] (==> [::events/toggle-address-search-dialog]))
+        results (<== [::subs/address-search-results])]
+    [lui/dialog
+     {:open?         open?
+      :title         (tr :map.address-search/title)
+      :on-close      toggle
+      :save-enabled? false
+      :cancel-label  (tr :actions/close)}
+     [mui/grid {:container true}
+      [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:style     {:width "250px"}
+         :defer-ms  500
+         :label     (tr :search/search)
+         :value     value
+         :on-change #(==> [::events/update-address-search-keyword %])}]]
+      (into
+       [mui/list]
+       (for [m results]
+         [mui/list-item
+          {:button   true
+           :on-click #(==> [::events/zoom-to-geom (:geometry m)])}
+          [mui/list-item-text
+           (:label m)]]))]]))
+
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
-    [lui/floating-container {:bottom 0 :background "transparent"}
-     [mui/grid {:container true :align-items "center" :spacing 8
-                :style {:padding-bottom "0.5em"}}
-      (when logged-in?
+    [:<>
+     [address-search-dialog]
+     [lui/floating-container {:bottom 0 :background "transparent"}
+      [mui/grid
+       {:container true :align-items "center" :spacing 8
+        :style     {:padding-bottom "0.5em"}}
+       (when logged-in?
+         [mui/grid {:item true}
+          [add-btn {:tr tr}]])
+       [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
-         [add-btn {:tr tr}]])
-      (when (= :list result-view)
-        [mui/grid {:item true}
-         [reports/dialog {:tr tr :btn-variant :fab}]])]]))
+         [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+          [mui/icon "search"]]]]
+       (when (= :list result-view)
+         [mui/grid {:item true}
+          [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [adding? (<== [::sports-site-subs/adding-new-site?])]
