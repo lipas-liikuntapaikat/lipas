@@ -336,9 +336,12 @@
 
 (re-frame/reg-event-fx
  ::address-search-failure
- (fn [{:keys [db]} [_ resp]]
-   (js/alert "FIXME")
-   (js/console.log resp)))
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:errors :address-search (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
 
 (re-frame/reg-event-fx
  ::zoom-to-geom
