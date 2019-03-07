@@ -161,4 +161,7 @@
     {:dialog-open?      false
      :selected-encoding "ISO-8859-1"
      :selected-items    #{}
-     :replace-existing? true}}})
+     :replace-existing? true}
+    :address-search
+    {:base-url     "https://api.digitransit.fi/geocoding/v1"
+     :dialog-open? false}}})

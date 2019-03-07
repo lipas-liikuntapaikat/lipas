@@ -12,10 +12,12 @@
    [mui/dialog-title title]
    [mui/dialog-content content]
    [mui/dialog-actions
-    [mui/button {:on-click on-close}
-     cancel-label]
-    [mui/button {:on-click on-save :disabled (not save-enabled?)}
-     save-label]]])
+    (when on-close
+      [mui/button {:on-click on-close}
+       cancel-label])
+    (when on-save
+      [mui/button {:on-click on-save :disabled (not save-enabled?)}
+       save-label])]])
 
 (defn slide [props]
   [mui/slide props])

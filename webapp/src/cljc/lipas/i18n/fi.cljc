@@ -677,6 +677,10 @@
     :ortokuva     "Ilmakuva"
     :copyright    "© Maanmittauslaitos"}
 
+   :map.address-search
+   {:title   "Etsi osoite"
+    :tooltip "Etsi osoite"}
+
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"
     :user-not-found      "Käyttäjää ei löydy."
