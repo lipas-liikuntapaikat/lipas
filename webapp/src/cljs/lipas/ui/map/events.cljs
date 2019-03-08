@@ -344,10 +344,18 @@
                   :success? false}]})))
 
 (re-frame/reg-event-fx
- ::zoom-to-geom
- (fn [{:keys []} [_ {:keys [coordinates]}]]
-   (let [{:keys [lon lat]} (wgs84->epsg3067 coordinates)]
-     {:dispatch-n
+ ::show-address
+ (fn [{:keys [db]} [_ {:keys [label geometry]}]]
+   (let [{:keys [lon lat]} (-> geometry :coordinates wgs84->epsg3067)
+
+         feature {:type "Feature" :geometry geometry :properties {:name label}}]
+     {:db (assoc-in db [:map :mode :address] feature)
+      :dispatch-n
       [[::set-center lat lon]
        [::set-zoom 14]
        [::toggle-address-search-dialog]]})))
+
+(re-frame/reg-event-db
+ ::hide-address
+ (fn [db _]
+   (assoc-in db [:map :mode :address] nil)))

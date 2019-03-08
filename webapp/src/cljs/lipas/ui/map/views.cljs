@@ -668,7 +668,7 @@
        (for [m results]
          [mui/list-item
           {:button   true
-           :on-click #(==> [::events/zoom-to-geom (:geometry m)])}
+           :on-click #(==> [::events/show-address m])}
           [mui/list-item-text
            (:label m)]]))]]))
 
