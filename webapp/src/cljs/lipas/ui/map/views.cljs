@@ -659,7 +659,7 @@
       [mui/grid {:item true :xs 12}
        [lui/text-field
         {:style     {:width "250px"}
-         :defer-ms  500
+         :defer-ms  150
          :label     (tr :search/search)
          :value     value
          :on-change #(==> [::events/update-address-search-keyword %])}]]
