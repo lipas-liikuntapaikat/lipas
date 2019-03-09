@@ -218,22 +218,30 @@
 
 (defn init-layers []
   {:basemaps
-   {:taustakartta (->wmts {:url        (:taustakartta urls)
-                           :layer-name "MML-Taustakartta"
-                           :visible?   true})
-    :maastokartta (->wmts {:url        (:maastokartta urls)
-                           :layer-name "MML-Maastokartta"})
-    :ortokuva     (->wmts {:url        (:ortokuva urls)
-                           :layer-name "MML-Ortokuva"})}
+   {:taustakartta
+    (->wmts
+     {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
+    :maastokartta
+    (->wmts
+     {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
+    (->wmts
+     {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
-   {:vectors (ol.layer.Vector.
-              #js{:source     (ol.source.Vector.)
-                  :style      feature-style
-                  :renderMode "image"})
-    :edits   (ol.layer.Vector.
-              #js{:source (ol.source.Vector.)
-                  :style  #js[edit-style vertices-style]
-                  :renderMode "vector"})}})
+   {:vectors
+    (ol.layer.Vector.
+     #js{:source     (ol.source.Vector.)
+         :style      feature-style
+         :renderMode "image"})
+    :edits
+    (ol.layer.Vector.
+     #js{:source     (ol.source.Vector.)
+         :style      #js[edit-style vertices-style]
+         :renderMode "vector"})
+    :markers
+    (ol.layer.Vector.
+     #js{:source     (ol.source.Vector.)
+         :style      red-marker-style
+         :renderMode "image"})}})
 
 (defn init-map! [{:keys [center zoom]}]
   (let [layers (init-layers)
@@ -253,12 +261,14 @@
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
                                 (-> layers :overlays :vectors)
-                                (-> layers :overlays :edits)]
+                                (-> layers :overlays :edits)
+                                (-> layers :overlays :markers)]
                   :overlays #js[popup-overlay]
                   :view     view}
 
         hover (ol.interaction.Select.
-               #js{:layers    #js[(-> layers :overlays :vectors)]
+               #js{:layers    #js[(-> layers :overlays :vectors)
+                                  (-> layers :overlays :markers)]
                    :style     feature-style-hover
                    :condition ol.events.condition.pointerMove})
 
@@ -282,9 +292,12 @@
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (aget (gobj/get e "selected") 0)]
              (.setPosition popup-overlay coords)
-             (==> [::events/show-sports-site
-                   (when selected
-                     (.get selected "lipas-id"))]))))
+             (==> [::events/show-sports-site (when selected
+                                               (.get selected "lipas-id"))]))))
+
+    (.on lmap "click"
+         (fn [e]
+           (==> [::events/hide-address])))
 
     (.on lmap "moveend"
          (fn [e]
@@ -375,6 +388,10 @@
                        ;; nil is returned.
                        nil))
     res))
+
+(defn clear-markers! [{:keys [layers] :as map-ctx}]
+  (-> layers :overlays :markers .getSource .clear)
+  map-ctx)
 
 (defn select-sports-site! [map-ctx lipas-id]
   (if-let [features (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
@@ -537,14 +554,15 @@
 
   (assoc map-ctx :interactions {}))
 
-(defn- existing-feature? [f]
-  (-> (.getId f)
-      (string/starts-with? temp-fid-prefix)
-      not))
+;; (defn- existing-feature? [f]
+;;   (-> (.getId f)
+;;       (string/starts-with? temp-fid-prefix)
+;;       not))
 
 (defn clear-edits! [{:keys [layers] :as map-ctx}]
-  (let [edits-source (-> layers :overlays :edits .getSource)
-        geoms-source (-> layers :overlays :vectors .getSource)]
+  (let [edits-source (-> layers :overlays :edits .getSource)]
+       ;;geoms-source (-> layers :overlays :vectors .getSource)
+
     ;; We add existing features which have been transferred to :edits
     ;; layer back to :vectors layer.
     ;; (.forEachFeature edits-source
@@ -621,23 +639,35 @@
       map-ctx ;; Noop
       (set-editing-mode! map-ctx mode :continue))))
 
+(defn show-address-marker!
+  [{:keys [layers] :as map-ctx} address]
+  (let [f (.readFeature geoJSON (clj->js address))]
+    (.setStyle f blue-marker-style)
+    (-> layers :overlays :markers .getSource (.addFeature f))
+    map-ctx))
+
 ;; Browsing and selecting features
 (defn set-default-mode! [map-ctx mode]
   (let [map-ctx (-> map-ctx
                     clear-interactions!
                     clear-edits!
+                    clear-markers!
                     enable-hover!
                     enable-select!)]
-    (if-let [lipas-id (:lipas-id mode)]
-      (select-sports-site! map-ctx lipas-id)
-      map-ctx)))
+    (let [lipas-id (:lipas-id mode)
+          address  (:address mode)]
+      (cond-> map-ctx
+        lipas-id (select-sports-site! lipas-id)
+        address (show-address-marker! address)))))
 
 (defn update-default-mode!
-  [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce]}]
+  [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce address]}]
   (let [fit? (not= fit-nonce (-> map-ctx :mode :fit-nonce))]
     (cond-> map-ctx
+      true     (clear-markers!)
       lipas-id (select-sports-site! lipas-id)
-      fit?     (fit-to-extent! (-> layers :overlays :vectors .getSource .getExtent)))))
+      fit?     (fit-to-extent! (-> layers :overlays :vectors .getSource .getExtent))
+      address  (show-address-marker! address))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)

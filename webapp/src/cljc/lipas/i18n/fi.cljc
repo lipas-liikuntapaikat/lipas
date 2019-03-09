@@ -87,6 +87,7 @@
     :selected-fields   "Valitut kentät"
     :shortcuts         "Pikavalinnat"
     :download-as-excel "Luo raportti"
+    :tooltip           "Luo Excel-raportti hakutuloksista"
     :contacts          (str "Yhteys" ZWSP "tiedot")}
 
    :stats
@@ -596,7 +597,9 @@
     :clear-filters         "Poista rajaukset"
     :permissions-filter    "Näytä kohteet joita voin muokata"
     :page-size             "Näytä kerralla"
-    :pagination            "Tulokset {1}-{2}"}
+    :pagination            "Tulokset {1}-{2}"
+    :list-view             "Näytä hakutulokset listana"
+    :table-view            "Näytä hakutulokset taulukossa"}
 
    :statuses
    {:edited "{1} (muokattu)"}
@@ -629,7 +632,7 @@
 
    :map
    {:add-to-map         "Lisää kartalle"
-    :zoom-to-site       "Näytä kartalla"
+    :zoom-to-site       "Kohdista kartta"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
     :zoom-closer        "Kartta täytyy zoomata lähemmäs"
     :draw-geoms         "Piirrä"
@@ -673,6 +676,10 @@
     :maastokartta "Maastokartta"
     :ortokuva     "Ilmakuva"
     :copyright    "© Maanmittauslaitos"}
+
+   :map.address-search
+   {:title   "Etsi osoite"
+    :tooltip "Etsi osoite"}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"

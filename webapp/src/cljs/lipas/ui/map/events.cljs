@@ -1,6 +1,7 @@
 (ns lipas.ui.map.events
   (:require
    ["ol"]
+   [ajax.core :as ajax]
    [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
@@ -31,6 +32,11 @@
  (fn [db _]
    (assoc-in db [:map :mode :fit-nonce] (gensym))))
 
+(defn wgs84->epsg3067 [wgs84-coords]
+  (let [proj      (.get js/ol.proj "EPSG:3067")
+        [lon lat] (js->clj (ol.proj.fromLonLat (clj->js wgs84-coords) proj))]
+    {:lon lon :lat lat}))
+
 (re-frame/reg-event-fx
  ::zoom-to-site
  (fn [{:keys [db]} [_ lipas-id width]]
@@ -41,9 +47,7 @@
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
                       "Polygon"    (-> geom :coordinates first first))
-         proj       (.get ol.proj "EPSG:3067")
-         [lon lat]  (js->clj (ol.proj.fromLonLat (clj->js wgs-coords) proj))
-         center     {:lon lon :lat lat}
+         center     (wgs84->epsg3067 wgs-coords)
          zoom       14]
      {:db         (-> db
                       (assoc-in [:map :zoom] zoom)
@@ -295,3 +299,66 @@
                      clj->js
                      (js/togpx #js{:creator "LIPAS"}))]
      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
+
+(re-frame/reg-event-db
+ ::toggle-address-search-dialog
+ (fn [db _]
+   (update-in db [:map :address-search :dialog-open?] not)))
+
+(re-frame/reg-event-db
+ ::clear-address-search-results
+ (fn [db _]
+   (assoc-in db [:map :address-search :results] [])))
+
+(re-frame/reg-event-fx
+ ::update-address-search-keyword
+ (fn [{:keys [db]} [_ s]]
+   {:db         (assoc-in db [:map :address-search :keyword] s)
+    :dispatch-n [[::search-address s]]}))
+
+;; https://www.digitransit.fi/en/developers/apis/2-geocoding-api/autocomplete/
+(re-frame/reg-event-fx
+ ::search-address
+ (fn [{:keys [db]} [_ s]]
+   (let [base-url (-> db :map :address-search :base-url)]
+     (if (not-empty s)
+       {:http-xhrio
+        {:method          :get
+         :uri             (str base-url "/autocomplete?"
+                               "sources=oa,osm"
+                               "&text=" s)
+         :response-format (ajax/json-response-format {:keywords? true})
+         :on-success      [::address-search-success]
+         :on-failure      [::address-search-failure]}}
+       {:dispatch [::clear-address-search-results]}))))
+
+(re-frame/reg-event-fx
+ ::address-search-success
+ (fn [{:keys [db]} [_ resp]]
+   {:db (assoc-in db [:map :address-search :results] resp)}))
+
+(re-frame/reg-event-fx
+ ::address-search-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:errors :address-search (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::show-address
+ (fn [{:keys [db]} [_ {:keys [label geometry]}]]
+   (let [{:keys [lon lat]} (-> geometry :coordinates wgs84->epsg3067)
+
+         feature {:type "Feature" :geometry geometry :properties {:name label}}]
+     {:db (assoc-in db [:map :mode :address] feature)
+      :dispatch-n
+      [[::set-center lat lon]
+       [::set-zoom 14]
+       [::toggle-address-search-dialog]]})))
+
+(re-frame/reg-event-db
+ ::hide-address
+ (fn [db _]
+   (assoc-in db [:map :mode :address] nil)))

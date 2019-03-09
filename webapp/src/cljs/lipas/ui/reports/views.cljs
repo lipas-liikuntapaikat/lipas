@@ -48,7 +48,7 @@
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
 
-(defn dialog [{:keys [tr]}]
+(defn dialog [{:keys [tr btn-variant]}]
   (let [open?           (<== [::subs/dialog-open?])
         toggle          #(==> [::events/toggle-dialog])
         selected-fields (<== [::subs/selected-fields])
@@ -59,13 +59,13 @@
     [:<>
      ;; Open Dialog button
      (when (< 0 results-count)
-       [mui/fab
-        {:style    {:margin-top "1em"}
-         :variant  "extended"
-         :color    "secondary"
-         :on-click toggle}
-        [mui/icon "arrow_right"]
-        (tr :reports/download-as-excel)])
+       [mui/tooltip {:title (tr :reports/tooltip)}
+        (if (= btn-variant :fab)
+          [mui/fab
+           {:variant "round" :color "default" :on-click toggle}
+           [mui/icon "list_alt"]]
+          [mui/button {:variant "contained" :color "secondary" :on-click toggle}
+           (tr :actions/download-excel)])])
 
      ;; Dialog
      [mui/dialog {:open       open?

@@ -144,3 +144,23 @@
  ::replace-existing-geoms?
  (fn [db _]
    (-> db :map :import :replace-existing?)))
+
+(re-frame/reg-sub
+ ::address-search-dialog-open?
+ (fn [db _]
+   (-> db :map :address-search :dialog-open?)))
+
+(re-frame/reg-sub
+ ::address-search-keyword
+ (fn [db _]
+   (-> db :map :address-search :keyword)))
+
+(defn ->result [f]
+  {:geometry (-> f :geometry)
+   :label    (-> f :properties :label)})
+
+(re-frame/reg-sub
+ ::address-search-results
+ (fn [db _]
+   (-> db :map :address-search :results :features
+       (->> (map ->result)))))

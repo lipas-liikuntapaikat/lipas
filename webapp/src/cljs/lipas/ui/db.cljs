@@ -119,7 +119,7 @@
     :pagination
     {:page       0
      :page-size  250
-     :page-sizes [100 250 500]}}
+     :page-sizes [25 50 100 250 500]}}
 
    ;; Reports
    :reports
@@ -161,4 +161,7 @@
     {:dialog-open?      false
      :selected-encoding "ISO-8859-1"
      :selected-items    #{}
-     :replace-existing? true}}})
+     :replace-existing? true}
+    :address-search
+    {:base-url     "https://api.digitransit.fi/geocoding/v1"
+     :dialog-open? false}}})
