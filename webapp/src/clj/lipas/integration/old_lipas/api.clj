@@ -11,9 +11,9 @@
 (def pass (:old-lipas-pass env))
 
 (def fields
-  ["properties" "schoolUse" "email" "type.name" "location.sportsPlaces"
-   "renovationYears" "admin" "www" "location.geometries" "name"
-   "type.typeCode" "location.locationId" "freeUse" "location.city.name"
+  ["properties" "schoolUse" "email" "constructionYear" "type.name"
+   "location.sportsPlaces" "renovationYears" "admin" "www" "location.geometries"
+   "name" "type.typeCode" "location.locationId" "freeUse" "location.city.name"
    "lastModified" "location.postalCode" "location.postalOffice"
    "location.city.cityCode" "phoneNumber" "location.neighborhood"
    "owner" "location.address"])
