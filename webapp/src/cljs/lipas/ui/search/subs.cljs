@@ -103,7 +103,7 @@
  (fn [results _]
    (-> results :hits :total)))
 
-(defn ->search-result
+(defn ->table-entry
   [{:keys [locale types cities admins owners logged-in? permissions]} hit]
   (let [site      (:_source hit)
         type-code (-> site :type :type-code)
@@ -133,7 +133,7 @@
                                 false)}))
 
 (re-frame/reg-sub
- ::search-results-list
+ ::search-results-table-data
  :<- [::search-results]
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/all-types]
@@ -148,8 +148,35 @@
                  :admins      admins :owners owners :logged-in? logged-in?
                  :permissions permissions}]
      (->> (-> results :hits :hits)
-          (map (partial ->search-result data))
+          (map (partial ->table-entry data))
           (sort-by :score utils/reverse-cmp)))))
+
+(defn ->list-entry
+  [{:keys [locale types cities]} hit]
+  (let [site      (:_source hit)
+        type-code (-> site :type :type-code)
+        city-code (-> site :location :city :city-code)]
+    {:lipas-id                (-> site :lipas-id)
+     :score                   (-> hit :_score)
+     :name                    (-> site :name)
+     :type.type-code          type-code
+     :type.name               (get-in types [type-code :name locale])
+     :location.city.city-code city-code
+     :location.city.name      (get-in cities [city-code :name locale])}))
+
+(re-frame/reg-sub
+ ::search-results-list-data
+ :<- [::search-results]
+ :<- [:lipas.ui.subs/translator]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ (fn [[results tr types cities] _]
+   (let [locale (tr)
+         data   {:types types :cities cities :locale locale}]
+     (->> (-> results :hits :hits)
+          (map (partial ->list-entry data))
+          (sort-by :score utils/reverse-cmp)
+          vec))))
 
 (re-frame/reg-sub
  ::search-results-view

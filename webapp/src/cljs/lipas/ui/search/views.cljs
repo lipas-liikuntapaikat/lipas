@@ -3,6 +3,7 @@
    [clojure.spec.alpha :as s]
    [goog.object :as gobj]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.lists :as lists]
    [lipas.ui.mui :as mui]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.events :as events]
@@ -186,47 +187,155 @@
        :label-rows-per-page     (tr :search/page-size)})
     (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
 
-(defn search-view [{:keys [tr on-result-click]}]
-  (let [in-progress?     (<== [::subs/in-progress?])
-        search-str       (<== [::subs/search-string])
-        results          (<== [::subs/search-results-list])
-        total            (<== [::subs/search-results-total-count])
-        result-view      (<== [::subs/search-results-view])
-        sort-opts        (<== [::subs/sort-opts])
-        filters-active?  (<== [::subs/filters-active?])
-        pagination-opts  (<== [::subs/pagination])
-        selected-columns (<== [::subs/selected-results-table-columns])
-        headers          (<== [::subs/results-table-headers])
+(defn results-table [{:keys [on-result-click]}]
+  (let [tr               (<== [:lipas.ui.subs/translator])
         specs            (<== [::subs/results-table-specs])
+        headers          (<== [::subs/results-table-headers])
+        selected-columns (<== [::subs/selected-results-table-columns])
+        sort-opts        (<== [::subs/sort-opts])
+        in-progress?     (<== [::subs/in-progress?])
+        results          (<== [::subs/search-results-table-data])
+        total            (<== [::subs/search-results-total-count])
+        pagination-opts  (<== [::subs/pagination])
         page-sizes       (-> pagination-opts :page-sizes)
         page-size        (-> pagination-opts :page-size)
         page             (-> pagination-opts :page)]
 
-    [mui/grid {:item true :xs 12 :style {:flex 1}}
+    [mui/grid {:container true :align-items "center" :justify "space-between"}
 
-     ;; First row: LIPAS-text
-     [mui/grid {:container true}
+     ;; Pagination
+     [mui/grid {:item true}
+      [pagination
+       {:tr                tr
+        :total             total
+        :page              page
+        :page-size         page-size
+        :page-sizes        page-sizes
+        :change-page-size? true
+        :style             {:margin-right "2em"}}]]
 
-      [mui/grid {:item true :style {:flex-grow 1}}
-       [mui/typography {:variant "h2" :style {:opacity 0.7}}
-        "LIPAS"]]]
+     [mui/grid {:item true}
+      [reports/dialog {:tr tr}]]
 
-     ;; Second row: Search input and button
-     [mui/grid {:container true :style {:margin-top "2em" :margin-bottom "1em"}}
-      [mui/grid {:item true :style {:flex-grow 1}}
-       [lui/text-field
-        {:value        search-str
-         :placeholder  (tr :search/placeholder)
-         :full-width   true
-         :defer-ms     10
-         :on-change    #(==> [::events/update-search-string %])
-         :on-key-press (fn [e]
-                         (when (= 13 (.-charCode e)) ; Enter
-                           (==> [::events/submit-search :fit-view])))}]]
-      [mui/grid {:item true}
-       [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
-        [mui/icon "search"]
-        (tr :search/search)]]]
+     ;; Rank results close to map center higher
+     [mui/grid {:item true}
+      [lui/checkbox
+       {:style     {:height "100%"}
+        :label     (tr :search/display-closest-first)
+        :value     (= :score (:sort-fn sort-opts))
+        :on-change #(==> [::events/toggle-sorting-by-distance])}]]
+
+     ;; Select table columns
+     [mui/grid {:item true :style {:padding-right "0.5em"}}
+      [lui/search-results-column-selector
+       {:value     selected-columns
+        :on-change #(==> [::events/select-results-table-columns %])}]]
+
+     ;; The table
+     [mui/grid {:item true :xs 12}
+      [lui/table-v2
+       {:key            (:sort-fn sort-opts)
+        :in-progress?   in-progress?
+        :items          results
+        :action-icon    "location_on"
+        :action-label   (tr :map/zoom-to-site)
+        :edit-label     (tr :actions/edit)
+        :save-label     (tr :actions/save)
+        :discard-label  (tr :actions/discard)
+        :on-select      #(on-result-click %)
+        :sort-fn        (or (:sort-fn sort-opts) :score)
+        :sort-asc?      (:asc? sort-opts)
+        :allow-editing? :permission?
+        :allow-saving?  (fn [item]
+                          (->> item
+                               (reduce
+                                (fn [res [k v]]
+                                  (if-let [spec (and (or (-> k specs :required?)
+                                                         (some? v))
+                                                     (-> k specs :spec))]
+                                    (conj res (s/valid? spec v))
+                                    (conj res true)))
+                                [])
+                               (every? true?)))
+        :on-item-save   #(==> [::events/save-edits %])
+        :on-sort-change #(==> [::events/change-sort-order %])
+        :headers        headers}]]]))
+
+(defn results-list [{:keys [on-result-click]}]
+  (let [tr           (<== [:lipas.ui.subs/translator])
+        in-progress? (<== [::subs/in-progress?])
+        results      (<== [::subs/search-results-list-data])
+        total        (<== [::subs/search-results-total-count])
+
+        pagination-opts (<== [::subs/pagination])
+
+        page-sizes (-> pagination-opts :page-sizes)
+        page-size  (-> pagination-opts :page-size)
+        page       (-> pagination-opts :page)]
+
+    [:<>
+     [mui/grid {:item true}
+      [pagination
+       {:tr                tr
+        :total             total
+        :page              page
+        :page-size         page-size
+        :page-sizes        page-sizes
+        :change-page-size? true}]]
+
+     (if in-progress?
+       ;; Spinner
+       [mui/grid {:item true}
+        [mui/circular-progress {:style {:margin-top "1em"}}]]
+
+       ;; Results
+       [mui/grid {:item true :style {:flex-grow 1}}
+        [lists/virtualized-list
+         {:items         results
+          :label-fn      :name
+          :label2-fn     #(str (-> % :type.name) ", "
+                               (-> % :location.city.name))
+          :on-item-click on-result-click}]])]))
+
+(defn search-input [{:keys []}]
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        search-str (<== [::subs/search-string])]
+
+    [mui/grid {:container true}
+     [mui/grid {:item true :style {:flex-grow 1}}
+      [lui/text-field
+       {:value        search-str
+        :placeholder  (tr :search/placeholder)
+        :full-width   true
+        :defer-ms     10
+        :on-change    #(==> [::events/update-search-string %])
+        :on-key-press (fn [e]
+                        (when (= 13 (.-charCode e)) ; Enter
+                          (==> [::events/submit-search :fit-view])))}]]
+     [mui/grid {:item true}
+      [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
+       [mui/icon "search"]
+       (tr :search/search)]]]))
+
+(defn search-view [{:keys [tr on-result-click]}]
+  (let [ total          (<== [::subs/search-results-total-count])
+        result-view     (<== [::subs/search-results-view])
+        filters-active? (<== [::subs/filters-active?])]
+
+    [mui/grid {:container true :direction "column" :style {:flex 1} :justify "flex-start"}
+
+     ;; Search input and button
+     (if (= :list result-view)
+       [search-input]
+       [mui/grid {:container true :direction "row" :align-items "flex-end"}
+
+        ;; LIPAS-text
+        [mui/grid {:item true :xs 12 :md 6}
+         [mui/typography {:variant "h2" :style {:opacity 0.7}}
+          "LIPAS"]]
+
+        [mui/grid {:item true :xs 12 :md 6}
+         [search-input]]])
 
      ;; Third row: filters expansion panel
      [lui/expansion-panel
@@ -259,110 +368,24 @@
       ;; Change result view (list | table)
       [mui/grid {:item true}
 
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
-        [mui/icon {:color (if (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_stream"]]
+       [mui/tooltip {:title (tr :search/list-view)}
+        [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
+         [mui/icon {:color (if (= :list result-view)
+                             "secondary"
+                             "inherit")}
+          "view_stream"]]]
 
-       [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
-        [mui/icon {:color (if-not (= :list result-view)
-                            "secondary"
-                            "inherit")}
-         "view_column"]]]]
+       [mui/tooltip {:title (tr :search/table-view)}
+        [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
+         [mui/icon {:color (if-not (= :list result-view)
+                             "secondary"
+                             "inherit")}
+          "view_column"]]]]]
 
-     [mui/divider]
+     [mui/grid {:item true}
+      [mui/divider]]
 
-     ;; 5th row: Excel export
-     (when (not= :list result-view)
-       [reports/dialog {:tr tr}])
-
-     ;; Remaining rows: Results
-
+     ;; Results
      (if (= :list result-view)
-       ;; Results list
-       [mui/grid {:container true :direction "row" :justify "center"}
-        [mui/grid {:item true :xs 12}
-         [pagination
-          {:tr                tr
-           :total             total
-           :page              page
-           :page-size         page-size
-           :page-sizes        page-sizes
-           :change-page-size? true}]]
-
-        (if in-progress?
-          ;; Spinner
-          [mui/grid {:item true}
-           [mui/circular-progress {:style {:margin-top "1em"}}]]
-
-          ;; Results
-          [mui/grid {:item true :xs 12}
-           [into [mui/list]
-            (for [result results]
-              [mui/list-item
-               {:button   true
-                :divider  true
-                :on-click #(on-result-click result)}
-               [mui/list-item-text
-                {:primary   (-> result :name)
-                 :secondary (str (-> result :type.name) ", "
-                                 (-> result :location.city.name))}]])]])]
-
-       ;; Results table
-       [mui/grid {:container true}
-
-        ;; Pagination
-        [mui/grid {:item true}
-         [pagination
-          {:tr                tr
-           :total             total
-           :page              page
-           :page-size         page-size
-           :page-sizes        page-sizes
-           :change-page-size? true
-           :style             {:margin-right "2em"}}]]
-
-        ;; Rank results close to map center higher
-        [mui/grid {:item true :style {:flex-grow 1}}
-         [lui/checkbox
-          {:style     {:height "100%"}
-           :label     (tr :search/display-closest-first)
-           :value     (= :score (:sort-fn sort-opts))
-           :on-change #(==> [::events/toggle-sorting-by-distance])}]]
-
-        ;; Select table columns
-        [mui/grid {:item true :style {:padding-right "2px"}}
-         [lui/search-results-column-selector
-          {:value     selected-columns
-           :on-change #(==> [::events/select-results-table-columns %])}]]
-
-        ;; The table
-        [mui/grid {:item true :xs 12}
-         [lui/table-v2
-          {:key            (:sort-fn sort-opts)
-           :in-progress?   in-progress?
-           :items          results
-           :action-icon    "location_on"
-           :action-label   (tr :map/zoom-to-site)
-           :edit-label     (tr :actions/edit)
-           :save-label     (tr :actions/save)
-           :discard-label  (tr :actions/discard)
-           :on-select      #(on-result-click %)
-           :sort-fn        (or (:sort-fn sort-opts) :score)
-           :sort-asc?      (:asc? sort-opts)
-           :allow-editing? :permission?
-           :allow-saving?  (fn [item]
-                             (->> item
-                                  (reduce
-                                   (fn [res [k v]]
-                                     (if-let [spec (and (or (-> k specs :required?)
-                                                            (some? v))
-                                                        (-> k specs :spec))]
-                                       (conj res (s/valid? spec v))
-                                       (conj res true)))
-                                   [])
-                                  (every? true?)))
-           :on-item-save   #(==> [::events/save-edits %])
-           :on-sort-change #(==> [::events/change-sort-order %])
-           :headers        headers}]]])]))
+       [results-list {:on-result-click on-result-click}]
+       [results-table {:on-result-click on-result-click}])]))

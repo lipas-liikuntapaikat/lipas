@@ -211,14 +211,14 @@
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
-(defn surface-material-selector [{:keys [tr value on-change label multi?]}]
+(defn surface-material-selector [{:keys [tr value on-change label multi? spec]}]
   (let [locale    (tr)
         items     (<== [::subs/surface-materials])
         component (if multi? lui/multi-select lui/select)]
     [component
      {:value     value
       :label     label
-      :spec      :lipas.sports-site.properties/surface-material
+      :spec      spec
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
@@ -252,6 +252,7 @@
            (material-field? k)     [surface-material-selector
                                     {:tr        tr
                                      :multi?    (= :surface-material k)
+                                     :spec      spec
                                      :label     label
                                      :value     value
                                      :on-change on-change}]

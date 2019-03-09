@@ -27,7 +27,7 @@
    {:img "img/partners/avi.png"}])
 
 (def known-users
-  [{:label "OKM" :href "https://minedu.fi/liikuntapaikkarakentaminen"}
+  [{:label "OKM" :href "https://minedu.fi/liikunta"}
    {:label "Retkikartta.fi" :href "https://www.retkikartta.fi/"}
    {:label "Paikkatietoikkuna" :href "https://www.paikkatietoikkuna.fi/"}
    {:label "palvelukartta.hel.fi" :href "https://palvelukartta.hel.fi/"}
@@ -42,7 +42,8 @@
    {:label "Tulikartta.fi" :href "https://www.tulikartta.fi/"}
    {:label "SportVenue" :href "https://www.sportvenue.fi/"}
    {:label "FCG" :href "http://www.fcg.fi/shvk"}
-   {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}])
+   {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}
+   {:label "Aluehallintovirasto" :href "https://www.avi.fi/web/avi/liikunta"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :md "auto" :lg "auto"}

@@ -81,7 +81,7 @@
                                             {:search-meta.location.wgs84-point
                                              {:origin (str lat "," lon)
                                               :offset (str distance "m")
-                                              :scale  (str (* 2 distance) "m")}}})])}}})]
+                                              :scale  (str distance "m")}}})])}}})]
     (cond-> params
       statuses     (add-filter {:terms {:status.keyword statuses}})
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
@@ -254,7 +254,7 @@
    {:db         (assoc-in db [:search :results-view] view)
     :dispatch-n [(when (= :list view) [::reset-sort-order])
                  (when (= :list view) [::change-result-page-size 250])
-                 (when (= :table view) [::change-result-page-size 100])]}))
+                 (when (= :table view) [::change-result-page-size 25])]}))
 
 (re-frame/reg-event-db
  ::select-results-table-columns
