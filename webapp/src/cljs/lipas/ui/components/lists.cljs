@@ -26,7 +26,7 @@
    (fn [m]
      (let [row-height 64
            width      (gobj/get m "width")
-           height     (gobj/get m "height")]
+           height     (max (gobj/get m "height") (* 5 row-height))]
        (r/as-element
         [:> js/reactVirtualized.List
          {:row-width    width
