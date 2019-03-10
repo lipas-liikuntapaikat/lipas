@@ -153,7 +153,7 @@
    ;; Map
    :map
    {:drawer-open? true
-    :center       {:lon 435047 :lat 6901408}
+    :center       {:lon 435047 :lat 7201408}
     :zoom         2
     :mode         {:name :default}
     :basemap      :taustakartta
