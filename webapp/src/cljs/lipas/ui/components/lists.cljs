@@ -15,19 +15,11 @@
      ^{:key key}
      [mui/grid {:item true :xs 12 :style style}
       [mui/list-item
-       {:button true :divider true :on-click #(on-item-click item)}
+       {:button   (some? item) :divider (some? item)
+        :on-click #(when item (on-item-click item))}
        [mui/list-item-text
         {:primary   (label-fn item)
          :secondary (label2-fn item)}]]])))
-
-(defn virtualized-list2 [{:keys [items] :as props}]
-  [:> js/reactVirtualized.List
-   {:row-width    390
-    :width        390
-    :height       (* 10 64)
-    :row-height   64
-    :row-renderer (partial row-renderer props)
-    :row-count    (count items)}])
 
 (defn virtualized-list [{:keys [items] :as props}]
   [:> js/reactVirtualized.AutoSizer
@@ -42,7 +34,7 @@
           :height       height
           :row-height   row-height
           :row-renderer (partial row-renderer props)
-          :row-count    (count items)}])))])
+          :row-count    (inc (count items))}])))])
 
 (defn inifinite-list [{:keys [items] :as props}]
   [:> js/reactVirtualized.InfiniteLoader
