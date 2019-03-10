@@ -692,7 +692,8 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
-  (let [adding? (<== [::sports-site-subs/adding-new-site?])]
+  (let [adding?     (<== [::sports-site-subs/adding-new-site?])
+        result-view (<== [:lipas.ui.search.subs/search-results-view])]
 
     [mui/grid
      {:container true
@@ -708,7 +709,7 @@
          :on-result-click (fn [{:keys [lipas-id]}]
                             (==> [::events/show-sports-site lipas-id])
                             (==> [::events/zoom-to-site lipas-id width]))}])
-     (when-not adding?
+     (when (and (= :list result-view) (not adding?))
        [default-tools {:tr tr :logged-in? logged-in?}])]))
 
 (defn map-view [{:keys [width]}]
