@@ -168,8 +168,8 @@
                  :else                           nil)]
     (into
      [mui/grid
-      {:container true :direction "row"
-       :style     {:position sticky :bottom (when sticky 0)}}]
+      {:container true :direction "row" :spacing 8 :align-items "center"
+       :style {:position sticky :bottom (when sticky 0)}}]
      children)))
 
 ;; Works as both display and edit views
@@ -295,37 +295,38 @@
        ;; Actions
        [sticky-bottom-container
         (into
-         [mui/grid {:item true :style {:padding-top "1em" :padding-bottom "0.5em"}}]
-
+         [mui/grid
+          {:container true :align-items "center" :spacing 8
+           :style     {:padding "0.5em 0em 0.5em 0em"}}]
          (->>
           (lui/edit-actions-list
             ;; TODO refactor (do ..) blocks to dispatch single event
             ;; according to user intention.
-            {:editing?           editing?
-             :valid?             edits-valid?
-             :logged-in?         logged-in?
-             :user-can-publish?  can-publish?
-             :on-discard         #(==> [:lipas.ui.events/confirm
-                                        (tr :confirm/discard-changes?)
-                                        (fn []
-                                          (==> [::sports-site-events/discard-edits lipas-id])
-                                          (==> [::events/stop-editing]))])
-             :discard-tooltip    (tr :actions/discard)
-             :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
-                                      (==> [::events/zoom-to-site lipas-id])
-                                      (==> [::events/start-editing lipas-id :editing geom-type]))
-             :edit-tooltip       (tr :actions/edit)
-             :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
-                                      (==> [::events/show-sports-site nil])
-                                      (==> [::events/stop-editing]))
-             :save-draft-tooltip (tr :actions/save-draft)
-             :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
-                                      (==> [::events/show-sports-site nil])
-                                      (==> [::events/stop-editing]))
-             :publish-tooltip    (tr :actions/save)
-             :invalid-message    (tr :error/invalid-form)
-             :on-delete          #(==> [::sports-site-events/toggle-delete-dialog])
-             :delete-tooltip     (tr :lipas.sports-site/delete-tooltip)})
+           {:editing?           editing?
+            :valid?             edits-valid?
+            :logged-in?         logged-in?
+            :user-can-publish?  can-publish?
+            :on-discard         #(==> [:lipas.ui.events/confirm
+                                       (tr :confirm/discard-changes?)
+                                       (fn []
+                                         (==> [::sports-site-events/discard-edits lipas-id])
+                                         (==> [::events/stop-editing]))])
+            :discard-tooltip    (tr :actions/discard)
+            :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
+                                     (==> [::events/zoom-to-site lipas-id])
+                                     (==> [::events/start-editing lipas-id :editing geom-type]))
+            :edit-tooltip       (tr :actions/edit)
+            :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
+                                     (==> [::events/show-sports-site nil])
+                                     (==> [::events/stop-editing]))
+            :save-draft-tooltip (tr :actions/save-draft)
+            :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
+                                     (==> [::events/show-sports-site nil])
+                                     (==> [::events/stop-editing]))
+            :publish-tooltip    (tr :actions/save)
+            :invalid-message    (tr :error/invalid-form)
+            :on-delete          #(==> [::sports-site-events/toggle-delete-dialog])
+            :delete-tooltip     (tr :lipas.sports-site/delete-tooltip)})
 
           (concat
            [;; Download GPX
@@ -391,7 +392,7 @@
                  :color    "default"}
                 [:> js/materialIcons.Eraser] ]])])
           (remove nil?)
-          (interpose [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}])))]])))
+          (map (fn [tool] [mui/grid {:item true} tool]))))]])))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
@@ -538,7 +539,7 @@
 
                 [mui/grid {:item true}
                  (when (not zoomed?)
-                   [mui/typography {:variant "body2" :color :error}
+                   [mui/typography {:variant "body2" :color "error"}
                     (tr :map/zoom-closer)])]
 
                 [mui/grid {:item true}
@@ -567,18 +568,17 @@
          ;; Step 3 - Fill data
          [mui/step
           [mui/step-label (tr :actions/fill-data)]
-          [mui/step-content {:style {:margin-top  "1em"
-                                     :padding     0
-                                     :margin-left "-24px"}}
-           [mui/grid {:container true
-                      :style     {:flex-direction "column"}}
+          [mui/step-content
+           {:style {:margin-left "-24px" :margin-top "1em" :padding 0 }}
+           [mui/grid {:container true :style {:flex-direction "column"}}
 
             ;; Tabs
             [mui/grid {:item true}
              [mui/tool-bar
-              [mui/tabs {:value     @selected-tab
-                         :on-change #(reset! selected-tab %2)
-                         :style     {:margin-bottom "1em"}}
+              [mui/tabs
+               {:value     @selected-tab
+                :on-change #(reset! selected-tab %2)
+                :style     {:margin-bottom "1em"}}
                [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
                [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
 
@@ -619,29 +619,29 @@
        ;; Actions
        [mui/grid {:item true}
         [sticky-bottom-container
-         [mui/grid {:item true}
+         [mui/grid
+          {:container true :align-items "center" :spacing 8
+           :style     {:padding-bottom "0.5em"}}
+          [mui/grid {:item true}
 
-          ;; Discard
-          [lui/discard-button
-           {:on-click #(==> [:lipas.ui.events/confirm
-                             (tr :confirm/discard-changes?)
-                             (fn []
-                               (==> [::sports-site-events/discard-new-site])
-                               (==> [::events/discard-drawing]))])
-            :tooltip  (tr :actions/discard)}]
+           ;; Discard
+           [lui/discard-button
+            {:on-click #(==> [:lipas.ui.events/confirm
+                              (tr :confirm/discard-changes?)
+                              (fn []
+                                (==> [::sports-site-events/discard-new-site])
+                                (==> [::events/discard-drawing]))])
+             :tooltip  (tr :actions/discard)}]]
 
           ;; Save
           (when data
             (let [draft? (not can-publish?)]
-              [lui/save-button
-               {:style            {:margin-top    "1em"
-                                   :margin-right  "0em"
-                                   :margin-bottom "1em"
-                                   :margin-left   "1em"}
-                :tooltip          (tr :actions/save)
-                :disabled-tooltip (tr :actions/fill-required-fields)
-                :disabled         (not new-site-valid?)
-                :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]))]]]])))
+              [mui/grid {:item true}
+               [lui/save-button
+                {:tooltip          (tr :actions/save)
+                 :disabled-tooltip (tr :actions/fill-required-fields)
+                 :disabled         (not new-site-valid?)
+                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]]))]]]])))
 
 (defn address-search-dialog []
   (let [tr      (<== [:lipas.ui.subs/translator])
@@ -701,14 +701,15 @@
       :justify   "space-between"}
 
      ;; Search, filters etc.
-     (when-not adding?
+     (if adding?
+       [add-sports-site-view {:tr tr}]
        [search/search-view
         {:tr              tr
          :on-result-click (fn [{:keys [lipas-id]}]
                             (==> [::events/show-sports-site lipas-id])
                             (==> [::events/zoom-to-site lipas-id width]))}])
-
-     [default-tools {:tr tr :logged-in? logged-in?}]]))
+     (when-not adding?
+       [default-tools {:tr tr :logged-in? logged-in?}])]))
 
 (defn map-view [{:keys [width]}]
   (let [tr            (<== [:lipas.ui.subs/translator])
@@ -766,6 +767,7 @@
        [mui/grid
         {:container true :direction "column" :justify "space-between"
          :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}
+
 
         [mui/grid {:item true :xs 12}
          (if selected-site

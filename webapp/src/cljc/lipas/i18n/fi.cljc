@@ -632,7 +632,7 @@
 
    :map
    {:add-to-map         "Lisää kartalle"
-    :zoom-to-site       "Kohdista kartta"
+    :zoom-to-site       "Kohdista kartta liikuntapaikkaan"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
     :zoom-closer        "Kartta täytyy zoomata lähemmäs"
     :draw-geoms         "Piirrä"
