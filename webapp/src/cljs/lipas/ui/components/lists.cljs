@@ -18,8 +18,10 @@
        {:button   (some? item) :divider (some? item)
         :on-click #(when item (on-item-click item))}
        [mui/list-item-text
-        {:primary   (label-fn item)
-         :secondary (label2-fn item)}]]])))
+        {:primary                    (label-fn item)
+         :secondary                  (label2-fn item)
+         :primary-typography-props   {:no-wrap true}
+         :secondary-typography-props {:no-wrap true}}]]])))
 
 (defn virtualized-list [{:keys [items] :as props}]
   [:> js/reactVirtualized.AutoSizer
