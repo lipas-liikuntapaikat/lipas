@@ -50,6 +50,9 @@
 (defn- new-site? [rev]
   (nil? (:lipas-id rev)))
 
+(defn- on-success-default []
+  [[:lipas.ui.search.events/submit-search]])
+
 (defn- on-success-new [{:keys [lipas-id]}]
   [[::discard-new-site]
    [:lipas.ui.map.events/stop-editing]
@@ -60,6 +63,10 @@
  ::commit-rev
  (fn [{:keys [db]} [_ rev draft? on-success]]
    (let [new?       (new-site? rev)
+         on-success (cond
+                      on-success on-success
+                      new?       on-success-new
+                      :else      on-success-default)
          on-success (or on-success (when new? on-success-new))]
      (if (or new? (dirty? db rev))
        (commit-ajax db rev draft? on-success)
@@ -72,7 +79,9 @@
                         utils/make-saveable)
          draft?     false
          new?       (new-site? rev)
-         on-success (when new? on-success-new)]
+         on-success (cond
+                      new?  on-success-new
+                      :else on-success-default)]
      (if (or new? (dirty? db rev))
        (commit-ajax db rev draft? on-success)
        {:dispatch [::save-success on-success rev]}))))
