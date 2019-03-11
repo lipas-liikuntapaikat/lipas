@@ -45,30 +45,23 @@
            adornment multiline read-only?]
     :or   {defer-ms 200}
     :as   props} & children]
-  (r/with-let [read-only*?   (r/atom read-only?)
-               state         (r/atom value)
-               on-change     (gfun/debounce on-change defer-ms)]
-    (let [_          (when (not= @read-only*? read-only?)
-                       (do ; fix stale state between read-only? switches
-                         (reset! read-only*? read-only?)
-                         (reset! state value)))
-          on-change* (fn [e]
-                       (let [new-val (->> e .-target .-value (coerce type))]
-                         (reset! state new-val)
-                         (on-change @state)))
-          input      (if multiline
-                       patched-textarea
-                       patched-input)
-          props      (-> (dissoc props :read-only? :defer-ms)
-                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                         (assoc :error (error? spec @state required))
-                         (assoc :Input-props
-                                (merge Input-props
-                                       {:input-component input}
-                                       (when adornment
-                                         (->adornment adornment))))
-                         (assoc :value @state)
-                         (assoc :on-change on-change*))]
-      (into [mui/text-field props] children))))
+
+  (let [on-change2 (fn [e]
+                     (let [new-val (->> e .-target .-value (coerce type))]
+                       (on-change new-val)))
+        input      (if multiline
+                     patched-textarea
+                     patched-input)
+        props      (-> (dissoc props :read-only? :defer-ms)
+                       (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                       (assoc :error (error? spec value required))
+                       (assoc :Input-props
+                              (merge Input-props
+                                     {:input-component input}
+                                     (when adornment
+                                       (->adornment adornment))))
+                       (assoc :value value)
+                       (assoc :on-change on-change2))]
+    (into [mui/text-field props] children)))
 
 (def text-field text-field-controlled)
