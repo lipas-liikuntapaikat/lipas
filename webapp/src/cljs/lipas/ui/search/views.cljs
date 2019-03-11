@@ -285,7 +285,7 @@
 
      (if in-progress?
        ;; Spinner
-       [mui/grid {:item true}
+       [mui/grid {:item true :style {:text-align "center"}}
         [mui/circular-progress {:style {:margin-top "1em"}}]]
 
        ;; Results
