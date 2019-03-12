@@ -45,6 +45,7 @@
 (def basic-fields
   {"lipas-id"                   {:fi "Lipas-id"}
    "name"                       {:fi "Nimi"}
+   "name-localized.se"          {:fi "Nimi ruotsiksi"}
    "marketing-name"             {:fi "Markkinointinimi"}
    "event-date"                 {:fi "Muokattu viimeksi"}
    "owner"                      {:fi "Omistaja"}
