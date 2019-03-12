@@ -141,14 +141,16 @@
      :selected-years        (range 2000 (dec utils/this-year))
      :selected-view         "chart"}
     :age-structure
-    {:groupings         reports/groupings
+    {:groupings         reports/age-structure-groupings
      :selected-grouping "owner"
      :selected-interval 10
      :selected-view     "chart"}
     :sports-stats
-    {:metrics         reports/sports-stats-metrics
-     :selected-metric "sites-count"
-     :selected-view   "chart"}}
+    {:groupings         reports/sports-stats-groupings
+     :selected-grouping "location.city.city-code"
+     :metrics           reports/sports-stats-metrics
+     :selected-metric   "sites-count"
+     :selected-view     "chart"}}
 
    ;; Map
    :map

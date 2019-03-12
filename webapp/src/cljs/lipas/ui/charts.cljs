@@ -169,14 +169,17 @@
           :label   false
           :fill    (get colors (get lookup k))}]))]))
 
-(defn sports-stats-chart [{:keys [data labels metric]}]
-  (let [data   (->> data (map #(rename-keys % labels)))
-        margin {:top 5 :right 50 :bottom 5 :left 50}]
+(defn sports-stats-chart [{:keys [data labels metric grouping]}]
+  (let [data       (->> data (map #(rename-keys % labels)))
+        margin     {:top 5 :right 50 :bottom 5 :left 100}
+        y-axis-key (if (= "location.city.city-code" grouping)
+                     :city-name
+                     :type-name)]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart {:data data :layout "vertical" :margin margin}
       [:> rc/Legend {:wrapperStyle font-styles}]
       [:> rc/Tooltip tooltip-styles]
       [:> rc/XAxis {:tick font-styles :type "number"}]
-      [:> rc/YAxis {:dataKey :city-name :type "category" :tick font-styles}]
+      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> rc/Bar {:dataKey (labels (keyword metric)) :fill "orange"}
        [:> rc/LabelList {:position "right"}]]]]))
