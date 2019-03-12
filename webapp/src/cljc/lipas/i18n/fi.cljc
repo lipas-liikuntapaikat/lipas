@@ -36,6 +36,10 @@
     :status            "Liikuntapaikan tila"
     :name-short        "Nimi"
     :name              "Virallinen nimi"
+    :name-localized    (fn [locale]
+                         (case locale
+                           "se" "Nimi ruotsiksi"
+                           (str "Nimi " locale)))
     :marketing-name    "Markkinointinimi"
     :event-date        "Muokattu"
     :owner             "Omistaja"

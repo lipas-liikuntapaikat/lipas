@@ -10,6 +10,9 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+;; TODO maybe put this into config / app-db instead?
+(def extra-locales [:se])
+
 (defn- show-status?
   "Status field is displayed only if latest saved status is
   'out-of-service-temporarily'. Applies to both display and edit
@@ -44,6 +47,17 @@
                     :required  true
                     :value     (-> edit-data :name)
                     :on-change #(on-change :name %)}]}
+
+     ;; Localized name(s)
+     (into
+      [:<>]
+      (for [l extra-locales]
+        {:label      (tr :lipas.sports-site/name-localized (name l))
+         :value      (-> display-data :name-localized l)
+         :form-field [lui/text-field
+                      {:spec      :lipas.sports-site/name
+                       :value     (-> edit-data :name-localized l)
+                       :on-change #(on-change :name-localized l %)}]}))
 
      ;; Marketing name
      {:label      (tr :lipas.sports-site/marketing-name)
