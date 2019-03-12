@@ -36,11 +36,13 @@
   "`s` is users input to search field. Goal is to transform `s` into ES
   query-string that returns relevant results for the user. Current
   implementation appends '*' wildcard after each word. Nil and Empty
-  string generates a match-all query."
+  string generates a match-all query. Dashes '-' are replaced with
+  whitespace because ES standard analyzer removes punctuation marks."
   [s]
   (if (empty? s)
     "*"
     (-> s
+        (string/replace "-" " ")
         (string/split #" ")
         (->> (map #(str % "*"))
              (string/join " ")))))
@@ -72,7 +74,7 @@
                    :query
                    {:bool
                     {:must
-                     [{:query_string
+                     [{:simple_query_string
                        {:query            string
                         :default_operator "AND"}}]}}
                    :functions  (filterv some?
