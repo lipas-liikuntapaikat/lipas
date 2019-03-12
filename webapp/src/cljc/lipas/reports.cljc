@@ -272,11 +272,17 @@
    "euros-per-capita" {:fi "€ / Asukas"
                        :en "€ / Capita"}})
 
-(def groupings
+(def age-structure-groupings
   {"owner" {:fi "Omistaja"
             :en "Owner"}
    "admin" {:fi "Ylläpitäjä"
             :en "Administrator"}})
+
+(def sports-stats-groupings
+  {"location.city.city-code" {:fi "Kunta"
+                              :en "City"}
+   "type.type-code"          {:fi "Tyyppi"
+                              :en "Type"}})
 
 (def sports-stats-metrics
   {"sites-count"        {:fi "Liikuntapaikkojen lkm"
@@ -333,7 +339,7 @@
     {:country-averages (calc-stats years all-cities)
      :data-points      (select-keys cities city-codes)}))
 
-(defn m2-per-capita-report [m2-data pop-data]
+(defn calculate-stats-by-city [m2-data pop-data]
   (reduce
    (fn [res m]
      (let [city-code   (:key m)
@@ -350,5 +356,28 @@
                         :m2-pc              (when (and population m2-total)
                                               (double (/ m2-total population)))}]
        (assoc res city-code entry)))
+   {}
+   m2-data))
+
+(defn calculate-stats-by-type [m2-data pop-data city-codes]
+  (reduce
+   (fn [res m]
+     (let [type-code   (:key m)
+           populations (if (empty? city-codes)
+                         pop-data ;; all
+                         (select-keys pop-data city-codes))
+           population  (->> populations vals (reduce +))
+           m2-total    (-> m :area_m2_sum :value)
+           sites-count (:doc_count m)
+           entry       {:population         population
+                        :m2-total           m2-total
+                        :sites-count        sites-count
+                        :sites-count-p1000c (when (and population sites-count)
+                                              (double
+                                               (/ sites-count
+                                                  (/ population 1000))))
+                        :m2-pc              (when (and population m2-total)
+                                              (double (/ m2-total population)))}]
+       (assoc res type-code entry)))
    {}
    m2-data))

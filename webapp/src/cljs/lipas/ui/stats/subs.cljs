@@ -245,6 +245,16 @@
    (-> db :stats :sports-stats :selected-metric)))
 
 (re-frame/reg-sub
+ ::sports-stats-groupings
+ (fn [db _]
+   (-> db :stats :sports-stats :groupings)))
+
+(re-frame/reg-sub
+ ::selected-sports-stats-grouping
+ (fn [db _]
+   (-> db :stats :sports-stats :selected-grouping)))
+
+(re-frame/reg-sub
  ::selected-sports-stats-cities
  (fn [db _]
    (-> db :stats :sports-stats :selected-cities)))
@@ -264,19 +274,24 @@
  :<- [::sports-stats-data*]
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [::selected-sports-stats-grouping]
  :<- [::selected-sports-stats-metric]
- (fn [[data tr cities metric] _]
+ (fn [[data tr cities types grouping metric] _]
    (let [locale (tr)]
      (->> data
           (reduce
            (fn [res [k v]]
-             (let [city-name (get-in cities [k :name locale])]
-               (conj res (assoc v :city-code k :city-name city-name))))
+             (if (= "location.city.city-code" grouping)
+               (let [city-name (get-in cities [k :name locale])]
+                 (conj res (assoc v :city-code k :city-name city-name)))
+               (let [type-name (get-in types [k :name locale])]
+                 (conj res (assoc v :type-code k :type-name type-name)))))
            [])
           (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
-                          (update :m2-pc round-safe)
-                          (update :sites-count-p1000c round-safe))))))))
+                          (update :m2-pc round-safe 5)
+                          (update :sites-count-p1000c round-safe 5))))))))
 
 (re-frame/reg-sub
  ::sports-stats-labels
@@ -290,9 +305,12 @@
  ::sports-stats-headers
  :<- [:lipas.ui.subs/translator]
  :<- [::sports-stats-metrics]
- (fn [[tr metrics] _]
+ :<- [::selected-sports-stats-grouping]
+ (fn [[tr metrics grouping] _]
    (let [locale (tr)]
-     (into [[:city-name (tr :lipas.location/city)]]
+     (into [(if (= "location.city.city-name" grouping)
+              [:city-name (tr :lipas.location/city)]
+              [:type-name (tr :lipas.sports-site/type)])]
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub

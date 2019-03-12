@@ -246,6 +246,12 @@
     }))
 
 (re-frame/reg-event-fx
+ ::select-sports-stats-grouping
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:stats :sports-stats :selected-grouping] v)
+    :dispatch [::create-sports-stats-report]}))
+
+(re-frame/reg-event-fx
  ::clear-sports-stats-filters
  (fn [_]
    {:dispatch-n
@@ -257,19 +263,21 @@
  ::create-sports-stats-report
  (fn [{:keys [db]} _]
    (let [city-codes (-> db :stats :sports-stats :selected-cities)
-         type-codes (-> db :stats :sports-stats :selected-types)]
-     {:dispatch [::create-sports-stats-report* city-codes type-codes]})))
+         type-codes (-> db :stats :sports-stats :selected-types)
+         grouping   (-> db :stats :sports-stats :selected-grouping)]
+     {:dispatch [::create-sports-stats-report* city-codes type-codes grouping]})))
 
-(defn ->sports-stats-query [city-codes type-codes]
+(defn ->sports-stats-query [city-codes type-codes grouping]
   (cond-> {}
+    grouping   (assoc :grouping grouping)
     city-codes (assoc :city-codes city-codes)
     type-codes (assoc :type-codes type-codes)))
 
 (re-frame/reg-event-fx
  ::create-sports-stats-report*
- (fn [{:keys [db]} [_ city-codes type-codes]]
-   (let [query (->sports-stats-query city-codes type-codes)
-         url   (str (:backend-url db) "/actions/create-m2-per-capita-report")]
+ (fn [{:keys [db]} [_ city-codes type-codes grouping]]
+   (let [query (->sports-stats-query city-codes type-codes grouping)
+         url   (str (:backend-url db) "/actions/calculate-stats")]
      {:http-xhrio
       {:method          :post
        :uri             url
