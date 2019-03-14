@@ -88,6 +88,11 @@
    (-> db :search :filters :retkikartta?)))
 
 (re-frame/reg-sub
+ ::school-use-filter
+ (fn [db _]
+   (-> db :search :filters :school-use?)))
+
+(re-frame/reg-sub
  ::search-string
  (fn [db _]
    (-> db :search :string)))
@@ -286,9 +291,18 @@
    (-> db :search :sort)))
 
 (re-frame/reg-sub
- ::pagination
+ ::pagination*
  (fn [db _]
    (-> db :search :pagination)))
+
+(re-frame/reg-sub
+ ::pagination
+ :<- [::pagination*]
+ :<- [:lipas.ui.user.subs/admin?]
+ (fn [[pagination admin?] _]
+   (if admin?
+     (update pagination :page-sizes conj 5000)
+     pagination)))
 
 (re-frame/reg-sub
  ::in-progress?
