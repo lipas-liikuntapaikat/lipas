@@ -215,6 +215,8 @@
 (s/def :lipas.sports-site/status (into #{} (keys sports-sites/statuses)))
 (s/def :lipas.sports-site/name (str-in 2 100))
 (s/def :lipas.sports-site/marketing-name (str-in 2 100))
+(s/def :lipas.sports-site/name-localized
+  (s/map-of #{:fi :se :en} :lipas.sports-site/name))
 
 (s/def :lipas.sports-site/owner (into #{} (keys owners/all)))
 (s/def :lipas.sports-site/admin (into #{} (keys admins/all)))
@@ -625,6 +627,7 @@
                    :lipas.sports-site/type
                    :lipas/location]
           :opt-un [:lipas.sports-site/created-at
+                   :lipas.sports-site/name-localized
                    :lipas.sports-site/marketing-name
                    :lipas.sports-site/phone-number
                    :lipas.sports-site/www

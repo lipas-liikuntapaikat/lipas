@@ -422,7 +422,7 @@
     (is (contains? body :country-averages))
     (is (= '(:275 :972) (-> body :data-points keys)))))
 
-(deftest m2-per-capita-report-test
+(deftest calculate-stats-test
   (let [_    (seed/seed-city-data! db)
         user (gen-user {:db? true :admin? true})
         site (-> (gen/generate (s/gen :lipas/sports-site))
@@ -431,7 +431,7 @@
                  (assoc-in [:properties :area-m2] 100))
         _    (core/upsert-sports-site!* db user site)
         _    (core/index! search site :sync)
-        path "/api/actions/create-m2-per-capita-report"
+        path "/api/actions/calculate-stats"
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/transit+json")
                       (mock/header "Accept" "application/transit+json")

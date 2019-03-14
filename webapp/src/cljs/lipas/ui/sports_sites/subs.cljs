@@ -217,6 +217,7 @@
        {:status         (-> status locale)
         :lipas-id       (-> latest :lipas-id)
         :name           (-> latest :name)
+        :name-localized (-> latest :name-localized)
         :marketing-name (-> latest :marketing-name)
         :type
         {:name          (-> type :name locale)

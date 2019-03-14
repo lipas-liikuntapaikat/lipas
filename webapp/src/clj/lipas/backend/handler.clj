@@ -295,16 +295,16 @@
              {:status 200
               :body   (core/finance-report db city-codes)}))}}]
 
-      ["/actions/create-m2-per-capita-report"
+      ["/actions/calculate-stats"
        {:post
-        {:parameters ;;:body :lipas.api.m2-per-capita-report/req
-         {}
+        {:parameters {}
          :handler
          (fn [{:keys [body-params]}]
            (let [city-codes (-> body-params :city-codes)
-                 type-codes (-> body-params :type-codes)]
+                 type-codes (-> body-params :type-codes)
+                 grouping   (-> body-params (:grouping "location.city.city-code"))]
              {:status 200
-              :body   (core/m2-per-capita-report db search city-codes type-codes)}))}}]]]
+              :body   (core/calculate-stats db search city-codes type-codes grouping)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
