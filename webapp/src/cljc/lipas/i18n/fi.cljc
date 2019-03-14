@@ -596,6 +596,7 @@
     :placeholder           "Etsi..."
     :filters               "Rajaa hakua"
     :retkikartta-filter    "Retkikartta.fi kohteet"
+    :school-use-filter     "Koulujen liikuntapaikat"
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
     :clear-filters         "Poista rajaukset"

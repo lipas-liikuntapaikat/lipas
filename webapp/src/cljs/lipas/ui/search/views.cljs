@@ -36,7 +36,8 @@
         year-min          (<== [::subs/construction-year-min-filter])
         year-max          (<== [::subs/construction-year-max-filter])
         surface-materials (<== [::subs/surface-materials-filter])
-        retkikartta?      (<== [::subs/retkikartta-filter])]
+        retkikartta?      (<== [::subs/retkikartta-filter])
+        school-use?       (<== [::subs/school-use-filter])]
 
     ^{:key @ugly-forcer}
     [mui/grid {:container true :spacing 16}
@@ -102,6 +103,13 @@
        {:value     retkikartta?
         :label     (tr :search/retkikartta-filter)
         :on-change #(==> [::events/set-retkikartta-filter %])}]]
+
+     ;; School-use? filter
+     [filter-layout {}
+      [lui/checkbox
+       {:value     school-use?
+        :label     (tr :search/school-use-filter)
+        :on-change #(==> [::events/set-school-use-filter %])}]]
 
      ;; Area filters
      [filter-layout {}

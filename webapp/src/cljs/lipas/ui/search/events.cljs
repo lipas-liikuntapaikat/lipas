@@ -58,6 +58,7 @@
         year-max          (-> filters :construction-year-max)
         materials         (-> filters :surface-materials not-empty)
         retkikartta?      (-> filters :retkikartta?)
+        school-use?       (-> filters :school-use?)
         admins            (-> filters :admins not-empty)
         owners            (-> filters :owners not-empty)
         statuses          (-> filters :statuses not-empty)
@@ -95,7 +96,8 @@
       materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
       admins       (add-filter {:terms {:admin.keyword admins}})
       owners       (add-filter {:terms {:owner.keyword owners}})
-      retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}}))))
+      retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
+      school-use?  (add-filter {:terms {:properties.school-use? [true]}}))))
 
 (re-frame/reg-event-fx
  ::search
@@ -216,6 +218,12 @@
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
+ ::set-school-use-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :school-use?] v)
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
