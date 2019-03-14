@@ -65,12 +65,10 @@
            {:variant "round" :color "default" :on-click toggle}
            [mui/icon "list_alt"]]
           [mui/button {:variant "contained" :color "secondary" :on-click toggle}
-           (tr :actions/download-excel)])])
+           (tr :reports/download-as-excel)])])
 
      ;; Dialog
-     [mui/dialog {:open       open?
-                  :full-width true
-                  :on-close   toggle}
+     [mui/dialog {:open open? :full-width true :on-close toggle}
       [mui/dialog-title (tr :reports/select-fields)]
       [mui/dialog-content
        [mui/grid {:container true :spacing 8}
@@ -80,13 +78,14 @@
          [mui/typography {:variant "body2" :style {:margin-top "1em"}}
           (tr :reports/shortcuts)]]
 
-        (into [:<>]
-              (for [{:keys [fields label]} quick-selects]
-                [mui/grid {:item true}
-                 [mui/button
-                  {:variant  "outlined"
-                   :on-click #(==> [::events/set-selected-fields fields :append])}
-                  label]]))
+        (into
+         [:<>]
+         (for [{:keys [fields label]} quick-selects]
+           [mui/grid {:item true}
+            [mui/button
+             {:variant  "outlined"
+              :on-click #(==> [::events/set-selected-fields fields :append])}
+             label]]))
 
         ;; Fields autocomplete selector
         [mui/grid {:item true :xs 12}
@@ -97,11 +96,12 @@
 
         ;; Clear selections
         [mui/grid {:item true :xs 12}
-         [mui/button {:style    {:margin-top "1em"}
-                      :variant  "outlined"
-                      :size     "small"
-                      :disabled (empty? selected-fields)
-                      :on-click #(==> [::events/set-selected-fields []])}
+         [mui/button
+          {:style    {:margin-top "1em"}
+           :variant  "outlined"
+           :size     "small"
+           :disabled (empty? selected-fields)
+           :on-click #(==> [::events/set-selected-fields []])}
           [mui/icon "clear"]
           (tr :actions/clear-selections)]]]]
 

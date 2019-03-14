@@ -269,7 +269,8 @@
   (let [data (get-cities db)]
     (reports/finance-report city-codes data)))
 
-(defn m2-per-capita-report [db search* city-codes type-codes]
+(defn calculate-stats
+  [db search* city-codes type-codes grouping]
   (let [pop-data (get-populations db 2017)
         statuses ["active" "out-of-service-temporarily"]
         query    {:size 0,
@@ -283,11 +284,13 @@
                            (when (not-empty city-codes)
                              {:terms {:location.city.city-code city-codes}})])}},
                   :aggs
-                  {:by_cities
-                   {:terms {:field :location.city.city-code, :size 400},
+                  {:grouping
+                   {:terms {:field (keyword grouping), :size 400},
                     :aggs  {:area_m2_sum {:sum {:field :properties.area-m2}}}}}}
-        m2-data  (-> (search search* query) :body :aggregations :by_cities :buckets)]
-    (reports/m2-per-capita-report m2-data pop-data)))
+        m2-data  (-> (search search* query) :body :aggregations :grouping :buckets)]
+    (if (= "location.city.city-code" grouping)
+      (reports/calculate-stats-by-city m2-data pop-data)
+      (reports/calculate-stats-by-type m2-data pop-data city-codes))))
 
 (comment
   (require '[lipas.backend.config :as config])

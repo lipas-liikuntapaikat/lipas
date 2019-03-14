@@ -36,6 +36,10 @@
     :status            "Liikuntapaikan tila"
     :name-short        "Nimi"
     :name              "Virallinen nimi"
+    :name-localized    (fn [locale]
+                         (case locale
+                           "se" "Nimi ruotsiksi"
+                           (str "Nimi " locale)))
     :marketing-name    "Markkinointinimi"
     :event-date        "Muokattu"
     :owner             "Omistaja"
@@ -592,6 +596,7 @@
     :placeholder           "Etsi..."
     :filters               "Rajaa hakua"
     :retkikartta-filter    "Retkikartta.fi kohteet"
+    :school-use-filter     "Koulujen liikuntapaikat"
     :results-count         "{1} hakutulosta"
     :display-closest-first "Näytä lähimmät kohteet ensin"
     :clear-filters         "Poista rajaukset"

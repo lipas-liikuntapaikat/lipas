@@ -54,6 +54,7 @@
                       :construction-year :location :properties])
 
         (assoc :last-modified (-> m :event-date UTC->last-modified)
+               :nameSe (-> m :name-localized :se)
                :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
                :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
                :school-use (-> m :properties :school-use?)

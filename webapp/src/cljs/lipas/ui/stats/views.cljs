@@ -26,7 +26,6 @@
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/finance-city-services])]
-    ^{:key value}
     [lui/select
      {:items     services
       :value     value
@@ -39,7 +38,6 @@
 (defn finance-metrics-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/finance-metrics])]
-    ^{:key value}
     [lui/multi-select
      {:items        metrics
       :value        value
@@ -52,7 +50,6 @@
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         units  (<== [::subs/finance-units])]
-    ^{:key value}
     [lui/select
      {:items     units
       :value     value
@@ -78,10 +75,9 @@
     :years        (range 2000 utils/this-year)
     :on-change    on-change}])
 
-(defn grouping-selector [{:keys [tr value on-change]}]
+(defn age-structure-grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/age-structure-groupings])]
-    ^{:key value}
     [lui/select
      {:items     groupings
       :value     value
@@ -114,15 +110,28 @@
       :label-fn     (comp locale second)
       :on-change    on-change}]))
 
+(defn sports-stats-grouping-selector [{:keys [tr value on-change]}]
+  (let [locale    (tr)
+        groupings (<== [::subs/sports-stats-groupings])]
+    [lui/select
+     {:items     groupings
+      :value     value
+      :style     select-style
+      :label     (tr :stats/select-grouping)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
 (defn sports-stats []
-  (let [tr      (<== [:lipas.ui.subs/translator])
-        cities  (<== [::subs/selected-sports-stats-cities])
-        types   (<== [::subs/selected-sports-stats-types])
-        metric  (<== [::subs/selected-sports-stats-metric])
-        view    (<== [::subs/selected-sports-stats-view])
-        data    (<== [::subs/sports-stats-data])
-        labels  (<== [::subs/sports-stats-labels])
-        headers (<== [::subs/sports-stats-headers])]
+  (let [tr       (<== [:lipas.ui.subs/translator])
+        cities   (<== [::subs/selected-sports-stats-cities])
+        types    (<== [::subs/selected-sports-stats-types])
+        metric   (<== [::subs/selected-sports-stats-metric])
+        grouping (<== [::subs/selected-sports-stats-grouping])
+        view     (<== [::subs/selected-sports-stats-view])
+        data     (<== [::subs/sports-stats-data])
+        labels   (<== [::subs/sports-stats-labels])
+        headers  (<== [::subs/sports-stats-headers])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -156,14 +165,21 @@
           [mui/button
            {:color    "secondary"
             :on-click #(==> [::events/clear-sports-stats-filters])}
-           (tr :search/clear-filters)]])]
+           (tr :search/clear-filters)]])
 
-      ;; Metric selector
-      [mui/grid {:item true}
-       [sports-stats-metrics-selector
-        {:tr        tr
-         :value     metric
-         :on-change #(==> [::events/select-sports-stats-metric %])}]]]
+       ;; Grouping selector
+       [mui/grid {:item true}
+        [sports-stats-grouping-selector
+         {:tr        tr
+          :value     grouping
+          :on-change #(==> [::events/select-sports-stats-grouping %])}]]
+
+       ;; Metric selector
+       [mui/grid {:item true}
+        [sports-stats-metrics-selector
+         {:tr        tr
+          :value     metric
+          :on-change #(==> [::events/select-sports-stats-metric %])}]]]]
 
      ;; Table
      (when (= view "table")
@@ -175,7 +191,7 @@
      (when (= view "chart")
        [mui/grid {:item true :xs 12}
         [charts/sports-stats-chart
-         {:data data :labels labels :metric metric}]])
+         {:data data :labels labels :metric metric :grouping grouping}]])
 
      ;; Tabs for choosing between chart/table views
      [mui/grid {:item true}
@@ -241,7 +257,7 @@
 
        ;; Grouping selector
        [mui/grid {:item true}
-        [grouping-selector
+        [age-structure-grouping-selector
          {:tr        tr
           :value     grouping
           :on-change #(==> [::events/select-age-structure-grouping %])}]]]]

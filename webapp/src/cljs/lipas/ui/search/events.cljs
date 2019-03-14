@@ -36,11 +36,13 @@
   "`s` is users input to search field. Goal is to transform `s` into ES
   query-string that returns relevant results for the user. Current
   implementation appends '*' wildcard after each word. Nil and Empty
-  string generates a match-all query."
+  string generates a match-all query. Dashes '-' are replaced with
+  whitespace because ES standard analyzer removes punctuation marks."
   [s]
   (if (empty? s)
     "*"
     (-> s
+        (string/replace "-" " ")
         (string/split #" ")
         (->> (map #(str % "*"))
              (string/join " ")))))
@@ -56,6 +58,7 @@
         year-max          (-> filters :construction-year-max)
         materials         (-> filters :surface-materials not-empty)
         retkikartta?      (-> filters :retkikartta?)
+        school-use?       (-> filters :school-use?)
         admins            (-> filters :admins not-empty)
         owners            (-> filters :owners not-empty)
         statuses          (-> filters :statuses not-empty)
@@ -72,7 +75,7 @@
                    :query
                    {:bool
                     {:must
-                     [{:query_string
+                     [{:simple_query_string
                        {:query            string
                         :default_operator "AND"}}]}}
                    :functions  (filterv some?
@@ -93,7 +96,8 @@
       materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
       admins       (add-filter {:terms {:admin.keyword admins}})
       owners       (add-filter {:terms {:owner.keyword owners}})
-      retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}}))))
+      retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
+      school-use?  (add-filter {:terms {:properties.school-use? [true]}}))))
 
 (re-frame/reg-event-fx
  ::search
@@ -214,6 +218,12 @@
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
+ ::set-school-use-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :school-use?] v)
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
