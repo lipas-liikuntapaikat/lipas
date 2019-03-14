@@ -58,7 +58,7 @@
    "comment"                    {:fi "Kommentti"}
    "type.type-code"             {:fi "Tyyppikoodi"}
    "type.type-name"             {:fi "Liikuntapaikkatyyppi"}
-   "location.city.city-code"    {:fi "kuntanumero"}
+   "location.city.city-code"    {:fi "Kuntanumero"}
    "location.city.city-name"    {:fi "Kunta"}
    "location.city.neighborhood" {:fi "Kuntaosa"}
    "location.address"           {:fi "Katuosoite"}
