@@ -216,7 +216,7 @@
 (s/def :lipas.sports-site/name (str-in 2 100))
 (s/def :lipas.sports-site/marketing-name (str-in 2 100))
 (s/def :lipas.sports-site/name-localized
-  (s/map-of keyword? :lipas.sports-site/name))
+  (s/map-of #{:fi :se :en} :lipas.sports-site/name))
 
 (s/def :lipas.sports-site/owner (into #{} (keys owners/all)))
 (s/def :lipas.sports-site/admin (into #{} (keys admins/all)))
