@@ -65,7 +65,7 @@
            {:variant "round" :color "default" :on-click toggle}
            [mui/icon "list_alt"]]
           [mui/button {:variant "contained" :color "secondary" :on-click toggle}
-           (tr :actions/download-excel)])])
+           (tr :reports/download-as-excel)])])
 
      ;; Dialog
      [mui/dialog {:open open? :full-width true :on-close toggle}
