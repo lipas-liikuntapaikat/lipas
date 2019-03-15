@@ -31,7 +31,10 @@
    {:name {:fi "Lapin AVI", :en "Lapin AVI", :se "Lappland"},
     :provinces #{19}},
    7
-   {:name {:fi "Ahvenanmaan AVI", :en "Ahvenanmaan AVI", :se "Åland"},
+   {:name
+    {:fi "Ahvenanmaan valtionvirasto",
+     :en "Ahvenanmaan valtionvirasto",
+     :se "Statens ämbetsverk på Åland"},
     :provinces #{21}}})
 
 ;; 19 Provinces

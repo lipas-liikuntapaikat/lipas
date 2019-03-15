@@ -303,7 +303,10 @@
 (re-frame/reg-event-db
  ::toggle-address-search-dialog
  (fn [db _]
-   (update-in db [:map :address-search :dialog-open?] not)))
+   (-> db
+       (update-in [:map :address-search :dialog-open?] not)
+       (assoc-in [:map :address-search :keyword] "")
+       (assoc-in [:map :address-search :results] []))))
 
 (re-frame/reg-event-db
  ::clear-address-search-results
