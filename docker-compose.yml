@@ -14,6 +14,7 @@ services:
     volumes:
       - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
+      - './nginx/nginx.conf:/etc/nginx/nginx.conf:z'
 
   proxy:
     extends:
@@ -36,7 +37,6 @@ services:
       - logstash
     volumes:
       - './nginx/proxy_dev.conf:/etc/nginx/conf.d/default.conf:z'
-      - './nginx/nginx.conf:/etc/nginx/nginx.conf:z'
 
   mapproxy:
     image: kartoza/mapproxy
