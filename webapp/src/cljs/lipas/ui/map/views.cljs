@@ -492,7 +492,7 @@
                               :style      {:margin-bottom "1em"}
                               :text-color "secondary"}
                     [mui/tab {:label (tr :map/draw-geoms)}]
-                    [mui/tab {:label (tr :map.import/tooltip)}]]])
+                    [mui/tab {:label (tr :map.import/tab-header)}]]])
 
                 ;; Draw
                 (when (= 0 @geom-tab)
