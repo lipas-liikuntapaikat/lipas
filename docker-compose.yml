@@ -6,6 +6,11 @@ services:
     ports:
       - '80:80'
       - '443:443'
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "proxy"
     volumes:
       - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
@@ -16,6 +21,7 @@ services:
     links:
       - mapproxy
       - backend
+      - logstash
     volumes:
       - './nginx/proxy.conf:/etc/nginx/conf.d/default.conf:z'
 
@@ -27,12 +33,19 @@ services:
     links:
       - mapproxy
       - backend
+      - logstash
     volumes:
       - './nginx/proxy_dev.conf:/etc/nginx/conf.d/default.conf:z'
+      - './nginx/nginx.conf:/etc/nginx/nginx.conf:z'
 
   mapproxy:
     image: kartoza/mapproxy
     hostname: mapproxy
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "mapproxy"
     environment:
       TZ: Europe/Helsinki
       MML_AUTH:
@@ -46,6 +59,11 @@ services:
   backend-base:
     image: clojure:lein
     working_dir: /usr/src/app
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "backend"
     environment:
       DB_HOST:
       DB_PORT:
@@ -129,6 +147,9 @@ services:
   backend-maintenance:
     extends:
       service: backend-base
+    logging:
+      options:
+        tag: "maintenance"
     entrypoint: lein run -m lipas.maintenance
     links:
       - postgres
@@ -136,6 +157,9 @@ services:
   backend-index-search:
     extends:
       service: backend-base
+    logging:
+      options:
+        tag: "search-indexer"
     entrypoint: lein run -m lipas.search-indexer
     links:
       - postgres
@@ -144,6 +168,9 @@ services:
   backend-integrations:
     extends:
       service: backend-base
+    logging:
+      options:
+        tag: "integrations"
     entrypoint: lein trampoline run -m lipas.integrator "new->old" "old->new"
     links:
       - postgres
@@ -152,6 +179,11 @@ services:
   node-base:
     image: node:10-alpine
     working_dir: /usr/src/app
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "backend-node"
     volumes:
       - './webapp/:/usr/src/app:z'
 
@@ -203,9 +235,10 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.6.1
     ports:
       - '9200:9200'
+      - '9300:9300'
     environment:
       - transport.host=127.0.0.1
       - xpack.security.enabled=false
@@ -214,8 +247,29 @@ services:
       - xpack.graph.enabled=false
       - xpack.watcher.enabled=false
       - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:6.6.1
+    ports:
+      - "5000:5000/udp"
+    environment:
+      - xpack.monitoring.enabled=false
+    links:
+      - elasticsearch
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.6.1
+    ports:
+      - "5601:5601"
+    environment:
+      - xpack.monitoring.enabled=false
+    links:
+      - elasticsearch
 
 volumes:
   pgdata: {}
