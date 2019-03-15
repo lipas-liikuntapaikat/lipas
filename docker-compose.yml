@@ -260,7 +260,7 @@ services:
     links:
       - elasticsearch
     volumes:
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - "./logstash/pipeline:/usr/share/logstash/pipeline:z"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:6.6.1
