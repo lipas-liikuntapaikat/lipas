@@ -663,6 +663,7 @@
 
    :map.import
    {:headline          "Tuo geometriat"
+    :tab-header        "Tuo tiedostosta"
     :tooltip           "Tuo reittiosia tiedostosta"
     :supported-formats (fn [ss]
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
