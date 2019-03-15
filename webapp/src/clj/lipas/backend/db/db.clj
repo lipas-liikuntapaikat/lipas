@@ -100,9 +100,10 @@
     (->> (sports-site/get-history db-spec params)
          (map sports-site/unmarshall))))
 
-(defn get-sports-sites-by-type-code [db-spec type-code {:keys [revs]
-                                                        :or   {revs "latest"}}]
+(defn get-sports-sites-by-type-code
+  [db-spec type-code {:keys [revs raw?] :or {revs "latest" raw? false}}]
   (let [db-fn  (cond
+                 (= revs "all")    sports-site/get-by-type-code
                  (= revs "latest") sports-site/get-latest-by-type-code
                  (= revs "yearly") sports-site/get-yearly-by-type-code
                  (number? revs)    sports-site/get-by-type-code-and-year)
@@ -110,8 +111,8 @@
                           (when (number? revs)
                             {:year revs}))
                    db-utils/->snake-case-keywords)]
-    (->> (db-fn db-spec params)
-         (map sports-site/unmarshall))))
+    (cond->> (db-fn db-spec params)
+      (not raw?) (map sports-site/unmarshall))))
 
 (defn get-users-drafts [db user]
   (let [params {:author-id (:id user) :status "draft"}]

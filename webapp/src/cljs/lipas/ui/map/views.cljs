@@ -492,7 +492,7 @@
                               :style      {:margin-bottom "1em"}
                               :text-color "secondary"}
                     [mui/tab {:label (tr :map/draw-geoms)}]
-                    [mui/tab {:label (tr :map.import/tooltip)}]]])
+                    [mui/tab {:label (tr :map.import/tab-header)}]]])
 
                 ;; Draw
                 (when (= 0 @geom-tab)
@@ -658,11 +658,12 @@
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [lui/text-field
-        {:style     {:width "250px"}
-         :defer-ms  150
-         :label     (tr :search/search)
-         :value     value
-         :on-change #(==> [::events/update-address-search-keyword %])}]]
+        {:style      {:width "250px"}
+         :auto-focus true
+         :defer-ms   150
+         :label      (tr :search/search)
+         :value      value
+         :on-change  #(==> [::events/update-address-search-keyword %])}]]
       (into
        [mui/list]
        (for [m results]

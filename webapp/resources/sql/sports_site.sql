@@ -35,6 +35,14 @@ SELECT *
 FROM sports_site_current
 WHERE lipas_id = :lipas_id
 
+-- :name get-by-type-code
+-- :command :query
+-- :result :many
+-- :doc Returns all revisions of sports sites by type_code
+SELECT *
+FROM sports_site
+WHERE type_code = :type_code
+
 -- :name get-latest-by-type-code
 -- :command :query
 -- :result :many

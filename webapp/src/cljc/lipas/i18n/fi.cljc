@@ -100,7 +100,7 @@
     nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
     vertailla sitä muihin kuntiin."
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
-    :bullet2             "Liikuntapaikkatilastot (tulossa)"
+    :bullet2             "Liikuntapaikkatilastot"
     :browse-to           "Siirry tilastoihin"
     :city-stats          (str "Kunta" ZWSP "tilastot")
     :finance-stats       (str "Talous" ZWSP "tiedot")
@@ -663,6 +663,7 @@
 
    :map.import
    {:headline          "Tuo geometriat"
+    :tab-header        "Tuo tiedostosta"
     :tooltip           "Tuo reittiosia tiedostosta"
     :supported-formats (fn [ss]
                          (str "Tuetut tiedostomuodot: " (string/join ", " ss)))
