@@ -45,6 +45,13 @@
  (fn [edit-data _]
    ((complement empty?) edit-data)))
 
+(re-frame/reg-sub
+ ::editing-allowed?
+ (fn [[_ lipas-id] _]
+   (re-frame/subscribe [::latest-rev lipas-id]))
+ (fn [rev _]
+   (->> rev :status #{"active" "out-of-service-temporarily"})))
+
 (defn- valid? [sports-site]
   (let [spec (case (-> sports-site :type :type-code)
                (3110 3120 3130) :lipas.sports-site/swimming-pool

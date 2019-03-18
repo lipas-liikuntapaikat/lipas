@@ -217,6 +217,8 @@
           can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
           logged-in?   (<== [::user-subs/logged-in?])
 
+          editing-allowed? (<== [::sports-site-subs/editing-allowed? lipas-id])
+
           delete-dialog-open? (<== [::sports-site-subs/delete-dialog-open?])
 
           mode     (<== [::subs/mode])
@@ -334,6 +336,7 @@
             ;; TODO refactor (do ..) blocks to dispatch single event
             ;; according to user intention.
            {:editing?           editing?
+            :editing-allowed?   editing-allowed?
             :valid?             edits-valid?
             :logged-in?         logged-in?
             :user-can-publish?  can-publish?
