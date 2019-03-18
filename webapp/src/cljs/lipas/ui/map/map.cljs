@@ -35,6 +35,28 @@
 
 (def ->geoJSON-clj (comp ->clj ->geoJSON))
 
+(defn find-feature-by-id [{:keys [layers]} fid]
+  (let [layer  (-> layers :overlays :vectors)
+        source (.getSource layer)]
+    (.getFeatureById source fid)))
+
+(defn find-features-by-lipas-id [{:keys [layers]} lipas-id]
+  (let [layer  (-> layers :overlays :vectors)
+        source (.getSource layer)
+        res    #js[]]
+    (.forEachFeature source
+                     (fn [f]
+                       (when (-> (.getId f)
+                                 (string/split "-")
+                                 first
+                                 (= (str lipas-id)))
+                         (.push res f))
+                       ;; Iteration stops if truthy val is returned
+                       ;; but we want to find all matching features so
+                       ;; nil is returned.
+                       nil))
+    res))
+
 (defn ->wmts-url [layer-name]
   (str "/mapproxy/wmts/"
        layer-name
@@ -128,14 +150,27 @@
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
-                    :style  #js[styles/hover-style styles/red-marker-style]})
+                    :style  styles/feature-style-selected})
 
         lmap (ol.Map. opts)]
+
+    ;; (fn [f]
+    ;;   (js/console.log (-> f .getGeometry .getType))
+    ;;   (if (= (-> f .getGeometry .getType) "Point")
+    ;;     #js[styles/hover-style styles/red-marker-style]
+    ;;     #js[styles/hover-style])
+    ;;   styles/feature-style-hover)
 
     (.on hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+                 selected (gobj/get e "selected")
+                 f1       (aget selected 0)
+                 lipas-id (when f1 (.get f1 "lipas-id"))
+                 fs       (find-features-by-lipas-id {:layers layers} lipas-id)]
+             (doto (.getFeatures hover)
+               (.clear)
+               (.extend fs))
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup (when (not-empty selected)
                                          {:anchor-el (.getElement popup-overlay)
@@ -221,35 +256,21 @@
       (.extend features))
     map-ctx))
 
-(defn find-feature-by-id [{:keys [layers]} fid]
-  (let [layer  (-> layers :overlays :vectors)
-        source (.getSource layer)]
-    (.getFeatureById source fid)))
-
-(defn find-features-by-lipas-id [{:keys [layers]} lipas-id]
-  (let [layer  (-> layers :overlays :vectors)
-        source (.getSource layer)
-        res    #js[]]
-    (.forEachFeature source
-                     (fn [f]
-                       (when (-> (.getId f)
-                                 (string/split "-")
-                                 first
-                                 (= (str lipas-id)))
-                         (.push res f))
-                       ;; Iteration stops if truthy val is returned
-                       ;; but we want to find all matching features so
-                       ;; nil is returned.
-                       nil))
-    res))
-
 (defn clear-markers! [{:keys [layers] :as map-ctx}]
   (-> layers :overlays :markers .getSource .clear)
   map-ctx)
 
+(defn fit-to-features! [map-ctx fs]
+  (let [extent (-> fs first .getGeometry .getExtent)]
+    (doseq [f (rest fs)]
+      (ol.extent.extend extent (-> f .getGeometry .getExtent)))
+    (fit-to-extent! map-ctx extent)))
+
 (defn select-sports-site! [map-ctx lipas-id]
-  (if-let [features (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
-    (select-features! map-ctx features)
+  (if-let [fs (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
+    (-> map-ctx
+        (select-features! fs)
+        (fit-to-features! fs))
     map-ctx))
 
 ;; The snap interaction must be added after the Modify and Draw
