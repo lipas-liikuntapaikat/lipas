@@ -13,12 +13,17 @@
 ;; TODO maybe put this into config / app-db instead?
 (def extra-locales [:se])
 
-(defn- show-status?
+(defn- allow-editing-status?
   "Status field is displayed only if latest saved status is
   'out-of-service-temporarily'. Applies to both display and edit
   views."
   [tr display-data]
   (= (:status display-data) (tr (keyword :status "out-of-service-temporarily"))))
+
+(defn- show-status? [tr display-data]
+  (or
+   (= (:status display-data) (tr (keyword :status "incorrect-data")))
+   (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
                     admins owners on-change read-only? sub-headings?]}]
@@ -27,11 +32,15 @@
 
     [lui/form {:read-only? read-only?}
 
+     (when (show-status? tr display-data)
+       [mui/typography {:variant "h6" :color "error"}
+        (:status display-data)])
+
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Status
-     (when (show-status? tr display-data)
+     (when (allow-editing-status? tr display-data)
        {:label      (tr :lipas.sports-site/status)
         :value      (-> display-data :status)
         :form-field [lui/status-selector-single
