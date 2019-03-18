@@ -379,6 +379,7 @@
 
       (-> new-ctx
           (assoc-in [:interactions :draw] draw)
+          clear-markers!
           enable-snapping!))))
 
 (defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
@@ -476,6 +477,7 @@
                         (when (#{:drawing :drawing-hole :deleting} sub-mode)
                           ;; Switch back to editing normal :editing mode
                           (==> [::events/start-editing lipas-id :editing geom-type])))]
+
      (case sub-mode
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
        :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons

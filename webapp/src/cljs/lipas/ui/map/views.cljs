@@ -23,6 +23,37 @@
   [mui/tooltip {:title tooltip}
    [mui/link {:style {:margin "0.5em"} :underline "always"} label]])
 
+(defn address-search-dialog []
+  (let [tr      (<== [:lipas.ui.subs/translator])
+        open?   (<== [::subs/address-search-dialog-open?])
+        value   (<== [::subs/address-search-keyword])
+        toggle  (fn [] (==> [::events/toggle-address-search-dialog]))
+        results (<== [::subs/address-search-results])]
+
+    [lui/dialog
+     {:open?         open?
+      :title         (tr :map.address-search/title)
+      :on-close      toggle
+      :save-enabled? false
+      :cancel-label  (tr :actions/close)}
+     [mui/grid {:container true}
+      [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:style      {:width "250px"}
+         :auto-focus true
+         :defer-ms   150
+         :label      (tr :search/search)
+         :value      value
+         :on-change  #(==> [::events/update-address-search-keyword %])}]]
+      (into
+       [mui/list]
+       (for [m results]
+         [mui/list-item
+          {:button   true
+           :on-click #(==> [::events/show-address m])}
+          [mui/list-item-text
+           (:label m)]]))]]))
+
 (defn import-geoms-view [{:keys [on-import show-replace?]
                           :or   {show-replace? true}}]
   (let [tr       (<== [:lipas.ui.subs/translator])
@@ -438,12 +469,11 @@
                         (some? type) 1
                         :else        0)]
 
-      [mui/grid {:container true
-                 :direction "column"
-                 :justify   "space-between"
-                 :style     {:flex   1
-                             :height "100%"}}
-
+      [mui/grid
+       {:container true
+        :direction "column"
+        :justify   "space-between"
+        :style     {:flex 1 :height "100%"}}
 
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
 
@@ -622,6 +652,9 @@
          [mui/grid
           {:container true :align-items "center" :spacing 8
            :style     {:padding-bottom "0.5em"}}
+
+          [address-search-dialog]
+
           [mui/grid {:item true}
 
            ;; Discard
@@ -641,37 +674,13 @@
                 {:tooltip          (tr :actions/save)
                  :disabled-tooltip (tr :actions/fill-required-fields)
                  :disabled         (not new-site-valid?)
-                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]]))]]]])))
+                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]]))
 
-(defn address-search-dialog []
-  (let [tr      (<== [:lipas.ui.subs/translator])
-        open?   (<== [::subs/address-search-dialog-open?])
-        value   (<== [::subs/address-search-keyword])
-        toggle  (fn [] (==> [::events/toggle-address-search-dialog]))
-        results (<== [::subs/address-search-results])]
-    [lui/dialog
-     {:open?         open?
-      :title         (tr :map.address-search/title)
-      :on-close      toggle
-      :save-enabled? false
-      :cancel-label  (tr :actions/close)}
-     [mui/grid {:container true}
-      [mui/grid {:item true :xs 12}
-       [lui/text-field
-        {:style      {:width "250px"}
-         :auto-focus true
-         :defer-ms   150
-         :label      (tr :search/search)
-         :value      value
-         :on-change  #(==> [::events/update-address-search-keyword %])}]]
-      (into
-       [mui/list]
-       (for [m results]
-         [mui/list-item
-          {:button   true
-           :on-click #(==> [::events/show-address m])}
-          [mui/list-item-text
-           (:label m)]]))]]))
+          ;; Address search button
+          [mui/tooltip {:title (tr :map.address-search/tooltip)}
+           [mui/grid {:item true}
+            [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+             [mui/icon "search"]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
