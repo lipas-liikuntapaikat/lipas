@@ -1,17 +1,14 @@
 (ns lipas.ui.map.map
   (:require
-   proj4
    ["ol"]
+   [lipas.ui.map.projection :as proj]
    [clojure.string :as string]
-   [goog.color :as gcolor]
-   [goog.color.alpha :as gcolora]
    [goog.object :as gobj]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
-   [lipas.ui.svg :as svg]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.data.styles :as styles]
+   [lipas.ui.map.styles :as styles]
    [re-frame.core :as re-frame]
    [reagent.core :as r]))
 
@@ -19,158 +16,10 @@
 
 (def temp-fid-prefix "temp")
 
-(defn ->marker-style [opts]
-  (ol.style.Style.
-   #js{:image
-       (ol.style.Icon.
-        #js{:src    (str "data:image/svg+xml;charset=utf-8,"
-                         (-> opts
-                             svg/->marker-str
-                             js/encodeURIComponent))
-            :anchor #js[0.5 0.85]
-            :offset #js[0 0]})}))
-
-(def blue-marker-style (->marker-style {}))
-(def red-marker-style (->marker-style {:color mui/secondary}))
-(def default-stroke (ol.style.Stroke. #js{:color "#3399CC" :width 3}))
-(def default-fill (ol.style.Fill. #js{:color "rgba(255,255,0,0.4)"}))
-(def hover-stroke (ol.style.Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
-(def hover-fill (ol.style.Fill. #js{:color "rgba(255,0,0,0.4)"}))
-
-;; Draw circles to all LineString and Polygon vertices
-(def vertices-style
-  (ol.style.Style.
-   #js{:image
-       (ol.style.Circle.
-        #js{:radius 5
-            :stroke (ol.style.Stroke.
-                     #js{:color mui/primary})
-            :fill   (ol.style.Fill.
-                     #js{:color mui/secondary2})})
-       :geometry (fn [f]
-                   (let [geom-type (-> f .getGeometry .getType)
-                         coords    (case geom-type
-                                     "Polygon"    (-> f
-                                                      .getGeometry
-                                                      .getCoordinates
-                                                      js->clj
-                                                      (as-> $ (mapcat identity $))
-                                                      clj->js)
-                                     "LineString" (-> f .getGeometry .getCoordinates)
-                                     nil)]
-                     (when coords
-                       (ol.geom.MultiPoint. coords))))}))
-
-(def edit-style
-  (ol.style.Style.
-   #js{:stroke
-       (ol.style.Stroke.
-        #js{:width 3
-            :color "blue"})
-       :fill default-fill
-       :image
-       (ol.style.Circle.
-        #js{:radius 5
-            :fill   default-fill
-            :stroke default-stroke})}))
-
-(def default-style
-  (ol.style.Style.
-   #js{:stroke default-stroke
-       :fill default-fill
-       :image
-       (ol.style.Circle.
-        #js{:radius 5
-            :fill   default-fill
-            :stroke default-stroke})}))
-
-(def hover-style
-  (ol.style.Style.
-   #js{:stroke hover-stroke
-       :fill   default-fill
-       :image  (ol.style.Circle.
-                #js{:radius 7
-                    :fill   default-fill
-                    :stroke hover-stroke})}))
-
-(def hover-styles #js[hover-style blue-marker-style])
-
-(defn ->rgba [hex alpha]
-  (when (and hex alpha)
-    (let [rgb  (gcolor/hexToRgb hex)
-          rgba (doto rgb
-                 (.push alpha))]
-      (gcolora/rgbaArrayToRgbaStyle rgba))))
-
-(defn ->symbol-style [m & {hover? :hover}]
-  (let [fill-alpha   (case (:shape m)
-                       "polygon" (if hover? 0.5 0.4)
-                       0.85)
-        fill-color   (-> m :fill :color (->rgba fill-alpha))
-        fill         (ol.style.Fill. #js{:color fill-color})
-        stroke-alpha (case (:shape m)
-                       "polygon" 0.6
-                       0.9)
-        stroke-width (if ((comp #{"polygon"} :shape) m) 1.5 3)
-        stroke-hover-width (if ((comp #{"polygon"} :shape) m) 3 5)
-        stroke-color (-> m :stroke :color (->rgba stroke-alpha))
-        stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
-        stroke       (ol.style.Stroke. #js{:color stroke-color
-                                           :width (if hover?
-                                                    stroke-hover-width
-                                                    stroke-width)})]
-    (ol.style.Style.
-     #js{:stroke stroke
-         :fill   fill
-         :image  (when-not (#{"polygon" "linestring"} (:shape m))
-                   (ol.style.Circle.
-                    #js{:radius (if hover? 8 7)
-                        :fill   fill
-                        :stroke (if hover? hover-stroke stroke-black)}))})))
-
-(def styleset styles/adapted-temp-symbols)
-;;(def symbols-set styles/all)
-
-(def symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
-
-(def hover-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styleset))
-
-(defn feature-style [f]
-  (let [type-code (.get f "type-code")]
-    (get symbols type-code)))
-
-(defn feature-style-hover [f]
-  (let [type-code (.get f "type-code")]
-    (get hover-symbols type-code)))
-
-(js/proj4.defs "EPSG:3067" (str "+proj=utm"
-                                "+zone=35"
-                                "+ellps=GRS80"
-                                "+towgs84=0,0,0,0,0,0,0"
-                                "+units=m"
-                                "+no_defs"))
-
-(let [^js/ol ol                  ol
-      ^js/ol.proj ol-proj        (.-proj ol)
-      ^js/ol.proj.proj4 ol-proj4 (.-proj4 ol-proj)]
-  (.register ol-proj4 proj4))
-
 (def mml-resolutions
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (def mml-matrix-ids (clj->js (range (count mml-resolutions))))
-
-(def ^js/ol.proj.Projection epsg3067 (ol.proj.get "EPSG:3067"))
-(def ^js/ol.Extent epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
-
-(.setExtent epsg3067 epsg3067-extent)
-
-(def epsg3067-top-left (ol.extent.getTopLeft (.getExtent epsg3067)))
-
-(def jyvaskyla #js[435047 6901408])
-(def center-wgs84 (ol.proj.fromLonLat #js[24 65]))
 
 (def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                      :featureProjection "EPSG:3067"}))
@@ -207,14 +56,13 @@
             :projection      "EPSG:3067"
             :matrixSet       "mml_grid"
             :tileGrid        (ol.tilegrid.WMTS.
-                              #js{:origin      epsg3067-top-left
-                                  :extent      epsg3067-extent
+                              #js{:origin      proj/epsg3067-top-left
+                                  :extent      proj/epsg3067-extent
                                   :resolutions mml-resolutions
                                   :matrixIds   mml-matrix-ids})
             :format          "png"
             :requestEncoding "REST"
             :isBaseLayer     true})}))
-
 
 (defn init-layers []
   {:basemaps
@@ -230,22 +78,22 @@
    {:vectors
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
-         :style      feature-style
+         :style      styles/feature-style
          :renderMode "image"})
     :edits
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
-         :style      #js[edit-style vertices-style]
+         :style      #js[styles/edit-style styles/vertices-style]
          :renderMode "vector"})
     :markers
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
-         :style      red-marker-style
+         :style      styles/red-marker-style
          :renderMode "image"})}})
 
 (defn init-view [center zoom]
   (ol.View. #js{:center         #js[(:lon center) (:lat center)]
-                :extent         epsg3067-extent
+                :extent         proj/epsg3067-extent
                 :zoom           zoom
                 :projection     "EPSG:3067"
                 :resolutions    mml-resolutions
@@ -275,12 +123,12 @@
         hover (ol.interaction.Select.
                #js{:layers    #js[(-> layers :overlays :vectors)
                                   (-> layers :overlays :markers)]
-                   :style     feature-style-hover
+                   :style     styles/feature-style-hover
                    :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
-                    :style  #js[hover-style red-marker-style]})
+                    :style  #js[styles/hover-style styles/red-marker-style]})
 
         lmap (ol.Map. opts)]
 
@@ -308,7 +156,7 @@
     (.on lmap "moveend"
          (fn [e]
            (let [center (.getCenter view)
-                 lonlat (ol.proj.toLonLat center epsg3067)
+                 lonlat (ol.proj.toLonLat center proj/epsg3067)
                  zoom   (.getZoom view)
                  extent (.calculateExtent view)
                  width  (.getWidth ol.extent extent)
@@ -440,7 +288,7 @@
 (defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
         delete (ol.interaction.Select. #js{:layers #js[layer]
-                                           :style  hover-style})
+                                           :style  styles/hover-style})
         source (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
@@ -478,7 +326,7 @@
         geom-type (-> geoJSON-feature :features first :geometry :type)
         hover     (ol.interaction.Select.
                    #js{:layers    #js[layer]
-                       :style     #js[hover-style vertices-style]
+                       :style     #js[styles/hover-style styles/vertices-style]
                        :condition ol.events.condition.pointerMove})]
 
     (.addInteraction lmap hover)
@@ -648,7 +496,7 @@
 (defn show-address-marker!
   [{:keys [layers] :as map-ctx} address]
   (let [f (.readFeature geoJSON (clj->js address))]
-    (.setStyle f blue-marker-style)
+    (.setStyle f styles/blue-marker-style)
     (-> layers :overlays :markers .getSource (.addFeature f))
     map-ctx))
 
