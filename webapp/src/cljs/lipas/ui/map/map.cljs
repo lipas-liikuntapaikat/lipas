@@ -362,8 +362,8 @@
                        :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
-        draw   (ol.interaction.Draw. #js{:source source
-                                         :type   geom-type})]
+        draw   (ol.interaction.Draw.
+                #js{:snapTolerance 0 :source source :type geom-type})]
 
     (let [new-ctx (if  (#{"LineString" "Polygon"} geom-type)
                     (enable-splitter! map-ctx)
