@@ -243,18 +243,24 @@
          :style      red-marker-style
          :renderMode "image"})}})
 
-(defn init-map! [{:keys [center zoom]}]
-  (let [layers (init-layers)
-        view   (ol.View. #js{:center      #js[(:lon center) (:lat center)]
-                             :extent      epsg3067-extent
-                             :zoom        zoom
-                             :projection  "EPSG:3067"
-                             :resolutions mml-resolutions
-                             :units       "m"})
+(defn init-view [center zoom]
+  (ol.View. #js{:center         #js[(:lon center) (:lat center)]
+                :extent         epsg3067-extent
+                :zoom           zoom
+                :projection     "EPSG:3067"
+                :resolutions    mml-resolutions
+                :units          "m"
+                :enableRotation false}))
 
-        popup-overlay (ol.Overlay. #js{:offset #js[-15 0]
-                                       :element
-                                       (js/document.getElementById "popup-anchor")})
+(defn init-overlay []
+  (ol.Overlay. #js{:offset #js[-15 0]
+                   :element
+                   (js/document.getElementById "popup-anchor")}))
+
+(defn init-map! [{:keys [center zoom]}]
+  (let [layers        (init-layers)
+        view          (init-view center zoom)
+        popup-overlay (init-overlay)
 
         opts #js {:target   "map"
                   :layers   #js[(-> layers :basemaps :taustakartta)
