@@ -130,6 +130,12 @@
                                       :geom-type geom-type
                                       :sub-mode  :drawing}))))
 
+(re-frame/reg-event-fx
+ ::start-adding-new-site
+ (fn [{:keys [db]} [_]]
+   {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
+    :dispatch-n [[:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+
 (re-frame/reg-event-db
  ::new-geom-drawn
  (fn [db [_ geom]]
@@ -141,6 +147,14 @@
  ::update-new-geom
  (fn [db [_ geom]]
    (assoc-in db [:map :mode :geom] geom)))
+
+(re-frame/reg-event-fx
+ ::confirm-remove-segment
+ (fn [{:keys [db]} [_ callback]]
+   (let [tr        (-> db :translator)
+         geom-type (-> db :map :mode :geom-type)]
+     {:dispatch
+      [:lipas.ui.events/confirm (tr :map/confirm-remove geom-type) callback]})))
 
 (re-frame/reg-event-fx
  ::discard-drawing

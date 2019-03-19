@@ -432,7 +432,7 @@
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
    [mui/fab
     {:color    "secondary"
-     :on-click #(==> [::sports-site-events/start-adding-new-site])}
+     :on-click #(==> [::events/start-adding-new-site])}
     [mui/icon "add"]]])
 
 (defn set-new-site-field [& args]
