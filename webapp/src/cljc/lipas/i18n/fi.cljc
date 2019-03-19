@@ -658,6 +658,11 @@
                             "LineString" "Poista reittiosa"
                             "Polygon"    "Poista alue"
                             "Poista osa"))
+    :confirm-remove     (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Haluatko poistaa valitun reittiosan?"
+                            "Polygon"    "Haluatko varmasti poisaa valitun alueen?"
+                            "Haluatko varmasti poistaa valitun kohteen?"))
     :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"
     :download-gpx       "Lataa GPX"}
 
