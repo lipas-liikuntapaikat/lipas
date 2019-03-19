@@ -176,6 +176,7 @@
 (defn set-default-mode! [map-ctx mode]
   (let [map-ctx (-> map-ctx
                     editing/clear-edits!
+                    map-utils/unselect-features!
                     map-utils/clear-interactions!
                     map-utils/clear-markers!
                     map-utils/enable-hover!
@@ -190,11 +191,12 @@
   [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce address]}]
   (let [fit? (not= fit-nonce (-> map-ctx :mode :fit-nonce))]
     (cond-> map-ctx
-      true     (map-utils/clear-markers!)
-      lipas-id (map-utils/select-sports-site! lipas-id)
-      fit?     (map-utils/fit-to-extent!
-                (-> layers :overlays :vectors .getSource .getExtent))
-      address  (map-utils/show-address-marker! address))))
+      true           (map-utils/clear-markers!)
+      lipas-id       (map-utils/select-sports-site! lipas-id)
+      (not lipas-id) (map-utils/unselect-features!)
+      fit?           (map-utils/fit-to-extent!
+                      (-> layers :overlays :vectors .getSource .getExtent))
+      address        (map-utils/show-address-marker! address))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)
