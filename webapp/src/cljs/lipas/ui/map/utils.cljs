@@ -63,6 +63,10 @@
       (.extend features))
     map-ctx))
 
+(defn unselect-features! [{:keys [interactions*] :as map-ctx}]
+  (-> interactions* :select .getFeatures .clear)
+  map-ctx)
+
 (defn clear-markers! [{:keys [layers] :as map-ctx}]
   (-> layers :overlays :markers .getSource .clear)
   map-ctx)
@@ -123,7 +127,7 @@
     (-> map-ctx
         (select-features! fs)
         (fit-to-features! fs))
-    map-ctx))
+    (unselect-features! map-ctx)))
 
 (defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
                       {:keys [lon lat] :as center}]
