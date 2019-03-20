@@ -57,7 +57,8 @@
                   :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
               [mui/table-row {:key      id
                               :on-click (when on-select #(on-select item))
-                              :hover    true}
+                              :hover    true
+                              :style    (when on-select {:cursor "pointer"})}
                (when (and on-select (not hide-action-btn?))
                  [mui/table-cell {:padding "checkbox"}
                   [mui/icon-button {:on-click #(on-select item)}
@@ -152,7 +153,8 @@
                 :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))
                       editing-this? (contains? @editing? id)]]
 
-            [mui/table-row {:key id :hover true}
+            [mui/table-row
+             {:key id :hover true :style (when on-select {:cursor "pointer"})}
 
              ;; First cell
              (when (or (and on-select (not hide-action-btn?)) any-editable?)
