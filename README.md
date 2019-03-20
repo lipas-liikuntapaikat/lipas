@@ -34,12 +34,12 @@ is implemented using HTTP-basic authentication and signed JWT-tokens.
 
 #### Frontend
 
-* [re-frame](https://github.com/Day8/re-frame)
-* [material-ui](https://material-ui.com/)
+* [re-frame](https://github.com/Day8/re-frame) Single Page Application
+* [material-ui](https://material-ui.com/) components
 
 #### Postgis database
 
-Spatial [PostGIS](https://postgis.net/) database where all data are stored.
+Spatial [PostGIS](https://postgis.net/) for master data storage.
 
 ### Nginx
 
@@ -107,6 +107,8 @@ See [certs/README.md](certs/README.md).
 
 ### Frontend
 
-`docker-compose run frontend-npm-deps`
-`docker-compose run frontend-npm-bundle`
-`docker-compose run frontend-build`
+```bash
+docker-compose run frontend-npm-deps
+docker-compose run frontend-npm-bundle
+docker-compose run frontend-build
+```
