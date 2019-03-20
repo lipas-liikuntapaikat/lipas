@@ -252,6 +252,17 @@
                :training-spot-surface-material
                :running-track-surface-material} k))
 
+(defn retkikartta? [k]
+  (= k :may-be-shown-in-excursion-map-fi?))
+
+(defn retkikartta-field [{:keys [tr on-change] :as props}]
+  (let [message (tr :retkikartta/disclaimer)
+        on-change* (fn [v]
+                     (if (true? v)
+                       (==> [:lipas.ui.events/confirm message (partial on-change v)])
+                       (on-change v)))]
+    [lui/checkbox (assoc props :on-change on-change*)]))
+
 (defn properties-form [{:keys [tr edit-data display-data types-props
                                on-change read-only? key]}]
   (let [locale (tr)]
@@ -277,6 +288,10 @@
                                      :multi?    (= :surface-material k)
                                      :spec      spec
                                      :label     label
+                                     :value     value
+                                     :on-change on-change}]
+           (retkikartta? k)        [retkikartta-field
+                                    {:tr        tr
                                      :value     value
                                      :on-change on-change}]
            (= "boolean" data-type) [lui/checkbox
