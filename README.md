@@ -8,7 +8,7 @@
  [use-cases](https://trello.com/b/S8i6NexB/k%C3%A4ytt%C3%B6tapaukset) (finnish) |
  [ideas](https://trello.com/b/IEwJ5Nrq/lipas) (finnish)
 
-LIPAS is a nationwide, public GIS service for Finnish sport
+LIPAS is a nationwide, public GIS service of Finnish sport
 sites. More information
 [here](https://www.jyu.fi/sport/en/cooperation/lipas).
 
