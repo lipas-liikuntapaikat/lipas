@@ -19,10 +19,11 @@
     false))
 
 (defn select [{:keys [label value items on-change value-fn label-fn
-                      sort-fn sort-cmp deselect? spec required]
+                      sort-fn sort-cmp deselect? spec required tooltip]
                :or   {value-fn :value
                       label-fn :label
-                      sort-cmp compare}
+                      sort-cmp compare
+                      tooltip  ""}
                :as   props}]
   (let [on-change #(on-change (-> %
                                   .-target
@@ -43,41 +44,45 @@
                       (assoc :value (if value (pr-str value) ""))
                       (assoc :on-change on-change))
         sort-fn   (or sort-fn label-fn)]
-    [mui/form-control
-     {:required required
-      :error    (error? spec value required)}
-     (when label [mui/input-label label])
-     (into [mui/select props]
-           (for [i (sort-by sort-fn sort-cmp items)]
-             (let [value (value-fn i)
-                   label (label-fn i)]
-               [mui/menu-item {:key   (pr-str value)
-                               :value (pr-str value)}
-                label])))]))
+    [mui/tooltip {:title tooltip}
+     [mui/form-control
+      {:required required
+       :error    (error? spec value required)}
+      (when label [mui/input-label label])
+      (into [mui/select props]
+            (for [i (sort-by sort-fn sort-cmp items)]
+              (let [value (value-fn i)
+                    label (label-fn i)]
+                [mui/menu-item {:key   (pr-str value)
+                                :value (pr-str value)}
+                 label])))]]))
 
-(defn multi-select [{:keys [label value items on-change value-fn
-                            label-fn sort-fn sort-cmp]
-                     :or   {value-fn :value
-                            label-fn :label
-                            sort-cmp compare}
-                     :as   props}]
+(defn multi-select
+  [{:keys [label value items on-change value-fn label-fn sort-fn
+           sort-cmp tooltip]
+    :or   {value-fn :value
+           label-fn :label
+           sort-cmp compare
+           tooltip  ""}
+    :as   props}]
   (let [sort-fn (or sort-fn label-fn)]
-    [mui/form-control
-     (when label [mui/input-label label])
-     [mui/select
-      (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
-             {:multiple  true
-              :value     (map pr-str value)
-              :on-change #(on-change (->> %
-                                          .-target
-                                          .-value
-                                          (map read-string)
-                                          not-empty))})
-      (for [i (sort-by sort-fn sort-cmp items)]
-        [mui/menu-item
-         {:key   (pr-str (value-fn i))
-          :value (pr-str (value-fn i))}
-         (label-fn i)])]]))
+    [mui/tooltip {:title tooltip}
+     [mui/form-control
+      (when label [mui/input-label label])
+      [mui/select
+       (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
+              {:multiple  true
+               :value     (map pr-str value)
+               :on-change #(on-change (->> %
+                                           .-target
+                                           .-value
+                                           (map read-string)
+                                           not-empty))})
+       (for [i (sort-by sort-fn sort-cmp items)]
+         [mui/menu-item
+          {:key   (pr-str (value-fn i))
+           :value (pr-str (value-fn i))}
+          (label-fn i)])]]]))
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]

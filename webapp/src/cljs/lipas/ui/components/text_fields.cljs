@@ -42,8 +42,8 @@
 
 (defn text-field-controlled
   [{:keys [value type on-change spec required defer-ms Input-props
-           adornment multiline read-only?]
-    :or   {defer-ms 200}
+           adornment multiline read-only? tooltip]
+    :or   {defer-ms 200 tooltip ""}
     :as   props} & children]
 
   (let [on-change2 (fn [e]
@@ -62,6 +62,7 @@
                                        (->adornment adornment))))
                        (assoc :value value)
                        (assoc :on-change on-change2))]
-    (into [mui/text-field props] children)))
+    [mui/tooltip {:title tooltip}
+     (into [mui/text-field props] children)]))
 
 (def text-field text-field-controlled)

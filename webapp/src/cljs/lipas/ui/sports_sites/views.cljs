@@ -234,12 +234,14 @@
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
-(defn surface-material-selector [{:keys [tr value on-change label multi? spec]}]
+(defn surface-material-selector
+  [{:keys [tr value on-change label multi? spec tooltip]}]
   (let [locale    (tr)
         items     (<== [::subs/surface-materials])
         component (if multi? lui/multi-select lui/select)]
     [component
      {:value     value
+      :tooltip   tooltip
       :label     label
       :spec      spec
       :items     items
@@ -275,6 +277,7 @@
       (for [[k v] types-props
             :let  [label     (-> types-props k :name locale)
                    data-type (:data-type v)
+                   tooltip   (-> v :description locale)
                    spec      (keyword :lipas.sports-site.properties k)
                    value     (-> edit-data k)
                    on-change #(on-change k %)]]
@@ -286,6 +289,7 @@
            (material-field? k)     [surface-material-selector
                                     {:tr        tr
                                      :multi?    (= :surface-material k)
+                                     :tooltip   tooltip
                                      :spec      spec
                                      :label     label
                                      :value     value
@@ -293,12 +297,15 @@
            (retkikartta? k)        [retkikartta-field
                                     {:tr        tr
                                      :value     value
-                                     :on-change on-change}]
+                                     :on-change on-change
+                                     :tooltip   tooltip}]
            (= "boolean" data-type) [lui/checkbox
                                     {:value     value
+                                     :tooltip   tooltip
                                      :on-change on-change}]
            :else                   [lui/text-field
                                     {:value     value
+                                     :tooltip   tooltip
                                      :spec      spec
                                      :type      (when (#{"numeric" "integer"} data-type)
                                                   "number")
