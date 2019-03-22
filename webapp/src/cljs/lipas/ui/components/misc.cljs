@@ -12,7 +12,7 @@
                                  publish-tooltip on-edit-start
                                  invalid-message on-edit-end
                                  delete-tooltip on-delete
-                                 on-publish]}]
+                                 on-publish editing-allowed?]}]
 
   [(when (and editing? user-can-publish?)
      [buttons/save-button
@@ -21,7 +21,7 @@
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
-   (when (and on-delete logged-in? (not editing?))
+   (when (and on-delete logged-in? editing-allowed? (not editing?))
      [buttons/delete-button
       {:on-click on-delete
        :tooltip  delete-tooltip}])
@@ -38,7 +38,7 @@
      [buttons/discard-button
       {:on-click on-discard :tooltip discard-tooltip}])
 
-   (when (and logged-in? (not editing?))
+   (when (and logged-in? editing-allowed? (not editing?))
      [buttons/edit-button
       {:color    "secondary"
        :disabled (and editing? (not valid?))
@@ -69,7 +69,7 @@
   [mui/typography
    {:variant "subtitle1"
     :style
-    {:margin-top    "2em"
-     :margin-bottom "2em"
+    {:margin-top    "1.5em"
+     :margin-bottom "0.5em"
      :font-weight   "bold"}}
    label])

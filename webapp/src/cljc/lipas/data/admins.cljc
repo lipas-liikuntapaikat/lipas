@@ -13,6 +13,9 @@
    "city-other"              {:fi "Kunta / muu"
                               :en "City / other"
                               :se nil}
+   "municipal-consortium"    {:fi "Kuntayhtymä"
+                              :en "Municipal consortium"
+                              :se "Samkommun"}
    "private-association"     {:fi "Yksityinen / yhdistys"
                               :en "Private / association"
                               :se nil}

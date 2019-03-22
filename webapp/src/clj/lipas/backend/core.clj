@@ -172,18 +172,29 @@
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
   [sports-site]
-  (let [geom        (-> sports-site :location :geometries :features first :geometry)
-        coords      (case (:type geom)
-                      "Point"      (-> geom :coordinates)
-                      "LineString" (-> geom :coordinates first)
-                      "Polygon"    (-> geom :coordinates first first))
-        city-code   (-> sports-site :location :city :city-code)
-        type-code   (-> sports-site :type :type-code)
-        search-meta {:location
-                     {:wgs84-point coords
-                      :city        {:name (-> city-code cities :name)}}
-                     :type
-                     {:name (-> type-code types :name)}}]
+  (let [geom   (-> sports-site :location :geometries :features first :geometry)
+        coords (case (:type geom)
+                 "Point"      (-> geom :coordinates)
+                 "LineString" (-> geom :coordinates first)
+                 "Polygon"    (-> geom :coordinates first first))
+
+        city-code (-> sports-site :location :city :city-code)
+        province  (-> city-code cities :province-id cities/provinces)
+        avi-area  (-> city-code cities :avi-id cities/avi-areas)
+
+        type-code     (-> sports-site :type :type-code)
+        main-category (-> type-code types :main-category types/main-categories)
+        sub-category  (-> type-code types :sub-category types/sub-categories)
+        search-meta   {:location
+                       {:wgs84-point coords
+                        :city        {:name (-> city-code cities :name)}
+                        :province    {:name (:name province)}
+                        :avi-area    {:name (:name avi-area)}}
+                       :type
+                       {:name          (-> type-code types :name)
+                        :tags          (-> type-code types :tags)
+                        :main-category {:name (:name main-category)}
+                        :sub-category  {:name (:name sub-category)}}}]
     (assoc sports-site :search-meta search-meta)))
 
 (defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]

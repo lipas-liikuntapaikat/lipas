@@ -41,11 +41,13 @@
   [s]
   (if (empty? s)
     "*"
-    (-> s
-        (string/replace "-" " ")
-        (string/split #" ")
-        (->> (map #(str % "*"))
-             (string/join " ")))))
+    ;; (-> s
+    ;;     (string/replace "-" " ")
+    ;;     (string/split #" ")
+    ;;     (->> (map #(str % "*"))
+    ;;          (string/join " ")))
+    s
+    ))
 
 (defn ->es-search-body [{:keys [filters string center distance sort
                                 locale pagination]}]
@@ -77,14 +79,38 @@
                     {:must
                      [{:simple_query_string
                        {:query            string
+                        :fields
+                        ["name^3"
+                         "name-localized.*^3"
+                         "marketing-name^3"
+                         "search-meta.location.city.name.*^2"
+                         "search-meta.type.name.*^2"
+                         "search-meta.type.tags.*^2"
+                         "search-meta.tags"
+                         "search-meta.type.main-category.name.*"
+                         "search-meta.type.sub-category.name.*"
+                         "search-meta.location.province.name.*"
+                         "search-meta.location.avi-area.name.*"
+                         "admin.keyword"
+                         "owner.keyword"
+                         "comment"
+                         "email"
+                         "phone-number"
+                         "www"
+                         "location.address"
+                         "location.postal-office"
+                         "location.postal-code"
+                         "location.city.neighborhood"
+                         "properties.surface-material-info"]
                         :default_operator "AND"}}]}}
-                   :functions  (filterv some?
-                                        [(when (and lat lon distance)
-                                           {:gauss
-                                            {:search-meta.location.wgs84-point
-                                             {:origin (str lat "," lon)
-                                              :offset (str distance "m")
-                                              :scale  (str distance "m")}}})])}}})]
+                   :functions
+                   (filterv some?
+                            [(when (and lat lon distance)
+                               {:gauss
+                                {:search-meta.location.wgs84-point
+                                 {:origin (str lat "," lon)
+                                  :offset (str distance "m")
+                                  :scale  (str distance "m")}}})])}}})]
     (cond-> params
       statuses     (add-filter {:terms {:status.keyword statuses}})
       type-codes   (add-filter {:terms {:type.type-code type-codes}})
