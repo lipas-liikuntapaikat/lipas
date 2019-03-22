@@ -19,7 +19,7 @@ import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import WMTS from 'ol/source/WMTS';
 import VectorSource from 'ol/source/Vector';
-import {getTopLeft, getWidth, getHeight} from 'ol/extent';
+import {getTopLeft, getWidth, getHeight, extend} from 'ol/extent';
 import GeoJSON from 'ol/format/GeoJSON';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import Draw from 'ol/interaction/Draw';
@@ -57,6 +57,7 @@ window.ol = {
     getTopLeft,
     getWidth,
     getHeight,
+    extend,
   },
   proj: {
     get,

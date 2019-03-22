@@ -13,12 +13,17 @@
 ;; TODO maybe put this into config / app-db instead?
 (def extra-locales [:se])
 
-(defn- show-status?
+(defn- allow-editing-status?
   "Status field is displayed only if latest saved status is
   'out-of-service-temporarily'. Applies to both display and edit
   views."
   [tr display-data]
   (= (:status display-data) (tr (keyword :status "out-of-service-temporarily"))))
+
+(defn- show-status? [tr display-data]
+  (or
+   (= (:status display-data) (tr (keyword :status "incorrect-data")))
+   (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
                     admins owners on-change read-only? sub-headings?]}]
@@ -27,11 +32,15 @@
 
     [lui/form {:read-only? read-only?}
 
+     (when (show-status? tr display-data)
+       [mui/typography {:variant "h6" :color "error"}
+        (:status display-data)])
+
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Status
-     (when (show-status? tr display-data)
+     (when (allow-editing-status? tr display-data)
        {:label      (tr :lipas.sports-site/status)
         :value      (-> display-data :status)
         :form-field [lui/status-selector-single
@@ -225,12 +234,14 @@
                     :spec      :lipas.location.city/neighborhood
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
-(defn surface-material-selector [{:keys [tr value on-change label multi? spec]}]
+(defn surface-material-selector
+  [{:keys [tr value on-change label multi? spec tooltip]}]
   (let [locale    (tr)
         items     (<== [::subs/surface-materials])
         component (if multi? lui/multi-select lui/select)]
     [component
      {:value     value
+      :tooltip   tooltip
       :label     label
       :spec      spec
       :items     items
@@ -242,6 +253,17 @@
   (contains? #{:surface-material
                :training-spot-surface-material
                :running-track-surface-material} k))
+
+(defn retkikartta? [k]
+  (= k :may-be-shown-in-excursion-map-fi?))
+
+(defn retkikartta-field [{:keys [tr on-change] :as props}]
+  (let [message (tr :retkikartta/disclaimer)
+        on-change* (fn [v]
+                     (if (true? v)
+                       (==> [:lipas.ui.events/confirm message (partial on-change v)])
+                       (on-change v)))]
+    [lui/checkbox (assoc props :on-change on-change*)]))
 
 (defn properties-form [{:keys [tr edit-data display-data types-props
                                on-change read-only? key]}]
@@ -255,6 +277,7 @@
       (for [[k v] types-props
             :let  [label     (-> types-props k :name locale)
                    data-type (:data-type v)
+                   tooltip   (-> v :description locale)
                    spec      (keyword :lipas.sports-site.properties k)
                    value     (-> edit-data k)
                    on-change #(on-change k %)]]
@@ -266,15 +289,23 @@
            (material-field? k)     [surface-material-selector
                                     {:tr        tr
                                      :multi?    (= :surface-material k)
+                                     :tooltip   tooltip
                                      :spec      spec
                                      :label     label
                                      :value     value
                                      :on-change on-change}]
+           (retkikartta? k)        [retkikartta-field
+                                    {:tr        tr
+                                     :value     value
+                                     :on-change on-change
+                                     :tooltip   tooltip}]
            (= "boolean" data-type) [lui/checkbox
                                     {:value     value
+                                     :tooltip   tooltip
                                      :on-change on-change}]
            :else                   [lui/text-field
                                     {:value     value
+                                     :tooltip   tooltip
                                      :spec      spec
                                      :type      (when (#{"numeric" "integer"} data-type)
                                                   "number")

@@ -63,21 +63,13 @@
             (recur db search idx-name (rest types) users))
        (wait-all futures)))))
 
-(defn -main [& args]
-  (let [mode   (case (first args)
-                 "--analytics" "analytics"
-                 "search")
-        config (select-keys config/default-config [:db :search])
-        system (backend/start-system! config)
-        db     (:db system)
-        search (:search system)]
-    (try
-      (let [idx-name (str mode "-" (search/gen-idx-name))
-            mappings (:sports-sites search/mappings)
-            types    (keys types/all)
-            alias    (case mode
-                       "search"    "sports_sites_current"
-                       "analytics" "analytics")]
+(defn main [system db search mode]
+  (let [idx-name (str mode "-" (search/gen-idx-name))
+        mappings (:sports-sites search/mappings)
+        types    (keys types/all)
+        alias    (case mode
+                   "search"    "sports_sites_current"
+                   "analytics" "analytics")]
         (log/info "Starting to re-index types" types)
         (search/create-index! search idx-name mappings)
         (log/info "Created index" idx-name)
@@ -94,7 +86,18 @@
           (doseq [idx old-idxs]
             (log/info "Deleting old index" idx)
             (search/delete-index! search idx)))
-        (log/info "All done!"))
+        (log/info "All done!")))
+
+(defn -main [& args]
+  (let [mode   (case (first args)
+                 "--analytics" "analytics"
+                 "search")
+        config (select-keys config/default-config [:db :search])
+        system (backend/start-system! config)
+        db     (:db system)
+        search (:search system)]
+    (try
+      (main system db search mode)
       (finally (backend/stop-system! system)))))
 
 (comment
@@ -105,13 +108,12 @@
   (def db (:db system))
   (get-user-data db)
   (def search (:search system))
+  (main system db search "search")
   (def user (core/get-user db "import@lipas.fi"))
   (search/delete-index! search "2018-*")
   (let [idx-name (search/gen-idx-name)
         mappings (:sports_sites search/mappings)]
     (search/create-index! search "test" (:sports-sites search/mappings))
-    (index-all! db search user "test" #{1180})
-    (index-all! db search user "test" #{4404})
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"

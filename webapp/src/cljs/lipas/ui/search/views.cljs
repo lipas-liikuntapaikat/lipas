@@ -301,8 +301,11 @@
         [lists/virtualized-list
          {:items         results
           :label-fn      :name
-          :label2-fn     #(str (-> % :type.name) ", "
-                               (-> % :location.city.name))
+          :label2-fn     #(when %
+                            (str (-> % :type.name) ", "
+                                 (-> % :location.city.name)
+                                 ;;" " (-> % :score) uncomment for search tuning
+                                 ))
           :on-item-click on-result-click}]])]))
 
 (defn search-input [{:keys []}]

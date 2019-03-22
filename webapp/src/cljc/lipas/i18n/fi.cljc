@@ -658,6 +658,11 @@
                             "LineString" "Poista reittiosa"
                             "Polygon"    "Poista alue"
                             "Poista osa"))
+    :confirm-remove     (fn [geom-type]
+                          (case geom-type
+                            "LineString" "Haluatko poistaa valitun reittiosan?"
+                            "Polygon"    "Haluatko varmasti poisaa valitun alueen?"
+                            "Haluatko varmasti poistaa valitun kohteen?"))
     :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"
     :download-gpx       "Lataa GPX"}
 
@@ -686,6 +691,16 @@
    :map.address-search
    {:title   "Etsi osoite"
     :tooltip "Etsi osoite"}
+
+   :retkikartta {:disclaimer "Kun ”Saa julkaista Retkikartassa” -ruutu
+   on rastitettu, luontoliikuntapaikan tiedot siirretään
+   automaattisesti Metsähallituksen ylläpitämään Retkikartta.fi
+   -karttapalveluun kerran vuorokaudessa. Sitoudun päivittämään
+   luontoliikuntapaikan tietojen muutokset viipymättä
+   Lippaaseen. Paikan hallinnoijalla on vastuu tietojen
+   oikeellisuudesta, paikan turvallisuudesta, palautteisiin
+   vastaamisesta ja mahdollisista yksityisteihin liittyvistä
+   kustannuksista."}
 
    :error
    {:unknown             "Tuntematon virhe tapahtui. :/"
