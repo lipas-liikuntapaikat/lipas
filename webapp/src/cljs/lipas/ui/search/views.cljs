@@ -303,7 +303,9 @@
           :label-fn      :name
           :label2-fn     #(when %
                             (str (-> % :type.name) ", "
-                                 (-> % :location.city.name)))
+                                 (-> % :location.city.name)
+                                 ;;" " (-> % :score) uncomment for search tuning
+                                 ))
           :on-item-click on-result-click}]])]))
 
 (defn search-input [{:keys []}]
