@@ -190,11 +190,11 @@
                         :city        {:name (-> city-code cities :name)}
                         :province    {:name (:name province)}
                         :avi-area    {:name (:name avi-area)}}
-                       :main-category {:name (:name main-category)}
-                       :sub-category  {:name (:name sub-category)}
                        :type
-                       {:name (-> type-code types :name)
-                        :tags (-> type-code types :tags)}}]
+                       {:name          (-> type-code types :name)
+                        :tags          (-> type-code types :tags)
+                        :main-category {:name (:name main-category)}
+                        :sub-category  {:name (:name sub-category)}}}]
     (assoc sports-site :search-meta search-meta)))
 
 (defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
