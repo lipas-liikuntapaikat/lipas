@@ -41,11 +41,13 @@
   [s]
   (if (empty? s)
     "*"
-    (-> s
-        (string/replace "-" " ")
-        (string/split #" ")
-        (->> (map #(str % "*"))
-             (string/join " ")))))
+    ;; (-> s
+    ;;     (string/replace "-" " ")
+    ;;     (string/split #" ")
+    ;;     (->> (map #(str % "*"))
+    ;;          (string/join " ")))
+    s
+    ))
 
 (defn ->es-search-body [{:keys [filters string center distance sort
                                 locale pagination]}]
