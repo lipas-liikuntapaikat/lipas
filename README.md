@@ -78,7 +78,7 @@ cp .env.sample.sh .env.sh
 $EDITOR .env.sh
 
 # Run setup script
-./setup-dev.s
+./setup-dev.sh
 ```
 
 ### Extra
