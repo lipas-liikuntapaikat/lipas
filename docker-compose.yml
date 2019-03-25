@@ -15,6 +15,7 @@ services:
       - './certs/:/certs:z'
       - './webapp/resources/public/:/usr/share/nginx/html:z'
       - './nginx/nginx.conf:/etc/nginx/nginx.conf:z'
+      - './nginx/htpasswd:/etc/nginx/htpasswd:z'
 
   proxy:
     extends:
@@ -23,6 +24,7 @@ services:
       - mapproxy
       - backend
       - logstash
+      - kibana
     volumes:
       - './nginx/proxy.conf:/etc/nginx/conf.d/default.conf:z'
 
@@ -35,8 +37,15 @@ services:
       - mapproxy
       - backend
       - logstash
+      - kibana
     volumes:
       - './nginx/proxy_dev.conf:/etc/nginx/conf.d/default.conf:z'
+
+  htpasswd:
+    image: lipas/htpasswd
+    build:
+      context: ./htpasswd
+      dockerfile: Dockerfile
 
   mapproxy:
     image: kartoza/mapproxy
@@ -270,6 +279,8 @@ services:
       - xpack.monitoring.enabled=false
     links:
       - elasticsearch
+    volumes:
+      - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
 
 volumes:
   pgdata: {}
