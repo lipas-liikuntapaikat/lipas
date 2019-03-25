@@ -277,7 +277,6 @@ services:
       - "5601:5601"
     environment:
       - xpack.monitoring.enabled=false
-      - server.basePath=/kibana
     links:
       - elasticsearch
     volumes:
