@@ -20,6 +20,7 @@ printf "\n *** Packaging backend *** \n\n"
 docker-compose run backend-build
 
 printf "\n *** Creating htpasswd file for Kibana *** \n\n"
+docker-compose build htpasswd
 docker-compose run htpasswd admin $ADMIN_PASSWORD nginx/htpasswd
 
 ### Frontend ###
