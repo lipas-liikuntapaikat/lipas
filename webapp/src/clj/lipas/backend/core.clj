@@ -137,7 +137,7 @@
       not-empty))
 
 (defn- new? [sports-site]
-  (empty? (:lipas-id sports-site)))
+  (nil? (:lipas-id sports-site)))
 
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
