@@ -156,7 +156,7 @@
  (fn [{:keys [db]} [_ lipas-id on-success]]
    (let [latest (get-in db [:sports-sites lipas-id :latest])]
      (if latest
-       {:dispatch-n on-success} ;; No need for get if we already have the data
+       {:dispatch-n (or on-success [])} ;; No need for get if we already have the data
        {:http-xhrio
         {:method          :get
          :uri             (str (:backend-url db) "/sports-sites/" lipas-id)
