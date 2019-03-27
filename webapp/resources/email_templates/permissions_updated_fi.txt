@@ -1,0 +1,14 @@
+Hyvä LIPAS-käyttäjä!
+
+Käyttöoikeutesi on päivitetty. Voit kirjautua sisään klikkaamalla henkilökohtaista sisäänkirjautumislinkkiäsi tai menemällä osoitteeseen https://liikuntapaikat.lipas.fi/#/kirjaudu ja syöttämällä sähköpostiosoitteesi ja salasanan jonka annoit rekisteröitymisen yhteydessä.
+
+Henkilökohtainen sisäänkirjautumislinkkisi:
+{{link}}
+Linkki on voimassa {{valid-days}} päivää. Voit käyttää linkkiä tänä aikana niin monta kertaa kuin haluat.
+
+Palaute ja kommentit
+Toivomme runsaasti palautetta ja kehittämisehdotuksia LIPAS-palvelun toiminnasta. Kerro ajatuksesi sähköpostilla tai puhelimitse! Alla yhteystiedot.
+
+Jyväskylän yliopisto:
+Kirsi Vehkakoski, LIPAS-projekti, puh. 0400 247 980
+s-posti: lipasinfo@jyu.fi

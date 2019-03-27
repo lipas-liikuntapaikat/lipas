@@ -76,15 +76,15 @@
 (defn site-view [{:keys [tr logged-in?]}]
   (let [locale       (tr)
         display-data (<== [::subs/display-site locale])
-        width        (<== [:lipas.ui.subs/screen-size])
 
         lipas-id (:lipas-id display-data)
 
         close #(==> [::events/display-site nil])
 
-        edit-data    (<== [::site-subs/editing-rev lipas-id])
-        editing?     (<== [::site-subs/editing? lipas-id])
-        edits-valid? (<== [::site-subs/edits-valid? lipas-id])
+        edit-data        (<== [::site-subs/editing-rev lipas-id])
+        editing?         (<== [::site-subs/editing? lipas-id])
+        edits-valid?     (<== [::site-subs/edits-valid? lipas-id])
+        editing-allowed? (<== [::site-subs/editing-allowed? lipas-id])
 
         dialogs               (<== [::subs/dialogs])
         types                 (<== [::subs/types-list])
@@ -116,24 +116,23 @@
       :bottom-actions
       (conj
        (lui/edit-actions-list
-        {:editing?           editing?
-         :valid?             edits-valid?
-         :logged-in?         logged-in?
-         :user-can-publish?  user-can-publish?
-         :on-discard         #(==> [:lipas.ui.events/confirm
-                                    (tr :confirm/discard-changes?)
-                                    (fn []
-                                      (==> [::site-events/discard-edits lipas-id]))])
-         :discard-tooltip    (tr :actions/discard)
-         :on-edit-start      #(==> [::site-events/edit-site lipas-id])
-         :edit-tooltip       (tr :actions/edit)
-         :on-save-draft      #(==> [::site-events/save-draft lipas-id])
-         :save-draft-tooltip (tr :actions/save-draft)
-         :on-publish         #(==> [::site-events/save-edits lipas-id])
-         :publish-tooltip    (tr :actions/save)
+        {:editing?          editing?
+         :valid?            edits-valid?
+         :logged-in?        logged-in?
+         :user-can-publish? user-can-publish?
+         :editing-allowed?  editing-allowed?
+         :on-discard        #(==> [:lipas.ui.events/confirm
+                                   (tr :confirm/discard-changes?)
+                                   (fn []
+                                     (==> [::site-events/discard-edits lipas-id]))])
+         :discard-tooltip   (tr :actions/discard)
+         :on-edit-start     #(==> [::site-events/edit-site lipas-id])
+         :edit-tooltip      (tr :actions/edit)
+         :on-publish        #(==> [::site-events/save-edits lipas-id])
+         :publish-tooltip   (tr :actions/save)
          ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
          ;;:delete-tooltip     (tr :actions/delete)
-         :invalid-message    (tr :error/invalid-form)})
+         :invalid-message   (tr :error/invalid-form)})
 
        (when-not editing?
          [mui/tooltip {:title (tr :map/zoom-to-site)}
@@ -705,15 +704,13 @@
        (str "> " (tr :ice-energy/energy-calculator))]]]]])
 
 (defn energy-form-tab [tr]
-  (let [locale          (tr)
-        editable-sites  (<== [::subs/sites-to-edit-list locale])
-        draftable-sites (<== [::subs/sites-to-draft-list])]
+  (let [locale         (tr)
+        editable-sites (<== [::subs/sites-to-edit-list locale])]
     (energy/energy-consumption-form
-     {:tr              tr
-      :cold?           true
-      :spectators?     true
-      :editable-sites  editable-sites
-      :draftable-sites draftable-sites})))
+     {:tr             tr
+      :cold?          true
+      :spectators?    true
+      :editable-sites editable-sites})))
 
 (defn reports-tab [tr]
   [sports-site/contacts-report

@@ -1,10 +1,12 @@
 (ns lipas.ui.components.autocompletes
   (:require
    [cljsjs.react-autosuggest]
+   [clojure.spec.alpha :as s]
    [clojure.string :refer [trim] :as string]
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :as utils]
+   [mui-downshift :as MuiDownshift]
    [reagent.core :as r]))
 
 (defn simple-matches [items label-fn s]
@@ -42,8 +44,8 @@
   [{:keys [label items value value-fn label-fn
            suggestion-fn on-change multi? spacing
            items-label show-all? label-style-fn sort-fn]
-    :or   {suggestion-fn  (partial simple-matches items label-fn)
-           label-fn       :label
+    :or   {label-fn       :label
+           suggestion-fn  (partial simple-matches items label-fn)
            label-style-fn (fn [item label] label)
            sort-fn        label-fn
            value-fn       :value
@@ -56,8 +58,7 @@
                input-value (r/atom "")
                suggs       (r/atom (map value-fn items))]
 
-    [mui/grid {:container true
-               :spacing   spacing}
+    [mui/grid {:container true :spacing spacing}
 
      ;; Input field
      [mui/grid {:item true}
@@ -117,3 +118,56 @@
                                           (into (empty old-value)
                                                 (remove #{v} old-value))))
                            (on-change @value))}]]))]))
+
+(defn hack-item2 [label-fn label-style-fn item item-props]
+  (let [item  (js->clj* item)
+        label (label-fn item)]
+    (r/as-element
+     [mui/list-item (js->clj* item-props)
+      [mui/list-item-text
+       (label-style-fn item label)]])))
+
+(defn error? [spec value required]
+  (if (and spec (or value required))
+    ((complement s/valid?) spec value)
+    false))
+
+(defn autocomplete-simple
+  [{:keys [label items value value-fn label-fn on-change spec
+           label-style-fn suggestions-fn required sort-fn]
+    :or   {label-fn       :label
+           label-style-fn (fn [item label] label)
+           sort-fn        label-fn
+           value-fn       :value
+           multi?         true}}]
+  (r/with-let [items-m        (utils/index-by value-fn items)
+               suggestions-fn (or suggestions-fn
+                                 (partial simple-matches items label-fn))
+               suggs          (r/atom items)
+               input-value    (r/atom (-> value items-m label-fn))]
+    [:> MuiDownshift
+     {:items           (sort-by sort-fn @suggs)
+      :get-input-props (fn []
+                         #js{:label    label
+                             :required required
+                             :error    (error? spec value required)})
+      :input-value     @input-value
+      :get-list-item   (fn [props]
+                         (let [item       (gobj/get props "item")
+                               item-props ((gobj/get props "getItemProps"))]
+                           (hack-item2 label-fn label-style-fn item item-props)))
+      :on-change       (fn [x]
+                         (let [value (-> x js->clj* value-fn)
+                               label (-> value items-m label-fn)]
+                           (reset! input-value (or label ""))
+                           (on-change value)))
+      :input-ref       (fn [node]
+                         (this-as this
+                           (gobj/set this "input" node)))
+      :on-state-change (fn [props]
+                         (let [s (gobj/get props "inputValue")]
+                           (if (empty? s)
+                             (reset! input-value "")
+                             (when-let [filtered-suggs (not-empty (suggestions-fn s))]
+                               (reset! input-value s)
+                               (reset! suggs filtered-suggs)))))}]))

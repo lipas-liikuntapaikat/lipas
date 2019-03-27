@@ -98,9 +98,9 @@
      (-> (apply translate (into [locale kw] (filter (complement keyword?) args)))
          (fmt args)))))
 
-(defn- localize-accessibility [locale pool]
-  (update pool :accessibility
-          #(map (fn [s] (get-in pools/accessibility [s locale])) %)))
+(defn- localize-accessibility [locale ss]
+  (when-not (empty? ss)
+    (map (fn [s] (get-in pools/accessibility [s locale])) ss)))
 
 (defn localize-pool [locale pool]
   (-> pool

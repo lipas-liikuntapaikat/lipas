@@ -4,17 +4,20 @@
 
 (re-frame/reg-event-fx
  ::get-users-sports-sites
- (fn [_ [_ {:keys [permissions]}]]
-   ;; TODO Create proper endpoint for fetching sites based on
-   ;; permissions. Current implementation fetches all sites from
-   ;; backend.
-   {:dispatch-n
-    [[:lipas.ui.sports-sites.events/get-by-type-code 3110]
-     [:lipas.ui.sports-sites.events/get-by-type-code 3130]
-     [:lipas.ui.sports-sites.events/get-by-type-code 2510]
-     [:lipas.ui.sports-sites.events/get-by-type-code 2520]]}))
+ (fn [{:keys [db]} _]
+   (let [permissions (-> db :user :login :permissions)]
+     {:dispatch-n
+      (into []
+            (map (fn [lipas-id]
+                   [:lipas.ui.sports-sites.events/get lipas-id]))
+            (:sports-sites permissions))})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::select-sports-site
- (fn [db [_ site]]
-   (assoc-in db [:user :selected-sports-site] site)))
+ (fn [{:keys [db]} [_ site]]
+   (let [portal-site? (-> site :type-code #{3110 3130 2510 2520})]
+     {:db (if (or portal-site? (nil? site))
+            (assoc-in db [:user :selected-sports-site] site)
+            db)
+      :dispatch-n [(when-not portal-site?
+                     [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view site])]})))

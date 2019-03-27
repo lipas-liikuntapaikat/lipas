@@ -212,14 +212,13 @@
         :multiline false
         :on-change #(set-field [:energy-consumption :comment] %)}]])])
 
-(defn energy-form [{:keys [tr year draft? cold? spectators?]}]
+(defn energy-form [{:keys [tr year cold? spectators?]}]
   (let [data           (<== [::subs/energy-consumption-rev])
         lipas-id       (:lipas-id data)
         energy-history (<== [::subs/energy-consumption-history])
         edits-valid?   (<== [::subs/edits-valid? lipas-id])
         ;; monthly-data?  (<== [::subs/monthly-data-exists?])
-        set-field      (partial set-field lipas-id)
-        ]
+        set-field      (partial set-field lipas-id)]
 
     (r/with-let [monthly-energy? (r/atom false)]
 
@@ -279,32 +278,28 @@
          {:variant  "extendedFab"
           :disabled (not edits-valid?)
           :color    "secondary"
-          :on-click #(==> [::events/commit-energy-consumption data draft?])
-          :tooltip  (if draft?
-                      (tr :actions/save-draft)
-                      (tr :actions/save))}]]
+          :on-click #(==> [::events/commit-energy-consumption data])
+          :tooltip  (tr :actions/save)}]]
 
        ;; Small footer on top of which floating container may scroll
        [mui/grid
         {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]])))
 
-(defn energy-consumption-form [{:keys [tr editable-sites draftable-sites
-                                       spectators? cold?]}]
+(defn energy-consumption-form
+  [{:keys [tr editable-sites spectators? cold?]}]
   (let [logged-in? (<== [:lipas.ui.user.subs/logged-in?])
         site       (<== [::subs/energy-consumption-site])
         years      (<== [::subs/energy-consumption-years-list])
         year       (<== [::subs/energy-consumption-year])
 
-        sites (or editable-sites draftable-sites)
+        sites editable-sites
 
         lipas-id (get-in site [:history (:latest site) :lipas-id])
 
         ;; Fix stale data when jumping between swimming-pool and
         ;; ice-stadium portals
         _ (when-not (some #{lipas-id} (map :lipas-id sites))
-            (==> [::events/select-energy-consumption-site nil]))
-
-        draft? (empty? editable-sites)]
+            (==> [::events/select-energy-consumption-site nil]))]
 
     (if-not logged-in?
 
@@ -326,6 +321,27 @@
            :on-click #(utils/navigate! "/#/rekisteroidy")}]]]]
 
       [mui/grid {:container true}
+
+       (when-not sites
+         [mui/grid {:container true}
+          [mui/grid {:item true :xs 12}
+           [mui/paper {:style {:padding "1em"}}
+            [lui/icon-text
+             {:icon "lock"
+              :text (tr :lipas.user/no-permissions)}]
+            [mui/typography {:style {:display "inline" :margin-left "0.75em"}}
+             (tr :help/permissions-help)]
+            [mui/link
+             {:color     "secondary"
+              :variant   "body2"
+              :href      (utils/->mailto
+                          {:email   "lipasinfo@jyu.fi"
+                           :subject (tr :help/permissions-help-subject)
+                           :body    (tr :help/permissions-help-body)} )}
+             (tr :general/here)]
+
+            [mui/typography {:style {:display "inline"}}
+             "."]]]])
 
        (when sites
          [lui/form-card {:title (tr :actions/select-hall)
@@ -354,7 +370,6 @@
          [energy-form
           {:tr          tr
            :year        year
-           :draft?      draft?
            :spectators? spectators?
            :cold?       cold?}])])))
 

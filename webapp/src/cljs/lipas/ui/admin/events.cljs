@@ -63,12 +63,15 @@
 (re-frame/reg-event-fx
  ::save-user
  (fn [{:keys [db]} [_ user]]
-   (let [token (-> db :user :login :token)]
+   (let [token (-> db :user :login :token)
+         body  (-> user
+                   (select-keys [:id :permissions])
+                   (assoc :login-url (str (utils/base-url) "/#/kirjaudu")))]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/update-user-permissions")
        :headers         {:Authorization (str "Token " token)}
-       :params          (select-keys user [:id :permissions])
+       :params          body
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::save-user-success user]

@@ -212,6 +212,7 @@
          :parameters
          {:body
           {:id          string?
+           :login-url   :lipas.magic-link/login-url
            :permissions :lipas.user/permissions}}
          :handler
          (fn [req]
