@@ -1,21 +1,23 @@
 (ns lipas.backend.handler-test
-  (:require [cheshire.core :as j]
-            [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.test :refer [deftest testing is] :as t]
-            [cognitect.transit :as transit]
-            [dk.ative.docjure.spreadsheet :as excel]
-            [lipas.backend.config :as config]
-            [lipas.backend.core :as core]
-            [lipas.backend.email :as email]
-            [lipas.backend.jwt :as jwt]
-            [lipas.backend.system :as system]
-            [lipas.schema.core]
-            [lipas.seed :as seed]
-            [lipas.utils :as utils]
-            [ring.mock.request :as mock])
-  (:import java.util.Base64
-           [java.io ByteArrayInputStream ByteArrayOutputStream]))
+  (:require
+   [cheshire.core :as j]
+   [clojure.spec.alpha :as s]
+   [clojure.spec.gen.alpha :as gen]
+   [clojure.test :refer [deftest testing is] :as t]
+   [cognitect.transit :as transit]
+   [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.backend.config :as config]
+   [lipas.backend.core :as core]
+   [lipas.backend.email :as email]
+   [lipas.backend.jwt :as jwt]
+   [lipas.backend.system :as system]
+   [lipas.schema.core]
+   [lipas.seed :as seed]
+   [lipas.utils :as utils]
+   [ring.mock.request :as mock])
+  (:import
+   java.util.Base64
+   [java.io ByteArrayInputStream ByteArrayOutputStream]))
 
 (def <-json #(j/parse-string (slurp %) true))
 (def ->json j/generate-string)
@@ -183,7 +185,8 @@
         resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
                        (mock/content-type "application/json")
                        (mock/body (->json {:id          (:id user)
-                                           :permissions perms}))
+                                           :permissions perms
+                                           :login-url   "https://localhost"}))
                        (token-header token)))
 
         site-log (->> (core/get-sports-site-history db 123)
@@ -198,7 +201,10 @@
         token (jwt/create-token user)
         resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
                        (mock/content-type "application/json")
-                       (mock/body (->json (select-keys user [:id :permissions])))
+                       (mock/body (-> user
+                                      (select-keys [:id :permissions])
+                                      (assoc :login-url "https://localhost")
+                                      ->json))
                        (token-header token)))]
     (is (= 403 (:status resp)))))
 
