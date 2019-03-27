@@ -48,6 +48,30 @@
                       :value     (-> edit-data :status)
                       :on-change #(on-change :status %)}]})
 
+     ;; Type
+     {:label      (tr :type/name)
+      :value      (-> display-data :type :name)
+      :form-field [lui/autocomplete-simple
+                   {:value     (-> edit-data :type :type-code)
+                    :required  true
+                    :items     types
+                    :label-fn  (comp locale :name)
+                    :value-fn  :type-code
+                    :on-change #(on-change :type :type-code %)}]}
+
+     ;; Ice-stadiums get special treatment
+     (when (or (= 2520 (-> edit-data :type :type-code))
+               (and read-only?
+                    (= 2520 (-> display-data :type :type-code))))
+       {:label      (tr :ice/size-category)
+        :value      (-> display-data :type :size-category)
+        :form-field [lui/select
+                     {:value     (-> edit-data :type :size-category)
+                      :items     size-categories
+                      :value-fn  first
+                      :label-fn  (comp locale second)
+                      :on-change #(on-change :type :size-category %)}]})
+
      ;; Name
      {:label      (tr :lipas.sports-site/name)
       :value      (-> display-data :name)
@@ -75,30 +99,6 @@
                    {:spec      :lipas.sports-site/marketing-name
                     :value     (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
-
-     ;; Type
-     {:label      (tr :type/name)
-      :value      (-> display-data :type :name)
-      :form-field [lui/select
-                   {:value     (-> edit-data :type :type-code)
-                    :required  true
-                    :items     types
-                    :label-fn  (comp locale :name)
-                    :value-fn  :type-code
-                    :on-change #(on-change :type :type-code %)}]}
-
-     ;; Ice-stadiums get special treatment
-     (when (or (= 2520 (-> edit-data :type :type-code))
-               (and read-only?
-                    (= 2520 (-> display-data :type :type-code))))
-       {:label      (tr :ice/size-category)
-        :value      (-> display-data :type :size-category)
-        :form-field [lui/select
-                     {:value     (-> edit-data :type :size-category)
-                      :items     size-categories
-                      :value-fn  first
-                      :label-fn  (comp locale second)
-                      :on-change #(on-change :type :size-category %)}]})
 
      ;; Construction year
      {:label      (tr :lipas.sports-site/construction-year)
@@ -210,14 +210,14 @@
      {:label      (tr :lipas.location/postal-office)
       :value      (-> display-data :postal-office)
       :form-field [lui/text-field
-                   {:value    (-> edit-data :postal-office)
+                   {:value     (-> edit-data :postal-office)
                     :spec      :lipas.location/postal-office
                     :on-change #(on-change :postal-office %)}]}
 
      ;; City
      {:label      (tr :lipas.location/city)
       :value      (-> display-data :city :name)
-      :form-field [lui/select
+      :form-field [lui/autocomplete-simple
                    {:value     (-> edit-data :city :city-code)
                     :required  true
                     :spec      :lipas.location.city/city-code

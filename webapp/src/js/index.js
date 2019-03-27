@@ -330,6 +330,10 @@ window.recharts = {
 import Autosuggest from 'react-autosuggest';
 window.Autosuggest = Autosuggest;
 
+// Mui-Downshift
+import MuiDownshift from 'mui-downshift';
+window.MuiDownshift = MuiDownshift;
+
 // Material Design Icons
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';

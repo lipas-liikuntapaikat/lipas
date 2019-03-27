@@ -8,4 +8,7 @@
     :controllers
     [{:start
       (fn [& params]
-        (==> [:lipas.ui.events/set-active-panel :register-panel]))}]}])
+        (==> [:lipas.ui.events/set-active-panel :register-panel]))}
+     {:stop
+      (fn [& params]
+        (==> [:lipas.ui..register.events/reset]))}]}])
