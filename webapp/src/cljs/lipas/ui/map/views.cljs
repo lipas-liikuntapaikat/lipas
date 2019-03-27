@@ -206,39 +206,31 @@
 ;; Works as both display and edit views
 (defn sports-site-view [{:keys [tr site-data width]}]
   (r/with-let [selected-tab (r/atom 0)]
-    (let [display-data (:display-data site-data)
-          lipas-id     (:lipas-id display-data)
-          edit-data    (:edit-data site-data)
-          cities       (<== [:lipas.ui.user.subs/permission-to-cities])
-          admins       (<== [::sports-site-subs/admins])
-          owners       (<== [::sports-site-subs/owners])
-          editing?     (<== [::sports-site-subs/editing? lipas-id])
-          edits-valid? (<== [::sports-site-subs/edits-valid? lipas-id])
-          can-publish? (<== [::user-subs/permission-to-publish? lipas-id])
-          logged-in?   (<== [::user-subs/logged-in?])
-
-          editing-allowed? (<== [::sports-site-subs/editing-allowed? lipas-id])
-
+    (let [display-data        (:display-data site-data)
+          lipas-id            (:lipas-id display-data)
+          edit-data           (:edit-data site-data)
+          cities              (<== [::sports-site-subs/cities-by-city-code])
+          admins              (<== [::sports-site-subs/admins])
+          owners              (<== [::sports-site-subs/owners])
+          editing?            (<== [::sports-site-subs/editing? lipas-id])
+          edits-valid?        (<== [::sports-site-subs/edits-valid? lipas-id])
+          can-publish?        (<== [::user-subs/permission-to-publish? lipas-id])
+          logged-in?          (<== [::user-subs/logged-in?])
+          editing-allowed?    (<== [::sports-site-subs/editing-allowed? lipas-id])
           delete-dialog-open? (<== [::sports-site-subs/delete-dialog-open?])
-
-          mode     (<== [::subs/mode])
-          sub-mode (-> mode :sub-mode)
-
-          type-code (-> display-data :type :type-code)
-          type      (<== [::sports-site-subs/type-by-type-code type-code])
-          geom-type (:geometry-type type)
-
-          ;; TODO types the user has access to
-          allowed-types   (<== [::sports-site-subs/types-by-geom-type geom-type])
-          types-props     (<== [::sports-site-subs/types-props type-code])
-          size-categories (<== [::ice-stadiums-subs/size-categories])
-
-          set-field (partial set-field lipas-id)
-
-          portal (case type-code
-                   (3110 3130) "uimahalliportaali"
-                   (2510 2520) "jaahalliportaali"
-                   nil)]
+          mode                (<== [::subs/mode])
+          sub-mode            (-> mode :sub-mode)
+          type-code           (-> display-data :type :type-code)
+          type                (<== [::sports-site-subs/type-by-type-code type-code])
+          geom-type           (:geometry-type type)
+          allowed-types       (<== [::sports-site-subs/types-by-geom-type geom-type])
+          types-props         (<== [::sports-site-subs/types-props type-code])
+          size-categories     (<== [::ice-stadiums-subs/size-categories])
+          set-field           (partial set-field lipas-id)
+          portal              (case type-code
+                                (3110 3130) "uimahalliportaali"
+                                (2510 2520) "jaahalliportaali"
+                                nil)]
 
       [mui/grid {:container true}
 
@@ -335,32 +327,28 @@
           (lui/edit-actions-list
             ;; TODO refactor (do ..) blocks to dispatch single event
             ;; according to user intention.
-           {:editing?           editing?
-            :editing-allowed?   editing-allowed?
-            :valid?             edits-valid?
-            :logged-in?         logged-in?
-            :user-can-publish?  can-publish?
-            :on-discard         #(==> [:lipas.ui.events/confirm
-                                       (tr :confirm/discard-changes?)
-                                       (fn []
-                                         (==> [::sports-site-events/discard-edits lipas-id])
-                                         (==> [::events/stop-editing]))])
-            :discard-tooltip    (tr :actions/discard)
-            :on-edit-start      #(do (==> [::sports-site-events/edit-site lipas-id])
-                                     (==> [::events/zoom-to-site lipas-id])
-                                     (==> [::events/start-editing lipas-id :editing geom-type]))
-            :edit-tooltip       (tr :actions/edit)
-            :on-save-draft      #(do (==> [::sports-site-events/save-draft lipas-id])
-                                     (==> [::events/show-sports-site nil])
-                                     (==> [::events/stop-editing]))
-            :save-draft-tooltip (tr :actions/save-draft)
-            :on-publish         #(do (==> [::sports-site-events/save-edits lipas-id])
-                                     (==> [::events/show-sports-site nil])
-                                     (==> [::events/stop-editing]))
-            :publish-tooltip    (tr :actions/save)
-            :invalid-message    (tr :error/invalid-form)
-            :on-delete          #(==> [::sports-site-events/toggle-delete-dialog])
-            :delete-tooltip     (tr :lipas.sports-site/delete-tooltip)})
+           {:editing?          editing?
+            :editing-allowed?  editing-allowed?
+            :valid?            edits-valid?
+            :logged-in?        logged-in?
+            :user-can-publish? can-publish?
+            :on-discard        #(==> [:lipas.ui.events/confirm
+                                      (tr :confirm/discard-changes?)
+                                      (fn []
+                                        (==> [::sports-site-events/discard-edits lipas-id])
+                                        (==> [::events/stop-editing]))])
+            :discard-tooltip   (tr :actions/discard)
+            :on-edit-start     #(do (==> [::sports-site-events/edit-site lipas-id])
+                                    (==> [::events/zoom-to-site lipas-id])
+                                    (==> [::events/start-editing lipas-id :editing geom-type]))
+            :edit-tooltip      (tr :actions/edit)
+            :on-publish        #(do (==> [::sports-site-events/save-edits lipas-id])
+                                    (==> [::events/show-sports-site nil])
+                                    (==> [::events/stop-editing]))
+            :publish-tooltip   (tr :actions/save)
+            :invalid-message   (tr :error/invalid-form)
+            :on-delete         #(==> [::sports-site-events/toggle-delete-dialog])
+            :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)})
 
           (concat
            [;; Download GPX
@@ -441,36 +429,26 @@
 (defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
-    (let [locale (tr)
-          type   (<== [::sports-site-subs/new-site-type])
-          data   (<== [::sports-site-subs/new-site-data])
-          cities (<== [:lipas.ui.user.subs/permission-to-cities])
-          admins (<== [::sports-site-subs/admins])
-          owners (<== [::sports-site-subs/owners])
-
-          types       (<== [:lipas.ui.user.subs/permission-to-types])
-          type-code   (:type-code type)
-          types-props (<== [::sports-site-subs/types-props type-code])
-
-          set-field set-new-site-field
-
+    (let [locale          (tr)
+          type            (<== [::sports-site-subs/new-site-type])
+          data            (<== [::sports-site-subs/new-site-data])
+          cities          (<== [::sports-site-subs/cities-by-city-code])
+          admins          (<== [::sports-site-subs/admins])
+          owners          (<== [::sports-site-subs/owners])
+          types           (<== [::sports-site-subs/all-types])
+          type-code       (:type-code type)
+          types-props     (<== [::sports-site-subs/types-props type-code])
           new-site-valid? (<== [::sports-site-subs/new-site-valid?])
-          can-publish?    (and
-                           new-site-valid?
-                           (<== [::user-subs/permission-to-publish-site? data]))
-
           size-categories (<== [::ice-stadiums-subs/size-categories])
-
-          zoomed? (<== [::subs/zoomed-for-drawing?])
-          geom    (<== [::subs/new-geom])
-
-          geom-type     (:geometry-type type)
-          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
-
-          active-step (cond
-                        (some? data) 2
-                        (some? type) 1
-                        :else        0)]
+          zoomed?         (<== [::subs/zoomed-for-drawing?])
+          geom            (<== [::subs/new-geom])
+          geom-type       (:geometry-type type)
+          allowed-types   (<== [::sports-site-subs/types-by-geom-type geom-type])
+          active-step     (cond
+                            (some? data) 2
+                            (some? type) 1
+                            :else        0)
+          set-field       set-new-site-field]
 
       [mui/grid
        {:container true
@@ -503,7 +481,7 @@
               :types     types
               :on-change #(==> [::sports-site-events/select-new-site-type %])}]]]]
 
-         ;; Step 2 -  Add to map
+         ;; Step 2 - Add to map
          [mui/step
           [mui/step-label (tr :map/draw)]
           [mui/step-content {:style {:padding-top "1em"}}
@@ -671,13 +649,12 @@
 
           ;; Save
           (when data
-            (let [draft? (not can-publish?)]
-              [mui/grid {:item true}
-               [lui/save-button
-                {:tooltip          (tr :actions/save)
-                 :disabled-tooltip (tr :actions/fill-required-fields)
-                 :disabled         (not new-site-valid?)
-                 :on-click         #(==> [::sports-site-events/commit-rev data draft?])}]]))
+            [mui/grid {:item true}
+             [lui/save-button
+              {:tooltip          (tr :actions/save)
+               :disabled-tooltip (tr :actions/fill-required-fields)
+               :disabled         (not new-site-valid?)
+               :on-click         #(==> [::sports-site-events/commit-rev data])}]])
 
           ;; Address search button
           [mui/tooltip {:title (tr :map.address-search/tooltip)}

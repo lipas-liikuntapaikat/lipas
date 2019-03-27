@@ -88,20 +88,29 @@
 (defn get-users [db]
   (db/get-users db))
 
-;; TODO send email
-(defn update-user-permissions! [db emailer {:keys [id permissions]}]
-  (let [user      (get-user! db id)
-        old-perms (-> user :permissions)
-        new-user  (assoc user :permissions permissions)]
-    (db/update-user-permissions! db new-user)
-    (publish-users-drafts! db new-user)
-    (add-user-event! db new-user "permissions-updated"
-                     {:from old-perms :to permissions})))
-
 (defn create-magic-link [url user]
   (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
     {:link       (str url "?token=" token)
      :valid-days 7}))
+
+(defn- send-permissions-updated-email!
+  [emailer login-url {:keys [email] :as user}]
+  (let [link (create-magic-link login-url user)]
+    (email/send-permissions-updated-email! emailer email link)))
+
+(defn update-user-permissions!
+  ([db emailer params]
+   (update-user-permissions! db emailer params true))
+  ([db emailer {:keys [id permissions login-url]} notify?]
+   (let [user      (get-user! db id)
+         old-perms (-> user :permissions)
+         new-user  (assoc user :permissions permissions)]
+     (db/update-user-permissions! db new-user)
+     (publish-users-drafts! db new-user)
+     (when notify?
+       (send-permissions-updated-email! emailer login-url user))
+     (add-user-event! db new-user "permissions-updated"
+                      {:from old-perms :to permissions}))))
 
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
@@ -127,8 +136,12 @@
   (-> (db/get-sports-site db lipas-id)
       not-empty))
 
+(defn- new? [sports-site]
+  (empty? (:lipas-id sports-site)))
+
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
+                (new? sports-site)
                 (permissions/publish? (:permissions user) sports-site))
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
@@ -154,7 +167,11 @@
    (check-permissions! user sports-site draft?)
    (when-let [lipas-id (:lipas-id sports-site)]
      (check-sports-site-exists! db lipas-id))
-   (upsert-sports-site!* db user sports-site draft?)))
+   (let [resp (upsert-sports-site!* db user sports-site draft?)]
+     (when (new? sports-site)
+       (let [user (update-in user [:permissions :sports-sites] conj (:lipas-id resp))]
+         (update-user-permissions! db nil user false)))
+     resp)))
 
 (defn get-sports-sites-by-type-code
   ([db type-code]

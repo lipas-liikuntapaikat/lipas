@@ -119,12 +119,13 @@
       [{:file           "dist/index.bundle.js"
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest"]
-        :global-exports {ol        ol        zipcelx            zipcelx
-                         filesaver filesaver react              React
-                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
-                         mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
+                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"]
+        :global-exports {ol            ol        zipcelx            zipcelx
+                         filesaver     filesaver react              React
+                         react-dom     ReactDOM  "react-dom/server" ReactDOMServer
+                         mui           mui       proj4              proj4
+                         recharts      recharts  react-autosuggest  "cljsjs.react-autosuggest"
+                         mui-downshift MuiDownshift}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "js/compiled/out"
@@ -146,12 +147,13 @@
       [{:file           "dist/index.bundle.js"
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest"]
-        :global-exports {ol        ol        zipcelx            zipcelx
-                         filesaver filesaver react              React
-                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
-                         mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"}}]
+                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"]
+        :global-exports {ol            ol        zipcelx            zipcelx
+                         filesaver     filesaver react              React
+                         react-dom     ReactDOM  "react-dom/server" ReactDOMServer
+                         mui           mui       proj4              proj4
+                         recharts      recharts  react-autosuggest  "cljsjs.react-autosuggest"
+                         mui-downshift MuiDownshift}}]
       :output-to       "resources/public/js/compiled/app.js"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}

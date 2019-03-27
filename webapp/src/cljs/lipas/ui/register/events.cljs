@@ -3,7 +3,6 @@
    [re-frame.core :as re-frame]
    [clojure.string :as string]
    [lipas.ui.db :refer [default-db]]
-   [lipas.ui.login.events :as login-events]
    [ajax.core :as ajax]))
 
 (re-frame/reg-event-db
@@ -11,11 +10,12 @@
  (fn [db [_ _]]
    (update-in db [:user] dissoc :registration-error)))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::set-registration-form-field
- (fn [db [_ path value]]
+ (fn [{:keys [db]} [_ path value]]
    (let [path (into [:user :registration-form] path)]
-     (assoc-in db path value))))
+     {:db       (assoc-in db path value)
+      :dispatch [::clear-errors]})))
 
 (re-frame/reg-event-db
  ::set-registration-form-email
@@ -30,14 +30,10 @@
 (re-frame/reg-event-fx
  ::registration-success
  (fn [{:keys [db]} [_ result]]
-   (let [username   (-> db :user :registration-form :username)
-         password   (-> db :user :registration-form :password)
-         empty-form (-> default-db :user :registration-form)]
+   (let [empty-form (-> default-db :user :registration-form)]
      {:db (-> db
            (assoc-in [:user :registration] result)
            (assoc-in [:user :registration-form] empty-form))
-      :dispatch [::login-events/submit-login-form {:username username
-                                                   :password password}]
       :ga/event ["user" "registered"]})))
 
 (re-frame/reg-event-db
@@ -56,3 +52,8 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::registration-success]
      :on-failure      [::registration-failure]}}))
+
+(re-frame/reg-event-db
+ ::reset-form
+ (fn [db _]
+   (update-in db [:user] dissoc :registration :registration-error)))

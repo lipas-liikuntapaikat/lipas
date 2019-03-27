@@ -10,7 +10,7 @@
 (defn set-field [& args]
   (==> [::events/set-registration-form-field (butlast args) (last args)]))
 
-(defn registration-form [tr]
+(defn registration-form [{:keys [tr]}]
   (let [form-data (<== [::subs/registration-form])
         error     (<== [::subs/registration-error])]
 
@@ -28,13 +28,15 @@
 
      ;; Username
      [lui/text-field
-      {:required    true
-       :label       (tr :lipas.user/username)
-       :type        "text"
-       :spec        :lipas.user/username
-       :value       (:username form-data)
-       :on-change   #(set-field :username %)
-       :placeholder (tr :lipas.user/username-example)}]
+      {:required          true
+       :Input-label-props (when-not (-> form-data :username empty?)
+                            {:shrink true})
+       :label             (tr :lipas.user/username)
+       :type              "text"
+       :spec              :lipas.user/username
+       :value             (:username form-data)
+       :on-change         #(set-field :username %)
+       :placeholder       (tr :lipas.user/username-example)}]
 
      ;; Password
      [lui/text-field
@@ -90,17 +92,23 @@
           "username-conflict" (tr :error/username-conflict)
           (tr :error/unknown))])]))
 
-(defn create-panel [tr form-data]
-  (let [card-props {:square true
-                    :style {:height "100%"}}]
-    [mui/grid {:container true
-               :justify "center"
-               :style {:padding "1em"}}
+(defn thank-you-for-registering-box [{:keys [tr]}]
+  [mui/grid
+   {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
+   [mui/paper {:style {:background-color mui/gray3 :padding "1em"}}
+    [mui/typography {:variant "body2"}
+     (tr :register/thank-you-for-registering)]]])
+
+(defn create-panel [tr]
+  (let [registered? (<== [::subs/registration-success?])]
+    [mui/grid {:container true :justify "center" :style {:padding "1em"}}
      [mui/grid {:item true :xs 12 :md 8 :lg 6}
-      [mui/card card-props
+      [mui/card {:square true :style {:height "100%"}}
        [mui/card-header {:title (tr :register/headline)}]
        [mui/card-content
-        [registration-form tr form-data]]]]]))
+        (if registered?
+          [thank-you-for-registering-box {:tr tr}]
+          [registration-form {:tr tr}])]]]]))
 
 (defn main [tr]
   (let [logged-in? (<== [::subs/logged-in?])]

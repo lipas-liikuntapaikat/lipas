@@ -85,12 +85,6 @@
         not-empty)))
 
 (re-frame/reg-sub
- ::sites-to-draft-list
- :<- [::latest-ice-stadium-revs]
- (fn [sites _]
-   (not-empty (sort-by :name (vals sites)))))
-
-(re-frame/reg-sub
  ::dialogs
  (fn [db _]
    (-> db :ice-stadiums :dialogs)))

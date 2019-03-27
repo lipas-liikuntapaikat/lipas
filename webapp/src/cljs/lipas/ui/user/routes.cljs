@@ -8,4 +8,5 @@
     :controllers
     [{:start
       (fn [& params]
-        (==> [:lipas.ui.events/set-active-panel :user-panel]))}]}])
+        (==> [:lipas.ui.events/set-active-panel :user-panel])
+        (==> [:lipas.ui.user.events/get-users-sports-sites]))}]}])
