@@ -57,7 +57,8 @@
   [[::discard-new-site]
    [:lipas.ui.map.events/stop-editing]
    [:lipas.ui.map.events/show-sports-site lipas-id]
-   [:lipas.ui.search.events/submit-search]])
+   [:lipas.ui.search.events/submit-search]
+   [:lipas.ui.login.events/refresh-login]])
 
 (re-frame/reg-event-fx
  ::commit-rev
@@ -83,18 +84,6 @@
                       new?  on-success-new
                       :else on-success-default)]
      (if (or new? (dirty? db rev))
-       (commit-ajax db rev draft? on-success)
-       {:dispatch [::save-success on-success rev]}))))
-
-(re-frame/reg-event-fx
- ::save-draft
- (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev        (-> (get-in db [:sports-sites lipas-id :editing])
-                        utils/make-saveable)
-         draft?     true
-         new?       (new-site? rev)
-         on-success (when new? on-success-new)]
-     (if (dirty? db rev)
        (commit-ajax db rev draft? on-success)
        {:dispatch [::save-success on-success rev]}))))
 
@@ -160,7 +149,7 @@
  ::get-success-single
  (fn [{:keys [db]} [_ on-success site]]
    {:db         (utils/add-to-db db site)
-    :dispatch-n on-success}))
+    :dispatch-n (or on-success [])}))
 
 (re-frame/reg-event-fx
  ::get

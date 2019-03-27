@@ -33,45 +33,6 @@
      :value    (-> data :user-data :lastname)
      :disabled true}]
 
-   ;; TODO figure out how to represent permissions in a clear way
-
-   ;; Permissions
-
-   ;; ;;; Admin?
-   ;; [lui/checkbox
-   ;;  {:label    (tr :lipas.user.permissions/admin?)
-   ;;   :value    (-> data :permissions :admin?)
-   ;;   :disabled true}]
-
-   ;; ;;; Draft?
-   ;; [lui/checkbox
-   ;;  {:label    (tr :lipas.user.permissions/draft?)
-   ;;   :value    (-> data :permissions :draft?)
-   ;;   :disabled true}]
-
-   ;; ;;; Sports-sites
-   ;; [lui/text-field
-   ;;  {:label    (tr :lipas.user.permissions/sports-sites)
-   ;;   :value    (pr-str (-> data :permissions :sports-sites))
-   ;;   :disabled true}]
-
-   ;; ;;; Types
-   ;; [lui/text-field
-   ;;  {:label    (tr :lipas.user.permissions/types)
-   ;;   :value    (get-in data [:permissions :types] "-")
-   ;;   :disabled true}]
-
-   ;; ;;; Cities
-   ;; [lui/text-field
-   ;;  {:label    (tr :lipas.user.permissions/cities)
-   ;;   :value    (pr-str (-> data :permissions :cities))
-   ;;   :disabled true}]
-
-   ;; [lui/text-field
-   ;;  {:label    (tr :lipas.user/permissions)
-   ;;   :value    (pr-str (:permissions data))
-   ;;   :disabled true}]
-
    ;; Permissions request
    [lui/text-field
     {:label    (tr :lipas.user/requested-permissions)
@@ -121,7 +82,8 @@
   (let [admin? (<== [::subs/admin?])
         cities (<== [::subs/permission-to-cities])
         types  (<== [::subs/permission-to-types])
-        sites  (<== [::subs/sports-sites (tr)])
+
+        sites        (<== [::subs/sports-sites (tr)])
 
         all-types?  (or admin? (-> user :permissions :all-types?))
         all-cities? (or admin? (-> user :permissions :all-cities?))
@@ -221,11 +183,7 @@
           [mui/grid {:container true}
            [lui/icon-text
             {:icon "lock"
-             :text (tr :lipas.user/no-permissions)}]
-           [lui/icon-text
-            {:icon       "info"
-             :icon-color :secondary
-             :text       (tr :lipas.user/draft-encouragement)}]])
+             :text (tr :lipas.user/no-permissions)}]])
 
         (when (and (not admin?) (not-empty sites))
           [:<>
@@ -256,7 +214,5 @@
   (let [logged-in? (<== [::subs/logged-in?])
         user       (<== [::subs/user-data])]
     (if logged-in?
-      (do
-        (==> [::events/get-users-sports-sites])
-        [user-panel tr user])
+      [user-panel tr user]
       (navigate! "/#/kirjaudu"))))

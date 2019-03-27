@@ -253,7 +253,10 @@
                         "Käytätkö mahdollisesti jotain rajapinnoistamme?")}
 
    :help
-   {:headline "Ohjeet"}
+   {:headline                 "Ohjeet"
+    :permissions-help         "Jos haluat lisää käyttöoikeuksia, ota yhteyttä "
+    :permissions-help-subject "Haluan lisää käyttöoikeuksia"
+    :permissions-help-body    "Haluan käyttöoikeudet seuraaviin liikuntapaikkoihin:"}
 
    :user
    {:headline            "Oma sivu"
@@ -301,12 +304,9 @@
     :permission-to-all-cities   "Sinulla on käyttöoikeus kaikkiin kuntiin"
     :permission-to-all-types    "Sinulla on käyttöoikeus kaikkiin
     liikuntapaikkatyyppeihin"
-    :no-permissions             "Sinulle ei ole myönnetty käyttöoikeuksia
-    julkaista muutoksia yhteenkään kohteeseen. "
+    :no-permissions             "Sinulle ei ole vielä myönnetty käyttöoikeuksia."
     :permission-to-portal-sites "Sinulla on käyttöoikeus seuraaviin
-    jää- ja uimahalleihin:"
-    :draft-encouragement        "Voit kuitenkin tallentaa muutosehdotuksia,
-    jotka lähetetään ylläpidon hyväksyttäväksi."
+    yksittäisiin liikuntapaikkoihin:"
     :view-basic-info            "Tarkista perustiedot"
     :report-energy-consumption  "Ilmoita energiankulutus"
     :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot"
@@ -314,7 +314,6 @@
 
    :lipas.user.permissions
    {:admin?       "Admin"
-    :draft?       "Ehdota muutoksia"
     :all-cities?  "Oikeus kaikkiin kuntiin"
     :all-types?   "Oikeus kaikkiin tyyppeihin"
     :sports-sites "Liikuntapaikat"
@@ -322,7 +321,9 @@
     :cities       "Kunnat"}
 
    :register
-   {:headline "Rekisteröidy"}
+   {:headline                  "Rekisteröidy"
+    :thank-you-for-registering "Kiitos rekisteröitymisestä! Saat
+    sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."}
 
    :login
    {:headline              "Kirjaudu"
@@ -547,7 +548,6 @@
    {:add                      "Lisää"
     :edit                     "Muokkaa"
     :save                     "Tallenna"
-    :save-draft               "Tallenna ehdotus"
     :delete                   "Poista"
     :discard                  "Kumoa"
     :cancel                   "Peruuta"
@@ -622,7 +622,8 @@
     :reported      "Ilmoitettu"
     :done          "Valmis"
     :measures      "Mitat"
-    :last-modified "Muokattu viimeksi"}
+    :last-modified "Muokattu viimeksi"
+    :here          "tästä"}
 
    :notifications
    {:save-success "Tallennus onnistui"

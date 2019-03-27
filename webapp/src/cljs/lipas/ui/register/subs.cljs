@@ -13,6 +13,11 @@
    (-> db :logged-in?)))
 
 (re-frame/reg-sub
+ ::registration-success?
+ (fn [db _]
+   (= "OK" (-> db :user :registration :status))))
+
+(re-frame/reg-sub
  ::registration-error
  (fn [db _]
    (-> db :user :registration-error)))
