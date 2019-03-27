@@ -99,18 +99,15 @@
     (email/send-permissions-updated-email! emailer email link)))
 
 (defn update-user-permissions!
-  ([db emailer params]
-   (update-user-permissions! db emailer params true))
-  ([db emailer {:keys [id permissions login-url]} notify?]
-   (let [user      (get-user! db id)
-         old-perms (-> user :permissions)
-         new-user  (assoc user :permissions permissions)]
-     (db/update-user-permissions! db new-user)
-     (publish-users-drafts! db new-user)
-     (when notify?
-       (send-permissions-updated-email! emailer login-url user))
-     (add-user-event! db new-user "permissions-updated"
-                      {:from old-perms :to permissions}))))
+  [db emailer {:keys [id permissions login-url]}]
+  (let [user      (get-user! db id)
+        old-perms (-> user :permissions)
+        new-user  (assoc user :permissions permissions)]
+    (db/update-user-permissions! db new-user)
+    (publish-users-drafts! db new-user)
+    (send-permissions-updated-email! emailer login-url user)
+    (add-user-event! db new-user "permissions-updated"
+                     {:from old-perms :to permissions})))
 
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
@@ -160,6 +157,17 @@
   ([db user sports-site draft?]
    (db/upsert-sports-site! db user sports-site draft?)))
 
+(defn ensure-permission!
+  "Checks if user has access to sports-site and if not explicit access
+  is added to users permissions.
+
+  Motivation is to ensures that user who creates the sports-site has
+  permission to it."
+  [db user {:keys [lipas-id] :as sports-site}]
+  (when-not (permissions/publish? (:permissions user) sports-site)
+    (let [user (update-in user [:permissions :sports-sites] conj lipas-id)]
+      (db/update-user-permissions! db user))))
+
 (defn upsert-sports-site!
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
@@ -169,8 +177,7 @@
      (check-sports-site-exists! db lipas-id))
    (let [resp (upsert-sports-site!* db user sports-site draft?)]
      (when (new? sports-site)
-       (let [user (update-in user [:permissions :sports-sites] conj (:lipas-id resp))]
-         (update-user-permissions! db nil user false)))
+       (ensure-permission! db user resp))
      resp)))
 
 (defn get-sports-sites-by-type-code
