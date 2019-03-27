@@ -7,10 +7,10 @@
  (fn [{:keys [db]} _]
    (let [permissions (-> db :user :login :permissions)]
      {:dispatch-n
-      (->> permissions
-           :sports-sites
-           (mapv (fn [lipas-id]
-                   [:lipas.ui.sports-sites.events/get lipas-id])))})))
+      (into []
+            (map (fn [lipas-id]
+                   [:lipas.ui.sports-sites.events/get lipas-id]))
+            (:sports-sites permissions))})))
 
 (re-frame/reg-event-fx
  ::select-sports-site
