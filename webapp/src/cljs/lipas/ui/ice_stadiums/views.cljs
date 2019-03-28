@@ -39,13 +39,13 @@
                              "xl" 1280
                              "lg" 960
                              "md" 640
-                             480)
+                             "100%")
         :height            (case width
                              ;;"xl" 1080
                              "xl" 720
                              "lg" 540
                              "md" 360
-                             270)
+                             "100%")
         :frameBorder       0
         :allow             (str "accelerometer; autoplay; encrypted-media; "
                                 "gyroscope; picture-in-picture")
