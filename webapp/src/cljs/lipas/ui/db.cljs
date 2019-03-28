@@ -37,7 +37,7 @@
 
    :delete-dialog
    {:open?           false
-    :selected-status "out-of-service-permanently"
+    :selected-status nil
     :selected-year   utils/this-year}
 
    :statuses              sports-sites/statuses
