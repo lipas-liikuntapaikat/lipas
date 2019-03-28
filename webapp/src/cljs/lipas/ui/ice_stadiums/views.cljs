@@ -733,10 +733,11 @@
      [mui/grid {:item true :xs 12 :class-name :no-print}
       [mui/card card-props
        [mui/card-content
-        [mui/tabs {:variant    "fullWidth"
-                   :text-color "secondary"
-                   :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
-                   :value      active-tab}
+        [mui/tabs
+         {:variant    "scrollable"
+          :text-color "secondary"
+          :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
+          :value      active-tab}
 
          ;; 0 Stats tab
          [mui/tab {:label (tr :ice/headline)
