@@ -308,7 +308,7 @@
                                  ))
           :on-item-click on-result-click}]])]))
 
-(defn search-input [{:keys []}]
+(defn search-input []
   (let [tr         (<== [:lipas.ui.subs/translator])
         search-str (<== [::subs/search-string])]
 
@@ -322,9 +322,9 @@
         :on-change    #(==> [::events/update-search-string %])
         :on-key-press (fn [e]
                         (when (= 13 (.-charCode e)) ; Enter
-                          (==> [::events/submit-search :fit-view])))}]]
+                          (==> [::events/search-with-keyword :fit-view])))}]]
      [mui/grid {:item true}
-      [mui/button {:on-click #(==> [::events/submit-search :fit-view])}
+      [mui/button {:on-click #(==> [::events/search-with-keyword :fit-view])}
        [mui/icon "search"]
        (tr :search/search)]]]))
 
