@@ -241,5 +241,6 @@
                       (utils/->end-of-year year))
          data       (assoc data :event-date event-date :status status)
          on-success (fn [] [[:lipas.ui.map.events/show-sports-site nil]
-                            [:lipas.ui.search.events/submit-search]])]
+                            [:lipas.ui.search.events/submit-search]
+                            [::select-delete-status nil]])]
      {:dispatch [::commit-rev data draft? on-success]})))
