@@ -660,7 +660,7 @@
           [mui/tooltip {:title (tr :map.address-search/tooltip)}
            [mui/grid {:item true}
             [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
-             [mui/icon "search"]]]]]]]])))
+             [:> js/materialIcons.MapSearchOutline]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
@@ -676,7 +676,7 @@
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
          [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
-          [mui/icon "search"]]]]
+          [:> js/materialIcons.MapSearchOutline]]]]
        (when (= :list result-view)
          [mui/grid {:item true}
           [reports/dialog {:tr tr :btn-variant :fab}]])]]]))

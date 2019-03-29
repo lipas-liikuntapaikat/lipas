@@ -337,10 +337,12 @@ window.MuiDownshift = MuiDownshift;
 // Material Design Icons
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
+import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 
 window.materialIcons = {
   Eraser,
   FileUpload,
+  MapSearchOutline,
 };
 
 // React virtualized
