@@ -189,7 +189,7 @@
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce address]}]
-  (let [fit? (not= fit-nonce (-> map-ctx :mode :fit-nonce))]
+  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
     (cond-> map-ctx
       true           (map-utils/clear-markers!)
       lipas-id       (map-utils/select-sports-site! lipas-id)
