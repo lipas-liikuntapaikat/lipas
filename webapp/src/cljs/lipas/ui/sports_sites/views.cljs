@@ -482,7 +482,7 @@
      {:title         (tr :lipas.sports-site/delete (:name data))
       :cancel-label  (tr :actions/cancel)
       :on-close      on-close
-      :save-enabled? true
+      :save-enabled? (some? status)
       :on-save       (fn []
                        (==> [::events/delete data status year draft?])
                        (on-close))
@@ -491,6 +491,7 @@
      [mui/form-group
       [lui/select
        {:label     (tr :lipas.sports-site/delete-reason)
+        :required  true
         :value     status
         :items     statuses
         :on-change #(==> [::events/select-delete-status %])

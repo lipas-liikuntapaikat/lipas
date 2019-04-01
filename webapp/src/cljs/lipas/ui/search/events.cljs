@@ -180,6 +180,13 @@
      {:dispatch [::search params fit-view?]})))
 
 (re-frame/reg-event-fx
+ ::search-with-keyword
+ (fn [{:keys [db]} [_ fit-view?]]
+   (let [kw (-> db :search :string)]
+     {:dispatch [::submit-search fit-view?]
+      :ga/event ["search" "submit" (or kw "")]})))
+
+(re-frame/reg-event-fx
  ::filters-updated
  (fn [_ [_ fit-view?]]
    {:dispatch-n
