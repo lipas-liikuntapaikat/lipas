@@ -39,13 +39,13 @@
                              "xl" 1280
                              "lg" 960
                              "md" 640
-                             480)
+                             "100%")
         :height            (case width
                              ;;"xl" 1080
                              "xl" 720
                              "lg" 540
                              "md" 360
-                             270)
+                             "100%")
         :frameBorder       0
         :allow             (str "accelerometer; autoplay; encrypted-media; "
                                 "gyroscope; picture-in-picture")
@@ -733,10 +733,11 @@
      [mui/grid {:item true :xs 12 :class-name :no-print}
       [mui/card card-props
        [mui/card-content
-        [mui/tabs {:variant    "fullWidth"
-                   :text-color "secondary"
-                   :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
-                   :value      active-tab}
+        [mui/tabs
+         {:variant    "scrollable"
+          :text-color "secondary"
+          :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
+          :value      active-tab}
 
          ;; 0 Stats tab
          [mui/tab {:label (tr :ice/headline)

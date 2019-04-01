@@ -43,7 +43,8 @@
    {:label "SportVenue" :href "https://www.sportvenue.fi/"}
    {:label "FCG" :href "http://www.fcg.fi/shvk"}
    {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}
-   {:label "Aluehallintovirasto" :href "https://www.avi.fi/web/avi/liikunta"}])
+   {:label "Aluehallintovirasto" :href "https://www.avi.fi/web/avi/liikunta"}
+   {:label "LIKES" :href "https://www.likes.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :md "auto" :lg "auto"}
