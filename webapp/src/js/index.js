@@ -355,3 +355,14 @@ window.reactVirtualized = {
   InfiniteLoader,
   List: VirtualizedList,
 };
+
+// Turf.js
+import kinks from '@turf/kinks';
+import lineSplit from '@turf/line-split';
+import combine from '@turf/combine';
+
+window.turf = {
+  kinks,
+  lineSplit,
+  combine,
+};
