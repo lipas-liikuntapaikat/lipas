@@ -62,6 +62,19 @@
             :fill   default-fill
             :stroke default-stroke})}))
 
+(def invalid-style
+  (ol.style.Style.
+   #js{:stroke
+       (ol.style.Stroke.
+        #js{:width 3
+            :color "red"})
+       :fill default-fill
+       :image
+       (ol.style.Circle.
+        #js{:radius 5
+            :fill   default-fill
+            :stroke default-stroke})}))
+
 (def default-style
   (ol.style.Style.
    #js{:stroke default-stroke
