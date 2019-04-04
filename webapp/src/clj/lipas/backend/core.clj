@@ -317,11 +317,11 @@
                            (when (not-empty type-codes)
                              {:terms {:type.type-code type-codes}})
                            (when (not-empty city-codes)
-                             {:terms {:location.city.city-code city-codes}})])}},
+                             {:terms {:location.city.city-code city-codes}})])}}
                   :aggs
                   {:grouping
-                   {:terms {:field (keyword grouping), :size 400},
-                    :aggs  {:area_m2_sum {:sum {:field :properties.area-m2}}}}}}
+                   {:terms {:field (keyword grouping) :size 400}
+                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}
         m2-data  (-> (search search* query) :body :aggregations :grouping :buckets)]
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city m2-data pop-data)
@@ -336,6 +336,26 @@
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
+
+  (let [statuses ["active" "out-of-service-temporarily"]
+        grouping "location.city.city-code"
+        type-codes [1340]
+        city-codes [992]
+        query    {:size 0,
+                  :query
+                  {:bool
+                   {:filter
+                    (into [] (remove nil?)
+                          [{:terms {:status.keyword statuses}}
+                           (when (not-empty type-codes)
+                             {:terms {:type.type-code type-codes}})
+                           (when (not-empty city-codes)
+                             {:terms {:location.city.city-code city-codes}})])}}
+                  :aggs
+                  {:grouping
+                   {:terms {:field (keyword grouping) :size 400}
+                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}]
+    (search search2 query))
 
   (first (get-cities db-spec))
   (time (get-populations db-spec 2017))

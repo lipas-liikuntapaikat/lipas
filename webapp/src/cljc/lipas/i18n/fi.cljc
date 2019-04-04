@@ -119,7 +119,12 @@
     :country-avg         "(maan keskiarvo)"
     :sports-sites-count  "Liikuntapaikkojen lkm"
     :filter-cities       "Rajaa kunnat"
-    :filter-types        "Rajaa tyypit"}
+    :filter-types        "Rajaa tyypit"
+    :m2-count            "Liikuntapinta-ala m² ilmoitettu lkm"
+    :m2-avg              "Liikuntapinta-ala m² keskiarvo"
+    :m2-min              "Liikuntapinta-ala m² min"
+    :m2-max              "Liikuntapinta-ala m² max"
+    :population          "Asukasluku"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")

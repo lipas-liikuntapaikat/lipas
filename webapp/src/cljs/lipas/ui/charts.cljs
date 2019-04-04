@@ -2,7 +2,10 @@
   (:require
    ["recharts" :as rc]
    [clojure.set :refer [rename-keys map-invert]]
-   [lipas.ui.mui :as mui]))
+   [goog.object :as gobj]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.components.tables :as tables]
+   [reagent.core :as r]))
 
 ;; Tip: enable rainbow-mode in emacs.
 
@@ -146,6 +149,7 @@
               :dataKey k2
               :stroke  (get colors (get lookup k1))}])))]))
 
+
 (defn age-structure-chart [{:keys [data labels]}]
   (let [lookup (map-invert labels)
         data   (->> data (map #(rename-keys % labels)))]
@@ -169,8 +173,39 @@
           :label   false
           :fill    (get colors (get lookup k))}]))]))
 
+(defn custom-tooltip [labels props]
+  (let [label   (gobj/get props "label")
+        payload (gobj/get props "payload")
+        entry   (-> payload
+                    first
+                    (gobj/get "payload")
+                    (js->clj :keywordize-keys true))]
+    (r/as-element
+     [mui/paper {:style {:padding "0.5em"}}
+      [mui/typography {:variant "subtitle2"}
+       label]
+      [mui/table {:style {:width "350"} :padding "dense"}
+       (->> entry
+            (reduce
+             (fn [res [k v]]
+               (if-let [label (labels k)]
+                 (conj res {:label label :value v})
+                 res))
+             [])
+            (sort-by :label)
+            (map
+             (fn [{:keys [label value]}]
+               [mui/table-row
+                [mui/table-cell
+                 [mui/typography {:variant "caption"}
+                  label]]
+                [mui/table-cell
+                 [mui/typography
+                  value]]]))
+            (into [mui/table-body]))]])))
+
 (defn sports-stats-chart [{:keys [data labels metric grouping]}]
-  (let [data       (->> data (map #(rename-keys % labels)))
+  (let [;;data       (->> data (map #(rename-keys % labels)))
         margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
@@ -178,8 +213,8 @@
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart {:data data :layout "vertical" :margin margin}
       [:> rc/Legend {:wrapperStyle font-styles}]
-      [:> rc/Tooltip tooltip-styles]
+      [:> rc/Tooltip {:content (partial custom-tooltip labels)}]
       [:> rc/XAxis {:tick font-styles :type "number"}]
       [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
-      [:> rc/Bar {:dataKey (labels (keyword metric)) :fill "orange"}
+      [:> rc/Bar {:dataKey (keyword metric) :fill "orange"}
        [:> rc/LabelList {:position "right"}]]]]))
