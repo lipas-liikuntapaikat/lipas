@@ -2,7 +2,6 @@
   (:require
    [clojure.string :as string]
    [lipas.ui.components :as lui]
-   [lipas.ui.ice-stadiums.subs :as ice-stadiums-subs]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
@@ -13,7 +12,6 @@
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.subs :as sports-site-subs]
    [lipas.ui.sports-sites.views :as sports-sites]
-   [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
