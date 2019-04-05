@@ -314,7 +314,7 @@
  :<- [::selected-sports-stats-grouping]
  (fn [[tr metrics grouping] _]
    (let [locale (tr)]
-     (into [(if (= "location.city.city-name" grouping)
+     (into [(if (= "location.city.city-code" grouping)
               [:city-name (tr :lipas.location/city)]
               [:type-name (tr :lipas.sports-site/type)])
             [:population (tr :stats/population)]
