@@ -47,6 +47,16 @@
      {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
      text]]])
 
+(defn icon-text2 [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:style {:color icon-color}}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography
+     {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
+     text]]])
+
 (defn li [text & children]
   (into
    [:li
