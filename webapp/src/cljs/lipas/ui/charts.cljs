@@ -127,32 +127,33 @@
     [:> rc/Legend
      {:wrapperStyle font-styles}]]])
 
-(defn finance-chart [{:keys [data metrics labels on-click]}]
-  (let [lookup (map-invert labels)
-        data   (->> data (map #(rename-keys % labels)))]
-    [:> rc/ResponsiveContainer {:width "100%" :height 500}
-     (-> [:> rc/ComposedChart {:data data :on-click on-click}
-          [:> rc/Legend {:wrapperStyle font-styles}]
-          [:> rc/Tooltip tooltip-styles]
-          [:> rc/YAxis {:tick font-styles}]
-          [:> rc/XAxis {:dataKey :year :tick font-styles}]]
-         (into
-          (for [m    metrics
-                :let [k ((keyword m) labels)]]
-            [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}]))
-         (into
-          (for [m    metrics
-                :let [k1 ((keyword m) labels)
-                      k2 ((keyword (str m "-avg")) labels)]]
-            [:> rc/Line
-             {:type    "monotone"
-              :dataKey k2
-              :stroke  (get colors (get lookup k1))}])))]))
+(def legend-icons
+  {"rect" "label"
+   "line" "show_chart"})
+
+(defn legend [labels props]
+  (let [payload (gobj/get props "payload")]
+    (r/as-element
+     (->> payload
+          (map
+           (fn [obj]
+             {:label (or (labels (gobj/get obj "value"))
+                         (labels (keyword (gobj/get obj "value"))))
+              :color (gobj/get obj "color")
+              :type  (gobj/get obj "type")}))
+          (sort-by :label)
+          (map
+           (fn [{:keys [label color type]}]
+             [mui/grid {:item true}
+              [misc/icon-text2
+               {:icon (legend-icons type) :icon-color color :text label}]]))
+          (into
+           [mui/grid {:container true :justify "center"}])))))
 
 (defn tooltip
   "`payload-fn` should return a map with
   keys :label :value (:icon :color)."
-  [labels payload-fn props]
+  [payload-fn labels props]
   (let [label   (gobj/get props "label")
         payload (gobj/get props "payload")]
     (r/as-element
@@ -183,6 +184,39 @@
                   value]]]))
             (into [mui/table-body]))]])))
 
+(defn finance-tooltip [labels props]
+  (let [payload-fn (fn [payload]
+                     (->> payload
+                          (map
+                           (fn [obj]
+                             {:color (gobj/get obj "color")
+                              :value (gobj/get obj "value")
+                              :icon  (if (gobj/get obj "stroke")
+                                       (legend-icons "line")
+                                       (legend-icons "rect"))
+                              :label (labels (keyword (gobj/get obj "name")))}))))]
+    (tooltip payload-fn labels props)))
+
+(defn finance-chart [{:keys [data metrics labels on-click]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 500}
+   (-> [:> rc/ComposedChart {:data data :on-click on-click}
+        [:> rc/Legend {:content (partial legend labels)}]
+        [:> rc/Tooltip {:content (partial finance-tooltip labels)}]
+        [:> rc/YAxis {:tick font-styles}]
+        [:> rc/XAxis {:dataKey :year :tick font-styles}]]
+       (into
+        (for [m    metrics
+              :let [k (keyword m)]]
+          [:> rc/Bar {:dataKey k :label false :fill (get colors k)}]))
+       (into
+        (for [m    metrics
+              :let [k1 (keyword m)
+                    k2 (keyword (str m "-avg"))]]
+          [:> rc/Line
+           {:type    "monotone"
+            :dataKey k2
+            :stroke  (get colors k1)}])))])
+
 (defn age-structure-tooltip [labels props]
   (let [payload-fn (fn [payload]
                      (->> payload
@@ -192,29 +226,7 @@
                               :color (gobj/get obj "fill")
                               :icon  "label"
                               :value (gobj/get obj "value")}))))]
-    (tooltip labels payload-fn props)))
-
-(def legend-icons
-  {"rect" "label"})
-
-(defn legend [labels props]
-  (let [payload (gobj/get props "payload")]
-    (r/as-element
-     (->> payload
-          (map
-           (fn [obj]
-             {:label (or (labels (gobj/get obj "value"))
-                         (labels (keyword (gobj/get obj "value"))))
-              :color (gobj/get obj "color")
-              :type  (gobj/get obj "type")}))
-          (sort-by :label)
-          (map
-           (fn [{:keys [label color type]}]
-             [mui/grid {:item true}
-              [misc/icon-text2
-               {:icon (legend-icons type) :icon-color color :text label}]]))
-          (into
-           [mui/grid {:container true :justify "center"}])))))
+    (tooltip payload-fn labels props)))
 
 (defn age-structure-chart [{:keys [data labels]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
@@ -250,7 +262,7 @@
                                  (conj res {:label label :value v})
                                  res))
                              []))))]
-    (tooltip labels payload-fn props)))
+    (tooltip payload-fn labels props)))
 
 (defn sports-stats-chart [{:keys [data labels metric grouping]}]
   (let [;;data       (->> data (map #(rename-keys % labels)))
