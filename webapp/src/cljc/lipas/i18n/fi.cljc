@@ -635,6 +635,18 @@
     :save-failed  "Tallennus epäonnistui"
     :get-failed   "Tietojen hakeminen epäonnistui."}
 
+   :reminders
+   {:title            "Lisää muistutus"
+    :placeholder      "Muista tarkistaa liikuntapaikka \"{1}\" {2}"
+    :description      "Viesti lähetetään sähköpostiisi valittuna ajankohtana"
+    :select-date      "Valitse päivämäärä"
+    :message          "Viesti"
+    :tomorrow         "Huomenna"
+    :in-a-week        "Viikon kuluttua"
+    :after-one-month  "Kuukauden kuluttua"
+    :after-six-months "Puolen vuoden kuluttua"
+    :in-a-year        "Vuoden kuluttua"}
+
    :disclaimer
    {:headline     "HUOMIO!"
     :test-version "Tämä on LIPAS-sovelluksen testiversio ja
