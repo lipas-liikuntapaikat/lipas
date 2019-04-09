@@ -1,6 +1,6 @@
 Hyvä LIPAS-käyttäjä!
 
-Tämä on automaattinen muistutus jonka olet asettanut itsellesi:
+Tämä on automaattinen muistutus, jonka olet asettanut itsellesi:
 
 {{message}}
 
