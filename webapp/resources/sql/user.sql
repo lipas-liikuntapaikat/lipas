@@ -102,7 +102,15 @@ WHERE  id = :id ::uuid;
 -- :name update-user-password!
 -- :command :execute
 -- :result :affected
--- :doc Update the password for the user with given id
+-- :doc Update password for the user with given id
 UPDATE account
 SET    password = :password
+WHERE  id = :id ::uuid;
+
+-- :name update-user-data!
+-- :command :execute
+-- :result :affected
+-- :doc Update user-data for the user with given id
+UPDATE account
+SET    user_data = :user_data
 WHERE  id = :id ::uuid;

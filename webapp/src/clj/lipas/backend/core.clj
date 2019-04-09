@@ -127,6 +127,26 @@
                                      (hashers/encrypt password)))
   (add-user-event! db user "password-reset"))
 
+(defn get-users-pending-reminders! [db {:keys [id]}]
+  (db/get-users-pending-reminders db id))
+
+(defn add-reminder! [db user m]
+  (let [m (assoc m :status "pending" :account-id (:id user))]
+    (db/add-reminder! db m)))
+
+(defn update-reminder-status! [db user {:keys [id] :as params}]
+  (prn user)
+  (let [exists (->> user
+                    (get-users-pending-reminders! db)
+                    (map :id)
+                    (some #{id}))]
+
+    (when-not exists
+      (throw (ex-info "Reminder not found" {:type :reminder-not-found})))
+
+    (db/update-reminder-status! db params)
+    {:status "OK"}))
+
 ;;; Sports-sites ;;;
 
 (defn get-sports-site [db lipas-id]
