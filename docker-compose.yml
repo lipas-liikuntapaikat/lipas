@@ -174,16 +174,26 @@ services:
       - postgres
       - elasticsearch
 
-  backend-integrations:
+  integrations:
     extends:
       service: backend-base
     logging:
       options:
         tag: "integrations"
-    entrypoint: lein trampoline run -m lipas.integrator "new->old" "old->new"
+    entrypoint: lein trampoline run -m lipas.integrator
     links:
       - postgres
       - elasticsearch
+
+  worker:
+    extends:
+      service: backend-base
+    logging:
+      options:
+        tag: "worker"
+    entrypoint: lein trampoline run -m lipas.worker
+    links:
+      - postgres
 
   node-base:
     image: node:10-alpine
