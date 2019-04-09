@@ -7,6 +7,7 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.reminders.views :as reminders]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
@@ -312,85 +313,94 @@
           {:container true :align-items "center" :spacing 8
            :style     {:padding "0.5em 0em 0.5em 0em"}}]
          (->>
-          (lui/edit-actions-list
-           {:editing?          editing?
-            :editing-allowed?  editing-allowed?
-            :valid?            edits-valid?
-            :logged-in?        logged-in?
-            :user-can-publish? can-publish?
-            :on-discard        #(==> [::events/discard-edits lipas-id])
-            :discard-tooltip   (tr :actions/discard)
-            :on-edit-start     #(==> [::events/edit-site lipas-id geom-type])
-            :edit-tooltip      (tr :actions/edit)
-            :on-publish        #(==> [::events/save-edits lipas-id])
-            :publish-tooltip   (tr :actions/save)
-            :invalid-message   (tr :error/invalid-form)
-            :on-delete         #(==> [::events/delete-site])
-            :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)})
+
+          [;; Download GPX
+           (when (and (not editing?) (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map/download-gpx)}
+              [mui/fab
+               {:on-click #(==> [::events/download-gpx lipas-id])
+                :color    "default"}
+               ".gpx"]])
+
+           ;; Zoom to site
+           (when-not editing?
+             [mui/tooltip {:title (tr :map/zoom-to-site)}
+              [mui/fab
+               {:on-click #(==> [::events/zoom-to-site lipas-id width])
+                :color    "default"}
+               [mui/icon {:color "secondary"}
+                "place"]]])
+
+           ;; Add reminder
+           (when (and logged-in? (not editing?))
+             (let [name (-> display-data :name)
+                   link (-> js/window .-location .-href)]
+               [reminders/add-button
+                {:message (tr :reminders/placeholder name link)}]))
+
+           ;; Import geom
+           (when (and editing? (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map.import/tooltip)}
+              [mui/fab
+               {:on-click #(==> [::events/toggle-import-dialog])
+                :color    "default"}
+               [:> js/materialIcons.FileUpload]]])
+
+           ;; Draw hole
+           (when (and editing? (#{"Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/draw-hole)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :drawing-hole)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
+                :style    (when (= sub-mode :drawing-hole)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [mui/icon "vignette"]]])
+
+           ;; Add new geom
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/draw geom-type)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :drawing)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :drawing geom-type]))
+                :style    (when (= sub-mode :drawing)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               (if (= geom-type "LineString")
+                 [mui/icon "timeline"]
+                 [mui/icon "change_history"])]])
+
+           ;; Delete geom
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/remove geom-type)}
+              [mui/fab
+               {:on-click #(if (= sub-mode :deleting)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :deleting geom-type]))
+                :style    (when (= sub-mode :deleting)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [:> js/materialIcons.Eraser]]])]
 
           (concat
-           [;; Download GPX
-            (when (and (not editing?) (#{"LineString"} geom-type))
-              [mui/tooltip {:title (tr :map/download-gpx)}
-               [mui/fab
-                {:on-click #(==> [::events/download-gpx lipas-id])
-                 :color    "default"}
-                ".gpx"]])
+           (lui/edit-actions-list
+            {:editing?          editing?
+             :editing-allowed?  editing-allowed?
+             :valid?            edits-valid?
+             :logged-in?        logged-in?
+             :user-can-publish? can-publish?
+             :on-discard        #(==> [::events/discard-edits lipas-id])
+             :discard-tooltip   (tr :actions/discard)
+             :on-edit-start     #(==> [::events/edit-site lipas-id geom-type])
+             :edit-tooltip      (tr :actions/edit)
+             :on-publish        #(==> [::events/save-edits lipas-id])
+             :publish-tooltip   (tr :actions/save)
+             :invalid-message   (tr :error/invalid-form)
+             :on-delete         #(==> [::events/delete-site])
+             :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)}))
 
-            ;; Zoom to site
-            (when-not editing?
-              [mui/tooltip {:title (tr :map/zoom-to-site)}
-               [mui/fab
-                {:on-click #(==> [::events/zoom-to-site lipas-id width])
-                 :color    "default"}
-                [mui/icon {:color "secondary"}
-                 "place"]]])
-
-            ;; Import geom
-            (when (and editing? (#{"LineString"} geom-type))
-              [mui/tooltip {:title (tr :map.import/tooltip)}
-               [mui/fab
-                {:on-click #(==> [::events/toggle-import-dialog])
-                 :color    "default"}
-                [:> js/materialIcons.FileUpload]]])
-
-            ;; Draw hole
-            (when (and editing? (#{"Polygon"} geom-type))
-              [mui/tooltip {:title (tr :map/draw-hole)}
-               [mui/fab
-                {:on-click #(if (= sub-mode :drawing-hole)
-                              (==> [::events/start-editing lipas-id :editing geom-type])
-                              (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
-                 :style    (when (= sub-mode :drawing-hole)
-                             {:border (str "5px solid " mui/secondary)})
-                 :color    "default"}
-                [mui/icon "vignette"]]])
-
-            ;; Add new geom
-            (when (and editing? (#{"LineString" "Polygon"} geom-type))
-              [mui/tooltip {:title (tr :map/draw geom-type)}
-               [mui/fab
-                {:on-click #(if (= sub-mode :drawing)
-                              (==> [::events/start-editing lipas-id :editing geom-type])
-                              (==> [::events/start-editing lipas-id :drawing geom-type]))
-                 :style    (when (= sub-mode :drawing)
-                             {:border (str "5px solid " mui/secondary)})
-                 :color    "default"}
-                (if (= geom-type "LineString")
-                  [mui/icon "timeline"]
-                  [mui/icon "change_history"])]])
-
-            ;; Delete geom
-            (when (and editing? (#{"LineString" "Polygon"} geom-type))
-              [mui/tooltip {:title (tr :map/remove geom-type)}
-               [mui/fab
-                {:on-click #(if (= sub-mode :deleting)
-                              (==> [::events/start-editing lipas-id :editing geom-type])
-                              (==> [::events/start-editing lipas-id :deleting geom-type]))
-                 :style    (when (= sub-mode :deleting)
-                             {:border (str "5px solid " mui/secondary)})
-                 :color    "default"}
-                [:> js/materialIcons.Eraser] ]])])
           (remove nil?)
           (map (fn [tool] [mui/grid {:item true} tool]))))]])))
 
@@ -601,13 +611,6 @@
 
           [address-search-dialog]
 
-          [mui/grid {:item true}
-
-           ;; Discard
-           [lui/discard-button
-            {:on-click #(==> [::events/discard-new-site])
-             :tooltip  (tr :actions/discard)}]]
-
           ;; Save
           (when data
             [mui/grid {:item true}
@@ -616,6 +619,13 @@
                :disabled-tooltip (tr :actions/fill-required-fields)
                :disabled         (not new-site-valid?)
                :on-click         #(==> [::events/save-new-site data])}]])
+
+          [mui/grid {:item true}
+
+           ;; Discard
+           [lui/discard-button
+            {:on-click #(==> [::events/discard-new-site])
+             :tooltip  (tr :actions/discard)}]]
 
           ;; Address search button
           [mui/tooltip {:title (tr :map.address-search/tooltip)}
@@ -631,13 +641,16 @@
       [mui/grid
        {:container true :align-items "center" :spacing 8
         :style     {:padding-bottom "0.5em"}}
+
        (when logged-in?
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
+
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
          [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
           [:> js/materialIcons.MapSearchOutline]]]]
+
        (when (= :list result-view)
          [mui/grid {:item true}
           [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
