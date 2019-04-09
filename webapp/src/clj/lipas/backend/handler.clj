@@ -39,10 +39,10 @@
     exception/default-handlers
     exception-handlers
     ;;Prints all stack traces
-    {::exception/wrap
-     (fn [handler e request]
-       (.printStackTrace e)
-       (handler e request))}
+    ;; {::exception/wrap
+    ;;  (fn [handler e request]
+    ;;    (.printStackTrace e)
+    ;;    (handler e request))}
     )))
 
 (defn create-app [{:keys [db emailer search]}]
@@ -283,6 +283,14 @@
            (let [params (:body parameters)]
              {:status 200
               :body   (core/update-reminder-status! db identity params)}))}}]
+
+      ["/actions/get-upcoming-reminders"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :handler
+         (fn [{:keys [identity]}]
+           {:status 200
+            :body   (core/get-users-pending-reminders! identity)})}}]
 
       ["/actions/create-energy-report"
        {:post
