@@ -709,9 +709,8 @@
           [mui/fab
            {:size     (if (utils/mobile? width) "small" "medium")
             :on-click #(==> [::events/toggle-drawer])
-            :variant  "contained"
             :color    "secondary"}
-           [mui/icon "expand_more"]]]])
+           [mui/icon "search"]]]])
 
       ;; Closable left sidebar drawer
       [mui/drawer
