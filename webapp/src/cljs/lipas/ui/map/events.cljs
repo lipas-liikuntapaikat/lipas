@@ -61,6 +61,18 @@
                       (assoc-in [:map :center] center))
       :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
+(re-frame/reg-event-fx
+ ::zoom-to-users-position
+ (fn [_ _]
+   {:lipas.ui.effects/request-geolocation!
+    (fn [position]
+      (let [lon*    (-> position .-coords .-longitude)
+            lat*    (-> position .-coords .-latitude)
+            {:keys [lon lat]} (wgs84->epsg3067 [lon* lat*])]
+        (when (and lon lat)
+          (==> [::set-center lat lon])
+          (==> [::set-zoom 12]))))}))
+
 (re-frame/reg-event-db
  ::set-center
  (fn [db [_ lat lon]]
@@ -84,9 +96,10 @@
 (re-frame/reg-event-db
  ::show-sports-site*
  (fn [db [_ lipas-id]]
-   (-> db
-       (assoc-in [:map :mode :lipas-id] lipas-id)
-       (assoc-in [:map :drawer-open?] true))))
+   (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))]
+     (-> db
+         (assoc-in [:map :mode :lipas-id] lipas-id)
+         (assoc-in [:map :drawer-open?] drawer-open?)))))
 
 ;; Geom editing events ;;
 
@@ -376,7 +389,7 @@
    (-> db
        (update-in [:map :address-search :dialog-open?] not)
        (assoc-in [:map :address-search :keyword] "")
-       (assoc-in [:map :address-search :results] []))))
+      (assoc-in [:map :address-search :results] []))))
 
 (re-frame/reg-event-db
  ::clear-address-search-results
