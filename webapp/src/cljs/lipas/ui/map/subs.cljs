@@ -55,7 +55,7 @@
  :<- [::drawer-open?]
  (fn [[screen-size drawer-open?] _]
    (let [margin 20]
-     (if (and (#{"xs"} screen-size) (not drawer-open?))
+     (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
        [margin margin margin (+ margin 430)])))) ;; drawer width is 430px
 
