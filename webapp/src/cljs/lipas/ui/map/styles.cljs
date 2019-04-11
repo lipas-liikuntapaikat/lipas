@@ -35,19 +35,20 @@
                      #js{:color mui/primary})
             :fill   (ol.style.Fill.
                      #js{:color mui/secondary2})})
-       :geometry (fn [f]
-                   (let [geom-type (-> f .getGeometry .getType)
-                         coords    (case geom-type
-                                     "Polygon"    (-> f
-                                                      .getGeometry
-                                                      .getCoordinates
-                                                      js->clj
-                                                      (as-> $ (mapcat identity $))
-                                                      clj->js)
-                                     "LineString" (-> f .getGeometry .getCoordinates)
-                                     nil)]
-                     (when coords
-                       (ol.geom.MultiPoint. coords))))}))
+       :geometry
+       (fn [f]
+         (let [geom-type (-> f .getGeometry .getType)
+               coords    (case geom-type
+                           "Polygon"    (-> f
+                                            .getGeometry
+                                            .getCoordinates
+                                            js->clj
+                                            (as-> $ (mapcat identity $))
+                                            clj->js)
+                           "LineString" (-> f .getGeometry .getCoordinates)
+                           nil)]
+           (when coords
+             (ol.geom.MultiPoint. coords))))}))
 
 (def edit-style
   (ol.style.Style.
@@ -89,47 +90,50 @@
   (ol.style.Style.
    #js{:stroke hover-stroke
        :fill   default-fill
-       :image  (ol.style.Circle.
-                #js{:radius 7
-                    :fill   default-fill
-                    :stroke hover-stroke})}))
+       :image
+       (ol.style.Circle.
+        #js{:radius 7
+            :fill   default-fill
+            :stroke hover-stroke})}))
 
 (def hover-styles #js[hover-style blue-marker-style])
 
 (defn ->rgba [hex alpha]
   (when (and hex alpha)
     (let [rgb  (gcolor/hexToRgb hex)
-          rgba (doto rgb
-                 (.push alpha))]
+          rgba (doto rgb (.push alpha))]
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
 (defn ->symbol-style [m & {hover? :hover selected? :selected}]
-  (let [fill-alpha   (case (:shape m)
-                       "polygon" (if hover? 0.3 0.2)
-                       0.85)
-        fill-color   (-> m :fill :color (->rgba fill-alpha))
-        fill         (ol.style.Fill. #js{:color fill-color})
-        stroke-alpha (case (:shape m)
-                       "polygon" 0.6
-                       0.9)
-        stroke-width (if ((comp #{"polygon"} :shape) m) 1.5 3)
-        stroke-hover-width (if ((comp #{"polygon"} :shape) m) 3 7)
-        stroke-color (-> m :stroke :color (->rgba stroke-alpha))
-        stroke-black (ol.style.Stroke. #js{:color "#00000" :width 1})
-        stroke       (ol.style.Stroke. #js{:color stroke-color
-                                           :lineDash (when (or selected? hover?)
-                                                       #js[3 8])
-                                           :width (if (or selected? hover?)
-                                                    stroke-hover-width
-                                                    stroke-width)})
-        style (ol.style.Style.
-               #js{:stroke stroke
-                   :fill   fill
-                   :image  (when-not (#{"polygon" "linestring"} (:shape m))
-                             (ol.style.Circle.
-                              #js{:radius (if hover? 8 7)
-                                  :fill   fill
-                                  :stroke (if hover? hover-stroke stroke-black)}))})]
+  (let [fill-alpha         (case (:shape m)
+                             "polygon" (if hover? 0.3 0.2)
+                             0.85)
+        fill-color         (-> m :fill :color (->rgba fill-alpha))
+        fill               (ol.style.Fill. #js{:color fill-color})
+        stroke-alpha       (case (:shape m)
+                             "polygon" 0.6
+                             0.9)
+
+        stroke-width       (-> m :stroke :width)
+        stroke-hover-width (* 2 stroke-width)
+        stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
+        stroke-black       (ol.style.Stroke. #js{:color "#00000" :width 1})
+        stroke             (ol.style.Stroke. #js{:color    stroke-color
+                                                 :lineDash (when (or selected? hover?)
+                                                             #js[2 8])
+                                                 :width    (if (or selected? hover?)
+                                                             stroke-hover-width
+                                                             stroke-width)})
+        style              (ol.style.Style.
+                            #js{:stroke stroke
+                                :fill   fill
+                                :zIndex (if selected? 100 99)
+                                :image
+                                (when-not (#{"polygon" "linestring"} (:shape m))
+                                  (ol.style.Circle.
+                                   #js{:radius (if hover? 8 7)
+                                       :fill   fill
+                                       :stroke (if hover? hover-stroke stroke-black)}))})]
 
     (if (and selected? (:shape m))
       #js[style red-marker-style]
@@ -146,14 +150,29 @@
 (def selected-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :selected true))) {} styleset))
 
-(defn feature-style [f]
-  (let [type-code (.get f "type-code")]
-    (get symbols type-code)))
+(defn shift-likely-overlapping!
+  [type-code style resolution f]
+  (when (#{4402} type-code)
+    (let [delta (* resolution 4)
+          copy  (-> f .getGeometry .clone)]
+      (doto style
+        (.setGeometry (doto copy
+                        (.translate delta delta)))))))
 
-(defn feature-style-hover [f]
-  (let [type-code (.get f "type-code")]
-    (get hover-symbols type-code)))
+(defn feature-style [f resolution]
+  (let [type-code (.get f "type-code")
+        style     (get symbols type-code)]
+    (shift-likely-overlapping! type-code style resolution f)
+    style))
 
-(defn feature-style-selected [f]
-  (let [type-code (.get f "type-code")]
-    (get selected-symbols type-code)))
+(defn feature-style-hover [f resolution]
+  (let [type-code (.get f "type-code")
+        style     (get hover-symbols type-code)]
+    (shift-likely-overlapping! type-code style resolution f)
+    style))
+
+(defn feature-style-selected [f resolution]
+  (let [type-code (.get f "type-code")
+        style     (get selected-symbols type-code)]
+    (shift-likely-overlapping! type-code (first style) resolution f)
+    style))
