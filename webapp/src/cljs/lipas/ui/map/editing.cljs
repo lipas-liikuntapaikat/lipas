@@ -63,7 +63,7 @@
         modify   (ol.interaction.Modify. #js{:source source})
         hover    (ol.interaction.Select.
                   #js{:layers    #js[layer]
-                      :style     #js[styles/hover-style styles/vertices-style]
+                      :style     #js[styles/editing-hover-style styles/vertices-style]
                       :condition ol.events.condition.pointerMove})]
 
     (.addInteraction lmap hover)
