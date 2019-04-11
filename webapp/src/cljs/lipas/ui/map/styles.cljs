@@ -54,8 +54,7 @@
   (ol.style.Style.
    #js{:stroke
        (ol.style.Stroke.
-        #js{:width 3
-            :color "blue"})
+        #js{:width 3 :color "blue"})
        :fill default-fill
        :image
        (ol.style.Circle.
@@ -90,6 +89,16 @@
   (ol.style.Style.
    #js{:stroke hover-stroke
        :fill   default-fill
+       :image
+       (ol.style.Circle.
+        #js{:radius 7
+            :fill   default-fill
+            :stroke hover-stroke})}))
+
+(def editing-hover-style
+  (ol.style.Style.
+   #js{:stroke hover-stroke
+       :fill   (ol.style.Fill. #js{:color "rgba(255,255,0,0.2)"})
        :image
        (ol.style.Circle.
         #js{:radius 7
