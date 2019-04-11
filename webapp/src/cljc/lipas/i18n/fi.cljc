@@ -9,11 +9,10 @@
 
 (def translations
   {:menu
-   {:headline      "LIPAS"
-    :headline-test "LIPAS-TESTAUS"
-    :main-menu     "Päävalikko"
-    :jyu           "Jyväskylän yliopisto"
-    :frontpage     "Etusivu"}
+   {:headline  "LIPAS"
+    :main-menu "Päävalikko"
+    :jyu       "Jyväskylän yliopisto"
+    :frontpage "Etusivu"}
 
    :restricted
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
