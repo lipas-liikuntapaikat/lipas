@@ -135,7 +135,6 @@
     (db/add-reminder! db m)))
 
 (defn update-reminder-status! [db user {:keys [id] :as params}]
-  (prn user)
   (let [exists (->> user
                     (get-users-pending-reminders! db)
                     (map :id)
