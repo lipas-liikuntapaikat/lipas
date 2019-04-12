@@ -2,6 +2,7 @@
   (:require
    ["ol"]
    [goog.object :as gobj]
+   [goog.array :as garray]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
@@ -21,18 +22,6 @@
         snap   (ol.interaction.Snap. #js{:source source})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
-
-;; Splitter needs to be added before other interactions
-(defn enable-splitter! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
-  ;; TODO figure out what's wrong
-  ;; (let [source   (-> layers :overlays :edits .getSource)
-  ;;       _ (prn "source...")
-  ;;       _ (js/console.log (.getFeaturesCollection source))
-  ;;       splitter (ol.interaction.Splitter. #js{:source source})]
-  ;;   (.addInteraction lmap splitter)
-  ;;   (assoc-in map-ctx [:interactions :splitter] splitter)
-  ;;   )
-  map-ctx)
 
 (defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
@@ -66,33 +55,39 @@
 
 (defn start-editing! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                       geoJSON-feature on-modifyend]
-  (let [layer     (-> layers :overlays :edits)
-        source    (.getSource layer)
-        features  (-> geoJSON-feature clj->js map-utils/->ol-features)
-        _         (.addFeatures source features)
-        modify    (ol.interaction.Modify. #js{:source source})
-        geom-type (-> geoJSON-feature :features first :geometry :type)
-        hover     (ol.interaction.Select.
-                   #js{:layers    #js[layer]
-                       :style     #js[styles/hover-style styles/vertices-style]
-                       :condition ol.events.condition.pointerMove})]
+  (let [layer    (-> layers :overlays :edits)
+        source   (.getSource layer)
+        _        (.clear source)
+        features (-> geoJSON-feature clj->js map-utils/->ol-features)
+        _        (.addFeatures source features)
+        modify   (ol.interaction.Modify. #js{:source source})
+        hover    (ol.interaction.Select.
+                  #js{:layers    #js[layer]
+                      :style     #js[styles/editing-hover-style styles/vertices-style]
+                      :condition ol.events.condition.pointerMove})]
 
     (.addInteraction lmap hover)
+    (.addInteraction lmap modify)
 
-    (let [new-ctx (if (#{"LineString" "Polygon"} geom-type)
-                    (enable-splitter! map-ctx)
-                    map-ctx)]
+    (.on modify "modifyend"
+         (fn [e]
+           (let [fixed (-> source
+                           .getFeatures
+                           map-utils/fix-features)]
 
-      (.addInteraction lmap modify)
-      (.on modify "modifyend"
-           (fn [e]
-             (on-modifyend (map-utils/->geoJSON-clj (.getFeatures source)))))
+             (.clear source)
+             (.addFeatures source fixed)
 
-      (-> new-ctx
-          (assoc-in [:interactions :modify] modify)
-          (assoc-in [:interactions :hover] hover)
-          enable-snapping!
-          (map-utils/fit-to-extent! (.getExtent source))))))
+             (-> source
+                 .getFeatures
+                 map-utils/->geoJSON-clj
+                 on-modifyend))))
+
+    (-> map-ctx
+        (assoc-in [:interactions :modify] modify)
+        (assoc-in [:interactions :hover] hover)
+        ;;(map-utils/fit-to-extent! (.getExtent source))
+        enable-snapping!)))
 
 (defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
                            on-modifyend]
@@ -113,22 +108,28 @@
         draw   (ol.interaction.Draw.
                 #js{:snapTolerance 0 :source source :type geom-type})]
 
-    (let [new-ctx (if  (#{"LineString" "Polygon"} geom-type)
-                    (enable-splitter! map-ctx)
-                    map-ctx)]
 
-      (.addInteraction lmap draw)
-      (.on draw "drawend"
-           (fn [e]
-             (let [f (gobj/get e "feature")
-                   _ (.setId f (str (gensym temp-fid-prefix)))]
-               (.addFeature source f)
-               (on-draw-end (map-utils/->geoJSON-clj (.getFeatures source))))))
+    (.addInteraction lmap draw)
+    (.on draw "drawend"
+         (fn [e]
+           (let [f     (gobj/get e "feature")
+                 _     (.setId f (str (gensym temp-fid-prefix)))
+                 fs    (.getFeatures source)
+                 _     (.push fs f)
+                 fixed (map-utils/fix-features fs)]
 
-      (-> new-ctx
-          (assoc-in [:interactions :draw] draw)
-          map-utils/clear-markers!
-          enable-snapping!))))
+             (.clear source)
+             (.addFeatures source fixed)
+
+             (-> source
+                 .getFeatures
+                 map-utils/->geoJSON-clj
+                 on-draw-end))))
+
+    (-> map-ctx
+        (assoc-in [:interactions :draw] draw)
+        map-utils/clear-markers!
+        enable-snapping!)))
 
 (defn refresh-edits!
   [{:keys [layers] :as map-ctx}

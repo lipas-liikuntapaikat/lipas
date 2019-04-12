@@ -9,11 +9,10 @@
 
 (def translations
   {:menu
-   {:headline      "LIPAS"
-    :headline-test "LIPAS-TESTAUS"
-    :main-menu     "Päävalikko"
-    :jyu           "Jyväskylän yliopisto"
-    :frontpage     "Etusivu"}
+   {:headline  "LIPAS"
+    :main-menu "Päävalikko"
+    :jyu       "Jyväskylän yliopisto"
+    :frontpage "Etusivu"}
 
    :restricted
    {:login-or-register "Kirjaudu sisään tai rekisteröidy"}
@@ -119,7 +118,12 @@
     :country-avg         "(maan keskiarvo)"
     :sports-sites-count  "Liikuntapaikkojen lkm"
     :filter-cities       "Rajaa kunnat"
-    :filter-types        "Rajaa tyypit"}
+    :filter-types        "Rajaa tyypit"
+    :m2-count            "Liikuntapinta-ala m² ilmoitettu lkm"
+    :m2-avg              "Liikuntapinta-ala m² keskiarvo"
+    :m2-min              "Liikuntapinta-ala m² min"
+    :m2-max              "Liikuntapinta-ala m² max"
+    :population          "Asukasluku"}
 
    :ice
    {:headline    (str "Jäähalli" ZWSP "portaali")
@@ -629,6 +633,18 @@
    {:save-success "Tallennus onnistui"
     :save-failed  "Tallennus epäonnistui"
     :get-failed   "Tietojen hakeminen epäonnistui."}
+
+   :reminders
+   {:title            "Lisää muistutus"
+    :placeholder      "Muista tarkistaa liikuntapaikka \"{1}\" {2}"
+    :description      "Viesti lähetetään sähköpostiisi valittuna ajankohtana"
+    :select-date      "Valitse päivämäärä"
+    :message          "Viesti"
+    :tomorrow         "Huomenna"
+    :in-a-week        "Viikon kuluttua"
+    :after-one-month  "Kuukauden kuluttua"
+    :after-six-months "Puolen vuoden kuluttua"
+    :in-a-year        "Vuoden kuluttua"}
 
    :disclaimer
    {:headline     "HUOMIO!"

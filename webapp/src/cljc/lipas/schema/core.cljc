@@ -9,6 +9,7 @@
    [lipas.data.ice-stadiums :as ice-stadiums]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
+   [lipas.data.reminders :as reminders]
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
@@ -112,6 +113,27 @@
 
 (s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
 
+
+;;; Reminder ;;;
+
+(s/def :lipas.reminder/id uuid?)
+(s/def :lipas.reminder/created-at :lipas/timestamp)
+(s/def :lipas.reminder/event-date :lipas/timestamp)
+(s/def :lipas.reminder/status (into #{} (keys reminders/statuses)))
+(s/def :lipas.reminder.body/message (str-in 1 2048))
+(s/def :lipas.reminder/body
+  (s/keys :req-un [:lipas.reminder.body/message]))
+
+(s/def :lipas/new-reminder
+  (s/keys :req-un [:lipas.reminder/event-date
+                   :lipas.reminder/body]))
+
+(s/def :lipas/reminder
+  (s/merge :lipas/new-reminder
+           (s/keys :req-un [:lipas.reminder/id
+                            :lipas.reminder/created-at
+                            :lipas.reminder/status])))
+
 ;;; User ;;;
 
 (s/def :lipas.user/id uuid?)
@@ -204,9 +226,10 @@
                                     ::geojson/feature-collection
                                     lipas-point-feature-gen))
 
-(comment (s/valid?
-          ::geojson/feature-collection
-          (gen/generate (s/gen :lipas.location/geometries))))
+(comment
+  (s/valid?
+   ::geojson/feature-collection
+   (gen/generate (s/gen :lipas.location/geometries))))
 
 ;;; Sports site ;;;
 

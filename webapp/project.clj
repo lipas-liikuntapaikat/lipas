@@ -6,7 +6,7 @@
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
-   [metosin/reitit "0.2.12"]
+   [metosin/reitit "0.3.1"]
 
    ;;; Frontend ;;;
    [org.clojure/clojurescript "1.10.520"]
@@ -119,13 +119,14 @@
       [{:file           "dist/index.bundle.js"
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"]
-        :global-exports {ol            ol        zipcelx            zipcelx
-                         filesaver     filesaver react              React
-                         react-dom     ReactDOM  "react-dom/server" ReactDOMServer
-                         mui           mui       proj4              proj4
-                         recharts      recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         mui-downshift MuiDownshift}}]
+                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"
+                         "turf"]
+        :global-exports {ol            ol           zipcelx            zipcelx
+                         filesaver     filesaver    react              React
+                         react-dom     ReactDOM     "react-dom/server" ReactDOMServer
+                         mui           mui          proj4              proj4
+                         recharts      recharts     react-autosuggest  "cljsjs.react-autosuggest"
+                         mui-downshift MuiDownshift turf               turf}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "js/compiled/out"
@@ -147,13 +148,14 @@
       [{:file           "dist/index.bundle.js"
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"]
-        :global-exports {ol            ol        zipcelx            zipcelx
-                         filesaver     filesaver react              React
-                         react-dom     ReactDOM  "react-dom/server" ReactDOMServer
-                         mui           mui       proj4              proj4
-                         recharts      recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         mui-downshift MuiDownshift}}]
+                         "recharts" "proj4" "cljsjs.react-autosuggest" "mui-downshift"
+                         "turf"]
+        :global-exports {ol            ol           zipcelx            zipcelx
+                         filesaver     filesaver    react              React
+                         react-dom     ReactDOM     "react-dom/server" ReactDOMServer
+                         mui           mui          proj4              proj4
+                         recharts      recharts     react-autosuggest  "cljsjs.react-autosuggest"
+                         mui-downshift MuiDownshift turf               turf}}]
       :output-to       "resources/public/js/compiled/app.js"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}

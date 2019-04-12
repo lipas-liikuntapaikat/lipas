@@ -3,7 +3,9 @@
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
    [lipas.backend.db.city :as city]
+   [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
+   [lipas.backend.db.reminder :as reminder]
    [lipas.backend.db.sports-site :as sports-site]
    [lipas.backend.db.user :as user]
    [lipas.backend.db.utils :as db-utils]
@@ -43,6 +45,11 @@
   (->> user
        (user/marshall)
        (user/update-user-history! db-spec)))
+
+(defn update-user-data! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-data! db-spec)))
 
 (defn reset-user-password! [db-spec user]
   (->> user
@@ -185,6 +192,39 @@
        (city/get-by-city-codes db-spec)
        (map city/unmarshall)))
 
+;; Reminders ;;
+
+(defn add-reminder! [db-spec params]
+  (->> params
+       reminder/marshall
+       (reminder/insert! db-spec)
+       reminder/unmarshall))
+
+(defn update-reminder-status! [db-spec params]
+  (reminder/update-status! db-spec params))
+
+(defn get-overdue-reminders [db-spec]
+  (->> (reminder/get-overdue db-spec)
+       (map reminder/unmarshall)))
+
+(defn get-users-pending-reminders [db-spec user-id]
+  (->> {:status "pending" :account-id user-id}
+       utils/->snake-case-keywords
+       (reminder/get-by-user-and-status db-spec)
+       (map reminder/unmarshall)))
+
+;; Scheduled emails queue ;;
+
+(defn get-email-out-queue! [db-spec]
+  (->> (email/get-out-queue db-spec)
+       (map email/unmarshall)))
+
+(defn add-email-to-out-queue! [db-spec params]
+  (email/add-to-out-queue! db-spec params))
+
+(defn delete-email-from-out-queue! [db-spec params]
+  (email/delete-from-out-queue! db-spec params))
+
 ;; DB connection pooling ;;
 
 (defn- ->hikari-opts [{:keys [dbtype dbname host user port password]}]
@@ -211,4 +251,8 @@
   (delete-from-integration-out-queue db-spec 234)
   (hikari/validate-options (->hikari-opts db-spec))
   (def cp1 (setup-connection-pool db-spec))
-  (get-user-by-email cp1 {:email "admin@lipas.fi"}))
+  (get-user-by-email cp1 {:email "admin@lipas.fi"})
+  (add-reminder! db-spec {:account-id "94b1344e-6e06-4ebb-bfd8-1be28b2f511e"
+                          :event-date "2019-01-01T00:00:00.000Z"
+                          :status     "pending"
+                          :body       {:message "Muista banaani"}}))

@@ -18,3 +18,9 @@
  ::save-as!
  (fn [{:keys [blob filename]}]
    (filesaver/saveAs blob filename)))
+
+(re-frame/reg-fx
+ ::request-geolocation!
+ (fn  [cb]
+   (when-let [geolocation (-> js/navigator .-geolocation)]
+     (.getCurrentPosition geolocation cb))))

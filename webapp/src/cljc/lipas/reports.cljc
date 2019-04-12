@@ -344,17 +344,21 @@
    (fn [res m]
      (let [city-code   (:key m)
            population  (pop-data city-code)
-           m2-total    (-> m :area_m2_sum :value)
+           m2-sum      (-> m :area_m2_stats :sum)
            sites-count (:doc_count m)
            entry       {:population         population
-                        :m2-total           m2-total
+                        :m2-total           m2-sum
+                        :m2-count           (-> m :area_m2_stats :count)
+                        :m2-avg             (-> m :area_m2_stats :avg)
+                        :m2-min             (-> m :area_m2_stats :min)
+                        :m2-max             (-> m :area_m2_stats :max)
                         :sites-count        sites-count
                         :sites-count-p1000c (when (and population sites-count)
                                               (double
                                                (/ sites-count
                                                   (/ population 1000))))
-                        :m2-pc              (when (and population m2-total)
-                                              (double (/ m2-total population)))}]
+                        :m2-pc              (when (and population m2-sum)
+                                              (double (/ m2-sum population)))}]
        (assoc res city-code entry)))
    {}
    m2-data))
@@ -367,17 +371,21 @@
                          pop-data ;; all
                          (select-keys pop-data city-codes))
            population  (->> populations vals (reduce +))
-           m2-total    (-> m :area_m2_sum :value)
+           m2-sum      (-> m :area_m2_stats :sum)
            sites-count (:doc_count m)
            entry       {:population         population
-                        :m2-total           m2-total
+                        :m2-total           m2-sum
+                        :m2-count           (-> m :area_m2_stats :count)
+                        :m2-avg             (-> m :area_m2_stats :avg)
+                        :m2-min             (-> m :area_m2_stats :min)
+                        :m2-max             (-> m :area_m2_stats :max)
                         :sites-count        sites-count
                         :sites-count-p1000c (when (and population sites-count)
                                               (double
                                                (/ sites-count
                                                   (/ population 1000))))
-                        :m2-pc              (when (and population m2-total)
-                                              (double (/ m2-total population)))}]
+                        :m2-pc              (when (and population m2-sum)
+                                              (double (/ m2-sum population)))}]
        (assoc res type-code entry)))
    {}
    m2-data))

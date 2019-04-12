@@ -11,6 +11,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
    [lipas.ui.register.views :as register]
+   [lipas.ui.reminders.views :as reminders]
    [lipas.ui.stats.views :as stats]
    [lipas.ui.subs :as subs]
    [lipas.ui.swimming-pools.views :as swimming-pools]
@@ -88,6 +89,9 @@
 
         ;; Main panel
         [show-panel active-panel tr logged-in?]
+
+        ;; Reminders dialog
+        [reminders/dialog]
 
         ;; Global UI-blocking confirmation dialog
         (when confirmation

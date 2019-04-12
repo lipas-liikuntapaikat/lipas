@@ -291,6 +291,7 @@
           (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
                           (update :m2-pc round-safe 5)
+                          (update :m2-avg round-safe 5)
                           (update :sites-count-p1000c round-safe 5))))))))
 
 (re-frame/reg-sub
@@ -299,7 +300,12 @@
  :<- [::sports-stats-metrics]
  (fn [[tr metrics] _]
    (let [locale (tr)]
-     (into {} (map (juxt (comp keyword first) (comp locale second)) metrics)))))
+     (into {:population (tr :stats/population)
+            :m2-count   (tr :stats/m2-count)
+            :m2-avg     (tr :stats/m2-avg)
+            :m2-min     (tr :stats/m2-min)
+            :m2-max     (tr :stats/m2-max)}
+           (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub
  ::sports-stats-headers
@@ -308,9 +314,14 @@
  :<- [::selected-sports-stats-grouping]
  (fn [[tr metrics grouping] _]
    (let [locale (tr)]
-     (into [(if (= "location.city.city-name" grouping)
+     (into [(if (= "location.city.city-code" grouping)
               [:city-name (tr :lipas.location/city)]
-              [:type-name (tr :lipas.sports-site/type)])]
+              [:type-name (tr :lipas.sports-site/type)])
+            [:population (tr :stats/population)]
+            [:m2-total (tr :stats/m2-total)]
+            [:m2-avg (tr :stats/m2-avg)]
+            [:m2-min (tr :stats/m2-min)]
+            [:m2-max (tr :stats/m2-max)]]
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub

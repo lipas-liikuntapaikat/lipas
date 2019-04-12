@@ -109,6 +109,7 @@
                #js{:layers    #js[(-> layers :overlays :vectors)
                                   (-> layers :overlays :markers)]
                    :style     styles/feature-style-hover
+                   :multi     true
                    :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
@@ -120,15 +121,20 @@
     (.on hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")
-                 f1       (aget selected 0)
-                 lipas-id (when f1 (.get f1 "lipas-id"))
-                 fs       (map-utils/find-features-by-lipas-id
-                           {:layers layers} lipas-id)]
+                 selected (gobj/get e "selected")]
 
-             (doto (.getFeatures hover)
-               (.clear)
-               (.extend fs))
+             ;; Uncommenting this would enable selecting all geoms
+             ;; attached to Lipas-ID on hover. However this causes
+             ;; terrible flickering and workaround hasn't been found
+             ;; yet.
+             ;;
+             ;; (let [f1       (aget selected 0)
+             ;;       lipas-id (when f1 (.get f1 "lipas-id"))
+             ;;       fs       (map-utils/find-features-by-lipas-id
+             ;;                 {:layers layers} lipas-id)]
+             ;;   (doto (.getFeatures hover)
+             ;;     (.clear)
+             ;;     (.extend fs)))
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
