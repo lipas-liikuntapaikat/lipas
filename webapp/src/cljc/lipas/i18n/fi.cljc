@@ -654,6 +654,7 @@
 
    :map
    {:add-to-map         "Lisää kartalle"
+    :zoom-to-user       "Kohdista nykyiseen sijaintiini"
     :zoom-to-site       "Kohdista kartta liikuntapaikkaan"
     :center-map-to-site "Kohdista kartta liikuntapaikkaan"
     :zoom-closer        "Kartta täytyy zoomata lähemmäs"
