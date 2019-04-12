@@ -150,6 +150,12 @@
       [mui/typography {:variant "caption"}
        (tr :map.basemap/copyright)]]]))
 
+(defn user-location-btn [{:keys [tr]}]
+  [mui/tooltip {:title (tr :map/zoom-to-user)}
+   [mui/fab {:size "small" :on-click #(==> [::events/zoom-to-users-position])}
+    [mui/icon {:color "default" :font-size "default"}
+     "my_location"]]])
+
 (defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)]
     (let [locale (tr)]
@@ -320,7 +326,7 @@
               [mui/fab
                {:on-click #(==> [::events/download-gpx lipas-id])
                 :color    "default"}
-               ".gpx"]])
+               [mui/icon "save_alt"]]])
 
            ;; Zoom to site
            (when-not editing?
@@ -738,14 +744,22 @@
            [sports-site-view {:tr tr :site-data selected-site :width width}]
            [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
 
-     ;; Layer switcher (bottom right)
+     ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
-      [mui/paper
-       {:elevation 1
-        :style
-        {:background-color "rgba(255,255,255,0.9)"
-         :margin           "0.25em" :padding-left "0.5em" :padding-right "0.5em"}}
-       [layer-switcher {:tr tr}]]]
+      [mui/grid {:container true :align-items "center"}
+
+       ;; Zoom to users location btn
+       [mui/grid {:item true}
+        [user-location-btn {:tr tr}]]
+
+       ;; Layer switcher
+       [mui/grid {:item true}
+        [mui/paper
+         {:elevation 1
+          :style
+          {:background-color "rgba(255,255,255,0.9)"
+           :margin           "0.25em" :padding-left "0.5em" :padding-right "0.5em"}}
+         [layer-switcher {:tr tr}]]]]]
 
      ;; We use this div to bind Popper to OpenLayers overlay
      [:div {:id "popup-anchor"}]
