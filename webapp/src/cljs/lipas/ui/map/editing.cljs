@@ -86,9 +86,8 @@
     (-> map-ctx
         (assoc-in [:interactions :modify] modify)
         (assoc-in [:interactions :hover] hover)
-        enable-snapping!
         ;;(map-utils/fit-to-extent! (.getExtent source))
-        )))
+        enable-snapping!)))
 
 (defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
                            on-modifyend]

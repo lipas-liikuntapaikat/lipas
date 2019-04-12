@@ -159,115 +159,139 @@
 
   (assoc map-ctx :interactions {}))
 
-(defn- ->splitter [fcoll]
-  (let [fs (gobj/get fcoll "features")]
-    (case (count fs)
-      1 (first fs)
-      (-> fcoll
-          turf/combine
-          (gobj/getValueByKeys "features" 0 "geometry")))))
+;; (defn- ->splitter [fcoll]
+;;   (let [fs (gobj/get fcoll "features")]
+;;     (case (count fs)
+;;       1 (first fs)
+;;       (-> fcoll
+;;           turf/combine
+;;           (gobj/getValueByKeys "features" 0 "geometry")))))
 
-(defn- split-by-kinks [f kinks]
-  (let [splitter (->splitter kinks)
-        fid      (gobj/get f "id")
-        splitted (turf/lineSplit f splitter)]
+;; (defn- split-by-kinks [f kinks]
+;;   (let [splitter (->splitter kinks)
+;;         fid      (gobj/get f "id")
+;;         splitted (turf/lineSplit f splitter)]
+;;     (garray/forEach (gobj/get splitted "features")
+;;                     (fn [f] (gobj/set f "id" (str (gensym fid)))))
+;;     splitted))
 
-    (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (gensym fid)))))
-    splitted))
+;; (defn fix-kinks [ol-feature]
+;;   (let [f     (.writeFeatureObject geoJSON ol-feature)
+;;         kinks (turf/kinks f)]
+;;     (if (-> kinks (gobj/get "features") not-empty)
+;;       (-> (split-by-kinks f kinks) ->ol-features)
+;;       #js[ol-feature])))
 
-(defn fix-kinks [ol-feature]
-  (let [f     (.writeFeatureObject geoJSON ol-feature)
-        kinks (turf/kinks f)]
-    (if (-> kinks (gobj/get "features") not-empty)
-      (-> (split-by-kinks f kinks) ->ol-features)
-      #js[ol-feature])))
+;; (defn merge-candidates [start end lines]
+;;   (->> lines
+;;        (filter #(some #{start end} [(first %) (last %)]))))
 
-(defn merge-candidates [start end lines]
-  (->> lines
-       (filter #(some #{start end} [(first %) (last %)]))))
+;; (def cat-dedupe (comp cat (dedupe)))
 
-(def cat-dedupe (comp cat (dedupe)))
+;; (defn- join-lines
+;;   "Joins l1 and l2 from corresponding elements in head or tail
+;;   position. l1 or l2 may be reversed during the process.
 
-(defn- join-lines
-  "Joins l1 and l2 from corresponding elements in head or tail
-  position. l1 or l2 may be reversed during the process.
+;;   Examples:
+;;   [1 2 3] [3 4 5] => [1 2 3 4 5]
+;;   [1 2 3] [4 5 3] => [1 2 3 5 4]
+;;   [1 2 3] [1 4 5] => [3 2 1 4 5]
+;;   [1 2 3] [4 5 1] => [4 5 1 2 3]"
+;;   [l1 l2]
+;;   (cond
+;;     (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
+;;     (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
+;;     (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
+;;     (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
 
-  Examples:
-  [1 2 3] [3 4 5] => [1 2 3 4 5]
-  [1 2 3] [4 5 3] => [1 2 3 5 4]
-  [1 2 3] [1 4 5] => [3 2 1 4 5]
-  [1 2 3] [4 5 1] => [4 5 1 2 3]"
-  [l1 l2]
-  (cond
-    (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
-    (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
-    (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
-    (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
+;; (defn merge-linestrings* [lines]
+;;   (loop [wip {:res [] :todo lines}]
 
-(defn merge-linestrings* [lines]
-  (loop [wip {:res [] :todo lines}]
+;;     ;; End condition
+;;     (if (-> wip :todo empty?)
+;;       (:res wip)
 
-    ;; End condition
-    (if (-> wip :todo empty?)
-      (:res wip)
+;;       (let [line   (-> wip :todo first)
+;;             others (-> wip :todo (disj line))
+;;             start  (first line)
+;;             end    (last line)]
 
-      (let [line   (-> wip :todo first)
-            others (-> wip :todo (disj line))
-            start  (first line)
-            end    (last line)]
+;;         (if (= start end)
 
-        (if (= start end)
+;;           ;; Closed ring (can't merge)
+;;           (recur
+;;            (-> wip
+;;                (update :res conj line)
+;;                (assoc :todo others)))
 
-          ;; Closed ring (can't merge)
-          (recur
-           (-> wip
-               (update :res conj line)
-               (assoc :todo others)))
+;;           ;; Merge if exactly 1 candidate is found
+;;           (let [candidates (merge-candidates start end others)]
+;;             (if (= 1 (count candidates))
 
-          ;; Merge if exactly 1 candidate is found
-          (let [candidates (merge-candidates start end others)]
-            (if (= 1 (count candidates))
+;;               (let [line2 (first candidates)]
+;;                 (recur
+;;                  (-> wip
+;;                      (update :res conj (join-lines line line2))
+;;                      (update :todo disj line line2))))
 
-              (let [line2 (first candidates)]
-                (recur
-                 (-> wip
-                     (update :res conj (join-lines line line2))
-                     (update :todo disj line line2))))
+;;               (recur
+;;                (-> wip
+;;                    (update :res conj line)
+;;                    (update :todo disj line))))))))))
 
-              (recur
-               (-> wip
-                   (update :res conj line)
-                   (update :todo disj line))))))))))
+;; (defn merge-linestrings [{:keys [features] :as fcoll}]
+;;   (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
+;;     (if (> 2 (count lines))
+;;       fcoll
+;;       (assoc fcoll :features
+;;               (->> (merge-linestrings* lines)
+;;                    (map-indexed
+;;                     (fn [idx coords]
+;;                       {:type "Feature"
+;;                        :geometry
+;;                        {:type        "LineString"
+;;                         :coordinates coords}
+;;                        :id   (str (gensym))}))
+;;                    (into []))))))
 
-(defn merge-linestrings [{:keys [features] :as fcoll}]
-  (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
-    (if (> 2 (count lines))
-      fcoll
-      (assoc fcoll :features
-              (->> (merge-linestrings* lines)
-                   (map-indexed
-                    (fn [idx coords]
-                      {:type "Feature"
-                       :geometry
-                       {:type        "LineString"
-                        :coordinates coords}
-                       :id   (str (gensym))}))
-                   (into []))))))
+;; (defn- split-by-intersections* [l1 l2]
+;;   (let [intersections (turf/lineIntersect l1 l2)]
+;;     (if (-> intersections (gobj/get "features") not-empty)
+;;       (let [ls1 (split-by-kinks l1 intersections)
+;;             ls2 (split-by-kinks l2 intersections)]
+;;         (-> #js[] (.concat (gobj/get ls1 "features")
+;;                            (gobj/get ls2 "features"))))
+;;       #js[l1 l2])))
 
-(defn fix-linestrings [ol-features]
-  (-> ol-features
-      ->geoJSON-clj
-      merge-linestrings
-      clj->js
-      ->ol-features
-      (garray/concatMap fix-kinks)))
+;; (defn- split-by-intersections [fcoll]
+;;   (let [fs (.reduce
+;;             (gobj/get fcoll "features")
+;;             (fn [res f]
+;;               (if (empty? res)
+;;                 (.push res f)
+;;                 (.forEach res (fn [f2]
+;;                                 (.concat res (split-by-intersections f2 f))))))
+;;             #js[])]
+;;     (gobj/set fcoll "features" fs)))
+
+;; ;; (garray/concatMap fix-kinks)
+;; (defn fix-linestrings [ol-features]
+;;   (-> ol-features
+;;       ->geoJSON-clj
+;;       merge-linestrings
+;;       clj->js
+;;       split-by-intersections
+;;       ))
+
+;; (defn fix-features [ol-features]
+;;   (let [geom-type (-> ol-features first .getGeometry .getType)]
+;;     (case geom-type
+;;       "LineString" (fix-linestrings ol-features)
+;;       ol-features)))
 
 (defn fix-features [ol-features]
-  (let [geom-type (-> ol-features first .getGeometry .getType)]
-    (case geom-type
-      "LineString" (fix-linestrings ol-features)
-      ol-features)))
+  ;; TODO
+  ol-features)
 
 (comment
   (def easy
@@ -336,6 +360,8 @@
   (-> kink clj->js fix-kinks)
   (merge-line-strings kink)
 
+  (turf/lineIntersect (clj->js kink) (clj->js kink))
+
   (def kinks
     {:type "FeatureCollection",
      :features
@@ -351,6 +377,8 @@
          [25.7480658612651 62.60963167475782]]}}]})
 
   (fix-kinks kinks)
+
+  (turf/lineIntersect (clj->js kink) (clj->js kinks))
 
   (join-lines [1 2 3] [3 4 5])
   (join-lines [1 2 3] [4 5 3])
