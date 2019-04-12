@@ -359,10 +359,12 @@ window.reactVirtualized = {
 // Turf.js
 import kinks from '@turf/kinks';
 import lineSplit from '@turf/line-split';
+import lineIntersect from '@turf/line-intersect';
 import combine from '@turf/combine';
 
 window.turf = {
   kinks,
   lineSplit,
+  lineIntersect,
   combine,
 };
