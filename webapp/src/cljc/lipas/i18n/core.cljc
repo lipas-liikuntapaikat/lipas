@@ -23,7 +23,7 @@
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
 
-(defn- append-data! [locale m]
+(defn append-data! [locale m]
   (->>
    {:status                    (->translations locale sports-sites/statuses)
     :admin                     (->translations locale admins/all)

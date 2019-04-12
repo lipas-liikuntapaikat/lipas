@@ -259,8 +259,7 @@
         resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
                        (mock/content-type "application/json")
                        (mock/body (->json site))
-                       (token-header token)))
-        _     (prn (<-json (:body resp)))]
+                       (token-header token)))]
     (is (= 400 (:status resp)))))
 
 (deftest upsert-sports-site-no-permissions-test
@@ -451,6 +450,35 @@
                       (mock/content-type "application/json")
                       (mock/body (->json {:type-code 3110 :year 2017}))))]
     (is (= 200 (:status resp)))))
+
+
+(deftest add-reminder-test
+  (let [user     (gen-user {:db? true})
+        token    (jwt/create-token user :terse? true)
+        reminder (gen/generate (s/gen :lipas/new-reminder))
+        resp     (app (-> (mock/request :post "/api/actions/add-reminder")
+                          (mock/content-type "application/json")
+                          (mock/body (->json reminder))
+                          (token-header token)))
+        body     (-> resp :body <-json)]
+    (is (= 200 (:status resp)))
+    (is (= "pending" (:status body)))))
+
+(deftest update-reminder-status-test
+  (let [user     (gen-user {:db? true})
+        token    (jwt/create-token user :terse? true)
+        reminder (gen/generate (s/gen :lipas/new-reminder))
+        resp1    (app (-> (mock/request :post "/api/actions/add-reminder")
+                          (mock/content-type "application/json")
+                          (mock/body (->json reminder))
+                          (token-header token)))
+        id       (-> resp1 :body <-json :id)
+        resp2    (app (-> (mock/request :post "/api/actions/update-reminder-status")
+                          (mock/content-type "application/json")
+                          (mock/body (->json {:id id :status "canceled"}))
+                          (token-header token)))]
+    (is (= 200 (:status resp1)))
+    (is (= 200 (:status resp2)))))
 
 (comment
   (t/run-tests *ns*))

@@ -26,11 +26,12 @@
         mw/add-cors-headers)))
 
 (def exception-handlers
-  {:username-conflict (exception-handler 409 :username-conflict)
-   :email-conflict    (exception-handler 409 :email-conflict)
-   :no-permission     (exception-handler 403 :no-permission)
-   :user-not-found    (exception-handler 404 :user-not-found)
-   :email-not-found   (exception-handler 404 :email-not-found)})
+  {:username-conflict  (exception-handler 409 :username-conflict)
+   :email-conflict     (exception-handler 409 :email-conflict)
+   :no-permission      (exception-handler 403 :no-permission)
+   :user-not-found     (exception-handler 404 :user-not-found)
+   :email-not-found    (exception-handler 404 :email-not-found)
+   :reminder-not-found (exception-handler 404 :reminder-not-found)})
 
 (def exceptions-mw
   (exception/create-exception-middleware
@@ -258,6 +259,38 @@
                  params  {:user user :variant variant :login-url url}
                  _       (core/send-magic-link! db emailer params)]
              {:status 200 :body {:status "OK"}}))}}]
+
+      ["/actions/add-reminder"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body :lipas/new-reminder}
+         :handler
+         (fn [{:keys [identity parameters]}]
+           (let [reminder (:body parameters)]
+             {:status 200
+              :body   (core/add-reminder! db identity reminder)}))}}]
+
+      ["/actions/update-reminder-status"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body
+          {:id     uuid?
+           :status :lipas.reminder/status}}
+         :handler
+         (fn [{:keys [identity parameters]}]
+           (let [params (:body parameters)]
+             {:status 200
+              :body   (core/update-reminder-status! db identity params)}))}}]
+
+      ["/actions/get-upcoming-reminders"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :handler
+         (fn [{:keys [identity]}]
+           {:status 200
+            :body   (core/get-users-pending-reminders! identity)})}}]
 
       ["/actions/create-energy-report"
        {:post

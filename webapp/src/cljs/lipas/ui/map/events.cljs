@@ -10,6 +10,11 @@
    proj4
    [re-frame.core :as re-frame]))
 
+(re-frame/reg-event-db
+ ::toggle-drawer
+ (fn [db _]
+   (update-in db [:map :drawer-open?] not)))
+
 ;; Width and height are in meters when using EPSG:3067 projection
 (re-frame/reg-event-fx
  ::set-view
@@ -26,6 +31,8 @@
       :dispatch-n
       [(when (and extent width)
          [:lipas.ui.search.events/submit-search])]})))
+
+;; Map displaying events ;;
 
 (re-frame/reg-event-db
  ::fit-to-current-vectors
@@ -54,6 +61,18 @@
                       (assoc-in [:map :center] center))
       :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
+(re-frame/reg-event-fx
+ ::zoom-to-users-position
+ (fn [_ _]
+   {:lipas.ui.effects/request-geolocation!
+    (fn [position]
+      (let [lon*    (-> position .-coords .-longitude)
+            lat*    (-> position .-coords .-latitude)
+            {:keys [lon lat]} (wgs84->epsg3067 [lon* lat*])]
+        (when (and lon lat)
+          (==> [::set-center lat lon])
+          (==> [::set-zoom 12]))))}))
+
 (re-frame/reg-event-db
  ::set-center
  (fn [db [_ lat lon]]
@@ -74,25 +93,19 @@
  (fn [db [_ feature]]
    (assoc-in db [:map :popup] feature)))
 
-(defn- get-latest-rev [db lipas-id]
-  (let [latest (get-in db [:sports-sites lipas-id :latest])]
-    (get-in db [:sports-sites lipas-id :history latest])))
-
 (re-frame/reg-event-db
  ::show-sports-site*
  (fn [db [_ lipas-id]]
-   (-> db
-       (assoc-in [:map :mode :lipas-id] lipas-id)
-       (assoc-in [:map :drawer-open?] true))))
+   (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))]
+     (-> db
+         (assoc-in [:map :mode :lipas-id] lipas-id)
+         (assoc-in [:map :drawer-open?] drawer-open?)))))
 
-(re-frame/reg-event-fx
- ::show-sports-site
- (fn [db [_ lipas-id]]
-   {:dispatch-n
-    [(if lipas-id
-       (let [params {:lipas-id lipas-id}]
-         [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])
-       [:lipas.ui.events/navigate :lipas.ui.routes.map/map])]}))
+;; Geom editing events ;;
+
+(defn- get-latest-rev [db lipas-id]
+  (let [latest (get-in db [:sports-sites lipas-id :latest])]
+    (get-in db [:sports-sites lipas-id :history latest])))
 
 (re-frame/reg-event-db
  ::start-editing
@@ -114,14 +127,6 @@
  (fn [db [_]]
    (assoc-in db [:map :mode :name] :default)))
 
-(re-frame/reg-event-fx
- ::update-geometries
- (fn [{:keys [db]} [_ lipas-id geoms]]
-   (let [path  [:sports-sites lipas-id :editing :location :geometries]
-         geoms (update geoms :features
-                       (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:db (assoc-in db path geoms)})))
-
 (re-frame/reg-event-db
  ::start-adding-geom
  (fn [db [_ geom-type]]
@@ -131,10 +136,12 @@
                                       :sub-mode  :drawing}))))
 
 (re-frame/reg-event-fx
- ::start-adding-new-site
- (fn [{:keys [db]} [_]]
-   {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
-    :dispatch-n [[:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+ ::update-geometries
+ (fn [{:keys [db]} [_ lipas-id geoms]]
+   (let [path  [:sports-sites lipas-id :editing :location :geometries]
+         geoms (update geoms :features
+                       (fn [fs] (map #(dissoc % :properties :id) fs)))]
+     {:db (assoc-in db path geoms)})))
 
 (re-frame/reg-event-db
  ::new-geom-drawn
@@ -170,10 +177,70 @@
      {:db         (assoc-in db [:map :mode :sub-mode] :finished)
       :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
 
-(re-frame/reg-event-db
- ::toggle-drawer
- (fn [db _]
-   (update-in db [:map :drawer-open?] not)))
+;;; Higher order events ;;;
+
+(re-frame/reg-event-fx
+ ::show-sports-site
+ (fn [db [_ lipas-id]]
+   {:dispatch-n
+    [(if lipas-id
+       (let [params {:lipas-id lipas-id}]
+         [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])
+       [:lipas.ui.events/navigate :lipas.ui.routes.map/map])]}))
+
+(re-frame/reg-event-fx
+ ::edit-site
+ (fn [_ [_ lipas-id geom-type]]
+   {:dispatch-n
+    [[:lipas.ui.sports-sites.events/edit-site lipas-id]
+     [::zoom-to-site lipas-id]
+     [::start-editing lipas-id :editing geom-type]]}))
+
+(re-frame/reg-event-fx
+ ::save-edits
+ (fn [_ [_ lipas-id]]
+   {:dispatch-n
+    [[:lipas.ui.sports-sites.events/save-edits lipas-id]
+     [::stop-editing]]}))
+
+(re-frame/reg-event-fx
+ ::discard-edits
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [tr (-> db :translator)]
+     {:dispatch
+      [:lipas.ui.events/confirm
+       (tr :confirm/discard-changes?)
+       (fn []
+         (==> [:lipas.ui.sports-sites.events/discard-edits lipas-id])
+         (==> [::stop-editing]))]})))
+
+(re-frame/reg-event-fx
+ ::delete-site
+ (fn [_]
+   {:dispatch-n
+    [[:lipas.ui.sports-sites.events/toggle-delete-dialog]]}))
+
+(re-frame/reg-event-fx
+ ::start-adding-new-site
+ (fn [{:keys [db]} [_]]
+   {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
+    :dispatch-n [[:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+
+(re-frame/reg-event-fx
+ ::discard-new-site
+ (fn [{:keys [db]} _]
+   (let [tr (-> db :translator)]
+     {:dispatch
+      [:lipas.ui.events/confirm
+       (tr :confirm/discard-changes?)
+       (fn []
+         (==> [:lipas.ui.sports-sites.events/discard-new-site])
+         (==> [::discard-drawing]))]})))
+
+(re-frame/reg-event-fx
+ ::save-new-site
+ (fn [_ [_ data]]
+   {:dispatch [:lipas.ui.sports-sites.events/commit-rev data]}))
 
 ;; Import geoms ;;
 
@@ -314,13 +381,15 @@
                      (js/togpx #js{:creator "LIPAS"}))]
      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
 
+;; Address search ;;
+
 (re-frame/reg-event-db
  ::toggle-address-search-dialog
  (fn [db _]
    (-> db
        (update-in [:map :address-search :dialog-open?] not)
        (assoc-in [:map :address-search :keyword] "")
-       (assoc-in [:map :address-search :results] []))))
+      (assoc-in [:map :address-search :results] []))))
 
 (re-frame/reg-event-db
  ::clear-address-search-results

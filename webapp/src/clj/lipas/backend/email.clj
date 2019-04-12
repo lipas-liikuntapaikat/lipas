@@ -22,7 +22,11 @@
      :lipas
      {:subject "LIPAS sisäänkirjautumislinkki"
       :html    (slurp (io/resource "email_templates/magic_link_lipas_fi.html"))
-      :text    (slurp (io/resource "email_templates/magic_link_lipas_fi.txt"))}}}})
+      :text    (slurp (io/resource "email_templates/magic_link_lipas_fi.txt"))}}
+    :reminder
+    {:subject "LIPAS-muistutus"
+     :html    (slurp (io/resource "email_templates/reminder_fi.html"))
+     :text    (slurp (io/resource "email_templates/reminder_fi.txt"))}}})
 
 (defn send*!
   "Thin wrapper for postal."
@@ -89,6 +93,25 @@
                                 :fi
                                 :permissions-updated
                                 :html
+                                (str/replace "{{link}}" link)
+                                (str/replace "{{valid-days}}" (str valid-days)))}))
+
+(defn send-reminder-email!
+  [emailer to {:keys [link valid-days]} {:keys [message]}]
+  (.send! emailer {:subject (-> templates :fi :reminder :subject)
+                   :to      to
+                   :plain   (-> templates
+                                :fi
+                                :reminder
+                                :text
+                                (str/replace "{{message}}" message)
+                                (str/replace "{{link}}" link)
+                                (str/replace "{{valid-days}}" (str valid-days)))
+                   :html    (-> templates
+                                :fi
+                                :reminder
+                                :html
+                                (str/replace "{{message}}" message)
                                 (str/replace "{{link}}" link)
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 

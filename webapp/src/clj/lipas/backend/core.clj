@@ -127,6 +127,25 @@
                                      (hashers/encrypt password)))
   (add-user-event! db user "password-reset"))
 
+(defn get-users-pending-reminders! [db {:keys [id]}]
+  (db/get-users-pending-reminders db id))
+
+(defn add-reminder! [db user m]
+  (let [m (assoc m :status "pending" :account-id (:id user))]
+    (db/add-reminder! db m)))
+
+(defn update-reminder-status! [db user {:keys [id] :as params}]
+  (let [exists (->> user
+                    (get-users-pending-reminders! db)
+                    (map :id)
+                    (some #{id}))]
+
+    (when-not exists
+      (throw (ex-info "Reminder not found" {:type :reminder-not-found})))
+
+    (db/update-reminder-status! db params)
+    {:status "OK"}))
+
 ;;; Sports-sites ;;;
 
 (defn get-sports-site [db lipas-id]
@@ -317,11 +336,11 @@
                            (when (not-empty type-codes)
                              {:terms {:type.type-code type-codes}})
                            (when (not-empty city-codes)
-                             {:terms {:location.city.city-code city-codes}})])}},
+                             {:terms {:location.city.city-code city-codes}})])}}
                   :aggs
                   {:grouping
-                   {:terms {:field (keyword grouping), :size 400},
-                    :aggs  {:area_m2_sum {:sum {:field :properties.area-m2}}}}}}
+                   {:terms {:field (keyword grouping) :size 400}
+                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}
         m2-data  (-> (search search* query) :body :aggregations :grouping :buckets)]
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city m2-data pop-data)
@@ -336,6 +355,26 @@
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
+
+  (let [statuses ["active" "out-of-service-temporarily"]
+        grouping "location.city.city-code"
+        type-codes [1340]
+        city-codes [992]
+        query    {:size 0,
+                  :query
+                  {:bool
+                   {:filter
+                    (into [] (remove nil?)
+                          [{:terms {:status.keyword statuses}}
+                           (when (not-empty type-codes)
+                             {:terms {:type.type-code type-codes}})
+                           (when (not-empty city-codes)
+                             {:terms {:location.city.city-code city-codes}})])}}
+                  :aggs
+                  {:grouping
+                   {:terms {:field (keyword grouping) :size 400}
+                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}]
+    (search search2 query))
 
   (first (get-cities db-spec))
   (time (get-populations db-spec 2017))

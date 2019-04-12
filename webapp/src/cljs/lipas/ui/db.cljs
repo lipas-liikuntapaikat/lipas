@@ -121,6 +121,12 @@
      :page-size  250
      :page-sizes [25 50 100 250 500]}}
 
+   ;; Reminders
+   :reminders
+   {:dialog-open? false
+    :form
+    {:time "06:00:00.000Z"}}
+
    ;; Reports
    :reports
    {:dialog-open?    false

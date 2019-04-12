@@ -2,7 +2,7 @@
 
 (defn ->polygon-style
   ([fill-color stroke-color]
-   (->polygon-style fill-color stroke-color 0.26))
+   (->polygon-style fill-color stroke-color 1.5))
   ([fill-color stroke-color stroke-width]
    {:shape "polygon"
     :fill
@@ -13,7 +13,7 @@
 
 (defn ->stroke
   ([color]
-   (->stroke color 2.0 "round" "round" [5 2]))
+   (->stroke color 3.0 "round" "round" [5 2]))
   ([color width linejoin linecap linedash]
    {:color     color
     :width     width
@@ -338,10 +338,13 @@
   (reduce
    (fn [m [k v]]
      (let [v2     (temp-symbols k)
-           stroke (if-let [c (not-empty (:stroke v2))] c "#000000")
-           fill   (if-let [c (not-empty (:fill v2))] c "#000000")]
-       (assoc m k (-> v
-                      (assoc-in [:stroke :color] stroke)
-                      (assoc-in [:fill :color] fill)))))
+           stroke (or (not-empty (:stroke v2)) "#000000")
+           fill   (or (not-empty (:fill v2)) "#000000")
+           width  (:width v2)]
+
+       (assoc m k (cond-> v
+                    stroke (assoc-in [:stroke :color] stroke)
+                    fill   (assoc-in [:fill :color] fill)
+                    width  (assoc-in [:stroke :width] width)))))
    {}
    all))

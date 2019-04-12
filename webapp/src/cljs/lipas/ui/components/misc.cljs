@@ -18,15 +18,6 @@
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
-   (when (and on-delete logged-in? editing-allowed? user-can-publish? (not editing?))
-     [buttons/delete-button
-      {:on-click on-delete
-       :tooltip  delete-tooltip}])
-
-   (when editing?
-     [buttons/discard-button
-      {:on-click on-discard :tooltip discard-tooltip}])
-
    (when (and logged-in? editing-allowed? user-can-publish? (not editing?))
      [buttons/edit-button
       {:color    "secondary"
@@ -35,12 +26,31 @@
        :on-click #(if editing?
                     (on-edit-end %)
                     (on-edit-start %))
-       :tooltip  edit-tooltip}])])
+       :tooltip  edit-tooltip}])
+
+   (when (and on-delete logged-in? editing-allowed? user-can-publish? (not editing?))
+     [buttons/delete-button
+      {:on-click on-delete
+       :tooltip  delete-tooltip}])
+
+   (when editing?
+     [buttons/discard-button
+      {:on-click on-discard :tooltip discard-tooltip}])])
 
 (defn icon-text [{:keys [icon text icon-color]}]
   [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
    [mui/grid {:item true}
     [mui/icon {:color (or icon-color "inherit")}
+     icon]]
+   [mui/grid {:item true}
+    [mui/typography
+     {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
+     text]]])
+
+(defn icon-text2 [{:keys [icon text icon-color]}]
+  [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
+   [mui/grid {:item true}
+    [mui/icon {:style {:color icon-color}}
      icon]]
    [mui/grid {:item true}
     [mui/typography

@@ -55,7 +55,7 @@
  :<- [::drawer-open?]
  (fn [[screen-size drawer-open?] _]
    (let [margin 20]
-     (if (and (#{"xs"} screen-size) (not drawer-open?))
+     (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
        [margin margin margin (+ margin 430)])))) ;; drawer width is 430px
 
@@ -164,3 +164,80 @@
  (fn [db _]
    (-> db :map :address-search :results :features
        (->> (map ->result)))))
+
+(re-frame/reg-sub
+ ::sports-site-view
+ (fn [[_ lipas-id type-code] _]
+   [(re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/edits-valid? lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-allowed? lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/delete-dialog-open? lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code type-code])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/types-props type-code])
+    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-publish? lipas-id])
+    (re-frame/subscribe [:lipas.ui.user.subs/logged-in?])
+    (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
+    (re-frame/subscribe [::mode])])
+ (fn [[cities admins owners editing? edits-valid? editing-allowed?
+       delete-dialog-open? type types-props can-publish? logged-in?
+       size-categories mode] _]
+   {:cities              cities
+    :admins              admins
+    :owners              owners
+    :editing?            editing?
+    :edits-valid?        edits-valid?
+    :editing-allowed?    editing-allowed?
+    :delete-dialog-open? delete-dialog-open?
+    :can-publish?        can-publish?
+    :logged-in?          logged-in?
+    :size-categories     size-categories
+    :mode                mode
+    :sub-mode            (:sub-mode mode)
+    :type                type
+    :types-props         types-props
+    :geom-type           (:geometry-type type)
+    :portal              (case (:type-code type)
+                           (3110 3130) "uimahalliportaali"
+                           (2510 2520) "jaahalliportaali"
+                           nil)}))
+
+(re-frame/reg-sub
+ ::add-sports-site-view
+ (fn [_]
+   [(re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-type])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-data])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-valid?])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/all-types])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/prop-types])
+    (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
+    (re-frame/subscribe [::zoomed-for-drawing?])
+    (re-frame/subscribe [::new-geom])])
+ (fn [[type data valid? admins owners cities types prop-types
+       size-categories zoomed? geom] _]
+   {:type type
+    :type-code       (:type-code type)
+    :geom-type       (:geometry-type type)
+    :data            data
+    :new-site-valid? valid?
+    :admins          admins
+    :owners          owners
+    :cities          cities
+    :types           types
+    :types-props     (reduce (fn [res [k v]]
+                               (let [prop-type (prop-types k)]
+                                 (assoc res k (merge prop-type v))))
+                             {}
+                             (:props type))
+    :size-categories size-categories
+    :zoomed?         zoomed?
+    :geom            geom
+    :active-step     (cond
+                       (some? data) 2
+                       (some? type) 1
+                       :else        0)}))

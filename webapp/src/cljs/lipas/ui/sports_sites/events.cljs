@@ -242,5 +242,6 @@
          data       (assoc data :event-date event-date :status status)
          on-success (fn [] [[:lipas.ui.map.events/show-sports-site nil]
                             [:lipas.ui.search.events/submit-search]
-                            [::select-delete-status nil]])]
+                            [::select-delete-status nil]
+                            [::select-delete-year utils/this-year]])]
      {:dispatch [::commit-rev data draft? on-success]})))
