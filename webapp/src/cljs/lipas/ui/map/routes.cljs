@@ -15,8 +15,7 @@
      :controllers
      [{:start
        (fn [_]
-         (==> [:lipas.ui.map.events/show-sports-site* nil])
-         (==> [:lipas.ui.map.events/zoom-to-users-position]))}]}]
+         (==> [:lipas.ui.map.events/show-sports-site* nil]))}]}]
 
    ["/:lipas-id"
     {:name       :lipas.ui.routes.map/details-view
