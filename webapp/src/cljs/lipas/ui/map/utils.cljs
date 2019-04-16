@@ -176,6 +176,14 @@
                     (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
     splitted))
 
+(defn split-at-coords [ol-feature coords]
+  (let [point   #js{:type "Point" :coordinates coords}
+        line    (.writeFeatureObject geoJSON ol-feature)
+        nearest (turf/nearestPointOnLine line point)]
+    (-> line
+        (split-by-features nearest)
+        ->ol-features)))
+
 (defn fix-kinks* [f]
   (let [kinks (turf/kinks f)]
     (if (-> kinks (gobj/get "features") not-empty)
@@ -350,19 +358,21 @@
       ->geoJSON
       turf/truncate
       ->clj
-      ;;(as-> $ (prn $) $)
-      ;;merge-linestrings
+      merge-linestrings
       (update :features #(filterv valid-line? %))
       fix-kinks
       split-by-intersections
       clj->js
       ->ol-features))
 
+;; (defn fix-features [ol-features]
+;;   (let [geom-type (-> ol-features first .getGeometry .getType)]
+;;     (case geom-type
+;;       "LineString" (fix-linestrings ol-features)
+;;       ol-features)))
+
 (defn fix-features [ol-features]
-  (let [geom-type (-> ol-features first .getGeometry .getType)]
-    (case geom-type
-      "LineString" (fix-linestrings ol-features)
-      ol-features)))
+  ol-features)
 
 (comment
   (def dying-geom
