@@ -15,6 +15,8 @@
 (def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                      :featureProjection "EPSG:3067"}))
 
+(def temp-fid-prefix "temp")
+
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
 
@@ -169,10 +171,9 @@
 
 (defn- split-by-features [f kinks]
   (let [splitter (->splitter kinks)
-        fid      (gobj/get f "id")
         splitted (turf/lineSplit f splitter)]
     (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (gensym fid)))))
+                    (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
     splitted))
 
 (defn fix-kinks* [f]
@@ -200,7 +201,9 @@
 
 (defn merge-candidates2 [start end lines]
   (->> lines
-       (filter #(some #{start end} %))))
+       (filter #(and
+                 (not= (first %) (last %))
+                 (some #{start end} %)))))
 
 (def cat-dedupe (comp cat (dedupe)))
 
@@ -267,12 +270,16 @@
                        :geometry
                        {:type        "LineString"
                         :coordinates coords}
-                       :id   (str (gensym))}))
+                       :id   (str (gensym temp-fid-prefix))}))
                    (into []))))))
 
 (defn valid-line? [{:keys [geometry]}]
-  (and (= "LineString" (:type geometry))
-       (= 2 (->> geometry :coordinates distinct (take 2) count))))
+  (let [valid (and (= "LineString" (:type geometry))
+                 (= 2 (->> geometry :coordinates distinct (take 2) count)))]
+    (when-not valid
+      (prn "Ditching invalid:")
+      (prn geometry))
+    valid))
 
 (defn sensify [{:keys [geometry] :as f}]
   (let [start  (->> geometry :coordinates first)
@@ -290,13 +297,13 @@
                                   clj->js
                                   (turf/lineSplit splitter)
                                   (gobj/get "features")
-                                  (garray/map turf/truncate)
+                                  ;;(garray/map turf/truncate)
                                   ;;(garray/map turf/cleanCoords)
                                   ->clj
                                   (->>
-                                   (map sensify)
+                                   ;;(map sensify)
                                    (filter valid-line?)
-                                   (mapv #(assoc % :id (str (gensym))))))))
+                                   (mapv #(assoc % :id (str (gensym temp-fid-prefix))))))))
                   []
                   features)]
     ;;(prn "After split: " (count fs))
@@ -315,7 +322,7 @@
                            (if (and l1 l2)
                              (-> (turf/lineIntersect l1 l2)
                                  (gobj/get "features")
-                                 (garray/map turf/truncate)
+                                 ;;(garray/map turf/truncate)
                                  ;;(garray/map turf/cleanCoords)
                                  ->clj)))))
                  #{}))]
@@ -340,8 +347,12 @@
   - Splits all lines at all intersections with any of the other lines"
   [ol-features]
   (-> ol-features
-      ->geoJSON-clj
-      merge-linestrings
+      ->geoJSON
+      turf/truncate
+      ->clj
+      ;;(as-> $ (prn $) $)
+      ;;merge-linestrings
+      (update :features #(filterv valid-line? %))
       fix-kinks
       split-by-intersections
       clj->js
@@ -352,6 +363,232 @@
     (case geom-type
       "LineString" (fix-linestrings ol-features)
       ol-features)))
+
+(comment
+  (def dying-geom
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3811"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.620238 64.927283]]},
+       :properties nil,
+       :id "G__3783"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3782"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+       :properties nil,
+       :id "G__3786"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3785"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+       :properties nil,
+       :id "G__3784"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3808"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.620238 64.927283] [25.61972 64.927007]]},
+       :properties nil,
+       :id "G__3793"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3792"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3813"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.61972 64.927007]]},
+       :properties nil,
+       :id "G__3790"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3789"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3788"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61972 64.927007] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3794"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3791"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3797"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3796"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3801"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3814"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3795"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3799"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3802"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3798"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3800"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3804"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.618495 64.927102]]},
+       :properties nil,
+       :id "G__3806"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619208 64.926996]]},
+       :properties nil,
+       :id "G__3803"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618495 64.927102] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3807"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3805"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61972 64.927007] [25.619208 64.926996]]},
+       :properties nil,
+       :id "G__3787"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618495 64.927102] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3809"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.618495 64.927102]]},
+       :properties nil,
+       :id "G__3810"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3812"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.617816 64.927202]]},
+       :properties nil,
+       :id "temp3815"}]})
+
+  (def killer-coords
+    [[25.61977, 64.927513] [25.617815999999994, 64.927202]])
+  (def killer-geom {:type "LineString" :coordinates killer-coords})
+  (def killer-feature {:type "Feature" :geometry killer-geom})
+
+  (turf/truncate (clj->js killer-geom))
+
+
+  (-> dying-geom :features count)
+  (->> (update dying-geom :features conj killer-feature)
+       (split-by-intersections)
+       :features
+       count
+       )
+
+  )
 
 (comment
   (def easy
