@@ -20,6 +20,7 @@
     "@turf/kinks": "^6.0.0",
     "@turf/line-intersect": "^6.0.2",
     "@turf/line-split": "^5.1.5",
+    "@turf/truncate": "^6.0.1",
     "file-saver": "^2.0.0",
     "mdi-material-ui": "^5.10.0",
     "mui-downshift": "^1.4.1",
