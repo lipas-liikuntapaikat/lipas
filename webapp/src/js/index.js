@@ -361,10 +361,14 @@ import kinks from '@turf/kinks';
 import lineSplit from '@turf/line-split';
 import lineIntersect from '@turf/line-intersect';
 import combine from '@turf/combine';
+import cleanCoords from '@turf/clean-coords';
+import truncate from '@turf/truncate';
 
 window.turf = {
   kinks,
   lineSplit,
   lineIntersect,
   combine,
+  cleanCoords,
+  truncate,
 };
