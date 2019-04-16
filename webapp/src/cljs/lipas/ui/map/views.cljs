@@ -423,10 +423,10 @@
 (defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
-    (let [locale                (tr)
+    (let [locale                         (tr)
           {:keys [type data new-site-valid? admins owners cities
                   types types-props size-categories zoomed? geom geom-type
-                  active-step]} (<== [::subs/add-sports-site-view])
+                  active-step sub-mode]} (<== [::subs/add-sports-site-view])
 
           allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     set-new-site-field]
@@ -542,18 +542,33 @@
 
                 ;; Add additional geom button
                 (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true :xs 12}
+                  [mui/grid {:item true :xs 8}
                    [mui/button
                     {:on-click #(==> [::events/start-adding-geom geom-type])
                      :variant  "contained"
                      :color    "secondary"}
                     (tr :map/draw geom-type)]])
 
+                ;; Delete geom
+                (when (#{"LineString" "Polygon"} geom-type)
+                  [mui/grid {:item true :xs 4}
+                   [mui/tooltip {:title (tr :map/remove geom-type)}
+                    [mui/button
+                     {:on-click #(if (= sub-mode :deleting)
+                                   (==> [::events/stop-deleting-geom geom-type])
+                                   (==> [::events/start-deleting-geom geom-type]))
+                      :disabled (-> geom :features empty?)
+                      :style    (when (= sub-mode :deleting)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [:> js/materialIcons.Eraser]]]])
+
                 ;; Done button
                 [mui/grid {:item true :xs 12}
                  [mui/button
                   {:on-click #(==> [::events/finish-adding-geom geom type-code])
                    :variant  "contained"
+                   :disabled (-> geom :features empty?)
                    :color    "secondary"}
                   (tr :general/done)]]]))]]
 
