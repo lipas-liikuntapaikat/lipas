@@ -8,7 +8,7 @@
 
 (defn add-button [{:keys [message]}]
   [mui/tooltip {:title "Lisää muistutus..."}
-   [mui/fab {:on-click #(==> [::events/add message])}
+   [mui/fab {:on-click #(==> [::events/add message]) :size "small"}
     [mui/icon "alarm_add"]]])
 
 (def preselect-opts

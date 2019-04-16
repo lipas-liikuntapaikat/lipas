@@ -40,6 +40,27 @@
                        (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))])))))
     (assoc-in map-ctx [:interactions :delete] delete)))
 
+(defn enable-splitting! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
+  (let [layer  (-> layers :overlays :edits)
+        split  (ol.interaction.Select. #js{:layers #js[layer]
+                                           :style  styles/hover-style})
+        source (.getSource layer)]
+    (.addInteraction lmap split)
+    (.on split "select"
+         (fn [e]
+           (let [selected (gobj/get e "selected")
+                 euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 wgs      (ol.proj.toLonLat euref "EPSG:3067")]
+             (when (not-empty selected)
+               (doseq [f selected]
+                 (when-let [splitted (map-utils/split-at-coords f wgs)]
+                   (.removeFeature source f)
+                   (.addFeatures source splitted)))
+               (doto (.getFeatures split)
+                 (.clear))
+               (on-modify (map-utils/->geoJSON-clj (.getFeatures source)))))))
+    (assoc-in map-ctx [:interactions :split] split)))
+
 (defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                            on-modifyend]
   (let [layer     (-> layers :overlays :edits)
@@ -188,6 +209,8 @@
        :deleting     (-> map-ctx
                          ;;(continue-editing! on-modifyend)
                          (enable-delete! on-modifyend))
+       :splitting    (-> map-ctx
+                         (enable-splitting! on-modifyend))
        :importing    (refresh-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx mode]

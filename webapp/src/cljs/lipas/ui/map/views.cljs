@@ -324,7 +324,8 @@
            (when (and (not editing?) (#{"LineString"} geom-type))
              [mui/tooltip {:title (tr :map/download-gpx)}
               [mui/fab
-               {:on-click #(==> [::events/download-gpx lipas-id])
+               {:size     "small"
+                :on-click #(==> [::events/download-gpx lipas-id])
                 :color    "default"}
                [mui/icon "save_alt"]]])
 
@@ -332,7 +333,8 @@
            (when-not editing?
              [mui/tooltip {:title (tr :map/zoom-to-site)}
               [mui/fab
-               {:on-click #(==> [::events/zoom-to-site lipas-id width])
+               {:size     "small"
+                :on-click #(==> [::events/zoom-to-site lipas-id width])
                 :color    "default"}
                [mui/icon {:color "secondary"}
                 "place"]]])
@@ -348,7 +350,8 @@
            (when (and editing? (#{"LineString"} geom-type))
              [mui/tooltip {:title (tr :map.import/tooltip)}
               [mui/fab
-               {:on-click #(==> [::events/toggle-import-dialog])
+               {:size     "small"
+                :on-click #(==> [::events/toggle-import-dialog])
                 :color    "default"}
                [:> js/materialIcons.FileUpload]]])
 
@@ -356,7 +359,8 @@
            (when (and editing? (#{"Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/draw-hole)}
               [mui/fab
-               {:on-click #(if (= sub-mode :drawing-hole)
+               {:size     "small"
+                :on-click #(if (= sub-mode :drawing-hole)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
                 :style    (when (= sub-mode :drawing-hole)
@@ -368,7 +372,8 @@
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/draw geom-type)}
               [mui/fab
-               {:on-click #(if (= sub-mode :drawing)
+               {:size     "small"
+                :on-click #(if (= sub-mode :drawing)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :drawing geom-type]))
                 :style    (when (= sub-mode :drawing)
@@ -382,13 +387,27 @@
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/remove geom-type)}
               [mui/fab
-               {:on-click #(if (= sub-mode :deleting)
+               {:size     "small"
+                :on-click #(if (= sub-mode :deleting)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :deleting geom-type]))
                 :style    (when (= sub-mode :deleting)
                             {:border (str "5px solid " mui/secondary)})
                 :color    "default"}
-               [:> js/materialIcons.Eraser]]])]
+               [:> js/materialIcons.Eraser]]])
+
+           ;; Split linestring
+           (when (and editing? (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map/split-route-segment)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(if (= sub-mode :splitting)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :splitting geom-type]))
+                :style    (when (= sub-mode :splitting)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [:> js/materialIcons.ContentCut]]])]
 
           (concat
            (lui/edit-actions-list
@@ -669,7 +688,8 @@
 
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
-         [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+         [mui/fab
+          {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
           [:> js/materialIcons.MapSearchOutline]]]]
 
        (when (= :list result-view)

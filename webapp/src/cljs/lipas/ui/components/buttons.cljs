@@ -69,12 +69,12 @@
 
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/fab (merge props {:on-click on-click})
+   [mui/fab (merge props {:on-click on-click :size "small"})
     [mui/icon "undo"]]])
 
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/fab (merge props {:on-click on-click})
+   [mui/fab (merge props {:on-click on-click :size "small"})
     [mui/icon "delete"]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
