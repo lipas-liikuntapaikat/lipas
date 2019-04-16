@@ -217,10 +217,11 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/prop-types])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::zoomed-for-drawing?])
-    (re-frame/subscribe [::new-geom])])
+    (re-frame/subscribe [::new-geom])
+    (re-frame/subscribe [::mode])])
  (fn [[type data valid? admins owners cities types prop-types
-       size-categories zoomed? geom] _]
-   {:type type
+       size-categories zoomed? geom mode] _]
+   {:type            type
     :type-code       (:type-code type)
     :geom-type       (:geometry-type type)
     :data            data
@@ -237,6 +238,7 @@
     :size-categories size-categories
     :zoomed?         zoomed?
     :geom            geom
+    :sub-mode        (:sub-mode mode)
     :active-step     (cond
                        (some? data) 2
                        (some? type) 1

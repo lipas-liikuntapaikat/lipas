@@ -135,6 +135,22 @@
                                       :geom-type geom-type
                                       :sub-mode  :drawing}))))
 
+(re-frame/reg-event-db
+ ::start-deleting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :deleting}))))
+
+(re-frame/reg-event-db
+ ::stop-deleting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :editing}))))
+
 (re-frame/reg-event-fx
  ::update-geometries
  (fn [{:keys [db]} [_ lipas-id geoms]]

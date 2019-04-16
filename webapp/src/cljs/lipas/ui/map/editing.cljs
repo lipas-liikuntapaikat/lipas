@@ -145,13 +145,13 @@
 
 ;; Adding new features
 (defn set-adding-mode! [map-ctx mode]
-  (let [map-ctx (-> map-ctx
-                    map-utils/clear-interactions!)]
+  (let [map-ctx   (-> map-ctx map-utils/clear-interactions!)
+        on-modify (fn [f] (==> [::events/update-new-geom f]))]
     (case (:sub-mode mode)
       :drawing  (start-drawing! map-ctx (:geom-type mode)
                                 (fn [f] (==> [::events/new-geom-drawn f])))
-      :editing  (start-editing! map-ctx (:geom mode)
-                                (fn [f] (==> [::events/update-new-geom f])))
+      :editing  (start-editing! map-ctx (:geom mode) on-modify)
+      :deleting (enable-delete! map-ctx on-modify)
       :finished (map-utils/show-feature! map-ctx (:geom mode)))))
 
 (defn update-adding-mode! [map-ctx mode]
