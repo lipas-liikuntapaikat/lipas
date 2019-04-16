@@ -8,8 +8,6 @@
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(def temp-fid-prefix "temp")
-
 (defn clear-edits! [{:keys [layers] :as map-ctx}]
   (-> layers :overlays :edits .getSource .clear)
   map-ctx)
@@ -71,9 +69,7 @@
 
     (.on modify "modifyend"
          (fn [e]
-           (let [fixed (-> source
-                           .getFeatures
-                           map-utils/fix-features)]
+           (let [fixed (-> source .getFeatures map-utils/fix-features)]
 
              (.clear source)
              (.addFeatures source fixed)
@@ -113,7 +109,7 @@
     (.on draw "drawend"
          (fn [e]
            (let [f     (gobj/get e "feature")
-                 _     (.setId f (str (gensym temp-fid-prefix)))
+                 _     (.setId f (str (gensym map-utils/temp-fid-prefix)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
                  fixed (map-utils/fix-features fs)]
