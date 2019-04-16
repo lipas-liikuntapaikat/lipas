@@ -2337,7 +2337,7 @@
      "Plats utrustad för rullskridskoåkning, skejtning och sparkcykelåkning. I preciseringsuppgifterna anges vad som är tillåtet på området.",
      :en
      "An area equipped  for roller-blading, skateboarding, kick scooting. Hobby  specified in 'attribute data'."},
-    :tags          {:fi ["ramppi"]},
+    :tags          {:fi ["ramppi" "skeittipaikka" "skeittipuisto" "skeittiparkki"]},
     :name
     {:fi "Skeitti-/rullaluistelupaikka",
      :se "Plats för skejtning/rullskridskoåkning",
