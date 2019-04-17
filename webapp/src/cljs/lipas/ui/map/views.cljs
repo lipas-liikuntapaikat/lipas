@@ -225,7 +225,7 @@
           allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     (partial set-field lipas-id)]
 
-      [mui/grid {:container true}
+      [mui/grid {:container true :style {:padding "0em 1em 0.5em 1em"}}
 
        (when editing?
          [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
@@ -453,7 +453,6 @@
       [mui/grid
        {:container true
         :direction "column"
-        :justify   "space-between"
         :style     {:flex 1 :height "100%"}}
 
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
@@ -595,7 +594,10 @@
          [mui/step
           [mui/step-label (tr :actions/fill-data)]
           [mui/step-content
-           {:style {:margin-left "-24px" :margin-top "1em" :padding 0 }}
+           {:style
+            {:margin-left  "-24px" ;; Undo stepper default padding
+             :margin-right "-24px"
+             :margin-top   "1em" :padding 0 }}
            [mui/grid {:container true :style {:flex-direction "column"}}
 
             ;; Tabs
@@ -670,7 +672,9 @@
           ;; Address search button
           [mui/tooltip {:title (tr :map.address-search/tooltip)}
            [mui/grid {:item true}
-            [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+            [mui/fab
+             {:size     "small"
+              :on-click #(==> [::events/toggle-address-search-dialog])}
              [:> js/materialIcons.MapSearchOutline]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
@@ -702,18 +706,20 @@
 
     [mui/grid
      {:container true
-      :style     {:height "100%"}
-      :direction "column"
-      :justify   "space-between"}
+      :style
+      {:height  (when (= result-view :list) "100%")
+       :padding "0em 1em 0.5em 1em"}
+      :direction "column"}
 
      ;; Search, filters etc.
-     (if adding?
-       [add-sports-site-view {:tr tr}]
-       [search/search-view
-        {:tr              tr
-         :on-result-click (fn [{:keys [lipas-id]}]
-                            (==> [::events/show-sports-site lipas-id])
-                            (==> [::events/zoom-to-site lipas-id width]))}])
+     [mui/grid {:item true :xs 12}
+      (if adding?
+        [add-sports-site-view {:tr tr}]
+        [search/search-view
+         {:tr              tr
+          :on-result-click (fn [{:keys [lipas-id]}]
+                             (==> [::events/show-sports-site lipas-id])
+                             (==> [::events/zoom-to-site lipas-id width]))}])]
      (when (and (= :list result-view) (not adding?))
        [default-tools {:tr tr :logged-in? logged-in?}])]))
 
@@ -769,15 +775,14 @@
         [mui/icon "expand_less"]]
 
        ;; Content
-       [mui/grid
-        {:container true :direction "column" :justify "space-between"
-         :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}
+       ;; [mui/grid
+       ;;  {:container true :direction "column"
+       ;;   :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}]
 
-
-        [mui/grid {:item true :xs 12}
-         (if selected-site
-           [sports-site-view {:tr tr :site-data selected-site :width width}]
-           [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
+       ;;[mui/grid {:item true :xs 12}]
+       (if selected-site
+         [sports-site-view {:tr tr :site-data selected-site :width width}]
+         [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]
 
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
