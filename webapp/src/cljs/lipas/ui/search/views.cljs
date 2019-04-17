@@ -209,7 +209,11 @@
         page-size        (-> pagination-opts :page-size)
         page             (-> pagination-opts :page)]
 
-    [mui/grid {:container true :align-items "center" :justify "space-between"}
+    [mui/grid
+     {:container   true
+      :align-items "center"
+      :justify     "space-between"
+      :style       {:padding "0.5em"}}
 
      ;; Pagination
      [mui/grid {:item true}
@@ -281,8 +285,8 @@
         page-size  (-> pagination-opts :page-size)
         page       (-> pagination-opts :page)]
 
-    [:<>
-     [mui/grid {:item true}
+    [mui/grid {:container true}
+     [mui/grid {:item true :xs 12}
       [pagination
        {:tr                tr
         :total             total
@@ -293,20 +297,21 @@
 
      (if in-progress?
        ;; Spinner
-       [mui/grid {:item true :style {:text-align "center"}}
+       [mui/grid {:item true :xs 12 :style {:text-align "center"}}
         [mui/circular-progress {:style {:margin-top "1em"}}]]
 
        ;; Results
-       [mui/grid {:item true :style {:flex-grow 1}}
-        [lists/virtualized-list
-         {:items         results
-          :label-fn      :name
-          :label2-fn     #(when %
-                            (str (-> % :type.name) ", "
-                                 (-> % :location.city.name)
-                                 ;;" " (-> % :score) uncomment for search tuning
-                                 ))
-          :on-item-click on-result-click}]])]))
+       [mui/grid {:item true :xs 12 :flex 1}
+        [:div {:style {:width "100%" :height "500px"}}
+         [lists/virtualized-list
+          {:items         results
+           :label-fn      :name
+           :label2-fn     #(when %
+                             (str (-> % :type.name) ", "
+                                  (-> % :location.city.name)
+                                  ;;" " (-> % :score) uncomment for search tuning
+                                  ))
+           :on-item-click on-result-click}]]])]))
 
 (defn search-input []
   (let [tr         (<== [:lipas.ui.subs/translator])
@@ -329,72 +334,84 @@
        (tr :search/search)]]]))
 
 (defn search-view [{:keys [tr on-result-click]}]
-  (let [ total          (<== [::subs/search-results-total-count])
+  (let [total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
         filters-active? (<== [::subs/filters-active?])]
 
-    [mui/grid {:container true :direction "column" :style {:flex 1} :justify "flex-start"}
 
-     ;; Search input and button
-     (if (= :list result-view)
-       [search-input]
-       [mui/grid {:container true :direction "row" :align-items "flex-end"}
-
-        ;; LIPAS-text
-        [mui/grid {:item true :xs 12 :md 6}
-         [mui/typography {:variant "h2" :style {:opacity 0.7}}
-          "LIPAS"]]
-
-        [mui/grid {:item true :xs 12 :md 6}
-         [search-input]]])
-
-     ;; Third row: filters expansion panel
-     [lui/expansion-panel
-      {:label            (tr :search/filters)
-       :label-color      "default"
-       :default-expanded false}
-      [filters {:tr tr}]]
-
-     ;; 4th row: Results count, clear filters button and result view selectors
+    [:div {:style {:height "100%"}}
      [mui/grid
-      {:container true :justify "space-between" :align-items "center"
-       :style     {:padding-top "0.5em" :padding-bottom "0.5em"}}
-      [mui/grid {:item true}
-       [mui/typography
-        {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
-        (tr :search/results-count total)]]
+      {:container   true
+       :style       {:padding "0em 1em 0.5em 1em"}
+       :align-items "flex-start"
+       :justify     "flex-start"
+       :direction   "row"}
 
-      ;; Clear filters button
-      (when filters-active?
+      ;; Search input and button
+      [mui/grid {:item true :xs 12}
+       (if (= :list result-view)
+         [search-input]
+         [mui/grid {:container true :direction "row" :align-items "flex-end"}
+
+          ;; LIPAS-text
+          [mui/grid {:item true :xs 12 :md 6}
+           [mui/typography {:variant "h2" :style {:opacity 0.7}}
+            "LIPAS"]]
+
+          [mui/grid {:item true :xs 12 :md 6}
+           [search-input]]])]
+
+      ;; Filters expansion panel
+      [mui/grid {:item true :xs 12}
+       [lui/expansion-panel
+        {:label            (tr :search/filters)
+         :label-color      "default"
+         :default-expanded false}
+        [filters {:tr tr}]]]
+
+      ;; Results count, clear filters button and result view selectors
+      [mui/grid {:item true :xs 12}
+       [mui/grid
+        {:container   true
+         :justify     "space-between"
+         :align-items "center"
+         :style       {:padding-top "0.5em" :padding-bottom "0.5em"}}
         [mui/grid {:item true}
-         [mui/button
-          {:style    {:margin "0.5em"}
-           :color    "secondary"
-           :size     "small"
-           :on-click (fn []
-                       (==> [::events/clear-filters])
-                       (swap! ugly-forcer inc))}
-          (tr :search/clear-filters)]])
+         [mui/typography
+          {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
+          (tr :search/results-count total)]]
 
-      ;; Change result view (list | table)
-      [mui/grid {:item true}
+        ;; Clear filters button
+        (when filters-active?
+          [mui/grid {:item true}
+           [mui/button
+            {:style    {:margin "0.5em"}
+             :color    "secondary"
+             :size     "small"
+             :on-click (fn []
+                         (==> [::events/clear-filters])
+                         (swap! ugly-forcer inc))}
+            (tr :search/clear-filters)]])
 
-       [mui/tooltip {:title (tr :search/list-view)}
-        [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
-         [mui/icon {:color (if (= :list result-view)
-                             "secondary"
-                             "inherit")}
-          "view_stream"]]]
+        ;; Change result view (list | table)
+        [mui/grid {:item true}
 
-       [mui/tooltip {:title (tr :search/table-view)}
-        [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
-         [mui/icon {:color (if-not (= :list result-view)
-                             "secondary"
-                             "inherit")}
-          "view_column"]]]]]
+         [mui/tooltip {:title (tr :search/list-view)}
+          [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
+           [mui/icon {:color (if (= :list result-view)
+                               "secondary"
+                               "inherit")}
+            "view_stream"]]]
 
-     [mui/grid {:item true}
-      [mui/divider]]
+         [mui/tooltip {:title (tr :search/table-view)}
+          [mui/icon-button {:on-click #(==> [::events/set-results-view :table])}
+           [mui/icon {:color (if-not (= :list result-view)
+                               "secondary"
+                               "inherit")}
+            "view_column"]]]]]]
+
+      [mui/grid {:item true :xs 12}
+       [mui/divider]]]
 
      ;; Results
      (if (= :list result-view)
