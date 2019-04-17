@@ -336,7 +336,7 @@
                {:size     "small"
                 :on-click #(==> [::events/zoom-to-site lipas-id width])
                 :color    "default"}
-               [mui/icon {:color "secondary"}
+               [mui/icon {:color "default"}
                 "place"]]])
 
            ;; Add reminder
@@ -781,7 +781,7 @@
 
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
-      [mui/grid {:container true :align-items "center"}
+      [mui/grid {:container true :align-items "center" :spacing 8}
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
