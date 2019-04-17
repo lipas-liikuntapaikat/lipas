@@ -198,7 +198,8 @@
                         (==> [::events/update-geometries lipas-id f])
                         (when (#{:drawing :drawing-hole :deleting} sub-mode)
                           ;; Switch back to editing normal :editing mode
-                          (==> [::events/start-editing lipas-id :editing geom-type])))]
+                          ;; (==> [::events/start-editing lipas-id :editing geom-type])
+                          ))]
 
      (case sub-mode
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
