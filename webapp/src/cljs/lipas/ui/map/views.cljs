@@ -225,7 +225,8 @@
           allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     (partial set-field lipas-id)]
 
-      [mui/grid {:container true}
+      [mui/grid
+       {:container true :style {:padding "1em"}}
 
        (when editing?
          [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
@@ -452,9 +453,8 @@
 
       [mui/grid
        {:container true
-        :direction "column"
-        :justify   "space-between"
-        :style     {:flex 1 :height "100%"}}
+        :direction "row"
+        :style     {:padding "0.5em 1em 0.5em 1em" :flex 1 :height "100%"}}
 
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
 
@@ -703,32 +703,36 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
-  (let [adding?     (<== [::sports-site-subs/adding-new-site?])
-        result-view (<== [:lipas.ui.search.subs/search-results-view])]
+  (let [adding?       (<== [::sports-site-subs/adding-new-site?])
+        result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        selected-site (<== [::subs/selected-sports-site])
+        view          (cond
+                        adding?       :adding
+                        selected-site :site
+                        :else         :search)]
 
-    [mui/grid
-     {:container true
-      :style     {:height "100%"}
-      :direction "column"
-      :justify   "space-between"}
-
+    [:<>
      ;; Search, filters etc.
-     (if adding?
-       [add-sports-site-view {:tr tr}]
-       [search/search-view
-        {:tr              tr
-         :on-result-click (fn [{:keys [lipas-id]}]
-                            (==> [::events/show-sports-site lipas-id])
-                            (==> [::events/zoom-to-site lipas-id width]))}])
-     (when (and (= :list result-view) (not adding?))
-       [default-tools {:tr tr :logged-in? logged-in?}])]))
+     (case view
+       :adding [add-sports-site-view {:tr tr}]
+       :site   [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :search [search/search-view
+                {:tr tr
+                 :on-result-click
+                 (fn [{:keys [lipas-id]}]
+                   (==> [::events/show-sports-site lipas-id])
+                   (==> [::events/zoom-to-site lipas-id width]))}])
+
+     (when (and (= :list result-view) (#{:search} view))
+       [:div {:style {:padding "0.5em"}}
+        [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
 (defn map-view [{:keys [width]}]
   (let [tr            (<== [:lipas.ui.subs/translator])
         logged-in?    (<== [:lipas.ui.subs/logged-in?])
-        selected-site (<== [::subs/selected-sports-site])
         drawer-open?  (<== [::subs/drawer-open?])
         result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        selected-site (<== [::subs/selected-sports-site])
         drawer-width  (cond
                         (#{"xs"} width)              "100%"
                         (and (#{"sm" "md"} width)
@@ -769,21 +773,13 @@
        ;; Close button
        [mui/button
         {:on-click #(==> [::events/toggle-drawer])
-         :style    {:margin-bottom "1em"}
+         :style    {:min-height "36px" :margin-bottom "1em"}
          :variant  "outlined"
          :color    "default"}
         [mui/icon "expand_less"]]
 
        ;; Content
-       [mui/grid
-        {:container true :direction "column" :justify "space-between"
-         :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}
-
-
-        [mui/grid {:item true :xs 12}
-         (if selected-site
-           [sports-site-view {:tr tr :site-data selected-site :width width}]
-           [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
+       [map-contents-view {:tr tr :logged-in? logged-in? :width width}]]]
 
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
