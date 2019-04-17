@@ -196,10 +196,9 @@
    (let [map-ctx      (map-utils/clear-interactions! map-ctx)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
-                        (when (#{:drawing :drawing-hole :deleting} sub-mode)
+                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
-                          ;; (==> [::events/start-editing lipas-id :editing geom-type])
-                          ))]
+                          (==> [::events/start-editing lipas-id :editing geom-type])))]
 
      (case sub-mode
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
