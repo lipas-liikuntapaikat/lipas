@@ -595,7 +595,11 @@
          [mui/step
           [mui/step-label (tr :actions/fill-data)]
           [mui/step-content
-           {:style {:margin-left "-24px" :margin-top "1em" :padding 0 }}
+           {:style
+            {:margin-left  "-24px" ;; Undo Stepper default padding
+             :margin-right "-24px"
+             :margin-top   "1em"
+             :padding      0 }}
            [mui/grid {:container true :style {:flex-direction "column"}}
 
             ;; Tabs
@@ -670,7 +674,9 @@
           ;; Address search button
           [mui/tooltip {:title (tr :map.address-search/tooltip)}
            [mui/grid {:item true}
-            [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+            [mui/fab
+             {:size     "small"
+              :on-click #(==> [::events/toggle-address-search-dialog])}
              [:> js/materialIcons.MapSearchOutline]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
