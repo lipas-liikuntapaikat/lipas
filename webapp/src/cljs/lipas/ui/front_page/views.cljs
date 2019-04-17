@@ -80,9 +80,9 @@
    ;; Contents
    (into [mui/grid {:item true :xs 12}] contents)])
 
-(defn grid-card [{:keys [title style link link-text xs md lg]
-                  :or   {xs 12 md 6 lg 4}} & children]
-  [mui/grid {:item true :xs xs :md md :lg lg}
+(defn grid-card [{:keys [title style link link-text xs md lg xl]
+                  :or   {xs 12 md 6 lg 4 xl 3}} & children]
+  [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
    [mui/card
     {:square true
      ;;:raised true
@@ -155,6 +155,8 @@
    ;; Main section with background image
    [mui/grid
     {:container true
+     :justify "flex-start"
+     ;;:align-items ""
      :style
      {:padding             "8px"
       :background-position "right center"
@@ -208,7 +210,8 @@
       (tr :stats/description)]
      [:ul
       [lui/li (tr :stats/bullet1)]
-      [lui/li (tr :stats/bullet2)]]]
+      [lui/li (tr :stats/bullet2)]
+      [lui/li (tr :stats/bullet3)]]]
 
     ;; Open Data
     [grid-card {:title (tr :open-data/headline)}
@@ -268,7 +271,8 @@
         [mui/icon "phone"]]
        [mui/list-item-text "0400 247 980"]]]]
 
-    [grid-card {:md 12 :lg 12 :title (tr :data-users/headline)}
+    ;; Known LIPAS users
+    [grid-card {:xs 12 :md 12 :lg 12 :xl 6 :title (tr :data-users/headline)}
      (into
       [mui/grid {:container true :spacing 8}]
       (map ->link known-users))

@@ -95,11 +95,12 @@
 
    :stats
    {:headline            "Tilastot"
-    :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
-    nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
-    vertailla sitä muihin kuntiin."
+    :description "Tilastoja liikuntapaikoista, myönnetyistä
+    avustuksista (tulossa) sekä kuntien liikunta- ja nuorisotoimen
+    taloudesta."
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
     :bullet2             "Liikuntapaikkatilastot"
+    :bullet3             "Avustukset (tulossa)"
     :browse-to           "Siirry tilastoihin"
     :city-stats          (str "Kunta" ZWSP "tilastot")
     :finance-stats       (str "Talous" ZWSP "tiedot")
