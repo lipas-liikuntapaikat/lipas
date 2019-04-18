@@ -783,7 +783,8 @@
 
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
-      [mui/grid {:container true :align-items "center" :spacing 8}
+
+      [mui/grid {:container true :align-items "center" :spacing 8 :wrap "nowrap"}
 
        ;; Zoom to users location btn
        [mui/grid {:item true}

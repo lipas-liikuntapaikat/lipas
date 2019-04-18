@@ -47,7 +47,7 @@
    {:label "LIKES" :href "https://www.likes.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
-  [mui/grid {:item true :xs 12 :md "auto" :lg "auto"}
+  [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
    [:img
     {:style
      (merge
@@ -66,7 +66,10 @@
     :or   {bg-color mui/gray1 title-style {:opacity 0.7}}} & contents]
 
   [mui/grid
-   {:container true :style {:background-color bg-color :padding "1em 2em 1em 2em"}}
+   {:container true
+    :style
+    {:background-color bg-color
+     :padding          "1em 2em 1em 2em"}}
 
    ;; Title
    [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
@@ -77,15 +80,18 @@
      [mui/typography {:variant "h4" :style title-style}
       title]]]
 
-   ;; Contents
-   (into [mui/grid {:item true :xs 12}] contents)])
+   ;; Content
+   [mui/grid {:item true :xs 12}
+    (into
+     [mui/grid
+      {:container true}]
+     contents)]])
 
 (defn grid-card [{:keys [title style link link-text xs md lg xl]
                   :or   {xs 12 md 6 lg 4 xl 3}} & children]
   [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
    [mui/card
     {:square true
-     ;;:raised true
      :style
      (merge
       {:background-color "rgb(250, 250, 250)"
@@ -122,35 +128,6 @@
 
 (defn create-panel [tr]
   [mui/grid {:container true}
-
-   ;; [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-
-   ;;  ;; "Jumbotron" header
-   ;;  [mui/grid
-   ;;   {:item true :xs 12
-   ;;    :style
-   ;;    {:background-color mui/secondary :padding "1em 2em 1em 2em" :z-index 1}}
-
-   ;;   [mui/grid {:container true :align-items "center" :spacing 16}
-
-   ;;    [mui/grid {:item true}
-   ;;     [mui/typography {:variant "h3" :style {:color "white"}}
-   ;;      "LIPAS"]]
-
-   ;;    [mui/grid {:item true}
-   ;;     [mui/grid {:container true :spacing 16 :align-items "flex-end"}
-
-   ;;      [mui/grid {:item true}
-   ;;       [mui/typography {:variant "h6" :style {:color "white"}}
-   ;;        (tr :sport/headline)]]
-
-   ;;      [mui/grid {:item true}
-   ;;       [mui/typography {:variant "h6" :style {:color "white"}}
-   ;;        (tr :ice/headline)]]
-
-   ;;      [mui/grid {:item true}
-   ;;       [mui/typography {:variant "h6" :style {:color "white"}}
-   ;;        (tr :swim/headline)]]]]]]]
 
    ;; Main section with background image
    [mui/grid
@@ -292,33 +269,8 @@
            :body    (tr :data-users/email-body)})}
         (tr :data-users/tell-us)]]]]]
 
-   ;; LIPAS-data users list
-   ;; [footer
-   ;;  {:title    (tr :data-users/headline) :title-style {:color mui/primary}
-   ;;   :bg-color "white"}
-
-   ;;  (into [mui/grid {:container true}] (map ->link known-users))
-
-   ;;  [mui/grid {:item true}
-   ;;   [mui/grid {:container true :spacing 16 :style {:margin-top "1em"}}
-   ;;    [mui/grid {:item true}
-   ;;     [mui/typography {:variant "h5" :color "primary"}
-   ;;      (tr :data-users/data-user?)]]
-
-   ;;    [mui/grid {:item true}
-   ;;     [mui/link
-   ;;      {:underline "always"
-   ;;       :variant   "h6"
-   ;;       :color     "secondary"
-   ;;       :href
-   ;;       (utils/->mailto
-   ;;        {:email   "lipasinfo@jyu.fi"
-   ;;         :subject (tr :data-users/email-subject)
-   ;;         :body    (tr :data-users/email-body)})}
-   ;;      (tr :data-users/tell-us)]]]]]
-
    ;;Partner logos
-   [footer {:title (tr :partners/headline) :bg-color mui/gray3}
+   [footer {:title (tr :partners/headline) :bg-color mui/gray2}
     (into
      [mui/grid {:container true :align-items "center"}]
      (map ->logo logos))]])
