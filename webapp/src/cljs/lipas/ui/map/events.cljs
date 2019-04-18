@@ -135,6 +135,22 @@
                                       :geom-type geom-type
                                       :sub-mode  :drawing}))))
 
+(re-frame/reg-event-db
+ ::start-deleting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :deleting}))))
+
+(re-frame/reg-event-db
+ ::stop-deleting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :editing}))))
+
 (re-frame/reg-event-fx
  ::update-geometries
  (fn [{:keys [db]} [_ lipas-id geoms]]
@@ -193,7 +209,7 @@
  (fn [_ [_ lipas-id geom-type]]
    {:dispatch-n
     [[:lipas.ui.sports-sites.events/edit-site lipas-id]
-     [::zoom-to-site lipas-id]
+     ;;[::zoom-to-site lipas-id]
      [::start-editing lipas-id :editing geom-type]]}))
 
 (re-frame/reg-event-fx
@@ -201,7 +217,11 @@
  (fn [_ [_ lipas-id]]
    {:dispatch-n
     [[:lipas.ui.sports-sites.events/save-edits lipas-id]
-     [::stop-editing]]}))
+     [::stop-editing]
+     ;; We "unselect" lipas-id to avoid map jumping to old position when
+     ;; mode is changed (::stop editing) but new revision hasn't yet
+     ;; been fetched from search (after successful save).
+     [::show-sports-site nil]]}))
 
 (re-frame/reg-event-fx
  ::discard-edits

@@ -24,7 +24,7 @@
      [energy/energy-stats
       {:tr             tr
        :year           year
-       :link           "/#/uimahalliportaali/ilmoita-tiedot"
+       :link           "/uimahalliportaali/ilmoita-tiedot"
        :stats          stats
        :on-year-change #(==> [::events/display-stats %])}]
 

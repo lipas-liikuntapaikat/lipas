@@ -8,8 +8,6 @@
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(def temp-fid-prefix "temp")
-
 (defn clear-edits! [{:keys [layers] :as map-ctx}]
   (-> layers :overlays :edits .getSource .clear)
   map-ctx)
@@ -42,6 +40,27 @@
                        (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))])))))
     (assoc-in map-ctx [:interactions :delete] delete)))
 
+(defn enable-splitting! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
+  (let [layer  (-> layers :overlays :edits)
+        split  (ol.interaction.Select. #js{:layers #js[layer]
+                                           :style  styles/hover-style})
+        source (.getSource layer)]
+    (.addInteraction lmap split)
+    (.on split "select"
+         (fn [e]
+           (let [selected (gobj/get e "selected")
+                 euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 wgs      (ol.proj.toLonLat euref "EPSG:3067")]
+             (when (not-empty selected)
+               (doseq [f selected]
+                 (when-let [splitted (map-utils/split-at-coords f wgs)]
+                   (.removeFeature source f)
+                   (.addFeatures source splitted)))
+               (doto (.getFeatures split)
+                 (.clear))
+               (on-modify (map-utils/->geoJSON-clj (.getFeatures source)))))))
+    (assoc-in map-ctx [:interactions :split] split)))
+
 (defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                            on-modifyend]
   (let [layer     (-> layers :overlays :edits)
@@ -71,9 +90,7 @@
 
     (.on modify "modifyend"
          (fn [e]
-           (let [fixed (-> source
-                           .getFeatures
-                           map-utils/fix-features)]
+           (let [fixed (-> source .getFeatures map-utils/fix-features)]
 
              (.clear source)
              (.addFeatures source fixed)
@@ -113,7 +130,7 @@
     (.on draw "drawend"
          (fn [e]
            (let [f     (gobj/get e "feature")
-                 _     (.setId f (str (gensym temp-fid-prefix)))
+                 _     (.setId f (str (gensym map-utils/temp-fid-prefix)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
                  fixed (map-utils/fix-features fs)]
@@ -149,13 +166,13 @@
 
 ;; Adding new features
 (defn set-adding-mode! [map-ctx mode]
-  (let [map-ctx (-> map-ctx
-                    map-utils/clear-interactions!)]
+  (let [map-ctx   (-> map-ctx map-utils/clear-interactions!)
+        on-modify (fn [f] (==> [::events/update-new-geom f]))]
     (case (:sub-mode mode)
       :drawing  (start-drawing! map-ctx (:geom-type mode)
                                 (fn [f] (==> [::events/new-geom-drawn f])))
-      :editing  (start-editing! map-ctx (:geom mode)
-                                (fn [f] (==> [::events/update-new-geom f])))
+      :editing  (start-editing! map-ctx (:geom mode) on-modify)
+      :deleting (enable-delete! map-ctx on-modify)
       :finished (map-utils/show-feature! map-ctx (:geom mode)))))
 
 (defn update-adding-mode! [map-ctx mode]
@@ -179,7 +196,7 @@
    (let [map-ctx      (map-utils/clear-interactions! map-ctx)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
-                        (when (#{:drawing :drawing-hole :deleting} sub-mode)
+                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
                           (==> [::events/start-editing lipas-id :editing geom-type])))]
 
@@ -192,6 +209,8 @@
        :deleting     (-> map-ctx
                          ;;(continue-editing! on-modifyend)
                          (enable-delete! on-modifyend))
+       :splitting    (-> map-ctx
+                         (enable-splitting! on-modifyend))
        :importing    (refresh-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx mode]

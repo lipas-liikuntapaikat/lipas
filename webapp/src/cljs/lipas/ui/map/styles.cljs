@@ -58,8 +58,8 @@
        :fill default-fill
        :image
        (ol.style.Circle.
-        #js{:radius 5
-            :fill   default-fill
+        #js{:radius 7
+            :fill (ol.style.Fill. #js{:color "rgba(255,255,0,0.85)"})
             :stroke default-stroke})}))
 
 (def invalid-style

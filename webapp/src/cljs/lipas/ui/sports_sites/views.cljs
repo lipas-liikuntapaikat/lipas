@@ -105,7 +105,8 @@
       :value      (-> display-data :construction-year)
       :form-field [lui/year-selector
                    {:value     (-> edit-data :construction-year)
-                    :on-change #(on-change :construction-year %)}]}
+                    :on-change #(on-change :construction-year %)
+                    :deselect? true}]}
 
      ;; Renovation years
      {:label      (tr :lipas.sports-site/renovation-years)

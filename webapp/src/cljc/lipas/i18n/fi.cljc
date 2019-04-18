@@ -95,11 +95,12 @@
 
    :stats
    {:headline            "Tilastot"
-    :description         "Kuntien viralliset tilinpäätöstiedot liikunta- ja
-    nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja
-    vertailla sitä muihin kuntiin."
+    :description "Tilastoja liikuntapaikoista, myönnetyistä
+    avustuksista (tulossa) sekä kuntien liikunta- ja nuorisotoimen
+    taloudesta."
     :bullet1             "Liikunta- ja nuorisotoimen taloustiedot"
     :bullet2             "Liikuntapaikkatilastot"
+    :bullet3             "Avustukset (tulossa)"
     :browse-to           "Siirry tilastoihin"
     :city-stats          (str "Kunta" ZWSP "tilastot")
     :finance-stats       (str "Talous" ZWSP "tiedot")
@@ -653,36 +654,37 @@
     Lipakseen."}
 
    :map
-   {:add-to-map         "Lisää kartalle"
-    :zoom-to-user       "Kohdista nykyiseen sijaintiini"
-    :zoom-to-site       "Kohdista kartta liikuntapaikkaan"
-    :center-map-to-site "Kohdista kartta liikuntapaikkaan"
-    :zoom-closer        "Kartta täytyy zoomata lähemmäs"
-    :draw-geoms         "Piirrä"
-    :draw               (fn [geom-type]
-                          (case geom-type
-                            "LineString" "Piirrä reittiosa"
-                            "Polygon"    "Piirrä alue"
-                            "Lisää kartalle"))
-    :modify             (fn [geom-type]
-                          (case geom-type
-                            "LineString" "Muokkaa reittiä"
-                            "Polygon"    "Muokkaa aluetta"
-                            "Point"      "Voit raahata pistettä kartalla"
-                            "-"))
-    :draw-hole          "Lisää reikä"
-    :remove             (fn [geom-type]
-                          (case geom-type
-                            "LineString" "Poista reittiosa"
-                            "Polygon"    "Poista alue"
-                            "Poista osa"))
-    :confirm-remove     (fn [geom-type]
-                          (case geom-type
-                            "LineString" "Haluatko poistaa valitun reittiosan?"
-                            "Polygon"    "Haluatko varmasti poisaa valitun alueen?"
-                            "Haluatko varmasti poistaa valitun kohteen?"))
-    :edit-later-hint    "Voit muokata geometriaa myös myöhemmin"
-    :download-gpx       "Lataa GPX"}
+   {:add-to-map          "Lisää kartalle"
+    :zoom-to-user        "Kohdista nykyiseen sijaintiini"
+    :zoom-to-site        "Kohdista kartta liikuntapaikkaan"
+    :center-map-to-site  "Kohdista kartta liikuntapaikkaan"
+    :zoom-closer         "Kartta täytyy zoomata lähemmäs"
+    :draw-geoms          "Piirrä"
+    :draw                (fn [geom-type]
+                           (case geom-type
+                             "LineString" "Piirrä reittiosa"
+                             "Polygon"    "Piirrä alue"
+                             "Lisää kartalle"))
+    :modify              (fn [geom-type]
+                           (case geom-type
+                             "LineString" "Muokkaa reittiä"
+                             "Polygon"    "Muokkaa aluetta"
+                             "Point"      "Voit raahata pistettä kartalla"
+                             "-"))
+    :draw-hole           "Lisää reikä"
+    :remove              (fn [geom-type]
+                           (case geom-type
+                             "LineString" "Poista reittiosa"
+                             "Polygon"    "Poista alue"
+                             "Poista osa"))
+    :confirm-remove      (fn [geom-type]
+                           (case geom-type
+                             "LineString" "Haluatko poistaa valitun reittiosan?"
+                             "Polygon"    "Haluatko varmasti poisaa valitun alueen?"
+                             "Haluatko varmasti poistaa valitun kohteen?"))
+    :edit-later-hint     "Voit muokata geometriaa myös myöhemmin"
+    :download-gpx        "Lataa GPX"
+    :split-route-segment "Katkaise reittiosa"}
 
    :map.import
    {:headline          "Tuo geometriat"

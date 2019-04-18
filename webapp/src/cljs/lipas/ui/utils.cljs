@@ -249,15 +249,16 @@
   (-> js/window .-location .-href url/url :host))
 
 (defn current-path []
-  (let [path (-> js/window .-location .-href url/url :anchor)]
-    (str "/#" path)))
+  (let [url (-> js/window .-location .-href url/url)]
+    (if-let [anchor (:anchor url)]
+      (str "/#" anchor)
+      (:path url))))
 
 (defn parse-token [s]
   (-> s
       url/url
-      :anchor
-      (string/split "?token=")
-      second))
+      :query
+      (get "token")))
 
 (defn prod? []
   (-> (base-url)
@@ -354,7 +355,6 @@
    (==> [:lipas.ui.events/navigate path])))
 
 (def check-mark "✓")
-
 
 (defn link? [x]
   (and (string? x)

@@ -225,7 +225,8 @@
           allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     (partial set-field lipas-id)]
 
-      [mui/grid {:container true}
+      [mui/grid
+       {:container true :style {:padding "1em"}}
 
        (when editing?
          [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
@@ -324,7 +325,8 @@
            (when (and (not editing?) (#{"LineString"} geom-type))
              [mui/tooltip {:title (tr :map/download-gpx)}
               [mui/fab
-               {:on-click #(==> [::events/download-gpx lipas-id])
+               {:size     "small"
+                :on-click #(==> [::events/download-gpx lipas-id])
                 :color    "default"}
                [mui/icon "save_alt"]]])
 
@@ -332,9 +334,10 @@
            (when-not editing?
              [mui/tooltip {:title (tr :map/zoom-to-site)}
               [mui/fab
-               {:on-click #(==> [::events/zoom-to-site lipas-id width])
+               {:size     "small"
+                :on-click #(==> [::events/zoom-to-site lipas-id width])
                 :color    "default"}
-               [mui/icon {:color "secondary"}
+               [mui/icon {:color "default"}
                 "place"]]])
 
            ;; Add reminder
@@ -348,7 +351,8 @@
            (when (and editing? (#{"LineString"} geom-type))
              [mui/tooltip {:title (tr :map.import/tooltip)}
               [mui/fab
-               {:on-click #(==> [::events/toggle-import-dialog])
+               {:size     "small"
+                :on-click #(==> [::events/toggle-import-dialog])
                 :color    "default"}
                [:> js/materialIcons.FileUpload]]])
 
@@ -356,7 +360,8 @@
            (when (and editing? (#{"Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/draw-hole)}
               [mui/fab
-               {:on-click #(if (= sub-mode :drawing-hole)
+               {:size     "small"
+                :on-click #(if (= sub-mode :drawing-hole)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
                 :style    (when (= sub-mode :drawing-hole)
@@ -368,7 +373,8 @@
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/draw geom-type)}
               [mui/fab
-               {:on-click #(if (= sub-mode :drawing)
+               {:size     "small"
+                :on-click #(if (= sub-mode :drawing)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :drawing geom-type]))
                 :style    (when (= sub-mode :drawing)
@@ -382,13 +388,27 @@
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
              [mui/tooltip {:title (tr :map/remove geom-type)}
               [mui/fab
-               {:on-click #(if (= sub-mode :deleting)
+               {:size     "small"
+                :on-click #(if (= sub-mode :deleting)
                              (==> [::events/start-editing lipas-id :editing geom-type])
                              (==> [::events/start-editing lipas-id :deleting geom-type]))
                 :style    (when (= sub-mode :deleting)
                             {:border (str "5px solid " mui/secondary)})
                 :color    "default"}
-               [:> js/materialIcons.Eraser]]])]
+               [:> js/materialIcons.Eraser]]])
+
+           ;; Split linestring
+           (when (and editing? (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map/split-route-segment)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(if (= sub-mode :splitting)
+                             (==> [::events/start-editing lipas-id :editing geom-type])
+                             (==> [::events/start-editing lipas-id :splitting geom-type]))
+                :style    (when (= sub-mode :splitting)
+                            {:border (str "5px solid " mui/secondary)})
+                :color    "default"}
+               [:> js/materialIcons.ContentCut]]])]
 
           (concat
            (lui/edit-actions-list
@@ -423,19 +443,18 @@
 (defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
-    (let [locale                (tr)
+    (let [locale                         (tr)
           {:keys [type data new-site-valid? admins owners cities
                   types types-props size-categories zoomed? geom geom-type
-                  active-step]} (<== [::subs/add-sports-site-view])
+                  active-step sub-mode]} (<== [::subs/add-sports-site-view])
 
           allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     set-new-site-field]
 
       [mui/grid
        {:container true
-        :direction "column"
-        :justify   "space-between"
-        :style     {:flex 1 :height "100%"}}
+        :direction "row"
+        :style     {:padding "0.5em 1em 0.5em 1em" :flex 1 :height "100%"}}
 
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
 
@@ -542,18 +561,33 @@
 
                 ;; Add additional geom button
                 (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true :xs 12}
+                  [mui/grid {:item true :xs 8}
                    [mui/button
                     {:on-click #(==> [::events/start-adding-geom geom-type])
                      :variant  "contained"
                      :color    "secondary"}
                     (tr :map/draw geom-type)]])
 
+                ;; Delete geom
+                (when (#{"LineString" "Polygon"} geom-type)
+                  [mui/grid {:item true :xs 4}
+                   [mui/tooltip {:title (tr :map/remove geom-type)}
+                    [mui/button
+                     {:on-click #(if (= sub-mode :deleting)
+                                   (==> [::events/stop-deleting-geom geom-type])
+                                   (==> [::events/start-deleting-geom geom-type]))
+                      :disabled (-> geom :features empty?)
+                      :style    (when (= sub-mode :deleting)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [:> js/materialIcons.Eraser]]]])
+
                 ;; Done button
                 [mui/grid {:item true :xs 12}
                  [mui/button
                   {:on-click #(==> [::events/finish-adding-geom geom type-code])
                    :variant  "contained"
+                   :disabled (-> geom :features empty?)
                    :color    "secondary"}
                   (tr :general/done)]]]))]]
 
@@ -561,7 +595,11 @@
          [mui/step
           [mui/step-label (tr :actions/fill-data)]
           [mui/step-content
-           {:style {:margin-left "-24px" :margin-top "1em" :padding 0 }}
+           {:style
+            {:margin-left  "-24px" ;; Undo Stepper default padding
+             :margin-right "-24px"
+             :margin-top   "1em"
+             :padding      0 }}
            [mui/grid {:container true :style {:flex-direction "column"}}
 
             ;; Tabs
@@ -636,7 +674,9 @@
           ;; Address search button
           [mui/tooltip {:title (tr :map.address-search/tooltip)}
            [mui/grid {:item true}
-            [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+            [mui/fab
+             {:size     "small"
+              :on-click #(==> [::events/toggle-address-search-dialog])}
              [:> js/materialIcons.MapSearchOutline]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
@@ -654,7 +694,8 @@
 
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
-         [mui/fab {:on-click #(==> [::events/toggle-address-search-dialog])}
+         [mui/fab
+          {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
           [:> js/materialIcons.MapSearchOutline]]]]
 
        (when (= :list result-view)
@@ -662,32 +703,36 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
-  (let [adding?     (<== [::sports-site-subs/adding-new-site?])
-        result-view (<== [:lipas.ui.search.subs/search-results-view])]
+  (let [adding?       (<== [::sports-site-subs/adding-new-site?])
+        result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        selected-site (<== [::subs/selected-sports-site])
+        view          (cond
+                        adding?       :adding
+                        selected-site :site
+                        :else         :search)]
 
-    [mui/grid
-     {:container true
-      :style     {:height "100%"}
-      :direction "column"
-      :justify   "space-between"}
-
+    [:<>
      ;; Search, filters etc.
-     (if adding?
-       [add-sports-site-view {:tr tr}]
-       [search/search-view
-        {:tr              tr
-         :on-result-click (fn [{:keys [lipas-id]}]
-                            (==> [::events/show-sports-site lipas-id])
-                            (==> [::events/zoom-to-site lipas-id width]))}])
-     (when (and (= :list result-view) (not adding?))
-       [default-tools {:tr tr :logged-in? logged-in?}])]))
+     (case view
+       :adding [add-sports-site-view {:tr tr}]
+       :site   [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :search [search/search-view
+                {:tr tr
+                 :on-result-click
+                 (fn [{:keys [lipas-id]}]
+                   (==> [::events/show-sports-site lipas-id])
+                   (==> [::events/zoom-to-site lipas-id width]))}])
+
+     (when (and (= :list result-view) (#{:search} view))
+       [:div {:style {:padding "0.5em"}}
+        [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
 (defn map-view [{:keys [width]}]
   (let [tr            (<== [:lipas.ui.subs/translator])
         logged-in?    (<== [:lipas.ui.subs/logged-in?])
-        selected-site (<== [::subs/selected-sports-site])
         drawer-open?  (<== [::subs/drawer-open?])
         result-view   (<== [:lipas.ui.search.subs/search-results-view])
+        selected-site (<== [::subs/selected-sports-site])
         drawer-width  (cond
                         (#{"xs"} width)              "100%"
                         (and (#{"sm" "md"} width)
@@ -728,25 +773,18 @@
        ;; Close button
        [mui/button
         {:on-click #(==> [::events/toggle-drawer])
-         :style    {:margin-bottom "1em"}
+         :style    {:min-height "36px" :margin-bottom "1em"}
          :variant  "outlined"
          :color    "default"}
         [mui/icon "expand_less"]]
 
        ;; Content
-       [mui/grid
-        {:container true :direction "column" :justify "space-between"
-         :style     {:flex 1 :padding "0em 1em 0.5em 1em"}}
-
-
-        [mui/grid {:item true :xs 12}
-         (if selected-site
-           [sports-site-view {:tr tr :site-data selected-site :width width}]
-           [map-contents-view {:tr tr :logged-in? logged-in? :width width}])]]]]
+       [map-contents-view {:tr tr :logged-in? logged-in? :width width}]]]
 
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
-      [mui/grid {:container true :align-items "center"}
+
+      [mui/grid {:container true :align-items "center" :spacing 8 :wrap "nowrap"}
 
        ;; Zoom to users location btn
        [mui/grid {:item true}

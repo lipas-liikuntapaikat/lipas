@@ -39,7 +39,7 @@
      (when (not logged-in?)
        [mui/menu-item
         {:id       "account-menu-item-login"
-         :on-click (comp close #(navigate! "/#/kirjaudu" :comeback? true))}
+         :on-click (comp close #(navigate! "/kirjaudu" :comeback? true))}
         [mui/list-item-icon
          [mui/icon "lock"]]
         [mui/list-item-text {:primary (tr :login/headline)}]])
@@ -47,7 +47,7 @@
      ;; Register
      (when (not logged-in?)
        [mui/menu-item {:id       "account-menu-item-register"
-                       :on-click (comp close #(navigate! "/#/rekisteroidy"))}
+                       :on-click (comp close #(navigate! "/rekisteroidy"))}
         [mui/list-item-icon
          [mui/icon "group_add"]]
         [mui/list-item-text {:primary (tr :register/headline)}]])
@@ -55,7 +55,7 @@
      ;; Profile
      (when logged-in?
        [mui/menu-item {:id       "account-menu-item-profile"
-                       :on-click (comp close #(navigate! "/#/profiili"))}
+                       :on-click (comp close #(navigate! "/profiili"))}
         [mui/list-item-icon
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
@@ -131,7 +131,7 @@
 
       ;; Home
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/etusivu")}
+                      :on-click #(hide-and-navigate! "/etusivu")}
        [mui/list-item-icon
         [mui/icon "home"]]
        [mui/list-item-text {:primary (tr :menu/frontpage)}]]
@@ -140,28 +140,28 @@
 
       ;; Sports sites
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/liikuntapaikat")}
+                      :on-click #(hide-and-navigate! "/liikuntapaikat")}
        [mui/list-item-icon
         [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
       ;; Ice stadiums
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/jaahalliportaali")}
+                      :on-click #(hide-and-navigate! "/jaahalliportaali")}
        [mui/list-item-icon
         [mui/icon "ac_unit"]]
        [mui/list-item-text {:primary (tr :ice/headline)}]]
 
       ;; Swiming pools
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/uimahalliportaali")}
+                      :on-click #(hide-and-navigate! "/uimahalliportaali")}
        [mui/list-item-icon
         [mui/icon "pool"]]
        [mui/list-item-text {:primary (tr :swim/headline)}]]
 
       ;; Stats
       [mui/list-item {:button   true
-                      :on-click #(hide-and-navigate! "/#/tilastot")}
+                      :on-click #(hide-and-navigate! "/tilastot")}
        [mui/list-item-icon
         [mui/icon "insert_chart_outlined"]]
        [mui/list-item-text {:primary (tr :stats/headline)}]]
@@ -171,7 +171,7 @@
       ;; Admin
       (when admin?
         [mui/list-item {:button   true
-                        :on-click #(hide-and-navigate! "/#/admin")}
+                        :on-click #(hide-and-navigate! "/admin")}
          [mui/list-item-icon
           [mui/icon "settings"]]
          [mui/list-item-text {:primary (tr :lipas.admin/headline)}]])
@@ -188,7 +188,7 @@
       ;; Profile
       (when logged-in?
         [mui/list-item {:button   true
-                        :on-click #(hide-and-navigate! "/#/profiili")}
+                        :on-click #(hide-and-navigate! "/profiili")}
          [mui/list-item-icon
           [mui/icon "account_circle"]]
          [mui/list-item-text {:primary (tr :user/headline)}]])
@@ -204,7 +204,7 @@
       ;; Login
       (when (not logged-in?)
         [mui/list-item {:button   true
-                        :on-click #(hide-and-navigate! "/#/kirjaudu")}
+                        :on-click #(hide-and-navigate! "/kirjaudu")}
          [mui/list-item-icon
           [mui/icon "lock"]]
          [mui/list-item-text {:primary (tr :login/headline)}]])
@@ -212,7 +212,7 @@
       ;; Register
       (when (not logged-in?)
         [mui/list-item {:button   true
-                        :on-click #(hide-and-navigate! "/#/rekisteroidy")}
+                        :on-click #(hide-and-navigate! "/rekisteroidy")}
          [mui/list-item-icon
           [mui/icon "group_add"]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
@@ -220,25 +220,25 @@
 (defn get-sub-page [panel tr]
   (case panel
     :front-page-panel     {:text (tr :home-page/headline)
-                           :href "/#/etusivu"}
+                           :href "/etusivu"}
     :admin-panel          {:text (tr :lipas.admin/headline)
-                           :href "/#/admin"}
+                           :href "/admin"}
     :sports-panel         {:text (tr :sport/headline)
-                           :href "/#/liikuntapaikat"}
+                           :href "/liikuntapaikat"}
     :ice-stadiums-panel   {:text (tr :ice/headline)
-                           :href "/#/jaahalliportaali"}
+                           :href "/jaahalliportaali"}
     :swimming-pools-panel {:text (tr :swim/headline)
-                           :href "/#/uimahalliportaali"}
+                           :href "/uimahalliportaali"}
     :login-panel          {:text (tr :login/headline)
-                           :href "/#/kirjaudu"}
+                           :href "/kirjaudu"}
     :register-panel       {:text (tr :register/headline)
-                           :href "/#/rekisteroidy"}
+                           :href "/rekisteroidy"}
     :user-panel           {:text (tr :user/headline)
-                           :href "/#/profiili"}
+                           :href "/profiili"}
     :reset-password-panel {:text (tr :reset-password/headline)
-                           :href "/#/passu-hukassa"}
+                           :href "/passu-hukassa"}
     :stats-panel          {:text (tr :stats/headline)
-                           :href "/#/tilastot"}
+                           :href "/tilastot"}
     {:text "" :href ""}))
 
 (defn menu-button [{:keys [tr]}]
@@ -295,7 +295,7 @@
      [mui/typography
       {:component "a"
        :variant   "h6"
-       :href      "/#/etusivu"
+       :href      "/etusivu"
        :style
        (merge
         mui/headline-aleo
