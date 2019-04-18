@@ -157,7 +157,6 @@
                          recharts      recharts     react-autosuggest  "cljsjs.react-autosuggest"
                          mui-downshift MuiDownshift turf               turf}}]
       :output-to       "resources/public/js/compiled/app.js"
-      :asset-path      "/js/compiled/out"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}
       :pretty-print    false}}
