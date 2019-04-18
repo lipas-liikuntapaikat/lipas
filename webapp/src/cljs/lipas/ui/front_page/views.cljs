@@ -21,7 +21,7 @@
    {:img "img/partners/metsahallitus.svg"}
    {:img "img/partners/sport_venue.png"}
    {:img "img/partners/suh.png"}
-   {:img "img/partners/syke.svg" :full-height? true}
+   {:img "img/partners/syke.png" :full-height? true}
    {:img "img/partners/ukty.png"}
    {:img "img/partners/vtt.svg"}
    {:img "img/partners/avi.png"}])
