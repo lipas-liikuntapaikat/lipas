@@ -214,14 +214,14 @@
 
 (re-frame/reg-event-fx
  ::save-edits
- (fn [{:keys [db]} [_ lipas-id]]
-   ;; We "unselect" lipas-id to avoid map jumping to old position when
-   ;; mode is changed (::stop editing) but new revision hasn't yet
-   ;; been fetched from search (after successful save).
-   {:db (assoc-in db [:map :mode :lipas-id] nil)
-    :dispatch-n
+ (fn [_ [_ lipas-id]]
+   {:dispatch-n
     [[:lipas.ui.sports-sites.events/save-edits lipas-id]
-     [::stop-editing]]}))
+     [::stop-editing]
+     ;; We "unselect" lipas-id to avoid map jumping to old position when
+     ;; mode is changed (::stop editing) but new revision hasn't yet
+     ;; been fetched from search (after successful save).
+     [::show-sports-site nil]]}))
 
 (re-frame/reg-event-fx
  ::discard-edits
