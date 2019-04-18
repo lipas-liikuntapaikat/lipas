@@ -38,7 +38,8 @@
   (when config/debug?
     (enable-console-print!)
     (==> [::events/set-backend-url dev-backend-url])
-    (println "dev mode, backend-url:" dev-backend-url)))
+    (println "dev mode, backend-url:" dev-backend-url)
+    ))
 
 (defn qa-setup []
   (when-not (utils/prod?)

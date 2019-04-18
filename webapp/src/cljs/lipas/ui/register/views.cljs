@@ -113,5 +113,5 @@
 (defn main [tr]
   (let [logged-in? (<== [::subs/logged-in?])]
     (if logged-in?
-      (navigate! "/#/profiili")
+      (navigate! "/profiili")
       [create-panel tr])))

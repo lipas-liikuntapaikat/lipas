@@ -20,8 +20,8 @@
 (re-frame/reg-event-db
  ::set-comeback-path
  (fn [db [_ path]]
-   (if (= "/#/kirjaudu" path)
-     (assoc db :comeback-path "/#/profiili")
+   (if (= "/kirjaudu" path)
+     (assoc db :comeback-path "/profiili")
      (assoc db :comeback-path path))))
 
 (re-frame/reg-event-fx
@@ -41,7 +41,7 @@
          :dispatch [::refresh-login]}]
        :dispatch-n
        [(when (= :magic-link login-type)
-          [:lipas.ui.events/navigate "/#/profiili"])]}
+          [:lipas.ui.events/navigate "/profiili"])]}
       (when (not= :refresh login-type)
         {:ga/set   [{:dimension1 (if admin? "admin" "user")}]
          :ga/event ["user" "login-success"]})))))
@@ -116,7 +116,7 @@
 
     ::local-storage/remove! :login-data
 
-    :dispatch [:lipas.ui.events/navigate "/#/kirjaudu"]
+    :dispatch [:lipas.ui.events/navigate "/kirjaudu"]
     :ga/set   [{:dimension1 "logged-out"}]}))
 
 (re-frame/reg-event-fx
@@ -127,7 +127,7 @@
      :uri             (str (:backend-url db) "/actions/order-magic-link")
      :params          {:email     email
                        :variant   :lipas
-                       :login-url (str (utils/base-url) "/#/kirjaudu")}
+                       :login-url (str (utils/base-url) "/kirjaudu")}
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::order-magic-link-success]

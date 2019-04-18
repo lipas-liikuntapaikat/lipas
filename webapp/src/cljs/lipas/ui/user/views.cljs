@@ -121,14 +121,14 @@
        [mui/card-content
         [user-form tr user]]
        [mui/card-actions
-        [mui/button {:href  "/#/etusivu"
+        [mui/button {:href  "/etusivu"
                      :color :secondary}
          (str "> " (tr :user/front-page-link))]
-        [mui/button {:href  "/#/passu-hukassa"
+        [mui/button {:href  "/passu-hukassa"
                      :color :primary}
          (str "> " (tr :reset-password/change-password))]
         (when admin?
-          [mui/button {:href  "/#/admin"
+          [mui/button {:href  "/admin"
                        :color :primary}
            (str "> " (tr :user/admin-page-link))])]]]
 
@@ -198,15 +198,15 @@
              :on-select #(==> [::events/select-sports-site %])}]])]
 
        [mui/card-actions
-        [mui/button {:href  "/#/liikuntapaikat"
+        [mui/button {:href  "/liikuntapaikat"
                      :color :secondary}
          (str "> " (tr :sport/headline))]
         (when (some #{2510 2520} (map :type-code sites))
-          [mui/button {:href  "/#/jaahalliportaali"
+          [mui/button {:href  "/jaahalliportaali"
                        :color :secondary}
            (str "> " (tr :user/ice-stadiums-link))])
         (when (some #{3110 3130} (map :type-code sites))
-          [mui/button {:href  "/#/uimahalliportaali"
+          [mui/button {:href  "/uimahalliportaali"
                        :color :secondary}
            (str "> " (tr :user/swimming-pools-link))])]]]]))
 
@@ -215,4 +215,4 @@
         user       (<== [::subs/user-data])]
     (if logged-in?
       [user-panel tr user]
-      (navigate! "/#/kirjaudu"))))
+      (navigate! "/kirjaudu"))))

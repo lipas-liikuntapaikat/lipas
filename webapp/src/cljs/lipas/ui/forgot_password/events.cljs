@@ -27,7 +27,7 @@
     {:method          :post
      :uri             (str (:backend-url db) "/actions/request-password-reset")
      :params          {:email     email
-                       :reset-url (str (utils/base-url) "/#/passu-hukassa")}
+                       :reset-url (str (utils/base-url) "/passu-hukassa")}
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::request-success]
@@ -42,7 +42,7 @@
      {:dispatch-n [[:lipas.ui.events/set-active-notification
                     {:message  (tr :reset-password/reset-success)
                      :success? true}]
-                   [:lipas.ui.events/navigate "/#/kirjaudu"]]
+                   [:lipas.ui.events/navigate "/kirjaudu"]]
       :db         (assoc-in db [:reset-password :success] :reset-link-sent)
       :ga/event   ["user" "reset-password-success"]})))
 

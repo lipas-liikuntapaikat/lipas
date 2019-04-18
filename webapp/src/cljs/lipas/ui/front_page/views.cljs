@@ -145,7 +145,7 @@
     ;; Sports sites
     [grid-card
      {:title     (tr :sport/headline)
-      :link      "/#/liikuntapaikat"
+      :link      "/liikuntapaikat"
       :link-text (tr :actions/browse-to-map)}
      [mui/typography {:variant "body1"}
       (tr :sport/description)]
@@ -157,7 +157,7 @@
     ;; Ice stadiums portal
     [grid-card
      {:title     (tr :ice/headline)
-      :link      "/#/jaahalliportaali"
+      :link      "/jaahalliportaali"
       :link-text (tr :actions/browse-to-portal)}
      [mui/typography {:variant "body1"}
       (tr :ice/description)]
@@ -169,7 +169,7 @@
     ;; Swimming pools portal
     [grid-card
      {:title     (tr :swim/headline)
-      :link      "/#/uimahalliportaali"
+      :link      "/uimahalliportaali"
       :link-text (tr :actions/browse-to-portal)}
      [mui/typography {:variant "body1"}
       (tr :swim/description)]
@@ -181,7 +181,7 @@
     ;; Reports
     [grid-card
      {:title     (tr :stats/headline)
-      :link      "/#/tilastot"
+      :link      "/tilastot"
       :link-text (tr :stats/browse-to)}
      [mui/typography {:variant "body1"}
       (tr :stats/description)]

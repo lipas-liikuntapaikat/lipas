@@ -34,7 +34,7 @@
      (when (#{"user-not-found" "email-not-found"} error)
        [mui/grid {:item true :xs 12}
         [mui/button {:full-width true
-                     :href       "/#/rekisteroidy"}
+                     :href       "/rekisteroidy"}
          (tr :register/headline)]])]))
 
 (defn magic-link-form [{:keys [tr]}]
@@ -155,17 +155,17 @@
 
        ;; Forgot password
        [mui/button {:style {:margin-top "2em"}
-                    :href  "/#/passu-hukassa"}
+                    :href  "/passu-hukassa"}
         (tr :login/forgot-password?)]
 
        ;; Register
-       [mui/button {:href "/#/rekisteroidy"}
+       [mui/button {:href "/rekisteroidy"}
         (tr :register/headline)]]]]))
 
 (defn register-btn [{:keys [tooltip]}]
   [mui/tooltip
    {:title tooltip}
-   [mui/icon-button {:href "/#/rekisteroidy"}
+   [mui/icon-button {:href "/rekisteroidy"}
     [mui/icon "group_add"]]])
 
 (defn login-panel [{:keys [tr]}]
@@ -199,5 +199,5 @@
         token         (utils/parse-token (-> js/window .-location .-href))]
     (cond
       token      (==> [:lipas.ui.login.events/login-with-magic-link token])
-      logged-in? (navigate! (or comeback-path "/#/profiili"))
+      logged-in? (navigate! (or comeback-path "/profiili"))
       :else      [login-panel {:tr tr}])))
