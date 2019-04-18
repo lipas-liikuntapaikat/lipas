@@ -2337,7 +2337,7 @@
      "Plats utrustad för rullskridskoåkning, skejtning och sparkcykelåkning. I preciseringsuppgifterna anges vad som är tillåtet på området.",
      :en
      "An area equipped  for roller-blading, skateboarding, kick scooting. Hobby  specified in 'attribute data'."},
-    :tags          {:fi ["ramppi"]},
+    :tags          {:fi ["ramppi" "skeittipaikka" "skeittipuisto" "skeittiparkki"]},
     :name
     {:fi "Skeitti-/rullaluistelupaikka",
      :se "Plats för skejtning/rullskridskoåkning",
@@ -3466,7 +3466,7 @@
      "Konditions- och styrketräningsanordningar osv, en \"utomhusträningssal\". Kan vara en del av en idrottspark eller konditionsplats vid en motionsbana.",
      :en
      "Contains fitness and gym equipment, etc., \"outdoor gym\". May be part of a sports park."},
-    :tags          {:fi ["kuntoilulaite" "ulkokuntoilupiste" "kuntoilupiste"]},
+    :tags          {:fi ["kuntoilulaite" "ulkokuntoilupiste" "kuntoilupiste" "kuntoilupaikka"]},
     :name
     {:fi "Ulkokuntoilupaikka",
      :se "Konditionsplats för utomhusaktiviteter",

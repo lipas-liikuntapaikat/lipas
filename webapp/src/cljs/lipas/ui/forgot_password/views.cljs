@@ -61,13 +61,13 @@
          (when (= error :email-not-found)
            [lui/register-button
             {:label (tr :register/headline)
-             :href  "/#/rekisteroidy"}])
+             :href  "/rekisteroidy"}])
 
          ;; Forgot password button
          (when (= error :reset-token-expired)
            [mui/button
             {:color :primary
-             :href  "/#/passu-hukassa"}
+             :href  "/passu-hukassa"}
             (tr :reset-password/get-new-link)])]]]]]))
 
 (defn reset-password-form [{:keys [tr token]}]

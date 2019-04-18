@@ -15,6 +15,8 @@
 (def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                      :featureProjection "EPSG:3067"}))
 
+(def temp-fid-prefix "temp")
+
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
 
@@ -159,129 +161,209 @@
 
   (assoc map-ctx :interactions {}))
 
-;; (defn- ->splitter [fcoll]
-;;   (let [fs (gobj/get fcoll "features")]
-;;     (case (count fs)
-;;       1 (first fs)
-;;       (-> fcoll
-;;           turf/combine
-;;           (gobj/getValueByKeys "features" 0 "geometry")))))
+(defn- ->splitter [fcoll]
+  (let [fs (gobj/get fcoll "features")]
+    (case (count fs)
+      1 (first fs)
+      (-> fcoll
+          turf/combine
+          (gobj/getValueByKeys "features" 0)))))
 
-;; (defn- split-by-kinks [f kinks]
-;;   (let [splitter (->splitter kinks)
-;;         fid      (gobj/get f "id")
-;;         splitted (turf/lineSplit f splitter)]
-;;     (garray/forEach (gobj/get splitted "features")
-;;                     (fn [f] (gobj/set f "id" (str (gensym fid)))))
-;;     splitted))
+(defn- split-by-features [f kinks]
+  (let [splitter (->splitter kinks)
+        splitted (turf/lineSplit f splitter)]
+    (garray/forEach (gobj/get splitted "features")
+                    (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
+    splitted))
 
-;; (defn fix-kinks [ol-feature]
-;;   (let [f     (.writeFeatureObject geoJSON ol-feature)
-;;         kinks (turf/kinks f)]
-;;     (if (-> kinks (gobj/get "features") not-empty)
-;;       (-> (split-by-kinks f kinks) ->ol-features)
-;;       #js[ol-feature])))
+(defn split-at-coords [ol-feature coords]
+  (let [point   #js{:type "Point" :coordinates coords}
+        line    (.writeFeatureObject geoJSON ol-feature)
+        nearest (turf/nearestPointOnLine line point)]
+    (-> line
+        (split-by-features nearest)
+        ->ol-features)))
 
-;; (defn merge-candidates [start end lines]
-;;   (->> lines
-;;        (filter #(some #{start end} [(first %) (last %)]))))
+(defn fix-kinks* [f]
+  (let [kinks (turf/kinks f)]
+    (if (-> kinks (gobj/get "features") not-empty)
+      (-> (split-by-features f kinks)
+          (gobj/get "features"))
+      #js[f])))
 
-;; (def cat-dedupe (comp cat (dedupe)))
+(defn ->fcoll [fs]
+  #js{:type     "FeatureCollection"
+      :features (clj->js fs)})
 
-;; (defn- join-lines
-;;   "Joins l1 and l2 from corresponding elements in head or tail
-;;   position. l1 or l2 may be reversed during the process.
+(defn fix-kinks [fcoll]
+  (-> fcoll
+      :features
+      clj->js
+      (garray/concatMap fix-kinks*)
+      ->fcoll
+      ->clj))
 
-;;   Examples:
-;;   [1 2 3] [3 4 5] => [1 2 3 4 5]
-;;   [1 2 3] [4 5 3] => [1 2 3 5 4]
-;;   [1 2 3] [1 4 5] => [3 2 1 4 5]
-;;   [1 2 3] [4 5 1] => [4 5 1 2 3]"
-;;   [l1 l2]
-;;   (cond
-;;     (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
-;;     (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
-;;     (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
-;;     (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
+(defn merge-candidates [start end lines]
+  (->> lines
+       (filter #(some #{start end} [(first %) (last %)]))))
 
-;; (defn merge-linestrings* [lines]
-;;   (loop [wip {:res [] :todo lines}]
+(defn merge-candidates2 [start end lines]
+  (->> lines
+       (filter #(and
+                 (not= (first %) (last %))
+                 (some #{start end} %)))))
 
-;;     ;; End condition
-;;     (if (-> wip :todo empty?)
-;;       (:res wip)
+(def cat-dedupe (comp cat (dedupe)))
 
-;;       (let [line   (-> wip :todo first)
-;;             others (-> wip :todo (disj line))
-;;             start  (first line)
-;;             end    (last line)]
+(defn- join-lines
+  "Joins l1 and l2 from corresponding elements in head or tail
+  position. l1 or l2 may be reversed during the process.
 
-;;         (if (= start end)
+  Examples:
+  [1 2 3] [3 4 5] => [1 2 3 4 5]
+  [1 2 3] [4 5 3] => [1 2 3 5 4]
+  [1 2 3] [1 4 5] => [3 2 1 4 5]
+  [1 2 3] [4 5 1] => [4 5 1 2 3]"
+  [l1 l2]
+  (cond
+    (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
+    (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
+    (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
+    (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
 
-;;           ;; Closed ring (can't merge)
-;;           (recur
-;;            (-> wip
-;;                (update :res conj line)
-;;                (assoc :todo others)))
+(defn merge-linestrings* [lines]
+  (loop [wip {:res [] :todo lines}]
 
-;;           ;; Merge if exactly 1 candidate is found
-;;           (let [candidates (merge-candidates start end others)]
-;;             (if (= 1 (count candidates))
+    ;; End condition
+    (if (-> wip :todo empty?)
+      (:res wip)
 
-;;               (let [line2 (first candidates)]
-;;                 (recur
-;;                  (-> wip
-;;                      (update :res conj (join-lines line line2))
-;;                      (update :todo disj line line2))))
+      (let [line   (-> wip :todo first)
+            others (-> wip :todo (disj line))
+            start  (first line)
+            end    (last line)]
 
-;;               (recur
-;;                (-> wip
-;;                    (update :res conj line)
-;;                    (update :todo disj line))))))))))
+        (if (= start end)
 
-;; (defn merge-linestrings [{:keys [features] :as fcoll}]
-;;   (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
-;;     (if (> 2 (count lines))
-;;       fcoll
-;;       (assoc fcoll :features
-;;               (->> (merge-linestrings* lines)
-;;                    (map-indexed
-;;                     (fn [idx coords]
-;;                       {:type "Feature"
-;;                        :geometry
-;;                        {:type        "LineString"
-;;                         :coordinates coords}
-;;                        :id   (str (gensym))}))
-;;                    (into []))))))
+          ;; Closed ring (can't merge)
+          (recur
+           (-> wip
+               (update :res conj line)
+               (assoc :todo others)))
 
-;; (defn- split-by-intersections* [l1 l2]
-;;   (let [intersections (turf/lineIntersect l1 l2)]
-;;     (if (-> intersections (gobj/get "features") not-empty)
-;;       (let [ls1 (split-by-kinks l1 intersections)
-;;             ls2 (split-by-kinks l2 intersections)]
-;;         (-> #js[] (.concat (gobj/get ls1 "features")
-;;                            (gobj/get ls2 "features"))))
-;;       #js[l1 l2])))
+          ;; Merge if exactly 1 candidate is found
+          (let [candidates (merge-candidates2 start end others)]
+            (if (= 1 (count candidates))
 
-;; (defn- split-by-intersections [fcoll]
-;;   (let [fs (.reduce
-;;             (gobj/get fcoll "features")
-;;             (fn [res f]
-;;               (if (empty? res)
-;;                 (.push res f)
-;;                 (.forEach res (fn [f2]
-;;                                 (.concat res (split-by-intersections f2 f))))))
-;;             #js[])]
-;;     (gobj/set fcoll "features" fs)))
+              (let [line2 (first candidates)]
+                (recur
+                 (-> wip
+                     (update :res conj (join-lines line line2))
+                     (update :todo disj line line2))))
 
-;; ;; (garray/concatMap fix-kinks)
-;; (defn fix-linestrings [ol-features]
-;;   (-> ol-features
-;;       ->geoJSON-clj
-;;       merge-linestrings
-;;       clj->js
-;;       split-by-intersections
-;;       ))
+              (recur
+               (-> wip
+                   (update :res conj line)
+                   (update :todo disj line))))))))))
+
+(defn merge-linestrings [{:keys [features] :as fcoll}]
+  (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
+    (if (> 2 (count lines))
+      fcoll
+      (assoc fcoll :features
+              (->> (merge-linestrings* lines)
+                   (map-indexed
+                    (fn [idx coords]
+                      {:type "Feature"
+                       :geometry
+                       {:type        "LineString"
+                        :coordinates coords}
+                       :id   (str (gensym temp-fid-prefix))}))
+                   (into []))))))
+
+(defn valid-line? [{:keys [geometry]}]
+  (let [valid (and (= "LineString" (:type geometry))
+                 (= 2 (->> geometry :coordinates distinct (take 2) count)))]
+    (when-not valid
+      (prn "Ditching invalid:")
+      (prn geometry))
+    valid))
+
+(defn sensify [{:keys [geometry] :as f}]
+  (let [start  (->> geometry :coordinates first)
+        end    (->> geometry :coordinates last)
+        coords (->> geometry :coordinates (into [] (distinct)))
+        res    (if (= start end) (conj coords end) coords)]
+    (assoc-in f [:geometry :coordinates] (into [] res))))
+
+(defn split-by-intersections* [{:keys [features] :as fcoll} ixs]
+  ;;(prn "Before split: " (count features))
+  (let [splitter (-> ixs clj->js ->splitter)
+        fs       (reduce
+                  (fn [res f]
+                    (into res (-> f
+                                  clj->js
+                                  (turf/lineSplit splitter)
+                                  (gobj/get "features")
+                                  ;;(garray/map turf/truncate)
+                                  ;;(garray/map turf/cleanCoords)
+                                  ->clj
+                                  (->>
+                                   ;;(map sensify)
+                                   (filter valid-line?)
+                                   (mapv #(assoc % :id (str (gensym temp-fid-prefix))))))))
+                  []
+                  features)]
+    ;;(prn "After split: " (count fs))
+    (assoc fcoll :features fs)))
+
+(defn find-intersections [{:keys [features] :as fcoll}]
+  (let [fs (->> features
+                set
+                (reduce
+                 (fn [res f]
+                   (into res cat
+                         (for [f2   (disj (set features) f)
+                               :let [l1 (-> f :geometry clj->js)
+                                     l2 (-> f2 :geometry clj->js)]]
+
+                           (if (and l1 l2)
+                             (-> (turf/lineIntersect l1 l2)
+                                 (gobj/get "features")
+                                 ;;(garray/map turf/truncate)
+                                 ;;(garray/map turf/cleanCoords)
+                                 ->clj)))))
+                 #{}))]
+    (assoc fcoll :features fs)))
+
+
+(defn- split-by-intersections [{:keys [features] :as fcoll}]
+  (if (> 2 (count features))
+    fcoll
+    (let [ixs (find-intersections fcoll)]
+      ;;(prn "Intersections: " (-> ixs :features count))
+      ;;(prn ixs)
+      (if (-> ixs :features seq)
+        (split-by-intersections* fcoll ixs)
+        fcoll))))
+
+(defn fix-linestrings
+  "Does following to given features:
+
+  - Merges lines that can be merged (degree 2 nodes)
+  - Fixes self-intersections (kinks) by splitting
+  - Splits all lines at all intersections with any of the other lines"
+  [ol-features]
+  (-> ol-features
+      ->geoJSON
+      turf/truncate
+      ->clj
+      merge-linestrings
+      (update :features #(filterv valid-line? %))
+      fix-kinks
+      split-by-intersections
+      clj->js
+      ->ol-features))
 
 ;; (defn fix-features [ol-features]
 ;;   (let [geom-type (-> ol-features first .getGeometry .getType)]
@@ -290,8 +372,233 @@
 ;;       ol-features)))
 
 (defn fix-features [ol-features]
-  ;; TODO
   ol-features)
+
+(comment
+  (def dying-geom
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3811"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.620238 64.927283]]},
+       :properties nil,
+       :id "G__3783"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3782"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+       :properties nil,
+       :id "G__3786"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3785"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+       :properties nil,
+       :id "G__3784"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3808"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.620238 64.927283] [25.61972 64.927007]]},
+       :properties nil,
+       :id "G__3793"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3792"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3813"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.61972 64.927007]]},
+       :properties nil,
+       :id "G__3790"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3789"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3788"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61972 64.927007] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3794"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+       :properties nil,
+       :id "G__3791"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3797"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3796"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3801"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3814"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3795"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3799"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3802"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+       :properties nil,
+       :id "G__3798"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+       :properties nil,
+       :id "G__3800"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.617816 64.927202] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3804"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.618495 64.927102]]},
+       :properties nil,
+       :id "G__3806"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.619208 64.926996]]},
+       :properties nil,
+       :id "G__3803"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618495 64.927102] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3807"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.619208 64.926996] [25.618262 64.92698]]},
+       :properties nil,
+       :id "G__3805"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61972 64.927007] [25.619208 64.926996]]},
+       :properties nil,
+       :id "G__3787"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618495 64.927102] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3809"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.618495 64.927102]]},
+       :properties nil,
+       :id "G__3810"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+       :properties nil,
+       :id "G__3812"}
+      {:type "Feature",
+       :geometry
+       {:type "LineString",
+        :coordinates [[25.61977 64.927513] [25.617816 64.927202]]},
+       :properties nil,
+       :id "temp3815"}]})
+
+  (def killer-coords
+    [[25.61977, 64.927513] [25.617815999999994, 64.927202]])
+  (def killer-geom {:type "LineString" :coordinates killer-coords})
+  (def killer-feature {:type "Feature" :geometry killer-geom})
+
+  (turf/truncate (clj->js killer-geom))
+
+
+  (-> dying-geom :features count)
+  (->> (update dying-geom :features conj killer-feature)
+       (split-by-intersections)
+       :features
+       count
+       )
+
+  )
 
 (comment
   (def easy
@@ -384,3 +691,83 @@
   (join-lines [1 2 3] [4 5 3])
   (join-lines [1 2 3] [1 4 5])
   (join-lines [1 2 3] [4 5 1]))
+
+(comment
+
+  (def spltr
+    {:type "FeatureCollection", :features
+     #{{:type "Feature", :properties {}, :geometry
+        {:type "Point", :coordinates [25.635576 64.930784]}}}})
+
+
+  (def ls1 {:type "LineString", :coordinates [[25.635078 64.9308] [25.635324 64.930785] [25.635576 64.930784] [25.635617 64.93085]]})
+
+  (def ls2 {:type "LineString", :coordinates [[25.635576 64.930784] [25.635669 64.930721]]})
+
+  (def f1 {:type "Feature" :geometry ls1})
+  (def f2 {:type "Feature" :geometry ls2})
+
+  (def fcoll {:type "FeatureCollection" :features [f1 f2]})
+
+  (->clj
+   (turf/lineSplit (clj->js f1) (-> spltr :features first clj->js)))
+
+  (->clj
+   (turf/lineSplit (clj->js f2) (-> spltr :features first clj->js)))
+
+  (find-intersections fcoll)
+  (split-by-intersections2 fcoll)
+
+  (def edge
+    {:type "FeatureCollection"
+     :features
+     [{:type "Feature"
+       :geometry
+       {:type "LineString"
+        :coordinates [[0 0] [10 0]]}}
+      {:type "Feature"
+       :geometry
+       {:type "LineString"
+        :coordinates [[0 10] [0 0]]}}]})
+
+  (def cross
+    {:type "FeatureCollection"
+     :features
+     [{:type "Feature"
+       :geometry
+       {:type "LineString"
+        :coordinates [[0 0] [10 0]]}}
+      {:type "Feature"
+       :geometry
+       {:type "LineString"
+        :coordinates [[5 10] [5 -10]]}}]})
+
+  (find-intersections edge)
+  (split-by-intersections2 edge)
+
+  (find-intersections cross)
+  (split-by-intersections2 cross)
+
+  (def f1 (-> edge :features first clj->js))
+  (def f2 (-> edge :features second clj->js))
+
+  (def g1 (-> edge :features first :geometry clj->js))
+  (def g2 (-> edge :features second :geometry clj->js))
+
+  (split-by-intersections2 edge)
+  (split-by-features f1 (turf/lineIntersect g1 g2))
+
+  (turf/lineIntersect g1 g2)
+  (turf/combine (turf/lineIntersect g1 g2))
+  (def splitter (-> (turf/lineIntersect g1 g2) ->splitter))
+  (turf/lineSplit f1 splitter)
+  (turf/lineSplit f2 splitter)
+
+  (defn debug-fcoll [x]
+    (-> x
+        (gobj/get "features")
+        (garray/map (fn [y] (-> y
+                                (gobj/get "geometry")
+                                (gobj/get "coordinates"))))
+        (js/console.log))
+    x))

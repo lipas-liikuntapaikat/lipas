@@ -27,13 +27,15 @@
     :controllers
     [{:start
       (fn [& params]
-        (->
-         (case (utils/domain)
-           "uimahallit.lipas.fi"     :lipas.ui.routes.swimming-pools/front-page
-           "jaahallit.lipas.fi"      :lipas.ui.routes.ice-stadiums/front-page
-           "liikuntapaikat.lipas.fi" :lipas.ui.routes/map
-           :lipas.ui.routes/front-page)
-         navigate-async!))}]}])
+        (if (-> (utils/current-path) (string/starts-with? "/#"))
+          (set! js/window.location.href (-> (utils/current-path) (subs 2)))
+          (->
+           (case (utils/domain)
+             "uimahallit.lipas.fi"     :lipas.ui.routes.swimming-pools/front-page
+             "jaahallit.lipas.fi"      :lipas.ui.routes.ice-stadiums/front-page
+             "liikuntapaikat.lipas.fi" :lipas.ui.routes.map/map
+             :lipas.ui.routes/front-page)
+           navigate-async!)))}]}])
 
 (def routes
   (rf/router
@@ -85,4 +87,4 @@
                       (assoc new-match :controllers
                              (rfc/apply-controllers
                               (:controllers old-match) new-match))))))
-   {:use-fragment true}))
+   {:use-fragment false}))
