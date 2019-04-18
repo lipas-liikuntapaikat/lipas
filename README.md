@@ -1,6 +1,6 @@
 # LIPAS
 
-[prod](https://liikuntapaikat.lipas.fi/) |
+[prod](https://www.lipas.fi/) |
  [dev](https://lipas-dev.cc.jyu.fi/) |
  [ci](https://travis-ci.com/lipas-liikuntapaikat/lipas) |
  [issues](https://github.com/lipas-liikuntapaikat/lipas/issues) |
