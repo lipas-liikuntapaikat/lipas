@@ -3466,7 +3466,7 @@
      "Konditions- och styrketräningsanordningar osv, en \"utomhusträningssal\". Kan vara en del av en idrottspark eller konditionsplats vid en motionsbana.",
      :en
      "Contains fitness and gym equipment, etc., \"outdoor gym\". May be part of a sports park."},
-    :tags          {:fi ["kuntoilulaite" "ulkokuntoilupiste" "kuntoilupiste"]},
+    :tags          {:fi ["kuntoilulaite" "ulkokuntoilupiste" "kuntoilupiste" "kuntoilupaikka"]},
     :name
     {:fi "Ulkokuntoilupaikka",
      :se "Konditionsplats för utomhusaktiviteter",
