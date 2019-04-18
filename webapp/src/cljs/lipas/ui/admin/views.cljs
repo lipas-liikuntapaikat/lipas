@@ -274,4 +274,4 @@
   (let [admin? (<== [:lipas.ui.user.subs/admin?])]
     (if admin?
       [admin-panel]
-      (==> [:lipas.ui.events/navigate "/#/"]))))
+      (==> [:lipas.ui.events/navigate "/"]))))

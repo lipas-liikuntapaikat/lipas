@@ -17,7 +17,7 @@
 (defn ->email
   [db {:keys [id body account-id]}]
   (let [user (db/get-user-by-id db {:id account-id})
-        url  "https://liikuntapaikat.lipas.fi/#/kirjaudu"]
+        url  "https://liikuntapaikat.lipas.fi/kirjaudu"]
     {:reminder-id id
      :account-id  account-id
      :email       (:email user)
