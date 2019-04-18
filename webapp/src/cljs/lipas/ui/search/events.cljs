@@ -41,13 +41,11 @@
   [s]
   (if (empty? s)
     "*"
-    ;; (-> s
-    ;;     (string/replace "-" " ")
-    ;;     (string/split #" ")
-    ;;     (->> (map #(str % "*"))
-    ;;          (string/join " ")))
-    s
-    ))
+    (-> s
+        (string/replace "-" " ")
+        (string/split #" ")
+        (->> (map #(str % "*"))
+             (string/join " ")))))
 
 (defn ->es-search-body [{:keys [filters string center distance sort
                                 locale pagination]}]
@@ -102,7 +100,8 @@
                          "location.postal-code"
                          "location.city.neighborhood"
                          "properties.surface-material-info"]
-                        :default_operator "AND"}}]}}
+                        :default_operator "AND"
+                        :analyze_wildcard true}}]}}
                    :functions
                    (filterv some?
                             [(when (and lat lon distance)
