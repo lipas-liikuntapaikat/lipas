@@ -33,7 +33,7 @@
            (case (utils/domain)
              "uimahallit.lipas.fi"     :lipas.ui.routes.swimming-pools/front-page
              "jaahallit.lipas.fi"      :lipas.ui.routes.ice-stadiums/front-page
-             "liikuntapaikat.lipas.fi" :lipas.ui.routes/map
+             "liikuntapaikat.lipas.fi" :lipas.ui.routes.map/map
              :lipas.ui.routes/front-page)
            navigate-async!)))}]}])
 
