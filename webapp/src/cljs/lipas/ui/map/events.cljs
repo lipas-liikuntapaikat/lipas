@@ -209,7 +209,7 @@
  (fn [_ [_ lipas-id geom-type]]
    {:dispatch-n
     [[:lipas.ui.sports-sites.events/edit-site lipas-id]
-     [::zoom-to-site lipas-id]
+     ;;[::zoom-to-site lipas-id]
      [::start-editing lipas-id :editing geom-type]]}))
 
 (re-frame/reg-event-fx
