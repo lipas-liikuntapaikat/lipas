@@ -81,7 +81,7 @@
          draft?     false
          new?       (new-site? rev)
          on-success (cond
-                      new?  on-success-new
+                      new?  #(on-success-new {:lipas-id lipas-id})
                       :else on-success-default)]
      (if (or new? (dirty? db rev))
        (commit-ajax db rev draft? on-success)
