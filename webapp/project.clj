@@ -129,7 +129,7 @@
                          mui-downshift MuiDownshift turf               turf}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
-      :asset-path           "js/compiled/out"
+      :asset-path           "/js/compiled/out"
       :source-map-timestamp true
       :preloads             [devtools.preload day8.re-frame-10x.preload]
       :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
@@ -157,6 +157,7 @@
                          recharts      recharts     react-autosuggest  "cljsjs.react-autosuggest"
                          mui-downshift MuiDownshift turf               turf}}]
       :output-to       "resources/public/js/compiled/app.js"
+      :asset-path      "/js/compiled/out"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}
       :pretty-print    false}}
