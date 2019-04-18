@@ -132,7 +132,7 @@
    ;; Main section with background image
    [mui/grid
     {:container true
-     :justify "flex-start"
+     :justify   "flex-start"
      ;;:align-items ""
      :style
      {:padding             "8px"
@@ -203,13 +203,17 @@
       ;; Lipas-API
       [mui/list-item {:button true :component "a" :href (:lipas-api links)}
        [mui/list-item-icon
-        [:img {:height "24px" :src "/img/swagger_logo.svg"}]]
+        [:img
+         {:style {:height "24px" :width "24px"}
+          :src   "/img/swagger_logo.svg"}]]
        [mui/list-item-text {:primary "Lipas API"}]]
 
       ;; Geoserver
       [mui/list-item {:button true :component "a" :href (:geoserver links)}
        [mui/list-item-icon
-        [:img {:height "24px" :src "/img/geoserver_logo.svg"}]]
+        [:img
+         {:style {:height "24px" :width "24px"}
+          :src   "/img/geoserver_logo.svg"}]]
        [mui/list-item-text "Geoserver"]]
 
       ;; Github
