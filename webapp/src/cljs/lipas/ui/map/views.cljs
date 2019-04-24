@@ -557,7 +557,10 @@
 
                 [mui/grid {:item true}
                  [mui/typography {:variant "body2"}
-                  (tr :map/modify geom-type)]
+                  (case geom-type
+                    "LineString" (tr :map/modify-linestring)
+                    "Polygon"    (tr :map/modify-polygon)
+                    (tr :map/modify))]
                  [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
                   (tr :map/edit-later-hint)]]
 
@@ -568,12 +571,19 @@
                     {:on-click #(==> [::events/start-adding-geom geom-type])
                      :variant  "contained"
                      :color    "secondary"}
-                    (tr :map/draw geom-type)]])
+                    (case geom-type
+                      "LineString" (tr :map/draw-linestring)
+                      "Polygon"    (tr :map/draw-polygon)
+                      (tr :map/draw))]])
 
                 ;; Delete geom
                 (when (#{"LineString" "Polygon"} geom-type)
                   [mui/grid {:item true :xs 4}
-                   [mui/tooltip {:title (tr :map/remove geom-type)}
+                   [mui/tooltip
+                    {:title (case geom-type
+                              "LineString" (tr :map/remove-linestring)
+                              "Polygon"    (tr :map/remove-polygon)
+                              (tr :map/remove))}
                     [mui/button
                      {:on-click #(if (= sub-mode :deleting)
                                    (==> [::events/stop-deleting-geom geom-type])
