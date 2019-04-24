@@ -153,6 +153,14 @@
                     :spec      :lipas.sports-site/www
                     :on-change #(on-change :www %)}]}
 
+     ;; Reservations-link
+     {:label      (tr :lipas.sports-site/reservations-link)
+      :value      (-> display-data :reservations-link)
+      :form-field [lui/text-field
+                   {:value     (-> edit-data :www)
+                    :spec      :lipas.sports-site/reservations-link
+                    :on-change #(on-change :reservations-link %)}]}
+
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/ownership)}])
 

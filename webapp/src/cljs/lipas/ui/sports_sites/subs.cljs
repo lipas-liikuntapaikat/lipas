@@ -229,21 +229,22 @@
 
            get-material #(get-in materials [% locale])]
 
-       {:status         (-> status locale)
-        :lipas-id       (-> latest :lipas-id)
-        :name           (-> latest :name)
-        :name-localized (-> latest :name-localized)
-        :marketing-name (-> latest :marketing-name)
+       {:status            (-> status locale)
+        :lipas-id          (-> latest :lipas-id)
+        :name              (-> latest :name)
+        :name-localized    (-> latest :name-localized)
+        :marketing-name    (-> latest :marketing-name)
         :type
         {:name          (-> type :name locale)
          :type-code     (-> latest :type :type-code)
          :size-category (-> size-category locale)}
-        :owner          (-> owner locale)
-        :admin          (-> admin locale)
-        :phone-number   (-> latest :phone-number)
-        :www            (-> latest :www)
-        :email          (-> latest :email)
-        :comment        (-> latest :comment)
+        :owner             (-> owner locale)
+        :admin             (-> admin locale)
+        :phone-number      (-> latest :phone-number)
+        :www               (-> latest :www)
+        :reservations-link (-> latest :reservations-link)
+        :email             (-> latest :email)
+        :comment           (-> latest :comment)
 
         :construction-year (-> latest :construction-year)
         :renovation-years  (-> latest :renovation-years)
@@ -286,6 +287,7 @@
      :owner             (-> owner locale)
      :admin             (-> admin locale)
      :www               (-> sports-site :www)
+     :reservations-link (-> sports-site :reservations-link)
      :email             (-> sports-site :email)
      :phone-number      (-> sports-site :phone-number)}))
 

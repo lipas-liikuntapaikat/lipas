@@ -246,6 +246,7 @@
 
 (s/def :lipas.sports-site/phone-number (str-in 1 50))
 (s/def :lipas.sports-site/www (str-in 1 200))
+(s/def :lipas.sports-site/reservations-link (str-in 1 200))
 (s/def :lipas.sports-site/email :lipas/email)
 
 (s/def :lipas.sports-site/comment (str-in 1 2048))
@@ -654,6 +655,7 @@
                    :lipas.sports-site/marketing-name
                    :lipas.sports-site/phone-number
                    :lipas.sports-site/www
+                   :lipas.sports-site/reservations-link
                    :lipas.sports-site/email
                    :lipas.sports-site/construction-year
                    :lipas.sports-site/renovation-years
