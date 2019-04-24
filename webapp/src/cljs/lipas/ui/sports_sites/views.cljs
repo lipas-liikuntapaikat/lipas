@@ -85,7 +85,9 @@
      (into
       [:<>]
       (for [l extra-locales]
-        {:label      (tr :lipas.sports-site/name-localized (name l))
+        {:label      (tr (keyword
+                          "lipas.sports-site"
+                          (str "name-localized-" (name l))))
          :value      (-> display-data :name-localized l)
          :form-field [lui/text-field
                       {:spec      :lipas.sports-site/name
