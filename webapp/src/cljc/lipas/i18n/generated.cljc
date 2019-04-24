@@ -650,6 +650,7 @@
    :select-years "Valitse vuodet",
    :browse-to "Siirry tilastoihin",
    :select-unit "Valitse yksikkö",
+   :bullet3 "Avustukset (tulossa)",
    :finance-stats "Talous​tiedot",
    :select-city "Valitse kunta",
    :filter-cities "Rajaa kunnat",
@@ -669,6 +670,7 @@
    :select-interval "Valitse aikaväli",
    :bullet1 "Liikunta- ja nuorisotoimen taloustiedot",
    :age-structure "Liikunta​paikkojen rakennus​vuodet",
+   :m2-total "Liikuntapinta-ala m² yhteensä",
    :city-stats "Kunta​tilastot"},
   :pool-structures
   {:concrete "Betoni",
@@ -1401,13 +1403,14 @@
   :stats
   {:description
    "Statistics of sports-sites and related municipality finances",
-   :m2-count "Total area m²",
+   :m2-count "Area m² reported count",
    :filter-types "Filter types",
    :headline "Statistics",
    :m2-max "Max area m²",
    :select-years "Select years",
    :browse-to "Go to statistics",
    :select-unit "Select unit",
+   :bullet3 "Grants (coming soon)",
    :finance-stats "Finances",
    :select-city "Select city",
    :filter-cities "Filter cities",
@@ -1427,6 +1430,7 @@
    :select-interval "Select interval",
    :bullet1 "Finances",
    :age-structure "Construction years",
+   :m2-total "Total area m²",
    :city-stats "City statistics"},
   :pool-structures
   {:concrete "Concrete",
