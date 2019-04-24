@@ -10,9 +10,7 @@
    [lipas.data.cities :as cities]
    [lipas.data.types :as types]
    [lipas.reports :as reports]
-   [lipas.i18n.en :as en]
-   [lipas.i18n.fi :as fi]
-   [lipas.i18n.se :as se]
+   [lipas.i18n.generated :as translations]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 
@@ -51,52 +49,21 @@
    (merge m)))
 
 (def dicts
-  {:fi (append-data! :fi fi/translations)
-   :se (append-data! :se se/translations)
-   :en (append-data! :en en/translations)
-   :tongue/fallback :fi})
+  (assoc translations/dicts :tongue/fallback :fi))
 
-(comment (translate :fi :front-page/lipas-headline))
-(comment (translate :fi :menu/sports-panel))
-(comment (translate :fi :menu/sports-panel :lower))
 (def translate (tongue/build-translate dicts))
 
-(def formatters
-  {:lower-case s/lower-case
-   :upper-case s/upper-case
-   :capitalize s/capitalize})
-
-(defn fmt
-  "Supported formatter options:
-
-  :lower-case
-  :upper-case
-  :capitalize"
-  [s args]
-  (case (first args)
-    :lower-case (s/lower-case s)
-    :upper-case (s/upper-case s)
-    :capitalize (s/capitalize s)
-    s))
-
-(comment ((->tr-fn :fi) :menu/sports-panel))
-(comment ((->tr-fn :fi) :menu/sports-panel :lower))
 (defn ->tr-fn
-  "Creates translator fn with support for optional formatter. See
-  `lipas.ui.i18n/fmt`
+  "Returns a translator fn for given locale.
 
-  Translator fn Returns current locale (:fi :sv :en) when called with
-  no args.
-
-  Function usage: ((->tr-fn :fi) :menu/sports-panel :lower)
-  => \"liikuntapaikat\""
+  Translator fn Returns current locale (:fi :se :en) when called with
+  no args. "
   [locale]
   (fn
     ([]
      locale)
     ([kw & args]
-     (-> (apply translate (into [locale kw] (filter (complement keyword?) args)))
-         (fmt args)))))
+     (apply translate (into [locale kw] args)))))
 
 (defn- localize-accessibility [locale ss]
   (when-not (empty? ss)
