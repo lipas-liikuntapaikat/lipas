@@ -454,7 +454,7 @@
       [mui/grid
        {:container true
         :direction "row"
-        :style     {:padding "0.5em 1em 0.5em 1em" :flex 1 :height "100%"}}
+        :style     {:padding "0.5em 1em 0.5em 1em" :flex 1}}
 
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
 
@@ -463,7 +463,9 @@
           :show-replace? false}]
 
         [mui/typography {:variant "h6"}
-         (tr :lipas.sports-site/new-site {:type type :locale locale})]
+         (if-let [type-name (get-in type [:name locale])]
+           (tr :lipas.sports-site/new-site-of-type type-name)
+           (tr :lipas.sports-site/new-site {:type type :locale locale}))]
 
         ;; Steps
         [mui/stepper
@@ -647,37 +649,38 @@
                   :key         type}])]]]]]]
 
        ;; Actions
-       [mui/grid {:item true}
-        [sticky-bottom-container
-         [mui/grid
-          {:container true :align-items "center" :spacing 8
-           :style     {:padding-bottom "0.5em"}}
+       [mui/grid {:container true :align-items "flex-end"}
+        [mui/grid {:item true :xs 12}
+         [sticky-bottom-container
+          [mui/grid
+           {:container true :align-items "center" :spacing 8
+            :style     {:padding-bottom "0.5em"}}
 
-          [address-search-dialog]
+           [address-search-dialog]
 
-          ;; Save
-          (when data
-            [mui/grid {:item true}
-             [lui/save-button
-              {:tooltip          (tr :actions/save)
-               :disabled-tooltip (tr :actions/fill-required-fields)
-               :disabled         (not new-site-valid?)
-               :on-click         #(==> [::events/save-new-site data])}]])
+           ;; Save
+           (when data
+             [mui/grid {:item true}
+              [lui/save-button
+               {:tooltip          (tr :actions/save)
+                :disabled-tooltip (tr :actions/fill-required-fields)
+                :disabled         (not new-site-valid?)
+                :on-click         #(==> [::events/save-new-site data])}]])
 
-          [mui/grid {:item true}
-
-           ;; Discard
-           [lui/discard-button
-            {:on-click #(==> [::events/discard-new-site])
-             :tooltip  (tr :actions/discard)}]]
-
-          ;; Address search button
-          [mui/tooltip {:title (tr :map.address-search/tooltip)}
            [mui/grid {:item true}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/toggle-address-search-dialog])}
-             [:> js/materialIcons.MapSearchOutline]]]]]]]])))
+
+            ;; Discard
+            [lui/discard-button
+             {:on-click #(==> [::events/discard-new-site])
+              :tooltip  (tr :actions/discard)}]]
+
+           ;; Address search button
+           [mui/tooltip {:title (tr :map.address-search/tooltip)}
+            [mui/grid {:item true}
+             [mui/fab
+              {:size     "small"
+               :on-click #(==> [::events/toggle-address-search-dialog])}
+              [:> js/materialIcons.MapSearchOutline]]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
