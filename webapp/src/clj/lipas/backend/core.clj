@@ -7,7 +7,9 @@
    [lipas.backend.email :as email]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.search :as search]
+   [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
+   [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
    [lipas.permissions :as permissions]
@@ -20,6 +22,8 @@
 
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
+(def admins admins/all)
+(def owners owners/all)
 
 ;;; User ;;;
 
@@ -211,6 +215,8 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
+(admins "unknown")
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -228,7 +234,9 @@
         type-code     (-> sports-site :type :type-code)
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
-        search-meta   {:location
+        search-meta   {:admin {:name (-> sports-site :admin admins)}
+                       :owner {:name (-> sports-site :owner owners)}
+                       :location
                        {:wgs84-point coords
                         :city        {:name (-> city-code cities :name)}
                         :province    {:name (:name province)}
