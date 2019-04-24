@@ -79,7 +79,7 @@
 (re-frame/reg-event-fx
  ::navigate
  (fn [_ [_ path & opts]]
-   {:lipas.ui.effects/navigate! [path opts]}))
+   {:lipas.ui.effects/navigate! (into [path] opts)}))
 
 (re-frame/reg-event-fx
  ::navigated
