@@ -1,6 +1,7 @@
 (ns lipas.ui.effects
   (:require
    [re-frame.core :as re-frame]
+   [lipas.ui.routes :as routes]
    ["zipcelx"]
    ["filesaver"]))
 
@@ -24,3 +25,8 @@
  (fn  [cb]
    (when-let [geolocation (-> js/navigator .-geolocation)]
      (.getCurrentPosition geolocation cb))))
+
+(re-frame/reg-fx
+ ::navigate!
+ (fn [args]
+   (apply routes/navigate! args)))
