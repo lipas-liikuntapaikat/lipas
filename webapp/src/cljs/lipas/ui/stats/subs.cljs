@@ -321,7 +321,8 @@
             [:m2-total (tr :stats/m2-total)]
             [:m2-avg (tr :stats/m2-avg)]
             [:m2-min (tr :stats/m2-min)]
-            [:m2-max (tr :stats/m2-max)]]
+            [:m2-max (tr :stats/m2-max)]
+            [:m2-count (tr :stats/m2-count)]]
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub
