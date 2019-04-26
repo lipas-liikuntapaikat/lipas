@@ -7,7 +7,6 @@
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
-   [lipas.ui.map.events :as events]
    [lipas.ui.map.projection]
    [lipas.ui.map.styles :as styles]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
@@ -38,7 +37,7 @@
 ;; Popups are rendered 'outside' OpenLayers by React so we need to
 ;; inform the outside world.
 (defn clear-popup! [map-ctx]
-  (==> [::events/show-popup nil])
+  (==> [:lipas.ui.map.events/show-popup nil])
   map-ctx)
 
 (defn update-geoms! [{:keys [layers] :as map-ctx} geoms]
@@ -370,6 +369,15 @@
 ;;     (case geom-type
 ;;       "LineString" (fix-linestrings ol-features)
 ;;       ol-features)))
+
+(defn strip-z [fcoll]
+  (-> fcoll
+      clj->js
+      (turf/truncate #js{:coordinates 2 :mutate true})
+      (gobj/get "features")
+      (garray/map turf/cleanCoords)
+      ->fcoll
+      ->clj))
 
 (defn fix-features [ol-features]
   ol-features)

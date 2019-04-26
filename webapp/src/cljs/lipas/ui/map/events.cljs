@@ -6,6 +6,7 @@
    [goog.object :as gobj]
    [goog.string :as gstring]
    [goog.string.path :as gpath]
+   [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    proj4
    [re-frame.core :as re-frame]))
@@ -277,15 +278,15 @@
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON]]
-   (let [fcoll (js->clj geoJSON :keywordize-keys true)
-         fs    (->> fcoll
-                    :features
-                    (filter (comp #{"LineString"} :type :geometry))
-                    (reduce
-                     (fn [res f]
-                       (let [id (gensym)]
-                         (assoc res id (assoc-in f [:properties :id] id))))
-                     {}))]
+   (let [fcoll   (js->clj geoJSON :keywordize-keys true)
+         fs      (->> fcoll
+                      :features
+                      (filter (comp #{"LineString"} :type :geometry))
+                      (reduce
+                       (fn [res f]
+                         (let [id (gensym)]
+                           (assoc res id (assoc-in f [:properties :id] id))))
+                       {}))]
      (assoc-in db [:map :import :data] fs))))
 
 (defn parse-dom [text]
@@ -357,7 +358,8 @@
                    :features (into [] cat
                                    [(when-not replace?
                                       (-> db :map :mode :geoms :features))
-                                    (->> data vals (map #(dissoc % :properties)))])}]
+                                    (->> data vals (map #(dissoc % :properties)))])}
+         fcoll    (map-utils/strip-z fcoll)]
      {:db         (-> db
                       (assoc-in [:map :mode :geoms] fcoll)
                       (assoc-in [:map :mode :sub-mode] :importing))
