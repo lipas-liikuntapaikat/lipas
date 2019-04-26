@@ -45,7 +45,8 @@
     :refrigerant-solutions     (->translations locale ice/refrigerant-solutions)
     :refrigerants              (->translations locale ice/refrigerants)
     :size-categories           (->translations locale ice/size-categories)
-    :stats-metrics             (->translations locale reports/stats-metrics)}
+    ;;:stats-metrics             (->translations locale reports/stats-metrics)
+    }
    (merge m)))
 
 (def dicts
