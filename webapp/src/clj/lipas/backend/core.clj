@@ -333,26 +333,28 @@
 
 (defn calculate-stats
   [db search* city-codes type-codes grouping]
-  (let [pop-data (get-populations db 2018)
-        statuses ["active" "out-of-service-temporarily"]
-        query    {:size 0,
-                  :query
-                  {:bool
-                   {:filter
-                    (into [] (remove nil?)
-                          [{:terms {:status.keyword statuses}}
-                           (when (not-empty type-codes)
-                             {:terms {:type.type-code type-codes}})
-                           (when (not-empty city-codes)
-                             {:terms {:location.city.city-code city-codes}})])}}
-                  :aggs
-                  {:grouping
-                   {:terms {:field (keyword grouping) :size 400}
-                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}
-        m2-data  (-> (search search* query) :body :aggregations :grouping :buckets)]
+  (let [pop-data  (get-populations db 2018)
+        statuses  ["active" "out-of-service-temporarily"]
+        query     {:size 0,
+                   :query
+                   {:bool
+                    {:filter
+                     (into [] (remove nil?)
+                           [{:terms {:status.keyword statuses}}
+                            (when (not-empty type-codes)
+                              {:terms {:type.type-code type-codes}})
+                            (when (not-empty city-codes)
+                              {:terms {:location.city.city-code city-codes}})])}}
+                   :aggs
+                   {:grouping
+                    {:terms {:field (keyword grouping) :size 400}
+                     :aggs
+                     {:area_m2_stats   {:stats {:field :properties.area-m2}}
+                      :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
+        aggs-data (-> (search search* query) :body :aggregations :grouping :buckets)]
     (if (= "location.city.city-code" grouping)
-      (reports/calculate-stats-by-city m2-data pop-data)
-      (reports/calculate-stats-by-type m2-data pop-data city-codes))))
+      (reports/calculate-stats-by-city aggs-data pop-data)
+      (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
 
 (comment
   (require '[lipas.backend.config :as config])

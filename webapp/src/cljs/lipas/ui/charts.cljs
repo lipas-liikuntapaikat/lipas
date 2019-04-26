@@ -265,8 +265,7 @@
     (tooltip payload-fn labels props)))
 
 (defn sports-stats-chart [{:keys [data labels metric grouping]}]
-  (let [;;data       (->> data (map #(rename-keys % labels)))
-        margin     {:top 5 :right 100 :bottom 5 :left 100}
+  (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
                      :type-name)]
