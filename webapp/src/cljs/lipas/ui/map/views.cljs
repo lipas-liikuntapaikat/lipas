@@ -399,7 +399,7 @@
 
            ;; Split linestring
            (when (and editing? (#{"LineString"} geom-type))
-             [mui/tooltip {:title (tr :map/split-route-segment)}
+             [mui/tooltip {:title (tr :map/split-linestring)}
               [mui/fab
                {:size     "small"
                 :on-click #(if (= sub-mode :splitting)
