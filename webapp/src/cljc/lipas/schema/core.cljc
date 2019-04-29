@@ -664,8 +664,7 @@
                    :lipas/energy-consumption
                    :lipas/visitors
                    :lipas/visitors-monthly
-                   ;; :lipas.sports-site/properties
-                   ]))
+                   :lipas.sports-site/properties]))
 
 (s/def :lipas/sports-site
   (s/merge
