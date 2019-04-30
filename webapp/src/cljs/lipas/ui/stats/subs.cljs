@@ -95,18 +95,11 @@
              {:city-code (-> m :city-code)
               :year      year})))))
 
-(defn round-safe
-  ([x]
-   (round-safe x 2))
-  ([x precision]
-   (if (number? x)
-     (.toFixed x precision))))
-
 (defn round-vals [m]
   (reduce
    (fn [m [k v]]
      (assoc m k (if (and (not= :year k) (not= :city-code k))
-                  (round-safe v)
+                  (utils/round-safe v)
                   v)))
    {}
    m))
@@ -290,11 +283,11 @@
            [])
           (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
-                          (update :area-m2-pc round-safe 5)
-                          (update :area-m2-avg round-safe 5)
-                          (update :length-km-pc round-safe 5)
-                          (update :length-km-avg round-safe 5)
-                          (update :sites-count-p1000c round-safe 5))))))))
+                          (update :area-m2-pc utils/round-safe 5)
+                          (update :area-m2-avg utils/round-safe 5)
+                          (update :length-km-pc utils/round-safe 5)
+                          (update :length-km-avg utils/round-safe 5)
+                          (update :sites-count-p1000c utils/round-safe 5))))))))
 
 (re-frame/reg-sub
  ::sports-stats-labels

@@ -335,12 +335,14 @@ import MuiDownshift from 'mui-downshift';
 window.MuiDownshift = MuiDownshift;
 
 // Material Design Icons
+import Calculator from 'mdi-material-ui/Calculator';
 import ContentCut from 'mdi-material-ui/ContentCut';
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
 import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 
 window.materialIcons = {
+  Calculator,
   ContentCut,
   Eraser,
   FileUpload,
@@ -366,6 +368,7 @@ import combine from '@turf/combine';
 import cleanCoords from '@turf/clean-coords';
 import truncate from '@turf/truncate';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
+import length from '@turf/length';
 
 window.turf = {
   kinks,
@@ -375,4 +378,5 @@ window.turf = {
   cleanCoords,
   truncate,
   nearestPointOnLine,
+  length,
 };

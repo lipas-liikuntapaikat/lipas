@@ -311,6 +311,7 @@
                 :on-change    (partial set-field :properties)
                 :display-data (:properties display-data)
                 :edit-data    (:properties edit-data)
+                :geoms        (-> edit-data :location :geometries)
                 :key          type-code}]))]
 
        ;; Actions
@@ -371,7 +372,9 @@
 
            ;; Add new geom
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
-             [mui/tooltip {:title (tr :map/draw geom-type)}
+             [mui/tooltip {:title (case geom-type
+                                    "LineString" (tr :map/draw-linestring)
+                                    "Polygon"    (tr :map/draw-polygon))}
               [mui/fab
                {:size     "small"
                 :on-click #(if (= sub-mode :drawing)
@@ -386,7 +389,9 @@
 
            ;; Delete geom
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
-             [mui/tooltip {:title (tr :map/remove geom-type)}
+             [mui/tooltip {:title (case geom-type
+                                    "LineString" (tr :map/remove-linestring)
+                                    "Polygon"    (tr :map/remove-polygon))}
               [mui/fab
                {:size     "small"
                 :on-click #(if (= sub-mode :deleting)
@@ -513,7 +518,7 @@
                    ;; Helper text
                    [mui/grid {:item true :xs 12}
                     [mui/typography {:variant "body2"}
-                     (tr :map/center-map-to-site)]]
+                     (tr :map/zoom-to-site)]]
 
                    ;; Zoom closer info text
                    (when (not zoomed?)
@@ -656,6 +661,7 @@
                   :read-only?  false
                   :on-change   (partial set-field :properties)
                   :edit-data   (:properties data)
+                  :geoms       (-> data :location :geometries)
                   :key         type}])]]]]]]
 
        ;; Actions
