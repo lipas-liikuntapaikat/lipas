@@ -4,6 +4,7 @@
   (:require
    ["ol"]
    ["turf" :as turf]
+   [clojure.reader :refer [read-string]]
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
@@ -381,6 +382,15 @@
 
 (defn fix-features [ol-features]
   ol-features)
+
+(defn calculate-length
+  [fcoll]
+  (-> fcoll
+      clj->js
+      turf/length
+      ->clj
+      (utils/round-safe 2)
+      read-string))
 
 (comment
   (def dying-geom
