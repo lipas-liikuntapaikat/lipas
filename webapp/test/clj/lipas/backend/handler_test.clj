@@ -443,7 +443,7 @@
                       (mock/body (->transit {:city-codes [275 972]}))))
         body (-> resp :body <-transit)]
     (is (= 200 (:status resp)))
-    (is (number? (get-in body [275 :m2-pc])))))
+    (is (number? (get-in body [275 :area-m2-pc])))))
 
 (deftest create-energy-report-test
   (let [resp (app (-> (mock/request :post "/api/actions/create-energy-report")
