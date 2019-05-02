@@ -12,11 +12,17 @@
 
 (defn ->sort-key [k locale]
   (case k
-    (:location.city.name :type.name) (-> k name
-                                         (->> (str "search-meta."))
-                                         (str "." (name locale) ".keyword")
-                                         keyword)
-    (:event-date)                    :event-date
+    (:location.city.name
+     :type.name
+     :admin.name
+     :owner.name)       (-> k name
+                            (->> (str "search-meta."))
+                            (str "." (name locale) ".keyword")
+                            keyword)
+    (:event-date
+     :construction-year
+     :renovation-years) k
+
     (keyword (str (name k) ".keyword"))))
 
 (defn resolve-sort [{:keys [sort-fn asc?]} locale]

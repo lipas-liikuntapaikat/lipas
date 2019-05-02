@@ -6,6 +6,7 @@
    [goog.object :as gobj]
    [goog.string :as gstring]
    [goog.string.path :as gpath]
+   [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    proj4
    [re-frame.core :as re-frame]))
@@ -107,20 +108,25 @@
   (let [latest (get-in db [:sports-sites lipas-id :latest])]
     (get-in db [:sports-sites lipas-id :history latest])))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::start-editing
- (fn [db [_ lipas-id sub-mode geom-type]]
-   (let [site (get-latest-rev db lipas-id)]
-     (update-in db [:map :mode] merge {:name      :editing
-                                       :lipas-id  lipas-id
-                                       :geoms     (utils/->feature site)
-                                       :sub-mode  sub-mode
-                                       :geom-type geom-type}))))
+ (fn [{:keys [db]} [_ lipas-id sub-mode geom-type]]
+   (let [site     (get-latest-rev db lipas-id)
+         geoms    (utils/->feature site)]
+     {:db (update-in db [:map :mode] merge {:name      :editing
+                                            :lipas-id  lipas-id
+                                            :geoms     geoms
+                                            :sub-mode  sub-mode
+                                            :geom-type geom-type})
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::continue-editing
- (fn [db _]
-   (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})))
+ (fn [{:keys [db]} _]
+   (let [geoms (-> db :map :mode :geoms)]
+     {:db (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})
+      :dispatch-n
+      [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (re-frame/reg-event-db
  ::stop-editing
@@ -151,25 +157,46 @@
                                       :geom-type geom-type
                                       :sub-mode  :editing}))))
 
+(re-frame/reg-event-db
+ ::start-splitting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :splitting}))))
+
+(re-frame/reg-event-db
+ ::stop-splitting-geom
+ (fn [db [_ geom-type]]
+   (-> db
+       (update-in [:map :mode] merge {:name      :adding
+                                      :geom-type geom-type
+                                      :sub-mode  :editing}))))
+
+
 (re-frame/reg-event-fx
  ::update-geometries
  (fn [{:keys [db]} [_ lipas-id geoms]]
    (let [path  [:sports-sites lipas-id :editing :location :geometries]
          geoms (update geoms :features
                        (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:db (assoc-in db path geoms)})))
+     {:db (assoc-in db path geoms)
+      :dispatch-n
+      [[::show-problems (map-utils/find-problems geoms)]]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::new-geom-drawn
- (fn [db [_ geom]]
-   (update-in db [:map :mode] merge {:name     :adding
-                                     :geom     geom
-                                     :sub-mode :editing})))
+ (fn [{:keys [db]} [_ geom]]
+   {:db (update-in db [:map :mode] merge {:name     :adding
+                                          :geom     geom
+                                          :sub-mode :editing})
+    :dispatch-n [[::show-problems (map-utils/find-problems geom)]]}))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::update-new-geom
- (fn [db [_ geom]]
-   (assoc-in db [:map :mode :geom] geom)))
+ (fn [{:keys [db]} [_ geom]]
+   {:db         (assoc-in db [:map :mode :geom] geom)
+    :dispatch-n [[::show-problems (map-utils/find-problems geom)]]}))
 
 (re-frame/reg-event-fx
  ::confirm-remove-segment
@@ -277,15 +304,15 @@
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON]]
-   (let [fcoll (js->clj geoJSON :keywordize-keys true)
-         fs    (->> fcoll
-                    :features
-                    (filter (comp #{"LineString"} :type :geometry))
-                    (reduce
-                     (fn [res f]
-                       (let [id (gensym)]
-                         (assoc res id (assoc-in f [:properties :id] id))))
-                     {}))]
+   (let [fcoll   (js->clj geoJSON :keywordize-keys true)
+         fs      (->> fcoll
+                      :features
+                      (filter (comp #{"LineString"} :type :geometry))
+                      (reduce
+                       (fn [res f]
+                         (let [id (gensym)]
+                           (assoc res id (assoc-in f [:properties :id] id))))
+                       {}))]
      (assoc-in db [:map :import :data] fs))))
 
 (defn parse-dom [text]
@@ -357,7 +384,8 @@
                    :features (into [] cat
                                    [(when-not replace?
                                       (-> db :map :mode :geoms :features))
-                                    (->> data vals (map #(dissoc % :properties)))])}]
+                                    (->> data vals (map #(dissoc % :properties)))])}
+         fcoll    (map-utils/strip-z fcoll)]
      {:db         (-> db
                       (assoc-in [:map :mode :geoms] fcoll)
                       (assoc-in [:map :mode :sub-mode] :importing))
@@ -468,3 +496,22 @@
  ::hide-address
  (fn [db _]
    (assoc-in db [:map :mode :address] nil)))
+
+(defn- problems->fcoll [tr {:keys [intersections kinks]}]
+  (let [kfs (-> kinks
+                :features
+                (->> (map #(assoc-in % [:properties :name] (tr :map/kink))))
+                not-empty)
+        ifs (-> intersections
+                :features
+                (->> (map #(assoc-in % [:properties :name] (tr :map/intersection))))
+                not-empty)]
+    {:type     "FeatureCollection"
+     :features (into [] cat [kfs ifs])}))
+
+(re-frame/reg-event-db
+ ::show-problems
+ (fn [db [_ problems]]
+   (let [tr (-> db :translator)]
+     (assoc-in db [:map :mode :problems] {:data  (problems->fcoll tr problems)
+                                          :show? true}))))

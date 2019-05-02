@@ -199,6 +199,7 @@
     :type                type
     :types-props         types-props
     :geom-type           (:geometry-type type)
+    :problems?           (-> mode :problems :data :features seq)
     :portal              (case (:type-code type)
                            (3110 3130) "uimahalliportaali"
                            (2510 2520) "jaahalliportaali"
@@ -238,6 +239,7 @@
     :size-categories size-categories
     :zoomed?         zoomed?
     :geom            geom
+    :problems?       (-> mode :problems :data :features seq)
     :sub-mode        (:sub-mode mode)
     :active-step     (cond
                        (some? data) 2

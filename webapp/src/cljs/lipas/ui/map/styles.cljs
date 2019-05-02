@@ -145,7 +145,7 @@
                                        :stroke (if hover? hover-stroke stroke-black)}))})]
 
     (if (and selected? (:shape m))
-      #js[style red-marker-style]
+      #js[style blue-marker-style]
       style)))
 
 (def styleset styles/adapted-temp-symbols)

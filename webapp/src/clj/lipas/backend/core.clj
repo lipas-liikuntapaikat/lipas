@@ -7,7 +7,9 @@
    [lipas.backend.email :as email]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.search :as search]
+   [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
+   [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
    [lipas.permissions :as permissions]
@@ -20,6 +22,8 @@
 
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
+(def admins admins/all)
+(def owners owners/all)
 
 ;;; User ;;;
 
@@ -228,7 +232,9 @@
         type-code     (-> sports-site :type :type-code)
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
-        search-meta   {:location
+        search-meta   {:admin {:name (-> sports-site :admin admins)}
+                       :owner {:name (-> sports-site :owner owners)}
+                       :location
                        {:wgs84-point coords
                         :city        {:name (-> city-code cities :name)}
                         :province    {:name (:name province)}
@@ -241,11 +247,14 @@
     (assoc sports-site :search-meta search-meta)))
 
 (defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
-  (-> ice-stadium
-      (assoc-in [:properties :surface-material] [(-> envelope :base-floor-structure)])
-      (assoc-in [:properties :area-m2] (-> building :total-ice-area-m2))
-      utils/clean
-      enrich*))
+  (let [smaterial (-> envelope :base-floor-structure)
+        area-m2   (-> building :total-ice-area-m2)]
+    (-> ice-stadium
+        (cond->
+            smaterial (assoc-in [:properties :surface-material] [smaterial])
+            area-m2   (assoc-in [:properties :area-m2] area-m2))
+        utils/clean
+        enrich*)))
 
 (defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
   (-> swimming-pool
@@ -325,26 +334,28 @@
 
 (defn calculate-stats
   [db search* city-codes type-codes grouping]
-  (let [pop-data (get-populations db 2017)
-        statuses ["active" "out-of-service-temporarily"]
-        query    {:size 0,
-                  :query
-                  {:bool
-                   {:filter
-                    (into [] (remove nil?)
-                          [{:terms {:status.keyword statuses}}
-                           (when (not-empty type-codes)
-                             {:terms {:type.type-code type-codes}})
-                           (when (not-empty city-codes)
-                             {:terms {:location.city.city-code city-codes}})])}}
-                  :aggs
-                  {:grouping
-                   {:terms {:field (keyword grouping) :size 400}
-                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}
-        m2-data  (-> (search search* query) :body :aggregations :grouping :buckets)]
+  (let [pop-data  (get-populations db 2018)
+        statuses  ["active" "out-of-service-temporarily"]
+        query     {:size 0,
+                   :query
+                   {:bool
+                    {:filter
+                     (into [] (remove nil?)
+                           [{:terms {:status.keyword statuses}}
+                            (when (not-empty type-codes)
+                              {:terms {:type.type-code type-codes}})
+                            (when (not-empty city-codes)
+                              {:terms {:location.city.city-code city-codes}})])}}
+                   :aggs
+                   {:grouping
+                    {:terms {:field (keyword grouping) :size 400}
+                     :aggs
+                     {:area_m2_stats   {:stats {:field :properties.area-m2}}
+                      :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
+        aggs-data (-> (search search* query) :body :aggregations :grouping :buckets)]
     (if (= "location.city.city-code" grouping)
-      (reports/calculate-stats-by-city m2-data pop-data)
-      (reports/calculate-stats-by-type m2-data pop-data city-codes))))
+      (reports/calculate-stats-by-city aggs-data pop-data)
+      (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
 
 (comment
   (require '[lipas.backend.config :as config])

@@ -43,27 +43,48 @@
    fields))
 
 (def basic-fields
-  {"lipas-id"                   {:fi "Lipas-id"}
-   "name"                       {:fi "Nimi"}
-   "name-localized.se"          {:fi "Nimi ruotsiksi"}
-   "marketing-name"             {:fi "Markkinointinimi"}
-   "event-date"                 {:fi "Muokattu viimeksi"}
-   "owner"                      {:fi "Omistaja"}
-   "admin"                      {:fi "Ylläpitäjä"}
-   "construction-year"          {:fi "Rakennusvuosi"}
-   "renovation-years"           {:fi "Peruskorjausvuodet"}
-   "phone-number"               {:fi "Puhelinnumero"}
-   "email"                      {:fi "Sähköposti"}
-   "www"                        {:fi "WWW"}
-   "comment"                    {:fi "Kommentti"}
-   "type.type-code"             {:fi "Tyyppikoodi"}
-   "type.type-name"             {:fi "Liikuntapaikkatyyppi"}
-   "location.city.city-code"    {:fi "Kuntanumero"}
-   "location.city.city-name"    {:fi "Kunta"}
-   "location.city.neighborhood" {:fi "Kuntaosa"}
-   "location.address"           {:fi "Katuosoite"}
-   "location.postal-code"       {:fi "Postinumero"}
-   "location.postal-office"     {:fi "Postitoimipaikka"}})
+  {"lipas-id"
+   {:fi "Lipas-id" :en "Lipas-id" :se "Lipas-id"}
+   "name"
+   {:fi "Nimi suomeksi" :en "Finnish name" :se "Namn på finska"}
+   "name-localized.se"
+   {:fi "Nimi ruotsiksi" :en "Swedish name" :se "Namn på svenska"}
+   "marketing-name"
+   {:fi "Markkinointinimi" :en "Marketing name" :se "Marketing name"}
+   "event-date"
+   {:fi "Muokattu viimeksi" :en "Last modified" :se "Last modified"}
+   "owner"
+   {:fi "Omistaja" :en "Owner" :se "Owner"}
+   "admin"
+   {:fi "Ylläpitäjä" :en "Administrator" :se "Administrator"}
+   "construction-year"
+   {:fi "Rakennusvuosi" :en "Construction year" :se "Construction year"}
+   "renovation-years"
+   {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renovation years"}
+   "phone-number"
+   {:fi "Puhelinnumero" :en "Phone number" :se "Phone number"}
+   "email"
+   {:fi "Sähköposti" :en "Email" :se "Epost"}
+   "www"
+   {:fi "WWW" :en "WWW" :se "WWW"}
+   "comment"
+   {:fi "Kommentti" :en "Comment" :se "Comment"}
+   "type.type-code"
+   {:fi "Tyyppikoodi" :en "Type code" :se "Type code"}
+   "type.type-name"
+   {:fi "Liikuntapaikkatyyppi" :en "Type" :se "Type"}
+   "location.city.city-code"
+   {:fi "Kuntanumero" :en "City code" :se "City code"}
+   "location.city.city-name"
+   {:fi "Kunta" :en "City" :se "City"}
+   "location.city.neighborhood"
+   {:fi "Kuntaosa" :en "Neighborhood" :se "Neighborhood"}
+   "location.address"
+   {:fi "Katuosoite" :en "Address" :se "Address"}
+   "location.postal-code"
+   {:fi "Postinumero" :en "Postal code" :se "Postal code"}
+   "location.postal-office"
+   {:fi "Postitoimipaikka" :en "Postal office" :se "Postal office"}})
 
 (def prop-fields
   (reduce (fn [res [k v]]
@@ -289,10 +310,14 @@
                          :en "Sports-sites count"}
    "sites-count-p1000c" {:fi "Liikuntapaikkojen lkm/1000 asukasta"
                          :en "Sports-sites count/1000 people"}
-   "m2-total"           {:fi "Liikuntapinta-ala m²"
-                         :en "Operating expenses"}
-   "m2-pc"              {:fi "Liikuntapinta-ala m²/asukas"
-                         :en "Surface area m²/capita"}})
+   "area-m2-sum"        {:fi "Liikuntapinta-ala m²"
+                         :en "Surface area m²"}
+   "area-m2-pc"         {:fi "Liikuntapinta-ala m²/asukas"
+                         :en "Surface area m²/capita"}
+   "length-km-sum"      {:fi "Reittien pituus km"
+                         :en "Routes total length km"}
+   "length-km-pc"       {:fi "Reittien pituus km/asukas"
+                         :en "Routes total length km/capita"}})
 
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
@@ -339,53 +364,76 @@
     {:country-averages (calc-stats years all-cities)
      :data-points      (select-keys cities city-codes)}))
 
-(defn calculate-stats-by-city [m2-data pop-data]
+(defn ->prefix-map [m prefix]
+  (reduce
+   (fn [res [k v]]
+     (assoc res (keyword (str prefix (name k))) v))
+   {}
+   m))
+
+(defn calculate-stats-by-city [aggs-data pop-data]
   (reduce
    (fn [res m]
-     (let [city-code   (:key m)
-           population  (pop-data city-code)
-           m2-sum      (-> m :area_m2_stats :sum)
-           sites-count (:doc_count m)
-           entry       {:population         population
-                        :m2-total           m2-sum
-                        :m2-count           (-> m :area_m2_stats :count)
-                        :m2-avg             (-> m :area_m2_stats :avg)
-                        :m2-min             (-> m :area_m2_stats :min)
-                        :m2-max             (-> m :area_m2_stats :max)
-                        :sites-count        sites-count
-                        :sites-count-p1000c (when (and population sites-count)
-                                              (double
-                                               (/ sites-count
-                                                  (/ population 1000))))
-                        :m2-pc              (when (and population m2-sum)
-                                              (double (/ m2-sum population)))}]
+     (let [city-code  (:key m)
+           population (pop-data city-code)
+
+           m2-sum          (-> m :area_m2_stats :sum)
+           km-sum          (-> m :length_km_stats :sum)
+           area-m2-stats   (-> m
+                               :area_m2_stats
+                               (assoc :pc (when (and population m2-sum)
+                                            (double (/ m2-sum population))))
+                               (->prefix-map "area-m2-"))
+           length-km-stats (-> m
+                               :length_km_stats
+                               (assoc :pc (when (and population km-sum)
+                                            (double (/ km-sum population))))
+                               (->prefix-map "length-km-"))
+           sites-count     (:doc_count m)
+           entry           (merge
+                            area-m2-stats
+                            length-km-stats
+                            {:population         population
+                             :sites-count        sites-count
+                             :sites-count-p1000c (when (and population sites-count)
+                                                   (double
+                                                    (/ sites-count
+                                                       (/ population 1000))))})]
        (assoc res city-code entry)))
    {}
-   m2-data))
+   aggs-data))
 
-(defn calculate-stats-by-type [m2-data pop-data city-codes]
+(defn calculate-stats-by-type [aggs-data pop-data city-codes]
   (reduce
    (fn [res m]
-     (let [type-code   (:key m)
-           populations (if (empty? city-codes)
-                         pop-data ;; all
-                         (select-keys pop-data city-codes))
-           population  (->> populations vals (reduce +))
-           m2-sum      (-> m :area_m2_stats :sum)
+     (let [type-code       (:key m)
+           populations     (if (empty? city-codes)
+                             pop-data ;; all
+                             (select-keys pop-data city-codes))
+           population      (->> populations vals (reduce +))
+           m2-sum          (-> m :area_m2_stats :sum)
+           km-sum          (-> m :length_km_stats :sum)
+           area-m2-stats   (-> m
+                               :area_m2_stats
+                               (assoc :pc (when (and population m2-sum)
+                                            (double (/ m2-sum population))))
+                               (->prefix-map "area-m2-"))
+           length-km-stats (-> m
+                               :length_km_stats
+                               (assoc :pc (when (and population km-sum)
+                                            (double (/ km-sum population))))
+                               (->prefix-map "length-km-"))
+
            sites-count (:doc_count m)
-           entry       {:population         population
-                        :m2-total           m2-sum
-                        :m2-count           (-> m :area_m2_stats :count)
-                        :m2-avg             (-> m :area_m2_stats :avg)
-                        :m2-min             (-> m :area_m2_stats :min)
-                        :m2-max             (-> m :area_m2_stats :max)
-                        :sites-count        sites-count
-                        :sites-count-p1000c (when (and population sites-count)
-                                              (double
-                                               (/ sites-count
-                                                  (/ population 1000))))
-                        :m2-pc              (when (and population m2-sum)
-                                              (double (/ m2-sum population)))}]
+           entry       (merge
+                        area-m2-stats
+                        length-km-stats
+                        {:population         population
+                         :sites-count        sites-count
+                         :sites-count-p1000c (when (and population sites-count)
+                                               (double
+                                                (/ sites-count
+                                                   (/ population 1000))))})]
        (assoc res type-code entry)))
    {}
-   m2-data))
+   aggs-data))

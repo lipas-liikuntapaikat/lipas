@@ -95,18 +95,11 @@
              {:city-code (-> m :city-code)
               :year      year})))))
 
-(defn round-safe
-  ([x]
-   (round-safe x 2))
-  ([x precision]
-   (if (number? x)
-     (.toFixed x precision))))
-
 (defn round-vals [m]
   (reduce
    (fn [m [k v]]
      (assoc m k (if (and (not= :year k) (not= :city-code k))
-                  (round-safe v)
+                  (utils/round-safe v)
                   v)))
    {}
    m))
@@ -290,9 +283,11 @@
            [])
           (sort-by (keyword metric) utils/reverse-cmp)
           (map (fn [m](-> m
-                          (update :m2-pc round-safe 5)
-                          (update :m2-avg round-safe 5)
-                          (update :sites-count-p1000c round-safe 5))))))))
+                          (update :area-m2-pc utils/round-safe 5)
+                          (update :area-m2-avg utils/round-safe 5)
+                          (update :length-km-pc utils/round-safe 5)
+                          (update :length-km-avg utils/round-safe 5)
+                          (update :sites-count-p1000c utils/round-safe 5))))))))
 
 (re-frame/reg-sub
  ::sports-stats-labels
@@ -300,11 +295,17 @@
  :<- [::sports-stats-metrics]
  (fn [[tr metrics] _]
    (let [locale (tr)]
-     (into {:population (tr :stats/population)
-            :m2-count   (tr :stats/m2-count)
-            :m2-avg     (tr :stats/m2-avg)
-            :m2-min     (tr :stats/m2-min)
-            :m2-max     (tr :stats/m2-max)}
+     (into {:population      (tr :stats/population)
+            :area-m2-sum     (tr :stats/area-m2-sum)
+            :area-m2-avg     (tr :stats/area-m2-avg)
+            :area-m2-min     (tr :stats/area-m2-min)
+            :area-m2-max     (tr :stats/area-m2-max)
+            :area-m2-count   (tr :stats/area-m2-count)
+            :length-km-sum   (tr :stats/length-km-sum)
+            :length-km-avg   (tr :stats/length-km-avg)
+            :length-km-min   (tr :stats/length-km-min)
+            :length-km-max   (tr :stats/length-km-max)
+            :length-km-count (tr :stats/length-km-count)}
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub
@@ -318,10 +319,15 @@
               [:city-name (tr :lipas.location/city)]
               [:type-name (tr :lipas.sports-site/type)])
             [:population (tr :stats/population)]
-            [:m2-total (tr :stats/m2-total)]
-            [:m2-avg (tr :stats/m2-avg)]
-            [:m2-min (tr :stats/m2-min)]
-            [:m2-max (tr :stats/m2-max)]]
+            [:area-m2-sum (tr :stats/m2-sum)]
+            [:area-m2-avg (tr :stats/m2-avg)]
+            [:area-m2-min (tr :stats/m2-min)]
+            [:area-m2-max (tr :stats/m2-max)]
+            [:area-m2-count (tr :stats/m2-count)]
+            [:length-km-sum (tr :stats/length-km-sum)]
+            [:length-km-avg   (tr :stats/length-km-avg)]
+            [:length-km-min   (tr :stats/length-km-min)]
+            [:length-km-max   (tr :stats/length-km-max)]]
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
 (re-frame/reg-sub
