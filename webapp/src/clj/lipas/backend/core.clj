@@ -247,11 +247,14 @@
     (assoc sports-site :search-meta search-meta)))
 
 (defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
-  (-> ice-stadium
-      (assoc-in [:properties :surface-material] [(-> envelope :base-floor-structure)])
-      (assoc-in [:properties :area-m2] (-> building :total-ice-area-m2))
-      utils/clean
-      enrich*))
+  (let [smaterial (-> envelope :base-floor-structure)
+        area-m2   (-> building :total-ice-area-m2)]
+    (-> ice-stadium
+        (cond->
+            smaterial (assoc-in [:properties :surface-material] [smaterial])
+            area-m2   (assoc-in [:properties :area-m2] area-m2))
+        utils/clean
+        enrich*)))
 
 (defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
   (-> swimming-pool
