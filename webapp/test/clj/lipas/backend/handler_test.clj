@@ -366,6 +366,7 @@
 (deftest search-test
   (let [site     (gen/generate (s/gen :lipas/sports-site))
         lipas-id (:lipas-id site)
+        name     (:name site)
         _        (core/index! search site :sync)
         resp     (app (-> (mock/request :post "/api/actions/search")
                           (mock/content-type "application/json")
@@ -373,7 +374,7 @@
                                               {:bool
                                                {:must
                                                 [{:query_string
-                                                  {:query (str lipas-id)}}]}}}))))
+                                                  {:query name}}]}}}))))
         body     (<-json (:body resp))
         sites    (map :_source (-> body :hits :hits))]
     (is (= 200 (:status resp)))
@@ -443,14 +444,13 @@
                       (mock/body (->transit {:city-codes [275 972]}))))
         body (-> resp :body <-transit)]
     (is (= 200 (:status resp)))
-    (is (number? (get-in body [275 :m2-pc])))))
+    (is (number? (get-in body [275 :area-m2-pc])))))
 
 (deftest create-energy-report-test
   (let [resp (app (-> (mock/request :post "/api/actions/create-energy-report")
                       (mock/content-type "application/json")
                       (mock/body (->json {:type-code 3110 :year 2017}))))]
     (is (= 200 (:status resp)))))
-
 
 (deftest add-reminder-test
   (let [user     (gen-user {:db? true})

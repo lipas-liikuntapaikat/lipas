@@ -19,6 +19,7 @@
     "@turf/clean-coords": "^6.0.1",
     "@turf/combine": "^6.0.1",
     "@turf/kinks": "^6.0.0",
+    "@turf/length": "^6.0.2",
     "@turf/line-intersect": "^6.0.2",
     "@turf/line-split": "^5.1.5",
     "@turf/nearest-point-on-line": "^6.0.2",

@@ -383,3 +383,10 @@
 
 (defn now+ [ms]
   (.toISOString (js/Date. (-> (js/Date.) .getTime (+ ms)))))
+
+(defn round-safe
+  ([x]
+   (round-safe x 2))
+  ([x precision]
+   (if (number? x)
+     (.toFixed x precision))))

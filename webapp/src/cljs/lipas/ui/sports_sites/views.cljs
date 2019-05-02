@@ -8,6 +8,7 @@
    [lipas.ui.sports-sites.events :as events]
    [lipas.ui.sports-sites.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.map.utils :as map-utils]
    [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
@@ -85,7 +86,9 @@
      (into
       [:<>]
       (for [l extra-locales]
-        {:label      (tr :lipas.sports-site/name-localized (name l))
+        {:label      (tr (keyword
+                          "lipas.sports-site"
+                          (str "name-localized-" (name l))))
          :value      (-> display-data :name-localized l)
          :form-field [lui/text-field
                       {:spec      :lipas.sports-site/name
@@ -152,6 +155,14 @@
                    {:value     (-> edit-data :www)
                     :spec      :lipas.sports-site/www
                     :on-change #(on-change :www %)}]}
+
+     ;; Reservations-link
+     {:label      (tr :lipas.sports-site/reservations-link)
+      :value      (-> display-data :reservations-link)
+      :form-field [lui/text-field
+                   {:value     (-> edit-data :www)
+                    :spec      :lipas.sports-site/reservations-link
+                    :on-change #(on-change :reservations-link %)}]}
 
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/ownership)}])
@@ -258,16 +269,34 @@
 (defn retkikartta? [k]
   (= k :may-be-shown-in-excursion-map-fi?))
 
-(defn retkikartta-field [{:keys [tr on-change] :as props}]
-  (let [message (tr :retkikartta/disclaimer)
+(defn retkikartta-field
+  [{:keys [tr on-change problems?] :as props}]
+  (let [message    (tr :retkikartta/disclaimer)
         on-change* (fn [v]
                      (if (true? v)
                        (==> [:lipas.ui.events/confirm message (partial on-change v)])
                        (on-change v)))]
-    [lui/checkbox (assoc props :on-change on-change*)]))
+    [:<>
+     [lui/checkbox (assoc props :on-change on-change*)]
+     (when problems?
+       [mui/typography {:color "error"}
+        (tr :map/retkikartta-problems-warning)])]))
 
-(defn properties-form [{:keys [tr edit-data display-data types-props
-                               on-change read-only? key]}]
+(defn route-length-km-field
+  [{:keys [tr geoms on-change] :as props}]
+  [mui/grid {:container true :wrap "nowrap"}
+   [mui/grid {:item true :style {:flex-grow 1}}
+    [mui/form-group
+     [lui/text-field (dissoc props :geoms)]]]
+   [mui/grid {:item true}
+    [mui/tooltip {:title (tr :map/calculate-route-length)}
+     [mui/icon-button
+      {:on-click #(-> geoms map-utils/calculate-length on-change)}
+      [:> js/materialIcons.Calculator]]]]])
+
+(defn properties-form
+  [{:keys [tr edit-data display-data types-props on-change read-only?
+           key geoms problems?]}]
   (let [locale (tr)]
     (into
      [lui/form
@@ -299,7 +328,17 @@
                                     {:tr        tr
                                      :value     value
                                      :on-change on-change
-                                     :tooltip   tooltip}]
+                                     :tooltip   tooltip
+                                     :problems? problems?}]
+           (= :route-length-km k)  [route-length-km-field
+                                    {:tr        tr
+                                     :value     value
+                                     :type      "number"
+                                     :spec      spec
+                                     :label     label
+                                     :tooltip   tooltip
+                                     :geoms     geoms
+                                     :on-change on-change}]
            (= "boolean" data-type) [lui/checkbox
                                     {:value     value
                                      :tooltip   tooltip
