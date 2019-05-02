@@ -215,8 +215,6 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
-(admins "unknown")
-
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."

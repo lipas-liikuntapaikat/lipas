@@ -73,7 +73,7 @@
     :markers
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
-         :style      styles/red-marker-style
+         :style      styles/blue-marker-style
          :renderMode "image"})}})
 
 (defn init-view [center zoom]
@@ -105,12 +105,17 @@
                   :overlays #js[popup-overlay]
                   :view     view}
 
-        hover (ol.interaction.Select.
-               #js{:layers    #js[(-> layers :overlays :vectors)
-                                  (-> layers :overlays :markers)]
-                   :style     styles/feature-style-hover
-                   :multi     true
-                   :condition ol.events.condition.pointerMove})
+        vector-hover (ol.interaction.Select.
+                      #js{:layers    #js[(-> layers :overlays :vectors)]
+                          :style     styles/feature-style-hover
+                          :multi     true
+                          :condition ol.events.condition.pointerMove})
+
+        marker-hover (ol.interaction.Select.
+                      #js{:layers    #js[(-> layers :overlays :markers)]
+                          :style     styles/feature-style-hover
+                          :multi     true
+                          :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
@@ -118,7 +123,7 @@
 
         lmap (ol.Map. opts)]
 
-    (.on hover "select"
+    (.on vector-hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (gobj/get e "selected")]
@@ -135,6 +140,17 @@
              ;;   (doto (.getFeatures hover)
              ;;     (.clear)
              ;;     (.extend fs)))
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
+    (.on marker-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -166,17 +182,20 @@
              (when (and (> width 0) (> height 0))
                (==> [::events/set-view center lonlat zoom extent width height])))))
 
-    {:lmap          lmap
-     :view          view
-     :center        center
-     :zoom          zoom
-     :layers        layers
+    {:lmap     lmap
+     :view     view
+     :center   center
+     :zoom     zoom
+     :layers   layers
      ;; We don't re-create :hover and :select each time when we toggle
      ;; them because it causes buggy behavior. We keep refs to
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
-     :interactions* {:select select :hover hover}
-     :overlays      {:popup popup-overlay}}))
+     :interactions*
+     {:select       select
+      :vector-hover vector-hover
+      :marker-hover marker-hover}
+     :overlays {:popup popup-overlay}}))
 
 ;; Browsing and selecting features
 (defn set-default-mode! [map-ctx mode]
@@ -185,7 +204,8 @@
                     map-utils/unselect-features!
                     map-utils/clear-interactions!
                     map-utils/clear-markers!
-                    map-utils/enable-hover!
+                    map-utils/enable-vector-hover!
+                    map-utils/enable-marker-hover!
                     map-utils/enable-select!)]
     (let [lipas-id (:lipas-id mode)
           address  (:address mode)]

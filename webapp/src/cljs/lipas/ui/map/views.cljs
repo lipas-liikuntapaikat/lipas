@@ -1,6 +1,7 @@
 (ns lipas.ui.map.views
   (:require
    [clojure.string :as string]
+   [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
@@ -20,7 +21,10 @@
 
 (defn helper [{:keys [label tooltip]}]
   [mui/tooltip {:title tooltip}
-   [mui/link {:style {:margin "0.5em"} :underline "always"} label]])
+   [mui/link
+    {:style     {:font-family "Lato" :font-size "0.9em" :margin "0.5em"}
+     :underline "always"}
+    label]])
 
 (defn address-search-dialog []
   (let [tr      (<== [:lipas.ui.subs/translator])
@@ -189,7 +193,10 @@
       :anchor-el anchor-el
       :container anchor-el
       :modifiers {:offset {:enabled true :offset "0px,10px"}}}
-     [mui/paper {:style {:padding "0.5em"}}
+     [mui/paper
+      {:style
+       {:padding "0.5em"
+        :width   (when (< 100 (count name)) "150px")}}
       [mui/typography {:variant "body2"}
        name]]]))
 
@@ -217,7 +224,7 @@
 
           type-code (-> display-data :type :type-code)
 
-          {:keys [cities admins owners editing? edits-valid?
+          {:keys [cities admins owners editing? edits-valid? problems?
                   editing-allowed? delete-dialog-open? can-publish? logged-in?
                   size-categories sub-mode types-props geom-type portal]}
           (<== [::subs/sports-site-view lipas-id type-code])
@@ -312,6 +319,7 @@
                 :display-data (:properties display-data)
                 :edit-data    (:properties edit-data)
                 :geoms        (-> edit-data :location :geometries)
+                :problems?    problems?
                 :key          type-code}]))]
 
        ;; Actions
@@ -449,7 +457,7 @@
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
     (let [locale                         (tr)
-          {:keys [type data new-site-valid? admins owners cities
+          {:keys [type data new-site-valid? admins owners cities problems?
                   types types-props size-categories zoomed? geom geom-type
                   active-step sub-mode]} (<== [::subs/add-sports-site-view])
 
@@ -499,7 +507,7 @@
              (if-not geom
 
                ;; Draw new geom
-               [mui/grid {:container true :spacing 16}
+               [mui/grid {:container true :spacing 16 :align-items "center"}
 
                 ;; Tabs for selecting btw drawing and importing geoms
                 (when (#{"LineString"} geom-type)
@@ -571,7 +579,7 @@
 
                 ;; Add additional geom button
                 (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true :xs 8}
+                  [mui/grid {:item true}
                    [mui/button
                     {:on-click #(==> [::events/start-adding-geom geom-type])
                      :variant  "contained"
@@ -583,7 +591,7 @@
 
                 ;; Delete geom
                 (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true :xs 4}
+                  [mui/grid {:item true}
                    [mui/tooltip
                     {:title (case geom-type
                               "LineString" (tr :map/remove-linestring)
@@ -599,6 +607,21 @@
                       :variant  "contained"}
                      [:> js/materialIcons.Eraser]]]])
 
+                ;; Split
+                (when (#{"LineString"} geom-type)
+                  [mui/grid {:item true}
+                   [mui/tooltip
+                    {:title (tr :map/split-linestring)}
+                    [mui/button
+                     {:on-click #(if (= sub-mode :splitting)
+                                   (==> [::events/stop-splitting-geom geom-type])
+                                   (==> [::events/start-splitting-geom geom-type]))
+                      :disabled (-> geom :features empty?)
+                      :style    (when (= sub-mode :splitting)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [:> js/materialIcons.ContentCut]]]])
+
                 ;; Done button
                 [mui/grid {:item true :xs 12}
                  [mui/button
@@ -606,7 +629,21 @@
                    :variant  "contained"
                    :disabled (-> geom :features empty?)
                    :color    "secondary"}
-                  (tr :general/done)]]]))]]
+                  (tr :general/done)]]
+
+                ;; Retkikartta Problems
+                (when (and (#{"LineString"} geom-type) problems?)
+                  [mui/grid {:item true}
+                   [mui/tooltip
+                    {:placement "right"
+                     :title     (str
+                                 (tr :map/retkikartta-problems-warning)
+                                 " "
+                                 (tr :map/retkikartta-checkbox-reminder))}
+                    [:span
+                     [lui/icon-text
+                      {:icon "warning"
+                       :text "Retkikartta.fi"}]]]])]))]]
 
          ;; Step 3 - Fill data
          [mui/step
@@ -662,6 +699,7 @@
                   :on-change   (partial set-field :properties)
                   :edit-data   (:properties data)
                   :geoms       (-> data :location :geometries)
+                  :problems?   problems?
                   :key         type}])]]]]]]
 
        ;; Actions

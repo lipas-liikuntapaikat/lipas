@@ -28,12 +28,27 @@
 
 (def ->geoJSON-clj (comp ->clj ->geoJSON))
 
+(defn add-marker!
+  [{:keys [layers] :as map-ctx} f style]
+  (.setStyle f style)
+  (-> layers :overlays :markers .getSource (.addFeature f))
+  map-ctx)
+
 (defn show-address-marker!
-  [{:keys [layers] :as map-ctx} address]
+  [map-ctx address]
   (let [f (.readFeature geoJSON (clj->js address))]
-    (.setStyle f styles/blue-marker-style)
-    (-> layers :overlays :markers .getSource (.addFeature f))
-    map-ctx))
+    (add-marker! map-ctx f styles/blue-marker-style)))
+
+(defn clear-problems! [{:keys [layers] :as map-ctx}]
+  (-> layers :overlays :markers .getSource .clear)
+  map-ctx)
+
+(defn show-problems!
+  [map-ctx problems]
+  (doseq [p (-> problems :data :features)]
+    (let [f (.readFeature geoJSON (clj->js p))]
+      (add-marker! map-ctx f styles/red-marker-style)))
+  map-ctx)
 
 ;; Popups are rendered 'outside' OpenLayers by React so we need to
 ;; inform the outside world.
@@ -68,7 +83,8 @@
       (.extend features))
     map-ctx))
 
-(defn unselect-features! [{:keys [interactions*] :as map-ctx}]
+(defn unselect-features!
+  [{:keys [interactions*] :as map-ctx}]
   (-> interactions* :select .getFeatures .clear)
   map-ctx)
 
@@ -76,11 +92,29 @@
   (-> layers :overlays :markers .getSource .clear)
   map-ctx)
 
-(defn enable-hover! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
-  (let [hover (:hover interactions*)]
+(defn enable-vector-hover!
+  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  (let [hover (:vector-hover interactions*)]
     (-> hover .getFeatures .clear)
     (.addInteraction lmap hover)
-    (assoc-in map-ctx [:interactions :hover] hover)))
+    (assoc-in map-ctx [:interactions :vector-hover] hover)))
+
+(defn enable-marker-hover!
+  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  (let [hover (:marker-hover interactions*)]
+    (-> hover .getFeatures .clear)
+    (.addInteraction lmap hover)
+    (assoc-in map-ctx [:interactions :marker-hover] hover)))
+
+(defn enable-edits-hover!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+  (let [layer (-> layers :overlays :edits)
+        hover (ol.interaction.Select.
+               #js{:layers    #js[layer]
+                   :style     #js[styles/editing-hover-style styles/vertices-style]
+                   :condition ol.events.condition.pointerMove})]
+    (.addInteraction lmap hover)
+    (assoc-in map-ctx [:interactions :edits-hover] hover)))
 
 (defn enable-select! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
   (let [select (:select interactions*)]
@@ -126,6 +160,10 @@
     (doseq [f (rest fs)]
       (ol.extent.extend extent (-> f .getGeometry .getExtent)))
     (fit-to-extent! map-ctx extent)))
+
+(defn fit-to-fcoll! [map-ctx fcoll]
+  (let [fs (-> fcoll clj->js ->ol-features)]
+    (fit-to-features! map-ctx fs)))
 
 (defn select-sports-site! [map-ctx lipas-id]
   (if-let [fs (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
@@ -200,6 +238,14 @@
       :features
       clj->js
       (garray/concatMap fix-kinks*)
+      ->fcoll
+      ->clj))
+
+(defn find-kinks [fcoll]
+  (-> fcoll
+      :features
+      clj->js
+      (garray/concatMap #(-> % turf/kinks (gobj/get "features")))
       ->fcoll
       ->clj))
 
@@ -379,6 +425,11 @@
       (garray/map turf/cleanCoords)
       ->fcoll
       ->clj))
+
+(defn find-problems [fcoll]
+  {:kinks         (find-kinks fcoll)
+   ;;:intersections (find-intersections fcoll)
+   })
 
 (defn fix-features [ol-features]
   ol-features)
