@@ -683,7 +683,7 @@
    :steel "Teräs"},
   :map
   {:retkikartta-checkbox-reminder
-   "Muista myös valita \"Saa julkaista Retkikartta.fi -palvelussa ruksi seuraavan vaiheen lisätiedoissa.\"",
+   "Muista myös valita \"Saa julkaista Retkikartta.fi -palvelussa\" ruksi seuraavan vaiheen lisätiedoissa.\"",
    :zoom-to-user "Kohdista sijaintiini",
    :remove "Poista",
    :modify-polygon "Muokkaa aluetta",
@@ -1478,7 +1478,7 @@
    :draw "Draw",
    :draw-linestring "Add route",
    :modify "Modify geometries",
-   :zoom-to-site "Show on map",
+   :zoom-to-site "Zoom map to sports-sites location",
    :kink
    "Self intersection. Please fix either by re-routing or splitting the segment.",
    :zoom-closer "Please zoom closer"},
@@ -1665,7 +1665,7 @@
    :delete "Radera",
    :browse-to-map "Flytta dig till kartan",
    :save "Spara",
-   :close "Stäng",
+   :close "Samkommun",
    :fill-required-fields "Fyll i obligatoriska fält",
    :browse-to-portal "Flytta dig till portalen",
    :download-excel "Ladda Excel",
