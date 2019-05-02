@@ -682,9 +682,14 @@
    :hardened-plastic "Lujitemuovi",
    :steel "Teräs"},
   :map
-  {:remove "Poista",
+  {:retkikartta-checkbox-reminder
+   "Muista myös valita \"Saa julkaista Retkikartta.fi -palvelussa ruksi seuraavan vaiheen lisätiedoissa.\"",
+   :zoom-to-user "Kohdista sijaintiini",
+   :remove "Poista",
    :modify-polygon "Muokkaa aluetta",
    :draw-polygon "Lisää alue",
+   :retkikartta-problems-warning
+   "Korjaa kartalle merkityt ongelmat, jos haluat, että kohde siirtyy Retkikartalle.",
    :edit-later-hint "Voit muokata geometriaa myös myöhemmin",
    :center-map-to-site "Kohdista kartta liikuntapaikkaan",
    :draw-hole "Lisää reikä",
@@ -701,6 +706,8 @@
    :draw-linestring "Lisää reittiosa",
    :modify "Voit raahata pistettä kartalle",
    :zoom-to-site "Kohdista kartta liikuntapaikkaan",
+   :kink
+   "Muuta reitin kulkua niin, että reittiosa ei risteä itsensä kanssa. Voit tarvittaessa katkaista reitin useampaan osaan.",
    :zoom-closer "Kartta täytyy zoomata lähemmäs"},
   :supporting-structures
   {:brick "Tiili",
@@ -1447,9 +1454,14 @@
    :hardened-plastic "Hardened plastic",
    :steel "Steel"},
   :map
-  {:remove "Remove",
+  {:retkikartta-checkbox-reminder
+   "Remember to tick \"May be shown in ExcursionMap.fi\" later in sports site properties.",
+   :zoom-to-user "Zoom to my location",
+   :remove "Remove",
    :modify-polygon "Modify area",
    :draw-polygon "Add area",
+   :retkikartta-problems-warning
+   "Please fix problems displayed on the map in case this route should be visible also in Retkikartta.fi",
    :edit-later-hint "You can modify geometries later",
    :center-map-to-site "Center map to sports-site",
    :draw-hole "Add hole",
@@ -1467,6 +1479,8 @@
    :draw-linestring "Add route",
    :modify "Modify geometries",
    :zoom-to-site "Show on map",
+   :kink
+   "Self intersection. Please fix either by re-routing or splitting the segment.",
    :zoom-closer "Please zoom closer"},
   :supporting-structures
   {:brick "Brick",

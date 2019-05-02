@@ -270,13 +270,17 @@
   (= k :may-be-shown-in-excursion-map-fi?))
 
 (defn retkikartta-field
-  [{:keys [tr on-change] :as props}]
+  [{:keys [tr on-change problems?] :as props}]
   (let [message    (tr :retkikartta/disclaimer)
         on-change* (fn [v]
                      (if (true? v)
                        (==> [:lipas.ui.events/confirm message (partial on-change v)])
                        (on-change v)))]
-    [lui/checkbox (assoc props :on-change on-change*)]))
+    [:<>
+     [lui/checkbox (assoc props :on-change on-change*)]
+     (when problems?
+       [mui/typography {:color "error"}
+        (tr :map/retkikartta-problems-warning)])]))
 
 (defn route-length-km-field
   [{:keys [tr geoms on-change] :as props}]
@@ -292,7 +296,7 @@
 
 (defn properties-form
   [{:keys [tr edit-data display-data types-props on-change read-only?
-           key geoms]}]
+           key geoms problems?]}]
   (let [locale (tr)]
     (into
      [lui/form
@@ -324,7 +328,8 @@
                                     {:tr        tr
                                      :value     value
                                      :on-change on-change
-                                     :tooltip   tooltip}]
+                                     :tooltip   tooltip
+                                     :problems? problems?}]
            (= :route-length-km k)  [route-length-km-field
                                     {:tr        tr
                                      :value     value
