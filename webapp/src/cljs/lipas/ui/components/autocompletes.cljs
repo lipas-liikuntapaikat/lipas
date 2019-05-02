@@ -9,11 +9,13 @@
    [mui-downshift :as MuiDownshift]
    [reagent.core :as r]))
 
+(def lower-case (fnil string/lower-case ""))
+
 (defn simple-matches [items label-fn s]
   (->> items
        (filter #(string/includes?
-                 (string/lower-case (label-fn %))
-                 (string/lower-case s)))))
+                 (lower-case (label-fn %))
+                 (lower-case s)))))
 
 (defn js->clj* [x]
   (js->clj x :keywordize-keys true))

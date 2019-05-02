@@ -43,27 +43,48 @@
    fields))
 
 (def basic-fields
-  {"lipas-id"                   {:fi "Lipas-id"}
-   "name"                       {:fi "Nimi"}
-   "name-localized.se"          {:fi "Nimi ruotsiksi"}
-   "marketing-name"             {:fi "Markkinointinimi"}
-   "event-date"                 {:fi "Muokattu viimeksi"}
-   "owner"                      {:fi "Omistaja"}
-   "admin"                      {:fi "Ylläpitäjä"}
-   "construction-year"          {:fi "Rakennusvuosi"}
-   "renovation-years"           {:fi "Peruskorjausvuodet"}
-   "phone-number"               {:fi "Puhelinnumero"}
-   "email"                      {:fi "Sähköposti"}
-   "www"                        {:fi "WWW"}
-   "comment"                    {:fi "Kommentti"}
-   "type.type-code"             {:fi "Tyyppikoodi"}
-   "type.type-name"             {:fi "Liikuntapaikkatyyppi"}
-   "location.city.city-code"    {:fi "Kuntanumero"}
-   "location.city.city-name"    {:fi "Kunta"}
-   "location.city.neighborhood" {:fi "Kuntaosa"}
-   "location.address"           {:fi "Katuosoite"}
-   "location.postal-code"       {:fi "Postinumero"}
-   "location.postal-office"     {:fi "Postitoimipaikka"}})
+  {"lipas-id"
+   {:fi "Lipas-id" :en "Lipas-id" :se "Lipas-id"}
+   "name"
+   {:fi "Nimi suomeksi" :en "Finnish name" :se "Namn på finska"}
+   "name-localized.se"
+   {:fi "Nimi ruotsiksi" :en "Swedish name" :se "Namn på svenska"}
+   "marketing-name"
+   {:fi "Markkinointinimi" :en "Marketing name" :se "Marketing name"}
+   "event-date"
+   {:fi "Muokattu viimeksi" :en "Last modified" :se "Last modified"}
+   "owner"
+   {:fi "Omistaja" :en "Owner" :se "Owner"}
+   "admin"
+   {:fi "Ylläpitäjä" :en "Administrator" :se "Administrator"}
+   "construction-year"
+   {:fi "Rakennusvuosi" :en "Construction year" :se "Construction year"}
+   "renovation-years"
+   {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renovation years"}
+   "phone-number"
+   {:fi "Puhelinnumero" :en "Phone number" :se "Phone number"}
+   "email"
+   {:fi "Sähköposti" :en "Email" :se "Epost"}
+   "www"
+   {:fi "WWW" :en "WWW" :se "WWW"}
+   "comment"
+   {:fi "Kommentti" :en "Comment" :se "Comment"}
+   "type.type-code"
+   {:fi "Tyyppikoodi" :en "Type code" :se "Type code"}
+   "type.type-name"
+   {:fi "Liikuntapaikkatyyppi" :en "Type" :se "Type"}
+   "location.city.city-code"
+   {:fi "Kuntanumero" :en "City code" :se "City code"}
+   "location.city.city-name"
+   {:fi "Kunta" :en "City" :se "City"}
+   "location.city.neighborhood"
+   {:fi "Kuntaosa" :en "Neighborhood" :se "Neighborhood"}
+   "location.address"
+   {:fi "Katuosoite" :en "Address" :se "Address"}
+   "location.postal-code"
+   {:fi "Postinumero" :en "Postal code" :se "Postal code"}
+   "location.postal-office"
+   {:fi "Postitoimipaikka" :en "Postal office" :se "Postal office"}})
 
 (def prop-fields
   (reduce (fn [res [k v]]
