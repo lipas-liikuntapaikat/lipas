@@ -427,9 +427,10 @@
       ->clj))
 
 (defn find-problems [fcoll]
-  {:kinks         (find-kinks fcoll)
-   ;;:intersections (find-intersections fcoll)
-   })
+  (when (#{"LineString"} (-> fcoll :features first :geometry :type))
+    {:kinks         (find-kinks fcoll)
+     ;;:intersections (find-intersections fcoll)
+     }))
 
 (defn fix-features [ol-features]
   ol-features)
