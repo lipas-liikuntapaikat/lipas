@@ -71,7 +71,7 @@
         (let [k2 (str k "-avg")
               v2 (str (locale v) " " (tr :stats/country-avg))]
           (assoc res (keyword k) (locale v) (keyword k2) v2)))
-      {}
+      {:population (tr :stats/population)}
       reports/stats-metrics))))
 
 (defn get-averages [avgs service fields]
@@ -92,15 +92,16 @@
             (merge
              (select-keys service* fields)
              (get-averages avgs service fields)
-             {:city-code (-> m :city-code)
-              :year      year})))))
+             {:city-code  (-> m :city-code)
+              :year       year
+              :population (get-in m [:stats year :population])})))))
 
 (defn round-vals [m]
   (reduce
    (fn [m [k v]]
-     (assoc m k (if (and (not= :year k) (not= :city-code k))
-                  (utils/round-safe v)
-                  v)))
+     (assoc m k (if (#{:year :population :city-code} k)
+                  v
+                  (utils/round-safe v))))
    {}
    m))
 
@@ -129,6 +130,7 @@
  (fn [tr _]
    [[:year (tr :time/year)]
     [:city-code (tr :lipas.location/city-code)]
+    [:population (tr :stats/population)]
     [:investments (tr :stats-metrics/investments)]
     [:investments-avg (str (tr :stats-metrics/investments) " "
                            (tr :stats/country-avg))]
