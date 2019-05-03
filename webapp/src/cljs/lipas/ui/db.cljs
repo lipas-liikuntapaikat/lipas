@@ -135,28 +135,31 @@
 
    ;; Stats
    :stats
-   {:selected-tab    "sports-stats"
-    :selected-cities #{179}
-    :finance
-    {:metrics               reports/stats-metrics
-     :selected-metrics      ["net-costs" "investments"]
-     :city-services         reports/city-services
-     :selected-city-service "sports-services"
-     :units                 reports/stats-units
-     :selected-unit         "1000-euros"
-     :selected-years        (range 2000 (dec utils/this-year))
-     :selected-view         "chart"}
+   {:selected-tab "sport"
+    :city
+    {:selected-cities #{179}
+     :finance
+     {:metrics               reports/stats-metrics
+      :selected-metrics      ["net-costs" "investments"]
+      :city-services         reports/city-services
+      :selected-city-service "sports-services"
+      :units                 reports/stats-units
+      :selected-unit         "1000-euros"
+      :selected-years        (range 2000 (dec utils/this-year))
+      :selected-view         "chart"}}
     :age-structure
     {:groupings         reports/age-structure-groupings
      :selected-grouping "owner"
      :selected-interval 10
      :selected-view     "chart"}
-    :sports-stats
+    :sport
     {:groupings         reports/sports-stats-groupings
      :selected-grouping "location.city.city-code"
      :metrics           reports/sports-stats-metrics
      :selected-metric   "sites-count"
-     :selected-view     "chart"}}
+     :selected-view     "chart"}
+    :finance
+    {:selected-cities []}}
 
    ;; Map
    :map

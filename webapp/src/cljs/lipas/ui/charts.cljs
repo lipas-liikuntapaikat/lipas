@@ -184,11 +184,13 @@
                   value]]]))
             (into [mui/table-body]))]])))
 
+(defn- get-population [payload]
+  (when (> (count payload) 0)
+    (gobj/getValueByKeys payload 0 "payload" "population")))
+
 (defn finance-tooltip [labels props]
   (let [payload-fn (fn [payload]
-                     (let [population (gobj/getValueByKeys payload 0
-                                                           "payload"
-                                                           "population")]
+                     (let [population (get-population payload)]
                        (conj
                         (->> payload
                              (map
