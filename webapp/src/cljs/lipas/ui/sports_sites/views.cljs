@@ -160,7 +160,7 @@
      {:label      (tr :lipas.sports-site/reservations-link)
       :value      (-> display-data :reservations-link)
       :form-field [lui/text-field
-                   {:value     (-> edit-data :www)
+                   {:value     (-> edit-data :reservations-link)
                     :spec      :lipas.sports-site/reservations-link
                     :on-change #(on-change :reservations-link %)}]}
 
