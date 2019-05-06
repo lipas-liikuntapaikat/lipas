@@ -184,17 +184,27 @@
                   value]]]))
             (into [mui/table-body]))]])))
 
+(defn- get-population [payload]
+  (when (> (count payload) 0)
+    (gobj/getValueByKeys payload 0 "payload" "population")))
+
 (defn finance-tooltip [labels props]
   (let [payload-fn (fn [payload]
-                     (->> payload
-                          (map
-                           (fn [obj]
-                             {:color (gobj/get obj "color")
-                              :value (gobj/get obj "value")
-                              :icon  (if (gobj/get obj "stroke")
-                                       (legend-icons "line")
-                                       (legend-icons "rect"))
-                              :label (labels (keyword (gobj/get obj "name")))}))))]
+                     (let [population (get-population payload)]
+                       (conj
+                        (->> payload
+                             (map
+                              (fn [obj]
+                                {:color (gobj/get obj "color")
+                                 :value (gobj/get obj "value")
+                                 :icon  (if (gobj/get obj "stroke")
+                                          (legend-icons "line")
+                                          (legend-icons "rect"))
+                                 :label (labels (keyword (gobj/get obj "name")))})))
+                        {:color "white"
+                         :icon  "__dummy__"
+                         :value population
+                         :label (:population labels)})))]
     (tooltip payload-fn labels props)))
 
 (defn finance-chart [{:keys [data metrics labels on-click]}]
