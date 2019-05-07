@@ -325,7 +325,10 @@
                :en "AVI-area"}
    "province" {:fi "Maakunta"
                :se "Landskap"
-               :en "Province"}})
+               :en "Province"}
+   "city"     {:fi "Kunta"
+               :se "Kommun"
+               :en "City"}})
 
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)

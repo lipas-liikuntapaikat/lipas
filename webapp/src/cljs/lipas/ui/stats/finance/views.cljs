@@ -1,5 +1,6 @@
 (ns lipas.ui.stats.finance.views
   (:require
+   [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.stats.common :as common]
@@ -7,8 +8,13 @@
    [lipas.ui.stats.finance.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(defn years-selector [props]
-  [lui/years-selector (merge props {:style common/select-style})])
+(defn year-selector
+  [{:keys [tr] :as props}]
+  [lui/year-selector
+   (merge
+    props
+    {:label (tr :actions/select-year)
+     :style common/select-style})])
 
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -34,6 +40,18 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
+(defn metrics-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        metrics (<== [::subs/metrics])]
+    [lui/multi-select
+     {:items     metrics
+      :value     value
+      :style     common/select-style
+      :label     (tr :stats/select-metrics)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
@@ -49,13 +67,15 @@
 (defn view []
   (let [tr       (<== [:lipas.ui.subs/translator])
         cities   (<== [::subs/selected-cities])
-        years    (<== [::subs/selected-years])
+        year     (<== [::subs/selected-year])
         service  (<== [::subs/selected-city-service])
         unit     (<== [::subs/selected-unit])
+        metrics  (<== [::subs/selected-metrics])
         grouping (<== [::subs/selected-grouping])
         data     (<== [::subs/data])
         labels   (<== [::subs/labels])
-        headers  (<== [::subs/headers])]
+        headers  (<== [::subs/headers])
+        view     (<== [::subs/selected-view])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -89,10 +109,17 @@
 
        ;; Years selector
        [mui/grid {:item true}
-        [years-selector
+        [year-selector
          {:tr        tr
-          :value     years
-          :on-change #(==> [::events/select-years %])}]]
+          :value     year
+          :on-change #(==> [::events/select-year %])}]]
+
+       ;; Metrics selector
+       [mui/grid {:item true}
+        [metrics-selector
+         {:tr        tr
+          :value     metrics
+          :on-change #(==> [::events/select-metrics %])}]]
 
        ;; Grouping selector
        [mui/grid {:item true}
@@ -109,10 +136,25 @@
             :on-click #(==> [::events/clear-filters])}
            (tr :search/clear-filters)]])]]
 
+     ;; Chart
+     (when (= "chart" view)
+       [mui/grid {:item true :xs 12}
+        [charts/finance-chart
+         {:data    data
+          :metrics metrics
+          :labels  labels}]])
+
      ;; Table
-     [mui/grid {:item true :xs 12}
-      [lui/table
-       {:headers headers :items data}]]
+     (when (= "table" view)
+       [mui/grid {:item true :xs 12}
+        [lui/table
+         {:headers headers :items data}]])
+
+     ;; Tabs for choosing between chart/table views
+     [mui/grid {:item true}
+      [common/view-tabs
+       {:value     view
+        :on-change #(==> [::events/select-view %2])}]]
 
      ;; Download Excel button
      [common/download-excel-button
