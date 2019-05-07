@@ -644,6 +644,7 @@
   {:description
    "Kuntien viralliset tilinpäätöstiedot liikunta- ja  nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja  vertailla sitä muihin kuntiin.",
    :filter-types "Rajaa tyypit",
+   :region "Alue"
    :length-km-sum "Liikuntareittien pituus km yhteensä",
    :headline "Tilastot",
    :select-years "Valitse vuodet",

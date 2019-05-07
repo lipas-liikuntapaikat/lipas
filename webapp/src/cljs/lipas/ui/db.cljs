@@ -159,7 +159,14 @@
      :selected-metric   "sites-count"
      :selected-view     "chart"}
     :finance
-    {:selected-cities []}}
+    {:selected-cities       [] ; whole country
+     :selected-years        [2016 2017]
+     :units                 reports/stats-units
+     :city-services         reports/city-services
+     :selected-city-service "sports-services"
+     :selected-unit         "euros-per-capita"
+     :groupings             reports/finance-stats-groupings
+     :selected-grouping     "avi"}}
 
    ;; Map
    :map

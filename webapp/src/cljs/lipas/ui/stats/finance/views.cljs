@@ -7,9 +7,52 @@
    [lipas.ui.stats.finance.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
+(defn years-selector [props]
+  [lui/years-selector (merge props {:style common/select-style})])
+
+(defn unit-selector [{:keys [tr value on-change]}]
+  (let [locale (tr)
+        units  (<== [::subs/units])]
+    [lui/select
+     {:items     units
+      :value     value
+      :style     common/select-style
+      :label     (tr :stats/select-unit)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
+(defn service-selector [{:keys [tr value on-change]}]
+  (let [locale   (tr)
+        services (<== [::subs/city-services])]
+    [lui/select
+     {:items     services
+      :value     value
+      :style     common/select-style
+      :label     (tr :stats/select-city-service)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
+(defn grouping-selector [{:keys [tr value on-change]}]
+  (let [locale    (tr)
+        groupings (<== [::subs/groupings])]
+    [lui/select
+     {:items     groupings
+      :value     value
+      :style     common/select-style
+      :label     (tr :stats/select-grouping)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
 (defn view []
   (let [tr       (<== [:lipas.ui.subs/translator])
         cities   (<== [::subs/selected-cities])
+        years    (<== [::subs/selected-years])
+        service  (<== [::subs/selected-city-service])
+        unit     (<== [::subs/selected-unit])
+        grouping (<== [::subs/selected-grouping])
         data     (<== [::subs/data])
         labels   (<== [::subs/labels])
         headers  (<== [::subs/headers])]
@@ -31,6 +74,32 @@
         [lui/region-selector
          {:value     cities
           :on-change #(==> [::events/select-cities %])}]]
+
+       ;; Unit selector
+       [mui/grid {:item true}
+        [unit-selector
+         {:tr tr :value unit :on-change #(==> [::events/select-unit %])}]]
+
+       ;; City service selector
+       [mui/grid {:item true}
+        [service-selector
+         {:tr        tr
+          :value     service
+          :on-change #(==> [::events/select-city-service %])}]]
+
+       ;; Years selector
+       [mui/grid {:item true}
+        [years-selector
+         {:tr        tr
+          :value     years
+          :on-change #(==> [::events/select-years %])}]]
+
+       ;; Grouping selector
+       [mui/grid {:item true}
+        [grouping-selector
+         {:tr        tr
+          :value     grouping
+          :on-change #(==> [::events/select-grouping %])}]]
 
        ;; Clear filters button
        (when (not-empty cities)
