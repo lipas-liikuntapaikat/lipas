@@ -44,21 +44,8 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
-(defn years-selector [{:keys [tr value on-change]}]
-  [lui/year-selector
-   {:label        (tr :stats/select-years)
-    :multi?       true
-    :render-value (fn [vs]
-                    (let [vs (sort vs)]
-                      (condp = (count vs)
-                        0 "-"
-                        1 (first vs)
-                        2 (str (first vs) ", " (second vs))
-                        (str (first vs) " ... " (last vs)))))
-    :value        value
-    :style        common/select-style
-    :years        (range 2000 utils/this-year)
-    :on-change    on-change}])
+(defn years-selector [props]
+  [lui/years-selector (merge props {:style common/select-style})])
 
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])

@@ -1169,24 +1169,35 @@
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
                    :lipas.api.sports-site-report.req/fields]))
 
-(s/def :lipas.api.cities-report.req/city-codes
+(s/def :lipas.api.report.req/city-codes
   (s/coll-of :lipas.location.city/city-code
              :min-count 0
              :distinct true
              :into []))
 
-(s/def :lipas.api.cities-report.req/type-codes
+(s/def :lipas.api.report.req/type-codes
   (s/coll-of :lipas.type/type-code
              :min-count 0
              :distinct true
              :into []))
 
-(s/def :lipas.api.cities-report/req
-  (s/keys :req-un [:lipas.api.cities-report.req/city-codes]))
+(s/def :lipas.api.finance-report.req/flat? boolean?)
+(s/def :lipas.api.finance-report.req/unit (keys reports/stats-units))
+(s/def :lipas.api.finance-report.req/city-service (keys reports/city-services))
+(s/def :lipas.api.finance-report.req/years
+  (s/coll-of (s/int-in 2000 utils/this-year) :distinct true :into []))
+
+
+(s/def :lipas.api.finance-report/req
+  (s/keys :req-un [:lipas.api.report.req/city-codes]
+          :opt-un [:lipas.api.finance-report.req/flat?
+                   :lipas.api.finance-report.req/years
+                   :lipas.api.finance-report.req/unit
+                   :lipas.api.finance-report.req/city-service]))
 
 (s/def :lipas.api.m2-per-capita-report/req
-  (s/keys :opt-un [:lipas.api.cities-report.req/city-codes
-                   :lipas.api.cities-report.req/type-codes]))
+  (s/keys :opt-un [:lipas.api.report.req/city-codes
+                   :lipas.api.report.req/type-codes]))
 
 (s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
 (s/def :lipas.magic-link/login-url

@@ -319,6 +319,14 @@
    "length-km-pc"       {:fi "Reittien pituus km/asukas"
                          :en "Routes total length km/capita"}})
 
+(def finance-stats-groupings
+  {"avi"      {:fi "AVI-alue"
+               :se "AVI"
+               :en "AVI-area"}
+   "province" {:fi "Maakunta"
+               :se "Landskap"
+               :en "Province"}})
+
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
         ks (-> stats-metrics keys (->> (map keyword)))]
@@ -364,13 +372,6 @@
     {:country-averages (calc-stats years all-cities)
      :data-points      (select-keys cities city-codes)}))
 
-(defn ->prefix-map [m prefix]
-  (reduce
-   (fn [res [k v]]
-     (assoc res (keyword (str prefix (name k))) v))
-   {}
-   m))
-
 (defn calculate-stats-by-city [aggs-data pop-data]
   (reduce
    (fn [res m]
@@ -383,12 +384,12 @@
                                :area_m2_stats
                                (assoc :pc (when (and population m2-sum)
                                             (double (/ m2-sum population))))
-                               (->prefix-map "area-m2-"))
+                               (utils/->prefix-map "area-m2-"))
            length-km-stats (-> m
                                :length_km_stats
                                (assoc :pc (when (and population km-sum)
                                             (double (/ km-sum population))))
-                               (->prefix-map "length-km-"))
+                               (utils/->prefix-map "length-km-"))
            sites-count     (:doc_count m)
            entry           (merge
                             area-m2-stats
@@ -417,12 +418,12 @@
                                :area_m2_stats
                                (assoc :pc (when (and population m2-sum)
                                             (double (/ m2-sum population))))
-                               (->prefix-map "area-m2-"))
+                               (utils/->prefix-map "area-m2-"))
            length-km-stats (-> m
                                :length_km_stats
                                (assoc :pc (when (and population km-sum)
                                             (double (/ km-sum population))))
-                               (->prefix-map "length-km-"))
+                               (utils/->prefix-map "length-km-"))
 
            sites-count (:doc_count m)
            entry       (merge

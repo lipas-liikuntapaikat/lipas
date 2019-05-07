@@ -27,6 +27,7 @@
 (def text-field text-fields/text-field-controlled)
 (def select selects/select)
 (def multi-select selects/multi-select)
+(def years-selector selects/years-selector)
 (def year-selector selects/year-selector)
 (def number-selector selects/number-selector)
 (def region-selector selects/region-selector)
