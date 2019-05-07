@@ -3,8 +3,9 @@
    ["recharts" :as rc]
    [clojure.set :refer [rename-keys map-invert]]
    [goog.object :as gobj]
-   [lipas.ui.mui :as mui]
+   [goog.string :as gstring]
    [lipas.ui.components.misc :as misc]
+   [lipas.ui.mui :as mui]
    [reagent.core :as r]))
 
 ;; Tip: enable rainbow-mode in emacs.
@@ -21,32 +22,32 @@
 
    ;; City finance
    :investments        "#1e6ed6"
-   :operating-expenses "#ff503c"
+   :operating-expenses "#ff6f0f"
    :operating-incomes  "#3ba12f"
-   :subsidies          "#8ce614"
+   :subsidies          "#8ddd21"
    :net-costs          "#d51a0d"
 
    ;;; Age structure
 
    ;; Owners
-   "other"                  mui/gray1
-   "city"                   "#D35400"
-   "city-main-owner"        "#DC7633"
-   "municipal-consortium"   "#dc9b33"
-   "registered-association" "#2980B9"
-   "company-ltd"            "#8E44AD"
-   "state"                  "#1ABC9C"
-   "foundation"             "#27AE60"
-   "unknown"                "#283747"
+   "other"                  "#7c5235"
+   "registered-association" "#3ba12f"
+   "state"                  "#8ddd21"
+   "city"                   "orange"
+   "city-main-owner"        "#efc700"
+   "municipal-consortium"   "#bf682b"
+   "company-ltd"            "#0a9bff"
+   "foundation"             "#8E44AD"
+   "unknown"                mui/gray1
 
    ;; Admins
-   "city-sports"             "#D35400"
-   "city-education"          "#BA4A00"
-   "city-technical-services" "#A04000"
-   "city-other"              "#873600"
-   "private-association"     "#2980B9"
-   "private-company"         "#8E44AD"
-   "private-foundation"      "#27AE60"})
+   "city-sports"             "orange"
+   "city-education"          "#efc700"
+   "city-technical-services" "#ff503c"
+   "city-other"              "#d51a0d"
+   "private-association"     "#3ba12f"
+   "private-company"         "#0a9bff"
+   "private-foundation"      "#8E44AD"})
 
 (def font-styles
   {:font-family "lato"})
@@ -207,7 +208,7 @@
                          :label (:population labels)})))]
     (tooltip payload-fn labels props)))
 
-(defn finance-chart [{:keys [data metrics labels on-click]}]
+(defn city-finance-chart [{:keys [data metrics labels on-click]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 500}
    (-> [:> rc/ComposedChart {:data data :on-click on-click}
         [:> rc/Legend {:content (partial legend labels)}]
@@ -287,3 +288,26 @@
       [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> rc/Bar {:dataKey (keyword metric) :fill "orange"}
        [:> rc/LabelList {:position "right"}]]]]))
+
+(defn angled-tick [props]
+  (let [x       (gobj/get props "x")
+        y       (gobj/get props "y")
+        payload (gobj/get props "payload")]
+    (r/as-element
+     [:g {:transform (gstring/format "translate(%d,%d)" x y)}
+      [:text {:x 0 :y 0 :dy 16 :textAnchor "end" :transform "rotate(-45)"}
+       (gobj/get payload "value")]])))
+
+(defn finance-chart [{:keys [data metrics labels on-click]}]
+  (let [x-interval (if (> (count data) 50) 5 0)]
+    [:> rc/ResponsiveContainer {:width "100%" :height 500}
+     (->
+      [:> rc/ComposedChart {:data data :on-click on-click :margin {:bottom 120}}
+       [:> rc/Legend {:content (partial legend labels) :verticalAlign "top"}]
+       [:> rc/Tooltip {:content (partial finance-tooltip labels)}]
+       [:> rc/YAxis {:tick font-styles}]
+       [:> rc/XAxis {:dataKey :region :tick angled-tick :interval x-interval}]]
+      (into
+       (for [metric metrics]
+         [:> rc/Bar
+          {:dataKey metric :label false :fill (get colors (keyword metric))}])))]))

@@ -2,8 +2,12 @@
   (:require
    [ajax.core :as ajax]
    [lipas.ui.utils :as utils]
-   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
+
+(re-frame/reg-event-db
+ ::select-view
+ (fn [db [_ view]]
+   (assoc-in db [:stats :finance :selected-view] view)))
 
 (re-frame/reg-event-fx
  ::select-cities
@@ -22,9 +26,9 @@
     :dispatch [::create-report]}))
 
 (re-frame/reg-event-fx
- ::select-years
+ ::select-year
  (fn [{:keys [db]} [_ v]]
-   {:db       (assoc-in db [:stats :finance :selected-years] v)
+   {:db       (assoc-in db [:stats :finance :selected-year] v)
     :dispatch [::create-report]}))
 
 
@@ -41,18 +45,24 @@
     :dispatch [::create-report]}))
 
 (re-frame/reg-event-fx
+ ::select-metrics
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:stats :finance :selected-metrics] v)
+    :dispatch [::create-report]}))
+
+(re-frame/reg-event-fx
  ::clear-filters
  (fn [_ _]
    {:dispatch-n
     [[::select-cities []]
-     [::create-repeort]]}))
+     [::create-report]]}))
 
 (re-frame/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
    (let [params {:city-codes   (or (-> db :stats :finance :selected-cities not-empty)
                                    (-> db :cities keys))
-                 :years        (-> db :stats :finance :selected-years)
+                 :years        (-> db :stats :finance :selected-year vector)
                  :city-service (-> db :stats :finance :selected-city-service)
                  :unit         (-> db :stats :finance :selected-unit)
                  :grouping     (-> db :stats :finance :selected-grouping)}]
@@ -72,23 +82,27 @@
 
 (defn- ->query
   [{:keys [city-codes years unit city-service grouping]}]
-  {:size 0
-   :query
-   {:bool
-    {:filter
-     (into [] (remove nil?)
-           [(when (not-empty years)
-              {:terms {:year years}})
-            (when (not-empty city-codes)
-              {:terms {:city-code city-codes}})])}}
-   :aggs
-   {:by_grouping
-    {:terms {:field (if (= "avi" grouping) :avi-id :province-id) :size 20}
+  (let [group-key (condp = grouping
+                    "avi"      :avi-id
+                    "province" :province-id
+                    "city"     :city-code)]
+    {:size 0
+     :query
+     {:bool
+      {:filter
+       (into [] (remove nil?)
+             [(when (not-empty years)
+                {:terms {:year years}})
+              (when (not-empty city-codes)
+                {:terms {:city-code city-codes}})])}}
      :aggs
-     {:by_year
-      {:terms {:field :year :size 20}
+     {:by_grouping
+      {:terms {:field group-key :size 400}
        :aggs
-       (aggs-fields unit city-service)}}}}})
+       {:by_year
+        {:terms {:field :year :size 20}
+         :aggs
+         (aggs-fields unit city-service)}}}}}))
 
 (re-frame/reg-event-fx
  ::create-report*

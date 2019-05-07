@@ -110,7 +110,7 @@
      ;; Chart
      (when (= view "chart")
        [mui/grid {:item true :xs 12}
-        [charts/finance-chart
+        [charts/city-finance-chart
          {:metrics metrics :data finance-data :labels labels}]])
 
      ;; Table

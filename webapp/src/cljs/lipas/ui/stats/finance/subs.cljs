@@ -5,14 +5,19 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
+ ::selected-view
+ (fn [db _]
+   (-> db :stats :finance :selected-view)))
+
+(re-frame/reg-sub
  ::selected-cities
  (fn [db _]
    (-> db :stats :finance :selected-cities)))
 
 (re-frame/reg-sub
- ::selected-years
+ ::selected-year
  (fn [db _]
-   (-> db :stats :finance :selected-years)))
+   (-> db :stats :finance :selected-year)))
 
 (re-frame/reg-sub
  ::selected-unit
@@ -23,6 +28,11 @@
  ::selected-city-service
  (fn [db _]
    (-> db :stats :finance :selected-city-service)))
+
+(re-frame/reg-sub
+ ::selected-metrics
+ (fn [db _]
+   (-> db :stats :finance :selected-metrics)))
 
 (re-frame/reg-sub
  ::selected-grouping
@@ -40,6 +50,11 @@
    (-> db :stats :finance :city-services)))
 
 (re-frame/reg-sub
+ ::metrics
+ (fn [db _]
+   (-> db :stats :finance :metrics)))
+
+(re-frame/reg-sub
  ::groupings
  (fn [db _]
    (-> db :stats :finance :groupings)))
@@ -49,24 +64,20 @@
  (fn [db _]
    (-> db :stats :finance :data)))
 
-(defn round-vals [m]
-  (reduce
-   (fn [m [k v]]
-     (assoc m k (if (#{:year :population :city-code} k)
-                  v
-                  (utils/round-safe v))))
-   {}
-   m))
-
 (re-frame/reg-sub
  ::data
  :<- [:lipas.ui.subs/translator]
  :<- [::data*]
  :<- [::selected-grouping]
+ :<- [::selected-unit]
  :<- [:lipas.ui.sports-sites.subs/avi-areas]
  :<- [:lipas.ui.sports-sites.subs/provinces]
- (fn [[tr data grouping avis provinces] _]
-   (let [locale (tr)]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ (fn [[tr data grouping unit avis provinces cities] _]
+   (let [locale (tr)
+         op     (if (= unit "euros-per-capita")
+                  (comp utils/round-safe :avg)
+                  :sum)]
      (->> data
           :aggregations
           :by_grouping
@@ -75,20 +86,23 @@
            (fn [res {:keys [key by_year]}]
              (let [k (if (= grouping "avi") :avi-id :province-id)]
                (into res
-                     (for [b (:buckets by_year)]
+                     (for [b    (:buckets by_year)
+                           :let [region (condp = grouping
+                                          "avi"      avis
+                                          "province" provinces
+                                          "city"     cities)]]
                        {k                   key
                         :year               (:key b)
-                        :region             (if (= grouping "avi")
-                                              (get-in avis [key :name locale])
-                                              (get-in provinces [key :name locale]))
+                        :region             (get-in region [key :name locale])
                         :count              (-> b :doc_count)
-                        :operating-expenses (-> b :operating-expenses :sum)
-                        :operating-incomes  (-> b :operating-incomes :sum)
-                        :net-costs          (-> b :net-costs :sum)
-                        :subsidies          (-> b :subsidies :sum)
-                        :investments        (-> b :investments :sum)
+                        :operating-expenses (-> b :operating-expenses op)
+                        :operating-incomes  (-> b :operating-incomes op)
+                        :net-costs          (-> b :net-costs op)
+                        :subsidies          (-> b :subsidies op)
+                        :investments        (-> b :investments op)
                         :population         (-> b :population :sum)}))))
-           [])))))
+           [])
+          (sort-by (if (= grouping "avi") :avi-id :province-id))))))
 
 (re-frame/reg-sub
  ::headers
