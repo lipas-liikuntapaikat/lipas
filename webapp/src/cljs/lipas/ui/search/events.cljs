@@ -49,6 +49,8 @@
     "*"
     (-> s
         (string/replace "-" " ")
+        (string/replace "/" "")
+        (string/replace #"\s+" " ")
         (string/split #" ")
         (->> (map #(str % "*"))
              (string/join " ")))))
