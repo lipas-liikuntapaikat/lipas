@@ -127,6 +127,7 @@
       :form-field
       [lui/text-field
        {:spec      :lipas.sports-site/comment
+        :rows      5
         :value     (-> edit-data :comment)
         :multiline true
         :on-change #(on-change :comment %)}]}
