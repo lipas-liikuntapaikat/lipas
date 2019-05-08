@@ -304,16 +304,18 @@
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON]]
-   (let [fcoll   (js->clj geoJSON :keywordize-keys true)
-         fs      (->> fcoll
-                      :features
-                      (filter (comp #{"LineString"} :type :geometry))
-                      (reduce
-                       (fn [res f]
-                         (let [id (gensym)]
-                           (assoc res id (assoc-in f [:properties :id] id))))
-                       {}))]
-     (assoc-in db [:map :import :data] fs))))
+   (let [fcoll (js->clj geoJSON :keywordize-keys true)
+         fs    (->> fcoll
+                    :features
+                    (filter (comp #{"LineString"} :type :geometry))
+                    (reduce
+                     (fn [res f]
+                       (let [id (gensym)]
+                         (assoc res id (assoc-in f [:properties :id] id))))
+                     {}))]
+     (-> db
+         (assoc-in [:map :import :data] fs)
+         (assoc-in [:map :import :batch-id] (gensym))))))
 
 (defn parse-dom [text]
   (let [parser (js/DOMParser.)]

@@ -3,6 +3,7 @@
    [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.energy.views :as energy]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.events :as events]
@@ -52,9 +53,10 @@
      ;; Type
      {:label      (tr :type/name)
       :value      (-> display-data :type :name)
-      :form-field [lui/autocomplete-simple
+      :form-field [autocompletes/autocomplete2
                    {:value     (-> edit-data :type :type-code)
                     :required  true
+                    :multi?    false
                     :items     types
                     :label-fn  (comp locale :name)
                     :value-fn  :type-code
@@ -229,7 +231,7 @@
      ;; City
      {:label      (tr :lipas.location/city)
       :value      (-> display-data :city :name)
-      :form-field [lui/autocomplete-simple
+      :form-field [autocompletes/autocomplete2
                    {:value     (-> edit-data :city :city-code)
                     :required  true
                     :spec      :lipas.location.city/city-code
@@ -248,18 +250,18 @@
 
 (defn surface-material-selector
   [{:keys [tr value on-change label multi? spec tooltip]}]
-  (let [locale    (tr)
-        items     (<== [::subs/surface-materials])
-        component (if multi? lui/multi-select lui/select)]
-    [component
-     {:value     value
-      :tooltip   tooltip
-      :label     label
-      :spec      spec
-      :items     items
-      :label-fn  (comp locale second)
-      :value-fn  first
-      :on-change on-change}]))
+  (let [locale (tr)
+        items  (<== [::subs/surface-materials])]
+    [lui/autocomplete2
+     {:value       value
+      :multi?      multi?
+      :helper-text tooltip
+      :label       label
+      :spec        spec
+      :items       items
+      :label-fn    (comp locale second)
+      :value-fn    first
+      :on-change   on-change}]))
 
 (defn material-field? [k]
   (contains? #{:surface-material
