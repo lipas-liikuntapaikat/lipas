@@ -6,7 +6,7 @@
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :as utils]
-   [mui-downshift :as MuiDownshift]
+   [react-select :as ReactSelect]
    [reagent.core :as r]))
 
 (def lower-case (fnil string/lower-case ""))
@@ -134,42 +134,32 @@
     ((complement s/valid?) spec value)
     false))
 
-(defn autocomplete-simple
-  [{:keys [label items value value-fn label-fn on-change spec
-           label-style-fn suggestions-fn required sort-fn]
+(defn ->opt [label-fn value-fn item]
+  {:label (label-fn item) :value (value-fn item)})
+
+(defn autocomplete2
+  [{:keys [label items value value-fn label-fn on-change spec multi?
+           required helper-text]
     :or   {label-fn       :label
            label-style-fn (fn [item label] label)
            sort-fn        label-fn
-           value-fn       :value
-           multi?         true}}]
-  (r/with-let [items-m        (utils/index-by value-fn items)
-               suggestions-fn (or suggestions-fn
-                                 (partial simple-matches items label-fn))
-               suggs          (r/atom items)
-               input-value    (r/atom (-> value items-m label-fn))]
-    [:> MuiDownshift
-     {:items           (sort-by sort-fn @suggs)
-      :get-input-props (fn []
-                         #js{:label    label
-                             :required required
-                             :error    (error? spec value required)})
-      :input-value     @input-value
-      :get-list-item   (fn [props]
-                         (let [item       (gobj/get props "item")
-                               item-props ((gobj/get props "getItemProps"))]
-                           (hack-item2 label-fn label-style-fn item item-props)))
-      :on-change       (fn [x]
-                         (let [value (-> x js->clj* value-fn)
-                               label (-> value items-m label-fn)]
-                           (reset! input-value (or label ""))
-                           (on-change value)))
-      :input-ref       (fn [node]
-                         (this-as this
-                           (gobj/set this "input" node)))
-      :on-state-change (fn [props]
-                         (let [s (gobj/get props "inputValue")]
-                           (if (empty? s)
-                             (reset! input-value "")
-                             (when-let [filtered-suggs (not-empty (suggestions-fn s))]
-                               (reset! input-value s)
-                               (reset! suggs filtered-suggs)))))}]))
+           value-fn       :value}}]
+  (r/with-let [items'  (utils/index-by value-fn items)
+               opts    (map (partial ->opt label-fn value-fn) items)
+               state   (r/atom value)]
+    [:> (if multi? ReactSelect.MultipleSelect ReactSelect.SingleSelect)
+     {(if multi?
+        :values
+        :value)    @state
+      :label       label
+      :helper-text helper-text
+      :on-change   (fn [v]
+                     (reset! state v)
+                     (on-change (js->clj v)))
+      :options     opts
+      :required    required
+      :style       {:font-family "Lato"}}]))
+
+(comment
+  {:getOptionLabel (fn [opt] (label-fn (js->clj opt :keywordize-keys true)))
+   :getOptionValue (fn [opt] (value-fn (js->clj opt :keywordize-keys true)))})

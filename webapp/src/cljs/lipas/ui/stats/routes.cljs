@@ -16,7 +16,8 @@
      :controllers
      [{:start
        (fn [& params]
-         (==> [::events/select-tab "sport"]))}]}]
+         (==> [::events/select-tab "sport"])
+         (==> [:lipas.ui.stats.sport.events/create-report]))}]}]
 
    ["/liikuntapaikat"
     {:name :lipas.ui.routes.stats/sport

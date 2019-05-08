@@ -262,7 +262,7 @@
         cities (or cities
                    (<== [:lipas.ui.sports-sites.subs/cities-by-city-code]))]
     ^{:key value}
-    [select
+    [autocompletes/autocomplete2
      {:items     cities
       :value     value
       :style     select-style

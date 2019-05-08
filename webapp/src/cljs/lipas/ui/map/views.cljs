@@ -33,7 +33,6 @@
         value   (<== [::subs/address-search-keyword])
         toggle  (fn [] (==> [::events/toggle-address-search-dialog]))
         results (<== [::subs/address-search-results])]
-
     [lui/dialog
      {:open?         open?
       :title         (tr :map.address-search/title)
@@ -64,6 +63,7 @@
         open?    (<== [::subs/import-dialog-open?])
         encoding (<== [::subs/selected-import-file-encoding])
         data     (<== [::subs/import-candidates])
+        batch-id (<== [::subs/import-batch-id])
         headers  (<== [::subs/import-candidates-headers])
         selected (<== [::subs/selected-import-items])
         replace? (<== [::subs/replace-existing-geoms?])
@@ -102,18 +102,19 @@
           [helper {:label "KML" :tooltip (tr :map.import/kml)}]]
 
          ;; File encoding selector
-        [mui/grid {:item true}
-         [lui/select
-          {:items     ["utf-8" "ISO-8859-1"]
-           :label     (tr :map.import/select-encoding)
-           :style     {:min-width "120px"}
-           :value     encoding
-           :value-fn  identity
-           :label-fn  identity
-           :on-change #(==> [::events/select-import-file-encoding %])}]]]]
+         [mui/grid {:item true}
+          [lui/select
+           {:items     ["utf-8" "ISO-8859-1"]
+            :label     (tr :map.import/select-encoding)
+            :style     {:min-width "120px"}
+            :value     encoding
+            :value-fn  identity
+            :label-fn  identity
+            :on-change #(==> [::events/select-import-file-encoding %])}]]]]
 
        [mui/grid {:item true :xs 12}
         (when (not-empty data)
+          ^{:key batch-id}
           [lui/table-v2
            {:items         (->> data vals (map :properties))
             :key-fn        :id
@@ -165,16 +166,16 @@
   (r/with-let [selected-type (r/atom value)]
     (let [locale (tr)]
       [mui/grid {:container true}
-       [mui/grid {:item true}
-        [lui/autocomplete
+       [mui/grid {:item true :xs 12}
+        [lui/autocomplete2
          {:multi?    false
-          :show-all? true
+          ;;:show-all? true
           :items     (vals types)
           :value     value
           :label     (tr :type/name)
           :value-fn  :type-code
           :label-fn  (comp locale :name)
-          :on-change #(reset! selected-type (first %))}]
+          :on-change #(reset! selected-type %)}]
         (when @selected-type
           [mui/grid {:item true}
            [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}

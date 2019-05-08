@@ -81,6 +81,9 @@
           [mui/grid {:item true}
            [mui/circular-progress {:style {:margin-top "1em"}}]]])]]]))
 
+(defn- resolve-key [key-fn item]
+  (or (key-fn item) (:id item) (:lipas-id item) (gensym)))
+
 (defn table-v2
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
            action-icon hide-action-btn? action-label on-sort-change
@@ -98,7 +101,10 @@
            multi-select?    false}}]
 
   (r/with-let [key-fn*         (or key-fn (constantly nil))
-               selected        (r/atom {})
+               selected        (r/atom (into {} (map
+                                                 (juxt (partial resolve-key key-fn*)
+                                                       (constantly false)))
+                                             items))
                sort-fn*        (r/atom sort-fn)
                sort-asc?       (r/atom sort-asc?)
                on-sort-change* #(on-sort-change {:sort-fn @sort-fn*
@@ -126,8 +132,21 @@
         [mui/table-head
          (into [mui/table-row
 
+                ;; "Select all" checkbox
                 (when (or (and on-select (not hide-action-btn?)) any-editable?)
-                  [mui/table-cell ""])]
+                  [mui/table-cell {:padding "checkbox"}
+                   (if multi-select?
+                     [checkboxes/checkbox
+                      {:value     (= (count items) (count (->> @selected vals (filter true?))))
+                       :on-change (fn []
+                                    (let [b (not (->> @selected vals (every? true?)))
+                                          m (swap! selected #(reduce-kv
+                                                              (fn [res k _]
+                                                                (assoc res k b))
+                                                              {}
+                                                              %))]
+                                      (on-select (keys m))))}]
+                     "")])]
 
                (for [[key {:keys [label hidden?]}] headers]
                  [mui/table-cell {:style    (when hidden? {:display :none})
@@ -150,7 +169,7 @@
                                             utils/reverse-cmp)
                                 items)
                        items)
-                :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))
+                :let [id (resolve-key key-fn* item)
                       editing-this? (contains? @editing? id)]]
 
             [mui/table-row
