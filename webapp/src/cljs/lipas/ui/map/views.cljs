@@ -18,6 +18,7 @@
    [reagent.core :as r]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json"])
+(def import-formats-str (string/join " " import-formats))
 
 (defn helper [{:keys [label tooltip]}]
   [mui/tooltip {:title tooltip}
@@ -550,7 +551,7 @@
                      ;; Supported formats helper text
                      [mui/grid {:item true :xs 12}
                       [mui/typography {:variant "body2"}
-                       (tr :map.import/supported-formats import-formats)]]
+                       (tr :map.import/supported-formats import-formats-str)]]
 
                      ;; Open import dialog button
                      [mui/grid {:item true}
