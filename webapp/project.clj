@@ -151,13 +151,12 @@
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
                          "recharts" "proj4" "cljsjs.react-autosuggest"
                          "turf" "react-select"]
-        :global-exports {ol           ol        zipcelx            zipcelx
-                         filesaver    filesaver react              React
-                         react-dom    ReactDOM  "react-dom/server" ReactDOMServer
-                         mui          mui       proj4              proj4
-                         recharts     recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         turf         turf
-                         react-select ReactSelect}}]
+        :global-exports {ol        ol        zipcelx            zipcelx
+                         filesaver filesaver react              React
+                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
+                         mui       mui       proj4              proj4
+                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"
+                         turf      turf      react-select       ReactSelect}}]
       :output-to       "resources/public/js/compiled/app.js"
       :optimizations   :advanced
       :closure-defines {goog.DEBUG false}

@@ -144,10 +144,8 @@
            label-style-fn (fn [item label] label)
            sort-fn        label-fn
            value-fn       :value}}]
-  (r/with-let [items'  (utils/index-by value-fn items)
-               opts    (map (partial ->opt label-fn value-fn) items)
-               state   (r/atom value)]
-    [:> (if multi? ReactSelect.MultipleSelect ReactSelect.SingleSelect)
+  (r/with-let [state   (r/atom value)]
+    [:> (if multi? js/ReactSelect.MultipleSelect js/ReactSelect.SingleSelect)
      {(if multi?
         :values
         :value)    @state
@@ -156,7 +154,7 @@
       :on-change   (fn [v]
                      (reset! state v)
                      (on-change (js->clj v)))
-      :options     opts
+      :options     (map (partial ->opt label-fn value-fn) items)
       :required    required
       :style       {:font-family "Lato"}}]))
 
