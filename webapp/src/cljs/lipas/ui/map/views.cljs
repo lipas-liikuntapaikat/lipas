@@ -865,5 +865,5 @@
      ;; The map
      [ol-map/map-outer]]))
 
-(defn main [tr]
+(defn main []
   [:> (mui/with-width* (r/reactify-component map-view))])

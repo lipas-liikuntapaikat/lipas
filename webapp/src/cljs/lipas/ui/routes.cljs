@@ -82,3 +82,7 @@
    routes
    on-navigate
    {:use-fragment false}))
+
+(comment
+  (require '[reitit.core :as reitit])
+  (reitit/route-names routes))

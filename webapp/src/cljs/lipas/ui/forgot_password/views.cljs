@@ -92,7 +92,6 @@
       (tr :actions/submit)]]))
 
 (defn main []
-  (==> [::events/clear-feedback])
   (let [tr    (<== [:lipas.ui.subs/translator])
         token (or (utils/parse-token (-> js/window .-location .-href))
                   (:token (<== [:lipas.ui.user.subs/user-data])))]
