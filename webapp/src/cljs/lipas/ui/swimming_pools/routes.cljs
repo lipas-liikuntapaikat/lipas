@@ -1,16 +1,18 @@
 (ns lipas.ui.swimming-pools.routes
   (:require
    [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.swimming-pools.events :as events]))
+   [lipas.ui.swimming-pools.events :as events]
+   [lipas.ui.swimming-pools.views :as views]))
 
 (def routes
   ["uimahalliportaali"
-   {:name :lipas.ui.routes/swimming-pools
+   {:name   :lipas.ui.routes/swimming-pools
+    :tr-key :swim/headline
+    :view   views/main
     :controllers
     [{:start
       (fn [& params]
-        (==> [::events/init])
-        (==> [:lipas.ui.events/set-active-panel :swimming-pools-panel]))}]}
+        (==> [::events/init]))}]}
 
    [""
     {:name :lipas.ui.routes.swimming-pools/front-page

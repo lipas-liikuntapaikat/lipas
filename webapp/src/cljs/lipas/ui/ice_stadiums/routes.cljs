@@ -1,16 +1,18 @@
 (ns lipas.ui.ice-stadiums.routes
   (:require
    [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.ice-stadiums.events :as events]))
+   [lipas.ui.ice-stadiums.events :as events]
+   [lipas.ui.ice-stadiums.views :as views]))
 
 (def routes
   ["jaahalliportaali"
-   {:name :lipas.ui.routes/ice-stadiums
+   {:name   :lipas.ui.routes/ice-stadiums
+    :tr-key :ice/headline
+    :view   views/main
     :controllers
     [{:start
       (fn [& params]
-        (==> [::events/init])
-        (==> [:lipas.ui.events/set-active-panel :ice-stadiums-panel]))}]}
+        (==> [::events/init]))}]}
 
    [""
     {:name :lipas.ui.routes.ice-stadiums/front-page

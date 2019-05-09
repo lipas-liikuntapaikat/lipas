@@ -4,9 +4,15 @@
    [clojure.string :refer [upper-case]]))
 
 (re-frame/reg-sub
- ::active-panel
+ ::current-route
  (fn [db _]
-   (:active-panel db)))
+   (:current-route db)))
+
+(re-frame/reg-sub
+ ::current-view
+ :<- [::current-route]
+ (fn [route _]
+   (-> route :data :view)))
 
 (re-frame/reg-sub
  ::account-menu-anchor
@@ -65,9 +71,9 @@
 
 (re-frame/reg-sub
  ::show-nav?
- :<- [::active-panel]
- (fn [active-panel _]
-   (not= active-panel :map-panel)))
+ :<- [::current-route]
+ (fn [current-route _]
+   (-> current-route :data :hide-nav? not)))
 
 (re-frame/reg-sub
  ::screen-size

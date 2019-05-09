@@ -328,9 +328,12 @@
          (excel/create-workbook "lipas")
          (excel/save-workbook-into-stream! out))))
 
-(defn finance-report [db city-codes]
+(defn finance-report [db {:keys [city-codes]}]
   (let [data (get-cities db)]
     (reports/finance-report city-codes data)))
+
+(defn query-finance-report [search params]
+  (:body (search/search search "city_stats" params)))
 
 (defn calculate-stats
   [db search* city-codes type-codes grouping]
@@ -386,6 +389,8 @@
                    {:terms {:field (keyword grouping) :size 400}
                     :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}]
     (search search2 query))
+
+  (flat-finance-report db-spec [992 175] )
 
   (first (get-cities db-spec))
   (time (get-populations db-spec 2017))

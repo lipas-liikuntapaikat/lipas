@@ -198,3 +198,10 @@
 
 (defn str-matches? [s x]
   (-> x str string/lower-case (string/includes? s)))
+
+(defn ->prefix-map [m prefix]
+  (reduce
+   (fn [res [k v]]
+     (assoc res (keyword (str prefix (name k))) v))
+   {}
+   m))

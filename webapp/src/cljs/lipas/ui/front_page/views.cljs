@@ -3,7 +3,7 @@
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [==> navigate!] :as utils]
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
    [reagent.core :as r]))
 
 (def links
@@ -279,5 +279,6 @@
      [mui/grid {:container true :align-items "center"}]
      (map ->logo logos))]])
 
-(defn main [tr]
-  [create-panel tr])
+(defn main []
+  (let [tr (<== [:lipas.ui.subs/translator])]
+    [create-panel tr]))

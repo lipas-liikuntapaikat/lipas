@@ -193,8 +193,9 @@
           [magic-link-form {:tr tr}]
           [login-form {:tr tr}])]]]]))
 
-(defn main [tr]
-  (let [logged-in?    (<== [::subs/logged-in?])
+(defn main []
+  (let [tr            (<== [:lipas.ui.subs/translator])
+        logged-in?    (<== [::subs/logged-in?])
         comeback-path (<== [::subs/comeback-path])
         token         (utils/parse-token (-> js/window .-location .-href))]
     (cond

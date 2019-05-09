@@ -210,8 +210,9 @@
                        :color :secondary}
            (str "> " (tr :user/swimming-pools-link))])]]]]))
 
-(defn main [tr]
-  (let [logged-in? (<== [::subs/logged-in?])
+(defn main []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [::subs/logged-in?])
         user       (<== [::subs/user-data])]
     (if logged-in?
       [user-panel tr user]

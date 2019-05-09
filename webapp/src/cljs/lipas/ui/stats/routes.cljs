@@ -1,22 +1,22 @@
 (ns lipas.ui.stats.routes
   (:require
    [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.stats.events :as events]))
+   [lipas.ui.stats.events :as events]
+   [lipas.ui.stats.views :as views]))
 
 (def routes
   ["tilastot"
-   {:name :lipas.ui.routes/stats
-    :controllers
-    [{:start
-      (fn []
-        (==> [:lipas.ui.events/set-active-panel :stats-panel]))}]}
+   {:name   :lipas.ui.routes/stats
+    :tr-key :stats/headline
+    :view   views/main}
 
    [""
     {:name :lipas.ui.routes.stats/front-page
      :controllers
      [{:start
        (fn [& params]
-         (==> [::events/select-tab "sport"]))}]}]
+         (==> [::events/select-tab "sport"])
+         (==> [:lipas.ui.stats.sport.events/create-report]))}]}]
 
    ["/liikuntapaikat"
     {:name :lipas.ui.routes.stats/sport

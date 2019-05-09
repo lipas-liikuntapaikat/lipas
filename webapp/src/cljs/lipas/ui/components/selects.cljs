@@ -96,6 +96,22 @@
                        :value     value
                        :required  required})]))
 
+(defn years-selector [{:keys [tr value on-change style]}]
+  [year-selector
+   {:label        (tr :stats/select-years)
+    :multi?       true
+    :render-value (fn [vs]
+                    (let [vs (sort vs)]
+                      (condp = (count vs)
+                        0 "-"
+                        1 (first vs)
+                        2 (str (first vs) ", " (second vs))
+                        (str (first vs) " ... " (last vs)))))
+    :value        value
+    :style        style
+    :years        (range 2000 utils/this-year)
+    :on-change    on-change}])
+
 (defn number-selector [{:keys [unit] :as props}]
   [select
    (merge
@@ -246,7 +262,7 @@
         cities (or cities
                    (<== [:lipas.ui.sports-sites.subs/cities-by-city-code]))]
     ^{:key value}
-    [select
+    [autocompletes/autocomplete2
      {:items     cities
       :value     value
       :style     select-style

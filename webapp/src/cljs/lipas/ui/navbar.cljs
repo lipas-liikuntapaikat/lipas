@@ -1,11 +1,11 @@
 (ns lipas.ui.navbar
   (:require
    [clojure.string :as string]
-   [lipas.ui.events :as events]
    [lipas.ui.mui :as mui]
    [lipas.ui.subs :as subs]
    [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]))
+   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
+   [reitit.frontend.easy :as rfe]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
@@ -20,7 +20,7 @@
 
 (defn account-menu-button [{:keys [tr logged-in?]}]
   [mui/icon-button
-   {:on-click   #(==> [::events/show-account-menu (.-currentTarget %)])
+   {:on-click   #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
     :id         "account-btn"
     :aria-label (tr :actions/open-account-menu)}
    (if logged-in?
@@ -29,7 +29,7 @@
 
 (defn account-menu [{:keys [tr logged-in?]}]
   (let [anchor     (<== [::subs/account-menu-anchor])
-        close      #(==> [::events/show-account-menu nil])]
+        close      #(==> [:lipas.ui.events/show-account-menu nil])]
 
     [mui/menu {:anchor-el anchor
                :open      (some? anchor)
@@ -90,7 +90,7 @@
 (defn lang-btn [locale]
   [mui/icon-button
    {:style {:font-size "1em"}
-    :on-click #(==> [::events/set-translator locale])}
+    :on-click #(==> [:lipas.ui.events/set-translator locale])}
    [mui/typography {:variant "body2"}
     (-> locale name string/upper-case)]])
 
@@ -103,7 +103,7 @@
    [lang-btn :en]])
 
 (defn toggle-drawer [_]
-  (==> [::events/toggle-drawer]))
+  (==> [:lipas.ui.events/toggle-drawer]))
 
 (defn drawer [{:keys [tr logged-in?]}]
   (let [open?              (<== [::subs/drawer-open?])
@@ -217,29 +217,11 @@
           [mui/icon "group_add"]]
          [mui/list-item-text {:primary (tr :register/headline)}]])]]))
 
-(defn get-sub-page [panel tr]
-  (case panel
-    :front-page-panel     {:text (tr :home-page/headline)
-                           :href "/etusivu"}
-    :admin-panel          {:text (tr :lipas.admin/headline)
-                           :href "/admin"}
-    :sports-panel         {:text (tr :sport/headline)
-                           :href "/liikuntapaikat"}
-    :ice-stadiums-panel   {:text (tr :ice/headline)
-                           :href "/jaahalliportaali"}
-    :swimming-pools-panel {:text (tr :swim/headline)
-                           :href "/uimahalliportaali"}
-    :login-panel          {:text (tr :login/headline)
-                           :href "/kirjaudu"}
-    :register-panel       {:text (tr :register/headline)
-                           :href "/rekisteroidy"}
-    :user-panel           {:text (tr :user/headline)
-                           :href "/profiili"}
-    :reset-password-panel {:text (tr :reset-password/headline)
-                           :href "/passu-hukassa"}
-    :stats-panel          {:text (tr :stats/headline)
-                           :href "/tilastot"}
-    {:text "" :href ""}))
+(defn get-sub-page [route tr]
+  (let [name   (-> route :data :name)
+        tr-key (-> route :data :tr-key)]
+    (when name
+      {:text (tr tr-key) :href (rfe/href name)})))
 
 (defn menu-button [{:keys [tr]}]
   [mui/icon-button
@@ -250,86 +232,88 @@
     {:color "secondary"
      :style {:font-weight :bold}} "menu"]])
 
-(defn nav [{:keys [tr active-panel logged-in?]}]
-  [mui/app-bar
-   {:position   "static"
-    :color      "primary"
-    :style      {:border-box "1px solid black"}
-    :class-name :no-print}
+(defn nav [{:keys [tr logged-in?]}]
+  (let [current-route (<== [:lipas.ui.subs/current-route])]
+    [mui/app-bar
+     {:position   "static"
+      :color      "primary"
+      :style      {:border-box "1px solid black"}
+      :class-name :no-print}
 
-   [mui/tool-bar {:disable-gutters true}
+     [mui/tool-bar {:disable-gutters true}
 
       ;;; JYU logo
-    [:a {:href "https://www.jyu.fi"}
-     [mui/svg-icon
-      {:view-box "0 0 132.54 301.95"
-       :style    {:height "2em" :margin "0.45em"}}
-      [svg/jyu-logo]]]
+      [:a {:href "https://www.jyu.fi"}
+       [mui/svg-icon
+        {:view-box "0 0 132.54 301.95"
+         :style    {:height "2em" :margin "0.45em"}}
+        [svg/jyu-logo]]]
 
       ;;; Header text
-    [mui/typography
-     {:variant "h6"
-      :style
-      {:flex        1
-       :font-size   "1em"
-       :font-weight "bold"}}
-
-     ;; University of Jyväskylä
-     [mui/hidden {:sm-down true}
       [mui/typography
-       {:component "a"
-        :variant   "h6"
-        :href      "https://www.jyu.fi"
+       {:variant "h6"
         :style
-        (merge
-         mui/headline-aleo
-         {:display         "inline"
-          :font-size       "1em"
-          :text-transform  "none"
-          :text-decoration "none"})}
-       (tr :menu/jyu)]
+        {:flex        1
+         :font-size   "1em"
+         :font-weight "bold"}}
 
-      [separator]]
+       ;; University of Jyväskylä
+       [mui/hidden {:sm-down true}
+        [mui/typography
+         {:component "a"
+          :variant   "h6"
+          :href      "https://www.jyu.fi"
+          :style
+          (merge
+           mui/headline-aleo
+           {:display         "inline"
+            :font-size       "1em"
+            :text-transform  "none"
+            :text-decoration "none"})}
+         (tr :menu/jyu)]
 
-     ;; LIPAS
-     [mui/typography
-      {:component "a"
-       :variant   "h6"
-       :href      "/etusivu"
-       :style
-       (merge
-        mui/headline-aleo
-        {:display         "inline"
-         :font-size       "1em"
-         :text-transform  "none"
-         :text-decoration "none"})}
-      (tr :menu/headline)]
+        [separator]]
 
-     [separator]
+       ;; LIPAS
+       [mui/typography
+        {:component "a"
+         :variant   "h6"
+         :href      "/etusivu"
+         :style
+         (merge
+          mui/headline-aleo
+          {:display         "inline"
+           :font-size       "1em"
+           :text-transform  "none"
+           :text-decoration "none"})}
+        (tr :menu/headline)]
 
-     ;; Sub page header
-     [mui/typography
-      {:component "a"
-       :variant   "h6"
-       :href      (:href (get-sub-page active-panel tr))
-       :style
-       (merge
-        mui/headline-aleo
-        {:display         "inline"
-         :font-size       "1em"
-         :text-transform  "none"
-         :text-decoration "none"})}
-      (:text (get-sub-page active-panel tr))]]
+       [separator]
 
-    ;; Lang selector
-    [mui/hidden {:sm-down true}
-     [lang-selector]]
+       ;; Sub page header
+       (let [sub-page (get-sub-page current-route tr)]
+         [mui/typography
+          {:component "a"
+           :variant   "h6"
+           :href      (:href sub-page)
+           :style
+           (merge
+            mui/headline-aleo
+            {:display         "inline"
+             :font-size       "1em"
+             :text-transform  "none"
+             :text-decoration "none"})}
+          (:text sub-page)])]
+
+      ;; Lang selector
+      [mui/hidden {:sm-down true}
+       [lang-selector]]
 
     ;;; Account menu button
-    [account-menu-button {:tr tr :logged-in? logged-in?}]
+      [account-menu-button {:tr tr :logged-in? logged-in?}]
 
     ;;; Main menu (drawer) button
-    [menu-button {:tr tr}]]])
+      [menu-button {:tr tr}]]]))
 
 (defn mini-nav [{:keys [tr logged-in?]}]
   [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}

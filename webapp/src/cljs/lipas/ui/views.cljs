@@ -1,48 +1,21 @@
 (ns lipas.ui.views
   (:require
-   [lipas.ui.admin.views :as admin]
    [lipas.ui.components :as lui]
    [lipas.ui.events :as events]
-   [lipas.ui.forgot-password.views :as forgot-password]
-   [lipas.ui.front-page.views :as front-page]
-   [lipas.ui.ice-stadiums.views :as ice-stadiums]
-   [lipas.ui.login.views :as login]
-   [lipas.ui.map.views :as map]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
-   [lipas.ui.register.views :as register]
    [lipas.ui.reminders.views :as reminders]
-   [lipas.ui.stats.views :as stats]
    [lipas.ui.subs :as subs]
-   [lipas.ui.swimming-pools.views :as swimming-pools]
-   [lipas.ui.user.views :as user]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn- panels [panel-name tr logged-in?]
-  (case panel-name
-    :front-page-panel     [front-page/main tr]
-    :admin-panel          [admin/main]
-    :map-panel            [map/main tr]
-    :ice-stadiums-panel   [ice-stadiums/main]
-    :swimming-pools-panel [swimming-pools/main]
-    :login-panel          [login/main tr]
-    :reset-password-panel [forgot-password/main tr]
-    :register-panel       [register/main tr]
-    :user-panel           [user/main tr]
-    :stats-panel          [stats/main tr]
-    [front-page/main tr]))
-
-(defn show-panel [panel-name tr logged-in?]
-  [panels panel-name tr logged-in?])
-
 (defn main-panel [{:keys [width]}]
-  (let [active-panel (<== [::subs/active-panel])
-        logged-in?   (<== [::subs/logged-in?])
+  (let [logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
         confirmation (<== [::subs/active-confirmation])
         disclaimer   (<== [::subs/active-disclaimer])
         show-nav?    (<== [::subs/show-nav?])
+        view         (<== [::subs/current-view])
         tr           (<== [::subs/translator])]
 
     (==> [::events/set-screen-size width])
@@ -53,8 +26,8 @@
 
       [mui/grid
        {:container true
-        :style (merge {:flex-direction "column" :background-color mui/gray3}
-                      (when-not show-nav? {:height "100%"}))}
+        :style     (merge {:flex-direction "column" :background-color mui/gray3}
+                          (when-not show-nav? {:height "100%"}))}
 
        ;; Drawer
        [nav/drawer {:tr tr :logged-in? logged-in?}]
@@ -66,7 +39,7 @@
        (when show-nav?
          [mui/grid {:item true :xs 12 :style {:flex "0 1 auto"}}
 
-          [nav/nav {:tr tr :active-panel active-panel :logged-in? logged-in?}]
+          [nav/nav {:tr tr :logged-in? logged-in?}]
 
           ;; Dev-env disclaimer
           (when disclaimer
@@ -88,7 +61,8 @@
        [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
         ;; Main panel
-        [show-panel active-panel tr logged-in?]
+        (when view
+          [view])
 
         ;; Reminders dialog
         [reminders/dialog]
