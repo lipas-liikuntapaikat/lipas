@@ -15,7 +15,6 @@
    [reitit.coercion :as rc]
    [reitit.coercion.spec :as rss]
    [reitit.frontend :as rf]
-   [reitit.frontend.controllers :as rfc]
    [reitit.frontend.easy :as rfe]))
 
 (defn navigate-async! [url]
@@ -75,16 +74,15 @@
            args  (conj args (-> match :parameters :path))]
        (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
-(defonce match (atom nil))
+(defn on-navigate [new-match]
+  (==> [:lipas.ui.events/navigated new-match]))
 
 (defn init! []
   (rfe/start!
    routes
-   (fn [new-match]
-     (==> [:lipas.ui.events/navigated (:path new-match)])
-     (swap! match (fn [old-match]
-                    (if new-match
-                      (assoc new-match :controllers
-                             (rfc/apply-controllers
-                              (:controllers old-match) new-match))))))
+   on-navigate
    {:use-fragment false}))
+
+(comment
+  (require '[reitit.core :as reitit])
+  (reitit/route-names routes))

@@ -1,14 +1,14 @@
 (ns lipas.ui.map.routes
   (:require
-   [lipas.ui.utils :as utils :refer [==>]]))
+   [lipas.ui.utils :as utils :refer [==>]]
+   [lipas.ui.map.views :as views]))
 
 (def routes
   ["liikuntapaikat"
-   {:name :lipas.ui.routes/map
-    :controllers
-    [{:start
-      (fn [& params]
-        (==> [:lipas.ui.events/set-active-panel :map-panel]))}]}
+   {:name      :lipas.ui.routes/map
+    :tr-key    :sport/headline
+    :view      views/main
+    :hide-nav? true}
 
    [""
     {:name :lipas.ui.routes.map/map

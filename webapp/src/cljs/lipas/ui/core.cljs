@@ -48,13 +48,13 @@
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
+  (routes/init!)
   (reagent/render
    [:> (mui/with-width* (reagent/reactify-component views/main-panel))]
    (.getElementById js/document "app")))
 
 (defn ^:export init []
   (track!)
-  (routes/init!)
   (re-frame/dispatch-sync [::events/initialize-db])
   (dev-setup)
   (qa-setup)

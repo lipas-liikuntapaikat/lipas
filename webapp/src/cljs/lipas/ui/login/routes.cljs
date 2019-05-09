@@ -1,11 +1,9 @@
 (ns lipas.ui.login.routes
   (:require
-   [lipas.ui.utils :as utils :refer [==>]]))
+   [lipas.ui.login.views :as views]))
 
 (def routes
   ["kirjaudu"
-   {:name :lipas.ui.routes/login
-    :controllers
-    [{:start
-      (fn [& params]
-        (==> [:lipas.ui.events/set-active-panel :login-panel]))}]}])
+   {:name   :lipas.ui.routes/login
+    :tr-key :login/headline
+    :view   views/main}])

@@ -319,15 +319,27 @@
                (fn [out]
                  (core/sports-sites-report search query fields out)))}))}}]
 
+      ;; Old simple db version
       ["/actions/create-finance-report"
        {:post
         {:parameters
-         {:body :lipas.api.cities-report/req}
+         {:body :lipas.api.finance-report/req}
          :handler
          (fn [{:keys [parameters]}]
-           (let [city-codes (-> parameters :body :city-codes)]
+           (let [params (:body parameters)]
              {:status 200
-              :body   (core/finance-report db city-codes)}))}}]
+              :body   (core/finance-report db params)}))}}]
+
+      ;; New version that uses ES backend
+      ["/actions/query-finance-report"
+       {:post
+        {:parameters
+         {:body map?}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [params (:body parameters)]
+             {:status 200
+              :body   (core/query-finance-report search params)}))}}]
 
       ["/actions/calculate-stats"
        {:post

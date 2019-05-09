@@ -136,6 +136,11 @@
            (->> (mapv (juxt first (comp ->entry name first)))))))))
 
 (re-frame/reg-sub
+ ::import-batch-id
+ (fn [db _]
+   (-> db :map :import :batch-id)))
+
+(re-frame/reg-sub
  ::selected-import-items
  (fn [db _]
    (-> db :map :import :selected-items)))

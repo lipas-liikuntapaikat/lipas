@@ -110,8 +110,9 @@
           [thank-you-for-registering-box {:tr tr}]
           [registration-form {:tr tr}])]]]]))
 
-(defn main [tr]
-  (let [logged-in? (<== [::subs/logged-in?])]
+(defn main []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [::subs/logged-in?])]
     (if logged-in?
       (navigate! "/profiili")
       [create-panel tr])))

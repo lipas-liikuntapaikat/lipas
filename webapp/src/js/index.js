@@ -32,7 +32,6 @@ import MultiPoint from 'ol/geom/MultiPoint';
 import GeometryCollection from 'ol/geom/GeometryCollection';
 
 // Openlayers-Extensions
-import Splitter from 'ol-ext/interaction/Splitter';
 import DrawHole from 'ol-ext/interaction/DrawHole';
 
 window.ol = {
@@ -78,7 +77,6 @@ window.ol = {
     Draw,
     Modify,
     Snap,
-    Splitter,
     DrawHole,
   },
   events: {
@@ -330,9 +328,13 @@ window.recharts = {
 import Autosuggest from 'react-autosuggest';
 window.Autosuggest = Autosuggest;
 
-// Mui-Downshift
-import MuiDownshift from 'mui-downshift';
-window.MuiDownshift = MuiDownshift;
+// react-select
+import { SingleSelect, MultipleSelect } from 'react-select-material-ui';
+
+window.ReactSelect = {
+  SingleSelect,
+  MultipleSelect,
+};
 
 // Material Design Icons
 import Calculator from 'mdi-material-ui/Calculator';
