@@ -2,6 +2,7 @@
   (:require
    [lipas.reports :as reports]
    [lipas.ui.utils :as utils]
+   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -40,6 +41,11 @@
    (-> db :stats :finance :selected-grouping)))
 
 (re-frame/reg-sub
+ ::selected-ranking-metric
+ (fn [db _]
+   (-> db :stats :finance :selected-ranking-metric)))
+
+(re-frame/reg-sub
  ::units
  (fn [db _]
    (-> db :stats :finance :units)))
@@ -58,6 +64,11 @@
  ::groupings
  (fn [db _]
    (-> db :stats :finance :groupings)))
+
+(re-frame/reg-sub
+ ::chart-type
+ (fn [db _]
+   (-> db :stats :finance :chart-type)))
 
 (re-frame/reg-sub
  ::data*
@@ -103,6 +114,14 @@
                         :population         (-> b :population :sum)}))))
            [])
           (sort-by (if (= grouping "avi") :avi-id :province-id))))))
+
+(re-frame/reg-sub
+ ::ranking-data
+ :<- [::data]
+ :<- [::selected-ranking-metric]
+ (fn [[data metric] _]
+   (let [kw (keyword metric)]
+     (sort-by #(-> % kw cutils/->number) utils/reverse-cmp data))))
 
 (re-frame/reg-sub
  ::headers

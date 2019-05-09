@@ -52,6 +52,18 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
+(defn metric-selector [{:keys [tr value on-change]}]
+  (let [locale  (tr)
+        metrics (<== [::subs/metrics])]
+    [lui/select
+     {:items     metrics
+      :value     value
+      :style     common/select-style
+      :label     (tr :stats/select-metric)
+      :value-fn  first
+      :label-fn  (comp locale second)
+      :on-change on-change}]))
+
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
@@ -65,17 +77,20 @@
       :on-change on-change}]))
 
 (defn view []
-  (let [tr       (<== [:lipas.ui.subs/translator])
-        cities   (<== [::subs/selected-cities])
-        year     (<== [::subs/selected-year])
-        service  (<== [::subs/selected-city-service])
-        unit     (<== [::subs/selected-unit])
-        metrics  (<== [::subs/selected-metrics])
-        grouping (<== [::subs/selected-grouping])
-        data     (<== [::subs/data])
-        labels   (<== [::subs/labels])
-        headers  (<== [::subs/headers])
-        view     (<== [::subs/selected-view])]
+  (let [tr             (<== [:lipas.ui.subs/translator])
+        cities         (<== [::subs/selected-cities])
+        year           (<== [::subs/selected-year])
+        service        (<== [::subs/selected-city-service])
+        unit           (<== [::subs/selected-unit])
+        metrics        (<== [::subs/selected-metrics])
+        grouping       (<== [::subs/selected-grouping])
+        ranking-metric (<== [::subs/selected-ranking-metric])
+        ranking-data   (<== [::subs/ranking-data])
+        chart-type     (<== [::subs/chart-type])
+        data           (<== [::subs/data])
+        labels         (<== [::subs/labels])
+        headers        (<== [::subs/headers])
+        view           (<== [::subs/selected-view])]
 
     [mui/grid {:container true :spacing 16}
 
@@ -115,11 +130,20 @@
           :on-change #(==> [::events/select-year %])}]]
 
        ;; Metrics selector
-       [mui/grid {:item true}
-        [metrics-selector
-         {:tr        tr
-          :value     metrics
-          :on-change #(==> [::events/select-metrics %])}]]
+       (when (= "comparison" chart-type)
+         [mui/grid {:item true}
+          [metrics-selector
+           {:tr        tr
+            :value     metrics
+            :on-change #(==> [::events/select-metrics %])}]])
+
+       ;; Metric selector
+       (when (= "ranking" chart-type)
+         [mui/grid {:item true}
+          [metric-selector
+           {:tr        tr
+            :value     ranking-metric
+            :on-change #(==> [::events/select-ranking-metric %])}]])
 
        ;; Grouping selector
        [mui/grid {:item true}
@@ -127,6 +151,19 @@
          {:tr        tr
           :value     grouping
           :on-change #(==> [::events/select-grouping %])}]]
+
+       ;; Chart type selector
+       [mui/grid {:item true}
+        [mui/tooltip
+         {:title
+          (if (= "ranking" chart-type)
+            (tr :stats/show-comparison)
+            (tr :stats/show-ranking))}
+         [mui/icon-button {:on-click #(==> [::events/toggle-chart-type])}
+          [mui/icon {:font-size "large" :color (if (= "ranking" chart-type)
+                                                 "secondary"
+                                                 "default")}
+           "sort"]]]]
 
        ;; Clear filters button
        (when (not-empty cities)
@@ -138,11 +175,22 @@
 
      ;; Chart
      (when (= "chart" view)
-       [mui/grid {:item true :xs 12}
-        [charts/finance-chart
-         {:data    data
-          :metrics metrics
-          :labels  labels}]])
+
+       ;; Comparison chart
+       (if (= "comparison" chart-type)
+         [mui/grid {:item true :xs 12}
+          [charts/finance-chart
+           {:data    data
+            :metrics metrics
+            :labels  labels}]]
+
+         ;; Ranking chart
+         [mui/grid {:container true :item true :direction "column" :spacing 16}
+          [mui/grid {:item true :xs 12 :md 6}
+           [charts/finance-ranking-chart
+            {:data   ranking-data
+             :metric ranking-metric
+             :labels labels}]]]))
 
      ;; Table
      (when (= "table" view)
@@ -151,12 +199,14 @@
          {:headers headers :items data}]])
 
      ;; Tabs for choosing between chart/table views
-     [mui/grid {:item true}
-      [common/view-tabs
-       {:value     view
-        :on-change #(==> [::events/select-view %2])}]]
+     [mui/grid {:container true :item true :xs 12}
 
-     ;; Download Excel button
-     [common/download-excel-button
-      {:tr       tr
-       :on-click #(==> [::events/download-excel data headers])}]]))
+      [mui/grid {:item true}
+       [common/view-tabs
+        {:value     view
+         :on-change #(==> [::events/select-view %2])}]]
+
+      ;; Download Excel button
+      [common/download-excel-button
+       {:tr       tr
+        :on-click #(==> [::events/download-excel data headers])}]]]))

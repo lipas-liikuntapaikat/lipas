@@ -31,7 +31,6 @@
    {:db       (assoc-in db [:stats :finance :selected-year] v)
     :dispatch [::create-report]}))
 
-
 (re-frame/reg-event-fx
  ::select-city-service
  (fn [{:keys [db]} [_ v]]
@@ -47,8 +46,19 @@
 (re-frame/reg-event-fx
  ::select-metrics
  (fn [{:keys [db]} [_ v]]
-   {:db       (assoc-in db [:stats :finance :selected-metrics] v)
-    :dispatch [::create-report]}))
+   {:db (assoc-in db [:stats :finance :selected-metrics] v)}))
+
+(re-frame/reg-event-fx
+ ::select-ranking-metric
+ (fn [{:keys [db]} [_ v]]
+   {:db (assoc-in db [:stats :finance :selected-ranking-metric] v)}))
+
+(re-frame/reg-event-db
+ ::toggle-chart-type
+ (fn [db _]
+   (let [oldv (-> db :stats :finance :chart-type)
+         newv (if (= oldv "ranking") "comparison" "ranking")]
+     (assoc-in db [:stats :finance :chart-type] newv))))
 
 (re-frame/reg-event-fx
  ::clear-filters

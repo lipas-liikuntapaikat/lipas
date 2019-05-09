@@ -60,7 +60,8 @@
   {:itemStyle  font-styles-bold
    :labelStyle font-styles-bold})
 
-(defn energy-chart [{:keys [data energy energy-label]}]
+(defn energy-chart
+  [{:keys [data energy energy-label]}]
   (let [data (map #(rename-keys % {energy energy-label}) data)]
    [:> rc/ResponsiveContainer {:width "100%" :height 300}
     [:> rc/BarChart {:data data}
@@ -71,7 +72,8 @@
      [:> rc/XAxis {:dataKey :name :label false :tick false}]
      [:> rc/Bar {:dataKey energy-label :label false :fill (get colors energy)}]]]))
 
-(defn monthly-chart [{:keys [data labels]}]
+(defn monthly-chart
+  [{:keys [data labels]}]
   (let [data-keys (vals (select-keys labels [:electricity-mwh
                                              :heat-mwh
                                              :cold-mwh
@@ -93,7 +95,8 @@
         (when (some #(get % k) data)
           [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
 
-(defn yearly-chart [{:keys [data labels on-click]}]
+(defn yearly-chart
+  [{:keys [data labels on-click]}]
   (let [data-keys (vals (select-keys labels [:electricity-mwh
                                              :heat-mwh
                                              :cold-mwh
@@ -113,7 +116,8 @@
         (when (some #(get % k) data)
           [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
 
-(defn energy-totals-gauge [{:keys [data energy-type]}]
+(defn energy-totals-gauge
+  [{:keys [data energy-type]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 150}
    [:> rc/PieChart {:data data}
     [:> rc/Pie
@@ -132,7 +136,8 @@
   {"rect" "label"
    "line" "show_chart"})
 
-(defn legend [labels props]
+(defn legend
+  [labels props]
   (let [payload (gobj/get props "payload")]
     (r/as-element
      (->> payload
@@ -208,7 +213,8 @@
                          :label (:population labels)})))]
     (tooltip payload-fn labels props)))
 
-(defn city-finance-chart [{:keys [data metrics labels on-click]}]
+(defn city-finance-chart
+  [{:keys [data metrics labels on-click]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 500}
    (-> [:> rc/ComposedChart {:data data :on-click on-click}
         [:> rc/Legend {:content (partial legend labels)}]
@@ -239,7 +245,8 @@
                               :value (gobj/get obj "value")}))))]
     (tooltip payload-fn labels props)))
 
-(defn age-structure-chart [{:keys [data labels]}]
+(defn age-structure-chart
+  [{:keys [data labels]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    (into
     [:> rc/BarChart {:data data}
@@ -275,7 +282,8 @@
                              []))))]
     (tooltip payload-fn labels props)))
 
-(defn sports-stats-chart [{:keys [data labels metric grouping]}]
+(defn sports-stats-chart
+  [{:keys [data labels metric grouping]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
@@ -295,14 +303,17 @@
         payload (gobj/get props "payload")]
     (r/as-element
      [:g {:transform (gstring/format "translate(%d,%d)" x y)}
-      [:text {:x 0 :y 0 :dy 16 :textAnchor "end" :transform "rotate(-45)"}
+      [:text
+       {:x 0 :y 0 :dy 16 :textAnchor "end" :transform "rotate(-45)"
+        :font-family "Lato"}
        (gobj/get payload "value")]])))
 
-(defn finance-chart [{:keys [data metrics labels on-click]}]
+(defn finance-chart
+  [{:keys [data metrics labels on-click]}]
   (let [x-interval (if (> (count data) 50) 5 0)]
     [:> rc/ResponsiveContainer {:width "100%" :height 500}
      (->
-      [:> rc/ComposedChart {:data data :on-click on-click :margin {:bottom 120}}
+      [:> rc/ComposedChart {:data data :on-click on-click :margin {:bottom 135}}
        [:> rc/Legend {:content (partial legend labels) :verticalAlign "top"}]
        [:> rc/Tooltip {:content (partial finance-tooltip labels)}]
        [:> rc/YAxis {:tick font-styles}]
@@ -311,3 +322,16 @@
        (for [metric metrics]
          [:> rc/Bar
           {:dataKey metric :label false :fill (get colors (keyword metric))}])))]))
+
+(defn finance-ranking-chart
+  [{:keys [data labels metric]}]
+  (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
+        y-axis-key :region]
+    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+     [:> rc/BarChart {:data data :layout "vertical" :margin margin}
+      [:> rc/Legend {:content (partial legend labels)}]
+      [:> rc/Tooltip {:content (partial finance-tooltip labels)}]
+      [:> rc/XAxis {:tick font-styles :type "number"}]
+      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      [:> rc/Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
+       [:> rc/LabelList {:position "right"}]]]]))
