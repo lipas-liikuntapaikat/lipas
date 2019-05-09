@@ -591,5 +591,5 @@
      [mui/grid
       {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]]))
 
-(defn main [tr]
+(defn main []
   [mui/typography "Nothing here"])

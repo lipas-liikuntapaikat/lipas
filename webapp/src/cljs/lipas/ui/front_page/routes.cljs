@@ -1,11 +1,9 @@
 (ns lipas.ui.front-page.routes
   (:require
-   [lipas.ui.utils :as utils :refer [==>]]))
+   [lipas.ui.front-page.views :as views]))
 
 (def routes
   ["etusivu"
-   {:name :lipas.ui.routes/front-page
-    :controllers
-    [{:start
-      (fn []
-        (==> [:lipas.ui.events/set-active-panel :front-page-panel]))}]}])
+   {:name   :lipas.ui.routes/front-page
+    :tr-key :home-page/headline
+    :view   views/main}])
