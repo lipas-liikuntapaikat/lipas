@@ -4,7 +4,8 @@
    [lipas.ui.db :as db]
    [lipas.ui.routes :as routes]
    [lipas.ui.utils :as utils :refer [==>]]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as re-frame]
+   [reitit.frontend.controllers :as rfc]))
 
 (re-frame/reg-event-fx
  ::initialize-db
@@ -83,9 +84,12 @@
 
 (re-frame/reg-event-fx
  ::navigated
- (fn [_ [_ new-path]]
-   (if new-path
-     {:ga/page-view [new-path]}
+ (fn [{:keys [db]} [_ {:keys [path] :as new-match}]]
+   (if new-match
+     (let [old-match (:current-route db)
+           ctrls     (rfc/apply-controllers (:controllers old-match) new-match)]
+       {:db           (assoc db :current-route (assoc new-match :controllers ctrls))
+        :ga/page-view [path]})
      {})))
 
 (re-frame/reg-event-fx
