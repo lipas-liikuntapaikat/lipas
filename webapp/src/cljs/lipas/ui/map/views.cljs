@@ -235,7 +235,8 @@
           set-field     (partial set-field lipas-id)]
 
       [mui/grid
-       {:container true :style {:padding "1em"}}
+       {:container true
+        :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
 
        (when editing?
          [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
