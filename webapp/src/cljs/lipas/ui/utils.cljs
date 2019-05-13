@@ -315,6 +315,9 @@
   (or (gbrowser/isSafari)
       (gbrowser/isIosWebview)))
 
+(defn ie? []
+  (gbrowser/isIE))
+
 (defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
   (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
     (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
