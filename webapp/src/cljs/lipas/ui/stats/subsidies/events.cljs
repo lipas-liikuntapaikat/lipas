@@ -96,8 +96,8 @@
      {:bool
       {:filter
        (into [] (remove nil?)
-             [(when (not-empty years))
-              {:terms {:year years}}
+             [(when (not-empty years)
+                {:terms {:year years}})
               (when (not-empty city-codes)
                 {:terms {:city-code city-codes}})
               (when (not-empty type-codes)

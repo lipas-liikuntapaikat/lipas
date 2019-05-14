@@ -292,13 +292,17 @@
     (tooltip payload-fn labels props)))
 
 (defn sports-stats-chart
-  [{:keys [data labels metric grouping]}]
+  [{:keys [data labels metric grouping on-click]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
                      :type-name)]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
-     [:> rc/BarChart {:data data :layout "vertical" :margin margin}
+     [:> rc/BarChart
+      {:data     data
+       :layout   "vertical"
+       :margin   margin
+       :on-click on-click}
       [:> rc/Legend {:content (partial legend labels)}]
       [:> rc/Tooltip {:content (partial sports-stats-tooltip labels)}]
       [:> rc/XAxis {:tick font-styles :type "number"}]
@@ -386,3 +390,8 @@
       [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> rc/Bar {:dataKey :amount :fill "#0a9bff"}
        [:> rc/LabelList {:position "right"}]]]]))
+
+(defn ->payload [evt]
+  (when-let [arr (gobj/get evt "activePayload")]
+    (let [obj (gobj/getValueByKeys arr 0 "payload")]
+      (js->clj obj :keywordize-keys true))))

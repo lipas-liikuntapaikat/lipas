@@ -46,6 +46,27 @@
      [::create-report]]}))
 
 (re-frame/reg-event-fx
+ ::select-filters
+ (fn [{:keys [db]} [_ {:keys [type-code city-code]} grouping]]
+   (prn grouping)
+   (let [city-k        "location.city.city-code"
+         type-k        "type.type-code"
+         types-path    [:stats :sport :selected-types]
+         cities-path   [:stats :sport :selected-cities]
+         grouping-path [:stats :sport :selected-grouping]]
+     {:db (cond-> db
+            (= type-k grouping) (->
+                                 (assoc-in types-path [type-code])
+                                 (assoc-in grouping-path city-k)
+                                 (assoc-in cities-path []))
+            (= city-k grouping) (->
+                                 (assoc-in cities-path [city-code])
+                                 (assoc-in grouping-path type-k)
+                                 (assoc-in types-path [])))
+      :dispatch-n
+      [[::create-report]]})))
+
+(re-frame/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
    (let [city-codes (-> db :stats :sport :selected-cities)

@@ -83,7 +83,7 @@
  :<- [::selected-unit]
  :<- [:lipas.ui.sports-sites.subs/avi-areas]
  :<- [:lipas.ui.sports-sites.subs/provinces]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.stats.subs/cities]
  (fn [[tr data grouping unit avis provinces cities] _]
    (let [locale (tr)
          op     (if (= unit "euros-per-capita")

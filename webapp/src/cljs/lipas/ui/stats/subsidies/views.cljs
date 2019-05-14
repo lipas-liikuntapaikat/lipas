@@ -41,6 +41,10 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
+(defn region-selector [props]
+  (let [regions (<== [:lipas.ui.stats.subs/regions])]
+    [lui/region-selector (assoc props :regions regions)]))
+
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])
         cities       (<== [::subs/selected-cities])
@@ -69,7 +73,7 @@
        ;; Region filter
        [mui/grid {:item true :xs 12}
         [mui/typography {:variant "body2"} (tr :stats/filter-cities)]
-        [lui/region-selector
+        [region-selector
          {:value     cities
           :on-change #(==> [::events/select-cities %])}]]
 
@@ -127,11 +131,8 @@
      ;; Chart
      (when (= "chart" view)
        (let [on-click (fn [evt]
-                        (when (gobj/get evt "activePayload")
-                          (let [arr (gobj/get evt "activePayload")
-                                obj (gobj/getValueByKeys arr 0 "payload")
-                                m   (js->clj obj :keywordize-keys true)]
-                            (==> [::events/select-filters m grouping]))))]
+                        (when-let [m (charts/->payload evt)]
+                          (==> [::events/select-filters m grouping])))]
          (if (= "ranking" chart-type)
            [charts/subsidies-ranking-chart
             {:data     ranking-data
@@ -139,9 +140,7 @@
              :labels   labels}]
            [charts/subsidies-chart
             {:data     data
-             :on-click #(let [obj (gobj/getValueByKeys % "activePayload" 0 "payload")
-                              m   (js->clj obj :keywordize-keys true)]
-                          (==> [::events/select-filters m grouping]))
+             :on-click on-click
              :labels   labels}])))
 
      ;; Table

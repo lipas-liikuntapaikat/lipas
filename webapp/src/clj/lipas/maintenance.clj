@@ -13,6 +13,11 @@
    [taoensso.timbre :as log])
   (:import java.lang.Math))
 
+(def all-cities
+  (merge
+   cities/by-city-code
+   cities/abolished-by-city-code))
+
 (defn upsert-all!
   ([db user sports-sites]
    (upsert-all! db user :lipas/sports-site sports-sites))
@@ -47,7 +52,7 @@
                 (for [[year data] stats
                       :let        [youth (-> data :services :youth-services)
                                    sports (-> data :services :sports-services)
-                                   city (cities/by-city-code city-code)
+                                   city (all-cities city-code)
                                    province (cities/provinces (:province-id city))
                                    avi (cities/avi-areas (:avi-id city))
                                    popl (:population data)]]
@@ -86,8 +91,8 @@
   (-> m
       (assoc
        :timestamp (str (:year m) "-01-01")
-       :province-id (-> m :city-code cities/by-city-code :province-id)
-       :avi-id (-> m :city-code cities/by-city-code :avi-id))
+       :province-id (-> m :city-code all-cities :province-id)
+       :avi-id (-> m :city-code all-cities :avi-id))
       (cond->
           (->> m :type-codes (remove nil?) empty?) (assoc :type-codes [-1]))
       (dissoc :city-name)))

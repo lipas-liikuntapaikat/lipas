@@ -2889,7 +2889,10 @@
     :avi-id 4}])
 
 (def active (filter #(= (:status %) "active") all))
+(def abolished (filter #(= (:status %) "abolished") all))
 
 (def by-city-code (utils/index-by :city-code active))
 (def by-avi-id (group-by :avi-id active))
 (def by-province-id (group-by :province-id active))
+
+(def abolished-by-city-code (utils/index-by :city-code abolished))

@@ -100,9 +100,16 @@
 
      ;; Chart
      (when (= view "chart")
-       [mui/grid {:item true :xs 12}
-        [charts/sports-stats-chart
-         {:data data :labels labels :metric metric :grouping grouping}]])
+       (let [on-click (fn [evt]
+                        (when-let [m (charts/->payload evt)]
+                          (==> [::events/select-filters m grouping])))]
+         [mui/grid {:item true :xs 12}
+          [charts/sports-stats-chart
+           {:data     data
+            :labels   labels
+            :metric   metric
+            :grouping grouping
+            :on-click on-click}]]))
 
      ;; Tabs for choosing between chart/table views
      [mui/grid {:item true}

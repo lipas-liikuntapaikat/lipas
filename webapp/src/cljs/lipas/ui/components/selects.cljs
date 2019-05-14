@@ -162,8 +162,9 @@
 (defn strong1 [text] [:strong text])
 (defn strong2 [text] [:strong {:style {:text-transform "uppercase"}} text])
 
-(defn region-selector [{:keys [value on-change]}]
-  (let [regions   (<== [:lipas.ui.sports-sites.subs/regions])
+(defn region-selector [{:keys [value on-change regions]}]
+  (let [regions   (or regions
+                      (<== [:lipas.ui.sports-sites.subs/regions]))
         tr        (<== [:lipas.ui.subs/translator])
         locale    (tr)
         avis      cities/by-avi-id
