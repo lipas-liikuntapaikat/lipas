@@ -96,7 +96,9 @@
                        :value     value
                        :required  required})]))
 
-(defn years-selector [{:keys [tr value on-change style]}]
+(defn years-selector
+  [{:keys [tr value on-change style years]
+    :or   {years (range 2000 utils/this-year)}}]
   [year-selector
    {:label        (tr :stats/select-years)
     :multi?       true
@@ -109,7 +111,7 @@
                         (str (first vs) " ... " (last vs)))))
     :value        value
     :style        style
-    :years        (range 2000 utils/this-year)
+    :years        years
     :on-change    on-change}])
 
 (defn number-selector [{:keys [unit] :as props}]

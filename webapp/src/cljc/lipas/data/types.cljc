@@ -4054,5 +4054,11 @@
      :school-use?                       {:priority 0},
      :route-length-km                   {:priority 1}}}})
 
+(def unknown
+  {:name          {:fi "Ei tietoa" :se "Unknown" :en "Unknown"}
+   :type-code     -1
+   :main-category -1
+   :sub-category  -1})
+
 (def by-main-category (group-by :main-category (vals all)))
 (def by-sub-category (group-by :sub-category (vals all)))
