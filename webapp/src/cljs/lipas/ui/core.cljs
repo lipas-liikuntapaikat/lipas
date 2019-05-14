@@ -7,6 +7,7 @@
    [lipas.ui.config :as config]
    [lipas.ui.effects]
    [lipas.ui.events :as events]
+   [lipas.ui.interceptors]
    [lipas.ui.local-storage]
    [lipas.ui.mui :as mui]
    [lipas.ui.routes :as routes]

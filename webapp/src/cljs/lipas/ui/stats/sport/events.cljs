@@ -54,15 +54,15 @@
          types-path    [:stats :sport :selected-types]
          cities-path   [:stats :sport :selected-cities]
          grouping-path [:stats :sport :selected-grouping]]
-     {:db (cond-> db
-            (= type-k grouping) (->
-                                 (assoc-in types-path [type-code])
-                                 (assoc-in grouping-path city-k)
-                                 (assoc-in cities-path []))
-            (= city-k grouping) (->
-                                 (assoc-in cities-path [city-code])
-                                 (assoc-in grouping-path type-k)
-                                 (assoc-in types-path [])))
+     {:db (condp = grouping
+            type-k (-> db
+                       (assoc-in types-path [type-code])
+                       (assoc-in grouping-path city-k)
+                       (assoc-in cities-path []))
+            city-k (-> db
+                       (assoc-in cities-path [city-code])
+                       (assoc-in grouping-path type-k)
+                       (assoc-in types-path [])))
       :dispatch-n
       [[::create-report]]})))
 

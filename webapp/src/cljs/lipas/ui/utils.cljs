@@ -195,6 +195,21 @@
   [{:keys [username password]}]
   (str "Basic " (b64/encodeString (str username ":" password))))
 
+(defn decode-jwt-payload [s]
+  (-> s
+      (string/split #"\.")
+      second
+      (b64/decodeString true)
+      js/JSON.parse
+      (js->clj :keywordize-keys true)))
+
+(defn jwt-expired?
+  "`s` is a jwt-token as string"
+  [s]
+  (let [now (-> (js/Date.) .getTime (/ 1000))
+        exp (-> s decode-jwt-payload :exp)]
+    (> now exp)))
+
 (defn join-pretty [coll]
   (string/join ", " coll))
 
