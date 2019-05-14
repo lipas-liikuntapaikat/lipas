@@ -1,3 +1,10 @@
+-- SEQUENCE: public.subsidy_id_seq
+
+CREATE SEQUENCE public.subsidy_id_seq;
+
+ALTER SEQUENCE public.subsidy_id_seq
+OWNER TO lipas;
+
 -- Table: public.subsidy
 
 CREATE TABLE public.subsidy (
@@ -12,10 +19,3 @@ TABLESPACE pg_default;
 
 ALTER TABLE public.subsidy
 OWNER to lipas;
-
--- SEQUENCE: public.subsidy_id_seq
-
-CREATE SEQUENCE public.subsidy_id_seq;
-
-ALTER SEQUENCE public.subsidy_id_seq
-OWNER TO lipas;
