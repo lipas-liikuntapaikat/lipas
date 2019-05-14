@@ -1,5 +1,6 @@
 (ns lipas.ui.stats.finance.views
   (:require
+   [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
@@ -76,6 +77,10 @@
       :label-fn  (comp locale second)
       :on-change on-change}]))
 
+(defn region-selector [props]
+  (let [regions (<== [:lipas.ui.stats.subs/regions])]
+    [lui/region-selector (assoc props :regions regions)]))
+
 (defn view []
   (let [tr             (<== [:lipas.ui.subs/translator])
         cities         (<== [::subs/selected-cities])
@@ -106,7 +111,7 @@
        ;; Region selector
        [mui/grid {:item true :xs 12}
         [mui/typography {:variant "body2"} (tr :stats/filter-cities)]
-        [lui/region-selector
+        [region-selector
          {:value     cities
           :on-change #(==> [::events/select-cities %])}]]
 
@@ -126,6 +131,7 @@
        [mui/grid {:item true}
         [year-selector
          {:tr        tr
+          :years     (range 2000 utils/this-year)
           :value     year
           :on-change #(==> [::events/select-year %])}]]
 
@@ -175,22 +181,27 @@
 
      ;; Chart
      (when (= "chart" view)
+       (let [on-click (fn [evt]
+                        (when-let [m (charts/->payload evt)]
+                          (==> [::events/select-filters m grouping])))]
 
-       ;; Comparison chart
-       (if (= "comparison" chart-type)
-         [mui/grid {:item true :xs 12}
-          [charts/finance-chart
-           {:data    data
-            :metrics metrics
-            :labels  labels}]]
+         ;; Comparison chart
+         (if (= "comparison" chart-type)
+           [mui/grid {:item true :xs 12}
+            [charts/finance-chart
+             {:data     data
+              :metrics  metrics
+              :on-click on-click
+              :labels   labels}]]
 
-         ;; Ranking chart
-         [mui/grid {:container true :item true :direction "column" :spacing 16}
-          [mui/grid {:item true :xs 12 :md 6}
-           [charts/finance-ranking-chart
-            {:data   ranking-data
-             :metric ranking-metric
-             :labels labels}]]]))
+           ;; Ranking chart
+           [mui/grid {:container true :item true :direction "column" :spacing 16}
+            [mui/grid {:item true :xs 12 :md 6}
+             [charts/finance-ranking-chart
+              {:data     ranking-data
+               :metric   ranking-metric
+               :on-click on-click
+               :labels   labels}]]])))
 
      ;; Table
      (when (= "table" view)

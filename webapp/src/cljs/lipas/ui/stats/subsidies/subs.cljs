@@ -60,7 +60,7 @@
  :<- [::selected-grouping]
  :<- [:lipas.ui.sports-sites.subs/avi-areas]
  :<- [:lipas.ui.sports-sites.subs/provinces]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.stats.subs/cities]
  :<- [::types]
  (fn [[grouping avis provinces cities types] _]
    (condp = grouping

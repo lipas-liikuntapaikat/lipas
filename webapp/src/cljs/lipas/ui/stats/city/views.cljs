@@ -47,6 +47,12 @@
 (defn years-selector [props]
   [lui/years-selector (merge props {:style common/select-style})])
 
+(defn city-selector
+  "Includes also abolished cities."
+  [props]
+  (let [cities (<== [:lipas.ui.stats.subs/cities])]
+    [lui/city-selector-single (assoc props :cities cities)]))
+
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])
         cities       (<== [::subs/selected-cities])
@@ -67,7 +73,7 @@
 
      ;; City selector
      [mui/grid {:item true :xs 12}
-      [lui/city-selector-single
+      [city-selector
        {:tr        tr
         :value     (first cities)
         :on-change #(==> [::events/select-cities [%]])}]]
@@ -104,6 +110,7 @@
        [mui/grid {:item true}
         [years-selector
          {:tr        tr
+          :years     (range 2000 utils/this-year)
           :value     years
           :on-change #(==> [::events/select-finance-years %])}]]]]
 
