@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.events
   (:require
    [ajax.core :as ajax]
+   [lipas.ui.interceptors :as interceptors]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -62,6 +63,7 @@
 
 (re-frame/reg-event-fx
  ::commit-rev
+ [interceptors/check-token]
  (fn [{:keys [db]} [_ rev draft? on-success]]
    (let [new?       (new-site? rev)
          on-success (cond
@@ -75,6 +77,7 @@
 
 (re-frame/reg-event-fx
  ::save-edits
+ [interceptors/check-token]
  (fn [{:keys [db]} [_ lipas-id]]
    (let [rev        (-> (get-in db [:sports-sites lipas-id :editing])
                         utils/make-saveable)
