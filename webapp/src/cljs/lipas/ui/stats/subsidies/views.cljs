@@ -1,6 +1,5 @@
 (ns lipas.ui.stats.subsidies.views
   (:require
-   [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
@@ -15,6 +14,14 @@
    (merge
     props
     {:label (tr :actions/select-years)
+     :style common/select-style})])
+
+(defn year-selector
+  [{:keys [tr] :as props}]
+  [lui/year-selector
+   (merge
+    props
+    {:label (tr :actions/select-year)
      :style common/select-style})])
 
 (defn grouping-selector [{:keys [tr value on-change]}]
@@ -87,11 +94,11 @@
 
        ;; Years selector
        [mui/grid {:item true}
-        [years-selector
+        [year-selector
          {:tr        tr
           :years     (range 2002 utils/this-year)
-          :value     years
-          :on-change #(==> [::events/select-years %])}]]
+          :value     (first years)
+          :on-change #(==> [::events/select-years [%]])}]]
 
        ;; Issuer selector
        [mui/grid {:item true}
