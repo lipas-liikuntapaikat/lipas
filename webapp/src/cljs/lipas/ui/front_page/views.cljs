@@ -44,7 +44,9 @@
    {:label "FCG" :href "http://www.fcg.fi/shvk"}
    {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}
    {:label "Aluehallintovirasto" :href "https://www.avi.fi/web/avi/liikunta"}
-   {:label "LIKES" :href "https://www.likes.fi/"}])
+   {:label "LIKES" :href "https://www.likes.fi/"}
+   {:label "Kuntaliitto" :href "https://www.kuntaliitto.fi/"}
+   {:label "EPSHP" :href "https://www.hyvis.fi/web/etela-pohjanmaa/palvelut"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
