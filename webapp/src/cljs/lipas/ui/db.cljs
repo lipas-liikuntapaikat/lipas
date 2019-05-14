@@ -14,6 +14,7 @@
    [lipas.i18n.core :as i18n]
    [lipas.reports :as reports]
    [lipas.schema.core :as schema]
+   [lipas.ui.stats.subsidies.db :as subsidies]
    [lipas.ui.utils :as utils]))
 
 (def default-db
@@ -171,7 +172,8 @@
      :metrics                 reports/stats-metrics
      :selected-metrics        ["net-costs" "investments"]
      :selected-ranking-metric "net-costs"
-     :chart-type              "comparison"}}
+     :chart-type              "comparison"}
+    :subsidies    subsidies/defaults}
 
    ;; Map
    :map

@@ -7,6 +7,7 @@
    [lipas.backend.db.integration :as integration]
    [lipas.backend.db.reminder :as reminder]
    [lipas.backend.db.sports-site :as sports-site]
+   [lipas.backend.db.subsidy :as subsidy]
    [lipas.backend.db.user :as user]
    [lipas.backend.db.utils :as db-utils]
    [lipas.utils :as utils]))
@@ -191,6 +192,21 @@
        utils/->snake-case-keywords
        (city/get-by-city-codes db-spec)
        (map city/unmarshall)))
+
+;; Subsidies ;;
+
+(defn add-subsidy! [db-spec subsidy]
+  (->> (subsidy/marshall subsidy)
+       (subsidy/insert! db-spec)))
+
+(defn get-subsidies [db-spec]
+  (->> (subsidy/get-all db-spec)
+       (map subsidy/unmarshall)))
+
+(defn get-subsidies-by-year [db-spec years]
+  (->> {:years years}
+       (subsidy/get-by-years db-spec)
+       (map subsidy/unmarshall)))
 
 ;; Reminders ;;
 

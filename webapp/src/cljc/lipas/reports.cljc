@@ -276,7 +276,7 @@
                          :en "Operating expenses"}
    "operating-incomes"  {:fi "Käyttötuotot"
                          :en "Operating incomes"}
-   "subsidies"          {:fi "Myönnetyt avustukset"
+   "subsidies"          {:fi "Kunnan myöntämät avustukset"
                          :en "Subsidies"}
    "net-costs"          {:fi "Nettokustannukset"
                          :en "Net costs"}})
@@ -329,6 +329,21 @@
    "city"     {:fi "Kunta"
                :se "Kommun"
                :en "City"}})
+
+(def subsidies-groupings
+  (merge
+   finance-stats-groupings
+   {"type" {:fi "Tyyppi"
+            :se "Type"
+            :en "Type"}}))
+
+(def subsidies-issuers
+  {"AVI" {:fi "AVI"
+          :se "AVI"
+          :en "AVI"}
+   "OKM" {:fi "OKM"
+          :se "OKM"
+          :en "OKM"}})
 
 (defn- service-avgs [service year cities]
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)

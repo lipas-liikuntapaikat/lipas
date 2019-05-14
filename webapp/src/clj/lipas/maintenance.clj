@@ -82,8 +82,29 @@
          deref)
     (log/info "All done!")))
 
+(defn- ->subsidy-entry [m]
+  (-> m
+      (assoc
+       :timestamp (str (:year m) "-01-01")
+       :province-id (-> m :city-code cities/by-city-code :province-id)
+       :avi-id (-> m :city-code cities/by-city-code :avi-id))
+      (cond->
+          (->> m :type-codes (remove nil?) empty?) (assoc :type-codes [-1]))
+      (dissoc :city-name)))
+
+(defn index-subsidies! [{:keys [db search]}]
+  (let [es-index "subsidies"]
+    (log/info "Starting to index subsidies data to" es-index)
+    (->> (core/get-subsidies db)
+         (map ->subsidy-entry)
+         (search/->bulk es-index :id)
+         (search/bulk-index! search)
+         deref)
+    (log/info "All done!")))
+
 (def tasks
-  {:index-city-finance-data index-city-finance-data!})
+  {:index-city-finance-data index-city-finance-data!
+   :index-subsidies         index-subsidies!})
 
 (defn print-usage! []
   (println "\nUsage: lein run -m lipas.maintenance :task-name\n")
@@ -110,4 +131,5 @@
       (print-usage!))))
 
 (comment
-  (-main ":index-city-finance-data"))
+  (-main ":index-city-finance-data")
+  (-main ":index-subsidies"))
