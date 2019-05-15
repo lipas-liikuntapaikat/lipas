@@ -86,7 +86,7 @@
        {}
        (let [token (-> login-data :token)]
          (if (utils/jwt-expired? token)
-           {:navigate! :lipas.ui.routes/login}
+           {:dispatch [::logout]}
            {:http-xhrio
             {:method          :get
              :uri             (str (:backend-url db) "/actions/refresh-login")
@@ -112,9 +112,7 @@
 (re-frame/reg-event-fx
  ::logout
  (fn [{:keys [db]}  _]
-   {:db (-> db/default-db
-            (assoc :active-panel :login-panel)
-            (assoc :backend-url (:backend-url db)))
+   {:db (assoc db/default-db :backend-url (:backend-url db))
 
     ::local-storage/remove! :login-data
 
