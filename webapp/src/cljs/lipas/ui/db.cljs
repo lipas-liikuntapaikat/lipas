@@ -13,7 +13,8 @@
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
    [lipas.reports :as reports]
-   [lipas.schema.core :as schema]
+   [lipas.schema.core :as specs]
+   [lipas.ui.stats.subsidies.db :as subsidies]
    [lipas.ui.utils :as utils]))
 
 (def default-db
@@ -49,6 +50,7 @@
    :cities-by-province-id cities/by-province-id
    :provinces             cities/provinces
    :avi-areas             cities/avi-areas
+   :abolished-cities      cities/abolished-by-city-code
    :types                 types/all
    :materials             materials/all
    :building-materials    materials/building-materials
@@ -171,7 +173,8 @@
      :metrics                 reports/stats-metrics
      :selected-metrics        ["net-costs" "investments"]
      :selected-ranking-metric "net-costs"
-     :chart-type              "comparison"}}
+     :chart-type              "comparison"}
+    :subsidies    subsidies/defaults}
 
    ;; Map
    :map

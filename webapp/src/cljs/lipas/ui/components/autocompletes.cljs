@@ -154,7 +154,9 @@
       :on-change   (fn [v]
                      (reset! state v)
                      (on-change (js->clj v)))
-      :options     (map (partial ->opt label-fn value-fn) items)
+      :options     (->> items
+                        (map (partial ->opt label-fn value-fn))
+                        (sort-by :label))
       :required    required
       :style       {:font-family "Lato"}}]))
 

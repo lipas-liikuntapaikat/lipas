@@ -13,6 +13,11 @@
    [taoensso.timbre :as log])
   (:import java.lang.Math))
 
+(def all-cities
+  (merge
+   cities/by-city-code
+   cities/abolished-by-city-code))
+
 (defn upsert-all!
   ([db user sports-sites]
    (upsert-all! db user :lipas/sports-site sports-sites))
@@ -39,7 +44,7 @@
    {}
    m))
 
-(defn- ->entries [data]
+(defn- ->city-finance-entries [data]
   (->> data
        (reduce
         (fn [res {:keys [city-code stats]}]
@@ -47,7 +52,7 @@
                 (for [[year data] stats
                       :let        [youth (-> data :services :youth-services)
                                    sports (-> data :services :sports-services)
-                                   city (cities/by-city-code city-code)
+                                   city (all-cities city-code)
                                    province (cities/provinces (:province-id city))
                                    avi (cities/avi-areas (:avi-id city))
                                    popl (:population data)]]
@@ -72,18 +77,50 @@
                        (utils/->prefix-map "sports-services-pc-"))))))
         [])))
 
-(defn index-city-finance-data! [{:keys [db search]}]
+;; `year`-`city` is used as primary key
+(defn index-city-finance-data!
+  "Re-indexes documents from db table 'city' into ES."
+  [{:keys [db search]}]
   (let [es-index "city_stats"]
     (log/info "Starting to index city finance data to" es-index)
     (->> (core/get-cities db)
-         ->entries
+         ->city-finance-entries
+         (search/->bulk es-index :id)
+         (search/bulk-index! search)
+         deref)
+    (log/info "All done!")))
+
+(defn- ->subsidy-entry [m]
+  (-> m
+      (assoc
+       :timestamp (str (:year m) "-01-01")
+       :province-id (-> m :city-code all-cities :province-id)
+       :avi-id (-> m :city-code all-cities :avi-id))
+      (cond->
+          (->> m :type-codes (remove nil?) empty?) (assoc :type-codes [-1]))
+      (dissoc :city-name)))
+
+;; There are no sensible primary keys in the data so we purge and
+;; rewrite the index each time.
+(defn index-subsidies!
+  "Deletes current index and creates new one with data from db-table
+  'subsidy'."
+  [{:keys [db search]}]
+  (let [es-index "subsidies"]
+    (log/info "Deleting index" es-index)
+    (search/delete-index! search es-index)
+    (log/info "Deleted" es-index)
+    (log/info "Starting to index subsidies data to" es-index)
+    (->> (core/get-subsidies db)
+         (map ->subsidy-entry)
          (search/->bulk es-index :id)
          (search/bulk-index! search)
          deref)
     (log/info "All done!")))
 
 (def tasks
-  {:index-city-finance-data index-city-finance-data!})
+  {:index-city-finance-data index-city-finance-data!
+   :index-subsidies         index-subsidies!})
 
 (defn print-usage! []
   (println "\nUsage: lein run -m lipas.maintenance :task-name\n")
@@ -110,4 +147,5 @@
       (print-usage!))))
 
 (comment
-  (-main ":index-city-finance-data"))
+  (-main ":index-city-finance-data")
+  (-main ":index-subsidies"))

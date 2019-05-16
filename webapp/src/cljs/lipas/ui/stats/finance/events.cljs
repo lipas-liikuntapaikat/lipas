@@ -68,6 +68,32 @@
      [::create-report]]}))
 
 (re-frame/reg-event-fx
+ ::select-filters
+ (fn [{:keys [db]} [_ {:keys [city-code avi-id province-id]} grouping]]
+   (let [types-path    [:stats :finance :selected-types]
+         cities-path   [:stats :finance :selected-cities]
+         grouping-path [:stats :finance :selected-grouping]]
+     {:db (cond-> db
+            (= "avi" grouping)      (->
+                                     (assoc-in cities-path
+                                               (-> db
+                                                   :cities-by-avi-id
+                                                   (get avi-id)
+                                                   (->> (map :city-code))))
+                                     (assoc-in grouping-path "province")
+                                     (assoc-in types-path []))
+            (= "province" grouping) (->
+                                     (assoc-in cities-path
+                                               (-> db
+                                                   :cities-by-province-id
+                                                   (get province-id)
+                                                   (->> (map :city-code))))
+                                     (assoc-in types-path [])
+                                     (assoc-in grouping-path "city")))
+      :dispatch-n
+      [[::create-report]]})))
+
+(re-frame/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
    (let [params {:city-codes   (or (-> db :stats :finance :selected-cities not-empty)

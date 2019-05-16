@@ -341,6 +341,17 @@
              {:status 200
               :body   (core/query-finance-report search params)}))}}]
 
+      ;; Subsidies
+      ["/actions/query-subsidies"
+       {:post
+        {:parameters
+         {:body map?}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [params (:body parameters)]
+             {:status 200
+              :body   (core/query-subsidies search params)}))}}]
+
       ["/actions/calculate-stats"
        {:post
         {:parameters {}

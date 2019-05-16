@@ -6,5 +6,6 @@
                              day8.re-frame.http-fx
                              district0x.re-frame.google-analytics-fx
                              lipas.ui.local-storage
+                             lipas.ui.interceptors
                              lipas.ui.effects
                              proj4]}

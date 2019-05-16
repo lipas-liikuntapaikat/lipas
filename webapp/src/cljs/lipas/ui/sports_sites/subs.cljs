@@ -77,6 +77,11 @@
    (-> db :cities)))
 
 (re-frame/reg-sub
+ ::abolished-cities
+ (fn [db _]
+   (-> db :abolished-cities)))
+
+(re-frame/reg-sub
  ::cities-list
  :<- [::cities-by-city-code]
  (fn [cities _]
@@ -105,7 +110,6 @@
       (assoc v :region-id (str "avi-" k)))
     (for [[k v] provinces]
       (assoc v :region-id (str "province-" k))))))
-
 
 (re-frame/reg-sub
  ::type-categories

@@ -48,4 +48,12 @@
      [{:start
        (fn [& params]
          (==> [::events/select-tab "finance"])
-         (==> [:lipas.ui.stats.finance.events/create-report]))}]}]])
+         (==> [:lipas.ui.stats.finance.events/create-report]))}]}]
+
+   ["/avustukset"
+    {:name :lipas.ui.routes.stats/subsidies
+     :controllers
+     [{:start
+       (fn [& params]
+         (==> [::events/select-tab "subsidies"])
+         (==> [:lipas.ui.stats.subsidies.events/create-report]))}]}]])
