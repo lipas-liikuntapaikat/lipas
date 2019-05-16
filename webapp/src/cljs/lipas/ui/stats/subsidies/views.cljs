@@ -16,14 +16,6 @@
     {:label (tr :actions/select-years)
      :style common/select-style})])
 
-(defn year-selector
-  [{:keys [tr] :as props}]
-  [lui/year-selector
-   (merge
-    props
-    {:label (tr :actions/select-year)
-     :style common/select-style})])
-
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
@@ -94,11 +86,11 @@
 
        ;; Years selector
        [mui/grid {:item true}
-        [year-selector
+        [years-selector
          {:tr        tr
           :years     (range 2002 utils/this-year)
-          :value     (first years)
-          :on-change #(==> [::events/select-years [%]])}]]
+          :value     years
+          :on-change #(==> [::events/select-years %])}]]
 
        ;; Issuer selector
        [mui/grid {:item true}
