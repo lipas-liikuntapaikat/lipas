@@ -85,14 +85,16 @@
      (if (or (empty? login-data) (not (:logged-in? db)))
        {}
        (let [token (-> login-data :token)]
-         {:http-xhrio
-          {:method          :get
-           :uri             (str (:backend-url db) "/actions/refresh-login")
-           :headers         {:Authorization (str "Token " token)}
-           :format          (ajax/json-request-format)
-           :response-format (ajax/json-response-format {:keywords? true})
-           :on-success      [::login-success :refresh]
-           :on-failure      [::login-refresh-failure]}})))))
+         (if (utils/jwt-expired? token)
+           {:dispatch [::logout]}
+           {:http-xhrio
+            {:method          :get
+             :uri             (str (:backend-url db) "/actions/refresh-login")
+             :headers         {:Authorization (str "Token " token)}
+             :format          (ajax/json-request-format)
+             :response-format (ajax/json-response-format {:keywords? true})
+             :on-success      [::login-success :refresh]
+             :on-failure      [::login-refresh-failure]}}))))))
 
 (re-frame/reg-event-fx
  ::login-with-magic-link
@@ -110,9 +112,7 @@
 (re-frame/reg-event-fx
  ::logout
  (fn [{:keys [db]}  _]
-   {:db (-> db/default-db
-            (assoc :active-panel :login-panel)
-            (assoc :backend-url (:backend-url db)))
+   {:db (assoc db/default-db :backend-url (:backend-url db))
 
     ::local-storage/remove! :login-data
 

@@ -18,13 +18,14 @@
     ((complement s/valid?) spec value)
     false))
 
-(defn select [{:keys [label value items on-change value-fn label-fn
-                      sort-fn sort-cmp deselect? spec required tooltip]
-               :or   {value-fn :value
-                      label-fn :label
-                      sort-cmp compare
-                      tooltip  ""}
-               :as   props}]
+(defn select
+  [{:keys [label value items on-change value-fn label-fn helper-text
+           sort-fn sort-cmp deselect? spec required tooltip]
+    :or   {value-fn :value
+           label-fn :label
+           sort-cmp compare
+           tooltip  ""}
+    :as   props}]
   (let [on-change #(on-change (-> %
                                   .-target
                                   .-value
@@ -55,11 +56,12 @@
                     label (label-fn i)]
                 [mui/menu-item {:key   (pr-str value)
                                 :value (pr-str value)}
-                 label])))]]))
+                 label])))
+      (when helper-text [mui/form-helper-text helper-text])]]))
 
 (defn multi-select
   [{:keys [label value items on-change value-fn label-fn sort-fn
-           sort-cmp tooltip]
+           sort-cmp tooltip helper-text]
     :or   {value-fn :value
            label-fn :label
            sort-cmp compare
@@ -82,7 +84,8 @@
          [mui/menu-item
           {:key   (pr-str (value-fn i))
            :value (pr-str (value-fn i))}
-          (label-fn i)])]]]))
+          (label-fn i)])]
+      (when helper-text [mui/form-helper-text helper-text])]]))
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
@@ -96,21 +99,25 @@
                        :value     value
                        :required  required})]))
 
-(defn years-selector [{:keys [tr value on-change style]}]
+(defn years-selector
+  [{:keys [tr value on-change style years] :as props
+    :or   {years (range 2000 utils/this-year)}}]
   [year-selector
-   {:label        (tr :stats/select-years)
-    :multi?       true
-    :render-value (fn [vs]
-                    (let [vs (sort vs)]
-                      (condp = (count vs)
-                        0 "-"
-                        1 (first vs)
-                        2 (str (first vs) ", " (second vs))
-                        (str (first vs) " ... " (last vs)))))
-    :value        value
-    :style        style
-    :years        (range 2000 utils/this-year)
-    :on-change    on-change}])
+   (merge
+    props
+    {:label        (tr :stats/select-years)
+     :multi?       true
+     :render-value (fn [vs]
+                     (let [vs (sort vs)]
+                       (condp = (count vs)
+                         0 "-"
+                         1 (first vs)
+                         2 (str (first vs) ", " (second vs))
+                         (str (first vs) " ... " (last vs)))))
+     :value        value
+     :style        style
+     :years        years
+     :on-change    on-change})])
 
 (defn number-selector [{:keys [unit] :as props}]
   [select
@@ -160,8 +167,9 @@
 (defn strong1 [text] [:strong text])
 (defn strong2 [text] [:strong {:style {:text-transform "uppercase"}} text])
 
-(defn region-selector [{:keys [value on-change]}]
-  (let [regions   (<== [:lipas.ui.sports-sites.subs/regions])
+(defn region-selector [{:keys [value on-change regions]}]
+  (let [regions   (or regions
+                      (<== [:lipas.ui.sports-sites.subs/regions]))
         tr        (<== [:lipas.ui.subs/translator])
         locale    (tr)
         avis      cities/by-avi-id

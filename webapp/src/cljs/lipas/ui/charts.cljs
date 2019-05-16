@@ -1,7 +1,9 @@
 (ns lipas.ui.charts
   (:require
    ["recharts" :as rc]
+   [cljs.pprint :as pprint]
    [clojure.set :refer [rename-keys map-invert]]
+   [goog.color :as gcolor]
    [goog.object :as gobj]
    [goog.string :as gstring]
    [lipas.ui.components.misc :as misc]
@@ -48,6 +50,13 @@
    "private-association"     "#3ba12f"
    "private-company"         "#0a9bff"
    "private-foundation"      "#8E44AD"})
+
+(def gcolors (js->clj gcolor/names :keywordize-keys true))
+
+(defn gen-color [n]
+  (-> gcolors
+      vals
+      (nth n)))
 
 (def font-styles
   {:font-family "lato"})
@@ -283,13 +292,17 @@
     (tooltip payload-fn labels props)))
 
 (defn sports-stats-chart
-  [{:keys [data labels metric grouping]}]
+  [{:keys [data labels metric grouping on-click]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
                      :type-name)]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
-     [:> rc/BarChart {:data data :layout "vertical" :margin margin}
+     [:> rc/BarChart
+      {:data     data
+       :layout   "vertical"
+       :margin   margin
+       :on-click on-click}
       [:> rc/Legend {:content (partial legend labels)}]
       [:> rc/Tooltip {:content (partial sports-stats-tooltip labels)}]
       [:> rc/XAxis {:tick font-styles :type "number"}]
@@ -335,3 +348,50 @@
       [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> rc/Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
        [:> rc/LabelList {:position "right"}]]]]))
+
+(defn subsidies-tooltip [labels props]
+  (let [payload-fn (fn [payload]
+                     (let [entry (-> payload
+                                     first
+                                     (gobj/get "payload")
+                                     (js->clj :keywordize-keys true))]
+                       (->> entry
+                            (reduce
+                             (fn [res [k v]]
+                               (if-let [label (labels k)]
+                                 (conj res {:label label :value v})
+                                 res))
+                             []))))]
+    (tooltip payload-fn labels props)))
+
+(defn subsidies-on-click [evt]
+  (let [payload (gobj/getValueByKeys evt "activePayload" 0 "payload")]
+    (prn payload)))
+
+(defn subsidies-chart
+  [{:keys [data labels on-click]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 500}
+   [:> rc/BarChart {:data data :on-click on-click}
+    [:> rc/Legend {:content (partial legend labels)}]
+    [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+    [:> rc/YAxis {:tick font-styles :data-key :amount}]
+    [:> rc/XAxis {:dataKey :group :tick font-styles}]
+    [:> rc/Bar {:dataKey :amount :label false :fill "#0a9bff"}]]])
+
+(defn subsidies-ranking-chart
+  [{:keys [data labels on-click]}]
+  (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
+        y-axis-key :group]
+    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+     [:> rc/BarChart {:data data :layout "vertical" :margin margin :on-click on-click}
+      [:> rc/Legend {:content (partial legend labels)}]
+      [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+      [:> rc/XAxis {:tick font-styles :type "number"}]
+      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      [:> rc/Bar {:dataKey :amount :fill "#0a9bff"}
+       [:> rc/LabelList {:position "right"}]]]]))
+
+(defn ->payload [evt]
+  (when-let [arr (gobj/get evt "activePayload")]
+    (let [obj (gobj/getValueByKeys arr 0 "payload")]
+      (js->clj obj :keywordize-keys true))))

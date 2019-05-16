@@ -302,6 +302,14 @@
             res))
         {})))
 
+;;; Subsidies ;;;
+
+(defn get-subsidies [db]
+  (db/get-subsidies db))
+
+(defn query-subsidies [search params]
+  (:body (search/search search "subsidies" params)))
+
 ;;; Reports ;;;
 
 (defn energy-report [db type-code year]
