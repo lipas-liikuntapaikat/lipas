@@ -87,14 +87,12 @@
           :by_grouping
           :buckets
           (reduce
-           (fn [res {:keys [key by_year]}]
-             (into res
-                   (for [b (:buckets by_year)]
-                     {k       key
-                      :year   (:key b)
-                      :group  (get-in group [key :name locale])
-                      :count  (-> b :doc_count)
-                      :amount (-> b :amount op)})))
+           (fn [res {:keys [key doc_count amount]}]
+             (conj res
+                   {k       key
+                    :group  (get-in group [key :name locale])
+                    :count  doc_count
+                    :amount (-> amount op)}))
            [])
           (sort-by k)))))
 

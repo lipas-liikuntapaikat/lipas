@@ -108,10 +108,7 @@
      {:by_grouping
       {:terms {:field group-key :size 400}
        :aggs
-       {:by_year
-        {:terms {:field :year :size 20}
-         :aggs
-         {:amount {:stats {:field :amount}}}}}}}}))
+       {:amount {:stats {:field :amount}}}}}}))
 
 (re-frame/reg-event-fx
  ::create-report*
@@ -150,29 +147,37 @@
    (let [types-path    [:stats :subsidies :selected-types]
          cities-path   [:stats :subsidies :selected-cities]
          grouping-path [:stats :subsidies :selected-grouping]]
-     {:db (cond-> db
-            (= "type" grouping)     (->
-                                     (assoc-in types-path [type-code])
-                                     (assoc-in cities-path []))
-            (= "avi" grouping)      (->
-                                     (assoc-in cities-path
-                                               (-> db
-                                                   :cities-by-avi-id
-                                                   (get avi-id)
-                                                   (->> (map :city-code))))
-                                     (assoc-in grouping-path "province")
-                                     (assoc-in types-path []))
-            (= "province" grouping) (->
-                                     (assoc-in cities-path
-                                               (-> db
-                                                   :cities-by-province-id
-                                                   (get province-id)
-                                                   (->> (map :city-code))))
-                                     (assoc-in types-path [])
-                                     (assoc-in grouping-path "city"))
-            (= "city" grouping)     (->
-                                     (assoc-in cities-path [city-code])
-                                     (assoc-in grouping-path "type")
-                                     (assoc-in types-path [])))
+     {:db (condp = grouping
+
+            ;; Show subsidies of this type in all cities
+            "type"     (-> db
+                           (assoc-in types-path [type-code])
+                           (assoc-in cities-path []))
+
+            ;; Drill into provinces in selected AVI
+            "avi"      (-> db
+                           (assoc-in cities-path
+                                     (-> db
+                                         :cities-by-avi-id
+                                         (get avi-id)
+                                         (->> (map :city-code))))
+                           (assoc-in grouping-path "province")
+                           (assoc-in types-path []))
+
+            ;; Drill into cities in selected Province
+            "province" (-> db
+                           (assoc-in cities-path
+                                     (-> db
+                                         :cities-by-province-id
+                                         (get province-id)
+                                         (->> (map :city-code))))
+                           (assoc-in types-path [])
+                           (assoc-in grouping-path "city"))
+
+            ;; Drill into types in selected city
+            "city"     (-> db
+                           (assoc-in cities-path [city-code])
+                           (assoc-in grouping-path "type")
+                           (assoc-in types-path [])))
       :dispatch-n
       [[::create-report]]})))
