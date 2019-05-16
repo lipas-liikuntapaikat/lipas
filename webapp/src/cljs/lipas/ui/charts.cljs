@@ -374,7 +374,7 @@
    [:> rc/BarChart {:data data :on-click on-click}
     [:> rc/Legend {:content (partial legend labels)}]
     [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
-    [:> rc/YAxis {:tick font-styles :data-key "amount"}]
+    [:> rc/YAxis {:tick font-styles :data-key :amount}]
     [:> rc/XAxis {:dataKey :group :tick font-styles}]
     [:> rc/Bar {:dataKey :amount :label false :fill "#0a9bff"}]]])
 

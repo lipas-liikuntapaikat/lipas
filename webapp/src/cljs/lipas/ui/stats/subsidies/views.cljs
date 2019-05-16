@@ -87,10 +87,12 @@
        ;; Years selector
        [mui/grid {:item true}
         [years-selector
-         {:tr        tr
-          :years     (range 2002 utils/this-year)
-          :value     years
-          :on-change #(==> [::events/select-years %])}]]
+         {:tr          tr
+          ;;:years     (range 2002 utils/this-year)
+          :years       [2016 2017]
+          :value       years
+          :helper-text "Lisää vuosia tulossa pian!"
+          :on-change   #(==> [::events/select-years %])}]]
 
        ;; Issuer selector
        [mui/grid {:item true}
