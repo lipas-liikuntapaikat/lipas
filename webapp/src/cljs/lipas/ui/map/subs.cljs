@@ -1,5 +1,7 @@
 (ns lipas.ui.map.subs
   (:require
+   [goog.array :as garray]
+   [goog.object :as gobj]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
@@ -48,6 +50,46 @@
           vals
           (map utils/->feature)
           not-empty))))
+
+(gobj/getValueByKeys #js{:a 1} "b" "c")
+
+(re-frame/reg-sub
+ ::geometries-fast
+ :<- [:lipas.ui.search.subs/search-results-fast]
+ (fn [results _]
+   (when results
+     (let [data (or (gobj/getValueByKeys results "hits" "hits") #js[])]
+       (->> data
+            (map
+             (fn [obj]
+               (let [obj       (gobj/get obj "_source")
+                     geoms     (or
+                                ;; Full geoms
+                                (gobj/getValueByKeys obj
+                                                     "location"
+                                                     "geometries"
+                                                     "features")
+                                ;; Simplified geoms
+                                (gobj/getValueByKeys obj
+                                                     "search-meta"
+                                                     "location"
+                                                     "simple-geoms"
+                                                     "features"))
+                     type-code (gobj/getValueByKeys obj "type" "type-code")
+                     lipas-id  (gobj/get obj "lipas-id")
+                     name      (gobj/get obj "name")]
+                 #js{:type     "FeatureCollection"
+                     :features (garray/map
+                                geoms
+                                (fn [geom idx]
+                                  (gobj/set geom "id" (str lipas-id "-" idx))
+                                  (gobj/set geom
+                                            "properties"
+                                            #js{:lipas-id  lipas-id
+                                                :name      name
+                                                :type-code type-code})
+                                  geom))})))
+            not-empty)))))
 
 (re-frame/reg-sub
  ::content-padding

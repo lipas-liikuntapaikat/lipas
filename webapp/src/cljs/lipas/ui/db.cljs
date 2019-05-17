@@ -109,9 +109,10 @@
    :search
    {:string       nil
     :filters
-    {:statuses   #{"active" "out-of-service-temporarily"}
-     :type-codes #{}
-     :city-codes #{}}
+    {:statuses      #{"active" "out-of-service-temporarily"}
+     :type-codes    #{}
+     :city-codes    #{}
+     :bounding-box? true}
     :sort
     {:asc?    true
      :sort-fn :score}
@@ -121,7 +122,7 @@
     :pagination
     {:page       0
      :page-size  250
-     :page-sizes [25 50 100 250 500]}}
+     :page-sizes [25 50 100 250 500 1000]}}
 
    ;; Reminders
    :reminders

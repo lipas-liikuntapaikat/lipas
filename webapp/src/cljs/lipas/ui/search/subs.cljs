@@ -1,5 +1,6 @@
 (ns lipas.ui.search.subs
   (:require
+   [goog.object :as gobj]
    [lipas.permissions :as permissions]
    [lipas.ui.components :as lui]
    [lipas.ui.db :as db]
@@ -93,6 +94,11 @@
    (-> db :search :filters :school-use?)))
 
 (re-frame/reg-sub
+ ::bounding-box-filter
+ (fn [db _]
+   (-> db :search :filters :bounding-box?)))
+
+(re-frame/reg-sub
  ::search-string
  (fn [db _]
    (-> db :search :string)))
@@ -103,10 +109,21 @@
    (-> db :search :results)))
 
 (re-frame/reg-sub
+ ::search-results-fast
+ (fn [db _]
+   (-> db :search :results-fast)))
+
+(re-frame/reg-sub
  ::search-results-total-count
+ :<- [::search-results-fast]
  :<- [::search-results]
- (fn [results _]
-   (-> results :hits :total)))
+ :<- [::search-results-view]
+ (fn [[fast-results results view] _]
+   (if (= :list view)
+     (if fast-results
+       (gobj/getValueByKeys fast-results "hits" "total")
+       0)
+     (or (-> results :hits :total) 0))))
 
 (defn ->table-entry
   [{:keys [locale types cities admins owners logged-in? permissions]} hit]
@@ -171,14 +188,14 @@
 
 (re-frame/reg-sub
  ::search-results-list-data
- :<- [::search-results]
+ :<- [::search-results-fast]
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/all-types]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  (fn [[results tr types cities] _]
    (let [locale (tr)
          data   {:types types :cities cities :locale locale}]
-     (->> (-> results :hits :hits)
+     (->> (-> results (js->clj :keywordize-keys true) :hits :hits)
           (map (partial ->list-entry data))
           (sort-by :score utils/reverse-cmp)
           vec))))

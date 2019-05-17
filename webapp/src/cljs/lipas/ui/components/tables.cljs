@@ -88,7 +88,8 @@
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
            action-icon hide-action-btn? action-label on-sort-change
            in-progress?  allow-editing? on-item-save edit-label
-           save-label discard-label allow-saving? multi-select?]
+           save-label discard-label allow-saving? multi-select?
+           on-edit-start]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
@@ -220,7 +221,10 @@
                      [mui/grid {:item true}
                       [mui/tooltip {:title edit-label}
                        [mui/icon-button
-                        {:on-click #(swap! editing? assoc id item)}
+                        {:on-click (fn []
+                                     (when on-edit-start
+                                       (on-edit-start item))
+                                     (swap! editing? assoc id item))}
                         [mui/icon "edit"]]]])])])
 
              ;; Remaining Cells

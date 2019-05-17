@@ -202,7 +202,7 @@
         selected-columns (<== [::subs/selected-results-table-columns])
         sort-opts        (<== [::subs/sort-opts])
         in-progress?     (<== [::subs/in-progress?])
-        results          (<== [::subs/search-results-table-data])
+        results          (<== [::subs/search-results-table-dataxo])
         total            (<== [::subs/search-results-total-count])
         pagination-opts  (<== [::subs/pagination])
         page-sizes       (-> pagination-opts :page-sizes)
@@ -271,6 +271,7 @@
                                (every? true?)))
         :on-item-save   #(==> [::events/save-edits %])
         :on-sort-change #(==> [::events/change-sort-order %])
+        :on-edit-start  #(==> [:lipas.ui.sports-sites.events/get (:lipas-id %)])
         :headers        headers}]]]))
 
 (defn results-list [{:keys [on-result-click]}]
@@ -309,7 +310,8 @@
            :label2-fn     #(when %
                              (str (-> % :type.name) ", "
                                   (-> % :location.city.name)
-                                  ;;" " (-> % :score) uncomment for search tuning
+                                  ;; uncomment for search tuning
+                                  ;;" " (-> % :score)
                                   ))
            :on-item-click on-result-click}]]])]))
 
@@ -336,8 +338,8 @@
 (defn search-view [{:keys [tr on-result-click]}]
   (let [total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
-        filters-active? (<== [::subs/filters-active?])]
-
+        filters-active? (<== [::subs/filters-active?])
+        bb-only?        (<== [::subs/bounding-box-filter])]
 
     [:div {:style {:height "100%"}}
      [mui/grid
@@ -361,11 +363,19 @@
           [mui/grid {:item true :xs 12 :md 6}
            [search-input]]])]
 
+      ;; Search only from area visible on map
+      [mui/grid {:item true :xs 12}
+       [lui/checkbox
+        {:label     "Hae kartan alueelta"
+         :value     bb-only?
+         :on-change #(==> [::events/set-bounding-box-filter %])}]]
+
       ;; Filters expansion panel
       [mui/grid {:item true :xs 12}
        [lui/expansion-panel
         {:label            (tr :search/filters)
          :label-color      "default"
+         :style            {}
          :default-expanded false}
         [filters {:tr tr}]]]
 
