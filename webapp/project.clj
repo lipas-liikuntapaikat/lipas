@@ -40,7 +40,8 @@
    [dk.ative/docjure "1.12.0"]
    [tea-time "1.0.0"]
    [etaoin "0.2.8-SNAPSHOT"]
-   [clj-http "3.9.1"]]
+   [clj-http "3.9.1"]
+   [factual/geo "3.0.0-rc-2"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]

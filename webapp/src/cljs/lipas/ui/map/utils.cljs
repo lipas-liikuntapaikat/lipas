@@ -56,7 +56,8 @@
   (==> [:lipas.ui.map.events/show-popup nil])
   map-ctx)
 
-(defn update-geoms! [{:keys [layers] :as map-ctx} geoms]
+(defn update-geoms!
+  [{:keys [layers] :as map-ctx} geoms]
   (let [vectors (-> layers :overlays :vectors)
         source  (.getSource vectors)]
 
@@ -65,18 +66,20 @@
 
     ;; Add new geoms
     (doseq [g    geoms
-            :let [fs (-> g clj->js ->ol-features)]]
+            :let [fs (->ol-features g)]]
       (.addFeatures source fs))
 
     (assoc map-ctx :geoms geoms)))
 
-(defn set-basemap! [{:keys [layers] :as map-ctx} basemap]
+(defn set-basemap!
+  [{:keys [layers] :as map-ctx} basemap]
   (doseq [[k v] (:basemaps layers)
           :let  [visible? (= k basemap)]]
     (.setVisible v visible?))
   map-ctx)
 
-(defn select-features! [{:keys [interactions] :as map-ctx} features]
+(defn select-features!
+  [{:keys [interactions] :as map-ctx} features]
   (let [select (-> interactions :select)]
     (doto (.getFeatures select)
       (.clear)
@@ -116,18 +119,21 @@
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions :edits-hover] hover)))
 
-(defn enable-select! [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+(defn enable-select!
+  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
   (let [select (:select interactions*)]
     (-> select .getFeatures .clear)
     (.addInteraction lmap select)
     (assoc-in map-ctx [:interactions :select] select)))
 
-(defn find-feature-by-id [{:keys [layers]} fid]
+(defn find-feature-by-id
+  [{:keys [layers]} fid]
   (let [layer  (-> layers :overlays :vectors)
         source (.getSource layer)]
     (.getFeatureById source fid)))
 
-(defn find-features-by-lipas-id [{:keys [layers]} lipas-id]
+(defn find-features-by-lipas-id
+  [{:keys [layers]} lipas-id]
   (let [layer  (-> layers :overlays :vectors)
         source (.getSource layer)
         res    #js[]]

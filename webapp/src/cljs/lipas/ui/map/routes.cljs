@@ -21,10 +21,11 @@
     {:name       :lipas.ui.routes.map/details-view
      :parameters {:path {:lipas-id int?}}
      :controllers
-     [{:params (fn [match]
-                 (-> match :parameters :path))
+     [{:identity
+       (fn [match]
+         (-> match :parameters :path :lipas-id))
        :start
-       (fn [{:keys [lipas-id]}]
+       (fn [lipas-id]
          (let [on-success [[:lipas.ui.map.events/show-sports-site* lipas-id]
                            ;; Not sure if zooming is good UX-wise...
                            [:lipas.ui.map.events/zoom-to-site lipas-id]]]

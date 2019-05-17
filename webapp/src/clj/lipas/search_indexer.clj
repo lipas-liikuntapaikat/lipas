@@ -108,6 +108,12 @@
   (def db (:db system))
   (get-user-data db)
   (def search (:search system))
+
+  (def dada (core/get-sports-sites-by-type-code db 4401))
+  (first dada)
+
+  (core/enrich (-> dada first))
+
   (main system db search "search")
   (def user (core/get-user db "import@lipas.fi"))
   (search/delete-index! search "2018-*")

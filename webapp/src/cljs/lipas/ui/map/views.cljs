@@ -309,7 +309,7 @@
 
           ;; Properties tab
           1 (if portal
-              [mui/button {:href (str "/#/" portal "/hallit/" lipas-id)}
+              [mui/button {:href (str "/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"]
                (tr :lipas.sports-site/details-in-portal portal)]
 
@@ -780,8 +780,7 @@
                 {:tr tr
                  :on-result-click
                  (fn [{:keys [lipas-id]}]
-                   (==> [::events/show-sports-site lipas-id])
-                   (==> [::events/zoom-to-site lipas-id width]))}])
+                   (==> [::events/show-sports-site lipas-id]))}])
 
      (when (and (= :list result-view) (#{:search} view))
        [:div {:style {:padding "0.5em"}}
