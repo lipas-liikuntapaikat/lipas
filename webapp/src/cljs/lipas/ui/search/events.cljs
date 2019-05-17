@@ -61,13 +61,24 @@
    {:search-meta.location.wgs84-point
     {:top_left top-left :bottom_right bottom-right}}})
 
+(defn ->geo-intersects-filter
+  [{:keys [top-left bottom-right]}]
+  {:geo_shape
+   {:search-meta.location.geometries
+    {:shape
+     {:type        "envelope"
+      :coordinates #js[top-left bottom-right]}
+     :relation    "intersects"}}})
+
 (defn ->es-search-body
   ([params]
    (->es-search-body params false))
   ([{:keys [filters string center distance sort
             locale pagination zoom bbox]} terse?]
    (let [string            (resolve-query-string string)
-         bbox?             (-> filters :bounding-box?)
+         bbox?             (and
+                            (> zoom 3)
+                            (-> filters :bounding-box?))
          type-codes        (-> filters :type-codes not-empty)
          city-codes        (-> filters :city-codes not-empty)
          area-min          (-> filters :area-min)
@@ -80,22 +91,26 @@
          admins            (-> filters :admins not-empty)
          owners            (-> filters :owners not-empty)
          statuses          (-> filters :statuses not-empty)
-         simple-geoms?     (> 9 zoom)
          {:keys [lon lat]} center
 
          params (merge
                  (resolve-sort sort locale)
                  (resolve-pagination pagination)
-                 {:_source
+                 {:track_total_hits 50000
+                  :_source
                   {:includes (if terse?
+
+                               ;; Used in result list view (while browsing map)
                                ["lipas-id"
                                 "name"
                                 "name-localized"
                                 "type.type-code"
                                 "location.city.city-code"
-                                (if simple-geoms?
+                                (if (> 9 zoom)
                                   "search-meta.location.simple-geoms"
                                   "location.geometries")]
+
+                               ;; Used in results table view
                                ["lipas-id"
                                 "name"
                                 "marketing-name"
@@ -154,7 +169,7 @@
                                    :offset (str distance "m")
                                    :scale  (str distance "m")}}})])}}})]
      (cond-> params
-       bbox?        (add-filter (->bbox-filter bbox))
+       bbox?        (add-filter (->geo-intersects-filter bbox))
        statuses     (add-filter {:terms {:status.keyword statuses}})
        type-codes   (add-filter {:terms {:type.type-code type-codes}})
        city-codes   (add-filter {:terms {:location.city.city-code city-codes}})

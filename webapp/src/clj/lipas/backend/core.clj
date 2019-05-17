@@ -216,6 +216,14 @@
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
 
+;; ES doesn't support indexing FeatureCollections
+(defn feature-coll->geom-coll
+  "Transforms GeoJSON FeatureCollection to ElasticSearch
+  geometrycollection."
+  [{:keys [features]}]
+  {:type "geometrycollection"
+   :geometries (mapv :geometry features)})
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -238,6 +246,7 @@
                        :owner {:name (-> sports-site :owner owners)}
                        :location
                        {:wgs84-point  coords
+                        :geometries   (feature-coll->geom-coll fcoll)
                         :city         {:name (-> city-code cities :name)}
                         :province     {:name (:name province)}
                         :avi-area     {:name (:name avi-area)}

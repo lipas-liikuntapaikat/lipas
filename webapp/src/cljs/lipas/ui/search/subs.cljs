@@ -121,9 +121,9 @@
  (fn [[fast-results results view] _]
    (if (= :list view)
      (if fast-results
-       (gobj/getValueByKeys fast-results "hits" "total")
+       (gobj/getValueByKeys fast-results "hits" "total" "value")
        0)
-     (or (-> results :hits :total) 0))))
+     (or (-> results :hits :total :value) 0))))
 
 (defn ->table-entry
   [{:keys [locale types cities admins owners logged-in? permissions]} hit]
