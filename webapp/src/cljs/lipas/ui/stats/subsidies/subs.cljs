@@ -1,7 +1,8 @@
 (ns lipas.ui.stats.subsidies.subs
   (:require
-   [lipas.ui.utils :as utils]
+   [clojure.string :as string]
    [lipas.data.types :as types]
+   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -91,7 +92,7 @@
            (fn [res {:keys [key doc_count amount]}]
              (conj res
                    {k       key
-                    :year   years
+                    :year   (string/join ", " years)
                     :group  (get-in group [key :name locale])
                     :count  doc_count
                     :amount (-> amount op)}))

@@ -48,14 +48,24 @@
  :<- [:lipas.ui.sports-sites.subs/all-types]
  :<- [::selected-grouping]
  :<- [::selected-metric]
- (fn [[data tr cities types grouping metric] _]
-   (let [locale (tr)]
+ :<- [:lipas.ui.sports-sites.subs/provinces]
+ :<- [:lipas.ui.sports-sites.subs/avi-areas]
+ (fn [[data tr cities types grouping metric provinces avis] _]
+   (let [locale       (tr)
+         get-avi      (fn [city-code]
+                        (-> city-code cities :avi-id avis :name locale))
+         get-province (fn [city-code]
+                        (-> city-code cities :province-id provinces :name locale))]
      (->> data
           (reduce
            (fn [res [k v]]
              (if (= "location.city.city-code" grouping)
                (let [city-name (get-in cities [k :name locale])]
-                 (conj res (assoc v :city-code k :city-name city-name)))
+                 (conj res (assoc v
+                                  :city-code k
+                                  :city-name city-name
+                                  :province-name (get-province k)
+                                  :avi-name (get-avi k))))
                (let [type-name (get-in types [k :name locale])]
                  (conj res (assoc v :type-code k :type-name type-name)))))
            [])
@@ -93,20 +103,28 @@
  :<- [::selected-grouping]
  (fn [[tr metrics grouping] _]
    (let [locale (tr)]
-     (into [(if (= "location.city.city-code" grouping)
-              [:city-name (tr :lipas.location/city)]
-              [:type-name (tr :lipas.sports-site/type)])
-            [:population (tr :stats/population)]
-            [:area-m2-sum (tr :stats/area-m2-sum)]
-            [:area-m2-avg (tr :stats/area-m2-avg)]
-            [:area-m2-min (tr :stats/area-m2-min)]
-            [:area-m2-max (tr :stats/area-m2-max)]
-            [:area-m2-count (tr :stats/area-m2-count)]
-            [:length-km-sum (tr :stats/length-km-sum)]
-            [:length-km-avg   (tr :stats/length-km-avg)]
-            [:length-km-min   (tr :stats/length-km-min)]
-            [:length-km-max   (tr :stats/length-km-max)]]
-           (map (juxt (comp keyword first) (comp locale second)) metrics)))))
+     (remove
+      nil?
+      (into
+       [(when (= "type.type-code" grouping)
+          [:type-name (tr :lipas.sports-site/type)])
+        (when (= "location.city.city-code" grouping)
+          [:city-name (tr :lipas.location/city)])
+        (when (= "location.city.city-code" grouping)
+          [:province-name (tr :lipas.location/province)])
+        (when (= "location.city.city-code" grouping)
+          [:avi-name (tr :lipas.location/avi-area)])
+        [:population (tr :stats/population)]
+        [:area-m2-sum (tr :stats/area-m2-sum)]
+        [:area-m2-avg (tr :stats/area-m2-avg)]
+        [:area-m2-min (tr :stats/area-m2-min)]
+        [:area-m2-max (tr :stats/area-m2-max)]
+        [:area-m2-count (tr :stats/area-m2-count)]
+        [:length-km-sum (tr :stats/length-km-sum)]
+        [:length-km-avg   (tr :stats/length-km-avg)]
+        [:length-km-min   (tr :stats/length-km-min)]
+        [:length-km-max   (tr :stats/length-km-max)]]
+       (map (juxt (comp keyword first) (comp locale second)) metrics))))))
 
 (re-frame/reg-sub
  ::selected-view
