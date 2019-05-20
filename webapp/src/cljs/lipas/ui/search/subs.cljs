@@ -150,9 +150,7 @@
                                 (permissions/publish? permissions site)
                                 false)}))
 
-(defn ->table-entry2
-  [m hit]
-  (js/console.log hit)
+(defn ->table-entry2 [m hit]
   (->table-entry m (js->clj hit :keywordize-keys true)))
 
 (re-frame/reg-sub
