@@ -340,7 +340,8 @@
       (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
       new-db)))
 
-(defn ->feature [{:keys [lipas-id name type] :as site}]
+(defn ->feature
+  [{:keys [lipas-id name type] :as site}]
   (let [type-code (-> type :type-code)]
     (-> site
         :location

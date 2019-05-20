@@ -112,6 +112,7 @@
 
                                ;; Used in results table view
                                ["lipas-id"
+                                "event-date"
                                 "name"
                                 "marketing-name"
                                 "www"
@@ -125,7 +126,10 @@
                                 "location.address"
                                 "location.postal-code"
                                 "location.postal-office"
-                                "location.city.city-code"])}
+                                "location.city.city-code"
+                                (if (> 9 zoom)
+                                  "search-meta.location.simple-geoms"
+                                  "location.geometries")])}
                   :query
                   {:function_score
                    {:score_mode "sum"
@@ -217,11 +221,11 @@
 
 (re-frame/reg-event-fx
  ::search-fast
- (fn [{:keys [db]} [_ params fit-view?]]
+ (fn [{:keys [db]} [_ params fit-view? terse?]]
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/search")
-     :params          (->es-search-body params :terse)
+     :params          (->es-search-body params terse?)
      :format          (ajax/json-request-format)
      :response-format (ajax/raw-response-format)
      :on-success      [::search-success-fast fit-view?]
@@ -257,10 +261,8 @@
  ::submit-search
  (fn [{:keys [db]} [_ fit-view?]]
    (let [params (collect-search-data db)
-         view (-> db :search :results-view)]
-     {:dispatch (if (= :list view)
-                  [::search-fast params fit-view?]
-                  [::search params fit-view?])})))
+         terse? (-> db :search :results-view (= :list))]
+     {:dispatch [::search-fast params fit-view? terse?]})))
 
 (re-frame/reg-event-fx
  ::search-with-keyword

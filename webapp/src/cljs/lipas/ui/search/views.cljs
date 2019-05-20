@@ -202,7 +202,7 @@
         selected-columns (<== [::subs/selected-results-table-columns])
         sort-opts        (<== [::subs/sort-opts])
         in-progress?     (<== [::subs/in-progress?])
-        results          (<== [::subs/search-results-table-dataxo])
+        results          (<== [::subs/search-results-table-data])
         total            (<== [::subs/search-results-total-count])
         pagination-opts  (<== [::subs/pagination])
         page-sizes       (-> pagination-opts :page-sizes)
