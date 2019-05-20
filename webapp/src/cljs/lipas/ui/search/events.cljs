@@ -2,9 +2,9 @@
   (:require
    [ajax.core :as ajax]
    [clojure.string :as string]
+   [lipas.ui.db :as db]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
-   [lipas.ui.db :as db]
    [re-frame.core :as re-frame]))
 
 (defn- add-filter [m filter]
@@ -379,7 +379,10 @@
    (let [params (-> db
                     collect-search-data
                     ->es-search-body
-                    (assoc-in [:_source :excludes] ["location.geometries"]))
+                    (assoc-in [:_source :includes] ["*"] )
+                    (assoc-in [:_source :excludes] ["location.geometries"])
+                    ;; track_total_hits is not supported by scroll
+                    (dissoc :track_total_hits))
          fields (-> db :reports :selected-fields)]
      {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
 
