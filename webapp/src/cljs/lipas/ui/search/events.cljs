@@ -170,7 +170,7 @@
                                 {:gauss
                                  {:search-meta.location.wgs84-point
                                   {:origin (str lat "," lon)
-                                   :offset (str distance "m")
+                                   :offset "0m"
                                    :scale  (str distance "m")}}})])}}})]
      (cond-> params
        bbox?        (add-filter (->geo-intersects-filter bbox))
