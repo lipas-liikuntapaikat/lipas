@@ -79,7 +79,8 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::data*]
  :<- [::grouping-data]
- (fn [[tr data [k group]] _]
+ :<- [::selected-years]
+ (fn [[tr data [k group] years] _]
    (let [locale (tr)
          op     :sum]
      (->> data
@@ -90,6 +91,7 @@
            (fn [res {:keys [key doc_count amount]}]
              (conj res
                    {k       key
+                    :year   years
                     :group  (get-in group [key :name locale])
                     :count  doc_count
                     :amount (-> amount op)}))
