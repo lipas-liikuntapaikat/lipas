@@ -30,7 +30,9 @@
    {:label  (tr :type/name)
     :fields ["type.type-name"]}
    {:label  (tr :lipas.location/city)
-    :fields ["location.city.city-name"]}
+    :fields ["location.city.city-name"
+             "search-meta.location.province.name.fi"
+             "search-meta.location.avi-area.name.fi"]}
    {:label  (tr :general/last-modified)
     :fields ["event-date"]}])
 

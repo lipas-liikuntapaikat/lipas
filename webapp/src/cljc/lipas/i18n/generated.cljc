@@ -551,6 +551,8 @@
    "Pihlajalinna Areena on energiatehokas jäähalli"},
   :lipas.location
   {:address "Katuosoite",
+   :province "Maakunta"
+   :avi-area "AVI-alue"
    :city "Kunta",
    :city-code "Kuntanumero",
    :headline "Sijainti",
