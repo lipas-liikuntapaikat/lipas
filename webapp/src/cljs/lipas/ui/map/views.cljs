@@ -1,7 +1,6 @@
 (ns lipas.ui.map.views
   (:require
    [clojure.string :as string]
-   [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
@@ -424,7 +423,12 @@
                 :style    (when (= sub-mode :splitting)
                             {:border (str "5px solid " mui/secondary)})
                 :color    "default"}
-               [:> js/materialIcons.ContentCut]]])]
+               [:> js/materialIcons.ContentCut]]])
+
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip {:title (tr :map/delete-vertices-hint)}
+              [mui/typography {:style {:font-size 24 :margin-left "4px"}}
+               "?"]])]
 
           (concat
            (lui/edit-actions-list
@@ -624,6 +628,12 @@
                                   {:outline (str "2px solid " mui/secondary)})
                       :variant  "contained"}
                      [:> js/materialIcons.ContentCut]]]])
+
+                ;; Delete vertices helper text
+                (when (#{"LineString" "Polygon"} geom-type)
+                  [mui/grid {:item true}
+                   [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+                    (tr :map/delete-vertices-hint)]])
 
                 ;; Done button
                 [mui/grid {:item true :xs 12}

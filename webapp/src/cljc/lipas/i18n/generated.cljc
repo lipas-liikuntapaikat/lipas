@@ -613,7 +613,7 @@
    :net-costs "Nettokustannukset",
    :operating-expenses "Käyttökustannukset",
    :operating-incomes "Käyttötuotot",
-   :subsidies "Myönnetyt avustukset"},
+   :subsidies "Kunnan myöntämät avustukset"},
   :refrigerant-solutions
   {:CO2 "CO2",
    :H2ONH3 "H2O/NH3",
@@ -701,6 +701,8 @@
    :center-map-to-site "Kohdista kartta liikuntapaikkaan",
    :draw-hole "Lisää reikä",
    :split-linestring "Katkaise reittiosa",
+   :delete-vertices-hint
+   "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
    :calculate-route-length "Laske reitin pituus automaattisesti",
    :remove-polygon "Poista alue",
    :modify-linestring "Muokkaa reittiä",
@@ -1396,7 +1398,7 @@
    :net-costs "Net costs",
    :operating-expenses "Operating expenses",
    :operating-incomes "Operating incomes",
-   :subsidies "Subsidies"},
+   :subsidies "Granted subsidies"},
   :refrigerant-solutions
   {:CO2 "CO2",
    :H2ONH3 "H2O/NH3",
@@ -1480,6 +1482,8 @@
    :center-map-to-site "Center map to sports-site",
    :draw-hole "Add hole",
    :split-linestring "Split",
+   :delete-vertices-hint
+   "Vertices can be deleted by pressing alt-key and clicking.",
    :calculate-route-length "Calculate route length",
    :remove-polygon "Remove area",
    :modify-linestring "Modify routes",
