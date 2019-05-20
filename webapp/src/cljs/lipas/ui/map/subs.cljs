@@ -2,7 +2,6 @@
   (:require
    [goog.array :as garray]
    [goog.object :as gobj]
-   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
 
@@ -38,29 +37,14 @@
                          [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
 (re-frame/reg-sub
- ::geometries
- :<- [:lipas.ui.search.subs/search-results]
- :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
- :<- [::editing-lipas-id]
- (fn [[results sites lipas-id] _]
-   (let [ids (map (comp :lipas-id :_source) (-> results :hits :hits))
-         ids (disj (set ids) lipas-id)] ; To avoid displaying
-                                        ; duplicates when editing
-     (->> (select-keys sites ids)
-          vals
-          (map utils/->feature)
-          not-empty))))
-
-(gobj/getValueByKeys #js{:a 1} "b" "c")
-
-(re-frame/reg-sub
  ::geometries-fast
  :<- [:lipas.ui.search.subs/search-results-fast]
- (fn [results _]
+ :<- [::editing-lipas-id]
+ (fn [[results lipas-id'] _]
    (when results
      (let [data (or (gobj/getValueByKeys results "hits" "hits") #js[])]
        (->> data
-            (map
+            (keep
              (fn [obj]
                (let [obj       (gobj/get obj "_source")
                      geoms     (or
@@ -78,17 +62,20 @@
                      type-code (gobj/getValueByKeys obj "type" "type-code")
                      lipas-id  (gobj/get obj "lipas-id")
                      name      (gobj/get obj "name")]
-                 #js{:type     "FeatureCollection"
-                     :features (garray/map
-                                geoms
-                                (fn [geom idx]
-                                  (gobj/set geom "id" (str lipas-id "-" idx))
-                                  (gobj/set geom
-                                            "properties"
-                                            #js{:lipas-id  lipas-id
-                                                :name      name
-                                                :type-code type-code})
-                                  geom))})))
+
+                 ;; To avoid displaying duplicates when editing
+                 (when-not (= lipas-id' lipas-id )
+                   #js{:type     "FeatureCollection"
+                       :features (garray/map
+                                  geoms
+                                  (fn [geom idx]
+                                    (gobj/set geom "id" (str lipas-id "-" idx))
+                                    (gobj/set geom
+                                              "properties"
+                                              #js{:lipas-id  lipas-id
+                                                  :name      name
+                                                  :type-code type-code})
+                                    geom))}))))
             not-empty)))))
 
 (re-frame/reg-sub
@@ -117,7 +104,7 @@
  ::editing-lipas-id
  (fn [db _]
    (when (#{:editing :drawing} (-> db :map :mode :name))
-         (-> db :map :mode :lipas-id))))
+     (-> db :map :mode :lipas-id))))
 
 (re-frame/reg-sub
  ::zoomed-for-drawing?

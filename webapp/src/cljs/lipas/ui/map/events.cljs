@@ -285,7 +285,8 @@
  ::start-adding-new-site
  (fn [{:keys [db]} [_]]
    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
-    :dispatch-n [[:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+    :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
+                 [:lipas.ui.sports-sites.events/start-adding-new-site]]}))
 
 (re-frame/reg-event-fx
  ::discard-new-site
