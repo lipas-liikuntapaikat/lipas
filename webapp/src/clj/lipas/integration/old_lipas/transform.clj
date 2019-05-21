@@ -44,6 +44,17 @@
         (.withZoneSameInstant java.time.ZoneOffset/UTC)
         (.format df-iso))))
 
+(defn- fix-special-case
+  "Fixes single special case where prop has totally stupid misspelled
+  name which fails camelCasing. Prop name can't be changed because
+  it's been exposed through legacy api for years."
+  [m]
+  (if-let [p (-> m :properties :pool1LengthMm)]
+    (-> m
+        (assoc-in [:properties :pool1LengthMM] p)
+        (update :properties dissoc :pool1LengthMm))
+    m))
+
 (defn ->old-lipas-sports-site*
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
   [m]
@@ -74,7 +85,8 @@
                                  (set/rename-keys old/prop-mappings-reverse)))
         old/adapt-geoms
         utils/clean
-        utils/->camel-case-keywords)))
+        utils/->camel-case-keywords
+        fix-special-case)))
 
 (defmulti ->old-lipas-sports-site
   "Transforms New LIPAS sports-site to old Lipas sports-site. Details
