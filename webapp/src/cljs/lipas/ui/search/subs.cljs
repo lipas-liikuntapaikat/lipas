@@ -316,9 +316,9 @@
 (re-frame/reg-sub
  ::pagination
  :<- [::pagination*]
- :<- [:lipas.ui.user.subs/admin?]
- (fn [[pagination admin?] _]
-   (if admin?
+ :<- [:lipas.ui.subs/logged-in?]
+ (fn [[pagination logged-in?] _]
+   (if logged-in?
      (update pagination :page-sizes conj 5000)
      pagination)))
 
