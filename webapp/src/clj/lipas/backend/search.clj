@@ -88,13 +88,13 @@
 (defn search
   [client idx-name params]
   (es/request client {:method :get
-                      :url    (es-utils/url [idx-name :_doc :_search])
+                      :url    (es-utils/url [idx-name :_search])
                       :body   params}))
 
 (defn scroll
   [client idx-name params]
   (es/scroll-chan client {:method :get
-                          :url    (es-utils/url [idx-name :_doc :_search])
+                          :url    (es-utils/url [idx-name :_search])
                           :body   params}))
 
 (defn more?
