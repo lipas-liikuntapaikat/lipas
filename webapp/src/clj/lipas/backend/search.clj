@@ -17,17 +17,11 @@
    {:settings
     {:max_result_window 50000}
     :mappings
-    {:_doc
-     {:properties
-      {:location.geometries.features
-       {:type "nested"
-        :properties
-        {:geometry
-         {:type             "geo_shape"
-          :ignore_malformed true}
-         :type {:type "keyword"}}}
-       :search-meta.location.wgs84-point
-       {:type "geo_point"}}}}}})
+    {:properties
+     {:search-meta.location.wgs84-point
+      {:type "geo_point"}
+      :search-meta.location.geometries
+      {:type "geo_shape"}}}}})
 
 (defn gen-idx-name
   "Returns index name generated from current timestamp that is
@@ -94,13 +88,13 @@
 (defn search
   [client idx-name params]
   (es/request client {:method :get
-                      :url    (es-utils/url [idx-name :_doc :_search])
+                      :url    (es-utils/url [idx-name :_search])
                       :body   params}))
 
 (defn scroll
   [client idx-name params]
   (es/scroll-chan client {:method :get
-                          :url    (es-utils/url [idx-name :_doc :_search])
+                          :url    (es-utils/url [idx-name :_search])
                           :body   params}))
 
 (defn more?
@@ -116,7 +110,7 @@
 (defn wrap-es-bulk
   [es-index es-type id-fn entry]
   [{:index {:_index es-index
-            :_type  es-type
+            ;;:_type  es-type
             :_id    (id-fn entry)}}
    entry])
 

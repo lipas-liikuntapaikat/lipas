@@ -93,7 +93,10 @@
           prop-types/all))
 
 (def meta-fields
-  {"search-meta.location.wgs84-point" {:fi "Koordinaatit (WGS84)"}})
+  {"search-meta.location.wgs84-point"      {:fi "Koordinaatit (WGS84)"
+                                            :en "Coordinates (WGS84)"}
+   "search-meta.location.avi-area.name.fi" {:fi "AVI-alue" :en "AVI-area"}
+   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province"}})
 
 (def area-fields
   (select-keys prop-fields ["properties.area-m2"

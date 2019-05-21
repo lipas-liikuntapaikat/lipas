@@ -45,8 +45,8 @@
   [permissions sports-site]
 
   {:pre [(s/valid? :lipas.user/permissions permissions)
-         (or (s/valid? :lipas/new-sports-site sports-site)
-             (s/explain :lipas/new-sports-site sports-site))]}
+         (or (s/valid? :lipas/sports-site-like sports-site)
+             (s/explain :lipas/sports-site-like sports-site))]}
 
   (let [{:keys [admin?]} permissions]
 

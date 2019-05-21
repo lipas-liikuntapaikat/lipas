@@ -11,6 +11,23 @@
    proj4
    [re-frame.core :as re-frame]))
 
+(defn wgs84->epsg3067 [wgs84-coords]
+  (let [proj      (.get js/ol.proj "EPSG:3067")
+        [lon lat] (js->clj (ol.proj.fromLonLat (clj->js wgs84-coords) proj))]
+    {:lon lon :lat lat}))
+
+(defn epsg3067->wgs84-fast [wgs84-coords]
+  (let [proj      (.get js/ol.proj "EPSG:3067")]
+    (ol.proj.toLonLat wgs84-coords proj)))
+
+(defn resolve-top-left [extent]
+  (epsg3067->wgs84-fast
+   #js[(aget extent 0) (aget extent 3)]))
+
+(defn resolve-bottom-right [extent]
+  (epsg3067->wgs84-fast
+   #js[(aget extent 2) (aget extent 1)]))
+
 (re-frame/reg-event-db
  ::toggle-drawer
  (fn [db _]
@@ -27,6 +44,8 @@
               (assoc-in [:map :center-wgs84] center-wgs84)
               (assoc-in [:map :zoom] zoom)
               (assoc-in [:map :extent] extent)
+              (assoc-in [:map :top-left-wgs84] (resolve-top-left extent))
+              (assoc-in [:map :bottom-right-wgs84] (resolve-bottom-right extent))
               (assoc-in [:map :width] width)
               (assoc-in [:map :height] height))
       :dispatch-n
@@ -39,11 +58,6 @@
  ::fit-to-current-vectors
  (fn [db _]
    (assoc-in db [:map :mode :fit-nonce] (gensym))))
-
-(defn wgs84->epsg3067 [wgs84-coords]
-  (let [proj      (.get js/ol.proj "EPSG:3067")
-        [lon lat] (js->clj (ol.proj.fromLonLat (clj->js wgs84-coords) proj))]
-    {:lon lon :lat lat}))
 
 (re-frame/reg-event-fx
  ::zoom-to-site
@@ -224,12 +238,12 @@
 
 (re-frame/reg-event-fx
  ::show-sports-site
- (fn [db [_ lipas-id]]
+ (fn [_ [_ lipas-id]]
    {:dispatch-n
-    [(if lipas-id
-       (let [params {:lipas-id lipas-id}]
-         [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params])
-       [:lipas.ui.events/navigate :lipas.ui.routes.map/map])]}))
+    (if lipas-id
+      (let [params {:lipas-id lipas-id}]
+        [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params]])
+      [[:lipas.ui.events/navigate :lipas.ui.routes.map/map]])}))
 
 (re-frame/reg-event-fx
  ::edit-site
@@ -271,7 +285,8 @@
  ::start-adding-new-site
  (fn [{:keys [db]} [_]]
    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
-    :dispatch-n [[:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+    :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
+                 [:lipas.ui.sports-sites.events/start-adding-new-site]]}))
 
 (re-frame/reg-event-fx
  ::discard-new-site

@@ -1,7 +1,8 @@
 (ns lipas.ui.stats.subsidies.subs
   (:require
-   [lipas.ui.utils :as utils]
+   [clojure.string :as string]
    [lipas.data.types :as types]
+   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -79,9 +80,17 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::data*]
  :<- [::grouping-data]
- (fn [[tr data [k group]] _]
-   (let [locale (tr)
-         op     :sum]
+ :<- [::selected-years]
+ :<- [:lipas.ui.sports-sites.subs/avi-areas]
+ :<- [:lipas.ui.sports-sites.subs/provinces]
+ :<- [:lipas.ui.stats.subs/cities]
+ (fn [[tr data [k group] years avis provinces cities] _]
+   (let [locale       (tr)
+         op           :sum
+         get-avi      (fn [city-code]
+                        (-> city-code cities :avi-id avis :name locale))
+         get-province (fn [city-code]
+                        (-> city-code cities :province-id provinces :name locale))]
      (->> data
           :aggregations
           :by_grouping
@@ -89,10 +98,15 @@
           (reduce
            (fn [res {:keys [key doc_count amount]}]
              (conj res
-                   {k       key
-                    :group  (get-in group [key :name locale])
-                    :count  doc_count
-                    :amount (-> amount op)}))
+                   (merge
+                    {k       key
+                     :year   (string/join ", " years)
+                     :group  (get-in group [key :name locale])
+                     :count  doc_count
+                     :amount (-> amount op)}
+                    (when (= :city-code k)
+                      {:avi-name      (get-avi key)
+                       :province-name (get-province key)}))))
            [])
           (sort-by k)))))
 
@@ -107,12 +121,18 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::selected-grouping]
  (fn [[tr grouping] _]
-   [[:group (if (= "type" grouping )
-              (tr :lipas.sports-site/type)
-              (tr :stats/region))]
-    [:year (tr :time/year)]
-    [:amount (tr :stats/total-amount-1000e)]
-    [:count (tr :stats/subsidies-count)]]))
+   (->>
+    [[:group (if (= "type" grouping )
+               (tr :lipas.sports-site/type)
+               (tr :stats/region))]
+     (when (= "city" grouping)
+       [:province-name (tr :lipas.location/province)])
+     (when (= "city" grouping)
+       [:avi-name (tr :lipas.location/avi-area)])
+     [:year (tr :time/year)]
+     [:amount (tr :stats/total-amount-1000e)]
+     [:count (tr :stats/subsidies-count)]]
+    (remove nil?))))
 
 (re-frame/reg-sub
  ::labels

@@ -601,7 +601,7 @@
           :opt-un [:lipas.location/postal-office]))
 
 (s/def :lipas.sport-site.type/type-code
-  (into #{} (map :type-code) sports-site-types/all))
+  (into #{} (keys sports-site-types/all)))
 
 (s/def :lipas.sports-site.type/size-category
   (into #{} (keys ice-stadiums/size-categories)))
@@ -1138,6 +1138,17 @@
              :distinct true
              :into []))
 
+(s/def :lipas.sports-site-like/type
+  (s/keys :req-un [:lipas.sport-site.type/type-code]))
+
+(s/def :lipas.sports-site-like/location
+  (s/keys :req-un [:lipas.location/city]))
+
+(s/def :lipas/sports-site-like
+  (s/keys :req-un [:lipas.sports-site-like/type
+                   :lipas.sports-site-like/location]
+          :opt-un [:lipas.sports-site/lipas-id]))
+
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})
@@ -1186,7 +1197,6 @@
 (s/def :lipas.api.finance-report.req/city-service (keys reports/city-services))
 (s/def :lipas.api.finance-report.req/years
   (s/coll-of (s/int-in 2000 utils/this-year) :distinct true :into []))
-
 
 (s/def :lipas.api.finance-report/req
   (s/keys :req-un [:lipas.api.report.req/city-codes]
