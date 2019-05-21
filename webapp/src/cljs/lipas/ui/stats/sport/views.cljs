@@ -53,7 +53,7 @@
 
      [mui/grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+      [mui/grid {:container true :spacing 16}
 
        ;; Region selector
        [mui/grid {:item true :xs 12}
@@ -92,6 +92,20 @@
           :value     metric
           :on-change #(==> [::events/select-metric %])}]]]]
 
+     [mui/grid {:container true :item true :xs 12 :spacing 16}
+
+      ;; Tabs for choosing between chart/table views
+      [mui/grid {:item true}
+       [common/view-tabs
+        {:value     view
+         :on-change #(==> [::events/select-view %2])}]]
+
+      ;; Download Excel button
+      [mui/grid {:item true}
+       [common/download-excel-button
+        {:tr       tr
+         :on-click #(==> [::events/download-excel data headers])}]]]
+
      ;; Table
      (when (= view "table")
        [mui/grid {:item true :xs 12}
@@ -109,15 +123,4 @@
             :labels   labels
             :metric   metric
             :grouping grouping
-            :on-click on-click}]]))
-
-     ;; Tabs for choosing between chart/table views
-     [mui/grid {:item true}
-      [common/view-tabs
-       {:value     view
-        :on-change #(==> [::events/select-view %2])}]]
-
-     ;; Download Excel button
-     [common/download-excel-button
-      {:tr       tr
-       :on-click #(==> [::events/download-excel data headers])}]]))
+            :on-click on-click}]]))]))

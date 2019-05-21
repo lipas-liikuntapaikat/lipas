@@ -106,7 +106,7 @@
 
      [mui/grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+      [mui/grid {:container true :spacing 16}
 
        ;; Region selector
        [mui/grid {:item true :xs 12}
@@ -179,6 +179,19 @@
             :on-click #(==> [::events/clear-filters])}
            (tr :search/clear-filters)]])]]
 
+     ;; Tabs for choosing between chart/table views
+     [mui/grid {:container true :item true :xs 12}
+
+      [mui/grid {:item true}
+       [common/view-tabs
+        {:value     view
+         :on-change #(==> [::events/select-view %2])}]]
+
+      ;; Download Excel button
+      [common/download-excel-button
+       {:tr       tr
+        :on-click #(==> [::events/download-excel data headers])}]]
+
      ;; Chart
      (when (= "chart" view)
        (let [on-click (fn [evt]
@@ -207,17 +220,4 @@
      (when (= "table" view)
        [mui/grid {:item true :xs 12}
         [lui/table
-         {:headers headers :items data}]])
-
-     ;; Tabs for choosing between chart/table views
-     [mui/grid {:container true :item true :xs 12}
-
-      [mui/grid {:item true}
-       [common/view-tabs
-        {:value     view
-         :on-change #(==> [::events/select-view %2])}]]
-
-      ;; Download Excel button
-      [common/download-excel-button
-       {:tr       tr
-        :on-click #(==> [::events/download-excel data headers])}]]]))
+         {:headers headers :items data}]])]))
