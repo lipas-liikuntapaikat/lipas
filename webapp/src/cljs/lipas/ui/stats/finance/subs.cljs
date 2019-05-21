@@ -85,10 +85,14 @@
  :<- [:lipas.ui.sports-sites.subs/provinces]
  :<- [:lipas.ui.stats.subs/cities]
  (fn [[tr data grouping unit avis provinces cities] _]
-   (let [locale (tr)
-         op     (if (= unit "euros-per-capita")
-                  (comp utils/round-safe :avg)
-                  :sum)]
+   (let [locale       (tr)
+         op           (if (= unit "euros-per-capita")
+                        (comp utils/round-safe :avg)
+                        :sum)
+         get-avi      (fn [city-code]
+                        (-> city-code cities :avi-id avis :name locale))
+         get-province (fn [city-code]
+                        (-> city-code cities :province-id provinces :name locale))]
      (->> data
           :aggregations
           :by_grouping
@@ -102,16 +106,20 @@
                                           "avi"      avis
                                           "province" provinces
                                           "city"     cities)]]
-                       {k                   key
-                        :year               (:key b)
-                        :region             (get-in region [key :name locale])
-                        :count              (-> b :doc_count)
-                        :operating-expenses (-> b :operating-expenses op)
-                        :operating-incomes  (-> b :operating-incomes op)
-                        :net-costs          (-> b :net-costs op)
-                        :subsidies          (-> b :subsidies op)
-                        :investments        (-> b :investments op)
-                        :population         (-> b :population :sum)}))))
+                       (merge
+                        {k                   key
+                         :year               (:key b)
+                         :region             (get-in region [key :name locale])
+                         :count              (-> b :doc_count)
+                         :operating-expenses (-> b :operating-expenses op)
+                         :operating-incomes  (-> b :operating-incomes op)
+                         :net-costs          (-> b :net-costs op)
+                         :subsidies          (-> b :subsidies op)
+                         :investments        (-> b :investments op)
+                         :population         (-> b :population :sum)}
+                        (when (= "city" grouping)
+                          {:avi-name      (get-avi key)
+                           :province-name (get-province key)}))))))
            [])
           (sort-by (if (= grouping "avi") :avi-id :province-id))))))
 
@@ -126,16 +134,23 @@
 (re-frame/reg-sub
  ::headers
  :<- [:lipas.ui.subs/translator]
- (fn [tr _]
-   [[:region (tr :stats/region)]
-    [:year (tr :time/year)]
-    ;;[:city-code (tr :lipas.location/city-code)]
-    [:population (tr :stats/population)]
-    [:investments (tr :stats-metrics/investments)]
-    [:net-costs (tr :stats-metrics/net-costs)]
-    [:operating-expenses (tr :stats-metrics/operating-expenses)]
-    [:operating-incomes (tr :stats-metrics/operating-incomes)]
-    [:subsidies (tr :stats-metrics/subsidies)]]))
+ :<- [::selected-grouping]
+ (fn [[tr grouping] _]
+   (->>
+    [[:region (tr :stats/region)]
+     (when (= "city" grouping)
+       [:province-name (tr :lipas.location/province)])
+     (when (= "city" grouping)
+       [:avi-name (tr :lipas.location/avi-area)])
+     [:year (tr :time/year)]
+     ;;[:city-code (tr :lipas.location/city-code)]
+     [:population (tr :stats/population)]
+     [:investments (tr :stats-metrics/investments)]
+     [:net-costs (tr :stats-metrics/net-costs)]
+     [:operating-expenses (tr :stats-metrics/operating-expenses)]
+     [:operating-incomes (tr :stats-metrics/operating-incomes)]
+     [:subsidies (tr :stats-metrics/subsidies)]]
+    (remove nil?))))
 
 (re-frame/reg-sub
  ::labels
