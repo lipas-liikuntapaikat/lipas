@@ -551,8 +551,6 @@
    "Pihlajalinna Areena on energiatehokas jäähalli"},
   :lipas.location
   {:address "Katuosoite",
-   :province "Maakunta"
-   :avi-area "AVI-alue"
    :city "Kunta",
    :city-code "Kuntanumero",
    :headline "Sijainti",
@@ -710,6 +708,7 @@
    :modify-linestring "Muokkaa reittiä",
    :download-gpx "Lataa GPX",
    :add-to-map "Lisää kartalle",
+   :bounding-box-filter "Hae kartan alueelta",
    :remove-linestring "Poista reittiosa",
    :draw-geoms "Piirrä",
    :confirm-remove "Haluatko varmasti poistaa valitun geometrian?",
@@ -1491,6 +1490,7 @@
    :modify-linestring "Modify routes",
    :download-gpx "Download GPX",
    :add-to-map "Add to map",
+   :bounding-box-filter "Search from map area",
    :remove-linestring "Remove route",
    :draw-geoms "Draw",
    :confirm-remove

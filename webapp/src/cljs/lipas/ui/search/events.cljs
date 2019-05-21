@@ -432,7 +432,7 @@
     :dispatch-n
     [[::submit-search]
      (when (> page-size 500)
-       [::set-bounding-box-filter true][])]}))
+       [::set-bounding-box-filter true])]}))
 
 (re-frame/reg-event-fx
  ::set-filters-by-permissions
