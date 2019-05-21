@@ -339,7 +339,8 @@
   (let [total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
         filters-active? (<== [::subs/filters-active?])
-        bb-only?        (<== [::subs/bounding-box-filter])]
+        bbox-only?      (<== [::subs/bounding-box-filter])
+        bbox-enabled?   (<== [::subs/allow-changing-bounding-box-filter?])]
 
     [:div {:style {:height "100%"}}
      [mui/grid
@@ -366,8 +367,9 @@
       ;; Search only from area visible on map
       [mui/grid {:item true :xs 12}
        [lui/checkbox
-        {:label     "Hae kartan alueelta"
-         :value     bb-only?
+        {:label     (tr :map/bounding-box-filter)
+         :disabled  (not bbox-enabled?)
+         :value     bbox-only?
          :on-change #(==> [::events/set-bounding-box-filter %])}]]
 
       ;; Filters expansion panel

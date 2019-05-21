@@ -326,3 +326,9 @@
  ::in-progress?
  (fn [db _]
    (-> db :search :in-progress?)))
+
+(re-frame/reg-sub
+ ::allow-changing-bounding-box-filter?
+ :<- [::pagination]
+ (fn [{:keys [page-size]}]
+   (>= 500 page-size)))
