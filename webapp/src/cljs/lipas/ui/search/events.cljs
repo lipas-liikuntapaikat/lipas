@@ -170,7 +170,7 @@
                                 {:gauss
                                  {:search-meta.location.wgs84-point
                                   {:origin (str lat "," lon)
-                                   :offset "0m"
+                                   :offset (str distance "m")
                                    :scale  (str distance "m")}}})])}}})]
      (cond-> params
        bbox?        (add-filter (->geo-intersects-filter bbox))
@@ -429,7 +429,10 @@
  ::change-result-page-size
  (fn [{:keys [db]} [_ page-size]]
    {:db       (assoc-in db [:search :pagination :page-size] page-size)
-    :dispatch [::submit-search]}))
+    :dispatch-n
+    [[::submit-search]
+     (when (> page-size 500)
+       [::set-bounding-box-filter true][])]}))
 
 (re-frame/reg-event-fx
  ::set-filters-by-permissions
