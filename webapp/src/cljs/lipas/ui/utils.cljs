@@ -312,24 +312,6 @@
   (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
                 (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
 
-;; https://caniuse.com/#search=position%3Asticky
-(defn supports-sticky? []
-  (cond
-    (and
-     (gbrowser/isEdge)
-     (gbrowser/isVersionOrHigher 16)) true
-    (gbrowser/isChrome)               true
-    (gbrowser/isFirefox)              true
-    (gbrowser/isSilk)                 true
-    (gbrowser/isCoast)                true
-    (gbrowser/isOpera)                true
-    (gbrowser/isAndroidBrowser)       true
-    :else                             false))
-
-(defn supports-webkit-sticky? []
-  (or (gbrowser/isSafari)
-      (gbrowser/isIosWebview)))
-
 (defn ie? []
   (gbrowser/isIE))
 
