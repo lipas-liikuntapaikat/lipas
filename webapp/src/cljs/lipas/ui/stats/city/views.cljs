@@ -114,6 +114,20 @@
           :value     years
           :on-change #(==> [::events/select-finance-years %])}]]]]
 
+     [mui/grid {:container true :item true :xs 12 :spacing 16}
+
+      ;; Tabs for choosing between chart/table views
+      [mui/grid {:item true}
+       [common/view-tabs
+        {:value     view
+         :on-change #(==> [::events/select-finance-view %2])}]]
+
+      ;; Download Excel button
+      [mui/grid {:item true}
+       [common/download-excel-button
+        {:tr       tr
+         :on-click #(==> [::events/download-finance-excel finance-data headers])}]]]
+
      ;; Chart
      (when (= view "chart")
        [mui/grid {:item true :xs 12}
@@ -124,15 +138,4 @@
      (when (= view "table")
        [mui/grid {:item true :xs 12}
         [lui/table
-         {:headers headers :items finance-data}]])
-
-     ;; Tabs for choosing between chart/table views
-     [mui/grid {:item true}
-      [common/view-tabs
-       {:value     view
-        :on-change #(==> [::events/select-finance-view %2])}]]
-
-     ;; Download Excel button
-     [common/download-excel-button
-      {:tr       tr
-       :on-click #(==> [::events/download-finance-excel finance-data headers])}]]))
+         {:headers headers :items finance-data}]])]))

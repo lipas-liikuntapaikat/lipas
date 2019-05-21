@@ -42,8 +42,9 @@
      {:name       :lipas.ui.routes.swimming-pools/details-view
       :parameters {:path {:lipas-id int?}}
       :controllers
-      [{:params (fn [match]
-                  (-> match :parameters :path))
+      [{:identity
+        (fn [match]
+          (-> match :parameters :path))
         :start
         (fn [{:keys [lipas-id]}]
           (==> [::events/display-site {:lipas-id lipas-id}]))}]}]]

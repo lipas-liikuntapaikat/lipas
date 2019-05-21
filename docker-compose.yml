@@ -254,7 +254,7 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.6.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.0.1
     ports:
       - '9200:9200'
       - '9300:9300'
@@ -271,7 +271,7 @@ services:
       - esdata:/usr/share/elasticsearch/data
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:6.6.1
+    image: docker.elastic.co/logstash/logstash:7.0.1
     ports:
       - "5000:5000/udp"
     environment:
@@ -282,7 +282,7 @@ services:
       - "./logstash/pipeline:/usr/share/logstash/pipeline:z"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:6.6.1
+    image: docker.elastic.co/kibana/kibana:7.0.1
     ports:
       - "5601:5601"
     environment:

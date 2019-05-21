@@ -292,14 +292,14 @@
       :display-name "map-inner"})))
 
 (defn map-outer []
-  (let [geoms   (re-frame/subscribe [::subs/geometries])
-        basemap (re-frame/subscribe [::subs/basemap])
-        center  (re-frame/subscribe [::subs/center])
-        zoom    (re-frame/subscribe [::subs/zoom])
-        mode    (re-frame/subscribe [::subs/mode])]
+  (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
+        basemap    (re-frame/subscribe [::subs/basemap])
+        center     (re-frame/subscribe [::subs/center])
+        zoom       (re-frame/subscribe [::subs/zoom])
+        mode       (re-frame/subscribe [::subs/mode])]
     (fn []
       [map-inner
-       {:geoms   @geoms
+       {:geoms   @geoms-fast
         :basemap @basemap
         :center  @center
         :zoom    @zoom

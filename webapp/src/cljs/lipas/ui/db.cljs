@@ -41,24 +41,24 @@
     :selected-status nil
     :selected-year   utils/this-year}
 
-   :statuses              sports-sites/statuses
-   :document-statuses     sports-sites/document-statuses
-   :admins                admins/all
-   :owners                owners/all
-   :cities                cities/by-city-code
-   :cities-by-avi-id      cities/by-avi-id
-   :cities-by-province-id cities/by-province-id
-   :provinces             cities/provinces
-   :avi-areas             cities/avi-areas
-   :abolished-cities      cities/abolished-by-city-code
-   :types                 types/all
-   :materials             materials/all
-   :building-materials    materials/building-materials
-   :supporting-structures materials/supporting-structures
-   :ceiling-structures    materials/ceiling-structures
-   :base-floor-structures materials/base-floor-structures
-   :surface-materials     materials/surface-materials
-   :prop-types            prop-types/used
+   :statuses               sports-sites/statuses
+   :document-statuses      sports-sites/document-statuses
+   :admins                 admins/all
+   :owners                 owners/all
+   :cities                 cities/by-city-code
+   :cities-by-avi-id       cities/by-avi-id
+   :cities-by-province-id  cities/by-province-id
+   :provinces              cities/provinces
+   :avi-areas              cities/avi-areas
+   :abolished-cities       cities/abolished-by-city-code
+   :types                  types/all
+   :materials              materials/all
+   :building-materials     materials/building-materials
+   :supporting-structures  materials/supporting-structures
+   :ceiling-structures     materials/ceiling-structures
+   :base-floor-structures  materials/base-floor-structures
+   :surface-materials      materials/surface-materials
+   :prop-types             prop-types/used
 
    ;; Ice stadiums
    :ice-stadiums
@@ -109,9 +109,10 @@
    :search
    {:string       nil
     :filters
-    {:statuses   #{"active" "out-of-service-temporarily"}
-     :type-codes #{}
-     :city-codes #{}}
+    {:statuses      #{"active" "out-of-service-temporarily"}
+     :type-codes    #{}
+     :city-codes    #{}
+     :bounding-box? true}
     :sort
     {:asc?    true
      :sort-fn :score}
@@ -121,7 +122,7 @@
     :pagination
     {:page       0
      :page-size  250
-     :page-sizes [25 50 100 250 500]}}
+     :page-sizes [25 50 100 250 500 1000]}}
 
    ;; Reminders
    :reminders

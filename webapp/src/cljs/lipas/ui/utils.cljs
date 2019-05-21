@@ -312,34 +312,18 @@
   (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
                 (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
 
-;; https://caniuse.com/#search=position%3Asticky
-(defn supports-sticky? []
-  (cond
-    (and
-     (gbrowser/isEdge)
-     (gbrowser/isVersionOrHigher 16)) true
-    (gbrowser/isChrome)               true
-    (gbrowser/isFirefox)              true
-    (gbrowser/isSilk)                 true
-    (gbrowser/isCoast)                true
-    (gbrowser/isOpera)                true
-    (gbrowser/isAndroidBrowser)       true
-    :else                             false))
-
-(defn supports-webkit-sticky? []
-  (or (gbrowser/isSafari)
-      (gbrowser/isIosWebview)))
-
 (defn ie? []
   (gbrowser/isIE))
 
-(defn add-to-db [db {:keys [lipas-id event-date] :as rev}]
+(defn add-to-db
+  [db {:keys [lipas-id event-date] :as rev}]
   (let [new-db (assoc-in db [:sports-sites lipas-id :history event-date] rev)]
     (if (latest? rev (get-in db [:sports-sites lipas-id :history]))
       (assoc-in new-db [:sports-sites lipas-id :latest] event-date)
       new-db)))
 
-(defn ->feature [{:keys [lipas-id name type] :as site}]
+(defn ->feature
+  [{:keys [lipas-id name type] :as site}]
   (let [type-code (-> type :type-code)]
     (-> site
         :location
