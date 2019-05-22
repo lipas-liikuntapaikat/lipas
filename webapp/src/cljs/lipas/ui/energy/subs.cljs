@@ -55,12 +55,12 @@
 (re-frame/reg-sub
  ::energy-report
  (fn [db [_ year type-code]]
-   (get-in db [:energy-stats year type-code])))
+   (get-in db [:energy year type-code])))
 
 (re-frame/reg-sub
  ::chart-energy-type
  (fn [db _]
-   (-> db :energy-stats :chart-energy-type)))
+   (-> db :energy :chart-energy-type)))
 
 (def months [:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec])
 

@@ -64,7 +64,7 @@
                      name      (gobj/get obj "name")]
 
                  ;; To avoid displaying duplicates when editing
-                 (when-not (= lipas-id' lipas-id )
+                 (when-not (= lipas-id' lipas-id)
                    #js{:type     "FeatureCollection"
                        :features (garray/map
                                   geoms

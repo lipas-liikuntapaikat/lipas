@@ -126,17 +126,17 @@
 (re-frame/reg-sub
  ::admins
  (fn [db _]
-   (-> db :admins)))
+   (-> db :sports-sites :admins)))
 
 (re-frame/reg-sub
  ::owners
  (fn [db _]
-   (-> db :owners)))
+   (-> db :sports-sites :owners)))
 
 (re-frame/reg-sub
  ::all-types
  (fn [db _]
-   (-> db :types)))
+   (-> db :sports-sites :types)))
 
 (re-frame/reg-sub
  ::type-by-type-code
@@ -167,32 +167,32 @@
 (re-frame/reg-sub
  ::materials
  (fn [db _]
-   (-> db :materials)))
+   (-> db :sports-sites :materials)))
 
 (re-frame/reg-sub
  ::building-materials
  (fn [db _]
-   (-> db :building-materials)))
+   (-> db :sports-sites :building-materials)))
 
 (re-frame/reg-sub
  ::supporting-structures
  (fn [db _]
-   (-> db :supporting-structures)))
+   (-> db :sports-sites :supporting-structures)))
 
 (re-frame/reg-sub
  ::ceiling-structures
  (fn [db _]
-   (-> db :ceiling-structures)))
+   (-> db :sports-sites :ceiling-structures)))
 
 (re-frame/reg-sub
  ::surface-materials
  (fn [db _]
-   (-> db :surface-materials)))
+   (-> db :sports-sites :surface-materials)))
 
 (re-frame/reg-sub
  ::prop-types
  (fn [db _]
-   (-> db :prop-types)))
+   (-> db :sports-sites :prop-types)))
 
 (re-frame/reg-sub
  ::types-props
@@ -336,7 +336,7 @@
  ::new-site-type
  (fn [db _]
    (let [type-code (-> db :new-sports-site :type)]
-     (get-in db [:types type-code]))))
+     (get-in db [:sports-sites :types type-code]))))
 
 (re-frame/reg-sub
  ::new-site-valid?
@@ -348,7 +348,7 @@
 (re-frame/reg-sub
  ::statuses
  (fn [db _]
-   (-> db :statuses)))
+   (-> db :sports-sites :statuses)))
 
 (re-frame/reg-sub
  ::delete-statuses
@@ -367,14 +367,14 @@
 (re-frame/reg-sub
  ::delete-dialog-open?
  (fn [db _]
-   (-> db :delete-dialog :open?)))
+   (-> db :sports-sites :delete-dialog :open?)))
 
 (re-frame/reg-sub
  ::selected-delete-status
  (fn [db _]
-   (-> db :delete-dialog :selected-status)))
+   (-> db :sports-sites :delete-dialog :selected-status)))
 
 (re-frame/reg-sub
  ::selected-delete-year
  (fn [db _]
-   (-> db :delete-dialog :selected-year)))
+   (-> db :sports-sites :delete-dialog :selected-year)))
