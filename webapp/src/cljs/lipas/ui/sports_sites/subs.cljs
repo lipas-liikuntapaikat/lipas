@@ -9,7 +9,7 @@
 (re-frame/reg-sub
  ::sports-sites
  (fn [db _]
-   (-> db :sports-sites)))
+   (->> db :sports-sites)))
 
 (re-frame/reg-sub
  ::sports-site
@@ -21,11 +21,13 @@
  :<- [::sports-sites]
  (fn [sites _]
    (not-empty
-    (reduce-kv (fn [m k v]
-                 (let [site (get-in v [:history (:latest v)])]
-                   (assoc m k site)))
-               {}
-               sites))))
+    (reduce-kv
+     (fn [m k v]
+       (if-let [site (get-in v [:history (:latest v)])]
+         (assoc m k site)
+         m))
+     {}
+     sites))))
 
 (re-frame/reg-sub
  ::latest-rev
@@ -205,6 +207,13 @@
                  (assoc res k (merge prop-type v))))
              {}
              props))))
+
+(re-frame/reg-sub
+ ::geom-type
+ (fn [[_ lipas-id]]
+   (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id]))
+ (fn [rev _]
+   (-> rev :location :geometries :features first :geometry :type)))
 
 (re-frame/reg-sub
  ::display-site

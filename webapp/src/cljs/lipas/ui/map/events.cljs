@@ -231,7 +231,8 @@
  (fn [{:keys [db]} [_ geoms type-code]]
    (let [geoms (update geoms :features
                        (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:db         (assoc-in db [:map :mode :sub-mode] :finished)
+     {:db         (-> db
+                      (assoc-in [:map :mode :sub-mode] :finished))
       :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
 
 ;;; Higher order events ;;;
@@ -532,3 +533,14 @@
    (let [tr (-> db :translator)]
      (assoc-in db [:map :mode :problems] {:data  (problems->fcoll tr problems)
                                           :show? true}))))
+
+(re-frame/reg-event-fx
+ ::duplicate-sports-site
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [ts     (get-in db [:sports-sites lipas-id :latest])
+         latest (get-in db [:sports-sites lipas-id :history ts])
+         geom   (get-in latest [:location :geometries])]
+     {:dispatch-n
+      [[::start-adding-new-site]
+       [::new-geom-drawn geom]
+       [:lipas.ui.sports-sites.events/duplicate latest]]})))

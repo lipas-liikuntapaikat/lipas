@@ -3,6 +3,7 @@
    [ajax.core :as ajax]
    [lipas.ui.interceptors :as interceptors]
    [lipas.ui.utils :as utils]
+   [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -209,12 +210,15 @@
 (re-frame/reg-event-fx
  ::init-new-site
  (fn [{:keys [db]} [_ type-code geoms]]
-   (let [data {:status     "active"
-               :event-date (utils/timestamp)
-               :type       {:type-code type-code}
-               :location   {:geometries geoms}}]
-     {:db (-> db
-              (assoc-in [:new-sports-site :data] data))})))
+   ;; We guess city-code based on permissions.
+   ;; TODO maybe use geolocation for better guesses
+   (let [city-code (-> db :user :login :permissions :cities first)
+         data      {:status     "active"
+                    :event-date (utils/timestamp)
+                    :type       {:type-code type-code}
+                    :location   {:geometries geoms
+                                 :city       {:city-code city-code}}}]
+     {:db (-> db (update-in [:new-sports-site :data] cutils/deep-merge data))})))
 
 (re-frame/reg-event-db
  ::edit-new-site-field
@@ -248,3 +252,13 @@
                             [::select-delete-status nil]
                             [::select-delete-year utils/this-year]])]
      {:dispatch [::commit-rev data draft? on-success]})))
+
+(re-frame/reg-event-fx
+ ::duplicate
+ (fn [{:keys [db]} [_ rev]]
+   (let [data (merge
+               (dissoc rev :lipas-id)
+               {:event-date (utils/timestamp)
+                :status     "active"})]
+     {:db (-> db
+              (assoc-in [:new-sports-site :data] data))})))
