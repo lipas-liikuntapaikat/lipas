@@ -224,17 +224,17 @@
 (re-frame/reg-event-db
  ::toggle-delete-dialog
  (fn [db _]
-   (update-in db [:delete-dialog :open?] not)))
+   (update-in db [:sports-sites :delete-dialog :open?] not)))
 
 (re-frame/reg-event-db
  ::select-delete-status
  (fn [db [_ status]]
-   (assoc-in db [:delete-dialog :selected-status] status)))
+   (assoc-in db [:sports-sites :delete-dialog :selected-status] status)))
 
 (re-frame/reg-event-db
  ::select-delete-year
  (fn [db [_ year]]
-   (assoc-in db [:delete-dialog :selected-year] year)))
+   (assoc-in db [:sports-sites :delete-dialog :selected-year] year)))
 
 (re-frame/reg-event-fx
  ::delete
