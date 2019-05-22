@@ -298,9 +298,10 @@
       [:> js/materialIcons.Calculator]]]]])
 
 (defn properties-form
-  [{:keys [tr edit-data display-data types-props on-change read-only?
+  [{:keys [tr edit-data display-data type-code on-change read-only?
            key geoms problems?]}]
-  (let [locale (tr)]
+  (let [locale      (tr)
+        types-props (<== [::subs/types-props type-code])]
     (into
      [lui/form
       {:key        key

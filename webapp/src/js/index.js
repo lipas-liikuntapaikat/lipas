@@ -339,6 +339,7 @@ window.ReactSelect = {
 // Material Design Icons
 import Calculator from 'mdi-material-ui/Calculator';
 import ContentCut from 'mdi-material-ui/ContentCut';
+import ContentDuplicate from 'mdi-material-ui/ContentDuplicate';
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
 import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
@@ -346,6 +347,7 @@ import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 window.materialIcons = {
   Calculator,
   ContentCut,
+  ContentDuplicate,
   Eraser,
   FileUpload,
   MapSearchOutline,

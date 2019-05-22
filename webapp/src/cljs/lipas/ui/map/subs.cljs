@@ -202,7 +202,9 @@
 (re-frame/reg-sub
  ::sports-site-view
  (fn [[_ lipas-id type-code] _]
-   [(re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+   [(re-frame/subscribe [:lipas.ui.user.subs/permission-to-cities])
+    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-types])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/geom-type lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id])
@@ -215,10 +217,11 @@
     (re-frame/subscribe [:lipas.ui.user.subs/logged-in?])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::mode])])
- (fn [[cities admins owners editing? edits-valid? editing-allowed?
-       delete-dialog-open? type types-props can-publish? logged-in?
-       size-categories mode] _]
-   {:cities              cities
+ (fn [[cities types geom-type admins owners editing? edits-valid?
+       editing-allowed?  delete-dialog-open? type types-props
+       can-publish? logged-in?  size-categories mode] _]
+   {:types               (filter (comp #{geom-type} :geometry-type second) types)
+    :cities              cities
     :admins              admins
     :owners              owners
     :editing?            editing?
@@ -247,8 +250,8 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-valid?])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/all-types])
+    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-cities])
+    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-types])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/prop-types])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::zoomed-for-drawing?])
@@ -256,26 +259,30 @@
     (re-frame/subscribe [::mode])])
  (fn [[type data valid? admins owners cities types prop-types
        size-categories zoomed? geom mode] _]
-   {:type            type
-    :type-code       (:type-code type)
-    :geom-type       (:geometry-type type)
-    :data            data
-    :new-site-valid? valid?
-    :admins          admins
-    :owners          owners
-    :cities          cities
-    :types           types
-    :types-props     (reduce (fn [res [k v]]
-                               (let [prop-type (prop-types k)]
-                                 (assoc res k (merge prop-type v))))
-                             {}
-                             (:props type))
-    :size-categories size-categories
-    :zoomed?         zoomed?
-    :geom            geom
-    :problems?       (-> mode :problems :data :features seq)
-    :sub-mode        (:sub-mode mode)
-    :active-step     (cond
-                       (some? data) 2
-                       (some? type) 1
-                       :else        0)}))
+   (let [geom-type (-> geom :features first :geometry :type)
+         sub-mode  (mode :sub-mode)]
+     {:type            type
+      :type-code       (:type-code type)
+      :geom-type       (:geometry-type type)
+      :data            data
+      :save-enabled?   (and valid? (= :finished sub-mode))
+      :admins          admins
+      :owners          owners
+      :cities          cities
+      :types           (if geom-type
+                         (filter (comp #{geom-type} :geometry-type second) types)
+                         types)
+      :types-props     (reduce (fn [res [k v]]
+                                 (let [prop-type (prop-types k)]
+                                   (assoc res k (merge prop-type v))))
+                               {}
+                               (:props type))
+      :size-categories size-categories
+      :zoomed?         zoomed?
+      :geom            geom
+      :problems?       (-> mode :problems :data :features seq)
+      :sub-mode        sub-mode
+      :active-step     (cond
+                         (= :finished sub-mode) 2
+                         (some? type)           1
+                         :else                  0)})))
