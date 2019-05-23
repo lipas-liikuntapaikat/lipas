@@ -254,7 +254,8 @@
    :clear-filters "Poista rajaukset"},
   :partners {:headline "Kehittä​misessä mukana"},
   :actions
-  {:select-year "Valitse vuosi",
+  {:duplicate "Kopioi",
+   :select-year "Valitse vuosi",
    :select-owners "Valitse omistajat",
    :select-admins "Valitse ylläpitäjät",
    :open-main-menu "Avaa päävalikko",
@@ -1050,7 +1051,8 @@
    :clear-filters "Clear filters"},
   :partners {:headline "In association with"},
   :actions
-  {:select-year "Select year",
+  {:duplicate "Duplicate",
+   :select-year "Select year",
    :select-owners "Select owners",
    :select-admins "Select administrators",
    :save-draft "Save draft",

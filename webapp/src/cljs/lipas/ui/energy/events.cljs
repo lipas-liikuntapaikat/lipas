@@ -89,7 +89,7 @@
 (re-frame/reg-event-db
  ::fetch-energy-report-success
  (fn [db [_ year type-code data]]
-   (assoc-in db [:energy-stats year type-code] data)))
+   (assoc-in db [:energy year type-code] data)))
 
 (re-frame/reg-event-fx
  ::fetch-energy-report-failure
@@ -113,4 +113,4 @@
 (re-frame/reg-event-db
  ::select-energy-type
  (fn [db [_ energy-type]]
-   (assoc-in db [:energy-stats :chart-energy-type] energy-type)))
+   (assoc-in db [:energy :chart-energy-type] energy-type)))

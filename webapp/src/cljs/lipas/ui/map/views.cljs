@@ -214,12 +214,12 @@
 
           type-code (-> display-data :type :type-code)
 
-          {:keys [cities admins owners editing? edits-valid? problems?
-                  editing-allowed? delete-dialog-open? can-publish? logged-in?
-                  size-categories sub-mode types-props geom-type portal]}
+          {:keys [types cities admins owners editing? edits-valid?
+                  problems?  editing-allowed? delete-dialog-open?
+                  can-publish? logged-in?  size-categories sub-mode
+                  geom-type portal]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
-          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
           set-field     (partial set-field lipas-id)]
 
       [mui/grid
@@ -278,7 +278,7 @@
                 :display-data    display-data
                 :edit-data       edit-data
                 :read-only?      (not editing?)
-                :types           (vals allowed-types)
+                :types           (vals types)
                 :size-categories size-categories
                 :admins          admins
                 :owners          owners
@@ -304,14 +304,14 @@
               ^{:key (str "props-" lipas-id)}
               [sports-sites/properties-form
                {:tr           tr
-                :types-props  types-props
+                :type-code    (or (-> edit-data :type :type-code) type-code)
                 :read-only?   (not editing?)
                 :on-change    (partial set-field :properties)
                 :display-data (:properties display-data)
                 :edit-data    (:properties edit-data)
                 :geoms        (-> edit-data :location :geometries)
                 :problems?    problems?
-                :key          type-code}]))]
+                :key          (-> edit-data :type :type-code)}]))]
 
        ;; Actions
        [:<>
@@ -348,6 +348,14 @@
                     link (-> js/window .-location .-href)]
                 [reminders/add-button
                  {:message (tr :reminders/placeholder name link)}]))
+
+            ;; Copy sports site
+            (when (and logged-in? (not editing?))
+              [mui/tooltip {:title (tr :actions/duplicate)}
+               [mui/fab
+                {:size     "small"
+                 :on-click #(==> [::events/duplicate-sports-site lipas-id])}
+                [:> js/materialIcons.ContentDuplicate]]])
 
             ;; Import geom
             (when (and editing? (#{"LineString"} geom-type))
@@ -454,13 +462,12 @@
 (defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
-    (let [locale                         (tr)
-          {:keys [type data new-site-valid? admins owners cities problems?
-                  types types-props size-categories zoomed? geom geom-type
+    (let [locale (tr)
+          {:keys [type data save-enabled? admins owners
+                  cities problems?  types size-categories zoomed? geom
                   active-step sub-mode]} (<== [::subs/add-sports-site-view])
 
-          allowed-types (<== [::sports-site-subs/types-by-geom-type geom-type])
-          set-field     set-new-site-field]
+          set-field set-new-site-field]
 
       [mui/grid
        {:container true
@@ -670,41 +677,41 @@
                [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
                [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
 
-            (case @selected-tab
+             (case @selected-tab
 
-              ;; Basic info tab
-              0 [mui/grid {:container true}
-                 [mui/grid {:item true :xs 12}
+               ;; Basic info tab
+               0 [mui/grid {:container true}
+                  [mui/grid {:item true :xs 12}
 
-                  [sports-sites/form
-                   {:tr              tr
-                    :edit-data       data
-                    :read-only?      false
-                    :types           (vals allowed-types)
-                    :size-categories size-categories
-                    :admins          admins
-                    :owners          owners
-                    :on-change       set-field
-                    :sub-headings?   true}]
+                   [sports-sites/form
+                    {:tr              tr
+                     :edit-data       data
+                     :read-only?      false
+                     :types           (vals types)
+                     :size-categories size-categories
+                     :admins          admins
+                     :owners          owners
+                     :on-change       set-field
+                     :sub-headings?   true}]
 
-                  [sports-sites/location-form
-                   {:tr            tr
-                    :read-only?    false
-                    :cities        (vals cities)
-                    :edit-data     (:location data)
-                    :on-change     (partial set-field :location)
-                    :sub-headings? true}]]]
+                   [sports-sites/location-form
+                    {:tr            tr
+                     :read-only?    false
+                     :cities        (vals cities)
+                     :edit-data     (:location data)
+                     :on-change     (partial set-field :location)
+                     :sub-headings? true}]]]
 
-              ;; Properties tab
-              1 [sports-sites/properties-form
-                 {:tr          tr
-                  :types-props types-props
-                  :read-only?  false
-                  :on-change   (partial set-field :properties)
-                  :edit-data   (:properties data)
-                  :geoms       (-> data :location :geometries)
-                  :problems?   problems?
-                  :key         type}])]]]]]]
+               ;; Properties tab
+               1 [sports-sites/properties-form
+                  {:key        (-> data :type :type-code)
+                   :tr         tr
+                   :type-code  (-> data :type :type-code )
+                   :read-only? false
+                   :on-change  (partial set-field :properties)
+                   :edit-data  (:properties data)
+                   :geoms      (-> data :location :geometries)
+                   :problems?  problems?}])]]]]]]
 
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}
@@ -722,7 +729,7 @@
               [lui/save-button
                {:tooltip          (tr :actions/save)
                 :disabled-tooltip (tr :actions/fill-required-fields)
-                :disabled         (not new-site-valid?)
+                :disabled         (not save-enabled?)
                 :on-click         #(==> [::events/save-new-site data])}]])
 
            [mui/grid {:item true}

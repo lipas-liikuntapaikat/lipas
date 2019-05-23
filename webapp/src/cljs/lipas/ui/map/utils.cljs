@@ -1,6 +1,6 @@
 (ns lipas.ui.map.utils
   "NOTE: make sure `lipas.ui.map.projection` is loaded first for
-  necessary side-effects to take effect.`"
+  x  necessary side-effects to take effect.`"
   (:require
    ["ol"]
    ["turf" :as turf]
