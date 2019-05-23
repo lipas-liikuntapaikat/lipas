@@ -6,7 +6,7 @@
    {:statuses      #{"active" "out-of-service-temporarily"}
     :type-codes    #{}
     :city-codes    #{}
-    :bounding-box? true}
+    :bounding-box? false}
    :sort
    {:asc?    true
     :sort-fn :score}
