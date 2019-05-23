@@ -534,12 +534,20 @@
      (assoc-in db [:map :mode :problems] {:data  (problems->fcoll tr problems)
                                           :show? true}))))
 
+(defn- geom-type [fcoll]
+  (-> fcoll :features first :geometry :type))
+
 (re-frame/reg-event-fx
  ::duplicate-sports-site
  (fn [{:keys [db]} [_ lipas-id]]
    (let [ts     (get-in db [:sports-sites lipas-id :latest])
          latest (get-in db [:sports-sites lipas-id :history ts])
-         geom   (get-in latest [:location :geometries])]
+         geom   (get-in latest [:location :geometries])
+         geom   (if (= "Point" (geom-type geom))
+                  ;; Shift point by ~11m so it doesn't overlap 1:1
+                  ;; with the original point.
+                  (update-in geom [:features 0 :geometry :coordinates 0] + 0.0001)
+                  geom)]
      {:dispatch-n
       [[::start-adding-new-site]
        [::new-geom-drawn geom]
