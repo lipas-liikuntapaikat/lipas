@@ -43,7 +43,7 @@
         #(-> %
              str
              string/lower-case
-             (string/includes? filter-text)) users)
+             (string/includes? (string/lower-case filter-text))) users)
        users))))
 
 (re-frame/reg-sub
