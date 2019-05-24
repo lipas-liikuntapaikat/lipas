@@ -7,6 +7,9 @@
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
+;; Zoom level where we start fetching full geoms
+(def full-geoms-threshold 9)
+
 (defn- add-filter [m filter]
   (update-in m [:query :function_score :query :bool :filter] conj filter))
 
@@ -106,7 +109,7 @@
                                 "name-localized"
                                 "type.type-code"
                                 "location.city.city-code"
-                                (if (> 9 zoom)
+                                (if (> full-geoms-threshold zoom)
                                   "search-meta.location.simple-geoms"
                                   "location.geometries")]
 
@@ -127,7 +130,7 @@
                                 "location.postal-code"
                                 "location.postal-office"
                                 "location.city.city-code"
-                                (if (> 9 zoom)
+                                (if (> full-geoms-threshold zoom)
                                   "search-meta.location.simple-geoms"
                                   "location.geometries")])}
                   :query
