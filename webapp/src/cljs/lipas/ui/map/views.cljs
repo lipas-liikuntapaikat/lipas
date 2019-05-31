@@ -869,14 +869,14 @@
      ;; Bar chart
      (when (seq data-bar)
        [mui/grid {:item true :xs 12}
-        [charts/population-chart
+        [charts/population-bar-chart
          {:data   data-bar
           :labels labels}]])
 
      ;; Area chart
      (when (seq data-area)
        [mui/grid {:item true :xs 12}
-        [charts/population-chart2
+        [charts/population-area-chart
          {:data   data-area
           :labels labels}]])
 

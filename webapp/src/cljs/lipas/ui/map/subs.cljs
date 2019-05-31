@@ -387,12 +387,12 @@
            (fn [res [zone ms]]
              (let [zk (keyword (str "zone" zone))]
                (-> res
-                   (assoc-in [:age-0-14 zk] (->> ms (map :ika_0_14) (reduce pos+)))
-                   (assoc-in [:age-15-64 zk] (->> ms (map :ika_15_64) (reduce pos+)))
-                   (assoc-in [:age-65- zk] (->> ms (map :ika_65_) (reduce pos+)))
-                   (assoc-in [:men zk] (->> ms (map :miehet) (reduce pos+)))
-                   (assoc-in [:women zk] (->> ms (map :naiset) (reduce pos+)))
-                   (assoc-in [:total zk] (->> ms (map :vaesto) (reduce pos+))))))
+                   (assoc-in [:age-0-14 zk] (->> ms (map :ika_0_14) (reduce pos+ 0)))
+                   (assoc-in [:age-15-64 zk] (->> ms (map :ika_15_64) (reduce pos+ 0)))
+                   (assoc-in [:age-65- zk] (->> ms (map :ika_65_) (reduce pos+ 0)))
+                   (assoc-in [:men zk] (->> ms (map :miehet) (reduce pos+ 0)))
+                   (assoc-in [:women zk] (->> ms (map :naiset) (reduce pos+ 0)))
+                   (assoc-in [:total zk] (->> ms (map :vaesto) (reduce pos+ 0))))))
            {})
         (map (fn [[k v]] (assoc v :group (labels k)))))))
 
@@ -409,7 +409,7 @@
          (fn [res [zone ms]]
            (conj res
                  {:zone      (labels (keyword (str "zone" zone)))
-                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+))
-                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+))
-                  :age-65-   (->> ms (map :ika_65_) (reduce pos+))})) [])
+                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+ 0))
+                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+ 0))
+                  :age-65-   (->> ms (map :ika_65_) (reduce pos+ 0))})) [])
         (sort-by :zone))))
