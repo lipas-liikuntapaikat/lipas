@@ -162,30 +162,38 @@
 (def finite? (complement infinite?))
 
 (defn fit-to-extent!
-  [{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent]
-  (let [padding (or (-> map-ctx :mode :content-padding) #js[0 0 0 0])]
-    (when (and view lmap (some finite? extent))
-      (.fit view extent #js{:size                (.getSize lmap)
+  ([map-ctx extent]
+   (fit-to-extent! map-ctx extent {}))
+  ([{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent opts]
+   (let [padding (or (-> map-ctx :mode :content-padding) #js[0 0 0 0])]
+     (when (and view lmap (some finite? extent))
+       (.fit view extent (clj->js
+                          (merge
+                           {:size                (.getSize lmap)
                             :padding             (clj->js padding)
-                            :constrainResolution true})))
-  map-ctx)
+                            :constrainResolution true}
+                           opts))))
+     map-ctx)))
 
-(defn fit-to-features! [map-ctx fs]
+(defn fit-to-features! [map-ctx fs opts]
   (let [extent (-> fs first .getGeometry .getExtent)]
     (doseq [f (rest fs)]
       (ol.extent.extend extent (-> f .getGeometry .getExtent)))
-    (fit-to-extent! map-ctx extent)))
+    (fit-to-extent! map-ctx extent opts)))
 
 (defn fit-to-fcoll! [map-ctx fcoll]
   (let [fs (-> fcoll clj->js ->ol-features)]
-    (fit-to-features! map-ctx fs)))
+    (fit-to-features! map-ctx fs {})))
 
-(defn select-sports-site! [map-ctx lipas-id]
-  (if-let [fs (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
-    (-> map-ctx
-        (fit-to-features! fs)
-        (select-features! fs))
-    (unselect-features! map-ctx)))
+(defn select-sports-site!
+  ([map-ctx lipas-id]
+   (select-sports-site! map-ctx lipas-id {}))
+  ([map-ctx lipas-id fit-opts]
+   (if-let [fs (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
+     (-> map-ctx
+         (select-features! fs)
+         (fit-to-features! fs fit-opts))
+     (unselect-features! map-ctx))))
 
 (defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
                       {:keys [lon lat] :as center}]

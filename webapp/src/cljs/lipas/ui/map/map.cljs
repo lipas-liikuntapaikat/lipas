@@ -248,9 +248,15 @@
 
 (defn show-population!
   [{:keys [layers] :as map-ctx}
-   {:keys [data geoms]}]
+   {:keys [data geoms lipas-id]}]
   (-> layers :overlays :population .getSource .clear)
   (let [geom-fs (when geoms (map-utils/->ol-features (clj->js geoms)))]
+
+    ;; Add selected style to sports-site feature
+    ;;(when lipas-id (display-as-selected map-ctx lipas-id))
+    (when lipas-id
+      (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
+
     (if data
       (let [fs  (map-utils/->ol-features data)
             res #js[]]
@@ -287,7 +293,7 @@
       lipas-id    (map-utils/select-sports-site! lipas-id)
       address     (map-utils/show-address-marker! address)
       population? (->
-                   map-utils/enable-population-hover!
+                   ;; map-utils/enable-population-hover!
                    (show-population! population)))))
 
 (defn update-default-mode!
