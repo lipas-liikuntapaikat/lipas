@@ -9,12 +9,12 @@
   [{:keys [editing? valid? logged-in?  user-can-publish? on-discard
            discard-tooltip edit-tooltip publish-tooltip on-edit-start
            invalid-message on-edit-end delete-tooltip on-delete
-           on-publish editing-allowed?]}]
+           on-publish editing-allowed? save-in-progress?]}]
 
   [(when (and editing? user-can-publish?)
      [buttons/save-button
       {:on-click         on-publish
-       :disabled         (not valid?)
+       :disabled         (or save-in-progress? (not valid?))
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
@@ -31,11 +31,14 @@
    (when (and on-delete logged-in? editing-allowed? user-can-publish? (not editing?))
      [buttons/delete-button
       {:on-click on-delete
+       :disabled save-in-progress?
        :tooltip  delete-tooltip}])
 
    (when editing?
      [buttons/discard-button
-      {:on-click on-discard :tooltip discard-tooltip}])])
+      {:on-click on-discard
+       :disabled save-in-progress?
+       :tooltip  discard-tooltip}])])
 
 (defn icon-text [{:keys [icon text icon-color]}]
   [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}

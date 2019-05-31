@@ -275,10 +275,16 @@
    {:dispatch-n
     [[:lipas.ui.sports-sites.events/save-edits lipas-id]
      [::stop-editing]
+
      ;; We "unselect" lipas-id to avoid map jumping to old position when
      ;; mode is changed (::stop editing) but new revision hasn't yet
      ;; been fetched from search (after successful save).
-     [::show-sports-site nil]]}))
+
+     ;; [::show-sports-site nil]
+
+     ;; TODO Uncommented above for now. Figure out how to re-position
+     ;; the mqp to new rev.
+     ]}))
 
 (re-frame/reg-event-fx
  ::discard-edits

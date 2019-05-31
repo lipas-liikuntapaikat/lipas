@@ -246,6 +246,7 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/edits-valid? lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-allowed? lipas-id])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/save-in-progress?])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/delete-dialog-open? lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code type-code])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/types-props type-code])
@@ -254,9 +255,10 @@
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::mode])])
  (fn [[cities types geom-type admins owners editing? edits-valid?
-       editing-allowed?  delete-dialog-open? type types-props
-       can-publish? logged-in?  size-categories mode] _]
-   {:types               (filter (comp #{geom-type} :geometry-type second) types)
+       editing-allowed? save-in-progress? delete-dialog-open? type
+       types-props can-publish? logged-in?  size-categories mode] _]
+   {:types               (filter
+                          (comp #{geom-type} :geometry-type second) types)
     :cities              cities
     :admins              admins
     :owners              owners
@@ -272,6 +274,7 @@
     :type                type
     :types-props         types-props
     :geom-type           (:geometry-type type)
+    :save-in-progress?   save-in-progress?
     :problems?           (-> mode :problems :data :features seq)
     :portal              (case (:type-code type)
                            (3110 3130) "uimahalliportaali"
@@ -284,6 +287,7 @@
    [(re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-type])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-data])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/new-site-valid?])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/save-in-progress?])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
     (re-frame/subscribe [:lipas.ui.user.subs/permission-to-cities])
@@ -293,15 +297,15 @@
     (re-frame/subscribe [::zoomed-for-drawing?])
     (re-frame/subscribe [::new-geom])
     (re-frame/subscribe [::mode])])
- (fn [[type data valid? admins owners cities types prop-types
-       size-categories zoomed? geom mode] _]
+ (fn [[type data valid? save-in-progress? admins owners cities types
+       prop-types size-categories zoomed? geom mode] _]
    (let [geom-type (-> geom :features first :geometry :type)
          sub-mode  (mode :sub-mode)]
      {:type            type
       :type-code       (:type-code type)
       :geom-type       (:geometry-type type)
       :data            data
-      :save-enabled?   (and valid? (= :finished sub-mode))
+      :save-enabled?   (and valid? (= :finished sub-mode) (not save-in-progress?))
       :admins          admins
       :owners          owners
       :cities          cities
@@ -327,6 +331,8 @@
  ::sub-mode
  (fn [db _]
    (-> db :map :mode :sub-mode)))
+
+;; Demographics ;;
 
 (re-frame/reg-sub
  ::selected-population
