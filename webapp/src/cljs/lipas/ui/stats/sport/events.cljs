@@ -48,7 +48,6 @@
 (re-frame/reg-event-fx
  ::select-filters
  (fn [{:keys [db]} [_ {:keys [type-code city-code]} grouping]]
-   (prn grouping)
    (let [city-k        "location.city.city-code"
          type-k        "type.type-code"
          types-path    [:stats :sport :selected-types]
