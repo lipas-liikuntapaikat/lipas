@@ -84,7 +84,6 @@
 
 (defn select-features!
   [{:keys [interactions] :as map-ctx} features]
-  (prn "select features")
   (let [select (-> interactions :select)]
     (doto (.getFeatures select)
       (.clear)
@@ -93,7 +92,6 @@
 
 (defn unselect-features!
   [{:keys [interactions*] :as map-ctx}]
-  (prn "Unselect features")
   (-> interactions* :select .getFeatures .clear)
   map-ctx)
 
