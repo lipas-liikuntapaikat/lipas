@@ -63,6 +63,7 @@
    {:vectors
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
+         :name       "vectors"
          :style      styles/feature-style
          :renderMode "image"})
     :edits
@@ -74,6 +75,12 @@
     (ol.layer.Vector.
      #js{:source     (ol.source.Vector.)
          :style      styles/blue-marker-style
+         :renderMode "image"})
+    :population
+    (ol.layer.Vector.
+     #js{:source     (ol.source.Vector.)
+         :style      styles/population-style
+         :name       "population"
          :renderMode "image"})}})
 
 (defn init-view [center zoom]
@@ -99,6 +106,7 @@
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
+                                (-> layers :overlays :population)
                                 (-> layers :overlays :vectors)
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :markers)]
@@ -116,6 +124,12 @@
                           :style     styles/feature-style-hover
                           :multi     true
                           :condition ol.events.condition.pointerMove})
+
+        population-hover (ol.interaction.Select.
+                          #js{:layers    #js[(-> layers :overlays :population)]
+                              :style     styles/population-hover-style
+                              :multi     false
+                              :condition ol.events.condition.pointerMove})
 
         select (ol.interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
@@ -158,17 +172,33 @@
                      {:anchor-el (.getElement popup-overlay)
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
+    (.on population-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :population
+                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
+    ;; It's not possible to have multiple selects with
+    ;; same "condition" (at least I couldn't get it
+    ;; working). Therefore we have to detect which layer we're
+    ;; selecting from and decide actions accordingly.
     (.on select "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (aget (gobj/get e "selected") 0)]
+                 selected (gobj/get e "selected")
+                 f1       (aget selected 0)]
              (.setPosition popup-overlay coords)
-             (==> [::events/show-sports-site (when selected
-                                               (.get selected "lipas-id"))]))))
+             (==> [::events/sports-site-selected e (when f1 (.get f1 "lipas-id"))]))))
 
     (.on lmap "click"
          (fn [e]
-           (==> [::events/hide-address])))
+           (==> [::events/map-clicked e])))
 
     (.on lmap "moveend"
          (fn [e]
@@ -192,37 +222,88 @@
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
      :interactions*
-     {:select       select
-      :vector-hover vector-hover
-      :marker-hover marker-hover}
+     {:select           select
+      :vector-hover     vector-hover
+      :marker-hover     marker-hover
+      :population-hover population-hover}
      :overlays {:popup popup-overlay}}))
 
+(defn any-intersects? [fs f buffer]
+  (when-not (empty? fs)
+    (let [extent (-> fs (aget 0) .getGeometry .getExtent)]
+      (.forEach fs (fn [f']
+                     (js/ol.extent.extend extent (-> f' .getGeometry .getExtent))))
+      (let [buffered (js/ol.extent.buffer extent buffer)]
+        (js/ol.extent.intersects buffered (-> f .getGeometry .getExtent))))))
+
+;; Zones idea (within 2km,5km,10km) roughly from
+;; https://www.oulu.fi/paikkatieto/Liikuntapaikkojen%20saavutettavuus.pdf
+;; (pages 27-30)
+(defn resolve-zone
+  [geom-fs population-f]
+  (cond
+    (any-intersects? geom-fs population-f 2000)  [1 styles/population-zone1-fn]
+    (any-intersects? geom-fs population-f 5000)  [2 styles/population-zone2-fn]
+    (any-intersects? geom-fs population-f 10000) [3 styles/population-zone3-fn]))
+
+(defn show-population!
+  [{:keys [layers] :as map-ctx}
+   {:keys [data geoms]}]
+  (-> layers :overlays :population .getSource .clear)
+  (let [geom-fs (when geoms (map-utils/->ol-features (clj->js geoms)))]
+    (if data
+      (let [fs  (map-utils/->ol-features data)
+            res #js[]]
+
+        (doseq [f    fs
+                :let [[zone style] (resolve-zone geom-fs f)]]
+
+          (when zone
+            (.setStyle f style)
+            (.set f "selected" true)
+            (.set f "zone" zone)
+            (.push res f)))
+
+        (-> layers :overlays :population .getSource (.addFeatures fs))
+        (==> [::events/set-selected-population-grid (-> res map-utils/->geoJSON-clj)])
+
+        map-ctx)
+      map-ctx)))
+
 ;; Browsing and selecting features
-(defn set-default-mode! [map-ctx mode]
-  (let [map-ctx (-> map-ctx
-                    editing/clear-edits!
-                    map-utils/unselect-features!
-                    map-utils/clear-interactions!
-                    map-utils/clear-markers!
-                    map-utils/enable-vector-hover!
-                    map-utils/enable-marker-hover!
-                    map-utils/enable-select!)]
-    (let [lipas-id (:lipas-id mode)
-          address  (:address mode)]
-      (cond-> map-ctx
-        lipas-id (map-utils/select-sports-site! lipas-id)
-        address (map-utils/show-address-marker! address)))))
+(defn set-default-mode!
+  [map-ctx {:keys [lipas-id address sub-mode population]}]
+  (let [population? (= sub-mode :population)
+        map-ctx     (-> map-ctx
+                        editing/clear-edits!
+                        map-utils/clear-population!
+                        map-utils/unselect-features!
+                        map-utils/clear-interactions!
+                        map-utils/clear-markers!
+                        map-utils/enable-vector-hover!
+                        map-utils/enable-marker-hover!
+                        map-utils/enable-select!)]
+    (cond-> map-ctx
+      lipas-id    (map-utils/select-sports-site! lipas-id)
+      address     (map-utils/show-address-marker! address)
+      population? (->
+                   map-utils/enable-population-hover!
+                   (show-population! population)))))
 
 (defn update-default-mode!
-  [{:keys [layers] :as map-ctx} {:keys [lipas-id fit-nonce address]}]
-  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id fit-nonce address sub-mode population]}]
+  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
+        pop? (= sub-mode :population)]
     (cond-> map-ctx
-      true           (map-utils/clear-markers!)
-      lipas-id       (map-utils/select-sports-site! lipas-id)
-      (not lipas-id) (map-utils/unselect-features!)
-      fit?           (map-utils/fit-to-extent!
-                      (-> layers :overlays :vectors .getSource .getExtent))
-      address        (map-utils/show-address-marker! address))))
+      true     (map-utils/clear-markers!)
+      true     (map-utils/unselect-features!)
+      true     (map-utils/clear-population!)
+      lipas-id (map-utils/select-sports-site! lipas-id)
+      fit?     (map-utils/fit-to-extent!
+                (-> layers :overlays :vectors .getSource .getExtent))
+      address  (map-utils/show-address-marker! address)
+      pop?     (show-population! population))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)

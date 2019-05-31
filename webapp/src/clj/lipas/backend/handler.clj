@@ -100,11 +100,8 @@
                  draft? (-> req :parameters :query :draft utils/->bool)
                  valid? (s/valid? spec body-params)]
              (if valid?
-               (let [resp (core/upsert-sports-site! db identity body-params draft?)]
-                 (when-not draft?
-                   (core/index! search resp :sync)
-                   (core/add-to-integration-out-queue! db resp))
-                 {:status 201 :body resp})
+               {:status 201
+                :body   (core/save-sports-site! db search identity body-params draft?)}
                {:status 400
                 :body   (s/explain-data spec body-params)})))}}]
 

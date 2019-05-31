@@ -3,11 +3,13 @@
    ["recharts" :as rc]
    [cljs.pprint :as pprint]
    [clojure.set :refer [rename-keys map-invert]]
+
    [goog.color :as gcolor]
    [goog.object :as gobj]
    [goog.string :as gstring]
    [lipas.ui.components.misc :as misc]
    [lipas.ui.mui :as mui]
+
    [reagent.core :as r]))
 
 ;; Tip: enable rainbow-mode in emacs.
@@ -146,24 +148,26 @@
    "line" "show_chart"})
 
 (defn legend
-  [labels props]
-  (let [payload (gobj/get props "payload")]
-    (r/as-element
-     (->> payload
-          (map
-           (fn [obj]
-             {:label (or (labels (gobj/get obj "value"))
-                         (labels (keyword (gobj/get obj "value"))))
-              :color (gobj/get obj "color")
-              :type  (gobj/get obj "type")}))
-          (sort-by :label)
-          (map
-           (fn [{:keys [label color type]}]
-             [mui/grid {:item true}
-              [misc/icon-text2
-               {:icon (legend-icons type) :icon-color color :text label}]]))
-          (into
-           [mui/grid {:container true :justify "center"}])))))
+  ([labels props]
+   (legend labels :label props))
+  ([labels sort-fn props]
+   (let [payload (gobj/get props "payload")]
+     (r/as-element
+      (->> payload
+           (map
+            (fn [obj]
+              {:label (or (labels (gobj/get obj "value"))
+                          (labels (keyword (gobj/get obj "value"))))
+               :color (gobj/get obj "color")
+               :type  (gobj/get obj "type")}))
+           (sort-by sort-fn)
+           (map
+            (fn [{:keys [label color type]}]
+              [mui/grid {:item true}
+               [misc/icon-text2
+                {:icon (legend-icons type) :icon-color color :text label}]]))
+           (into
+            [mui/grid {:container true :justify "center"}]))))))
 
 (defn tooltip
   "`payload-fn` should return a map with
@@ -364,10 +368,6 @@
                              []))))]
     (tooltip payload-fn labels props)))
 
-(defn subsidies-on-click [evt]
-  (let [payload (gobj/getValueByKeys evt "activePayload" 0 "payload")]
-    (prn payload)))
-
 (defn subsidies-chart
   [{:keys [data labels on-click]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 500}
@@ -395,3 +395,38 @@
   (when-let [arr (gobj/get evt "activePayload")]
     (let [obj (gobj/getValueByKeys arr 0 "payload")]
       (js->clj obj :keywordize-keys true))))
+
+(def zones
+  {:zone1 "Chartreuse"
+   :zone2 "LimeGreen"
+   :zone3 "DarkSeaGreen"})
+
+(def age-groups
+  {:age-0-14  "Chartreuse"
+   :age-15-64 "LimeGreen"
+   :age-65-   "DarkSeaGreen"})
+
+(defn population-chart
+  [{:keys [data labels on-click]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+   (into
+    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> rc/Legend {:content (partial legend labels)}]
+     [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+     [:> rc/XAxis {:dataKey "group" :tick font-styles :type "category"}]
+     [:> rc/YAxis {:tick font-styles}]]
+    (for [zone [:zone1 :zone2 :zone3]]
+      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zones zone)}]))])
+
+(defn population-chart2
+  [{:keys [data labels on-click]}]
+  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+   (into
+    [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
+     [:> rc/Legend {:content (partial legend labels)}]
+     [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+     [:> rc/XAxis {:dataKey "zone" :tick font-styles :type "category"}]
+     [:> rc/YAxis {:tick font-styles}]]
+    (for [k [:age-0-14 :age-15-64 :age-65-]]
+      [:> rc/Area
+       {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
