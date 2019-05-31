@@ -845,8 +845,14 @@
         [mui/grid {:item true}
          [mui/typography selected-site]]])
 
+     ;; No data available text
+     (when (and selected-site (empty? data-bar))
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:color "error"}
+         (tr :error/no-data)]])
+
      ;; Helper text
-     (when (empty? data-bar)
+     (when (and (empty? selected-site) (empty? data-bar))
        [mui/grid {:item true :xs 12 :container true :align-items "center"}
         [mui/grid {:item true}
          [mui/typography
