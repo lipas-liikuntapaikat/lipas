@@ -248,7 +248,6 @@
 
 (defn population-zone1-fn
   [f resolution]
-  (prn resolution)
   (let [n (.get f "vaesto")]
     (condp > n
       5    (population-zone1 0)
