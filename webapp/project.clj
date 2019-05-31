@@ -133,7 +133,9 @@
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "/js/compiled/out"
       :source-map-timestamp true
-      :preloads             [devtools.preload day8.re-frame-10x.preload re-frisk.preload]
+      :preloads             [devtools.preload day8.re-frame-10x.preload
+                             ;Re-frisk.preload
+                             ]
       :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
       :external-config      {:devtools/config {:features-to-install :all}}}}
 

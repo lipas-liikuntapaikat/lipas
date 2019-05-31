@@ -124,6 +124,8 @@
   :general
   {:description "Kuvaus",
    :hall "Halli",
+   :women "Naiset",
+   :total-short "Yht.",
    :done "Valmis",
    :updated "Päivitetty",
    :name "Nimi",
@@ -135,7 +137,8 @@
    :structure "Rakenne",
    :general-info "Yleiset tiedot",
    :comment "Kommentti",
-   :measures "Mitat"},
+   :measures "Mitat",
+   :men "Miehet"},
   :dryer-duty-types {:automatic "Automaattinen", :manual "Manuaali"},
   :swim-energy
   {:description
@@ -337,6 +340,15 @@
    :daily-open-hours "Käyttötunnit päivässä",
    :average-water-consumption-l
    "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)"},
+  :map.demographics
+  {:headline "Väestö",
+   :tooltip "Näytä väestötiedot",
+   :helper-text
+   "Valitse liikuntapaikka kartalta tai kohdista kartta haluamaasi paikkaan ja paina",
+   :copyright1
+   "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2018",
+   :copyright2 "1x1km ruutuaineistoa",
+   :copyright3 "lisenssillä"},
   :lipas.swimming-pool.slides
   {:add-slide "Lisää liukumäki",
    :edit-slide "Muokkaa liukumäkeä",
@@ -925,6 +937,8 @@
   :general
   {:description "Description",
    :hall "Hall",
+   :women "Women",
+   :total-short "Total",
    :done "Done",
    :updated "Updated",
    :name "Name",
@@ -936,7 +950,8 @@
    :structure "Structure",
    :general-info "General information",
    :comment "Comment",
-   :measures "Measures"},
+   :measures "Measures",
+   :men "Men"},
   :dryer-duty-types {:automatic "Automatic", :manual "Manual"},
   :swim-energy
   {:description
@@ -1129,6 +1144,14 @@
    :daily-open-hours "Daily open hours",
    :average-water-consumption-l
    "Average water consumption (l) / maintenance"},
+  :map.demographics
+  {:headline "Demographics",
+   :tooltip "Show demographics",
+   :helper-text
+   "Select sports site on map or zoom into desired location and click",
+   :copyright1 "Tilastokeskus 2018",
+   :copyright2 "1x1km population grid",
+   :copyright3 "with license"},
   :lipas.swimming-pool.slides
   {:add-slide "Add Slide",
    :edit-slide "Edit slide",

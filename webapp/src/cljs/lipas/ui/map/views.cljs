@@ -1,6 +1,7 @@
 (ns lipas.ui.map.views
   (:require
    [clojure.string :as string]
+   [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
@@ -11,7 +12,6 @@
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
-   [lipas.ui.sports-sites.subs :as sports-site-subs]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -185,21 +185,52 @@
                         :color      "secondary"}
             "OK"]])]])))
 
+(defmulti popup-body :type)
+
+(defmethod popup-body :default [popup]
+  (let [name' (-> popup :data :features first :properties :name)]
+    [mui/paper
+     {:style
+      {:padding "0.5em"
+       :width   (when (< 100 (count name')) "150px")}}
+     [mui/typography {:variant "body2"}
+      name']]))
+
+(defmethod popup-body :population [popup]
+  (let [data   (-> popup :data :features first :properties)
+        fields {:ika_0_14  "Ikä 0-14"
+                :ika_15_64 "Ikä 15-64"
+                :ika_65_   "Ikä 65-"
+                :miehet    "Miehet"
+                :naiset    "Naiset"
+                :vaesto    "Yht."}]
+
+    [mui/paper
+     {:style
+      {:padding "0.5em"}}
+     [mui/table {:padding "dense"}
+      (into
+       [mui/table-body]
+       (for [[k text] fields
+             :let     [v (get data k)]]
+         [mui/table-row {:style {:height "24px"}}
+          [mui/table-cell
+           [mui/typography {:variant "caption" :noWrap true}
+            text]]
+          [mui/table-cell
+           [mui/typography v]]]))]]))
+
 (defn popup []
-  (let [{:keys [data anchor-el]} (<== [::subs/popup])
-        {:keys [name]}           (-> data :features first :properties)]
+  (let [{:keys [data anchor-el]
+         :or   {type :default}
+         :as   popup'}   (<== [::subs/popup])]
     [mui/popper
      {:open      (boolean (seq data))
       :placement "top-end"
       :anchor-el anchor-el
       :container anchor-el
       :modifiers {:offset {:enabled true :offset "0px,10px"}}}
-     [mui/paper
-      {:style
-       {:padding "0.5em"
-        :width   (when (< 100 (count name)) "150px")}}
-      [mui/typography {:variant "body2"}
-       name]]]))
+     [popup-body popup']]))
 
 (defn set-field
   [lipas-id & args]
@@ -217,7 +248,7 @@
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
-                  geom-type portal]}
+                  geom-type portal save-in-progress?]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
           set-field     (partial set-field lipas-id)]
@@ -433,6 +464,7 @@
             (lui/edit-actions-list
              {:editing?          editing?
               :editing-allowed?  editing-allowed?
+              :save-in-progress? save-in-progress?
               :valid?            edits-valid?
               :logged-in?        logged-in?
               :user-can-publish? can-publish?
@@ -748,7 +780,8 @@
               [:> js/materialIcons.MapSearchOutline]]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
-  (let [result-view (<== [:lipas.ui.search.subs/search-results-view])]
+  (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
+        sub-mode    (<== [::subs/sub-mode])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background "transparent"}
@@ -756,41 +789,138 @@
        {:container true :align-items "center" :spacing 8
         :style     {:padding-bottom "0.5em"}}
 
+       ;; Create sports site btn
        (when logged-in?
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
 
+       ;; Address search btn
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
         [mui/grid {:item true}
          [mui/fab
           {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
           [:> js/materialIcons.MapSearchOutline]]]]
 
+       ;; Create Excel report btn
        (when (= :list result-view)
          [mui/grid {:item true}
-          [reports/dialog {:tr tr :btn-variant :fab}]])]]]))
+          [reports/dialog {:tr tr :btn-variant :fab}]])
+
+       ;; Demographics tool btn
+       (when (= :list result-view)
+         [mui/tooltip {:title (tr :map.demographics/tooltip)}
+          [mui/grid {:item true}
+           [mui/fab
+            {:size     "small"
+             :style    (when (= sub-mode :population)
+                         {:border (str "5px solid " mui/secondary)})
+             :on-click #(==> (if (= sub-mode :population)
+                               [::events/hide-population]
+                               [::events/show-population]))}
+            [mui/icon "people"]]]])]]]))
+
+(defn population-view []
+  (let [tr            (<== [:lipas.ui.subs/translator])
+        data-bar      (<== [::subs/population-bar-chart-data])
+        data-area     (<== [::subs/population-area-chart-data])
+        selected-site (<== [::subs/selected-population-center])
+        labels        (<== [::subs/population-labels])]
+
+    [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
+
+     ;; Header and close button
+     [mui/grid {:item true :container true :justify "space-between"}
+      [mui/grid {:item true}
+       [mui/typography {:variant "h4"}
+        (tr :map.demographics/headline)]]
+      [mui/grid {:item true}
+       [mui/icon-button {:on-click #(==> [::events/unselect-population])}
+        [mui/icon "close"]]]]
+
+     ;; Site name
+     (when selected-site
+       [mui/grid {:item true :xs 12 :container true :align-items "center"}
+        [mui/grid {:item true}
+         [mui/icon "location_on"]]
+        [mui/grid {:item true}
+         [mui/typography selected-site]]])
+
+     ;; No data available text
+     (when (and selected-site (empty? data-bar))
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:color "error"}
+         (tr :error/no-data)]])
+
+     ;; Helper text
+     (when (and (empty? selected-site) (empty? data-bar))
+       [mui/grid {:item true :xs 12 :container true :align-items "center"}
+        [mui/grid {:item true}
+         [mui/typography
+          (tr :map.demographics/helper-text)
+          " "
+          [mui/link
+           {:color    "secondary"
+            :href     "javascript:;"
+            :variant  "body2"
+            :on-click #(==> [::events/show-near-by-population])}
+           (tr :general/here)]
+          "."]]])
+
+     ;; Bar chart
+     (when (seq data-bar)
+       [mui/grid {:item true :xs 12}
+        [charts/population-bar-chart
+         {:data   data-bar
+          :labels labels}]])
+
+     ;; Area chart
+     (when (seq data-area)
+       [mui/grid {:item true :xs 12}
+        [charts/population-area-chart
+         {:data   data-area
+          :labels labels}]])
+
+     ;; Tilastokeskus copyright notice (demographics data)
+     [mui/grid {:item true :xs 12}
+      [mui/typography {:variant "caption"}
+       "© "
+       (tr :map.demographics/copyright1)
+       " "
+       [mui/link
+        {:href      "https://bit.ly/2WzrRwf"
+         :underline "always"}
+        (tr :map.demographics/copyright2)]
+       " "
+       (tr :map.demographics/copyright3)
+       " "
+       [mui/link
+        {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
+         :underline "always"}
+        "CC BY 4.0"]
+       "."]]
+
+     ;; Small nest where floating controls can "land"
+     [mui/grid {:item true :xs 12 :style {:height "70px"}}]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
-  (let [adding?       (<== [::sports-site-subs/adding-new-site?])
-        result-view   (<== [:lipas.ui.search.subs/search-results-view])
-        selected-site (<== [::subs/selected-sports-site])
-        view          (cond
-                        adding?       :adding
-                        selected-site :site
-                        :else         :search)]
+  (let [selected-site (<== [::subs/selected-sports-site])
+        show-tools?   (<== [::subs/show-default-tools?])
+        view          (<== [::subs/view])]
 
     [:<>
      ;; Search, filters etc.
      (case view
-       :adding [add-sports-site-view {:tr tr}]
-       :site   [sports-site-view {:tr tr :site-data selected-site :width width}]
-       :search [search/search-view
-                {:tr tr
-                 :on-result-click
-                 (fn [{:keys [lipas-id]}]
-                   (==> [::events/show-sports-site lipas-id]))}])
+       :adding     [add-sports-site-view {:tr tr}]
+       :population [population-view]
+       :site       [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :search     [search/search-view
+                    {:tr tr
+                     :on-result-click
+                     (fn [{:keys [lipas-id]}]
+                       (==> [::events/show-sports-site lipas-id]))}])
 
-     (when (and (= :list result-view) (#{:search} view))
+     ;; Floating bottom toolbar
+     (when show-tools?
        [:div {:style {:padding "0.5em"}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 

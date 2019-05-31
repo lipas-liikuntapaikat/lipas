@@ -19,7 +19,7 @@ import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import WMTS from 'ol/source/WMTS';
 import VectorSource from 'ol/source/Vector';
-import {getTopLeft, getWidth, getHeight, extend} from 'ol/extent';
+import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
 import GeoJSON from 'ol/format/GeoJSON';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import Draw from 'ol/interaction/Draw';
@@ -57,6 +57,8 @@ window.ol = {
     getWidth,
     getHeight,
     extend,
+    intersects,
+    buffer,
   },
   proj: {
     get,
@@ -290,6 +292,8 @@ window.mui = {
 };
 
 // Recharts
+import Area from 'recharts/lib/cartesian/Area';
+import AreaChart from 'recharts/lib/chart/AreaChart';
 import Bar from 'recharts/lib/cartesian/Bar';
 import BarChart from 'recharts/lib/chart/BarChart';
 import CartesianGrid from 'recharts/lib/cartesian/CartesianGrid';
@@ -307,6 +311,8 @@ import YAxis from 'recharts/lib/cartesian/YAxis';
 import XAxis from 'recharts/lib/cartesian/XAxis';
 
 window.recharts = {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -365,6 +371,7 @@ window.reactVirtualized = {
 };
 
 // Turf.js
+import bbox from '@turf/bbox';
 import kinks from '@turf/kinks';
 import lineSplit from '@turf/line-split';
 import lineIntersect from '@turf/line-intersect';
@@ -375,6 +382,7 @@ import nearestPointOnLine from '@turf/nearest-point-on-line';
 import length from '@turf/length';
 
 window.turf = {
+  bbox,
   kinks,
   lineSplit,
   lineIntersect,
