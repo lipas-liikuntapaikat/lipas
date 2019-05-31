@@ -406,7 +406,7 @@
    :age-15-64 "LimeGreen"
    :age-65-   "DarkSeaGreen"})
 
-(defn population-chart
+(defn population-bar-chart
   [{:keys [data labels on-click]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    (into
@@ -418,14 +418,26 @@
     (for [zone [:zone1 :zone2 :zone3]]
       [:> rc/Bar {:dataKey zone :stackId "a" :fill (zones zone)}]))])
 
-(defn population-chart2
+(defn fixed-tick [props]
+  (let [x       (gobj/get props "x")
+        y       (gobj/get props "y")
+        payload (gobj/get props "payload")
+        v       (gobj/get payload "value")]
+    (r/as-element
+     [:g {:transform (gstring/format "translate(%d,%d)" x y)}
+      [:text
+       {:x 0 :y 0 :dy 20 :textAnchor "middle" :font-family "Lato"
+        :style {::font-weight "normal" :fill "rgb(102, 102, 102)"}}
+       (subs v 2)]])))
+
+(defn population-area-chart
   [{:keys [data labels on-click]}]
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    (into
     [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
      [:> rc/Legend {:content (partial legend labels)}]
      [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
-     [:> rc/XAxis {:dataKey "zone" :tick font-styles :type "category"}]
+     [:> rc/XAxis {:dataKey "zone" :tick fixed-tick :type "category"}]
      [:> rc/YAxis {:tick font-styles}]]
     (for [k [:age-0-14 :age-15-64 :age-65-]]
       [:> rc/Area
