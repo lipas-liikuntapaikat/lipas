@@ -216,13 +216,13 @@
   (make-population-styles :hover "LawnGreen"))
 
 (def population-zone1
-  (make-population-styles :hover "Chartreuse"))
+  (make-population-styles :hover "#008000"))
 
 (def population-zone2
-  (make-population-styles :hover "LimeGreen"))
+  (make-population-styles :hover "#2db92d"))
 
 (def population-zone3
-  (make-population-styles :hover "DarkSeaGreen"))
+  (make-population-styles :hover "#73e600"))
 
 (defn population-style
   [f resolution]
@@ -248,6 +248,7 @@
 
 (defn population-zone1-fn
   [f resolution]
+  (prn resolution)
   (let [n (.get f "vaesto")]
     (condp > n
       5    (population-zone1 0)

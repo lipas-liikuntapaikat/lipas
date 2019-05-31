@@ -397,14 +397,14 @@
       (js->clj obj :keywordize-keys true))))
 
 (def zones
-  {:zone1 "Chartreuse"
-   :zone2 "LimeGreen"
-   :zone3 "DarkSeaGreen"})
+  {:zone1 "#008000"
+   :zone2 "#2db92d"
+   :zone3 "#73e600"})
 
 (def age-groups
-  {:age-0-14  "Chartreuse"
-   :age-15-64 "LimeGreen"
-   :age-65-   "DarkSeaGreen"})
+  {:age-0-14  "#008000"
+   :age-15-64 "#2db92d"
+   :age-65-   "#73e600"})
 
 (defn population-bar-chart
   [{:keys [data labels on-click]}]
