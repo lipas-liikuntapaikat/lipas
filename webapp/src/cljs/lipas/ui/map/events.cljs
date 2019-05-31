@@ -2,6 +2,7 @@
   (:require
    ["ol"]
    [ajax.core :as ajax]
+   [cemerick.url :as url]
    [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
@@ -20,11 +21,11 @@
   (let [proj      (.get js/ol.proj "EPSG:3067")]
     (ol.proj.toLonLat wgs84-coords proj)))
 
-(defn resolve-top-left [extent]
+(defn top-left [extent]
   (epsg3067->wgs84-fast
    #js[(aget extent 0) (aget extent 3)]))
 
-(defn resolve-bottom-right [extent]
+(defn bottom-right [extent]
   (epsg3067->wgs84-fast
    #js[(aget extent 2) (aget extent 1)]))
 
@@ -44,13 +45,12 @@
               (assoc-in [:map :center-wgs84] center-wgs84)
               (assoc-in [:map :zoom] zoom)
               (assoc-in [:map :extent] extent)
-              (assoc-in [:map :top-left-wgs84] (resolve-top-left extent))
-              (assoc-in [:map :bottom-right-wgs84] (resolve-bottom-right extent))
+              (assoc-in [:map :top-left-wgs84] (top-left extent))
+              (assoc-in [:map :bottom-right-wgs84] (bottom-right extent))
               (assoc-in [:map :width] width)
               (assoc-in [:map :height] height))
       :dispatch-n
-      [(when (and extent width)
-         [:lipas.ui.search.events/submit-search])]})))
+      [(when (and extent width) [:lipas.ui.search.events/submit-search])]})))
 
 ;; Map displaying events ;;
 
@@ -234,6 +234,21 @@
      {:db         (-> db
                       (assoc-in [:map :mode :sub-mode] :finished))
       :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
+
+;;; Map events ;;;
+
+(re-frame/reg-event-fx
+ ::map-clicked
+ (fn [{:keys [db]} [_ evt]]
+   {:dispatch [::hide-address]}))
+
+(re-frame/reg-event-fx
+ ::sports-site-selected
+ (fn [{:keys [db]} [_ evt lipas-id]]
+   (let [sub-mode (-> db :map :mode :sub-mode)]
+     (if (= sub-mode :population)
+       {:dispatch [::show-sports-site-population lipas-id]}
+       {:dispatch [::show-sports-site lipas-id]}))))
 
 ;;; Higher order events ;;;
 
@@ -552,3 +567,125 @@
       [[::start-adding-new-site]
        [::new-geom-drawn geom]
        [:lipas.ui.sports-sites.events/duplicate latest]]})))
+
+;; Population events ;;
+
+(re-frame/reg-event-fx
+ ::show-population
+ (fn [{:keys [db]} _]
+   {:db (-> db
+            (assoc-in  [:map :mode :name] :default)
+            (assoc-in  [:map :mode :sub-mode] :population))}))
+
+(re-frame/reg-event-fx
+ ::hide-population
+ (fn [{:keys [db]} _]
+   {:db (-> db
+            (assoc-in [:map :mode :name] :default)
+            (assoc-in [:map :population :data] nil)
+            (assoc-in [:map :population :selected] nil)
+            (assoc-in [:map :mode :population] nil)
+            (update-in  [:map :mode] dissoc :sub-mode))}))
+
+(defn- calc-buffered-bbox [fcoll buffer]
+  (let [fs     (-> fcoll clj->js map-utils/->ol-features)
+        extent (-> fs (aget 0) .getGeometry .getExtent)]
+    (.forEach fs (fn [f']
+                   (js/ol.extent.extend extent (-> f' .getGeometry .getExtent))))
+    (js/ol.extent.buffer extent buffer)))
+
+(defn- resolve-bbox [db]
+  (let [geoms (-> db :map :mode :population :geoms)]
+    (if geoms
+      (calc-buffered-bbox geoms 15000) ; 15km buffer
+      (-> db :map :extent))))
+
+(re-frame/reg-event-fx
+ ::get-population
+ (fn [{:keys [db]} [_ cb]]
+   (let [bbox     (resolve-bbox db)
+         base-url "/tilastokeskus/geoserver/vaestoruutu/ows?"
+         params   {:service      "WFS"
+                   :version      "1.0.0"
+                   :request      "GetFeature"
+                   :typeName     "vaestoruutu:vaki2018_1km"
+                   :outputFormat "application/json"
+                   ;;:srsName      "EPSG:3067"
+                   :srsName      "EPSG:4326"
+                   :bbox         bbox}]
+     {:http-xhrio
+      {:method          :get
+       :uri             (-> base-url url/url (assoc :query params) str (subs 3))
+       :response-format (ajax/raw-response-format)
+       :on-success      [::get-population-success cb]
+       :on-failure      [::get-population-failure]}})))
+
+(re-frame/reg-event-fx
+ ::get-population-success
+ (fn [{:keys [db]} [_ cb resp]]
+   {:db         (assoc-in db [:map :population :data] (js/JSON.parse resp))
+    :dispatch-n (if cb (cb resp) [])}))
+
+(re-frame/reg-event-fx
+ ::get-population-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:errors :population (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::set-selected-population-grid
+ (fn [{:keys [db]} [_ fcoll]]
+   {:db (assoc-in db [:map :population :selected] fcoll)}))
+
+(re-frame/reg-event-fx
+ ::unselect-population
+ (fn [{:keys [db]} _]
+   (if (-> db :map :mode :population :geoms)
+     {:db (-> db
+              (assoc-in [:map :population :selected] nil)
+              (assoc-in [:map :population :data] nil)
+              (assoc-in [:map :population :selected] nil)
+              (assoc-in [:map :mode :population] nil))}
+     {:dispatch [::hide-population]})))
+
+(re-frame/reg-event-fx
+ ::show-near-by-population
+ (fn [{:keys [db]} _]
+   (let [coords (-> db :map :center-wgs84)
+         zoom   (-> db :map :zoom)
+         f      {:type "FeatureCollection"
+                 :features
+                 [{:type       "Feature"
+                   :properties {}
+                   :geometry
+                   {:type        "Point"
+                    :coordinates [(:lon coords) (:lat coords)]}}]}]
+     {:db       (-> db
+                    (assoc-in [:map :mode :population :geoms] f)
+                    (assoc-in [:map :mode :population :lipas-id] nil)
+                    (cond->
+                        (< zoom 7) (assoc-in [:map :zoom] 7)))
+      :dispatch [::get-population]})))
+
+(re-frame/reg-event-fx
+ ::show-sports-site-population
+ (fn [_ [_ lipas-id]]
+   (if lipas-id
+     (let [on-success [[::show-sports-site-population* lipas-id]]]
+       {:dispatch [:lipas.ui.sports-sites.events/get lipas-id on-success]})
+     {})))
+
+(re-frame/reg-event-fx
+ ::show-sports-site-population*
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [latest (get-in db [:sports-sites lipas-id :latest])
+         rev    (get-in db [:sports-sites lipas-id :history latest])
+         geoms  (-> rev :location :geometries)]
+     {:db       (-> db
+                    (assoc-in [:map :mode :population :geoms] geoms)
+                    (assoc-in [:map :mode :population :lipas-id] lipas-id)
+                    (assoc-in [:map :mode :population :site-name] (:name rev)))
+      :dispatch [::get-population]})))

@@ -43,6 +43,10 @@
   (-> layers :overlays :markers .getSource .clear)
   map-ctx)
 
+(defn clear-population! [{:keys [layers] :as map-ctx}]
+  (-> layers :overlays :population .getSource .clear)
+  map-ctx)
+
 (defn show-problems!
   [map-ctx problems]
   (doseq [p (-> problems :data :features)]
@@ -95,19 +99,24 @@
   (-> layers :overlays :markers .getSource .clear)
   map-ctx)
 
-(defn enable-vector-hover!
-  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
-  (let [hover (:vector-hover interactions*)]
+(defn- enable-hover!
+  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx} k]
+  (let [hover (k interactions*)]
     (-> hover .getFeatures .clear)
     (.addInteraction lmap hover)
-    (assoc-in map-ctx [:interactions :vector-hover] hover)))
+    (assoc-in map-ctx [:interactions k] hover)))
+
+(defn enable-vector-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :vector-hover))
 
 (defn enable-marker-hover!
-  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
-  (let [hover (:marker-hover interactions*)]
-    (-> hover .getFeatures .clear)
-    (.addInteraction lmap hover)
-    (assoc-in map-ctx [:interactions :marker-hover] hover)))
+  [map-ctx]
+  (enable-hover! map-ctx :marker-hover))
+
+(defn enable-population-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :population-hover))
 
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
@@ -174,8 +183,8 @@
 (defn select-sports-site! [map-ctx lipas-id]
   (if-let [fs (not-empty (find-features-by-lipas-id map-ctx lipas-id))]
     (-> map-ctx
-        (select-features! fs)
-        (fit-to-features! fs))
+        (fit-to-features! fs)
+        (select-features! fs))
     (unselect-features! map-ctx)))
 
 (defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
@@ -204,6 +213,15 @@
     (.removeInteraction lmap v))
 
   (assoc map-ctx :interactions {}))
+
+(defn refresh-select!
+  [{:keys [interactions] :as map-ctx} lipas-id]
+  (let [select (-> interactions :select)
+        fs     (find-features-by-lipas-id map-ctx lipas-id)]
+    (doto (.getFeatures select)
+      (.clear)
+      (.extend fs))
+    map-ctx))
 
 (defn- ->splitter [fcoll]
   (let [fs (gobj/get fcoll "features")]
@@ -255,167 +273,167 @@
       ->fcoll
       ->clj))
 
-(defn merge-candidates [start end lines]
-  (->> lines
-       (filter #(some #{start end} [(first %) (last %)]))))
+;; (defn merge-candidates [start end lines]
+;;   (->> lines
+;;        (filter #(some #{start end} [(first %) (last %)]))))
 
-(defn merge-candidates2 [start end lines]
-  (->> lines
-       (filter #(and
-                 (not= (first %) (last %))
-                 (some #{start end} %)))))
+;; (defn merge-candidates2 [start end lines]
+;;   (->> lines
+;;        (filter #(and
+;;                  (not= (first %) (last %))
+;;                  (some #{start end} %)))))
 
-(def cat-dedupe (comp cat (dedupe)))
+;; (def cat-dedupe (comp cat (dedupe)))
 
-(defn- join-lines
-  "Joins l1 and l2 from corresponding elements in head or tail
-  position. l1 or l2 may be reversed during the process.
+;; (defn- join-lines
+;;   "Joins l1 and l2 from corresponding elements in head or tail
+;;   position. l1 or l2 may be reversed during the process.
 
-  Examples:
-  [1 2 3] [3 4 5] => [1 2 3 4 5]
-  [1 2 3] [4 5 3] => [1 2 3 5 4]
-  [1 2 3] [1 4 5] => [3 2 1 4 5]
-  [1 2 3] [4 5 1] => [4 5 1 2 3]"
-  [l1 l2]
-  (cond
-    (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
-    (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
-    (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
-    (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
+;;   Examples:
+;;   [1 2 3] [3 4 5] => [1 2 3 4 5]
+;;   [1 2 3] [4 5 3] => [1 2 3 5 4]
+;;   [1 2 3] [1 4 5] => [3 2 1 4 5]
+;;   [1 2 3] [4 5 1] => [4 5 1 2 3]"
+;;   [l1 l2]
+;;   (cond
+;;     (= (last l1) (first l2))  (into [] cat-dedupe [l1 l2])
+;;     (= (last l1) (last l2))   (into [] cat-dedupe [l1 (reverse l2)])
+;;     (= (first l1) (first l2)) (into [] cat-dedupe [(reverse l1) l2])
+;;     (= (first l1) (last l2))  (into [] cat-dedupe [l2 l1])))
 
-(defn merge-linestrings* [lines]
-  (loop [wip {:res [] :todo lines}]
+;; (defn merge-linestrings* [lines]
+;;   (loop [wip {:res [] :todo lines}]
 
-    ;; End condition
-    (if (-> wip :todo empty?)
-      (:res wip)
+;;     ;; End condition
+;;     (if (-> wip :todo empty?)
+;;       (:res wip)
 
-      (let [line   (-> wip :todo first)
-            others (-> wip :todo (disj line))
-            start  (first line)
-            end    (last line)]
+;;       (let [line   (-> wip :todo first)
+;;             others (-> wip :todo (disj line))
+;;             start  (first line)
+;;             end    (last line)]
 
-        (if (= start end)
+;;         (if (= start end)
 
-          ;; Closed ring (can't merge)
-          (recur
-           (-> wip
-               (update :res conj line)
-               (assoc :todo others)))
+;;           ;; Closed ring (can't merge)
+;;           (recur
+;;            (-> wip
+;;                (update :res conj line)
+;;                (assoc :todo others)))
 
-          ;; Merge if exactly 1 candidate is found
-          (let [candidates (merge-candidates2 start end others)]
-            (if (= 1 (count candidates))
+;;           ;; Merge if exactly 1 candidate is found
+;;           (let [candidates (merge-candidates2 start end others)]
+;;             (if (= 1 (count candidates))
 
-              (let [line2 (first candidates)]
-                (recur
-                 (-> wip
-                     (update :res conj (join-lines line line2))
-                     (update :todo disj line line2))))
+;;               (let [line2 (first candidates)]
+;;                 (recur
+;;                  (-> wip
+;;                      (update :res conj (join-lines line line2))
+;;                      (update :todo disj line line2))))
 
-              (recur
-               (-> wip
-                   (update :res conj line)
-                   (update :todo disj line))))))))))
+;;               (recur
+;;                (-> wip
+;;                    (update :res conj line)
+;;                    (update :todo disj line))))))))))
 
-(defn merge-linestrings [{:keys [features] :as fcoll}]
-  (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
-    (if (> 2 (count lines))
-      fcoll
-      (assoc fcoll :features
-              (->> (merge-linestrings* lines)
-                   (map-indexed
-                    (fn [idx coords]
-                      {:type "Feature"
-                       :geometry
-                       {:type        "LineString"
-                        :coordinates coords}
-                       :id   (str (gensym temp-fid-prefix))}))
-                   (into []))))))
+;; (defn merge-linestrings [{:keys [features] :as fcoll}]
+;;   (let [lines (into #{} (map (comp :coordinates :geometry)) features)]
+;;     (if (> 2 (count lines))
+;;       fcoll
+;;       (assoc fcoll :features
+;;               (->> (merge-linestrings* lines)
+;;                    (map-indexed
+;;                     (fn [idx coords]
+;;                       {:type "Feature"
+;;                        :geometry
+;;                        {:type        "LineString"
+;;                         :coordinates coords}
+;;                        :id   (str (gensym temp-fid-prefix))}))
+;;                    (into []))))))
 
-(defn valid-line? [{:keys [geometry]}]
-  (let [valid (and (= "LineString" (:type geometry))
-                 (= 2 (->> geometry :coordinates distinct (take 2) count)))]
-    (when-not valid
-      (prn "Ditching invalid:")
-      (prn geometry))
-    valid))
+;; (defn valid-line? [{:keys [geometry]}]
+;;   (let [valid (and (= "LineString" (:type geometry))
+;;                  (= 2 (->> geometry :coordinates distinct (take 2) count)))]
+;;     (when-not valid
+;;       (prn "Ditching invalid:")
+;;       (prn geometry))
+;;     valid))
 
-(defn sensify [{:keys [geometry] :as f}]
-  (let [start  (->> geometry :coordinates first)
-        end    (->> geometry :coordinates last)
-        coords (->> geometry :coordinates (into [] (distinct)))
-        res    (if (= start end) (conj coords end) coords)]
-    (assoc-in f [:geometry :coordinates] (into [] res))))
+;; (defn sensify [{:keys [geometry] :as f}]
+;;   (let [start  (->> geometry :coordinates first)
+;;         end    (->> geometry :coordinates last)
+;;         coords (->> geometry :coordinates (into [] (distinct)))
+;;         res    (if (= start end) (conj coords end) coords)]
+;;     (assoc-in f [:geometry :coordinates] (into [] res))))
 
-(defn split-by-intersections* [{:keys [features] :as fcoll} ixs]
-  ;;(prn "Before split: " (count features))
-  (let [splitter (-> ixs clj->js ->splitter)
-        fs       (reduce
-                  (fn [res f]
-                    (into res (-> f
-                                  clj->js
-                                  (turf/lineSplit splitter)
-                                  (gobj/get "features")
-                                  ;;(garray/map turf/truncate)
-                                  ;;(garray/map turf/cleanCoords)
-                                  ->clj
-                                  (->>
-                                   ;;(map sensify)
-                                   (filter valid-line?)
-                                   (mapv #(assoc % :id (str (gensym temp-fid-prefix))))))))
-                  []
-                  features)]
-    ;;(prn "After split: " (count fs))
-    (assoc fcoll :features fs)))
+;; (defn split-by-intersections* [{:keys [features] :as fcoll} ixs]
+;;   ;;(prn "Before split: " (count features))
+;;   (let [splitter (-> ixs clj->js ->splitter)
+;;         fs       (reduce
+;;                   (fn [res f]
+;;                     (into res (-> f
+;;                                   clj->js
+;;                                   (turf/lineSplit splitter)
+;;                                   (gobj/get "features")
+;;                                   ;;(garray/map turf/truncate)
+;;                                   ;;(garray/map turf/cleanCoords)
+;;                                   ->clj
+;;                                   (->>
+;;                                    ;;(map sensify)
+;;                                    (filter valid-line?)
+;;                                    (mapv #(assoc % :id (str (gensym temp-fid-prefix))))))))
+;;                   []
+;;                   features)]
+;;     ;;(prn "After split: " (count fs))
+;;     (assoc fcoll :features fs)))
 
-(defn find-intersections [{:keys [features] :as fcoll}]
-  (let [fs (->> features
-                set
-                (reduce
-                 (fn [res f]
-                   (into res cat
-                         (for [f2   (disj (set features) f)
-                               :let [l1 (-> f :geometry clj->js)
-                                     l2 (-> f2 :geometry clj->js)]]
+;; (defn find-intersections [{:keys [features] :as fcoll}]
+;;   (let [fs (->> features
+;;                 set
+;;                 (reduce
+;;                  (fn [res f]
+;;                    (into res cat
+;;                          (for [f2   (disj (set features) f)
+;;                                :let [l1 (-> f :geometry clj->js)
+;;                                      l2 (-> f2 :geometry clj->js)]]
 
-                           (if (and l1 l2)
-                             (-> (turf/lineIntersect l1 l2)
-                                 (gobj/get "features")
-                                 ;;(garray/map turf/truncate)
-                                 ;;(garray/map turf/cleanCoords)
-                                 ->clj)))))
-                 #{}))]
-    (assoc fcoll :features fs)))
+;;                            (if (and l1 l2)
+;;                              (-> (turf/lineIntersect l1 l2)
+;;                                  (gobj/get "features")
+;;                                  ;;(garray/map turf/truncate)
+;;                                  ;;(garray/map turf/cleanCoords)
+;;                                  ->clj)))))
+;;                  #{}))]
+;;     (assoc fcoll :features fs)))
 
 
-(defn- split-by-intersections [{:keys [features] :as fcoll}]
-  (if (> 2 (count features))
-    fcoll
-    (let [ixs (find-intersections fcoll)]
-      ;;(prn "Intersections: " (-> ixs :features count))
-      ;;(prn ixs)
-      (if (-> ixs :features seq)
-        (split-by-intersections* fcoll ixs)
-        fcoll))))
+;; (defn- split-by-intersections [{:keys [features] :as fcoll}]
+;;   (if (> 2 (count features))
+;;     fcoll
+;;     (let [ixs (find-intersections fcoll)]
+;;       ;;(prn "Intersections: " (-> ixs :features count))
+;;       ;;(prn ixs)
+;;       (if (-> ixs :features seq)
+;;         (split-by-intersections* fcoll ixs)
+;;         fcoll))))
 
-(defn fix-linestrings
-  "Does following to given features:
+;; (defn fix-linestrings
+;;   "Does following to given features:
 
-  - Merges lines that can be merged (degree 2 nodes)
-  - Fixes self-intersections (kinks) by splitting
-  - Splits all lines at all intersections with any of the other lines"
-  [ol-features]
-  (-> ol-features
-      ->geoJSON
-      turf/truncate
-      ->clj
-      merge-linestrings
-      (update :features #(filterv valid-line? %))
-      fix-kinks
-      split-by-intersections
-      clj->js
-      ->ol-features))
+;;   - Merges lines that can be merged (degree 2 nodes)
+;;   - Fixes self-intersections (kinks) by splitting
+;;   - Splits all lines at all intersections with any of the other lines"
+;;   [ol-features]
+;;   (-> ol-features
+;;       ->geoJSON
+;;       turf/truncate
+;;       ->clj
+;;       merge-linestrings
+;;       (update :features #(filterv valid-line? %))
+;;       fix-kinks
+;;       split-by-intersections
+;;       clj->js
+;;       ->ol-features))
 
 ;; (defn fix-features [ol-features]
 ;;   (let [geom-type (-> ol-features first .getGeometry .getType)]

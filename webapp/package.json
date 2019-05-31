@@ -16,6 +16,8 @@
     "@mapbox/togeojson": "^0.16.0",
     "@material-ui/core": "^3.9.3",
     "@material-ui/icons": "^3.0.2",
+    "@turf/bbox": "^6.0.1",
+    "@turf/buffer": "^5.1.5",
     "@turf/clean-coords": "^6.0.1",
     "@turf/combine": "^6.0.1",
     "@turf/kinks": "^6.0.0",

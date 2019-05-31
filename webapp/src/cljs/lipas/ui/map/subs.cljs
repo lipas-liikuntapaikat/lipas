@@ -1,9 +1,31 @@
 (ns lipas.ui.map.subs
   (:require
+   [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
+   [lipas.utils :as utils]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
+
+(re-frame/reg-sub
+ ::view
+ :<- [:lipas.ui.sports-sites.subs/adding-new-site?]
+ :<- [::selected-sports-site]
+ :<- [::mode*]
+ (fn [[adding? selected-site mode] _]
+   (let [population? (-> mode :sub-mode (= :population))]
+     (cond
+       adding?       :adding
+       population?   :population
+       selected-site :site
+       :else         :search))))
+
+(re-frame/reg-sub
+ ::show-default-tools?
+ :<- [::view]
+ :<- [:lipas.ui.search.subs/search-results-view]
+ (fn [[view result-view] _]
+   (and (= :list result-view) (#{:search :population} view))))
 
 (re-frame/reg-sub
  ::basemap
@@ -94,11 +116,25 @@
    (-> db :map :mode)))
 
 (re-frame/reg-sub
+ ::population-data
+ (fn [db _]
+   (-> db :map :population :data)))
+
+(re-frame/reg-sub
+ ::population
+ (fn [db _]
+   (-> db :map :population)))
+
+(re-frame/reg-sub
  ::mode
  :<- [::content-padding]
  :<- [::mode*]
- (fn [[content-padding mode] _]
-   (assoc mode :content-padding content-padding)))
+ :<- [::population]
+ (fn [[content-padding mode {:keys [data]}] _]
+   (let [default? (= (:name mode) :default)]
+     (cond-> mode
+       true     (assoc :content-padding content-padding)
+       default? (assoc-in [:population :data] data)))))
 
 (re-frame/reg-sub
  ::editing-lipas-id
@@ -286,3 +322,88 @@
                          (= :finished sub-mode) 2
                          (some? type)           1
                          :else                  0)})))
+
+(re-frame/reg-sub
+ ::sub-mode
+ (fn [db _]
+   (-> db :map :mode :sub-mode)))
+
+(re-frame/reg-sub
+ ::selected-population
+ (fn [db _]
+   (-> db :map :population :selected)))
+
+(re-frame/reg-sub
+ ::selected-population-center
+ :<- [::mode*]
+ (fn [mode _]
+   (-> mode :population :site-name)))
+
+(re-frame/reg-sub
+ ::population-labels
+ (fn [db _]
+   (let [tr (-> db :translator)]
+     {:zone1     "0-2 km"
+      :zone2     "2-5 km"
+      :zone3     "5-10 km"
+      :range1    "2 km"
+      :range2    "5 km"
+      :range3    "10 km"
+      :age-0-14  (str "0-14" (tr :duration/years-short))
+      :age-15-64 (str "15-64" (tr :duration/years-short))
+      :age-65-   (str "65" (tr :duration/years-short) "-")
+      :men       (tr :general/men)
+      :women     (tr :general/women)
+      :total     (tr :general/total-short)})))
+
+;; Tilastokeskus won't display demographics if population is less than
+;; 10 (for privacy reasons). Missing data is encoded as -1 in data and
+;; we decided to treat -1 as zero when calculating total sums.
+(defn- pos+ [a b]
+  (+ (if (<= 0 a) a 0) (if (<= 0 b) b 0)))
+
+(re-frame/reg-sub
+ ::population-chart-data
+ :<- [::selected-population]
+ (fn [fcoll _]
+   (let [ks [:ika_0_14 :ika_15_64 :ika_65_ :naiset :miehet :vaesto :zone]
+         fs (->> fcoll :features (map (comp #(select-keys % ks) :properties)))]
+     (->> fs
+          (group-by :zone)))))
+
+(re-frame/reg-sub
+ ::population-bar-chart-data
+ :<- [::population-chart-data]
+ :<- [::population-labels]
+ (fn [[data labels] _]
+   (->> data
+        (reduce
+           (fn [res [zone ms]]
+             (let [zk (keyword (str "zone" zone))]
+               (-> res
+                   (assoc-in [:age-0-14 zk] (->> ms (map :ika_0_14) (reduce pos+)))
+                   (assoc-in [:age-15-64 zk] (->> ms (map :ika_15_64) (reduce pos+)))
+                   (assoc-in [:age-65- zk] (->> ms (map :ika_65_) (reduce pos+)))
+                   (assoc-in [:men zk] (->> ms (map :miehet) (reduce pos+)))
+                   (assoc-in [:women zk] (->> ms (map :naiset) (reduce pos+)))
+                   (assoc-in [:total zk] (->> ms (map :vaesto) (reduce pos+))))))
+           {})
+        (map (fn [[k v]] (assoc v :group (labels k)))))))
+
+(defn parse-km [s]
+  (-> s (string/split " ") first utils/->int))
+
+(re-frame/reg-sub
+ ::population-area-chart-data
+ :<- [::population-chart-data]
+ :<- [::population-labels]
+ (fn [[data labels] _]
+   (->> data
+        (reduce
+         (fn [res [zone ms]]
+           (conj res
+                 {:zone      (labels (keyword (str "zone" zone)))
+                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+))
+                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+))
+                  :age-65-   (->> ms (map :ika_65_) (reduce pos+))})) [])
+        (sort-by :zone))))
