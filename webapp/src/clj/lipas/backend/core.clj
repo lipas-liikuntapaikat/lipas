@@ -2,6 +2,7 @@
   (:require
    [buddy.hashers :as hashers]
    [clojure.core.async :as async]
+   [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
@@ -296,6 +297,21 @@
 (defn add-to-integration-out-queue! [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
+;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
+;; save-sports-site! to form more sensible API.
+(defn save-sports-site!
+  "Saves sports-site to db and search and appends it to outbound
+  integrations queue."
+  ([db search user sports-site]
+   (save-sports-site! db search user sports-site false))
+  ([db search user sports-site draft?]
+   (jdbc/with-db-transaction [tx db]
+     (let [resp (upsert-sports-site! tx user sports-site draft?)]
+       (when-not draft?
+         (index! search resp :sync)
+         (add-to-integration-out-queue! tx resp))
+       resp))))
+
 ;;; Cities ;;;
 
 (defn get-cities [db]
@@ -379,6 +395,8 @@
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
+
+
 
 (comment
   (require '[lipas.backend.config :as config])

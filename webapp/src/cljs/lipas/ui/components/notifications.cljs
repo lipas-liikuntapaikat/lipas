@@ -9,14 +9,19 @@
     :auto-hide-duration 5000
     :open               true
     :anchor-origin      {:vertical "top" :horizontal "right"}
-    :on-close           on-close}
+    :on-close           on-close
+    }
    [mui/snackbar-content
-    {:message (:message notification)
+    {:style   {:background-color
+               (if (:success? notification)
+                 "#43a047"
+                 "#d32f2f")}
+     :message (:message notification)
      :action  (r/as-element
                [mui/icon-button
                 {:key      "close"
                  :on-click on-close
-                 :color    "secondary"}
+                 :style    {:color "white"}}
                 (if (:success? notification)
                   [mui/icon "done"]
                   [mui/icon "warning"])])}]])

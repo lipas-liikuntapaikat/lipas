@@ -185,3 +185,96 @@
         style     (get selected-symbols type-code)]
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
+
+;; Color scheme from Tilastokeskus
+;; http://www.stat.fi/org/avoindata/paikkatietoaineistot/vaestoruutuaineisto_1km.html
+(def population-colors
+  ["rgba(255,237,169,0.5)"
+   "rgba(255,206,123,0.5)"
+   "rgba(247,149,72,0.5)"
+   "rgba(243,112,67,0.5)"
+   "rgba(237,26,59,0.5)"
+   "rgba(139,66,102,0.5)"])
+
+(defn make-population-styles
+  ([] (make-population-styles false "LawnGreen"))
+  ([hover? stroke-color]
+   (->> population-colors
+        (map-indexed
+         (fn [idx color]
+           [idx (ol.style.Style.
+                 #js{:stroke (if hover?
+                               (ol.style.Stroke. #js{:color stroke-color :width 5})
+                               (ol.style.Stroke. #js{:color "black" :width 2}))
+                     :fill   (ol.style.Fill. #js{:color color})})]))
+        (into {}))))
+
+(def population-styles
+  (make-population-styles))
+
+(def population-hover-styles
+  (make-population-styles :hover "LawnGreen"))
+
+(def population-zone1
+  (make-population-styles :hover "#008000"))
+
+(def population-zone2
+  (make-population-styles :hover "#2db92d"))
+
+(def population-zone3
+  (make-population-styles :hover "#73e600"))
+
+(defn population-style
+  [f resolution]
+  (let [n (.get f "vaesto")]
+    (condp > n
+      5    (population-styles 0)
+      20   (population-styles 1)
+      50   (population-styles 2)
+      500  (population-styles 3)
+      5000 (population-styles 4)
+      (population-styles 5))))
+
+(defn population-hover-style
+  [f resolution]
+  (let [n (.get f "vaesto")]
+    (condp > n
+      5    (population-hover-styles 0)
+      20   (population-hover-styles 1)
+      50   (population-hover-styles 2)
+      500  (population-hover-styles 3)
+      5000 (population-hover-styles 4)
+      (population-styles 5))))
+
+(defn population-zone1-fn
+  [f resolution]
+  (let [n (.get f "vaesto")]
+    (condp > n
+      5    (population-zone1 0)
+      20   (population-zone1 1)
+      50   (population-zone1 2)
+      500  (population-zone1 3)
+      5000 (population-zone1 4)
+      (population-zone1 5))))
+
+(defn population-zone2-fn
+  [f resolution]
+  (let [n (.get f "vaesto")]
+    (condp > n
+      5    (population-zone2 0)
+      20   (population-zone2 1)
+      50   (population-zone2 2)
+      500  (population-zone2 3)
+      5000 (population-zone2 4)
+      (population-zone2 5))))
+
+(defn population-zone3-fn
+  [f resolution]
+  (let [n (.get f "vaesto")]
+    (condp > n
+      5    (population-zone3 0)
+      20   (population-zone3 1)
+      50   (population-zone3 2)
+      500  (population-zone3 3)
+      5000 (population-zone3 4)
+      (population-zone3 5))))

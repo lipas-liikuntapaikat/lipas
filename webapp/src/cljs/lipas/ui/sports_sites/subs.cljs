@@ -71,6 +71,11 @@
  (fn [edit-data _]
    (valid? edit-data)))
 
+(re-frame/reg-sub
+ ::save-in-progress?
+ (fn [db _]
+   (-> db :sports-sites :save-in-progress?)))
+
 ;; TODO maybe refactor region related subs to other ns
 
 (re-frame/reg-sub
