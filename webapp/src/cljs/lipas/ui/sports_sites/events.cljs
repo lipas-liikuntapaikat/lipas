@@ -28,7 +28,8 @@
 (defn- commit-ajax [db data draft? on-success]
   (let [token  (-> db :user :login :token)
         params (when draft? "?draft=true")]
-    {:http-xhrio
+    {:db (assoc-in db [:sports-sites :save-in-progress?] true)
+     :http-xhrio
      {:method          :post
       :headers         {:Authorization (str "Token " token)}
       :uri             (str (:backend-url db) (str "/sports-sites" params))
@@ -52,8 +53,9 @@
 (defn- new-site? [rev]
   (nil? (:lipas-id rev)))
 
-(defn- on-success-default []
-  [[:lipas.ui.search.events/submit-search]])
+(defn- on-success-default [{:keys [lipas-id]}]
+  [[:lipas.ui.search.events/submit-search]
+   [:lipas.ui.map.events/show-sports-site nil]])
 
 (defn- on-success-new [{:keys [lipas-id]}]
   [[::discard-new-site]
@@ -86,7 +88,7 @@
          new?       (new-site? rev)
          on-success (cond
                       new?  #(on-success-new {:lipas-id lipas-id})
-                      :else on-success-default)]
+                      :else (partial on-success-default {:lipas-id lipas-id}))]
      (if (or new? (dirty? db rev))
        (commit-ajax db rev draft? on-success)
        {:dispatch [::save-success on-success rev]}))))
@@ -104,7 +106,8 @@
          dispatch-extras (when on-success (on-success result))]
      {:db             (-> db
                           (utils/add-to-db result)
-                          (assoc-in [:sports-sites lipas-id :editing] nil))
+                          (assoc-in [:sports-sites lipas-id :editing] nil)
+                          (assoc-in [:sports-sites :save-in-progress?] false))
       :dispatch-n     (into
                        [[:lipas.ui.events/set-active-notification
                          {:message  (tr :notifications/save-success)
@@ -119,7 +122,9 @@
  (fn [{:keys [db]} [_ error]]
    (let [tr     (:translator db)
          fatal? false]
-     {:db           (assoc-in db [:sports-sites :errors (utils/timestamp)] error)
+     {:db           (-> db
+                        (assoc-in [:sports-sites :errors (utils/timestamp)] error)
+                        (assoc-in [:sports-sites :save-in-progress?] false))
       :dispatch     [:lipas.ui.events/set-active-notification
                      {:message  (tr :notifications/save-failed)
                       :success? false}]

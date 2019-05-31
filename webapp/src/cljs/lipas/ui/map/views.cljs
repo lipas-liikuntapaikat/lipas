@@ -248,7 +248,7 @@
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
-                  geom-type portal]}
+                  geom-type portal save-in-progress?]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
           set-field     (partial set-field lipas-id)]
@@ -464,6 +464,7 @@
             (lui/edit-actions-list
              {:editing?          editing?
               :editing-allowed?  editing-allowed?
+              :save-in-progress? save-in-progress?
               :valid?            edits-valid?
               :logged-in?        logged-in?
               :user-can-publish? can-publish?
