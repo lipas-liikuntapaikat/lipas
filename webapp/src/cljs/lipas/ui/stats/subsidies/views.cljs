@@ -89,7 +89,7 @@
         [years-selector
          {:tr          tr
           ;;:years     (range 2002 utils/this-year)
-          :years       [2014 2015 2016 2017]
+          :years       [2010 2011 2012 2013 2014 2015 2016 2017]
           :value       years
           :helper-text "Lisää vuosia tulossa pian!"
           :on-change   #(==> [::events/select-years %])}]]
