@@ -80,7 +80,8 @@
            dd (utils/zero-left-pad dd 2)
            hh (utils/zero-left-pad hh 2)
            mm (utils/zero-left-pad mm 2)
-           ss (utils/zero-left-pad ss 2)]
+           ss (utils/zero-left-pad ss 2)
+           ms (utils/zero-left-pad ms 3)]
        (str yyyy "-" MM "-" dd "T" hh ":" mm ":" ss "." ms "Z")))
    (gen/tuple
     (s/gen (s/int-in 1900 (inc utils/this-year)))
