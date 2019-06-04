@@ -348,7 +348,9 @@
        [mui/dialog-actions
         [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
          (tr :actions/cancel)]
-        [mui/button {:on-click #(==> [::events/save-current-search @name'])}
+        [mui/button
+         {:disabled (empty? @name')
+          :on-click #(==> [::events/save-current-search @name'])}
          (tr :actions/save)]]])))
 
 (defn search-view [{:keys [tr on-result-click]}]
