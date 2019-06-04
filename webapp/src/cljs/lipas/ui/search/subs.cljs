@@ -332,3 +332,8 @@
  :<- [::pagination]
  (fn [{:keys [page-size]}]
    (>= 500 page-size)))
+
+(re-frame/reg-sub
+ ::save-dialog-open?
+ (fn [db _]
+   (-> db :search :save-dialog-open?)))

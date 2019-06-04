@@ -16,6 +16,9 @@
 (re-frame/reg-event-fx
  ::report-failure
  (fn [{:keys [db]} [_ error]]
-   ;; TODO display error msg
-   (let [fatal? false]
-     {:ga/exception [(:message error) fatal?]})))
+   (let [fatal? false
+         tr     (-> db :translator)]
+     {:ga/exception [(:message error) fatal?]
+      :dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr :notifications/get-failed)
+                      :success? false}]})))

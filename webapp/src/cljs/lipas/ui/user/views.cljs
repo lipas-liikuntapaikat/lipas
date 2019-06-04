@@ -83,7 +83,7 @@
         cities (<== [::subs/permission-to-cities])
         types  (<== [::subs/permission-to-types])
 
-        sites        (<== [::subs/sports-sites (tr)])
+        sites (<== [::subs/sports-sites (tr)])
 
         all-types?  (or admin? (-> user :permissions :all-types?))
         all-cities? (or admin? (-> user :permissions :all-cities?))
@@ -92,13 +92,15 @@
         card-props {:square true}
 
         firstname (-> user :user-data :firstname)
-        lastname  (-> user :user-data :lastname)]
+        lastname  (-> user :user-data :lastname)
 
-    [mui/grid {:container true :spacing 8 :style {:padding 8}}
-     [mui/grid {:item true :xs 12 :md 6}
+        saved-searches (<== [::subs/saved-searches])]
 
-      ;; Promo card
-      (when (or admin? all-types? (some #{2150} (keys types)))
+    [mui/grid {:container true :spacing 8 :style {:padding 8} :direction "column"}
+
+     ;; Promo card
+     (when (or admin? all-types? (some #{2150} (keys types)))
+       [mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title (tr :user/promo-headline)}]
          [mui/card-content
@@ -113,9 +115,10 @@
                         (==> [:lipas.ui.search.events/set-filters-by-permissions])
                         (==> [:lipas.ui.search.events/set-type-filter [2150]])
                         (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
-           (tr :user/promo1-link)]]])
+           (tr :user/promo1-link)]]]])
 
-      ;; Profile card
+     ;; Profile card
+     [mui/grid {:item true :xs 12}
       [mui/card card-props
        [mui/card-header {:title (tr :user/greeting firstname lastname)}]
        [mui/card-content
@@ -133,7 +136,7 @@
            (str "> " (tr :user/admin-page-link))])]]]
 
      ;; Permissions
-     [mui/grid {:item true :xs 12 :md 6}
+     [mui/grid {:item true :xs 12}
 
       [actions-dialog tr]
 
@@ -208,12 +211,27 @@
         (when (some #{3110 3130} (map :type-code sites))
           [mui/button {:href  "/uimahalliportaali"
                        :color :secondary}
-           (str "> " (tr :user/swimming-pools-link))])]]]]))
+           (str "> " (tr :user/swimming-pools-link))])]]]
+
+     ;; Saved searches
+     (when saved-searches
+       [mui/grid {:item true :xs 12}
+        [mui/card card-props
+         [mui/card-header {:title (tr :lipas.user/saved-searches)}]
+         [mui/card-content
+          [lui/select
+           {:label     (tr :actions/select)
+            :style     {:width "170px"}
+            :items     saved-searches
+            :label-fn  :name
+            :value-fn  identity
+            :on-change #(==> [::events/select-saved-search %])}]]]])]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [::subs/logged-in?])
         user       (<== [::subs/user-data])]
+
     (if logged-in?
       [user-panel tr user]
       (navigate! "/kirjaudu"))))
