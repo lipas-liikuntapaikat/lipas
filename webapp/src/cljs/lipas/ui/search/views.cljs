@@ -441,7 +441,7 @@
                [mui/icon "save"]]]])
 
           ;; Saved searches select
-          (when (and logged-in? (= :table result-view))
+          (when (and logged-in?  (= :table result-view) saved-searches)
             [mui/grid {:item true}
              [lui/select
               {:style        {:width "170px"}
