@@ -64,7 +64,9 @@
        [mui/dialog-actions
         [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
          (tr :actions/cancel)]
-        [mui/button {:on-click #(==> [::events/save-current-report @name'])}
+        [mui/button
+         {:disabled (empty? @name')
+          :on-click #(==> [::events/save-current-report @name'])}
          (tr :actions/save)]]])))
 
 (defn dialog [{:keys [tr btn-variant]}]
