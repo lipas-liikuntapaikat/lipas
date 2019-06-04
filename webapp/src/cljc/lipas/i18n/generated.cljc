@@ -781,17 +781,20 @@
    :permissions "Käyttöoikeudet",
    :permissions-example
    "Oikeus päivittää Jyväskylän jäähallien tietoja.",
+   :saved-searches "Tallennetut haut",
    :report-energy-and-visitors
    "Ilmoita energia- ja kävijämäärätiedot",
    :permission-to-cities
    "Sinulla on käyttöoikeus seuraaviin kuntiin:",
    :password "Salasana",
    :lastname "Sukunimi",
+   :save-report "Tallenna raporttipohja",
    :sports-sites "Omat kohteet",
    :permission-to-all-cities
    "Sinulla on käyttöoikeus kaikkiin kuntiin",
    :username "Käyttäjätunnus",
    :history "Historia",
+   :saved-reports "Tallennetut raporttipohjat",
    :contact-info "Yhteystiedot",
    :permission-to-all-types
    "Sinulla on käyttöoikeus kaikkiin  liikuntapaikkatyyppeihin",
@@ -803,6 +806,7 @@
    "Kerro, mitä tietoja haluat päivittää Lipaksessa",
    :report-energy-consumption "Ilmoita energiankulutus",
    :firstname "Etunimi",
+   :save-search "Tallenna haku",
    :view-basic-info "Tarkista perustiedot",
    :no-permissions "Sinulle ei ole vielä myönnetty käyttöoikeuksia.",
    :username-example "tane12",
@@ -1573,15 +1577,18 @@
   {:email "Email",
    :permissions "Permissions",
    :permissions-example "Access to update Jyväskylä ice stadiums.",
+   :saved-searches "Saved searches",
    :report-energy-and-visitors
    "Report visitors and energy consumption",
    :permission-to-cities "You have permission to following cities:",
    :password "Password",
    :lastname "Last name",
+   :save-report "Save template",
    :sports-sites "My sites",
    :permission-to-all-cities "You have permission to all cities",
    :username "Username",
    :history "History",
+   :saved-reports "Saved templates",
    :contact-info "Contact info",
    :permission-to-all-types "You have permission to all types",
    :requested-permissions "Requested permissions",
@@ -1591,6 +1598,7 @@
    :permissions-help "Describe what permissions you wish to have",
    :report-energy-consumption "Report energy consumption",
    :firstname "First name",
+   :save-search "Save search",
    :view-basic-info "View basic info",
    :no-permissions
    "You don't have permission to publish changes to  any sites.",

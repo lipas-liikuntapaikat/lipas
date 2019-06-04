@@ -89,3 +89,15 @@
  ::selected-sports-site
  (fn [db _]
    (-> db :user :selected-sports-site)))
+
+(re-frame/reg-sub
+ ::saved-reports
+ :<- [::user-data]
+ (fn [user]
+   (-> user :user-data :saved-reports)))
+
+(re-frame/reg-sub
+ ::saved-searches
+ :<- [::user-data]
+ (fn [user _]
+   (-> user :user-data :saved-searches)))

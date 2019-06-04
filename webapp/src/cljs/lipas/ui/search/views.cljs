@@ -335,14 +335,36 @@
        [mui/icon "search"]
        (tr :search/search)]]]))
 
+(defn save-dialog []
+  (r/with-let [name' (r/atom nil)]
+    (let [tr    (<== [:lipas.ui.subs/translator])
+          open? (<== [::subs/save-dialog-open?])]
+      [mui/dialog {:open open?}
+       [mui/dialog-content
+        [lui/text-field
+         {:label     (tr :general/name)
+          :value     @name'
+          :on-change #(reset! name' %)}]]
+       [mui/dialog-actions
+        [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
+         (tr :actions/cancel)]
+        [mui/button {:on-click #(==> [::events/save-current-search @name'])}
+         (tr :actions/save)]]])))
+
 (defn search-view [{:keys [tr on-result-click]}]
   (let [total           (<== [::subs/search-results-total-count])
         result-view     (<== [::subs/search-results-view])
         filters-active? (<== [::subs/filters-active?])
         bbox-only?      (<== [::subs/bounding-box-filter])
-        bbox-enabled?   (<== [::subs/allow-changing-bounding-box-filter?])]
+        bbox-enabled?   (<== [::subs/allow-changing-bounding-box-filter?])
+        saved-searches  (<== [:lipas.ui.user.subs/saved-searches])
+        logged-in?      (<== [:lipas.ui.subs/logged-in?])]
 
     [:div {:style {:height "100%"}}
+
+     (when (= result-view :table)
+       [save-dialog])
+
      [mui/grid
       {:container   true
        :style       {:padding "0em 1em 0.5em 1em"}
@@ -362,15 +384,18 @@
             "LIPAS"]]
 
           [mui/grid {:item true :xs 12 :md 6}
-           [search-input]]])]
+           [search-input]]
+
+          [mui/grid {:item true :xs 12 :style {:min-height "1em"}}]])]
 
       ;; Search only from area visible on map
-      [mui/grid {:item true :xs 12}
-       [lui/checkbox
-        {:label     (tr :map/bounding-box-filter)
-         :disabled  (not bbox-enabled?)
-         :value     bbox-only?
-         :on-change #(==> [::events/set-bounding-box-filter %])}]]
+      (when (= result-view :list)
+        [mui/grid {:item true :xs 12}
+         [lui/checkbox
+          {:label     (tr :map/bounding-box-filter)
+           :disabled  (not bbox-enabled?)
+           :value     bbox-only?
+           :on-change #(==> [::events/set-bounding-box-filter %])}]])
 
       ;; Filters expansion panel
       [mui/grid {:item true :xs 12}
@@ -389,16 +414,48 @@
          :align-items "center"
          :style       {:padding-top "0.5em" :padding-bottom "0.5em"}}
         [mui/grid {:item true}
-         [mui/typography
-          {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
-          (tr :search/results-count total)]]
+         [mui/grid {:container true :align-items "center" :spacing 16}
 
-        ;; Clear filters button
-        (when filters-active?
+          ;; Results ocunt
+          [mui/grid {:item true}
+           [mui/typography
+            {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
+            (tr :search/results-count total)]]
+
+          ;; Clear filters button
+          (when (and filters-active? (= :table result-view))
+            [mui/grid {:item true}
+             [mui/button
+              {:color    "secondary"
+               :size     "small"
+               :on-click (fn []
+                           (==> [::events/clear-filters])
+                           (swap! ugly-forcer inc))}
+              (tr :search/clear-filters)]])
+
+          ;; Save search btn
+          (when (and filters-active? logged-in? (= :table result-view))
+            [mui/tooltip {:title "Tallenna haku"}
+             [mui/grid {:item true}
+              [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
+               [mui/icon "save"]]]])
+
+          ;; Saved searches select
+          (when (and logged-in? (= :table result-view))
+            [mui/grid {:item true}
+             [lui/select
+              {:style        {:width "170px"}
+               :items        saved-searches
+               :value        "dummy"
+               :render-value (constantly (str (tr :lipas.user/saved-searches) "..."))
+               :label-fn     :name
+               :value-fn     identity
+               :on-change    #(==> [::events/select-saved-search %])}]])]]
+
+        (when (and filters-active? (= :list result-view))
           [mui/grid {:item true}
            [mui/button
-            {:style    {:margin "0.5em"}
-             :color    "secondary"
+            {:color    "secondary"
              :size     "small"
              :on-click (fn []
                          (==> [::events/clear-filters])
