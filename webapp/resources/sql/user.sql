@@ -109,7 +109,7 @@ WHERE  id = :id ::uuid;
 
 -- :name update-user-data!
 -- :command :execute
--- :result :affected
+-- :result :one
 -- :doc Update user-data for the user with given id
 UPDATE account
 SET    user_data = :user_data

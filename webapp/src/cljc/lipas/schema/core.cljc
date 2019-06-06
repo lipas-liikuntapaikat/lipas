@@ -80,7 +80,8 @@
            dd (utils/zero-left-pad dd 2)
            hh (utils/zero-left-pad hh 2)
            mm (utils/zero-left-pad mm 2)
-           ss (utils/zero-left-pad ss 2)]
+           ss (utils/zero-left-pad ss 2)
+           ms (utils/zero-left-pad ms 3)]
        (str yyyy "-" MM "-" dd "T" hh ":" mm ":" ss "." ms "Z")))
    (gen/tuple
     (s/gen (s/int-in 1900 (inc utils/this-year)))
@@ -146,8 +147,23 @@
 (s/def :lipas.user/login (s/or :username :lipas.user/username
                                :email :lipas.user/email))
 
-(s/def :lipas.user/user-data (s/keys :req-un [:lipas.user/firstname
-                                              :lipas.user/lastname]))
+(s/def :lipas.user.user-data.saved-report/name (str-in 1 128))
+(s/def :lipas.user.user-data.saved-report/fields (s/coll-of (str-in 1 256)))
+
+(s/def :lipas.user.user-data/saved-report
+  (s/keys :req-un [:lipas.user.user-data.saved-report/name]
+          :opt-un [:lipas.user.user-data.saved-report/fields]))
+
+(s/def :lipas.user.user-data/saved-reports
+  (s/coll-of :lipas.user.user-data/saved-report
+             :min-count 0
+             :max-count 1000
+             :into []))
+
+(s/def :lipas.user/user-data
+  (s/keys :req-un [:lipas.user/firstname
+                   :lipas.user/lastname]
+          :opt-un [:lipas.user.user-data/saved-reports]))
 
 (s/def :lipas.user.permissions/sports-sites
   (s/coll-of :lipas.sports-site/lipas-id

@@ -5,7 +5,8 @@
    [lipas.ui.reports.events :as events]
    [lipas.ui.reports.subs :as subs]
    [lipas.ui.search.events :as search-events]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [reagent.core :as r]))
 
 (defn- make-quick-selects [tr]
   [{:label  (tr :lipas.sports-site/basic-data)
@@ -50,12 +51,32 @@
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
 
+(defn save-dialog []
+  (r/with-let [name' (r/atom nil)]
+    (let [tr    (<== [:lipas.ui.subs/translator])
+          open? (<== [::subs/save-dialog-open?])]
+      [mui/dialog {:open open?}
+       [mui/dialog-content
+        [lui/text-field
+         {:label     (tr :general/name)
+          :value     @name'
+          :on-change #(reset! name' %)}]]
+       [mui/dialog-actions
+        [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
+         (tr :actions/cancel)]
+        [mui/button
+         {:disabled (empty? @name')
+          :on-click #(==> [::events/save-current-report @name'])}
+         (tr :actions/save)]]])))
+
 (defn dialog [{:keys [tr btn-variant]}]
   (let [open?           (<== [::subs/dialog-open?])
         toggle          #(==> [::events/toggle-dialog])
         selected-fields (<== [::subs/selected-fields])
         downloading?    (<== [::subs/downloading?])
         results-count   (<== [:lipas.ui.search.subs/search-results-total-count])
+        logged-in?      (<== [:lipas.ui.subs/logged-in?])
+        saved-reports   (<== [:lipas.ui.user.subs/saved-reports])
 
         quick-selects (make-quick-selects tr)]
     [:<>
@@ -69,11 +90,37 @@
           [mui/button {:variant "contained" :color "secondary" :on-click toggle}
            (tr :reports/download-as-excel)])])
 
+     ;; Save for later use dialog
+     [save-dialog]
+
      ;; Dialog
      [mui/dialog {:open open? :full-width true :on-close toggle}
-      [mui/dialog-title (tr :reports/select-fields)]
+      [mui/dialog-title
+       [mui/grid {:container true :justify "space-between" :align-items "baseline"}
+        [mui/grid {:item true}
+         (tr :reports/select-fields)]
+
+        ;; Save template for later use btn
+        (when logged-in?
+          [mui/tooltip {:title (tr :lipas.user/save-report)}
+           [mui/grid {:item true}
+            [mui/icon-button
+             {:on-click #(==> [::events/toggle-save-dialog])}
+             [mui/icon "save"]]]])]]
+
       [mui/dialog-content
        [mui/grid {:container true :spacing 8}
+
+        ;; Saved reports
+        (when saved-reports
+          [mui/grid {:item true :xs 12}
+           [lui/select
+            {:label     (tr :lipas.user/saved-reports)
+             :style     {:width "210px"}
+             :items     saved-reports
+             :label-fn  :name
+             :value-fn  :fields
+             :on-change #(==> [::events/set-selected-fields %])}]])
 
         ;; Quick selects
         [mui/grid {:item true :xs 12}

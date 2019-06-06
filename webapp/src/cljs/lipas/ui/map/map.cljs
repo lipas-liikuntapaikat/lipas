@@ -361,12 +361,13 @@
 
       :component-did-update
       (fn [comp]
-        (let [opts    (r/props comp)
-              geoms   (-> opts :geoms)
-              basemap (-> opts :basemap)
-              center  (-> opts :center)
-              zoom    (-> opts :zoom)
-              mode    (-> opts :mode)]
+        (let [opts     (r/props comp)
+              geoms    (-> opts :geoms)
+              basemap  (-> opts :basemap)
+              center   (-> opts :center)
+              zoom     (-> opts :zoom)
+              mode     (-> opts :mode)
+              lipas-id (:lipas-id mode)]
 
           (cond-> @map-ctx*
             (not= (:geoms @map-ctx*) geoms)     (map-utils/update-geoms! geoms)
@@ -374,6 +375,8 @@
             (not= (:center @map-ctx*) center)   (map-utils/update-center! center)
             (not= (:zoom @map-ctx*) zoom)       (map-utils/update-zoom! zoom)
             (not= (:mode @map-ctx*) mode)       (update-mode! mode)
+            (and (= :default (:name mode))
+                 lipas-id)                      (map-utils/refresh-select! lipas-id)
             true                                (as-> $ (reset! map-ctx* $)))))
 
       :display-name "map-inner"})))

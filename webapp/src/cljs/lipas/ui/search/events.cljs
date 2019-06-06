@@ -478,3 +478,33 @@
       [:lipas.ui.events/set-active-notification
        {:message  ((:translator db) :notifications/save-failed)
         :success? false}]})))
+
+;; Save search (for later use) ;;
+
+(re-frame/reg-event-db
+ ::toggle-save-dialog
+ (fn [db _]
+   (update-in db [:search :save-dialog-open?] not)))
+
+(re-frame/reg-event-fx
+ ::save-current-search
+ (fn [{:keys [db]} [_ name]]
+   (let [m         {:name    name
+                    :string  (-> db :search :string)
+                    :filters (-> db :search :filters)}
+         user-data (-> db
+                       :user
+                       :login
+                       :user-data
+                       (update :saved-searches conj m))]
+     {:dispatch-n
+      [[:lipas.ui.user.events/update-user-data user-data]
+       [::toggle-save-dialog]]})))
+
+(re-frame/reg-event-fx
+ ::select-saved-search
+ (fn [{:keys [db]} [_ {:keys [string filters]}]]
+   {:db (-> db
+        (assoc-in [:search :filters] filters)
+        (assoc-in [:search :string] string))
+    :dispatch [::submit-search]}))
