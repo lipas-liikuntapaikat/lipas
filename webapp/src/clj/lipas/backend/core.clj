@@ -152,6 +152,11 @@
     (db/update-reminder-status! db params)
     {:status "OK"}))
 
+(defn update-user-data!
+  [db user user-data]
+  (db/update-user-data! db (assoc user :user-data user-data))
+  user-data)
+
 ;;; Sports-sites ;;;
 
 (defn get-sports-site [db lipas-id]

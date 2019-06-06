@@ -219,6 +219,18 @@
              {:status 200
               :body   {:status "OK"}}))}}]
 
+      ["/actions/update-user-data"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body :lipas.user/user-data}
+         :handler
+         (fn [req]
+           (let [user-data (-> req :parameters :body)
+                 user      (:identity req)]
+             {:status 200
+              :body   (core/update-user-data! db user user-data)}))}}]
+
       ["/actions/order-magic-link"
        {:post
         {:parameters

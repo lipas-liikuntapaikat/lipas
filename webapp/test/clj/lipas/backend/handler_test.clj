@@ -208,6 +208,18 @@
                        (token-header token)))]
     (is (= 403 (:status resp)))))
 
+(deftest update-user-data-test
+  (let [user       (gen-user {:db? true})
+        token      (jwt/create-token user :terse? true)
+        user-data  (gen/generate (s/gen :lipas.user/user-data))
+        resp       (app (-> (mock/request :post "/api/actions/update-user-data")
+                            (mock/content-type "application/json")
+                            (mock/body (->json user-data))
+                            (token-header token)))
+        user-data2 (-> resp :body <-json)]
+    (is (= 200 (:status resp)))
+    (is (= user-data user-data2))))
+
 (deftest send-magic-link-test
   (let [admin (gen-user {:db? true :admin? true})
         user  (-> (gen-user {:db? false})

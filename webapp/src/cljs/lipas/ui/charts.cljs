@@ -402,9 +402,9 @@
    :zone3 "#73e600"})
 
 (def age-groups
-  {:age-0-14  "#008000"
-   :age-15-64 "#2db92d"
-   :age-65-   "#73e600"})
+  {:age-0-14  "#80bfff"
+   :age-15-64 "#1e90ff"
+   :age-65-   "#0073e6"})
 
 (defn population-bar-chart
   [{:keys [data labels on-click]}]

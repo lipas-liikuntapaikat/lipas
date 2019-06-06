@@ -78,7 +78,28 @@
 (re-frame/reg-event-fx
  ::report-failure
  (fn [{:keys [db]} [_ error]]
-   ;; TODO display error msg
-   (let [fatal? false]
+   (let [fatal? false
+         tr     (-> db :translator)]
      {:db           (assoc-in db [:reports :downloading?] false)
-      :ga/exception [(:message error) fatal?]})))
+      :ga/exception [(:message error) fatal?]
+      :dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr :notifications/get-failed)
+                      :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::save-current-report
+ (fn [{:keys [db]} [_ name]]
+   (let [m         {:name name :fields (-> db :reports :selected-fields)}
+         user-data (-> db
+                       :user
+                       :login
+                       :user-data
+                       (update :saved-reports conj m))]
+     {:dispatch-n
+      [[:lipas.ui.user.events/update-user-data user-data]
+       [::toggle-save-dialog]]})))
+
+(re-frame/reg-event-db
+ ::toggle-save-dialog
+ (fn [db _]
+   (update-in db [:reports :save-dialog-open?] not)))

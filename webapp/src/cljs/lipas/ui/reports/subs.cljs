@@ -26,3 +26,8 @@
  ::selected-fields
  (fn [db _]
    (-> db :reports :selected-fields)))
+
+(re-frame/reg-sub
+ ::save-dialog-open?
+ (fn [db _]
+   (-> db :reports :save-dialog-open?)))
