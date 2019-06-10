@@ -276,8 +276,9 @@
       (get "token")))
 
 (defn prod? []
-  (-> (base-url)
-      (string/includes? "lipas.fi")))
+  (let [url (base-url)]
+    (or (string/includes? url "lipas.fi")
+        (string/includes? url "liikuntapaikat.fi"))))
 
 (defn year-labels-map [start end]
   (->> (range start (inc end))
