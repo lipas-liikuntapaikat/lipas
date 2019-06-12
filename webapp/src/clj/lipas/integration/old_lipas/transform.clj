@@ -77,11 +77,11 @@
         (update-in [:location :city] dissoc :neighborhood)
 
         (update :properties #(-> %
-                                 (assoc :info-fi (-> m :comment))
                                  (dissoc :school-use? :free-use?)
                                  (update :surface-material
                                          (comp old/surface-materials first))
                                  (select-keys (-> type-code types/all :props keys))
+                                 (assoc :info-fi (-> m :comment))
                                  (set/rename-keys old/prop-mappings-reverse)))
         old/adapt-geoms
         utils/clean
