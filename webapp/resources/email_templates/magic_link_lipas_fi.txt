@@ -8,10 +8,9 @@ Linkki on voimassa {{valid-days}} päivää. Voit käyttää linkkiä tänä aik
 
 Ajankohtaista:
 
-Tarkista koulujen liikuntasalien tiedot Lipas-järjestelmässä
-toukokuuhun 2019 mennessä! Uusia kouluja on rakennettu ja vanhoja
-lakkautettu koko Suomessa. Mikä on koulujen liikuntasalien tilanne
-kunnassasi?
+Tarkista koulujen liikuntasalien tiedot Lipas-järjestelmässä! Uusia
+kouluja on rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on
+koulujen liikuntasalien tilanne kunnassasi?
 
 Palaute ja kommentit:
 
