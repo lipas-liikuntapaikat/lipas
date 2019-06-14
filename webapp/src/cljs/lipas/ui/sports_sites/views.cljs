@@ -578,8 +578,7 @@
 
      ;; Contents
      (into
-      [mui/grid {:item  true :xs 12
-                 :style {:padding 8}}]
+      [mui/grid {:item true :xs 12 :style {:padding 8}}]
       contents)
 
      ;; Floating actions
@@ -587,7 +586,7 @@
       (into
        [mui/grid
         {:container true :align-items "center" :spacing 8}]
-       (for [c bottom-actions
+       (for [c     bottom-actions
              :when (some? c)]
          [mui/grid {:item true}
           c]))]
