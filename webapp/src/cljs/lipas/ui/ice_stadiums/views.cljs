@@ -137,7 +137,8 @@
        (when-not editing?
          [mui/tooltip {:title (tr :map/zoom-to-site)}
           [mui/fab
-           {:color    "default"
+           {:size     "small"
+            :color    "default"
             :on-click #(show-on-map lipas-id)}
            [mui/icon {:color "secondary"}
             "place"]]]))}

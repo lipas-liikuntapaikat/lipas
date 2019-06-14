@@ -583,10 +583,14 @@
       contents)
 
      ;; Floating actions
-     (into
-      [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}]
-      (interpose [:span {:style {:margin-left "0.25em" :margin-right "0.25em"}}]
-                 bottom-actions))
+     [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}
+      (into
+       [mui/grid
+        {:container true :align-items "center" :spacing 8}]
+       (for [c bottom-actions
+             :when (some? c)]
+         [mui/grid {:item true}
+          c]))]
 
      ;; Small footer on top of which floating container may scroll
      [mui/grid
