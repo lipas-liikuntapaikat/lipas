@@ -269,22 +269,26 @@
      ;;[::zoom-to-site lipas-id]
      [::start-editing lipas-id :editing geom-type]]}))
 
+(defn- on-success-default [{:keys [lipas-id]}]
+  [[::stop-editing]
+   [:lipas.ui.search.events/submit-search]
+   [:lipas.ui.map.events/show-sports-site lipas-id]])
+
+(defn- on-failure-default [{:keys [lipas-id]}]
+  [[:lipas.ui.map.events/show-sports-site lipas-id]])
+
 (re-frame/reg-event-fx
  ::save-edits
  (fn [_ [_ lipas-id]]
-   {:dispatch-n
-    [[:lipas.ui.sports-sites.events/save-edits lipas-id]
-     [::stop-editing]
-
-     ;; We "unselect" lipas-id to avoid map jumping to old position when
-     ;; mode is changed (::stop editing) but new revision hasn't yet
-     ;; been fetched from search (after successful save).
-
-     ;; [::show-sports-site nil]
-
-     ;; TODO Uncommented above for now. Figure out how to re-position
-     ;; the mqp to new rev.
-     ]}))
+   (let [on-success (partial on-success-default {:lipas-id lipas-id})
+         on-failure (partial on-failure-default {:lipas-id lipas-id})]
+     {:dispatch-n
+      ;; We "unselect" sports-site while saving to make the
+      ;; map "forget" and focus on updated entries once they're saved.
+      ;; Some more elegant solution could be possibly implemented in
+      ;; the future.
+      [[:lipas.ui.map.events/show-sports-site nil]
+       [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]})))
 
 (re-frame/reg-event-fx
  ::discard-edits
@@ -321,10 +325,20 @@
          (==> [:lipas.ui.sports-sites.events/discard-new-site])
          (==> [::discard-drawing]))]})))
 
+(defn- on-success-new [{:keys [lipas-id]}]
+  [[:lipas.ui.sports-sites.events/discard-new-site]
+   [:lipas.ui.map.events/stop-editing]
+   [:lipas.ui.map.events/show-sports-site lipas-id]
+   [:lipas.ui.search.events/submit-search]
+   [:lipas.ui.login.events/refresh-login]])
+
 (re-frame/reg-event-fx
  ::save-new-site
  (fn [_ [_ data]]
-   {:dispatch [:lipas.ui.sports-sites.events/commit-rev data]}))
+   (let [draft? false
+         data   (assoc data :event-date (utils/timestamp))]
+     {:dispatch
+      [:lipas.ui.sports-sites.events/commit-rev data draft? on-success-new]})))
 
 ;; Import geoms ;;
 

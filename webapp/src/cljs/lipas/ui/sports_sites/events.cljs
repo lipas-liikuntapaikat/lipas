@@ -25,73 +25,33 @@
  (fn [db [_ lipas-id]]
    (assoc-in db [:sports-sites lipas-id :editing] nil)))
 
-(defn- commit-ajax [db data draft? on-success]
-  (let [token  (-> db :user :login :token)
-        params (when draft? "?draft=true")]
-    {:db (assoc-in db [:sports-sites :save-in-progress?] true)
-     :http-xhrio
-     {:method          :post
-      :headers         {:Authorization (str "Token " token)}
-      :uri             (str (:backend-url db) (str "/sports-sites" params))
-      :params          data
-      :format          (ajax/json-request-format)
-      :response-format (ajax/json-response-format {:keywords? true})
-      :on-success      [::save-success on-success]
-      :on-failure      [::save-failure]}}))
-
-(defn- dirty? [db rev]
-  (let [lipas-id  (:lipas-id rev)
-        site      (get-in db [:sports-sites lipas-id])
-        year      (utils/resolve-year (:event-date rev))
-        timestamp (if (utils/this-year? year)
-                    (:latest site)
-                    (-> (utils/latest-by-year (:history site))
-                        (get year)))
-        latest    (get-in site [:history timestamp])]
-    (utils/different? rev latest)))
-
-(defn- new-site? [rev]
-  (nil? (:lipas-id rev)))
-
-(defn- on-success-default [{:keys [lipas-id]}]
-  [[:lipas.ui.search.events/submit-search]
-   [:lipas.ui.map.events/show-sports-site nil]])
-
-(defn- on-success-new [{:keys [lipas-id]}]
-  [[::discard-new-site]
-   [:lipas.ui.map.events/stop-editing]
-   [:lipas.ui.map.events/show-sports-site lipas-id]
-   [:lipas.ui.search.events/submit-search]
-   [:lipas.ui.login.events/refresh-login]])
-
+;; Save revision (data). Triggers REST-api call
 (re-frame/reg-event-fx
  ::commit-rev
  [interceptors/check-token]
- (fn [{:keys [db]} [_ rev draft? on-success]]
-   (let [new?       (new-site? rev)
-         on-success (cond
-                      on-success on-success
-                      new?       on-success-new
-                      :else      on-success-default)
-         on-success (or on-success (when new? on-success-new))]
-     (if (or new? (dirty? db rev))
-       (commit-ajax db rev draft? on-success)
-       {:dispatch [::save-success on-success rev]}))))
+ (fn [{:keys [db]} [_ rev draft? on-success on-failure]]
+   (let [token  (-> db :user :login :token)
+         params (when draft? "?draft=true")]
+     {:db (assoc-in db [:sports-sites :save-in-progress?] true)
+      :http-xhrio
+      {:method          :post
+       :headers         {:Authorization (str "Token " token)}
+       :uri             (str (:backend-url db) (str "/sports-sites" params))
+       :params          rev
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::save-success on-success]
+       :on-failure      [::save-failure on-failure]}})))
 
+;; Save by lipas-id. Sets :event-date to current-timestamp.
 (re-frame/reg-event-fx
  ::save-edits
- [interceptors/check-token]
- (fn [{:keys [db]} [_ lipas-id]]
-   (let [rev        (-> (get-in db [:sports-sites lipas-id :editing])
-                        utils/make-saveable)
-         draft?     false
-         new?       (new-site? rev)
-         on-success (cond
-                      new?  #(on-success-new {:lipas-id lipas-id})
-                      :else (partial on-success-default {:lipas-id lipas-id}))]
-     (if (or new? (dirty? db rev))
-       (commit-ajax db rev draft? on-success)
-       {:dispatch [::save-success on-success rev]}))))
+ (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
+   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
+                    utils/make-saveable
+                    (assoc :event-date (utils/timestamp)))
+         draft? false]
+     {:dispatch [::commit-rev rev draft? on-success on-failure]})))
 
 (re-frame/reg-event-fx
  ::save-success
@@ -119,15 +79,17 @@
 
 (re-frame/reg-event-fx
  ::save-failure
- (fn [{:keys [db]} [_ error]]
+ (fn [{:keys [db]} [_ on-failure error]]
    (let [tr     (:translator db)
          fatal? false]
      {:db           (-> db
                         (assoc-in [:sports-sites :errors (utils/timestamp)] error)
                         (assoc-in [:sports-sites :save-in-progress?] false))
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/save-failed)
-                      :success? false}]
+      :dispatch-n   (into
+                     [[:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/save-failed)
+                        :success? false}]]
+                     (when on-failure (on-failure error)))
       :ga/exception [(:message error) fatal?]})))
 
 (re-frame/reg-event-fx
