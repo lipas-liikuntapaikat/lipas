@@ -643,7 +643,7 @@
    :promo-headline "Ajankohtaista",
    :front-page-link "Siirry etusivulle",
    :promo1-text
-   "Tarkista koulujen liikuntasalien tiedot  Lipas-järjestelmässä toukokuuhun 2019 mennessä! Uusia kouluja on  rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on koulujen  liikuntasalien tilanne kunnassasi?",
+   "Tarkista koulujen liikuntasalien tiedot  Lipas-järjestelmässä! Uusia kouluja on  rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on koulujen  liikuntasalien tilanne kunnassasi?",
    :ice-stadiums-link "Jäähalliportaali",
    :greeting "Hei {1} {2}!",
    :promo1-topic "Liikuntasalien päivitys"},
