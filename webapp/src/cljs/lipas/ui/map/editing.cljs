@@ -17,7 +17,7 @@
 ;; fired first. Its handlers are responsible of doing the snapping.
 (defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [source (-> layers :overlays :edits .getSource)
-        snap   (ol.interaction.Snap. #js{:source source})]
+        snap   (ol.interaction.Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
