@@ -1,6 +1,6 @@
 (ns lipas.ui.map.map
   (:require
-   ["ol"]
+   ["ol" :as ol]
    [goog.object :as gobj]
    [lipas.ui.map.editing :as editing]
    [lipas.ui.map.events :as events]
@@ -32,15 +32,15 @@
 
 (defn ->wmts [{:keys [url layer-name visible?]
                :or   {visible? false}}]
-  (ol.layer.Tile.
+  (ol/layer.Tile.
    #js{:visible visible?
        :source
-       (ol.source.WMTS.
+       (ol/source.WMTS.
         #js{:url             url
             :layer           layer-name
             :projection      "EPSG:3067"
             :matrixSet       "mml_grid"
-            :tileGrid        (ol.tilegrid.WMTS.
+            :tileGrid        (ol/tilegrid.WMTS.
                               #js{:origin      proj/epsg3067-top-left
                                   :extent      proj/epsg3067-extent
                                   :resolutions mml-resolutions
@@ -61,30 +61,30 @@
      {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors
-    (ol.layer.Vector.
-     #js{:source     (ol.source.Vector.)
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
          :name       "vectors"
          :style      styles/feature-style
          :renderMode "image"})
     :edits
-    (ol.layer.Vector.
-     #js{:source     (ol.source.Vector.)
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
          :style      #js[styles/edit-style styles/vertices-style]
          :renderMode "vector"})
     :markers
-    (ol.layer.Vector.
-     #js{:source     (ol.source.Vector.)
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
          :style      styles/blue-marker-style
          :renderMode "image"})
     :population
-    (ol.layer.Vector.
-     #js{:source     (ol.source.Vector.)
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
          :style      styles/population-style
          :name       "population"
          :renderMode "image"})}})
 
 (defn init-view [center zoom]
-  (ol.View. #js{:center         #js[(:lon center) (:lat center)]
+  (ol/View. #js{:center         #js[(:lon center) (:lat center)]
                 :extent         proj/epsg3067-extent
                 :zoom           zoom
                 :projection     "EPSG:3067"
@@ -93,7 +93,7 @@
                 :enableRotation false}))
 
 (defn init-overlay []
-  (ol.Overlay. #js{:offset #js[-15 0]
+  (ol/Overlay. #js{:offset #js[-15 0]
                    :element
                    (js/document.getElementById "popup-anchor")}))
 
@@ -113,29 +113,29 @@
                   :overlays #js[popup-overlay]
                   :view     view}
 
-        vector-hover (ol.interaction.Select.
+        vector-hover (ol/interaction.Select.
                       #js{:layers    #js[(-> layers :overlays :vectors)]
                           :style     styles/feature-style-hover
                           :multi     true
-                          :condition ol.events.condition.pointerMove})
+                          :condition ol/events.condition.pointerMove})
 
-        marker-hover (ol.interaction.Select.
+        marker-hover (ol/interaction.Select.
                       #js{:layers    #js[(-> layers :overlays :markers)]
                           :style     styles/feature-style-hover
                           :multi     true
-                          :condition ol.events.condition.pointerMove})
+                          :condition ol/events.condition.pointerMove})
 
-        population-hover (ol.interaction.Select.
+        population-hover (ol/interaction.Select.
                           #js{:layers    #js[(-> layers :overlays :population)]
                               :style     styles/population-hover-style
                               :multi     false
-                              :condition ol.events.condition.pointerMove})
+                              :condition ol/events.condition.pointerMove})
 
-        select (ol.interaction.Select.
+        select (ol/interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
                     :style  styles/feature-style-selected})
 
-        lmap (ol.Map. opts)]
+        lmap (ol/Map. opts)]
 
     (.on vector-hover "select"
          (fn [e]
@@ -201,13 +201,13 @@
            (==> [::events/map-clicked e])))
 
     (.on lmap "moveend"
-         (fn [e]
+         (fn [_]
            (let [center (.getCenter view)
-                 lonlat (ol.proj.toLonLat center proj/epsg3067)
+                 lonlat (ol/proj.toLonLat center proj/epsg3067)
                  zoom   (.getZoom view)
                  extent (.calculateExtent view)
-                 width  (.getWidth ol.extent extent)
-                 height (.getHeight ol.extent extent)]
+                 width  (.getWidth ol/extent extent)
+                 height (.getHeight ol/extent extent)]
 
              (when (and (> width 0) (> height 0))
                (==> [::events/set-view center lonlat zoom extent width height])))))
@@ -232,9 +232,9 @@
   (when-not (empty? fs)
     (let [extent (-> fs (aget 0) .getGeometry .getExtent)]
       (.forEach fs (fn [f']
-                     (js/ol.extent.extend extent (-> f' .getGeometry .getExtent))))
-      (let [buffered (js/ol.extent.buffer extent buffer)]
-        (js/ol.extent.intersects buffered (-> f .getGeometry .getExtent))))))
+                     (ol/extent.extend extent (-> f' .getGeometry .getExtent))))
+      (let [buffered (ol/extent.buffer extent buffer)]
+        (ol/extent.intersects buffered (-> f .getGeometry .getExtent))))))
 
 ;; Zones idea (within 2km,5km,10km) roughly from
 ;; https://www.oulu.fi/paikkatieto/Liikuntapaikkojen%20saavutettavuus.pdf

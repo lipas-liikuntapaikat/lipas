@@ -1,18 +1,18 @@
 (ns lipas.ui.map.utils
-  "NOTE: make sure `lipas.ui.map.projection` is loaded first for
-  x  necessary side-effects to take effect.`"
+  "NOTE: make sure `lipas.ui.map.projection` is loaded first for the
+  necessary side-effects to take effect.`"
   (:require
-   ["ol"]
+   ["ol" :as ol]
    ["turf" :as turf]
    [clojure.reader :refer [read-string]]
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
-   [lipas.ui.map.projection]
+   [lipas.ui.map.projection] ;; Loaded for side-effects
    [lipas.ui.map.styles :as styles]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(def geoJSON (ol.format.GeoJSON. #js{:dataProjection    "EPSG:4326"
+(def geoJSON (ol/format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                      :featureProjection "EPSG:3067"}))
 
 (def temp-fid-prefix "temp")
@@ -121,10 +121,10 @@
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [layer (-> layers :overlays :edits)
-        hover (ol.interaction.Select.
+        hover (ol/interaction.Select.
                #js{:layers    #js[layer]
                    :style     #js[styles/editing-hover-style styles/vertices-style]
-                   :condition ol.events.condition.pointerMove})]
+                   :condition ol/events.condition.pointerMove})]
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions :edits-hover] hover)))
 
@@ -178,7 +178,7 @@
 (defn fit-to-features! [map-ctx fs opts]
   (let [extent (-> fs first .getGeometry .getExtent)]
     (doseq [f (rest fs)]
-      (ol.extent.extend extent (-> f .getGeometry .getExtent)))
+      (ol/extent.extend extent (-> f .getGeometry .getExtent)))
     (fit-to-extent! map-ctx extent opts)))
 
 (defn fit-to-fcoll! [map-ctx fcoll]
@@ -280,6 +280,46 @@
       (garray/concatMap #(-> % turf/kinks (gobj/get "features")))
       ->fcoll
       ->clj))
+
+(defn strip-z [fcoll]
+  (-> fcoll
+      clj->js
+      (turf/truncate #js{:coordinates 2 :mutate true})
+      (gobj/get "features")
+      (garray/map turf/cleanCoords)
+      ->fcoll
+      ->clj))
+
+(defn find-problems [fcoll]
+  (when (#{"LineString"} (-> fcoll :features first :geometry :type))
+    {:kinks         (find-kinks fcoll)
+     ;;:intersections (find-intersections fcoll)
+     }))
+
+(defn fix-features [ol-features]
+  ol-features)
+
+(defn calculate-length
+  [fcoll]
+  (-> fcoll
+      clj->js
+      turf/length
+      ->clj
+      (utils/round-safe 2)
+      read-string))
+
+;; Below is a WIP attempt to automagically fix badly drawn
+;; linestrings.
+;;
+;; a) fix kinks
+;; b) join lines that can be joined
+;;
+;; I got it kinda working for simple cases but I wasn't confident
+;; enough to put it in production because it wasn't behaving correctly
+;; with some of the more complex cases.. Needs more testing.
+;;
+;; Current implementation finds the problems and displays them to the
+;; user but it's up to the human to fix the issues.
 
 ;; (defn merge-candidates [start end lines]
 ;;   (->> lines
@@ -449,427 +489,394 @@
 ;;       "LineString" (fix-linestrings ol-features)
 ;;       ol-features)))
 
-(defn strip-z [fcoll]
-  (-> fcoll
-      clj->js
-      (turf/truncate #js{:coordinates 2 :mutate true})
-      (gobj/get "features")
-      (garray/map turf/cleanCoords)
-      ->fcoll
-      ->clj))
+;; (def dying-geom
+;;   {:type "FeatureCollection",
+;;    :features
+;;    [{:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3811"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.620238 64.927283]]},
+;;      :properties nil,
+;;      :id "G__3783"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3782"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+;;      :properties nil,
+;;      :id "G__3786"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3785"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
+;;      :properties nil,
+;;      :id "G__3784"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619208 64.926996] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3808"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.620238 64.927283] [25.61972 64.927007]]},
+;;      :properties nil,
+;;      :id "G__3793"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3792"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3813"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.61972 64.927007]]},
+;;      :properties nil,
+;;      :id "G__3790"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3789"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3788"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61972 64.927007] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3794"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
+;;      :properties nil,
+;;      :id "G__3791"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+;;      :properties nil,
+;;      :id "G__3797"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+;;      :properties nil,
+;;      :id "G__3796"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
+;;      :properties nil,
+;;      :id "G__3801"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+;;      :properties nil,
+;;      :id "G__3814"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+;;      :properties nil,
+;;      :id "G__3795"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+;;      :properties nil,
+;;      :id "G__3799"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3802"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
+;;      :properties nil,
+;;      :id "G__3798"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
+;;      :properties nil,
+;;      :id "G__3800"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.617816 64.927202] [25.618262 64.92698]]},
+;;      :properties nil,
+;;      :id "G__3804"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619208 64.926996] [25.618495 64.927102]]},
+;;      :properties nil,
+;;      :id "G__3806"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.619208 64.926996]]},
+;;      :properties nil,
+;;      :id "G__3803"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618495 64.927102] [25.618262 64.92698]]},
+;;      :properties nil,
+;;      :id "G__3807"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.619208 64.926996] [25.618262 64.92698]]},
+;;      :properties nil,
+;;      :id "G__3805"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61972 64.927007] [25.619208 64.926996]]},
+;;      :properties nil,
+;;      :id "G__3787"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618495 64.927102] [25.617816 64.927202]]},
+;;      :properties nil,
+;;      :id "G__3809"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.618495 64.927102]]},
+;;      :properties nil,
+;;      :id "G__3810"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
+;;      :properties nil,
+;;      :id "G__3812"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates [[25.61977 64.927513] [25.617816 64.927202]]},
+;;      :properties nil,
+;;      :id "temp3815"}]})
 
-(defn find-problems [fcoll]
-  (when (#{"LineString"} (-> fcoll :features first :geometry :type))
-    {:kinks         (find-kinks fcoll)
-     ;;:intersections (find-intersections fcoll)
-     }))
+;; (def killer-coords
+;;   [[25.61977, 64.927513] [25.617815999999994, 64.927202]])
+;; (def killer-geom {:type "LineString" :coordinates killer-coords})
+;; (def killer-feature {:type "Feature" :geometry killer-geom})
 
-(defn fix-features [ol-features]
-  ol-features)
-
-(defn calculate-length
-  [fcoll]
-  (-> fcoll
-      clj->js
-      turf/length
-      ->clj
-      (utils/round-safe 2)
-      read-string))
-
-(comment
-  (def dying-geom
-    {:type "FeatureCollection",
-     :features
-     [{:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3811"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.620238 64.927283]]},
-       :properties nil,
-       :id "G__3783"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3782"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
-       :properties nil,
-       :id "G__3786"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61977 64.927513] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3785"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.61977 64.927513]]},
-       :properties nil,
-       :id "G__3784"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619208 64.926996] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3808"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.620238 64.927283] [25.61972 64.927007]]},
-       :properties nil,
-       :id "G__3793"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3792"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3813"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.61972 64.927007]]},
-       :properties nil,
-       :id "G__3790"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619746 64.927269] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3789"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3788"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61972 64.927007] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3794"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.619746 64.927269]]},
-       :properties nil,
-       :id "G__3791"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
-       :properties nil,
-       :id "G__3797"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
-       :properties nil,
-       :id "G__3796"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.617816 64.927202] [25.618741 64.92723]]},
-       :properties nil,
-       :id "G__3801"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
-       :properties nil,
-       :id "G__3814"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
-       :properties nil,
-       :id "G__3795"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
-       :properties nil,
-       :id "G__3799"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3802"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.619342 64.927257]]},
-       :properties nil,
-       :id "G__3798"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619342 64.927257] [25.618741 64.92723]]},
-       :properties nil,
-       :id "G__3800"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.617816 64.927202] [25.618262 64.92698]]},
-       :properties nil,
-       :id "G__3804"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619208 64.926996] [25.618495 64.927102]]},
-       :properties nil,
-       :id "G__3806"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.619208 64.926996]]},
-       :properties nil,
-       :id "G__3803"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618495 64.927102] [25.618262 64.92698]]},
-       :properties nil,
-       :id "G__3807"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.619208 64.926996] [25.618262 64.92698]]},
-       :properties nil,
-       :id "G__3805"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61972 64.927007] [25.619208 64.926996]]},
-       :properties nil,
-       :id "G__3787"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618495 64.927102] [25.617816 64.927202]]},
-       :properties nil,
-       :id "G__3809"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.618495 64.927102]]},
-       :properties nil,
-       :id "G__3810"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.618741 64.92723] [25.617816 64.927202]]},
-       :properties nil,
-       :id "G__3812"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates [[25.61977 64.927513] [25.617816 64.927202]]},
-       :properties nil,
-       :id "temp3815"}]})
-
-  (def killer-coords
-    [[25.61977, 64.927513] [25.617815999999994, 64.927202]])
-  (def killer-geom {:type "LineString" :coordinates killer-coords})
-  (def killer-feature {:type "Feature" :geometry killer-geom})
-
-  (turf/truncate (clj->js killer-geom))
+;; (turf/truncate (clj->js killer-geom))
 
 
-  (-> dying-geom :features count)
-  (->> (update dying-geom :features conj killer-feature)
-       (split-by-intersections)
-       :features
-       count
-       )
+;; (-> dying-geom :features count)
+;; (->> (update dying-geom :features conj killer-feature)
+;;      (split-by-intersections)
+;;      :features
+;;      count
+;;      )
 
-  )
+;; (def easy
+;;   {:type "FeatureCollection",
+;;    :features
+;;    [{:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates
+;;       [[25.74504757340173 62.60883756260095]
+;;        [25.745300602130833 62.60866102563988]
+;;        [25.74586650741268 62.60877169751404]]},
+;;      :properties nil,
+;;      :id "temp14"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates
+;;       [[25.74586650741268 62.60877169751404]
+;;        [25.74634838061013 62.608872629054495]
+;;        [25.746625766677678 62.60870039304092]]},
+;;      :properties nil,
+;;      :id "temp15"}]})
 
-(comment
-  (def easy
-    {:type "FeatureCollection",
-     :features
-     [{:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74504757340173 62.60883756260095]
-         [25.745300602130833 62.60866102563988]
-         [25.74586650741268 62.60877169751404]]},
-       :properties nil,
-       :id "temp14"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74586650741268 62.60877169751404]
-         [25.74634838061013 62.608872629054495]
-         [25.746625766677678 62.60870039304092]]},
-       :properties nil,
-       :id "temp15"}]})
-
-  (def easy2
-    {:type "FeatureCollection",
-     :features
-     [{:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74504757340173 62.60883756260095]
-         [25.745300602130833 62.60866102563988]
-         [25.74586650741268 62.60877169751404]]},
-       :properties nil,
-       :id "temp14"}
-      {:type "Feature",
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74634838061013 62.608872629054495]
-         [25.746625766677678 62.60870039304092]
-         [25.74586650741268 62.60877169751404]]},
-       :properties nil,
-       :id "temp15"}]})
+;; (def easy2
+;;   {:type "FeatureCollection",
+;;    :features
+;;    [{:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates
+;;       [[25.74504757340173 62.60883756260095]
+;;        [25.745300602130833 62.60866102563988]
+;;        [25.74586650741268 62.60877169751404]]},
+;;      :properties nil,
+;;      :id "temp14"}
+;;     {:type "Feature",
+;;      :geometry
+;;      {:type "LineString",
+;;       :coordinates
+;;       [[25.74634838061013 62.608872629054495]
+;;        [25.746625766677678 62.60870039304092]
+;;        [25.74586650741268 62.60877169751404]]},
+;;      :properties nil,
+;;      :id "temp15"}]})
 
 
-  (merge-linestrings easy)
-  (merge-linestrings easy2))
+;; (merge-linestrings easy)
+;; (merge-linestrings easy2)
 
-(comment
-  (def kink
-    {:type "FeatureCollection",
-     :features
-     [{:type "Feature",
-       :id "1"
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74829599086967 62.60992094390775]
-         [25.749438011346825 62.610070518117595]
-         [25.749690556547957 62.609852625658625]
-         [25.7484300396036 62.6100707537238]]}}]})
-
-
-  (-> kink clj->js fix-kinks)
-  (merge-line-strings kink)
-
-  (turf/lineIntersect (clj->js kink) (clj->js kink))
-
-  (def kinks
-    {:type "FeatureCollection",
-     :features
-     [{:type     "Feature",
-       :features [],
-       :geometry
-       {:type "LineString",
-        :coordinates
-        [[25.74809991565044 62.609440270660826]
-         [25.7487270259911 62.60968963987866]
-         [25.74834318779659 62.60938667187484]
-         [25.74895985958416 62.60938494083431]
-         [25.7480658612651 62.60963167475782]]}}]})
-
-  (fix-kinks kinks)
-
-  (turf/lineIntersect (clj->js kink) (clj->js kinks))
-
-  (join-lines [1 2 3] [3 4 5])
-  (join-lines [1 2 3] [4 5 3])
-  (join-lines [1 2 3] [1 4 5])
-  (join-lines [1 2 3] [4 5 1]))
-
-(comment
-
-  (def spltr
-    {:type "FeatureCollection", :features
-     #{{:type "Feature", :properties {}, :geometry
-        {:type "Point", :coordinates [25.635576 64.930784]}}}})
+;; (comment
+;;   (def kink
+;;     {:type "FeatureCollection",
+;;      :features
+;;      [{:type "Feature",
+;;        :id "1"
+;;        :geometry
+;;        {:type "LineString",
+;;         :coordinates
+;;         [[25.74829599086967 62.60992094390775]
+;;          [25.749438011346825 62.610070518117595]
+;;          [25.749690556547957 62.609852625658625]
+;;          [25.7484300396036 62.6100707537238]]}}]})
 
 
-  (def ls1 {:type "LineString", :coordinates [[25.635078 64.9308] [25.635324 64.930785] [25.635576 64.930784] [25.635617 64.93085]]})
+;;   (-> kink clj->js fix-kinks)
+;;   (merge-line-strings kink)
 
-  (def ls2 {:type "LineString", :coordinates [[25.635576 64.930784] [25.635669 64.930721]]})
+;;   (turf/lineIntersect (clj->js kink) (clj->js kink))
 
-  (def f1 {:type "Feature" :geometry ls1})
-  (def f2 {:type "Feature" :geometry ls2})
+;;   (def kinks
+;;     {:type "FeatureCollection",
+;;      :features
+;;      [{:type     "Feature",
+;;        :features [],
+;;        :geometry
+;;        {:type "LineString",
+;;         :coordinates
+;;         [[25.74809991565044 62.609440270660826]
+;;          [25.7487270259911 62.60968963987866]
+;;          [25.74834318779659 62.60938667187484]
+;;          [25.74895985958416 62.60938494083431]
+;;          [25.7480658612651 62.60963167475782]]}}]})
 
-  (def fcoll {:type "FeatureCollection" :features [f1 f2]})
+;;   (fix-kinks kinks)
 
-  (->clj
-   (turf/lineSplit (clj->js f1) (-> spltr :features first clj->js)))
+;;   (turf/lineIntersect (clj->js kink) (clj->js kinks))
 
-  (->clj
-   (turf/lineSplit (clj->js f2) (-> spltr :features first clj->js)))
+;;   (join-lines [1 2 3] [3 4 5])
+;;   (join-lines [1 2 3] [4 5 3])
+;;   (join-lines [1 2 3] [1 4 5])
+;;   (join-lines [1 2 3] [4 5 1]))
 
-  (find-intersections fcoll)
-  (split-by-intersections2 fcoll)
+;; (def spltr
+;;   {:type "FeatureCollection", :features
+;;    #{{:type "Feature", :properties {}, :geometry
+;;       {:type "Point", :coordinates [25.635576 64.930784]}}}})
 
-  (def edge
-    {:type "FeatureCollection"
-     :features
-     [{:type "Feature"
-       :geometry
-       {:type "LineString"
-        :coordinates [[0 0] [10 0]]}}
-      {:type "Feature"
-       :geometry
-       {:type "LineString"
-        :coordinates [[0 10] [0 0]]}}]})
 
-  (def cross
-    {:type "FeatureCollection"
-     :features
-     [{:type "Feature"
-       :geometry
-       {:type "LineString"
-        :coordinates [[0 0] [10 0]]}}
-      {:type "Feature"
-       :geometry
-       {:type "LineString"
-        :coordinates [[5 10] [5 -10]]}}]})
+;; (def ls1 {:type "LineString", :coordinates [[25.635078 64.9308] [25.635324 64.930785] [25.635576 64.930784] [25.635617 64.93085]]})
 
-  (find-intersections edge)
-  (split-by-intersections2 edge)
+;; (def ls2 {:type "LineString", :coordinates [[25.635576 64.930784] [25.635669 64.930721]]})
 
-  (find-intersections cross)
-  (split-by-intersections2 cross)
+;; (def f1 {:type "Feature" :geometry ls1})
+;; (def f2 {:type "Feature" :geometry ls2})
 
-  (def f1 (-> edge :features first clj->js))
-  (def f2 (-> edge :features second clj->js))
+;; (def fcoll {:type "FeatureCollection" :features [f1 f2]})
 
-  (def g1 (-> edge :features first :geometry clj->js))
-  (def g2 (-> edge :features second :geometry clj->js))
+;; (->clj
+;;  (turf/lineSplit (clj->js f1) (-> spltr :features first clj->js)))
 
-  (split-by-intersections2 edge)
-  (split-by-features f1 (turf/lineIntersect g1 g2))
+;; (->clj
+;;  (turf/lineSplit (clj->js f2) (-> spltr :features first clj->js)))
 
-  (turf/lineIntersect g1 g2)
-  (turf/combine (turf/lineIntersect g1 g2))
-  (def splitter (-> (turf/lineIntersect g1 g2) ->splitter))
-  (turf/lineSplit f1 splitter)
-  (turf/lineSplit f2 splitter)
+;; (find-intersections fcoll)
+;; (split-by-intersections2 fcoll)
 
-  (defn debug-fcoll [x]
-    (-> x
-        (gobj/get "features")
-        (garray/map (fn [y] (-> y
-                                (gobj/get "geometry")
-                                (gobj/get "coordinates"))))
-        (js/console.log))
-    x))
+;; (def edge
+;;   {:type "FeatureCollection"
+;;    :features
+;;    [{:type "Feature"
+;;      :geometry
+;;      {:type "LineString"
+;;       :coordinates [[0 0] [10 0]]}}
+;;     {:type "Feature"
+;;      :geometry
+;;      {:type "LineString"
+;;       :coordinates [[0 10] [0 0]]}}]})
+
+;; (def cross
+;;   {:type "FeatureCollection"
+;;    :features
+;;    [{:type "Feature"
+;;      :geometry
+;;      {:type "LineString"
+;;       :coordinates [[0 0] [10 0]]}}
+;;     {:type "Feature"
+;;      :geometry
+;;      {:type "LineString"
+;;       :coordinates [[5 10] [5 -10]]}}]})
+
+;; (find-intersections edge)
+;; (split-by-intersections2 edge)
+
+;; (find-intersections cross)
+;; (split-by-intersections2 cross)
+
+;; (def f1 (-> edge :features first clj->js))
+;; (def f2 (-> edge :features second clj->js))
+
+;; (def g1 (-> edge :features first :geometry clj->js))
+;; (def g2 (-> edge :features second :geometry clj->js))
+
+;; (split-by-intersections2 edge)
+;; (split-by-features f1 (turf/lineIntersect g1 g2))
+
+;; (turf/lineIntersect g1 g2)
+;; (turf/combine (turf/lineIntersect g1 g2))
+;; (def splitter (-> (turf/lineIntersect g1 g2) ->splitter))
+;; (turf/lineSplit f1 splitter)
+;; (turf/lineSplit f2 splitter)
+
+;; (defn debug-fcoll [x]
+;;   (-> x
+;;       (gobj/get "features")
+;;       (garray/map (fn [y] (-> y
+;;                               (gobj/get "geometry")
+;;                               (gobj/get "coordinates"))))
+;;       (js/console.log))
+;;   x)
