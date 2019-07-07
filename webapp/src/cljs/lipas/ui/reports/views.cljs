@@ -120,7 +120,7 @@
              :items     saved-reports
              :label-fn  :name
              :value-fn  :fields
-             :on-change #(==> [::events/set-selected-fields %])}]])
+             :on-change #(==> [::events/open-saved-report %])}]])
 
         ;; Quick selects
         [mui/grid {:item true :xs 12}
