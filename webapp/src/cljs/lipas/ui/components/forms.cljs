@@ -23,7 +23,7 @@
        [mui/input-label {:shrink true :style {:color "rgba(0, 0, 0, 0.88)"}}
         label]
        [mui/link {:href value :style {:padding "6px 0 7px"}}
-        value]
+        [mui/typography {:variant "body1"} value]]
        [mui/divider
         {:style
          {:border-top "1px dotted"
