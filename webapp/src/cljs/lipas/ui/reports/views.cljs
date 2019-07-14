@@ -53,8 +53,8 @@
 
 (defn save-dialog []
   (r/with-let [name' (r/atom nil)]
-    (let [tr    (<== [:lipas.ui.subs/translator])
-          open? (<== [::subs/save-dialog-open?])]
+    (let [tr        (<== [:lipas.ui.subs/translator])
+          open?     (<== [::subs/save-dialog-open?])]
       [mui/dialog {:open open?}
        [mui/dialog-content
         [lui/text-field
@@ -156,10 +156,11 @@
 
       ;; Cancel / download buttons
       [mui/dialog-actions
+       [mui/typography {:variant "caption"}
+        (tr :search/results-count results-count)]
        (when downloading?
          [mui/circular-progress])
-       [mui/button {:on-click toggle
-                    :disabled downloading?}
+       [mui/button {:on-click toggle :disabled downloading?}
         (tr :actions/cancel)]
        [mui/button
         {:disabled (or downloading? (empty? selected-fields))
