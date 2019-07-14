@@ -14,16 +14,36 @@
       :disabled   true
       :read-only? true}]))
 
+(defn ->link
+  "Layout is similar to text-field but contains a link."
+  [{:keys [label value] :as d}]
+  (let [value (utils/display-value value :empty "-" :links? false)]
+    (if (utils/link? value)
+      [:<>
+       [mui/input-label {:shrink true :style {:color "rgba(0, 0, 0, 0.88)"}}
+        label]
+       [mui/link {:href value :style {:padding "6px 0 7px"}}
+        value]
+       [mui/divider
+        {:style
+         {:border-top "1px dotted"
+          :color      "rgba(0, 0, 0, 0.12)"}}]]
+      (->display-tf d false 1))))
+
 (defn- ->field [read-only? d]
   (let [field (-> d :form-field)
+        link? (= :link (:type d))
         props (-> field second)]
     (cond
       (= (first d) :<>) (into
                          [:<>]
                          (map (partial ->field read-only?) (rest d)))
       (vector? d)       d
-      read-only?        (->display-tf d (:multiline props) (:rows props))
-      :else             (assoc field 1 (assoc props :label (:label d))))))
+
+      read-only? (if link?
+                   (->link d)
+                   (->display-tf d (:multiline props) (:rows props)))
+      :else      (assoc field 1 (assoc props :label (:label d))))))
 
 (defn form [{:keys [read-only?]} & data]
   (into
