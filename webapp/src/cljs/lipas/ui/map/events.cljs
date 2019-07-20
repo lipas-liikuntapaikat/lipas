@@ -1,6 +1,6 @@
 (ns lipas.ui.map.events
   (:require
-   ["ol"]
+   ["ol" :as ol]
    [ajax.core :as ajax]
    [cemerick.url :as url]
    [clojure.string :as string]
@@ -13,13 +13,13 @@
    [re-frame.core :as re-frame]))
 
 (defn wgs84->epsg3067 [wgs84-coords]
-  (let [proj      (.get js/ol.proj "EPSG:3067")
-        [lon lat] (js->clj (ol.proj.fromLonLat (clj->js wgs84-coords) proj))]
+  (let [proj      (.get ol/proj "EPSG:3067")
+        [lon lat] (js->clj (ol/proj.fromLonLat (clj->js wgs84-coords) proj))]
     {:lon lon :lat lat}))
 
 (defn epsg3067->wgs84-fast [wgs84-coords]
-  (let [proj      (.get js/ol.proj "EPSG:3067")]
-    (ol.proj.toLonLat wgs84-coords proj)))
+  (let [proj      (.get ol/proj "EPSG:3067")]
+    (ol/proj.toLonLat wgs84-coords proj)))
 
 (defn top-left [extent]
   (epsg3067->wgs84-fast
@@ -239,12 +239,12 @@
 
 (re-frame/reg-event-fx
  ::map-clicked
- (fn [{:keys [db]} [_ evt]]
+ (fn [_]
    {:dispatch [::hide-address]}))
 
 (re-frame/reg-event-fx
  ::sports-site-selected
- (fn [{:keys [db]} [_ evt lipas-id]]
+ (fn [{:keys [db]} [_ _ lipas-id]]
    (let [sub-mode (-> db :map :mode :sub-mode)]
      (if (= sub-mode :population)
        {:dispatch [::show-sports-site-population lipas-id]}
@@ -688,7 +688,8 @@
                     (assoc-in [:map :mode :population :lipas-id] nil)
                     (cond->
                         (< zoom 7) (assoc-in [:map :zoom] 7)))
-      :dispatch [::get-population]})))
+      :dispatch [::get-population]
+      :ga/event ["analysis" "show-near-by-population"]})))
 
 (re-frame/reg-event-fx
  ::show-sports-site-population
@@ -708,4 +709,5 @@
                     (assoc-in [:map :mode :population :geoms] geoms)
                     (assoc-in [:map :mode :population :lipas-id] lipas-id)
                     (assoc-in [:map :mode :population :site-name] (:name rev)))
-      :dispatch [::get-population]})))
+      :dispatch [::get-population]
+      :ga/event ["analysis" "show-sports-site-population" lipas-id]})))
