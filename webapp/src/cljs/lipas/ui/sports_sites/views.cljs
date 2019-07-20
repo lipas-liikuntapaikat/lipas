@@ -154,6 +154,7 @@
      ;; WWW
      {:label      (tr :lipas.sports-site/www)
       :value      (-> display-data :www)
+      :type       :link
       :form-field [lui/text-field
                    {:value     (-> edit-data :www)
                     :spec      :lipas.sports-site/www
@@ -162,6 +163,7 @@
      ;; Reservations-link
      {:label      (tr :lipas.sports-site/reservations-link)
       :value      (-> display-data :reservations-link)
+      :type       :link
       :form-field [lui/text-field
                    {:value     (-> edit-data :reservations-link)
                     :spec      :lipas.sports-site/reservations-link

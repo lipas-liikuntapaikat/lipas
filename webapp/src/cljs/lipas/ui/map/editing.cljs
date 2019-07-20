@@ -1,8 +1,7 @@
 (ns lipas.ui.map.editing
   (:require
-   ["ol"]
+   ["ol" :as ol]
    [goog.object :as gobj]
-   [goog.array :as garray]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
@@ -17,13 +16,13 @@
 ;; fired first. Its handlers are responsible of doing the snapping.
 (defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [source (-> layers :overlays :edits .getSource)
-        snap   (ol.interaction.Snap. #js{:source source :pixelTolerance 5})]
+        snap   (ol/interaction.Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
 (defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
-        delete (ol.interaction.Select. #js{:layers #js[layer]
+        delete (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
         source (.getSource layer)]
     (.addInteraction lmap delete)
@@ -44,7 +43,7 @@
 
 (defn enable-splitting! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
   (let [layer  (-> layers :overlays :edits)
-        split  (ol.interaction.Select. #js{:layers #js[layer]
+        split  (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
         source (.getSource layer)]
     (.addInteraction lmap split)
@@ -52,7 +51,7 @@
          (fn [e]
            (let [selected (gobj/get e "selected")
                  euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 wgs      (ol.proj.toLonLat euref "EPSG:3067")]
+                 wgs      (ol/proj.toLonLat euref "EPSG:3067")]
              (when (not-empty selected)
                (doseq [f selected]
                  (when-let [splitted (map-utils/split-at-coords f wgs)]
@@ -68,11 +67,11 @@
 (defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                            on-modifyend]
   (let [layer     (-> layers :overlays :edits)
-        draw-hole (js/ol.interaction.DrawHole. #js{:layers #js[layer]})
+        draw-hole (ol/nteraction.DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
-         (fn [e]
+         (fn [_]
            (on-modifyend (map-utils/->geoJSON-clj (.getFeatures source)))))
     (assoc-in map-ctx [:interactions :draw-hole] draw-hole)))
 
@@ -83,17 +82,17 @@
         _        (.clear source)
         features (-> geoJSON-feature clj->js map-utils/->ol-features)
         _        (.addFeatures source features)
-        modify   (ol.interaction.Modify. #js{:source source})
-        hover    (ol.interaction.Select.
+        modify   (ol/interaction.Modify. #js{:source source})
+        hover    (ol/interaction.Select.
                   #js{:layers    #js[layer]
                       :style     #js[styles/editing-hover-style styles/vertices-style]
-                      :condition ol.events.condition.pointerMove})]
+                      :condition ol/events.condition.pointerMove})]
 
     (.addInteraction lmap hover)
     (.addInteraction lmap modify)
 
     (.on modify "modifyend"
-         (fn [e]
+         (fn [_]
            (let [fixed (-> source .getFeatures map-utils/fix-features)]
 
              (.clear source)
@@ -126,7 +125,7 @@
                        :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
-        draw   (ol.interaction.Draw.
+        draw   (ol/interaction.Draw.
                 #js{:snapTolerance 0 :source source :type geom-type})]
 
 

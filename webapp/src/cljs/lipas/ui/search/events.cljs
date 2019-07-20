@@ -499,7 +499,8 @@
                        (update :saved-searches conj m))]
      {:dispatch-n
       [[:lipas.ui.user.events/update-user-data user-data]
-       [::toggle-save-dialog]]})))
+       [::toggle-save-dialog]]
+      :ga/event ["user" "save-my-search"]})))
 
 (re-frame/reg-event-fx
  ::select-saved-search
@@ -507,4 +508,5 @@
    {:db (-> db
         (assoc-in [:search :filters] filters)
         (assoc-in [:search :string] string))
-    :dispatch [::submit-search]}))
+    :dispatch [::submit-search]
+    :ga/event ["user" "open-saved-search"]}))

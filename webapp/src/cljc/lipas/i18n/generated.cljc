@@ -244,7 +244,7 @@
    :headline "Haku",
    :results-count "{1} hakutulosta",
    :placeholder "Etsi...",
-   :retkikartta-filter "Retkikartta.fi kohteet",
+   :retkikartta-filter "Retkikartta.fi-kohteet",
    :filters "Rajaa hakua",
    :search-more "Hae lisää...",
    :page-size "Näytä kerralla",
