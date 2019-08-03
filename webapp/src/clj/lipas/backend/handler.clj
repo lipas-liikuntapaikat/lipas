@@ -19,7 +19,7 @@
    [ring.util.io :as ring-io]))
 
 (defn exception-handler [status type]
-  (fn [^Exception e request]
+  (fn [^Exception e _request]
     (-> {:status status
          :body   {:message (.getMessage e)
                   :type    type}}
@@ -31,7 +31,9 @@
    :no-permission      (exception-handler 403 :no-permission)
    :user-not-found     (exception-handler 404 :user-not-found)
    :email-not-found    (exception-handler 404 :email-not-found)
-   :reminder-not-found (exception-handler 404 :reminder-not-found)})
+   :reminder-not-found (exception-handler 404 :reminder-not-found)
+
+   :qbits.spandex/response-exception (exception-handler 500 :internal-server-error)})
 
 (def exceptions-mw
   (exception/create-exception-middleware
@@ -41,6 +43,7 @@
     ;;Prints all stack traces
     {::exception/wrap
      (fn [handler e request]
+       (prn (ex-data e))
        (.printStackTrace e)
        (handler e request))}
     )))
