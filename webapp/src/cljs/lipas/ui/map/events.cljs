@@ -450,8 +450,9 @@
  (fn [{:keys [db]} _]
    (let [ids      (-> db :map :import :selected-items)
          data     (select-keys (-> db :map :import :data) ids)
-         fcoll    {:type     "FeatureCollection"
-                   :features (into [] (->> data vals (map #(dissoc % :properties))))}]
+         fcoll    (map-utils/strip-z
+                   {:type     "FeatureCollection"
+                    :features (into [] (->> data vals (map #(dissoc % :properties))))})]
      {:db         (assoc-in db [:map :mode :geoms] fcoll)
       :dispatch-n [[::new-geom-drawn fcoll]
                    [::toggle-import-dialog]
