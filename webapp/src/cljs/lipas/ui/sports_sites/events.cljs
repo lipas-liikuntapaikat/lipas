@@ -177,9 +177,11 @@
 (re-frame/reg-event-fx
  ::init-new-site
  (fn [{:keys [db]} [_ type-code geoms]]
-   ;; We guess city-code based on permissions.
-   ;; TODO maybe use geolocation for better guesses
-   (let [city-code (-> db :user :login :permissions :cities first)
+   ;; If city-code is not set yet, We guess it based on user
+   ;; permissions.  TODO maybe use geolocation for better guesses
+   (let [city-code (or
+                    (-> db :new-sports-site :data :location :city :city-code)
+                    (-> db :user :login :permissions :cities first))
          data      {:status     "active"
                     :event-date (utils/timestamp)
                     :type       {:type-code type-code}
