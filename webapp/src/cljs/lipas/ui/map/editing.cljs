@@ -170,7 +170,7 @@
 ;; Adding new feature collection ;;
 
 (defn set-adding-mode!
-  [map-ctx {:keys [problems geom geom-type] :as mode}]
+  [map-ctx {:keys [problems geoms geom-type undo-geoms] :as mode}]
   (let [map-ctx   (-> map-ctx
                       map-utils/clear-interactions!
                       map-utils/clear-problems!
@@ -183,10 +183,11 @@
                                  (fn [f] (==> [::events/new-geom-drawn f])))
       :editing   (-> map-ctx
                      (cond->
-                         (nil? old-sm) (map-utils/fit-to-fcoll! geom))
-                     (start-editing! geom on-modify))
+                         (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
+                     (start-editing! geoms on-modify))
       :deleting  (enable-delete! map-ctx on-modify)
       :splitting (enable-splitting! map-ctx on-modify)
+      :undo      (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
       :finished  (map-utils/show-feature! map-ctx (:geom mode)))))
 
 (defn update-adding-mode!
@@ -208,10 +209,24 @@
         clear-edits!
         (start-editing! fs on-modifyend))))
 
+(defn undo-edits!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id undo-geoms]}]
+  (let [source   (-> layers :overlays :edits .getSource)
+        features (-> undo-geoms clj->js map-utils/->ol-features)]
+
+    (doseq [f (.getFeatures source)]
+      (.removeFeature source f))
+
+    (.addFeatures source features)
+    (==> [::events/undo-done lipas-id undo-geoms])
+    map-ctx))
+
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as mode} continue?]
+  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
+  mode} continue?]
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
@@ -238,6 +253,7 @@
                          (enable-delete! on-modifyend))
        :splitting    (-> map-ctx
                          (enable-splitting! on-modifyend))
+       :undo         (undo-edits! map-ctx mode)
        :importing    (refresh-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx {:keys [problems] :as mode}]

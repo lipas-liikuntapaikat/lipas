@@ -248,10 +248,10 @@
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
-                  geom-type portal save-in-progress?]}
+                  geom-type portal save-in-progress? undo redo]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
-          set-field     (partial set-field lipas-id)]
+          set-field (partial set-field lipas-id)]
 
       [mui/grid
        {:container true
@@ -458,7 +458,23 @@
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
               [mui/tooltip {:title (tr :map/delete-vertices-hint)}
                [mui/typography {:style {:font-size 24 :margin-left "4px"}}
-                "?"]])]
+                "?"]])
+
+            ;; Undo
+            (when editing?
+              [mui/tooltip {:title "Undo"}
+               [mui/fab
+                {:disabled (not undo)
+                 :on-click #(==> [::events/undo lipas-id])}
+                [mui/icon "undo"]]])
+
+            ;; Redo
+            (when editing?
+              [mui/tooltip {:title "Redo"}
+               [mui/fab
+                {:disabled (not redo)
+                 :on-click #(==> [::events/redo lipas-id])}
+                [mui/icon "redo"]]])]
 
            (concat
             (lui/edit-actions-list
@@ -494,10 +510,10 @@
 (defn add-sports-site-view [{:keys [tr]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
-    (let [locale (tr)
+    (let [locale                                   (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems?  types size-categories zoomed? geom
-                  active-step sub-mode]} (<== [::subs/add-sports-site-view])
+                  active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
 
           set-field set-new-site-field]
 
@@ -664,6 +680,26 @@
                   [mui/grid {:item true}
                    [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
                     (tr :map/delete-vertices-hint)]])
+
+                ;; Undo & Redo
+                [mui/grid {:item true}
+                 [mui/grid {:container true}
+
+                  ;; Undo
+                  [mui/grid {:item true}
+                   [mui/tooltip {:title "Undo"}
+                    [mui/icon-button
+                     {:disabled (not undo)
+                      :on-click #(==> [::events/undo "new"])}
+                     [mui/icon "undo"]]]]
+
+                  ;; Redo
+                  [mui/grid {:item true}
+                   [mui/icon-button
+                    {:disabled (not redo)
+                     :on-click #(==> [::events/redo "new"])}
+                    [mui/tooltip {:title "Redo"}
+                     [mui/icon "redo"]]]]]]
 
                 ;; Done button
                 [mui/grid {:item true :xs 12}
