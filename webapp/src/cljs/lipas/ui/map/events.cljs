@@ -125,14 +125,15 @@
 (re-frame/reg-event-fx
  ::start-editing
  (fn [{:keys [db]} [_ lipas-id sub-mode geom-type]]
-   (let [site     (get-latest-rev db lipas-id)
-         geoms    (utils/->feature site)]
-     {:db (update-in db [:map :mode] merge {:name      :editing
-                                            :lipas-id  lipas-id
-                                            :geoms     geoms
-                                            :sub-mode  sub-mode
-                                            :geom-type geom-type})
-      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
+   (let [site  (get-latest-rev db lipas-id)
+         geoms (utils/->feature site)]
+     {:db         (update-in db [:map :mode] merge {:name      :editing
+                                                    :lipas-id  lipas-id
+                                                    :geoms     geoms
+                                                    :sub-mode  sub-mode
+                                                    :geom-type geom-type})
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
+                   [::clear-undo-redo]]})))
 
 (re-frame/reg-event-fx
  ::continue-editing
@@ -142,16 +143,20 @@
       :dispatch-n
       [[::show-problems (map-utils/find-problems geoms)]]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::stop-editing
- (fn [db [_]]
-   (assoc-in db [:map :mode :name] :default)))
+ (fn [{:keys [db]} [_]]
+   {:db (-> db
+            (assoc-in [:map :mode :name] :default)
+            (assoc-in [:map :temp] {}))
+    :dispatch [::clear-undo-redo]}))
 
 (re-frame/reg-event-db
  ::start-adding-geom
  (fn [db [_ geom-type]]
    (-> db
        (update-in [:map :mode] merge {:name      :adding
+                                      :temp      {}
                                       :geom-type geom-type
                                       :sub-mode  :drawing}))))
 
@@ -189,28 +194,81 @@
 
 
 (re-frame/reg-event-fx
+ ::undo
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [path       [:map :mode :geoms]
+         curr-geoms (get-in db path)
+         undo-stack (get-in db [:map :temp lipas-id :undo-stack])]
+     {:db (-> db
+              (assoc-in [:map :mode :sub-mode] :undo)
+              (assoc-in [:map :mode :undo-geoms] (peek undo-stack))
+              (update-in [:map :temp lipas-id :undo-stack] pop)
+              (update-in [:map :temp lipas-id :redo-stack] conj curr-geoms))})))
+
+(re-frame/reg-event-fx
+ ::redo
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [path       [:map :mode :geoms]
+         curr-geoms (get-in db path)
+         redo-stack (get-in db [:map :temp lipas-id :redo-stack])]
+     {:db (-> db
+              (assoc-in [:map :mode :sub-mode] :undo)
+              (assoc-in [:map :mode :undo-geoms] (peek redo-stack))
+              (update-in [:map :temp lipas-id :redo-stack] pop)
+              (update-in [:map :temp lipas-id :undo-stack] conj curr-geoms))})))
+
+;; Callback from OpenLayers
+(re-frame/reg-event-fx
+ ::undo-done
+ (fn [{:keys [db]} [_ lipas-id geoms]]
+   (let [path [:sports-sites lipas-id :editing :location :geometries]]
+     {:db         (cond-> db
+                    true     (update-in [:map :mode] merge {:geoms geoms :sub-mode :editing})
+                    lipas-id (assoc-in path geoms))
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
+
+(re-frame/reg-event-db
+ ::clear-undo-redo
+ (fn [db _]
+   (assoc-in db [:map :temp] {})))
+
+(re-frame/reg-event-fx
  ::update-geometries
  (fn [{:keys [db]} [_ lipas-id geoms]]
-   (let [path  [:sports-sites lipas-id :editing :location :geometries]
-         geoms (update geoms :features
-                       (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:db (assoc-in db path geoms)
+   (let [path      [:sports-sites lipas-id :editing :location :geometries]
+         old-geoms (-> db :map :mode :geoms)
+         new-geoms (update geoms :features
+                           (fn [fs] (map #(dissoc % :properties :id) fs)))]
+     {:db (-> db
+              (update-in [:map :temp lipas-id :undo-stack] conj old-geoms)
+              (assoc-in [:map :mode :geoms] new-geoms)
+              (assoc-in [:map :temp lipas-id :redo-stack] '())
+              (assoc-in path geoms))
       :dispatch-n
-      [[::show-problems (map-utils/find-problems geoms)]]})))
+      [[::show-problems (map-utils/find-problems new-geoms)]]})))
 
 (re-frame/reg-event-fx
  ::new-geom-drawn
- (fn [{:keys [db]} [_ geom]]
-   {:db (update-in db [:map :mode] merge {:name     :adding
-                                          :geom     geom
-                                          :sub-mode :editing})
-    :dispatch-n [[::show-problems (map-utils/find-problems geom)]]}))
+ (fn [{:keys [db]} [_ geoms]]
+   (let [curr-geoms (-> db :map :mode :geoms)]
+     {:db (cond-> db
+            curr-geoms (update-in [:map :temp "new" :undo-stack] conj curr-geoms)
+            true       (assoc-in [:map :temp "new" :redo-stack] '())
+            true       (update-in [:map :mode] merge {:name     :adding
+                                                      :geoms     geoms
+                                                      :sub-mode :editing}))
+
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (re-frame/reg-event-fx
  ::update-new-geom
- (fn [{:keys [db]} [_ geom]]
-   {:db         (assoc-in db [:map :mode :geom] geom)
-    :dispatch-n [[::show-problems (map-utils/find-problems geom)]]}))
+ (fn [{:keys [db]} [_ geoms]]
+   (let [curr-geoms (-> db :map :mode :geoms)]
+     {:db         (-> db
+                      (assoc-in [:map :mode :geoms] geoms)
+                      (assoc-in [:map :temp "new" :redo-stack] '())
+                      (update-in [:map :temp "new" :undo-stack] conj curr-geoms))
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (re-frame/reg-event-fx
  ::confirm-remove-segment
@@ -578,15 +636,15 @@
  (fn [{:keys [db]} [_ lipas-id]]
    (let [ts     (get-in db [:sports-sites lipas-id :latest])
          latest (get-in db [:sports-sites lipas-id :history ts])
-         geom   (get-in latest [:location :geometries])
-         geom   (if (= "Point" (geom-type geom))
+         geoms  (get-in latest [:location :geometries])
+         geoms  (if (= "Point" (geom-type geoms))
                   ;; Shift point by ~11m so it doesn't overlap 1:1
                   ;; with the original point.
-                  (update-in geom [:features 0 :geometry :coordinates 0] + 0.0001)
-                  geom)]
+                  (update-in geoms [:features 0 :geometry :coordinates 0] + 0.0001)
+                  geoms)]
      {:dispatch-n
       [[::start-adding-new-site]
-       [::new-geom-drawn geom]
+       [::new-geom-drawn geoms]
        [:lipas.ui.sports-sites.events/duplicate latest]]})))
 
 ;; Population events ;;

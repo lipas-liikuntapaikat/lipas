@@ -49,7 +49,7 @@
 
 (re-frame/reg-sub-raw
  ::selected-sports-site
- (fn [app-db event]
+ (fn [app-db _event]
    (ratom/reaction
     (let [lipas-id (-> @app-db :map :mode :lipas-id)]
       (when lipas-id
@@ -157,13 +157,24 @@
  ::new-geom
  (fn [db _]
    (when (= :adding (-> db :map :mode :name))
-     (-> db :map :mode :geom))))
+     (-> db :map :mode :geoms))))
+
+(re-frame/reg-sub
+ ::undo
+ (fn [db [_ lipas-id]]
+   (let [undo-stack (get-in db [:map :temp lipas-id :undo-stack])]
+     (seq undo-stack))))
+
+(re-frame/reg-sub
+ ::redo
+ (fn [db [_ lipas-id]]
+   (let [redo-stack (get-in db [:map :temp lipas-id :redo-stack])]
+     (seq redo-stack))))
 
 (re-frame/reg-sub
  ::drawer-open?
  (fn [db _]
    (-> db :map :drawer-open?)))
-
 
 ;; Import geoms ;;
 
@@ -253,10 +264,13 @@
     (re-frame/subscribe [:lipas.ui.user.subs/permission-to-publish? lipas-id])
     (re-frame/subscribe [:lipas.ui.user.subs/logged-in?])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
-    (re-frame/subscribe [::mode])])
+    (re-frame/subscribe [::mode])
+    (re-frame/subscribe [::undo lipas-id])
+    (re-frame/subscribe [::redo lipas-id])])
  (fn [[cities types geom-type admins owners editing? edits-valid?
        editing-allowed? save-in-progress? delete-dialog-open? type
-       types-props can-publish? logged-in?  size-categories mode] _]
+       types-props can-publish? logged-in?  size-categories mode undo redo] _]
+
    {:types               (filter
                           (comp #{geom-type} :geometry-type second) types)
     :cities              cities
@@ -279,7 +293,9 @@
     :portal              (case (:type-code type)
                            (3110 3130) "uimahalliportaali"
                            (2510 2520) "jaahalliportaali"
-                           nil)}))
+                           nil)
+    :undo                undo
+    :redo                redo}))
 
 (re-frame/reg-sub
  ::add-sports-site-view
@@ -296,9 +312,11 @@
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::zoomed-for-drawing?])
     (re-frame/subscribe [::new-geom])
-    (re-frame/subscribe [::mode])])
+    (re-frame/subscribe [::mode])
+    (re-frame/subscribe [::undo "new"])
+    (re-frame/subscribe [::redo "new"])])
  (fn [[type data valid? save-in-progress? admins owners cities types
-       prop-types size-categories zoomed? geom mode] _]
+       prop-types size-categories zoomed? geom mode undo redo] _]
    (let [geom-type (-> geom :features first :geometry :type)
          sub-mode  (mode :sub-mode)]
      {:type            type
@@ -325,7 +343,9 @@
       :active-step     (cond
                          (= :finished sub-mode) 2
                          (some? type)           1
-                         :else                  0)})))
+                         :else                  0)
+      :undo            undo
+      :redo            redo})))
 
 (re-frame/reg-sub
  ::sub-mode
