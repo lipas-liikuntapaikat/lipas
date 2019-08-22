@@ -289,9 +289,18 @@
  (fn [{:keys [db]} [_ geoms type-code]]
    (let [geoms (update geoms :features
                        (fn [fs] (map #(dissoc % :properties :id) fs)))]
-     {:db         (-> db
-                      (assoc-in [:map :mode :sub-mode] :finished))
+     {:db         (assoc-in db [:map :mode :sub-mode] :finished)
       :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
+
+(re-frame/reg-event-db
+ ::open-more-tools-menu
+ (fn [db [_ el]]
+   (assoc-in db [:map :more-tools-menu :anchor] el)))
+
+(re-frame/reg-event-db
+ ::close-more-tools-menu
+ (fn [db _]
+   (assoc-in db [:map :more-tools-menu :anchor] nil)))
 
 ;;; Map events ;;;
 
