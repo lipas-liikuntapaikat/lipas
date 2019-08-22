@@ -67,7 +67,7 @@
 (defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
                            on-modifyend]
   (let [layer     (-> layers :overlays :edits)
-        draw-hole (ol/nteraction.DrawHole. #js{:layers #js[layer]})
+        draw-hole (ol/interaction.DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
@@ -188,7 +188,7 @@
       :deleting  (enable-delete! map-ctx on-modify)
       :splitting (enable-splitting! map-ctx on-modify)
       :undo      (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
-      :finished  (map-utils/show-feature! map-ctx (:geom mode)))))
+      :finished  (map-utils/show-feature! map-ctx geoms))))
 
 (defn update-adding-mode!
   [map-ctx {:keys [problems] :as mode}]

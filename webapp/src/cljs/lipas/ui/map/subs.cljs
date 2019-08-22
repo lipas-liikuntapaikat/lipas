@@ -247,6 +247,11 @@
        (->> (map ->result)))))
 
 (re-frame/reg-sub
+ ::more-tools-menu-anchor
+ (fn [db]
+   (-> db :map :more-tools-menu :anchor)))
+
+(re-frame/reg-sub
  ::sports-site-view
  (fn [[_ lipas-id type-code] _]
    [(re-frame/subscribe [:lipas.ui.user.subs/permission-to-cities])
@@ -266,36 +271,39 @@
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [::mode])
     (re-frame/subscribe [::undo lipas-id])
-    (re-frame/subscribe [::redo lipas-id])])
+    (re-frame/subscribe [::redo lipas-id])
+    (re-frame/subscribe [::more-tools-menu-anchor])])
  (fn [[cities types geom-type admins owners editing? edits-valid?
        editing-allowed? save-in-progress? delete-dialog-open? type
-       types-props can-publish? logged-in?  size-categories mode undo redo] _]
+       types-props can-publish? logged-in?  size-categories mode undo redo
+       more-tools-menu-anchor] _]
 
-   {:types               (filter
-                          (comp #{geom-type} :geometry-type second) types)
-    :cities              cities
-    :admins              admins
-    :owners              owners
-    :editing?            editing?
-    :edits-valid?        edits-valid?
-    :editing-allowed?    editing-allowed?
-    :delete-dialog-open? delete-dialog-open?
-    :can-publish?        can-publish?
-    :logged-in?          logged-in?
-    :size-categories     size-categories
-    :mode                mode
-    :sub-mode            (:sub-mode mode)
-    :type                type
-    :types-props         types-props
-    :geom-type           (:geometry-type type)
-    :save-in-progress?   save-in-progress?
-    :problems?           (-> mode :problems :data :features seq)
-    :portal              (case (:type-code type)
-                           (3110 3130) "uimahalliportaali"
-                           (2510 2520) "jaahalliportaali"
-                           nil)
-    :undo                undo
-    :redo                redo}))
+   {:types                  (filter
+                             (comp #{geom-type} :geometry-type second) types)
+    :cities                 cities
+    :admins                 admins
+    :owners                 owners
+    :editing?               editing?
+    :edits-valid?           edits-valid?
+    :editing-allowed?       editing-allowed?
+    :delete-dialog-open?    delete-dialog-open?
+    :can-publish?           can-publish?
+    :logged-in?             logged-in?
+    :size-categories        size-categories
+    :mode                   mode
+    :sub-mode               (:sub-mode mode)
+    :type                   type
+    :types-props            types-props
+    :geom-type              (:geometry-type type)
+    :save-in-progress?      save-in-progress?
+    :problems?              (-> mode :problems :data :features seq)
+    :portal                 (case (:type-code type)
+                              (3110 3130) "uimahalliportaali"
+                              (2510 2520) "jaahalliportaali"
+                              nil)
+    :undo                   undo
+    :redo                   redo
+    :more-tools-menu-anchor more-tools-menu-anchor}))
 
 (re-frame/reg-sub
  ::add-sports-site-view

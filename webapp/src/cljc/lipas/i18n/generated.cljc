@@ -257,7 +257,10 @@
    :clear-filters "Poista rajaukset"},
   :partners {:headline "Kehittä​misessä mukana"},
   :actions
-  {:duplicate "Kopioi",
+  {:undo "Kumoa"
+   :redo "Tee uudelleen"
+   :more "Lisää..."
+   :duplicate "Kopioi",
    :select-year "Valitse vuosi",
    :select-owners "Valitse omistajat",
    :select-admins "Valitse ylläpitäjät",
@@ -1070,7 +1073,10 @@
    :clear-filters "Clear filters"},
   :partners {:headline "In association with"},
   :actions
-  {:duplicate "Duplicate",
+  {:undo "Undo"
+   :redo "Redo"
+   :more "More..."
+   :duplicate "Duplicate",
    :select-year "Select year",
    :select-owners "Select owners",
    :select-admins "Select administrators",
