@@ -718,7 +718,7 @@
    :draw-hole "Lisää reikä",
    :split-linestring "Katkaise reittiosa",
    :delete-vertices-hint
-   "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
+   "Muokkaustyökalu valittu. Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
    :calculate-route-length "Laske reitin pituus automaattisesti",
    :remove-polygon "Poista alue",
    :modify-linestring "Muokkaa reittiä",

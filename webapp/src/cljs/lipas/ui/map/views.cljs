@@ -373,28 +373,37 @@
                  :on-click #(==> [::events/redo lipas-id])}
                 [mui/icon "redo"]]])
 
-            ;; Add new geom
+            ;; Active editing tool
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-              [mui/tooltip {:title (case geom-type
-                                     "LineString" (tr :map/draw-linestring)
-                                     "Polygon"    (tr :map/draw-polygon))}
+              [mui/tooltip
+               {:title
+                (case sub-mode
+                  :drawing         "Piirtotyökalu valittu"
+                  :drawing-hole    "Reikäpiirtotyökalu valittu"
+                  (:editing :undo) (tr :map/delete-vertices-hint)
+                  :importing       "Tuontityökalu valittu"
+                  :deleting        "Poistotyökalu valittu"
+                  :splitting       "Katkaisutyökalu valittu")}
                [mui/fab
                 {:size     "small"
-                 :on-click #(if (= sub-mode :drawing)
-                              (==> [::events/start-editing lipas-id :editing geom-type])
-                              (==> [::events/start-editing lipas-id :drawing geom-type]))
-                 :style    (when (= sub-mode :drawing)
-                             {:border (str "5px solid " mui/secondary)})
+                 :on-click #() ; noop
                  :color    "default"}
-                (if (= geom-type "LineString")
-                  [mui/icon "timeline"]
-                  [mui/icon "change_history"])]])
+                (let [props {:color "secondary"}]
+                  (case sub-mode
+                    :drawing         (case geom-type
+                                       "Point"      [mui/icon props "edit"]
+                                       "LineString" [mui/icon props "timeline"]
+                                       "Polygon"    [mui/icon props "change_history"])
+                    :drawing-hole    [mui/icon props "vignette"]
+                    (:editing :undo) [mui/icon props "edit"]
+                    :importing       [:> js/materialIcons.FileUpload props]
+                    :deleting        [:> js/materialIcons.Eraser props]
+                    :splitting       [:> js/materialIcons.ContentCut props]))]])
 
-            ;; More tools button and menu
+            ;; Tool select button
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
               [:<>
-
-               [mui/tooltip {:title (tr :actions/more)}
+               [mui/tooltip {:title "Valitse työkalu"}
                 [mui/fab
                  {:size     "small"
                   :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
@@ -423,11 +432,10 @@
                    {:on-click
                     #(do
                        (==> [::events/close-more-tools-menu])
-                       (if (= sub-mode :drawing-hole)
-                         (==> [::events/start-editing lipas-id :editing geom-type])
-                         (==> [::events/start-editing lipas-id :drawing-hole geom-type])))}
+                       (==> [::events/start-editing lipas-id :drawing-hole geom-type]))}
                    [mui/list-item-icon
-                    [mui/icon {:color (if (= sub-mode :drawing-hole) "secondary" "default")}
+                    [mui/icon
+                     {:color (if (= sub-mode :drawing-hole) "secondary" "default")}
                      "vignette"]]
                    [mui/list-item-text (tr :map/draw-hole)]])
 
@@ -438,9 +446,7 @@
                    {:on-click
                     #(do
                        (==> [::events/close-more-tools-menu])
-                       (if (= sub-mode :drawing)
-                         (==> [::events/start-editing lipas-id :editing geom-type])
-                         (==> [::events/start-editing lipas-id :drawing geom-type])))}
+                       (==> [::events/start-editing lipas-id :drawing geom-type]))}
                    [mui/list-item-icon
                     (if (= geom-type "LineString")
                       [mui/icon
@@ -455,14 +461,11 @@
 
                 ;; Delete geom
                 (when (and editing? (#{"LineString" "Polygon"} geom-type))
-
                   [mui/menu-item
                    {:on-click
                     #(do
                        (==> [::events/close-more-tools-menu])
-                       (if (= sub-mode :deleting)
-                         (==> [::events/start-editing lipas-id :editing geom-type])
-                         (==> [::events/start-editing lipas-id :deleting geom-type])))}
+                       (==> [::events/start-editing lipas-id :deleting geom-type]))}
                    [mui/list-item-icon
                     [:> js/materialIcons.Eraser
                      {:color (if (= sub-mode :deleting) "secondary" "default")}]]
@@ -472,25 +475,28 @@
 
                 ;; Split linestring
                 (when (and editing? (#{"LineString"} geom-type))
-
                   [mui/menu-item
                    {:on-click
                     #(do
                        (==> [::events/close-more-tools-menu])
-                       (if (= sub-mode :splitting)
-                         (==> [::events/start-editing lipas-id :editing geom-type])
-                         (==> [::events/start-editing lipas-id :splitting geom-type])))}
+                       (==> [::events/start-editing lipas-id :splitting geom-type]))}
                    [mui/list-item-icon
                     [:> js/materialIcons.ContentCut
                      {:color (if (= sub-mode :splitting) "secondary" "default")}]]
                    [mui/list-item-text (tr :map/split-linestring)]])
 
-                ;; Delete vertices Helper text
+                ;; Edit tool
                 (when (and editing? (#{"LineString" "Polygon"} geom-type))
-                  [mui/tooltip {:title (tr :map/delete-vertices-hint)}
-                   [mui/menu-item
-                    [mui/list-item-icon [mui/icon "info"]]
-                    [mui/list-item-text "Pisteiden poistaminen"]]])]])
+                  [mui/menu-item
+                   {:on-click
+                    #(do
+                       (==> [::events/close-more-tools-menu])
+                       (==> [::events/start-editing lipas-id :editing geom-type]))}
+                   [mui/list-item-icon
+                    [mui/icon
+                     {:color (if (= sub-mode :editing) "secondary" "default")}
+                     "edit"]]
+                   [mui/list-item-text "Muokkaustyökalu"]])]])
 
             ;; Download GPX
             (when (and (not editing?) (#{"LineString"} geom-type))

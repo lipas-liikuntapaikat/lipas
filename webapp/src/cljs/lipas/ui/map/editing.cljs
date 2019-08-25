@@ -241,7 +241,9 @@
                         (==> [::events/update-geometries lipas-id f])
                         (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
-                          (==> [::events/continue-editing lipas-id :editing geom-type])))]
+                          ;;(==> [::events/continue-editing lipas-id :editing geom-type])
+                          )
+                        )]
 
      (case sub-mode
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
