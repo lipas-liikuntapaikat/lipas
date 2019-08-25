@@ -14,13 +14,15 @@
 ;; The snap interaction must be added after the Modify and Draw
 ;; interactions in order for its map browser event handlers to be
 ;; fired first. Its handlers are responsible of doing the snapping.
-(defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+(defn enable-snapping!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [source (-> layers :overlays :edits .getSource)
         snap   (ol/interaction.Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
-(defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
+(defn enable-delete!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
         delete (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
@@ -41,7 +43,8 @@
         map-utils/enable-edits-hover!
         (assoc-in[:interactions :delete] delete))))
 
-(defn enable-splitting! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
+(defn enable-splitting!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
   (let [layer  (-> layers :overlays :edits)
         split  (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
@@ -64,8 +67,8 @@
         map-utils/enable-edits-hover!
         (assoc-in [:interactions :split] split))))
 
-(defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
-                           on-modifyend]
+(defn start-drawing-hole!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modifyend]
   (let [layer     (-> layers :overlays :edits)
         draw-hole (ol/interaction.DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
@@ -75,8 +78,8 @@
            (on-modifyend (map-utils/->geoJSON-clj (.getFeatures source)))))
     (assoc-in map-ctx [:interactions :draw-hole] draw-hole)))
 
-(defn start-editing! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
-                      geoJSON-feature on-modifyend]
+(defn start-editing!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} geoJSON-feature on-modifyend]
   (let [layer    (-> layers :overlays :edits)
         source   (.getSource layer)
         _        (.clear source)
@@ -109,8 +112,8 @@
         ;;(map-utils/fit-to-extent! (.getExtent source))
         enable-snapping!)))
 
-(defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
-                           on-modifyend]
+(defn start-editing-site!
+  [{:keys [layers] :as map-ctx} lipas-id geoms on-modifyend]
   (let [layer    (-> layers :overlays :vectors)
         source   (.getSource layer)
         features (map-utils/find-features-by-lipas-id map-ctx lipas-id)]
@@ -121,8 +124,9 @@
                 (.removeFeature source f)))
     (start-editing! map-ctx geoms on-modifyend)))
 
-(defn start-drawing! [{:keys [^js/ol.Map lmap layers]
-                       :as   map-ctx} geom-type on-draw-end]
+(defn start-drawing!
+  [{:keys [^js/ol.Map lmap layers]
+    :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
         draw   (ol/interaction.Draw.
@@ -202,7 +206,8 @@
 
 ;; Editing existing feature collection ;;
 
-(defn continue-editing! [{:keys [layers] :as map-ctx} on-modifyend]
+(defn continue-editing!
+  [{:keys [layers] :as map-ctx} on-modifyend]
   (let [layer (-> layers :overlays :edits)
         fs    (-> layer .getSource .getFeatures map-utils/->geoJSON-clj)]
     (-> map-ctx

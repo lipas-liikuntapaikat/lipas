@@ -373,6 +373,23 @@
                  :on-click #(==> [::events/redo lipas-id])}
                 [mui/icon "redo"]]])
 
+            ;; Add new geom
+            (when (and editing? (#{"LineString" "Polygon"} geom-type))
+              [mui/tooltip {:title (case geom-type
+                                     "LineString" (tr :map/draw-linestring)
+                                     "Polygon"    (tr :map/draw-polygon))}
+               [mui/fab
+                {:size     "small"
+                 :on-click #(if (= sub-mode :drawing)
+                              (==> [::events/start-editing lipas-id :editing geom-type])
+                              (==> [::events/start-editing lipas-id :drawing geom-type]))
+                 :style    (when (= sub-mode :drawing)
+                             {:border (str "5px solid " mui/secondary)})
+                 :color    "default"}
+                (if (= geom-type "LineString")
+                  [mui/icon "timeline"]
+                  [mui/icon "change_history"])]])
+
             ;; More tools button and menu
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
               [:<>

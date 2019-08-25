@@ -185,9 +185,6 @@ import RadioGroup from '@material-ui/core/RadioGroup';
 import Slide from '@material-ui/core/Slide';
 import Snackbar from '@material-ui/core/Snackbar';
 import SnackbarContent from '@material-ui/core/SnackbarContent';
-import SpeedDial from '@material-ui/lab/SpeedDial';
-import SpeedDialAction from '@material-ui/lab/SpeedDialAction';
-import SpeedDialIcon from '@material-ui/lab/SpeedDialIcon';
 import Step from '@material-ui/core/Step';
 import StepContent from '@material-ui/core/StepContent';
 import StepLabel from '@material-ui/core/StepLabel';
@@ -271,9 +268,6 @@ window.mui = {
   Slide,
   Snackbar,
   SnackbarContent,
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
   Step,
   StepContent,
   StepLabel,

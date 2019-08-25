@@ -119,8 +119,9 @@
 ;; Geom editing events ;;
 
 (defn- get-latest-rev [db lipas-id]
-  (let [latest (get-in db [:sports-sites lipas-id :latest])]
-    (get-in db [:sports-sites lipas-id :history latest])))
+  (or (get-in db [:sports-sites lipas-id :editing])
+      (let [latest (get-in db [:sports-sites lipas-id :latest])]
+        (get-in db [:sports-sites lipas-id :history latest]))))
 
 (re-frame/reg-event-fx
  ::start-editing
@@ -132,8 +133,7 @@
                                                     :geoms     geoms
                                                     :sub-mode  sub-mode
                                                     :geom-type geom-type})
-      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
-                   [::clear-undo-redo]]})))
+      :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (re-frame/reg-event-fx
  ::continue-editing
@@ -146,9 +146,7 @@
 (re-frame/reg-event-fx
  ::stop-editing
  (fn [{:keys [db]} [_]]
-   {:db (-> db
-            (assoc-in [:map :mode :name] :default)
-            (assoc-in [:map :temp] {}))
+   {:db       (assoc-in db [:map :mode :name] :default)
     :dispatch [::clear-undo-redo]}))
 
 (re-frame/reg-event-db
@@ -235,15 +233,16 @@
 (re-frame/reg-event-fx
  ::update-geometries
  (fn [{:keys [db]} [_ lipas-id geoms]]
+
    (let [path      [:sports-sites lipas-id :editing :location :geometries]
          old-geoms (-> db :map :mode :geoms)
          new-geoms (update geoms :features
                            (fn [fs] (map #(dissoc % :properties :id) fs)))]
      {:db (-> db
               (update-in [:map :temp lipas-id :undo-stack] conj old-geoms)
-              (assoc-in [:map :mode :geoms] new-geoms)
+              (assoc-in [:map :mode :geoms] geoms)
               (assoc-in [:map :temp lipas-id :redo-stack] '())
-              (assoc-in path geoms))
+              (assoc-in path new-geoms))
       :dispatch-n
       [[::show-problems (map-utils/find-problems new-geoms)]]})))
 
@@ -334,6 +333,7 @@
    {:dispatch-n
     [[:lipas.ui.sports-sites.events/edit-site lipas-id]
      ;;[::zoom-to-site lipas-id]
+     [::clear-undo-redo]
      [::start-editing lipas-id :editing geom-type]]}))
 
 (defn- on-success-default [{:keys [lipas-id]}]
