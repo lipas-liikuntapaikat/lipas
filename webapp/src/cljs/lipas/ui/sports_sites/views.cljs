@@ -420,11 +420,12 @@
            :tr       tr}])
 
        ;; Report readings button
-       (when (and editing? user-can-publish?)
-         [report-readings-button
-          {:tr       tr
-           :lipas-id lipas-id
-           :close    close}])])))
+       ;; (when (and editing? user-can-publish?)
+       ;;   [report-readings-button
+       ;;    {:tr       tr
+       ;;     :lipas-id lipas-id
+       ;;     :close    close}])
+       ])))
 
 (defn- make-headers [tr spectators?]
   (remove nil?
@@ -482,11 +483,12 @@
            :tr       tr}])
 
        ;; Report readings button
-       (when (and editing? user-can-publish?)
-         [report-readings-button
-          {:tr       tr
-           :lipas-id lipas-id
-           :close    close}])])))
+       ;; (when (and editing? user-can-publish?)
+       ;;   [report-readings-button
+       ;;    {:tr       tr
+       ;;     :lipas-id lipas-id
+       ;;     :close    close}])
+       ])))
 
 (defn contacts-report [{:keys [tr types]}]
   (let [locale  (tr)
