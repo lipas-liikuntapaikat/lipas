@@ -719,10 +719,11 @@
     :types #{2510 2520}}])
 
 (def tabs
-  {0 :lipas.ui.routes.ice-stadiums/front-page
-   1 :lipas.ui.routes.ice-stadiums/report-consumption
+  {
+   ;;0 :lipas.ui.routes.ice-stadiums/front-page
+   ;;1 :lipas.ui.routes.ice-stadiums/report-consumption
    2 :lipas.ui.routes.ice-stadiums/list-view
-   3 :lipas.ui.routes.ice-stadiums/visualizations
+   ;;3 :lipas.ui.routes.ice-stadiums/visualizations
    4 :lipas.ui.routes.ice-stadiums/energy-info
    5 :lipas.ui.routes.ice-stadiums/reports})
 
@@ -741,37 +742,44 @@
           :value      active-tab}
 
          ;; 0 Stats tab
-         [mui/tab {:label (tr :ice/headline)
-                   :icon  (r/as-element [mui/icon "ac_unit"])}]
+         ;; [mui/tab {:label (tr :ice/headline)
+         ;;           :icon  (r/as-element [mui/icon "ac_unit"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label (tr :lipas.energy-consumption/report)
-                   :icon  (r/as-element [mui/icon "edit"])}]
+         ;; [mui/tab {:label (tr :lipas.energy-consumption/report)
+         ;;           :icon  (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Ice stadiums tab
-         [mui/tab {:label (tr :ice-rinks/headline)
-                   :icon  (r/as-element [mui/icon "list_alt"])}]
+         [mui/tab
+          {:label (tr :ice-rinks/headline)
+           :value 2
+           :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 3 Compare tab
-         [mui/tab {:label (tr :ice/comparison)
-                   :icon  (r/as-element [mui/icon "compare"])}]
+         ;; [mui/tab {:label (tr :ice/comparison)
+         ;;           :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 4 Energy info tab
-         [mui/tab {:label (tr :ice-energy/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]
+         ;; [mui/tab
+         ;;  {:label (tr :ice-energy/headline)
+         ;;   :value 4
+         ;;   :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
-         [mui/tab {:label (tr :reports/contacts)
-                   :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
+         [mui/tab
+          {:label (tr :reports/contacts)
+           :value 5
+           :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 [stats-tab]
-        1 [energy-form-tab tr]
+        ;;0 [stats-tab]
+        ;;1 [energy-form-tab tr]
         2 [ice-stadiums-tab tr logged-in?]
-        3 [compare-tab]
-        4 [energy-info-tab tr]
-        5 [reports-tab tr])]]))
+        ;;3 [compare-tab]
+        ;;4 [energy-info-tab tr]
+        5 [reports-tab tr]
+        [ice-stadiums-tab tr logged-in?])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

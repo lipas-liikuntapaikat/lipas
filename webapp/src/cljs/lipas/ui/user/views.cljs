@@ -204,14 +204,17 @@
         [mui/button {:href  "/liikuntapaikat"
                      :color :secondary}
          (str "> " (tr :sport/headline))]
-        (when (some #{2510 2520} (map :type-code sites))
-          [mui/button {:href  "/jaahalliportaali"
-                       :color :secondary}
-           (str "> " (tr :user/ice-stadiums-link))])
-        (when (some #{3110 3130} (map :type-code sites))
-          [mui/button {:href  "/uimahalliportaali"
-                       :color :secondary}
-           (str "> " (tr :user/swimming-pools-link))])]]]
+
+        ;; (when (some #{2510 2520} (map :type-code sites))
+        ;;   [mui/button {:href  "/jaahalliportaali"
+        ;;                :color :secondary}
+        ;;    (str "> " (tr :user/ice-stadiums-link))])
+        ;; (when (some #{3110 3130} (map :type-code sites))
+        ;;   [mui/button {:href  "/uimahalliportaali"
+        ;;                :color :secondary}
+        ;;    (str "> " (tr :user/swimming-pools-link))])
+
+        ]]]
 
      ;; Saved searches
      (when saved-searches

@@ -24,7 +24,7 @@
      [energy/energy-stats
       {:tr             tr
        :year           year
-       :link           "/uimahalliportaali/ilmoita-tiedot"
+       :link           "/uimahallit/ilmoita-tiedot"
        :stats          stats
        :on-year-change #(==> [::events/display-stats %])}]
 
@@ -724,37 +724,43 @@
           :value      active-tab}
 
          ;; 0 Stats
-         [mui/tab {:label (tr :swim/headline)
-                   :icon  (r/as-element [mui/icon "pool"])}]
+         ;; [mui/tab {:label (tr :swim/headline)
+         ;;           :icon  (r/as-element [mui/icon "pool"])}]
 
          ;; 1 Energy form tab
-         [mui/tab {:label (tr :lipas.energy-consumption/report)
-                   :icon  (r/as-element [mui/icon "edit"])}]
+         ;; [mui/tab {:label (tr :lipas.energy-consumption/report)
+         ;;           :icon  (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Halls tab
-         [mui/tab {:label (tr :swim/list)
-                   :icon  (r/as-element [mui/icon "list_alt"])}]
+         [mui/tab
+          {:label (tr :swim/list)
+           :value 2
+           :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 3 Compare tab
-         [mui/tab {:label (tr :swim/visualizations)
-                   :icon  (r/as-element [mui/icon "compare"])}]
+         ;; [mui/tab
+         ;;  {:label (tr :swim/visualizations)
+         ;;   :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 4 Energy info tab
-         [mui/tab {:label (tr :swim-energy/headline)
-                   :icon  (r/as-element [mui/icon "info"])}]
+         ;; [mui/tab {:label (tr :swim-energy/headline)
+         ;;           :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
-         [mui/tab {:label (tr :reports/contacts)
-                   :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
+         [mui/tab
+          {:label (tr :reports/contacts)
+           :value 5
+           :icon  (r/as-element [mui/icon "table_chart"])}]]]]]
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        0 [stats-tab]
-        1 [energy-form-tab tr]
+        ;;0 [stats-tab]
+        ;;1 [energy-form-tab tr]
         2 [swimming-pools-tab tr logged-in?]
-        3 [compare-tab]
-        4 [energy-info-tab tr]
-        5 [reports-tab tr])]]))
+        ;;3 [compare-tab]
+        ;;4 [energy-info-tab tr]
+        5 [reports-tab tr]
+        [swimming-pools-tab tr logged-in?])]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

@@ -9,14 +9,8 @@
  [ideas](https://trello.com/b/IEwJ5Nrq/lipas) (finnish)
 
 LIPAS is a nationwide, public GIS service of Finnish sport
-sites. More information
+facilities. More information
 [here](https://www.jyu.fi/sport/en/cooperation/lipas).
-
-LIPAS consists of three main services:
-
-* Hub for data and information of sports facility conditions
-* Monitoring energy efficiency of public ice stadiums
-* Monitoring energy efficiency of public indoor swimming pools
 
 ## Tech stack
 
