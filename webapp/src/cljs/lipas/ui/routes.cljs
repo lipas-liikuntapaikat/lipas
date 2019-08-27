@@ -26,15 +26,10 @@
     :controllers
     [{:start
       (fn [& params]
-        (if (-> (utils/current-path) (string/starts-with? "/#"))
-          (set! js/window.location.href (-> (utils/current-path) (subs 2)))
-          (->
-           (case (utils/domain)
-             "uimahallit.lipas.fi"     :lipas.ui.routes.swimming-pools/front-page
-             "jaahallit.lipas.fi"      :lipas.ui.routes.ice-stadiums/front-page
-             "liikuntapaikat.lipas.fi" :lipas.ui.routes.map/map
-             :lipas.ui.routes/front-page)
-           navigate-async!)))}]}])
+        (navigate-async!
+         (if (= "liikuntapaikat.lipas.fi" (utils/domain))
+           :lipas.ui.routes.map/map
+           :lipas.ui.routes/front-page)))}]}])
 
 (def routes
   (rf/router
@@ -60,22 +55,39 @@
   ([path]
    (navigate! path nil))
   ([path & args]
-   (if (and (string? path) (or (string/starts-with? path "http")
-                               (string/starts-with? path "tel:")
-                               (string/starts-with? path "mailto:")))
-     ;; External link
-     (set! (.-location js/window) path)
+   (cond (and (string? path) (or (string/starts-with? path "http")
+                                 (string/starts-with? path "tel:")
+                                 (string/starts-with? path "mailto:")))
+         ;; External link
+         (set! (.-location js/window) path)
 
-     ;; Internal link
-     (let [match (when (string? path) (-> path match-by-path))
-           kw    (cond
-                   (keyword? path) path
-                   (string? path)  (-> match :data :name))
-           args  (conj args (-> match :parameters :path))]
-       (apply rfe/push-state (into [kw] (remove nil?) args))))))
+         ;; Internal link
+         :else
+         (let [match (when (string? path) (-> path match-by-path))
+               kw    (cond
+                       (keyword? path) path
+                       (string? path)  (-> match :data :name))
+               args  (conj args (-> match :parameters :path))]
+           (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
 (defn on-navigate [new-match]
-  (==> [:lipas.ui.events/navigated new-match]))
+  (let [current-path (utils/current-path)]
+    (cond
+      ;; Fix deprecated url with hash
+      (string/starts-with? current-path "/#")
+      (set! js/window.location.href (-> (utils/current-path) (subs 2)))
+
+      ;; Fix deprecated /uimahalliportaali/... paths
+      (string/includes? current-path "uimahalliportaali")
+      (set! js/window.location.href
+            (string/replace current-path "uimahalliportaali" "uimahallit"))
+
+      ;; Fix deprecated /jaahalliportaali/... paths
+      (string/includes? current-path "jaahalliportaali")
+      (set! js/window.location.href
+            (string/replace current-path "jaahalliportaali" "jaahallit"))
+
+      :else (==> [:lipas.ui.events/navigated new-match]))))
 
 (defn init! []
   (rfe/start!

@@ -298,8 +298,8 @@
     :save-in-progress?      save-in-progress?
     :problems?              (-> mode :problems :data :features seq)
     :portal                 (case (:type-code type)
-                              (3110 3130) "uimahalliportaali"
-                              (2510 2520) "jaahalliportaali"
+                              (3110 3130) "uimahallit"
+                              (2510 2520) "jaahallit"
                               nil)
     :undo                   undo
     :redo                   redo

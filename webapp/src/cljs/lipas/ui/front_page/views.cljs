@@ -32,7 +32,7 @@
    {:label "Paikkatietoikkuna" :href "https://www.paikkatietoikkuna.fi/"}
    {:label "palvelukartta.hel.fi" :href "https://palvelukartta.hel.fi/"}
    {:label "Finterest" :href "https://finterest.fi/"}
-   {:label "likiliikkuja.fi" :href "https://likiliikkuja.fi/"}
+   {:label "Puskaparkit" :href "http://bit.do/puskaparkit"}
    {:label "liiteri" :href "https://liiteri.ymparisto.fi/"}
    {:label "TEAviisari" :href "https://teaviisari.fi"}
    {:label "Uimaan.fi" :href "https://uimaan.fi/"}
@@ -90,8 +90,9 @@
       {:container true}]
      contents)]])
 
-(defn grid-card [{:keys [title style link link-text xs md lg xl]
-                  :or   {xs 12 md 6 lg 4 xl 3}} & children]
+(defn grid-card
+  [{:keys [title style link link-text xs md lg xl]
+    :or   {xs 12 md 6 lg 6 xl 6}} & children]
   [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
    [mui/card
     {:square true
@@ -129,6 +130,25 @@
        [mui/button {:variant :text :color "secondary" :href link}
         (str "> " link-text)]])]])
 
+(defn fb-plugin []
+  (r/create-class
+   {:component-did-mount
+    (fn []
+      (js/FB.XFBML.parse))
+    :reagent-render
+    (fn []
+      [mui/grid {:container true :justify "center"}
+       [mui/grid {:item true}
+        [:div
+         {:class                      "fb-page"
+          :data-href                  "https://www.facebook.com/LIPASLiikuntapaikat"
+          :data-tabs                  "timeline"
+          :data-height                "596"
+          :data-small-header          "false"
+          :data-adapt-container-width "true"
+          :data-hide-cover            "true"
+          :data-show-facepile         "true"}]]])}))
+
 (defn create-panel [tr]
   [mui/grid {:container true}
 
@@ -146,114 +166,131 @@
       :background-repeat   "no-repeat"}}
 
     ;; Sports sites
+    [mui/grid {:item true :xs 12 :md 12 :lg 8}
+     [mui/grid {:container true}
+      [grid-card
+       {:title     (tr :sport/headline)
+        :link      "/liikuntapaikat"
+        :link-text (tr :actions/browse-to-map)}
+       [mui/typography {:variant "body1"}
+        (tr :sport/description)]
+       [:ul
+        [lui/li (tr :sport/up-to-date-information)]
+        [lui/li (tr :sport/updating-tools)]
+        [lui/li (tr :sport/open-interfaces)]]]
+
+      ;; Ice stadiums portal
+      ;; [grid-card
+      ;;  {:title     (tr :ice/headline)
+      ;;   :link      "/jaahalliportaali"
+      ;;   :link-text (tr :actions/browse-to-portal)}
+      ;;  [mui/typography {:variant "body1"}
+      ;;   (tr :ice/description)]
+      ;;  [:ul
+      ;;   [lui/li (tr :ice/basic-data-of-halls)]
+      ;;   [lui/li (tr :ice/entering-energy-data)]
+      ;;   [lui/li (tr :ice/updating-basic-data)]]]
+
+      ;; Swimming pools portal
+      ;; [grid-card
+      ;;  {:title     (tr :swim/headline)
+      ;;   :link      "/uimahalliportaali"
+      ;;   :link-text (tr :actions/browse-to-portal)}
+      ;;  [mui/typography {:variant "body1"}
+      ;;   (tr :swim/description)]
+      ;;  [:ul
+      ;;   [lui/li (tr :swim/basic-data-of-halls)]
+      ;;   [lui/li (tr :swim/entering-energy-data)]
+      ;;   [lui/li (tr :swim/updating-basic-data)]]]
+
+      ;; Reports
+      [grid-card
+       {:title     (tr :stats/headline)
+        :link      "/tilastot"
+        :link-text (tr :stats/browse-to)}
+       [mui/typography {:variant "body1"}
+        (tr :stats/description)]
+       [:ul
+        [lui/li (tr :stats/bullet1)]
+        [lui/li (tr :stats/bullet2)]
+        [lui/li (tr :stats/bullet3)]]]
+
+      ;; Open Data
+      [grid-card {:title (tr :open-data/headline)}
+       [mui/list
+
+        ;; info
+        [mui/list-item {:button true :component "a" :href (:open-data links)}
+         [mui/list-item-icon
+          [mui/icon "info"]]
+         [mui/list-item-text {:primary "Info"}]]
+
+        ;; Lipas-API
+        [mui/list-item {:button true :component "a" :href (:lipas-api links)}
+         [mui/list-item-icon
+          [:img
+           {:style {:height "24px" :width "24px"}
+            :src   "/img/swagger_logo.svg"}]]
+         [mui/list-item-text {:primary "Lipas API"}]]
+
+        ;; Geoserver
+        [mui/list-item {:button true :component "a" :href (:geoserver links)}
+         [mui/list-item-icon
+          [:img
+           {:style {:height "24px" :width "24px"}
+            :src   "/img/geoserver_logo.svg"}]]
+         [mui/list-item-text "Geoserver"]]
+
+        ;; Github
+        [mui/list-item {:button true :component "a" :href (:github links)}
+         [mui/list-item-icon
+          [mui/svg-icon
+           [svg/github-icon]]]
+         [mui/list-item-text {:primary "GitHub"}]]]]
+
+      ;; Help
+      [grid-card {:title (tr :help/headline)}
+
+       [mui/list
+
+        ;; Lipasinfo
+        [mui/list-item {:button true :component "a" :href (:lipasinfo links)}
+         [mui/list-item-icon
+          [mui/icon "library_books"]]
+         [mui/list-item-text "lipasinfo.fi"]]
+
+        ;; Youtube
+        [mui/list-item {:button true :component "a" :href (:youtube links)}
+         [mui/list-item-icon
+          [mui/icon "video_library"]]
+         [mui/list-item-text "Youtube"]]
+
+        ;; Email
+        [mui/list-item {:button true :component "a" :href "mailto:lipasinfo@jyu.fi"}
+         [mui/list-item-icon
+          [mui/icon "email"]]
+         [mui/list-item-text "lipasinfo@jyu.fi"]]
+
+        ;; Phone
+        [mui/list-item {:button true :component "a" :href "tel:+358400247980"}
+         [mui/list-item-icon
+          [mui/icon "phone"]]
+         [mui/list-item-text "0400 247 980"]]]]]]
+
     [grid-card
-     {:title     (tr :sport/headline)
-      :link      "/liikuntapaikat"
-      :link-text (tr :actions/browse-to-map)}
-     [mui/typography {:variant "body1"}
-      (tr :sport/description)]
-     [:ul
-      [lui/li (tr :sport/up-to-date-information)]
-      [lui/li (tr :sport/updating-tools)]
-      [lui/li (tr :sport/open-interfaces)]]]
+     {:xs 12 :md 12 :lg 8 :title "Uima- ja jäähalliportaalit ovat muuttaneet"}
+     [:ul {:style {:margin-top "-0.5em"}}
+      [:li
+       [mui/link {:variant "h6" :href "https://uimahalliportaali.fi/"}
+        "uimahalliportaali.fi"]]
+      [:li
+       [mui/link {:variant "h6" :href "https://jaahalliportaali.fi/"}
+        "jaahalliportaali.fi"]]]
+     [mui/typography
+      "Portaalien kehittämisestä ja ylläpidosta vastaa jatkossa Sport Venue Oy."]]
 
-    ;; Ice stadiums portal
-    [grid-card
-     {:title     (tr :ice/headline)
-      :link      "/jaahalliportaali"
-      :link-text (tr :actions/browse-to-portal)}
-     [mui/typography {:variant "body1"}
-      (tr :ice/description)]
-     [:ul
-      [lui/li (tr :ice/basic-data-of-halls)]
-      [lui/li (tr :ice/entering-energy-data)]
-      [lui/li (tr :ice/updating-basic-data)]]]
-
-    ;; Swimming pools portal
-    [grid-card
-     {:title     (tr :swim/headline)
-      :link      "/uimahalliportaali"
-      :link-text (tr :actions/browse-to-portal)}
-     [mui/typography {:variant "body1"}
-      (tr :swim/description)]
-     [:ul
-      [lui/li (tr :swim/basic-data-of-halls)]
-      [lui/li (tr :swim/entering-energy-data)]
-      [lui/li (tr :swim/updating-basic-data)]]]
-
-    ;; Reports
-    [grid-card
-     {:title     (tr :stats/headline)
-      :link      "/tilastot"
-      :link-text (tr :stats/browse-to)}
-     [mui/typography {:variant "body1"}
-      (tr :stats/description)]
-     [:ul
-      [lui/li (tr :stats/bullet1)]
-      [lui/li (tr :stats/bullet2)]
-      [lui/li (tr :stats/bullet3)]]]
-
-    ;; Open Data
-    [grid-card {:title (tr :open-data/headline)}
-     [mui/list
-
-      ;; info
-      [mui/list-item {:button true :component "a" :href (:open-data links)}
-       [mui/list-item-icon
-        [mui/icon "info"]]
-       [mui/list-item-text {:primary "Info"}]]
-
-      ;; Lipas-API
-      [mui/list-item {:button true :component "a" :href (:lipas-api links)}
-       [mui/list-item-icon
-        [:img
-         {:style {:height "24px" :width "24px"}
-          :src   "/img/swagger_logo.svg"}]]
-       [mui/list-item-text {:primary "Lipas API"}]]
-
-      ;; Geoserver
-      [mui/list-item {:button true :component "a" :href (:geoserver links)}
-       [mui/list-item-icon
-        [:img
-         {:style {:height "24px" :width "24px"}
-          :src   "/img/geoserver_logo.svg"}]]
-       [mui/list-item-text "Geoserver"]]
-
-      ;; Github
-      [mui/list-item {:button true :component "a" :href (:github links)}
-       [mui/list-item-icon
-        [mui/svg-icon
-         [svg/github-icon]]]
-       [mui/list-item-text {:primary "GitHub"}]]]]
-
-    ;; Help
-    [grid-card {:title (tr :help/headline)}
-
-     [mui/list
-
-      ;; Lipasinfo
-      [mui/list-item {:button true :component "a" :href (:lipasinfo links)}
-       [mui/list-item-icon
-        [mui/icon "library_books"]]
-       [mui/list-item-text "lipasinfo.fi"]]
-
-      ;; Youtube
-      [mui/list-item {:button true :component "a" :href (:youtube links)}
-       [mui/list-item-icon
-        [mui/icon "video_library"]]
-       [mui/list-item-text "Youtube"]]
-
-      ;; Email
-      [mui/list-item {:button true :component "a" :href "mailto:lipasinfo@jyu.fi"}
-       [mui/list-item-icon
-        [mui/icon "email"]]
-       [mui/list-item-text "lipasinfo@jyu.fi"]]
-
-      ;; Phone
-      [mui/list-item {:button true :component "a" :href "tel:+358400247980"}
-       [mui/list-item-icon
-        [mui/icon "phone"]]
-       [mui/list-item-text "0400 247 980"]]]]
+    ;; [grid-card {:md 6 :lg 4}
+    ;;  [fb-plugin]]
 
     ;; Known LIPAS users
     [grid-card {:xs 12 :md 12 :lg 12 :xl 6 :title (tr :data-users/headline)}
@@ -262,7 +299,7 @@
       (map ->link known-users))
      [mui/grid {:container true :spacing 16 :style {:margin-top "1em"}}
       [mui/grid {:item true}
-       [mui/typography {:variant "h5" :color "primary"}
+       [mui/typography {:variant "h6" :color "primary"}
         (tr :data-users/data-user?)]]
       [mui/grid {:item true}
        [mui/link

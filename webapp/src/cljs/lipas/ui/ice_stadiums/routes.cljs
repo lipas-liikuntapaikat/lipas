@@ -5,7 +5,7 @@
    [lipas.ui.ice-stadiums.views :as views]))
 
 (def routes
-  ["jaahalliportaali"
+  ["jaahallit"
    {:name   :lipas.ui.routes/ice-stadiums
     :tr-key :ice/headline
     :view   views/main
