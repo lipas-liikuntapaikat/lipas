@@ -405,9 +405,9 @@
               [:<>
                [mui/tooltip {:title "Valitse työkalu"}
                 [mui/fab
-                 {:size     "small"
+                 {:size     "medium"
                   :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-                  :color    "default"}
+                  :color    "secondary"}
                  [mui/icon "more_horiz"]]]
 
                [mui/menu
