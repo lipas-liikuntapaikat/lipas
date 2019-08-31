@@ -70,7 +70,7 @@
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
    [mui/fab (merge props {:on-click on-click :size "small"})
-    [mui/icon "undo"]]])
+    [mui/icon {:class "material-icons-outlined"} "close"]]])
 
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}

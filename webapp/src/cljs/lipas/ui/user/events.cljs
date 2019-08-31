@@ -15,13 +15,9 @@
 
 (re-frame/reg-event-fx
  ::select-sports-site
- (fn [{:keys [db]} [_ site]]
-   (let [portal-site? (-> site :type-code #{3110 3130 2510 2520})]
-     {:db (if (or portal-site? (nil? site))
-            (assoc-in db [:user :selected-sports-site] site)
-            db)
-      :dispatch-n [(when-not portal-site?
-                     [:lipas.ui.events/navigate :lipas.ui.routes.map/details-view site])]})))
+ (fn [_ [_ site]]
+   {:dispatch-n
+    [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view site]]}))
 
 (re-frame/reg-event-fx
  ::update-user-data-success
