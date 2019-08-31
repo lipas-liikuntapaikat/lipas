@@ -14,13 +14,15 @@
 ;; The snap interaction must be added after the Modify and Draw
 ;; interactions in order for its map browser event handlers to be
 ;; fired first. Its handlers are responsible of doing the snapping.
-(defn enable-snapping! [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+(defn enable-snapping!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [source (-> layers :overlays :edits .getSource)
         snap   (ol/interaction.Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
-(defn enable-delete! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
+(defn enable-delete!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
         delete (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
@@ -41,7 +43,8 @@
         map-utils/enable-edits-hover!
         (assoc-in[:interactions :delete] delete))))
 
-(defn enable-splitting! [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
+(defn enable-splitting!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
   (let [layer  (-> layers :overlays :edits)
         split  (ol/interaction.Select. #js{:layers #js[layer]
                                            :style  styles/hover-style})
@@ -64,10 +67,10 @@
         map-utils/enable-edits-hover!
         (assoc-in [:interactions :split] split))))
 
-(defn start-drawing-hole! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
-                           on-modifyend]
+(defn start-drawing-hole!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modifyend]
   (let [layer     (-> layers :overlays :edits)
-        draw-hole (ol/nteraction.DrawHole. #js{:layers #js[layer]})
+        draw-hole (ol/interaction.DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
@@ -75,8 +78,8 @@
            (on-modifyend (map-utils/->geoJSON-clj (.getFeatures source)))))
     (assoc-in map-ctx [:interactions :draw-hole] draw-hole)))
 
-(defn start-editing! [{:keys [^js/ol.Map lmap layers] :as map-ctx}
-                      geoJSON-feature on-modifyend]
+(defn start-editing!
+  [{:keys [^js/ol.Map lmap layers] :as map-ctx} geoJSON-feature on-modifyend]
   (let [layer    (-> layers :overlays :edits)
         source   (.getSource layer)
         _        (.clear source)
@@ -109,8 +112,8 @@
         ;;(map-utils/fit-to-extent! (.getExtent source))
         enable-snapping!)))
 
-(defn start-editing-site! [{:keys [layers] :as map-ctx} lipas-id geoms
-                           on-modifyend]
+(defn start-editing-site!
+  [{:keys [layers] :as map-ctx} lipas-id geoms on-modifyend]
   (let [layer    (-> layers :overlays :vectors)
         source   (.getSource layer)
         features (map-utils/find-features-by-lipas-id map-ctx lipas-id)]
@@ -121,8 +124,9 @@
                 (.removeFeature source f)))
     (start-editing! map-ctx geoms on-modifyend)))
 
-(defn start-drawing! [{:keys [^js/ol.Map lmap layers]
-                       :as   map-ctx} geom-type on-draw-end]
+(defn start-drawing!
+  [{:keys [^js/ol.Map lmap layers]
+    :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
         draw   (ol/interaction.Draw.
@@ -170,7 +174,7 @@
 ;; Adding new feature collection ;;
 
 (defn set-adding-mode!
-  [map-ctx {:keys [problems geom geom-type] :as mode}]
+  [map-ctx {:keys [problems geoms geom-type undo-geoms] :as mode}]
   (let [map-ctx   (-> map-ctx
                       map-utils/clear-interactions!
                       map-utils/clear-problems!
@@ -183,11 +187,12 @@
                                  (fn [f] (==> [::events/new-geom-drawn f])))
       :editing   (-> map-ctx
                      (cond->
-                         (nil? old-sm) (map-utils/fit-to-fcoll! geom))
-                     (start-editing! geom on-modify))
+                         (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
+                     (start-editing! geoms on-modify))
       :deleting  (enable-delete! map-ctx on-modify)
       :splitting (enable-splitting! map-ctx on-modify)
-      :finished  (map-utils/show-feature! map-ctx (:geom mode)))))
+      :undo      (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
+      :finished  (map-utils/show-feature! map-ctx geoms))))
 
 (defn update-adding-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -201,17 +206,32 @@
 
 ;; Editing existing feature collection ;;
 
-(defn continue-editing! [{:keys [layers] :as map-ctx} on-modifyend]
+(defn continue-editing!
+  [{:keys [layers] :as map-ctx} on-modifyend]
   (let [layer (-> layers :overlays :edits)
         fs    (-> layer .getSource .getFeatures map-utils/->geoJSON-clj)]
     (-> map-ctx
         clear-edits!
         (start-editing! fs on-modifyend))))
 
+(defn undo-edits!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id undo-geoms]}]
+  (let [source   (-> layers :overlays :edits .getSource)
+        features (-> undo-geoms clj->js map-utils/->ol-features)]
+
+    (doseq [f (.getFeatures source)]
+      (.removeFeature source f))
+
+    (.addFeatures source features)
+    (==> [::events/undo-done lipas-id undo-geoms])
+    map-ctx))
+
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as mode} continue?]
+  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
+  mode} continue?]
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
@@ -221,7 +241,9 @@
                         (==> [::events/update-geometries lipas-id f])
                         (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
-                          (==> [::events/continue-editing lipas-id :editing geom-type])))]
+                          ;;(==> [::events/continue-editing lipas-id :editing geom-type])
+                          )
+                        )]
 
      (case sub-mode
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
@@ -238,6 +260,7 @@
                          (enable-delete! on-modifyend))
        :splitting    (-> map-ctx
                          (enable-splitting! on-modifyend))
+       :undo         (undo-edits! map-ctx mode)
        :importing    (refresh-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx {:keys [problems] :as mode}]

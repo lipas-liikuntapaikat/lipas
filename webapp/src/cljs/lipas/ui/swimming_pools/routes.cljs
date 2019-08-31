@@ -5,7 +5,7 @@
    [lipas.ui.swimming-pools.views :as views]))
 
 (def routes
-  ["uimahalliportaali"
+  ["uimahallit"
    {:name   :lipas.ui.routes/swimming-pools
     :tr-key :swim/headline
     :view   views/main

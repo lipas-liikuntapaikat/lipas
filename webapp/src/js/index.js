@@ -3,33 +3,33 @@ import proj4 from 'proj4';
 window.proj4 = proj4;
 
 // OpenLayers
-import Map from 'ol/Map';
-import View from 'ol/View';
-import Overlay from 'ol/Overlay';
-import Collection from 'ol/Collection';
-import {get, fromLonLat, toLonLat} from 'ol/proj';
-import {register} from 'ol/proj/proj4';
-import Style from 'ol/style/Style';
 import CircleStyle from 'ol/style/Circle';
+import Collection from 'ol/Collection';
+import Draw from 'ol/interaction/Draw';
 import Fill from 'ol/style/Fill';
-import Stroke from 'ol/style/Stroke';
+import GeoJSON from 'ol/format/GeoJSON';
+import GeometryCollection from 'ol/geom/GeometryCollection';
 import Icon from 'ol/style/Icon';
+import Map from 'ol/Map';
+import Modify from 'ol/interaction/Modify';
+import MultiPoint from 'ol/geom/MultiPoint';
+import Overlay from 'ol/Overlay';
+import Point from 'ol/geom/Point';
 import RegularShape from 'ol/style/RegularShape';
+import Select from 'ol/interaction/Select';
+import Snap from 'ol/interaction/Snap';
+import Stroke from 'ol/style/Stroke';
+import Style from 'ol/style/Style';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
-import WMTS from 'ol/source/WMTS';
 import VectorSource from 'ol/source/Vector';
-import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
-import GeoJSON from 'ol/format/GeoJSON';
+import View from 'ol/View';
+import WMTS from 'ol/source/WMTS';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
-import Draw from 'ol/interaction/Draw';
-import Select from 'ol/interaction/Select';
-import Modify from 'ol/interaction/Modify';
-import Snap from 'ol/interaction/Snap';
+import {get, fromLonLat, toLonLat} from 'ol/proj';
+import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
 import {pointerMove} from 'ol/events/condition';
-import Point from 'ol/geom/Point';
-import MultiPoint from 'ol/geom/MultiPoint';
-import GeometryCollection from 'ol/geom/GeometryCollection';
+import {register} from 'ol/proj/proj4';
 
 // Openlayers-Extensions
 import DrawHole from 'ol-ext/interaction/DrawHole';
@@ -41,32 +41,32 @@ window.ol = {
     Vector: VectorLayer,
   },
   source: {
-    WMTS,
     Vector: VectorSource,
+    WMTS,
   },
   style: {
-    Style,
     Circle: CircleStyle,
     Fill,
-    Stroke,
     Icon,
     RegularShape,
+    Stroke,
+    Style,
   },
   extent: {
+    buffer,
+    extend,
+    getHeight,
     getTopLeft,
     getWidth,
-    getHeight,
-    extend,
     intersects,
-    buffer,
   },
   proj: {
-    get,
     fromLonLat,
-    toLonLat,
+    get,
     proj4: {
       register,
     },
+    toLonLat,
   },
   tilegrid: {
     WMTS: WMTSTileGrid,
@@ -75,11 +75,11 @@ window.ol = {
     GeoJSON,
   },
   interaction: {
-    Select,
     Draw,
-    Modify,
-    Snap,
     DrawHole,
+    Modify,
+    Select,
+    Snap,
   },
   events: {
     condition: {
@@ -87,9 +87,9 @@ window.ol = {
     },
   },
   geom: {
-    Point,
-    MultiPoint,
     GeometryCollection,
+    MultiPoint,
+    Point,
   },
 };
 
@@ -141,6 +141,7 @@ import CardHeader from '@material-ui/core/CardHeader';
 import CardMedia from '@material-ui/core/CardMedia';
 import Checkbox from '@material-ui/core/Checkbox';
 import Chip from '@material-ui/core/Chip';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -162,7 +163,6 @@ import FormLabel from '@material-ui/core/FormLabel';
 import Grid from '@material-ui/core/Grid';
 import Grow from '@material-ui/core/Grow';
 import Hidden from '@material-ui/core/Hidden';
-import MuiIcon from '@material-ui/core/Icon';
 import IconButton from '@material-ui/core/IconButton';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -175,11 +175,13 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import MenuList from '@material-ui/core/MenuList';
+import MuiIcon from '@material-ui/core/Icon';
+import MuiSelect from '@material-ui/core/Select';
+import MuiTooltip from '@material-ui/core/Tooltip';
 import Paper from '@material-ui/core/Paper';
 import Popper from '@material-ui/core/Popper';
 import Radio from '@material-ui/core/Radio';
 import RadioGroup from '@material-ui/core/RadioGroup';
-import MuiSelect from '@material-ui/core/Select';
 import Slide from '@material-ui/core/Slide';
 import Snackbar from '@material-ui/core/Snackbar';
 import SnackbarContent from '@material-ui/core/SnackbarContent';
@@ -200,10 +202,8 @@ import TableSortLabel from '@material-ui/core/TableSortLabel';
 import Tabs from '@material-ui/core/Tabs';
 import TextField from '@material-ui/core/TextField';
 import Toolbar from '@material-ui/core/Toolbar';
-import MuiTooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import Zoom from '@material-ui/core/Zoom';
-import CircularProgress from '@material-ui/core/CircularProgress';
 import withWidth from '@material-ui/core/withWidth';
 
 // Material-UI styles
@@ -215,79 +215,79 @@ window.mui = {
   createMuiTheme,
   MuiThemeProvider,
   // Core
-  CssBaseline,
   AppBar,
-  Toolbar,
-  Typography,
-  Icon: MuiIcon,
-  SvgIcon,
-  IconButton,
-  TextField,
-  Grid,
-  Paper,
-  Fab,
+  Avatar,
+  Button,
   Card,
+  CardActions,
   CardContent,
   CardHeader,
-  CardActions,
   CardMedia,
-  Chip,
-  Menu,
-  MenuItem,
-  MenuList,
-  Link,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemSecondaryAction,
-  Drawer,
-  Divider,
-  SwipeableDrawer,
-  Tabs,
-  Radio,
-  RadioGroup,
-  Tab,
-  InputAdornment,
-  FormControl,
-  FormControlLabel,
-  FormLabel,
-  FormGroup,
-  FormHelperText,
-  Button,
-  Hidden,
-  Tooltip: MuiTooltip,
-  Avatar,
   Checkbox,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableSortLabel,
-  TablePagination,
+  Chip,
+  CircularProgress,
+  CssBaseline,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Snackbar,
-  SnackbarContent,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Drawer,
   ExpansionPanel,
   ExpansionPanelActions,
   ExpansionPanelDetails,
   ExpansionPanelSummary,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
+  Fab,
+  Fade,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
+  FormHelperText,
+  FormLabel,
+  Grid,
+  Grow,
+  Hidden,
+  Icon: MuiIcon,
+  IconButton,
+  InputAdornment,
   InputLabel,
+  Link,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemSecondaryAction,
+  ListItemText,
+  Menu,
+  MenuItem,
+  MenuList,
+  Paper,
   Popper,
+  Radio,
+  RadioGroup,
   Select: MuiSelect,
   Slide,
+  Snackbar,
+  SnackbarContent,
+  Step,
+  StepContent,
+  StepLabel,
+  Stepper,
+  SvgIcon,
+  SwipeableDrawer,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TableSortLabel,
+  Tabs,
+  TextField,
+  Toolbar,
+  Tooltip: MuiTooltip,
+  Typography,
   Zoom,
-  Fade,
-  Grow,
-  CircularProgress,
   withWidth,
 };
 
@@ -307,8 +307,8 @@ import Pie from 'recharts/lib/polar/Pie';
 import PieChart from 'recharts/lib/chart/PieChart';
 import ResponsiveContainer from 'recharts/lib/component/ResponsiveContainer';
 import Tooltip from 'recharts/lib/component/Tooltip';
-import YAxis from 'recharts/lib/cartesian/YAxis';
 import XAxis from 'recharts/lib/cartesian/XAxis';
+import YAxis from 'recharts/lib/cartesian/YAxis';
 
 window.recharts = {
   Area,
@@ -326,8 +326,8 @@ window.recharts = {
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  YAxis,
   XAxis,
+  YAxis,
 };
 
 // React-autosuggest
@@ -360,9 +360,9 @@ window.materialIcons = {
 };
 
 // React virtualized
-import VirtualizedList from 'react-virtualized/dist/commonjs/List';
 import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
 import InfiniteLoader from 'react-virtualized/dist/commonjs/InfiniteLoader';
+import VirtualizedList from 'react-virtualized/dist/commonjs/List';
 
 window.reactVirtualized = {
   AutoSizer,
@@ -372,23 +372,23 @@ window.reactVirtualized = {
 
 // Turf.js
 import bbox from '@turf/bbox';
-import kinks from '@turf/kinks';
-import lineSplit from '@turf/line-split';
-import lineIntersect from '@turf/line-intersect';
-import combine from '@turf/combine';
 import cleanCoords from '@turf/clean-coords';
-import truncate from '@turf/truncate';
-import nearestPointOnLine from '@turf/nearest-point-on-line';
+import combine from '@turf/combine';
+import kinks from '@turf/kinks';
 import length from '@turf/length';
+import lineIntersect from '@turf/line-intersect';
+import lineSplit from '@turf/line-split';
+import nearestPointOnLine from '@turf/nearest-point-on-line';
+import truncate from '@turf/truncate';
 
 window.turf = {
   bbox,
-  kinks,
-  lineSplit,
-  lineIntersect,
-  combine,
   cleanCoords,
-  truncate,
-  nearestPointOnLine,
+  combine,
+  kinks,
   length,
+  lineIntersect,
+  lineSplit,
+  nearestPointOnLine,
+  truncate,
 };
