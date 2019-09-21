@@ -130,6 +130,8 @@
                                 "location.postal-code"
                                 "location.postal-office"
                                 "location.city.city-code"
+                                "search-meta.type.main-category"
+                                "search-meta.type.sub-category"
                                 (if (> full-geoms-threshold zoom)
                                   "search-meta.location.simple-geoms"
                                   "location.geometries")])}

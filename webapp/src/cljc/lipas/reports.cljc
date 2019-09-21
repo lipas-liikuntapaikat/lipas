@@ -96,7 +96,11 @@
   {"search-meta.location.wgs84-point"      {:fi "Koordinaatit (WGS84)"
                                             :en "Coordinates (WGS84)"}
    "search-meta.location.avi-area.name.fi" {:fi "AVI-alue" :en "AVI-area"}
-   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province"}})
+   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province"}
+   "search-meta.type.main-category.name.fi"
+   {:fi "Liikuntapaikkatyypin pääryhmä" :en "Type main-category" :se "Type"}
+   "search-meta.type.sub-category.name.fi"
+   {:fi "Liikuntapaikkatyypin alaryhmä" :en "Type sub-category" :se "Type sub-category"}})
 
 (def area-fields
   (select-keys prop-fields ["properties.area-m2"

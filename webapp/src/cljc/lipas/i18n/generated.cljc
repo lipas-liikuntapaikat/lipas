@@ -188,7 +188,11 @@
    :mar "Maaliskuu",
    :dec "Joulukuu",
    :aug "Elokuu"},
-  :type {:name "Liikuntapaikkatyyppi", :type-code "Tyyppikoodi"},
+  :type
+  {:name "Liikuntapaikkatyyppi",
+   :type-code "Tyyppikoodi"
+   :main-category "Pääryhmä"
+   :sub-category "Alaryhmä"},
   :duration
   {:hour "tuntia",
    :month "kuukautta",
@@ -1019,7 +1023,12 @@
    :mar "March",
    :dec "December",
    :aug "August"},
-  :type {:name "Type", :type-code "Type code"},
+
+  :type
+  {:name "Type",
+   :type-code "Type code"
+   :main-category "Main category"
+   :sub-category "Sub category"},
   :duration
   {:hour "hours", :month "months", :years "years", :years-short "y"},
   :size-categories

@@ -141,6 +141,8 @@
      :owner.name              (-> site :owner owners locale)
      :type.type-code          type-code
      :type.name               (get-in types [type-code :name locale])
+     :type.main-category      (-> site :search-meta :type :main-category :name locale)
+     :type.sub-category       (-> site :search-meta :type :sub-category :name locale)
      :location.address        (-> site :location :address)
      :location.postal-code    (-> site :location :postal-code)
      :location.postal-office  (-> site :location :postal-office)
@@ -212,6 +214,8 @@
  (fn [tr _]
    [[:name                   {:label (tr :lipas.sports-site/name)}]
     [:type.name              {:label (tr :type/name)}]
+    [:type.main-category     {:label (tr :type/main-category)}]
+    [:type.sub-category      {:label (tr :type/sub-category)}]
     [:admin.name             {:label (tr :lipas.sports-site/admin)}]
     [:owner.name             {:label (tr :lipas.sports-site/owner)}]
     [:construction-year      {:label (tr :lipas.sports-site/construction-year)}]
@@ -263,6 +267,8 @@
                                {:component lui/type-selector-single
                                 :value-key :type.type-code
                                 :props     {:types types}}}]
+     [:type.main-category     {:label (tr :type/main-category)}]
+     [:type.sub-category      {:label (tr :type/sub-category)}]
      [:admin.name             {:label (tr :lipas.sports-site/admin)
                                :form
                                {:component lui/admin-selector-single
