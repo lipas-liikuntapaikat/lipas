@@ -11,7 +11,9 @@
 (defonce tasks (atom {}))
 
 (def all-tasks
-  [:new->old :old->new])
+  [:new->old
+   ;;:old->new
+   ])
 
 (defn -main
   "Runs all integrations if no task names are given in args. Else runs
