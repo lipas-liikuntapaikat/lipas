@@ -78,6 +78,7 @@
 
      ["/api"
       {:middleware [mw/cors]
+       :no-doc     true
        :options
        {:handler
         (fn [_]
@@ -93,24 +94,26 @@
 
       ["/sports-sites"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
          :parameters
          {:query :lipas.api/query-params
           :body  map?}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [spec   :lipas/new-or-existing-sports-site
+           (let [spec :lipas/new-or-existing-sports-site
                  draft? (-> req :parameters :query :draft utils/->bool)
                  valid? (s/valid? spec body-params)]
              (if valid?
                {:status 201
                 :body   (core/save-sports-site! db search identity body-params draft?)}
                {:status 400
-                :body   (s/explain-data spec body-params)})))}}]
+                :body (s/explain-data spec body-params)})))}}]
 
       ["/sports-sites/:lipas-id"
        {:get
-        {:parameters {:path {:lipas-id int?}}
+        {:no-doc     false
+         :parameters {:path {:lipas-id int?}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            (if-let [res (core/get-sports-site db lipas-id)]
@@ -153,7 +156,8 @@
 
       ["/actions/search"
        {:post
-        {:handler
+        {:no-doc false
+         :handler
          (fn [{:keys [body-params]}]
            (core/search search body-params))}}]
 
