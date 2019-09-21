@@ -29,7 +29,9 @@
     :fields ["properties.surface-material"
              "properties.surface-material-info"]}
    {:label  (tr :type/name)
-    :fields ["type.type-name"]}
+    :fields ["type.type-name"
+             "search-meta.type.main-category.name.fi"
+             "search-meta.type.sub-category.name.fi"]}
    {:label  (tr :lipas.location/city)
     :fields ["location.city.city-name"
              "search-meta.location.province.name.fi"
