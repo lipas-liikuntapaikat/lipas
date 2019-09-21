@@ -22,12 +22,16 @@
       [:<>
        [mui/input-label {:shrink true :style {:color "rgba(0, 0, 0, 0.88)"}}
         label]
-       [mui/link {:href value :style {:padding "6px 0 7px"}}
-        [mui/typography {:variant "body1"} value]]
+       [mui/link
+        {:href    value
+         :variant "body1"
+         :noWrap  true
+         :style   {:padding "6px 0 7px"}}
+        (if (> (count value) 50)
+          (str (subs value 0 50) " ...")
+          value)]
        [mui/divider
-        {:style
-         {:border-top "1px dotted"
-          :color      "rgba(0, 0, 0, 0.12)"}}]]
+        {:style {:border-top "1px dotted" :color "rgba(0, 0, 0, 0.12)"}}]]
       (->display-tf d false 1))))
 
 (defn- ->field [read-only? d]
