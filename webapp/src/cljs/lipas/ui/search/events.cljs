@@ -119,7 +119,7 @@
                                 "name"
                                 "marketing-name"
                                 "www"
-                                "phone-numer"
+                                "phone-number"
                                 "email"
                                 "owner"
                                 "admin"
