@@ -1,11 +1,12 @@
 (ns lipas.ui.stats.finance.db
   (:require
-   [lipas.reports :as reports]))
+   [lipas.reports :as reports]
+   [lipas.ui.utils :as utils]))
 
 (def default-db
   {:selected-view           "chart"
    :selected-cities         [] ; whole country
-   :selected-year           2017
+   :selected-year           (dec utils/this-year)
    :units                   reports/stats-units
    :selected-unit           "euros-per-capita"
    :city-services           reports/city-services
