@@ -129,7 +129,7 @@
 (defn simple-stats [coll]
   {:count  (count coll)
    :sum    (reduce + coll)
-   :mean   (mean coll)
+   :mean   (double (mean coll))
    :median (median coll)
    :mode   (mode coll)})
 
