@@ -1,7 +1,6 @@
 (ns lipas.ui.stats.city.subs
   (:require
    [lipas.reports :as reports]
-   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
 ;;; General ;;;
@@ -93,15 +92,6 @@
               :year       year
               :population (get-in m [:stats year :population])})))))
 
-(defn round-vals [m]
-  (reduce
-   (fn [m [k v]]
-     (assoc m k (if (#{:year :population :city-code} k)
-                  v
-                  (utils/round-safe v))))
-   {}
-   m))
-
 (re-frame/reg-sub
  ::finance-data
  :<- [::finance-data*]
@@ -118,7 +108,6 @@
      (->> cities
           vals
           (reduce (partial ->entries avgs service years) [])
-          (map round-vals)
           (sort-by :year)))))
 
 (re-frame/reg-sub
