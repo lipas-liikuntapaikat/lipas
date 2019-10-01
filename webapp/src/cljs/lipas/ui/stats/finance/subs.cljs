@@ -75,6 +75,11 @@
  (fn [db _]
    (-> db :stats :finance :data)))
 
+(defn ->int [x]
+  (try
+    (js/parseInt x)
+    (catch js/Error _ nil)))
+
 (re-frame/reg-sub
  ::data
  :<- [:lipas.ui.subs/translator]
@@ -87,7 +92,7 @@
  (fn [[tr data grouping unit avis provinces cities] _]
    (let [locale       (tr)
          op           (if (= unit "euros-per-capita")
-                        (comp utils/round-safe :avg)
+                        (comp ->int utils/round-safe :avg)
                         :sum)
          get-avi      (fn [city-code]
                         (-> city-code cities :avi-id avis :name locale))

@@ -3,13 +3,12 @@
    ["recharts" :as rc]
    [cljs.pprint :as pprint]
    [clojure.set :refer [rename-keys map-invert]]
-
    [goog.color :as gcolor]
    [goog.object :as gobj]
    [goog.string :as gstring]
    [lipas.ui.components.misc :as misc]
    [lipas.ui.mui :as mui]
-
+   [lipas.ui.utils :as utils]
    [reagent.core :as r]))
 
 ;; Tip: enable rainbow-mode in emacs.
@@ -215,7 +214,7 @@
                              (map
                               (fn [obj]
                                 {:color (gobj/get obj "color")
-                                 :value (gobj/get obj "value")
+                                 :value (utils/round-safe (gobj/get obj "value"))
                                  :icon  (if (gobj/get obj "stroke")
                                           (legend-icons "line")
                                           (legend-icons "rect"))
