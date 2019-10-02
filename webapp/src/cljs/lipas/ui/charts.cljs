@@ -279,19 +279,24 @@
         :label   false
         :fill    (get colors k)}]))])
 
+(def ugly-keys
+  #{:length-km-pc :length-km-avg :sites-count-p1000c :area-m2-pc :area-m2-avg})
+
 (defn sports-stats-tooltip [labels props]
-  (let [payload-fn (fn [payload]
-                     (let [entry (-> payload
-                                     first
-                                     (gobj/get "payload")
-                                     (js->clj :keywordize-keys true))]
-                       (->> entry
-                            (reduce
-                             (fn [res [k v]]
-                               (if-let [label (labels k)]
-                                 (conj res {:label label :value v})
-                                 res))
-                             []))))]
+  (let [->formatter (fn [k] (if (ugly-keys k) utils/round-safe identity))
+        payload-fn  (fn [payload]
+                      (let [entry (-> payload
+                                      first
+                                      (gobj/get "payload")
+                                      (js->clj :keywordize-keys true))]
+                        (->> entry
+                             (reduce
+                              (fn [res [k v]]
+                                (if-let [label (labels k)]
+                                  (conj res {:label label
+                                             :value ((->formatter k) v)})
+                                  res))
+                              []))))]
     (tooltip payload-fn labels props)))
 
 (defn sports-stats-chart
@@ -299,7 +304,8 @@
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
-                     :type-name)]
+                     :type-name)
+        formatter (when (ugly-keys (keyword metric)) utils/round-safe)]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart
       {:data     data
@@ -311,7 +317,7 @@
       [:> rc/XAxis {:tick font-styles :type "number"}]
       [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> rc/Bar {:dataKey (keyword metric) :fill "orange"}
-       [:> rc/LabelList {:position "right"}]]]]))
+       [:> rc/LabelList {:position "right" :formatter formatter}]]]]))
 
 (defn angled-tick [props]
   (let [x       (gobj/get props "x")
