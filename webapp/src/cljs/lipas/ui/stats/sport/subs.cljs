@@ -69,13 +69,7 @@
                (let [type-name (get-in types [k :name locale])]
                  (conj res (assoc v :type-code k :type-name type-name)))))
            [])
-          (sort-by (keyword metric) utils/reverse-cmp)
-          (map (fn [m](-> m
-                          (update :area-m2-pc utils/round-safe 5)
-                          (update :area-m2-avg utils/round-safe 5)
-                          (update :length-km-pc utils/round-safe 5)
-                          (update :length-km-avg utils/round-safe 5)
-                          (update :sites-count-p1000c utils/round-safe 5))))))))
+          (sort-by (keyword metric) utils/reverse-cmp)))))
 
 (re-frame/reg-sub
  ::labels
