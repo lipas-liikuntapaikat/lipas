@@ -161,7 +161,6 @@
                           "comment"
                           "email"
                           "phone-number"
-                          "www"
                           "location.address"
                           "location.postal-office"
                           "location.postal-code"
