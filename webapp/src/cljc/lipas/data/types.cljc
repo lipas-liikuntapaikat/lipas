@@ -671,7 +671,7 @@
      "Närparkerna befinner sig i tätorter, i omedelbar närhet av bebyggelse. Närparkerna är avsedda till daglig användning. En plats för lek, vistelse och promenad.                   Planbeteckning VL.",
      :en
      "In population centres, in or near residential areas. Intended for daily use. Used for play, recreation and walks. Symbol VL."},
-    :tags          {:fi ["puisto"]},
+    :tags          {:fi ["puisto" "lähiliikuntapaikka"]},
     :name          {:fi "Lähipuisto", :se "Närpark", :en "Neighbourhood park"},
     :type-code     101,
     :main-category 0,
@@ -2677,7 +2677,7 @@
      "Näridrottsplats avsedd för daglig motion och dagligt friluftsliv. Den ligger i omedelbar närhet till bebyggelse, är relativt liten och har fritt tillträde. I regel erbjuds olika faciliteter för enstaka aktiviteter. I tilläggsinformation anges om det är en skolgård eller daghemsgård samt vilka enskilda faciliteter som finns.",
      :en
      "A neighbourhood sports area is intended for daily outdoor activities and exercise. It is a small area located in or near a residential area, with free public access. It usually provides different exercise/play facilities. It is specified in 'additional information' whether it is a school/nursery school yard, what facilities/equipment are offered, etc."},
-    :tags          {:fi ["ässäkenttä" "monitoimikenttä" "monitoimikaukalo"]},
+    :tags          {:fi ["ässäkenttä" "monitoimikenttä" "monitoimikaukalo" "lähipuisto"]},
     :name
     {:fi "Lähiliikuntapaikka",
      :se "Näridrottsplats",
