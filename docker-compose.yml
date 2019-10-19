@@ -61,7 +61,7 @@ services:
     command: /mapproxy/start.sh
     volumes:
       - './mapproxy:/mapproxy:z'
-      - 'mapproxy_cache:/mapproxy/cache_data'
+      - 'mapproxy_cache:/cache_data'
     ports:
       - '8080:8080'
 
