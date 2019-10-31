@@ -231,3 +231,13 @@
                 :status     "active"})]
      {:db (-> db
               (assoc-in [:new-sports-site :data] data))})))
+
+(re-frame/reg-event-fx
+ ::resurrect
+ (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
+   (let [site  (get-in db [:sports-sites lipas-id])
+         rev   (-> (utils/make-revision site (utils/timestamp))
+                   (utils/make-editable)
+                   (assoc :status "active"))
+         draft false]
+     {:dispatch [::commit-rev rev draft on-success on-failure]})))

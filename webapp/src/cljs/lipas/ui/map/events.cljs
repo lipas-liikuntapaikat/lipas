@@ -375,6 +375,18 @@
     [[:lipas.ui.sports-sites.events/toggle-delete-dialog]]}))
 
 (re-frame/reg-event-fx
+ ::resurrect
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [tr (:translator db)]
+    {:dispatch
+     [:lipas.ui.events/confirm
+      (tr :confirm/resurrect?)
+      (fn []
+        (==> [:lipas.ui.sports-sites.events/resurrect
+              lipas-id
+              on-success-default on-failure-default]))]})))
+
+(re-frame/reg-event-fx
  ::start-adding-new-site
  (fn [{:keys [db]} [_]]
    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup

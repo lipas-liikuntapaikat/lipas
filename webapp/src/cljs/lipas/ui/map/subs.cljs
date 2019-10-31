@@ -266,6 +266,7 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/delete-dialog-open? lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code type-code])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/types-props type-code])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/dead? lipas-id])
     (re-frame/subscribe [:lipas.ui.user.subs/permission-to-publish? lipas-id])
     (re-frame/subscribe [:lipas.ui.user.subs/logged-in?])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
@@ -275,8 +276,8 @@
     (re-frame/subscribe [::more-tools-menu-anchor])])
  (fn [[cities types geom-type admins owners editing? edits-valid?
        editing-allowed? save-in-progress? delete-dialog-open? type
-       types-props can-publish? logged-in?  size-categories mode undo redo
-       more-tools-menu-anchor] _]
+       types-props dead? can-publish? logged-in? size-categories mode
+       undo redo more-tools-menu-anchor] _]
 
    {:types                  (filter
                              (comp #{geom-type} :geometry-type second) types)
@@ -301,6 +302,7 @@
                               (3110 3130) "uimahallit"
                               (2510 2520) "jaahallit"
                               nil)
+    :dead?                  dead?
     :undo                   undo
     :redo                   redo
     :more-tools-menu-anchor more-tools-menu-anchor}))

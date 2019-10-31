@@ -13,7 +13,8 @@
    "Ajantasainen tieto Suomen liikuntapaikoista",
    :updating-tools "Päivitystyökalut tiedontuottajille"},
   :confirm
-  {:discard-changes? "Tahdotko kumota tekemäsi muutokset?",
+  {:resurrect? "Tahdotko palauttaa liikuntapaikan aktiiviseksi?"
+   :discard-changes? "Tahdotko kumota tekemäsi muutokset?",
    :headline "Varmistus",
    :no "Ei",
    :press-again-to-delete "Varmista painamalla uudestaan",
@@ -269,7 +270,8 @@
    :splitting-tooltip "Katkaisutyökalu valittu"},
   :partners {:headline "Kehittä​misessä mukana"},
   :actions
-  {:duplicate "Kopioi",
+  {:resurrect "Palauta"
+   :duplicate "Kopioi",
    :select-year "Valitse vuosi",
    :select-owners "Valitse omistajat",
    :select-admins "Valitse ylläpitäjät",
@@ -846,7 +848,8 @@
    "Up-to-date information about sports facilities",
    :updating-tools "Tools for data maintainers"},
   :confirm
-  {:discard-changes? "Do you want to discard all changes?",
+  {:resurrect? "Are you sure you want to resurrect this sports facility?"
+   :discard-changes? "Do you want to discard all changes?",
    :headline "Confirmation",
    :no "No",
    :press-again-to-delete "Press again to delete",
@@ -1101,7 +1104,8 @@
    :splitting-tooltip "Split tool selected"},
   :partners {:headline "In association with"},
   :actions
-  {:duplicate "Duplicate",
+  {:resurrect "Resurrect"
+   :duplicate "Duplicate",
    :select-year "Select year",
    :select-owners "Select owners",
    :select-admins "Select administrators",
