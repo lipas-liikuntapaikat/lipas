@@ -50,9 +50,18 @@
 (re-frame/reg-sub
  ::editing-allowed?
  (fn [[_ lipas-id] _]
+   [(re-frame/subscribe [::latest-rev lipas-id])
+    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
+ (fn [[rev admin?] _]
+   (or admin?
+       (->> rev :status #{"active" "out-of-service-temporarily"}))))
+
+(re-frame/reg-sub
+ ::dead?
+ (fn [[_ lipas-id] _]
    (re-frame/subscribe [::latest-rev lipas-id]))
  (fn [rev _]
-   (->> rev :status #{"active" "out-of-service-temporarily"})))
+   (->> rev :status #{"out-of-service-permanently"})))
 
 (defn- valid? [sports-site]
   (let [spec (case (-> sports-site :type :type-code)

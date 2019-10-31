@@ -249,7 +249,7 @@
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
                   geom-type portal save-in-progress? undo redo
-                  more-tools-menu-anchor]}
+                  more-tools-menu-anchor dead?]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
           set-field (partial set-field lipas-id)]
@@ -531,6 +531,14 @@
                 {:size     "small"
                  :on-click #(==> [::events/duplicate-sports-site lipas-id])}
                 [:> js/materialIcons.ContentDuplicate]]])
+
+            ;; Resurrect button
+            (when (and dead? logged-in? editing-allowed?)
+              [mui/tooltip {:title (tr :actions/resurrect)}
+               [mui/fab
+                {:size     "small"
+                 :on-click #(==> [::events/resurrect lipas-id])}
+                [mui/icon "360"]]])
 
             ;; ;; Import geom
             ;; (when (and editing? (#{"LineString"} geom-type))
