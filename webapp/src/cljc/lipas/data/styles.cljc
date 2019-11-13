@@ -13,7 +13,7 @@
 
 (defn ->stroke
   ([color]
-   (->stroke color 3.0 "round" "round" [5 2]))
+   (->stroke color 4.0 "round" "round" [5 2]))
   ([color width linejoin linecap linedash]
    {:color     color
     :width     width
@@ -208,7 +208,8 @@
    5310 {:type-code 5310, :fill "#7c8b8a", :stroke "#aa00ff"},
    1560 {:type-code 1560, :fill "#0095bf", :stroke "#000000"},
    205  {:type-code 205, :fill "#80c6b6", :stroke "#0055ff"},
-   2150 {:type-code 2150, :fill "#fde8a6", :stroke "#000000"},
+   2150 {:type-code 2150, :fill "#f4ff9f", :stroke "#000000"},
+   ;;2150 {:type-code 2150, :fill "#fde8a6", :stroke "#000000"},
    2210 {:type-code 2210, :fill "#b7763c", :stroke "#000000"},
    101  {:type-code 101, :fill "#fccc69", :stroke "#000000"},
    102  {:type-code 102, :fill "#fba626", :stroke "#000000"},
@@ -279,8 +280,10 @@
    103  {:type-code 103, :fill "#57fba0", :stroke "#000000"},
    201  {:type-code 201, :fill "#8397de", :stroke "#0055ff"},
    1220 {:type-code 1220, :fill "#b12e07", :stroke "#000000"},
-   4411 {:type-code 4411, :fill "", :stroke "#e588fc"},
-   1140 {:type-code 1140, :fill "#5f8b67", :stroke "#000000"},
+   4411 {:type-code 4411, :fill "", :stroke "#f09dfc"},
+   ;;4411 {:type-code 4411, :fill "", :stroke "#e588fc"},
+   1140 {:type-code 1140, :fill "#2f8b62", :stroke "#000000"},
+   ;;1140 {:type-code 1140, :fill "#5f8b67", :stroke "#000000"},
    4520 {:type-code 4520, :fill "#ff7b3c", :stroke "#000000"},
    2710 {:type-code 2710, :fill "#55007f", :stroke "#000000"},
    107  {:type-code 107, :fill "#daab0c", :stroke "#000000"},
@@ -332,7 +335,9 @@
    4421 {:type-code 4421, :fill "", :stroke "#961275"},
    2220 {:type-code 2220, :fill "#ac6c46", :stroke "#000000"},
    1320 {:type-code 1320, :fill "#aaaaff", :stroke "#707172"},
-   4402 {:type-code 4402, :fill "", :stroke "#6cf7f7"}})
+   4402 {:type-code 4402, :fill "", :stroke "#00cafd"}
+   ;;4402 {:type-code 4402, :fill "", :stroke "#6cf7f7"}
+   })
 
 (def adapted-temp-symbols
   (reduce
