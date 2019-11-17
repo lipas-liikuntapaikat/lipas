@@ -97,8 +97,8 @@
 (defn lang-selector []
   [mui/grid {:item true :style {:margin "1em"}}
    [lang-btn :fi]
-   ;;[separator]
-   ;;[lang-btn :se]
+   [separator]
+   [lang-btn :se]
    [separator]
    [lang-btn :en]])
 
