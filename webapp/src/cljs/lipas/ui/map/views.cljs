@@ -652,7 +652,7 @@
                geom-tab     (r/atom 0)]
     (let [locale                                   (tr)
           {:keys [type data save-enabled? admins owners
-                  cities problems?  types size-categories zoomed? geom
+                  cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
 
           set-field set-new-site-field]
