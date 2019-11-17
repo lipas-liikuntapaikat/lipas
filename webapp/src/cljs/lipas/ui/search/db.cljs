@@ -8,7 +8,7 @@
     :city-codes    #{}
     :bounding-box? false}
    :sort
-   {:asc?    true
+   {:asc?    false
     :sort-fn :score}
    :results-view :list
    :selected-results-table-columns

@@ -406,7 +406,7 @@
 (re-frame/reg-event-fx
  ::reset-sort-order
  (fn [{:keys [db]} _]
-   {:db       (assoc-in db [:search :sort] {:asc? true :sort-fn :score})
+   {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
     :dispatch [::submit-search]}))
 
 (re-frame/reg-event-fx
@@ -419,8 +419,10 @@
 (re-frame/reg-event-fx
  ::toggle-sorting-by-distance
  (fn [{:keys [db]} _]
-   (let [path [:search :sort :sort-fn]]
-     {:db       (update-in db path #(if (= % :score) :name :score))
+   (let [path [:search :sort]]
+     {:db       (update-in db path #(if (= (:sort-fn %) :score)
+                                      (merge % {:sort-fn :name :asc? true})
+                                      (merge % {:sort-fn :score :asc? false})))
       :dispatch [::submit-search]})))
 
 (re-frame/reg-event-fx
