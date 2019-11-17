@@ -172,7 +172,7 @@
        {:title     (tr :sport/headline)
         :link      "/liikuntapaikat"
         :link-text (tr :actions/browse-to-map)}
-       [mui/typography {:variant "body1"}
+       [mui/typography {:variant "body1" :style {:height "4em"}}
         (tr :sport/description)]
        [:ul
         [lui/li (tr :sport/up-to-date-information)]
@@ -208,7 +208,7 @@
        {:title     (tr :stats/headline)
         :link      "/tilastot"
         :link-text (tr :stats/browse-to)}
-       [mui/typography {:variant "body1"}
+       [mui/typography {:variant "body1" :style {:height "4em"}}
         (tr :stats/description)]
        [:ul
         [lui/li (tr :stats/bullet1)]
