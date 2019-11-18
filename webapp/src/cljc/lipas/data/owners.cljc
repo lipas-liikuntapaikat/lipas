@@ -3,28 +3,28 @@
 (def all
   {"city"                   {:fi "Kunta"
                              :en "City"
-                             :se nil}
+                             :se "Kommun"}
    "registered-association" {:fi "Rekisteröity yhdistys"
                              :en "Registered association"
-                             :se nil}
+                             :se "Registrerad förening"}
    "company-ltd"            {:fi "Yritys"
                              :en "Company ltd"
-                             :se nil}
+                             :se "Företag"}
    "city-main-owner"        {:fi "Kuntaenemmistöinen yritys"
                              :en "City main owner"
-                             :se nil}
+                             :se "Företag med kommun som majoritetsägare"}
    "municipal-consortium"   {:fi "Kuntayhtymä"
                              :en "Municipal consortium"
                              :se "Samkommun"}
    "foundation"             {:fi "Säätiö"
                              :en "Foundation"
-                             :se nil}
+                             :se "Stiftelse"}
    "state"                  {:fi "Valtio"
                              :en "State"
-                             :se nil}
+                             :se "Stat"}
    "other"                  {:fi "Muu"
                              :en "Other"
-                             :se nil}
+                             :se "Annat"}
    "unknown"                {:fi "Ei tietoa"
                              :en "Unknown"
-                             :se nil}})
+                             :se "Okänt"}})
