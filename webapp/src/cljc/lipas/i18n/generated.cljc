@@ -60,8 +60,7 @@
    :entering-energy-data "Energiankulutustietojen syöttäminen",
    :list "Hallien tiedot",
    :visualizations "Hallien vertailu"},
-  :home-page
-  {:description "Jäähallien perustiedot", :headline "Etusivu"},
+  :home-page {:description "Etusivu", :headline "Etusivu"},
   :ice-energy
   {:description
    "Ajantasaisen tietopaketin löydät Jääkiekkoliiton sivuilta.",
@@ -265,6 +264,7 @@
   :map.tools
   {:drawing-tooltip "Piirtotyökalu valittu",
    :drawing-hole-tooltip "Reikäpiirtotyökalu valittu",
+   :edit-tool "Muokkaustyökalu",
    :importing-tooltip "Tuontityökalu valittu",
    :deleting-tooltip "Poistotyökalu valittu",
    :splitting-tooltip "Katkaisutyökalu valittu"},
@@ -275,6 +275,7 @@
    :select-year "Valitse vuosi",
    :select-owners "Valitse omistajat",
    :select-admins "Valitse ylläpitäjät",
+   :select-tool "Valitse työkalu",
    :save-draft "Tallenna luonnos",
    :redo "Tee uudelleen",
    :open-main-menu "Avaa päävalikko",
@@ -381,9 +382,9 @@
    :headline "Energian​säästö​toimet",
    :shower-water-heat-recovery? "Suihkuveden lämmöntalteenotto"},
   :ice-form
-  {:headline "Bensiini",
-   :headline-short "Nestekaasu",
-   :select-rink "Sähkö"},
+  {:headline "Nestekaasu",
+   :headline-short "Sähkö",
+   :select-rink "Nestekaasu"},
   :restricted
   {:login-or-register "Kirjaudu sisään tai rekisteröidy"},
   :lipas.ice-stadium.rinks
@@ -851,7 +852,7 @@
    :headline "Bekräftelse",
    :no "Nej",
    :press-again-to-delete "Klicka igen för att radera",
-   :resurrect? "Ja",
+   :resurrect? "Vill du spara grunddata?",
    :save-basic-data? "Vill du spara grunddata?",
    :yes "Ja"},
   :lipas.swimming-pool.saunas
@@ -861,9 +862,12 @@
    :headline "Bastur",
    :men? "Män",
    :women? "Kvinnor"},
-  :slide-structures {:concrete "Betong", :steel "Stål"},
+  :slide-structures
+  {:concrete "Betong",
+   :hardened-plastic "Öppna gränssnitt",
+   :steel "Stål"},
   :lipas.swimming-pool.conditions
-  {:open-days-in-year "Måndagar",
+  {:open-days-in-year "Fredagar",
    :open-hours-mon "Måndagar",
    :headline "Öppettider",
    :open-hours-wed "Onsdagar",
@@ -874,29 +878,33 @@
    :daily-open-hours "Dagliga öppettider",
    :open-hours-sat "Lördagar"},
   :lipas.ice-stadium.ventilation
-  {:dryer-type "Gatuadress",
-   :headline "Kommun",
-   :heat-recovery-efficiency "Gatuadress",
-   :heat-recovery-type "Kommun"},
+  {:dryer-duty-type "Gatuadress",
+   :dryer-type "Kommun",
+   :heat-pump-type "Gatuadress",
+   :heat-recovery-efficiency "Kommun",
+   :heat-recovery-type "Gatuadress"},
   :swim
-  {:description "Energi information",
+  {:basic-data-of-halls "Simhallsportal",
    :edit "Simhallsportal",
+   :entering-energy-data "Datum",
    :headline "Simhallsportal",
-   :latest-updates "Datum",
-   :updating-basic-data "Timme",
+   :latest-updates "Timme",
+   :list "Energi information",
+   :updating-basic-data "Information",
    :visualizations "Energi information"},
   :home-page
   {:description
    "LIPAS-system innehåller information av idrottsanläggningar, idrottsrutter och friluftsregioner. Data är öppen CC4.0 International.",
    :headline "Startsida"},
-  :ice-energy {:headline "El"},
+  :ice-energy {:finhockey-link "El", :headline "Bensin"},
   :filtering-methods
-  {:activated-carbon "Annat",
+  {:activated-carbon "Kol",
    :coal "Kol",
-   :multi-layer-filtering "Annat",
+   :membrane-filtration "Annat",
+   :open-sand "Annat",
    :other "Annat",
-   :precipitation "Kommentar",
-   :pressure-sand "Beskrivning"},
+   :precipitation "Beskrivning",
+   :pressure-sand "Kommentar"},
   :open-data
   {:description "Länkar och information om gränssnitten",
    :headline "Öppna data",
@@ -917,7 +925,7 @@
    :cold-pool "Kallbassäng",
    :other-pool "Annan bassäng",
    :teaching-pool "Undervisningsbassäng"},
-  :disclaimer {:headline "OBS!", :test-version "Manual"},
+  :disclaimer {:headline "OBS!", :test-version "Automatisk"},
   :admin
   {:private-foundation "Privat / stiftelse",
    :city-other "Kommun / annat",
@@ -976,14 +984,12 @@
    :this-year "Det här året",
    :last-year "Förra året"},
   :ice-resurfacer-fuels
-  {:LPG "Bensin",
+  {:LPG "El",
    :electicity "El",
    :gasoline "Bensin",
    :natural-gas "Naturgas",
    :propane "Propan"},
-  :ice-rinks
-  {:headline
-   "Är du säker på att du vill skicka magic link till {1}?"},
+  :ice-rinks {:headline "Du har admin rättigheter."},
   :month
   {:sep "September",
    :jan "Januari",
@@ -1016,13 +1022,16 @@
    :users "Användare"},
   :lipas.building
   {:headline "Byggnad",
-   :heat-source "Antalet personal",
-   :piled? "Antalet personal",
+   :total-volume-m3 "Areal av vatten m²",
    :staff-count "Antalet personal",
+   :heat-sections? "Antalet personal",
    :total-ice-area-m2 "Areal av is m²",
-   :total-pool-room-area-m2 "Kommentar",
-   :total-surface-area-m2 "Areal av vatten m²",
-   :total-water-area-m2 "Areal av vatten m²"},
+   :main-designers "Antalet personal",
+   :total-pool-room-area-m2 "Areal av vatten m²",
+   :total-water-area-m2 "Areal av vatten m²",
+   :ceiling-structures "Byggnad",
+   :supporting-structures "Areal av is m²",
+   :seating-capacity "Antalet personal"},
   :search
   {:table-view "Visa resultaten i tabellen",
    :headline "Sökning",
@@ -1042,6 +1051,7 @@
   :map.tools
   {:drawing-tooltip "Ritningsverktyg vald",
    :drawing-hole-tooltip "Hålverktyg vald",
+   :edit-tool "Redigeringsverktyg",
    :importing-tooltip "Importeringsverktyg vald",
    :deleting-tooltip "Borttagningsverktyg vald",
    :splitting-tooltip "Klippningsverktyg vald"},
@@ -1052,6 +1062,7 @@
    :select-year "Välj år",
    :select-owners "Välj ägare",
    :select-admins "Välj administratörer",
+   :select-tool "Välj verktyg",
    :save-draft "Spara utkast",
    :redo "Gör igen",
    :open-main-menu "Öppna huvudmeny",
@@ -1133,11 +1144,13 @@
    :save-failed "Sparningen misslyckades",
    :save-success "Sparningen lyckades"},
   :lipas.swimming-pool.energy-saving
-  {:headline "Gym", :shower-water-heat-recovery? "Andra tjänster"},
+  {:filter-rinse-water-heat-recovery? "Gym",
+   :headline "Andra tjänster",
+   :shower-water-heat-recovery? "Gym"},
   :ice-form
-  {:headline "Bensin",
-   :headline-short "Naturgas",
-   :select-rink "El"},
+  {:headline "Naturgas",
+   :headline-short "El",
+   :select-rink "Bensin"},
   :restricted {:login-or-register "Logga in eller registrera dig"},
   :lipas.sports-site
   {:properties "Ytterligare information",
@@ -1184,15 +1197,18 @@
   :ice-comparison {:headline "Jämförelse av hallar"},
   :lipas.visitors
   {:headline "Användare",
-   :not-reported-monthly "Glömt lösenordet?",
-   :spectators-count "Lösenord eller användarnamn är felaktigt",
-   :total-count "Glömt ditt lösenord?"},
+   :not-reported "Glömt lösenordet?",
+   :not-reported-monthly "Lösenord eller användarnamn är felaktigt",
+   :spectators-count "Glömt ditt lösenord?",
+   :total-count "Lösenord eller användarnamn är felaktigt"},
   :lipas.energy-stats
-  {:headline "Vatten m³",
-   :report "Vatten m³",
-   :disclaimer "El + värme MWh",
-   :cold-mwh "El MWh",
-   :hall-missing? "Värme MWh",
+  {:headline "Värme MWh",
+   :energy-reported-for "Värme MWh",
+   :disclaimer "El MWh",
+   :reported "Vatten m³",
+   :cold-mwh "El + värme MWh",
+   :hall-missing? "Vatten m³",
+   :not-reported "Vatten m³",
    :water-m3 "Vatten m³",
    :electricity-mwh "El MWh",
    :heat-mwh "Värme MWh",
@@ -1208,7 +1224,8 @@
    :headline "Bassänger",
    :structure "Struktur"},
   :condensate-energy-targets
-  {:snow-melting "Nej",
+  {:service-water-heating "Nej",
+   :snow-melting "Vill du förkasta ändringar?",
    :track-heating "Vill du förkasta ändringar?"},
   :refrigerants
   {:CO2 "CO2 (koldioxid)",
@@ -1239,15 +1256,15 @@
    :shortcuts "Genvägar",
    :tooltip "Skapa Excel-rapport från resultaten"},
   :heat-sources
-  {:district-heating "Hjälp",
-   :private-power-station
-   "Om du behöver ytterligare användarrättigheter, kontakt "},
+  {:district-heating
+   "Om du behöver ytterligare användarrättigheter, kontakt ",
+   :private-power-station "Hjälp"},
   :map.import
   {:headline "Importera geometri",
    :geoJSON
    "Laddar upp .json file som innehåller GeoJSON FeatureCollect object. Koordinater måste vara i WGS84 koordinatsystem.",
    :gpx "Utgångsmaterial måste vara i WGS84 koordinatsystem.",
-   :supported-formats "Filformat som passar är",
+   :supported-formats "Filformat som passar är {1}",
    :replace-existing? "Ersätt gammal geometri",
    :select-encoding "Välj teckenuppsättning",
    :tab-header "Importera från filen",
@@ -1256,7 +1273,7 @@
    "Importera .shp .dbf och .prj filer i packade .zip filen.",
    :import-selected "Importera valda",
    :tooltip "Importera ruttdelar från filen",
-   :unknown-format "Okänt filformat"},
+   :unknown-format "Okänt filformat '{1}'"},
   :error
   {:email-conflict "E-post är redan registrerad",
    :email-not-found "E-post är inte registrerad",
@@ -1288,13 +1305,16 @@
    :times-per-day "gånger per dag",
    :times-per-week "gånger per vecka"},
   :lipas.energy-consumption
-  {:comment "Kommentar",
-   :not-reported "Vatten m³",
-   :report "Vatten m³",
-   :reported-for-year "El MWh",
-   :water "Vatten m³"},
+  {:cold "Kommentar",
+   :comment "Kommentar",
+   :monthly? "Vatten m³",
+   :operating-hours "Vatten m³",
+   :report "El MWh",
+   :reported-for-year "Vatten m³",
+   :water "Vatten m³",
+   :yearly "El MWh"},
   :ice
-  {:description "Ishallsportal",
+  {:description "Stor tävlingshall > 3000",
    :large "Stor tävlingshall > 3000",
    :competition "Tävlingsishall < 3000 person",
    :headline "Ishallsportal",
@@ -1303,10 +1323,10 @@
    :size-category "Storlek kategori",
    :basic-data-of-halls "Grunddata av ishallar",
    :updating-basic-data "Uppdatering av grunddata",
-   :entering-energy-data "Stor tävlingshall > 3000",
+   :entering-energy-data "Ishallsportal",
    :small "Liten tävlingshall > 500 person",
    :watch "Titta",
-   :video-description "Jämförelse av hallar"},
+   :video-description "Titta"},
   :lipas.location
   {:address "Gatuadress",
    :city "Kommun",
@@ -1339,7 +1359,7 @@
    :wood "Trä"},
   :data-users
   {:data-user? "Använder du LIPAS-data?",
-   :email-body "Några som använder LIPAS-data",
+   :email-body "Vi använder också LIPAS-data",
    :email-subject "Vi använder också LIPAS-data",
    :headline "Några som använder LIPAS-data",
    :tell-us "Berättä om det för oss"},
@@ -1376,7 +1396,7 @@
    :H2ONH3 "H2O/NH3",
    :cacl "CaCl",
    :ethanol-water "Freezium",
-   :ethylene-glycol "R717",
+   :ethylene-glycol "R134A",
    :freezium "Freezium",
    :water-glycol "R134A"},
   :user
@@ -1403,7 +1423,7 @@
    :select-years "Välj år",
    :browse-to "Gå till statistiken",
    :select-issuer "Välj understödare",
-   :select-unit "Välj enhet",
+   :select-unit "Välj måttenhet",
    :bullet3 "Bidrag",
    :finance-stats "Ekonomiska uppgifter",
    :select-city "Välj kommun",
@@ -1496,7 +1516,7 @@
    :jyu "Jyväskylä universitet",
    :main-menu "Huvudmeny"},
   :dryer-types
-  {:cooling-coil "år", :munters "timmar", :none "månader"},
+  {:cooling-coil "timmar", :munters "månader", :none "timmar"},
   :physical-units
   {:mm "mm",
    :hour "h",
@@ -1508,17 +1528,17 @@
    :m2 "m²",
    :celsius "°C"},
   :lipas.swimming-pool.water-treatment
-  {:activated-carbon? "Kontaktuppgifter",
-   :headline "E-post",
-   :ozonation? "Kontaktuppgifter",
-   :uv-treatment? "E-post"},
+  {:filtering-methods "E-post",
+   :headline "Kontaktuppgifter",
+   :ozonation? "E-post",
+   :uv-treatment? "Kontaktuppgifter"},
   :statuses {:edited "{1} (redigerad)"},
   :lipas.user
   {:email "E-post",
    :permissions "Rättigheter",
    :permissions-example "Rätt att uppdatera Jyväskylä ishallen.",
    :saved-searches "Sparad sök",
-   :report-energy-and-visitors "Begärda rättigheter",
+   :report-energy-and-visitors "Spara raportmodellen",
    :permission-to-cities
    "Du har rättighet att uppdatera de här kommunerna:",
    :password "Lösenord",
@@ -1538,7 +1558,7 @@
    :permission-to-portal-sites
    "Du har rättighet att uppdatera de här platserna:",
    :permissions-help "Skriv vad du vill uppdatera i Lipas",
-   :report-energy-consumption "Spara raportmodellen",
+   :report-energy-consumption "Begärda rättigheter",
    :firstname "Förnamn",
    :save-search "Spara söket",
    :view-basic-info "Kolla ut grunddata",
@@ -1546,7 +1566,8 @@
    "Användarnamn till Lipas har inte ännu konfirmerats",
    :username-example "tane12",
    :permission-to-types
-   "Du har rättighet att uppdatera de här typerna:"}},
+   "Du har rättighet att uppdatera de här typerna:"},
+  :heat-recovery-types {:thermal-wheel "Hjälp"}},
  :en
  {:sport
   {:description
@@ -1808,6 +1829,7 @@
   :map.tools
   {:drawing-tooltip "Draw tool selected",
    :drawing-hole-tooltip "Draw hole tool selected",
+   :edit-tool "Edit tool",
    :importing-tooltip "Import tool selected",
    :deleting-tooltip "Delete tool selected",
    :splitting-tooltip "Split tool selected"},
@@ -1818,6 +1840,7 @@
    :select-year "Select year",
    :select-owners "Select owners",
    :select-admins "Select administrators",
+   :select-tool "Select tool",
    :save-draft "Save draft",
    :redo "Redo",
    :open-main-menu "Open main menu",

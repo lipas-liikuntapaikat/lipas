@@ -403,7 +403,7 @@
             ;; Tool select button
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
               [:<>
-               [mui/tooltip {:title "Valitse työkalu"}
+               [mui/tooltip {:title (tr :actions/select-tool)}
                 [mui/fab
                  {:size     "medium"
                   :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
@@ -496,7 +496,7 @@
                     [mui/icon
                      {:color (if (= sub-mode :editing) "secondary" "default")}
                      "edit"]]
-                   [mui/list-item-text "Muokkaustyökalu"]])]])
+                   [mui/list-item-text (tr :map.tools/edit-tool)]])]])
 
             ;; Download GPX
             (when (and (not editing?) (#{"LineString"} geom-type))
