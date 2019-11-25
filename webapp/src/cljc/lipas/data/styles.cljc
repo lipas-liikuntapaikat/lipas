@@ -13,7 +13,7 @@
 
 (defn ->stroke
   ([color]
-   (->stroke color 4.0 "round" "round" [5 2]))
+   (->stroke color 3.5 "round" "round" [5 2]))
   ([color width linejoin linecap linedash]
    {:color     color
     :width     width
@@ -218,7 +218,7 @@
    6220 {:type-code 6220, :fill "#cc791e", :stroke "#456d3a"},
    4530 {:type-code 4530, :fill "#df7000", :stroke "#000000"},
    4720 {:type-code 4720, :fill "#a6a77c", :stroke "#000000"},
-   1330 {:type-code 1330, :fill "#e5d788", :stroke "#707172"},
+   1330 {:type-code 1330, :fill "#e9cb70", :stroke "#707172"},
    206  {:type-code 206, :fill "#87d215", :stroke "#004800"},
    4830 {:type-code 4830, :fill "#fece0e", :stroke "#aa0000"},
    1180 {:type-code 1180, :fill "#8fed75", :stroke "#000000"},

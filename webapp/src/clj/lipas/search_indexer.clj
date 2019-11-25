@@ -98,7 +98,12 @@
         search (:search system)]
     (try
       (main system db search mode)
-      (finally (backend/stop-system! system)))))
+      (finally
+        (log/info "Stopping system...")
+        (backend/stop-system! system)
+        (log/info "System stopped. Shutting down...")
+        (shutdown-agents)
+        (System/exit 0)))))
 
 (comment
   (-main)

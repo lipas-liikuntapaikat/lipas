@@ -232,6 +232,7 @@
 (re-frame/reg-sub
  ::selected-results-table-columns
  (fn [db _]
+   ;; (conj :score) for debugging search results
    (-> db :search :selected-results-table-columns set)))
 
 (re-frame/reg-sub
