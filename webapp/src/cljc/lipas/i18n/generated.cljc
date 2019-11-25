@@ -1047,7 +1047,7 @@
    :list-view "Visa resultaten i listan",
    :pagination "Resultaten {1}-{2}",
    :school-use-filter "Idrottsanläggningar nära skolor",
-   :clear-filters "Avmarkera alla"},
+   :clear-filters "Avmarkera filter"},
   :map.tools
   {:drawing-tooltip "Ritningsverktyg vald",
    :drawing-hole-tooltip "Hålverktyg vald",
@@ -1400,14 +1400,17 @@
    :freezium "Freezium",
    :water-glycol "R134A"},
   :user
-  {:admin-page-link "Gå till adminsidan",
-   :front-page-link "Gå till framsidan",
-   :greeting "Hej {1} {2} !",
-   :headline "Mitt konto",
-   :ice-stadiums-link "Ishallsportal",
+  {:headline "Mitt konto",
+   :admin-page-link "Gå till adminsidan",
+   :promo1-link "Visa gymnastiksaler som jag kan uppdatera",
+   :swimming-pools-link "Simhallsportal",
    :promo-headline "Aktuellt",
-   :promo1-text "Simhallsportal",
-   :swimming-pools-link "Simhallsportal"},
+   :front-page-link "Gå till framsidan",
+   :promo1-text
+   "Kolla skolornas gymnastiksaler i Lipas! Skolor har byggts och stängts i hela landet. Hur ser det ut i din kommun?",
+   :ice-stadiums-link "Ishallsportal",
+   :greeting "Hej {1} {2} !",
+   :promo1-topic "Uppdatera gymnastiksaler"},
   :building-materials
   {:brick "Tegel",
    :concrete "Betong",
