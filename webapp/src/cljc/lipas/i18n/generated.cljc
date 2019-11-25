@@ -841,7 +841,7 @@
    :thermal-wheel "Pyörivä"}},
  :se
  {:sport
-  {:description "Öppna gränssnitt",
+  {:description "LIPAS är en landsomfattande databas för offentliga finländska idrottsplatser.",
    :headline "Idrottsanläggningar",
    :open-interfaces "Öppna gränssnitt",
    :up-to-date-information
