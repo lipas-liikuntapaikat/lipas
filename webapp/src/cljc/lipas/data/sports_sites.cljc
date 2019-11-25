@@ -13,17 +13,17 @@
 (def statuses
   {"active"
    {:fi "Toiminnassa"
-    :se nil
+    :se "Aktiv"
     :en "Active"}
    "out-of-service-temporarily"
    {:fi "Poistettu käytöstä väliaikaisesti"
-    :se nil
+    :se "Tillfälligt ur funktion"
     :en "Temporarily out of service"}
    "out-of-service-permanently"
    {:fi "Poistettu käytöstä pysyvästi"
-    :se nil
+    :se "Permanent ur funktion"
     :en "Out of service"}
    "incorrect-data"
    {:fi "Väärä tieto"
-    :se nil
+    :se "Fel information"
     :en "Out of service"}})
