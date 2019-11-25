@@ -50,41 +50,41 @@
    "name-localized.se"
    {:fi "Nimi ruotsiksi" :en "Swedish name" :se "Namn på svenska"}
    "marketing-name"
-   {:fi "Markkinointinimi" :en "Marketing name" :se "Marketing name"}
+   {:fi "Markkinointinimi" :en "Marketing name" :se "Varumärkesnamn"}
    "event-date"
-   {:fi "Muokattu viimeksi" :en "Last modified" :se "Last modified"}
+   {:fi "Muokattu viimeksi" :en "Last modified" :se "Senaste redigerad"}
    "owner"
-   {:fi "Omistaja" :en "Owner" :se "Owner"}
+   {:fi "Omistaja" :en "Owner" :se "Ägare"}
    "admin"
-   {:fi "Ylläpitäjä" :en "Administrator" :se "Administrator"}
+   {:fi "Ylläpitäjä" :en "Administrator" :se "Administratör"}
    "construction-year"
-   {:fi "Rakennusvuosi" :en "Construction year" :se "Construction year"}
+   {:fi "Rakennusvuosi" :en "Construction year" :se "Byggår"}
    "renovation-years"
-   {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renovation years"}
+   {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renoveringsår"}
    "phone-number"
-   {:fi "Puhelinnumero" :en "Phone number" :se "Phone number"}
+   {:fi "Puhelinnumero" :en "Phone number" :se "Telefonnummer"}
    "email"
    {:fi "Sähköposti" :en "Email" :se "Epost"}
    "www"
    {:fi "WWW" :en "WWW" :se "WWW"}
    "comment"
-   {:fi "Kommentti" :en "Comment" :se "Comment"}
+   {:fi "Kommentti" :en "Comment" :se "Ytterligare information"}
    "type.type-code"
-   {:fi "Tyyppikoodi" :en "Type code" :se "Type code"}
+   {:fi "Tyyppikoodi" :en "Type code" :se "Typkod"}
    "type.type-name"
-   {:fi "Liikuntapaikkatyyppi" :en "Type" :se "Type"}
+   {:fi "Liikuntapaikkatyyppi" :en "Type" :se "Typ"}
    "location.city.city-code"
-   {:fi "Kuntanumero" :en "City code" :se "City code"}
+   {:fi "Kuntanumero" :en "City code" :se "Kommunkod"}
    "location.city.city-name"
-   {:fi "Kunta" :en "City" :se "City"}
+   {:fi "Kunta" :en "City" :se "Stat"}
    "location.city.neighborhood"
-   {:fi "Kuntaosa" :en "Neighborhood" :se "Neighborhood"}
+   {:fi "Kuntaosa" :en "Neighborhood" :se "Kommundel"}
    "location.address"
-   {:fi "Katuosoite" :en "Address" :se "Address"}
+   {:fi "Katuosoite" :en "Address" :se "Adress"}
    "location.postal-code"
-   {:fi "Postinumero" :en "Postal code" :se "Postal code"}
+   {:fi "Postinumero" :en "Postal code" :se "Postnummer"}
    "location.postal-office"
-   {:fi "Postitoimipaikka" :en "Postal office" :se "Postal office"}})
+   {:fi "Postitoimipaikka" :en "Postal office" :se "Postkontor"}})
 
 (def prop-fields
   (reduce (fn [res [k v]]
@@ -94,13 +94,14 @@
 
 (def meta-fields
   {"search-meta.location.wgs84-point"      {:fi "Koordinaatit (WGS84)"
+                                            :se "Koordinater (WGS84)"
                                             :en "Coordinates (WGS84)"}
-   "search-meta.location.avi-area.name.fi" {:fi "AVI-alue" :en "AVI-area"}
-   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province"}
+   "search-meta.location.avi-area.name.fi" {:fi "AVI-alue" :en "AVI-area" :se "AVI"}
+   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province" :se "Landskap"}
    "search-meta.type.main-category.name.fi"
-   {:fi "Liikuntapaikkatyypin pääryhmä" :en "Type main-category" :se "Type"}
+   {:fi "Liikuntapaikkatyypin pääryhmä" :en "Type main-category" :se "Typ huvud kategori"}
    "search-meta.type.sub-category.name.fi"
-   {:fi "Liikuntapaikkatyypin alaryhmä" :en "Type sub-category" :se "Type sub-category"}})
+   {:fi "Liikuntapaikkatyypin alaryhmä" :en "Type sub-category" :se "Typ under kategori"}})
 
 (def area-fields
   (select-keys prop-fields ["properties.area-m2"
@@ -278,52 +279,71 @@
 
 (def stats-metrics
   {"investments"        {:fi "Investoinnit"
+                         :se "Investeringar"
                          :en "Investments"}
    "operating-expenses" {:fi "Käyttökustannukset"
+                         :se "Driftskostnader"
                          :en "Operating expenses"}
    "operating-incomes"  {:fi "Käyttötuotot"
+                         :se "Driftsintäkter"
                          :en "Operating incomes"}
    "subsidies"          {:fi "Kunnan myöntämät avustukset"
+                         :se "Understöd och bidrag från kommunen"
                          :en "Subsidies"}
    "net-costs"          {:fi "Nettokustannukset"
+                         :se "Nettokostnader"
                          :en "Net costs"}})
 
 (def city-services
   {"sports-services" {:fi "Liikuntatoimi"
+                      :se "Idrottsväsende"
                       :en "Sports services"}
    "youth-services"  {:fi "Nuorisotoimi"
+                      :se "Ungdomsväsende"
                       :en "Youth services"}})
 
 (def stats-units
   {"1000-euros"       {:fi "Tuhatta €"
+                       :se "1000 €"
                        :en "€1000"}
    "euros-per-capita" {:fi "€ / Asukas"
+                       :se "€ / Invånare"
                        :en "€ / Capita"}})
 
 (def age-structure-groupings
   {"owner" {:fi "Omistaja"
+            :se "Ägare"
             :en "Owner"}
    "admin" {:fi "Ylläpitäjä"
+            :se "Administratör"
             :en "Administrator"}})
 
 (def sports-stats-groupings
   {"location.city.city-code" {:fi "Kunta"
+                              :se "Kommun"
                               :en "City"}
    "type.type-code"          {:fi "Tyyppi"
+                              :se "Typ"
                               :en "Type"}})
 
 (def sports-stats-metrics
   {"sites-count"        {:fi "Liikuntapaikkojen lkm"
-                         :en "Sports-sites count"}
+                         :se "Antal av platser"
+                         :en "Sports facility count"}
    "sites-count-p1000c" {:fi "Liikuntapaikkojen lkm/1000 asukasta"
-                         :en "Sports-sites count/1000 people"}
+                         :se "Antal av platser/1000 invånare"
+                         :en "Sports facility count/1000 person"}
    "area-m2-sum"        {:fi "Liikuntapinta-ala m²"
+                         :se "Idrottsareal m²"
                          :en "Surface area m²"}
    "area-m2-pc"         {:fi "Liikuntapinta-ala m²/asukas"
+                         :se "Idrottsareal m²/invånare"
                          :en "Surface area m²/capita"}
    "length-km-sum"      {:fi "Reittien pituus km"
+                         :se "Idrottsrutters totalt längd km"
                          :en "Routes total length km"}
    "length-km-pc"       {:fi "Reittien pituus km/asukas"
+                         :se "Idrottsrutters totalt längd km/invånare"
                          :en "Routes total length km/capita"}})
 
 (def finance-stats-groupings
@@ -341,7 +361,7 @@
   (merge
    finance-stats-groupings
    {"type" {:fi "Tyyppi"
-            :se "Type"
+            :se "Typ"
             :en "Type"}}))
 
 (def subsidies-issuers

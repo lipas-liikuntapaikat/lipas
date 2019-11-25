@@ -137,7 +137,10 @@
         args'  {:db db :search search :user user}]
     (try
       (apply task-fn (into [args'] args))
-      (finally (backend/stop-system! system)))))
+      (finally
+        (backend/stop-system! system)
+        (shutdown-agents)
+        (System/exit 0)))))
 
 (defn -main [& args]
   (let [task-key (-> args first edn/read-string)

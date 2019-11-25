@@ -114,14 +114,14 @@
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
 (defn ->symbol-style [m & {hover? :hover selected? :selected}]
-  (let [fill-alpha         (case (:shape m)
-                             "polygon" (if hover? 0.3 0.2)
-                             0.85)
-        fill-color         (-> m :fill :color (->rgba fill-alpha))
-        fill               (ol/style.Fill. #js{:color fill-color})
-        stroke-alpha       (case (:shape m)
-                             "polygon" 0.6
-                             0.9)
+  (let [fill-alpha   (case (:shape m)
+                       "polygon" (if hover? 0.3 0.2)
+                       0.85)
+        fill-color   (-> m :fill :color (->rgba fill-alpha))
+        fill         (ol/style.Fill. #js{:color fill-color})
+        stroke-alpha (case (:shape m)
+                       "polygon" 0.6
+                       0.9)
 
         stroke-width       (-> m :stroke :width)
         stroke-hover-width (* 2 stroke-width)
@@ -133,10 +133,14 @@
                                                  :width    (if (or selected? hover?)
                                                              stroke-hover-width
                                                              stroke-width)})
+        on-top?            (or selected? hover?)
         style              (ol/style.Style.
                             #js{:stroke stroke
                                 :fill   fill
-                                :zIndex (if selected? 100 99)
+                                :zIndex (condp = (:shape m)
+                                          "polygon"    (if on-top? 100 99)
+                                          "linestring" (if on-top? 200 199)
+                                          (if on-top? 300 299))
                                 :image
                                 (when-not (#{"polygon" "linestring"} (:shape m))
                                   (ol/style.Circle.

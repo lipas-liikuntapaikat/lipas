@@ -338,7 +338,9 @@
       :owners          owners
       :cities          cities
       :types           (if geom-type
-                         (filter (comp #{geom-type} :geometry-type second) types)
+                         (->> types
+                              (filter (comp #{geom-type} :geometry-type second))
+                              (into {}))
                          types)
       :types-props     (reduce (fn [res [k v]]
                                  (let [prop-type (prop-types k)]
