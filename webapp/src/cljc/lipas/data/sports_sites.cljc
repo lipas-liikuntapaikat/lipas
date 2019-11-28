@@ -11,7 +11,11 @@
     :en "Published"}})
 
 (def statuses
-  {"active"
+  {"planned"
+   {:fi "Suunniteltu"
+    :se "Planerad"
+    :en "Planned"}
+   "active"
    {:fi "Toiminnassa"
     :se "Aktiv"
     :en "Active"}
