@@ -54,7 +54,7 @@
     (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
  (fn [[rev admin?] _]
    (or admin?
-       (->> rev :status #{"active" "out-of-service-temporarily"}))))
+       (->> rev :status #{"active" "out-of-service-temporarily" "planned"}))))
 
 (re-frame/reg-sub
  ::dead?
@@ -385,7 +385,7 @@
  ::resurrect-statuses
  :<- [::statuses]
  (fn [statuses _]
-   (select-keys statuses ["out-of-service-temporarily" "active"])))
+   (select-keys statuses ["out-of-service-temporarily" "active" "planned"])))
 
 (re-frame/reg-sub
  ::delete-dialog-open?
