@@ -20,12 +20,15 @@
   'out-of-service-temporarily'. Applies to both display and edit
   views."
   [tr display-data]
-  (= (:status display-data) (tr (keyword :status "out-of-service-temporarily"))))
+  (or
+   true
+   (= (:status display-data) (tr (keyword :status "out-of-service-temporarily")))))
 
 (defn- show-status? [tr display-data]
   (or
    (= (:status display-data) (tr (keyword :status "incorrect-data")))
-   (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))))
+   (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))
+   (= (:status display-data) (tr (keyword :status "planned")))))
 
 (defn form [{:keys [tr display-data edit-data types size-categories
                     admins owners on-change read-only? sub-headings?]}]
