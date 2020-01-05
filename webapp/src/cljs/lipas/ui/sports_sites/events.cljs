@@ -47,8 +47,11 @@
 (re-frame/reg-event-fx
  ::save-edits
  (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
-   (let [rev    (-> (get-in db [:sports-sites lipas-id :editing])
+   (let [rev    (get-in db [:sports-sites lipas-id :editing])
+         type   (get-in db [:sports-sites :types (-> rev :type :type-code)])
+         rev    (-> rev
                     utils/make-saveable
+                    (update :properties #(select-keys % (-> type :props keys)))
                     (assoc :event-date (utils/timestamp)))
          draft? false]
      {:dispatch [::commit-rev rev draft? on-success on-failure]})))
