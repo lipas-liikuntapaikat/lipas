@@ -413,9 +413,12 @@
 
 (re-frame/reg-event-fx
  ::save-new-site
- (fn [_ [_ data]]
+ (fn [{:keys [db]} [_ data]]
    (let [draft? false
-         data   (assoc data :event-date (utils/timestamp))]
+         type   (get-in db [:sports-sites :types (-> data :type :type-code)])
+         data   (-> data
+                    (assoc :event-date (utils/timestamp))
+                    (update :properties #(select-keys % (-> type :props keys))))]
      {:dispatch
       [:lipas.ui.sports-sites.events/commit-rev data draft? on-success-new]})))
 
