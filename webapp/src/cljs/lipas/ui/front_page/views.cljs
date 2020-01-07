@@ -167,9 +167,7 @@
          :message
          (r/as-element
           [mui/typography {:style {:color "white"}}
-           (str "Internet Explorer ei ole tuettu selain. "
-                "Suosittelemme käyttämään toista selainta, "
-                "esim. Chrome, Firefox tai Edge.")])
+           (tr :notifications/ie)])
          :action
          (r/as-element
           [mui/icon-button {:on-click #(reset! snack-open? false)}
@@ -275,8 +273,7 @@
           [mui/list-item {:button true :component "a" :href (:cc4.0 links)}
            [mui/list-item-icon
             [mui/icon "copyright"]]
-           [mui/list-item-text {:primary "CC 4.0"}]]
-          ]]
+           [mui/list-item-text {:primary "CC 4.0"}]]]]
 
         ;; Help
         [grid-card { :title (tr :help/headline)}
@@ -311,7 +308,7 @@
           [mui/list-item {:button true :component "a" :href "/rekisteroidy"}
            [mui/list-item-icon
             [mui/icon "group_add"]]
-           [mui/list-item-text "Rekisteröidy päivittäjäksi"]]]]]]
+           [mui/list-item-text (tr :register/link)]]]]]]
 
       [grid-card
        {:xs 12 :md 12 :lg 8 :title "Uima- ja jäähalliportaalit ovat muuttaneet"}
