@@ -375,7 +375,10 @@
   :notifications
   {:get-failed "Tietojen hakeminen epäonnistui.",
    :save-failed "Tallennus epäonnistui",
-   :save-success "Tallennus onnistui"},
+   :save-success "Tallennus onnistui"
+   :ie (str "Internet Explorer ei ole tuettu selain. "
+            "Suosittelemme käyttämään toista selainta, "
+            "esim. Chrome, Firefox tai Edge.")},
   :lipas.swimming-pool.energy-saving
   {:filter-rinse-water-heat-recovery?
    "Suodattimien huuhteluveden lämmöntalteenotto",
@@ -430,6 +433,7 @@
    :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti"},
   :register
   {:headline "Rekisteröidy",
+   :link "Rekisteröidy päivittäjäksi"
    :thank-you-for-registering
    "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."},
   :map.address-search {:title "Etsi osoite", :tooltip "Etsi osoite"},
@@ -1142,7 +1146,8 @@
   :notifications
   {:get-failed "Datasökning misslyckades.",
    :save-failed "Sparningen misslyckades",
-   :save-success "Sparningen lyckades"},
+   :save-success "Sparningen lyckades"
+   :ie (str "Internet Explorer stöds inte. Vi rekommenderar du använder t.ex. Chrome, Firefox eller Edge.")},
   :lipas.swimming-pool.energy-saving
   {:filter-rinse-water-heat-recovery? "Gym",
    :headline "Andra tjänster",
@@ -1191,6 +1196,7 @@
    :out-of-service-temporarily "Tillfälligt ur funktion"},
   :register
   {:headline "Registrera",
+   :link "Registrera här"
    :thank-you-for-registering
    "Tack för registrering! Du vill få e-posten snart."},
   :map.address-search {:title "Sök address", :tooltip "Sök address"},
@@ -1938,7 +1944,8 @@
   :notifications
   {:get-failed "Couldn't get data.",
    :save-failed "Saving failed",
-   :save-success "Saving succeeded"},
+   :save-success "Saving succeeded"
+   :ie "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge."},
   :lipas.swimming-pool.energy-saving
   {:filter-rinse-water-heat-recovery?
    "Filter rinse water heat recovery?",
@@ -1990,6 +1997,7 @@
    :out-of-service-temporarily "Temporarily out of service"},
   :register
   {:headline "Register",
+   :link "Sign up here"
    :thank-you-for-registering
    "Thank you for registering! You wil receive an email once we've updated your permissions."},
   :map.address-search
