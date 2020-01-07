@@ -310,18 +310,6 @@
             [mui/icon "group_add"]]
            [mui/list-item-text (tr :register/link)]]]]]]
 
-      [grid-card
-       {:xs 12 :md 12 :lg 8 :title "Uima- ja jäähalliportaalit ovat muuttaneet"}
-       [:ul {:style {:margin-top "-0.5em"}}
-        [:li
-         [mui/link {:variant "h6" :href "https://uimahalliportaali.fi/"}
-          "uimahalliportaali.fi"]]
-        [:li
-         [mui/link {:variant "h6" :href "https://jaahalliportaali.fi/"}
-          "jaahalliportaali.fi"]]]
-       [mui/typography
-        "Portaalien kehittämisestä ja ylläpidosta vastaa jatkossa Sport Venue Oy."]]
-
       ;; [grid-card {:md 6 :lg 4}
       ;;  [fb-plugin]]
 
