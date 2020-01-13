@@ -3,7 +3,7 @@
    [goog.object :as gobj]
    [lipas.permissions :as permissions]
    [lipas.ui.components :as lui]
-   [lipas.ui.db :as db]
+   [lipas.ui.search.db :as db]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -22,10 +22,12 @@
  ::filters-active?
  :<- [::filters]
  :<- [::search-string]
- (fn [[filters search-str] _]
-   (or (not-empty search-str)
-       (some (comp some? filter-enabled? second) (dissoc filters :statuses))
-       (not= (-> db/default-db :search :filters :statuses) (:statuses filters)))))
+ :<- [:lipas.ui.login.subs/logged-in?]
+ (fn [[filters search-str logged-in?] _]
+   (let [default-db (if logged-in? db/default-db-logged-in db/default-db)]
+     (or (not-empty search-str)
+         (some (comp some? filter-enabled? second) (dissoc filters :statuses))
+         (not= (-> default-db :filters :statuses) (:statuses filters))))))
 
 (re-frame/reg-sub
  ::statuses

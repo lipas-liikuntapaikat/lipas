@@ -2,7 +2,7 @@
   (:require
    [ajax.core :as ajax]
    [clojure.string :as string]
-   [lipas.ui.db :as db]
+   [lipas.ui.search.db :as db]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
@@ -369,10 +369,15 @@
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
+ ::set-logged-in-filters
+ (fn [{:keys [db]} [_]]
+   {:db       (update-in db [:search :filters :statuses] conj "planned")
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
-   (let [defaults  (-> db/default-db
-                       :search
+   (let [defaults  (-> (if (:logged-in? db) db/default-db-logged-in db/default-db)
                        (select-keys [:filters :sort :string])
                        (assoc-in [:filters :bounding-box?] false))
          fit-view? false]
