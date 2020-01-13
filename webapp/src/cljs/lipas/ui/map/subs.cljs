@@ -83,7 +83,8 @@
                                                      "features"))
                      type-code (gobj/getValueByKeys obj "type" "type-code")
                      lipas-id  (gobj/get obj "lipas-id")
-                     name      (gobj/get obj "name")]
+                     name      (gobj/get obj "name")
+                     status    (gobj/get obj "status")]
 
                  ;; To avoid displaying duplicates when editing
                  (when-not (= lipas-id' lipas-id)
@@ -96,7 +97,8 @@
                                               "properties"
                                               #js{:lipas-id  lipas-id
                                                   :name      name
-                                                  :type-code type-code})
+                                                  :type-code type-code
+                                                  :status    status})
                                     geom))}))))
             not-empty)))))
 
