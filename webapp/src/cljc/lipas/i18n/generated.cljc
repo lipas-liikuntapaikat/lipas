@@ -428,6 +428,7 @@
    :marketing-name "Markkinointinimi"},
   :status
   {:active "Toiminnassa",
+   :planned "Suunniteltu"
    :incorrect-data "Väärä tieto",
    :out-of-service-permanently "Poistettu käytöstä pysyvästi",
    :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti"},
@@ -1191,6 +1192,7 @@
    :marketing-name "Varumärkesnamn"},
   :status
   {:active "Aktiv",
+   :planned "Planerad"
    :incorrect-data "Fel information",
    :out-of-service-permanently "Permanent ur funktion",
    :out-of-service-temporarily "Tillfälligt ur funktion"},
@@ -1992,6 +1994,7 @@
    :marketing-name "Marketing name"},
   :status
   {:active "Active",
+   :planned "Planned"
    :incorrect-data "Incorrect data",
    :out-of-service-permanently "Permanently out of service",
    :out-of-service-temporarily "Temporarily out of service"},

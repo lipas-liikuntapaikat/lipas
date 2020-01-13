@@ -105,6 +105,7 @@
 
                                ;; Used in result list view (while browsing map)
                                ["lipas-id"
+                                "status"
                                 "name"
                                 "name-localized"
                                 "type.type-code"
@@ -115,6 +116,7 @@
 
                                ;; Used in results table view
                                ["lipas-id"
+                                "status"
                                 "event-date"
                                 "name"
                                 "marketing-name"

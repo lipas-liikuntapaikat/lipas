@@ -113,7 +113,7 @@
           rgba (doto rgb (.push alpha))]
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
-(defn ->symbol-style [m & {hover? :hover selected? :selected}]
+(defn ->symbol-style [m & {hover? :hover selected? :selected planned? :planned}]
   (let [fill-alpha   (case (:shape m)
                        "polygon" (if hover? 0.3 0.2)
                        0.85)
@@ -127,12 +127,18 @@
         stroke-hover-width (* 2 stroke-width)
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
-        stroke             (ol/style.Stroke. #js{:color    stroke-color
-                                                 :lineDash (when (or selected? hover?)
-                                                             #js[2 8])
-                                                 :width    (if (or selected? hover?)
-                                                             stroke-hover-width
-                                                             stroke-width)})
+        stroke-planned     (ol/style.Stroke.
+                            #js{:color "#5cd8fa"
+                                :width (if (#{"polygon" "linestring"} (:shape m))
+                                         10
+                                         5)})
+        stroke             (ol/style.Stroke.
+                            #js{:color    stroke-color
+                                :lineDash (when (or selected? hover?)
+                                            #js[2 8])
+                                :width    (if (or selected? hover?)
+                                            stroke-hover-width
+                                            stroke-width)})
         on-top?            (or selected? hover?)
         style              (ol/style.Style.
                             #js{:stroke stroke
@@ -144,13 +150,24 @@
                                 :image
                                 (when-not (#{"polygon" "linestring"} (:shape m))
                                   (ol/style.Circle.
-                                   #js{:radius (if hover? 8 7)
+                                   #js{:radius (cond
+                                                 hover?   8
+                                                 planned? 10
+                                                 :else    7)
                                        :fill   fill
-                                       :stroke (if hover? hover-stroke stroke-black)}))})]
+                                       :stroke
+                                       (cond
+                                         planned? stroke-planned
+                                         hover?   hover-stroke
+                                         :else    stroke-black)}))})
+        planned-stroke     (ol/style.Style.
+                            #js{:stroke stroke-planned})]
 
     (if (and selected? (:shape m))
       #js[style blue-marker-style]
-      style)))
+      (if planned?
+        #js[style planned-stroke]
+        #js[style]))))
 
 (def styleset styles/adapted-temp-symbols)
 
@@ -163,6 +180,9 @@
 (def selected-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :selected true))) {} styleset))
 
+(def planned-symbols
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planned true))) {} styleset))
+
 (defn shift-likely-overlapping!
   [type-code style resolution f]
   (when (#{4402} type-code)
@@ -174,14 +194,17 @@
 
 (defn feature-style [f resolution]
   (let [type-code (.get f "type-code")
-        style     (get symbols type-code)]
-    (shift-likely-overlapping! type-code style resolution f)
+        status    (.get f "status")
+        style     (if (= "planned" status)
+                    (get planned-symbols type-code)
+                    (get symbols type-code))]
+    (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
 (defn feature-style-hover [f resolution]
   (let [type-code (.get f "type-code")
         style     (get hover-symbols type-code)]
-    (shift-likely-overlapping! type-code style resolution f)
+    (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
 (defn feature-style-selected [f resolution]
