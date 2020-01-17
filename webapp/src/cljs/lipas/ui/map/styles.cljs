@@ -128,10 +128,12 @@
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
         stroke-planned     (ol/style.Stroke.
-                            #js{:color "#5cd8fa"
-                                :width (if (#{"polygon" "linestring"} (:shape m))
-                                         10
-                                         5)})
+                            #js{:color    "#3b3b3b"
+                                :lineDash #js[2 20]
+                                        ; :lineDashOffset 1
+                                :width    (if (#{"polygon" "linestring"} (:shape m))
+                                            10
+                                            5)})
         stroke             (ol/style.Stroke.
                             #js{:color    stroke-color
                                 :lineDash (when (or selected? hover?)
@@ -152,12 +154,15 @@
                                   (ol/style.Circle.
                                    #js{:radius (cond
                                                  hover?   8
-                                                 planned? 10
+                                                 planned? 7
                                                  :else    7)
                                        :fill   fill
                                        :stroke
                                        (cond
-                                         planned? stroke-planned
+                                         planned? (ol/style.Stroke.
+                                                   #js{:color    "black"
+                                                       :width    3
+                                                       :lineDash #js [2 5]})
                                          hover?   hover-stroke
                                          :else    stroke-black)}))})
         planned-stroke     (ol/style.Style.
