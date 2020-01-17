@@ -1,6 +1,7 @@
 (ns lipas.ui.map.views
   (:require
    [clojure.string :as string]
+   [lipas.data.sports-sites :as ss]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
@@ -188,13 +189,19 @@
 (defmulti popup-body :type)
 
 (defmethod popup-body :default [popup]
-  (let [name' (-> popup :data :features first :properties :name)]
+  (let [name'  (-> popup :data :features first :properties :name)
+        status (-> popup :data :features first :properties :status)
+        tr     (-> popup :tr)
+        locale (tr)]
     [mui/paper
      {:style
       {:padding "0.5em"
        :width   (when (< 100 (count name')) "150px")}}
      [mui/typography {:variant "body2"}
-      name']]))
+      name']
+     (when-not (#{"active"} status)
+       [mui/typography {:variant "body2" :color "error"}
+        (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :population [popup]
   (let [data   (-> popup :data :features first :properties)
@@ -223,14 +230,15 @@
 (defn popup []
   (let [{:keys [data anchor-el]
          :or   {type :default}
-         :as   popup'}   (<== [::subs/popup])]
+         :as   popup'} (<== [::subs/popup])
+        tr             (<== [:lipas.ui.subs/translator])]
     [mui/popper
      {:open      (boolean (seq data))
       :placement "top-end"
       :anchor-el anchor-el
       :container anchor-el
       :modifiers {:offset {:enabled true :offset "0px,10px"}}}
-     [popup-body popup']]))
+     [popup-body (assoc popup' :tr tr)]]))
 
 (defn set-field
   [lipas-id & args]
