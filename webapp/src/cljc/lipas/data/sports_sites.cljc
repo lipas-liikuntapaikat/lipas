@@ -11,8 +11,7 @@
     :en "Published"}})
 
 (def statuses
-  {
-   "planned"
+  {"planned"
    {:fi "Suunniteltu"
     :se "Planerad"
     :en "Planned"}
