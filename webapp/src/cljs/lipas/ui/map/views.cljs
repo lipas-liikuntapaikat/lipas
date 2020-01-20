@@ -156,9 +156,38 @@
       [mui/typography {:variant "caption"}
        (tr :map.basemap/copyright)]]]))
 
+(defn overlay-selector [{:keys [tr]}]
+  (r/with-let [anchor-el (r/atom nil)]
+    (let [overlays          {:light-traffic (tr :map.overlay/light-traffic)
+                             :retkikartta-snowmobile-tracks
+                             (tr :map.overlay/retkikartta-snowmobile-tracks)}
+          selected-overlays (<== [::subs/selected-overlays])]
+      [:<>
+       (into
+
+        [mui/menu
+         {:dense     true
+          :open      (boolean @anchor-el)
+          :anchor-el @anchor-el
+          :on-close  #(reset! anchor-el nil)}]
+
+        (for [[k label] overlays]
+          [mui/menu-item
+           {:on-click #(==> [::events/toggle-overlay k])}
+           [lui/checkbox
+            {:value     (contains? selected-overlays k)
+             :on-change #()}]
+           label]))
+
+       [mui/grid {:item true}
+        [mui/icon-button
+         {:on-click
+          (fn [evt] (reset! anchor-el (.-currentTarget evt)))}
+         [mui/icon "layers"]]]])))
+
 (defn user-location-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :map/zoom-to-user)}
-   [mui/fab {:size "small" :on-click #(==> [::events/zoom-to-users-position])}
+   [mui/icon-button {:on-click #(==> [::events/zoom-to-users-position])}
     [mui/icon {:color "default" :font-size "default"}
      "my_location"]]])
 
@@ -1171,7 +1200,11 @@
        [mui/grid {:item true}
         [user-location-btn {:tr tr}]]
 
-       ;; Layer switcher
+       ;; Overlay selector
+       [mui/grid {:item true}
+        [overlay-selector {:tr tr}]]
+
+       ;; Base Layer switcher
        [mui/grid {:item true}
         [mui/paper
          {:elevation 1

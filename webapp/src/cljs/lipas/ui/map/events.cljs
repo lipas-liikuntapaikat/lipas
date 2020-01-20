@@ -104,6 +104,14 @@
    (assoc-in db [:map :basemap] basemap)))
 
 (re-frame/reg-event-db
+ ::toggle-overlay
+ (fn [db [_ k]]
+   (let [op (if (-> db :map :selected-overlays (contains? k))
+              disj
+              conj)]
+     (update-in db [:map :selected-overlays] op k))))
+
+(re-frame/reg-event-db
  ::show-popup
  (fn [db [_ feature]]
    (assoc-in db [:map :popup] feature)))

@@ -21,10 +21,13 @@ import Snap from 'ol/interaction/Snap';
 import Stroke from 'ol/style/Stroke';
 import Style from 'ol/style/Style';
 import TileLayer from 'ol/layer/Tile';
+import ImageLayer from 'ol/layer/Image';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import View from 'ol/View';
 import WMTS from 'ol/source/WMTS';
+import TileWMS from 'ol/source/TileWMS';
+import ImageWMS from 'ol/source/ImageWMS';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
@@ -38,11 +41,14 @@ window.ol = {
   Map, View, Overlay, Collection,
   layer: {
     Tile: TileLayer,
+    Image: ImageLayer,
     Vector: VectorLayer,
   },
   source: {
     Vector: VectorSource,
     WMTS,
+    TileWMS,
+    ImageWMS,
   },
   style: {
     Circle: CircleStyle,

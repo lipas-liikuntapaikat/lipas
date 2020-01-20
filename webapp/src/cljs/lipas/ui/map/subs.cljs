@@ -33,6 +33,11 @@
    (-> db :map :basemap)))
 
 (re-frame/reg-sub
+ ::selected-overlays
+ (fn [db _]
+   (-> db :map :selected-overlays)))
+
+(re-frame/reg-sub
  ::center
  (fn [db _]
    (-> db :map :center)))
