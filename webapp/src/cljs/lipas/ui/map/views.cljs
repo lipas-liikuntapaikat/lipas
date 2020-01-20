@@ -167,19 +167,25 @@
                               :label2 "© Metsähallitus"
                               :icon   [mui/icon
                                        {:style {:color "#0000FF"}}
+                                       "timeline"]}
+                             :mml-kiinteisto
+                             {:label  (tr :map.overlay/mml-kiinteisto)
+                              :label2 "© Maanmittauslaitos"
+                              :icon   [mui/icon
+                                       {:style {:color "red"}}
                                        "timeline"]}}
           selected-overlays (<== [::subs/selected-overlays])]
       [:<>
        (into
 
         [mui/menu
-         {:dense     true
+         {:dense     false
           :open      (boolean @anchor-el)
           :anchor-el @anchor-el
           :on-close  #(reset! anchor-el nil)}]
 
         (for [[k {:keys [label label2 icon]}] overlays
-              :let [v (contains? selected-overlays k)]]
+              :let                            [v (contains? selected-overlays k)]]
           [mui/menu-item
            {:button   true
             :on-click #(==> [::events/toggle-overlay k])}

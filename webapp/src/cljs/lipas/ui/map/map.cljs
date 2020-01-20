@@ -28,12 +28,19 @@
 (def urls
   {:taustakartta (->wmts-url "mml_taustakartta")
    :maastokartta (->wmts-url "mml_maastokartta")
-   :ortokuva     (->wmts-url "mml_ortokuva")})
+   :ortokuva     (->wmts-url "mml_ortokuva")
+   :kiinteisto   (->wmts-url "mml_kiinteisto")})
 
-(defn ->wmts [{:keys [url layer-name visible?]
-               :or   {visible? false}}]
+(defn ->wmts
+  [{:keys [url layer-name visible? base-layer? min-res max-res]
+    :or   {visible?    false
+           base-layer? true
+           max-res     8192
+           min-res     0.25}}]
   (ol/layer.Tile.
-   #js{:visible visible?
+   #js{:visible       visible?
+       :minResolution min-res
+       :maxResolution max-res
        :source
        (ol/source.WMTS.
         #js{:url             url
@@ -47,7 +54,7 @@
                                   :matrixIds   mml-matrix-ids})
             :format          "png"
             :requestEncoding "REST"
-            :isBaseLayer     true})}))
+            :isBaseLayer     base-layer?})}))
 
 (defn init-layers []
   {:basemaps
@@ -99,7 +106,13 @@
           #js{:url         "/geoserver/lipas/wms?"
               :params      #js{:LAYERS "lipas:metsahallitus_urat2019"}
               :serverType  "geoserver"
-              :crossOrigin "anonymous"})})}})
+              :crossOrigin "anonymous"})})
+    :mml-kiinteisto
+    (->wmts
+     {:url        (:kiinteisto urls)
+      :min-res    0.25
+      :max-res    8
+      :layer-name "MML-Kiinteistö"})}})
 
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
@@ -129,7 +142,8 @@
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
-                                (-> layers :overlays :retkikartta-snowmobile-tracks)]
+                                (-> layers :overlays :retkikartta-snowmobile-tracks)
+                                (-> layers :overlays :mml-kiinteisto)]
                   :overlays #js[popup-overlay]
                   :view     view}
 

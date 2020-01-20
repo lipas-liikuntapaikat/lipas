@@ -63,6 +63,16 @@ sources:
       headers:
         Authorization: Basic {MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/ortokuva/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.jpg
+  mml_kiinteisto:
+    type: tile
+    grid: mml_grid
+    min_res: 8
+    max_res: 0.5
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/kiinteisto/wmts/1.0.0/kiinteistojaotus/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
 
 caches:
   mml_maastokartta_cache:
@@ -74,6 +84,9 @@ caches:
   mml_ortokuva_cache:
     grids: [mml_grid]
     sources: [mml_ortokuva]
+  mml_kiinteisto_cache:
+    grids: [mml_grid]
+    sources: [mml_kiinteisto]
 
 layers:
   - name: mml_maastokartta
@@ -85,3 +98,6 @@ layers:
   - name: mml_ortokuva
     title: MML Ortokuva
     sources: [mml_ortokuva_cache]
+  - name: mml_kiinteisto
+    title: MML Kiinteistö
+    sources: [mml_kiinteisto_cache]
