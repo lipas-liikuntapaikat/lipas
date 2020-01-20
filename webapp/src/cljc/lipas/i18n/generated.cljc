@@ -466,6 +466,10 @@
    :maastokartta "Maastokartta",
    :ortokuva "Ilmakuva",
    :taustakartta "Taustakartta"},
+  :map.overlay
+  {:tooltip "Muut karttatasot"
+   :light-traffic "Kevyen liikenteen väylät"
+   :retkikartta-snowmobile-tracks "Metsähallituksen moottorikelkkaurat"}
   :lipas.swimming-pool.pools
   {:add-pool "Lisää allas",
    :edit-pool "Muokkaa allasta",
@@ -2032,6 +2036,10 @@
    :maastokartta "Terrain",
    :ortokuva "Satellite",
    :taustakartta "Default"},
+  :map.overlay
+  {:overlay "Other layers"
+   :light-traffic "Light traffic"
+   :retkikartta-snowmobile-tracks "Metsähallitus snowmobile tracks"}
   :lipas.swimming-pool.pools
   {:add-pool "Add pool",
    :edit-pool "Edit pool",

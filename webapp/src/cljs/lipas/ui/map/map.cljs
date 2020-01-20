@@ -81,7 +81,25 @@
      #js{:source     (ol/source.Vector.)
          :style      styles/population-style
          :name       "population"
-         :renderMode "image"})}})
+         :renderMode "image"})
+    :light-traffic
+    (ol/layer.Image.
+     #js{:visible false
+         :source
+         (ol/source.ImageWMS.
+          #js{:url         "https://julkinen.vayla.fi/inspirepalvelu/avoin/wms"
+              :params      #js{:LAYERS "TL166"}
+              :serverType  "geoserver"
+              :crossOrigin "anonymous"})})
+    :retkikartta-snowmobile-tracks
+    (ol/layer.Image.
+     #js{:visible false
+         :source
+         (ol/source.ImageWMS.
+          #js{:url         "/geoserver/lipas/wms?"
+              :params      #js{:LAYERS "lipas:metsahallitus_urat2019"}
+              :serverType  "geoserver"
+              :crossOrigin "anonymous"})})}})
 
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
@@ -109,7 +127,9 @@
                                 (-> layers :overlays :population)
                                 (-> layers :overlays :vectors)
                                 (-> layers :overlays :edits)
-                                (-> layers :overlays :markers)]
+                                (-> layers :overlays :markers)
+                                (-> layers :overlays :light-traffic)
+                                (-> layers :overlays :retkikartta-snowmobile-tracks)]
                   :overlays #js[popup-overlay]
                   :view     view}
 
@@ -347,10 +367,11 @@
 
       :component-did-mount
       (fn [comp]
-        (let [opts    (r/props comp)
-              basemap (:basemap opts)
-              geoms   (:geoms opts)
-              mode    (-> opts :mode)
+        (let [opts     (r/props comp)
+              basemap  (:basemap opts)
+              overlays (:overlays opts)
+              geoms    (:geoms opts)
+              mode     (-> opts :mode)
 
               map-ctx (-> (init-map! opts)
                           (map-utils/update-geoms! geoms)
@@ -364,33 +385,37 @@
         (let [opts     (r/props comp)
               geoms    (-> opts :geoms)
               basemap  (-> opts :basemap)
+              overlays (-> opts :overlays)
               center   (-> opts :center)
               zoom     (-> opts :zoom)
               mode     (-> opts :mode)
               lipas-id (:lipas-id mode)]
 
           (cond-> @map-ctx*
-            (not= (:geoms @map-ctx*) geoms)     (map-utils/update-geoms! geoms)
-            (not= (:basemap @map-ctx*) basemap) (map-utils/set-basemap! basemap)
-            (not= (:center @map-ctx*) center)   (map-utils/update-center! center)
-            (not= (:zoom @map-ctx*) zoom)       (map-utils/update-zoom! zoom)
-            (not= (:mode @map-ctx*) mode)       (update-mode! mode)
+            (not= (:geoms @map-ctx*) geoms)       (map-utils/update-geoms! geoms)
+            (not= (:basemap @map-ctx*) basemap)   (map-utils/set-basemap! basemap)
+            (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
+            (not= (:center @map-ctx*) center)     (map-utils/update-center! center)
+            (not= (:zoom @map-ctx*) zoom)         (map-utils/update-zoom! zoom)
+            (not= (:mode @map-ctx*) mode)         (update-mode! mode)
             (and (= :default (:name mode))
-                 lipas-id)                      (map-utils/refresh-select! lipas-id)
-            true                                (as-> $ (reset! map-ctx* $)))))
+                 lipas-id)                        (map-utils/refresh-select! lipas-id)
+            true                                  (as-> $ (reset! map-ctx* $)))))
 
       :display-name "map-inner"})))
 
 (defn map-outer []
   (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
         basemap    (re-frame/subscribe [::subs/basemap])
+        overlays   (re-frame/subscribe [::subs/selected-overlays])
         center     (re-frame/subscribe [::subs/center])
         zoom       (re-frame/subscribe [::subs/zoom])
         mode       (re-frame/subscribe [::subs/mode])]
     (fn []
       [map-inner
-       {:geoms   @geoms-fast
-        :basemap @basemap
-        :center  @center
-        :zoom    @zoom
-        :mode    @mode}])))
+       {:geoms    @geoms-fast
+        :basemap  @basemap
+        :overlays @overlays
+        :center   @center
+        :zoom     @zoom
+        :mode     @mode}])))
