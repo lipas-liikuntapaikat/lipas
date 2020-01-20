@@ -158,9 +158,16 @@
 
 (defn overlay-selector [{:keys [tr]}]
   (r/with-let [anchor-el (r/atom nil)]
-    (let [overlays          {:light-traffic (tr :map.overlay/light-traffic)
+    (let [overlays          {:light-traffic
+                             {:label  (tr :map.overlay/light-traffic)
+                              :label2 "© Väylävirasto"
+                              :icon   [mui/icon "timeline"]}
                              :retkikartta-snowmobile-tracks
-                             (tr :map.overlay/retkikartta-snowmobile-tracks)}
+                             {:label  (tr :map.overlay/retkikartta-snowmobile-tracks)
+                              :label2 "© Metsähallitus"
+                              :icon   [mui/icon
+                                       {:style {:color "#0000FF"}}
+                                       "timeline"]}}
           selected-overlays (<== [::subs/selected-overlays])]
       [:<>
        (into
@@ -171,19 +178,30 @@
           :anchor-el @anchor-el
           :on-close  #(reset! anchor-el nil)}]
 
-        (for [[k label] overlays]
+        (for [[k {:keys [label label2 icon]}] overlays
+              :let [v (contains? selected-overlays k)]]
           [mui/menu-item
-           {:on-click #(==> [::events/toggle-overlay k])}
-           [lui/checkbox
-            {:value     (contains? selected-overlays k)
+           {:button   true
+            :on-click #(==> [::events/toggle-overlay k])}
+           [mui/checkbox
+            {:style     {:padding 0}
+             :checked   (boolean v)
+             :size      "small"
+             :value     (str v)
              :on-change #()}]
-           label]))
+           [mui/list-item-text
+            {:primaryTypographyProps {:style {:margin-right "2em"}}
+             :primary                label :secondary label2}]
+           [mui/list-item-secondary-action
+            {:style {:margin-right "1em"}}
+            icon]]))
 
        [mui/grid {:item true}
-        [mui/icon-button
-         {:on-click
-          (fn [evt] (reset! anchor-el (.-currentTarget evt)))}
-         [mui/icon "layers"]]]])))
+        [mui/tooltip {:title (tr :map.overlay/tooltip)}
+         [mui/icon-button
+          {:on-click
+           (fn [evt] (reset! anchor-el (.-currentTarget evt)))}
+          [mui/icon "layers"]]]]])))
 
 (defn user-location-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :map/zoom-to-user)}
@@ -1194,15 +1212,21 @@
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
 
-      [mui/grid {:container true :align-items "center" :spacing 8 :wrap "nowrap"}
+      [mui/grid
+       {:container   true
+        :align-items "center"
+        :style       {:margin-bottom "1px"}
+        :spacing     8 :wrap "nowrap"}
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
-        [user-location-btn {:tr tr}]]
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [user-location-btn {:tr tr}]]]
 
        ;; Overlay selector
        [mui/grid {:item true}
-        [overlay-selector {:tr tr}]]
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [overlay-selector {:tr tr}]]]
 
        ;; Base Layer switcher
        [mui/grid {:item true}
@@ -1210,7 +1234,7 @@
          {:elevation 1
           :style
           {:background-color "rgba(255,255,255,0.9)"
-           :margin           "0.25em" :padding-left "0.5em" :padding-right "0.5em"}}
+           :padding-left     "0.5em" :padding-right "0.5em"}}
          [layer-switcher {:tr tr}]]]]]
 
      ;; We use this div to bind Popper to OpenLayers overlay
