@@ -372,7 +372,7 @@
  ::set-logged-in-filters
  (fn [{:keys [db]} [_]]
    {:db       (update-in db [:search :filters :statuses] conj "planned")
-    :dispatch [::filters-updated :fit-view]}))
+    :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
  ::clear-filters
