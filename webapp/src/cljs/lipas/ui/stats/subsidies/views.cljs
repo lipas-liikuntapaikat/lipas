@@ -88,7 +88,7 @@
        [mui/grid {:item true}
         [years-selector
          {:tr        tr
-          :years     (range 2002 (inc 2018))
+          :years     (range 2002 (inc 2019))
           :value     years
           :on-change #(==> [::events/select-years %])}]]
 
