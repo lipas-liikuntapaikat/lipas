@@ -1,6 +1,7 @@
 (ns lipas.ui.map.views
   (:require
    [clojure.string :as string]
+   [lipas.data.sports-sites :as ss]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
@@ -155,9 +156,62 @@
       [mui/typography {:variant "caption"}
        (tr :map.basemap/copyright)]]]))
 
+(defn overlay-selector [{:keys [tr]}]
+  (r/with-let [anchor-el (r/atom nil)]
+    (let [overlays          {:light-traffic
+                             {:label  (tr :map.overlay/light-traffic)
+                              :label2 "© Väylävirasto"
+                              :icon   [mui/icon "timeline"]}
+                             :retkikartta-snowmobile-tracks
+                             {:label  (tr :map.overlay/retkikartta-snowmobile-tracks)
+                              :label2 "© Metsähallitus"
+                              :icon   [mui/icon
+                                       {:style {:color "#0000FF"}}
+                                       "timeline"]}
+                             :mml-kiinteisto
+                             {:label  (tr :map.overlay/mml-kiinteisto)
+                              :label2 "© Maanmittauslaitos"
+                              :icon   [mui/icon
+                                       {:style {:color "red"}}
+                                       "timeline"]}}
+          selected-overlays (<== [::subs/selected-overlays])]
+      [:<>
+       (into
+
+        [mui/menu
+         {:dense     false
+          :open      (boolean @anchor-el)
+          :anchor-el @anchor-el
+          :on-close  #(reset! anchor-el nil)}]
+
+        (for [[k {:keys [label label2 icon]}] overlays
+              :let                            [v (contains? selected-overlays k)]]
+          [mui/menu-item
+           {:button   true
+            :on-click #(==> [::events/toggle-overlay k])}
+           [mui/checkbox
+            {:style     {:padding 0}
+             :checked   (boolean v)
+             :size      "small"
+             :value     (str v)
+             :on-change #()}]
+           [mui/list-item-text
+            {:primaryTypographyProps {:style {:margin-right "2em"}}
+             :primary                label :secondary label2}]
+           [mui/list-item-secondary-action
+            {:style {:margin-right "1em"}}
+            icon]]))
+
+       [mui/grid {:item true}
+        [mui/tooltip {:title (tr :map.overlay/tooltip)}
+         [mui/icon-button
+          {:on-click
+           (fn [evt] (reset! anchor-el (.-currentTarget evt)))}
+          [mui/icon "layers"]]]]])))
+
 (defn user-location-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :map/zoom-to-user)}
-   [mui/fab {:size "small" :on-click #(==> [::events/zoom-to-users-position])}
+   [mui/icon-button {:on-click #(==> [::events/zoom-to-users-position])}
     [mui/icon {:color "default" :font-size "default"}
      "my_location"]]])
 
@@ -188,13 +242,19 @@
 (defmulti popup-body :type)
 
 (defmethod popup-body :default [popup]
-  (let [name' (-> popup :data :features first :properties :name)]
+  (let [name'  (-> popup :data :features first :properties :name)
+        status (-> popup :data :features first :properties :status)
+        tr     (-> popup :tr)
+        locale (tr)]
     [mui/paper
      {:style
       {:padding "0.5em"
        :width   (when (< 100 (count name')) "150px")}}
      [mui/typography {:variant "body2"}
-      name']]))
+      name']
+     (when-not (#{"active"} status)
+       [mui/typography {:variant "body2" :color "error"}
+        (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :population [popup]
   (let [data   (-> popup :data :features first :properties)
@@ -223,14 +283,15 @@
 (defn popup []
   (let [{:keys [data anchor-el]
          :or   {type :default}
-         :as   popup'}   (<== [::subs/popup])]
+         :as   popup'} (<== [::subs/popup])
+        tr             (<== [:lipas.ui.subs/translator])]
     [mui/popper
      {:open      (boolean (seq data))
       :placement "top-end"
       :anchor-el anchor-el
       :container anchor-el
       :modifiers {:offset {:enabled true :offset "0px,10px"}}}
-     [popup-body popup']]))
+     [popup-body (assoc popup' :tr tr)]]))
 
 (defn set-field
   [lipas-id & args]
@@ -1157,19 +1218,29 @@
      ;; Floating container (bottom right)
      [lui/floating-container {:bottom "0.5em" :right "2.75em"}
 
-      [mui/grid {:container true :align-items "center" :spacing 8 :wrap "nowrap"}
+      [mui/grid
+       {:container   true
+        :align-items "center"
+        :style       {:margin-bottom "1px"}
+        :spacing     8 :wrap "nowrap"}
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
-        [user-location-btn {:tr tr}]]
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [user-location-btn {:tr tr}]]]
 
-       ;; Layer switcher
+       ;; Overlay selector
+       [mui/grid {:item true}
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [overlay-selector {:tr tr}]]]
+
+       ;; Base Layer switcher
        [mui/grid {:item true}
         [mui/paper
          {:elevation 1
           :style
           {:background-color "rgba(255,255,255,0.9)"
-           :margin           "0.25em" :padding-left "0.5em" :padding-right "0.5em"}}
+           :padding-left     "0.5em" :padding-right "0.5em"}}
          [layer-switcher {:tr tr}]]]]]
 
      ;; We use this div to bind Popper to OpenLayers overlay

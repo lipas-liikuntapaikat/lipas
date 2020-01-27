@@ -82,6 +82,13 @@
     (.setVisible v visible?))
   map-ctx)
 
+(defn set-overlays!
+  [{:keys [layers] :as map-ctx} selected-overlays]
+  (doseq [[k v] (:overlays layers)
+          :let  [visible? (contains? selected-overlays k)]]
+    (.setVisible v visible?))
+  map-ctx)
+
 (defn select-features!
   [{:keys [interactions] :as map-ctx} features]
   (let [select (-> interactions :select)]
