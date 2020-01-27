@@ -428,6 +428,7 @@
    :marketing-name "Markkinointinimi"},
   :status
   {:active "Toiminnassa",
+   :planned "Suunniteltu"
    :incorrect-data "Väärä tieto",
    :out-of-service-permanently "Poistettu käytöstä pysyvästi",
    :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti"},
@@ -465,6 +466,11 @@
    :maastokartta "Maastokartta",
    :ortokuva "Ilmakuva",
    :taustakartta "Taustakartta"},
+  :map.overlay
+  {:tooltip "Muut karttatasot"
+   :mml-kiinteisto "Kiinteistörajat"
+   :light-traffic "Kevyen liikenteen väylät"
+   :retkikartta-snowmobile-tracks "Metsähallituksen moottorikelkkaurat"}
   :lipas.swimming-pool.pools
   {:add-pool "Lisää allas",
    :edit-pool "Muokkaa allasta",
@@ -1191,6 +1197,7 @@
    :marketing-name "Varumärkesnamn"},
   :status
   {:active "Aktiv",
+   :planned "Planerad"
    :incorrect-data "Fel information",
    :out-of-service-permanently "Permanent ur funktion",
    :out-of-service-temporarily "Tillfälligt ur funktion"},
@@ -1992,6 +1999,7 @@
    :marketing-name "Marketing name"},
   :status
   {:active "Active",
+   :planned "Planned"
    :incorrect-data "Incorrect data",
    :out-of-service-permanently "Permanently out of service",
    :out-of-service-temporarily "Temporarily out of service"},
@@ -2029,6 +2037,11 @@
    :maastokartta "Terrain",
    :ortokuva "Satellite",
    :taustakartta "Default"},
+  :map.overlay
+  {:tooltip "Other layers"
+   :mml-kiinteisto "Property boundaries"
+   :light-traffic "Light traffic"
+   :retkikartta-snowmobile-tracks "Metsähallitus snowmobile tracks"}
   :lipas.swimming-pool.pools
   {:add-pool "Add pool",
    :edit-pool "Edit pool",

@@ -37,11 +37,12 @@
        ::local-storage/set! [:login-data body]
 
        :dispatch-later
-       [{:ms       (* 1000 refresh-interval-s)
-         :dispatch [::refresh-login]}]
+       [{:ms (* 1000 refresh-interval-s) :dispatch [::refresh-login]}]
+
        :dispatch-n
-       [(when (= :magic-link login-type)
-          [:lipas.ui.events/navigate "/profiili"])]}
+       [(when (= :magic-link login-type) [:lipas.ui.events/navigate "/profiili"])
+        [:lipas.ui.search.events/set-logged-in-filters]]}
+
       (when (not= :refresh login-type)
         {:ga/set   [{:dimension1 (if admin? "admin" "user")}]
          :ga/event ["user" "login-success"]})))))
