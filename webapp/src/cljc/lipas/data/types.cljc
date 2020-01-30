@@ -1595,7 +1595,7 @@
     :type-code     304,
     :main-category 0,
     :status        "active",
-    :sub-category  3,
+    :sub-category  2,
     :geometry-type "Point",
     :props
     {:toilet?                           {:priority 0},
@@ -2120,7 +2120,7 @@
     :type-code     301,
     :main-category 0,
     :status        "active",
-    :sub-category  3,
+    :sub-category  2,
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
@@ -2734,7 +2734,7 @@
     :type-code     302,
     :main-category 0,
     :status        "active",
-    :sub-category  3,
+    :sub-category  2,
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi? {:priority 0},
