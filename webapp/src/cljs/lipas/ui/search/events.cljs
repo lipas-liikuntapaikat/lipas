@@ -139,7 +139,7 @@
                                   "location.geometries")])}
                   :query
                   {:function_score
-                   {:score_mode "sum"
+                   {:score_mode "max"
                     :query
                     {:bool
                      {:must
@@ -172,12 +172,14 @@
                          :analyze_wildcard true}}]}}
                     :functions
                     (filterv some?
-                             [(when (and lat lon distance)
-                                {:gauss
-                                 {:search-meta.location.wgs84-point
-                                  {:origin (str lat "," lon)
-                                   :offset (str distance "m")
-                                   :scale  (str distance "m")}}})])}}})]
+                             (for [kw [:search-meta.location.wgs84-point
+                                       :search-meta.location.wgs84-center
+                                       :search-meta.location.wgs84-end]]
+                               (when (every? pos? [lon lat distance])
+                                 {:exp
+                                  {kw {:origin (str lat "," lon)
+                                       :offset (str distance "m")
+                                       :scale  (str distance "m")}}})))}}})]
      (cond-> params
        bbox?        (add-filter (->geo-intersects-filter bbox))
        statuses     (add-filter {:terms {:status.keyword statuses}})
