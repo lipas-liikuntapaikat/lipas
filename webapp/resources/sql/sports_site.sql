@@ -114,3 +114,11 @@ WHERE lipas_id IN (:v*:lipas_ids)
 UPDATE public.sports_site
 SET document = jsonb_set(document, '{status}', '"incorrect-data"')
 WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
+
+-- :name get-latest-by-city-code
+-- :command :query
+-- :result :many
+-- :doc Returns latests revisions of all sports sites by city_code
+SELECT *
+FROM sports_site_current
+WHERE city_code = :city_code

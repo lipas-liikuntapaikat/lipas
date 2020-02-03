@@ -122,6 +122,13 @@
     (cond->> (db-fn db-spec params)
       (not raw?) (map sports-site/unmarshall))))
 
+(defn get-sports-sites-by-city-code
+  [db-spec city-code]
+  (let [params (-> {:city-code (str city-code)} db-utils/->snake-case-keywords)]
+    (->> params
+         (sports-site/get-latest-by-city-code db-spec)
+         (map sports-site/unmarshall))))
+
 (defn get-users-drafts [db user]
   (let [params {:author-id (:id user) :status "draft"}]
     (->> params
@@ -271,4 +278,5 @@
   (add-reminder! db-spec {:account-id "94b1344e-6e06-4ebb-bfd8-1be28b2f511e"
                           :event-date "2019-01-01T00:00:00.000Z"
                           :status     "pending"
-                          :body       {:message "Muista banaani"}}))
+                          :body       {:message "Muista banaani"}})
+  (get-sports-sites-by-city-code db-spec 911))
