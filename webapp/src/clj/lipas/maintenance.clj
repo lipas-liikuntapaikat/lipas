@@ -118,9 +118,35 @@
          deref)
     (log/info "All done!")))
 
+(def get-city-name (comp :fi :name all-cities))
+
+(defn newer [a b]
+  (if (.isAfter (java.time.Instant/parse a) (java.time.Instant/parse b))
+    a
+    b))
+
+;; https://fi.wikipedia.org/wiki/Kuntaliitos_Suomessa
+(defn merge-cities
+  [{:keys [db user]} from-city-code to-city-code event-date]
+  (let [from-city-code (utils/->int from-city-code)
+        to-city-code   (utils/->int to-city-code)
+        event-date     (or event-date (utils/timestamp))
+        from-name      (get-city-name from-city-code)
+        to-name        (get-city-name to-city-code)]
+    (log/info "Merging" from-name from-city-code "->" to-name to-city-code)
+    (->> from-city-code
+         (db/get-sports-sites-by-city-code db)
+         (map (fn [m]
+                (-> m
+                    (assoc-in [:location :city :city-code] to-city-code)
+                    (update :event-date #(newer % event-date)))))
+         (upsert-all! db user))
+    (log/info "All done!")))
+
 (def tasks
   {:index-city-finance-data index-city-finance-data!
-   :index-subsidies         index-subsidies!})
+   :index-subsidies         index-subsidies!
+   :merge-cities            merge-cities})
 
 (defn print-usage! []
   (println "\nUsage: lein run -m lipas.maintenance :task-name\n")
@@ -137,6 +163,7 @@
         args'  {:db db :search search :user user}]
     (try
       (apply task-fn (into [args'] args))
+      (catch Exception e (log/error e))
       (finally
         (backend/stop-system! system)
         (shutdown-agents)
@@ -151,4 +178,6 @@
 
 (comment
   (-main ":index-city-finance-data")
-  (-main ":index-subsidies"))
+  (-main ":index-subsidies")
+  ;; Valtimo -> Nurmes
+  (-main ":merge-cities" "911" "541" "2020-01-01T00:00:00.000Z"))

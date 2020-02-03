@@ -2623,8 +2623,8 @@
     :avi-id 1}
    {:name {:fi "Valtimo", :se "Valtimo", :en "Valtimo"},
     :city-code 911,
-    :status "active",
-    :valid-until nil,
+    :status "abolished",
+    :valid-until 2019,
     :province-id 12,
     :avi-id 3}
    {:name {:fi "Vammala", :se "Vammala", :en "Vammala"},
