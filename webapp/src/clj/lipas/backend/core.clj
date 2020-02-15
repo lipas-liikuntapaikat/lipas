@@ -234,12 +234,20 @@
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
   [sports-site]
-  (let [fcoll  (-> sports-site :location :geometries)
-        geom   (-> fcoll :features first :geometry)
-        coords (case (:type geom)
-                 "Point"      (-> geom :coordinates)
-                 "LineString" (-> geom :coordinates first)
-                 "Polygon"    (-> geom :coordinates first first))
+  (let [fcoll        (-> sports-site :location :geometries)
+        geom         (-> fcoll :features first :geometry)
+        start-coords (case (:type geom)
+                       "Point"      (-> geom :coordinates)
+                       "LineString" (-> geom :coordinates first)
+                       "Polygon"    (-> geom :coordinates first first))
+
+        center-coords (-> fcoll gis/centroid :coordinates)
+
+        geom2      (-> fcoll :features last :geometry)
+        end-coords (case (:type geom2)
+                     "Point"      (-> geom2 :coordinates)
+                     "LineString" (-> geom2 :coordinates last)
+                     "Polygon"    (-> geom2 :coordinates last last))
 
         city-code (-> sports-site :location :city :city-code)
         province  (-> city-code cities :province-id cities/provinces)
@@ -251,7 +259,9 @@
         search-meta   {:admin {:name (-> sports-site :admin admins)}
                        :owner {:name (-> sports-site :owner owners)}
                        :location
-                       {:wgs84-point  coords
+                       {:wgs84-point  start-coords
+                        :wgs84-center center-coords
+                        :wgs84-end    end-coords
                         :geometries   (feature-coll->geom-coll fcoll)
                         :city         {:name (-> city-code cities :name)}
                         :province     {:name (:name province)}
