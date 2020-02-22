@@ -365,6 +365,9 @@
         (string/starts-with? x "http")
         (string/starts-with? x "www"))))
 
+(defn link-strict? [x]
+  (and (string? x) (string/starts-with? x "http")))
+
 (defn truncate [s]
   (if (> (count s) 30)
     (str (subs s 0 27) "...")
