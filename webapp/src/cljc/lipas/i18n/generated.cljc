@@ -671,15 +671,15 @@
   :user
   {:headline "Oma sivu",
    :admin-page-link "Siirry admin-sivulle",
-   :promo1-link "Näytä liikuntasalit jotka voin päivittää",
+   :promo1-link "Näytä TEAviisari-kohteet jotka voin päivittää",
    :swimming-pools-link "Uimahallit",
    :promo-headline "Ajankohtaista",
    :front-page-link "Siirry etusivulle",
    :promo1-text
-   "Tarkista koulujen liikuntasalien tiedot  Lipas-järjestelmässä! Uusia kouluja on  rakennettu ja vanhoja lakkautettu koko Suomessa. Mikä on koulujen  liikuntasalien tilanne kunnassasi?",
+   "TEAviisari tiedonkeruun tekijät poimivat seuraavat tiedot LIPAS-tietojärjestelmästä 31.8.2020:",
    :ice-stadiums-link "Jäähallit",
    :greeting "Hei {1} {2}!",
-   :promo1-topic "Liikuntasalien päivitys"},
+   :promo1-topic "TEAviisari tiedonkeruu 31.8.2020"},
   :building-materials
   {:brick "Tiili",
    :concrete "Betoni",
