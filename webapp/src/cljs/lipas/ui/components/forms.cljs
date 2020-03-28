@@ -18,12 +18,14 @@
   "Layout is similar to text-field but contains a link."
   [{:keys [label value] :as d}]
   (let [value (utils/display-value value :empty "-" :links? false)]
-    (if (utils/link? value)
+    (if-not (= "-" value)
       [:<>
        [mui/input-label {:shrink true :style {:color "rgba(0, 0, 0, 0.88)"}}
         label]
        [mui/link
-        {:href    value
+        {:href    (if (utils/link-strict? value)
+                    value
+                    (str "http://" value))
          :variant "body1"
          :noWrap  true
          :style   {:padding "6px 0 7px"}}
