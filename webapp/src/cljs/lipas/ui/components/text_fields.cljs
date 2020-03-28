@@ -60,8 +60,13 @@
                                      {:input-component input}
                                      (when adornment
                                        (->adornment adornment))))
-                       (assoc :on-blur #(when (= "number" type)
-                                          (on-change (read-string (str value)))))
+                       (assoc :on-blur #(if (= "number" type)
+                                          (on-change (read-string (str value)))
+                                          (when (string? value)
+                                            (-> value
+                                                string/trim
+                                                not-empty
+                                                on-change))))
                        (assoc :value value)
                        (assoc :on-change on-change2))]
     [mui/tooltip {:title tooltip}

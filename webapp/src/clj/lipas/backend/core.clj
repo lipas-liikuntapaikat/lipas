@@ -388,7 +388,7 @@
 
 (defn calculate-stats
   [db search* city-codes type-codes grouping]
-  (let [pop-data  (get-populations db 2018)
+  (let [pop-data  (get-populations db 2019)
         statuses  ["active" "out-of-service-temporarily"]
         query     {:size 0,
                    :query
