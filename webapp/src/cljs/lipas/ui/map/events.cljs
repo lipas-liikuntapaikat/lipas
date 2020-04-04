@@ -675,7 +675,8 @@
                   (update-in geoms [:features 0 :geometry :coordinates 0] + 0.0001)
                   geoms)]
      {:dispatch-n
-      [[::start-adding-new-site]
+      [[:lipas.ui.map.events/show-sports-site nil]
+       [::start-adding-new-site]
        [::new-geom-drawn geoms]
        [:lipas.ui.sports-sites.events/duplicate latest]]})))
 
