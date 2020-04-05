@@ -138,6 +138,7 @@
 ;;; User ;;;
 
 (s/def :lipas.user/id uuid?)
+(s/def :lipas.user/status #{"active" "archived"})
 (s/def :lipas.user/firstname (str-in 1 128))
 (s/def :lipas.user/lastname (str-in 1 128))
 (s/def :lipas.user/username (str-in 1 128))
@@ -207,7 +208,8 @@
                                         :lipas.user/permissions]))
 
 (s/def :lipas/user (s/merge :lipas/new-user
-                            (s/keys :req-un [:lipas.user/id])))
+                            (s/keys :req-un [:lipas.user/id
+                                             :lipas.user/status])))
 
 ;;; Location ;;;
 

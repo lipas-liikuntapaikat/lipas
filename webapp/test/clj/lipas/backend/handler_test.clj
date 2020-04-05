@@ -57,11 +57,11 @@
 
 (defn gen-user
   ([]
-   (gen-user {:db? false :admin? false}))
-  ([{:keys [db? admin?]
-     :or   {admin? false}}]
+   (gen-user {:db? false :admin? false :status "active"}))
+  ([{:keys [db? admin? status]
+     :or   {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
-                  (assoc :password (str (gensym)))
+                  (assoc :password (str (gensym)) :status status)
                   (assoc-in [:permissions :admin?] admin?))]
      (if db?
        (do
@@ -219,6 +219,28 @@
         user-data2 (-> resp :body <-json)]
     (is (= 200 (:status resp)))
     (is (= user-data user-data2))))
+
+(deftest update-user-status-test
+  (let [admin (gen-user {:db? true :admin? true})
+        user  (gen-user {:db? true :status "active"})
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-status")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:id (:id user) :status "archived"}))
+                       (token-header token)))
+        user2 (-> resp :body <-json)]
+    (is (= 200 (:status resp)))
+    (is (= "archived" (:status user2)))))
+
+(deftest update-user-status-requires-admin-test
+  (let [admin (gen-user {:db? true :admin? false})
+        user  (gen-user {:db? true :status "active"})
+        token (jwt/create-token admin)
+        resp  (app (-> (mock/request :post "/api/actions/update-user-status")
+                       (mock/content-type "application/json")
+                       (mock/body (->json {:id (:id user) :status "archived"}))
+                       (token-header token)))]
+    (is (= 403 (:status resp)))))
 
 (deftest send-magic-link-test
   (let [admin (gen-user {:db? true :admin? true})

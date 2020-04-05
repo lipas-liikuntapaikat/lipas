@@ -10,6 +10,11 @@
    (assoc-in db [:admin :users-filter] s)))
 
 (re-frame/reg-event-db
+ ::select-status
+ (fn [db [_ s]]
+   (assoc-in db [:admin :users-status] s)))
+
+(re-frame/reg-event-db
  ::get-users-success
  (fn [db [_ users]]
    (assoc-in db [:admin :users] (utils/index-by :id users))))
@@ -75,6 +80,21 @@
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::save-user-success user]
+       :on-failure      [::failure]}})))
+
+(re-frame/reg-event-fx
+ ::update-user-status
+ (fn [{:keys [db]} [_ user status]]
+   (let [token (-> db :user :login :token)
+         body  {:id (:id user) :status status}]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/update-user-status")
+       :headers         {:Authorization (str "Token " token)}
+       :params          body
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::save-user-success (assoc user :status status)]
        :on-failure      [::failure]}})))
 
 (re-frame/reg-event-fx

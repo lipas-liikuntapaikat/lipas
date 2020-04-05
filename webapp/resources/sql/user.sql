@@ -4,6 +4,7 @@
 -- :doc Selects all users
 SELECT
   id,
+  status,
   email,
   username,
   password,
@@ -19,6 +20,7 @@ FROM
 -- :doc Selects the user matching the id
 SELECT
   id,
+  status,
   email,
   username,
   password,
@@ -36,6 +38,7 @@ WHERE
 -- :doc Selects the user matching the username
 SELECT
   id,
+  status,
   email,
   username,
   password,
@@ -53,6 +56,7 @@ WHERE
 -- :doc Selects the user matching the email
 SELECT
   id,
+  status,
   email,
   username,
   password,
@@ -69,6 +73,7 @@ WHERE
 -- :result :raw
 -- :doc Inserts a single user into account table
 INSERT INTO account (
+  status,
   email,
   username,
   password,
@@ -76,6 +81,7 @@ INSERT INTO account (
   permissions
 )
 VALUES (
+  :status,
   :email,
   :username,
   :password,
@@ -113,4 +119,12 @@ WHERE  id = :id ::uuid;
 -- :doc Update user-data for the user with given id
 UPDATE account
 SET    user_data = :user_data
+WHERE  id = :id ::uuid;
+
+-- :name update-user-status!
+-- :command :execute
+-- :result :one
+-- :doc Update stauts for the user with given id
+UPDATE account
+SET    status = :status
 WHERE  id = :id ::uuid;
