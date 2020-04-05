@@ -6,7 +6,7 @@
 (def routes
   ["admin"
    {:name   :lipas.ui.routes/admin
-    :tr-ley :lipas.admin/headline
+    :tr-key :lipas.admin/headline
     :view   views/main
     :controllers
     [{:start

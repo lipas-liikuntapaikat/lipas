@@ -10,6 +10,11 @@
    (-> db :admin :users)))
 
 (re-frame/reg-sub
+ ::users-status
+ (fn [db _]
+   (-> db :admin :users-status)))
+
+(re-frame/reg-sub
  ::users-filter
  (fn [db _]
    (-> db :admin :users-filter)))
@@ -33,11 +38,31 @@
 (re-frame/reg-sub
  ::users-list
  :<- [::users]
+ :<- [::users-status]
+ :<- [::users-filter]
+ :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ (fn [[users status filter-text cities types] _]
+   (let [users (->> users
+                    vals
+                    (filter (comp #{status} :status))
+                    (map (partial ->users-list-entry cities types)))]
+     (if (not-empty filter-text)
+       (filter
+        #(-> %
+             str
+             string/lower-case
+             (string/includes? (string/lower-case filter-text))) users)
+       users))))
+
+(re-frame/reg-sub
+ ::archived-users-list
+ :<- [::archived-users]
  :<- [::users-filter]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [[users filter-text cities types] _]
-   (let [users (->> users vals (map (partial ->users-list-entry cities types)))]
+   (let [users (->> users (map (partial ->users-list-entry cities types)))]
      (if (not-empty filter-text)
        (filter
         #(-> %

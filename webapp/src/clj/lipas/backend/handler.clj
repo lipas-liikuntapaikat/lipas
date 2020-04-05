@@ -101,14 +101,14 @@
           :body  map?}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [spec :lipas/new-or-existing-sports-site
+           (let [spec   :lipas/new-or-existing-sports-site
                  draft? (-> req :parameters :query :draft utils/->bool)
                  valid? (s/valid? spec body-params)]
              (if valid?
                {:status 201
                 :body   (core/save-sports-site! db search identity body-params draft?)}
                {:status 400
-                :body (s/explain-data spec body-params)})))}}]
+                :body   (s/explain-data spec body-params)})))}}]
 
       ["/sports-sites/:lipas-id"
        {:get
@@ -225,6 +225,18 @@
                  _      (core/update-user-permissions! db emailer params)]
              {:status 200
               :body   {:status "OK"}}))}}]
+
+      ["/actions/update-user-status"
+       {:post
+        {:middleware [mw/token-auth mw/auth mw/admin]
+         :parameters
+         {:body
+          {:id     string?
+           :status :lipas.user/status}}
+         :handler
+         (fn [req]
+           {:status 200
+            :body   (core/update-user-status! db (-> req :parameters :body))})}}]
 
       ["/actions/update-user-data"
        {:post
