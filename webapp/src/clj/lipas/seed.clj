@@ -56,7 +56,20 @@
 (def city-data
   [{:city-code 972,
     :stats
-    {:2018
+    {:2019
+     {:services
+      {:youth-services
+       {:net-costs 61.0,
+        :subsidies nil,
+        :operating-incomes 0.0,
+        :operating-expenses 60.0},
+       :sports-services
+       {:net-costs 222.0,
+        :subsidies nil,
+        :operating-incomes 43.0,
+        :operating-expenses 260.0}},
+      :population 2100}
+     :2018
      {:services
       {:youth-services
        {:net-costs 60.0,
@@ -84,7 +97,20 @@
       :population 2192}}}
    {:city-code 275,
     :stats
-    {:2018
+    {:2019
+     {:services
+      {:youth-services
+       {:net-costs 100.0,
+        :subsidies 16.0,
+        :operating-incomes 6.0,
+        :operating-expenses 112.0},
+       :sports-services
+       {:net-costs 97.0,
+        :subsidies 7.0,
+        :operating-incomes 1.0,
+        :operating-expenses 98.0}},
+      :population 3000}
+     :2018
      {:services
       {:youth-services
        {:net-costs 106.0,

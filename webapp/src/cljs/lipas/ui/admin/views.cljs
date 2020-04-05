@@ -48,15 +48,37 @@
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/set-user-to-edit nil])
       :bottom-actions
-      [[lui/email-button
+      [;; Archive button
+       (when (= "active" (:status user))
+         [mui/button
+          {:variant  "contained"
+           :color    "secondary"
+           :on-click #(==> [::events/update-user-status user "archived"])}
+          [mui/icon {:style {:margin-right "0.25em"}} "archive"]
+          "Arkistoi"])
+
+       ;; Restore button
+       (when (= "archived" (:status user))
+         [mui/button
+          {:variant  "contained"
+           :color    "secondary"
+           :on-click #(==> [::events/update-user-status user "active"])}
+          [mui/icon {:style {:margin-right "0.25em"}} "restore"]
+          "Palauta"])
+
+       ;; Send magic link button
+       [lui/email-button
         {:label    (tr :lipas.admin/magic-link)
          :disabled (not (s/valid? :lipas/new-user user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
+
+       ;; Save button
        (when existing?
          [mui/button
           {:variant  "contained"
            :color    "secondary"
            :on-click #(==> [::events/save-user user])}
+          [mui/icon {:style {:margin-right "0.25em"}} "save"]
           (tr :actions/save)])]}
 
      [mui/grid {:container true :spacing 8}
@@ -94,7 +116,6 @@
           :value     (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
           :disabled  existing?}]]]
-
 
       ;;; Permissions
       [lui/form-card {:title (tr :lipas.user/permissions)}
@@ -207,6 +228,7 @@
 
 (defn admin-panel []
   (let [tr           (<== [:lipas.ui.subs/translator])
+        status       (<== [::subs/users-status])
         users        (<== [::subs/users-list])
         users-filter (<== [::subs/users-filter])
         selected-tab (<== [::subs/selected-tab])]
@@ -249,6 +271,17 @@
               :style    {:margin-top "1em"}
               :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
              [mui/icon "add"]]]
+
+           ;; Status selector
+           [mui/grid {:item true}
+            [lui/select
+             {:style     {:width "150px"}
+              :label     "Status"
+              :value     status
+              :items     ["active" "archived"]
+              :value-fn  identity
+              :label-fn  identity
+              :on-change #(==> [::events/select-status %])}]]
 
            ;; Users filter
            [mui/grid {:item true}

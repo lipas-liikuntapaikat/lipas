@@ -45,6 +45,7 @@
                     {:type :email-conflict})))
 
   (let [defaults {:permissions permissions/default-permissions
+                  :status      "active"
                   :username    (:email user)
                   :user-data   {}
                   :password    (str (utils/gen-uuid))}
@@ -114,6 +115,16 @@
     (send-permissions-updated-email! emailer login-url user)
     (add-user-event! db new-user "permissions-updated"
                      {:from old-perms :to permissions})))
+
+(defn update-user-status!
+  [db {:keys [id status]}]
+  (let [user       (get-user! db id)
+        old-status (-> user :status)
+        new-user   (assoc user :status status)]
+    (db/update-user-status! db new-user)
+    (add-user-event! db new-user "status-changed"
+                     {:from old-status :to status})
+    new-user))
 
 (defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
