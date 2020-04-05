@@ -42,6 +42,11 @@
        (user/marshall)
        (user/update-user-permissions! db-spec)))
 
+(defn update-user-status! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-status! db-spec)))
+
 (defn update-user-history! [db-spec user]
   (->> user
        (user/marshall)
