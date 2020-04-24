@@ -305,7 +305,8 @@
         y-axis-key (if (= "location.city.city-code" grouping)
                      :city-name
                      :type-name)
-        formatter (when (ugly-keys (keyword metric)) utils/round-safe)]
+        precision (if (= metric "length-km-pc") 8 2)
+        formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))]
     [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
      [:> rc/BarChart
       {:data     data
