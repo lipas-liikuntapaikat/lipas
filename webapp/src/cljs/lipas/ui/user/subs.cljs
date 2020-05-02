@@ -72,6 +72,12 @@
      :type      (get-in types [type-code :name locale])
      :type-code type-code}))
 
+(defn show?
+  [permissions {:keys [status] :as sports-site}]
+  (and
+   (permissions/publish? permissions sports-site)
+   (#{"planned" "active" "out-of-service-temporarily"} status)))
+
 (re-frame/reg-sub
  ::sports-sites
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
@@ -82,7 +88,7 @@
    (when (and permissions sites)
      (->> sites
           vals
-          (filter (partial permissions/publish? permissions))
+          (filter (partial show? permissions))
           (map (partial ->list-entry locale cities types))))))
 
 (re-frame/reg-sub
