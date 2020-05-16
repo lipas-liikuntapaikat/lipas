@@ -1169,7 +1169,7 @@
         selected-site (<== [::subs/selected-sports-site])
         drawer-width  (cond
                         (#{"xs"} width)              "100%"
-                        (and (#{"sm" "md"} width)
+                        (and (#{"sm"} width)
                              (= :table result-view)) "100%"
                         (and (= :table result-view)
                              (empty? selected-site)) "100%"
