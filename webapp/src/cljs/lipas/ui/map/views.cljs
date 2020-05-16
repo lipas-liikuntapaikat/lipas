@@ -57,7 +57,7 @@
           [mui/list-item-text
            (:label m)]]))]]))
 
-(defn import-geoms-view [{:keys [on-import show-replace?]
+(defn import-geoms-view [{:keys [on-import show-replace? geom-type]
                           :or   {show-replace? true}}]
   (let [tr       (<== [:lipas.ui.subs/translator])
         open?    (<== [::subs/import-dialog-open?])
@@ -91,7 +91,9 @@
           [:input
            {:type      "file"
             :accept    (string/join "," import-formats)
-            :on-change #(==> [::events/load-geoms-from-file (-> % .-target .-files)])}]]
+            :on-change #(==> [::events/load-geoms-from-file
+                              (-> % .-target .-files)
+                              geom-type])}]]
 
          ;; Helper texts
          [mui/grid {:item true}
@@ -320,7 +322,9 @@
         :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
 
        (when editing?
-         [import-geoms-view {:on-import #(==> [::events/import-selected-geoms])}])
+         [import-geoms-view
+          {:geom-type geom-type
+           :on-import #(==> [::events/import-selected-geoms])}])
 
        [mui/grid {:item true :xs 12}
 
@@ -479,7 +483,7 @@
                  :on-close   #(==> [::events/close-more-tools-menu])}
 
                 ;; Import geom
-                (when (and editing? (#{"LineString"} geom-type))
+                (when (and editing? (#{"LineString" "Polygon"} geom-type))
                   [mui/menu-item {:on-click #(do
                                                (==> [::events/close-more-tools-menu])
                                                (==> [::events/toggle-import-dialog]))}
@@ -716,7 +720,8 @@
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
 
-          set-field set-new-site-field]
+          set-field set-new-site-field
+          geom-type (:geometry-type type)]
 
       [mui/grid
        {:container true
@@ -726,7 +731,8 @@
        [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
 
         [import-geoms-view
-         {:on-import     #(==> [::events/import-selected-geoms-to-new])
+         {:geom-type     geom-type
+          :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
 
         [mui/typography {:variant "h6"}
@@ -755,8 +761,7 @@
           [mui/step-label (tr :map/draw)]
           [mui/step-content {:style {:padding-top "1em"}}
 
-           (let [geom-type (:geometry-type type)
-                 type-code (:type-code type)]
+           (let [type-code (:type-code type)]
 
              (if-not geom
 
@@ -764,7 +769,7 @@
                [mui/grid {:container true :spacing 16 :align-items "center"}
 
                 ;; Tabs for selecting btw drawing and importing geoms
-                (when (#{"LineString"} geom-type)
+                (when (#{"LineString" "Polygon"} geom-type)
                   [mui/grid {:item true}
 
                    [mui/tabs {:value      @geom-tab
@@ -799,7 +804,7 @@
                      (tr :map/add-to-map)]]])
 
                 (when (= 1 @geom-tab)
-                  (when (#{"LineString"} geom-type)
+                  (when (#{"LineString" "Polygon"} geom-type)
                     [:<>
                      ;; Supported formats helper text
                      [mui/grid {:item true :xs 12}
