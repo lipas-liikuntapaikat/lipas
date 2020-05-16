@@ -272,14 +272,14 @@
                                 :props     {:types types}}}]
      [:type.main-category     {:label (tr :type/main-category)}]
      [:type.sub-category      {:label (tr :type/sub-category)}]
-     [:admin.name             {:label (tr :lipas.sports-site/admin)
-                               :form
-                               {:component lui/admin-selector-single
-                                :value-key :admin}}]
      [:owner.name             {:label (tr :lipas.sports-site/owner)
                                :form
                                {:component lui/owner-selector-single
                                 :value-key :owner}}]
+     [:admin.name             {:label (tr :lipas.sports-site/admin)
+                               :form
+                               {:component lui/admin-selector-single
+                                :value-key :admin}}]
      [:construction-year      {:label (tr :lipas.sports-site/construction-year)
                                :form  {:component lui/year-selector}}]
      [:renovation-years       {:label (tr :lipas.sports-site/renovation-years)
