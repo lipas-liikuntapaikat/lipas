@@ -444,11 +444,11 @@
 
 (re-frame/reg-event-db
  ::set-import-candidates
- (fn [db [_ geoJSON]]
+ (fn [db [_ geoJSON geom-type]]
    (let [fcoll (js->clj geoJSON :keywordize-keys true)
          fs    (->> fcoll
                     :features
-                    (filter (comp #{"LineString"} :type :geometry))
+                    (filter (comp #{geom-type} :type :geometry))
                     (reduce
                      (fn [res f]
                        (let [id (gensym)]
@@ -493,12 +493,12 @@
 
 (re-frame/reg-event-fx
  ::load-geoms-from-file
- (fn [{:keys [db]} [_ files]]
+ (fn [{:keys [db]} [_ files geom-type]]
    (let [file   (aget files 0)
          params {:enc  (-> db :map :import :selected-encoding)
                  :file file
                  :ext  (parse-ext file)
-                 :cb   (fn [data] (==> [::set-import-candidates data]))}]
+                 :cb   (fn [data] (==> [::set-import-candidates data geom-type]))}]
 
      (if-let [ext (:unknown (file->geoJSON params))]
        {:dispatch-n [(let [tr (-> db :translator)]
