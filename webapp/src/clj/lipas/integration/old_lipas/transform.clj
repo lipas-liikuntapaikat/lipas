@@ -61,7 +61,7 @@
   (let [type-code (-> m :type :type-code)]
     (-> m
 
-        (select-keys [:name :email :www :phone-umber :renovation-years
+        (select-keys [:name :email :www :phone-number :renovation-years
                       :construction-year :location :properties])
 
         (assoc :last-modified (-> m :event-date UTC->last-modified)
