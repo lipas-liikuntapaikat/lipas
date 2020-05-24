@@ -315,9 +315,12 @@
       {:on-click #(-> geoms map-utils/calculate-length on-change)}
       [:> js/materialIcons.Calculator]]]]])
 
+(defn show-calc? [k geom-type]
+  (and (= :route-length-km k) (#{"LineString"} geom-type)))
+
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
-           key geoms problems?]}]
+           key geoms geom-type problems?]}]
   (let [locale      (tr)
         types-props (<== [::subs/types-props type-code])]
     (into
@@ -338,45 +341,45 @@
          :priority (:priority v)
          :form-field
          (cond
-           (material-field? k)     [surface-material-selector
-                                    {:tr        tr
-                                     :multi?    (= :surface-material k)
-                                     :tooltip   tooltip
-                                     :spec      spec
-                                     :label     label
-                                     :value     value
-                                     :on-change on-change}]
-           (retkikartta? k)        [retkikartta-field
-                                    {:tr        tr
-                                     :value     value
-                                     :on-change on-change
-                                     :tooltip   tooltip
-                                     :problems? problems?}]
-           (harrastuspassi? k)     [harrastuspassi-field
-                                    {:tr        tr
-                                     :value     value
-                                     :on-change on-change
-                                     :tooltip   tooltip}]
-           (= :route-length-km k)  [route-length-km-field
-                                    {:tr        tr
-                                     :value     value
-                                     :type      "number"
-                                     :spec      spec
-                                     :label     label
-                                     :tooltip   tooltip
-                                     :geoms     geoms
-                                     :on-change on-change}]
-           (= "boolean" data-type) [lui/checkbox
-                                    {:value     value
-                                     :tooltip   tooltip
-                                     :on-change on-change}]
-           :else                   [lui/text-field
-                                    {:value     value
-                                     :tooltip   tooltip
-                                     :spec      spec
-                                     :type      (when (#{"numeric" "integer"} data-type)
-                                                  "number")
-                                     :on-change on-change}])})))))
+           (material-field? k)      [surface-material-selector
+                                     {:tr        tr
+                                      :multi?    (= :surface-material k)
+                                      :tooltip   tooltip
+                                      :spec      spec
+                                      :label     label
+                                      :value     value
+                                      :on-change on-change}]
+           (retkikartta? k)         [retkikartta-field
+                                     {:tr        tr
+                                      :value     value
+                                      :on-change on-change
+                                      :tooltip   tooltip
+                                      :problems? problems?}]
+           (harrastuspassi? k)      [harrastuspassi-field
+                                     {:tr        tr
+                                      :value     value
+                                      :on-change on-change
+                                      :tooltip   tooltip}]
+           (show-calc? k geom-type) [route-length-km-field
+                                     {:tr        tr
+                                      :value     value
+                                      :type      "number"
+                                      :spec      spec
+                                      :label     label
+                                      :tooltip   tooltip
+                                      :geoms     geoms
+                                      :on-change on-change}]
+           (= "boolean" data-type)  [lui/checkbox
+                                     {:value     value
+                                      :tooltip   tooltip
+                                      :on-change on-change}]
+           :else                    [lui/text-field
+                                     {:value     value
+                                      :tooltip   tooltip
+                                      :spec      spec
+                                      :type      (when (#{"numeric" "integer"} data-type)
+                                                   "number")
+                                      :on-change on-change}])})))))
 
 (defn report-readings-button [{:keys [tr lipas-id close]}]
   [mui/button
