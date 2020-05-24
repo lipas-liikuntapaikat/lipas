@@ -91,6 +91,11 @@
    (-> db :search :filters :retkikartta?)))
 
 (re-frame/reg-sub
+ ::harrastuspassi-filter
+ (fn [db _]
+   (-> db :search :filters :harrastuspassi?)))
+
+(re-frame/reg-sub
  ::school-use-filter
  (fn [db _]
    (-> db :search :filters :school-use?)))
