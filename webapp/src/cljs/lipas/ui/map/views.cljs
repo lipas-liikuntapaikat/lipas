@@ -407,6 +407,7 @@
                 :display-data (:properties display-data)
                 :edit-data    (:properties edit-data)
                 :geoms        (-> edit-data :location :geometries)
+                :geom-type    geom-type
                 :problems?    problems?
                 :key          (-> edit-data :type :type-code)}]))]
 
