@@ -37,6 +37,7 @@
         year-max          (<== [::subs/construction-year-max-filter])
         surface-materials (<== [::subs/surface-materials-filter])
         retkikartta?      (<== [::subs/retkikartta-filter])
+        harrastuspassi?   (<== [::subs/harrastuspassi-filter])
         school-use?       (<== [::subs/school-use-filter])]
 
     ^{:key @ugly-forcer}
@@ -103,6 +104,13 @@
        {:value     retkikartta?
         :label     (tr :search/retkikartta-filter)
         :on-change #(==> [::events/set-retkikartta-filter %])}]]
+
+     ;; Harrastuspassi.fi filter
+     [filter-layout {}
+      [lui/checkbox
+       {:value     harrastuspassi?
+        :label     (tr :search/harrastuspassi-filter)
+        :on-change #(==> [::events/set-harrastuspassi-filter %])}]]
 
      ;; School-use? filter
      [filter-layout {}

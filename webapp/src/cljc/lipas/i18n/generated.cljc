@@ -251,6 +251,7 @@
    :results-count "{1} hakutulosta",
    :placeholder "Etsi...",
    :retkikartta-filter "Retkikartta.fi-kohteet",
+   :harrastuspassi-filter "Harrastuspassi.fi-kohteet",
    :filters "Rajaa hakua",
    :search-more "Hae lisää...",
    :page-size "Näytä kerralla",
@@ -491,6 +492,9 @@
    :R407A "R407A",
    :R407C "R407C",
    :R717 "R717"},
+  :harrastuspassi
+  {:disclaimer
+   "Kun ”saa julkaista Harrastuspassissa” – ruutu on rastitettu, liikuntapaikan tiedot siirretään automaattisesti Harrastuspassi-palveluun. Sitoudun päivittämään liikuntapaikan tietojen muutokset viipymättä Lippaaseen. Paikan hallinnoijalla on vastuu tietojen oikeellisuudesta ja paikan turvallisuudesta. Tiedot näkyvät Harrastuspassissa vain, mikäli kunnalla on sopimus Harrastuspassin käytöstä Harrastuspassin palveluntuottajan kanssa."}
   :retkikartta
   {:disclaimer
    "Kun ”Saa julkaista Retkikartassa” -ruutu  on rastitettu, luontoliikuntapaikan tiedot siirretään  automaattisesti Metsähallituksen ylläpitämään Retkikartta.fi  -karttapalveluun kerran vuorokaudessa. Sitoudun päivittämään  luontoliikuntapaikan tietojen muutokset viipymättä  Lippaaseen. Paikan hallinnoijalla on vastuu tietojen  oikeellisuudesta, paikan turvallisuudesta, palautteisiin  vastaamisesta ja mahdollisista yksityisteihin liittyvistä  kustannuksista."},

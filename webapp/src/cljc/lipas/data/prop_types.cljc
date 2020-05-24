@@ -192,6 +192,17 @@
      :se
      "Information om motionsstället får publiceras i Retkikartta.fi",
      :en ""}},
+   :may-be-shown-in-harrastuspassi-fi?
+   {:name
+    {:fi "Saa julkaista Harrastuspassi.fi -palvelussa",
+     :se "Får publiceras i Harrastuspassi.fi",
+     :en "May be shown in Harrastuspassi.fi"},
+    :data-type "boolean",
+    :description
+    {:fi "Kohteen tiedot saa julkaista Harrastuspassi.fi-palvelussa",
+     :se
+     "Information om motionsstället får publiceras i Harrastuspassi.fi",
+     :en ""}}
    :sprint-lanes-count
    {:name
     {:fi "Etusuorien lkm",

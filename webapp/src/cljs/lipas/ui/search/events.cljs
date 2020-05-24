@@ -90,6 +90,7 @@
          year-max          (-> filters :construction-year-max)
          materials         (-> filters :surface-materials not-empty)
          retkikartta?      (-> filters :retkikartta?)
+         harrastuspassi?   (-> filters :harrastuspassi?)
          school-use?       (-> filters :school-use?)
          admins            (-> filters :admins not-empty)
          owners            (-> filters :owners not-empty)
@@ -181,19 +182,20 @@
                                        :offset (str distance "m")
                                        :scale  (str distance "m")}}})))}}})]
      (cond-> params
-       bbox?        (add-filter (->geo-intersects-filter bbox))
-       statuses     (add-filter {:terms {:status.keyword statuses}})
-       type-codes   (add-filter {:terms {:type.type-code type-codes}})
-       city-codes   (add-filter {:terms {:location.city.city-code city-codes}})
-       area-min     (add-filter {:range {:properties.area-m2 {:gte area-min}}})
-       area-max     (add-filter {:range {:properties.area-m2 {:lte area-max}}})
-       year-min     (add-filter {:range {:construction-year {:gte year-min}}})
-       year-max     (add-filter {:range {:construction-year {:lte year-max}}})
-       materials    (add-filter {:terms {:properties.surface-material.keyword materials}})
-       admins       (add-filter {:terms {:admin.keyword admins}})
-       owners       (add-filter {:terms {:owner.keyword owners}})
-       retkikartta? (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
-       school-use?  (add-filter {:terms {:properties.school-use? [true]}})))))
+       bbox?           (add-filter (->geo-intersects-filter bbox))
+       statuses        (add-filter {:terms {:status.keyword statuses}})
+       type-codes      (add-filter {:terms {:type.type-code type-codes}})
+       city-codes      (add-filter {:terms {:location.city.city-code city-codes}})
+       area-min        (add-filter {:range {:properties.area-m2 {:gte area-min}}})
+       area-max        (add-filter {:range {:properties.area-m2 {:lte area-max}}})
+       year-min        (add-filter {:range {:construction-year {:gte year-min}}})
+       year-max        (add-filter {:range {:construction-year {:lte year-max}}})
+       materials       (add-filter {:terms {:properties.surface-material.keyword materials}})
+       admins          (add-filter {:terms {:admin.keyword admins}})
+       owners          (add-filter {:terms {:owner.keyword owners}})
+       retkikartta?    (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
+       harrastuspassi? (add-filter {:terms {:properties.may-be-shown-in-harrastuspassi-fi? [true]}})
+       school-use?     (add-filter {:terms {:properties.school-use? [true]}})))))
 
 (re-frame/reg-event-fx
  ::search
@@ -344,6 +346,12 @@
  ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
+ ::set-harrastuspassi-filter
+ (fn [{:keys [db]} [_ v]]
+   {:db       (assoc-in db [:search :filters :harrastuspassi?] v)
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
