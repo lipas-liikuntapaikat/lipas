@@ -1252,7 +1252,10 @@
    :R407A "R407A",
    :R407C "R407C",
    :R717 "R717"},
-  :retkikartta {:disclaimer "Annan bastu"},
+  :harrastuspassi {:disclaimer "När du kryssat för rutan ”Kan visas på Harrastuspassi.fi” flyttas uppgifterna om idrottsanläggningen automatiskt till Harrastuspassi.fi. Jag förbinder mig att uppdatera ändringar i uppgifterna om idrottsanläggningen utan dröjsmål i Lipas. Anläggningens administratör ansvarar för uppgifternas riktighet och anläggningens säkerhet. Uppgifterna visas i Harrastuspassi.fi om kommunen har kontrakt med Harrastuspassi.fi administratör för att använda Harrastuspassi.fi."}
+  :retkikartta {:disclaimer "När du kryssat för rutan ”Kan visas på Utflyktskarta.fi” flyttas uppgifterna om naturutflyktsmålet automatiskt till karttjänsten Utflyktskarta.fi som Forststyrelsen administrerar.
+Uppgifter överförs till karttjänsten en gång i dygnet. Jag förbinder mig att uppdatera ändringar i uppgifterna om naturutflyktsmålet utan dröjsmål i Lipas.
+Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflyktsmålets säkerhet samt för svar på respons och för eventuella kostnader i samband med privata vägar."},
   :reset-password
   {:change-password "Ändra lösenord",
    :enter-new-password "Skriv ett ny lösenord",
@@ -2066,7 +2069,10 @@
    :R407A "R407A",
    :R407C "R407C",
    :R717 "R717"},
-  :retkikartta {:disclaimer "Filters"},
+  :harrastuspassi {:disclaimer "When the option “May be shown in Harrastuspassi.fi” is ticked, the information regarding the sport facility will be transferred automatically to the Harrastuspassi.fi. I agree to update in the Lipas service any changes to information regarding the sport facility. The site administrator is responsible for the accuracy of information and safety of the location. Facility information is shown in Harrastuspassi.fi only if the municipality has a contract with Harrastuspassi.fi service provider."}
+  :retkikartta {:disclaimer "When the option “May be shown in Excursionmap.fi” is ticked, the information regarding the open air exercise location will be transferred once in every 24 hours automatically to the Excursionmap.fi service, maintained by Metsähallitus.
+I agree to update in the Lipas service any changes to information regarding an open air exercise location.
+The site administrator is responsible for the accuracy of information, safety of the location, responses to feedback and possible costs related to private roads."},
   :reset-password
   {:change-password "Change password",
    :enter-new-password "Enter new password",
