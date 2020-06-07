@@ -532,7 +532,7 @@
    :shapefile
    "Tuo .shp-, .dbf- ja .prj-tiedostot pakattuna .zip-muotoon.",
    :import-selected "Tuo valitut",
-   :tooltip "Tuo reittiosia tiedostosta",
+   :tooltip "Tuo geometriat tiedostosta",
    :unknown-format "Tuntematon tiedostopääte '{1}'"},
   :error
   {:email-conflict "Sähköpostiosoite on jo käytössä",
@@ -1292,7 +1292,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :shapefile
    "Importera .shp .dbf och .prj filer i packade .zip filen.",
    :import-selected "Importera valda",
-   :tooltip "Importera ruttdelar från filen",
+   :tooltip "Importera geometrier från filen",
    :unknown-format "Okänt filformat '{1}'"},
   :error
   {:email-conflict "E-post är redan registrerad",
