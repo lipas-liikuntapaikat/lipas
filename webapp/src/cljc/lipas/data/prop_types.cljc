@@ -194,15 +194,15 @@
      :en ""}},
    :may-be-shown-in-harrastuspassi-fi?
    {:name
-    {:fi "Saa julkaista Harrastuspassi.fi -palvelussa",
+    {:fi "Saa julkaista Harrastuspassi.fi-sovelluksessa",
      :se "Får publiceras i Harrastuspassi.fi",
      :en "May be shown in Harrastuspassi.fi"},
     :data-type "boolean",
     :description
-    {:fi "Kohteen tiedot saa julkaista Harrastuspassi.fi-palvelussa",
+    {:fi "Kohteen tiedot saa julkaista Harrastuspassi.fi-sovelluksessa",
      :se
-     "Information om motionsstället får publiceras i Harrastuspassi.fi",
-     :en ""}}
+     "När du kryssat för rutan ”Kan visas på Harrastuspassi.fi” flyttas uppgifterna om idrottsanläggningen automatisk till Harrastuspassi.fi –applikationen.",
+     :en "When the option ”May be shown in Harrastuspassi.fi” is ticked, the information regarding the sport facility will be transferred automatically to the Harrastuspassi.fi application."}}
    :sprint-lanes-count
    {:name
     {:fi "Etusuorien lkm",
