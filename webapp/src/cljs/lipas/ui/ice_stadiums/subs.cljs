@@ -272,7 +272,8 @@
         :rinks              (:rinks latest)
         :renovations        (:renovations latest)
         :visitors-history   (sort-by :year visitors-history)
-        :energy-consumption (sort-by :year energy-history)}))))
+        :energy-consumption (sort-by :year energy-history)
+        :properties         (:properties latest)}))))
 
 (re-frame/reg-sub
  ::sites-filter

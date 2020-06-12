@@ -318,11 +318,18 @@
 (defn show-calc? [k geom-type]
   (and (= :route-length-km k) (#{"LineString"} geom-type)))
 
+(defn special-case? [type-code]
+  ;; Uimahalli / jäähalli
+  (#{3110 3120 3130 2510 2520} type-code))
+
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
            key geoms geom-type problems?]}]
   (let [locale      (tr)
-        types-props (<== [::subs/types-props type-code])]
+        types-props (<== [::subs/types-props type-code])
+        types-props (if (special-case? type-code)
+                      (select-keys types-props [:may-be-shown-in-harrastuspassi-fi?])
+                      types-props)]
     (into
      [lui/form
       {:key        key
