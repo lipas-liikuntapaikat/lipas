@@ -158,6 +158,17 @@
          :owners          owners
          :on-change       set-field}]]
 
+      [lui/form-card {:title (tr :lipas.sports-site/properties)}
+       [sports-site/properties-form
+        {:tr           tr
+         :edit-data    (:properties edit-data)
+         :display-data (:properties display-data)
+         :type-code    (or
+                        (-> edit-data :type :type-code)
+                        (-> display-data :type :type-code))
+         :on-change    (partial set-field :properties)
+         :read-only?   (not editing?)}]]
+
       ;;; Conditions
       (let [on-change    (partial set-field :conditions)
             display-data (-> display-data :conditions)
