@@ -49,7 +49,8 @@
    {:label "Kuntaliitto" :href "https://www.kuntaliitto.fi/"}
    {:label "EPSHP" :href "https://www.hyvis.fi/web/etela-pohjanmaa/palvelut"}
    {:label "Paikkatietoalusta" :href "http://www.paikkatietoalusta.fi"}
-   {:label "Ladulle.fi" :href "https://ladulle.fi/"}])
+   {:label "Ladulle.fi" :href "https://ladulle.fi/"}
+   {:label "Liikkuva Kuopio" :href "https://liikkuvakuopio.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
