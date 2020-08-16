@@ -454,8 +454,9 @@
    {:db       (assoc-in db [:search :pagination :page-size] page-size)
     :dispatch-n
     [[::submit-search]
-     (when (> page-size 500)
-       [::set-bounding-box-filter true])]}))
+     #_(when (> page-size 500)
+         [::set-bounding-box-filter true])]}))
+
 
 (re-frame/reg-event-fx
  ::set-filters-by-permissions

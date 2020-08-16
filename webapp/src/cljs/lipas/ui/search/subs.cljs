@@ -345,7 +345,8 @@
  ::allow-changing-bounding-box-filter?
  :<- [::pagination]
  (fn [{:keys [page-size]}]
-   (>= 500 page-size)))
+   ;;(>= 500 page-size)
+   true))
 
 (re-frame/reg-sub
  ::save-dialog-open?
