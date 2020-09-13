@@ -441,7 +441,8 @@
                                             {:query "*"}}]}}}
                                        :fields ["lipas-id"
                                                 "name"
-                                                "location.city.city-code"]}))))
+                                                "location.city.city-code"]
+                                       :locale :fi}))))
         body     (:body resp)
         wb       (excel/load-workbook body)
         header-1 (excel/read-cell

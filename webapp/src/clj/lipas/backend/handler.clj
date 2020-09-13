@@ -338,14 +338,15 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [query  (-> parameters :body :search-query)
-                 fields (-> parameters :body :fields)]
+                 fields (-> parameters :body :fields)
+                 locale (-> parameters :body :locale)]
              {:status  200
               :headers {"Content-Type"        (-> utils/content-type :xlsx)
                         "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
               :body
               (ring-io/piped-input-stream
                (fn [out]
-                 (core/sports-sites-report search query fields out)))}))}}]
+                 (core/sports-sites-report search query fields locale out)))}))}}]
 
       ;; Old simple db version
       ["/actions/create-finance-report"

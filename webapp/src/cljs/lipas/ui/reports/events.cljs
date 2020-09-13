@@ -57,8 +57,9 @@
       {:method          :post
        :uri             (str (:backend-url db) "/actions/create-sports-sites-report")
        :params          {:search-query query
-                         :fields       fields}
-       :format          (ajax/json-request-format)
+                         :fields       fields
+                         :locale       (-> db :translator (apply []))}
+       :format          (ajax/transit-request-format)
        :response-format {:type         :blob
                          :content-type (-> cutils/content-type :xlsx)
                          :description  (-> cutils/content-type :xlsx)
