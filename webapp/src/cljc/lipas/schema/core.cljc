@@ -114,7 +114,6 @@
 
 (s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
 
-
 ;;; Reminder ;;;
 
 (s/def :lipas.reminder/id uuid?)
@@ -1198,7 +1197,8 @@
 
 (s/def :lipas.api.sports-site-report/req
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
-                   :lipas.api.sports-site-report.req/fields]))
+                   :lipas.api.sports-site-report.req/fields
+                   :lipas/locale]))
 
 (s/def :lipas.api.report.req/city-codes
   (s/coll-of :lipas.location.city/city-code

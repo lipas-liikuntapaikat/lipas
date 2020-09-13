@@ -370,11 +370,10 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
-;; TODO support :se and :en locales
-(defn sports-sites-report [search params fields out]
+(defn sports-sites-report [search params fields locale out]
   (let [idx-name  "sports_sites_current"
         in-chan   (search/scroll search idx-name params)
-        locale    :fi
+        locale    (or locale :fi)
         headers   (mapv #(get-in reports/fields [% locale]) fields)
         data-chan (async/go
                     (loop [res [headers]]
