@@ -19,7 +19,6 @@
                (assoc res k (-> v locale))) {} m))
 
 (def cities (utils/index-by :city-code cities/all))
-(def types types/all)
 
 (defn append-data! [locale m]
   (->>
@@ -93,9 +92,23 @@
    ;; Type
    {:path         [:type]
     :translate-fn (fn [locale {:keys [type-code] :as type}]
-                    (assoc type :type-name (-> (get types type-code)
+                    (assoc type :type-name (-> (get types/all type-code)
                                                :name
                                                locale)))}
+
+   {:path         [:search-meta :type :main-category :name :fi]
+    :translate-fn (fn [locale main-cat-fi]
+                    (-> types/main-category-by-fi-name
+                        (get main-cat-fi)
+                        :name
+                        locale))}
+
+   {:path         [:search-meta :type :sub-category :name :fi]
+    :translate-fn (fn [locale sub-cat-fi]
+                    (-> types/sub-category-by-fi-name
+                        (get sub-cat-fi)
+                        :name
+                        locale))}
 
    ;; Location
    {:path         [:location :city]
