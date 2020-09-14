@@ -1,4 +1,6 @@
-(ns lipas.data.types)
+(ns lipas.data.types
+  (:require
+   [lipas.utils :as utils]))
 
 (def main-categories
   {0
@@ -4201,3 +4203,9 @@
 
 (def by-main-category (group-by :main-category (vals all)))
 (def by-sub-category (group-by :sub-category (vals all)))
+
+(def main-category-by-fi-name
+  (utils/index-by (comp :fi :name) (vals main-categories)))
+
+(def sub-category-by-fi-name
+  (utils/index-by (comp :fi :name) (vals sub-categories)))
