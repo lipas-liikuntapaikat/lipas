@@ -450,10 +450,10 @@
 
 (re-frame/reg-event-fx
  ::change-result-page-size
- (fn [{:keys [db]} [_ page-size]]
+ (fn [{:keys [db]} [_ page-size fit-view?]]
    {:db       (assoc-in db [:search :pagination :page-size] page-size)
     :dispatch-n
-    [[::submit-search]
+    [[::submit-search fit-view?]
      #_(when (> page-size 500)
          [::set-bounding-box-filter true])]}))
 

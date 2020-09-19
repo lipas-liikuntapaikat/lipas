@@ -26,7 +26,12 @@
          (-> match :parameters :path :lipas-id))
        :start
        (fn [lipas-id]
-         (let [on-success [[:lipas.ui.map.events/show-sports-site* lipas-id]
-                           ;; Not sure if zooming is good UX-wise...
-                           [:lipas.ui.map.events/zoom-to-site lipas-id]]]
+         (let [fit-view?  false
+               on-success
+               [[:lipas.ui.map.events/show-sports-site* lipas-id]
+                ;; Not sure if zooming is good UX-wise...
+                [:lipas.ui.map.events/zoom-to-site lipas-id]
+                ;; Trigger search to reveal also sites nearby, set
+                ;; page size proper for map viewing
+                [:lipas.ui.search.events/change-result-page-size 250 fit-view?]]]
            (==> [:lipas.ui.sports-sites.events/get lipas-id on-success])))}]}]])
