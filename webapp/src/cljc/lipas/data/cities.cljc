@@ -2385,7 +2385,7 @@
     :city-code 785,
     :status "active",
     :valid-until nil,
-    :province-id 18,
+    :province-id 17,
     :avi-id 5}
    {:name {:fi "Sastamala", :se "Sastamala", :en "Sastamala"},
     :city-code 790,
