@@ -32,11 +32,14 @@
    :kiinteisto   (->wmts-url "mml_kiinteisto")})
 
 (defn ->wmts
-  [{:keys [url layer-name visible? base-layer? min-res max-res]
+  [{:keys [url layer-name visible? base-layer? min-res max-res
+           resolutions matrix-ids]
     :or   {visible?    false
            base-layer? true
            max-res     8192
-           min-res     0.25}}]
+           min-res     0.25
+           resolutions mml-resolutions
+           matrix-ids  mml-matrix-ids}}]
   (ol/layer.Tile.
    #js{:visible       visible?
        :minResolution min-res
@@ -50,8 +53,8 @@
             :tileGrid        (ol/tilegrid.WMTS.
                               #js{:origin      proj/epsg3067-top-left
                                   :extent      proj/epsg3067-extent
-                                  :resolutions mml-resolutions
-                                  :matrixIds   mml-matrix-ids})
+                                  :resolutions resolutions
+                                  :matrixIds   matrix-ids})
             :format          "png"
             :requestEncoding "REST"
             :isBaseLayer     base-layer?})}))
@@ -109,10 +112,17 @@
               :crossOrigin "anonymous"})})
     :mml-kiinteisto
     (->wmts
-     {:url        (:kiinteisto urls)
-      :min-res    0.25
-      :max-res    8
-      :layer-name "MML-Kiinteistö"})}})
+     {:url         (:kiinteisto urls)
+      ;; Source (MML WMTS) won't return anything with res 0.25 so we
+      ;; limit this layer grid to min resolution of 0.5 but allow
+      ;; zooming to 0.25. Limiting the grid has a desired effect that
+      ;; WMTS won't try to get the data and it shows geoms of
+      ;; the "previous" resolution.
+      :resolutions (.slice mml-resolutions 0 15)
+      :matrix-ids  (.slice mml-matrix-ids 0 15)
+      :min-res     0.25
+      :max-res     8
+      :layer-name  "MML-Kiinteistö"})}})
 
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
