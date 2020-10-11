@@ -720,7 +720,7 @@
          params   {:service      "WFS"
                    :version      "1.0.0"
                    :request      "GetFeature"
-                   :typeName     "vaestoruutu:vaki2018_1km"
+                   :typeName     "vaestoruutu:vaki2019_1km"
                    :outputFormat "application/json"
                    ;;:srsName      "EPSG:3067"
                    :srsName      "EPSG:4326"
