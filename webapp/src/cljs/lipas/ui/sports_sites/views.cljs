@@ -320,7 +320,7 @@
 
 (defn special-case? [type-code]
   ;; Uimahalli / jäähalli
-  (#{3110 3120 3130 2510 2520} type-code))
+  (#{3110 3130 2510 2520} type-code))
 
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
