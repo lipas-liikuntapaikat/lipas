@@ -366,7 +366,7 @@
    :helper-text
    "Valitse liikuntapaikka kartalta tai kohdista kartta haluamaasi paikkaan ja paina",
    :copyright1
-   "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2018",
+   "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2019",
    :copyright2 "1x1 km ruutuaineistoa",
    :copyright3 "lisenssillä"},
   :lipas.swimming-pool.slides
@@ -1146,7 +1146,7 @@
    :helper-text
    "Välj idrottsanläggning på kartan eller zooma in till position och klicka",
    :copyright1
-   "Befolkningsinformation: Statistikcentralen 2018 årets",
+   "Befolkningsinformation: Statistikcentralen 2019 årets",
    :copyright2 "1 km * 1 km data",
    :copyright3 "licens"},
   :lipas.swimming-pool.slides
@@ -1948,7 +1948,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :tooltip "Show demographics",
    :helper-text
    "Select sports facility on map or zoom into desired location and click",
-   :copyright1 "Statistics of Finland 2018",
+   :copyright1 "Statistics of Finland 2019",
    :copyright2 "1x1km population grid",
    :copyright3 "with license"},
   :lipas.swimming-pool.slides
