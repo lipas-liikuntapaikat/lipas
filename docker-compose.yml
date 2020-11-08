@@ -90,6 +90,9 @@ services:
       OLD_LIPAS_USER:
       OLD_LIPAS_PASS:
       ADMIN_PASSWORD:
+      ACCESSIBILITY_REGISTER_BASE_URL:
+      ACCESSIBILITY_REGISTER_SYSTEM_ID:
+      ACCESSIBILITY_REGISTER_SECRET_KEY:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'

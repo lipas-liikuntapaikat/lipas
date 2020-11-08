@@ -39,3 +39,8 @@ export MML_AUTH=`echo -n $MML_USERNAME:$MML_PASSWORD | base64`
 export OLD_LIPAS_URL=http://lipas-kehitys.cc.jyu.fi
 export OLD_LIPAS_USER=***FILL_THIS***
 export OLD_LIPAS_PASS=***FILL_THIS***
+
+# Accessibility register
+export ACCESSIBILITY_REGISTER_BASE_URL=https://asiointi.hel.fi/kapaesteettomyys_testi
+export ACCESSIBILITY_REGISTER_SYSTEM_ID=***FILL_THIS***
+export ACCESSIBILITY_REGISTER_SECRET_KEY=***FILL_THIS***

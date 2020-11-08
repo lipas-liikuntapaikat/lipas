@@ -332,7 +332,8 @@
    {:dispatch-n
     (if lipas-id
       (let [params {:lipas-id lipas-id}]
-        [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params]])
+        [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view params]
+         [:lipas.ui.accessibility.events/get-statements lipas-id]])
       [[:lipas.ui.events/navigate :lipas.ui.routes.map/map]])}))
 
 (re-frame/reg-event-fx
