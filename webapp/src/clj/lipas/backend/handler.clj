@@ -390,7 +390,27 @@
                  type-codes (-> body-params :type-codes)
                  grouping   (-> body-params (:grouping "location.city.city-code"))]
              {:status 200
-              :body   (core/calculate-stats db search city-codes type-codes grouping)}))}}]]]
+              :body   (core/calculate-stats db search city-codes type-codes grouping)}))}}]
+
+      ;; Accessibility
+      ["/actions/get-accessibility-statements"
+       {:post
+        {:parameters {:lipas-id int?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [lipas-id (-> body-params :lipas-id)]
+             {:status 200
+              :body   (core/get-accessibility-statements lipas-id)}))}}]
+
+      ["/actions/get-accessibility-app-url"
+       {:post
+        {:middleware [mw/token-auth mw/auth]
+         :parameters {:lipas-id int?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           (let [lipas-id (-> body-params :lipas-id)]
+             {:status 200
+              :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

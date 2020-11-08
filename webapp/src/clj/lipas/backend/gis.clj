@@ -6,6 +6,7 @@
   (:import [org.locationtech.jts.simplify DouglasPeuckerSimplifier]))
 
 (def srid 4326) ;; WGS84
+(def tm35fin-srid 3067)
 
 (defn- simplify-geom [m]
   (update m :geometry #(-> %
@@ -42,7 +43,14 @@
       gio/to-geojson
       (json/decode keyword)))
 
+(defn wgs84->tm35fin [[lon lat]]
+  (let [transformed (jts/transform-geom (jts/point lat lon) srid tm35fin-srid)]
+    {:easting (.getX transformed) :northing (.getY transformed)}))
+
 (comment
+
+  (wgs84->tm35fin [23.8259457479965 61.4952794263427])
+
   (def test-point
     {:type "FeatureCollection",
      :features

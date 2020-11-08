@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
+   [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
@@ -348,14 +349,23 @@
 
        ;; Tabs
        [mui/grid {:item true :xs 12}
-        [mui/tool-bar
-         [mui/tabs
-          {:value      @selected-tab
-           :on-change  #(reset! selected-tab %2)
-           :style      {:margin-bottom "1em"}
-           :text-color "secondary"}
-          [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-          [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
+        ;; [mui/tool-bar {:disableGutters true}]
+        [mui/tabs
+         {:value      @selected-tab
+          :on-change  #(reset! selected-tab %2)
+          ;; :variant    "scrollable"
+          :variant    "fullWidth"
+          :style      {:margin-bottom "1em"}
+          :text-color "secondary"}
+         [mui/tab
+          {:style {:min-width 0}
+           :label (tr :lipas.sports-site/basic-data)}]
+         [mui/tab
+          {:style {:min-width 0}
+           :label (tr :lipas.sports-site/properties)}]
+         [mui/tab
+          {:style {:min-width 0}
+           :label "Esteettömyys"}]]
 
         (when delete-dialog-open?
           [sports-sites/delete-dialog
@@ -409,7 +419,10 @@
                 :geoms        (-> edit-data :location :geometries)
                 :geom-type    geom-type
                 :problems?    problems?
-                :key          (-> edit-data :type :type-code)}]))]
+                :key          (-> edit-data :type :type-code)}])
+
+          ;; Accessibility
+          2 [accessibility/view {:lipas-id lipas-id}])]
 
        ;; Actions
        [:<>

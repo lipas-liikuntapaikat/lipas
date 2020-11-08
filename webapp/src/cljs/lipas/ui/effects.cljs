@@ -30,3 +30,8 @@
  ::navigate!
  (fn [args]
    (apply routes/navigate! args)))
+
+(re-frame/reg-fx
+ ::open-link-in-new-window!
+ (fn [url]
+   (.open js/window url)))

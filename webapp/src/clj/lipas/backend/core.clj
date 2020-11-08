@@ -4,6 +4,7 @@
    [clojure.core.async :as async]
    [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.backend.accessibility :as accessibility]
    [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
@@ -421,7 +422,14 @@
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
 
+;;; Accessibility register ;;;
 
+(defn get-accessibility-statements [lipas-id]
+  (accessibility/get-statements lipas-id))
+
+(defn get-accessibility-app-url [db user lipas-id]
+  (when-let [sports-site (get-sports-site db lipas-id)]
+    {:url (accessibility/make-app-url user sports-site)}))
 
 (comment
   (require '[lipas.backend.config :as config])
