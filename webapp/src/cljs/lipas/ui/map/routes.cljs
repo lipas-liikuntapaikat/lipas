@@ -29,6 +29,7 @@
          (let [fit-view?  false
                on-success
                [[:lipas.ui.map.events/show-sports-site* lipas-id]
+                [:lipas.ui.accessibility.events/get-statements lipas-id]
                 ;; Not sure if zooming is good UX-wise...
                 [:lipas.ui.map.events/zoom-to-site lipas-id]
                 ;; Trigger search to reveal also sites nearby, set
