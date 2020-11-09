@@ -3,6 +3,39 @@
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
+(def accessibility-types
+  #{1130
+    1120
+    2220
+    2120
+    2150
+    3220
+    3110
+    2210
+    3230
+    2330
+    2310
+    2130
+    2140
+    3210
+    2520
+    2230
+    2340
+    2320
+    3120
+    2510
+    1630
+    2350
+    2370
+    1140
+    4220
+    2360})
+
+(re-frame/reg-sub
+ ::accessibility-type?
+ (fn [_ [_ type-code]]
+   (accessibility-types type-code)))
+
 (re-frame/reg-sub
  ::all-statements
  (fn [db _]

@@ -6,7 +6,8 @@
    [lipas.ui.accessibility.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(defn view [{:keys [lipas-id]}]
+(defn view
+  [{:keys [lipas-id]}]
   (let [statements (<== [::subs/statements lipas-id])
         logged-in? (<== [:lipas.ui.user.subs/logged-in?])
         can-edit?  (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])]
@@ -23,8 +24,15 @@
                  [:li s]))]))
 
      (when (and logged-in? can-edit?)
-       [mui/button
-        {:variant  "contained"
-         :color    "secondary"
-         :on-click #(==> [::events/get-app-url lipas-id])}
-        "Täytä esteettömyyssovelluksessa"])]))
+       [:<>
+        [mui/button
+         {:variant  "contained"
+          :color    "secondary"
+          :on-click #(==> [::events/get-app-url lipas-id])}
+         "Täytä esteettömyyssovelluksessa"]
+        [mui/icon-button
+         {:style    {:margin-left "0.5em"}
+          :variant  "contained"
+          :color    "secondary"
+          :on-click #(==> [::events/get-statements lipas-id])}
+         [mui/icon "refresh"]]])]))

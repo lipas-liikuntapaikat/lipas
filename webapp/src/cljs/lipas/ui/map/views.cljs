@@ -307,7 +307,8 @@
           lipas-id     (:lipas-id display-data)
           edit-data    (:edit-data site-data)
 
-          type-code (-> display-data :type :type-code)
+          type-code           (-> display-data :type :type-code)
+          accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
@@ -363,9 +364,9 @@
          [mui/tab
           {:style {:min-width 0}
            :label (tr :lipas.sports-site/properties)}]
-         [mui/tab
-          {:style {:min-width 0}
-           :label "Esteettömyys"}]]
+         (when accessibility-type? [mui/tab
+                                    {:style {:min-width 0}
+                                     :label "Esteettömyys"}])]
 
         (when delete-dialog-open?
           [sports-sites/delete-dialog
