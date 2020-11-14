@@ -7,7 +7,8 @@
 (re-frame/reg-event-fx
  ::get-statements
  (fn [{:keys [db]} [_ lipas-id]]
-   {:http-xhrio
+   {:db (assoc-in db [:accessibility :loading?] true)
+    :http-xhrio
     {:method          :post
      :params          {:lipas-id lipas-id}
      :uri             (str (:backend-url db) "/actions/get-accessibility-statements")
@@ -18,20 +19,27 @@
 
 (def index-by-lang (partial cutils/index-by (comp keyword :language) :value))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::get-statements-success
- (fn [db [_  lipas-id data]]
+ (fn [{:keys [db]} [_  lipas-id data]]
    (let [data (->> data
                    (map #(update % :sentenceGroups index-by-lang))
                    (map #(update % :sentences (fn [coll]
-                                                (group-by (comp keyword :language) coll)))))]
-     (assoc-in db [:accessibility :statements lipas-id] data))))
+                                                (group-by (comp keyword :language) coll)))))
+
+         event (if (empty? data) "empty-response" "data-found")]
+
+     {:db       (-> db
+                    (assoc-in [:accessibility :statements lipas-id] data)
+                    (assoc-in [:accessibility :loading?] false))
+      :ga/event ["accessibility" event "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-fx
  ::get-statements-failure
- (fn [_ [_ resp]]
+ (fn [{:keys [db]} [_ resp]]
    (let [fatal? false]
-     {:ga/exception [(:message resp) fatal?]})))
+     {:db           (assoc-in db [:accessibility :loading?] false)
+      :ga/exception [(:message resp) fatal?]})))
 
 (re-frame/reg-event-fx
  ::get-app-url
@@ -44,13 +52,14 @@
        :headers         {:Authorization (str "Token " token)}
        :format          (ajax/json-request-format)
        :response-format (ajax/json-response-format {:keywords? true})
-       :on-success      [::get-app-url-success]
+       :on-success      [::get-app-url-success lipas-id]
        :on-failure      [::get-app-url-failure]}})))
 
 (re-frame/reg-event-fx
  ::get-app-url-success
- (fn [_ [_ data]]
-   {:lipas.ui.effects/open-link-in-new-window! (:url data)}))
+ (fn [_ [_ lipas-id data]]
+   {:lipas.ui.effects/open-link-in-new-window! (:url data)
+    :ga/event ["accessibility" "app-opened" "lipas-id" lipas-id]}))
 
 (re-frame/reg-event-fx
  ::get-app-url-failure
