@@ -56,3 +56,8 @@
              (fn [res group coll]
                (assoc res group (mapcat (comp #(map :value %) locale :sentences) coll)))
              {}))))))
+
+(re-frame/reg-sub
+ ::loading?
+ (fn [db _]
+   (get-in db [:accessibility :loading?])))
