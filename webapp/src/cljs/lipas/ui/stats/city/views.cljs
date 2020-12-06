@@ -83,6 +83,11 @@
       [mui/typography {:variant "h4"}
        (tr :stats/finance-stats)]]
 
+     ;; Disclaimers
+     [mui/grid {:item true :xs 12}
+      [common/disclaimer
+       {:texts [(tr :stats/finance-disclaimer)]}]]
+
      ;; Selectors
      [mui/grid {:item true}
       [mui/grid {:container true :spacing 16}

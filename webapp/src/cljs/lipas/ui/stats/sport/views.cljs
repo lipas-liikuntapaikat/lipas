@@ -51,6 +51,12 @@
       [mui/typography {:variant "h4"}
        (tr :stats/sports-stats)]]
 
+     ;; Disclaimers
+     [common/disclaimer
+      {:texts [(tr :stats/general-disclaimer-1)
+               (tr :stats/general-disclaimer-2)
+               (tr :stats/general-disclaimer-3)]}]
+
      [mui/grid {:item true :xs 12}
 
       [mui/grid {:container true :spacing 16}
