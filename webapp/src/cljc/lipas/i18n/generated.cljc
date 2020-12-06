@@ -691,7 +691,11 @@
    :steel "Teräs",
    :wood "Puu"},
   :stats
-  {:description
+  {:general-disclaimer-1 "Lipas.fi – Suomen liikuntapaikat, ulkoilureitit ja virkistysalueet: Nimeä 4.0 Kansainvälinen (CC BY 4.0)."
+   :general-disclaimer-2 "Voit vapaasti käyttää, kopioida, jakaa ja muokata aineistoa. Aineistolähteeseen tulee viitata esimerkiksi näin: Liikuntapaikat: Lipas.fi Jyväskylän yliopisto, otospäivä. Lisätietoja Creative Commons. https://creativecommons.org/licenses/by/4.0/deed.fi"
+   :general-disclaimer-3 "Huomaa, että Lipas-tietokannan tiedot perustuvat kuntien ja muiden liikuntapaikkojen omistajien Lipas-tietokantaan syöttämiin tietoihin sekä Jyväskylän yliopiston Lipas-ylläpitäjien tuottamaan aineistoon. Tietojen kattavuutta, virheettömyyttä, ajantasaisuutta ja yhdenmukaisuutta ei voida taata. Lipas.fi –tilastot -osiossa tilastojen laskenta perustuu tietokantaan tallennettuihin tietoihin. Mahdolliset puuttuvat tiedot vaikuttavat laskelmiin."
+   :finance-disclaimer "Aineistolähde: Tilastokeskus avoimet tilastoaineistot. Huomaa, että kunnat vastaavat itse virallisten taloustietojensa tallentamisesta Tilastokeskuksen tietokantaan Tilastokeskuksen ohjeiden perusteella. Tietojen yhdenmukaisuudesta tai aikasarjojen jatkuvuudesta ei voida antaa takeita."
+   :description
    "Kuntien viralliset tilinpäätöstiedot liikunta- ja  nuorisotoimien osalta. Kunta voi seurata omaa menokehitystään ja  vertailla sitä muihin kuntiin.",
    :filter-types "Rajaa tyypit",
    :length-km-sum "Liikuntareittien pituus km yhteensä",
@@ -1438,7 +1442,11 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :steel "Stål",
    :wood "Trä"},
   :stats
-  {:description
+  {:general-disclaimer-1 "Lipas.fi idrottsanläggningar, friluftsleder och friluftsområden i Finland: Erkännande 4.0 Internationell (CC BY 4.0). https://creativecommons.org/licenses/by/4.0/deed.sv"
+   :general-disclaimer-2 "Du har tillstånd att dela, kopiera och vidaredistribuera materialet oavsett medium eller format, bearbeta, remixa, transformera, och bygg vidare på materialet, för alla ändamål, även kommersiellt. Du måste ge ett korrekt erkännande om du använder Lipas-data, till exempel “Idrottsplatser: Lipas.fi, Jyväskylä Universitet, datum/år”."
+   :general-disclaimer-3 "Observera, att Lipas.fi data är uppdaterat av kommuner och andra ägare av idrottsplatser samt Lipas.fi administratörer i Jyväskylä Universitet. Omfattning, riktighet eller enhetlighet kan inte garanteras. I Lipas.fi statistik är material baserat på data i Lipas.fi databas. Återstående information kan påverka beräkningar."
+   :finance-disclaimer "Ekonomiska uppgifter av kommuners idrotts- och ungdomsväsende: Statistikcentralen öppen data. Materialet har laddats ner från Statistikcentralens gränssnittstjänst 2001-2019 med licensen CC BY 4.0. Observera, att kommunerna ansvarar själva för att uppdatera sina ekonomiska uppgifter i Statistikcentralens databas. Enhetlighet och jämförbarhet mellan åren eller kommunerna kan inte garanteras."
+   :description
    "Ekonomiska uppgifter om idrotts- och ungdomsväsende. Kommunen kan observera hur kostnader utvecklas över tid.",
    :filter-types "Välj typer",
    :length-km-sum "Idrottsrutters totalt längd ",
@@ -2261,7 +2269,11 @@ The site administrator is responsible for the accuracy of information, safety of
    :steel "Steel",
    :wood "Wood"},
   :stats
-  {:description
+  {:general-disclaimer-1 "Lipas.fi Finland’s sport venues and places, outdoor routes and recreational areas data is open data under license: Attribution 4.0 International (CC BY 4.0). https://creativecommons.org/licenses/by/4.0/deed.en."
+   :general-disclaimer-2 "You are free to use, adapt and share Lipas.fi data in any way, as long as the source is mentioned (Lipas.fi data, University of Jyväskylä, date/year of data upload or relevant information)."
+   :general-disclaimer-3 "Note, that Lipas.fi data is updated by municipalities, other owners of sport facilities and Lipas.fi administrators at the University of Jyväskylä, Finland. Data accuracy, uniformity or comparability between municipalities is not guaranteed. In the Lipas.fi statistics, all material is based on the data in Lipas database and possible missing information may affect the results."
+   :finance-disclaimer "Data on finances of sport and youth sector in municipalities: Statistics Finland open data. The material was downloaded from Statistics Finland's interface service in 2001-2019 with the license CC BY 4.0. Notice, that municipalities are responsible for updating financial information to Statistics Finland’s database. Data uniformity and data comparability between years or between municipalities is not guaranteed."
+   :description
    "Statistics of sports facilities and related municipality finances",
    :filter-types "Filter types",
    :length-km-sum "Total route length km",

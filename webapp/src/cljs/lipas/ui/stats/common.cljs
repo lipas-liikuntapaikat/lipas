@@ -1,6 +1,7 @@
 (ns lipas.ui.stats.common
   (:require
    [lipas.ui.mui :as mui]
+   [lipas.ui.components :as components]
    [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
@@ -17,3 +18,13 @@
     :color    "secondary"
     :on-click on-click}
    (tr :actions/download-excel)])
+
+(defn disclaimer [{:keys [texts]}]
+  [components/expansion-panel
+   {:label "Copyright"
+    :style {:margin-bottom "1em" :background-color mui/gray3}}
+   (into
+    [mui/card-content]
+    (for [text texts]
+      [mui/typography {:variant "body1" :paragraph true}
+       text]))])
