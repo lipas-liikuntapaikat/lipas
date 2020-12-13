@@ -230,7 +230,7 @@
            (tr :user/promo1-topic)]
           [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
            (tr :user/promo1-text)]
-          [:ul {:dense true}
+          #_[:ul {:dense true}
            [:li "Liikuntapaikat, kaikki yhteensä"]
            [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]
            [:li "Pallokentät (1310, 1320, 1330, 1340, 1370, 1380)"]
@@ -239,9 +239,9 @@
            [:li "Liikuntasalit ja -hallit (2150, 2210, 2220, 2230, 2240)"]
            [:li "Uimahallit, kylpylät ja maauimalat (3110, 3130, 3210)"]
            [:li "Polut, ladut ja reitit (4401, 4402, 4403, 4404, 4405)"]]
-          [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
-           "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
-          [mui/button
+          #_[mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+             "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
+          #_[mui/button
            {:variant  "contained"
             :color    "secondary"
             :on-click (fn []

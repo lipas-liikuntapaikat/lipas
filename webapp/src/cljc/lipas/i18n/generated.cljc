@@ -680,10 +680,10 @@
    :promo-headline "Ajankohtaista",
    :front-page-link "Siirry etusivulle",
    :promo1-text
-   "TEAviisari tiedonkeruun tekijät poimivat seuraavat tiedot LIPAS-tietojärjestelmästä 31.8.2020:",
+   "Opetus- ja kulttuuriministeriö pyytää kuntia täydentämään erityisesti sisäliikuntapaikkojen rakennusvuosien ja peruskorjausvuosien tiedot. Tieto on tärkeää mm. liikuntapaikkojen korjausvelkaa arvioitaessa.",
    :ice-stadiums-link "Jäähallit",
    :greeting "Hei {1} {2}!",
-   :promo1-topic "TEAviisari tiedonkeruu 31.8.2020"},
+   :promo1-topic "Kiitos että käytät Lipas.fi-palvelua!"},
   :building-materials
   {:brick "Tiili",
    :concrete "Betoni",
@@ -1431,10 +1431,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :promo-headline "Aktuellt",
    :front-page-link "Gå till framsidan",
    :promo1-text
-   "Kolla skolornas gymnastiksaler i Lipas! Skolor har byggts och stängts i hela landet. Hur ser det ut i din kommun?",
+   "Undervisnings- och kulturministeriet önskar att kommuner kompletterar information om byggnadsår och renoveringår om idrottsplatser inomhus. Informationen är viktig för utvärdering av renoveringsskuld i idrottsplatser.",
    :ice-stadiums-link "Ishallsportal",
    :greeting "Hej {1} {2} !",
-   :promo1-topic "Uppdatera gymnastiksaler"},
+   :promo1-topic "Tack för att du använder Lipas.fi!"},
   :building-materials
   {:brick "Tegel",
    :concrete "Betong",
