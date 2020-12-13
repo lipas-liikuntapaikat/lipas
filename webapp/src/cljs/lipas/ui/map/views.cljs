@@ -364,9 +364,11 @@
          [mui/tab
           {:style {:min-width 0}
            :label (tr :lipas.sports-site/properties)}]
-         (when accessibility-type? [mui/tab
-                                    {:style {:min-width 0}
-                                     :label "Esteettömyys"}])]
+         ;; Disabled until this can be released
+         (when (and false accessibility-type?)
+           [mui/tab
+            {:style {:min-width 0}
+             :label "Esteettömyys"}])]
 
         (when delete-dialog-open?
           [sports-sites/delete-dialog
