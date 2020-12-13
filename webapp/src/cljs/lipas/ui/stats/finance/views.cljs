@@ -107,7 +107,8 @@
      ;; Disclaimers
      [mui/grid {:item true :xs 12}
       [common/disclaimer
-       {:texts [(tr :stats/finance-disclaimer)]}]]
+       {:label (tr :stats/disclaimer-headline)
+        :texts [(tr :stats/finance-disclaimer)]}]]
 
      [mui/grid {:item true :xs 12}
 

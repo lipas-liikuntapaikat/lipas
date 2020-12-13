@@ -67,7 +67,8 @@
 
      ;; Disclaimers
      [common/disclaimer
-      {:texts [(tr :stats/general-disclaimer-1)
+      {:label (tr :stats/disclaimer-headline)
+       :texts [(tr :stats/general-disclaimer-1)
                (tr :stats/general-disclaimer-2)
                (tr :stats/general-disclaimer-3)]}]
 

@@ -19,10 +19,11 @@
     :on-click on-click}
    (tr :actions/download-excel)])
 
-(defn disclaimer [{:keys [texts]}]
+(defn disclaimer [{:keys [texts label]}]
   [components/expansion-panel
-   {:label "Copyright"
-    :style {:margin-bottom "1em" :background-color mui/gray3}}
+   {:label            label
+    :default-expanded true
+    :style            {:margin-bottom "1em" :background-color mui/gray3}}
    (into
     [mui/card-content]
     (for [text texts]
