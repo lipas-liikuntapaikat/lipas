@@ -176,6 +176,18 @@
                               :label2 "© Maanmittauslaitos"
                               :icon   [mui/icon
                                        {:style {:color "red"}}
+                                       "timeline"]}
+                             :mml-kiinteistotunnukset
+                             {:label  "Kiinteistötunnukset"
+                              :label2 "© Maanmittauslaitos"
+                              :icon   [mui/icon
+                                       {:style {:color "black"}}
+                                       "text_format"]}
+                             :mml-kuntarajat
+                             {:label  "Kuntarajat"
+                              :label2 "© Maanmittauslaitos"
+                              :icon   [mui/icon
+                                       {:style {:color "#6222BC"}}
                                        "timeline"]}}
           selected-overlays (<== [::subs/selected-overlays])]
       [:<>
