@@ -73,6 +73,24 @@ sources:
       headers:
         Authorization: Basic {MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/kiinteisto/wmts/1.0.0/kiinteistojaotus/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
+  mml_kiinteistotunnukset:
+    type: tile
+    grid: mml_grid
+    min_res: 8
+    max_res: 0.5
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/kiinteisto/wmts/1.0.0/kiinteistotunnukset/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
+  mml_kuntarajat:
+    type: tile
+    grid: mml_grid
+    http:
+      ssl_no_cert_checks: true
+      headers:
+        Authorization: Basic {MML_AUTH}
+    url: https://karttakuva.maanmittauslaitos.fi/teema/wmts/1.0.0/kuntarajat/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
 
 caches:
   mml_maastokartta_cache:
@@ -87,6 +105,12 @@ caches:
   mml_kiinteisto_cache:
     grids: [mml_grid]
     sources: [mml_kiinteisto]
+  mml_kiinteistotunnukset_cache:
+    grids: [mml_grid]
+    sources: [mml_kiinteistotunnukset]
+  mml_kuntarajat_cache:
+    grids: [mml_grid]
+    sources: [mml_kuntarajat]
 
 layers:
   - name: mml_maastokartta
@@ -101,3 +125,9 @@ layers:
   - name: mml_kiinteisto
     title: MML Kiinteistö
     sources: [mml_kiinteisto_cache]
+  - name: mml_kiinteistotunnukset
+    title: MML Kiinteistötunnukset
+    sources: [mml_kiinteistotunnukset_cache]
+  - name: mml_kuntarajat
+    title: MML Kuntarajat
+    sources: [mml_kuntarajat_cache]
