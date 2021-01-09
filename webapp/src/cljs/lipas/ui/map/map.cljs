@@ -26,10 +26,12 @@
        "/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png"))
 
 (def urls
-  {:taustakartta (->wmts-url "mml_taustakartta")
-   :maastokartta (->wmts-url "mml_maastokartta")
-   :ortokuva     (->wmts-url "mml_ortokuva")
-   :kiinteisto   (->wmts-url "mml_kiinteisto")})
+  {:taustakartta        (->wmts-url "mml_taustakartta")
+   :maastokartta        (->wmts-url "mml_maastokartta")
+   :ortokuva            (->wmts-url "mml_ortokuva")
+   :kiinteisto          (->wmts-url "mml_kiinteisto")
+   :kiinteistotunnukset (->wmts-url "mml_kiinteistotunnukset")
+   :kuntarajat          (->wmts-url "mml_kuntarajat")})
 
 (defn ->wmts
   [{:keys [url layer-name visible? base-layer? min-res max-res
@@ -122,7 +124,24 @@
       :matrix-ids  (.slice mml-matrix-ids 0 15)
       :min-res     0.25
       :max-res     8
-      :layer-name  "MML-Kiinteistö"})}})
+      :layer-name  "MML-Kiinteistö"})
+    :mml-kiinteistotunnukset
+    (->wmts
+     {:url         (:kiinteistotunnukset urls)
+      ;; Source (MML WMTS) won't return anything with res 0.25 so we
+      ;; limit this layer grid to min resolution of 0.5 but allow
+      ;; zooming to 0.25. Limiting the grid has a desired effect that
+      ;; WMTS won't try to get the data and it shows geoms of
+      ;; the "previous" resolution.
+      :resolutions (.slice mml-resolutions 0 15)
+      :matrix-ids  (.slice mml-matrix-ids 0 15)
+      :min-res     0.25
+      :max-res     8
+      :layer-name  "MML-Kiinteistötunnukset"})
+    :mml-kuntarajat
+    (->wmts
+     {:url         (:kuntarajat urls)
+      :layer-name  "MML-Kuntarajat"})}})
 
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
@@ -153,7 +172,9 @@
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
                                 (-> layers :overlays :retkikartta-snowmobile-tracks)
-                                (-> layers :overlays :mml-kiinteisto)]
+                                (-> layers :overlays :mml-kiinteisto)
+                                (-> layers :overlays :mml-kiinteistotunnukset)
+                                (-> layers :overlays :mml-kuntarajat)]
                   :overlays #js[popup-overlay]
                   :view     view}
 
