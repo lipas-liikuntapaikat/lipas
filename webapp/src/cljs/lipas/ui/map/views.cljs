@@ -376,8 +376,9 @@
          [mui/tab
           {:style {:min-width 0}
            :label (tr :lipas.sports-site/properties)}]
-         ;; Disabled until this can be released
-         (when (and false accessibility-type?)
+
+         ;; Disabled in prod until this can be released
+         (when (and (not (utils/prod?)) accessibility-type?)
            [mui/tab
             {:style {:min-width 0}
              :label "Esteettömyys"}])]
