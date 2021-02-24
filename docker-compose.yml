@@ -315,7 +315,7 @@ services:
       - elasticsearch
       - postgres
     volumes:
-      - "./legacy-api.jar:/lipas-api.jar"
+      - "./legacy-api.jar:/lipas-api.jar:z"
 
   geoserver:
     image: kartoza/geoserver:2.18.2
@@ -331,7 +331,7 @@ services:
     links:
       - postgres
     volumes:
-      - "./geoserver/data_dir:/my_data_dir"
+      - "./geoserver/data_dir:/my_data_dir:z"
 
 volumes:
   pgdata: {}
