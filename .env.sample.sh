@@ -44,3 +44,13 @@ export OLD_LIPAS_PASS=***FILL_THIS***
 export ACCESSIBILITY_REGISTER_BASE_URL=https://asiointi.hel.fi/kapaesteettomyys_testi
 export ACCESSIBILITY_REGISTER_SYSTEM_ID=***FILL_THIS***
 export ACCESSIBILITY_REGISTER_SECRET_KEY=***FILL_THIS***
+
+# Legacy API
+export LEGACY_DB_URL="//postgres:5432/lipas-legacy"
+export LEGACY_DB_USER=lipas
+export LEGACY_DB_PASS=***FILL_THIS***
+
+# Geoserver
+export GEOSERVER_DATA_DIR="/my_data_dir"
+export GEOSERVER_ADMIN_USER=admin
+export GEOSERVER_ADMIN_PASSWORD=***FILL_THIS***

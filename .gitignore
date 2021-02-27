@@ -4,3 +4,5 @@
 /certs/*
 !/certs/README.md
 *.jar
+/geoserver/*
+!/geoserver/README.md
