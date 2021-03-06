@@ -338,6 +338,11 @@ services:
 
   geoserver:
     image: kartoza/geoserver:2.18.2
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "geoserver"
     ports:
       - "8888:8080"
     environment:
