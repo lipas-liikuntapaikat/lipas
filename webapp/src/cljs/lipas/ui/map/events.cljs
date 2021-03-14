@@ -781,7 +781,7 @@
                     (assoc-in [:map :mode :population :lipas-id] nil)
                     (cond->
                         (< zoom 7) (assoc-in [:map :zoom] 7)))
-      :dispatch [::get-population]
+      :dispatch-n [[::get-population] [::get-schools]]
       :ga/event ["analysis" "show-near-by-population"]})))
 
 (re-frame/reg-event-fx
@@ -802,5 +802,46 @@
                     (assoc-in [:map :mode :population :geoms] geoms)
                     (assoc-in [:map :mode :population :lipas-id] lipas-id)
                     (assoc-in [:map :mode :population :site-name] (:name rev)))
-      :dispatch [::get-population]
+      :dispatch-n [[::get-population] [::get-schools]]
       :ga/event ["analysis" "show-sports-site-population" lipas-id]})))
+
+
+(re-frame/reg-event-fx
+ ::get-schools
+ (fn [{:keys [db]} [_ cb]]
+   (let [bbox     (resolve-bbox db)
+         base-url "/tilastokeskus/geoserver/oppilaitokset/ows?"
+         params   {:service      "WFS"
+                   :version      "1.0.0"
+                   :request      "GetFeature"
+                   :typeName     "oppilaitokset:oppilaitokset"
+                   :outputFormat "application/json"
+                   ;;:srsName      "EPSG:3067"
+                   :srsName      "EPSG:4326"
+                   :bbox         bbox}]
+     {:http-xhrio
+      {:method          :get
+       :uri             (-> base-url url/url (assoc :query params) str (subs 3))
+       :response-format (ajax/raw-response-format)
+       :on-success      [::get-schools-success cb]
+       :on-failure      [::get-schools-failure]}})))
+
+(re-frame/reg-event-fx
+ ::get-schools-success
+ (fn [{:keys [db]} [_ cb resp]]
+   {:db         (assoc-in db [:map :schools :data] (js/JSON.parse resp))
+    :dispatch-n (if cb (cb resp) [])}))
+
+(re-frame/reg-event-fx
+ ::get-schools-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:errors :population (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
+
+(re-frame/reg-event-fx
+ ::toggle-overlay
+ (fn [{:keys [db]} [_ val layer]]
+   {:db (update-in db [:map :selected-overlays] (if val conj disj) layer)}))

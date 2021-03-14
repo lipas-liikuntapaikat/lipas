@@ -168,6 +168,7 @@
 (def stepper (mui->reagent "Stepper"))
 (def svg-icon (mui->reagent "SvgIcon"))
 (def swipeable-drawer (mui->reagent "SwipeableDrawer"))
+(def switch (mui->reagent "Switch"))
 (def tab (mui->reagent "Tab"))
 (def table (mui->reagent "Table"))
 (def table-body (mui->reagent "TableBody"))

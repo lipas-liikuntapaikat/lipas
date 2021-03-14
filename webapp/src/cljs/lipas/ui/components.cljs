@@ -65,3 +65,4 @@
 (def edit-actions-list misc/edit-actions-list)
 (def li misc/li)
 (def sub-heading misc/sub-heading)
+(def switch checkboxes/switch)

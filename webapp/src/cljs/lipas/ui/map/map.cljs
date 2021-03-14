@@ -94,6 +94,12 @@
          :style      styles/population-style
          :name       "population"
          :renderMode "image"})
+    :schools
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
+         :style      styles/school-style
+         :name       "schools"
+         :renderMode "image"})
     :light-traffic
     (ol/layer.Image.
      #js{:visible false
@@ -140,8 +146,8 @@
       :layer-name  "MML-Kiinteistötunnukset"})
     :mml-kuntarajat
     (->wmts
-     {:url         (:kuntarajat urls)
-      :layer-name  "MML-Kuntarajat"})}})
+     {:url        (:kuntarajat urls)
+      :layer-name "MML-Kuntarajat"})}})
 
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
@@ -167,6 +173,7 @@
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
                                 (-> layers :overlays :population)
+                                (-> layers :overlays :schools)
                                 (-> layers :overlays :vectors)
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :markers)
@@ -195,6 +202,12 @@
                               :style     styles/population-hover-style
                               :multi     false
                               :condition ol/events.condition.pointerMove})
+
+        schools-hover (ol/interaction.Select.
+                       #js{:layers    #js[(-> layers :overlays :schools)]
+                           :style     styles/school-hover-style
+                           :multi     false
+                           :condition ol/events.condition.pointerMove})
 
         select (ol/interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
@@ -249,6 +262,18 @@
                       :type      :population
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
+    (.on schools-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :school
+                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
     ;; It's not possible to have multiple selects with
     ;; same "condition" (at least I couldn't get it
     ;; working). Therefore we have to detect which layer we're
@@ -290,7 +315,8 @@
      {:select           select
       :vector-hover     vector-hover
       :marker-hover     marker-hover
-      :population-hover population-hover}
+      :population-hover population-hover
+      :schools-hover    schools-hover}
      :overlays {:popup popup-overlay}}))
 
 (defn any-intersects? [fs f buffer]
@@ -341,9 +367,32 @@
         map-ctx)
       map-ctx)))
 
+(defn show-schools!
+  [{:keys [layers] :as map-ctx}
+   {:keys [data geoms lipas-id]}]
+  (-> layers :overlays :schools .getSource .clear)
+
+  ;; Add selected style to sports-site feature
+  ;;(when lipas-id (display-as-selected map-ctx lipas-id))
+  (when lipas-id
+    (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
+
+  (when data
+    (let [fs  (map-utils/->ol-features data)
+          res #js[]]
+
+      (doseq [f fs]
+        ;;(.setStyle f styles/school-style)
+        (.set f "selected" true)
+        (.push res f))
+
+      (-> layers :overlays :schools .getSource (.addFeatures fs))))
+
+  map-ctx)
+
 ;; Browsing and selecting features
 (defn set-default-mode!
-  [map-ctx {:keys [lipas-id address sub-mode population]}]
+  [map-ctx {:keys [lipas-id address sub-mode population schools]}]
   (let [population? (= sub-mode :population)
         map-ctx     (-> map-ctx
                         editing/clear-edits!
@@ -359,11 +408,14 @@
       address     (map-utils/show-address-marker! address)
       population? (->
                    ;; map-utils/enable-population-hover!
-                   (show-population! population)))))
+                   (show-population! population))
+      population? (->
+                   (show-schools! schools)
+                   (map-utils/enable-schools-hover!)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce address sub-mode population]}]
+   {:keys [lipas-id fit-nonce address sub-mode population schools]}]
   (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
         pop? (= sub-mode :population)]
     (cond-> map-ctx
@@ -374,7 +426,9 @@
       fit?     (map-utils/fit-to-extent!
                 (-> layers :overlays :vectors .getSource .getExtent))
       address  (map-utils/show-address-marker! address)
-      pop?     (show-population! population))))
+      pop?     (show-population! population)
+      pop?     (-> (show-schools! schools)
+                   (map-utils/enable-schools-hover!)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)

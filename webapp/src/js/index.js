@@ -196,6 +196,7 @@ import StepContent from '@material-ui/core/StepContent';
 import StepLabel from '@material-ui/core/StepLabel';
 import Stepper from '@material-ui/core/Stepper';
 import SvgIcon from '@material-ui/core/SvgIcon';
+import Switch from '@material-ui/core/Switch';
 import SwipeableDrawer from '@material-ui/core/SwipeableDrawer';
 import Tab from '@material-ui/core/Tab';
 import Table from '@material-ui/core/Table';
@@ -280,6 +281,7 @@ window.mui = {
   Stepper,
   SvgIcon,
   SwipeableDrawer,
+  Switch,
   Tab,
   Table,
   TableBody,
