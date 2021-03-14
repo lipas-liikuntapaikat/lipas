@@ -98,7 +98,9 @@
         firstname (-> user :user-data :firstname)
         lastname  (-> user :user-data :lastname)
 
-        saved-searches (<== [::subs/saved-searches])]
+        saved-searches (<== [::subs/saved-searches])
+
+        experimental-features? (<== [::subs/experimental-features?])]
 
     [mui/grid {:container true :spacing 8 :style {:padding 8}}
 
@@ -242,15 +244,28 @@
           #_[mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
              "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
           #_[mui/button
-           {:variant  "contained"
-            :color    "secondary"
-            :on-click (fn []
-                        (==> [:lipas.ui.search.events/clear-filters])
-                        (==> [:lipas.ui.search.events/set-filters-by-permissions])
-                        (==> [:lipas.ui.search.events/set-type-filter teaviisari-types])
-                        (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
-           (tr :user/promo1-link)]
-          ]]]]]]))
+             {:variant  "contained"
+              :color    "secondary"
+              :on-click (fn []
+                          (==> [:lipas.ui.search.events/clear-filters])
+                          (==> [:lipas.ui.search.events/set-filters-by-permissions])
+                          (==> [:lipas.ui.search.events/set-type-filter teaviisari-types])
+                          (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
+             (tr :user/promo1-link)]
+
+
+          ]]]]]
+
+     ;; Experimental features
+     [mui/grid {:item true :xs 12}
+      [mui/card card-props
+       [mui/card-header {:title "Experimental features"}]
+       [mui/card-content
+        [lui/checkbox
+         {:label     "Enable experimental features"
+          :value     experimental-features?
+          :on-change #(==> [::events/toggle-experimental-features])}]]]]
+     ]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

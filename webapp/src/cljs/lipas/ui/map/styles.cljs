@@ -18,6 +18,17 @@
             :anchor #js[0.5 0.85]
             :offset #js[0 0]})}))
 
+(defn ->school-style [opts]
+  (ol/style.Style.
+   #js{:image
+       (ol/style.Icon.
+        #js{:src    (str "data:image/svg+xml;charset=utf-8,"
+                         (-> opts
+                             svg/->school-str
+                             js/encodeURIComponent))
+            :anchor #js[0.0 0.0]
+            :offset #js[0 0]})}))
+
 (def blue-marker-style (->marker-style {}))
 (def red-marker-style (->marker-style {:color mui/secondary}))
 (def default-stroke (ol/style.Stroke. #js{:color "#3399CC" :width 3}))
@@ -310,3 +321,17 @@
       500  (population-zone3 3)
       5000 (population-zone3 4)
       (population-zone3 5))))
+
+(def school-colors
+  {"11" {:name "Peruskoulut" :color "#C17B0D"}
+   "12" {:name "Peruskouluasteen erityiskoulut" :color "#C2923E"}
+   "15" {:name "Lukiot" :color "#4A69C2"}
+   "19" {:name "Perus- ja lukioasteen koulut" :color "#0D3BC1"}})
+
+(defn school-style [f resolution]
+  (let [color (:color (get school-colors (.get f "oltyp")))]
+    (->school-style {:color color :width 24 :height 24})))
+
+(defn school-hover-style [f resolution]
+  (let [color (:color (get school-colors (.get f "oltyp")))]
+    (->school-style {:color color :width 24 :height 24 :hover? true})))

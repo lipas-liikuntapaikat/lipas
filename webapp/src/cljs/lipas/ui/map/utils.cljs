@@ -125,6 +125,10 @@
   [map-ctx]
   (enable-hover! map-ctx :population-hover))
 
+(defn enable-schools-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :schools-hover))
+
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
   (let [layer (-> layers :overlays :edits)

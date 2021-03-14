@@ -22,3 +22,15 @@
                    {:icon (r/as-element icon)})
                  (when checked-icon
                    {:checked-icon (r/as-element checked-icon)}))])}]])
+
+(defn switch
+  [{:keys [label value on-change]}]
+  [mui/form-group
+   [mui/form-control-label
+    {:label label
+     :control
+     (r/as-element
+      [mui/switch
+       {:value value
+        :checked value
+        :on-change #(on-change (-> % .-target .-checked))}])}]])

@@ -38,6 +38,12 @@
    (-> db :map :selected-overlays)))
 
 (re-frame/reg-sub
+ ::overlay-visible?
+ :<- [::selected-overlays]
+ (fn [overlays [_ layer]]
+   (contains? overlays layer)))
+
+(re-frame/reg-sub
  ::center
  (fn [db _]
    (-> db :map :center)))
@@ -133,15 +139,27 @@
    (-> db :map :population)))
 
 (re-frame/reg-sub
+ ::schools-data
+ (fn [db _]
+   (-> db :map :schools :data)))
+
+(re-frame/reg-sub
+ ::schools
+ (fn [db _]
+   (-> db :map :schools)))
+
+(re-frame/reg-sub
  ::mode
  :<- [::content-padding]
  :<- [::mode*]
- :<- [::population]
- (fn [[content-padding mode {:keys [data]}] _]
+ :<- [::population-data]
+ :<- [::schools-data]
+ (fn [[content-padding mode population schools] _]
    (let [default? (= (:name mode) :default)]
      (cond-> mode
        true     (assoc :content-padding content-padding)
-       default? (assoc-in [:population :data] data)))))
+       default? (assoc-in [:population :data] population)
+       default? (assoc-in [:schools :data] schools)))))
 
 (re-frame/reg-sub
  ::editing-lipas-id

@@ -295,6 +295,16 @@
           [mui/table-cell
            [mui/typography v]]]))]]))
 
+(defmethod popup-body :school [popup]
+  (let [data   (-> popup :data :features first :properties)]
+    [mui/paper
+     {:style
+      {:padding "0.5em"}}
+     [mui/typography {:variant "body2"}
+      (:onimi data)]
+     [mui/typography {:variant "caption"}
+      (:oltyp_nimi data)]]))
+
 (defn popup []
   (let [{:keys [data anchor-el]
          :or   {type :default}
@@ -1096,7 +1106,11 @@
         data-bar      (<== [::subs/population-bar-chart-data])
         data-area     (<== [::subs/population-area-chart-data])
         selected-site (<== [::subs/selected-population-center])
-        labels        (<== [::subs/population-labels])]
+        labels        (<== [::subs/population-labels])
+
+        show-sports-sites? (<== [::subs/overlay-visible? :vectors])
+        show-population?   (<== [::subs/overlay-visible? :population])
+        show-schools?      (<== [::subs/overlay-visible? :schools])]
 
     [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
 
@@ -1116,6 +1130,24 @@
          [mui/icon "location_on"]]
         [mui/grid {:item true}
          [mui/typography selected-site]]])
+
+     ;; Switches
+     [mui/grid {:item true :xs 12}
+
+      [lui/switch
+       {:label     "Show sports facilities"
+        :value     show-sports-sites?
+        :on-change #(==> [::events/toggle-overlay % :vectors])}]
+
+      [lui/switch
+       {:label     "Show population grid"
+        :value     show-population?
+        :on-change #(==> [::events/toggle-overlay % :population])}]
+
+      [lui/switch
+       {:label     "Show schools"
+        :value     show-schools?
+        :on-change #(==> [::events/toggle-overlay % :schools])}]]
 
      ;; No data available text
      (when (and selected-site (empty? data-bar))
