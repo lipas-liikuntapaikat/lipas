@@ -388,6 +388,8 @@ import lineIntersect from '@turf/line-intersect';
 import lineSplit from '@turf/line-split';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
 import truncate from '@turf/truncate';
+import distance from '@turf/distance';
+import { point } from '@turf/helpers';
 
 window.turf = {
   bbox,
@@ -399,4 +401,6 @@ window.turf = {
   lineSplit,
   nearestPointOnLine,
   truncate,
+  distance,
+  point,
 };

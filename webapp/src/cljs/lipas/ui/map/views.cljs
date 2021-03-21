@@ -1110,7 +1110,19 @@
 
         show-sports-sites? (<== [::subs/overlay-visible? :vectors])
         show-population?   (<== [::subs/overlay-visible? :population])
-        show-schools?      (<== [::subs/overlay-visible? :schools])]
+        show-schools?      (<== [::subs/overlay-visible? :schools])
+
+        selected-tab (<== [::subs/selected-analysis-tab])
+
+        sports-site-distances   (<== [::subs/sports-site-distances])
+        sports-sites-view       (<== [::subs/sports-sites-view])
+        sports-sites-chart-data (<== [::subs/sports-sites-chart-data])
+
+        school-distances   (<== [::subs/school-distances])
+        schools-view       (<== [::subs/schools-view])
+        schools-chart-data (<== [::subs/schools-chart-data])
+
+        selected-types (<== [:lipas.ui.search.subs/types-filter])]
 
     [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
 
@@ -1137,17 +1149,17 @@
       [lui/switch
        {:label     "Show sports facilities"
         :value     show-sports-sites?
-        :on-change #(==> [::events/toggle-overlay % :vectors])}]
+        :on-change #(==> [::events/set-overlay % :vectors])}]
 
       [lui/switch
        {:label     "Show population grid"
         :value     show-population?
-        :on-change #(==> [::events/toggle-overlay % :population])}]
+        :on-change #(==> [::events/set-overlay % :population])}]
 
       [lui/switch
        {:label     "Show schools"
         :value     show-schools?
-        :on-change #(==> [::events/toggle-overlay % :schools])}]]
+        :on-change #(==> [::events/set-overlay % :schools])}]]
 
      ;; No data available text
      (when (and selected-site (empty? data-bar))
@@ -1170,38 +1182,114 @@
            (tr :general/here)]
           "."]]])
 
-     ;; Bar chart
-     (when (seq data-bar)
-       [mui/grid {:item true :xs 12}
-        [charts/population-bar-chart
-         {:data   data-bar
-          :labels labels}]])
-
-     ;; Area chart
-     (when (seq data-area)
-       [mui/grid {:item true :xs 12}
-        [charts/population-area-chart
-         {:data   data-area
-          :labels labels}]])
-
-     ;; Tilastokeskus copyright notice (demographics data)
+     ;; Analysis tabs
      [mui/grid {:item true :xs 12}
-      [mui/typography {:variant "caption"}
-       "© "
-       (tr :map.demographics/copyright1)
-       " "
-       [mui/link
-        {:href      "https://bit.ly/2WzrRwf"
-         :underline "always"}
-        (tr :map.demographics/copyright2)]
-       " "
-       (tr :map.demographics/copyright3)
-       " "
-       [mui/link
-        {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
-         :underline "always"}
-        "CC BY 4.0"]
-       "."]]
+      [mui/tabs {:value      selected-tab
+                 :on-change  #(==> [::events/select-analysis-tab %2])
+                 :style      {:margin-bottom "1em"}
+                 :text-color "secondary"}
+       [mui/tab {:label "Sports sites" :value :sports-sites}]
+       [mui/tab {:label "Population" :value :population}]
+       [mui/tab {:label "Schools" :value :schools}]]]
+
+     ;; Sports-sites tab
+     (when (= selected-tab "sports-sites")
+       [:<>
+        [mui/grid {:item true :xs 12}
+         [lui/type-category-selector
+          {:value     selected-types
+           :on-change #(==> [:lipas.ui.search.events/set-type-filter %])}]]
+
+        [mui/grid {:item :true :xs 12}
+         [mui/tabs {:value          sports-sites-view
+                    :indicatorColor "primary"
+                    :variant        "fullWidth"
+
+                    :on-change #(==> [::events/select-sports-sites-view %2])}
+          [mui/tab {:icon (r/as-element [mui/icon "list"]) :value "list"}]
+          [mui/tab {:icon (r/as-element [mui/icon "analytics"]) :value "chart"}]]]
+
+        (when (= sports-sites-view "list")
+          [mui/grid {:item :true :xs 12}
+           (into [mui/list]
+                 (for [m sports-site-distances]
+                   [mui/list-item
+                    {:divider true}
+                    [mui/list-item-text
+                     {:primary   (:name m)
+                      :secondary (str (:type m) " " (:distance m) "km")}]]))])
+
+        (when (= sports-sites-view "chart")
+          [mui/grid {:item :true :xs 12}
+           [charts/sports-sites-bar-chart
+            {:data   sports-sites-chart-data
+             :labels {:zone1 "0-2km"
+                      :zone2 "2-5km"
+                      :zone3 "5-10km"}}]])])
+
+     ;; Population tab
+     (when (= selected-tab "population")
+       [:<>
+
+        ;; Bar chart
+        (when (seq data-bar)
+          [mui/grid {:item true :xs 12}
+           [charts/population-bar-chart
+            {:data   data-bar
+             :labels labels}]])
+
+        ;; Area chart
+        (when (seq data-area)
+          [mui/grid {:item true :xs 12}
+           [charts/population-area-chart
+            {:data   data-area
+             :labels labels}]])
+
+        ;; Tilastokeskus copyright notice (demographics data)
+        [mui/grid {:item true :xs 12}
+         [mui/typography {:variant "caption"}
+          "© "
+          (tr :map.demographics/copyright1)
+          " "
+          [mui/link
+           {:href      "https://bit.ly/2WzrRwf"
+            :underline "always"}
+           (tr :map.demographics/copyright2)]
+          " "
+          (tr :map.demographics/copyright3)
+          " "
+          [mui/link
+           {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
+            :underline "always"}
+           "CC BY 4.0"]
+          "."]]])
+
+     ;; Schools tab
+     (when (= selected-tab "schools")
+       [mui/grid {:item true :xs 12}
+        [mui/tabs {:value          schools-view
+                   :indicatorColor "primary"
+                   :variant        "fullWidth"
+
+                   :on-change #(==> [::events/select-schools-view %2])}
+         [mui/tab {:icon (r/as-element [mui/icon "list"]) :value "list"}]
+         [mui/tab {:icon (r/as-element [mui/icon "analytics"]) :value "chart"}]]
+
+        (when (= schools-view "list")
+          (into [mui/list]
+                (for [m school-distances]
+                  [mui/list-item
+                   {:divider true}
+                   [mui/list-item-text
+                    {:primary   (:name m)
+                     :secondary (str (:type m) " " (:distance m) "km")}]])))
+
+        (when (= schools-view "chart")
+          [charts/schools-bar-chart
+           {:data   schools-chart-data
+            :labels {:zone1 "0-2km"
+                     :zone2 "2-5km"
+                     :zone3 "5-10km"}}])])
 
      ;; Small nest where floating controls can "land"
      [mui/grid {:item true :xs 12 :style {:height "70px"}}]]))

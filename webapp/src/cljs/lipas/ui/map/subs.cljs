@@ -1,9 +1,11 @@
 (ns lipas.ui.map.subs
   (:require
+   ["turf" :as turf]
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
    [lipas.utils :as utils]
+   [lipas.ui.utils :as ui-utils]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
 
@@ -403,6 +405,22 @@
    (-> mode :population :site-name)))
 
 (re-frame/reg-sub
+ ::analytics-center-fcoll
+ (fn [db _]
+   (-> db :map :mode :population :geoms)))
+
+(re-frame/reg-sub
+ ::analytics-center-point
+ :<- [::analytics-center-fcoll]
+ (fn [fcoll _]
+   (let [geom (-> fcoll :features first :geometry)]
+     (when geom
+      (case (:type geom)
+        "Point"      (-> geom :coordinates)
+        "LineString" (-> geom :coordinates first)
+        "Polygon"    (-> geom :coordinates first first))))))
+
+(re-frame/reg-sub
  ::population-labels
  (fn [db _]
    (let [tr (-> db :translator)]
@@ -470,3 +488,132 @@
                   :age-15-64 (->> ms (map :ika_15_64) (reduce pos+ 0))
                   :age-65-   (->> ms (map :ika_65_) (reduce pos+ 0))})) [])
         (sort-by :zone))))
+
+(re-frame/reg-sub
+ ::analysis
+ (fn [db _]
+   (-> db :map :analysis)))
+
+(re-frame/reg-sub
+ ::selected-analysis-tab
+ :<- [::analysis]
+ (fn [analysis _]
+   (:selected-tab analysis)))
+
+(re-frame/reg-sub
+ ::sports-site-distances
+ :<- [:lipas.ui.search.subs/search-results-fast]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.subs/locale]
+ (fn [[search-results types locale] _]
+   (let [results (gobj/getValueByKeys search-results "hits" "hits")]
+     (->> results
+          (map (fn [result]
+                 (let [doc       (gobj/get result "_source")
+                       type-code (gobj/getValueByKeys doc "type" "type-code")]
+                   {:name      (gobj/get doc "name")
+                    :type-code type-code
+                    :type      (get-in types [type-code :name locale])
+                    :distance
+
+                    (/ (min
+                        (js/Number (gobj/getValueByKeys result "fields" "distance-start-m"))
+                        (js/Number (gobj/getValueByKeys result "fields" "distance-center-m"))
+                        (js/Number (gobj/getValueByKeys result "fields" "distance-end-m")))
+                       1000)})))))))
+
+(re-frame/reg-sub
+ ::sports-sites-view
+ :<- [::analysis]
+ (fn [analysis _]
+   (-> analysis :sports-sites :view)))
+
+(re-frame/reg-sub
+ ::zones
+ :<- [::analysis]
+ (fn [analysis _]
+   (:zones analysis)))
+
+(re-frame/reg-sub
+ ::sports-sites-chart-data
+ :<- [::sports-site-distances]
+ :<- [::zones]
+ (fn [[data zones] _]
+   (->> data
+        (map
+         (fn [{:keys [distance] :as m}]
+           (assoc m :zone (some #(and (<= distance (:max %))
+                                      (:id %))
+                                zones))))
+        (remove (comp nil? :zone))
+        (group-by :type)
+        (map
+         (fn [[type vs]]
+           (let [by-zone (group-by :zone vs)]
+             {:type type
+              :zone1 (-> :zone1 by-zone count)
+              :zone2 (-> :zone2 by-zone count)
+              :zone3 (-> :zone3 by-zone count)})))
+        (sort-by (juxt :zone1 :zone2 :zone3) utils/reverse-cmp))))
+
+(re-frame/reg-sub
+ ::school-distances
+ :<- [::schools-data]
+ :<- [::mode]
+ :<- [:lipas.ui.subs/locale]
+ (fn [[^js schools-data mode locale] _]
+   (let [{:keys [lon lat]} (-> mode :population :center)
+         ref-coords        (when (and lon lat)
+                             #js[lon lat])]
+     (when (and ref-coords schools-data)
+       (->> (gobj/get schools-data "features")
+            (map (fn [school]
+                   (let [props  (gobj/get school "properties")
+                         geom   (gobj/get school "geometry")
+                         coords (gobj/get geom "coordinates")]
+                     {:name     (gobj/get props "onimi")
+                      :type     (gobj/get props "oltyp_nimi")
+                      :distance (turf/distance ref-coords coords)})))
+            (sort-by :distance))))))
+
+(re-frame/reg-sub
+ ::schools-view
+ :<- [::analysis]
+ (fn [analysis _]
+   (-> analysis :schools :view)))
+
+(re-frame/reg-sub
+ ::zones
+ :<- [::analysis]
+ (fn [analysis _]
+   (:zones analysis)))
+
+(re-frame/reg-sub
+ ::schools-chart-data
+ :<- [::school-distances]
+ :<- [::zones]
+ (fn [[data zones] _]
+   (->> data
+        (map
+         (fn [{:keys [distance] :as m}]
+           (assoc m :zone (some #(and (<= distance (:max %))
+                                      (:id %))
+                                zones))))
+        (remove (comp nil? :zone))
+        (group-by :type)
+        (map
+         (fn [[type vs]]
+           (let [by-zone (group-by :zone vs)]
+             {:type type
+              :zone1 (-> :zone1 by-zone count)
+              :zone2 (-> :zone2 by-zone count)
+              :zone3 (-> :zone3 by-zone count)})))
+        (sort-by (juxt :zone1 :zone2 :zone3) utils/reverse-cmp))))
+
+(comment
+  (def zones [{:min 0 :max 2 :id 1}
+              {:min 2 :max 5 :id 2}
+              {:min 5 :max 10 :id 3}])
+
+  frequencies
+  (some #(and (<= 4.25 (:max %)) (:id %)) zones))
