@@ -124,7 +124,8 @@
           rgba (doto rgb (.push alpha))]
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
-(defn ->symbol-style [m & {hover? :hover selected? :selected planned? :planned}]
+(defn ->symbol-style
+  [m & {hover? :hover selected? :selected planned? :planned planning? :planning}]
   (let [fill-alpha   (case (:shape m)
                        "polygon" (if hover? 0.3 0.2)
                        0.85)
@@ -138,6 +139,7 @@
         stroke-hover-width (* 2 stroke-width)
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
+
         stroke-planned     (ol/style.Stroke.
                             #js{:color    "#3b3b3b"
                                 :lineDash #js[2 20]
@@ -145,45 +147,63 @@
                                 :width    (if (#{"polygon" "linestring"} (:shape m))
                                             10
                                             5)})
-        stroke             (ol/style.Stroke.
-                            #js{:color    stroke-color
-                                :lineDash (when (or selected? hover?)
-                                            #js[2 8])
-                                :width    (if (or selected? hover?)
-                                            stroke-hover-width
-                                            stroke-width)})
-        on-top?            (or selected? hover?)
-        style              (ol/style.Style.
-                            #js{:stroke stroke
-                                :fill   fill
-                                :zIndex (condp = (:shape m)
-                                          "polygon"    (if on-top? 100 99)
-                                          "linestring" (if on-top? 200 199)
-                                          (if on-top? 300 299))
-                                :image
-                                (when-not (#{"polygon" "linestring"} (:shape m))
-                                  (ol/style.Circle.
-                                   #js{:radius (cond
-                                                 hover?   8
-                                                 planned? 7
-                                                 :else    7)
-                                       :fill   fill
-                                       :stroke
-                                       (cond
-                                         planned? (ol/style.Stroke.
-                                                   #js{:color    "black"
-                                                       :width    3
-                                                       :lineDash #js [2 5]})
-                                         hover?   hover-stroke
-                                         :else    stroke-black)}))})
-        planned-stroke     (ol/style.Style.
-                            #js{:stroke stroke-planned})]
+
+        stroke-planning (ol/style.Stroke.
+                         #js{:color    "#ee00ee"
+                             :lineDash #js[2 20]
+                                        ; :lineDashOffset 1
+                             :width    (if (#{"polygon" "linestring"} (:shape m))
+                                         10
+                                         5)})
+
+        stroke         (ol/style.Stroke.
+                        #js{:color    stroke-color
+                            :lineDash (when (or selected? hover?)
+                                        #js[2 8])
+                            :width    (if (or selected? hover?)
+                                        stroke-hover-width
+                                        stroke-width)})
+        on-top?        (or selected? hover?)
+        style          (ol/style.Style.
+                        #js{:stroke stroke
+                            :fill   fill
+                            :zIndex (condp = (:shape m)
+                                      "polygon"    (if on-top? 100 99)
+                                      "linestring" (if on-top? 200 199)
+                                      (if on-top? 300 299))
+                            :image
+                            (when-not (#{"polygon" "linestring"} (:shape m))
+                              (ol/style.Circle.
+                               #js{:radius (cond
+                                             hover?    8
+                                             planning? 7
+                                             planned?  7
+                                             :else     7)
+                                   :fill   fill
+                                   :stroke
+                                   (cond
+                                     planning? (ol/style.Stroke.
+                                                #js{:color    "#ee00ee"
+                                                    :width    3
+                                                    :lineDash #js [2 5]})
+                                     planned? (ol/style.Stroke.
+                                               #js{:color    "black"
+                                                   :width    3
+                                                   :lineDash #js [2 5]})
+                                     hover?   hover-stroke
+                                     :else    stroke-black)}))})
+        planned-stroke (ol/style.Style.
+                        #js{:stroke stroke-planned})
+
+        planning-stroke (ol/style.Style.
+                         #js{:stroke stroke-planning})]
 
     (if (and selected? (:shape m))
       #js[style blue-marker-style]
-      (if planned?
-        #js[style planned-stroke]
-        #js[style]))))
+      (cond
+        planning? #js[style planning-stroke]
+        planned?  #js[style planned-stroke]
+        :else     #js[style]))))
 
 (def styleset styles/adapted-temp-symbols)
 
@@ -199,6 +219,9 @@
 (def planned-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planned true))) {} styleset))
 
+(def planning-symbols
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
+
 (defn shift-likely-overlapping!
   [type-code style resolution f]
   (when (#{4402} type-code)
@@ -211,8 +234,9 @@
 (defn feature-style [f resolution]
   (let [type-code (.get f "type-code")
         status    (.get f "status")
-        style     (if (= "planned" status)
-                    (get planned-symbols type-code)
+        style     (condp = status
+                    "planning" (get planning-symbols type-code)
+                    "planned"  (get planned-symbols type-code)
                     (get symbols type-code))]
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))

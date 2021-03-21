@@ -414,6 +414,8 @@
 
 (defn population-bar-chart
   [{:keys [data labels on-click]}]
+  (prn labels)
+  (prn data)
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    (into
     [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
@@ -448,3 +450,29 @@
     (for [k [:age-0-14 :age-15-64 :age-65-]]
       [:> rc/Area
        {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
+
+(defn sports-sites-bar-chart
+  [{:keys [data labels on-click]}]
+  (prn data)
+  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+   (into
+    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> rc/Legend {:content (partial legend labels)}]
+     [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+     [:> rc/XAxis {:dataKey "type" :tick font-styles :type "category"}]
+     [:> rc/YAxis {:tick font-styles}]]
+    (for [zone [:zone1 :zone2 :zone3]]
+      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zones zone)}]))])
+
+(defn schools-bar-chart
+  [{:keys [data labels on-click]}]
+  (prn data)
+  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+   (into
+    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> rc/Legend {:content (partial legend labels)}]
+     [:> rc/Tooltip {:content (partial subsidies-tooltip labels)}]
+     [:> rc/XAxis {:dataKey "type" :tick font-styles :type "category"}]
+     [:> rc/YAxis {:tick font-styles}]]
+    (for [zone [:zone1 :zone2 :zone3]]
+      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zones zone)}]))])

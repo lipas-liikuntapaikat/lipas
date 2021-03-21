@@ -14,4 +14,14 @@
     :replace-existing? true}
    :address-search
    {:base-url     "https://api.digitransit.fi/geocoding/v1"
-    :dialog-open? false}})
+    :dialog-open? false}
+   :analysis
+   {:selected-tab "sports-sites"
+    :zones
+    [{:min 0 :max 2 :id :zone1}
+     {:min 2 :max 5 :id :zone2}
+     {:min 5 :max 10 :id :zone3}]
+    :sports-sites
+    {:view "list"}
+    :schools
+    {:view "list"}}})

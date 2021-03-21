@@ -683,6 +683,8 @@
 
 ;; Population events ;;
 
+;; TODO rename to analysis
+
 (re-frame/reg-event-fx
  ::show-population
  (fn [{:keys [db]} _]
@@ -698,7 +700,12 @@
             (assoc-in [:map :population :data] nil)
             (assoc-in [:map :population :selected] nil)
             (assoc-in [:map :mode :population] nil)
-            (update-in  [:map :mode] dissoc :sub-mode))}))
+            (assoc-in [:map :schools :data] nil)
+            (update-in  [:map :mode] dissoc :sub-mode))
+    :dispatch-n [[::set-overlay true :vectors]
+                 [::set-overlay false :schools]
+                 [::set-overlay false :population]
+                 [:lipas.ui.search.events/clear-filters]]}))
 
 (defn- calc-buffered-bbox [fcoll buffer]
   (let [fs     (-> fcoll clj->js map-utils/->ol-features)
@@ -779,9 +786,10 @@
      {:db       (-> db
                     (assoc-in [:map :mode :population :geoms] f)
                     (assoc-in [:map :mode :population :lipas-id] nil)
-                    (cond->
+                    (assoc-in [:map :mode :population :center] coords)
+                    #_(cond->
                         (< zoom 7) (assoc-in [:map :zoom] 7)))
-      :dispatch-n [[::get-population] [::get-schools]]
+      :dispatch-n [[::get-population] [::get-schools] [::submit-search]]
       :ga/event ["analysis" "show-near-by-population"]})))
 
 (re-frame/reg-event-fx
@@ -792,18 +800,38 @@
        {:dispatch [:lipas.ui.sports-sites.events/get lipas-id on-success]})
      {})))
 
+;; TODO resolve closest point in case of LineString / Polygon
+(defn resolve-coords-js [js-fcoll]
+  (let [geom (-> js-fcoll .-features (aget 0) .-geometry)]
+    (case (.-type geom)
+      "Point"      (-> geom .-coordinates)
+      "LineString" (-> geom .-coordinates (aget 0))
+      "Polygon"    (-> geom .-coordinates (aget 0) (aget 0)))))
+
+(defn resolve-coords [fcoll]
+  (let [geom (-> fcoll :features first :geometry)]
+    (case (:type geom)
+      "Point"      (-> geom :coordinates)
+      "LineString" (-> geom :coordinates first)
+      "Polygon"    (-> geom :coordinates first first))))
+
 (re-frame/reg-event-fx
  ::show-sports-site-population*
  (fn [{:keys [db]} [_ lipas-id]]
-   (let [latest (get-in db [:sports-sites lipas-id :latest])
-         rev    (get-in db [:sports-sites lipas-id :history latest])
-         geoms  (-> rev :location :geometries)]
-     {:db       (-> db
+   (let [latest    (get-in db [:sports-sites lipas-id :latest])
+         rev       (get-in db [:sports-sites lipas-id :history latest])
+         geoms     (-> rev :location :geometries)
+         [lon lat] (resolve-coords geoms)
+         coords    {:lon lon :lat lat}]
+     {:db         (-> db
                     (assoc-in [:map :mode :population :geoms] geoms)
                     (assoc-in [:map :mode :population :lipas-id] lipas-id)
+                    (assoc-in [:map :mode :population :center] coords)
                     (assoc-in [:map :mode :population :site-name] (:name rev)))
-      :dispatch-n [[::get-population] [::get-schools]]
-      :ga/event ["analysis" "show-sports-site-population" lipas-id]})))
+      :dispatch-n [[::get-population]
+                   [::get-schools]
+                   [:lipas.ui.search.events/submit-search false]]
+      :ga/event   ["analysis" "show-sports-site-population" lipas-id]})))
 
 
 (re-frame/reg-event-fx
@@ -842,6 +870,21 @@
                   :success? false}]})))
 
 (re-frame/reg-event-fx
- ::toggle-overlay
+ ::set-overlay
  (fn [{:keys [db]} [_ val layer]]
    {:db (update-in db [:map :selected-overlays] (if val conj disj) layer)}))
+
+(re-frame/reg-event-db
+ ::select-analysis-tab
+ (fn [db [_ tab]]
+   (assoc-in db [:map :analysis :selected-tab] tab)))
+
+(re-frame/reg-event-db
+ ::select-sports-sites-view
+ (fn [db [_ view]]
+   (assoc-in db [:map :analysis :sports-sites :view] view)))
+
+(re-frame/reg-event-db
+ ::select-schools-view
+ (fn [db [_ view]]
+   (assoc-in db [:map :analysis :schools :view] view)))
