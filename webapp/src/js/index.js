@@ -3,9 +3,11 @@ import proj4 from 'proj4';
 window.proj4 = proj4;
 
 // OpenLayers
+import Circle from 'ol/geom/Circle';
 import CircleStyle from 'ol/style/Circle';
 import Collection from 'ol/Collection';
 import Draw from 'ol/interaction/Draw';
+import Feature from 'ol/Feature';
 import Fill from 'ol/style/Fill';
 import GeoJSON from 'ol/format/GeoJSON';
 import GeometryCollection from 'ol/geom/GeometryCollection';
@@ -33,12 +35,13 @@ import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
 import {pointerMove} from 'ol/events/condition';
 import {register} from 'ol/proj/proj4';
+import WKT from 'ol/format/WKT';
 
 // Openlayers-Extensions
 import DrawHole from 'ol-ext/interaction/DrawHole';
 
 window.ol = {
-  Map, View, Overlay, Collection,
+  Map, View, Overlay, Collection, Feature,
   layer: {
     Tile: TileLayer,
     Image: ImageLayer,
@@ -79,6 +82,7 @@ window.ol = {
   },
   format: {
     GeoJSON,
+    WKT,
   },
   interaction: {
     Draw,
@@ -96,6 +100,7 @@ window.ol = {
     GeometryCollection,
     MultiPoint,
     Point,
+    Circle,
   },
 };
 
@@ -356,15 +361,17 @@ import ContentCut from 'mdi-material-ui/ContentCut';
 import ContentDuplicate from 'mdi-material-ui/ContentDuplicate';
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
+import Helicopter from 'mdi-material-ui/Helicopter';
 import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 
 window.materialIcons = {
-  Calculator,
   ContentCut,
   ContentDuplicate,
   Eraser,
   FileUpload,
+  Helicopter,
   MapSearchOutline,
+  Calculator,
 };
 
 // React virtualized
@@ -380,6 +387,7 @@ window.reactVirtualized = {
 
 // Turf.js
 import bbox from '@turf/bbox';
+import bufferTurf from '@turf/buffer';
 import cleanCoords from '@turf/clean-coords';
 import combine from '@turf/combine';
 import kinks from '@turf/kinks';
@@ -393,6 +401,7 @@ import { point } from '@turf/helpers';
 
 window.turf = {
   bbox,
+  buffer: bufferTurf,
   cleanCoords,
   combine,
   kinks,
@@ -403,4 +412,9 @@ window.turf = {
   truncate,
   distance,
   point,
+};
+
+// rc-slider
+window.rcslider = {
+  Slider: require('rc-slider'),
 };

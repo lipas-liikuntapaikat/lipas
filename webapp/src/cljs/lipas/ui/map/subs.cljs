@@ -15,10 +15,10 @@
  :<- [::selected-sports-site]
  :<- [::mode*]
  (fn [[adding? selected-site mode] _]
-   (let [population? (-> mode :sub-mode (= :population))]
+   (let [analysis? (-> mode :sub-mode (= :analysis))]
      (cond
        adding?       :adding
-       population?   :population
+       analysis?     :analysis
        selected-site :site
        :else         :search))))
 
@@ -27,7 +27,7 @@
  :<- [::view]
  :<- [:lipas.ui.search.subs/search-results-view]
  (fn [[view result-view] _]
-   (and (= :list result-view) (#{:search :population} view))))
+   (and (= :list result-view) (#{:search :analysis} view))))
 
 (re-frame/reg-sub
  ::basemap
@@ -119,11 +119,13 @@
  ::content-padding
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
- (fn [[screen-size drawer-open?] _]
-   (let [margin 20]
+ :<- [::sub-mode]
+ (fn [[screen-size drawer-open? sub-mode] _]
+   (let [margin       20
+         drawer-width (if (= :analysis sub-mode) 700 430)]
      (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
-       [margin margin margin (+ margin 430)])))) ;; drawer width is 430px
+       [margin margin margin (+ margin drawer-width)]))))
 
 (re-frame/reg-sub
  ::mode*
@@ -131,37 +133,21 @@
    (-> db :map :mode)))
 
 (re-frame/reg-sub
- ::population-data
- (fn [db _]
-   (-> db :map :population :data)))
-
-(re-frame/reg-sub
- ::population
- (fn [db _]
-   (-> db :map :population)))
-
-(re-frame/reg-sub
- ::schools-data
- (fn [db _]
-   (-> db :map :schools :data)))
-
-(re-frame/reg-sub
- ::schools
- (fn [db _]
-   (-> db :map :schools)))
+ ::sub-mode
+ :<- [::mode*]
+ (fn [mode _]
+   (:sub-mode mode)))
 
 (re-frame/reg-sub
  ::mode
  :<- [::content-padding]
  :<- [::mode*]
- :<- [::population-data]
- :<- [::schools-data]
- (fn [[content-padding mode population schools] _]
-   (let [default? (= (:name mode) :default)]
+ :<- [:lipas.ui.analysis.subs/analysis]
+ (fn [[content-padding mode analysis] _]
+   (let [analysis? (= (:sub-mode mode) :analysis)]
      (cond-> mode
-       true     (assoc :content-padding content-padding)
-       default? (assoc-in [:population :data] population)
-       default? (assoc-in [:schools :data] schools)))))
+       true      (assoc :content-padding content-padding)
+       analysis? (assoc :analysis analysis)))))
 
 (re-frame/reg-sub
  ::editing-lipas-id
@@ -390,230 +376,3 @@
  ::sub-mode
  (fn [db _]
    (-> db :map :mode :sub-mode)))
-
-;; Demographics ;;
-
-(re-frame/reg-sub
- ::selected-population
- (fn [db _]
-   (-> db :map :population :selected)))
-
-(re-frame/reg-sub
- ::selected-population-center
- :<- [::mode*]
- (fn [mode _]
-   (-> mode :population :site-name)))
-
-(re-frame/reg-sub
- ::analytics-center-fcoll
- (fn [db _]
-   (-> db :map :mode :population :geoms)))
-
-(re-frame/reg-sub
- ::analytics-center-point
- :<- [::analytics-center-fcoll]
- (fn [fcoll _]
-   (let [geom (-> fcoll :features first :geometry)]
-     (when geom
-      (case (:type geom)
-        "Point"      (-> geom :coordinates)
-        "LineString" (-> geom :coordinates first)
-        "Polygon"    (-> geom :coordinates first first))))))
-
-(re-frame/reg-sub
- ::population-labels
- (fn [db _]
-   (let [tr (-> db :translator)]
-     {:zone1     "0-2 km"
-      :zone2     "2-5 km"
-      :zone3     "5-10 km"
-      :range1    "2 km"
-      :range2    "5 km"
-      :range3    "10 km"
-      :age-0-14  (str "0-14" (tr :duration/years-short))
-      :age-15-64 (str "15-64" (tr :duration/years-short))
-      :age-65-   (str "65" (tr :duration/years-short) "-")
-      :men       (tr :general/men)
-      :women     (tr :general/women)
-      :total     (tr :general/total-short)})))
-
-;; Tilastokeskus won't display demographics if population is less than
-;; 10 (for privacy reasons). Missing data is encoded as -1 in data and
-;; we decided to treat -1 as zero when calculating total sums.
-(defn- pos+ [a b]
-  (+ (if (<= 0 a) a 0) (if (<= 0 b) b 0)))
-
-(re-frame/reg-sub
- ::population-chart-data
- :<- [::selected-population]
- (fn [fcoll _]
-   (let [ks [:ika_0_14 :ika_15_64 :ika_65_ :naiset :miehet :vaesto :zone]
-         fs (->> fcoll :features (map (comp #(select-keys % ks) :properties)))]
-     (->> fs
-          (group-by :zone)))))
-
-(re-frame/reg-sub
- ::population-bar-chart-data
- :<- [::population-chart-data]
- :<- [::population-labels]
- (fn [[data labels] _]
-   (->> data
-        (reduce
-           (fn [res [zone ms]]
-             (let [zk (keyword (str "zone" zone))]
-               (-> res
-                   (assoc-in [:age-0-14 zk] (->> ms (map :ika_0_14) (reduce pos+ 0)))
-                   (assoc-in [:age-15-64 zk] (->> ms (map :ika_15_64) (reduce pos+ 0)))
-                   (assoc-in [:age-65- zk] (->> ms (map :ika_65_) (reduce pos+ 0)))
-                   (assoc-in [:men zk] (->> ms (map :miehet) (reduce pos+ 0)))
-                   (assoc-in [:women zk] (->> ms (map :naiset) (reduce pos+ 0)))
-                   (assoc-in [:total zk] (->> ms (map :vaesto) (reduce pos+ 0))))))
-           {})
-        (map (fn [[k v]] (assoc v :group (labels k)))))))
-
-(defn parse-km [s]
-  (-> s (string/split " ") first utils/->int))
-
-(re-frame/reg-sub
- ::population-area-chart-data
- :<- [::population-chart-data]
- :<- [::population-labels]
- (fn [[data labels] _]
-   (->> data
-        (reduce
-         (fn [res [zone ms]]
-           (conj res
-                 {:zone      (labels (keyword (str "zone" zone)))
-                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+ 0))
-                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+ 0))
-                  :age-65-   (->> ms (map :ika_65_) (reduce pos+ 0))})) [])
-        (sort-by :zone))))
-
-(re-frame/reg-sub
- ::analysis
- (fn [db _]
-   (-> db :map :analysis)))
-
-(re-frame/reg-sub
- ::selected-analysis-tab
- :<- [::analysis]
- (fn [analysis _]
-   (:selected-tab analysis)))
-
-(re-frame/reg-sub
- ::sports-site-distances
- :<- [:lipas.ui.search.subs/search-results-fast]
- :<- [:lipas.ui.sports-sites.subs/all-types]
- :<- [:lipas.ui.subs/locale]
- (fn [[search-results types locale] _]
-   (let [results (gobj/getValueByKeys search-results "hits" "hits")]
-     (->> results
-          (map (fn [result]
-                 (let [doc       (gobj/get result "_source")
-                       type-code (gobj/getValueByKeys doc "type" "type-code")]
-                   {:name      (gobj/get doc "name")
-                    :type-code type-code
-                    :type      (get-in types [type-code :name locale])
-                    :distance
-
-                    (/ (min
-                        (js/Number (gobj/getValueByKeys result "fields" "distance-start-m"))
-                        (js/Number (gobj/getValueByKeys result "fields" "distance-center-m"))
-                        (js/Number (gobj/getValueByKeys result "fields" "distance-end-m")))
-                       1000)})))))))
-
-(re-frame/reg-sub
- ::sports-sites-view
- :<- [::analysis]
- (fn [analysis _]
-   (-> analysis :sports-sites :view)))
-
-(re-frame/reg-sub
- ::zones
- :<- [::analysis]
- (fn [analysis _]
-   (:zones analysis)))
-
-(re-frame/reg-sub
- ::sports-sites-chart-data
- :<- [::sports-site-distances]
- :<- [::zones]
- (fn [[data zones] _]
-   (->> data
-        (map
-         (fn [{:keys [distance] :as m}]
-           (assoc m :zone (some #(and (<= distance (:max %))
-                                      (:id %))
-                                zones))))
-        (remove (comp nil? :zone))
-        (group-by :type)
-        (map
-         (fn [[type vs]]
-           (let [by-zone (group-by :zone vs)]
-             {:type type
-              :zone1 (-> :zone1 by-zone count)
-              :zone2 (-> :zone2 by-zone count)
-              :zone3 (-> :zone3 by-zone count)})))
-        (sort-by (juxt :zone1 :zone2 :zone3) utils/reverse-cmp))))
-
-(re-frame/reg-sub
- ::school-distances
- :<- [::schools-data]
- :<- [::mode]
- :<- [:lipas.ui.subs/locale]
- (fn [[^js schools-data mode locale] _]
-   (let [{:keys [lon lat]} (-> mode :population :center)
-         ref-coords        (when (and lon lat)
-                             #js[lon lat])]
-     (when (and ref-coords schools-data)
-       (->> (gobj/get schools-data "features")
-            (map (fn [school]
-                   (let [props  (gobj/get school "properties")
-                         geom   (gobj/get school "geometry")
-                         coords (gobj/get geom "coordinates")]
-                     {:name     (gobj/get props "onimi")
-                      :type     (gobj/get props "oltyp_nimi")
-                      :distance (turf/distance ref-coords coords)})))
-            (sort-by :distance))))))
-
-(re-frame/reg-sub
- ::schools-view
- :<- [::analysis]
- (fn [analysis _]
-   (-> analysis :schools :view)))
-
-(re-frame/reg-sub
- ::zones
- :<- [::analysis]
- (fn [analysis _]
-   (:zones analysis)))
-
-(re-frame/reg-sub
- ::schools-chart-data
- :<- [::school-distances]
- :<- [::zones]
- (fn [[data zones] _]
-   (->> data
-        (map
-         (fn [{:keys [distance] :as m}]
-           (assoc m :zone (some #(and (<= distance (:max %))
-                                      (:id %))
-                                zones))))
-        (remove (comp nil? :zone))
-        (group-by :type)
-        (map
-         (fn [[type vs]]
-           (let [by-zone (group-by :zone vs)]
-             {:type type
-              :zone1 (-> :zone1 by-zone count)
-              :zone2 (-> :zone2 by-zone count)
-              :zone3 (-> :zone3 by-zone count)})))
-        (sort-by (juxt :zone1 :zone2 :zone3) utils/reverse-cmp))))
-
-(comment
-  (def zones [{:min 0 :max 2 :id 1}
-              {:min 2 :max 5 :id 2}
-              {:min 5 :max 10 :id 3}])
-
-  frequencies
-  (some #(and (<= 4.25 (:max %)) (:id %)) zones))
