@@ -160,6 +160,7 @@
 (def radio-group (mui->reagent "RadioGroup"))
 (def select (mui->reagent "Select"))
 (def slide (mui->reagent "Slide"))
+(def slider (mui->reagent "Slider"))
 (def snackbar (mui->reagent "Snackbar"))
 (def snackbar-content (mui->reagent "SnackbarContent"))
 (def step (mui->reagent "Step"))

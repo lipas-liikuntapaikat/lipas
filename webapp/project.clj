@@ -41,7 +41,15 @@
    [tea-time "1.0.0"]
    [etaoin "0.2.8-SNAPSHOT"]
    [clj-http "3.9.1"]
-   [factual/geo "3.0.0-rc-2"]]
+   [factual/geo "3.0.0-rc-2"]
+   [com.google.maps/google-maps-services "0.18.0"]
+   [org.apache.commons/commons-math3 "3.6.1"]
+   [org.apache.commons/commons-lang3 "3.12.0"]
+   [org.apache.commons/commons-math "2.2"]
+   [org.locationtech.geowave/geowave-analytic-api "1.2.0"
+    :exclusions
+    [[org.locationtech.geowave/geowave-adapter-raster]
+     [org.locationtech.geowave/geowave-adapter-vector]]]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]
@@ -122,19 +130,20 @@
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
                          "recharts" "proj4" "cljsjs.react-autosuggest"
-                         "turf" "react-select"]
+                         "turf" "react-select" "rcslider"]
         :global-exports {ol        ol        zipcelx            zipcelx
                          filesaver filesaver react              React
                          react-dom ReactDOM  "react-dom/server" ReactDOMServer
                          mui       mui       proj4              proj4
                          recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         turf      turf      react-select       ReactSelect}}]
+                         turf      turf      react-select       ReactSelect
+                         rcslider  rcslider}}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "/js/compiled/out"
       :source-map-timestamp true
       :preloads             [devtools.preload day8.re-frame-10x.preload
-                             ;Re-frisk.preload
+                                        ;Re-frisk.preload
                              ]
       :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
       :external-config      {:devtools/config {:features-to-install :all}}}}

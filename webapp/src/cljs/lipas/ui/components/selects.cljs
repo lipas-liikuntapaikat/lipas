@@ -209,7 +209,7 @@
                 (map :type-code))
            type-codes])))
 
-(defn type-category-selector [{:keys [value on-change]}]
+(defn type-category-selector [{:keys [value on-change label]}]
   (let [cats         (<== [:lipas.ui.sports-sites.subs/type-categories])
         tr           (<== [:lipas.ui.subs/translator])
         locale       (tr)
@@ -221,7 +221,7 @@
      {:items          cats
       :value          (map (partial str "type-") value)
       :show-all?      true
-      :label          (tr :search/search)
+      :label          (or label (tr :search/search))
       :value-fn       :cat-id
       :label-fn       (fn [item] (str (:type-code item) " " (-> item :name locale)))
       :label-style-fn (fn [item label]

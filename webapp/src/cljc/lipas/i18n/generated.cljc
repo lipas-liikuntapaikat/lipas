@@ -4,7 +4,9 @@
 
 (def dicts
   {:fi
- {:sport
+   {:analysis
+    {:headline "Analyysi"}
+    :sport
   {:description
    "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista  liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa.",
    :headline "Liikuntapaikat",

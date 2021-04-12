@@ -2,6 +2,7 @@
   (:require
    ["ol" :as ol]
    [goog.object :as gobj]
+   [lipas.ui.analysis.events :as analysis-events]
    [lipas.ui.map.editing :as editing]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.projection :as proj]
@@ -88,10 +89,16 @@
      #js{:source     (ol/source.Vector.)
          :style      styles/blue-marker-style
          :renderMode "image"})
-    :population
+    :analysis
     (ol/layer.Vector.
      #js{:source     (ol/source.Vector.)
          :style      styles/population-style
+         :name       "analysis"
+         :renderMode "image"})
+    :population
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
+         :style      styles/population-style2
          :name       "population"
          :renderMode "image"})
     :schools
@@ -172,6 +179,7 @@
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
+                                (-> layers :overlays :analysis)
                                 (-> layers :overlays :population)
                                 (-> layers :overlays :schools)
                                 (-> layers :overlays :vectors)
@@ -199,7 +207,7 @@
 
         population-hover (ol/interaction.Select.
                           #js{:layers    #js[(-> layers :overlays :population)]
-                              :style     styles/population-hover-style
+                              :style     styles/population-hover-style2
                               :multi     false
                               :condition ol/events.condition.pointerMove})
 
@@ -312,64 +320,42 @@
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
      :interactions*
-     {:select           select
-      :vector-hover     vector-hover
-      :marker-hover     marker-hover
-      :population-hover population-hover
-      :schools-hover    schools-hover}
+     {:select                select
+      :vector-hover          vector-hover
+      :marker-hover          marker-hover
+      :population-hover      population-hover
+      :schools-hover         schools-hover}
      :overlays {:popup popup-overlay}}))
-
-(defn any-intersects? [fs f buffer]
-  (when-not (empty? fs)
-    (let [extent (-> fs (aget 0) .getGeometry .getExtent)]
-      (.forEach fs (fn [f']
-                     (ol/extent.extend extent (-> f' .getGeometry .getExtent))))
-      (let [buffered (ol/extent.buffer extent buffer)]
-        (ol/extent.intersects buffered (-> f .getGeometry .getExtent))))))
-
-;; Zones idea (within 2km,5km,10km) roughly from
-;; https://www.oulu.fi/paikkatieto/Liikuntapaikkojen%20saavutettavuus.pdf
-;; (pages 27-30)
-(defn resolve-zone
-  [geom-fs population-f]
-  (cond
-    (any-intersects? geom-fs population-f 2000)  [1 styles/population-zone1-fn]
-    (any-intersects? geom-fs population-f 5000)  [2 styles/population-zone2-fn]
-    (any-intersects? geom-fs population-f 10000) [3 styles/population-zone3-fn]))
 
 (defn show-population!
   [{:keys [layers] :as map-ctx}
-   {:keys [data geoms lipas-id]}]
-  (-> layers :overlays :population .getSource .clear)
-  (let [geom-fs (when geoms (map-utils/->ol-features (clj->js geoms)))]
+   {:keys [population geoms lipas-id]}]
+
+  (let [source  (-> layers :overlays :population .getSource)]
+
+    (.clear source)
 
     ;; Add selected style to sports-site feature
     ;;(when lipas-id (display-as-selected map-ctx lipas-id))
     (when lipas-id
       (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
 
-    (if data
-      (let [fs  (map-utils/->ol-features data)
-            res #js[]]
+    (when-let [data (:data2 population)]
+      (doseq [m    data
+              :let [f (map-utils/<-wkt (:coords m))]]
+        (.set f "ika_65_" (:ika_65_ m))
+        (.set f "ika_15_64" (:ika_15_64 m))
+        (.set f "ika_0_14" (:ika_0_14 m))
+        (.set f "vaesto" (:vaesto m))
+        (.set f "miehet" (:miehet m))
+        (.set f "naiset" (:naiset m))
+        (.addFeature source f)))
 
-        (doseq [f    fs
-                :let [[zone style] (resolve-zone geom-fs f)]]
-
-          (when zone
-            (.setStyle f style)
-            (.set f "selected" true)
-            (.set f "zone" zone)
-            (.push res f)))
-
-        (-> layers :overlays :population .getSource (.addFeatures fs))
-        (==> [::events/set-selected-population-grid (-> res map-utils/->geoJSON-clj)])
-
-        map-ctx)
-      map-ctx)))
+    map-ctx))
 
 (defn show-schools!
   [{:keys [layers] :as map-ctx}
-   {:keys [data geoms lipas-id]}]
+   {:keys [schools geoms lipas-id]}]
   (-> layers :overlays :schools .getSource .clear)
 
   ;; Add selected style to sports-site feature
@@ -377,24 +363,22 @@
   (when lipas-id
     (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
 
-  (when data
-    (let [fs  (map-utils/->ol-features data)
-          res #js[]]
-
-      (doseq [f fs]
-        ;;(.setStyle f styles/school-style)
-        (.set f "selected" true)
-        (.push res f))
-
-      (-> layers :overlays :schools .getSource (.addFeatures fs))))
+  (when-let [data (:data schools)]
+    (doseq [m data]
+      (let [source (-> layers :overlays :schools .getSource)
+            f      (map-utils/<-wkt (:coords m))]
+        (.set f "name" (:name m))
+        (.set f "type" (:type m))
+        #_(.set f "selected" true)
+        (.addFeature source f))))
 
   map-ctx)
 
 ;; Browsing and selecting features
 (defn set-default-mode!
-  [map-ctx {:keys [lipas-id address sub-mode population schools]}]
-  (let [population? (= sub-mode :population)
-        map-ctx     (-> map-ctx
+  [map-ctx {:keys [lipas-id address sub-mode analysis]}]
+  (let [analysis? (= sub-mode :analysis)
+        map-ctx   (-> map-ctx
                         editing/clear-edits!
                         map-utils/clear-population!
                         map-utils/unselect-features!
@@ -404,31 +388,34 @@
                         map-utils/enable-marker-hover!
                         map-utils/enable-select!)]
     (cond-> map-ctx
-      lipas-id    (map-utils/select-sports-site! lipas-id)
-      address     (map-utils/show-address-marker! address)
-      population? (->
-                   ;; map-utils/enable-population-hover!
-                   (show-population! population))
-      population? (->
-                   (show-schools! schools)
-                   (map-utils/enable-schools-hover!)))))
+      lipas-id  (map-utils/select-sports-site! lipas-id)
+      address   (map-utils/show-address-marker! address)
+      analysis? (->
+                 (map-utils/enable-population-hover!)
+                 (show-population! analysis)
+                 (show-schools! analysis)
+                 (map-utils/enable-schools-hover!)
+                 (map-utils/draw-analytics-buffer! analysis)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce address sub-mode population schools]}]
-  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
-        pop? (= sub-mode :population)]
+   {:keys [lipas-id fit-nonce address sub-mode analysis]}]
+  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
+        analysis? (= sub-mode :analysis)]
     (cond-> map-ctx
-      true     (map-utils/clear-markers!)
-      true     (map-utils/unselect-features!)
-      true     (map-utils/clear-population!)
-      lipas-id (map-utils/select-sports-site! lipas-id)
-      fit?     (map-utils/fit-to-extent!
-                (-> layers :overlays :vectors .getSource .getExtent))
-      address  (map-utils/show-address-marker! address)
-      pop?     (show-population! population)
-      pop?     (-> (show-schools! schools)
-                   (map-utils/enable-schools-hover!)))))
+      true      (map-utils/clear-markers!)
+      true      (map-utils/unselect-features!)
+      true      (map-utils/clear-population!)
+      lipas-id  (map-utils/select-sports-site! lipas-id)
+      fit?      (map-utils/fit-to-extent!
+                 (-> layers :overlays :vectors .getSource .getExtent))
+      address   (map-utils/show-address-marker! address)
+      analysis? (->
+                 (map-utils/enable-population-hover!)
+                 (show-population! analysis)
+                 (show-schools! analysis)
+                 (map-utils/enable-schools-hover!)
+                 (map-utils/draw-analytics-buffer! analysis)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)

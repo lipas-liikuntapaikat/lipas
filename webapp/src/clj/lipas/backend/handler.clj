@@ -410,7 +410,35 @@
          (fn [{:keys [body-params identity]}]
            (let [lipas-id (-> body-params :lipas-id)]
              {:status 200
-              :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]]]
+              :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]
+
+      ;;; Analysis ;;;
+
+      ;; Search Schools
+      ["/actions/search-schools"
+       {:post
+        {:no-doc false
+         :handler
+         (fn [{:keys [body-params]}]
+           (core/search-schools search body-params))}}]
+
+      ;; Search population
+      ["/actions/search-population"
+       {:post
+        {:no-doc false
+         :handler
+         (fn [{:keys [body-params]}]
+           (core/search-population search body-params))}}]
+
+      ;; Calc distances and travel-times
+      ["/actions/calc-distances-and-travel-times"
+       {:post
+        {:no-doc false
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/calc-distances-and-travel-times search body-params)})}}]
+      ]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

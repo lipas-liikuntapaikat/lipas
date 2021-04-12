@@ -346,16 +346,50 @@
       5000 (population-zone3 4)
       (population-zone3 5))))
 
+(defn population-style2
+  [f _resolution]
+  (let [n (.get f "vaesto")]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "blue"})
+         :fill default-fill
+         :image
+         (ol/style.Circle.
+          #js{:radius (min 7 (* 0.01 n))
+              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+              :stroke default-stroke})})))
+
+(defn population-hover-style2
+  [f _resolution]
+  (let [n (.get f "vaesto")]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "blue"})
+         :fill default-fill
+         :image
+         (ol/style.Circle.
+          #js{:radius (min 7 (* 0.01 n))
+              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+              :stroke hover-stroke})})))
+
 (def school-colors
-  {"11" {:name "Peruskoulut" :color "#C17B0D"}
-   "12" {:name "Peruskouluasteen erityiskoulut" :color "#C2923E"}
-   "15" {:name "Lukiot" :color "#4A69C2"}
-   "19" {:name "Perus- ja lukioasteen koulut" :color "#0D3BC1"}})
+  {"Peruskoulut"
+   {:name "Peruskoulut" :color "#C17B0D"}
+   "Peruskouluasteen erityiskoulut"
+   {:name "Peruskouluasteen erityiskoulut" :color "#C2923E"}
+   "Lukiot"
+   {:name "Lukiot" :color "#4A69C2"}
+   "Perus- ja lukioasteen koulut"
+   {:name "Perus- ja lukioasteen koulut" :color "#0D3BC1"}
+   "Varhaiskasvatusyksikkö"
+   {:name "Varhaiskasvatusyksikkö" :color "#ff40ff"}})
 
 (defn school-style [f resolution]
-  (let [color (:color (get school-colors (.get f "oltyp")))]
+  (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24})))
 
 (defn school-hover-style [f resolution]
-  (let [color (:color (get school-colors (.get f "oltyp")))]
+  (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24 :hover? true})))

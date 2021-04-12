@@ -112,7 +112,7 @@
   ([params]
    (->es-search-body params false))
   ([{:keys [filters string center distance sort decay?
-            locale pagination zoom bbox]} terse?]
+            locale pagination zoom bbox geom]} terse?]
    (let [string            (resolve-query-string string)
          bbox?             (and
                             (> zoom 3)
@@ -229,12 +229,20 @@
                    {:type.type-code type-codes}}
                   {:match_all {}})
                 :filter
-                (merge
-                 {:geo_distance
-                  {:distance "15km"
-                   :search-meta.location.wgs84-point
-                   {:lon lon
-                    :lat lat}}})}})
+                {:geo_shape
+                 {:search-meta.location.geometries
+                  {:shape    (if (= "Point" (-> geom :type))
+                               {:type        "circle"
+                                :coordinates (-> geom :coordinates)
+                                :radius      (str distance "m")}
+                               geom)
+                   :relation "intersects"}}}
+
+                #_ {:geo_distance
+                    {:distance (str distance "m")
+                     :search-meta.location.wgs84-point
+                     {:lon lon
+                      :lat lat}}}}})
 
        (cond-> params
          bbox?           (add-filter (->geo-intersects-filter bbox))
@@ -312,9 +320,9 @@
 
 (defn analysis-mode? [db]
   (and (= :default (-> db :map :mode :name))
-       (= :population (-> db :map :mode :sub-mode))
-       (-> db :map :mode :population :center :lon)
-       (-> db :map :mode :population :center :lat)))
+       (= :analysis (-> db :map :mode :sub-mode))
+       (-> db :analysis :center :lon)
+       (-> db :analysis :center :lat)))
 
 (defn- collect-search-data [db]
   (let [analysis? (analysis-mode? db)]
@@ -327,10 +335,13 @@
         (assoc :bbox {:top-left     (-> db :map :top-left-wgs84)
                       :bottom-right (-> db :map :bottom-right-wgs84)})
         (assoc :center (if analysis?
-                         (-> db :map :mode :population :center)
+                         (-> db :analysis :center)
                          (-> db :map :center-wgs84)))
-        (assoc :distance (/ (max (-> db :map :width)
-                                 (-> db :map :height)) 2)))))
+        (assoc :geom (-> db :analysis :buffer-geom :features first :geometry))
+        (assoc :distance (if analysis?
+                           (-> db :analysis :distance-km (* 1000))
+                           (/ (max (-> db :map :width)
+                                   (-> db :map :height)) 2))))))
 
 (re-frame/reg-event-fx
  ::submit-search
