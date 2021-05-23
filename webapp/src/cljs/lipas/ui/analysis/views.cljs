@@ -302,11 +302,23 @@
        [:<>
 
         ;; Site name
-        [mui/grid {:item true :xs 12 :container true :align-items "center"}
+        [mui/grid
+         {:item        true
+          :xs          12
+          :container   true
+          :justify     "space-between"
+          :align-items "center"}
          [mui/grid {:item true}
-          [mui/icon "location_on"]]
-         [mui/grid {:item true}
-          [mui/typography selected-site]]]
+          [mui/grid {:container true :align-items "center"}
+           [mui/grid {:item true}
+            [mui/icon "location_on"]]
+           [mui/grid {:item true}
+            [mui/typography selected-site]]]]
+         [mui/grid {:item true :style {:padding-right "1em"}}
+          [lui/download-button
+           {:size     "small"
+            :on-click #(==> [::events/create-report])
+            :label    "Export report"}]]]
 
         ;; Switches
         [mui/grid {:container true :style {:padding "1em"}}
@@ -335,14 +347,11 @@
             :value     show-schools?
             :on-change #(==> [::map-events/set-overlay % :schools])}]]]
 
-        ;; Distance selector
-        #_[mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
-         [distance-selector]]
-
-        ;; Distance selector v2
+        ;; Zones selector
         [mui/grid {:item true :xs 12}
          [zones-selector]]
 
+        ;; Travel profile selector
         [mui/grid {:item true :xs 12}
          [travel-profile-selector]]
 
