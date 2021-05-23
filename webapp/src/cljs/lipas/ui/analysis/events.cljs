@@ -2,6 +2,7 @@
   (:require
    ["ol" :as ol]
    [ajax.core :as ajax]
+   [ajax.protocols :as ajaxp]
    [cemerick.url :as url]
    [clojure.string :as string]
    [goog.object :as gobj]
@@ -12,6 +13,7 @@
    [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
+   [lipas.utils :as cutils]
    proj4
    [re-frame.core :as re-frame]))
 
@@ -343,3 +345,40 @@
                  :else current-zones)
          _ (reset! hacky-atom-ref v)]
      {:dispatch [::set-zones v metric]})))
+
+(re-frame/reg-event-fx
+ ::create-report
+ (fn [{:keys [db]} _]
+   (let [params (:analysis db)]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/create-analysis-report")
+       :params          params
+       :format          (ajax/transit-request-format)
+       :response-format {:type         :blob
+                         :content-type (-> cutils/content-type :xlsx)
+                         :description  (-> cutils/content-type :xlsx)
+                         :read         ajaxp/-body}
+       :on-success      [::report-success]
+       :on-failure      [::report-failure]}
+      :db (assoc-in db [:analysis :loading?] true)})))
+
+(re-frame/reg-event-fx
+ ::report-success
+ (fn [{:keys [db ]} [_ blob]]
+   {:lipas.ui.effects/save-as!
+    {:blob         blob
+     :filename     "lipas-analysis.xlsx"
+     :content-type (-> cutils/content-type :xlsx)}
+    :db (assoc-in db [:analysis :loading?] false)}))
+
+(re-frame/reg-event-fx
+ ::report-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [fatal? false
+         tr     (-> db :translator)]
+     {:db           (assoc-in db [:analysis :loading?] false)
+      :ga/exception [(:message error) fatal?]
+      :dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr :notifications/get-failed)
+                      :success? false}]})))

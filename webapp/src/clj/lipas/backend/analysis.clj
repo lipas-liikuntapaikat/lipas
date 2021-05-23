@@ -1,11 +1,12 @@
 (ns lipas.backend.analysis
   (:require
-   [clojure.string :as str]
    [clojure.set :as set]
-   [lipas.backend.search :as search]
-   [lipas.utils :as utils]
+   [clojure.string :as str]
    [lipas.backend.gis :as gis]
-   [lipas.backend.osrm :as osrm]))
+   [lipas.backend.osrm :as osrm]
+   [lipas.backend.search :as search]
+   [lipas.data.types :as types]
+   [lipas.utils :as utils]))
 
 (def population-index "vaestoruutu_1km_2019_kp")
 (def schools-index "schools")
@@ -262,6 +263,167 @@
              @school-travel-times
              profiles)))
 
+;;; Report generation ;;;;
+
+(defn resolve-zone
+  [zones m profile metric]
+  (if (= :travel-time metric)
+
+    ;; travel time
+    (let [time-min (-> m :route profile :duration-s (/ 60))]
+      (->> zones
+           :travel-time
+           (some
+            (fn [zone]
+              (when (>= (:max zone) time-min (:min zone))
+                (:id zone))))))
+
+    ;; distance
+    (let [distance-km (-> m :route profile :distance-m (/ 1000))]
+      (->> zones
+           :distance
+           (some
+            (fn [zone]
+              (when (>= (:max zone) distance-km (:min zone))
+                (:id zone))))))))
+
+(def categories
+  {:travel-time
+   {:car     "Travel time by car"
+    :bicycle "Travel time by bicylce"
+    :foot    "Travel time by foot"}
+   :distance
+   {:car     "Distance by car"
+    :bicycle "Disntace by bicycle"
+    :foot    "Distance by foot"}})
+
+(def population-fields
+  {:ika_65_   "Age 65-"
+   :ika_15_64 "Age 15-64"
+   :ika_0_14  "Age 0-14"
+   :vaesto    "People total"})
+
+(def school-fields
+  {:vaka        "Varhaiskasvatusyksikkö"
+   :lukiot      "Lukiot"
+   :peruskoulut "Peruskoulut"
+   :perus+lukio "Perus- ja lukioasteen koulut"
+   :erityis     "Peruskouluasteen erityiskoulut"})
+
+(def school-fields-invert (set/map-invert school-fields))
+
+(def sports-site-fields
+  (into {}
+        (map (juxt first (comp :fi :name second)))
+        types/all))
+
+(def sports-site-to-sub-cat-fields
+  (into {}
+        (map (juxt first (comp :fi :name types/sub-categories :sub-category second)))
+        types/all))
+
+(def sports-site-to-main-cat-fields
+  (into {}
+        (map (juxt first (comp :fi :name types/main-categories :main-category second)))
+        types/all))
+
+(def units
+  {:travel-time "min"
+   :distance    "km"})
+
+(defn make-zone-name [zone suffix]
+  (str (:min zone) "-" (:max zone) suffix))
+
+(defn- create-sheet
+  [data zones metric fields]
+  (let [m-zones (metric zones)]
+
+    (into [] cat
+          (for [[profile p-name] (get categories metric)
+                :let [by-zone (->> data
+                                   (map
+                                    (fn [m]
+                                      (assoc m :zone (resolve-zone zones m profile metric))))
+                                   (group-by :zone))]]
+            (into [[p-name ""]] cat
+                  (for [zone m-zones]
+                    (into [[(make-zone-name zone (units metric)) ""]]
+                          (for [[k f-name] fields]
+                            [f-name (->> (:id zone)
+                                         by-zone
+                                         (map #(get % k))
+                                         (reduce +))]))))))))
+
+(defn create-population-sheet
+  [data metric]
+  (create-sheet (-> data :population :data2)
+                (:zones data)
+                metric
+                population-fields))
+
+(defn create-schools-sheet
+  [data metric]
+  (create-sheet  (->> data
+                      :schools
+                      :data
+                      (map
+                       (fn [m]
+                         (let [k (school-fields-invert (:type m))
+                               ks (set/difference (set (keys school-fields)) #{k})]
+                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
+                 (:zones data)
+                 metric
+                 school-fields))
+
+(defn create-sports-sites-sheet
+  [data metric]
+  (create-sheet  (->> data
+                      :sports-sites
+                      :data
+                      (map
+                       (fn [m]
+                         (let [k (-> m :type :type-code)
+                               ks (set/difference (set (keys sports-site-fields)) #{k})]
+                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
+                 (:zones data)
+                 metric
+                 sports-site-fields))
+
+(defn create-sports-sites-sheet-main-cat
+  [data metric]
+  (create-sheet  (->> data
+                      :sports-sites
+                      :data
+                      (map
+                       (fn [m]
+                         (let [k  (-> m :type :type-code sports-site-to-main-cat-fields)
+                               ks (set/difference
+                                   (set (vals sports-site-to-main-cat-fields))
+                                   #{k})]
+                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
+                 (:zones data)
+                 metric
+                 sports-site-to-main-cat-fields))
+
+(defn create-report [data]
+  ["Population travel-time" (create-population-sheet data :travel-time)
+   "Population distance" (create-population-sheet data :distance)
+   "Schools travel-time" (create-schools-sheet data :travel-time)
+   "Schools distance" (create-schools-sheet data :distance)
+   "Sports facility distance (all types)" (create-sports-sites-sheet data :distance)
+   "Sports facility travel-time (all types)" (create-sports-sites-sheet data :travel-time)
+   "Sports facility distance (main-category)" nil
+   "Sports facility travel-time (main-category)" nil])
+
 (comment
+  (def data (read-string (slurp "/Users/tipo/kana.edn")))
+  (-> data :zones :travel-time)
+
+  (create-population-sheet data :travel-time)
+  (create-population-sheet data :distance)
+  (create-schools-sheet data :travel-time)
+  (create-schools-sheet data :distance)
+  (create-sports-sites-sheet data :travel-time)
+  (create-sports-sites-sheet-main-cat data :travel-time)
 
   )

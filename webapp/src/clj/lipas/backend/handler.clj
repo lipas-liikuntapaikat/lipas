@@ -438,6 +438,20 @@
          (fn [{:keys [body-params]}]
            {:status 200
             :body   (core/calc-distances-and-travel-times search body-params)})}}]
+
+      ;; Create analysis report
+      ["/actions/create-analysis-report"
+       {:post
+        {:no-doc false
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status  200
+            :headers {"Content-Type"        (-> utils/content-type :xlsx)
+                      "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+            :body
+            (ring-io/piped-input-stream
+             (fn [out]
+               (core/create-analysis-report body-params out)))})}}]
       ]]
 
     {:data

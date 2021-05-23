@@ -445,6 +445,12 @@
 (defn calc-distances-and-travel-times [search params]
   (analysis/calc-distances-and-travel-times search params))
 
+(defn create-analysis-report [data out]
+  (->> data
+       (analysis/create-report)
+       (apply excel/create-workbook)
+       (excel/save-workbook-into-stream! out)))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
