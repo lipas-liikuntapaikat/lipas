@@ -472,8 +472,6 @@
 
 (defn sports-sites-bar-chart
   [{:keys [data labels on-click zones zone-colors]}]
-  (prn zones)
-  (prn zone-colors)
   [:> rc/ResponsiveContainer {:width "100%" :height 300}
    (into
     [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}

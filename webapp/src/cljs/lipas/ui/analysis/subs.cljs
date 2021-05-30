@@ -510,6 +510,14 @@
    (count zones)))
 
 (re-frame/reg-sub
+ ::zones-count-max
+ :<- [::zones]
+ :<- [::selected-travel-metric]
+ (fn [[zones metric] _]
+   (let [range (get-in zones [:ranges metric])]
+     (count range))))
+
+(re-frame/reg-sub
  ::zone-colors
  :<- [::zones]
  (fn [zones _]
@@ -519,25 +527,22 @@
  ::zones-selector-value
  :<- [::zones-by-selected-metric]
  (fn [zones _]
-   (into [] (comp (mapcat (juxt :min :max)) (distinct)) zones)))
+   (into [] (comp (mapcat (juxt :min-idx :max-idx)) (distinct)) zones)))
 
 (re-frame/reg-sub
  ::zones-selector-marks
+ :<- [::zones]
  :<- [::selected-travel-metric]
- (fn [metric _]
+ (fn [[zones metric] _]
    (into {}
-         (for [n (if (= :distance metric)
-                   (range 0 55 5)
-                   (range 0 105 15))]
-           [n (str n (if (= :distance metric) "km" "min"))]))))
+         (map (juxt first (comp :label second)))
+         (get-in zones [:ranges metric]))))
 
 (re-frame/reg-sub
  ::zones-selector-max
- :<- [::selected-travel-metric]
- (fn [metric _]
-   (if (= :distance metric)
-     50
-     90)))
+ :<- [::zones-selector-marks]
+ (fn [marks _]
+   (apply max (keys marks))))
 
 (re-frame/reg-sub
  ::zones-selector-step

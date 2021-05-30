@@ -316,11 +316,16 @@
 (re-frame/reg-event-fx
  ::set-zones
  (fn [{:keys [db]} [_ v metric]]
-   (let [zones (->> v
-                      (partition 2 1)
-                      (map-indexed
-                       (fn [idx [min max]]
-                         {:min min :max max :id (keyword (str "zone" (inc idx)))})))]
+   (let [ranges (-> db :analysis :zones :ranges metric)
+         zones  (->> v
+                     (partition 2 1)
+                     (map-indexed
+                      (fn [idx [min-idx max-idx]]
+                        {:min     (get-in ranges [min-idx :value])
+                         :min-idx min-idx
+                         :max     (get-in ranges [max-idx :value])
+                         :max-idx max-idx
+                         :id      (keyword (str "zone" (inc idx)))})))]
      {:db (assoc-in db [:analysis :zones metric] zones)
       :dispatch-n
       (let [old-max (-> db :analysis :distance-km)
@@ -333,18 +338,18 @@
 (re-frame/reg-event-fx
  ::set-zones-count
  (fn [_ [_ n metric current-zones hacky-atom-ref]]
-   (let [steps {:distance 5 :travel-time 10}
-         step  (get steps metric)
-         v     (cond
-                 (< n (count current-zones))
-                 (take (inc n) current-zones)
+   (let [v (cond
+             (< n (count current-zones))
+             (take (inc n) current-zones)
 
-                 (> n (count current-zones))
-                 (take (inc n) (range 0 (* step (inc n)) step))
+             (>= n (count current-zones))
+             (take (inc n) (range))
 
-                 :else current-zones)
+             :else current-zones)
          _ (reset! hacky-atom-ref v)]
      {:dispatch [::set-zones v metric]})))
+
+(take 4 (range))
 
 (re-frame/reg-event-fx
  ::create-report

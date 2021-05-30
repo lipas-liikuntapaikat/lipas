@@ -69,6 +69,7 @@
   (let [profile (<== [::subs/selected-travel-profile])
         metric  (<== [::subs/selected-travel-metric])]
     [mui/grid {:container true :spacing 2 :align-items "center"}
+
      ;; Direct
      [mui/grid {:item true}
       [mui/icon-button
@@ -90,7 +91,7 @@
         :color    (if (= profile :bicycle) "secondary" "default")}
        [mui/icon "directions_bike"]]]
 
-     ;; Walk
+     ;; Foot
      [mui/grid {:item true}
       [mui/icon-button
        {:on-click #(==> [::events/select-travel-profile :foot])
@@ -225,7 +226,8 @@
         value           (<== [::subs/zones-selector-value])
         max-v           (<== [::subs/zones-selector-max])
         step            (<== [::subs/zones-selector-step])
-        zones-count     (<== [::subs/zones-count])]
+        zones-count     (<== [::subs/zones-count])
+        zones-count-max (<== [::subs/zones-count-max])]
 
     (r/with-let [value* (r/atom value)
                  metric* (r/atom metric)]
@@ -237,7 +239,7 @@
 
           [:> RangeSlider
            {:key             metric
-            :step            step
+            ;; :step            step
             :min             0
             :max             max-v
             :pushable        step
@@ -260,7 +262,7 @@
              {:value     zones-count
               :label     "Zones"
               :on-change #(==> [::events/set-zones-count % metric value value*])
-              :items     (range 1 10)}]]]]]))))
+              :items     (range 1 zones-count-max)}]]]]]))))
 
 (defn analysis-view []
   (let [tr            (<== [:lipas.ui.subs/translator])
