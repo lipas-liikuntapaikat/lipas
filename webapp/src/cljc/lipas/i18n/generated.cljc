@@ -363,8 +363,8 @@
    :average-water-consumption-l
    "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)"},
   :map.demographics
-  {:headline "Väestö",
-   :tooltip "Näytä väestötiedot",
+  {:headline "Analyysityökalu",
+   :tooltip "Analyysityökalu",
    :helper-text
    "Valitse liikuntapaikka kartalta tai kohdista kartta haluamaasi paikkaan ja paina",
    :copyright1
@@ -1956,8 +1956,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :average-water-consumption-l
    "Average water consumption (l) / maintenance"},
   :map.demographics
-  {:headline "Demographics",
-   :tooltip "Show demographics",
+  {:headline "Analysis tool",
+   :tooltip "Analysis tool",
    :helper-text
    "Select sports facility on map or zoom into desired location and click",
    :copyright1 "Statistics of Finland 2019",

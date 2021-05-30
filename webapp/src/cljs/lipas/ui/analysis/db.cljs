@@ -32,12 +32,10 @@
     [{:min 0 :max 15 :id :zone1}
      {:min 15 :max 30 :id :zone2}
      {:min 30 :max 45 :id :zone3}
-     {:min 45 :max 60 :zone :zone4}]}
+     {:min 45 :max 60 :id :zone4}]}
    :population
-   {}
+   {:view "chart"}
    :sports-sites
-   {:view "list"}
+   {:view "chart"}
    :schools
-   {:view "list"}
-   :nursery-schools
-   {:view "list"}})
+   {:view "chart"}})
