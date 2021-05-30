@@ -26,12 +26,15 @@
         zones                            (<== [::subs/zones-by-selected-metric])
         zone-colors                      (<== [::subs/zone-colors])]
     [:<>
+
+     ;; Category filter
      [mui/grid {:item true :xs 12}
       [lui/type-category-selector
        {:value     selected-types
         :on-change #(==> [::events/set-type-codes-filter %])
         :label     "Filter types"}]]
 
+     ;; Tabs
      [mui/grid {:item :true :xs 12}
       [mui/tabs {:value          sports-sites-view
                  :indicatorColor "primary"
@@ -41,6 +44,7 @@
        [mui/tab {:icon (r/as-element [mui/icon "list"]) :value "list"}]
        [mui/tab {:icon (r/as-element [mui/icon "analytics"]) :value "chart"}]]]
 
+     ;; List view
      (when (= sports-sites-view "list")
        [mui/grid {:item :true :xs 12}
         (into [mui/list]
@@ -51,6 +55,7 @@
                   {:primary   (:name m)
                    :secondary (:display-val m)}]]))])
 
+     ;; Chart view
      (when (= sports-sites-view "chart")
        [mui/grid {:item :true :xs 12}
         [charts/sports-sites-bar-chart
