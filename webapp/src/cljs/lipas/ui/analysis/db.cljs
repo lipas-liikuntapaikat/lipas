@@ -15,6 +15,20 @@
                (gcolor/lighten (/ n 10))
                gcolor/rgbArrayToHex)])))
 
+(def distances
+  (into {}
+        (map-indexed
+         (fn [idx v]
+           [idx {:idx idx :value v :label (str v "km")}]))
+        [0 0.5 1 1.5 2 3 4 5 7.5 10 15 20 30 40 50]))
+
+(def travel-times
+  (into {}
+        (map-indexed
+         (fn [idx v]
+           [idx {:idx idx :value v :label (str v "min")}]))
+        [0 10 20 30 40 50 60]))
+
 (def default-db
   {:selected-tab            "sports-sites"
    :distance-km             15
@@ -22,17 +36,28 @@
    :selected-travel-profile :car
    :selected-travel-metric  :travel-time
    :zones
-   {:colors zone-colors
+   {:ranges
+    {:distance    distances
+     :travel-time travel-times}
+    :colors zone-colors
     :distance
-    [{:min 0 :max 2 :id :zone1}
-     {:min 2 :max 5 :id :zone2}
-     {:min 5 :max 10 :id :zone3}
-     {:min 10 :max 15 :id :zone4}]
+    (map-indexed
+     (fn [idx [from-idx to-idx]]
+       {:min     (get-in distances [from-idx :value])
+        :min-idx from-idx
+        :max     (get-in distances [to-idx :value])
+        :max-idx to-idx
+        :id      (keyword (str "zone" (inc idx)))})
+     [[0 4] [4 7] [7 8] [8 10]])
     :travel-time
-    [{:min 0 :max 15 :id :zone1}
-     {:min 15 :max 30 :id :zone2}
-     {:min 30 :max 45 :id :zone3}
-     {:min 45 :max 60 :id :zone4}]}
+    (map-indexed
+     (fn [idx [from-idx to-idx]]
+       {:min     (get-in travel-times [from-idx :value])
+        :min-idx from-idx
+        :max     (get-in travel-times [to-idx :value])
+        :max-idx to-idx
+        :id      (keyword (str "zone" (inc idx)))})
+     [[0 1] [1 2] [2 3] [3 4]])}
    :population
    {:view "chart"}
    :sports-sites
