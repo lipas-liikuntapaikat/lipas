@@ -1060,7 +1060,8 @@
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        sub-mode    (<== [::subs/sub-mode])]
+        sub-mode    (<== [::subs/sub-mode])
+        admin?      (<== [:lipas.ui.user.subs/admin?])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background "transparent"}
@@ -1086,7 +1087,7 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])
 
        ;; Analysis tool btn
-       (when (= :list result-view)
+       (when (and logged-in? admin? (= :list result-view))
          [mui/tooltip {:title (tr :map.demographics/tooltip)}
           [mui/grid {:item true}
            [mui/fab
@@ -1096,7 +1097,7 @@
              :on-click #(==> (if (= sub-mode :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
-            [mui/icon "people"]]]])]]]))
+            [mui/icon "insights"]]]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])

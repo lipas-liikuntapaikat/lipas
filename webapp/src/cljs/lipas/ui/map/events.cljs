@@ -693,7 +693,12 @@
    {:db       (-> db
                   (assoc-in  [:map :mode :name] :default)
                   (assoc-in  [:map :mode :sub-mode] :analysis))
-    :dispatch [:lipas.ui.analysis.events/show-analysis]}))
+    :dispatch-n
+    [[::set-overlay true :vectors]
+     ;;[::set-overlay true :schools]
+     ;;[::set-overlay true :population]
+     [::set-overlay true :analysis]
+     [:lipas.ui.analysis.events/show-analysis]]}))
 
 (re-frame/reg-event-fx
  ::hide-analysis
