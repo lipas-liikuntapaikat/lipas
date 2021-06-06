@@ -24,6 +24,12 @@
    (-> analysis :population :data)))
 
 (re-frame/reg-sub
+ ::population-stats
+ :<- [::analysis]
+ (fn [analysis _]
+   (-> analysis :population :stats)))
+
+(re-frame/reg-sub
  ::schools-data
  :<- [::analysis]
  (fn [analysis _]
@@ -82,56 +88,8 @@
 (defn- pos+ [a b]
   (+ (if (<= 0 a) a 0) (if (<= 0 b) b 0)))
 
-(re-frame/reg-sub
- ::population-data
- (fn [db _]
-   (-> db :analysis :population :data)))
-
-(re-frame/reg-sub
- ::population-chart-data
- :<- [::population-data]
- (fn [fcoll _]
-   (let [ks [:ika_0_14 :ika_15_64 :ika_65_ :naiset :miehet :vaesto :zone]
-         fs (->> fcoll :features (map (comp #(select-keys % ks) :properties)))]
-     (->> fs
-          (group-by :zone)))))
-
-(re-frame/reg-sub
- ::population-bar-chart-data
- :<- [::population-chart-data]
- :<- [::population-labels]
- (fn [[data labels] _]
-   (->> data
-        (reduce
-           (fn [res [zone ms]]
-             (let [zk (keyword (str "zone" zone))]
-               (-> res
-                   (assoc-in [:age-0-14 zk] (->> ms (map :ika_0_14) (reduce pos+ 0)))
-                   (assoc-in [:age-15-64 zk] (->> ms (map :ika_15_64) (reduce pos+ 0)))
-                   (assoc-in [:age-65- zk] (->> ms (map :ika_65_) (reduce pos+ 0)))
-                   (assoc-in [:men zk] (->> ms (map :miehet) (reduce pos+ 0)))
-                   (assoc-in [:women zk] (->> ms (map :naiset) (reduce pos+ 0)))
-                   (assoc-in [:total zk] (->> ms (map :vaesto) (reduce pos+ 0))))))
-           {})
-        (map (fn [[k v]] (assoc v :group (labels k)))))))
-
 (defn parse-km [s]
   (-> s (string/split " ") first utils/->int))
-
-(re-frame/reg-sub
- ::population-area-chart-data
- :<- [::population-chart-data]
- :<- [::population-labels]
- (fn [[data labels] _]
-   (->> data
-        (reduce
-         (fn [res [zone ms]]
-           (conj res
-                 {:zone      (labels (keyword (str "zone" zone)))
-                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+ 0))
-                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+ 0))
-                  :age-65-   (->> ms (map :ika_65_) (reduce pos+ 0))})) [])
-        (sort-by :zone))))
 
 (re-frame/reg-sub
  ::selected-travel-profile
@@ -144,43 +102,6 @@
  :<- [::analysis]
  (fn [analysis]
    (:selected-travel-metric analysis)))
-
-(re-frame/reg-sub
- ::population-data-v2
- :<- [::analysis]
- (fn [analysis _]
-   (-> analysis :population :data2)))
-
-(defn resolve-zone-v2 [m profile metric]
-  (if (= :travel-time metric)
-
-    ;; travel time
-    (let [time-s (-> m :route profile :duration-s)]
-      (cond
-        (> (* 60 10) time-s)
-        1
-
-        (> (* 60 30) time-s)
-        2
-
-        (> (* 60 45) time-s)
-        3
-
-        :else 4))
-
-    ;; distance
-    (let [distance-m (-> m :route profile :distance-m)]
-      (cond
-        (> 2000.0 distance-m)
-        1
-
-        (> 5000.0 distance-m)
-        2
-
-        (> 10000.0 distance-m)
-        3
-
-        :else 4))))
 
 (defn resolve-zone-v3
   [zones m profile metric]
@@ -209,33 +130,22 @@
   x)
 
 (re-frame/reg-sub
- ::population-chart-data-v2
- :<- [::population-data-v2]
+ ::population-chart-data-v3
+ :<- [::population-stats]
  :<- [::selected-travel-profile]
  :<- [::selected-travel-metric]
  :<- [::population-labels]
- :<- [::zones]
- (fn [[data profile metric labels zones] _]
-   (->> data
-        (map
-         (fn [m]
-           (assoc m :zone (resolve-zone-v3 zones m profile metric))))
-
-        (remove #(nil? (:zone %)))
-
-        (group-by :zone)
-
+ (fn [[stats profile metric labels] _]
+   (->> (get-in stats [metric profile])
         (reduce
-         (fn [res [zone ms]]
+         (fn [res [zone m]]
            (conj res
                  {:zone      (labels zone)
                   :zone*     zone
-                  :age-0-14  (->> ms (map :ika_0_14) (reduce pos+ 0))
-                  :age-15-64 (->> ms (map :ika_15_64) (reduce pos+ 0))
-                  :age-65-   (->> ms (map :ika_65_) (reduce pos+ 0))
-                  :miehet    (->> ms (map :miehet) (reduce pos+ 0))
-                  :naiset    (->> ms (map :naiset) (reduce pos+ 0))
-                  :vaesto    (->> ms (map :vaesto) (reduce pos+ 0))})
+                  :age-0-14  (:ika_0_14 m)
+                  :age-15-64 (:ika_15_64 m)
+                  :age-65-   (:ika_65_ m)
+                  :vaesto    (:vaesto m)})
            ) [])
 
         (sort-by :zone*))))

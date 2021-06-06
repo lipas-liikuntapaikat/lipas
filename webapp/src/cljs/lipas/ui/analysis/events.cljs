@@ -41,7 +41,8 @@
  (fn [db [_ resp]]
    (-> db
        (assoc-in [:analysis :loading?] false)
-       (assoc-in [:analysis :population :data2] (:population resp))
+       (assoc-in [:analysis :population :data] (:population resp))
+       (assoc-in [:analysis :population :stats] (:population-stats resp))
        (assoc-in [:analysis :schools :data] (:schools resp))
        (assoc-in [:analysis :sports-sites :data] (:sports-sites resp)))))
 
@@ -214,42 +215,6 @@
       :dispatch [::refresh-analysis]
       :ga/event ["analysis" "show-analysis" lipas-id]})))
 
-#_(re-frame/reg-event-fx
- ::get-schools
- (fn [{:keys [db]} [_ cb]]
-   (let [#_#_bbox     (resolve-bbox db)
-         base-url "/tilastokeskus/geoserver/oppilaitokset/ows?"
-         params   {:service      "WFS"
-                   :version      "1.0.0"
-                   :request      "GetFeature"
-                   :typeName     "oppilaitokset:oppilaitokset"
-                   :outputFormat "application/json"
-                   :cql_filter   (resolve-filter db "geom")
-                   ;;:srsName      "EPSG:3067"
-                   :srsName      "EPSG:4326"
-                   #_#_:bbox     bbox}]
-     {:http-xhrio
-      {:method          :get
-       :uri             (-> base-url url/url (assoc :query params) str (subs 3))
-       :response-format (ajax/raw-response-format)
-       :on-success      [::get-schools-success cb]
-       :on-failure      [::get-schools-failure]}})))
-
-#_(re-frame/reg-event-fx
- ::get-schools-success
- (fn [{:keys [db]} [_ cb resp]]
-   {:db         (assoc-in db [:analysis :schools :data] (js/JSON.parse resp))
-    :dispatch-n (if cb (cb resp) [])}))
-
-#_(re-frame/reg-event-fx
- ::get-schools-failure
- (fn [{:keys [db]} [_ error]]
-   (let [tr (:translator db)]
-     {:db       (assoc-in db [:errors :population (utils/timestamp)] error)
-      :dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr :notifications/get-failed)
-                  :success? false}]})))
-
 (re-frame/reg-event-db
  ::select-analysis-tab
  (fn [db [_ tab]]
@@ -275,9 +240,11 @@
          fcoll       (-> db :analysis :geoms)
          distance-km (-> db :analysis :distance-km)
          type-codes  (-> db :analysis :sports-sites :type-codes)
+         zones       (-> db :analysis :zones)
          buff-geom   (calc-buffer-geom db)
          params      {:distance-km  distance-km
                       :profiles     profiles
+                      :zones        zones
                       :search-fcoll fcoll
                       :buffer-fcoll buff-geom
                       :type-codes   type-codes}]

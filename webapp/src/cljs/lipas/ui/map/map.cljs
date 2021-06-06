@@ -340,15 +340,10 @@
     (when lipas-id
       (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
 
-    (when-let [data (:data2 population)]
+    (when-let [data (:data population)]
       (doseq [m    data
               :let [f (map-utils/<-wkt (:coords m))]]
-        (.set f "ika_65_" (:ika_65_ m))
-        (.set f "ika_15_64" (:ika_15_64 m))
-        (.set f "ika_0_14" (:ika_0_14 m))
         (.set f "vaesto" (:vaesto m))
-        (.set f "miehet" (:miehet m))
-        (.set f "naiset" (:naiset m))
         (.addFeature source f)))
 
     map-ctx))

@@ -370,7 +370,7 @@
          :fill default-fill
          :image
          (ol/style.Circle.
-          #js{:radius (min 7 (* 0.01 n))
+          #js{:radius (min 10 (* 0.1 n))
               :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
               :stroke hover-stroke})})))
 
