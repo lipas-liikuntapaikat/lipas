@@ -194,7 +194,7 @@
                                     count)})
            ) [])
 
-        (sort-by :zone))))
+        (sort-by :zone*))))
 
 (comment
   '("Lukiot"
