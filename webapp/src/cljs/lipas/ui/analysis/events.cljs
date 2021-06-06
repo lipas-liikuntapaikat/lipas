@@ -3,7 +3,6 @@
    ["ol" :as ol]
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
-   [cemerick.url :as url]
    [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
@@ -64,87 +63,6 @@
                    (js/ol.extent.extend extent (-> f' .getGeometry .getExtent))))
     (js/ol.extent.buffer extent buffer)))
 
-(defn- resolve-bbox [db]
-  (let [geoms (-> db :analysis :geoms)]
-    (if geoms
-      (calc-buffered-bbox geoms 15000) ; 15km buffer
-      (-> db :map :extent))))
-
-(defn- resolve-filter
-  ([db] (resolve-filter db "the_geom" "kilometers"))
-  ([db geom-name] (resolve-filter db geom-name "kilometers"))
-  ([db geom-name unit]
-   (let [geoms (or (-> db :analysis :geoms map-utils/->geom-coll)
-                   {:type "Feature"
-                    :geometry
-                    {:type        "Point"
-                     :coordinates (-> db :map :center-wgs84)}})]
-     (gstring/format
-      "DWITHIN(%s,%s,%d,%s)"
-      geom-name
-      (-> geoms
-          clj->js
-          map-utils/->ol-feature
-          map-utils/->wkt)
-      (-> db :analysis :distance-km)
-      unit))))
-
-(re-frame/reg-event-fx
- ::get-population
- (fn [{:keys [db]} [_ cb]]
-   (let [#_#_bbox (resolve-bbox db)
-         cql      (resolve-filter db)
-         base-url "/tilastokeskus/geoserver/vaestoruutu/ows?"
-         params   {:service      "WFS"
-                   :version      "1.0.0"
-                   :request      "GetFeature"
-                   :typeName     "vaestoruutu:vaki2019_1km_kp"
-                   :outputFormat "application/json"
-                   ;;:srsName      "EPSG:3067"
-                   :srsName      "EPSG:4326"
-                   :cql_filter   cql
-                   #_#_:bbox     bbox
-                   }]
-     {:http-xhrio
-      {:method          :get
-       :uri             (-> base-url url/url (assoc :query params) str (subs 3))
-       :response-format (ajax/raw-response-format)
-       :on-success      [::get-population-success cb]
-       :on-failure      [::get-population-failure]}})))
-
-(defn any-intersects? [fs f buffer]
-  (when-not (empty? fs)
-    (let [extent (-> fs (aget 0) .getGeometry .getExtent)]
-      (.forEach fs (fn [f']
-                     (ol/extent.extend extent (-> f' .getGeometry .getExtent))))
-      (let [buffered (ol/extent.buffer extent buffer)]
-        (ol/extent.intersects buffered (-> f .getGeometry .getExtent))))))
-
-;; Zones idea (within 2km,5km,10km) roughly from
-;; https://www.oulu.fi/paikkatieto/Liikuntapaikkojen%20saavutettavuus.pdf
-;; (pages 27-30)
-(defn resolve-zone
-  [geom-fs analysis-f]
-  (cond
-    (any-intersects? geom-fs analysis-f 2000)  [1 styles/population-zone1-fn]
-    (any-intersects? geom-fs analysis-f 5000)  [2 styles/population-zone2-fn]
-    (any-intersects? geom-fs analysis-f 10000) [3 styles/population-zone3-fn]))
-
-(re-frame/reg-event-fx
- ::get-population-success
- (fn [{:keys [db]} [_ cb resp]]
-   {:db         (assoc-in db [:analysis :population :data] (js/JSON.parse resp))
-    :dispatch-n (if cb (cb resp) [])}))
-
-(re-frame/reg-event-fx
- ::get-population-failure
- (fn [{:keys [db]} [_ error]]
-   (let [tr (:translator db)]
-     {:db       (assoc-in db [:errors :population (utils/timestamp)] error)
-      :dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr :notifications/get-failed)
-                  :success? false}]})))
-
 (re-frame/reg-event-fx
  ::set-selected-population-grid
  (fn [{:keys [db]} [_ fcoll]]
@@ -153,28 +71,7 @@
 (re-frame/reg-event-fx
  ::unselect-analysis
  (fn [{:keys [db]} _]
-   {:dispatch [::hide-analysis]}))
-
-(re-frame/reg-event-fx
- ::show-near-by-analysis
- (fn [{:keys [db]} _]
-   (let [coords (-> db :map :center-wgs84)
-         zoom   (-> db :map :zoom)
-         f      {:type "FeatureCollection"
-                 :features
-                 [{:type       "Feature"
-                   :properties {}
-                   :geometry
-                   {:type        "Point"
-                    :coordinates [(:lon coords) (:lat coords)]}}]}]
-     {:db       (-> db
-                    (assoc-in [:analysis :geoms] f)
-                    (assoc-in [:analysis :lipas-id] nil)
-                    (assoc-in [:analysis :center] coords)
-                    #_(cond->
-                          (< zoom 7) (assoc-in [:map :zoom] 7)))
-      :dispatch [::refresh-analysis]
-      :ga/event ["analysis" "show-near-by-population"]})))
+   {:dispatch [:lipas.ui.map.events/hide-analysis]}))
 
 (re-frame/reg-event-fx
  ::show-analysis
@@ -315,8 +212,6 @@
              :else current-zones)
          _ (reset! hacky-atom-ref v)]
      {:dispatch [::set-zones v metric]})))
-
-(take 4 (range))
 
 (re-frame/reg-event-fx
  ::create-report
