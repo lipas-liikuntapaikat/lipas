@@ -3,6 +3,8 @@
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
+   [lipas.ui.analysis.events :as analysis-events]
+   [lipas.ui.analysis.views :as analysis]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
@@ -273,12 +275,7 @@
 
 (defmethod popup-body :population [popup]
   (let [data   (-> popup :data :features first :properties)
-        fields {:ika_0_14  "Ikä 0-14"
-                :ika_15_64 "Ikä 15-64"
-                :ika_65_   "Ikä 65-"
-                :miehet    "Miehet"
-                :naiset    "Naiset"
-                :vaesto    "Yht."}]
+        fields {:vaesto "Population"}]
 
     [mui/paper
      {:style
@@ -294,6 +291,16 @@
             text]]
           [mui/table-cell
            [mui/typography v]]]))]]))
+
+(defmethod popup-body :school [popup]
+  (let [data   (-> popup :data :features first :properties)]
+    [mui/paper
+     {:style
+      {:padding "0.5em"}}
+     [mui/typography {:variant "body2"}
+      (:name data)]
+     [mui/typography {:variant "caption"}
+      (:type data)]]))
 
 (defn popup []
   (let [{:keys [data anchor-el]
@@ -1053,7 +1060,8 @@
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        sub-mode    (<== [::subs/sub-mode])]
+        sub-mode    (<== [::subs/sub-mode])
+        admin?      (<== [:lipas.ui.user.subs/admin?])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background "transparent"}
@@ -1078,101 +1086,18 @@
          [mui/grid {:item true}
           [reports/dialog {:tr tr :btn-variant :fab}]])
 
-       ;; Demographics tool btn
-       (when (= :list result-view)
+       ;; Analysis tool btn
+       (when (and logged-in? admin? (= :list result-view))
          [mui/tooltip {:title (tr :map.demographics/tooltip)}
           [mui/grid {:item true}
            [mui/fab
             {:size     "small"
-             :style    (when (= sub-mode :population)
+             :style    (when (= sub-mode :analysis)
                          {:border (str "5px solid " mui/secondary)})
-             :on-click #(==> (if (= sub-mode :population)
-                               [::events/hide-population]
-                               [::events/show-population]))}
-            [mui/icon "people"]]]])]]]))
-
-(defn population-view []
-  (let [tr            (<== [:lipas.ui.subs/translator])
-        data-bar      (<== [::subs/population-bar-chart-data])
-        data-area     (<== [::subs/population-area-chart-data])
-        selected-site (<== [::subs/selected-population-center])
-        labels        (<== [::subs/population-labels])]
-
-    [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
-
-     ;; Header and close button
-     [mui/grid {:item true :container true :justify "space-between"}
-      [mui/grid {:item true}
-       [mui/typography {:variant "h4"}
-        (tr :map.demographics/headline)]]
-      [mui/grid {:item true}
-       [mui/icon-button {:on-click #(==> [::events/unselect-population])}
-        [mui/icon "close"]]]]
-
-     ;; Site name
-     (when selected-site
-       [mui/grid {:item true :xs 12 :container true :align-items "center"}
-        [mui/grid {:item true}
-         [mui/icon "location_on"]]
-        [mui/grid {:item true}
-         [mui/typography selected-site]]])
-
-     ;; No data available text
-     (when (and selected-site (empty? data-bar))
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:color "error"}
-         (tr :error/no-data)]])
-
-     ;; Helper text
-     (when (and (empty? selected-site) (empty? data-bar))
-       [mui/grid {:item true :xs 12 :container true :align-items "center"}
-        [mui/grid {:item true}
-         [mui/typography
-          (tr :map.demographics/helper-text)
-          " "
-          [mui/link
-           {:color    "secondary"
-            :href     "javascript:;"
-            :variant  "body2"
-            :on-click #(==> [::events/show-near-by-population])}
-           (tr :general/here)]
-          "."]]])
-
-     ;; Bar chart
-     (when (seq data-bar)
-       [mui/grid {:item true :xs 12}
-        [charts/population-bar-chart
-         {:data   data-bar
-          :labels labels}]])
-
-     ;; Area chart
-     (when (seq data-area)
-       [mui/grid {:item true :xs 12}
-        [charts/population-area-chart
-         {:data   data-area
-          :labels labels}]])
-
-     ;; Tilastokeskus copyright notice (demographics data)
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:variant "caption"}
-       "© "
-       (tr :map.demographics/copyright1)
-       " "
-       [mui/link
-        {:href      "https://bit.ly/2WzrRwf"
-         :underline "always"}
-        (tr :map.demographics/copyright2)]
-       " "
-       (tr :map.demographics/copyright3)
-       " "
-       [mui/link
-        {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
-         :underline "always"}
-        "CC BY 4.0"]
-       "."]]
-
-     ;; Small nest where floating controls can "land"
-     [mui/grid {:item true :xs 12 :style {:height "70px"}}]]))
+             :on-click #(==> (if (= sub-mode :analysis)
+                               [::events/hide-analysis]
+                               [::events/show-analysis]))}
+            [mui/icon "insights"]]]])]]]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
@@ -1182,14 +1107,14 @@
     [:<>
      ;; Search, filters etc.
      (case view
-       :adding     [add-sports-site-view {:tr tr}]
-       :population [population-view]
-       :site       [sports-site-view {:tr tr :site-data selected-site :width width}]
-       :search     [search/search-view
-                    {:tr tr
-                     :on-result-click
-                     (fn [{:keys [lipas-id]}]
-                       (==> [::events/show-sports-site lipas-id]))}])
+       :adding   [add-sports-site-view {:tr tr}]
+       :analysis [analysis/analysis-view]
+       :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :search   [search/search-view
+                  {:tr tr
+                   :on-result-click
+                   (fn [{:keys [lipas-id]}]
+                     (==> [::events/show-sports-site lipas-id]))}])
 
      ;; Floating bottom toolbar
      (when show-tools?
@@ -1202,12 +1127,15 @@
         drawer-open?  (<== [::subs/drawer-open?])
         result-view   (<== [:lipas.ui.search.subs/search-results-view])
         selected-site (<== [::subs/selected-sports-site])
+        sub-mode      (<== [::subs/sub-mode])
         drawer-width  (cond
                         (#{"xs"} width)              "100%"
                         (and (#{"sm"} width)
                              (= :table result-view)) "100%"
                         (and (= :table result-view)
                              (empty? selected-site)) "100%"
+                        (and (not (#{"xs" "sm"} width))
+                             (= :analysis sub-mode)) "700px"
                         :else                        "430px")]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}

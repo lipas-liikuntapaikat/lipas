@@ -97,6 +97,9 @@ services:
       ACCESSIBILITY_REGISTER_BASE_URL:
       ACCESSIBILITY_REGISTER_SYSTEM_ID:
       ACCESSIBILITY_REGISTER_SECRET_KEY:
+      OSRM_CAR_URL:
+      OSRM_BICYCLE_URL:
+      OSRM_FOOT_URL:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
@@ -111,6 +114,9 @@ services:
     links:
       - postgres
       - elasticsearch
+      - osrm-car
+      - osrm-bicycle
+      - osrm-foot
 
   backend-dev:
     extends:
@@ -122,6 +128,9 @@ services:
     links:
       - postgres
       - elasticsearch
+      - osrm-car
+      - osrm-bicycle
+      - osrm-foot
 
   backend-build:
     extends:
@@ -261,7 +270,7 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
     ports:
       - '9200:9200'
       - '9300:9300'
@@ -273,12 +282,12 @@ services:
       - xpack.graph.enabled=false
       - xpack.watcher.enabled=false
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms3g -Xmx3g"
+      - "ES_JAVA_OPTS=${ES_JAVA_OPTS}"
     volumes:
       - esdata:/usr/share/elasticsearch/data
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.1.1
+    image: docker.elastic.co/logstash/logstash:7.12.0
     ports:
       - "5000:5000/udp"
     environment:
@@ -289,7 +298,7 @@ services:
       - "./logstash/pipeline:/usr/share/logstash/pipeline:z"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.11.1
+    image: docker.elastic.co/kibana/kibana:7.12.0
     ports:
       - "5601:5601"
     environment:
@@ -350,12 +359,46 @@ services:
       GEOWEBCACHE_CACHE_DIR: "/my_data_dir/gwc"
       GEOSERVER_ADMIN_PASSWORD:
       GEOSERVER_ADMIN_USER:
-      INITIAL_MEMORY: 2G
-      MAXIMUM_MEMORY: 4G
+      INITIAL_MEMORY: ${GEOSERVER_INITIAL_MEMORY}
+      MAXIMUM_MEMORY: ${GEOSERVER_MAX_MEMORY}
     links:
       - postgres
     volumes:
       - "./geoserver/data_dir:/my_data_dir:z"
+
+  elasticdump:
+    image: elasticdump/elasticsearch-dump
+    links:
+      - elasticsearch
+    volumes:
+      - "./data:/data:z"
+
+  osrm-car:
+    image: osrm/osrm-backend
+    restart: unless-stopped
+    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    volumes:
+      - "./osrm/car:/data:z"
+    ports:
+      - "5001:5000"
+
+  osrm-bicycle:
+    image: osrm/osrm-backend
+    restart: unless-stopped
+    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    volumes:
+      - "./osrm/bicycle:/data:z"
+    ports:
+      - "5002:5000"
+
+  osrm-foot:
+    image: osrm/osrm-backend
+    restart: unless-stopped
+    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    volumes:
+      - "./osrm/foot:/data:z"
+    ports:
+      - "5003:5000"
 
 volumes:
   pgdata: {}

@@ -28,18 +28,36 @@
 
     (keyword (str (name k) ".keyword"))))
 
-(defn resolve-sort [{:keys [sort-fn asc?]} locale]
-  {:sort
-   (filterv some?
-            [(cond
-               (= sort-fn :score) :_score
-               sort-fn            {(->sort-key sort-fn locale)
-                                   {:order (if asc? "asc" "desc")}}
-               :else              nil)])})
+(defn resolve-sort [{:keys [sort-fn asc?]} locale decay? center]
+  (if-not decay?
 
-(defn resolve-pagination [{:keys [page page-size]}]
-  {:from (* page page-size)
-   :size page-size})
+    {:sort
+     {:_geo_distance
+      {:search-meta.location.wgs84-point
+       {:lon (:lon center)
+        :lat (:lat center)}
+       :order           "asc"
+       :unit            "m"
+       :mode            "min"
+       :distance_type   "arc"
+       :ignore_unmapped true}}}
+
+    {:sort
+     (filterv some?
+              [(cond
+                 (= sort-fn :score) :_score
+                 sort-fn            {(->sort-key sort-fn locale)
+                                     {:order (if asc? "asc" "desc")}}
+                 :else              nil)])}))
+
+(defn resolve-pagination [{:keys [page page-size]} decay?]
+  (if decay?
+
+    {:from (* page page-size)
+     :size page-size}
+
+    {:from 0
+     :size 5000}))
 
 (defn resolve-query-string
   "`s` is users input to search field. Goal is to transform `s` into ES
@@ -73,11 +91,28 @@
       :coordinates #js[top-left bottom-right]}
      :relation    "intersects"}}})
 
+(defn add-distance-fields [lat lon]
+  {:script_fields
+   {:distance-start-m
+    {:script
+     {:params {:lat lat
+               :lon lon}
+      :source "doc[\u0027search-meta.location.wgs84-point\u0027].arcDistance(params.lat, params.lon)"}},
+    :distance-center-m
+    {:script {:params {:lat lat
+                       :lon lon},
+              :source "doc[\u0027search-meta.location.wgs84-center\u0027].arcDistance(params.lat, params.lon)"}},
+    :distance-end-m
+    {:script
+     {:params {:lat lat
+               :lon lon},
+      :source "doc[\u0027search-meta.location.wgs84-end\u0027].arcDistance(params.lat, params.lon)"}}}})
+
 (defn ->es-search-body
   ([params]
    (->es-search-body params false))
-  ([{:keys [filters string center distance sort
-            locale pagination zoom bbox]} terse?]
+  ([{:keys [filters string center distance sort decay?
+            locale pagination zoom bbox geom]} terse?]
    (let [string            (resolve-query-string string)
          bbox?             (and
                             (> zoom 3)
@@ -98,8 +133,9 @@
          {:keys [lon lat]} center
 
          params (merge
-                 (resolve-sort sort locale)
-                 (resolve-pagination pagination)
+                 (add-distance-fields lat lon)
+                 (resolve-sort sort locale decay? center)
+                 (resolve-pagination pagination decay?)
                  {:track_total_hits 50000
                   :_source
                   {:includes (if terse?
@@ -139,63 +175,90 @@
                                   "search-meta.location.simple-geoms"
                                   "location.geometries")])}
                   :query
-                  {:function_score
-                   {:score_mode "max"
-                    :query
-                    {:bool
-                     {:must
-                      [{:simple_query_string
-                        {:query            string
-                         :fields
-                         ["name^3"
-                          "name-localized.*^3"
-                          "marketing-name^3"
-                          "lipas-id"
-                          "search-meta.location.city.name.*^2"
-                          "search-meta.type.name.*^2"
-                          "search-meta.type.tags.*^2"
-                          "search-meta.tags"
-                          "search-meta.type.main-category.name.*"
-                          "search-meta.type.sub-category.name.*"
-                          "search-meta.location.province.name.*"
-                          "search-meta.location.avi-area.name.*"
-                          "admin.keyword"
-                          "owner.keyword"
-                          "comment"
-                          "email"
-                          "phone-number"
-                          "location.address"
-                          "location.postal-office"
-                          "location.postal-code"
-                          "location.city.neighborhood"
-                          "properties.surface-material-info"]
-                         :default_operator "AND"
-                         :analyze_wildcard true}}]}}
-                    :functions
-                    (filterv some?
-                             (for [kw [:search-meta.location.wgs84-point
-                                       :search-meta.location.wgs84-center
-                                       :search-meta.location.wgs84-end]]
-                               (when (every? pos? [lon lat distance])
-                                 {:exp
-                                  {kw {:origin (str lat "," lon)
-                                       :offset (str distance "m")
-                                       :scale  (str distance "m")}}})))}}})]
-     (cond-> params
-       bbox?           (add-filter (->geo-intersects-filter bbox))
-       statuses        (add-filter {:terms {:status.keyword statuses}})
-       type-codes      (add-filter {:terms {:type.type-code type-codes}})
-       city-codes      (add-filter {:terms {:location.city.city-code city-codes}})
-       area-min        (add-filter {:range {:properties.area-m2 {:gte area-min}}})
-       area-max        (add-filter {:range {:properties.area-m2 {:lte area-max}}})
-       year-min        (add-filter {:range {:construction-year {:gte year-min}}})
-       year-max        (add-filter {:range {:construction-year {:lte year-max}}})
-       materials       (add-filter {:terms {:properties.surface-material.keyword materials}})
-       admins          (add-filter {:terms {:admin.keyword admins}})
-       owners          (add-filter {:terms {:owner.keyword owners}})
-       retkikartta?    (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
-       harrastuspassi? (add-filter {:terms {:properties.may-be-shown-in-harrastuspassi-fi? [true]}})
-       school-use?     (add-filter {:terms {:properties.school-use? [true]}})))))
+                  (when decay?
+                    {:function_score
+                     {:score_mode "max"
+                      :query
+                      {:bool
+                       {:must
+                        [{:simple_query_string
+                          {:query            string
+                           :fields
+                           ["name^3"
+                            "name-localized.*^3"
+                            "marketing-name^3"
+                            "lipas-id"
+                            "search-meta.location.city.name.*^2"
+                            "search-meta.type.name.*^2"
+                            "search-meta.type.tags.*^2"
+                            "search-meta.tags"
+                            "search-meta.type.main-category.name.*"
+                            "search-meta.type.sub-category.name.*"
+                            "search-meta.location.province.name.*"
+                            "search-meta.location.avi-area.name.*"
+                            "admin.keyword"
+                            "owner.keyword"
+                            "comment"
+                            "email"
+                            "phone-number"
+                            "location.address"
+                            "location.postal-office"
+                            "location.postal-code"
+                            "location.city.neighborhood"
+                            "properties.surface-material-info"]
+                           :default_operator "AND"
+                           :analyze_wildcard true}}]}}
+                      :functions
+                      (filterv some?
+                               (for [kw [:search-meta.location.wgs84-point
+                                         :search-meta.location.wgs84-center
+                                         :search-meta.location.wgs84-end]]
+                                 (when (every? pos? [lon lat distance])
+                                   {:exp
+                                    {kw {:origin (str lat "," lon)
+                                         :offset (str distance "m")
+                                         :scale  (str distance "m")}}})))}})})]
+
+     (if-not decay?
+
+       (assoc params :query
+              {:bool
+               {:must
+                (if (not-empty type-codes)
+                  {:terms
+                   {:type.type-code type-codes}}
+                  {:match_all {}})
+                :filter
+                {:geo_shape
+                 {:search-meta.location.geometries
+                  {:shape    (if (= "Point" (-> geom :type))
+                               {:type        "circle"
+                                :coordinates (-> geom :coordinates)
+                                :radius      (str distance "m")}
+                               geom)
+                   :relation "intersects"}}}
+
+                #_ {:geo_distance
+                    {:distance (str distance "m")
+                     :search-meta.location.wgs84-point
+                     {:lon lon
+                      :lat lat}}}}})
+
+       (cond-> params
+         bbox?           (add-filter (->geo-intersects-filter bbox))
+         statuses        (add-filter {:terms {:status.keyword statuses}})
+         type-codes      (add-filter {:terms {:type.type-code type-codes}})
+         city-codes      (add-filter {:terms {:location.city.city-code city-codes}})
+         area-min        (add-filter {:range {:properties.area-m2 {:gte area-min}}})
+         area-max        (add-filter {:range {:properties.area-m2 {:lte area-max}}})
+         year-min        (add-filter {:range {:construction-year {:gte year-min}}})
+         year-max        (add-filter {:range {:construction-year {:lte year-max}}})
+         materials       (add-filter {:terms {:properties.surface-material.keyword materials}})
+         admins          (add-filter {:terms {:admin.keyword admins}})
+         owners          (add-filter {:terms {:owner.keyword owners}})
+         retkikartta?    (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
+         harrastuspassi? (add-filter {:terms {:properties.may-be-shown-in-harrastuspassi-fi? [true]}})
+         school-use?     (add-filter {:terms {:properties.school-use? [true]}}))))))
 
 (re-frame/reg-event-fx
  ::search
@@ -255,17 +318,30 @@
  (fn [db [_ s]]
    (assoc-in db [:search :string] s)))
 
+(defn analysis-mode? [db]
+  (and (= :default (-> db :map :mode :name))
+       (= :analysis (-> db :map :mode :sub-mode))
+       (-> db :analysis :center :lon)
+       (-> db :analysis :center :lat)))
+
 (defn- collect-search-data [db]
-  (-> db
-      :search
-      (select-keys [:string :filters :sort :pagination])
-      (assoc :locale ((-> db :translator)))
-      (assoc :zoom (-> db :map :zoom))
-      (assoc :bbox {:top-left     (-> db :map :top-left-wgs84)
-                    :bottom-right (-> db :map :bottom-right-wgs84)})
-      (assoc :center (-> db :map :center-wgs84))
-      (assoc :distance (/ (max (-> db :map :width)
-                               (-> db :map :height)) 2))))
+  (let [analysis? (analysis-mode? db)]
+    (-> db
+        :search
+        (select-keys [:string :filters :sort :pagination])
+        (assoc :locale ((-> db :translator)))
+        (assoc :decay? (not analysis?))
+        (assoc :zoom (-> db :map :zoom))
+        (assoc :bbox {:top-left     (-> db :map :top-left-wgs84)
+                      :bottom-right (-> db :map :bottom-right-wgs84)})
+        (assoc :center (if analysis?
+                         (-> db :analysis :center)
+                         (-> db :map :center-wgs84)))
+        (assoc :geom (-> db :analysis :buffer-geom :features first :geometry))
+        (assoc :distance (if analysis?
+                           (-> db :analysis :distance-km (* 1000))
+                           (/ (max (-> db :map :width)
+                                   (-> db :map :height)) 2))))))
 
 (re-frame/reg-event-fx
  ::submit-search
@@ -381,7 +457,7 @@
 (re-frame/reg-event-fx
  ::set-logged-in-filters
  (fn [{:keys [db]} [_]]
-   {:db       (update-in db [:search :filters :statuses] conj "planned")
+   {:db       (update-in db [:search :filters :statuses] conj "planned" "planning")
     :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx

@@ -58,3 +58,8 @@
    {:dispatch-n
     [[:lipas.ui.search.events/select-saved-search search]
      [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]}))
+
+(re-frame/reg-event-db
+ ::toggle-experimental-features
+ (fn [db _]
+   (update-in db [:user :experimental-features?] not)))

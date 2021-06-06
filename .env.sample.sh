@@ -29,6 +29,7 @@ export DB_PASSWORD=***FILL_THIS***
 export SEARCH_HOST=http://127.0.0.1:9200
 export SEARCH_USER=***FILL_THIS***
 export SEARCH_PASS=***FILL_THIS***
+export ES_JAVA_OPTS="-Xms1g -Xmx1g"
 
 # Mapproxy
 MML_USERNAME=***FILL_THIS***
@@ -51,6 +52,15 @@ export LEGACY_DB_USER=lipas
 export LEGACY_DB_PASS=***FILL_THIS***
 
 # Geoserver
-export GEOSERVER_DATA_DIR="/my_data_dir"
 export GEOSERVER_ADMIN_USER=admin
 export GEOSERVER_ADMIN_PASSWORD=***FILL_THIS***
+export GEOSERVER_INITIAL_MEMORY=1G
+export GEOSERVER_MAX_MEMORY=2G
+
+# OSRM
+# export OSRM_CAR_URL="http://localhost:5001/table/v1/car/"
+# export OSRM_BICYCLE_URL="http://localhost:5002/table/v1/bicycle/"
+# export OSRM_FOOT_URL="http://localhost:5003/table/v1/foot/"
+export OSRM_CAR_URL="http://osrm-car:5000/table/v1/car/"
+export OSRM_BICYCLE_URL="http://osrm-bicycle:5000/table/v1/bicycle/"
+export OSRM_FOOT_URL="http://osrm-foot:5000/table/v1/foot/"

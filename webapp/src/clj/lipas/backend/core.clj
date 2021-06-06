@@ -5,6 +5,7 @@
    [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.accessibility :as accessibility]
+   [lipas.backend.analysis :as analysis]
    [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
@@ -430,6 +431,25 @@
 (defn get-accessibility-app-url [db user lipas-id]
   (when-let [sports-site (get-sports-site db lipas-id)]
     {:url (accessibility/make-app-url user sports-site)}))
+
+;;; Analysis ;;;
+
+(defn search-schools [search params]
+  (let [idx-name "schools"]
+    (search/search search idx-name params)))
+
+(defn search-population [search params]
+  (let [idx-name "vaestoruutu_1km_2019_kp"]
+    (search/search search idx-name params)))
+
+(defn calc-distances-and-travel-times [search params]
+  (analysis/calc-distances-and-travel-times search params))
+
+(defn create-analysis-report [data out]
+  (->> data
+       (analysis/create-report)
+       (apply excel/create-workbook)
+       (excel/save-workbook-into-stream! out)))
 
 (comment
   (require '[lipas.backend.config :as config])
