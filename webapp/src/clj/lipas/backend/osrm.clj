@@ -35,7 +35,6 @@
 (defn make-url
   [{:keys [sources destinations profile]}]
   (let [base-url (-> profiles profile :url)]
-    (prn "OSRM URL: " base-url)
     (str base-url
          (->> (into [] cat [sources destinations])
               (str/join ";"))

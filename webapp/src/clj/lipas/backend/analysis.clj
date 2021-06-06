@@ -9,11 +9,12 @@
    [lipas.utils :as utils]))
 
 (def population-index "vaestoruutu_1km_2019_kp")
+(def population-index-high-def "vaestoruutu_250m_2020_kp")
 (def schools-index "schools")
 (def sports-sites-index "sports_sites_current")
 
 (defn- build-query [geom distance-km]
-  {:size 1000
+  {:size 10000
    :query
    {:bool
     {:must
@@ -37,7 +38,8 @@
 
 (defn get-population-data
   [search fcoll distance-km]
-  (get-es-data* population-index search fcoll distance-km))
+  (let [idx (if (> distance-km 10) population-index population-index-high-def)]
+    (get-es-data* idx search fcoll distance-km)))
 
 (defn get-school-data
   [search fcoll distance-km]
@@ -123,11 +125,33 @@
      {}
      result)))
 
+(defn resolve-zone
+  [zones m profile metric]
+  (if (= :travel-time metric)
+
+    ;; travel time
+    (let [time-min (-> m :route profile :duration-s (/ 60))]
+      (->> zones
+           :travel-time
+           (some
+            (fn [zone]
+              (when (>= (:max zone) time-min (:min zone))
+                (:id zone))))))
+
+    ;; distance
+    (let [distance-km (-> m :route profile :distance-m (/ 1000))]
+      (->> zones
+           :distance
+           (some
+            (fn [zone]
+              (when (>= (:max zone) distance-km (:min zone))
+                (:id zone))))))))
+
 (defn- combine
   [sports-site-data sports-site-distances sports-site-travel-times
    pop-data pop-distances pop-travel-times
    school-data school-distances school-travel-times
-   profiles]
+   profiles zones]
   {:population
    (->> pop-data
         :hits
@@ -135,14 +159,24 @@
         (map
          (fn [{:keys [id_nro] :as m}]
            (-> m
+               (select-keys [:vaesto :coords])
+               (update :kunta utils/->int)
+               (update :vaesto utils/->int)))))
+   :population-stats
+   (->> pop-data
+        :hits
+        (map :_source)
+        (map
+         (fn [{:keys [id_nro] :as m}]
+           (-> m
                (select-keys [:id_nro :ika_65_ :ika_15_64 :ika_0_14 :kunta
-                             :naiset :miehet :vaesto :coords])
+                             #_:naiset #_:miehet :vaesto :coords])
                (update :ika_65_ utils/->int)
                (update :ika_15_64 utils/->int)
                (update :ika_0_14 utils/->int)
                (update :kunta utils/->int)
-               (update :naiset utils/->int)
-               (update :miehet utils/->int)
+               #_(update :naiset utils/->int)
+               #_(update :miehet utils/->int)
                (update :vaesto utils/->int)
                (assoc :route
                       (into {}
@@ -151,7 +185,46 @@
                (assoc-in [:route :direct :distance-m]
                          (double
                           (Math/round
-                           (get-in pop-distances [id_nro :distance-m]))))))))
+                           (get-in pop-distances [id_nro :distance-m])))))))
+
+        (map
+         (fn [m]
+           (reduce
+            (fn [m1 profile]
+              (let [d-zone  (resolve-zone zones m1 profile :distance)
+                    tt-zone (resolve-zone zones m1 profile :travel-time)]
+                (cond-> m1
+                  d-zone  (assoc-in [:zone profile :distance] d-zone)
+                  tt-zone (assoc-in [:zone profile :travel-time] tt-zone))))
+            m
+            profiles)))
+
+        (reduce
+         (fn [res m]
+           (reduce
+            (fn [res2 profile]
+              (let [d-zone  (get-in m [:zone profile :distance])
+                    tt-zone (get-in m [:zone profile :travel-time])]
+                (cond-> res2
+
+                  d-zone
+                  (->
+                   (update-in [:distance profile d-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
+                   (update-in [:distance profile d-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
+                   (update-in [:distance profile d-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                   (update-in [:distance profile d-zone :vaesto] #(+ (or % 0) (:vaesto m))))
+
+                  tt-zone
+                  (->
+                   (update-in [:travel-time profile tt-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
+                   (update-in [:travel-time profile tt-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
+                   (update-in [:travel-time profile tt-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                   (update-in [:travel-time profile tt-zone :vaesto] #(+ (or % 0) (:vaesto m))))))
+              )
+            res
+            profiles))
+         {}))
+
    :schools
    (->> school-data
         :hits
@@ -186,7 +259,7 @@
                            (get-in sports-site-distances [id :distance-m]))))))))})
 
 (defn calc-distances-and-travel-times
-  [search {:keys [search-fcoll buffer-fcoll distance-km profiles type-codes]}]
+  [search {:keys [search-fcoll buffer-fcoll distance-km profiles type-codes zones]}]
   (let [pop-data (future (get-population-data search buffer-fcoll distance-km))
 
         school-data (future (get-school-data search buffer-fcoll distance-km))
@@ -261,31 +334,10 @@
              @school-data
              @school-distances
              @school-travel-times
-             profiles)))
+             profiles
+             zones)))
 
 ;;; Report generation ;;;;
-
-(defn resolve-zone
-  [zones m profile metric]
-  (if (= :travel-time metric)
-
-    ;; travel time
-    (let [time-min (-> m :route profile :duration-s (/ 60))]
-      (->> zones
-           :travel-time
-           (some
-            (fn [zone]
-              (when (>= (:max zone) time-min (:min zone))
-                (:id zone))))))
-
-    ;; distance
-    (let [distance-km (-> m :route profile :distance-m (/ 1000))]
-      (->> zones
-           :distance
-           (some
-            (fn [zone]
-              (when (>= (:max zone) distance-km (:min zone))
-                (:id zone))))))))
 
 (def categories
   {:travel-time

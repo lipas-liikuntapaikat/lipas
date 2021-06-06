@@ -48,7 +48,7 @@
         :max     (get-in distances [to-idx :value])
         :max-idx to-idx
         :id      (keyword (str "zone" (inc idx)))})
-     [[0 4] [4 7] [7 8] [8 10]])
+     [[0 4] [4 7] [7 9] [9 10]])
     :travel-time
     (map-indexed
      (fn [idx [from-idx to-idx]]

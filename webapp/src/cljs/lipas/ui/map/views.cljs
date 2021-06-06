@@ -275,12 +275,7 @@
 
 (defmethod popup-body :population [popup]
   (let [data   (-> popup :data :features first :properties)
-        fields {:ika_0_14  "Ikä 0-14"
-                :ika_15_64 "Ikä 15-64"
-                :ika_65_   "Ikä 65-"
-                :miehet    "Miehet"
-                :naiset    "Naiset"
-                :vaesto    "Yht."}]
+        fields {:vaesto "Population"}]
 
     [mui/paper
      {:style

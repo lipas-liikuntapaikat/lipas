@@ -366,11 +366,12 @@
   {:headline "Analyysityökalu",
    :tooltip "Analyysityökalu",
    :helper-text
-   "Valitse liikuntapaikka kartalta tai kohdista kartta haluamaasi paikkaan ja paina",
+   "Aloita valitsemalla liikuntapaikka kartalta.",
    :copyright1
    "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2019",
    :copyright2 "1x1 km ruutuaineistoa",
-   :copyright3 "lisenssillä"},
+   :copyright3 "lisenssillä"
+   :copyright4 ", sekä vuoden 2020 250x250m ruutuaineistoa suljetulla lisenssillä."},
   :lipas.swimming-pool.slides
   {:add-slide "Lisää liukumäki",
    :edit-slide "Muokkaa liukumäkeä",
@@ -1151,7 +1152,7 @@
   {:headline "Befolkning",
    :tooltip "Visa befolkning",
    :helper-text
-   "Välj idrottsanläggning på kartan eller zooma in till position och klicka",
+   "Välj idrottsanläggning på kartan.",
    :copyright1
    "Befolkningsinformation: Statistikcentralen 2019 årets",
    :copyright2 "1 km * 1 km data",
@@ -1959,9 +1960,9 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
   {:headline "Analysis tool",
    :tooltip "Analysis tool",
    :helper-text
-   "Select sports facility on map or zoom into desired location and click",
-   :copyright1 "Statistics of Finland 2019",
-   :copyright2 "1x1km population grid",
+   "Select sports facility on the map.",
+   :copyright1 "Statistics of Finland 2019/2020",
+   :copyright2 "1x1km and 250x250m population grids",
    :copyright3 "with license"},
   :lipas.swimming-pool.slides
   {:add-slide "Add Slide",

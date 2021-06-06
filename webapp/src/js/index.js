@@ -361,17 +361,17 @@ import ContentCut from 'mdi-material-ui/ContentCut';
 import ContentDuplicate from 'mdi-material-ui/ContentDuplicate';
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
-import Helicopter from 'mdi-material-ui/Helicopter';
+import MapMarkerDistance from 'mdi-material-ui/MapMarkerDistance';
 import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 
 window.materialIcons = {
+  Calculator,
   ContentCut,
   ContentDuplicate,
   Eraser,
   FileUpload,
-  Helicopter,
+  MapMarkerDistance,
   MapSearchOutline,
-  Calculator,
 };
 
 // React virtualized

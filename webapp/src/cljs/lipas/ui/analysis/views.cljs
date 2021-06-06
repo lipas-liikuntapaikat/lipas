@@ -72,31 +72,39 @@
 
      ;; Direct
      [mui/grid {:item true}
-      [mui/icon-button
-       {:on-click #(==> [::events/select-travel-profile :direct])
-        :color    (if (= profile :direct) "secondary" "default")}
-       [:> js/materialIcons.Helicopter]]]
+      [mui/tooltip
+       {:title "Direct"}
+       [mui/icon-button
+        {:on-click #(==> [::events/select-travel-profile :direct])
+         :color    (if (= profile :direct) "secondary" "default")}
+        [:> js/materialIcons.MapMarkerDistance]]]]
 
      ;; Car
      [mui/grid {:item true}
-      [mui/icon-button
-       {:on-click #(==> [::events/select-travel-profile :car])
-        :color    (if (= profile :car) "secondary" "default")}
-       [mui/icon "directions_car"]]]
+      [mui/tooltip
+       {:title "By car"}
+       [mui/icon-button
+        {:on-click #(==> [::events/select-travel-profile :car])
+         :color    (if (= profile :car) "secondary" "default")}
+        [mui/icon "directions_car"]]]]
 
      ;; Bicycle
      [mui/grid {:item true}
-      [mui/icon-button
-       {:on-click #(==> [::events/select-travel-profile :bicycle])
-        :color    (if (= profile :bicycle) "secondary" "default")}
-       [mui/icon "directions_bike"]]]
+      [mui/tooltip
+       {:title "By bicycle"}
+       [mui/icon-button
+        {:on-click #(==> [::events/select-travel-profile :bicycle])
+         :color    (if (= profile :bicycle) "secondary" "default")}
+        [mui/icon "directions_bike"]]]]
 
      ;; Foot
      [mui/grid {:item true}
-      [mui/icon-button
-       {:on-click #(==> [::events/select-travel-profile :foot])
-        :color    (if (= profile :foot) "secondary" "default")}
-       [mui/icon "directions_walk"]]]
+      [mui/tooltip
+       {:title "By foot"}
+       [mui/icon-button
+        {:on-click #(==> [::events/select-travel-profile :foot])
+         :color    (if (= profile :foot) "secondary" "default")}
+        [mui/icon "directions_walk"]]]]
 
      ;; Distance vs travel time
      [mui/grid {:item true}
@@ -108,7 +116,7 @@
          {:label "Distance" :value :distance}]}]]]))
 
 (defn population-v2-tab [{:keys [tr]}]
-  (let [data   (<== [::subs/population-chart-data-v2])
+  (let [data   (<== [::subs/population-chart-data-v3])
         labels (<== [::subs/population-labels])]
     [:<>
 
@@ -181,7 +189,7 @@
         {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
          :underline "always"}
         "CC BY 4.0"]
-       "."]]]))
+       (tr :map.demographics/copyright4)]]]))
 
 (defn schools-tab [{:keys [tr]}]
   (let [schools-list       (<== [::subs/schools-list])
@@ -294,16 +302,7 @@
        [mui/grid {:item true :xs 12 :container true :align-items "center"}
         [mui/grid {:item true}
          [mui/typography
-          (tr :map.demographics/helper-text)
-          " "
-          [mui/link
-           {:color    "secondary"
-            :href     "javascript:;"
-            :variant  "body2"
-            :on-click #(==> [::events/show-near-by-analysis])}
-           (tr :general/here)]
-          "."]]])
-
+          (tr :map.demographics/helper-text)]]])
 
      (when selected-site
        [:<>
@@ -354,13 +353,13 @@
             :value     show-schools?
             :on-change #(==> [::map-events/set-overlay % :schools])}]]]
 
-        ;; Zones selector
-        [mui/grid {:item true :xs 12}
-         [zones-selector]]
-
         ;; Travel profile selector
         [mui/grid {:item true :xs 12}
          [travel-profile-selector]]
+
+        ;; Zones selector
+        [mui/grid {:item true :xs 12}
+         [zones-selector]]
 
         ;; No data available text
         #_(when (and selected-site (empty? data-bar))
