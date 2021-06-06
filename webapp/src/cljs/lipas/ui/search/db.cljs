@@ -19,4 +19,4 @@
     :page-sizes [25 50 100 250 500 1000]}})
 
 (def default-db-logged-in
-  (update-in default-db [:filters :statuses] conj "planned"))
+  (update-in default-db [:filters :statuses] conj "planned" "planning"))

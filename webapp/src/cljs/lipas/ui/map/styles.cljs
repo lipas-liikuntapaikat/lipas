@@ -18,6 +18,17 @@
             :anchor #js[0.5 0.85]
             :offset #js[0 0]})}))
 
+(defn ->school-style [opts]
+  (ol/style.Style.
+   #js{:image
+       (ol/style.Icon.
+        #js{:src    (str "data:image/svg+xml;charset=utf-8,"
+                         (-> opts
+                             svg/->school-str
+                             js/encodeURIComponent))
+            :anchor #js[0.0 0.0]
+            :offset #js[0 0]})}))
+
 (def blue-marker-style (->marker-style {}))
 (def red-marker-style (->marker-style {:color mui/secondary}))
 (def default-stroke (ol/style.Stroke. #js{:color "#3399CC" :width 3}))
@@ -113,7 +124,8 @@
           rgba (doto rgb (.push alpha))]
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
-(defn ->symbol-style [m & {hover? :hover selected? :selected planned? :planned}]
+(defn ->symbol-style
+  [m & {hover? :hover selected? :selected planned? :planned planning? :planning}]
   (let [fill-alpha   (case (:shape m)
                        "polygon" (if hover? 0.3 0.2)
                        0.85)
@@ -127,6 +139,7 @@
         stroke-hover-width (* 2 stroke-width)
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
+
         stroke-planned     (ol/style.Stroke.
                             #js{:color    "#3b3b3b"
                                 :lineDash #js[2 20]
@@ -134,45 +147,63 @@
                                 :width    (if (#{"polygon" "linestring"} (:shape m))
                                             10
                                             5)})
-        stroke             (ol/style.Stroke.
-                            #js{:color    stroke-color
-                                :lineDash (when (or selected? hover?)
-                                            #js[2 8])
-                                :width    (if (or selected? hover?)
-                                            stroke-hover-width
-                                            stroke-width)})
-        on-top?            (or selected? hover?)
-        style              (ol/style.Style.
-                            #js{:stroke stroke
-                                :fill   fill
-                                :zIndex (condp = (:shape m)
-                                          "polygon"    (if on-top? 100 99)
-                                          "linestring" (if on-top? 200 199)
-                                          (if on-top? 300 299))
-                                :image
-                                (when-not (#{"polygon" "linestring"} (:shape m))
-                                  (ol/style.Circle.
-                                   #js{:radius (cond
-                                                 hover?   8
-                                                 planned? 7
-                                                 :else    7)
-                                       :fill   fill
-                                       :stroke
-                                       (cond
-                                         planned? (ol/style.Stroke.
-                                                   #js{:color    "black"
-                                                       :width    3
-                                                       :lineDash #js [2 5]})
-                                         hover?   hover-stroke
-                                         :else    stroke-black)}))})
-        planned-stroke     (ol/style.Style.
-                            #js{:stroke stroke-planned})]
+
+        stroke-planning (ol/style.Stroke.
+                         #js{:color    "#ee00ee"
+                             :lineDash #js[2 20]
+                                        ; :lineDashOffset 1
+                             :width    (if (#{"polygon" "linestring"} (:shape m))
+                                         10
+                                         5)})
+
+        stroke         (ol/style.Stroke.
+                        #js{:color    stroke-color
+                            :lineDash (when (or selected? hover?)
+                                        #js[2 8])
+                            :width    (if (or selected? hover?)
+                                        stroke-hover-width
+                                        stroke-width)})
+        on-top?        (or selected? hover?)
+        style          (ol/style.Style.
+                        #js{:stroke stroke
+                            :fill   fill
+                            :zIndex (condp = (:shape m)
+                                      "polygon"    (if on-top? 100 99)
+                                      "linestring" (if on-top? 200 199)
+                                      (if on-top? 300 299))
+                            :image
+                            (when-not (#{"polygon" "linestring"} (:shape m))
+                              (ol/style.Circle.
+                               #js{:radius (cond
+                                             hover?    8
+                                             planning? 7
+                                             planned?  7
+                                             :else     7)
+                                   :fill   fill
+                                   :stroke
+                                   (cond
+                                     planning? (ol/style.Stroke.
+                                                #js{:color    "#ee00ee"
+                                                    :width    3
+                                                    :lineDash #js [2 5]})
+                                     planned? (ol/style.Stroke.
+                                               #js{:color    "black"
+                                                   :width    3
+                                                   :lineDash #js [2 5]})
+                                     hover?   hover-stroke
+                                     :else    stroke-black)}))})
+        planned-stroke (ol/style.Style.
+                        #js{:stroke stroke-planned})
+
+        planning-stroke (ol/style.Style.
+                         #js{:stroke stroke-planning})]
 
     (if (and selected? (:shape m))
       #js[style blue-marker-style]
-      (if planned?
-        #js[style planned-stroke]
-        #js[style]))))
+      (cond
+        planning? #js[style planning-stroke]
+        planned?  #js[style planned-stroke]
+        :else     #js[style]))))
 
 (def styleset styles/adapted-temp-symbols)
 
@@ -188,9 +219,12 @@
 (def planned-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planned true))) {} styleset))
 
+(def planning-symbols
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
+
 (defn shift-likely-overlapping!
   [type-code style resolution f]
-  (when (#{4402} type-code)
+  (when (#{4402 4440} type-code)
     (let [delta (* resolution 4)
           copy  (-> f .getGeometry .clone)]
       (doto style
@@ -200,8 +234,9 @@
 (defn feature-style [f resolution]
   (let [type-code (.get f "type-code")
         status    (.get f "status")
-        style     (if (= "planned" status)
-                    (get planned-symbols type-code)
+        style     (condp = status
+                    "planning" (get planning-symbols type-code)
+                    "planned"  (get planned-symbols type-code)
                     (get symbols type-code))]
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
@@ -310,3 +345,51 @@
       500  (population-zone3 3)
       5000 (population-zone3 4)
       (population-zone3 5))))
+
+(defn population-style2
+  [f _resolution]
+  (let [n (.get f "vaesto")]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "blue"})
+         :fill default-fill
+         :image
+         (ol/style.Circle.
+          #js{:radius (min 7 (* 0.01 n))
+              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+              :stroke default-stroke})})))
+
+(defn population-hover-style2
+  [f _resolution]
+  (let [n (.get f "vaesto")]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "blue"})
+         :fill default-fill
+         :image
+         (ol/style.Circle.
+          #js{:radius (min 10 (* 0.1 n))
+              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+              :stroke hover-stroke})})))
+
+(def school-colors
+  {"Peruskoulut"
+   {:name "Peruskoulut" :color "#C17B0D"}
+   "Peruskouluasteen erityiskoulut"
+   {:name "Peruskouluasteen erityiskoulut" :color "#C2923E"}
+   "Lukiot"
+   {:name "Lukiot" :color "#4A69C2"}
+   "Perus- ja lukioasteen koulut"
+   {:name "Perus- ja lukioasteen koulut" :color "#0D3BC1"}
+   "Varhaiskasvatusyksikkö"
+   {:name "Varhaiskasvatusyksikkö" :color "#ff40ff"}})
+
+(defn school-style [f resolution]
+  (let [color (:color (get school-colors (.get f "type")))]
+    (->school-style {:color color :width 24 :height 24})))
+
+(defn school-hover-style [f resolution]
+  (let [color (:color (get school-colors (.get f "type")))]
+    (->school-style {:color color :width 24 :height 24 :hover? true})))

@@ -4,7 +4,9 @@
 
 (def dicts
   {:fi
- {:sport
+   {:analysis
+    {:headline "Analyysi"}
+    :sport
   {:description
    "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista  liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa.",
    :headline "Liikuntapaikat",
@@ -361,14 +363,15 @@
    :average-water-consumption-l
    "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)"},
   :map.demographics
-  {:headline "Väestö",
-   :tooltip "Näytä väestötiedot",
+  {:headline "Analyysityökalu",
+   :tooltip "Analyysityökalu",
    :helper-text
-   "Valitse liikuntapaikka kartalta tai kohdista kartta haluamaasi paikkaan ja paina",
+   "Aloita valitsemalla liikuntapaikka kartalta.",
    :copyright1
    "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2019",
    :copyright2 "1x1 km ruutuaineistoa",
-   :copyright3 "lisenssillä"},
+   :copyright3 "lisenssillä"
+   :copyright4 ", sekä vuoden 2020 250x250m ruutuaineistoa suljetulla lisenssillä."},
   :lipas.swimming-pool.slides
   {:add-slide "Lisää liukumäki",
    :edit-slide "Muokkaa liukumäkeä",
@@ -1149,7 +1152,7 @@
   {:headline "Befolkning",
    :tooltip "Visa befolkning",
    :helper-text
-   "Välj idrottsanläggning på kartan eller zooma in till position och klicka",
+   "Välj idrottsanläggning på kartan.",
    :copyright1
    "Befolkningsinformation: Statistikcentralen 2019 årets",
    :copyright2 "1 km * 1 km data",
@@ -1954,12 +1957,12 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
    :average-water-consumption-l
    "Average water consumption (l) / maintenance"},
   :map.demographics
-  {:headline "Demographics",
-   :tooltip "Show demographics",
+  {:headline "Analysis tool",
+   :tooltip "Analysis tool",
    :helper-text
-   "Select sports facility on map or zoom into desired location and click",
-   :copyright1 "Statistics of Finland 2019",
-   :copyright2 "1x1km population grid",
+   "Select sports facility on the map.",
+   :copyright1 "Statistics of Finland 2019/2020",
+   :copyright2 "1x1km and 250x250m population grids",
    :copyright3 "with license"},
   :lipas.swimming-pool.slides
   {:add-slide "Add Slide",

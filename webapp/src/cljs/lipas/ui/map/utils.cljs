@@ -15,10 +15,16 @@
 (def geoJSON (ol/format.GeoJSON. #js{:dataProjection    "EPSG:4326"
                                      :featureProjection "EPSG:3067"}))
 
+(def WKT (ol/format.WKT. #js{:dataProjection    "EPSG:4326"
+                             :featureProjection "EPSG:3067"}))
+
 (def temp-fid-prefix "temp")
 
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
+
+(defn ->ol-feature [geoJSON-feature]
+  (.readFeature geoJSON geoJSON-feature))
 
 (defn ->geoJSON [ol-features]
   (.writeFeaturesObject geoJSON ol-features))
@@ -27,6 +33,36 @@
   (js->clj x :keywordize-keys true))
 
 (def ->geoJSON-clj (comp ->clj ->geoJSON))
+
+(defn ->wkt [ol-feature]
+  (.writeFeature WKT ol-feature))
+
+(defn <-wkt [wkt]
+  (.readFeature WKT wkt #js{:dataProjection    "EPSG:4326"
+                            :featureProjection "EPSG:3067"}))
+
+(defn ->geom-coll [fcoll]
+  {:type "GeometryCollection"
+   :geometries (->> fcoll :features (map :geometry))})
+
+(comment
+  (def pf {:type "Feature"
+           :geometry
+           {:type "Point", :coordinates [25.635576 64.930784]}})
+
+  (def lf {:type "LineString",
+           :coordinates
+           [[25.635078 64.9308]
+            [25.635324 64.930785]
+            [25.635576 64.930784]
+            [25.635617 64.93085]]})
+
+  (-> lf
+      clj->js
+      ->ol-feature
+      ->wkt
+      )
+  )
 
 (defn add-marker!
   [{:keys [layers] :as map-ctx} f style]
@@ -124,6 +160,10 @@
 (defn enable-population-hover!
   [map-ctx]
   (enable-hover! map-ctx :population-hover))
+
+(defn enable-schools-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :schools-hover))
 
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
@@ -314,6 +354,55 @@
       ->clj
       (utils/round-safe 2)
       read-string))
+
+(defn wgs84->epsg3067 [wgs84-coords]
+  (let [proj      (.get ol/proj "EPSG:3067")]
+    (ol/proj.fromLonLat wgs84-coords proj)))
+
+(defn calc-buffer-geom [geoms distance-km]
+  (case (-> geoms :features first :geometry :type)
+
+    "Point"
+    geoms
+
+    ("LineString" "Polygon")
+    (-> geoms
+        clj->js
+        (turf/combine)
+        (turf/buffer distance-km #js{:units "kilometers"})
+        (js->clj :keywordize-keys true))
+
+    nil))
+
+(defn draw-analytics-buffer!
+  [{:keys [layers] :as map-ctx}
+   {:keys [buffer-geom center distance-km]}]
+
+  ;; Clear existing buffer
+  (-> layers :overlays :analysis .getSource .clear)
+
+  (when-let [buff-feature
+             (case (-> buffer-geom :features first :geometry :type)
+
+               "Point"
+               (when (and (:lon center) (:lat center))
+                 (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
+                   (ol.Feature.
+                    #js{:geometry (ol.geom.Circle. center (* distance-km 1000))})))
+
+               ("LineString" "Polygon")
+               (-> buffer-geom :features first clj->js ->ol-feature)
+
+               nil)]
+
+    (-> layers
+        :overlays
+        :analysis
+        .getSource
+        (.addFeature buff-feature)))
+
+  map-ctx)
+
 
 ;; Below is a WIP attempt to automagically fix badly drawn
 ;; linestrings.

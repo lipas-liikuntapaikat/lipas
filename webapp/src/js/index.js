@@ -3,9 +3,11 @@ import proj4 from 'proj4';
 window.proj4 = proj4;
 
 // OpenLayers
+import Circle from 'ol/geom/Circle';
 import CircleStyle from 'ol/style/Circle';
 import Collection from 'ol/Collection';
 import Draw from 'ol/interaction/Draw';
+import Feature from 'ol/Feature';
 import Fill from 'ol/style/Fill';
 import GeoJSON from 'ol/format/GeoJSON';
 import GeometryCollection from 'ol/geom/GeometryCollection';
@@ -33,12 +35,13 @@ import {get, fromLonLat, toLonLat} from 'ol/proj';
 import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
 import {pointerMove} from 'ol/events/condition';
 import {register} from 'ol/proj/proj4';
+import WKT from 'ol/format/WKT';
 
 // Openlayers-Extensions
 import DrawHole from 'ol-ext/interaction/DrawHole';
 
 window.ol = {
-  Map, View, Overlay, Collection,
+  Map, View, Overlay, Collection, Feature,
   layer: {
     Tile: TileLayer,
     Image: ImageLayer,
@@ -79,6 +82,7 @@ window.ol = {
   },
   format: {
     GeoJSON,
+    WKT,
   },
   interaction: {
     Draw,
@@ -96,6 +100,7 @@ window.ol = {
     GeometryCollection,
     MultiPoint,
     Point,
+    Circle,
   },
 };
 
@@ -196,6 +201,7 @@ import StepContent from '@material-ui/core/StepContent';
 import StepLabel from '@material-ui/core/StepLabel';
 import Stepper from '@material-ui/core/Stepper';
 import SvgIcon from '@material-ui/core/SvgIcon';
+import Switch from '@material-ui/core/Switch';
 import SwipeableDrawer from '@material-ui/core/SwipeableDrawer';
 import Tab from '@material-ui/core/Tab';
 import Table from '@material-ui/core/Table';
@@ -280,6 +286,7 @@ window.mui = {
   Stepper,
   SvgIcon,
   SwipeableDrawer,
+  Switch,
   Tab,
   Table,
   TableBody,
@@ -354,6 +361,7 @@ import ContentCut from 'mdi-material-ui/ContentCut';
 import ContentDuplicate from 'mdi-material-ui/ContentDuplicate';
 import Eraser from 'mdi-material-ui/Eraser';
 import FileUpload from 'mdi-material-ui/FileUpload';
+import MapMarkerDistance from 'mdi-material-ui/MapMarkerDistance';
 import MapSearchOutline from 'mdi-material-ui/MapSearchOutline';
 
 window.materialIcons = {
@@ -362,6 +370,7 @@ window.materialIcons = {
   ContentDuplicate,
   Eraser,
   FileUpload,
+  MapMarkerDistance,
   MapSearchOutline,
 };
 
@@ -378,6 +387,7 @@ window.reactVirtualized = {
 
 // Turf.js
 import bbox from '@turf/bbox';
+import bufferTurf from '@turf/buffer';
 import cleanCoords from '@turf/clean-coords';
 import combine from '@turf/combine';
 import kinks from '@turf/kinks';
@@ -386,9 +396,12 @@ import lineIntersect from '@turf/line-intersect';
 import lineSplit from '@turf/line-split';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
 import truncate from '@turf/truncate';
+import distance from '@turf/distance';
+import { point } from '@turf/helpers';
 
 window.turf = {
   bbox,
+  buffer: bufferTurf,
   cleanCoords,
   combine,
   kinks,
@@ -397,4 +410,11 @@ window.turf = {
   lineSplit,
   nearestPointOnLine,
   truncate,
+  distance,
+  point,
+};
+
+// rc-slider
+window.rcslider = {
+  Slider: require('rc-slider'),
 };
