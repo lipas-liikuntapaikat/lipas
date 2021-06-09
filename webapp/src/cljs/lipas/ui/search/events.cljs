@@ -133,7 +133,8 @@
          {:keys [lon lat]} center
 
          params (merge
-                 (add-distance-fields lat lon)
+                 (when (and lat lon)
+                     (add-distance-fields lat lon))
                  (resolve-sort sort locale decay? center)
                  (resolve-pagination pagination decay?)
                  {:track_total_hits 50000
