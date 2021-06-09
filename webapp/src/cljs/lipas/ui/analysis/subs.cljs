@@ -170,6 +170,7 @@
          (fn [m]
            (assoc m :zone (resolve-zone-v3 zones m profile metric))))
 
+        (remove (comp nil? :zone))
         (group-by :zone)
 
         (reduce
