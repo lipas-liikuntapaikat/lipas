@@ -218,7 +218,9 @@
    (let [event-date (if (utils/this-year? year)
                       (utils/timestamp)
                       (utils/->end-of-year year))
-         data       (assoc data :event-date event-date :status status)
+         data       (-> data
+                        (assoc :event-date event-date :status status)
+                        (utils/clean))
          on-success (fn [] [[:lipas.ui.map.events/show-sports-site nil]
                             [:lipas.ui.search.events/submit-search]
                             [::select-delete-status nil]
