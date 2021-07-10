@@ -369,7 +369,7 @@
                              (reduce
                               (fn [res [k v]]
                                 (if-let [label (labels k)]
-                                  (conj res {:label label :value v})
+                                  (conj res {:label label :value (if (= -1 v) "<10" v)})
                                   res))
                               []))))]
      (tooltip payload-fn labels sort-fn props))))

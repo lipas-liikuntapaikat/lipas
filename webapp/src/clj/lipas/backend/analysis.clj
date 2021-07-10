@@ -147,6 +147,22 @@
               (when (>= (:max zone) distance-km (:min zone))
                 (:id zone))))))))
 
+(def anonymity-threshold 10)
+
+(defn anonymize [n]
+  (if (and (some? n) (< n anonymity-threshold)) -1 n))
+
+(defn- kissa [profiles zones m]
+  (reduce
+   (fn [m ks]
+     (update-in m ks anonymize))
+   m
+   (for [k1 [:distance :travel-time]
+         k2 profiles
+         k3 (map :id (:distance zones))
+         k4 [:ika_65_ :ika_15_64 :ika_0_14 :vaesto]]
+     [k1 k2 k3 k4])))
+
 (defn- combine
   [sports-site-data sports-site-distances sports-site-travel-times
    pop-data pop-distances pop-travel-times
@@ -161,11 +177,13 @@
            (-> m
                (select-keys [:vaesto :coords])
                (update :kunta utils/->int)
-               (update :vaesto utils/->int)))))
+               (update :vaesto (comp anonymize utils/->int))))))
    :population-stats
    (->> pop-data
         :hits
         (map :_source)
+
+        ;; Combine distance and travel-time calculations to demographics
         (map
          (fn [{:keys [id_nro] :as m}]
            (-> m
@@ -187,6 +205,7 @@
                           (Math/round
                            (get-in pop-distances [id_nro :distance-m])))))))
 
+        ;; Resolve zones
         (map
          (fn [m]
            (reduce
@@ -199,6 +218,7 @@
             m
             profiles)))
 
+        ;; Sum by metric, profile, zone and demography
         (reduce
          (fn [res m]
            (reduce
@@ -223,7 +243,10 @@
               )
             res
             profiles))
-         {}))
+         {})
+
+        ;; Anonymize possibly "too small" population values
+        (kissa profiles zones))
 
    :schools
    (->> school-data
