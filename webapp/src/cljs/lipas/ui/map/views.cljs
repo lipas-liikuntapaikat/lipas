@@ -290,7 +290,7 @@
            [mui/typography {:variant "caption" :noWrap true}
             text]]
           [mui/table-cell
-           [mui/typography v]]]))]]))
+           [mui/typography (if (= -1 v) "<10" v)]]]))]]))
 
 (defmethod popup-body :school [popup]
   (let [data   (-> popup :data :features first :properties)]
