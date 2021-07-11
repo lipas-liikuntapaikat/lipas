@@ -274,8 +274,9 @@
         (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :population [popup]
-  (let [data   (-> popup :data :features first :properties)
-        fields {:vaesto "Population"}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        data   (-> popup :data :features first :properties)
+        fields {:vaesto (tr :analysis/population)}]
 
     [mui/paper
      {:style
@@ -290,7 +291,7 @@
            [mui/typography {:variant "caption" :noWrap true}
             text]]
           [mui/table-cell
-           [mui/typography (if (= -1 v) "<10" v)]]]))]]))
+           [mui/typography (if (nil? v) "<10" v)]]]))]]))
 
 (defmethod popup-body :school [popup]
   (let [data   (-> popup :data :features first :properties)]

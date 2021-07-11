@@ -6,7 +6,7 @@
 
 ;; Zone colors
 (def base-color "#0073e6")
-(def zone-colors
+#_(def zone-colors
   (into {}
         (for [n (range 1 (inc 10))]
           [(keyword (str "zone" n))
@@ -14,6 +14,30 @@
                gcolor/hexToRgb
                (gcolor/lighten (/ n 10))
                gcolor/rgbArrayToHex)])))
+
+(def zone-colors
+  {:zone1  "#00c7ff"
+   :zone2  "#1ab8eb"
+   :zone3  "#25a9d8"
+   :zone4  "#2b9ac4"
+   :zone5  "#2e8cb1"
+   :zone6  "#2f7d9f"
+   :zone7  "#30708c"
+   :zone8  "#2f627b"
+   :zone9  "#2d5569"
+   :zone10 "#2a4858"})
+
+#_(def zone-colors
+  {:zone1 "#ED71AD"
+   :zone2 "#DF72B5"
+   :zone3 "#D272BC"
+   :zone4 "#C473C4"
+   :zone5 "#B674CB"
+   :zone6 "#A974D3"
+   :zone7 "#9B75DA"
+   :zone8 "#8D76E2"
+   :zone9 "#8076E9"
+   :zone10 "#7277F1"})
 
 (def distances
   (into {}
