@@ -6,7 +6,7 @@
    :zoom              2
    :mode              {:name :default}
    :basemap           :taustakartta
-   :selected-overlays #{:vectors :edits :markers :analysis :schools}
+   :selected-overlays #{:vectors :edits :markers :analysis :schools :population}
    :import
    {:dialog-open?      false
     :selected-encoding "ISO-8859-1"

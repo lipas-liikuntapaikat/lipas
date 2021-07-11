@@ -150,16 +150,16 @@
 (def anonymity-threshold 10)
 
 (defn anonymize [n]
-  (if (and (some? n) (< n anonymity-threshold)) -1 n))
+  (when (and (some? n) (>= n anonymity-threshold)) n))
 
-(defn- kissa [profiles zones m]
+(defn- anonymize-all [profiles zones m]
   (reduce
    (fn [m ks]
      (update-in m ks anonymize))
    m
    (for [k1 [:distance :travel-time]
          k2 profiles
-         k3 (map :id (:distance zones))
+         k3 (map :id ((if (= :distance k1) :distance :travel-time) zones))
          k4 [:ika_65_ :ika_15_64 :ika_0_14 :vaesto]]
      [k1 k2 k3 k4])))
 
@@ -246,7 +246,7 @@
          {})
 
         ;; Anonymize possibly "too small" population values
-        (kissa profiles zones))
+        (anonymize-all profiles zones))
 
    :schools
    (->> school-data

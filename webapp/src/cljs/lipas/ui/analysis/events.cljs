@@ -1,19 +1,13 @@
 (ns lipas.ui.analysis.events
   (:require
-   ["ol" :as ol]
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
-   [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
    [goog.string.format]
-   [goog.string.path :as gpath]
    [lipas.ui.analysis.db :as db]
-   [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [==>] :as utils]
    [lipas.utils :as cutils]
-   proj4
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
@@ -55,13 +49,6 @@
       :dispatch     [:lipas.ui.events/set-active-notification
                      {:message  (tr :notifications/get-failed)
                       :success? false}]})))
-
-(defn- calc-buffered-bbox [fcoll buffer]
-  (let [fs     (-> fcoll clj->js map-utils/->ol-features)
-        extent (-> fs (aget 0) .getGeometry .getExtent)]
-    (.forEach fs (fn [f']
-                   (js/ol.extent.extend extent (-> f' .getGeometry .getExtent))))
-    (js/ol.extent.buffer extent buffer)))
 
 (re-frame/reg-event-fx
  ::set-selected-population-grid
@@ -193,10 +180,10 @@
      {:db (assoc-in db [:analysis :zones metric] zones)
       :dispatch-n
       (let [old-max (-> db :analysis :distance-km)
-            new-max (apply max v)]
+            new-max (apply max (map :max zones))]
         [(when (= :distance metric)
            [::set-analysis-distance-km new-max])
-         (when (not= old-max new-max)
+         (when (and (= :distance metric) (not= old-max new-max))
            [::refresh-analysis])])})))
 
 (re-frame/reg-event-fx

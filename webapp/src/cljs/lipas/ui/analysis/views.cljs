@@ -28,11 +28,18 @@
     [:<>
 
      ;; Category filter
-     [mui/grid {:item true :xs 12}
+
+     [mui/grid {:item true :xs 10}
       [lui/type-category-selector
        {:value     selected-types
         :on-change #(==> [::events/set-type-codes-filter %])
-        :label     "Filter types"}]]
+        :label     (tr :analysis/filter-types)}]]
+
+     (when (seq selected-types)
+       [mui/grid {:item true :xs 2}
+        [mui/tooltip {:title (tr :search/clear-filters)}
+         [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
+          [mui/icon {:color "secondary"} "filter_alt"]]]])
 
      ;; Tabs
      [mui/grid {:item :true :xs 12}
@@ -64,10 +71,19 @@
           :zones       zones
           :zone-colors zone-colors}]])]))
 
+(defn travel-metric-selector
+  [{:keys [tr]}]
+  (let [metric (<== [::subs/selected-travel-metric])]
+    [lui/select
+     {:on-change #(==> [::events/select-travel-metric %])
+      :value     metric
+      :items
+      [{:label (tr :analysis/travel-time) :value :travel-time}
+       {:label (tr :analysis/distance) :value :distance}]}]))
+
 (defn travel-profile-selector
-  []
-  (let [profile (<== [::subs/selected-travel-profile])
-        metric  (<== [::subs/selected-travel-metric])]
+  [{:keys [tr]}]
+  (let [profile (<== [::subs/selected-travel-profile])]
     [mui/grid {:container true :spacing 2 :align-items "center"}
 
      ;; Direct
@@ -106,22 +122,20 @@
          :color    (if (= profile :foot) "secondary" "default")}
         [mui/icon "directions_walk"]]]]
 
-     ;; Distance vs travel time
+     ;; Distance vs travel time selector
      [mui/grid {:item true}
-      [lui/select
-       {:on-change #(==> [::events/select-travel-metric %])
-        :value     metric
-        :items
-        [{:label "Travel time" :value :travel-time}
-         {:label "Distance" :value :distance}]}]]]))
+      [travel-metric-selector {:tr tr}]]
+
+     ;; Settings button
+     [mui/grid {:item true}
+      [mui/icon-button
+       {:on-click #(==> [::events/select-analysis-tab "settings"])}
+       [mui/icon "settings"]]]]))
 
 (defn population-v2-tab [{:keys [tr]}]
   (let [data   (<== [::subs/population-chart-data-v3])
         labels (<== [::subs/population-labels])]
     [:<>
-
-     #_[mui/grid {:item true :xs 12}
-      [travel-profile-selector]]
 
      ;; Area chart
      (when (seq data)
@@ -227,63 +241,117 @@
           :labels labels}]])]))
 
 (defn zones-selector
-  []
-  (let [selector-marks  (<== [::subs/zones-selector-marks])
-        selector-colors (<== [::subs/zones-selector-colors])
-        metric          (<== [::subs/selected-travel-metric])
-        value           (<== [::subs/zones-selector-value])
-        max-v           (<== [::subs/zones-selector-max])
-        step            (<== [::subs/zones-selector-step])
-        zones-count     (<== [::subs/zones-count])
-        zones-count-max (<== [::subs/zones-count-max])]
+  [{:keys [tr metric]}]
+  (let [selector-marks  (<== [::subs/zones-selector-marks metric])
+        selector-colors (<== [::subs/zones-selector-colors metric])
+        value           (<== [::subs/zones-selector-value metric])
+        max-v           (<== [::subs/zones-selector-max metric])
+        zones-count     (<== [::subs/zones-count metric])
+        zones-count-max (<== [::subs/zones-count-max metric])]
+    (r/with-let [value* (r/atom value)]
+      
+      [mui/grid {:container true}
+       (prn selector-colors)
+       ;; Slider
+       [mui/grid {:item true :xs 10 :style {:padding "1em"}}
+        [:> RangeSlider
+         {:min             0
+          :max             max-v
+          :pushable        true
+          :marks           selector-marks
+          :trackStyle      selector-colors
+          :value           @value*
+          :on-after-change #(==> [::events/set-zones %1 metric])
+          :on-change       (fn [v]
+                             (reset! value* v))
+          :style           {:font-family "Lato, sans-serif"}
+          :tipFormatter    (fn [idx] (get selector-marks idx))}]]
 
-    (r/with-let [value* (r/atom value)
-                 metric* (r/atom metric)]
-      (let [_ (when (not= @metric* metric)
-                (reset! value* value)
-                (reset! metric* metric))]
-        [mui/grid {:container true}
-         [mui/grid {:item true :xs 10 :style {:padding "1em"}}
+       ;; Zone count selector
+       [mui/grid {:item true :xs 2}
+        [mui/grid {:container true :justify "center"}
+         [mui/grid {:item true}
+          [lui/number-selector
+           {:value     zones-count
+            :label     (tr :analysis/zones)
+            :on-change #(==> [::events/set-zones-count % metric value value*])
+            :items     (range 1 zones-count-max)}]]]]])))
 
-          [:> RangeSlider
-           {:key             metric
-            ;; :step            step
-            :min             0
-            :max             max-v
-            :pushable        step
-            :marks           selector-marks
-            :trackStyle      selector-colors
-            :value           @value*
-            :on-after-change #(==> [::events/set-zones %1 metric])
-            :on-change       #(reset! value* %1)
-            :style           {:fontf-family "Lato, sans-serif"}
-            :tipFormatter    (fn [n]
-                               (if (= :distance metric)
-                                 (str n "km")
-                                 (gduration/format (* 60 1000 n))))}]]
+(defn settings-tab
+  [{:keys [tr]}]
+  (let [show-analysis?     (<== [::map-subs/overlay-visible? :analysis])
+        show-sports-sites? (<== [::map-subs/overlay-visible? :vectors])
+        show-population?   (<== [::map-subs/overlay-visible? :population])
+        show-schools?      (<== [::map-subs/overlay-visible? :schools])]
+    [:<>
 
-         ;; Zone count selector
-         [mui/grid {:item true :xs 2}
-          [mui/grid {:container true :justify "center"}
-           [mui/grid {:item true}
-            [lui/number-selector
-             {:value     zones-count
-              :label     "Zones"
-              :on-change #(==> [::events/set-zones-count % metric value value*])
-              :items     (range 1 zones-count-max)}]]]]]))))
+     [mui/grid {:container true}
+
+      ;; What's visible on map
+      [mui/grid {:item true :xs 12}
+       [lui/expansion-panel
+        {:label            (tr :analysis/settings-map)
+         :default-expanded true}
+
+        ;; Switches
+        [mui/grid {:container true :style {:padding "1em"}}
+
+         ;; Sports facilities
+         [mui/grid {:item true}
+          [lui/switch
+           {:label     (tr :sport/headline)
+            :value     show-sports-sites?
+            :on-change #(==> [::map-events/set-overlay % :vectors])}]]
+
+         ;; Analysis buffer
+         [mui/grid {:item true}
+          [lui/switch
+           {:label     (tr :analysis/analysis-buffer)
+            :value     show-analysis?
+            :on-change #(==> [::map-events/set-overlay % :analysis])}]]
+
+         ;; Population
+         [mui/grid {:item true}
+          [lui/switch
+           {:label     (tr :analysis/population)
+            :value     show-population?
+            :on-change #(==> [::map-events/set-overlay % :population])}]]
+
+         ;; Schools
+         [mui/grid {:item true}
+          [lui/switch
+           {:label     (tr :analysis/schools)
+            :value     show-schools?
+            :on-change #(==> [::map-events/set-overlay % :schools])}]]]]]
+
+      ;; Distances and travel times
+      [mui/grid {:item true :xs 12}
+       [lui/expansion-panel
+        {:label            (tr :analysis/settings-zones)
+         :default-expanded true}
+        [mui/grid {:container true :spacing 2}
+
+         ;; Helper text
+         [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+          [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
+           [mui/typography {:variant "body1" :paragraph false}
+            (tr :analysis/settings-help)]]]
+
+         ;; Distance zones selector
+         [mui/grid {:item true :xs 12}
+          [mui/typography (tr :analysis/distance)]
+          [zones-selector {:tr tr :metric :distance}]]
+
+         ;; Travel time zones selector
+         [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
+          [mui/typography (tr :analysis/travel-time)]
+          [zones-selector {:tr tr :metric :travel-time}]]]]]]]))
 
 (defn analysis-view []
   (let [tr            (<== [:lipas.ui.subs/translator])
         selected-site (<== [::subs/selected-analysis-center])
-
-        show-analysis?     (<== [::map-subs/overlay-visible? :analysis])
-        show-sports-sites? (<== [::map-subs/overlay-visible? :vectors])
-        show-population?   (<== [::map-subs/overlay-visible? :population])
-        show-schools?      (<== [::map-subs/overlay-visible? :schools])
-
-        loading? (<== [::subs/loading?])
-
-        selected-tab (<== [::subs/selected-analysis-tab])]
+        loading?      (<== [::subs/loading?])
+        selected-tab  (<== [::subs/selected-analysis-tab])]
 
     [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
 
@@ -324,42 +392,22 @@
           [lui/download-button
            {:size     "small"
             :on-click #(==> [::events/create-report])
-            :label    "Export report"}]]]
-
-        ;; Switches
-        [mui/grid {:container true :style {:padding "1em"}}
-
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     "Sports facilities"
-            :value     show-sports-sites?
-            :on-change #(==> [::map-events/set-overlay % :vectors])}]]
-
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     "Analysis buffer"
-            :value     show-analysis?
-            :on-change #(==> [::map-events/set-overlay % :analysis])}]]
-
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     "Population grid"
-            :value     show-population?
-            :on-change #(==> [::map-events/set-overlay % :population])}]]
-
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     "Schools"
-            :value     show-schools?
-            :on-change #(==> [::map-events/set-overlay % :schools])}]]]
+            :label    (tr :reports/download-as-excel)}]]]
 
         ;; Travel profile selector
         [mui/grid {:item true :xs 12}
-         [travel-profile-selector]]
+         [travel-profile-selector {:tr tr}]]
 
-        ;; Zones selector
+        ;; Analysis tabs
         [mui/grid {:item true :xs 12}
-         [zones-selector]]
+         [mui/tabs {:value      selected-tab
+                    :on-change  #(==> [::events/select-analysis-tab %2])
+                    :style      {:margin-bottom "1em"}
+                    :text-color "secondary"}
+          [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
+          [mui/tab {:label (tr :analysis/population)  :value :population}]
+          [mui/tab {:label (tr :analysis/schools) :value :schools}]
+          [mui/tab {:label (tr :analysis/settings) :value :settings}]]]
 
         ;; No data available text
         #_(when (and selected-site (empty? data-bar))
@@ -370,21 +418,14 @@
         [mui/grid {:item true :xs 12}
          [mui/divider]]
 
-        ;; Analysis tabs
-        [mui/grid {:item true :xs 12}
-         [mui/tabs {:value      selected-tab
-                    :on-change  #(==> [::events/select-analysis-tab %2])
-                    :style      {:margin-bottom "1em"}
-                    :text-color "secondary"}
-          [mui/tab {:label "Sports sites" :value :sports-sites}]
-          [mui/tab {:label "Population" :value :population}]
-          [mui/tab {:label "Schools" :value :schools}]]]
-
-        (if loading?
+        (if (and loading? (not= selected-tab "settings"))
           [mui/grid {:item true :xs 12}
            [mui/circular-progress]]
 
           [:<>
+
+           (when (= selected-tab "settings")
+             [settings-tab {:tr tr}])
 
            ;; Sports-sites tab
            (when (= selected-tab "sports-sites")
@@ -396,11 +437,7 @@
 
            ;; Schools tab
            (when (= selected-tab "schools")
-             [schools-tab {:tr tr}])
-
-           ])
-
-        ])
+             [schools-tab {:tr tr}])])])
 
      ;; Small nest where floating controls can "land"
      [mui/grid {:item true :xs 12 :style {:height "70px"}}]]))

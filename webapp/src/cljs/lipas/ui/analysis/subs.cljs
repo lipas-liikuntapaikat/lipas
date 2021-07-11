@@ -71,11 +71,11 @@
      :men         (tr :general/men)
      :women       (tr :general/women)
      :total       (tr :general/total-short)
-     :vaka        "Varhaiskasvatusyksikkö"
-     :lukiot      "Lukio"
-     :peruskoulut "Peruskoulu"
-     :perus+lukio "Perus- ja lukioasteen koulu"
-     :erityis     "Erityiskoulu"}
+     :vaka        (tr :analysis/daycare)
+     :lukiot      (tr :analysis/high-school)
+     :peruskoulut (tr :analysis/elementary-school)
+     :perus+lukio (tr :analysis/elementary-and-high-school)
+     :erityis     (tr :analysis/special-school)}
     (into {}
           (map
            (fn [zone]
@@ -416,15 +416,14 @@
 
 (re-frame/reg-sub
  ::zones-count
- :<- [::zones-by-selected-metric]
- (fn [zones _]
-   (count zones)))
+ :<- [::zones]
+ (fn [zones [_ metric]]
+   (count (get zones metric))))
 
 (re-frame/reg-sub
  ::zones-count-max
  :<- [::zones]
- :<- [::selected-travel-metric]
- (fn [[zones metric] _]
+ (fn [zones [_ metric]]
    (let [range (get-in zones [:ranges metric])]
      (count range))))
 
@@ -436,39 +435,31 @@
 
 (re-frame/reg-sub
  ::zones-selector-value
- :<- [::zones-by-selected-metric]
- (fn [zones _]
-   (into [] (comp (mapcat (juxt :min-idx :max-idx)) (distinct)) zones)))
+ :<- [::zones]
+ (fn [zones [_ metric]]
+   (into [] (comp (mapcat (juxt :min-idx :max-idx)) (distinct)) (get zones metric))))
 
 (re-frame/reg-sub
  ::zones-selector-marks
  :<- [::zones]
- :<- [::selected-travel-metric]
- (fn [[zones metric] _]
+ (fn [zones [_ metric]]
    (into {}
          (map (juxt first (comp :label second)))
          (get-in zones [:ranges metric]))))
 
 (re-frame/reg-sub
  ::zones-selector-max
- :<- [::zones-selector-marks]
+ (fn [[_ metric] _]
+   (re-frame/subscribe [::zones-selector-marks metric]))
  (fn [marks _]
    (apply max (keys marks))))
 
 (re-frame/reg-sub
- ::zones-selector-step
- :<- [::selected-travel-metric]
- (fn [metric _]
-   (if (= :distance metric)
-     0.5
-     5)))
-
-(re-frame/reg-sub
  ::zones-selector-colors
  :<- [::zone-colors]
- :<- [::zones-by-selected-metric]
- (fn [[colors zones] _]
-   (->> zones
+ :<- [::zones]
+ (fn [[colors zones] [_ metric]]
+   (->> (get zones metric)
         (map :id)
         (select-keys colors)
         seq
