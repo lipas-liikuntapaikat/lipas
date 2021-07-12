@@ -159,8 +159,10 @@
 
 (re-frame/reg-event-fx
  ::start-adding-new-site
- (fn [{:keys [db]} [_]]
-   {:db       (assoc-in db [:new-sports-site :adding?] true)
+ (fn [{:keys [db]} [_ template]]
+   {:db       (-> db
+                  (assoc-in [:new-sports-site :adding?] true)
+                  (assoc-in [:new-sports-site :template] template))
     :dispatch-n [[:lipas.ui.search.events/clear-filters]
                  [:lipas.ui.search.events/set-results-view :list]]}))
 
@@ -170,7 +172,8 @@
    (-> db
        (assoc-in [:new-sports-site :adding?] false)
        (assoc-in [:new-sports-site :type] nil)
-       (assoc-in [:new-sports-site :data] nil))))
+       (assoc-in [:new-sports-site :data] nil)
+       (assoc-in [:new-sports-site :template] nil))))
 
 (re-frame/reg-event-db
  ::select-new-site-type
@@ -182,15 +185,20 @@
  (fn [{:keys [db]} [_ type-code geoms]]
    ;; If city-code is not set yet, We guess it based on user
    ;; permissions.  TODO maybe use geolocation for better guesses
-   (let [city-code (or
+   (let [template  (or (-> db :new-sports-site :template) {})
+         city-code (or
                     (-> db :new-sports-site :data :location :city :city-code)
                     (-> db :user :login :permissions :cities first))
-         data      {:status     "active"
-                    :event-date (utils/timestamp)
-                    :type       {:type-code type-code}
-                    :location   {:geometries geoms
-                                 :city       {:city-code city-code}}}]
-     {:db (-> db (update-in [:new-sports-site :data] cutils/deep-merge data))})))
+         data      (cutils/deep-merge
+                    {:status     "active"
+                     :event-date (utils/timestamp)
+                     :type       {:type-code type-code}
+                     :location   {:geometries geoms
+                                  :city       {:city-code city-code}}}
+                    template)]
+     {:db (-> db
+              (update-in [:new-sports-site :data] cutils/deep-merge data)
+              (update :new-sports-site dissoc :template))})))
 
 (re-frame/reg-event-db
  ::edit-new-site-field

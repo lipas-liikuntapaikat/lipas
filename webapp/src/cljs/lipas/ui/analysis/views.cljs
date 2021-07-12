@@ -28,19 +28,26 @@
         zone-colors                      (<== [::subs/zone-colors metric])]
     [:<>
 
-     ;; Category filter
+     ;; Tools
 
-     [mui/grid {:item true :xs 10}
-      [lui/type-category-selector
-       {:value     selected-types
-        :on-change #(==> [::events/set-type-codes-filter %])
-        :label     (tr :analysis/filter-types)}]]
+     [mui/grid {:item true :xs 12}
+      [lui/expansion-panel
+       {:label            (tr :analysis/filter-types)
+        :default-expanded false}
 
-     (when (seq selected-types)
-       [mui/grid {:item true :xs 2}
-        [mui/tooltip {:title (tr :search/clear-filters)}
-         [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
-          [mui/icon {:color "secondary"} "filter_alt"]]]])
+       ;; Types selector
+       [mui/grid {:item true :xs 10}
+        [lui/type-category-selector
+         {:value     selected-types
+          :on-change #(==> [::events/set-type-codes-filter %])
+          :label     (tr :actions/select-types)}]]
+
+       ;; Clear filter button
+       (when (seq selected-types)
+         [mui/grid {:item true :xs 2}
+          [mui/tooltip {:title (tr :search/clear-filters)}
+           [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
+            [mui/icon {:color "secondary"} "filter_alt"]]]])]]
 
      ;; Tabs
      [mui/grid {:item :true :xs 12}
@@ -90,7 +97,7 @@
      ;; Direct
      [mui/grid {:item true}
       [mui/tooltip
-       {:title "Direct"}
+       {:title (tr :analysis/direct)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :direct])
          :color    (if (= profile :direct) "secondary" "default")}
@@ -99,7 +106,7 @@
      ;; Car
      [mui/grid {:item true}
       [mui/tooltip
-       {:title "By car"}
+       {:title (tr :analysis/by-car)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :car])
          :color    (if (= profile :car) "secondary" "default")}
@@ -108,7 +115,7 @@
      ;; Bicycle
      [mui/grid {:item true}
       [mui/tooltip
-       {:title "By bicycle"}
+       {:title (tr :analysis/by-bicycle)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :bicycle])
          :color    (if (= profile :bicycle) "secondary" "default")}
@@ -117,7 +124,7 @@
      ;; Foot
      [mui/grid {:item true}
       [mui/tooltip
-       {:title "By foot"}
+       {:title (tr :analysis/by-foot)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :foot])
          :color    (if (= profile :foot) "secondary" "default")}
@@ -165,7 +172,9 @@
         {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
          :underline "always"}
         "CC BY 4.0"]
-       "."]]]))
+       "."]
+      [mui/typography {:variant "caption"}
+       "© Tilastokeskus väestörakenne 2020"]]]))
 
 (defn population-tab [{:keys [tr]}]
   (let [data-bar  (<== [::subs/population-bar-chart-data])
@@ -186,7 +195,7 @@
         [charts/population-area-chart
          {:data   data-area
           :labels labels}]])
-
+     
      ;; Tilastokeskus copyright notice (demographics data)
      [mui/grid {:item true :xs 12}
       [mui/typography {:variant "caption"}
@@ -354,13 +363,16 @@
         loading?      (<== [::subs/loading?])
         selected-tab  (<== [::subs/selected-analysis-tab])]
 
-    [mui/grid {:container true :spacing 16 :style {:padding "0.5em"}}
+    [mui/grid
+     {:container true
+      :spacing   16
+      :style     {:padding (if (empty? selected-site) "1em" "0.5em")}}
 
      ;; Header and close button
      [mui/grid {:item true :container true :justify "space-between"}
       [mui/grid {:item true}
        [mui/typography {:variant "h4"}
-        "Analysis"
+        (tr :analysis/headline)
         #_(tr :map.analysis/headline)]]
       [mui/grid {:item true}
        [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
@@ -368,10 +380,36 @@
 
      ;; Helper text
      (when (empty? selected-site)
-       [mui/grid {:item true :xs 12 :container true :align-items "center"}
+       [mui/grid
+        {:item        true :xs 12
+         :container   true
+         :align-items "center"
+         :spacing     4}
+
         [mui/grid {:item true}
          [mui/typography
-          (tr :map.demographics/helper-text)]]])
+          (tr :map.demographics/helper-text)
+          [mui/link
+           {:color    "secondary"
+            :on-click #(==> [::map-events/add-analysis-target])}
+           (tr :general/here)]
+          "."]]
+
+        ;; Analysis tool description
+        [mui/grid {:item true :xs 12 :style {:margin-top "1em"}}
+         [mui/paper
+          {:style
+           {:padding "1em" :background-color "#f5e642"}}
+          [mui/typography {:variant "body2" :paragraph true}
+           "Info"]
+          [mui/typography {:variant "body1" :paragraph true}
+           (tr :analysis/description)]
+          [mui/typography {:variant "body1" :paragraph true}
+           (tr :analysis/description2)]
+          [mui/typography {:variant "body1" :paragraph true}
+           (tr :analysis/description3)]
+          [mui/typography {:variant "body1" :paragraph true}
+           (tr :analysis/description4)]]]])
 
      (when selected-site
        [:<>
@@ -406,7 +444,7 @@
                     :style      {:margin-bottom "1em"}
                     :text-color "secondary"}
           [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
-          [mui/tab {:label (tr :analysis/population)  :value :population}]
+          [mui/tab {:label (tr :analysis/population) :value :population}]
           [mui/tab {:label (tr :analysis/schools) :value :schools}]
           [mui/tab {:label (tr :analysis/settings) :value :settings}]]]
 
