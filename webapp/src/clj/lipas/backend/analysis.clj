@@ -365,7 +365,7 @@
 (def categories
   {:travel-time
    {:car     "Travel time by car"
-    :bicycle "Travel time by bicylce"
+    :bicycle "Travel time by bicycle"
     :foot    "Travel time by foot"}
    :distance
    {:car     "Distance by car"
@@ -431,10 +431,15 @@
 
 (defn create-population-sheet
   [data metric]
-  (create-sheet (-> data :population :data)
-                (:zones data)
-                metric
-                population-fields))
+  (let [zones (-> data :zones metric (->> (utils/index-by :id)))
+        stats (-> data :population :stats metric)]
+    (into [] cat
+          (for [[profile zone] stats]
+            (into [[(get-in categories [metric profile])]] cat
+                  (for [[zkey zpop] zone]
+                    (into [[(make-zone-name (get zones zkey) (units metric)) ""]]
+                          (for [[popk popv] zpop]
+                            [(popk population-fields) popv]))))))))
 
 (defn create-schools-sheet
   [data metric]
