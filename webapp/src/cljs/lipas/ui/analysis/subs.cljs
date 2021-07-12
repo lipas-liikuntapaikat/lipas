@@ -3,6 +3,7 @@
    [clojure.string :as string]
    [goog.date.duration :as gduration]
    [goog.object :as gobj]
+   [goog.color :as gcolor]
    [lipas.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -427,11 +428,20 @@
    (let [range (get-in zones [:ranges metric])]
      (count range))))
 
+#_(def base-color "#0073e6")
+
+(def from-color (gcolor/hexToRgb "#C8D4D9"))
+(def to-color (gcolor/hexToRgb "#0080B7"))
+
 (re-frame/reg-sub
  ::zone-colors
  :<- [::zones]
- (fn [zones _]
-   (:colors zones)))
+ (fn [zones [_ metric]]
+   (into {}
+         (for [n (range 1 (inc (count (get zones metric))))]
+           [(keyword (str "zone" n))
+            (-> (gcolor/blend from-color to-color (/ n (count (get zones metric))))
+                gcolor/rgbArrayToHex)]))))
 
 (re-frame/reg-sub
  ::zones-selector-value
@@ -456,13 +466,10 @@
 
 (re-frame/reg-sub
  ::zones-selector-colors
- :<- [::zone-colors]
- :<- [::zones]
- (fn [[colors zones] [_ metric]]
-   (->> (get zones metric)
-        (map :id)
-        (select-keys colors)
-        seq
+ (fn [[_ metric] _]
+   (re-frame/subscribe [::zone-colors metric]))
+ (fn [colors _]
+   (->> colors
         (sort-by first)
         (map second)
         (map (fn [color] {:backgroundColor color})))))
