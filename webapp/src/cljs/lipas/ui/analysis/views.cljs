@@ -24,7 +24,8 @@
         selected-types                   (<== [:lipas.ui.search.subs/types-filter])
         labels                           (<== [::subs/population-labels])
         zones                            (<== [::subs/zones-by-selected-metric])
-        zone-colors                      (<== [::subs/zone-colors])]
+        metric                           (<== [::subs/selected-travel-metric])
+        zone-colors                      (<== [::subs/zone-colors metric])]
     [:<>
 
      ;; Category filter
