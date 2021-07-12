@@ -430,6 +430,7 @@
          [mui/grid {:item true :style {:padding-right "1em"}}
           [lui/download-button
            {:size     "small"
+            :disabled loading?
             :on-click #(==> [::events/create-report])
             :label    (tr :reports/download-as-excel)}]]]
 
