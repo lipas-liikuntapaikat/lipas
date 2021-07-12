@@ -486,9 +486,7 @@
    "Schools travel-time" (create-schools-sheet data :travel-time)
    "Schools distance" (create-schools-sheet data :distance)
    "Sports facility distance (all types)" (create-sports-sites-sheet data :distance)
-   "Sports facility travel-time (all types)" (create-sports-sites-sheet data :travel-time)
-   "Sports facility distance (main-category)" nil
-   "Sports facility travel-time (main-category)" nil])
+   "Sports facility travel-time (all types)" (create-sports-sites-sheet data :travel-time)])
 
 (comment
   (def data (read-string (slurp "/Users/tipo/kana.edn")))
