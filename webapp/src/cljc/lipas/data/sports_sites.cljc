@@ -12,7 +12,7 @@
 
 (def statuses
   {"planning"
-   {:fi "Suunnittelussa"
+   {:fi "Vedos"
     :se "Planering"
     :en "Planning"}
    "planned"

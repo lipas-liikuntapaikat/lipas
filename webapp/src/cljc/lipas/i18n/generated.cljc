@@ -5,7 +5,12 @@
 (def dicts
   {:fi
    {:analysis
-    {:headline                   "Analyysi"
+    {:headline                   "Analyysityökalu (beta)"
+     :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
+     :description2               "Väestöaineistona käytetään Tilastokeskuksen 250x250m ja 1x1km ruutuaineistoja, joista selviää kussakin ruudussa olevan väestön jakauma kolmessa ikäryhmässä (0-14, 15-65, 65-)."
+     :description3               "Matka-aikojen laskeminen eri kulkutavoilla (kävellen, polkupyörällä, autolla) perustuu avoimeen OpenStreetMap-aineistoon ja OSRM-työkaluun."
+     :description4               "Oppilaitosten nimi- ja sijaintitiedot perustuvat Tilastokeskuksen avoimeen aineistoon. Varhaiskasvatusyksiköiden nimi- ja sijaintitiedoissa käytetään LIKES:n keräämää ja luovuttamaa aineistoa."
+     :add-new                    "Lisää uusi"
      :distance                   "Etäisyys"
      :travel-time                "Matka-aika"
      :zones                      "Korit"
@@ -387,7 +392,7 @@
     {:headline   "Analyysityökalu",
      :tooltip    "Analyysityökalu",
      :helper-text
-     "Aloita valitsemalla liikuntapaikka kartalta.",
+     "Valitse liikuntapaikka kartalta tai lisää uusi analysoitava kohde ",
      :copyright1
      "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2019",
      :copyright2 "1x1 km ruutuaineistoa",
@@ -1627,7 +1632,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     :heat-recovery-types {:thermal-wheel "Hjälp"}},
    :en
    {:analysis
-    {:headline                   "Analysis tool"
+    {:headline                   "Analysis tool (beta)"
+     :add-new                    "Add new"
      :distance                   "Distance"
      :travel-time                "Travel time"
      :zones                      "Baskets"

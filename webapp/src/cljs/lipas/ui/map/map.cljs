@@ -372,7 +372,7 @@
 ;; Browsing and selecting features
 (defn set-default-mode!
   [map-ctx {:keys [lipas-id address sub-mode analysis]}]
-  (let [analysis? (= sub-mode :analysis)
+  (let [analysis? (#{:analysis :analysis-draw} sub-mode)
         map-ctx   (-> map-ctx
                         editing/clear-edits!
                         map-utils/clear-population!
@@ -396,7 +396,7 @@
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce address sub-mode analysis]}]
   (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
-        analysis? (= sub-mode :analysis)]
+        analysis? (#{:analysis :analysis-draw} sub-mode)]
     (cond-> map-ctx
       true      (map-utils/clear-markers!)
       true      (map-utils/unselect-features!)

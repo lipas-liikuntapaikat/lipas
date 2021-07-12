@@ -96,7 +96,10 @@
                     (assoc-in [:analysis :lipas-id] lipas-id)
                     (assoc-in [:analysis :center] coords)
                     (assoc-in [:analysis :site-name] (:name rev)))
-      :dispatch [::refresh-analysis]
+      :dispatch-n
+      [[:lipas.ui.search.events/clear-filters]
+       [:lipas.ui.map.events/show-analysis*]
+       [::refresh-analysis]]
       :ga/event ["analysis" "show-analysis" lipas-id]})))
 
 (re-frame/reg-event-db

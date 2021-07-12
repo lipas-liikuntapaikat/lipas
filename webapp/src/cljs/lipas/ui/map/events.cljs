@@ -398,10 +398,10 @@
 
 (re-frame/reg-event-fx
  ::start-adding-new-site
- (fn [{:keys [db]} [_]]
+ (fn [{:keys [db]} [_ template]]
    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
     :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
-                 [:lipas.ui.sports-sites.events/start-adding-new-site]]}))
+                 [:lipas.ui.sports-sites.events/start-adding-new-site template]]}))
 
 (re-frame/reg-event-fx
  ::discard-new-site
@@ -688,17 +688,24 @@
    {:db (update-in db [:map :selected-overlays] (if val conj disj) layer)}))
 
 (re-frame/reg-event-fx
- ::show-analysis
+ ::show-analysis*
  (fn [{:keys [db]} _]
-   {:db       (-> db
-                  (assoc-in  [:map :mode :name] :default)
-                  (assoc-in  [:map :mode :sub-mode] :analysis))
+   {:db (-> db
+            (assoc-in  [:map :mode :name] :default)
+            (assoc-in  [:map :mode :sub-mode] :analysis))
     :dispatch-n
     [[::set-overlay true :vectors]
      [::set-overlay true :schools]
      [::set-overlay true :population]
-     [::set-overlay true :analysis]
-     [:lipas.ui.analysis.events/show-analysis]]}))
+     [::set-overlay true :analysis]]}))
+
+(re-frame/reg-event-fx
+ ::show-analysis
+ (fn [{:keys [db]} [_ lipas-id]]
+   {:dispatch-n
+    [(when-not lipas-id
+       [::show-analysis*])
+     [:lipas.ui.analysis.events/show-analysis lipas-id]]}))
 
 (re-frame/reg-event-fx
  ::hide-analysis
@@ -712,3 +719,16 @@
                  [::set-overlay false :population]
                  [::set-overlay false :analysis]
                  [:lipas.ui.search.events/clear-filters]]}))
+
+(re-frame/reg-event-fx
+ ::add-analysis-target
+ (fn [{:keys [db]} _]
+   (let [template {:status "planning"
+                   :name   "Analyysikohde"
+                   :owner  "unknown"
+                   :admin  "unknown"
+                   :location
+                   {:address     "Testikatu 123"
+                    :postal-code "12345"}}]
+     {:dispatch-n
+      [[::start-adding-new-site template]]})))

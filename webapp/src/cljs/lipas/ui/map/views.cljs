@@ -643,6 +643,14 @@
                  :on-click #(==> [::events/resurrect lipas-id])}
                 [mui/icon "360"]]])
 
+            ;; Analysis
+            (when (and logged-in? (not editing?))
+              [mui/tooltip {:title (tr :map.demographics/tooltip)}
+               [mui/fab
+                {:size     "small"
+                 :on-click #(==> [::events/show-analysis lipas-id])}
+                [mui/icon "insights"]]])
+
             ;; ;; Import geom
             ;; (when (and editing? (#{"LineString"} geom-type))
             ;;   [mui/tooltip {:title (tr :map.import/tooltip)}
@@ -1088,7 +1096,7 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])
 
        ;; Analysis tool btn
-       (when (and logged-in? admin? (= :list result-view))
+       (when (and logged-in? (= :list result-view))
          [mui/tooltip {:title (tr :map.demographics/tooltip)}
           [mui/grid {:item true}
            [mui/fab
