@@ -425,8 +425,12 @@
  ::zones-count-max
  :<- [::zones]
  (fn [zones [_ metric]]
-   (let [range (get-in zones [:ranges metric])]
-     (count range))))
+   #_(let [range (get-in zones [:ranges metric])]
+       (count range))
+   (condp = metric
+     :travel-time 7
+     :distance 10
+     nil)))
 
 #_(def base-color "#0073e6")
 
