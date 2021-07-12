@@ -31,7 +31,7 @@
      :settings                   "Asetukset"
      :settings-map               "Kartalla näkyvät kohteet"
      :settings-zones             "Etäisyydet ja matka-ajat"
-     :settings-help              "Analyysialue määräytyy suurimman etäisyyskorin mukaan. Matka-aikoja ei lasketa myöskään tämän alueen ulkopuolelta."}
+     :settings-help              "Analyysialue määräytyy suurimman etäisyyskorin mukaan. Myöskään matka-aikoja ei lasketa tämän alueen ulkopuolelta."}
     :sport
     {:description
      "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista  liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa.",
