@@ -431,7 +431,7 @@
 
 (defn create-population-sheet
   [data metric]
-  (create-sheet (-> data :population :data2)
+  (create-sheet (-> data :population :data)
                 (:zones data)
                 metric
                 population-fields))
