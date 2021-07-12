@@ -695,8 +695,8 @@
                   (assoc-in  [:map :mode :sub-mode] :analysis))
     :dispatch-n
     [[::set-overlay true :vectors]
-     ;;[::set-overlay true :schools]
-     ;;[::set-overlay true :population]
+     [::set-overlay true :schools]
+     [::set-overlay true :population]
      [::set-overlay true :analysis]
      [:lipas.ui.analysis.events/show-analysis]]}))
 
