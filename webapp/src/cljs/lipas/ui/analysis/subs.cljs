@@ -385,7 +385,7 @@
 #_(def base-color "#0073e6")
 
 (def from-color (gcolor/hexToRgb "#C8D4D9"))
-(def to-color (gcolor/hexToRgb "#0080B7"))
+(def to-color (gcolor/hexToRgb "#006190"))
 
 (re-frame/reg-sub
  ::zone-colors
