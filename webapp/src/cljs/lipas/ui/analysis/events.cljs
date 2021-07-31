@@ -22,7 +22,8 @@
        :format          (ajax/transit-request-format)
        :response-format (ajax/transit-response-format)
        :on-success      [::calc-success]
-       :on-failure      [::calc-failure]}})))
+       :on-failure      [::calc-failure]}
+      :ga/event ["analysis" "calculate-analysis" (-> db :analysis :lipas-id)]})))
 
 (re-frame/reg-event-db
  ::clear
@@ -218,7 +219,8 @@
                          :read         ajaxp/-body}
        :on-success      [::report-success]
        :on-failure      [::report-failure]}
-      :db (assoc-in db [:analysis :loading?] true)})))
+      :db       (assoc-in db [:analysis :loading?] true)
+      :ga/event ["analysis" "download-report" (:lipas-id params)]})))
 
 (re-frame/reg-event-fx
  ::report-success
