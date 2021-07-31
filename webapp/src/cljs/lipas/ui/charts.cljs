@@ -409,16 +409,16 @@
    :zone4 "#aaaaaa"})
 
 (def age-groups
-  {:age-0-14  "#80bfff"
-   :age-15-64 "#1e90ff"
-   :age-65-   "#0073e6"})
+  {:age-0-14  "#006190"
+   :age-15-64 "#5b8caa"
+   :age-65-   "#9cb7c5"})
 
 (def school-types
-  {:vaka        "#80bfff"
-   :peruskoulut "#1e90ff"
-   :lukiot      "#0073e6"
-   :perus+lukio "#73e600"
-   :erityis     "#2db92d"})
+  {:vaka        "#006190"
+   :peruskoulut "#457da1"
+   :lukiot      "#9cb7c5"
+   :perus+lukio "#709ab3"
+   :erityis     "#c8d4d9"})
 
 (defn population-bar-chart
   [{:keys [data labels on-click]}]
