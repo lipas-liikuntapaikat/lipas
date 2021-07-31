@@ -257,14 +257,14 @@
           ]]]]]
 
      ;; Experimental features
-     [mui/grid {:item true :xs 12}
-      [mui/card card-props
-       [mui/card-header {:title "Experimental features"}]
-       [mui/card-content
-        [lui/checkbox
-         {:label     "Enable experimental features"
-          :value     experimental-features?
-          :on-change #(==> [::events/toggle-experimental-features])}]]]]
+     #_[mui/grid {:item true :xs 12}
+        [mui/card card-props
+         [mui/card-header {:title "Experimental features"}]
+         [mui/card-content
+          [lui/checkbox
+           {:label     "Enable experimental features"
+            :value     experimental-features?
+            :on-change #(==> [::events/toggle-experimental-features])}]]]]
      ]))
 
 (defn main []
