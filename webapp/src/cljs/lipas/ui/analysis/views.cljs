@@ -20,7 +20,6 @@
   (let [sports-sites-list                (<== [::subs/sports-sites-list])
         sports-sites-view                (<== [::subs/sports-sites-view])
         sports-sites-chart-data          (<== [::subs/sports-sites-chart-data-v2])
-        #_#_sports-sites-area-chart-data (<== [::subs/sports-sites-area-chart-data])
         selected-types                   (<== [:lipas.ui.search.subs/types-filter])
         labels                           (<== [::subs/population-labels])
         zones                            (<== [::subs/zones-by-selected-metric])
