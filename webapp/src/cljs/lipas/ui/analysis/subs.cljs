@@ -83,15 +83,6 @@
              [(:id zone) (str (:max zone) (if (= metric :distance) "km" "min"))]))
           (get zones metric)))))
 
-;; Tilastokeskus won't display demographics if population is less than
-;; 10 (for privacy reasons). Missing data is encoded as -1 in data and
-;; we decided to treat -1 as zero when calculating total sums.
-(defn- pos+ [a b]
-  (+ (if (<= 0 a) a 0) (if (<= 0 b) b 0)))
-
-(defn parse-km [s]
-  (-> s (string/split " ") first utils/->int))
-
 (re-frame/reg-sub
  ::selected-travel-profile
  :<- [::analysis]
@@ -125,10 +116,6 @@
             (fn [zone]
               (when (>= (:max zone) distance-km (:min zone))
                 (:id zone))))))))
-
-(defn debug [x]
-  (prn x)
-  x)
 
 (re-frame/reg-sub
  ::population-chart-data-v3
@@ -197,13 +184,6 @@
            ) [])
 
         (sort-by :zone*))))
-
-(comment
-  '("Lukiot"
-   "Peruskoulut"
-   "Peruskouluasteen erityiskoulut"
-   "Perus- ja lukioasteen koulut"
-   "Varhaiskasvatusyksikkö"))
 
 (re-frame/reg-sub
  ::analysis
@@ -294,29 +274,6 @@
  (fn [analysis _]
    (:zones analysis)))
 
-(re-frame/reg-sub
- ::sports-sites-chart-data
- :<- [::sports-site-distances]
- :<- [::zones]
- (fn [[data zones] _]
-   (->> data
-        (map
-         (fn [{:keys [distance] :as m}]
-           (assoc m :zone (some #(and (<= distance (:max %))
-                                      (:id %))
-                                zones))))
-        (remove (comp nil? :zone))
-        (group-by :type)
-        (map
-         (fn [[type vs]]
-           (let [by-zone (group-by :zone vs)]
-             {:type type
-              :zone1 (-> :zone1 by-zone count)
-              :zone2 (-> :zone2 by-zone count)
-              :zone3 (-> :zone3 by-zone count)
-              :zone4 (-> :zone4 by-zone count)})))
-        (sort-by (juxt :zone1 :zone2 :zone3 :zone4) utils/reverse-cmp))))
-
 (def zone-sorter (juxt :zone1 :zone2 :zone3 :zone4 :zone5 :zone6 :zone7 :zone8 :zone9))
 
 (re-frame/reg-sub
@@ -350,13 +307,6 @@
            ) [])
 
         (sort-by zone-sorter utils/reverse-cmp))))
-
-(re-frame/reg-sub
- ::sports-sites-area-chart-data
- :<- [::sports-site-distances]
- :<- [::zones]
- (fn [[data zones] _]
-   data))
 
 (re-frame/reg-sub
  ::school-distances
