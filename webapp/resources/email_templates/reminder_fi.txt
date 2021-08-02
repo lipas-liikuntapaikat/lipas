@@ -15,5 +15,5 @@ Linkki on voimassa {{valid-days}} päivää. Voit käyttää linkkiä tänä aik
 Toivomme runsaasti palautetta ja kehittämisehdotuksia LIPAS-palvelun toiminnasta. Kerro ajatuksesi sähköpostilla tai puhelimitse! Alla yhteystiedot.
 
 Jyväskylän yliopisto
-Kirsi Vehkakoski, LIPAS-projekti, puh. 0400 247 980
+Tapani Laakso, LIPAS-projekti, puh. 0400 247 980
 Sähköposti: lipasinfo@jyu.fi
