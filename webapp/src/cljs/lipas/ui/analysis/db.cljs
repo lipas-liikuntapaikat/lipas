@@ -31,7 +31,7 @@
 
 (def default-db
   {:selected-tab            "sports-sites"
-   :distance-km             15
+   :distance-km             10
    :travel-profiles         [:car :foot :bicycle :direct]
    :selected-travel-profile :car
    :selected-travel-metric  :travel-time
@@ -48,7 +48,7 @@
         :max     (get-in distances [to-idx :value])
         :max-idx to-idx
         :id      (keyword (str "zone" (inc idx)))})
-     [[0 4] [4 7] [7 9] [9 10]])
+     [[0 4] [4 7] [7 9]])
     :travel-time
     (map-indexed
      (fn [idx [from-idx to-idx]]
