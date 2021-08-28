@@ -329,9 +329,11 @@
 
 (defn show-population!
   [{:keys [layers] :as map-ctx}
-   {:keys [population geoms lipas-id]}]
+   {:keys [population geoms lipas-id zones] :as analysis}]
 
-  (let [source  (-> layers :overlays :population .getSource)]
+  (let [source  (-> layers :overlays :population .getSource)
+        metric  (:selected-travel-metric analysis)
+        profile (:selected-travel-profile analysis)]
 
     (.clear source)
 
@@ -342,8 +344,12 @@
 
     (when-let [data (:data population)]
       (doseq [m    data
-              :let [f (map-utils/<-wkt (:coords m))]]
+              :let [f (map-utils/<-wkt (:coords m))
+                    zone-id (get-in m [:zone profile metric])]
+              :when zone-id]
         (.set f "vaesto" (:vaesto m))
+        (.set f "zone" zone-id)
+        (.set f "color" (get-in zones [:colors zone-id]))
         (.addFeature source f)))
 
     map-ctx))

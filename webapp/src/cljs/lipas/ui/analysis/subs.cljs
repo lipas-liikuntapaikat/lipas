@@ -477,6 +477,21 @@
         (map (fn [color] {:backgroundColor color})))))
 
 (re-frame/reg-sub
+ ::zones-popup-labels
+ :<- [::zones]
+ (fn [zones _]
+   (into {}
+         (for [metric  [:distance :travel-time]
+               zone    (zones metric)
+               :let    [u (if (= metric :distance) "km" "min")
+                        k [metric (:id zone)]
+                        v (str (get-in zone [:min])
+                               "-"
+                               (get-in zone [:max])
+                               u)]]
+           [k v]))))
+
+(re-frame/reg-sub
  ::schools-chart-data
  :<- [::school-distances]
  :<- [::zones-by-selected-metric]
