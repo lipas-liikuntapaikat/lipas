@@ -274,24 +274,35 @@
         (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :population [popup]
-  (let [tr     (<== [:lipas.ui.subs/translator])
-        data   (-> popup :data :features first :properties)
-        fields {:vaesto (tr :analysis/population)}]
-
+  (let [tr          (<== [:lipas.ui.subs/translator])
+        zone-labels (<== [:lipas.ui.analysis.subs/zones-popup-labels])
+        metric      (<== [:lipas.ui.analysis.subs/selected-travel-metric])
+        data        (-> popup :data :features first :properties)
+        zone-id     (keyword (:zone data))]
     [mui/paper
      {:style
       {:padding "0.5em"}}
      [mui/table {:padding "dense"}
-      (into
-       [mui/table-body]
-       (for [[k text] fields
-             :let     [v (get data k)]]
-         [mui/table-row {:style {:height "24px"}}
-          [mui/table-cell
-           [mui/typography {:variant "caption" :noWrap true}
-            text]]
-          [mui/table-cell
-           [mui/typography (if (nil? v) "<10" v)]]]))]]))
+      [mui/table-body
+
+       ;; Population
+       [mui/table-row {:style {:height "24px"}}
+        [mui/table-cell
+         [mui/typography {:variant "caption" :noWrap true}
+          (tr :analysis/population)]]
+        [mui/table-cell
+         [mui/typography (if-let [v (:vaesto data)] v "<10")]]]
+
+       ;; Profile / Zone / Metric
+       [mui/table-row {:style {:height "24px"}}
+        [mui/table-cell
+         [mui/typography {:variant "caption" :noWrap true}
+          (if (= metric :travel-time)
+            (tr :analysis/travel-time)
+            (tr :analysis/distance))]]
+        [mui/table-cell
+         [mui/typography
+          (get-in zone-labels [[metric zone-id]])]]]]]]))
 
 (defmethod popup-body :school [popup]
   (let [data   (-> popup :data :features first :properties)]

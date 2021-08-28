@@ -348,17 +348,18 @@
 
 (defn population-style2
   [f _resolution]
-  (let [n (.get f "vaesto")]
+  (let [n     (.get f "vaesto")
+        color (.get f "color")]
     (ol/style.Style.
      #js{:stroke
          (ol/style.Stroke.
-          #js{:width 3 :color "blue"})
-         :fill default-fill
+          #js{:width 3 :color color})
+         :fill (ol/style.Fill. #js{:color color})
          :image
          (ol/style.Circle.
           #js{:radius (min 7 (* 0.01 (js/Math.abs n)))
-              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
-              :stroke default-stroke})})))
+              :fill   (ol/style.Fill. #js{:color color})
+              :stroke (ol/style.Stroke. #js{:color color :width 3})})})))
 
 (defn population-hover-style2
   [f _resolution]

@@ -163,23 +163,9 @@
          k4 [:ika_65_ :ika_15_64 :ika_0_14 :vaesto]]
      [k1 k2 k3 k4])))
 
-(defn- combine
-  [sports-site-data sports-site-distances sports-site-travel-times
-   pop-data pop-distances pop-travel-times
-   school-data school-distances school-travel-times
-   profiles zones]
-  {:population
-   (->> pop-data
-        :hits
-        (map :_source)
-        (map
-         (fn [{:keys [id_nro] :as m}]
-           (-> m
-               (select-keys [:vaesto :coords])
-               (update :kunta utils/->int)
-               (update :vaesto (comp anonymize utils/->int))))))
-   :population-stats
-   (->> pop-data
+(defn- resolve-zones
+  [zones profiles pop-data pop-distances pop-travel-times]
+  (->> pop-data
         :hits
         (map :_source)
 
@@ -216,70 +202,92 @@
                   d-zone  (assoc-in [:zone profile :distance] d-zone)
                   tt-zone (assoc-in [:zone profile :travel-time] tt-zone))))
             m
-            profiles)))
+            profiles)))))
 
-        ;; Sum by metric, profile, zone and demography
-        (reduce
-         (fn [res m]
-           (reduce
-            (fn [res2 profile]
-              (let [d-zone  (get-in m [:zone profile :distance])
-                    tt-zone (get-in m [:zone profile :travel-time])]
-                (cond-> res2
+(defn- combine
+  [sports-site-data sports-site-distances sports-site-travel-times
+   pop-data pop-distances pop-travel-times
+   school-data school-distances school-travel-times
+   profiles zones]
 
-                  d-zone
-                  (->
-                   (update-in [:distance profile d-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
-                   (update-in [:distance profile d-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
-                   (update-in [:distance profile d-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
-                   (update-in [:distance profile d-zone :vaesto] #(+ (or % 0) (:vaesto m))))
+  (let [pop-data-with-zones (resolve-zones zones
+                                           profiles
+                                           pop-data
+                                           pop-distances
+                                           pop-travel-times)]
 
-                  tt-zone
-                  (->
-                   (update-in [:travel-time profile tt-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
-                   (update-in [:travel-time profile tt-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
-                   (update-in [:travel-time profile tt-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
-                   (update-in [:travel-time profile tt-zone :vaesto] #(+ (or % 0) (:vaesto m))))))
-              )
-            res
-            profiles))
-         {})
+    {:population
+     (->> pop-data-with-zones
+          (map
+           (fn [{:keys [id_nro] :as m}]
+             ;; TODO Figure out if it's OK to expose grid id's or not
+             (-> m
+                 (select-keys [:vaesto :coords :zone])
+                 (update :vaesto anonymize)))))
+
+     :population-stats
+     (->> pop-data-with-zones
+          ;; Sum by metric, profile, zone and demography
+          (reduce
+           (fn [res m]
+             (reduce
+              (fn [res2 profile]
+                (let [d-zone  (get-in m [:zone profile :distance])
+                      tt-zone (get-in m [:zone profile :travel-time])]
+                  (cond-> res2
+
+                    d-zone
+                    (->
+                     (update-in [:distance profile d-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
+                     (update-in [:distance profile d-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
+                     (update-in [:distance profile d-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                     (update-in [:distance profile d-zone :vaesto] #(+ (or % 0) (:vaesto m))))
+
+                    tt-zone
+                    (->
+                     (update-in [:travel-time profile tt-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
+                     (update-in [:travel-time profile tt-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
+                     (update-in [:travel-time profile tt-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                     (update-in [:travel-time profile tt-zone :vaesto] #(+ (or % 0) (:vaesto m)))))))
+              res
+              profiles))
+           {})
 
         ;; Anonymize possibly "too small" population values
-        (anonymize-all profiles zones))
+          (anonymize-all profiles zones))
 
-   :schools
-   (->> school-data
-        :hits
-        (map (juxt :_id :_source))
-        (map
-         (fn [[id m]]
-           (-> m
-               (assoc :route
-                      (into {}
-                            (for [p profiles]
-                              [p (get-in school-travel-times [p id])])))
-               (assoc-in [:route :direct :distance-m]
-                         (double
-                          (Math/round
-                           (get-in school-distances [id :distance-m]))))))))
+     :schools
+     (->> school-data
+          :hits
+          (map (juxt :_id :_source))
+          (map
+           (fn [[id m]]
+             (-> m
+                 (assoc :route
+                        (into {}
+                              (for [p profiles]
+                                [p (get-in school-travel-times [p id])])))
+                 (assoc-in [:route :direct :distance-m]
+                           (double
+                            (Math/round
+                             (get-in school-distances [id :distance-m]))))))))
 
-   :sports-sites
-   (->> sports-site-data
-        :hits
-        (map (juxt :_id :_source))
-        (map
-         (fn [[id m]]
-           (-> m
-               (select-keys [:type :name])
-               (assoc :route
-                      (into {}
-                            (for [p profiles]
-                              [p (get-in sports-site-travel-times [p id])])))
-               (assoc-in [:route :direct :distance-m]
-                         (double
-                          (Math/round
-                           (get-in sports-site-distances [id :distance-m]))))))))})
+     :sports-sites
+     (->> sports-site-data
+          :hits
+          (map (juxt :_id :_source))
+          (map
+           (fn [[id m]]
+             (-> m
+                 (select-keys [:type :name])
+                 (assoc :route
+                        (into {}
+                              (for [p profiles]
+                                [p (get-in sports-site-travel-times [p id])])))
+                 (assoc-in [:route :direct :distance-m]
+                           (double
+                            (Math/round
+                             (get-in sports-site-distances [id :distance-m]))))))))}))
 
 (defn calc-distances-and-travel-times
   [search {:keys [search-fcoll buffer-fcoll distance-km profiles type-codes zones]}]
@@ -504,4 +512,16 @@
   (create-sports-sites-sheet data :travel-time)
   (create-sports-sites-sheet-main-cat data :travel-time)
 
+  (require '[clojure.java.io :as io])
+
+
+  (require '[cognitect.transit :as transit])
+  
+  (import [java.io ByteArrayInputStream ByteArrayOutputStream])  
+  
+  (def in (io/input-stream "/tmp/cc.transit"))
+  (def reader (transit/reader in :json))
+  
+  (spit "/tmp/cc-output.edn" (transit/read reader))
   )
+
