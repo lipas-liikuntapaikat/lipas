@@ -10,6 +10,8 @@
 
 (def population-index "vaestoruutu_1km_2019_kp")
 (def population-index-high-def "vaestoruutu_250m_2020_kp")
+(def population-high-def-threshold-km 15)
+
 (def schools-index "schools")
 (def sports-sites-index "sports_sites_current")
 
@@ -38,7 +40,9 @@
 
 (defn get-population-data
   [search fcoll distance-km]
-  (let [idx (if (> distance-km 10) population-index population-index-high-def)]
+  (let [idx (if (> distance-km population-high-def-threshold-km)
+              population-index
+              population-index-high-def)]
     (get-es-data* idx search fcoll distance-km)))
 
 (defn get-school-data
