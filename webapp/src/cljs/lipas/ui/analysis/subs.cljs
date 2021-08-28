@@ -31,10 +31,22 @@
    (-> analysis :population :stats)))
 
 (re-frame/reg-sub
+ ::population-chart-mode
+ :<- [::analysis]
+ (fn [analysis _]
+   (-> analysis :population :chart-mode)))
+
+(re-frame/reg-sub
  ::schools-data
  :<- [::analysis]
  (fn [analysis _]
    (-> analysis :schools :data)))
+
+(re-frame/reg-sub
+ ::schools-chart-mode
+ :<- [::analysis]
+ (fn [analysis _]
+   (-> analysis :schools :chart-mode)))
 
 (re-frame/reg-sub
  ::selected-analysis-center
@@ -123,20 +135,37 @@
  :<- [::selected-travel-profile]
  :<- [::selected-travel-metric]
  :<- [::population-labels]
- (fn [[stats profile metric labels] _]
-   (->> (get-in stats [metric profile])
-        (reduce
-         (fn [res [zone m]]
-           (conj res
-                 {:zone      (labels zone)
-                  :zone*     zone
-                  :age-0-14  (:ika_0_14 m)
-                  :age-15-64 (:ika_15_64 m)
-                  :age-65-   (:ika_65_ m)
-                  :vaesto    (:vaesto m)})
-           ) [])
+ :<- [::population-chart-mode]
+ (fn [[stats profile metric labels chart-mode] _]
+   (let [res (->> (get-in stats [metric profile])
+                  (reduce
+                   (fn [res [zone m]]
+                     (conj res
+                           {:zone      (labels zone)
+                            :zone*     zone
+                            :age-0-14  (:ika_0_14 m)
+                            :age-15-64 (:ika_15_64 m)
+                            :age-65-   (:ika_65_ m)
+                            :vaesto    (:vaesto m)})) [])
 
-        (sort-by :zone*))))
+                  (sort-by :zone*))]
+
+     (if (= "non-cumulative" chart-mode)
+       res
+       ;; Calc cumulative results
+       (first
+        (reduce
+         (fn [[res prev-zone] zone]
+           (let [zone (if prev-zone
+                        (-> zone
+                            (update :age-0-14 #(+ % (:age-0-14 prev-zone)))
+                            (update :age-15-64 #(+ % (:age-15-64 prev-zone)))
+                            (update :age-65- #(+ % (:age-65- prev-zone)))
+                            (update :vaesto #(+ % (:vaesto prev-zone))))
+                        zone)]
+             [(conj res zone) zone]))
+         [[]]
+         res))))))
 
 (re-frame/reg-sub
  ::schools-data-v2
@@ -151,39 +180,58 @@
  :<- [::selected-travel-metric]
  :<- [::population-labels]
  :<- [::zones]
- (fn [[data profile metric labels zones] _]
+ :<- [::schools-chart-mode]
+ (fn [[data profile metric labels zones chart-mode] _]
 
-   (->> data
-        (map
-         (fn [m]
-           (assoc m :zone (resolve-zone-v3 zones m profile metric))))
+   (let [res (->> data
+                  (map
+                   (fn [m]
+                     (assoc m :zone (resolve-zone-v3 zones m profile metric))))
 
-        (remove (comp nil? :zone))
-        (group-by :zone)
+                  (remove (comp nil? :zone))
+                  (group-by :zone)
 
+                  (reduce
+                   (fn [res [zone ms]]
+                     (conj res
+                           {:zone        (labels zone)
+                            :zone*       zone
+                            :vaka        (->> ms
+                                              (filter #(= "Varhaiskasvatusyksikkö" (:type %)))
+                                              count)
+                            :lukiot      (->> ms
+                                              (filter #(= "Lukiot" (:type %)))
+                                              count)
+                            :peruskoulut (->> ms
+                                              (filter #(= "Peruskoulut" (:type %)))
+                                              count)
+                            :perus+lukio (->> ms
+                                              (filter #(= "Perus- ja lukioasteen koulut" (:type %)))
+                                              count)
+                            :erityis     (->> ms
+                                              (filter #(= "Peruskouluasteen erityiskoulut" (:type %)))
+                                              count)})) [])
+
+                  (sort-by :zone*))]
+
+     (if (= "non-cumulative" chart-mode)
+       res
+
+       ;; Calculate cumulative results
+       (first
         (reduce
-         (fn [res [zone ms]]
-           (conj res
-                 {:zone        (labels zone)
-                  :zone*       zone
-                  :vaka        (->> ms
-                                    (filter #(= "Varhaiskasvatusyksikkö" (:type %)))
-                                    count)
-                  :lukiot      (->> ms
-                                    (filter #(= "Lukiot" (:type %)))
-                                    count)
-                  :peruskoulut (->> ms
-                                    (filter #(= "Peruskoulut" (:type %)))
-                                    count)
-                  :perus+lukio (->> ms
-                                    (filter #(= "Perus- ja lukioasteen koulut" (:type %)))
-                                    count)
-                  :erityis     (->> ms
-                                    (filter #(= "Peruskouluasteen erityiskoulut" (:type %)))
-                                    count)})
-           ) [])
-
-        (sort-by :zone*))))
+         (fn [[res prev-zone] zone]
+           (let [zone (if prev-zone
+                        (-> zone
+                            (update :vaka #(+ % (:vaka prev-zone)))
+                            (update :lukiot #(+ % (:lukiot prev-zone)))
+                            (update :peruskoulut #(+ % (:peruskoulut prev-zone)))
+                            (update :perus+lukio #(+ % (:perus+lukio prev-zone)))
+                            (update :erityis #(+ % (:erityis prev-zone))))
+                        zone)]
+             [(conj res zone) zone]))
+         [[]]
+         res))))))
 
 (re-frame/reg-sub
  ::analysis

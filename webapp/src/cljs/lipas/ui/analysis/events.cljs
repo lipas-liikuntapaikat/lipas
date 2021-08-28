@@ -241,3 +241,15 @@
       :dispatch     [:lipas.ui.events/set-active-notification
                      {:message  (tr :notifications/get-failed)
                       :success? false}]})))
+
+(re-frame/reg-event-db
+ ::set-population-chart-mode
+ (fn [db [_ v]]
+   (assoc-in db [:analysis :population :chart-mode]
+             (if v "cumulative" "non-cumulative"))))
+
+(re-frame/reg-event-db
+ ::set-schools-chart-mode
+ (fn [db [_ v]]
+   (assoc-in db [:analysis :schools :chart-mode]
+             (if v "cumulative" "non-cumulative"))))

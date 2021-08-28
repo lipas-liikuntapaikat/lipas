@@ -59,8 +59,10 @@
         :id      (keyword (str "zone" (inc idx)))})
      [[0 1] [1 2] [2 3] [3 4]])}
    :population
-   {:view "chart"}
+   {:view       "chart"
+    :chart-mode "cumulative"}
    :sports-sites
    {:view "chart"}
    :schools
-   {:view "chart"}})
+   {:view       "chart"
+    :chart-mode "cumulative"}})

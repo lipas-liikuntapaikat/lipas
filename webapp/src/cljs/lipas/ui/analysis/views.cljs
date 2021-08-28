@@ -140,8 +140,9 @@
        [mui/icon "settings"]]]]))
 
 (defn population-v2-tab [{:keys [tr]}]
-  (let [data   (<== [::subs/population-chart-data-v3])
-        labels (<== [::subs/population-labels])]
+  (let [data       (<== [::subs/population-chart-data-v3])
+        labels     (<== [::subs/population-labels])
+        chart-mode (<== [::subs/population-chart-mode])]
     [:<>
 
      ;; Area chart
@@ -153,6 +154,13 @@
                          {:naiset "Naiset"
                           :miehet "Miehet"
                           :vaesto "Yhteensä"})}]])
+
+     ;; Cumulative / non-cumulative selector
+     [mui/grid {:item true :xs 12 :style {:padding-left "1em"}}
+      [lui/checkbox
+       {:label     "Kumulatiiviset tulokset"
+        :on-change #(==> [::events/set-population-chart-mode %1])
+        :value     (= "cumulative" chart-mode)}]]
 
      ;; Tilastokeskus copyright notice (demographics data)
      [mui/grid {:item true :xs 12}
@@ -218,7 +226,8 @@
   (let [schools-list       (<== [::subs/schools-list])
         schools-view       (<== [::subs/schools-view])
         schools-chart-data (<== [::subs/schools-chart-data-v2])
-        labels             (<== [::subs/population-labels])]
+        labels             (<== [::subs/population-labels])
+        chart-mode         (<== [::subs/schools-chart-mode])]
     [:<>
 
      [mui/grid {:item true :xs 12}
@@ -231,7 +240,7 @@
        [mui/tab {:icon (r/as-element [mui/icon "analytics"]) :value "chart"}]]]
 
      #_[mui/grid {:item true :xs 12}
-      [travel-profile-selector]]
+        [travel-profile-selector]]
 
      (when (= schools-view "list")
        [mui/grid {:item true :xs 12}
@@ -244,10 +253,17 @@
                    :secondary (:display-val m)}]]))])
 
      (when (= schools-view "chart")
-        [mui/grid {:item true :xs 12}
+       [mui/grid {:item true :xs 12}
         [charts/schools-area-chart
          {:data   schools-chart-data
-          :labels labels}]])]))
+          :labels labels}]
+        
+        ;; Cumulative / non-cumulative selector
+        [mui/grid {:item true :xs 12 :style {:padding-left "1em"}}
+         [lui/checkbox
+          {:label     "Kumulatiiviset tulokset"
+           :on-change #(==> [::events/set-schools-chart-mode %1])
+           :value     (= "cumulative" chart-mode)}]]])]))
 
 (defn zones-selector
   [{:keys [tr metric]}]
@@ -260,7 +276,7 @@
     (r/with-let [value* (r/atom value)]
       
       [mui/grid {:container true}
-       (prn selector-colors)
+   
        ;; Slider
        [mui/grid {:item true :xs 10 :style {:padding "1em"}}
         [:> RangeSlider
