@@ -10,7 +10,7 @@
 
 (def population-index "vaestoruutu_1km_2019_kp")
 (def population-index-high-def "vaestoruutu_250m_2020_kp")
-(def population-high-def-threshold-km 15)
+(def population-high-def-threshold-km 10)
 
 (def schools-index "schools")
 (def sports-sites-index "sports_sites_current")
