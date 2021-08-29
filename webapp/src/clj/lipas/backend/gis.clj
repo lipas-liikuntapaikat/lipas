@@ -148,6 +148,15 @@
       .getCoordinates
       (->> (map #(vector (.getX %) (.getY %))))))
 
+(defn dedupe-polygon-coords
+  [fcoll]
+  (update fcoll :features
+          (fn [fs]
+            (map
+             (fn [f]
+               (update-in f [:geometry :coordinates] #(map dedupe %)))
+             fs))))
+
 (comment
 
   (wgs84->tm35fin [23.8259457479965 61.4952794263427])
