@@ -134,13 +134,14 @@
   (if (= :travel-time metric)
 
     ;; travel time
-    (let [time-min (-> m :route profile :duration-s (/ 60))]
-      (->> zones
-           :travel-time
-           (some
-            (fn [zone]
-              (when (>= (:max zone) time-min (:min zone))
-                (:id zone))))))
+    (when-let [time-s (-> m :route profile :duration-s)]
+      (let [time-min (/ time-s 60)]
+        (->> zones
+             :travel-time
+             (some
+              (fn [zone]
+                (when (>= (:max zone) time-min (:min zone))
+                  (:id zone)))))))
 
     ;; distance
     (let [distance-km (-> m :route profile :distance-m (/ 1000))]
@@ -170,43 +171,43 @@
 (defn- resolve-zones
   [zones profiles pop-data pop-distances pop-travel-times]
   (->> pop-data
-        :hits
-        (map :_source)
+       :hits
+       (map :_source)
 
         ;; Combine distance and travel-time calculations to demographics
-        (map
-         (fn [{:keys [id_nro] :as m}]
-           (-> m
-               (select-keys [:id_nro :ika_65_ :ika_15_64 :ika_0_14 :kunta
-                             #_:naiset #_:miehet :vaesto :coords])
-               (update :ika_65_ utils/->int)
-               (update :ika_15_64 utils/->int)
-               (update :ika_0_14 utils/->int)
-               (update :kunta utils/->int)
-               #_(update :naiset utils/->int)
-               #_(update :miehet utils/->int)
-               (update :vaesto utils/->int)
-               (assoc :route
-                      (into {}
-                            (for [p profiles]
-                              [p (get-in pop-travel-times [p id_nro])])))
-               (assoc-in [:route :direct :distance-m]
-                         (double
-                          (Math/round
-                           (get-in pop-distances [id_nro :distance-m])))))))
+       (map
+        (fn [{:keys [id_nro] :as m}]
+          (-> m
+              (select-keys [:id_nro :ika_65_ :ika_15_64 :ika_0_14 :kunta
+                            #_:naiset #_:miehet :vaesto :coords])
+              (update :ika_65_ utils/->int)
+              (update :ika_15_64 utils/->int)
+              (update :ika_0_14 utils/->int)
+              (update :kunta utils/->int)
+              #_(update :naiset utils/->int)
+              #_(update :miehet utils/->int)
+              (update :vaesto utils/->int)
+              (assoc :route
+                     (into {}
+                           (for [p profiles]
+                             [p (get-in pop-travel-times [p id_nro])])))
+              (assoc-in [:route :direct :distance-m]
+                        (double
+                         (Math/round
+                          (get-in pop-distances [id_nro :distance-m])))))))
 
         ;; Resolve zones
-        (map
-         (fn [m]
-           (reduce
-            (fn [m1 profile]
-              (let [d-zone  (resolve-zone zones m1 profile :distance)
-                    tt-zone (resolve-zone zones m1 profile :travel-time)]
-                (cond-> m1
-                  d-zone  (assoc-in [:zone profile :distance] d-zone)
-                  tt-zone (assoc-in [:zone profile :travel-time] tt-zone))))
-            m
-            profiles)))))
+       (map
+        (fn [m]
+          (reduce
+           (fn [m1 profile]
+             (let [d-zone  (resolve-zone zones m1 profile :distance)
+                   tt-zone (resolve-zone zones m1 profile :travel-time)]
+               (cond-> m1
+                 d-zone  (assoc-in [:zone profile :distance] d-zone)
+                 tt-zone (assoc-in [:zone profile :travel-time] tt-zone))))
+           m
+           (conj profiles :direct))))))
 
 (defn- combine
   [sports-site-data sports-site-distances sports-site-travel-times
@@ -254,7 +255,7 @@
                      (update-in [:travel-time profile tt-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
                      (update-in [:travel-time profile tt-zone :vaesto] #(+ (or % 0) (:vaesto m)))))))
               res
-              profiles))
+              (conj profiles :direct)))
            {})
 
         ;; Anonymize possibly "too small" population values
