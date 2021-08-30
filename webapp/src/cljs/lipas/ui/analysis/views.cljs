@@ -90,15 +90,18 @@
 
 (defn travel-profile-selector
   [{:keys [tr]}]
-  (let [profile (<== [::subs/selected-travel-profile])]
+  (let [profile (<== [::subs/selected-travel-profile])
+        metric  (<== [::subs/selected-travel-metric])]
     [mui/grid {:container true :spacing 2 :align-items "center"}
 
+     (prn metric)
      ;; Direct
      [mui/grid {:item true}
       [mui/tooltip
        {:title (tr :analysis/direct)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :direct])
+         :disabled (= metric :travel-time)
          :color    (if (= profile :direct) "secondary" "default")}
         [:> js/materialIcons.MapMarkerDistance]]]]
 
