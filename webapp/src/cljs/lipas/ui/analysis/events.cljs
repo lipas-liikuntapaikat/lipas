@@ -183,11 +183,14 @@
                          :id      (keyword (str "zone" (inc idx)))})))]
      {:db (assoc-in db [:analysis :zones metric] zones)
       :dispatch-n
-      (let [old-max (-> db :analysis :distance-km)
-            new-max (apply max (map :max zones))]
+      (let [old-max        (-> db :analysis :distance-km)
+            new-max        (apply max (map :max zones))
+            old-zone-count (count (get-in db [:analysis :zones metric]))]
         [(when (= :distance metric)
            [::set-analysis-distance-km new-max])
-         (when (and (= :distance metric) (not= old-max new-max))
+         (when (or
+                (< old-zone-count (count zones))
+                (and (= :distance metric) (not= old-max new-max)))
            [::refresh-analysis])])})))
 
 (re-frame/reg-event-fx

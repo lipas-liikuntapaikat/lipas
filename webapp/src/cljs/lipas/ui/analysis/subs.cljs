@@ -136,8 +136,12 @@
  :<- [::selected-travel-metric]
  :<- [::population-labels]
  :<- [::population-chart-mode]
- (fn [[stats profile metric labels chart-mode] _]
-   (let [res (->> (get-in stats [metric profile])
+ :<- [::zones-by-selected-metric]
+ (fn [[stats profile metric labels chart-mode zones] _]
+   (let [zone-ids (map :id zones)
+         res (-> (get-in stats [metric profile])
+                 (select-keys zone-ids)
+                 (->>
                   (reduce
                    (fn [res [zone m]]
                      (conj res
@@ -148,7 +152,7 @@
                             :age-65-   (:ika_65_ m)
                             :vaesto    (:vaesto m)})) [])
 
-                  (sort-by :zone*))]
+                  (sort-by :zone*)))]
 
      (if (= "non-cumulative" chart-mode)
        res
