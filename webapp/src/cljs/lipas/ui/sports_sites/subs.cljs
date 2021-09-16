@@ -143,6 +143,19 @@
       (assoc v :cat-id (str "sub-cat-" k))))))
 
 (re-frame/reg-sub
+ ::type-table
+ :<- [::all-types]
+ :<- [:lipas.ui.subs/locale]
+ (fn [[types locale]]
+   (for [[type-code m] types]
+     {:type-code     type-code
+      :name          (get-in m [:name locale])
+      :geometry-type (:geometry-type m)
+      :main-category (get-in types/main-categories [(:main-category m) :name locale])
+      :sub-category  (get-in types/sub-categories [(:sub-category m) :name locale])
+      :description   (get-in m [:description locale])})))
+
+(re-frame/reg-sub
  ::admins
  (fn [db _]
    (-> db :sports-sites :admins)))
