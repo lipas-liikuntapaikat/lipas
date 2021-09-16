@@ -226,6 +226,25 @@
            {:size :small :on-click #(pick-color type-code :stroke stroke)}
            "reset"]]]))]))
 
+(defn type-codes-view []
+  (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       "Tyyppikoodit"]
+      [lui/table
+       {:hide-action-btn? true
+        :headers
+        [[:type-code "Tyyppikoodi"]
+         [:name "Nimi"]
+         [:main-category "Pääluokka"]
+         [:sub-category "Alaluokka"]
+         [:description "Kuvaus"]
+         [:geometry-type "Geometria"]]
+        :sort-fn   :type-code
+        :items     types
+        :on-select #(js/alert "Ei tee mitään vielä...")}]]]))
+
 (defn admin-panel []
   (let [tr           (<== [:lipas.ui.subs/translator])
         status       (<== [::subs/users-status])
@@ -239,7 +258,8 @@
         {:value     selected-tab
          :on-change #(==> [::events/select-tab %2])}
         [mui/tab {:label (tr :lipas.admin/users)}]
-        [mui/tab {:label "Symbolityökalu"}]]]
+        [mui/tab {:label "Symbolityökalu"}]
+        [mui/tab {:label "Tyyppikoodit"}]]]
 
       (when (= 1 selected-tab)
         [:<>
@@ -301,7 +321,10 @@
              [:types (tr :lipas.user.permissions/types)]]
             :sort-fn   :email
             :items     users
-            :on-select #(==> [::events/set-user-to-edit %])}]]])]]))
+            :on-select #(==> [::events/set-user-to-edit %])}]]])
+
+      (when (= 2 selected-tab)
+        [type-codes-view])]]))
 
 (defn main []
   (let [admin? (<== [:lipas.ui.user.subs/admin?])]
