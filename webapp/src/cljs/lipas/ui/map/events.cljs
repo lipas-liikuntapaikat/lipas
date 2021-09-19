@@ -3,6 +3,7 @@
    ["ol" :as ol]
    [ajax.core :as ajax]
    [cemerick.url :as url]
+   [clojure.set :as set]
    [clojure.string :as string]
    [goog.object :as gobj]
    [goog.string :as gstring]
@@ -687,6 +688,23 @@
  (fn [{:keys [db]} [_ val layer]]
    {:db (update-in db [:map :selected-overlays] (if val conj disj) layer)}))
 
+;; Takes coll of pairs like [:analysis true] [:population false]
+(re-frame/reg-event-fx
+ ::set-overlays
+ (fn [{:keys [db]} [_ layers]]
+   (let [adds    (->> layers (filter second) (map first))
+         removes (->> layers (filter (complement second)) (map first))]
+     {:db (update-in db [:map :selected-overlays]
+                     (fn [current-layers]
+                       (as-> (set current-layers) $
+                         (apply conj $ adds)
+                         (apply disj $ removes))))})))
+
+(re-frame/reg-event-fx
+ ::enable-overlays
+ (fn [{:keys [db]} [_ layers]]
+   {:db (update-in db [:map :selected-overlays] into layers)}))
+
 (re-frame/reg-event-fx
  ::show-analysis*
  (fn [{:keys [db]} _]
@@ -694,10 +712,8 @@
             (assoc-in  [:map :mode :name] :default)
             (assoc-in  [:map :mode :sub-mode] :analysis))
     :dispatch-n
-    [[::set-overlay true :vectors]
-     [::set-overlay true :schools]
-     [::set-overlay true :population]
-     [::set-overlay true :analysis]]}))
+    [[::enable-overlays [:vectors :schools :population :analysis]]
+     [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))
 
 (re-frame/reg-event-fx
  ::show-analysis
@@ -714,10 +730,11 @@
             (assoc-in [:map :mode :name] :default)
             (update-in [:map :mode] dissoc :sub-mode))
     :dispatch-n [[:lipas.ui.analysis.events/clear]
-                 [::set-overlay true :vectors]
-                 [::set-overlay false :schools]
-                 [::set-overlay false :population]
-                 [::set-overlay false :analysis]
+                 [::set-overlays [[:vectors true]
+                                  [:schools false]
+                                  [:population false]
+                                  [:analysis false]]]
+                 [:lipas.ui.search.events/remove-status-filter "planning"]
                  [:lipas.ui.search.events/clear-filters]]}))
 
 (re-frame/reg-event-fx
