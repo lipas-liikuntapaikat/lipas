@@ -2,6 +2,7 @@
   (:require
    [lipas.i18n.core :as i18n]
    [lipas.ui.db :as db]
+   [lipas.ui.search.db :as search-db]
    [lipas.ui.routes :as routes]
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]
@@ -15,7 +16,8 @@
      (let [admin? (-> login-data :permissions :admin?)]
        {:db       (-> db/default-db
                       (assoc-in [:user :login] login-data)
-                      (assoc :logged-in? true))
+                      (assoc :logged-in? true)
+                      (assoc :search search-db/default-db-logged-in))
         :dispatch [:lipas.ui.login.events/refresh-login]
         :ga/set   [{:dimension1 (if admin? "admin" "user")}]})
      {:db     db/default-db
