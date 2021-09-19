@@ -374,6 +374,12 @@
     :dispatch [::filters-updated :fit-view]}))
 
 (re-frame/reg-event-fx
+ ::remove-status-filter
+ (fn [{:keys [db]} [_ status]]
+   {:db       (update-in db [:search :filters :statuses] (comp disj set) status)
+    :dispatch [::filters-updated :fit-view]}))
+
+(re-frame/reg-event-fx
  ::set-type-filter
  (fn [{:keys [db]} [_ type-codes append?]]
    {:db       (if append?
