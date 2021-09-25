@@ -7,7 +7,7 @@
    :selected-cities   [] ; whole country
    :selected-types    [] ; all types
    :selected-issuers  ["AVI" "OKM"]
-   :selected-years    [2020]
+   :selected-years    [2021]
    :groupings         reports/subsidies-groupings
    :issuers           reports/subsidies-issuers
    :selected-grouping "avi"
