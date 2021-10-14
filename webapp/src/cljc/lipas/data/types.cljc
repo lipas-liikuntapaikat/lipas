@@ -355,7 +355,7 @@
     {:fi
      "Koiran koulutukseen, agilityyn tai muuhun harjoittamiseen varattu ulkoalue.",
      :se
-     "Område reserverat för hunddressyr, agility eller annan träning.",
+     "Område reserverat för hundträning, agility eller annan hundhobby.",
      :en
      "Area reserved for dog training, agility or other dog sports."},
     :tags          {:fi ["agility" "koirakenttä"]},
@@ -418,7 +418,7 @@
     {:fi
      "Pesäpallokenttä, mikäli katsomoita tarjolla, lisätään kentän nimeen stadion-sana. Vähintään kansallisen tason pelipaikka. Hiekka, hiekkatekonurmi / muu synteettinen päällyste, > 50 x 100 m. ",
      :se
-     "En bobollsplan, kan ha flera läktare. Minimikrav: spelplats på nationell nivå.Sand, konstgräs på sand / annan syntetisk beläggning. >50 x 100 m.",
+     "En bobollsplan, kan ha flera läktare. Minimikrav: spelplats på nationell nivå. Sand, konstgräs med sand / annan syntetisk beläggning. >50 x 100 m.",
      :en
      "Finnish baseball field, may include stands. Can host at least national-level games. Sand, artificial turf / other synthetic surface, > 50 x 100 m. "},
     :tags          {:fi ["pesäpallostadion"]},
@@ -758,9 +758,9 @@
     {:fi
      "Liikuntapuisto on useita liikuntapaikkoja käsittävä liikunta-alue. Liikuntapuistossa voi olla esim. erilaisia kenttiä, uimaranta, kuntorata, monitoimihalli, leikkipuisto jne. koottuna samalle alueelle. Lipakseen tallennetaan sekä tieto liikuntapuistosta että yksittäiset liikuntapaikat, joita puisto sisältää. Liikuntapaikat lasketaan omiksi paikoikseen.",
      :se
-     "En idrottspark är ett idrottsområde med flera idrottsplatser. Där kan finnas olika planer, badstrand, konditionsbana, allaktivitetshall, lekpark osv samlade på samma område. I Lipas lagras uppgifter om såväl idrottsparken som enstaka faciliteter som finns i parken. Varje motionsplats räknas som en plats. Sökning kan ske både via parken eller enstaka faciliteter.",
+     "En idrottspark är ett idrottsområde med flera idrottsplatser. Där kan finnas olika planer, badstrand, konditionsbana, allaktivitetshall, lekpark osv samlade på samma område. I Lipas lagras uppgifter om såväl idrottsparken som enstaka faciliteter som finns i parken. Varje motionsplats räknas som en plats.",
      :en
-     "A sports park is an area including several sports facilities, e.g., different fields, beach, a jogging track, a multi-purpose hall, a playground. 'Lipas' contains information both on the sports park and the individual sports facilities found there. The sports facilities are listed as individual items in the classification, enabling search by the park or by the individual facility."},
+     "A sports park is an area including several sports facilities, e.g., different fields, beach, a jogging track, a multi-purpose hall, a playground. 'Lipas' contains information both on the sports park and the individual sports facilities found there. The sports facilities are listed as individual items in the classification."},
     :tags          {:fi ["puisto" "lähiliikunta" "lähiliikuntapaikka"]},
     :name          {:fi "Liikuntapuisto", :se "Idrottspark", :en "Sports park"},
     :type-code     1110,
@@ -782,7 +782,7 @@
     {:fi
      "Erityisesti koiraharrastusta, agilityä, koulutusta tms. varten varustettu halli.",
      :se
-     "Hall som utrustats särskilt för hundhobby, agility, dressyr osv.",
+     "Hall som utrustats särskilt för hundhobby, agility, träning osv.",
      :en
      "Hall specifically equipped for dog sports, agility, training, etc."},
     :tags          {:fi ["agility" "koirahalli"]},
@@ -1941,9 +1941,9 @@
     {:fi
      "Luisteluun tarkoitettu, luonnonjäälle tai maalle rakennettava huollettu luistelureitti. Rakennetaan talvisin samalle alueelle, esim. liikuntapuiston alueelle tai meren jäälle.",
      :se
-     "Byggs varje vinter på samma område t ex i en idrottspark eller på havsis. Samma som skridskoleden i Anläggningar för terrängidrott.",
+     "Byggs varje vinter på samma område t ex i en idrottspark eller på havsis.",
      :en
-     "Built yearly in the same area, e.g., in a sports park or on frozen lake/sea. Same as 'ice-skating route' in 'outdoor recreation routes'."},
+     "Built yearly in the same area, e.g., in a sports park or on frozen lake/sea."},
     :tags          {:fi ["luistelu" "retkiluistelu" "retkiluistelurata"]},
     :name
     {:fi "Luistelureitti", :se "Skridskoled", :en "Ice-skating route"},
@@ -2204,7 +2204,7 @@
     {:fi
      "Luonnonsuojelualueita, joiden perustamisesta ja tarkoituksesta on säädetty lailla. Pinta-ala väh. 1000 ha. Metsähallitus tietolähde.",
      :se
-     "Naturskyddsområden med lagstadgad status och uppgift. Areal minst 1000 ha. Källa: Forststyrelsen",
+     "Naturskyddsområden med lagstadgad status och uppgift. Areal minst 1000 ha. Källa: Forststyrelsen.",
      :en
      "Nature conservation areas whose establishment and purpose are based on legislation. Min. area 1,000 ha. Source of information  Metsähallitus."},
     :tags          {:fi []},
@@ -2301,7 +2301,7 @@
     :tags          {:fi ["luistelurata"]},
     :name
     {:fi "Pikaluistelurata",
-     :se "Bana hastighetsåkning på skridsko",
+     :se "Bana för hastighetsåkning på skridsko",
      :en "Speed-skating track"},
     :type-code     1540,
     :main-category 1000,
@@ -2448,9 +2448,9 @@
     {:fi
      "Yksittäinen yleisurheilun olosuhde, ei yu-hallin yhteydessä. Ominaisuustiedoissa kerrotaan suorituspaikat.",
      :se
-     "Fristående, ej i anslutning till en friidrottshall. I karakteristika anges övningsplatserna (exemplifieras nedan)",
+     "Fristående, ej i anslutning till en friidrottshall. I karakteristika anges övningsplatserna",
      :en
-     "Stand-alone, not in an athletics hall. Venues specified under 'attribute data' (examples below)."},
+     "Stand-alone, not in an athletics hall. Venues specified under 'attribute data'"},
     :tags          {:fi ["yleisurheilu" "juoksurata"]},
     :name
     {:fi "Yksittäinen yleisurheilun suorituspaikka",
@@ -2842,9 +2842,9 @@
     {:fi
      "Maastossa oleva retkeilyreitti, yleensä kauempana asutuksesta. Reitin varrella retkeilyn palveluita, esim. laavuja.",
      :se
-     "Utflyktsled i terrängen, oftast längre borta från bebyggelse. Längs rutten friluftstjänster, t ex vindskydd. Sommar- och vinteranvändning i karakteristika.",
+     "Utflyktsled i terrängen, oftast längre borta från bebyggelse. Längs rutten friluftstjänster, t ex vindskydd.",
      :en
-     "Natural hiking route, usually further away from residential areas. Provides hiking facilities, e.g. lean-to structures. Summer and winter use specified in 'attribute data'."},
+     "Natural hiking route, usually further away from residential areas. Provides hiking facilities, e.g. lean-to structures."},
     :tags          {:fi ["retkeily" "vaellus" "vaelluspolku"]},
     :name
     {:fi "Retkeilyreitti", :se "Utflyktsled", :en "Hiking route"},
@@ -3288,7 +3288,7 @@
    {:description
     {:fi
      "Kohteessa on veneilyyn liittyviä palveluita. Palveluvarustus kuvattava.",
-     :se "Tjänster för båtfarare.Precisering i karakteristika.",
+     :se "Tjänster för båtfarare. Precisering i karakteristika.",
      :en "Facilities related to boating. Specififed in 'attributes'."},
     :tags          {:fi ["satama" "laituri"]},
     :name
@@ -3334,7 +3334,7 @@
      :ski-track-traditional?             {:priority 0},
      :route-width-m                      {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
-     :toilet?                            {:priority nil},
+     :toilet?                            {:priority 0},
      :shower?                            {:priority 0},
      :rest-places-count                  {:priority 0},
      :changing-rooms?                    {:priority 0},
@@ -3345,6 +3345,7 @@
      :loudspeakers?                      {:priority 0},
      :accessibility-info                 {:priority 0},
      :ski-track-freestyle?               {:priority 0},
+     :summer-usage?                      {:priority 0}
      :school-use?                        {:priority 0},
      :route-length-km                    {:priority 0}}},
    5360
@@ -3575,7 +3576,7 @@
     {:fi
      "Opastuspiste on ulkoilureitin, virkistysalueen tai muun liikuntapaikan yhteydessä oleva lisätieto. Paikassa voi olla esimerkiksi opastustaulu ja kartta tai laajempi palvelupiste. Opastuspiste-merkintää voi käyttää myös ilmoittamaan reitin lähtöpisteen.",
      :se
-     "I närheten av friluftsbanor, friluftsområden och andra motionsplatser, finns det oftast en informationspunkt som innehåller extra information om området. Det kan t.ex. finnas en karta och informationstavla eller en större servicepunkt. Ruttens startpunkt kan också betäcknas med hjälp av informationspunkten",
+     "I närheten av friluftsbanor, friluftsområden och andra motionsplatser, finns det oftast en informationspunkt som innehåller extra information om området. Det kan t.ex. finnas en karta och informationstavla eller en större servicepunkt. Ruttens startpunkt kan också betäcknas med hjälp av informationspunkten.",
      :en
      "Information point or starting point of a route, recreation area etc. Map of the route or area included, possibly also parking area."},
     :tags          {:fi ["info" "opastaulu" "infopiste"]},
@@ -3942,9 +3943,9 @@
     {:fi
      "Golfia varten varustettu sisäharjoittelutila. Voi olla useita erilaisia suorituspaikkoja.",
      :se
-     "Övningsutrymme byggt för golf. Storlek i karakteristika. Länk till Anläggningar  för inomhusidrott.",
+     "Övningsutrymme byggt för golf. Storlek i karakteristika.",
      :en
-     "Training space built for golf. Size specified in 'attribute data'. Link to 'indoor sport facilities'"},
+     "Training space built for golf. Size specified in 'attribute data'."},
     :tags          {:fi ["greeni" "puttialue"]},
     :name
     {:fi "Golfin harjoitushalli",
@@ -3999,7 +4000,7 @@
     {:fi
      "Palloiluun tarkoitettu kenttä. Hiekka, nurmi, hiekkatekonurmi tms., koko vaihtelee. Yksi tai useampi palloilulaji mahdollista. Kevyt poistettava kate mahdollinen.",
      :se
-     "Plan avsedd för bollspel.Sand, konstgräs på sand el dyl, storleken varierar. En eller flera bollspelsgrenar möjliga.",
+     "Plan avsedd för bollspel. Sand, konstgräs med sand el dyl, storleken varierar. En eller flera bollspelsgrenar möjliga.",
      :en
      "A field intended for ball games. Sand, grass, artificial turf, etc., size varies. One or more types of ball games possible."},
     :tags          {:fi []},
