@@ -142,7 +142,10 @@
 (re-frame/reg-event-fx
  ::download-new-colors-excel
  (fn [{:keys [db]} _]
-   (let [headers [[:type-code "type-code"] [:fill "fill"] [:stroke "stroke"]]
+   (let [headers [[:type-code "type-code"]
+                  [:symbol "symbol"]
+                  [:fill "fill"]
+                  [:stroke "stroke"]]
          data    (reduce (fn [res [k v] ]
                            (conj res (assoc v :type-code k)))
                          []

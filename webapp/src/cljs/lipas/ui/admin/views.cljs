@@ -192,6 +192,8 @@
        [mui/table-cell "Type-code"]
        [mui/table-cell "Type-name"]
        [mui/table-cell "Geometry"]
+       [mui/table-cell "Old symbol"]
+       [mui/table-cell "New symbol"]
        [mui/table-cell "Old-fill"]
        [mui/table-cell "New-fill"]
        [mui/table-cell "Old-stroke"]
@@ -200,31 +202,60 @@
      (into
       [mui/table-body]
       (for [[type-code type] (sort-by first types)
-            :let             [shape (-> type-code styles/all :shape)
-                              fill (-> type-code styles/all :fill :color)
-                              stroke (-> type-code styles/all :stroke :color)]]
+            :let             [shape (-> type-code types :geometry-type)
+                              fill (-> type-code styles/temp-symbols :fill)
+                              stroke (-> type-code styles/temp-symbols :stroke)]]
         [mui/table-row
          [mui/table-cell type-code]
          [mui/table-cell (-> type :name :fi)]
          [mui/table-cell shape]
+
+         ;; Old symbol
+         [mui/table-cell (condp = shape
+                           "Point" "Circle"
+                           shape)]
+
+         ;; New symbol
+         [mui/table-cell (condp = shape
+                           "Point" [lui/select
+                                    {:items     [{:label "Circle" :value "circle"}
+                                                 {:label "Square" :value "square"}]
+                                     :value     (or (-> type-code new-colors :symbol)
+                                                    "circle")
+                                     :on-change (partial pick-color type-code :symbol)}]
+                           shape)]
+
+         ;; Old fill
          [mui/table-cell
           [color-picker {:value fill :on-change #()}]]
+
+         ;; New fill
          [mui/table-cell
-          [color-picker
-           {:value     (-> (new-colors type-code) :fill)
-            :on-change (partial pick-color type-code :fill)}]
-          [mui/button
-           {:size :small :on-click #(pick-color type-code :fill fill)}
-           "reset"]]
+          [mui/grid {:container true :wrap "nowrap"}
+           [mui/grid {:item true}
+            [color-picker
+             {:value     (-> (new-colors type-code) :fill)
+              :on-change (partial pick-color type-code :fill)}]]
+           [mui/grid {:item true}
+            [mui/button
+             {:size :small :on-click #(pick-color type-code :fill fill)}
+             "reset"]]]]
+
+         ;; Old stroke
          [mui/table-cell
           [color-picker {:value stroke :on-change #()}]]
+
+         ;; New stroke
          [mui/table-cell
-          [color-picker
-           {:value     (-> (new-colors type-code) :stroke)
-            :on-change (partial pick-color type-code :stroke)}]
-          [mui/button
-           {:size :small :on-click #(pick-color type-code :stroke stroke)}
-           "reset"]]]))]))
+          [mui/grid {:container true :wrap "nowrap"}
+           [mui/grid {:item true}
+            [color-picker
+             {:value     (-> (new-colors type-code) :stroke)
+              :on-change (partial pick-color type-code :stroke)}]]
+           [mui/grid {:item true}
+            [mui/button
+             {:size :small :on-click #(pick-color type-code :stroke stroke)}
+             "reset"]]]]]))]))
 
 (defn type-codes-view []
   (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
