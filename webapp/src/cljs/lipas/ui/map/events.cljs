@@ -445,6 +445,30 @@
  (fn [db [_ encoding]]
    (assoc-in db [:map :import :selected-encoding] encoding)))
 
+(defn geom-coll->features [geom-coll]
+  (->> geom-coll
+       :geometries
+       (map-indexed
+        (fn [idx g]
+          {:type     "Feature"
+           :geometry g
+           :properties
+           {:id   (gensym)
+            :name (str "geom-" (inc idx))}}))))
+
+(defn normalize-geom-colls
+  "Handles a special case where geometries are contained in a
+  GeometryCollection. Normalizes geom coll into features with dummy
+  props."
+  [fcoll geom-type]
+  (->> fcoll
+       :features
+       (filter (comp #{"GeometryCollection"} :type :geometry))
+       (map :geometry)
+       (mapcat geom-coll->features)
+       (filter (comp #{geom-type} :type :geometry))
+       (utils/index-by (comp :id :properties))))
+
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON geom-type]]
@@ -456,7 +480,8 @@
                      (fn [res f]
                        (let [id (gensym)]
                          (assoc res id (assoc-in f [:properties :id] id))))
-                     {}))]
+                     {})
+                    (merge (normalize-geom-colls fcoll geom-type)))]
      (-> db
          (assoc-in [:map :import :data] fs)
          (assoc-in [:map :import :batch-id] (gensym))))))
