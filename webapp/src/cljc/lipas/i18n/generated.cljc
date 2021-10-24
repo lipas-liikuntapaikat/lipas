@@ -464,7 +464,7 @@
      :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti"},
     :register
     {:headline "Rekisteröidy",
-     :link     "Rekisteröidy päivittäjäksi"
+     :link     "Rekisteröidy"
      :thank-you-for-registering
      "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."},
     :map.address-search {:title "Etsi osoite", :tooltip "Etsi osoite"},
