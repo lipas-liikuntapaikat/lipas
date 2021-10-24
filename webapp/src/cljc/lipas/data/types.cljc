@@ -594,7 +594,7 @@
    {:description
     {:fi
      "Muun rakennuksen yhteydessä oleva liikuntatila. Salin koko vaihtelee alle 300 neliöstä noin 750 neliöön.",
-     :se "",
+     :se "En idrottssal som är ansluten till en annan byggnad. Storlek och höjd anges i karakteristika. Precisera till tilläggsuppgifter, ifall ansluten vid en skola.",
      :en
      "A gymnastics hall connected to another building. Size and height specified in 'additional information'. Also specified in 'additional information' if within a school."},
     :tags          {:fi ["jumppasali" "voimistelusali"]},
@@ -1299,13 +1299,13 @@
      :track-length-m                     {:priority 1}}},
    2140
    {:description
-    {:fi "",
-     :se "",
+    {:fi "Sali, jossa voi harrastaa itsepuolustuslajeja: esim. paini, nyrkkeily ym. Koko ominaisuustietoihin. ",
+     :se "Sal där man kan utöva självförsvarsgrenar, t ex brottning, boxning. Storleken anges i karakteristika.",
      :en
      "Hall for self-defence sports, e.g., wrestling, boxing. Size specified in 'attribute data'. "},
     :tags          {:fi ["paini" "judo" "tatami"]},
     :name
-    {:fi "Kamppailulajien sali", :se "", :en "Martial arts hall"},
+    {:fi "Kamppailulajien sali", :se "Sal för kampsport", :en "Martial arts hall"},
     :type-code     2140,
     :main-category 2000,
     :status        "active",
@@ -3647,11 +3647,14 @@
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
    4110
-   {:description   {:fi "", :se "", :en "-"},
+   {:description
+    {:fi "Laskettelurinteet, lumikourut ym. rinnerakenteet.",
+     :se "Slalombacke, rodelbana, pipe, puckelpist, freestyle ramp, trickbana.",
+     :en "Ski slopes, half pipes and other slope structures."},
     :tags          {:fi ["rinne" "laskettelu" "laskettelurinne"]},
     :name
     {:fi "Laskettelun suorituspaikka",
-     :se "",
+     :se "Slalombackar och alpina skidcentra",
      :en "Ski slopes and downhill ski resorts"},
     :type-code     4110,
     :main-category 4000,
