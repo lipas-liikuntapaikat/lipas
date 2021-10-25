@@ -920,7 +920,7 @@
      :se "Ute eller inne.Utrustning och grenar i karakteristika.",
      :en
      "Outdoors or indoors. Equipment and the various sports detailed in 'attribute data'."},
-    :tags          {:fi []},
+    :tags          {:fi ["jousiampumarata"]},
     :name
     {:fi "Jousiammuntarata", :se "Bågskyttebana", :en "Archery range"},
     :type-code     4830,
@@ -1438,7 +1438,7 @@
     {:fi "Maastoon rakennettu jousiammuntarata.",
      :se "Bågskyttebana byggd i terrängen.",
      :en "Archery course built in rough terrain."},
-    :tags          {:fi []},
+    :tags          {:fi ["jousiampumarata"]},
     :name
     {:fi "Jousiammuntamaastorata",
      :se "Terrängbana för bågskytte.",
@@ -2479,7 +2479,10 @@
      :school-use?                        {:priority 0},
      :highjump-places-count              {:priority 0}}},
    5210
-   {:description   {:fi "Ilmailuun tarkoitettu alue.", :se "", :en nil},
+   {:description
+    {:fi "Ilmailuun tarkoitettu alue, esim. lentopaikka.",
+     :se "Flygsportarena, t ex en flygplats.",
+     :en "Area for air sports, e.g. an airfield."},
     :tags
     {:fi
      ["lentäminen"
@@ -3229,20 +3232,20 @@
     :sub-category  3100,
     :geometry-type "Point",
     :props
-    {:pool-tracks-count                  {:priority 0},
+    {#_#_:pool-tracks-count                  {:priority 0},
      :kiosk?                             {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
-     :pool-width-m                       {:priority 0},
-     :pool-min-depth-m                   {:priority 0},
+     #_#_:pool-width-m                       {:priority 0},
+     #_#_:pool-min-depth-m                   {:priority 0},
      :toilet?                            {:priority 0},
      :swimming-pool-count                {:priority 1},
      :pool-water-area-m2                 {:priority 1},
-     :pool-length-m                      {:priority 1},
+     #_#_:pool-length-m                      {:priority 1},
      :other-pools-count                  {:priority 0},
-     :pool-max-depth-m                   {:priority 0},
+     #_#_:pool-max-depth-m                   {:priority 0},
      :accessibility-info                 {:priority 0},
-     :pool-temperature-c                 {:priority 0},
+     #_#_:pool-temperature-c                 {:priority 0},
      :school-use?                        {:priority 0}}},
    3110
    {:description
@@ -3263,7 +3266,7 @@
     :sub-category  3100,
     :geometry-type "Point",
     :props
-    {:pool-tracks-count                  {:priority 0},
+    {#_#_:pool-tracks-count                  {:priority 0},
      :automated-timing?                  {:priority 0},
      :kiosk?                             {:priority 0},
      :stand-capacity-person              {:priority 0},
@@ -3271,18 +3274,18 @@
      :finish-line-camera?                {:priority 0},
      :match-clock?                       {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
-     :pool-width-m                       {:priority 0},
-     :pool-min-depth-m                   {:priority 0},
+     #_#_:pool-width-m                       {:priority 0},
+     #_#_:pool-min-depth-m                   {:priority 0},
      :toilet?                            {:priority 0},
-     :swimming-pool-count                {:priority 1},
-     :pool-water-area-m2                 {:priority 1},
+     #_#_:swimming-pool-count                {:priority 1},
+     #_#_:pool-water-area-m2                 {:priority 1},
      :scoreboard?                        {:priority 0},
-     :pool-length-m                      {:priority 1},
-     :other-pools-count                  {:priority 0},
-     :pool-max-depth-m                   {:priority 0},
+     #_#_:pool-length-m                      {:priority 1},
+     #_#_:other-pools-count                  {:priority 0},
+     #_#_:pool-max-depth-m                   {:priority 0},
      :loudspeakers?                      {:priority 0},
      :accessibility-info                 {:priority 0},
-     :pool-temperature-c                 {:priority 0},
+     #_#_:pool-temperature-c                 {:priority 0},
      :school-use?                        {:priority 0}}},
    203
    {:description
