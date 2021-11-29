@@ -464,7 +464,7 @@
 (re-frame/reg-event-fx
  ::set-logged-in-filters
  (fn [{:keys [db]} [_]]
-   {:db       (update-in db [:search :filters :statuses] conj "planned" "planning")
+   {:db       (update-in db [:search :filters :statuses] conj "planned")
     :dispatch [::filters-updated]}))
 
 (re-frame/reg-event-fx
