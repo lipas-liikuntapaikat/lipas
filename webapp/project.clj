@@ -48,7 +48,9 @@
    [org.apache.commons/commons-math "2.2"]
    [org.locationtech.geowave/geowave-analytic-api "1.2.0"
     :exclusions
-    [[org.locationtech.geowave/geowave-adapter-raster]
+    [[org.slf4j/slf4j-log4j12]
+     [log4j]
+     [org.locationtech.geowave/geowave-adapter-raster]
      [org.locationtech.geowave/geowave-adapter-vector]]]]
 
   :plugins [[lein-environ "1.1.0"]
