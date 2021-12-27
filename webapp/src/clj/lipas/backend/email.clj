@@ -33,10 +33,10 @@
   [{:keys [host user pass from]}
    {:keys [to subject plain html]}]
   (postal/send-message
-   {:host host
-    :user user
-    :pass pass
-    :ssl  true}
+   (merge
+    {:host host}
+    (when (and (not-empty user) (not-empty pass))
+      {:user user :pass pass :ssl true}))
    {:from    from
     :to      to
     :subject subject
