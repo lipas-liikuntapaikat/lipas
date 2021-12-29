@@ -469,6 +469,31 @@
        (filter (comp #{geom-type} :type :geometry))
        (utils/index-by (comp :id :properties))))
 
+(defn multi-geom->single-geoms
+  [multi-geom geom-type]
+  (->> multi-geom
+       :coordinates
+       (map-indexed
+        (fn [idx coords]
+          {:type "Feature"
+           :geometry
+           {:type        geom-type
+            :coordinates coords}
+           :properties
+           {:id   (gensym)
+            :name (str "geom-" (inc idx))}}))))
+
+(defn normalize-multi-geoms
+  "Makes an effort to convert multi-geoms into single geoms."
+  [fcoll geom-type]
+  (->> fcoll
+       :features
+       (filter (comp #{"MultiLineString" "MultiPolygon"} :type :geometry))
+       (map :geometry)
+       (mapcat (fn [g] (multi-geom->single-geoms g geom-type)))
+       (filter (comp #{geom-type} :type :geometry))
+       (utils/index-by (comp :id :properties))))
+
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON geom-type]]
@@ -481,7 +506,8 @@
                        (let [id (gensym)]
                          (assoc res id (assoc-in f [:properties :id] id))))
                      {})
-                    (merge (normalize-geom-colls fcoll geom-type)))]
+                    (merge (normalize-geom-colls fcoll geom-type)
+                           (normalize-multi-geoms fcoll geom-type)))]
      (-> db
          (assoc-in [:map :import :data] fs)
          (assoc-in [:map :import :batch-id] (gensym))))))
@@ -495,9 +521,10 @@
         cb     (fn [e]
                  (let [text   (-> e .-target .-result)
                        parsed (condp = ext
-                                "json" (js/JSON.parse text)
-                                "kml"  (-> text parse-dom js/toGeoJSON.kml)
-                                "gpx"  (-> text parse-dom js/toGeoJSON.gpx))]
+                                "geojson" (js/JSON.parse text)
+                                "json"    (js/JSON.parse text)
+                                "kml"     (-> text parse-dom js/toGeoJSON.kml)
+                                "gpx"     (-> text parse-dom js/toGeoJSON.gpx))]
                    (cb parsed)))]
     (set! (.-onload reader) cb)
     (.readAsText reader file enc)
@@ -511,6 +538,7 @@
 (defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
 (defmethod file->geoJSON "kml" [params] (text->geoJSON params))
 (defmethod file->geoJSON "json" [params] (text->geoJSON params))
+(defmethod file->geoJSON "geojson" [params] (text->geoJSON params))
 (defmethod file->geoJSON :default [params] {:unknown (:ext params)})
 
 (defn parse-ext [file]

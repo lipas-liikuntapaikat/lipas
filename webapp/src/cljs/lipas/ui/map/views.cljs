@@ -20,7 +20,7 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(def import-formats [".zip" ".kml" ".gpx" ".json"])
+(def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))
 
 (defn helper [{:keys [label tooltip]}]
