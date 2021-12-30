@@ -355,7 +355,7 @@
     :city-code 90,
     :status "active",
     :valid-until nil,
-    :province-id 10,
+    :province-id 12,
     :avi-id 3}
    {:name {:fi "Helsinki", :se "Helsingfors", :en "Helsinki"},
     :city-code 91,
@@ -390,7 +390,7 @@
    {:name {:fi "Honkajoki", :se "Honkajoki", :en "Honkajoki"},
     :city-code 99,
     :status "active",
-    :valid-until nil,
+    :valid-until 2020,
     :province-id 4,
     :avi-id 2}
    {:name {:fi "Houtskari", :se "Houtskär", :en "Houtskari"},
@@ -457,7 +457,7 @@
     :city-code 142,
     :status "active",
     :valid-until nil,
-    :province-id 8,
+    :province-id 7,
     :avi-id 1}
    {:name {:fi "Ikaalinen", :se "Ikalis", :en "Ikaalinen"},
     :city-code 143,
@@ -505,7 +505,7 @@
     :city-code 152,
     :status "active",
     :valid-until nil,
-    :province-id 15,
+    :province-id 14,
     :avi-id 4}
    {:name {:fi "Imatra", :se "Imatra", :en "Imatra"},
     :city-code 153,
@@ -553,7 +553,7 @@
     :city-code 171,
     :status "active",
     :valid-until nil,
-    :province-id 10,
+    :province-id 11,
     :avi-id 3}
    {:name {:fi "Joutsa", :se "Joutsa", :en "Joutsa"},
     :city-code 172,
@@ -1038,7 +1038,7 @@
     :city-code 291,
     :status "active",
     :valid-until nil,
-    :province-id 13,
+    :province-id 6,
     :avi-id 4}
    {:name {:fi "Kuivaniemi", :se "Kuivaniemi", :en "Kuivaniemi"},
     :city-code 292,
