@@ -452,6 +452,7 @@
 (s/def :lipas.sports-site.properties/school-use? boolean?)
 (s/def :lipas.sports-site.properties/free-use? boolean?)
 (s/def :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi? boolean?)
+(s/def :lipas.sports-site.properties/padel-courts-count ::real)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -605,7 +606,8 @@
                    :lipas.sports-site.properties/training-spot-surface-material
                    :lipas.sports-site.properties/range?
                    :lipas.sports-site.properties/track-length-m
-                   :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi?]))
+                   :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi?
+                   :lipas.sports-site.properties/padel-courts-count]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)

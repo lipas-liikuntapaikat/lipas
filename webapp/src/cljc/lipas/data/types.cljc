@@ -629,11 +629,11 @@
    2210
    {:description
     {:fi
-     "Liikuntahalli on rakennus, jossa on useita liikuntatiloja. Koko vaihtelee noin 750-4999 neliön välillä.",
+     "Liikuntahalli on rakennus, jossa voi olla useita liikuntatiloja tai lohkoihin jaettavissa oleva pääsali. Liikuntahallin koko vaihtelee noin 750 - 4 999 neliön välillä. Myös sisäaktiviteettipuistot, joissa on paljon liikunnallisia kohteita.",
      :se
-     "Byggnad med utrymmen för flera idrottsgrenar. Storlek och övningsfaciliteter i karakteristika.",
+     "Idrottshall med utrymmen för flera idrottsgrenar eller med ett i mindre sektioner indelbart huvudidrottsutrymme. Storleken varierar mellan ca 750 och 4 999 m2. Inkluderar inomhusaktivitetsparker med faciliteter för flera fysiska aktiviteter.",
      :en
-     "Building containing facilities for various sports. Size and facilities specified in 'attribute data'."},
+     "Building containing facilities for various sports or the main sports area can be split into smaller sections. Hall size varies between app. 750- 4999 square meters. Includes indoor activity parks with facilities for multiple physical activities."},
     :tags          {:fi ["urheilutalo" "urheiluhalli"]},
     :name          {:fi "Liikuntahalli", :se "Idrottshall", :en "Sports hall "},
     :type-code     2210,
@@ -679,15 +679,16 @@
      :volleyball-fields-count            {:priority 0},
      :climbing-wall?                     {:priority 0},
      :school-use?                        {:priority 0},
-     :highjump-places-count              {:priority 0}}},
+     :highjump-places-count              {:priority 0}
+     :padel-courts-count                 {:priority 0}}},
    101
    {:description
     {:fi
-     "Lähipuistot sijaitsevat taajamissa asutuksen välittömässä läheisyydessä. Lähipuistot on tarkoitettu jokapäiväiseen käyttöön. Leikki-, oleskelu- ja kävelypaikka. Kaavamerkintä VL.",
+     "Sijaitsevat taajamissa asutuksen välittömässä läheisyydessä. Lähipuistot on tarkoitettu jokapäiväiseen käyttöön. Leikki-, oleskelu- ja kävelypaikka. Kaavamerkintä VL. Esimerkiksi lasten leikkipuisto.",
      :se
-     "Närparkerna befinner sig i tätorter, i omedelbar närhet av bebyggelse. Närparkerna är avsedda till daglig användning. En plats för lek, vistelse och promenad.                   Planbeteckning VL.",
+     "I tätorter, i omedelbar närhet till bebyggelse. Avsedd för daglig användning. Plats för lek, vistelse och promenader. Planbeteckning VL. Till exempel en lekpark.",
      :en
-     "In population centres, in or near residential areas. Intended for daily use. Used for play, recreation and walks. Symbol VL."},
+     "In population centres, in or near residential areas. Intended for daily use. Used for play, recreation and walks. Plan symbol VL. For example a playground."},
     :tags          {:fi ["puisto" "lähiliikuntapaikka"]},
     :name          {:fi "Lähipuisto", :se "Närpark", :en "Neighbourhood park"},
     :type-code     101,
@@ -1267,7 +1268,8 @@
      :floorball-fields-count             {:priority 0},
      :squash-courts-count                {:priority 0},
      :volleyball-fields-count            {:priority 0},
-     :school-use?                        {:priority 0}}},
+     :school-use?                        {:priority 0}
+     :padel-courts-count                 {:priority 0}}},
    6140
    {:description
     {:fi "Raviurheilun harjoitus- tai kilparata.",
@@ -1605,16 +1607,16 @@
    4710
    {:description
     {:fi
-     "Rakennettu kiipeilyseinä ulkona. Korkeus ominaisuustietoihin. Myös boulderointipaikat.",
+     "Rakennettu kiipeilyseinä ulkona, köysikiipeilyrata tai vastaava kiipeilyä varten rakennettu paikka. Myös rakennetut boulderointipaikat. Paikan tarkempi kuvaus ominaisuustietoihin.",
      :se
-     "Byggd klättervägg utomhus. Höjden anges i karakteristika. Även platser för bouldering.",
+     "Byggd klättervägg utomhus, klätterbana eller annan plats byggd för klättring. Även platser för bouldering. Precisering i karakteristika.",
      :en
-     "Built outdoor climbing wall. Height given in 'attribute data'. Also includes bouldering venues."},
+     "Built outdoor climbing wall, rope climbing path or other place built for climbing. Also places for bouldering. Clarification in 'attribute data'"},
     :tags          {:fi ["kiipeilyseinä"]},
     :name
-    {:fi "Ulkokiipeilyseinä",
-     :se "Utomhusklättervägg",
-     :en "Open-air climbing wall"},
+    {:fi "Ulkokiipeilypaikka",
+     :se "Utomhusklätterplats",
+     :en "Open-air climbing venue"},
     :type-code     4710,
     :main-category 4000,
     :status        "active",
@@ -1967,11 +1969,9 @@
      :track-length-m                     {:priority 1}}},
    3230
    {:description
-    {:fi
-     "Uintiin tarkoitettu paikka, jossa on pukukopit ja veden laadun seuranta. Ei valvontaa.",
-     :se
-     "Badplats med t ex omklädningshytter men ej övervakning. Vinterbad i karakteristika.",
-     :en "Beach with e.g. changing rooms. No lifeguards. "},
+    {:fi "Pieni yleinen uimaranta tai uimapaikka, jossa pelastusväline ja ilmoitustaulu. Veden laadun seuranta ja alueen hoito järjestetty.",
+     :se "Liten allmän badstrand eller badplats. Räddningsutrustning och en anslagstavla finns. Kvaliteten på vattnet följs upp och området underhålls."
+     :en "Small public beach or swimming area. Rescue equipment and a notice board are available. Quality of the water is monitored and the area is maintained."},
     :tags          {:fi ["uimaranta"]},
     :name
     {:fi "Uimapaikka", :se "Badplats", :en "Unsupervised beach "},
@@ -2045,10 +2045,10 @@
    3240
    {:description
     {:fi
-     "Avanto tai avovesi, joka on talvisin käytettävissä talviuintiin.",
-     :se "Endast vinterbadplats, eventuellt vak.",
-     :en "Winter swimming area only, possibly a hole in the ice. "},
-    :tags          {:fi ["avanto" "avantouinti"]},
+     "Talviuintipaikka voi sijaita avannossa, avovedessä tai maauimalassa talvikaudella. Talviuintipaikka merkitään omaksi liikuntapaikakseen."
+     :se "Vinterbadplats kan vara belägen i en vak, öppet vatten eller utomhuspool. Vinterbadplats är markerad som egen idrottsanläggning"
+     :en "Winter swimming area may be located in an ice hole, open water or open air pool. Winter swimming area is marked as its own sports facility"},
+    :tags          {:fi ["avanto" "avantouinti" "talviuinti"]},
     :name
     {:fi "Talviuintipaikka",
      :se "Vinterbadplats",
@@ -3101,11 +3101,11 @@
    3220
    {:description
     {:fi
-     "Uintiin varusteltu hoidettu ranta. Aukioloaikoina valvottu ja pukukopit löytyvät.",
+     "Yleinen uimaranta, EU-uimaranta. Pelastusväline ja ilmoitustaulu, jäteastia ja käymälä. Veden laadun seuranta ja alueen hoito järjestetty.",
      :se
-     "Bevakad under öppethållandetider, omklädningshytter o dyl utrustning. Vinterbad i karakteristika.",
+     "Allmän badstrand, EU badstrand. Räddningsutrustning, en anslagstavla samt ett sopkärl och en toalett finns. Kvaliteten på vattnet följs upp och området underhålls.",
      :en
-     "Supervised during opening hours; includes changing rooms and other facilities. "},
+     "Public beach, EU bathing beach. Rescue equipment, a notice board and a rubbish bin and a toilet are available. Quality of the water is monitored and area is maintained."},
     :tags          {:fi ["uimapaikka"]},
     :name          {:fi "Uimaranta", :se "Badstrand", :en "Supervised beach"},
     :type-code     3220,
@@ -3409,6 +3409,33 @@
      :toilet?                            {:priority 0},
      :area-m2                            {:priority 1},
      :scoreboard?                        {:priority 0},
+     :school-use?                        {:priority 0}}}
+   2295
+   {:description
+    {:fi "Yksi tai useampi padel-kenttä sisällä. Pintamateriaali tekonurmi (hiekkatekonurmi), mitat 20 x 10 m. Lajivaatimusten mukaiset seinät. Vapaa korkeus ilmoitetaan ominaisuustiedoissa.",
+     :se "En eller flera padelbanor inomhus. Ytmaterial konstgräs (med sand), 20 x 10 m. Väggar måste uppfylla spelets krav. Höjd anges i karakteristika.",
+     :en "One or more indoor padel courts. Court has an artificial grass surface and its measurements are 20 x 10 metres. Walls must meet requirements of the game. Height given in 'attribute data'"},
+    :tags          {:fi ["padel"]},
+    :name
+    {:fi "Padelhalli", :se "Padelhall", :en "Padel hall"},
+    :type-code     2295,
+    :main-category 2000,
+    :status        "active",
+    :sub-category  2200,
+    :geometry-type "Point",
+    :props
+    {:height-m                           {:priority 1},
+     :surface-material                   {:priority 1},
+     :surface-material-info              {:priority 0},
+     :free-use?                          {:priority 0},
+     :padel-courts-count                 {:priority 1},
+     :field-width-m                      {:priority 0},
+     :field-length-m                     {:priority 0},
+     :stand-capacity-person              {:priority 0},
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0},
+     :toilet?                            {:priority 0},
+     :area-m2                            {:priority 1},
+     :scoreboard?                        {:priority 0},
      :school-use?                        {:priority 0}}},
    2260
    {:description
@@ -3442,7 +3469,8 @@
      :floorball-fields-count             {:priority 0},
      :squash-courts-count                {:priority 0},
      :volleyball-fields-count            {:priority 0},
-     :school-use?                        {:priority 0}}},
+     :school-use?                        {:priority 0}
+     :padel-courts-count                 {:priority 0}}},
    1160
    {:description
     {:fi
@@ -3599,17 +3627,18 @@
    1130
    {:description
     {:fi
-     "Kuntoilulaitteita, voimailulaitteita, ns. \"ulkokuntosali\". Kohde voi olla osa liikuntapuistoa tai liikuntareitin varrella oleva kuntoilupaikka.",
+     "Kuntoilulaitteita, voimailulaitteita, ns. \"ulkokuntosali\". Kohde voi olla osa liikuntapuistoa tai liikuntareitin varrella oleva kuntoilupaikka. Myös kuntoportaat.",
      :se
-     "Konditions- och styrketräningsanordningar osv, en \"utomhusträningssal\". Kan vara en del av en idrottspark.",
+     "Konditions- och styrketräningsanordningar osv, ett \"utomhusgym\". Kan vara en del av en idrottspark. Även konditionstrappor.",
      :en
-     "Contains fitness and gym equipment, etc., \"outdoor gym\". May be part of a sports park."},
+     "Contains fitness and street workout equipment, \"outdoor gym\". This includes fitness stairs. May be part of a sports park."},
     :tags
     {:fi
      ["kuntoilulaite"
       "ulkokuntoilupiste"
       "kuntoilupiste"
-      "kuntoilupaikka"]},
+      "kuntoilupaikka"
+      "kuntoportaat"]},
     :name
     {:fi "Ulkokuntoilupaikka",
      :se "Konditionspark för utomhusaktiviteter",
@@ -3868,6 +3897,57 @@
      :field-width-m                      {:priority 1},
      :ligthing?                          {:priority 1},
      :school-use?                        {:priority 0}}},
+   1390
+   {:description
+    {:fi "Yksi tai useampi padel-kenttä ulkona. Pintamateriaali hiekkatekonurmi, mitat 20 x 10 m. Lajivaatimusten mukaiset seinät. Voi olla myös katettu.",
+     :se "En eller flera padelbanor utomhus. Ytmaterial konstgräs med sand, 20 x 10 m. Väggar bör uppfylla spelets krav, kan även finnas tak.",
+     :en "One or more padel courts in the same area. Court has an artificial grass surface and its measurements are 20 x 10 metres. Walls must meet requirements of the game, ceiling is optional."},
+    :name
+    {:fi "Padelkenttäalue",
+     :se "Område med padelbanor",
+     :en "Padel court area"},
+    :tags          {:fi ["padel"]},
+    :type-code     1390,
+    :main-category 1000,
+    :status        "active",
+    :sub-category  1300,
+    :geometry-type "Point",
+    :props
+    {:surface-material                   {:priority 1},
+     :surface-material-info              {:priority 0},
+     :free-use?                          {:priority 0},
+     :field-length-m                     {:priority 1},
+     :light-roof?                        {:priority 0}
+     :fields-count                       {:priority 1},
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0},
+     :toilet?                            {:priority 0},
+     :area-m2                            {:priority 1},
+     :field-width-m                      {:priority 1},
+     :ligthing?                          {:priority 1},
+     :school-use?                        {:priority 0}}},
+   1395
+   {:description
+    {:fi "Yksi tai useampi pöytätennispöytä ulkona. Pöytätennispöydän tulee olla sijoitettu niin, että pelaamiseen on riittävä tila pöydän ympärillä. Pöydän tulee olla pelikäyttöön soveltuva.",
+     :se "Ett eller flera bordtennisbord utomhus. Bordet är lämpligt för spel och bör vara placerat så att det finns tillräckligt utrymme för spel.",
+     :en "One or more outdoor table tennis tables in the same area. Table must be positioned so that there is enough room for playing and the table is suitable for playing."},
+    :name
+    {:fi "Pöytätennisalue",
+     :se "Område med bordtennisbord",
+     :en "Table tennis area"},
+    :tags          {:fi ["pöytätennis" "pingis" "ping pong"]},
+    :type-code     1395,
+    :main-category 1000,
+    :status        "active",
+    :sub-category  1300,
+    :geometry-type "Point",
+    :props
+    {:free-use?                          {:priority 0},
+     :table-tennis-count                 {:priority 1}
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0},
+     :toilet?                            {:priority 0},
+     :area-m2                            {:priority 1},
+     :ligthing?                          {:priority 1},
+     :school-use?                        {:priority 0}}}
    4451
    {:description
     {:fi
@@ -4140,7 +4220,8 @@
      :volleyball-fields-count            {:priority 0},
      :climbing-wall?                     {:priority 0},
      :school-use?                        {:priority 0},
-     :highjump-places-count              {:priority 0}}},
+     :highjump-places-count              {:priority 0}
+     :padel-courts-count                 {:priority 0}}},
    1320
    {:description
     {:fi
