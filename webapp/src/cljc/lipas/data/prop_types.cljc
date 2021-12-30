@@ -1034,9 +1034,9 @@
     {:fi "Hyppyrien lukumäärä", :se "Antalet hoppbackar", :en ""}},
    :table-tennis-count
    {:name
-    {:fi "Pöytätennis lkm",
+    {:fi "Pöytätennispöytien lkm",
      :se "Antalet bord för bordtennis",
-     :en "Table tennis"},
+     :en "Table tennis table count"},
     :data-type "numeric",
     :description
     {:fi "Pingis-/pöytätennispöytien lukumäärä",
@@ -1331,6 +1331,16 @@
     :description
     {:fi "Juoksuradan, pyöräilyradan tms. pituus metreinä",
      :se "Löpbanans, rundbanans el.dyl. längd i meter",
+     :en ""}}
+   :padel-courts-count
+   {:name
+    {:fi "Padelkentät lkm"
+     :se "Antalet padelbanor"
+     :en "Number of padel courts"}
+    :data-type "numeric"
+    :description
+    {:fi "",
+     :se "",
      :en ""}}})
 
 (def used
@@ -1342,6 +1352,7 @@
   (cset/difference (keys all) (keys used))
   (cset/difference (keys used) (keys all))
 
+  
   ;; Unused?
   #{:ski-track? :winter-swimming? :archery?
     :throwing-sports-spots-count :radio-and-tv-capabilities?
