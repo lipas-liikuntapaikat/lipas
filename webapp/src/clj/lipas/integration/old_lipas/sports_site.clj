@@ -194,7 +194,8 @@
    :pool3MaxDepthM               :pool-3-max-depth-m,
    :pool2MaxDepthM               :pool-2-max-depth-m,
    :pool4LengthM                 :pool-4-length-m,
-   :pool2TemperatureC            :pool-2-temperature-c})
+   :pool2TemperatureC            :pool-2-temperature-c
+   :padelCourtsCount             :padel-courts-count})
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 
