@@ -173,25 +173,34 @@
                                       (if on-top? 300 299))
                             :image
                             (when-not (#{"polygon" "linestring"} (:shape m))
-                              (ol/style.Circle.
-                               #js{:radius (cond
-                                             hover?    8
-                                             planning? 7
-                                             planned?  7
-                                             :else     7)
-                                   :fill   fill
-                                   :stroke
-                                   (cond
-                                     planning? (ol/style.Stroke.
-                                                #js{:color    "#ee00ee"
-                                                    :width    3
-                                                    :lineDash #js [2 5]})
-                                     planned? (ol/style.Stroke.
-                                               #js{:color    "black"
-                                                   :width    3
-                                                   :lineDash #js [2 5]})
-                                     hover?   hover-stroke
-                                     :else    stroke-black)}))})
+                              (let [stroke (cond
+                                             planning? (ol/style.Stroke.
+                                                        #js{:color    "#ee00ee"
+                                                            :width    3
+                                                            :lineDash #js [2 5]})
+                                             planned? (ol/style.Stroke.
+                                                       #js{:color    "black"
+                                                           :width    3
+                                                           :lineDash #js [2 5]})
+                                             hover?   hover-stroke
+                                             :else    stroke-black)
+                                    radius (cond
+                                                 hover?    8
+                                                 planning? 7
+                                                 planned?  7
+                                                 :else     7)]
+                                (case (:shape m)
+                                  ("square") (ol/style.RegularShape.
+                                              #js{:fill fill
+                                                  :stroke stroke
+                                                  :points 4
+                                                  :radius (inc (inc radius))
+                                                  :angle (/ js/Math.PI 4)})
+                                  ;; Default
+                                  (ol/style.Circle.
+                                   #js{:radius radius
+                                       :fill   fill
+                                       :stroke stroke}))))})
         planned-stroke (ol/style.Style.
                         #js{:stroke stroke-planned})
 
