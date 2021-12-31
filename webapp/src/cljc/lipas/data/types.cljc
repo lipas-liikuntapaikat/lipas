@@ -239,7 +239,7 @@
      :se
      "Rink avsedd för skridskoåkning, ishockey, rinkbandy osv. Används under vintersäsongen.",
      :en
-     "Rink intended for ice-skating, ice hockey, rink bandy, etc. Potential summer use specified in 'attribute data'."},
+     "Rink intended for ice-skating, ice hockey, rink bandy, etc."},
     :tags          {:fi ["jääkiekkokaukalo"]},
     :name          {:fi "Kaukalo", :se "Rink", :en "Rink"},
     :type-code     1530,
@@ -268,9 +268,9 @@
     {:fi
      "Luisteluun tarkoitettu kenttä. Jäädytetään talvisin. Käytössä talvikaudella.",
      :se
-     "Plan avsedd för skridskoåkning. Används under vintersäsongen",
+     "Plan avsedd för skridskoåkning. Används under vintersäsongen.",
      :en
-     "Field intended for ice-skating. Summer use specified in 'attribute data'."},
+     "Field intended for ice-skating."},
     :tags          {:fi []},
     :name
     {:fi "Luistelukenttä",
@@ -387,7 +387,7 @@
      :se
      "En eller flera tennisbanor på samma område. Antalet banor, ytmaterial mm i karakteristika. Även uppgift om slagväggen.",
      :en
-     "One or more tennis courts in the same area. Number of courts, surface material, etc. specified in 'attribute data', including information about a potential hit wall."},
+     "One or more tennis courts in the same area. Number of courts, surface material, etc. specified in properties, including information about a potential hit wall."},
     :tags          {:fi ["tenniskenttä"]},
     :name
     {:fi "Tenniskenttäalue",
@@ -474,9 +474,9 @@
    {:description
     {:fi "Pysyvästi käytössä oleva ampumarata sisätiloissa.",
      :se
-     "Permanent skjutbana inomhus. Obs. Länk till sportskytteplatser.",
+     "Permanent skjutbana inomhus.",
      :en
-     "Permanent indoor shooting range. Note  Link to 'shooting sports facilities'."},
+     "Permanent indoor shooting range."},
     :tags          {:fi ["ilmakivääri" "ilma-ase" "ammunta"]},
     :name
     {:fi "Sisäampumarata",
@@ -594,9 +594,9 @@
    {:description
     {:fi
      "Muun rakennuksen yhteydessä oleva liikuntatila. Salin koko vaihtelee alle 300 neliöstä noin 750 neliöön.",
-     :se "En idrottssal som är ansluten till en annan byggnad. Storlek och höjd anges i karakteristika. Precisera till tilläggsuppgifter, ifall ansluten vid en skola.",
+     :se "En idrottssal som är ansluten till en annan byggnad. Storlek och höjd anges i karakteristika.",
      :en
-     "A gymnastics hall connected to another building. Size and height specified in 'additional information'. Also specified in 'additional information' if within a school."},
+     "A gymnastics hall connected to another building. Size and height specified in properties."},
     :tags          {:fi ["jumppasali" "voimistelusali"]},
     :name
     {:fi "Liikuntasali", :se "Idrottssal", :en "Gymnastics hall"},
@@ -707,7 +707,7 @@
     {:fi
      "Päivittäin käytettäviä alueita, max 1 km asunnoista. Toimivat kävely-, leikki-, oleskelu-, lenkkeily- ja pyöräilypaikkoina. Kevyt liikenne voi mennä ulkoilupuiston läpi. Voi sisältää puistoa, metsää, peltoa, niittyä, vesialuetta. Kaavamerkintä V tai VL.",
      :se
-     "Områden avsedda för daglig använding, max på 1 kilometers avstånd från bebyggelse. Fungerar som ett område för promenader, lekar, vistelse, joggning och cykling. Lätt trafikled kan fara igenom friluftsparken. Området kan bestä av park, skog, äker, äng och vattenled. Planbeteckning V eller VL.",
+     "Områden avsedda för daglig använding, max på 1 kilometers avstånd från bebyggelse. Fungerar som ett område för promenader, lekar, vistelse, joggning och cykling. Lätt trafikled kan fara igenom friluftsparken. Området kan bestå av park, skog, åker, äng och vattenled. Planbeteckning V eller VL.",
      :en
      "Used daily, max. 1 km from residential areas. Intended for walks, play, recreation, jogging and cycling. There may be bicycle and pedestrian traffic across the park. May consist of park, forest, fields, meadows, bodies of water. Symbol V or VL."},
     :tags          {:fi ["puisto"]},
@@ -918,9 +918,9 @@
    4830
    {:description
     {:fi "Ulkona tai sisällä. Varustus ja lajit ominaisuustietoihin.",
-     :se "Ute eller inne.Utrustning och grenar i karakteristika.",
+     :se "Ute eller inne. Utrustning och grenar i karakteristika.",
      :en
-     "Outdoors or indoors. Equipment and the various sports detailed in 'attribute data'."},
+     "Outdoors or indoors. Equipment and the various sports detailed in properties."},
     :tags          {:fi ["jousiampumarata"]},
     :name
     {:fi "Jousiammuntarata", :se "Bågskyttebana", :en "Archery range"},
@@ -1000,7 +1000,7 @@
      :se
      "Led avsedd för ridning och/eller häst med kärra. Användningsanvisningar i karakteristika.",
      :en
-     "Route intended for horseback riding and/or carriage riding. Different uses specified in 'attribute data'."},
+     "Route intended for horseback riding and/or carriage riding. Different uses specified in additional information."},
     :tags          {:fi ["ratsastusreitti"]},
     :name          {:fi "Hevosreitti", :se "Hästled", :en "Horse track"},
     :type-code     4430,
@@ -1111,7 +1111,7 @@
      "Keilailuun varustettu halli. Ratojen määrä ja palveluvarustus vaihtelee.",
      :se "Antalet banor och serviceutrustning i karakteristika.",
      :en
-     "Number of alleys and service facilities in 'attribute data'."},
+     "Number of alleys and service facilities in properties."},
     :tags          {:fi []},
     :name          {:fi "Keilahalli", :se "Bowlinghall", :en "Bowling alley"},
     :type-code     2610,
@@ -1169,7 +1169,7 @@
      :se
      "Enstaka simbassäng , ofta i anslutning till en annan byggnad.",
      :en
-     "Individual swimming pool, often in connection with other buildings. <17 m long."},
+     "Individual swimming pool, often in connection with other buildings."},
     :tags          {:fi []},
     :name          {:fi "Uima-allas", :se "Simbassäng", :en "Swimming pool"},
     :type-code     3120,
@@ -1242,7 +1242,7 @@
     {:fi
      "Tenniksen pelaamiseen varusteltu halli. Pääkäyttömuoto tenniksen peluu.",
      :se "Antalet banor i karakteristika.",
-     :en "Number of courts specified in 'attribute data'."},
+     :en "Number of courts specified in properties."},
     :tags          {:fi []},
     :name          {:fi "Tennishalli", :se "Tennishall", :en "Tennis hall"},
     :type-code     2280,
@@ -1304,7 +1304,7 @@
     {:fi "Sali, jossa voi harrastaa itsepuolustuslajeja: esim. paini, nyrkkeily ym. Koko ominaisuustietoihin. ",
      :se "Sal där man kan utöva självförsvarsgrenar, t ex brottning, boxning. Storleken anges i karakteristika.",
      :en
-     "Hall for self-defence sports, e.g., wrestling, boxing. Size specified in 'attribute data'. "},
+     "Hall for self-defence sports, e.g., wrestling, boxing. Size specified in properties. "},
     :tags          {:fi ["paini" "judo" "tatami"]},
     :name
     {:fi "Kamppailulajien sali", :se "Sal för kampsport", :en "Martial arts hall"},
@@ -1332,7 +1332,7 @@
     {:fi
      "Hiihtoon tarkoitettu katettu tila (esim. tunneli, putki, halli).",
      :se
-     "Utrymme avsett för skidåkning under tak (tunnel, rör, hall el dyl)",
+     "Utrymme avsett för skidåkning under tak (tunnel, rör, hall el dyl).",
      :en
      "Covered space (tunnel, tube, hall, etc.) intended for skiing."},
     :tags          {:fi []},
@@ -1362,9 +1362,9 @@
     {:fi
      "Jalkapalloiluun tarkoitettu halli. Yleensä tekonurmi tai luonnonnurmi.",
      :se
-     "Hall avsedd för fotboll. Ytmaterial, antalet planer, storlek och byggnadens konstruktion i karakteristika.",
+     "Hall avsedd för fotboll. Ytmaterial, antalet planer och storlek i karakteristika.",
      :en
-     "Hall intended for football. Surface material, number and size of courts specified in 'attribute data', as well as hall structure."},
+     "Hall intended for football. Surface material, number and size of courts specified in properties."},
     :tags          {:fi []},
     :name
     {:fi "Jalkapallohalli", :se "Fotbollshall", :en "Football hall"},
@@ -1443,7 +1443,7 @@
     :tags          {:fi ["jousiampumarata"]},
     :name
     {:fi "Jousiammuntamaastorata",
-     :se "Terrängbana för bågskytte.",
+     :se "Terrängbana för bågskytte",
      :en "Field archery course"},
     :type-code     4840,
     :main-category 4000,
@@ -1463,9 +1463,9 @@
     {:fi
      "Koneellisesti / keinotekoisesti jäähdytetty ulkokenttä. Kentän koko ja varustustiedot löytyvät ominaisuustiedoista. Käytössä talvikaudella.",
      :se
-     "Konstfrusen utomhusplan. Storlek, utrustning, rink, belysning osv i karakteristika. Likaså uppgiften om planen är kombinerad. Används under vintersäsongen",
+     "Konstfrusen utomhusplan. Storlek, utrustning, rink, belysning osv i karakteristika. Används under vintersäsongen.",
      :en
-     "Mechanically/artificially frozen open-air field. Field size, equipment, rink, lighting, etc. specified in 'attribute data', as well as information about multi-use fields."},
+     "Mechanically/artificially frozen open-air field. Field size, equipment, rink, lighting, etc. specified in properties."},
     :tags          {:fi ["luistelukenttä" "luistelu"]},
     :name
     {:fi "Tekojääkenttä",
@@ -1561,7 +1561,7 @@
      :se
      "Läktare finns, storleken på läktaren anges i karakteristika, likaså antalet planer.",
      :en
-     "Includes bleachers, whose size is specified in 'attribute data'. Number of fields, etc., specified in 'attribute data'."},
+     "Includes bleachers, whose size is specified in properties. Number of fields, heating, changing rooms, etc., specified in properties."},
     :tags          {:fi ["jäähalli"]},
     :additional-type
     {:small       {:fi "Pieni kilpahalli > 500 hlö", :en nil, :se nil},
@@ -1611,7 +1611,7 @@
      :se
      "Byggd klättervägg utomhus, klätterbana eller annan plats byggd för klättring. Även platser för bouldering. Precisering i karakteristika.",
      :en
-     "Built outdoor climbing wall, rope climbing path or other place built for climbing. Also places for bouldering. Clarification in 'attribute data'"},
+     "Built outdoor climbing wall, rope climbing path or other place built for climbing. Also places for bouldering. Clarification in additional information."},
     :tags          {:fi ["kiipeilyseinä"]},
     :name
     {:fi "Ulkokiipeilypaikka",
@@ -1796,9 +1796,9 @@
     {:fi
      "Kuntoiluun tarkoitettu hoidettu liikuntareitti asutuksen läheisyydessä. Usein ainakin osittain valaistu.",
      :se
-     "Led avsedd för konditionssport i närheten av bebyggelse.Vinter- och sommaranvändning beskrivs i karakteristika.",
+     "Led avsedd för konditionssport i närheten av bebyggelse.",
      :en
-     "Winter and summer uses specified in 'attribute data'. Route intended for jogging in or near a residential area."},
+     "Route intended for jogging in or near a residential area."},
     :tags          {:fi ["pururata"]},
     :name          {:fi "Kuntorata", :se "Konditionsbana", :en "Jogging track"},
     :type-code     4401,
@@ -1826,7 +1826,7 @@
     {:fi "Pysyvästi tanssi- tai ilmaisuliikuntaan varustettu tila.",
      :se "Permanent utrustning för dans och kreativ motion.",
      :en
-     "Space permanently equipped for dance or expressive movement exercise (tanssi- tai ilmaisuliikunta)."},
+     "Space permanently equipped for dance or expressive movement exercise."},
     :tags          {:fi ["peilisali" "baletti" "tanssisali"]},
     :name
     {:fi "Tanssitila", :se "Utrymme för dans", :en "Dance studio"},
@@ -1875,7 +1875,7 @@
     {:fi
      "Liikuntatila, jossa on useita kuntosalilaitteita pysyvästi sijoitettuna.",
      :se "Gymredskap osv. Storleken anges i karakteristika.",
-     :en "Gym equipment, etc. Size specified in 'attribute data'."},
+     :en "Gym equipment, etc. Size specified in properties."},
     :tags          {:fi ["kuntoilu" "voimailu"]},
     :name          {:fi "Kuntosali", :se "Gym", :en "Gym"},
     :type-code     2120,
@@ -2128,7 +2128,7 @@
      :se
      "En eller flera squashplaner. Antalet planer i karakteristika.",
      :en
-     "One or more squash courts. Number of courts specified in 'attribute data'."},
+     "One or more squash courts. Number of courts specified in properties."},
     :tags
     {:fi ["squash" "squash-kenttä" "squashkenttä" "squashhalli"]},
     :name          {:fi "Squash-halli", :se "Squashhall", :en "Squash hall"},
@@ -2297,7 +2297,7 @@
     {:fi
      "Pikaluisteluun varusteltu luistelurata. Käytössä talvikaudella.",
      :se "Bana för hastighetsåkning. Används under vintersäsongen.",
-     :en "Track size and length specified in 'attribute data'."},
+     :en "Track size and length specified in properties."},
     :tags          {:fi ["luistelurata"]},
     :name
     {:fi "Pikaluistelurata",
@@ -2324,11 +2324,11 @@
    5320
    {:description
     {:fi
-     "Pääasiallisesti moottoripyöräilyä varten. Lajityypit mainitaan ominaisuustiedoissa.",
+     "Pääasiallisesti moottoripyöräilyä varten.",
      :se
-     "Huvudsakligen för motorcykelsport. Möjliga grenar anges i karakteristika.",
+     "Huvudsakligen för motorcykelsport.",
      :en
-     "Mainly for motorcycling. Sports types detailed in 'attribute data'."},
+     "Mainly for motorcycling."},
     :tags          {:fi ["motocross"]},
     :name
     {:fi "Moottoripyöräilyalue",
@@ -2421,9 +2421,9 @@
     {:fi
      "Rullaluistelua, skeittausta, potkulautailua varten varustettu paikka. Ominaisuustiedoissa tarkemmat tiedot.",
      :se
-     "Plats utrustad för rullskridskoåkning, skejtning och sparkcykelåkning. I preciseringsuppgifterna anges vad som är tillåtet på området.",
+     "Plats utrustad för rullskridskoåkning, skejtning och sparkcykelåkning.",
      :en
-     "An area equipped  for roller-blading, skateboarding, kick scooting. Hobby  specified in 'attribute data'."},
+     "An area equipped  for roller-blading, skateboarding, kick scooting."},
     :tags
     {:fi ["ramppi" "skeittipaikka" "skeittipuisto" "skeittiparkki"]},
     :name
@@ -2448,9 +2448,9 @@
     {:fi
      "Yksittäinen yleisurheilun olosuhde, ei yu-hallin yhteydessä. Ominaisuustiedoissa kerrotaan suorituspaikat.",
      :se
-     "Fristående, ej i anslutning till en friidrottshall. I karakteristika anges övningsplatserna",
+     "Fristående, ej i anslutning till en friidrottshall. I karakteristika anges övningsplatserna.",
      :en
-     "Stand-alone, not in an athletics hall. Venues specified under 'attribute data'"},
+     "Stand-alone, not in an athletics hall. Venues specified under properties."},
     :tags          {:fi ["yleisurheilu" "juoksurata"]},
     :name
     {:fi "Yksittäinen yleisurheilun suorituspaikka",
@@ -2587,7 +2587,7 @@
      :se
      "En plan, banor och träningsplatser för friidrott. Centrum, banor, ytbeläggningar samt träningsplatser med beskrivningar.",
      :en
-     "Field, track and athletic venues/facilities. Centre, tracks, surfaces, venues specified in 'attribute data'. "},
+     "Field, track and athletic venues/facilities. Centre, tracks, surfaces, venues specified in properties. "},
     :tags
     {:fi
      ["keihäs"
@@ -2741,7 +2741,7 @@
     {:fi "Ratsastukseen varustettu kenttä.",
      :se "Bana avsedd för ridning. Storlek i karakteristika.",
      :en
-     "Field reserved for horseback riding. Size specified in 'attribute data'."},
+     "Field reserved for horseback riding. Size specified in properties."},
     :tags          {:fi []},
     :name
     {:fi "Ratsastuskenttä", :se "Ridbana", :en "Equestrian field"},
@@ -2768,9 +2768,9 @@
     {:fi
      "Lähiliikuntapaikka on tarkoitettu päivittäiseen ulkoiluun ja liikuntaan. Se sijaitsee asutuksen välittömässä läheisyydessä, on pienimuotoinen ja alueelle on vapaa pääsy. Yleensä tarjolla on erilaisia suorituspaikkoja. Voi olla myös koulun tai päiväkodin piha, jos paikan käyttö on mahdollista myös muille kouluajan jälkeen.",
      :se
-     "Näridrottsplats avsedd för daglig motion och dagligt friluftsliv. Den ligger i omedelbar närhet till bebyggelse, är relativt liten och har fritt tillträde. I regel erbjuds olika faciliteter för enstaka aktiviteter. I tilläggsinformation anges om det är en skolgård eller daghemsgård samt vilka enskilda faciliteter som finns.",
+     "Näridrottsplats avsedd för daglig motion och dagligt friluftsliv. Den ligger i omedelbar närhet till bebyggelse, är relativt liten och har fritt tillträde. I regel erbjuds olika faciliteter för enstaka aktiviteter. Kan också vara en skolgård eller daghemsgård. I tilläggsinformation anges vilka enskilda faciliteter som finns.",
      :en
-     "A neighbourhood sports area is intended for daily outdoor activities and exercise. It is a small area located in or near a residential area, with free public access. It usually provides different exercise/play facilities. It is specified in 'additional information' whether it is a school/nursery school yard, what facilities/equipment are offered, etc."},
+     "A neighbourhood sports area is intended for daily outdoor activities and exercise. It is a small area located in or near a residential area, with free public access. It usually provides different exercise/play facilities. May also be a school/nursery school yard."},
     :tags
     {:fi
      ["ässäkenttä" "monitoimikenttä" "monitoimikaukalo" "lähipuisto"]},
@@ -2956,7 +2956,7 @@
      "Virallinen golfkenttä. Väylien määrä kysytään ominaisuustiedoissa.",
      :se "Officiell golfbana. Antalet hål anges i karakteristika.",
      :en
-     "Official golf course. Number of holes included in 'attribute data'."},
+     "Official golf course. Number of holes included in properties."},
     :tags          {:fi ["greeni" "puttialue" "range"]},
     :name          {:fi "Golfkenttä", :se "Golfbana", :en "Golf course"},
     :type-code     1620,
@@ -2980,7 +2980,7 @@
      :se
      "Hall utrustad för skejtning, rullskridskoåkning, bmx-åkning osv.",
      :en
-     "An area for skateboarding, roller-blading, BMX biking, etc,. found in sports halls."},
+     "An area for skateboarding, roller-blading, BMX biking, etc."},
     :tags          {:fi ["ramppi"]},
     :name
     {:fi "Skeittihalli", :se "Skateboardhall", :en "Indoor skatepark"},
@@ -3002,9 +3002,9 @@
      :school-use?                        {:priority 0}}},
    2530
    {:description
-    {:fi "Pikaluisteluun tarkoitettu halli. Koko >333 1 / 3 m",
+    {:fi "Pikaluisteluun tarkoitettu halli. Koko >333 1/3 m.",
      :se
-     "Hall avsedd för hastighetsåkning på skridsko. Storlek > 333 1/3 m",
+     "Hall avsedd för hastighetsåkning på skridsko. Storlek > 333 1/3 m.",
      :en "Hall intended for speed-skating. Size > 333.3 m."},
     :tags          {:fi ["jäähalli"]},
     :name
@@ -3073,7 +3073,7 @@
      :se
      "Utrustad för tyngdlyftning och boxning. Storleken anges i karakteristika.",
      :en
-     "Equipped for weightlifting and boxing. Size specified in 'attribute data'."},
+     "Equipped for weightlifting and boxing. Size specified in properties."},
     :tags          {:fi ["kuntosali" "kuntoilu" "painonnosto" "voimanosto"]},
     :name
     {:fi "Voimailusali",
@@ -3223,7 +3223,7 @@
      :se
      "Mångsidig badinrättning med rehabiliterings- och rekreationstjänster. Vattenareal samt antal och typ av bassänger i karakteristika.",
      :en
-     "Versatile spa with rehabilitation or wellness services. Water volume and number/types of pools specified in 'attribute data'."},
+     "Versatile spa with rehabilitation or wellness services. Water volume and number/types of pools specified in properties."},
     :tags          {:fi []},
     :name          {:fi "Kylpylä", :se "Badinrättning", :en "Spa"},
     :type-code     3130,
@@ -3254,7 +3254,7 @@
      :se
      "Hall med en eller flera simbassänger. Antalet bassänger och vattenareal anges i karakteristika.",
      :en
-     "Hall with one or several swimming pools. Number of pools and water surface area is requested in 'attribute data'."},
+     "Hall with one or several swimming pools. Number of pools and water surface area is requested in properties."},
     :tags          {:fi []},
     :name
     {:fi "Uimahalli",
@@ -3389,10 +3389,10 @@
     {:fi "Petanque-peliin tarkoitettu halli.",
      :se
      "Hall avsedd för petanque. Storlek, antalet planer och utrustning i karakteristika.",
-     :en "Hall intended for petanque"},
+     :en "Hall intended for petanque."},
     :tags          {:fi ["petankki"]},
     :name
-    {:fi "Petanque-halli", :se "Petanquehall", :en "Petanque Hall"},
+    {:fi "Petanque-halli", :se "Petanquehall", :en "Petanque hall"},
     :type-code     2290,
     :main-category 2000,
     :status        "active",
@@ -3414,7 +3414,7 @@
    {:description
     {:fi "Yksi tai useampi padel-kenttä sisällä. Pintamateriaali tekonurmi (hiekkatekonurmi), mitat 20 x 10 m. Lajivaatimusten mukaiset seinät. Vapaa korkeus ilmoitetaan ominaisuustiedoissa.",
      :se "En eller flera padelbanor inomhus. Ytmaterial konstgräs (med sand), 20 x 10 m. Väggar måste uppfylla spelets krav. Höjd anges i karakteristika.",
-     :en "One or more indoor padel courts. Court has an artificial grass surface and its measurements are 20 x 10 metres. Walls must meet requirements of the game. Height given in 'attribute data'"},
+     :en "One or more indoor padel courts. Court has an artificial grass surface and its measurements are 20 x 10 metres. Walls must meet requirements of the game. Height given in properties"},
     :tags          {:fi ["padel"]},
     :name
     {:fi "Padelhalli", :se "Padelhall", :en "Padel hall"},
@@ -3501,7 +3501,7 @@
      :se
      "Platserna för olika aktiviteter anges i preciseringsuppgifter. Även enstaka aktiviteter.",
      :en
-     "The various sports venues are specified in 'attribute data', also individual venues."},
+     "The various sports venues are specified in properties, also individual venues."},
     :tags
     {:fi
      ["keihäs"
@@ -3577,7 +3577,7 @@
      :se
      "K-punkt, material samt sommar- och vinteranvändning i karakteristika.",
      :en
-     "K point in 'attribute data'; materials, summer and winter use specified in attributes. "},
+     "K point in properties; materials, summer and winter use specified in attributes. "},
     :tags          {:fi ["mäkihyppy" "hyppyri" "hyppyrimäki"]},
     :name
     {:fi "Harjoitushyppyrimäki",
@@ -3607,7 +3607,7 @@
     {:fi
      "Opastuspiste on ulkoilureitin, virkistysalueen tai muun liikuntapaikan yhteydessä oleva lisätieto. Paikassa voi olla esimerkiksi opastustaulu ja kartta tai laajempi palvelupiste. Opastuspiste-merkintää voi käyttää myös ilmoittamaan reitin lähtöpisteen.",
      :se
-     "I närheten av friluftsbanor, friluftsområden och andra motionsplatser, finns det oftast en informationspunkt som innehåller extra information om området. Det kan t.ex. finnas en karta och informationstavla eller en större servicepunkt. Ruttens startpunkt kan också betäcknas med hjälp av informationspunkten.",
+     "I närheten av friluftsbanor, friluftsområden och andra motionsplatser, finns det oftast en informationspunkt som innehåller extra information om området. Det kan t ex finnas en karta och informationstavla eller en större servicepunkt. Ruttens startpunkt kan också betäcknas med hjälp av informationspunkten.",
      :en
      "Information point or starting point of a route, recreation area etc. Map of the route or area included, possibly also parking area."},
     :tags          {:fi ["info" "opastaulu" "infopiste"]},
@@ -3775,7 +3775,7 @@
      :se
      "Hall i första hand avsedd för innebandy. Antalet planer samt ytmaterial i karakteristika.",
      :en
-     "Hall primarily intended for floorball. Number of courts and surface material specified in 'attribute data'."},
+     "Hall primarily intended for floorball. Number of courts and surface material specified in properties."},
     :tags          {:fi ["sähly"]},
     :name
     {:fi "Salibandyhalli", :se "Innebandyhall", :en "Floorball hall"},
@@ -3807,7 +3807,7 @@
      :se
      "Antalet planer och omklädningshytter, uppvärmning osv anges i karakteristika.",
      :en
-     "Number of fields, heating, changing rooms, etc., specified in 'attribute data'. "},
+     "Number of fields, heating, changing rooms, etc., specified in properties."},
     :tags          {:fi ["jäähalli"]},
     :name
     {:fi "Harjoitusjäähalli",
@@ -3852,7 +3852,7 @@
      :se
      "Bangolf / minigolf, enligt Finlands Bangolfförbundets regler.",
      :en
-     "A course built for miniature golf, accepted by the Ratagolf Union"},
+     "A course built for miniature golf, accepted by the Ratagolf Union."},
     :tags          {:fi ["minigolf"]},
     :name          {:fi "Ratagolf", :se "Bangolf", :en "Minigolf course"},
     :type-code     1640,
@@ -4031,7 +4031,7 @@
      :se
      "Övningsutrymme byggt för golf. Storlek i karakteristika.",
      :en
-     "Training space built for golf. Size specified in 'attribute data'."},
+     "Training space built for golf. Size specified in properties."},
     :tags          {:fi ["greeni" "puttialue"]},
     :name
     {:fi "Golfin harjoitushalli",
@@ -4258,7 +4258,7 @@
      :se
      "Led avsedd för skidåkning. Ej sommaranvändning och -underhåll. Åkstilar anges i karakteristika.",
      :en
-     "Route intended for skiing. Not in use and unmaintained in summer. Ski styles provided in 'attribute data'."},
+     "Route intended for skiing. Not in use and unmaintained in summer. Ski styles provided in properties."},
     :tags          {:fi ["hiihto" "hiihtolatu"]},
     :name          {:fi "Latu", :se "Skidspår", :en "Ski track"},
     :type-code     4402,
