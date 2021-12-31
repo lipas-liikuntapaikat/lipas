@@ -1657,8 +1657,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :settings-help              "Note: analysis area will be determined by the maximum distance defined here. Travel times are not calculated outside the maximum distance."}
     :sport
     {:description
-     "LIPAS is the national database of sport facilities  and their conditions in Finland.",
-     :headline        "Sports Faclities",
+     "LIPAS is the national database of sports facilities and their conditions in Finland.",
+     :headline        "Sports Facilities",
      :open-interfaces "Open data and APIs",
      :up-to-date-information
      "Up-to-date information about sports facilities",
@@ -1715,11 +1715,11 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :visualizations       "Comparison"},
     :home-page
     {:description
-     "LIPAS system has information on sport facilities,  routes and recreational areas and economy. The content is open  data under the CC4.0 International licence.",
+     "LIPAS system has information on sport facilities, routes and recreational areas and economy. The content is open  data under the CC4.0 International licence.",
      :headline "Front page"},
     :ice-energy
     {:description
-     "Up-to-date information can be found from Finhockey  association web-site.",
+     "Up-to-date information can be found from Finhockey association web-site.",
      :energy-calculator "Ice stadium energy concumption calculator",
      :finhockey-link    "Browse to Finhockey web-site",
      :headline          "Energy Info"},
@@ -2038,7 +2038,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     :lipas.sports-site
     {:properties        "Properties",
      :delete-tooltip    "Delete sports facility...",
-     :headline          "sports faclities",
+     :headline          "Sports facility",
      :new-site-of-type  "New {1}",
      :address           "Address",
      :new-site          "New Sports Facility",
