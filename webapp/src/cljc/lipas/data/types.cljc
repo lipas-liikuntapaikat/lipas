@@ -2155,7 +2155,8 @@
      :floorball-fields-count             {:priority 0},
      :squash-courts-count                {:priority 1},
      :volleyball-fields-count            {:priority 0},
-     :school-use?                        {:priority 0}}},
+     :school-use?                        {:priority 0}
+     :padel-courts-count                 {:priority 0}}},
    4210
    {:description
     {:fi "Pysyvästi lajiin varustettu, katettu curlingrata.",
