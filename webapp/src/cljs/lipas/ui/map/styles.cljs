@@ -140,21 +140,23 @@
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
         stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
 
-        stroke-planned     (ol/style.Stroke.
-                            #js{:color    "#3b3b3b"
-                                :lineDash #js[2 20]
+        stroke-planned (ol/style.Stroke.
+                        #js{:color    "#3b3b3b"
+                            :lineDash #js[2 20]
                                         ; :lineDashOffset 1
-                                :width    (if (#{"polygon" "linestring"} (:shape m))
-                                            10
-                                            5)})
+                            :width    (case (:shape m)
+                                        ("polygon" "linestring") 10
+                                        ("circle")               5
+                                        ("square")               4)})
 
         stroke-planning (ol/style.Stroke.
                          #js{:color    "#ee00ee"
                              :lineDash #js[2 20]
                                         ; :lineDashOffset 1
-                             :width    (if (#{"polygon" "linestring"} (:shape m))
-                                         10
-                                         5)})
+                             :width    (case (:shape m)
+                                         ("polygon" "linestring") 10
+                                         ("circle")               5
+                                         ("square")               4)})
 
         stroke         (ol/style.Stroke.
                         #js{:color    stroke-color
@@ -164,6 +166,9 @@
                                         stroke-hover-width
                                         stroke-width)})
         on-top?        (or selected? hover?)
+        line-dash      (case (:shape m) ("square") #js[1 4] #js[2 5])
+        line-cap       (case (:shape m) ("square") "square" "round")
+        stroke-width   (case (:shape m) ("square") 2 3)
         style          (ol/style.Style.
                         #js{:stroke stroke
                             :fill   fill
@@ -176,26 +181,28 @@
                               (let [stroke (cond
                                              planning? (ol/style.Stroke.
                                                         #js{:color    "#ee00ee"
-                                                            :width    3
-                                                            :lineDash #js [2 5]})
-                                             planned? (ol/style.Stroke.
-                                                       #js{:color    "black"
-                                                           :width    3
-                                                           :lineDash #js [2 5]})
-                                             hover?   hover-stroke
-                                             :else    stroke-black)
+                                                            :width    stroke-width
+                                                            :lineCap  line-cap
+                                                            :lineDash line-dash})
+                                             planned?  (ol/style.Stroke.
+                                                        #js{:color    "black"
+                                                            :width    stroke-width
+                                                            :lineCap  line-cap
+                                                            :lineDash line-dash})
+                                             hover?    hover-stroke
+                                             :else     stroke-black)
                                     radius (cond
-                                                 hover?    8
-                                                 planning? 7
-                                                 planned?  7
-                                                 :else     7)]
+                                             hover?    8
+                                             planning? 7
+                                             planned?  7
+                                             :else     7)]
                                 (case (:shape m)
                                   ("square") (ol/style.RegularShape.
-                                              #js{:fill fill
+                                              #js{:fill   fill
                                                   :stroke stroke
                                                   :points 4
                                                   :radius (inc (inc radius))
-                                                  :angle (/ js/Math.PI 4)})
+                                                  :angle  (/ js/Math.PI 4)})
                                   ;; Default
                                   (ol/style.Circle.
                                    #js{:radius radius
@@ -214,7 +221,7 @@
         planned?  #js[style planned-stroke]
         :else     #js[style]))))
 
-(def styleset styles/adapted-temp-symbols)
+(def styleset styles/symbols)
 
 (def symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))

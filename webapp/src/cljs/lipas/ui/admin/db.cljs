@@ -9,4 +9,4 @@
    :magic-link-variants         [{:value "lipas" :label "Lipas"}
                                  {:value "portal" :label "Portaali"}]
    :selected-magic-link-variant "lipas"
-   :color-picker                styles/temp-symbols})
+   :color-picker                styles/symbols})
