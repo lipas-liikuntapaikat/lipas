@@ -203,8 +203,8 @@
       [mui/table-body]
       (for [[type-code type] (sort-by first types)
             :let             [shape (-> type-code types :geometry-type)
-                              fill (-> type-code styles/temp-symbols :fill)
-                              stroke (-> type-code styles/temp-symbols :stroke)]]
+                              fill (-> type-code styles/symbols :fill :color)
+                              stroke (-> type-code styles/symbols :stroke :color)]]
         [mui/table-row
          [mui/table-cell type-code]
          [mui/table-cell (-> type :name :fi)]
