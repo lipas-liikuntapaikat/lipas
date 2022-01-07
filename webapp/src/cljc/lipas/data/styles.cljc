@@ -22,7 +22,7 @@
     :fill {:color "#98713d"},
     :stroke {:color "#ee0000"}},
    1395
-   {:shape "square",
+   {:shape "circle",
     :radius 9,
     :fill {:color "#d7fa85"},
     :stroke {:color "#000000"}},
@@ -117,7 +117,7 @@
     :fill {:color "#87d215"},
     :stroke {:color "#004800"}},
    4830
-   {:shape "circle",
+   {:shape "square",
     :radius 9,
     :fill {:color "#dcc210"},
     :stroke {:color "#aa0000"}},
@@ -161,7 +161,7 @@
    2610
    {:shape "square",
     :radius 9,
-    :fill {:color "#aa007f"},
+    :fill {:color "#55007f"},
     :stroke {:color "#000000"}},
    2110
    {:shape "square",
@@ -471,7 +471,7 @@
     :fill {:color "#b4d5b3"},
     :stroke {:color "#c7a481"}},
    1390
-   {:shape "square",
+   {:shape "circle",
     :radius 9,
     :fill {:color "#aa007f"},
     :stroke {:color "#000000"}},
