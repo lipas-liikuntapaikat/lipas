@@ -31,17 +31,28 @@ import WMTS from 'ol/source/WMTS';
 import TileWMS from 'ol/source/TileWMS';
 import ImageWMS from 'ol/source/ImageWMS';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
-import {get, fromLonLat, toLonLat} from 'ol/proj';
-import {getTopLeft, getWidth, getHeight, extend, buffer, intersects} from 'ol/extent';
-import {pointerMove} from 'ol/events/condition';
-import {register} from 'ol/proj/proj4';
+import { get, fromLonLat, toLonLat } from 'ol/proj';
+import {
+  getTopLeft,
+  getWidth,
+  getHeight,
+  extend,
+  buffer,
+  intersects,
+} from 'ol/extent';
+import { pointerMove } from 'ol/events/condition';
+import { register } from 'ol/proj/proj4';
 import WKT from 'ol/format/WKT';
 
 // Openlayers-Extensions
 import DrawHole from 'ol-ext/interaction/DrawHole';
 
 window.ol = {
-  Map, View, Overlay, Collection, Feature,
+  Map,
+  View,
+  Overlay,
+  Collection,
+  Feature,
   layer: {
     Tile: TileLayer,
     Image: ImageLayer,
@@ -113,16 +124,16 @@ import zipcelx from 'zipcelx-es5-cjs';
 window.zipcelx = zipcelx;
 
 // jszip
-import JSZip from './jszip';
-window.JSZip = JSZip;
+// import JSZip from "./jszip";
+// window.JSZip = JSZip;
 
 // jszip-utils
-import JSZipUtils from './jszip_utils';
-window.JSZipUtils = JSZipUtils;
+// import JSZipUtils from "./jszip_utils";
+// window.JSZipUtils = JSZipUtils;
 
 // shp2geojson
-import { loadshp } from './shp2geojson';
-window.shp2geojson = { loadshp };
+// import { loadshp } from "./shp2geojson";
+// window.shp2geojson = { loadshp };
 
 // togeojson (KML,GPX)
 import toGeoJSON from '@mapbox/togeojson';
@@ -418,3 +429,7 @@ window.turf = {
 window.rcslider = {
   Slider: require('rc-slider'),
 };
+
+import shp from 'shpjs';
+
+window.shp = shp;

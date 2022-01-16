@@ -533,7 +533,7 @@
 (defmulti file->geoJSON :ext)
 
 (defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
-  (js/shp2geojson.loadshp #js{:url file :encoding enc} cb))
+  (-> file .arrayBuffer (.then js/shp) (.then cb)))
 
 (defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
 (defmethod file->geoJSON "kml" [params] (text->geoJSON params))

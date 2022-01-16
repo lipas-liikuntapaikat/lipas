@@ -103,7 +103,8 @@
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
-     [org.clojure/test.check "0.9.0"]]
+     [org.clojure/test.check "0.9.0"]
+     [metasoarous/oz "2.0.0-alpha5"]]
 
     :plugins [[lein-figwheel "0.5.18"]
               [lein-doo "0.1.10"]]}
@@ -132,7 +133,7 @@
         :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
                          "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
                          "recharts" "proj4" "cljsjs.react-autosuggest"
-                         "turf" "react-select" "rcslider"]
+                         "turf" "react-select" "rcslider" "shp"]
         :global-exports {ol        ol        zipcelx            zipcelx
                          filesaver filesaver react              React
                          react-dom ReactDOM  "react-dom/server" ReactDOMServer
