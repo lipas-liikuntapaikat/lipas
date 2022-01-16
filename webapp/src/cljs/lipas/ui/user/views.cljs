@@ -125,7 +125,7 @@
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
-              ;; Permissions
+       ;; Permissions
        [mui/grid {:item true :xs 12}
 
         [actions-dialog tr]
@@ -230,8 +230,14 @@
          [mui/card-content
           [mui/typography {:variant "h5" :style {:margin-top "-0.5em"}}
            (tr :user/promo1-topic)]
-          [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+          [mui/button
+           {:variant "contained"
+            :color   "secondary"
+            :style {:margin-top "1em"}
+            :href    (str "/pdf/tiedote_" (name (tr)) ".pdf")
+            :target  "_blank"}
            (tr :user/promo1-text)]
+          
           #_[:ul {:dense true}
            [:li "Liikuntapaikat, kaikki yhteensä"]
            [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]
