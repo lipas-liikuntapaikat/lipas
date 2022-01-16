@@ -708,11 +708,10 @@
      :swimming-pools-link "Uimahallit",
      :promo-headline      "Ajankohtaista",
      :front-page-link     "Siirry etusivulle",
-     :promo1-text
-     "Opetus- ja kulttuuriministeriö pyytää kuntia täydentämään erityisesti sisäliikuntapaikkojen rakennusvuosien ja peruskorjausvuosien tiedot. Tieto on tärkeää mm. liikuntapaikkojen korjausvelkaa arvioitaessa.",
+     :promo1-text         "Avaa PDF",
      :ice-stadiums-link   "Jäähallit",
      :greeting            "Hei {1} {2}!",
-     :promo1-topic        "Kiitos että käytät Lipas.fi-palvelua!"},
+     :promo1-topic        "TIEDOTE LIPAS-TYYPPILUOKKAPÄIVITYKSISTÄ (11.1.2022)"},
     :building-materials
     {:brick      "Tiili",
      :concrete   "Betoni",
@@ -1460,11 +1459,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :swimming-pools-link "Simhallsportal",
      :promo-headline      "Aktuellt",
      :front-page-link     "Gå till framsidan",
-     :promo1-text
-     "Undervisnings- och kulturministeriet önskar att kommuner kompletterar information om byggnadsår och renoveringår om idrottsplatser inomhus. Informationen är viktig för utvärdering av renoveringsskuld i idrottsplatser.",
+     :promo1-text         "Öppna PDF",
      :ice-stadiums-link   "Ishallsportal",
      :greeting            "Hej {1} {2} !",
-     :promo1-topic        "Tack för att du använder Lipas.fi!"},
+     :promo1-topic        "OBS! EN UPPDATERING I KLASSIFICERING AV IDROTTS- OCH FRILUFTSPLATSER I LIPAS-SYSTEMET (11 januari 2022)"},
     :building-materials
     {:brick      "Tegel",
      :concrete   "Betong",
@@ -2314,8 +2312,9 @@ The site administrator is responsible for the accuracy of information, safety of
      :greeting            "Hello {1} {2}!",
      :headline            "Profile",
      :ice-stadiums-link   "Ice stadiums",
-     :promo-headline      "Important",
-     :promo1-text         "Swimming pools",
+     :promo1-headline     "Important",
+     :promo1-topic "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
+     :promo1-text         "View PDF",
      :swimming-pools-link "Swimming pools"},
     :building-materials
     {:brick      "Brick",
