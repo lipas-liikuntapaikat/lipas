@@ -140,7 +140,7 @@
                          mui       mui       proj4              proj4
                          recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"
                          turf      turf      react-select       ReactSelect
-                         rcslider  rcslider}}]
+                         rcslider  rcslider  shp                shp }}]
       :output-to            "resources/public/js/compiled/app.js"
       :output-dir           "resources/public/js/compiled/out"
       :asset-path           "/js/compiled/out"
