@@ -11,6 +11,7 @@
    [lipas.ui.sports-sites.events :as events]
    [lipas.ui.sports-sites.subs :as subs]
    [lipas.ui.swimming-pools.pools :as pools]
+   [lipas.ui.ice-stadiums.rinks :as rinks]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
@@ -346,6 +347,27 @@
          :items        (-> data :edit-data :pools)
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
+(defn rinks-field
+  [{:keys [tr read-only?] :as props}]
+  (let [dialogs  (<== [:lipas.ui.ice-stadiums.subs/dialogs])
+        data     (<== [:lipas.ui.map.subs/selected-sports-site])
+        lipas-id (-> data :edit-data :lipas-id)]
+    [:<>
+     (when (-> dialogs :rink :open?)
+       [rinks/dialog {:tr tr :lipas-id lipas-id}])
+     
+     (if read-only?
+       [:<>
+        [rinks/read-only-table
+         {:tr    tr
+          :items (-> data :display-data :rinks)}]
+        [:span {:style {:margin-top "1em"}}]]
+       [rinks/table
+        {:tr           tr
+         :add-btn-size "small"
+         :items        (-> data :edit-data :rinks)
+         :lipas-id     (-> data :edit-data :lipas-id)}])]))
+
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
            key geoms geom-type problems?]}]
@@ -365,6 +387,14 @@
          [mui/typography {:variant "body2"}
           (tr :lipas.swimming-pool.pools/headline)]
          [pools-field
+          {:tr         tr
+           :read-only? read-only?}]])
+
+      (when (#{2510 2520} type-code)
+        [:<>
+         [mui/typography {:variant "body2"}
+          (tr :lipas.ice-stadium.rinks/headline)]
+         [rinks-field
           {:tr         tr
            :read-only? read-only?}]])]
 
