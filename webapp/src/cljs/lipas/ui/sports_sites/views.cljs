@@ -1,15 +1,17 @@
 (ns lipas.ui.sports-sites.views
   (:require
+   [clojure.string :as str]
    [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.energy.views :as energy]
+   [lipas.ui.map.utils :as map-utils]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.events :as events]
    [lipas.ui.sports-sites.subs :as subs]
+   [lipas.ui.swimming-pools.pools :as pools]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.ui.map.utils :as map-utils]
    [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
@@ -323,18 +325,49 @@
   ;; Uimahalli / jäähalli
   (#{3110 3130 2510 2520} type-code))
 
+(defn pools-field
+  [{:keys [tr read-only?] :as props}]
+  (let [dialogs  (<== [:lipas.ui.swimming-pools.subs/dialogs])
+        data     (<== [:lipas.ui.map.subs/selected-sports-site])
+        lipas-id (-> data :edit-data :lipas-id)]
+    [:<>
+     (when (-> dialogs :pool :open?)
+       [pools/dialog {:tr tr :lipas-id lipas-id}])
+     
+     (if read-only?
+       [:<>
+        [pools/read-only-table
+         {:tr    tr
+          :items (-> data :display-data :pools)}]
+        [:span {:style {:margin-top "1em"}}]]
+       [pools/table
+        {:tr           tr
+         :add-btn-size "small"
+         :items        (-> data :edit-data :pools)
+         :lipas-id     (-> data :edit-data :lipas-id)}])]))
+
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
            key geoms geom-type problems?]}]
   (let [locale      (tr)
         types-props (<== [::subs/types-props type-code])
-        types-props (if (special-case? type-code)
-                      (select-keys types-props [:may-be-shown-in-harrastuspassi-fi?])
-                      types-props)]
+        types-props (if false #_(special-case? type-code)
+                        (select-keys types-props [:may-be-shown-in-harrastuspassi-fi?])
+                        types-props)]
     (into
      [lui/form
       {:key        key
-       :read-only? read-only?}]
+       :read-only? read-only?}
+
+      ;; Swimming halls
+      (when (#{3110 3130} type-code)
+        [:<>
+         [mui/typography {:variant "body2"}
+          (tr :lipas.swimming-pool.pools/headline)]
+         [pools-field
+          {:tr         tr
+           :read-only? read-only?}]])]
+
      (sort-by
       (juxt (comp - :priority) :label)
       (for [[k v] types-props
@@ -349,25 +382,26 @@
          :priority (:priority v)
          :form-field
          (cond
-           (material-field? k)      [surface-material-selector
-                                     {:tr        tr
-                                      :multi?    (= :surface-material k)
-                                      :tooltip   tooltip
-                                      :spec      spec
-                                      :label     label
-                                      :value     value
-                                      :on-change on-change}]
-           (retkikartta? k)         [retkikartta-field
-                                     {:tr        tr
-                                      :value     value
-                                      :on-change on-change
-                                      :tooltip   tooltip
-                                      :problems? problems?}]
-           (harrastuspassi? k)      [harrastuspassi-field
-                                     {:tr        tr
-                                      :value     value
-                                      :on-change on-change
-                                      :tooltip   tooltip}]
+           (material-field? k) [surface-material-selector
+                                {:tr        tr
+                                 :multi?    (= :surface-material k)
+                                 :tooltip   tooltip
+                                 :spec      spec
+                                 :label     label
+                                 :value     value
+                                 :on-change on-change}]
+           (retkikartta? k)    [retkikartta-field
+                                {:tr        tr
+                                 :value     value
+                                 :on-change on-change
+                                 :tooltip   tooltip
+                                 :problems? problems?}]
+           (harrastuspassi? k) [harrastuspassi-field
+                                {:tr        tr
+                                 :value     value
+                                 :on-change on-change
+                                 :tooltip   tooltip}]
+
            (show-calc? k geom-type) [route-length-km-field
                                      {:tr        tr
                                       :value     value

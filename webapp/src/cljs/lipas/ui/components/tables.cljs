@@ -260,7 +260,8 @@
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
-                          read-only? on-add on-edit on-delete]
+                          read-only? on-add on-edit on-delete add-btn-size]
+                   :or   {add-btn-size "large"}
                    :as   props}]
   (if read-only?
 
@@ -340,6 +341,7 @@
          [mui/fab
           {:style    {:margin-top "1em"}
            :on-click on-add
+           :size     add-btn-size
            :color    "secondary"}
           [mui/icon "add"]]]]])))
 
