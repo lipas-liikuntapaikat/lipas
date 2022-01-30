@@ -18,12 +18,6 @@
         locale          (tr)]
     [mui/form-group
 
-     ;; Outdoor pool?
-     [lui/checkbox
-      {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
-       :value     (:outdoor-pool? data)
-       :on-change #(set-field :outdoor-pool? %)}]
-
      ;; Pool type
      [lui/select
       {:deselect? true
@@ -43,6 +37,12 @@
        :label-fn  (comp locale second)
        :value-fn  first
        :on-change #(set-field :structure %)}]
+
+     ;; Outdoor pool?
+     [lui/checkbox
+      {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
+       :value     (:outdoor-pool? data)
+       :on-change #(set-field :outdoor-pool? %)}]
 
      ;; Temperature c
      [lui/text-field
@@ -117,25 +117,24 @@
        :on-change #(set-field :accessibility %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
-  (let [data (<== [::subs/pool-form])
-        reset #(==> [::events/reset-dialog :pool])
-        close #(==> [::events/toggle-dialog :pool])
+  (let [data   (<== [::subs/pool-form])
+        reset  #(==> [::events/reset-dialog :pool])
+        close  #(==> [::events/toggle-dialog :pool])
         valid? (s/valid? :lipas.swimming-pool/pool data)]
-    [lui/dialog {:title (if (:id data)
-                          (tr :lipas.swimming-pool.pools/edit-pool)
-                          (tr :lipas.swimming-pool.pools/add-pool))
-                 :save-label (tr :actions/save)
-                 :cancel-label (tr :actions/cancel)
-                 :on-close #(==> [::events/toggle-dialog :pool])
+    [lui/dialog {:title         (if (:id data)
+                                  (tr :lipas.swimming-pool.pools/edit-pool)
+                                  (tr :lipas.swimming-pool.pools/add-pool))
+                 :save-label    (tr :actions/save)
+                 :cancel-label  (tr :actions/cancel)
+                 :on-close      #(==> [::events/toggle-dialog :pool])
                  :save-enabled? valid?
-                 :on-save (comp reset
-                                close
-                                #(==> [::events/save-pool lipas-id data]))}
+                 :on-save       (comp reset
+                                      close
+                                      #(==> [::events/save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
   [[:type (tr :general/type)]
-   [:outdoor-pool? (tr :lipas.swimming-pool.pool/outdoor-pool?)]
    [:temperature-c (tr :physical-units/temperature-c)]
    [:volume-m3 (tr :dimensions/volume-m3)]
    [:area-m2 (tr :dimensions/surface-area-m2)]
@@ -144,13 +143,14 @@
    [:depth-min-m (tr :dimensions/depth-min-m)]
    [:depth-max-m (tr :dimensions/depth-max-m)]
    [:structure (tr :general/structure)]
-   [:accessibility (tr :lipas.swimming-pool.pool/accessibility)]])
+   [:accessibility (tr :lipas.swimming-pool.pool/accessibility)]
+   [:outdoor-pool? (tr :lipas.swimming-pool.pool/outdoor-pool?)]])
 
 (defn- localize-accessibility [tr pool]
   (update pool :accessibility
           #(map (fn [f] (tr (keyword :accessibility f))) %)))
 
-(defn table [{:keys [tr items lipas-id]}]
+(defn table [{:keys [tr items lipas-id add-btn-size]}]
   (let [localize (partial utils/localize-field tr)]
     [lui/form-table
      {:headers         (make-headers tr)
@@ -161,6 +161,7 @@
            (map (partial localize-accessibility tr))
            (sort-by :length-m utils/reverse-cmp))
       :add-tooltip     (tr :lipas.swimming-pool.pools/add-pool)
+      :add-btn-size    add-btn-size
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)
       :confirm-tooltip (tr :confirm/press-again-to-delete)

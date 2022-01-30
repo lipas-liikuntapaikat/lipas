@@ -256,9 +256,11 @@
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/materials])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/statuses])
-    (re-frame/subscribe [:lipas.ui.subs/translator])])
+    (re-frame/subscribe [:lipas.ui.subs/translator])
+    (re-frame/subscribe [:lipas.ui.swimming-pools.subs/pool-types])
+    (re-frame/subscribe [:lipas.ui.swimming-pools.subs/accessibility])])
  (fn [[site cities admins owners types size-categories
-       materials statuses translator] _]
+       materials statuses translator pool-types pool-accessibility] _]
    (when site
      (let [locale        (translator)
            latest        (or (utils/latest-edit (:edits site))
@@ -272,41 +274,51 @@
 
            get-material #(get-in materials [% locale])]
 
-       {:status            (-> status locale)
-        :lipas-id          (-> latest :lipas-id)
-        :name              (-> latest :name)
-        :name-localized    (-> latest :name-localized)
-        :marketing-name    (-> latest :marketing-name)
-        :type
-        {:name          (-> type :name locale)
-         :type-code     (-> latest :type :type-code)
-         :size-category (-> size-category locale)}
-        :owner             (-> owner locale)
-        :admin             (-> admin locale)
-        :phone-number      (-> latest :phone-number)
-        :www               (-> latest :www)
-        :reservations-link (-> latest :reservations-link)
-        :email             (-> latest :email)
-        :comment           (-> latest :comment)
+       (merge
+        {:status            (-> status locale)
+         :lipas-id          (-> latest :lipas-id)
+         :name              (-> latest :name)
+         :name-localized    (-> latest :name-localized)
+         :marketing-name    (-> latest :marketing-name)
+         :type
+         {:name          (-> type :name locale)
+          :type-code     (-> latest :type :type-code)
+          :size-category (-> size-category locale)}
+         :owner             (-> owner locale)
+         :admin             (-> admin locale)
+         :phone-number      (-> latest :phone-number)
+         :www               (-> latest :www)
+         :reservations-link (-> latest :reservations-link)
+         :email             (-> latest :email)
+         :comment           (-> latest :comment)
 
-        :construction-year (-> latest :construction-year)
-        :renovation-years  (-> latest :renovation-years)
+         :construction-year (-> latest :construction-year)
+         :renovation-years  (-> latest :renovation-years)
 
-        :properties (-> latest
-                        :properties
-                        (update :surface-material #(map get-material %))
-                        (update :running-track-surface-material get-material)
-                        (update :training-spot-surface-material get-material))
+         :properties (-> latest
+                         :properties
+                         (update :surface-material #(map get-material %))
+                         (update :running-track-surface-material get-material)
+                         (update :training-spot-surface-material get-material))
 
-        :location
-        {:address       (-> latest :location :address)
-         :postal-code   (-> latest :location :postal-code)
-         :postal-office (-> latest :location :postal-office)
-         :city
-         {:name         (-> city :name locale)
-          :neighborhood (-> latest :location :city :neighborhood)}}
+         :location
+         {:address       (-> latest :location :address)
+          :postal-code   (-> latest :location :postal-code)
+          :postal-office (-> latest :location :postal-office)
+          :city
+          {:name         (-> city :name locale)
+           :neighborhood (-> latest :location :city :neighborhood)}}
 
-        :building (:building latest)}))))
+         :building (:building latest)}
+        
+        (when (#{3110 3130} (:type-code type))
+          (let [get-pool-type     #(get-in pool-types [% locale])
+                get-accessibility #(get-in pool-accessibility [% locale])]
+            {:pools
+             (->> (:pools latest)
+                  (map #(update % :type get-pool-type))
+                  (map #(update % :structure get-material))
+                  (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))})))))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]

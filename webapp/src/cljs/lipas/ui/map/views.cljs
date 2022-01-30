@@ -349,7 +349,7 @@
           (<== [::subs/sports-site-view lipas-id type-code])
 
           set-field (partial set-field lipas-id)]
-
+      
       [mui/grid
        {:container true
         :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
@@ -438,7 +438,7 @@
                 :sub-headings? true}]]]
 
           ;; Properties tab
-          1 (if portal
+          1 (if false #_portal
               [mui/button {:href (str "/" portal "/hallit/" lipas-id)}
                [mui/icon "arrow_right"]
                (tr :lipas.sports-site/details-in-portal portal)]
