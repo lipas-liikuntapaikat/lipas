@@ -318,7 +318,10 @@
              (->> (:pools latest)
                   (map #(update % :type get-pool-type))
                   (map #(update % :structure get-material))
-                  (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))})))))))
+                  (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))}))
+
+        (when (#{2510 2520} (:type-code type))
+          {:rinks (:rinks latest)}))))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]
