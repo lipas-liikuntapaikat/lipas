@@ -41,9 +41,10 @@
 (defn- make-headers [tr]
   [[:length-m (tr :dimensions/length-m)]])
 
-(defn table [{:keys [tr items lipas-id]}]
+(defn table [{:keys [tr items lipas-id add-btn-size]}]
   [lui/form-table
    {:headers         (make-headers tr)
+    :add-btn-size    add-btn-size
     :items           (vals items)
     :add-tooltip     (tr :lipas.swimming-pool.slides/add-slide)
     :edit-tooltip    (tr :actions/edit)
