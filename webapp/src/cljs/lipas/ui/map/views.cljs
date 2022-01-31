@@ -1034,15 +1034,17 @@
                      :sub-headings? true}]]]
 
                ;; Properties tab
-               1 [sports-sites/properties-form
-                  {:key        (-> data :type :type-code)
-                   :tr         tr
-                   :type-code  (-> data :type :type-code )
-                   :read-only? false
-                   :on-change  (partial set-field :properties)
-                   :edit-data  (:properties data)
-                   :geoms      (-> data :location :geometries)
-                   :problems?  problems?}])]]]]]]
+               1 (if (#{3110 3130 2510 2520} (:type-code type))
+                   [mui/typography "Voit muokata lisätietoja tallennuksen jälkeen."]
+                   [sports-sites/properties-form
+                    {:key        (-> data :type :type-code)
+                     :tr         tr
+                     :type-code  (-> data :type :type-code)
+                     :read-only? false
+                     :on-change  (partial set-field :properties)
+                     :edit-data  (:properties data)
+                     :geoms      (-> data :location :geometries)
+                     :problems?  problems?}]))]]]]]]
 
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}

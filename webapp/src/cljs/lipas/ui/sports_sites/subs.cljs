@@ -318,7 +318,9 @@
              (->> (:pools latest)
                   (map #(update % :type get-pool-type))
                   (map #(update % :structure get-material))
-                  (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))}))
+                  (map #(update % :accessibility (fn [coll] (map get-accessibility coll)))))
+             :slides     (:slides latest)
+             :facilities (:facilities latest)}))
 
         (when (#{2510 2520} (:type-code type))
           {:rinks (:rinks latest)}))))))
