@@ -60,7 +60,7 @@ services:
         gelf-address: "udp://localhost:5000"
         tag: "mapproxy"
     environment:
-      PRODUCTION: true
+      PRODUCTION: 'true'
       PROCESSES: 4
       THREADS: 10
       MAPPROXY_USER_ID: 1000
