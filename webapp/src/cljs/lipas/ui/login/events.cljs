@@ -41,7 +41,8 @@
 
        :dispatch-n
        [(when (= :magic-link login-type) [:lipas.ui.events/navigate "/profiili"])
-        [:lipas.ui.search.events/set-logged-in-filters]]}
+        (when (not= :refresh login-type)
+          [:lipas.ui.search.events/set-logged-in-filters])]}
 
       (when (not= :refresh login-type)
         {:ga/set   [{:dimension1 (if admin? "admin" "user")}]
