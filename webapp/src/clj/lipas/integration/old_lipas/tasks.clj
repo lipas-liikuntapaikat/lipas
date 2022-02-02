@@ -69,7 +69,7 @@
         (handle-success db name res)
         (doseq [[lipas-id e] (:errors res)
                 :let         [msg (str "Pushing " lipas-id " to old Lipas failed!")]]
-          (handle-error db name (ex-info msg (ex-data e) e))))
+          (handle-error db name (ex-info msg (or (ex-data e) {}) e))))
       (catch Exception e
         (handle-error db name e)))))
 
