@@ -650,7 +650,7 @@
    2510
    {:shape "square",
     :radius 9,
-    :fill {:color "#55007f"},
+    :fill {:color "#94e8ff"},
     :stroke {:color "#000000"}},
    1640
    {:shape "circle",
