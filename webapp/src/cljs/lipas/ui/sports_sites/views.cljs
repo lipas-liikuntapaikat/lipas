@@ -424,7 +424,7 @@
            :read-only? read-only?}]])
 
       ;; Ice stadiums
-      (when (#{2510 2520} type-code)
+      #_(when (#{2510 2520} type-code)
         [:<>
 
          ;; Rinks
@@ -491,71 +491,162 @@
                                                     "number")
                                        :on-change on-change}])})
 
-       (when (#{3110 3130} type-code)
-         ;; Platforms
-         (let [data         (<== [:lipas.ui.map.subs/selected-sports-site])
-               lipas-id     (-> data :display-data :lipas-id)
-               on-change    (fn [k v] (==> [::events/edit-field lipas-id [:facilities k] v]))
-               edit-data    (-> data :edit-data :facilities)
-               display-data (-> data :display-data :facilities)]
-           [;; Platforms 1m count
-            {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
-             :sort  "1"
-             :value (-> display-data :platforms-1m-count)
-             :form-field
-             [lui/text-field
-              {:adornment (tr :units/pcs)
-               :type      "number"
-               :value     (-> edit-data :platforms-1m-count)
-               :spec      :lipas.swimming-pool.facilities/platforms-1m-count
-               :on-change #(on-change :platforms-1m-count %)}]}
-            ;; Platforms 3m count
-            {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
-             :sort  "2"
-             :value (-> display-data :platforms-3m-count)
-             :form-field
-             [lui/text-field
-              {:adornment (tr :units/pcs)
-               :type      "number"
-               :value     (-> edit-data :platforms-3m-count)
-               :spec      :lipas.swimming-pool.facilities/platforms-3m-count
-               :on-change #(on-change :platforms-3m-count %)}]}
+       (concat
+        ;; Ice stadium special props
+        (when (#{2510 2520} type-code)
+          (let [data         (<== [:lipas.ui.map.subs/selected-sports-site])
+                lipas-id     (-> data :display-data :lipas-id)
+                on-change    (fn [n k v] (==> [::events/edit-field lipas-id [:rinks n k] v]))
+                edit-data    (-> data :edit-data)
+                display-data (-> data :display-data)]
 
-          ;; Platforms 5m count
-            {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
-             :value (-> display-data :platforms-5m-count)
-             :sort  "3"
-             :form-field
-             [lui/text-field
-              {:adornment (tr :units/pcs)
-               :type      "number"
-               :value     (-> edit-data :platforms-5m-count)
-               :spec      :lipas.swimming-pool.facilities/platforms-5m-count
-               :on-change #(on-change :platforms-5m-count %)}]}
+            [;; Rink 1 length
+             {:label    (tr :lipas.ice-stadium.rinks/rink1-length)
+              :sort     "1A"
+              :priority 1
+              :value    (get-in display-data [:rinks 0 :length-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 0 :length-m])
+                :spec      :lipas.ice-stadium.rink/length-m
+                :on-change #(on-change 0 :length-m %)}]}
 
-          ;; Platforms 7.5m count
-            {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
-             :value (-> display-data :platforms-7.5m-count)
-             :sort  "4"
-             :form-field
-             [lui/text-field
-              {:adornment (tr :units/pcs)
-               :type      "number"
-               :value     (-> edit-data :platforms-7.5m-count)
-               :spec      :lipas.swimming-pool.facilities/platforms-7.5m-count
-               :on-change #(on-change :platforms-7.5m-count %)}]}
+             ;; Rink 1 width
+             {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
+              :sort     "1B"
+              :priority 1
+              :value    (get-in display-data [:rinks 0 :width-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 0 :width-m])
+                :spec      :lipas.ice-stadium.rink/width-m
+                :on-change #(on-change 0 :width-m %)}]}
 
-          ;; Platforms 10m count
-            {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
-             :value (-> display-data :platforms-10m-count)
-             :sort  "5"
-             :form-field
-             [lui/text-field
-              {:adornment (tr :units/pcs)
-               :type      "number"
-               :value     (-> edit-data :platforms-10m-count)
-               :spec      :lipas.swimming-pool.facilities/platforms-10m-count
-               :on-change #(on-change :platforms-10m-count %)}]}])))))))
+             ;; Rink 2 length
+             {:label    (tr :lipas.ice-stadium.rinks/rink2-length)
+              :sort     "2A"
+              :priority 1
+              :value    (get-in display-data [:rinks 1 :length-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 1 :length-m])
+                :spec      :lipas.ice-stadium.rink/length-m
+                :on-change #(on-change 1 :length-m %)}]}
+
+             ;; Rink 2 width
+             {:label    (tr :lipas.ice-stadium.rinks/rink2-width)
+              :sort     "2B"
+              :priority 1
+              :value    (get-in display-data [:rinks 1 :width-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 1 :width-m])
+                :spec      :lipas.ice-stadium.rink/width-m
+                :on-change #(on-change 1 :width-m %)}]}
+
+             ;; Rink 3 length
+             {:label    (tr :lipas.ice-stadium.rinks/rink3-length)
+              :sort     "3A"
+              :priority 1
+              :value    (get-in display-data [:rinks 2 :length-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 2 :length-m])
+                :spec      :lipas.ice-stadium.rink/length-m
+                :on-change #(on-change 2 :length-m %)}]}
+
+             ;; Rink 3 width
+             {:label    (tr :lipas.ice-stadium.rinks/rink3-width)
+              :sort     "3B"
+              :priority 1
+              :value    (get-in display-data [:rinks 2 :width-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 2 :width-m])
+                :spec      :lipas.ice-stadium.rink/width-m
+                :on-change #(on-change 2 :width-m %)}]}
+
+             
+             ]))
+
+        ;; Swimming pool special props
+        (when (#{3110 3130} type-code)
+          ;; Platforms
+          (let [data         (<== [:lipas.ui.map.subs/selected-sports-site])
+                lipas-id     (-> data :display-data :lipas-id)
+                on-change    (fn [k v] (==> [::events/edit-field lipas-id [:facilities k] v]))
+                edit-data    (-> data :edit-data :facilities)
+                display-data (-> data :display-data :facilities)]
+            [;; Platforms 1m count
+             {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
+              :sort  "1"
+              :value (-> display-data :platforms-1m-count)
+              :form-field
+              [lui/text-field
+               {:adornment (tr :units/pcs)
+                :type      "number"
+                :value     (-> edit-data :platforms-1m-count)
+                :spec      :lipas.swimming-pool.facilities/platforms-1m-count
+                :on-change #(on-change :platforms-1m-count %)}]}
+             ;; Platforms 3m count
+             {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
+              :sort  "2"
+              :value (-> display-data :platforms-3m-count)
+              :form-field
+              [lui/text-field
+               {:adornment (tr :units/pcs)
+                :type      "number"
+                :value     (-> edit-data :platforms-3m-count)
+                :spec      :lipas.swimming-pool.facilities/platforms-3m-count
+                :on-change #(on-change :platforms-3m-count %)}]}
+
+             ;; Platforms 5m count
+             {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
+              :value (-> display-data :platforms-5m-count)
+              :sort  "3"
+              :form-field
+              [lui/text-field
+               {:adornment (tr :units/pcs)
+                :type      "number"
+                :value     (-> edit-data :platforms-5m-count)
+                :spec      :lipas.swimming-pool.facilities/platforms-5m-count
+                :on-change #(on-change :platforms-5m-count %)}]}
+
+             ;; Platforms 7.5m count
+             {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
+              :value (-> display-data :platforms-7.5m-count)
+              :sort  "4"
+              :form-field
+              [lui/text-field
+               {:adornment (tr :units/pcs)
+                :type      "number"
+                :value     (-> edit-data :platforms-7.5m-count)
+                :spec      :lipas.swimming-pool.facilities/platforms-7.5m-count
+                :on-change #(on-change :platforms-7.5m-count %)}]}
+
+             ;; Platforms 10m count
+             {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
+              :value (-> display-data :platforms-10m-count)
+              :sort  "5"
+              :form-field
+              [lui/text-field
+               {:adornment (tr :units/pcs)
+                :type      "number"
+                :value     (-> edit-data :platforms-10m-count)
+                :spec      :lipas.swimming-pool.facilities/platforms-10m-count
+                :on-change #(on-change :platforms-10m-count %)}]}]))))))))
 
 (defn report-readings-button [{:keys [tr lipas-id close]}]
   [mui/button

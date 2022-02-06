@@ -421,7 +421,13 @@
     :restricted
     {:login-or-register "Kirjaudu sisään tai rekisteröidy"},
     :lipas.ice-stadium.rinks
-    {:add-rink  "Lisää rata",
+    {:rink1-width "Radan 1 leveys (m)"
+     :rink2-width "Radan 2 leveys (m)"
+     :rink3-width "Radan 3 leveys (m)"
+     :rink1-length "Radan 1 pituus (m)"
+     :rink2-length "Radan 2 pituus (m)"
+     :rink3-length "Radan 3 pituus (m)"
+     :add-rink  "Lisää rata",
      :edit-rink "Muokkaa rataa",
      :headline  "Radat"},
     :lipas.sports-site
