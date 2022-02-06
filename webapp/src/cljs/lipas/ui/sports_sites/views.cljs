@@ -70,18 +70,20 @@
                     :value-fn  :type-code
                     :on-change #(on-change :type :type-code %)}]}
 
+     ;; Disabled 2022-02-06
+     ;;
      ;; Ice-stadiums get special treatment
-     (when (or (= 2520 (-> edit-data :type :type-code))
-               (and read-only?
-                    (= 2520 (-> display-data :type :type-code))))
-       {:label      (tr :ice/size-category)
-        :value      (-> display-data :type :size-category)
-        :form-field [lui/select
-                     {:value     (-> edit-data :type :size-category)
-                      :items     size-categories
-                      :value-fn  first
-                      :label-fn  (comp locale second)
-                      :on-change #(on-change :type :size-category %)}]})
+     ;; (when (or (= 2520 (-> edit-data :type :type-code))
+     ;;           (and read-only?
+     ;;                (= 2520 (-> display-data :type :type-code))))
+     ;;   {:label      (tr :ice/size-category)
+     ;;    :value      (-> display-data :type :size-category)
+     ;;    :form-field [lui/select
+     ;;                 {:value     (-> edit-data :type :size-category)
+     ;;                  :items     size-categories
+     ;;                  :value-fn  first
+     ;;                  :label-fn  (comp locale second)
+     ;;                  :on-change #(on-change :type :size-category %)}]})
 
      ;; Name
      {:label      (tr :lipas.sports-site/name)
