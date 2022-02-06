@@ -435,7 +435,7 @@
            :read-only? read-only?}]])]
 
      (sort-by
-      (juxt (comp - :priority) :label)
+      (juxt (comp - :priority) #(or (:sort %) (:label %)))
       
       (into
        (for [[k v] types-props
@@ -500,6 +500,7 @@
                display-data (-> data :display-data :facilities)]
            [;; Platforms 1m count
             {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
+             :sort  "1"
              :value (-> display-data :platforms-1m-count)
              :form-field
              [lui/text-field
@@ -509,48 +510,52 @@
                :spec      :lipas.swimming-pool.facilities/platforms-1m-count
                :on-change #(on-change :platforms-1m-count %)}]}
             ;; Platforms 3m count
-          {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
-           :value (-> display-data :platforms-3m-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :platforms-3m-count)
-             :spec      :lipas.swimming-pool.facilities/platforms-3m-count
-             :on-change #(on-change :platforms-3m-count %)}]}
+            {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
+             :sort  "2"
+             :value (-> display-data :platforms-3m-count)
+             :form-field
+             [lui/text-field
+              {:adornment (tr :units/pcs)
+               :type      "number"
+               :value     (-> edit-data :platforms-3m-count)
+               :spec      :lipas.swimming-pool.facilities/platforms-3m-count
+               :on-change #(on-change :platforms-3m-count %)}]}
 
           ;; Platforms 5m count
-          {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
-           :value (-> display-data :platforms-5m-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :platforms-5m-count)
-             :spec      :lipas.swimming-pool.facilities/platforms-5m-count
-             :on-change #(on-change :platforms-5m-count %)}]}
+            {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
+             :value (-> display-data :platforms-5m-count)
+             :sort  "3"
+             :form-field
+             [lui/text-field
+              {:adornment (tr :units/pcs)
+               :type      "number"
+               :value     (-> edit-data :platforms-5m-count)
+               :spec      :lipas.swimming-pool.facilities/platforms-5m-count
+               :on-change #(on-change :platforms-5m-count %)}]}
 
           ;; Platforms 7.5m count
-          {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
-           :value (-> display-data :platforms-7.5m-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :platforms-7.5m-count)
-             :spec      :lipas.swimming-pool.facilities/platforms-7.5m-count
-             :on-change #(on-change :platforms-7.5m-count %)}]}
+            {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
+             :value (-> display-data :platforms-7.5m-count)
+             :sort  "4"
+             :form-field
+             [lui/text-field
+              {:adornment (tr :units/pcs)
+               :type      "number"
+               :value     (-> edit-data :platforms-7.5m-count)
+               :spec      :lipas.swimming-pool.facilities/platforms-7.5m-count
+               :on-change #(on-change :platforms-7.5m-count %)}]}
 
           ;; Platforms 10m count
-          {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
-           :value (-> display-data :platforms-10m-count)
-           :form-field
-           [lui/text-field
-            {:adornment (tr :units/pcs)
-             :type      "number"
-             :value     (-> edit-data :platforms-10m-count)
-             :spec      :lipas.swimming-pool.facilities/platforms-10m-count
-             :on-change #(on-change :platforms-10m-count %)}]}])))))))
+            {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
+             :value (-> display-data :platforms-10m-count)
+             :sort  "5"
+             :form-field
+             [lui/text-field
+              {:adornment (tr :units/pcs)
+               :type      "number"
+               :value     (-> edit-data :platforms-10m-count)
+               :spec      :lipas.swimming-pool.facilities/platforms-10m-count
+               :on-change #(on-change :platforms-10m-count %)}]}])))))))
 
 (defn report-readings-button [{:keys [tr lipas-id close]}]
   [mui/button
