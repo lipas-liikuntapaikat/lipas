@@ -226,6 +226,7 @@
 
       ;; Ice stadiums
       (update-in [:rinks] (comp not-empty remove-ids vals))
+      (update-in [:rinks] (fn [rinks] (remove empty? rinks)))
 
       clean))
 
