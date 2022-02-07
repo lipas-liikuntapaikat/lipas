@@ -421,15 +421,18 @@
     :restricted
     {:login-or-register "Kirjaudu sisään tai rekisteröidy"},
     :lipas.ice-stadium.rinks
-    {:rink1-width "Radan 1 leveys (m)"
-     :rink2-width "Radan 2 leveys (m)"
-     :rink3-width "Radan 3 leveys (m)"
-     :rink1-length "Radan 1 pituus (m)"
-     :rink2-length "Radan 2 pituus (m)"
-     :rink3-length "Radan 3 pituus (m)"
-     :add-rink  "Lisää rata",
-     :edit-rink "Muokkaa rataa",
-     :headline  "Radat"},
+    {:rink1-width "Kentän 1 leveys m"
+     :rink2-width "Kentän 2 leveys m"
+     :rink3-width "Kentän 3 leveys m"
+     :rink1-length "Kentän 1 pituus m"
+     :rink2-length "Kentän 2 pituus m"
+     :rink3-length "Kentän 3 pituus m"
+     :rink1-area-m2 "Kentän 1 pinta-ala m²"
+     :rink2-area-m2 "Kentän 2 pinta-ala m²"
+     :rink3-area-m2 "Kentän 3 pinta-ala m²"
+     :add-rink  "Lisää kenttä",
+     :edit-rink "Muokkaa kenttää",
+     :headline  "Kentät"},
     :lipas.sports-site
     {:properties        "Lisätiedot",
      :delete-tooltip    "Poista liikuntapaikka...",
@@ -899,7 +902,20 @@
      :open-interfaces "Öppna gränssnitt",
      :up-to-date-information
      "Aktuell data om finska idrottsanläggningar",
-     :updating-tools  "Uppdateringsverktyg"},
+     :updating-tools  "Uppdateringsverktyg"}
+    :lipas.ice-stadium.rinks
+    {:rink1-width "1. planens bredd m"
+     :rink2-width "2. planens bredd m"
+     :rink3-width "3. planens bredd m"
+     :rink1-length "1. planens längd m"
+     :rink2-length "2. planens längd m"
+     :rink3-length "3. planens längd m"
+     :rink1-area-m2 "1. planens areal m²"
+     :rink2-area-m2 "2. planens areal m²"
+     :rink3-area-m2 "3. planens areal m²"
+     :add-rink  "Lisää kenttä",
+     :edit-rink "Muokkaa kenttää",
+     :headline  "Kentät"},,
     :confirm
     {:discard-changes?      "Vill du förkasta ändringar?",
      :headline              "Bekräftelse",
@@ -2038,7 +2054,18 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :select-rink    "Select stadium"},
     :restricted       {:login-or-register "Please login or register"},
     :lipas.ice-stadium.rinks
-    {:add-rink "Add rink", :edit-rink "Edit rink", :headline "Rinks"},
+    {:add-rink "Add rink",
+     :edit-rink "Edit rink",
+     :headline "Rinks"
+     :rink1-width "Rink 1 width m"
+     :rink2-width "Rink 2 width m"
+     :rink3-width "Rink 3 width m"
+     :rink1-length "Rink 1 length m"
+     :rink2-length "Rink 2 length m"
+     :rink3-length "Rink 3 length m"
+     :rink1-area-m2 "Rink 1 area m²"
+     :rink2-area-m2 "Rink 2 area m²"
+     :rink3-area-m2 "Rink 3 area m²"},
     :lipas.sports-site
     {:properties        "Properties",
      :delete-tooltip    "Delete sports facility...",
