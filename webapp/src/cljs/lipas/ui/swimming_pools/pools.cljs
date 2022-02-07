@@ -62,6 +62,15 @@
        :spec      :lipas.swimming-pool.pool/width-m
        :on-change #(set-field :width-m %)}]
 
+     ;; Area m2
+     [lui/text-field
+      {:type      "number"
+       :label     (tr :dimensions/area-m2)
+       :adornment (tr :physical-units/m2)
+       :value     (:area-m2 data)
+       :spec      :lipas.swimming-pool.pool/area-m2
+       :on-change #(set-field :area-m2 %)}]
+
      ;; Depth min m
      [lui/text-field
       {:type      "number"
@@ -79,15 +88,6 @@
        :value     (:depth-max-m data)
        :spec      :lipas.swimming-pool.pool/depth-max-m
        :on-change #(set-field :depth-max-m %)}]
-
-     ;; Area m2
-     [lui/text-field
-      {:type      "number"
-       :label     (tr :dimensions/area-m2)
-       :adornment (tr :physical-units/m2)
-       :value     (:area-m2 data)
-       :spec      :lipas.swimming-pool.pool/area-m2
-       :on-change #(set-field :area-m2 %)}]
 
      ;; Temperature c
      [lui/text-field
@@ -138,9 +138,9 @@
    #_[:volume-m3 (tr :dimensions/volume-m3)]
    [:length-m (tr :dimensions/length-m)]
    [:width-m (tr :dimensions/width-m)]
-   [:depth-min-m (tr :dimensions/depth-min-m)]
-   [:depth-max-m (tr :dimensions/depth-max-m)]
    [:area-m2 (tr :dimensions/surface-area-m2)]
+   [:depth-min-m (tr :dimensions/depth-min-m)]
+   [:depth-max-m (tr :dimensions/depth-max-m)]   
    [:temperature-c (tr :physical-units/temperature-c)]
    #_[:structure (tr :general/structure)]
    #_[:accessibility (tr :lipas.swimming-pool.pool/accessibility)]

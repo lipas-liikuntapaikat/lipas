@@ -526,6 +526,19 @@
                 :spec      :lipas.ice-stadium.rink/width-m
                 :on-change #(on-change 0 :width-m %)}]}
 
+             ;; Rink 1 area m2
+             {:label    (tr :lipas.ice-stadium.rinks/rink1-area-m2)
+              :sort     "1C"
+              :priority 1
+              :value    (get-in display-data [:rinks 0 :area-m2])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 0 :area-m2])
+                :spec      :lipas.ice-stadium.rink/area-m2
+                :on-change #(on-change 0 :area-m2 %)}]}
+
              ;; Rink 2 length
              {:label    (tr :lipas.ice-stadium.rinks/rink2-length)
               :sort     "2A"
@@ -552,6 +565,19 @@
                 :spec      :lipas.ice-stadium.rink/width-m
                 :on-change #(on-change 1 :width-m %)}]}
 
+             ;; Rink 2 area m2
+             {:label    (tr :lipas.ice-stadium.rinks/rink2-area-m2)
+              :sort     "2C"
+              :priority 1
+              :value    (get-in display-data [:rinks 1 :area-m2])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 1 :area-m2])
+                :spec      :lipas.ice-stadium.rink/area-m2
+                :on-change #(on-change 1 :area-m2 %)}]}
+
              ;; Rink 3 length
              {:label    (tr :lipas.ice-stadium.rinks/rink3-length)
               :sort     "3A"
@@ -577,6 +603,19 @@
                 :value     (get-in edit-data [:rinks 2 :width-m])
                 :spec      :lipas.ice-stadium.rink/width-m
                 :on-change #(on-change 2 :width-m %)}]}
+
+             ;; Rink 3 area m2
+             {:label    (tr :lipas.ice-stadium.rinks/rink3-area-m2)
+              :sort     "3C"
+              :priority 1
+              :value    (get-in display-data [:rinks 2 :area-m2])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 2 :area-m2])
+                :spec      :lipas.ice-stadium.rink/area-m2
+                :on-change #(on-change 2 :area-m2 %)}]}
 
              
              ]))

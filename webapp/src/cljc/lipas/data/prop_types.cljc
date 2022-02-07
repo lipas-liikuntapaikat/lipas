@@ -1034,7 +1034,7 @@
     {:fi "Hyppyrien lukumäärä", :se "Antalet hoppbackar", :en ""}},
    :table-tennis-count
    {:name
-    {:fi "Pöytätennispöytien lkm",
+    {:fi "Pöytätennispöydät lkm",
      :se "Antalet bord för bordtennis",
      :en "Table tennis table count"},
     :data-type "numeric",
