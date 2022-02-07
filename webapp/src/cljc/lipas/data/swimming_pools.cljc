@@ -2,37 +2,37 @@
 
 (def pool-types
   {"main-pool"         {:fi "Pääallas"
-                        :se nil
+                        :se "Huvudbassäng"
                         :en "Main pool"}
    "diving-pool"       {:fi "Hyppyallas"
-                        :se nil
+                        :se "Hoppbassäng"
                         :en "Diving pool"}
    "multipurpose-pool" {:fi "Monitoimiallas"
-                        :se nil
+                        :se "Multifunktionell bassäng"
                         :en "Multi-purpose pool"}
    "teaching-pool"     {:fi "Opetusallas"
-                        :se nil
+                        :se "Undervisningsbassäng"
                         :en "Teaching pool"}
    "paddling-pool"     {:fi "Kahluuallas"
-                        :se nil
+                        :se "Plaskbassäng"
                         :en "Paddling pool"}
    "childrens-pool"    {:fi "Lastenallas"
-                        :se nil
-                        :en "Childrens pool"}
+                        :se "Barnbassäng"
+                        :en "Children's pool"}
    "cold-pool"         {:fi "Kylmäallas"
-                        :se nil
+                        :se "Kallvattensbassäng"
                         :en "Cold pool"}
    "whirlpool-bath"    {:fi "Poreallas"
-                        :se nil
+                        :se "Bubbelbad"
                         :en "Whirlpool bath"}
    "therapy-pool"      {:fi "Terapia-allas"
-                        :se nil
+                        :se "Rehabiliteringsbassäng"
                         :en "Therapy pool"}
    "other-pool"        {:fi "Muu allas"
-                        :se nil
+                        :se "Annan bassäng"
                         :en "Other pool"}
    "fitness-pool"      {:fi "Kuntouintiallas"
-                        :se nil
+                        :se "Motionsbassäng"
                         :en "Fitness pool"}})
 
 (def filtering-methods
