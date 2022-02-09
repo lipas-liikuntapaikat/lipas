@@ -431,7 +431,7 @@
     :sub-category  1300,
     :geometry-type "Point",
     :props
-    {#_#_:heating?                           {:priority 0},
+    {:heating?                           {:priority 0},
      :surface-material                   {:priority 1},
      :surface-material-info              {:priority 0},
      :kiosk?                             {:priority 0},
