@@ -68,7 +68,7 @@
    "www"
    {:fi "WWW" :en "WWW" :se "WWW"}
    "comment"
-   {:fi "Kommentti" :en "Comment" :se "Ytterligare information"}
+   {:fi "Lisätieto" :en "Additional information" :se "Ytterligare information"}
    "type.type-code"
    {:fi "Tyyppikoodi" :en "Type code" :se "Typkod"}
    "type.type-name"
