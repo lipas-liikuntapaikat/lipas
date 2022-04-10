@@ -48,7 +48,7 @@
        (handler e request))}
     )))
 
-(defn create-app [{:keys [db emailer search]}]
+(defn create-app [{:keys [db emailer search mailchimp]}]
   (ring/ring-handler
    (ring/router
 
@@ -453,6 +453,26 @@
              (fn [out]
                (core/create-analysis-report body-params out)))})}}]
 
+      ;; Get newsletter
+      ["/actions/get-newsletter"
+       {:post
+        {:handler
+         (fn [_]
+           {:status 200
+            :body (core/get-newsletter mailchimp)})}}]
+
+      ;; Subscribe newsletter
+      ["/actions/subscribe-newsletter"
+       {:post
+        {:parameters
+         {:body
+          {:email :lipas/email}}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body (core/subscribe-newsletter mailchimp body-params)})}}]
+
+      ;; Calculate diversity indices
       ["/actions/calc-diversity-indices"
        {:post
         {:no-doc false
@@ -465,7 +485,6 @@
                 :body (core/calc-diversity-indices search body)}
                {:status 400
                 :body {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]]]
-
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance
