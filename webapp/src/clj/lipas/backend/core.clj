@@ -11,6 +11,7 @@
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
    [lipas.backend.jwt :as jwt]
+   [lipas.backend.newsletter :as newsletter]
    [lipas.backend.search :as search]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
@@ -506,6 +507,12 @@
         (catch Exception ex
           (log/error ex)
           (db/update-analysis-status! db lipas-id "failed"))))))
+
+(defn get-newsletter [config]
+  (newsletter/retrieve config))
+
+(defn subscribe-newsletter [config user]
+  (newsletter/subscribe config user))
 
 (comment
   (require '[lipas.backend.config :as config])

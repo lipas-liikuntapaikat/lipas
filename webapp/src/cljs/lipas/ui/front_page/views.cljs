@@ -1,6 +1,9 @@
 (ns lipas.ui.front-page.views
   (:require
+   [clojure.spec.alpha :as s]
    [lipas.ui.components :as lui]
+   [lipas.ui.front-page.events :as events]
+   [lipas.ui.front-page.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.svg :as svg]
    [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
@@ -154,8 +157,76 @@
           :data-hide-cover            "true"
           :data-show-facepile         "true"}]]])}))
 
+(defn newsletter-signup []
+  (r/with-let [open? (r/atom false)
+               email (r/atom nil)]
+    (let [tr   (<== [:lipas.ui.subs/translator])
+          user (<== [:lipas.ui.user.subs/user-data])
+          _    (when user (reset! email (:email user)))]
+      [:<>
+       
+       ;; Signup modal
+       [mui/dialog
+        {:open       @open?
+         :full-width true
+         :on-close   #(reset! open? false)
+         :max-width  "sm"}
+        [mui/dialog-title
+         (tr :newsletter/subscribe)]
+        [mui/dialog-content
+         [lui/text-field
+          {:value      @email
+           :full-width true
+           :label      (tr :lipas.user/email)
+           :spec       :lipas/email
+           :on-change  #(reset! email %)}]]
+        [mui/dialog-actions
+         [mui/button {:on-click #(reset! open? false)}
+          (tr :actions/cancel)]
+         [mui/button
+          {:color    "secondary"
+           :disabled (not (s/valid? :lipas/email @email))
+           :on-click
+           (fn []
+             (==> [::events/subscribe-newsletter {:email @email}])
+             (reset! open? false))}
+          (tr :newsletter/subscribe-short)]]]
+
+       ;; Signup btn
+       [mui/button
+        {:style    {:margin-top "1em"}         
+         :color    "secondary"
+         :on-click #(reset! open? true)}
+        [mui/icon {:style {:margin-right "0.25em"}} "arrow_forward_ios"]
+        (tr :newsletter/subscribe)]])))
+
+(defn newsletter []
+  (let [newsletter-data         (<== [::subs/newsletter-data])
+        newsletter-error        (<== [::subs/newsletter-error])
+        newsletter-in-progress? (<== [::subs/newsletter-in-progress?])]
+    [mui/grid {:container true :spacing 8}
+     [mui/grid {:item true :xs 12}
+      (when newsletter-in-progress?
+        [mui/circular-progress])
+
+      (when (and (not newsletter-in-progress?) newsletter-error)
+        [mui/typography "Unable to retrieve newsletter."])
+      
+      (when (and (not newsletter-in-progress?) newsletter-data)
+        (into
+         [mui/list]
+         (for [m newsletter-data]
+           [mui/list-item {:button true :component "a" :href (:url m) :target "_blank"}
+            [mui/list-item-icon
+             [mui/icon "mail_outline"]]
+            [mui/list-item-text
+             {:primary (str (:send-time m) " | " (:title m))
+              :secondary (:preview-text m)}]])))
+      
+      [newsletter-signup]]]))
+
 (defn create-panel [tr]
-  (r/with-let [snack-open? (r/atom true)]
+  (r/with-let [snack-open? (r/atom true)]    
     [mui/grid {:container true}
 
      ;; Ephmeral snackbar
@@ -316,6 +387,10 @@
       ;; [grid-card {:md 6 :lg 4}
       ;;  [fb-plugin]]
 
+      ;; Newsletter
+      [grid-card {:xs 12 :md 12 :lg 8 :xl 8 :title "Uutiskirjeet"}
+       [newsletter]]
+      
       ;; Known LIPAS users
       [grid-card {:xs 12 :md 12 :lg 12 :xl 6 :title (tr :data-users/headline)}
        (into
@@ -336,9 +411,9 @@
              :subject (tr :data-users/email-subject)
              :body    (tr :data-users/email-body)})}
           (tr :data-users/tell-us)]]]]]
-
+     
      ;;Partner logos
-     [footer {:title (tr :partners/headline) :bg-color mui/gray2}
+     [footer {:title (tr :partners/headline) :bg-color mui/gray2}        
       (into
        [mui/grid {:container true :align-items "center"}]
        (map ->logo logos))]]))

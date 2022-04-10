@@ -21,6 +21,9 @@
 (defmethod ig/init-key :search [_ config]
   (search/create-cli config))
 
+(defmethod ig/init-key :mailchimp [_ config]
+  config)
+
 (defmethod ig/init-key :app [_ config]
   (handler/create-app config))
 
@@ -45,7 +48,8 @@
      (pprint (-> config
                  (update-in [:db :password] mask)
                  (update-in [:emailer :pass] mask)
-                 (update-in [:search :pass] mask)))
+                 (update-in [:search :pass] mask)
+                 (update-in [:mailchimp :api-key] mask)))
      system)))
 
 (defn stop-system! [system]

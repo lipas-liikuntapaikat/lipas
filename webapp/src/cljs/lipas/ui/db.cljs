@@ -7,6 +7,7 @@
    [lipas.ui.admin.db :as admin]
    [lipas.ui.analysis.db :as analysis]   
    [lipas.ui.energy.db :as energy]
+   [lipas.ui.front-page.db :as front-page]
    [lipas.ui.ice-stadiums.db :as ice-stadiums]
    [lipas.ui.map.db :as map]
    [lipas.ui.reminders.db :as reminders]
@@ -41,6 +42,9 @@
    ;; Energy
    :energy energy/default-db
 
+   ;; Front page
+   :front-page front-page/default-db
+   
    ;; Ice stadiums
    :ice-stadiums ice-stadiums/default-db
 

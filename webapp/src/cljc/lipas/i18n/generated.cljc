@@ -4,7 +4,12 @@
 
 (def dicts
   {:fi
-   {:analysis
+   {:newsletter
+    {:subscribe-short "Tilaa"
+     :subscribe "Tilaa uutiskirje"
+     :subscription-failed "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."
+     :subscription-success "Uutiskirje tilattu!"}
+    :analysis
     {:headline                   "Analyysityökalu (beta)"
      :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
      :results "Tulokset"
