@@ -10,6 +10,7 @@
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
    [lipas.backend.jwt :as jwt]
+   [lipas.backend.newsletter :as newsletter]
    [lipas.backend.search :as search]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
@@ -464,6 +465,12 @@
        (analysis/create-report)
        (apply excel/create-workbook)
        (excel/save-workbook-into-stream! out)))
+
+(defn get-newsletter [config]
+  (newsletter/retrieve config))
+
+(defn subscribe-newsletter [config user]
+  (newsletter/subscribe config user))
 
 (comment
   (require '[lipas.backend.config :as config])

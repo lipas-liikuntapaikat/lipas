@@ -20,10 +20,17 @@
    {:hosts [(:search-host env)] ; Notice vector!
     :user  (:search-user env)
     :pass  (:search-pass env)}
+   :mailchimp
+   {:api-key                (:mailchimp-api-key env)
+    :api-url                (:mailchimp-api-url env)
+    :list-id                (:mailchimp-list-id env)
+    :newsletter-interest-id (:mailchimp-newsletter-interest-id env)
+    :campaign-folder-id     (:mailchimp-campaign-folder-id env)}
    :app
-   {:db      (ig/ref :db)
-    :emailer (ig/ref :emailer)
-    :search  (ig/ref :search)
+   {:db        (ig/ref :db)
+    :emailer   (ig/ref :emailer)
+    :search    (ig/ref :search)
+    :mailchimp (ig/ref :mailchimp)
     :accessibility-register
     {:base-url   (:accessibility-register-base-url env)
      :system-id  (:accessibility-register-system-id env)

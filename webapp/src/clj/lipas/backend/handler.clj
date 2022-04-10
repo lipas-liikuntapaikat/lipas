@@ -48,7 +48,7 @@
        (handler e request))}
     )))
 
-(defn create-app [{:keys [db emailer search]}]
+(defn create-app [{:keys [db emailer search mailchimp]}]
   (ring/ring-handler
    (ring/router
 
@@ -452,7 +452,27 @@
             (ring-io/piped-input-stream
              (fn [out]
                (core/create-analysis-report body-params out)))})}}]
-      ]]
+
+      ;; Newsletter
+
+      ;; Get newsletter
+      ["/actions/get-newsletter"
+       {:post
+        {:handler
+         (fn [_]           
+           {:status 200
+            :body (core/get-newsletter mailchimp)})}}]
+
+      ;; Subscribe
+      ["/actions/subscribe-newsletter"
+       {:post
+        {:parameters
+         {:body
+          {:email :lipas/email}}
+         :handler
+         (fn [{:keys [body-params]}]           
+           {:status 200
+            :body (core/subscribe-newsletter mailchimp body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

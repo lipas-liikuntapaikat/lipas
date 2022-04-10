@@ -4,7 +4,12 @@
 
 (def dicts
   {:fi
-   {:analysis
+   {:newsletter
+    {:subscribe-short "Tilaa"
+     :subscribe "Tilaa uutiskirje"
+     :subscription-failed "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."
+     :subscription-success "Uutiskirje tilattu!"}
+    :analysis
     {:headline                   "Analyysityökalu (beta)"
      :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
      :description2               "Väestöaineistona käytetään Tilastokeskuksen 250x250m ja 1x1km ruutuaineistoja, joista selviää kussakin ruudussa olevan väestön jakauma kolmessa ikäryhmässä (0-14, 15-65, 65-)."
