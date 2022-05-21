@@ -57,36 +57,38 @@
 
 (defn ->old-lipas-sports-site*
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
-  [m]
-  (let [type-code (-> m :type :type-code)]
-    (-> m
+  ([m]
+   (->old-lipas-sports-site* m (-> m :type :type-code types/all :props keys)))
+  ([m prop-keys]  
+   (let [type-code (-> m :type :type-code)]
+     (-> m
 
-        (select-keys [:name :email :www :phone-number :renovation-years
-                      :construction-year :location :properties])
+         (select-keys [:name :email :www :phone-number :renovation-years
+                       :construction-year :location :properties])
 
-        (assoc :last-modified (-> m :event-date UTC->last-modified)
-               :nameSe (-> m :name-localized :se)
-               :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
-               :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
-               :school-use (-> m :properties :school-use?)
-               :free-use (-> m :properties :free-use?)
-               :type (select-keys (:type m) [:type-code]))
+         (assoc :last-modified (-> m :event-date UTC->last-modified)
+                :nameSe (-> m :name-localized :se)
+                :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
+                :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
+                :school-use (-> m :properties :school-use?)
+                :free-use (-> m :properties :free-use?)
+                :type (select-keys (:type m) [:type-code]))
 
-        (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
+         (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
 
-        (update-in [:location :city] dissoc :neighborhood)
+         (update-in [:location :city] dissoc :neighborhood)
 
-        (update :properties #(-> %
-                                 (dissoc :school-use? :free-use?)
-                                 (update :surface-material
-                                         (comp old/surface-materials first))
-                                 (select-keys (-> type-code types/all :props keys))
-                                 (assoc :info-fi (-> m :comment))
-                                 (set/rename-keys old/prop-mappings-reverse)))
-        old/adapt-geoms
-        utils/clean
-        utils/->camel-case-keywords
-        fix-special-case)))
+         (update :properties #(-> %
+                                  (dissoc :school-use? :free-use?)
+                                  (update :surface-material
+                                          (comp old/surface-materials first))
+                                  (select-keys prop-keys)
+                                  (assoc :info-fi (-> m :comment))
+                                  (set/rename-keys old/prop-mappings-reverse)))
+         old/adapt-geoms
+         utils/clean
+         utils/->camel-case-keywords
+         fix-special-case))))
 
 (defmulti ->old-lipas-sports-site
   "Transforms New LIPAS sports-site to old Lipas sports-site. Details
@@ -100,27 +102,31 @@
 
 (defmethod ->old-lipas-sports-site 2510
   [m]
-  (-> m
-      old/add-ice-stadium-props
-      ->old-lipas-sports-site*))
+  (let [m1 (-> m
+               (update :properties select-keys (-> 2510 types/all :props keys))
+               old/add-ice-stadium-props)]
+    (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defmethod ->old-lipas-sports-site 2520
   [m]
-  (-> m
-      old/add-ice-stadium-props
-      ->old-lipas-sports-site*))
+  (let [m1 (-> m
+               (update :properties select-keys (-> 2520 types/all :props keys))
+               old/add-ice-stadium-props)]
+    (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defmethod ->old-lipas-sports-site 3110
-  [m]
-  (-> m
-      old/add-swimming-pool-props
-      ->old-lipas-sports-site*))
+  [m]  
+  (let [m1 (-> m
+               (update :properties select-keys (-> 3110 types/all :props keys))
+               old/add-swimming-pool-props)]
+    (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defmethod ->old-lipas-sports-site 3130
   [m]
-  (-> m
-      old/add-swimming-pool-props
-      ->old-lipas-sports-site*))
+  (let [m1 (-> m
+               (update :properties select-keys (-> 3130 types/all :props keys))
+               old/add-swimming-pool-props)]
+    (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defn ->sports-site
   "Transforms old lipas sports-site m to new LIPAS sports-site."
@@ -188,9 +194,106 @@
       utils/clean))
 
 (comment
+  
   (map last-modified->UTC ["2019-01-03 00:00:00.000"
                            "2019-01-03 00:00:00.00"
                            "2019-01-03 00:00:00"])
   (map UTC->last-modified ["2019-01-03T00:00:00.000Z"
                            "2019-01-03T00:00:00.00Z"
-                           "2019-01-03T00:00:00Z"]))
+                           "2019-01-03T00:00:00Z"])
+
+  (def m1
+    {:properties {},
+     :water-treatment {:comment "Rikkihappo, Kempac",
+                       :ozonation? true,
+                       :activated-carbon? true,
+                       :filtering-methods ["open-sand"]},
+     :email "uimahalli@kirkkonummi.fi",
+     :phone-number "040-126 9412",
+     :building {:total-volume-m3 20100,
+                :staff-count 11,
+                :ventilation-units-count 5,
+                :main-construction-materials ["concrete" "wood"],
+                :main-designers "ProArk Oy",
+                :total-pool-room-area-m2 800,
+                :heat-source "district-heating",
+                :total-surface-area-m2 4120,
+                :total-water-area-m2 560,
+                :ceiling-structures ["wood"],
+                :supporting-structures ["concrete" "wood"]},
+     :admin "city-sports",
+     :www "http://www.kirkkonummi.fi/liikuntajaulkoilu/uimahalli",
+     :name "Kirkkonummen uimahalli",
+     :slides [{:length-m 42}],
+     :construction-year 2001,
+     :type {:type-code 3110},
+     :lipas-id 505849,
+     :pools [{:type "main-pool",
+              :area-m2 340,
+              :width-m 12,
+              :length-m 25,
+              :volume-m3 800,
+              :depth-max-m 4,
+              :depth-min-m 1.2,
+              :temperature-c 27}
+             {:type "teaching-pool",
+              :area-m2 135,
+              :width-m 10,
+              :length-m 12,
+              :volume-m3 80,
+              :depth-max-m 1,
+              :depth-min-m 0.3,
+              :temperature-c 27}
+             {:type "therapy-pool",
+              :area-m2 77,
+              :width-m 8.3,
+              :length-m 9,
+              :volume-m3 100,
+              :depth-max-m 1.35,
+              :depth-min-m 1,
+              :temperature-c 31}
+             {:type "childrens-pool",
+              :area-m2 6.2,
+              :width-m 2,
+              :length-m 3,
+              :volume-m3 1,
+              :depth-max-m 0.5,
+              :depth-min-m 0.25,
+              :temperature-c 30}],
+     :conditions {:daily-open-hours 12, :open-days-in-year 320},
+     :saunas [{:type "sauna"}
+              {:type "sauna"}
+              {:type "sauna"}
+              {:type "sauna"}
+              {:type "sauna"}
+              {:type "sauna"}
+              {:type "sauna"}],
+     :status "active",
+     :comment "Vedenkulutuslukemat vaillinaisia v. 2016 osalta (mittari ei ole toiminut oikein).",
+     :event-date "2020-01-22T17:55:03.570Z",
+     :name-localized {:se "Kyrkslätt símhall"},
+     :energy-saving {:shower-water-recovery true},
+     :facilities {:showers-men-count 13,
+                  :lockers-men-count 98,
+                  :platforms-5m-count 0,
+                  :kiosk? true,
+                  :platforms-10m-count 0,
+                  :hydro-massage-spots-count 6,
+                  :lockers-women-count 95,
+                  :platforms-7.5m-count 0,
+                  :platforms-1m-count 1,
+                  :showers-women-count 14,
+                  :platforms-3m-count 1},
+     :location {:city {:city-code 257},
+                :address "Gesterbyntie 41",
+                :geometries {:type "FeatureCollection",
+                             :features [{:type "Feature",
+                                         :geometry {:type "Point",
+                                                    :coordinates [24.4466521313197
+                                                                  60.1281667315472]}}]},
+                :postal-code "02400",
+                :postal-office "Kirkkonummi"},
+     :owner "city",
+     :hall-id "UU056000"})
+
+  (->old-lipas-sports-site m1))
