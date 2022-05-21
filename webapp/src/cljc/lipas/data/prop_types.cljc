@@ -672,8 +672,8 @@
     {:fi "Pukukopit", :se "Omklädningsrum", :en "Changing rooms"},
     :data-type "boolean",
     :description
-    {:fi "Onko uimapaikalla pukukoppeja",
-     :se "Finns det omklädningsrum vid badplatsen",
+    {:fi "Onko pukukoppeja",
+     :se "Finns det omklädningsrum",
      :en ""}},
    :pistol-shooting?
    {:name
