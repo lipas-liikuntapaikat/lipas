@@ -1,6 +1,7 @@
 (ns lipas.backend.gis
   (:require
    [cheshire.core :as json]
+   [clojure.string :as str]
    [geo.io :as gio]
    [geo.jts :as jts]
    [geo.spatial :as geo])
@@ -85,6 +86,11 @@
 (defn shortest-distance [g1 g2]
   (DistanceOp/distance g1 g2))
 
+(def ->point geo/point)
+
+(defn distance-point [p1 p2]
+  (geo/distance p1 p2))
+
 (defn nearest-points [g1 g2]
   (DistanceOp/nearestPoints g1 g2))
 
@@ -148,6 +154,14 @@
       .getCoordinates
       (->> (map #(vector (.getX %) (.getY %))))))
 
+(defn ->coord-pair-strs [fcoll]
+  (if (point? fcoll)
+    [(-> fcoll :features first :geometry :coordinates
+         (->> (str/join ",")))]
+    (-> fcoll
+        ->single-linestring-coords
+        (->> (map #(str/join "," %))))))
+
 (defn dedupe-polygon-coords
   [fcoll]
   (update fcoll :features
@@ -171,6 +185,18 @@
         :coordinates [25.720539797408946,
                       62.62057217751676]}}]})
 
+  (def test-point2
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature",
+       :geometry
+       {:type        "Point",
+        :coordinates [26.720539797408946,
+                      61.62057217751676]}}]})
+
+  (distance-point (-> test-point :features first :geometry)
+                  (-> test-point2 :features first :geometry))
+  
   (def buff(calc-buffer test-point 10))
 
   (json/encode

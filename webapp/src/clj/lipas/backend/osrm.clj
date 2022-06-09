@@ -33,15 +33,19 @@
         (->> (map #(str/join "," %))))))
 
 (defn make-url
-  [{:keys [sources destinations profile]}]
+  [{:keys [sources destinations profile annotations]
+    :or   {annotations "distance,duration"}}]
   (let [base-url (-> profiles profile :url)]
     (str base-url
          (->> (into [] cat [sources destinations])
               (str/join ";"))
          "?"
          (url/map->query
-          {:annotations    "distance,duration"
+          {:annotations    annotations
+           :skip_waypoints true
            :generate_hints false
+           #_#_:radiuses       (str/join ";" (repeat
+                                          (+ (count sources) (count destinations)) "800"))
            :sources        (str/join ";" (range 0 (count sources)))
            :destinations   (str/join ";" (range (count sources)
                                                 (+ (count sources)
@@ -49,7 +53,7 @@
 
 (defn get-data
   [m]
-  (-> m make-url client/get :body (json/decode keyword)))
+  (-> m make-url (doto prn) client/get :body (json/decode keyword)))
 
 (defn get-distances-and-travel-times
   [{:keys [profiles]

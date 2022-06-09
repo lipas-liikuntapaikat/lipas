@@ -1,5 +1,5 @@
 (ns lipas.backend.handler
-  (:require
+  (:require   
    [clojure.java.io :as io]
    [clojure.spec.alpha :as s]
    [lipas.backend.core :as core]
@@ -452,7 +452,19 @@
             (ring-io/piped-input-stream
              (fn [out]
                (core/create-analysis-report body-params out)))})}}]
-      ]]
+
+      ["/actions/calc-diversity-indices"
+       {:post
+        {:no-doc false
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [body (:body parameters)]             
+             (if (s/valid? :lipas.api.diversity-indices/req body)
+               {:status  200
+                :body (core/calc-diversity-indices search body)}
+               {:status 400
+                :body {:error (s/explain :lipas.api.diversity-indices/req body)}})))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
