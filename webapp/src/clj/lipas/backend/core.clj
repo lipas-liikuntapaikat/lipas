@@ -465,6 +465,9 @@
        (apply excel/create-workbook)
        (excel/save-workbook-into-stream! out)))
 
+(defn calc-diversity-indices [search params]
+  (analysis/calc-diversity-indices search params))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))

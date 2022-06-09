@@ -1242,3 +1242,33 @@
         :prod3 #(string/starts-with? % "https://liikuntapaikat.lipas.fi")
         :prod4 #(string/starts-with? % "https://www.lipas.fi")
         :prod5 #(string/starts-with? % "https://lipas.fi")))
+
+(s/def :lipas.api.diversity-indices/analysis-area-fcoll ::geojson/feature-collection)
+(s/def :lipas.api.diversity-indices.categories/factor ::real)
+(s/def :lipas.api.diversity-indices.categories/name (str-in 2 100))
+(s/def :lipas.api.diversity-indices.categories/type-codes
+  (s/coll-of :lipas.sports-site.type/type-code
+             :min-count 1
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.diversity-indices/category
+  (s/keys :req-un [:lipas.api.diversity-indices.categories/factor
+                   :lipas.api.diversity-indices.categories/type-codes]))
+
+(s/def :lipas.api.diversity-indices/categories
+  (s/coll-of :lipas.api.diversity-indices/category
+             :min-count 1
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.diversity-indices/analysis-radius-km ::real)
+(s/def :lipas.api.diversity-indices/max-distance-m ::real)
+(s/def :lipas.api.diversity-indices/distance-mode #{"euclid" "route"})
+
+(s/def :lipas.api.diversity-indices/req
+  (s/keys :req-un [:lipas.api.diversity-indices/categories
+                   :lipas.api.diversity-indices/analysis-area-fcoll]
+          :opt-un [:lipas.api.diversity-indices/analysis-radius-km
+                   :lipas.api.diversity-indices/max-distance-m
+                   :lipas.api.diversity-indices/distance-mode]))
