@@ -620,23 +620,24 @@
 
 (defn- ->diversity-geojson [pop-data]
   {:type     "FeatureCollection"
-   :features (map
-              (fn [pop-entry]
-                {:type "Feature"
-                 :geometry
-                 {:type        "Point"
-                  :coordinates (-> pop-entry :_source :coords gis/wkt-point->coords)}
-                 :properties
-                 (merge
-                  {:id            (-> pop-entry :_source :id_nro)
-                   :grid_id       (-> pop-entry :_source :grd_id)
-                   :diversity_idx (:diversity-index pop-entry)
-                   #_#_:age_0_14      (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
-                   #_#_:age_15_64     (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
-                   #_#_:age_65_       (-> pop-entry :_source :ika_65_ utils/->int anonymize)
-                   #_#_:population    (-> pop-entry :_source :vaesto)}
-                  (:categories pop-entry))})
-              pop-data)})
+   :features
+   (map
+    (fn [pop-entry]
+      {:type "Feature"
+       :geometry
+       {:type        "Point"
+        :coordinates (-> pop-entry :_source :coords gis/wkt-point->coords)}
+       :properties
+       (merge
+        {:id            (-> pop-entry :_source :id_nro)
+         :grid_id       (-> pop-entry :_source :grd_id)
+         :diversity_idx (:diversity-index pop-entry)
+         #_#_:age_0_14      (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
+         #_#_:age_15_64     (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
+         #_#_:age_65_       (-> pop-entry :_source :ika_65_ utils/->int anonymize)
+         #_#_:population    (-> pop-entry :_source :vaesto)}
+        (:categories pop-entry))})
+    pop-data)})
 
 (defn prepare-categories [categories]
   (map #(update % :type-codes set) categories))
@@ -652,7 +653,8 @@
         pop-data  (future (get-population-data search analysis-area-fcoll analysis-radius-km))
         site-data (future (get-sports-site-data search
                                                 analysis-area-fcoll
-                                                analysis-radius-km
+                                                (double (+ analysis-radius-km
+                                                           (/ max-distance-m 1000)))
                                                 (into #{}
                                                       (mapcat :type-codes)
                                                       categories)))
@@ -873,6 +875,9 @@
   ;; liikuntapaikat radius + max-distance
 
   ;; Postinumeroalueet...?
+
+  (double (+ (:analysis-radius-km params)
+             (/ (:max-distance-m params) 1000)))
   
   (require '[lipas.backend.search])
   (require '[lipas.backend.config :as config])
@@ -882,6 +887,8 @@
    (calc-diversity-indices search params)
    :features
    (map (comp :diversity_idx :properties)))
+
+
   
   )
 
