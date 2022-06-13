@@ -382,7 +382,7 @@ services:
   osrm-car:
     image: osrm/osrm-backend
     restart: unless-stopped
-    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
       - "./osrm/car:/data:z"
     ports:
@@ -391,7 +391,7 @@ services:
   osrm-bicycle:
     image: osrm/osrm-backend
     restart: unless-stopped
-    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
       - "./osrm/bicycle:/data:z"
     ports:
@@ -400,7 +400,7 @@ services:
   osrm-foot:
     image: osrm/osrm-backend
     restart: unless-stopped
-    command: osrm-routed --max-table-size 1000 --algorithm mld /data/finland-latest.osrm
+    command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
       - "./osrm/foot:/data:z"
     ports:
