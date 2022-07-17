@@ -29,7 +29,7 @@
 
 ;;; Regexes ;;;
 
-(def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
+(def email-regex #"^[a-zA-Z0-9åÅäÄöÖ._%+-]+@[a-zA-Z0-9åÅäÄöÖ.-]+\.[a-zA-Z]{2,63}$")
 (def postal-code-regex #"[0-9]{5}")
 
 ;; https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime
