@@ -5,7 +5,7 @@
    [lipas.i18n.core :as i18n]
    [lipas.schema.core :as specs]
    [lipas.ui.admin.db :as admin]
-   [lipas.ui.analysis.db :as analysis]
+   [lipas.ui.analysis.db :as analysis]   
    [lipas.ui.energy.db :as energy]
    [lipas.ui.ice-stadiums.db :as ice-stadiums]
    [lipas.ui.map.db :as map]

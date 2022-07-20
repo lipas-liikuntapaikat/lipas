@@ -2,7 +2,7 @@
   (:require
    ["ol" :as ol]
    [goog.object :as gobj]
-   [lipas.ui.analysis.events :as analysis-events]
+   [lipas.ui.analysis.reachability.events :as analysis-events]
    [lipas.ui.map.editing :as editing]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.projection :as proj]
