@@ -142,7 +142,7 @@
  ::mode
  :<- [::content-padding]
  :<- [::mode*]
- :<- [:lipas.ui.analysis.subs/analysis]
+ :<- [:lipas.ui.analysis.reachability.subs/reachability]
  (fn [[content-padding mode analysis] _]
    (let [analysis? (= (:sub-mode mode) :analysis)]
      (cond-> mode

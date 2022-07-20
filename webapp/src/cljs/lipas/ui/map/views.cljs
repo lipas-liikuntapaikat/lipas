@@ -3,8 +3,9 @@
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
-   [lipas.ui.analysis.events :as analysis-events]
    [lipas.ui.analysis.views :as analysis]
+   [lipas.ui.analysis.reachability.events :as reachability-events]
+   [lipas.ui.analysis.reachability.views :as reachability]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
@@ -275,8 +276,8 @@
 
 (defmethod popup-body :population [popup]
   (let [tr          (<== [:lipas.ui.subs/translator])
-        zone-labels (<== [:lipas.ui.analysis.subs/zones-popup-labels])
-        metric      (<== [:lipas.ui.analysis.subs/selected-travel-metric])
+        zone-labels (<== [:lipas.ui.analysis.reachability.subs/zones-popup-labels])
+        metric      (<== [:lipas.ui.analysis.reachability.subs/selected-travel-metric])
         data        (-> popup :data :features first :properties)
         zone-id     (keyword (:zone data))]
     [mui/paper
@@ -1130,7 +1131,7 @@
      ;; Search, filters etc.
      (case view
        :adding   [add-sports-site-view {:tr tr}]
-       :analysis [analysis/analysis-view]
+       :analysis #_[reachability/analysis-view] [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :search   [search/search-view
                   {:tr tr

@@ -323,7 +323,7 @@
  (fn [{:keys [db]} [_ _ lipas-id]]
    (let [sub-mode (-> db :map :mode :sub-mode)]
      (if (= sub-mode :analysis)
-       {:dispatch [:lipas.ui.analysis.events/show-analysis lipas-id]}
+       {:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]}
        {:dispatch [::show-sports-site lipas-id]}))))
 
 ;;; Higher order events ;;;
@@ -774,7 +774,7 @@
    {:dispatch-n
     [(when-not lipas-id
        [::show-analysis*])
-     [:lipas.ui.analysis.events/show-analysis lipas-id]]}))
+     [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]]}))
 
 (re-frame/reg-event-fx
  ::hide-analysis
@@ -782,7 +782,7 @@
    {:db (-> db
             (assoc-in [:map :mode :name] :default)
             (update-in [:map :mode] dissoc :sub-mode))
-    :dispatch-n [[:lipas.ui.analysis.events/clear]
+    :dispatch-n [[:lipas.ui.analysis.reachability.events/clear]
                  [::set-overlays [[:vectors true]
                                   [:schools false]
                                   [:population false]
