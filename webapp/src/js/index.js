@@ -17,6 +17,7 @@ import Modify from 'ol/interaction/Modify';
 import MultiPoint from 'ol/geom/MultiPoint';
 import Overlay from 'ol/Overlay';
 import Point from 'ol/geom/Point';
+import Polygon from 'ol/geom/Polygon';
 import RegularShape from 'ol/style/RegularShape';
 import Select from 'ol/interaction/Select';
 import Snap from 'ol/interaction/Snap';
@@ -33,6 +34,7 @@ import ImageWMS from 'ol/source/ImageWMS';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import { get, fromLonLat, toLonLat } from 'ol/proj';
 import {
+  boundingExtent,
   getTopLeft,
   getWidth,
   getHeight,
@@ -73,6 +75,7 @@ window.ol = {
     Style,
   },
   extent: {
+    boundingExtent,
     buffer,
     extend,
     getHeight,
@@ -111,6 +114,7 @@ window.ol = {
     GeometryCollection,
     MultiPoint,
     Point,
+    Polygon,
     Circle,
   },
 };

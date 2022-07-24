@@ -52,13 +52,14 @@
                                                    (count destinations))))}))))
 
 (defn get-data
-  [m]
-  (-> m make-url (doto prn) client/get :body (json/decode keyword)))
+  [{:keys [sources destinations] :as m}]
+  (when (and (seq sources) (seq destinations))
+    (-> m make-url client/get :body (json/decode keyword))))
 
 (defn get-distances-and-travel-times
   [{:keys [profiles]
     :or   {profiles [:car :bicycle :foot]}
-    :as   m}]
+    :as   m}]  
   (->> profiles
        (mapv (fn [p] (vector p (future (get-data (assoc m :profile p))))))
        (reduce (fn [res [p f]] (assoc res p (deref f))) {})))

@@ -42,8 +42,6 @@
 
 (defn get-population-data
   [search fcoll distance-km]
-  (prn fcoll)
-  (prn distance-km)
   (let [idx (if (> distance-km population-high-def-threshold-km)
               population-index
               population-index-high-def)]
@@ -602,41 +600,51 @@
   (map
    (fn [pop-entry]
      (let [cats (reduce
-                 (fn [m {:keys [type-codes name]}]                   
-                   (assoc m name
+                 (fn [m {:keys [type-codes name factor]
+                         :or   {factor 1}}]                   
+                   (assoc m name                          
                           (->> pop-entry
                                :sports-sites
                                (filter
                                 (fn [site]
                                   (and (type-codes (:type-code site))
                                        (> max-distance-m (:distance-m site)))))
-                               count)))
+                               count
+                               (min 1)
+                               ;; Occurrence in category contributes
+                               ;; to diversity index with 0 or 1 *
+                               ;; factor
+                               (* factor))))
                  {}
                  categories)]
        (-> pop-entry
            (assoc :categories cats)
-           (assoc :diversity-index (->> cats vals (map (partial min 1)) (apply +))))))
+           (assoc :diversity-index (->> cats vals (apply +))))))
    pop-data))
 
 (defn- ->diversity-geojson [pop-data]
-  {:type     "FeatureCollection"
+  {:type "FeatureCollection"
    :features
    (map
     (fn [pop-entry]
-      {:type "Feature"
-       :geometry
-       {:type        "Point"
-        :coordinates (-> pop-entry :_source :coords gis/wkt-point->coords)}
-       :properties
-       (merge
-        {:id            (-> pop-entry :_source :id_nro)
-         :grid_id       (-> pop-entry :_source :grd_id)
-         :diversity_idx (:diversity-index pop-entry)
-         #_#_:age_0_14      (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
-         #_#_:age_15_64     (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
-         #_#_:age_65_       (-> pop-entry :_source :ika_65_ utils/->int anonymize)
-         #_#_:population    (-> pop-entry :_source :vaesto)}
-        (:categories pop-entry))})
+      (let [coords      (-> pop-entry :_source :coords gis/wkt-point->coords)
+            coords-3067 (gis/wgs84->tm35fin-no-wrap coords)]
+        {:type "Feature"
+         :geometry
+         {:type        "Point"
+          :coordinates coords}
+         :properties
+         (merge
+          {:id             (-> pop-entry :_source :id_nro)
+           :grid_id        (-> pop-entry :_source :grd_id)
+           :epsg3067       coords-3067
+           :envelope_wgs84 (gis/epsg3067-point->wgs84-envelope coords-3067 125)
+           :diversity_idx  (:diversity-index pop-entry)
+           #_#_:age_0_14   (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
+           #_#_:age_15_64  (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
+           #_#_:age_65_    (-> pop-entry :_source :ika_65_ utils/->int anonymize)
+           #_#_:population (-> pop-entry :_source :vaesto)}
+          (:categories pop-entry))}))
     pop-data)})
 
 (defn prepare-categories [categories]
@@ -865,6 +873,28 @@
   
   (def point-fcoll {:type "FeatureCollection" :features [point]})  
 
+
+  (def poly1
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature",
+       :properties {},
+       :geometry
+       {:type "Polygon",
+        :coordinates
+        [[[25.742855072021484
+           62.240251303552284]
+          [25.743649005889893
+           62.23839231861945]
+          [25.74845552444458
+           62.239341814488185]
+          [25.74772596359253
+           62.24125071045343]
+          [25.745022296905518
+           62.24139062477656]
+          [25.742855072021484
+           62.240251303552284]]]}}]})
+  
   (def params
     {:analysis-area-fcoll point-fcoll
      :categories          my-categories
@@ -881,14 +911,157 @@
   
   (require '[lipas.backend.search])
   (require '[lipas.backend.config :as config])
-  
-  (time )
+    
   (->>
    (calc-diversity-indices search params)
    :features
    (map (comp :diversity_idx :properties)))
+  
+  (calc-diversity-indices search (assoc params :analysis-area-fcoll poly1))
 
 
+  (def params2
+    {:max-distance-m 800,
+     :analysis-radius-km 5,
+     :distance-mode "route",
+     :analysis-area-fcoll
+     {:type "FeatureCollection",
+      :features [{:type "Feature",
+                  :properties {},
+                  :geometry {:type "Polygon",
+                             :coordinates [[[25.742855072021484
+                                             62.240251303552284]
+                                            [25.743649005889893
+                                             62.23839231861945]
+                                            [25.74845552444458
+                                             62.239341814488185]
+                                            [25.74772596359253
+                                             62.24125071045343]
+                                            [25.745022296905518
+                                             62.24139062477656]
+                                            [25.742855072021484
+                                             62.240251303552284]]]}}]},
+     :categories [{:name "koira",
+                   :factor 1,
+                   :type-codes [1530
+                                1520
+                                2320
+                                6130
+                                1395
+                                6210
+                                1370
+                                1360
+                                2360
+                                5310
+                                1560]}
+                  {:name "kana",
+                   :factor 1,
+                   :type-codes [205
+                                2150
+                                2210
+                                7000
+                                6220
+                                4720
+                                1330
+                                206
+                                4830
+                                1180
+                                204
+                                4610
+                                2610
+                                2110
+                                3120
+                                2330
+                                2280
+                                6140]}
+                  {:name "heppa",
+                   :factor 1,
+                   :type-codes [2140
+                                4220
+                                2230
+                                1350
+                                4840
+                                1510
+                                5350
+                                2520
+                                4710
+                                304
+                                4820
+                                1170
+                                2350
+                                2340
+                                2120
+                                5160
+                                1550
+                                3230
+                                5130
+                                5110
+                                3240
+                                4240
+                                2270
+                                4210]}
+                  {:name "mursu",
+                   :factor 1,
+                   :type-codes [301
+                                4630
+                                4810
+                                1540
+                                5320
+                                3210
+                                4640
+                                1150
+                                2310
+                                5210
+                                2380
+                                201
+                                1220
+                                1140
+                                6110
+                                1120
+                                1390
+                                5340
+                                302
+                                6120
+                                1310
+                                202
+                                1620
+                                2250
+                                2530
+                                2130
+                                3220
+                                5330
+                                4230
+                                4320
+                                3130
+                                3110
+                                203
+                                4620
+                                5360
+                                2290
+                                2260
+                                1160
+                                1210
+                                5140
+                                4310
+                                207
+                                1130
+                                5120
+                                4110
+                                5370
+                                2240
+                                2510
+                                1640
+                                1380
+                                5150
+                                1630
+                                2295
+                                2370
+                                1340
+                                1610
+                                2220
+                                1320]}]})
+
+  (calc-diversity-indices search params2)
   
   )
 

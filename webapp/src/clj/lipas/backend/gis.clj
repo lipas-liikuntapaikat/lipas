@@ -65,6 +65,20 @@
   (let [transformed (jts/transform-geom (jts/point lat lon) srid tm35fin-srid)]
     {:easting (.getX transformed) :northing (.getY transformed)}))
 
+(defn wgs84->tm35fin-no-wrap [[lon lat]]
+  (let [transformed (jts/transform-geom (jts/point lat lon) srid tm35fin-srid)]
+    [(.getX transformed) (.getY transformed)]))
+
+(defn epsg3067-point->envelope [[e n] delta]
+  [[(- e delta) (+ n delta)] [(+ e delta) (- n delta)]])
+
+(defn epsg3067-point->wgs84-envelope [coords delta]
+  (let [envelope (epsg3067-point->envelope coords delta)]
+    (mapv (fn [[lon lat]]
+            (let [transformed (jts/transform-geom (jts/point lat lon) tm35fin-srid srid)]
+              [(.getX transformed) (.getY transformed)]))
+          envelope)))
+
 (defn ->jts-geom [f]
   (-> f (update :features #(map dummy-props %))
       json/encode
@@ -315,4 +329,15 @@
   (shortest-distance test-point test-route)
 
   (->flat-coords test-polygon)
+
+  (def p100 [25.742855072021484
+             62.240251303552284])
+
+  (def p101 (wgs84->tm35fin p100))
+  
+  (def envelope
+    (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))
+
+  
+  
   )

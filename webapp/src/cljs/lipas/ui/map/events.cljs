@@ -1,14 +1,9 @@
 (ns lipas.ui.map.events
   (:require
    ["ol" :as ol]
-   [ajax.core :as ajax]
-   [cemerick.url :as url]
-   [clojure.set :as set]
-   [clojure.string :as string]
-   [goog.object :as gobj]
+   [ajax.core :as ajax]   
    [goog.string :as gstring]
-   [goog.string.format]
-   [goog.string.path :as gpath]
+   [goog.string.format]   
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    proj4
@@ -445,55 +440,6 @@
  (fn [db [_ encoding]]
    (assoc-in db [:map :import :selected-encoding] encoding)))
 
-(defn geom-coll->features [geom-coll]
-  (->> geom-coll
-       :geometries
-       (map-indexed
-        (fn [idx g]
-          {:type     "Feature"
-           :geometry g
-           :properties
-           {:id   (gensym)
-            :name (str "geom-" (inc idx))}}))))
-
-(defn normalize-geom-colls
-  "Handles a special case where geometries are contained in a
-  GeometryCollection. Normalizes geom coll into features with dummy
-  props."
-  [fcoll geom-type]
-  (->> fcoll
-       :features
-       (filter (comp #{"GeometryCollection"} :type :geometry))
-       (map :geometry)
-       (mapcat geom-coll->features)
-       (filter (comp #{geom-type} :type :geometry))
-       (utils/index-by (comp :id :properties))))
-
-(defn multi-geom->single-geoms
-  [multi-geom geom-type]
-  (->> multi-geom
-       :coordinates
-       (map-indexed
-        (fn [idx coords]
-          {:type "Feature"
-           :geometry
-           {:type        geom-type
-            :coordinates coords}
-           :properties
-           {:id   (gensym)
-            :name (str "geom-" (inc idx))}}))))
-
-(defn normalize-multi-geoms
-  "Makes an effort to convert multi-geoms into single geoms."
-  [fcoll geom-type]
-  (->> fcoll
-       :features
-       (filter (comp #{"MultiLineString" "MultiPolygon"} :type :geometry))
-       (map :geometry)
-       (mapcat (fn [g] (multi-geom->single-geoms g geom-type)))
-       (filter (comp #{geom-type} :type :geometry))
-       (utils/index-by (comp :id :properties))))
-
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON geom-type]]
@@ -506,46 +452,11 @@
                        (let [id (gensym)]
                          (assoc res id (assoc-in f [:properties :id] id))))
                      {})
-                    (merge (normalize-geom-colls fcoll geom-type)
-                           (normalize-multi-geoms fcoll geom-type)))]
+                    (merge (map-utils/normalize-geom-colls fcoll geom-type)
+                           (map-utils/normalize-multi-geoms fcoll geom-type)))]
      (-> db
          (assoc-in [:map :import :data] fs)
          (assoc-in [:map :import :batch-id] (gensym))))))
-
-(defn parse-dom [text]
-  (let [parser (js/DOMParser.)]
-    (.parseFromString parser text "text/xml")))
-
-(defn- text->geoJSON [{:keys [file ext enc cb]}]
-  (let [reader (js/FileReader.)
-        cb     (fn [e]
-                 (let [text   (-> e .-target .-result)
-                       parsed (condp = ext
-                                "geojson" (js/JSON.parse text)
-                                "json"    (js/JSON.parse text)
-                                "kml"     (-> text parse-dom js/toGeoJSON.kml)
-                                "gpx"     (-> text parse-dom js/toGeoJSON.gpx))]
-                   (cb parsed)))]
-    (set! (.-onload reader) cb)
-    (.readAsText reader file enc)
-    {}))
-
-(defmulti file->geoJSON :ext)
-
-(defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
-  (-> file .arrayBuffer (.then js/shp) (.then cb)))
-
-(defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
-(defmethod file->geoJSON "kml" [params] (text->geoJSON params))
-(defmethod file->geoJSON "json" [params] (text->geoJSON params))
-(defmethod file->geoJSON "geojson" [params] (text->geoJSON params))
-(defmethod file->geoJSON :default [params] {:unknown (:ext params)})
-
-(defn parse-ext [file]
-  (-> file
-      (gobj/get "name" "")
-      gpath/extension
-      string/lower-case))
 
 (re-frame/reg-event-fx
  ::load-geoms-from-file
@@ -553,10 +464,10 @@
    (let [file   (aget files 0)
          params {:enc  (-> db :map :import :selected-encoding)
                  :file file
-                 :ext  (parse-ext file)
+                 :ext  (map-utils/parse-ext file)
                  :cb   (fn [data] (==> [::set-import-candidates data geom-type]))}]
 
-     (if-let [ext (:unknown (file->geoJSON params))]
+     (if-let [ext (:unknown (map-utils/file->geoJSON params))]
        {:dispatch-n [(let [tr (-> db :translator)]
                        [:lipas.ui.events/set-active-notification
                         {:message  (tr :map.import/unknown-format ext)
@@ -762,10 +673,14 @@
  ::show-analysis*
  (fn [{:keys [db]} _]
    {:db (-> db
-            (assoc-in  [:map :mode :name] :analysis)
-            (assoc-in  [:map :mode :sub-mode] :reachability))
+            (assoc-in [:map :mode :name] :analysis)
+            (assoc-in [:map :mode :sub-mode] :reachability))
     :dispatch-n
-    [[::enable-overlays [:vectors :schools :population :analysis]]
+    [[::set-overlays [[:vectors true]
+                      [:schools true]
+                      [:population true]
+                      [:diversity false]
+                      [:analysis true]]]
      [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))
 
 (re-frame/reg-event-fx
@@ -786,6 +701,7 @@
                  [::set-overlays [[:vectors true]
                                   [:schools false]
                                   [:population false]
+                                  [:diversity false]
                                   [:analysis false]]]
                  [:lipas.ui.search.events/remove-status-filter "planning"]
                  [:lipas.ui.search.events/clear-filters]]}))

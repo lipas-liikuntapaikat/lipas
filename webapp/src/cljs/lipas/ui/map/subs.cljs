@@ -7,7 +7,8 @@
    [lipas.utils :as utils]
    [lipas.ui.utils :as ui-utils]
    [re-frame.core :as re-frame]
-   [reagent.ratom :as ratom]))
+   [reagent.ratom :as ratom]
+   [lipas.ui.analysis.reachability.views :as reachability]))
 
 (re-frame/reg-sub
  ::view
@@ -149,11 +150,13 @@
  :<- [::content-padding]
  :<- [::mode*]
  :<- [:lipas.ui.analysis.reachability.subs/reachability]
- (fn [[content-padding mode analysis] _]
+ :<- [:lipas.ui.analysis.diversity.subs/diversity]
+ (fn [[content-padding mode reachability diversity] _]
    (let [analysis? (= (:name mode) :analysis)]
      (cond-> mode
        true      (assoc :content-padding content-padding)
-       analysis? (assoc :analysis analysis)))))
+       analysis? (assoc :analysis {:reachability reachability
+                                   :diversity    diversity})))))
 
 (re-frame/reg-sub
  ::editing-lipas-id

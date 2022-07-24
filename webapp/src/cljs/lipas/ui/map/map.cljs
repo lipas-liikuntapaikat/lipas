@@ -107,6 +107,12 @@
          :style      styles/school-style
          :name       "schools"
          :renderMode "image"})
+    :diversity
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
+         :style      styles/diversity-style
+         :name       "diversity"
+         :renderMode "image"})
     :light-traffic
     (ol/layer.Image.
      #js{:visible false
@@ -183,6 +189,7 @@
                                 (-> layers :overlays :population)
                                 (-> layers :overlays :schools)
                                 (-> layers :overlays :vectors)
+                                (-> layers :overlays :diversity)
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
@@ -217,6 +224,18 @@
                            :multi     false
                            :condition ol/events.condition.pointerMove})
 
+        diversity-hover (ol/interaction.Select.
+                         #js{:layers    #js[(-> layers :overlays :diversity)]
+                             :style     styles/diversity-hover-style
+                             :multi     false
+                             :condition ol/events.condition.pointerMove})
+
+        analysis-area-hover (ol/interaction.Select.
+                             #js{:layers    #js[(-> layers :overlays :analysis)]
+                                 :style     styles/diversity-hover-style
+                                 :multi     false
+                                 :condition ol/events.condition.pointerMove})
+        
         select (ol/interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
                     :style  styles/feature-style-selected})
@@ -282,6 +301,30 @@
                       :type      :school
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
+    (.on diversity-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :diversity
+                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
+    (.on analysis-area-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :analysis-area
+                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
     ;; It's not possible to have multiple selects with
     ;; same "condition" (at least I couldn't get it
     ;; working). Therefore we have to detect which layer we're
@@ -320,11 +363,13 @@
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
      :interactions*
-     {:select                select
-      :vector-hover          vector-hover
-      :marker-hover          marker-hover
-      :population-hover      population-hover
-      :schools-hover         schools-hover}
+     {:select              select
+      :vector-hover        vector-hover
+      :marker-hover        marker-hover
+      :population-hover    population-hover
+      :schools-hover       schools-hover
+      :diversity-hover     diversity-hover
+      :analysis-area-hover analysis-area-hover}
      :overlays {:popup popup-overlay}}))
 
 (defn show-population!
@@ -375,38 +420,39 @@
 
   map-ctx)
 
+(defn show-diversity!
+  [{:keys [layers] :as map-ctx}
+   {:keys [data results]}]
+  (-> layers :overlays :diversity .getSource .clear)  
+    
+  (when (seq results)
+    (let [source (-> layers :overlays :diversity .getSource)]
+
+      (doseq [fcoll (map :grid (vals results))
+              f     (:features fcoll)]
+        (let [[nw se] (-> f :properties :envelope_wgs84)
+              min-x   (first se)
+              max-x   (first nw)    
+              min-y   (second nw)
+              max-y   (second se)
+              coords  #js[#js[#js[min-x max-y]
+                              #js[max-x max-y]
+                              #js[max-x min-y]
+                              #js[min-x min-y]
+                              #js[min-x max-y]]]
+              geojson #js{:type       "Feature"
+                          :geometry   #js{:type        "Polygon"
+                                          :coordinates coords}
+                          :properties (clj->js (:properties f))}
+              ol-f    (map-utils/->ol-feature geojson)]                            
+          (.addFeature source ol-f)))))
+  
+
+  map-ctx)
+
 ;; Browsing and selecting features
 (defn set-default-mode!
-  [map-ctx {:keys [lipas-id address sub-mode analysis]}]
-  (let [analysis? (#{:analysis :analysis-draw} sub-mode)
-        map-ctx   (-> map-ctx
-                        editing/clear-edits!
-                        map-utils/clear-population!
-                        map-utils/unselect-features!
-                        map-utils/clear-interactions!
-                        map-utils/clear-markers!
-                        map-utils/enable-vector-hover!
-                        map-utils/enable-marker-hover!
-                        map-utils/enable-select!)]
-    (cond-> map-ctx
-      lipas-id  (map-utils/select-sports-site! lipas-id)
-      address   (map-utils/show-address-marker! address))))
-
-(defn update-default-mode!
-  [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce address sub-mode analysis]}]
-  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
-    (cond-> map-ctx
-      true      (map-utils/clear-markers!)
-      true      (map-utils/unselect-features!)
-      true      (map-utils/clear-population!)
-      lipas-id  (map-utils/select-sports-site! lipas-id)
-      fit?      (map-utils/fit-to-extent!
-                 (-> layers :overlays :vectors .getSource .getExtent))
-      address   (map-utils/show-address-marker! address))))
-
-(defn set-analysis-mode!
-  [map-ctx {:keys [lipas-id sub-mode analysis]}]
+  [map-ctx {:keys [lipas-id address]}]
   (-> map-ctx
       editing/clear-edits!
       map-utils/clear-population!
@@ -416,29 +462,109 @@
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
       map-utils/enable-select!
-      (map-utils/enable-population-hover!)
-      (show-population! analysis)
-      (show-schools! analysis)
-      (map-utils/enable-schools-hover!)
-      (map-utils/draw-analytics-buffer! analysis)))
+      (cond->
+        lipas-id  (map-utils/select-sports-site! lipas-id)
+        address   (map-utils/show-address-marker! address))))
+
+(defn update-default-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id fit-nonce address]}]
+  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
+    (-> map-ctx
+        (map-utils/clear-markers!)
+        (map-utils/unselect-features!)
+        (map-utils/clear-population!)
+        (cond->
+            lipas-id  (map-utils/select-sports-site! lipas-id)
+            fit?      (map-utils/fit-to-extent!
+                       (-> layers :overlays :vectors .getSource .getExtent))
+            address   (map-utils/show-address-marker! address)))))
+
+(defn set-reachability-mode!
+  [map-ctx {:keys [analysis]}]  
+  (let [reachability (:reachability analysis)]
+    (-> map-ctx
+        editing/clear-edits!
+        map-utils/clear-population!
+        map-utils/unselect-features!
+        map-utils/clear-interactions!
+        map-utils/clear-markers!
+        map-utils/enable-vector-hover!
+        map-utils/enable-marker-hover!
+        map-utils/enable-select!
+        (map-utils/enable-population-hover!)
+        (show-population! reachability)
+        (show-schools! reachability)
+        (map-utils/enable-schools-hover!)
+        (map-utils/draw-analytics-buffer! reachability))))
+
+(defn set-diversity-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [analysis] :as mode}]  
+  (let [diversity (:diversity analysis)]
+    (-> map-ctx
+        editing/clear-edits!
+        map-utils/clear-population!
+        map-utils/unselect-features!
+        map-utils/clear-interactions!
+        map-utils/clear-markers!
+        (map-utils/draw-diversity-areas! diversity)
+        (map-utils/enable-analysis-area-hover!)
+        (map-utils/enable-diversity-hover!)        
+        (show-diversity! diversity)
+        (map-utils/fit-to-extent! (-> layers :overlays :analysis .getSource .getExtent)))))
+
+(defn set-analysis-mode!
+  [map-ctx {:keys [sub-mode] :as mode}]
+  (condp = sub-mode
+    :reachability (set-reachability-mode! map-ctx mode)
+    :diversity    (set-diversity-mode! map-ctx mode)))
+
+(defn update-reachability-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id fit-nonce analysis]}]  
+  (let [reachability (:reachability analysis)
+        fit?         (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]    
+    (-> map-ctx
+        (map-utils/clear-markers!)
+        (map-utils/unselect-features!)
+        (map-utils/clear-population!)
+        (cond->
+            lipas-id (map-utils/select-sports-site! lipas-id)
+            fit? (map-utils/fit-to-extent!
+                      (-> layers :overlays :vectors .getSource .getExtent)))     
+        (map-utils/enable-population-hover!)
+        (show-population! reachability)
+        (show-schools! reachability)
+        (map-utils/enable-schools-hover!)
+        (map-utils/draw-analytics-buffer! reachability))))
+
+(defn update-diversity-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id fit-nonce sub-mode analysis]}]  
+  (let [diversity (:diversity analysis)
+        fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]    
+    (-> map-ctx
+        (map-utils/clear-markers!)
+        (map-utils/unselect-features!)
+        (map-utils/clear-population!)       
+        (show-diversity! diversity)
+        (map-utils/enable-diversity-hover!)
+        (map-utils/enable-analysis-area-hover!)
+        (map-utils/draw-diversity-areas! diversity)        
+        (map-utils/fit-to-extent! (-> layers :overlays :analysis .getSource .getExtent)))))
 
 (defn update-analysis-mode!
-  [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce sub-mode analysis]}]
-  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
-    (cond-> map-ctx
-      true     (map-utils/clear-markers!)
-      true     (map-utils/unselect-features!)
-      true     (map-utils/clear-population!)
-      lipas-id (map-utils/select-sports-site! lipas-id)
-      fit?     (map-utils/fit-to-extent!
-                 (-> layers :overlays :vectors .getSource .getExtent))
-      true     (->
-            (map-utils/enable-population-hover!)
-            (show-population! analysis)
-            (show-schools! analysis)
-            (map-utils/enable-schools-hover!)
-            (map-utils/draw-analytics-buffer! analysis)))))
+  [map-ctx
+   {:keys [sub-mode] :as mode}]
+  (let [old-sub-mode (-> map-ctx :mode :sub-mode)]
+    (condp = sub-mode
+      :reachability (if (#{:reachability} old-sub-mode) 
+                      (update-reachability-mode! map-ctx mode)
+                      (set-reachability-mode! map-ctx mode))
+      :diversity    (if (#{:diversity} old-sub-mode)
+                      (update-diversity-mode! map-ctx mode)
+                      (set-diversity-mode! map-ctx mode)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)
