@@ -321,8 +321,8 @@
 (re-frame/reg-event-fx
  ::sports-site-selected
  (fn [{:keys [db]} [_ _ lipas-id]]
-   (let [sub-mode (-> db :map :mode :sub-mode)]
-     (if (= sub-mode :analysis)
+   (let [mode (-> db :map :mode :name)]
+     (if (= mode :analysis)
        {:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]}
        {:dispatch [::show-sports-site lipas-id]}))))
 
@@ -762,8 +762,8 @@
  ::show-analysis*
  (fn [{:keys [db]} _]
    {:db (-> db
-            (assoc-in  [:map :mode :name] :default)
-            (assoc-in  [:map :mode :sub-mode] :analysis))
+            (assoc-in  [:map :mode :name] :analysis)
+            (assoc-in  [:map :mode :sub-mode] :reachability))
     :dispatch-n
     [[::enable-overlays [:vectors :schools :population :analysis]]
      [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))

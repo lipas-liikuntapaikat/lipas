@@ -390,19 +390,12 @@
                         map-utils/enable-select!)]
     (cond-> map-ctx
       lipas-id  (map-utils/select-sports-site! lipas-id)
-      address   (map-utils/show-address-marker! address)
-      analysis? (->
-                 (map-utils/enable-population-hover!)
-                 (show-population! analysis)
-                 (show-schools! analysis)
-                 (map-utils/enable-schools-hover!)
-                 (map-utils/draw-analytics-buffer! analysis)))))
+      address   (map-utils/show-address-marker! address))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce address sub-mode analysis]}]
-  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
-        analysis? (#{:analysis :analysis-draw} sub-mode)]
+  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
     (cond-> map-ctx
       true      (map-utils/clear-markers!)
       true      (map-utils/unselect-features!)
@@ -410,19 +403,49 @@
       lipas-id  (map-utils/select-sports-site! lipas-id)
       fit?      (map-utils/fit-to-extent!
                  (-> layers :overlays :vectors .getSource .getExtent))
-      address   (map-utils/show-address-marker! address)
-      analysis? (->
-                 (map-utils/enable-population-hover!)
-                 (show-population! analysis)
-                 (show-schools! analysis)
-                 (map-utils/enable-schools-hover!)
-                 (map-utils/draw-analytics-buffer! analysis)))))
+      address   (map-utils/show-address-marker! address))))
+
+(defn set-analysis-mode!
+  [map-ctx {:keys [lipas-id sub-mode analysis]}]
+  (-> map-ctx
+      editing/clear-edits!
+      map-utils/clear-population!
+      map-utils/unselect-features!
+      map-utils/clear-interactions!
+      map-utils/clear-markers!
+      map-utils/enable-vector-hover!
+      map-utils/enable-marker-hover!
+      map-utils/enable-select!
+      (map-utils/enable-population-hover!)
+      (show-population! analysis)
+      (show-schools! analysis)
+      (map-utils/enable-schools-hover!)
+      (map-utils/draw-analytics-buffer! analysis)))
+
+(defn update-analysis-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id fit-nonce sub-mode analysis]}]
+  (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
+    (cond-> map-ctx
+      true     (map-utils/clear-markers!)
+      true     (map-utils/unselect-features!)
+      true     (map-utils/clear-population!)
+      lipas-id (map-utils/select-sports-site! lipas-id)
+      fit?     (map-utils/fit-to-extent!
+                 (-> layers :overlays :vectors .getSource .getExtent))
+      true     (->
+            (map-utils/enable-population-hover!)
+            (show-population! analysis)
+            (show-schools! analysis)
+            (map-utils/enable-schools-hover!)
+            (map-utils/draw-analytics-buffer! analysis)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)
-                  :default   (set-default-mode! map-ctx mode)
-                  :editing   (editing/set-editing-mode! map-ctx mode)
-                  :adding    (editing/set-adding-mode! map-ctx mode))]
+                  :default  (set-default-mode! map-ctx mode)
+                  :editing  (editing/set-editing-mode! map-ctx mode)
+                  :adding   (editing/set-adding-mode! map-ctx mode)
+                  :analysis (set-analysis-mode! map-ctx mode))]
     (assoc map-ctx :mode mode)))
 
 (defn update-mode! [map-ctx mode]
@@ -436,7 +459,10 @@
                                (editing/set-editing-mode! map-ctx mode))
                   :adding    (if update?
                                (editing/update-adding-mode! map-ctx mode)
-                               (editing/set-adding-mode! map-ctx mode)))]
+                               (editing/set-adding-mode! map-ctx mode))
+                  :analysis (if update?
+                              (update-analysis-mode! map-ctx mode)
+                              (set-analysis-mode! map-ctx mode)))]
     (assoc map-ctx :mode mode)))
 
 (defn map-inner []
