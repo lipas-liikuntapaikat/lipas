@@ -7,6 +7,15 @@
    {:analysis
     {:headline                   "Analyysityökalu (beta)"
      :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
+     :results "Tulokset"
+     :mean "Keskiarvo"
+     :median "Mediaani"
+     :mode "Moodi"
+     :categories                 "Kategoriat"
+     :diversity "Monipuolisuus"
+     :diversity-grid "Tulosruudukko"
+     :analysis-areas "Analyysialueet"
+     :categories-help            "Samaan kategoriaan kuuluvat liikuntapaikkatyypit vaikuttavat monipuolisuusindeksiin vain yhden kerran."
      :description2               "Väestöaineistona käytetään Tilastokeskuksen 250x250m ja 1x1km ruutuaineistoja, joista selviää kussakin ruudussa olevan väestön jakauma kolmessa ikäryhmässä (0-14, 15-65, 65-)."
      :description3               "Matka-aikojen laskeminen eri kulkutavoilla (kävellen, polkupyörällä, autolla) perustuu avoimeen OpenStreetMap-aineistoon ja OSRM-työkaluun."
      :description4               "Oppilaitosten nimi- ja sijaintitiedot perustuvat Tilastokeskuksen avoimeen aineistoon. Varhaiskasvatusyksiköiden nimi- ja sijaintitiedoissa käytetään LIKES:n keräämää ja luovuttamaa aineistoa."
@@ -389,8 +398,8 @@
      :average-water-consumption-l
      "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)"},
     :map.demographics
-    {:headline   "Analyysityökalu",
-     :tooltip    "Analyysityökalu",
+    {:headline   "Analyysityökalut",
+     :tooltip    "Analyysityökalut",
      :helper-text
      "Valitse liikuntapaikka kartalta tai lisää uusi analysoitava kohde ",
      :copyright1

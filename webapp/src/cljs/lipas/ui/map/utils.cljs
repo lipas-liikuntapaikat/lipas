@@ -8,6 +8,7 @@
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
+   [goog.string.path :as gpath]
    [lipas.ui.map.projection] ;; Loaded for side-effects
    [lipas.ui.map.styles :as styles]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
@@ -45,6 +46,41 @@
   {:type "GeometryCollection"
    :geometries (->> fcoll :features (map :geometry))})
 
+(defn parse-dom [text]
+  (let [parser (js/DOMParser.)]
+    (.parseFromString parser text "text/xml")))
+
+(defn- text->geoJSON [{:keys [file ext enc cb]}]
+  (let [reader (js/FileReader.)
+        cb     (fn [e]
+                 (let [text   (-> e .-target .-result)
+                       parsed (condp = ext
+                                "geojson" (js/JSON.parse text)
+                                "json"    (js/JSON.parse text)
+                                "kml"     (-> text parse-dom js/toGeoJSON.kml)
+                                "gpx"     (-> text parse-dom js/toGeoJSON.gpx))]
+                   (cb parsed)))]
+    (set! (.-onload reader) cb)
+    (.readAsText reader file enc)
+    {}))
+
+(defmulti file->geoJSON :ext)
+
+(defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
+  (-> file .arrayBuffer (.then js/shp) (.then cb)))
+
+(defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
+(defmethod file->geoJSON "kml" [params] (text->geoJSON params))
+(defmethod file->geoJSON "json" [params] (text->geoJSON params))
+(defmethod file->geoJSON "geojson" [params] (text->geoJSON params))
+(defmethod file->geoJSON :default [params] {:unknown (:ext params)})
+
+(defn parse-ext [file]
+  (-> file
+      (gobj/get "name" "")
+      gpath/extension
+      string/lower-case))
+
 (comment
   (def pf {:type "Feature"
            :geometry
@@ -63,6 +99,55 @@
       ->wkt
       )
   )
+
+(defn geom-coll->features [geom-coll]
+  (->> geom-coll
+       :geometries
+       (map-indexed
+        (fn [idx g]
+          {:type     "Feature"
+           :geometry g
+           :properties
+           {:id   (gensym)
+            :name (str "geom-" (inc idx))}}))))
+
+(defn normalize-geom-colls
+  "Handles a special case where geometries are contained in a
+  GeometryCollection. Normalizes geom coll into features with dummy
+  props."
+  [fcoll geom-type]
+  (->> fcoll
+       :features
+       (filter (comp #{"GeometryCollection"} :type :geometry))
+       (map :geometry)
+       (mapcat geom-coll->features)
+       (filter (comp #{geom-type} :type :geometry))
+       (utils/index-by (comp :id :properties))))
+
+(defn multi-geom->single-geoms
+  [multi-geom geom-type]
+  (->> multi-geom
+       :coordinates
+       (map-indexed
+        (fn [idx coords]
+          {:type "Feature"
+           :geometry
+           {:type        geom-type
+            :coordinates coords}
+           :properties
+           {:id   (gensym)
+            :name (str "geom-" (inc idx))}}))))
+
+(defn normalize-multi-geoms
+  "Makes an effort to convert multi-geoms into single geoms."
+  [fcoll geom-type]
+  (->> fcoll
+       :features
+       (filter (comp #{"MultiLineString" "MultiPolygon"} :type :geometry))
+       (map :geometry)
+       (mapcat (fn [g] (multi-geom->single-geoms g geom-type)))
+       (filter (comp #{geom-type} :type :geometry))
+       (utils/index-by (comp :id :properties))))
 
 (defn add-marker!
   [{:keys [layers] :as map-ctx} f style]
@@ -164,6 +249,14 @@
 (defn enable-schools-hover!
   [map-ctx]
   (enable-hover! map-ctx :schools-hover))
+
+(defn enable-diversity-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :diversity-hover))
+
+(defn enable-analysis-area-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :analysis-area-hover))
 
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
@@ -400,6 +493,20 @@
         :analysis
         .getSource
         (.addFeature buff-feature)))
+
+  map-ctx)
+
+(defn draw-diversity-areas!
+  [{:keys [layers] :as map-ctx}
+   {:keys [areas results]}]
+
+  ;; Clear existing geoms
+  (-> layers :overlays :analysis .getSource .clear)
+  
+  (doseq [[id feat] areas]        
+    (let [aggs (get-in results [id :aggs])
+          ol-feat (->ol-feature (clj->js (update feat :properties merge aggs)))]
+      (-> layers :overlays :analysis .getSource (.addFeature ol-feat))))
 
   map-ctx)
 

@@ -459,12 +459,13 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [parameters]}]
-           (let [body (:body parameters)]             
+           (let [body (:body parameters)]
+             (prn body)
              (if (s/valid? :lipas.api.diversity-indices/req body)
                {:status  200
                 :body (core/calc-diversity-indices search body)}
                {:status 400
-                :body {:error (s/explain :lipas.api.diversity-indices/req body)}})))}}]]]
+                :body {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

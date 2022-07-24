@@ -315,6 +315,53 @@
      [mui/typography {:variant "caption"}
       (:type data)]]))
 
+(defmethod popup-body :diversity [popup]
+  (let [tr   (<== [:lipas.ui.subs/translator])
+        data (-> popup :data :features first :properties)]
+    [mui/paper
+     {:style
+      {:padding "0.5em"}}
+     [mui/table {:padding "dense"}
+      [mui/table-body
+       [mui/table-row
+        [mui/table-cell
+         [mui/typography "Diversity idx"]]
+        [mui/table-cell
+         (:diversity_idx data)]]]]]))
+
+(defmethod popup-body :analysis-area [popup]
+  (let [tr   (<== [:lipas.ui.subs/translator])
+        data (-> popup :data :features first :properties)]
+    [mui/paper
+     {:style
+      {:padding "0.5em"}}
+     [mui/table {:padding "dense"}
+      [mui/table-body
+
+       ;; Mean
+       [mui/table-row
+        [mui/table-cell
+         [mui/typography (tr :analysis/mean)]]
+        [mui/table-cell
+         (:diversity-idx-mean data)]]
+
+       ;; Median
+       [mui/table-row
+        [mui/table-cell
+         [mui/typography (tr :analysis/median)]]
+        [mui/table-cell
+         (:diversity-idx-median data)]]
+
+       ;; Mode
+       [mui/table-row
+        [mui/table-cell
+         [mui/typography (tr :analysis/mode)]]
+        [mui/table-cell
+         (when (seq (:diversity-idx-mode data))
+           (string/join "," (:diversity-idx-mode data)))]]
+
+       ]]]))
+
 (defn popup []
   (let [{:keys [data anchor-el]
          :or   {type :default}

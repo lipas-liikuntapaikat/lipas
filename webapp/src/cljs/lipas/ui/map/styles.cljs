@@ -410,3 +410,40 @@
 (defn school-hover-style [f resolution]
   (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24 :hover? true})))
+
+
+(def diversity-base-color "#9D191A")
+
+(def diversity-colors
+  (into {}
+        (for [n (range 30)]
+          [(- (dec 30) n)
+           (-> diversity-base-color
+               gcolor/hexToRgb
+               (gcolor/lighten (/ n 30))
+               gcolor/rgbArrayToHex)])))
+
+(comment
+  (sort-by first diversity-colors)
+  (reverse (range 30))
+  )
+
+
+
+(defn diversity-style [f _resolution]
+  (let [diversity-idx (.get f "diversity_idx")
+        fill-color (get diversity-colors diversity-idx diversity-base-color)]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "#0D3BC1"})
+         :fill (ol/style.Fill. #js{:color fill-color})         
+         })))
+
+(defn diversity-hover-style [f resolution]
+  (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color "#0D3BC1"})
+         :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})         
+         }))

@@ -6,8 +6,7 @@
    [lipas.ui.analysis.reachability.subs :as subs]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
-   [lipas.ui.map.events :as map-events]
-   [lipas.ui.map.subs :as map-subs]
+   [lipas.ui.map.events :as map-events]   
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -306,10 +305,10 @@
 
 (defn settings-tab
   [{:keys [tr]}]
-  (let [show-analysis?     (<== [::map-subs/overlay-visible? :analysis])
-        show-sports-sites? (<== [::map-subs/overlay-visible? :vectors])
-        show-population?   (<== [::map-subs/overlay-visible? :population])
-        show-schools?      (<== [::map-subs/overlay-visible? :schools])]
+  (let [show-analysis?     (<== [:lipas.ui.map.subs/overlay-visible? :analysis])
+        show-sports-sites? (<== [:lipas.ui.map.subs/overlay-visible? :vectors])
+        show-population?   (<== [:lipas.ui.map.subs/overlay-visible? :population])
+        show-schools?      (<== [:lipas.ui.map.subs/overlay-visible? :schools])]
     [:<>
 
      [mui/grid {:container true}

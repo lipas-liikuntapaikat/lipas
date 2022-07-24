@@ -13,15 +13,16 @@
     [mui/grid {:container true :style {:padding "1em"}}
      
      ;; Header and close button
-     [mui/grid {:item true :container true :justify "space-between"}
-      [mui/grid {:item true}       
+     [mui/grid {:item true :container true :justify "space-between"}      
+      [mui/grid {:item true :xs 10}       
        [mui/tabs
         {:value selected-tool
          :on-change #(==> [::events/select-tool %2])
          :variant "fullWidth"
+         :centered true
          :indicatorColor "primary"}
-        [mui/tab {:value "reachability" :label "Reachability tool (beta)"}]
-        [mui/tab {:value "diversity" :label "Diversity tool (beta)"}]]]
+        [mui/tab {:value "reachability" :label "Analyysi (beta)"}]
+        [mui/tab {:value "diversity" :label "Monipuolisuus (beta)"}]]]
       [mui/grid {:item true}
        [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
         [mui/icon "close"]]]]

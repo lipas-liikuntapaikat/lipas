@@ -2,7 +2,11 @@
   (:require   
    [re-frame.core :as re-frame]))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::select-tool
- (fn [db [_ tool]]   
-   (assoc-in db [:analysis :selected-tool] tool)))
+ (fn [{:keys [db]} [_ tool]]   
+   {:db         (assoc-in db [:analysis :selected-tool] tool)
+    :dispatch-n [(when (= "diversity" tool)
+                   [:lipas.ui.analysis.diversity.events/init])
+                 (when (= "reachability" tool)
+                   [:lipas.ui.map.events/show-analysis*])]}))
