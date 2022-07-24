@@ -15,7 +15,7 @@
  :<- [::selected-sports-site]
  :<- [::mode*]
  (fn [[adding? selected-site mode] _]
-   (let [analysis? (-> mode :sub-mode (= :analysis))]
+   (let [analysis? (-> mode :name (= :analysis))]
      (cond
        adding?       :adding
        analysis?     :analysis
@@ -119,10 +119,10 @@
  ::content-padding
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
- :<- [::sub-mode]
- (fn [[screen-size drawer-open? sub-mode] _]
+ :<- [::mode-name]
+ (fn [[screen-size drawer-open? mode-name] _]
    (let [margin       20
-         drawer-width (if (= :analysis sub-mode) 700 430)]
+         drawer-width (if (= :analysis mode-name) 700 430)]
      (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
        [margin margin margin (+ margin drawer-width)]))))
@@ -131,6 +131,12 @@
  ::mode*
  (fn [db _]
    (-> db :map :mode)))
+
+(re-frame/reg-sub
+ ::mode-name
+ :<- [::mode*]
+ (fn [mode _]
+   (:name mode)))
 
 (re-frame/reg-sub
  ::sub-mode
@@ -144,7 +150,7 @@
  :<- [::mode*]
  :<- [:lipas.ui.analysis.reachability.subs/reachability]
  (fn [[content-padding mode analysis] _]
-   (let [analysis? (= (:sub-mode mode) :analysis)]
+   (let [analysis? (= (:name mode) :analysis)]
      (cond-> mode
        true      (assoc :content-padding content-padding)
        analysis? (assoc :analysis analysis)))))

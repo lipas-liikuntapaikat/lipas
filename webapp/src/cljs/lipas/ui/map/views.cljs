@@ -1083,7 +1083,7 @@
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        sub-mode    (<== [::subs/sub-mode])
+        mode-name   (<== [::subs/mode-name])
         admin?      (<== [:lipas.ui.user.subs/admin?])]
     [:<>
      [address-search-dialog]
@@ -1115,9 +1115,9 @@
           [mui/grid {:item true}
            [mui/fab
             {:size     "small"
-             :style    (when (= sub-mode :analysis)
+             :style    (when (= mode-name :analysis)
                          {:border (str "5px solid " mui/secondary)})
-             :on-click #(==> (if (= sub-mode :analysis)
+             :on-click #(==> (if (= mode-name :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
             [mui/icon "insights"]]]])]]]))
@@ -1131,7 +1131,7 @@
      ;; Search, filters etc.
      (case view
        :adding   [add-sports-site-view {:tr tr}]
-       :analysis #_[reachability/analysis-view] [analysis/view]
+       :analysis [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :search   [search/search-view
                   {:tr tr
@@ -1150,16 +1150,16 @@
         drawer-open?  (<== [::subs/drawer-open?])
         result-view   (<== [:lipas.ui.search.subs/search-results-view])
         selected-site (<== [::subs/selected-sports-site])
-        sub-mode      (<== [::subs/sub-mode])
+        mode-name     (<== [::subs/mode-name])
         drawer-width  (cond
-                        (#{"xs"} width)              "100%"
+                        (#{"xs"} width)               "100%"
                         (and (#{"sm"} width)
-                             (= :table result-view)) "100%"
+                             (= :table result-view))  "100%"
                         (and (= :table result-view)
-                             (empty? selected-site)) "100%"
+                             (empty? selected-site))  "100%"
                         (and (not (#{"xs" "sm"} width))
-                             (= :analysis sub-mode)) "700px"
-                        :else                        "430px")]
+                             (= :analysis mode-name)) "700px"
+                        :else                         "430px")]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
