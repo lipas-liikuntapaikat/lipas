@@ -250,13 +250,13 @@
   [map-ctx]
   (enable-hover! map-ctx :schools-hover))
 
-(defn enable-diversity-hover!
+(defn enable-diversity-grid-hover!
   [map-ctx]
-  (enable-hover! map-ctx :diversity-hover))
+  (enable-hover! map-ctx :diversity-grid-hover))
 
-(defn enable-analysis-area-hover!
+(defn enable-diversity-area-hover!
   [map-ctx]
-  (enable-hover! map-ctx :analysis-area-hover))
+  (enable-hover! map-ctx :diversity-area-hover))
 
 (defn enable-edits-hover!
   [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
@@ -501,12 +501,14 @@
    {:keys [areas results]}]
 
   ;; Clear existing geoms
-  (-> layers :overlays :analysis .getSource .clear)
+  (-> layers :overlays :diversity-area .getSource .clear)
   
   (doseq [[id feat] areas]        
     (let [aggs (get-in results [id :aggs])
           ol-feat (->ol-feature (clj->js (update feat :properties merge aggs)))]
-      (-> layers :overlays :analysis .getSource (.addFeature ol-feat))))
+
+      #_(.setStyle ol-feat styles/diversity-aggs-style)
+      (-> layers :overlays :diversity-area .getSource (.addFeature ol-feat))))
 
   map-ctx)
 

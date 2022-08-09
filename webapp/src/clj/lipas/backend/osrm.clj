@@ -5,25 +5,12 @@
    [clj-http.client :as client]
    [clojure.string :as str]
    [environ.core :refer [env]]
-   [lipas.backend.gis :as gis])
-  (:import
-   [com.google.maps.internal PolylineEncoding]
-   [com.google.maps.model LatLng]))
+   [lipas.backend.gis :as gis]))
 
 (def profiles
   {:car     {:url (:osrm-car-url env)}
    :bicycle {:url (:osrm-bicycle-url env)}
    :foot    {:url (:osrm-foot-url env)}})
-
-(defn ->google-polyline [coords]
-  (->> coords
-       (map #(LatLng. (second %) (first %)))
-       (PolylineEncoding/encode)))
-
-(defn <-google-polyline [s]
-  (->> s
-       (PolylineEncoding/decode)
-       (map #(vector (.-lng %) (.-lat %)))))
 
 (defn resolve-sources [fcoll]
   (if (gis/point? fcoll)

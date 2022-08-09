@@ -413,6 +413,13 @@
 
 
 (def diversity-base-color "#9D191A")
+(def transparent "rgba(0,0,0,0.25)")
+
+(def diversity-stroke "#0D3BC1")
+(def diversity-hover-stroke (-> diversity-stroke
+                                gcolor/hexToRgb
+                                (gcolor/lighten 0.2)
+                                gcolor/rgbArrayToHex))
 
 (def diversity-colors
   (into {}
@@ -423,27 +430,52 @@
                (gcolor/lighten (/ n 30))
                gcolor/rgbArrayToHex)])))
 
+(def diversity-colors-alpha
+  (into {}
+        (for [n (range 30)]
+          [(- (dec 30) n)
+           (-> diversity-base-color
+               gcolor/hexToRgb
+               (gcolor/lighten (/ n 30))
+               gcolor/rgbArrayToHex
+               (->rgba 0.7))])))
+
 (comment
   (sort-by first diversity-colors)
-  (reverse (range 30))
-  )
+  (reverse (range 30)))
 
-
-
-(defn diversity-style [f _resolution]
+(defn diversity-grid-style [f _resolution]
   (let [diversity-idx (.get f "diversity_idx")
         fill-color (get diversity-colors diversity-idx diversity-base-color)]
     (ol/style.Style.
      #js{:stroke
          (ol/style.Stroke.
           #js{:width 3 :color "#0D3BC1"})
-         :fill (ol/style.Fill. #js{:color fill-color})         
-         })))
+         :fill (ol/style.Fill. #js{:color fill-color})})))
 
-(defn diversity-hover-style [f resolution]
-  (ol/style.Style.
+(defn diversity-grid-hover-style [f resolution]
+  (let [diversity-idx (.get f "diversity_idx")
+        fill-color (get diversity-colors diversity-idx diversity-base-color)]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color mui/secondary})
+         :fill (ol/style.Fill. #js{:color fill-color})})))
+
+(defn diversity-area-style [f _resolution]
+  (let [diversity-idx (js/Math.round (.get f "population-weighted-mean"))
+        fill-color (get diversity-colors-alpha diversity-idx transparent)]
+    (ol/style.Style.
      #js{:stroke
          (ol/style.Stroke.
           #js{:width 3 :color "#0D3BC1"})
-         :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})         
-         }))
+         :fill (ol/style.Fill. #js{:color fill-color})})))
+
+(defn diversity-area-hover-style [f _resolution]
+  (let [diversity-idx (js/Math.round (.get f "population-weighted-mean"))
+        fill-color (get diversity-colors-alpha diversity-idx transparent)]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 5 :color diversity-hover-stroke})
+         :fill (ol/style.Fill. #js{:color fill-color})})))

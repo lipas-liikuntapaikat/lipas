@@ -6,8 +6,7 @@
    [goog.string :as gstring]   
    [goog.string.format]
    [lipas.ui.analysis.diversity.db :as db]
-   [lipas.ui.map.utils :as map-utils]
-   [lipas.utils :as cutils]
+   [lipas.ui.map.utils :as map-utils]   
    [lipas.ui.utils :refer [==>] :as utils]
    [re-frame.core :as re-frame]))
 
@@ -22,8 +21,9 @@
       [[:vectors true]
        [:schools false]
        [:population false]
-       [:analysis true]
-       [:diversity true]]]]}))
+       [:analysis false]
+       [:diversity-grid true]
+       [:diversity-area true]]]]}))
 
 (re-frame/reg-event-db
  ::select-analysis-tab
@@ -62,20 +62,12 @@
  (fn [db _]
    (assoc-in db [:analysis :diversity] db/default-db)))
 
-(defn calc-aggregate-results [fcoll]
-  (let [idxs (->> fcoll :features (map (comp :diversity_idx :properties)))]
-    {:diversity-idx-mean   (utils/round-safe (cutils/mean idxs))
-     :diversity-idx-median (cutils/median idxs)
-     :diversity-idx-mode   (cutils/mode idxs)}))
-
 (re-frame/reg-event-db
  ::calc-success
- (fn [db [_ candidate-id resp]]
-   (let [aggs (calc-aggregate-results resp)]
-     (-> db
-         (assoc-in [:analysis :diversity :loading?] false)
-         (assoc-in [:analysis :diversity :results candidate-id :grid] resp)
-         (assoc-in [:analysis :diversity :results candidate-id :aggs] aggs)))))
+ (fn [db [_ candidate-id resp]]   
+   (-> db
+       (assoc-in [:analysis :diversity :loading?] false)
+       (assoc-in [:analysis :diversity :results candidate-id] resp))))
 
 (re-frame/reg-event-db
  ::clear-results

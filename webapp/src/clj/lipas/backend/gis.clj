@@ -336,8 +336,6 @@
   (def p101 (wgs84->tm35fin p100))
   
   (def envelope
-    (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))
-
-  
+    (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))  
   
   )
