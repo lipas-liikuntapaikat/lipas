@@ -105,12 +105,37 @@
                    {:on-click #(==> [::events/delete-category idx])}
                    [mui/icon "delete"]]]]]]]))]))
 
+(defn overlay-switches []
+  (let [tr                   (<== [:lipas.ui.subs/translator])
+        show-diversity-area? (<== [:lipas.ui.map.subs/overlay-visible? :diversity-area])
+        show-diversity-grid? (<== [:lipas.ui.map.subs/overlay-visible? :diversity-grid])
+        show-sports-sites?   (<== [:lipas.ui.map.subs/overlay-visible? :vectors])]
+    [mui/grid {:container true :style {:padding "1em"}}
+
+     ;; Sports facilities
+     [mui/grid {:item true}
+      [lui/switch
+       {:label     (tr :sport/headline)
+        :value     show-sports-sites?
+        :on-change #(==> [:lipas.ui.map.events/set-overlay % :vectors])}]]
+
+     ;; Diversity area
+     [mui/grid {:item true}
+      [lui/switch
+       {:label     (tr :analysis/analysis-areas)
+        :value     show-diversity-area?
+        :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-area])}]]
+
+     ;; Diversity grid
+     [mui/grid {:item true}
+      [lui/switch
+       {:label     (tr :analysis/diversity-grid)
+        :value     show-diversity-grid?
+        :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
+
 (defn settings []
-  (let [tr                 (<== [:lipas.ui.subs/translator])
-        show-analysis?     (<== [:lipas.ui.map.subs/overlay-visible? :analysis])
-        show-sports-sites? (<== [:lipas.ui.map.subs/overlay-visible? :vectors])
-        show-diversity?    (<== [:lipas.ui.map.subs/overlay-visible? :diversity])
-        max-distance-m     (<== [::subs/max-distance-m])]
+  (let [tr             (<== [:lipas.ui.subs/translator])
+        max-distance-m (<== [::subs/max-distance-m])]
     [:<>
 
      [mui/grid {:container true}
@@ -122,35 +147,7 @@
          :default-expanded false}
 
         ;; Switches
-        [mui/grid {:container true :style {:padding "1em"}}
-
-         ;; Sports facilities
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     (tr :sport/headline)
-            :value     show-sports-sites?
-            :on-change #(==> [:lipas.ui.map.events/set-overlay % :vectors])}]]
-
-         ;; Analysis buffer
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     (tr :analysis/analysis-areas)
-            :value     show-analysis?
-            :on-change #(==> [:lipas.ui.map.events/set-overlay % :analysis])}]]
-
-         ;; Population
-         #_[mui/grid {:item true}
-          [lui/switch
-           {:label     (tr :analysis/population)
-            :value     show-population?
-            :on-change #(==> [:lipas.ui.map.events/set-overlay % :population])}]]
-
-         ;; Diversity grid
-         [mui/grid {:item true}
-          [lui/switch
-           {:label     (tr :analysis/diversity-grid)
-            :value     show-diversity?
-            :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity])}]]]]]
+        [overlay-switches]]]
 
       ;; Categories
       [mui/grid {:item true :xs 12}
@@ -241,10 +238,10 @@
   (let [tr           (<== [:lipas.ui.subs/translator])
         selected-tab (<== [::subs/selected-analysis-tab])]
     [:<>
-     [mui/grid
-      {:container true      
-       :spacing   16
-       #_#_:style     {:padding "0.5em"}}          
+     [mui/grid {:container true :spacing 16}          
+
+      #_[mui/grid {:item true :xs 12}
+       [overlay-switches]]
       
       [mui/grid {:item true :xs 12}
        [mui/tabs {:value      selected-tab

@@ -107,11 +107,17 @@
          :style      styles/school-style
          :name       "schools"
          :renderMode "image"})
-    :diversity
+    :diversity-grid
     (ol/layer.Vector.
      #js{:source     (ol/source.Vector.)
-         :style      styles/diversity-style
-         :name       "diversity"
+         :style      styles/diversity-grid-style
+         :name       "diversity-grid"
+         :renderMode "image"})
+    :diversity-area
+    (ol/layer.Vector.
+     #js{:source     (ol/source.Vector.)
+         :style      styles/diversity-area-style
+         :name       "diversity-area"
          :renderMode "image"})
     :light-traffic
     (ol/layer.Image.
@@ -188,8 +194,9 @@
                                 (-> layers :overlays :analysis)
                                 (-> layers :overlays :population)
                                 (-> layers :overlays :schools)
+                                (-> layers :overlays :diversity-area)
+                                (-> layers :overlays :diversity-grid)
                                 (-> layers :overlays :vectors)
-                                (-> layers :overlays :diversity)
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
@@ -224,18 +231,18 @@
                            :multi     false
                            :condition ol/events.condition.pointerMove})
 
-        diversity-hover (ol/interaction.Select.
-                         #js{:layers    #js[(-> layers :overlays :diversity)]
-                             :style     styles/diversity-hover-style
-                             :multi     false
-                             :condition ol/events.condition.pointerMove})
+        diversity-grid-hover (ol/interaction.Select.
+                              #js{:layers    #js[(-> layers :overlays :diversity-grid)]
+                                  :style     styles/diversity-grid-hover-style
+                                  :multi     false
+                                  :condition ol/events.condition.pointerMove})
 
-        analysis-area-hover (ol/interaction.Select.
-                             #js{:layers    #js[(-> layers :overlays :analysis)]
-                                 :style     styles/diversity-hover-style
-                                 :multi     false
-                                 :condition ol/events.condition.pointerMove})
-        
+        diversity-area-hover (ol/interaction.Select.
+                              #js{:layers    #js[(-> layers :overlays :diversity-area)]
+                                  :style     styles/diversity-area-hover-style
+                                  :multi     false
+                                  :condition ol/events.condition.pointerMove})
+
         select (ol/interaction.Select.
                 #js{:layers #js[(-> layers :overlays :vectors)]
                     :style  styles/feature-style-selected})
@@ -301,7 +308,7 @@
                       :type      :school
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
-    (.on diversity-hover "select"
+    (.on diversity-grid-hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (gobj/get e "selected")]
@@ -310,10 +317,10 @@
              (==> [::events/show-popup
                    (when (not-empty selected)
                      {:anchor-el (.getElement popup-overlay)
-                      :type      :diversity
+                      :type      :diversity-grid
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
-    (.on analysis-area-hover "select"
+    (.on diversity-area-hover "select"
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (gobj/get e "selected")]
@@ -322,7 +329,7 @@
              (==> [::events/show-popup
                    (when (not-empty selected)
                      {:anchor-el (.getElement popup-overlay)
-                      :type      :analysis-area
+                      :type      :diversity-area
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     ;; It's not possible to have multiple selects with
@@ -363,13 +370,13 @@
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
      :interactions*
-     {:select              select
-      :vector-hover        vector-hover
-      :marker-hover        marker-hover
-      :population-hover    population-hover
-      :schools-hover       schools-hover
-      :diversity-hover     diversity-hover
-      :analysis-area-hover analysis-area-hover}
+     {:select               select
+      :vector-hover         vector-hover
+      :marker-hover         marker-hover
+      :population-hover     population-hover
+      :schools-hover        schools-hover
+      :diversity-grid-hover diversity-grid-hover
+      :diversity-area-hover diversity-area-hover}
      :overlays {:popup popup-overlay}}))
 
 (defn show-population!
@@ -420,19 +427,19 @@
 
   map-ctx)
 
-(defn show-diversity!
+(defn show-diversity-grid!
   [{:keys [layers] :as map-ctx}
    {:keys [data results]}]
-  (-> layers :overlays :diversity .getSource .clear)  
-    
+  (-> layers :overlays :diversity-grid .getSource .clear)
+
   (when (seq results)
-    (let [source (-> layers :overlays :diversity .getSource)]
+    (let [source (-> layers :overlays :diversity-grid .getSource)]
 
       (doseq [fcoll (map :grid (vals results))
               f     (:features fcoll)]
         (let [[nw se] (-> f :properties :envelope_wgs84)
               min-x   (first se)
-              max-x   (first nw)    
+              max-x   (first nw)
               min-y   (second nw)
               max-y   (second se)
               coords  #js[#js[#js[min-x max-y]
@@ -444,9 +451,9 @@
                           :geometry   #js{:type        "Polygon"
                                           :coordinates coords}
                           :properties (clj->js (:properties f))}
-              ol-f    (map-utils/->ol-feature geojson)]                            
+              ol-f    (map-utils/->ol-feature geojson)]
           (.addFeature source ol-f)))))
-  
+
 
   map-ctx)
 
@@ -481,7 +488,7 @@
             address   (map-utils/show-address-marker! address)))))
 
 (defn set-reachability-mode!
-  [map-ctx {:keys [analysis]}]  
+  [map-ctx {:keys [analysis]}]
   (let [reachability (:reachability analysis)]
     (-> map-ctx
         editing/clear-edits!
@@ -500,7 +507,7 @@
 
 (defn set-diversity-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [analysis] :as mode}]  
+   {:keys [analysis] :as mode}]
   (let [diversity (:diversity analysis)]
     (-> map-ctx
         editing/clear-edits!
@@ -509,10 +516,10 @@
         map-utils/clear-interactions!
         map-utils/clear-markers!
         (map-utils/draw-diversity-areas! diversity)
-        (map-utils/enable-analysis-area-hover!)
-        (map-utils/enable-diversity-hover!)        
-        (show-diversity! diversity)
-        (map-utils/fit-to-extent! (-> layers :overlays :analysis .getSource .getExtent)))))
+        (map-utils/enable-diversity-area-hover!)
+        (map-utils/enable-diversity-grid-hover!)
+        (show-diversity-grid! diversity)
+        (map-utils/fit-to-extent! (-> layers :overlays :diversity-area .getSource .getExtent)))))
 
 (defn set-analysis-mode!
   [map-ctx {:keys [sub-mode] :as mode}]
@@ -522,9 +529,9 @@
 
 (defn update-reachability-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce analysis]}]  
+   {:keys [lipas-id fit-nonce analysis]}]
   (let [reachability (:reachability analysis)
-        fit?         (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]    
+        fit?         (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
@@ -532,7 +539,7 @@
         (cond->
             lipas-id (map-utils/select-sports-site! lipas-id)
             fit? (map-utils/fit-to-extent!
-                      (-> layers :overlays :vectors .getSource .getExtent)))     
+                      (-> layers :overlays :vectors .getSource .getExtent)))
         (map-utils/enable-population-hover!)
         (show-population! reachability)
         (show-schools! reachability)
@@ -541,25 +548,24 @@
 
 (defn update-diversity-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce sub-mode analysis]}]  
-  (let [diversity (:diversity analysis)
-        fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]    
+   {:keys [lipas-id fit-nonce sub-mode analysis]}]
+  (let [diversity (:diversity analysis)]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
-        (map-utils/clear-population!)       
-        (show-diversity! diversity)
-        (map-utils/enable-diversity-hover!)
-        (map-utils/enable-analysis-area-hover!)
-        (map-utils/draw-diversity-areas! diversity)        
-        (map-utils/fit-to-extent! (-> layers :overlays :analysis .getSource .getExtent)))))
+        (map-utils/clear-population!)
+        (show-diversity-grid! diversity)
+        (map-utils/enable-diversity-grid-hover!)
+        (map-utils/enable-diversity-area-hover!)
+        (map-utils/draw-diversity-areas! diversity)
+        (map-utils/fit-to-extent! (-> layers :overlays :diversity-area .getSource .getExtent)))))
 
 (defn update-analysis-mode!
   [map-ctx
    {:keys [sub-mode] :as mode}]
   (let [old-sub-mode (-> map-ctx :mode :sub-mode)]
     (condp = sub-mode
-      :reachability (if (#{:reachability} old-sub-mode) 
+      :reachability (if (#{:reachability} old-sub-mode)
                       (update-reachability-mode! map-ctx mode)
                       (set-reachability-mode! map-ctx mode))
       :diversity    (if (#{:diversity} old-sub-mode)

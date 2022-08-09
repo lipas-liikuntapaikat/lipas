@@ -4,9 +4,6 @@
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
-   [lipas.ui.analysis.reachability.events :as reachability-events]
-   [lipas.ui.analysis.reachability.views :as reachability]
-   [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
@@ -315,7 +312,7 @@
      [mui/typography {:variant "caption"}
       (:type data)]]))
 
-(defmethod popup-body :diversity [popup]
+(defmethod popup-body :diversity-grid [popup]
   (let [tr   (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
     [mui/paper
@@ -323,44 +320,75 @@
       {:padding "0.5em"}}
      [mui/table {:padding "dense"}
       [mui/table-body
+       
+       ;; Diversity index
        [mui/table-row
         [mui/table-cell
-         [mui/typography "Diversity idx"]]
+         [mui/typography "Monipuolisuusindeksi"]]
         [mui/table-cell
-         (:diversity_idx data)]]]]]))
+         (:diversity_idx data)]]
+       
+       ;; Population
+       [mui/table-row
+        [mui/table-cell
+         [mui/typography (tr :analysis/population)]]
+        [mui/table-cell
+         (:population data)]]]]]))
 
-(defmethod popup-body :analysis-area [popup]
+(defmethod popup-body :diversity-area [popup]
   (let [tr   (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
     [mui/paper
      {:style
       {:padding "0.5em"}}
-     [mui/table {:padding "dense"}
-      [mui/table-body
 
-       ;; Mean
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography (tr :analysis/mean)]]
-        [mui/table-cell
-         (:diversity-idx-mean data)]]
+     (if (or (:population-weighted-mean data) (:population data))
 
-       ;; Median
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography (tr :analysis/median)]]
-        [mui/table-cell
-         (:diversity-idx-median data)]]
+       ;; Results table       
+       [mui/table {:padding "dense"}
+        [mui/table-body
 
-       ;; Mode
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography (tr :analysis/mode)]]
-        [mui/table-cell
-         (when (seq (:diversity-idx-mode data))
-           (string/join "," (:diversity-idx-mode data)))]]
+         ;; Population weighted mean
+         [mui/table-row
+          [mui/table-cell
+           [mui/typography (tr :analysis/population-weighted-mean)]]
+          [mui/table-cell
+           (utils/round-safe
+            (:population-weighted-mean data))]]
 
-       ]]]))
+         ;; Population
+         [mui/table-row
+          [mui/table-cell
+           [mui/typography (tr :analysis/population)]]
+          [mui/table-cell         
+           (:population data)]]
+         
+         ;; Mean
+         #_[mui/table-row
+            [mui/table-cell
+             [mui/typography (tr :analysis/mean)]]
+            [mui/table-cell
+             (:diversity-idx-mean data)]]
+
+         ;; Median
+         #_[mui/table-row
+            [mui/table-cell
+             [mui/typography (tr :analysis/median)]]
+            [mui/table-cell
+             (:diversity-idx-median data)]]
+
+         ;; Mode
+         #_[mui/table-row
+            [mui/table-cell
+             [mui/typography (tr :analysis/mode)]]
+            [mui/table-cell
+             (when (seq (:diversity-idx-mode data))
+               (string/join "," (:diversity-idx-mode data)))]]
+
+         ]]
+
+       ;; No data available
+       [mui/typography "Analyysiä ei ole tehty"])]))
 
 (defn popup []
   (let [{:keys [data anchor-el]

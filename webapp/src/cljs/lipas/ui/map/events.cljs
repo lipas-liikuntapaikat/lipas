@@ -679,7 +679,8 @@
     [[::set-overlays [[:vectors true]
                       [:schools true]
                       [:population true]
-                      [:diversity false]
+                      [:diversity-grid false]
+                      [:diversity-area false]
                       [:analysis true]]]
      [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))
 
@@ -701,7 +702,8 @@
                  [::set-overlays [[:vectors true]
                                   [:schools false]
                                   [:population false]
-                                  [:diversity false]
+                                  [:diversity-grid false]
+                                  [:diversity-area false]
                                   [:analysis false]]]
                  [:lipas.ui.search.events/remove-status-filter "planning"]
                  [:lipas.ui.search.events/clear-filters]]}))

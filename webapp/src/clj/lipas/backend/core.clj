@@ -465,10 +465,7 @@
        (apply excel/create-workbook)
        (excel/save-workbook-into-stream! out)))
 
-(defn calc-diversity-indices [search params]
-  (println "PARAMS")
-  (prn params)
-  (println "END PARAMS")
+(defn calc-diversity-indices [search params]  
   (analysis/calc-diversity-indices search params))
 
 (comment
