@@ -13,7 +13,7 @@
       :type-codes [1560]}
      {:name       "Ampumaurheilu",
       :factor     1,
-      :type-codes [4810 4840 4610 4620 4820 4830]}
+      :type-codes [4810 4840 4610 4620 4820 4830 2360]}
      {:name       "Beachvolleykentta",
       :factor     1,
       :type-codes [1330]}
@@ -83,7 +83,6 @@
       :factor     1,
       :type-codes [1380]}
      {:name "Salibandyhalli", :factor 1, :type-codes [2240]}
-     {:name "Sisaampumarata", :factor 1, :type-codes [2360]}
      {:name       "Sisakiipeilyseina",
       :factor     1,
       :type-codes [2370]}
