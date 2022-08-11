@@ -570,7 +570,7 @@
     :map.import
     {:headline          "Tuo geometriat",
      :geoJSON
-     "Tuo .json-tiedosto, joka sisältää GeoJSON FeatureCollection -objektin. Lähtöaineiston pitää olla WGS84-koordinaatistossa.",
+     "Tuo .json tai .geojson päätteinen tiedosto, joka sisältää GeoJSON FeatureCollection -objektin. Lähtöaineiston pitää olla WGS84-koordinaatistossa.",
      :gpx               "Lähtöaineiston pitää olla WGS84-koordinaatistossa.",
      :supported-formats "Tuetut tiedostomuodot ovat {1}",
      :replace-existing? "Korvaa nykyiset geometriat",
