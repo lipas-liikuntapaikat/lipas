@@ -675,15 +675,13 @@
     :as   opts}]
   
   (let [categories (prepare-categories categories)
+        type-codes (into #{} (mapcat :type-codes) categories)
+        buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
+        buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
+        buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
         
         pop-data  (future (get-population-data search analysis-area-fcoll analysis-radius-km))
-        site-data (future (get-sports-site-data search
-                                                analysis-area-fcoll
-                                                (double (+ analysis-radius-km
-                                                           (/ max-distance-m 1000)))
-                                                (into #{}
-                                                      (mapcat :type-codes)
-                                                      categories)))
+        site-data (future (get-sports-site-data search buff-fcoll buff-dist type-codes))
         
         with-distances (condp = distance-mode
                          "euclid" (append-euclid-distances (:hits @pop-data) (:hits @site-data))

@@ -185,6 +185,15 @@
                (update-in f [:geometry :coordinates] #(map dedupe %)))
              fs))))
 
+
+
+(defn ->fcoll [features]
+  {:type     "FeatureCollection"
+   :features (mapv #(update % :properties (fnil identity {})) features)})
+
+(defn ->feature [geom]
+  {:type "Feature" :geometry geom})
+
 (comment
 
   (wgs84->tm35fin [23.8259457479965 61.4952794263427])
@@ -211,7 +220,7 @@
   (distance-point (-> test-point :features first :geometry)
                   (-> test-point2 :features first :geometry))
   
-  (def buff(calc-buffer test-point 10))
+  (def buff (calc-buffer test-point 10))
 
   (json/encode
    {:type "FeatureCollection"
@@ -319,6 +328,10 @@
        {:type        "Point",
         :coordinates [19.720539797408946,
                       65.62057217751676]}}]})
+
+  (calc-buffer test-point2 100)
+
+  (->fcoll [(->feature (calc-buffer test-point2 100))])
 
   (point? test-point)
   (point? test-polygon)
