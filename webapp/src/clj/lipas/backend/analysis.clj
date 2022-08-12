@@ -51,42 +51,49 @@
   [search fcoll distance-km]
   (get-es-data* schools-index search fcoll distance-km))
 
-(defn get-sports-site-data
-  [search fcoll distance-km type-codes]
-  (let [geom  (-> fcoll :features first)
-        query (-> (build-query geom distance-km)
-                  (assoc :_source [:name
-                                   :type.type-code
-                                   :search-meta.location.simple-geoms])
-                  (update-in [:query :bool :filter :geo_shape] set/rename-keys
-                             {:coords :search-meta.location.geometries})
-                  (cond->
-                      (not-empty type-codes) (assoc-in [:query :bool :must]
-                                                       {:terms
-                                                        {:type.type-code type-codes}})))
+(def default-statuses #{"planning" "planned" "active" "out-of-service-temporarily"})
 
-        g1    (gis/->jts-geom fcoll)]
-    (-> (search/search search sports-sites-index query)
-        :body
-        :hits
-        (update :hits #(map
-                       (fn [hit]
-                         (let [closest (-> hit
-                                           :_source
-                                           :search-meta
-                                           :location
-                                           :simple-geoms
-                                           gis/->flat-coords
-                                           not-empty
-                                           (some->
-                                            gis/->jts-multi-point
-                                            (gis/nearest-points g1)
-                                            first
-                                            gis/->wkt))]
-                           (when closest
-                             (assoc-in hit [:_source :coords] closest)))
-                         ) %))
-        (update :hits #(remove nil? %)))))
+(defn get-sports-site-data
+  ([search fcoll distance-km type-codes]
+   (get-sports-site-data search fcoll distance-km type-codes default-statuses))
+  ([search fcoll distance-km type-codes statuses]
+   (let [geom  (-> fcoll :features first)
+         query (-> (build-query geom distance-km)
+                   (assoc :_source [:name
+                                    :type.type-code
+                                    :search-meta.location.simple-geoms])
+                   (update-in [:query :bool :filter :geo_shape] set/rename-keys
+                              {:coords :search-meta.location.geometries})
+                   (cond->
+                       (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
+                       (seq type-codes) (update-in [:query :bool :must] conj
+                                                   {:terms {:type.type-code type-codes}})
+                       (seq statuses)   (update-in [:query :bool :must] conj
+                                                   {:terms {:status statuses}})))
+
+         g1 (gis/->jts-geom fcoll)]
+
+     (-> (search/search search sports-sites-index query)
+         :body
+         :hits
+         (update :hits #(map
+                         (fn [hit]
+                           (let [closest (-> hit
+                                             :_source
+                                             :search-meta
+                                             :location
+                                             :simple-geoms
+                                             gis/->flat-coords
+                                             not-empty
+                                             (some->
+                                              gis/->jts-multi-point
+                                              (gis/nearest-points g1)
+                                              first
+                                              gis/->wkt))]
+                             (when closest
+                               (assoc-in hit [:_source :coords] closest)))
+                           ) %))
+         (update :hits #(remove nil? %))))))
 
 (defn calc-distances
   [source-fcoll populations]
@@ -594,6 +601,8 @@
                site-data)))
      pop-data)))
 
+(def bool->num {true 1 false 0})
+
 (defn- calc-indices
   [pop-data categories
    {:keys [max-distance-m] :as opts}]
@@ -609,8 +618,9 @@
                                 (fn [site]
                                   (and (type-codes (:type-code site))
                                        (> max-distance-m (:distance-m site)))))
-                               count
-                               (min 0)
+                               first
+                               some?
+                               bool->num
                                ;; Occurrence in category contributes
                                ;; to diversity index with 0 or 1 *
                                ;; factor
@@ -680,9 +690,10 @@
         buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
         buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
         buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
+        statuses  #{"active" "out-of-service-temporarily"}
 
-        pop-data  (future (get-population-data search analysis-area-fcoll analysis-radius-km))
-        site-data (future (get-sports-site-data search buff-fcoll buff-dist type-codes))
+        pop-data (future (get-population-data search analysis-area-fcoll analysis-radius-km))
+        site-data (future (get-sports-site-data search buff-fcoll buff-dist type-codes statuses))
 
         with-distances (condp = distance-mode
                          "euclid" (append-euclid-distances (:hits @pop-data) (:hits @site-data))
@@ -693,7 +704,7 @@
     {:grid (->diversity-geojson with-indices)
      :aggs (calc-aggs with-indices)
      #_#_:sports-sites
-     {:type     "FeatureCollection"
+     {:type "FeatureCollection"
       :features
       (->> @site-data
            :hits
@@ -726,7 +737,7 @@
   (def point2 (assoc-in point1 [:geometry :coordinates] [25.7473 62.2426]))
   (def point2-fcoll (assoc point1-fcoll :features [point2]))
 
-  (def site-data (get-sports-site-data search point1-fcoll distance-km point-type-codes))
+  (def site-data (get-sports-site-data search point1-fcoll distance-km point-type-codes default-statuses))
   site-data
 
   (def point3 (assoc-in point1 [:geometry :coordinates] [25.759742853 62.236192345]))
