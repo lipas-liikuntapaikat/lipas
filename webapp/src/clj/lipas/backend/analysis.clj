@@ -102,7 +102,7 @@
   [search-fcoll populations profiles id-fn]
   (let [destinations (gis/->coord-pair-strs search-fcoll)
 
-        sources (->> populations                     
+        sources (->> populations
                      (map (comp gis/wkt-point->coords :coords :_source))
                      (map #(str/join "," %)))
 
@@ -518,23 +518,23 @@
 
 
   (require '[cognitect.transit :as transit])
-  
-  (import [java.io ByteArrayInputStream ByteArrayOutputStream])  
-  
+
+  (import [java.io ByteArrayInputStream ByteArrayOutputStream])
+
   (def in (io/input-stream "/tmp/cc.transit"))
   (def reader (transit/reader in :json))
-  
+
   (spit "/tmp/cc-output.edn" (transit/read reader))
   )
 
-;; Monipuolisuustyökalu 
+;; Monipuolisuustyökalu
 
 ;; process:
 
 ;; - input1 desired area (point + radius OR polygon)
 ;; - input2 "max distance" for a relevant sports site
 ;; - input3 categorisation for sports sites (map from cat => type-codes)
-;; 
+;;
 ;; - in parallel
 ;;   - get population grid (area)
 ;;   - get sports sites (area + buffer, max-distance..?)
@@ -563,7 +563,7 @@
                                                      :geometry
                                                      :coordinates
                                                      (->> (apply gis/->point)))
-                                              
+
                                               distance (gis/distance-point g1 g2)]
                                           {:id                (:_id site)
                                            :type-code         (-> site
@@ -575,7 +575,7 @@
 
 (defn- append-route-distances [pop-data site-data]
   (let [res (osrm/get-distances-and-travel-times
-             {:profiles     #{:foot}     
+             {:profiles     #{:foot}
               :sources      (->> pop-data
                                      (map (comp gis/wkt-point->coords :coords :_source))
                                      (map #(str/join "," %)))
@@ -584,7 +584,7 @@
                                      (mapcat gis/->coord-pair-strs))})]
     (map-indexed
      (fn [pop-idx pop-entry]
-       (assoc pop-entry :sports-sites              
+       (assoc pop-entry :sports-sites
               (map-indexed
                (fn [site-idx site]
                  {:id         (:_id site)
@@ -596,13 +596,13 @@
 
 (defn- calc-indices
   [pop-data categories
-   {:keys [max-distance-m population-weight-factor analysis] :as opts}]  
+   {:keys [max-distance-m] :as opts}]
   (map
    (fn [pop-entry]
      (let [cats (reduce
                  (fn [m {:keys [type-codes name factor]
-                         :or   {factor 1}}]                   
-                   (assoc m name                          
+                         :or   {factor 1}}]
+                   (assoc m name
                           (->> pop-entry
                                :sports-sites
                                (filter
@@ -610,7 +610,7 @@
                                   (and (type-codes (:type-code site))
                                        (> max-distance-m (:distance-m site)))))
                                count
-                               (min 1)
+                               (min 0)
                                ;; Occurrence in category contributes
                                ;; to diversity index with 0 or 1 *
                                ;; factor
@@ -638,12 +638,13 @@
           {:id             (-> pop-entry :_source :id_nro)
            :grid_id        (-> pop-entry :_source :grd_id)
            :epsg3067       coords-3067
+           #_#_:sports-sites   (map :_id (:sports-sites pop-entry))
            :envelope_wgs84 (gis/epsg3067-point->wgs84-envelope coords-3067 125)
            :diversity_idx  (:diversity-index pop-entry)
            #_#_:age_0_14   (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
            #_#_:age_15_64  (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
            #_#_:age_65_    (-> pop-entry :_source :ika_65_ utils/->int anonymize)
-           :population (-> pop-entry :_source :vaesto utils/->int anonymize)}
+           :population     (-> pop-entry :_source :vaesto utils/->int anonymize)}
           (:categories pop-entry))}))
     pop-data)})
 
@@ -673,26 +674,39 @@
    {:keys [analysis-area-fcoll categories max-distance-m analysis-radius-km distance-mode]
     :or   {max-distance-m 800 analysis-radius-km 5}
     :as   opts}]
-  
+
   (let [categories (prepare-categories categories)
         type-codes (into #{} (mapcat :type-codes) categories)
         buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
         buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
         buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
-        
+
         pop-data  (future (get-population-data search analysis-area-fcoll analysis-radius-km))
         site-data (future (get-sports-site-data search buff-fcoll buff-dist type-codes))
-        
+
         with-distances (condp = distance-mode
                          "euclid" (append-euclid-distances (:hits @pop-data) (:hits @site-data))
                          "route"  (append-route-distances (:hits @pop-data) (:hits @site-data))
                          (append-route-distances (:hits @pop-data) (:hits @site-data)))
-        with-indices   (calc-indices with-distances categories opts)]    
+        with-indices   (calc-indices with-distances categories opts)]
 
     {:grid (->diversity-geojson with-indices)
-     :aggs (calc-aggs with-indices)}))
+     :aggs (calc-aggs with-indices)
+     #_#_:sports-sites
+     {:type     "FeatureCollection"
+      :features
+      (->> @site-data
+           :hits
+           (mapcat
+            (fn [m]
+              (let [props {:id        (:_id m)
+                           :name      (-> m :_source :name)
+                           :type-code (-> m :_source :type :type-code)}]
+                (map
+                 (fn [f] (assoc f :properties props))
+                 (-> m :_source :search-meta :location :simple-geoms :features))))))}}))
 
-(comment    
+(comment
   (require '[lipas.backend.search])
   (require '[lipas.backend.config :as config])
   (require '[lipas.data.types :as types])
@@ -704,14 +718,14 @@
   (def distance-km 5)
   (def pop-data (get-population-data search point1-fcoll distance-km))
   (->> pop-data :hits (map :_source) (map :vaesto) distinct)
-  
+
   (def point-type-codes (->> types/all
                              (filter (comp #{"Point"} :geometry-type second))
                              (map first)))
 
   (def point2 (assoc-in point1 [:geometry :coordinates] [25.7473 62.2426]))
   (def point2-fcoll (assoc point1-fcoll :features [point2]))
-  
+
   (def site-data (get-sports-site-data search point1-fcoll distance-km point-type-codes))
   site-data
 
@@ -725,7 +739,7 @@
   site-data3
 
   (time (osrm/get-distances-and-travel-times
-         {:profiles     #{:foot}     
+         {:profiles     #{:foot}
           :sources      (->> pop-data3 :hits
                                  (map (comp gis/wkt-point->coords :coords :_source))
                                  (map #(str/join "," %)))
@@ -740,7 +754,7 @@
   site-data4
 
   (time (osrm/get-distances-and-travel-times
-         {:profiles     #{:foot}     
+         {:profiles     #{:foot}
           :sources      (->> pop-data4 :hits
                                  (map (comp gis/wkt-point->coords :coords :_source))
                                  (map #(str/join "," %)))
@@ -752,7 +766,7 @@
 
   (time
    (osrm/get-distances-and-travel-times
-    {:profiles     #{:foot}     
+    {:profiles     #{:foot}
      :sources      (->> pop-data :hits
                         (map (comp gis/wkt-point->coords :coords :_source))
                         (map #(str/join "," %)))
@@ -760,9 +774,9 @@
                         :hits
                         (map (comp :simple-geoms :location :search-meta :_source))
                         (mapcat gis/->coord-pair-strs))}))
-  
+
   point-type-codes
-  
+
   (def categoriez
     [{:name       "koira"
       :factor     1
@@ -776,8 +790,8 @@
      {:name       "mursu"
       :factor     1
       :type-codes [301 4630 4810 1540 5320 3210 4640 1150 2310 5210 2380 201 1220 1140 6110 1120 1390 5340 302 6120 1310 202 1620 2250 2530 2130 3220 5330 4230 4320 3130 3110 203 4620 5360 2290 2260 1160 1210 5140 4310 207 1130 5120 4110 5370 2240 2510 1640 1380 5150 1630 2295 2370 1340 1610 2220 1320]}])
-  
-  
+
+
   (def res1 (calc-diversity-indices search point2-fcoll categoriez
                                     {:max-distance-m 800 :analysis-radius-km 0.5}))
 
@@ -797,7 +811,7 @@
      :categories          categoriez
      :max-distance-m      800 :analysis-radius-km 2
      :distance-mode       "route"})
-  
+
   (time
    (doall (calc-diversity-indices search params)))
 
@@ -808,20 +822,20 @@
   (require '[jsonista.core :as json2])
 
   (json2/write-value-as-string temp)
-  
+
   (require '[clojure.spec.alpha :as spec])
   (spec/valid? :lipas.api.diversity-indices/req params)
 
   (keys res3)
   (-> res3 :features count)
-  
+
   (-> pop-data :hits count)
   (->> pop-data3 :hits (map (comp :coords :_source)))
-  
+
   (require '[cheshire.core :as json])
-  
+
   (->> site-data3
-       :hits 
+       :hits
        (map (fn [s]
               (-> s
                   :_source
@@ -834,13 +848,14 @@
                   :coordinates)))
        (map count)
        distinct)
-  
+
   (time (append-euclid-distances (:hits pop-data) (:hits site-data)))
 
   (str/join ";" (repeat 5 "800"))
-  
+
   )
 
-
-
-
+;; valmiit alueet: Kunta -> postinumeroalueet
+;; kategoriahärvelin --> uusi kategoria, pyyhi teksti
+;; vain aktiiviset ja väliaikaisesti pois käytöstä
+;; Selitetekstit + käännökset (Tapani)
