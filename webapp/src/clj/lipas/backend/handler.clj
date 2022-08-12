@@ -1,5 +1,5 @@
 (ns lipas.backend.handler
-  (:require   
+  (:require
    [clojure.java.io :as io]
    [clojure.spec.alpha :as s]
    [lipas.backend.core :as core]
@@ -460,7 +460,6 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
-             (prn body)
              (if (s/valid? :lipas.api.diversity-indices/req body)
                {:status  200
                 :body (core/calc-diversity-indices search body)}
