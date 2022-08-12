@@ -1,6 +1,6 @@
 (ns lipas.ui.analysis.diversity.view
   (:require
-   [clojure.string :as str]   
+   [clojure.string :as str]
    [lipas.ui.analysis.diversity.events :as events]
    [lipas.ui.analysis.diversity.subs :as subs]
    [lipas.ui.charts :as charts]
@@ -26,38 +26,53 @@
     label]])
 
 (defn analysis-area-selector []
-  (let [tr         (<== [:lipas.ui.subs/translator])        
+  (let [tr         (<== [:lipas.ui.subs/translator])
         candidates (<== [::subs/analysis-candidates-table-rows])
         headers    (<== [::subs/analysis-candidates-table-headers])
         loading?   (<== [::subs/loading?])]
-    #_[:> js/materialIcons.FileUpload props]
-    [mui/grid {:container true :spacing 16}
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:variant "body2"}
-       (str (tr :map.import/headline) " (polygon)")]]
-     [mui/grid {:item true}
-      [:input
-       {:type      "file"
-        :accept    (str/join "," import-formats)
-        :on-change #(==> [::events/load-geoms-from-file
-                          (-> % .-target .-files)
-                          geom-type])}]]
-     [mui/grid {:item true}
-      [mui/typography {:inline true} (str (tr :help/headline) ":")]
-      [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
-      [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]      
-      [helper {:label "KML" :tooltip (tr :map.import/kml)}]]
 
-     (when (seq candidates)
-       (lui/table-v2
-        {:headers            headers
-         :items              candidates
-         :in-progress?       loading?
-         :action-icon        "refresh"
-         :action-label       "Laske monipuolisuus"
-         :on-select          #(==> [::events/calc-diversity-indices %])
-         #_#_:allow-editing? (constantly true)
-         #_#_:multi-select?  true}))]))
+    #_[:> js/materialIcons.FileUpload props]
+
+    [mui/grid {:container true :spacing 16}
+
+     [mui/grid {:item true :xs 12}
+      [mui/typography "Valitse lähde"]]
+
+     [mui/grid {:item true :xs 12}
+      [lui/expansion-panel {:label            "Käytä postinumeroalueita"
+                            :default-expanded true}
+       [lui/city-selector-single
+        {:on-change #(==> [::events/fetch-postal-code-areas %])}]]
+
+      [lui/expansion-panel {:label            "Tuo omat alueet"
+                            :default-expanded false}
+       [:<>
+        [mui/grid {:item true :xs 12}
+         [mui/typography {:variant "body2"}
+          (str (tr :map.import/headline) " (polygon)")]]
+        [mui/grid {:item true}
+         [:input
+          {:type      "file"
+           :accept    (str/join "," import-formats)
+           :on-change #(==> [::events/load-geoms-from-file
+                             (-> % .-target .-files)
+                             geom-type])}]]
+        [mui/grid {:item true}
+         [mui/typography {:inline true} (str (tr :help/headline) ":")]
+         [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
+         [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
+         [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
+
+      (when (seq candidates)
+        (lui/table-v2
+         {:headers            headers
+          :items              candidates
+          :in-progress?       loading?
+          :action-icon        "refresh"
+          :action-label       "Laske monipuolisuus"
+          :on-select          #(==> [::events/calc-diversity-indices %])
+          #_#_:allow-editing? (constantly true)
+          #_#_:multi-select?  true}))]]))
 
 (defn seq-indexed [coll]
   (map-indexed vector coll))
@@ -97,7 +112,7 @@
                    :items     (map (fn [n] {:label n :value n}) [1 2 3 4 5])
                    :on-change #(==> [::events/set-category-factor idx %])
                    :value     (:factor category)}]]
-                
+
                 ;; Delete category button
                 [mui/grid {:item true :xs 2}
                  [mui/tooltip {:title "Poista kategoria"}
@@ -166,8 +181,8 @@
          [mui/grid {:item true :xs 12 :md 6}
           [mui/button
            {:on-click #(==> [::events/add-new-category])}
-           "Uusi kategoria"]]         
-         
+           "Uusi kategoria"]]
+
          ;; Reset default categories button
          [mui/grid {:item true :xs 12 :md 6}
           [mui/button
@@ -175,9 +190,9 @@
            "Palauta oletuskategoriat"]]
 
          ;; Category builder
-         [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}          
+         [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
           [category-builder]]]]]
-      
+
       ;; Distances
       [mui/grid {:item true :xs 12}
        [lui/expansion-panel
@@ -190,14 +205,14 @@
           [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
            [mui/typography {:variant "body1" :paragraph false}
             "Monipuolisuus lasketaan jokaiselle väestöruudulle siten, että monipuolisuuteen vaikuttavat ne liikuntapaikat, jotka ovat annetun metrimäärän kävelyetäisyydellä tieverkkoa pitkin väestöruudun keskipisteestä."]]]
-         
+
          ;; Distance zones selector
          [mui/grid {:item true :xs 12 :style {:margin-top    "1em"
                                               :margin-left   "1em"
                                               :margin-right  "1em"
                                               :margin-bottom "5em"}}
 
-          (let [min 500 max 1500 step 100]            
+          (let [min 500 max 1500 step 100]
             [:> Slider
              {:min       min
               :max       max
@@ -220,16 +235,16 @@
        {:label "Formaatti"
         :items [{:label "GeoJSON" :value "geojson"}]
         :value selected-format}]]
-     
+
      ;; Export aggregate results
      [mui/grid {:item true :xs 12}
-      
+
       [mui/button
        {:on-click #(==> [::events/export-aggs selected-format])}
        "Lataa alueet"]]
 
      ;; Export grid
-     [mui/grid {:item true :xs 12}    
+     [mui/grid {:item true :xs 12}
       [mui/button
        {:on-click #(==> [::events/export-grid selected-format])}
        "Lataa ruudukko"]]]))
@@ -238,11 +253,11 @@
   (let [tr           (<== [:lipas.ui.subs/translator])
         selected-tab (<== [::subs/selected-analysis-tab])]
     [:<>
-     [mui/grid {:container true :spacing 16}          
+     [mui/grid {:container true :spacing 16}
 
       #_[mui/grid {:item true :xs 12}
        [overlay-switches]]
-      
+
       [mui/grid {:item true :xs 12}
        [mui/tabs {:value      selected-tab
                   :on-change  #(==> [::events/select-analysis-tab %2])

@@ -1,23 +1,21 @@
 (ns lipas.ui.analysis.diversity.events
   (:require
    [ajax.core :as ajax]
-   [ajax.protocols :as ajaxp]
-   [goog.object :as gobj]
-   [goog.string :as gstring]   
    [goog.string.format]
    [lipas.ui.analysis.diversity.db :as db]
-   [lipas.ui.map.utils :as map-utils]   
+   [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
  ::init
- (fn [{:keys [db]} _]   
+ (fn [{:keys [db]} _]
    {:db (-> db
             (assoc-in [:map :mode :name] :analysis)
             (assoc-in [:map :mode :sub-mode] :diversity))
     :dispatch-n
-    [[:lipas.ui.map.events/set-overlays
+    [[:lipas.ui.search.events/clear-filters]
+     [:lipas.ui.map.events/set-overlays
       [[:vectors true]
        [:schools false]
        [:population false]
@@ -55,7 +53,13 @@
        :response-format (ajax/transit-response-format)
        :on-success      [::calc-success id]
        :on-failure      [::calc-failure]}
-      :ga/event ["analysis" "calculate-analysis" "diversity"]})))
+      :ga/event ["analysis" "calculate-analysis" "diversity"]
+
+      :dispatch-n
+      [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
+         [:lipas.ui.search.events/set-type-filter type-codes])
+
+       []]})))
 
 (re-frame/reg-event-db
  ::clear
@@ -64,7 +68,7 @@
 
 (re-frame/reg-event-db
  ::calc-success
- (fn [db [_ candidate-id resp]]   
+ (fn [db [_ candidate-id resp]]
    (-> db
        (assoc-in [:analysis :diversity :loading?] false)
        (assoc-in [:analysis :diversity :results candidate-id] resp))))
@@ -130,17 +134,17 @@
 
 (re-frame/reg-event-db
  ::set-category-name
- (fn [db [_ idx name]]   
+ (fn [db [_ idx name]]
    (assoc-in db [:analysis :diversity :settings :categories idx :name] name)))
 
 (re-frame/reg-event-db
  ::set-category-factor
- (fn [db [_ idx factor]]   
+ (fn [db [_ idx factor]]
    (assoc-in db [:analysis :diversity :settings :categories idx :factor] factor)))
 
 (re-frame/reg-event-db
  ::set-category-type-codes
- (fn [db [_ idx type-codes]]   
+ (fn [db [_ idx type-codes]]
    (assoc-in db [:analysis :diversity :settings :categories idx :type-codes] type-codes)))
 
 (re-frame/reg-event-db
@@ -151,13 +155,13 @@
 
 (re-frame/reg-event-db
  ::delete-category
- (fn [db [_ idx]]   
+ (fn [db [_ idx]]
    (update-in db [:analysis :diversity :settings :categories]
               #(into (subvec % 0 idx) (subvec % (inc idx))))))
 
 (re-frame/reg-event-db
  ::set-max-distance-m
- (fn [db [_ n]]   
+ (fn [db [_ n]]
    (assoc-in db [:analysis :diversity :settings :max-distance-m] n)))
 
 (re-frame/reg-event-fx
@@ -183,3 +187,48 @@
      {:lipas.ui.effects/save-as!
       {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
        :filename (str "monipuolisuus_ruudukko" "." fmt)}})))
+
+;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
+
+(re-frame/reg-event-fx
+ ::fetch-postal-code-areas
+ (fn [{:keys [db]} [_ city-code]]
+   (let [url "https://lipas.fi/tilastokeskus/geoserver/postialue/wfs"]
+     {:db       (assoc-in db [:analysis :diversity :loading?] true)
+      :http-xhrio
+      {:method          :get
+       :uri             url
+       :params          {:service      "wfs"
+                         :version      "2.0.0"
+                         :request      "GetFeature"
+                         :srsName      "EPSG:4326"
+                         :typeNames    "postialue:pno_2022"
+                         :cql_filter   (str "kuntanro=" city-code)
+                         :outputFormat "json"}
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::fetch-postal-code-areas-success]
+       :on-failure      [::fetch-postal-code-areas-failure]}})))
+
+(re-frame/reg-event-fx
+ ::fetch-postal-code-areas-success
+ (fn [{:keys [db]} [_ resp]]
+   (let [fcoll (update resp :features
+                       (fn [fs]
+                         (map (fn [f] (update f :properties dissoc :bbox :pinta_ala)) fs)))]
+     {:db         (assoc-in db [:analysis :diversity :loading?] false)
+      :dispatch-n [[::set-analysis-candidates fcoll "Polygon"]]})))
+
+(re-frame/reg-event-fx
+ ::fetch-postal-code-areas-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [fatal? false
+         tr     (-> db :translator)]
+     {:db           (assoc-in db [:analysis :diversity :loading?] false)
+      :ga/exception [(:message error) fatal?]
+      :dispatch     [:lipas.ui.events/set-active-notification
+                     {:message  (tr :notifications/get-failed)
+                      :success? false}]})))
+
+(comment
+  (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))
