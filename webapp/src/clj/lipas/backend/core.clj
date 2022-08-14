@@ -5,7 +5,8 @@
    [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.accessibility :as accessibility]
-   [lipas.backend.analysis :as analysis]
+   [lipas.backend.analysis.diversity :as diversity]
+   [lipas.backend.analysis.reachability :as reachability]
    [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
@@ -457,16 +458,16 @@
     (search/search search idx-name params)))
 
 (defn calc-distances-and-travel-times [search params]
-  (analysis/calc-distances-and-travel-times search params))
+  (reachability/calc-distances-and-travel-times search params))
 
 (defn create-analysis-report [data out]
   (->> data
-       (analysis/create-report)
+       (reachability/create-report)
        (apply excel/create-workbook)
        (excel/save-workbook-into-stream! out)))
 
-(defn calc-diversity-indices [search params]  
-  (analysis/calc-diversity-indices search params))
+(defn calc-diversity-indices [search params]
+  (diversity/calc-diversity-indices search params))
 
 (comment
   (require '[lipas.backend.config :as config])
