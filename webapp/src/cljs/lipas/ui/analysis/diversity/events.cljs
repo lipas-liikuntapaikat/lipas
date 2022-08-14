@@ -150,7 +150,7 @@
 (re-frame/reg-event-db
  ::add-new-category
  (fn [db _]
-   (let [category {:name "Uusi kategoria" :type-codes []}]
+   (let [category {:name "" :type-codes []}]
      (update-in db [:analysis :diversity :settings :categories] #(into [category] %)))))
 
 (re-frame/reg-event-db
