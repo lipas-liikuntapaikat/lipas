@@ -91,9 +91,10 @@
               ;; Category name
               [mui/table-cell {:style {:width "40%"}}
                [lui/text-field
-                {:full-width true
-                 :value      (:name category)
-                 :on-change  #(==> [::events/set-category-name idx %])}]]
+                {:full-width  true
+                 :value       (:name category)
+                 :placeholder "Uusi kategoria"
+                 :on-change   #(==> [::events/set-category-name idx %])}]]
 
               ;; Types + delete
               [mui/table-cell {:style {:width "60%"}}
