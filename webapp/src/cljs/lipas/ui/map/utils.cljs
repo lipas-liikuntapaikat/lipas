@@ -125,7 +125,7 @@
        (utils/index-by (comp :id :properties))))
 
 (defn multi-geom->single-geoms
-  [multi-geom geom-type]
+  [multi-geom geom-type props]
   (->> multi-geom
        :coordinates
        (map-indexed
@@ -135,8 +135,9 @@
            {:type        geom-type
             :coordinates coords}
            :properties
-           {:id   (gensym)
-            :name (str "geom-" (inc idx))}}))))
+           (merge
+            props
+            {:id (gensym)})}))))
 
 (defn normalize-multi-geoms
   "Makes an effort to convert multi-geoms into single geoms."
@@ -144,8 +145,8 @@
   (->> fcoll
        :features
        (filter (comp #{"MultiLineString" "MultiPolygon"} :type :geometry))
-       (map :geometry)
-       (mapcat (fn [g] (multi-geom->single-geoms g geom-type)))
+       (map (juxt :geometry :properties))
+       (mapcat (fn [[g props]] (multi-geom->single-geoms g geom-type props)))
        (filter (comp #{geom-type} :type :geometry))
        (utils/index-by (comp :id :properties))))
 
@@ -502,8 +503,8 @@
 
   ;; Clear existing geoms
   (-> layers :overlays :diversity-area .getSource .clear)
-  
-  (doseq [[id feat] areas]        
+
+  (doseq [[id feat] areas]
     (let [aggs (get-in results [id :aggs])
           ol-feat (->ol-feature (clj->js (update feat :properties merge aggs)))]
 
