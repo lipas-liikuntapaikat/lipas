@@ -36,9 +36,25 @@
     [mui/grid {:container true :spacing 16}
 
      [mui/grid {:item true :xs 12}
+      [lui/expansion-panel {:label            "Info"
+                            :default-expanded false}
+       [mui/paper
+        {:style
+         {:padding "1em" :background-color "#f5e642"}}
+        [mui/typography {:variant "body1" :paragraph true}
+         (tr :analysis/diversity-help1)]
+        [mui/typography {:variant "body1" :paragraph true}
+         (tr :analysis/diversity-help2)]
+        [mui/typography {:variant "body1" :paragraph true}
+         (tr :analysis/description3)]
+        [mui/typography {:variant "body1" :paragraph true}
+         (tr :analysis/diversity-help3)]]]]
+
+     [mui/grid {:item true :xs 12}
       [mui/typography "Valitse lähde"]]
 
      [mui/grid {:item true :xs 12}
+
       [lui/expansion-panel {:label            "Käytä postinumeroalueita"
                             :default-expanded true}
        [lui/city-selector-single
