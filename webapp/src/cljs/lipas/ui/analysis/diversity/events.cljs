@@ -215,7 +215,17 @@
  (fn [{:keys [db]} [_ resp]]
    (let [fcoll (update resp :features
                        (fn [fs]
-                         (map (fn [f] (update f :properties dissoc :bbox :pinta_ala)) fs)))]
+                         (map
+                          (fn [f]
+                            (update f :properties dissoc
+                                    :bbox
+                                    :pinta_ala
+                                    :namn
+                                    :kunta
+                                    :kuntanro
+                                    :vuosi
+                                    :objectid))
+                          fs)))]
      {:db         (assoc-in db [:analysis :diversity :loading?] false)
       :dispatch-n [[::set-analysis-candidates fcoll "Polygon"]]})))
 
