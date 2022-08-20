@@ -243,9 +243,11 @@
                                   :multi     false
                                   :condition ol/events.condition.pointerMove})
 
-        select (ol/interaction.Select.
-                #js{:layers #js[(-> layers :overlays :vectors)]
-                    :style  styles/feature-style-selected})
+        diversity-area-select (ol/interaction.Select.
+                               #js{:layers #js[(-> layers :overlays :diversity-area)]})
+
+        select (ol/interaction.Select. #js{:layers #js[(-> layers :overlays :vectors)]
+                                           :style  styles/feature-style-selected})
 
         lmap (ol/Map. opts)]
 
@@ -332,6 +334,14 @@
                       :type      :diversity-area
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
+    (.on diversity-area-select "select"
+         (fn [e]
+           (let [selected (gobj/get e "selected")
+                 f1       (when (seq selected) (aget selected 0))
+                 fid      (when f1 (.get f1 "id"))]
+             (when fid
+               (==> [:lipas.ui.analysis.diversity.events/calc-diversity-indices {:id (symbol fid)}])))))
+
     ;; It's not possible to have multiple selects with
     ;; same "condition" (at least I couldn't get it
     ;; working). Therefore we have to detect which layer we're
@@ -370,13 +380,14 @@
      ;; singleton instances under special :interactions* key in
      ;; map-ctx where we can find them when they need to be enabled.
      :interactions*
-     {:select               select
-      :vector-hover         vector-hover
-      :marker-hover         marker-hover
-      :population-hover     population-hover
-      :schools-hover        schools-hover
-      :diversity-grid-hover diversity-grid-hover
-      :diversity-area-hover diversity-area-hover}
+     {:select                select
+      :vector-hover          vector-hover
+      :marker-hover          marker-hover
+      :population-hover      population-hover
+      :schools-hover         schools-hover
+      :diversity-grid-hover  diversity-grid-hover
+      :diversity-area-hover  diversity-area-hover
+      :diversity-area-select diversity-area-select}
      :overlays {:popup popup-overlay}}))
 
 (defn show-population!
@@ -515,6 +526,7 @@
         map-utils/unselect-features!
         map-utils/clear-interactions!
         map-utils/clear-markers!
+        map-utils/enable-diversity-area-select!
         (map-utils/draw-diversity-areas! diversity)
         (map-utils/enable-diversity-area-hover!)
         (map-utils/enable-diversity-grid-hover!)

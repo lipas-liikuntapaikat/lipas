@@ -276,6 +276,13 @@
     (.addInteraction lmap select)
     (assoc-in map-ctx [:interactions :select] select)))
 
+(defn enable-diversity-area-select!
+  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  (let [select (:diversity-area-select interactions*)]
+    (-> select .getFeatures .clear)
+    (.addInteraction lmap select)
+    (assoc-in map-ctx [:interactions :select] select)))
+
 (defn find-feature-by-id
   [{:keys [layers]} fid]
   (let [layer  (-> layers :overlays :vectors)
