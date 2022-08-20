@@ -57,9 +57,7 @@
 
       :dispatch-n
       [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-         [:lipas.ui.search.events/set-type-filter type-codes])
-
-       []]})))
+         [:lipas.ui.search.events/set-type-filter type-codes])]})))
 
 (re-frame/reg-event-db
  ::clear
