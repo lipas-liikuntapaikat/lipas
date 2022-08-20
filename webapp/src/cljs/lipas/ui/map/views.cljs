@@ -389,7 +389,11 @@
          ]]
 
        ;; No data available
-       [mui/typography "Analyysiä ei ole tehty"])]))
+       [:div {:style {:width "200px" :padding "0.5em"}}
+        [mui/typography {:paragraph true}
+         "Analyysiä ei ole tehty"]
+        [mui/typography {:paragraph true :variant "caption"}
+         "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
 (defn popup []
   (let [{:keys [data anchor-el]
