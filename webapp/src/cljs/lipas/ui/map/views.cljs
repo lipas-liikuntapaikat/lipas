@@ -320,20 +320,20 @@
       {:padding "0.5em"}}
      [mui/table {:padding "dense"}
       [mui/table-body
-       
+
        ;; Diversity index
        [mui/table-row
         [mui/table-cell
          [mui/typography "Monipuolisuusindeksi"]]
         [mui/table-cell
          (:diversity_idx data)]]
-       
+
        ;; Population
        [mui/table-row
         [mui/table-cell
          [mui/typography (tr :analysis/population)]]
         [mui/table-cell
-         (:population data)]]]]]))
+         (or (:population data) "<10")]]]]]))
 
 (defmethod popup-body :diversity-area [popup]
   (let [tr   (<== [:lipas.ui.subs/translator])
@@ -344,7 +344,7 @@
 
      (if (or (:population-weighted-mean data) (:population data))
 
-       ;; Results table       
+       ;; Results table
        [mui/table {:padding "dense"}
         [mui/table-body
 
@@ -360,9 +360,10 @@
          [mui/table-row
           [mui/table-cell
            [mui/typography (tr :analysis/population)]]
-          [mui/table-cell         
-           (:population data)]]
-         
+          [mui/table-cell
+           (let [n (:population data 0)]
+             (if (< n 10) "<10" n))]]
+
          ;; Mean
          #_[mui/table-row
             [mui/table-cell
@@ -425,7 +426,7 @@
           (<== [::subs/sports-site-view lipas-id type-code])
 
           set-field (partial set-field lipas-id)]
-      
+
       [mui/grid
        {:container true
         :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
