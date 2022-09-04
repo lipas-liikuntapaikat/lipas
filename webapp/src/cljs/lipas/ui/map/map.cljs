@@ -92,13 +92,13 @@
     :analysis
     (ol/layer.Vector.
      #js{:source     (ol/source.Vector.)
-         :style      styles/population-style
+         :style      styles/analysis-style
          :name       "analysis"
          :renderMode "image"})
     :population
     (ol/layer.Vector.
      #js{:source     (ol/source.Vector.)
-         :style      styles/population-style2
+         :style      styles/population-style3
          :name       "population"
          :renderMode "image"})
     :schools
@@ -221,7 +221,7 @@
 
         population-hover (ol/interaction.Select.
                           #js{:layers    #js[(-> layers :overlays :population)]
-                              :style     styles/population-hover-style2
+                              :style     styles/population-hover-style3
                               :multi     false
                               :condition ol/events.condition.pointerMove})
 
