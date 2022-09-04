@@ -40,24 +40,30 @@
          feat  (get-in db [:analysis :diversity :areas id])
          fcoll {:type     "FeatureCollection"
                 :features [feat]}]
-     {:db       (assoc-in db [:analysis :diversity :loading?] true)
-      :http-xhrio
-      {:method          :post
-       :uri             url
-       :params          (-> db
-                            :analysis
-                            :diversity
-                            :settings
-                            (assoc :analysis-area-fcoll fcoll))
-       :format          (ajax/transit-request-format)
-       :response-format (ajax/transit-response-format)
-       :on-success      [::calc-success id]
-       :on-failure      [::calc-failure]}
-      :ga/event ["analysis" "calculate-analysis" "diversity"]
 
-      :dispatch-n
-      [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-         [:lipas.ui.search.events/set-type-filter type-codes])]})))
+     ;; Flood prevention
+     (if (-> db :analysis :diversity :loading?)
+       (do
+         (println "kiskis")
+         {})
+       {:db       (assoc-in db [:analysis :diversity :loading?] true)
+        :http-xhrio
+        {:method          :post
+         :uri             url
+         :params          (-> db
+                              :analysis
+                              :diversity
+                              :settings
+                              (assoc :analysis-area-fcoll fcoll))
+         :format          (ajax/transit-request-format)
+         :response-format (ajax/transit-response-format)
+         :on-success      [::calc-success id]
+         :on-failure      [::calc-failure]}
+        :ga/event ["analysis" "calculate-analysis" "diversity"]
+
+        :dispatch-n
+        [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
+           [:lipas.ui.search.events/set-type-filter type-codes])]}))))
 
 (re-frame/reg-event-db
  ::clear

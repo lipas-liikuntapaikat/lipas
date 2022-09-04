@@ -1,9 +1,11 @@
 (ns lipas.backend.analysis.diversity
   (:require
+   [clojure.set :as set]
    [clojure.string :as str]
    [lipas.backend.analysis.common :as common]
    [lipas.backend.gis :as gis]
    [lipas.backend.osrm :as osrm]
+   [lipas.backend.search :as search]
    [lipas.data.types :as types]
    [lipas.utils :as utils]))
 
@@ -21,6 +23,10 @@
 ;; - route distance with OSRM
 ;; - calculate weighted diversity index (by population) for the whole area
 ;; - return as GeoJSON
+
+(def statuses
+  "Relevant sports site statuses for diversity index calculation."
+  #{"active" "out-of-service-temporarily"})
 
 (defn- append-euclid-distances [pop-data site-data]
   (for [pop-entry pop-data
@@ -57,17 +63,18 @@
   (let [res (osrm/get-distances-and-travel-times
              {:profiles     #{:foot}
               :sources      (->> pop-data
-                                     (map (comp gis/wkt-point->coords :coords :_source))
-                                     (map #(str/join "," %)))
+                                 (map (comp gis/wkt-point->coords :coords :_source))
+                                 (map #(str/join "," %)))
               :destinations (->> site-data
-                                     (map (comp :simple-geoms :location :search-meta :_source))
-                                     (mapcat gis/->coord-pair-strs))})]
+                                 (map (comp :simple-geoms :location :search-meta :_source))
+                                 (mapcat gis/->coord-pair-strs))})]
     (map-indexed
      (fn [pop-idx pop-entry]
        (assoc pop-entry :sports-sites
               (map-indexed
                (fn [site-idx site]
                  {:id         (:_id site)
+                  :status     (-> site :_source :status)
                   :type-code  (-> site :_source :type :type-code)
                   :distance-m (get-in res [:foot :distances pop-idx site-idx])
                   :duration-s (get-in res [:foot :durations pop-idx site-idx])})
@@ -78,7 +85,14 @@
 
 (defn- calc-indices
   [pop-data categories
-   {:keys [max-distance-m] :as opts}]
+   {:keys [max-distance-m statuses site->distance-fn site->type-code-fn site->status-fn
+           sports-sites-fn]
+    :or   {statuses           #{true}
+           sports-sites-fn    :sports-sites
+           site->type-code-fn :type-code
+           site->distance-fn  :distance-m
+           site->status-fn    (constantly true)}
+    :as   opts}]
   (map
    (fn [pop-entry]
      (let [cats (reduce
@@ -86,11 +100,13 @@
                          :or   {factor 1}}]
                    (assoc m name
                           (->> pop-entry
-                               :sports-sites
+                               sports-sites-fn
                                (filter
                                 (fn [site]
-                                  (and (type-codes (:type-code site))
-                                       (> max-distance-m (:distance-m site)))))
+                                  (and
+                                   (statuses (site->status-fn site))
+                                   (type-codes (site->type-code-fn site))
+                                   (> max-distance-m (site->distance-fn site)))))
                                first
                                some?
                                bool->num
@@ -105,31 +121,34 @@
            (assoc :diversity-index (->> cats vals (apply +))))))
    pop-data))
 
-(defn- ->grid-geojson [pop-data]
-  {:type "FeatureCollection"
-   :features
-   (map
-    (fn [pop-entry]
-      (let [coords      (-> pop-entry :_source :coords gis/wkt-point->coords)
-            coords-3067 (gis/wgs84->tm35fin-no-wrap coords)]
-        {:type "Feature"
-         :geometry
-         {:type        "Point"
-          :coordinates coords}
-         :properties
-         (merge
-          {:id             (-> pop-entry :_source :id_nro)
-           :grid_id        (-> pop-entry :_source :grd_id)
-           :epsg3067       coords-3067
-           #_#_:sports-sites   (map :_id (:sports-sites pop-entry))
-           :envelope_wgs84 (gis/epsg3067-point->wgs84-envelope coords-3067 125)
-           :diversity_idx  (:diversity-index pop-entry)
-           #_#_:age_0_14   (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
-           #_#_:age_15_64  (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
-           #_#_:age_65_    (-> pop-entry :_source :ika_65_ utils/->int anonymize)
-           :population     (-> pop-entry :_source :vaesto utils/->int common/anonymize)}
-          (:categories pop-entry))}))
-    pop-data)})
+(defn- ->grid-geojson
+  ([pop-data] (->grid-geojson pop-data {}))
+  ([pop-data {:keys [coords-fn]
+              :or   {coords-fn (comp gis/wkt-point->coords :coords)}}]
+   {:type "FeatureCollection"
+    :features
+    (map
+     (fn [pop-entry]
+       (let [coords      (-> pop-entry :_source coords-fn)
+             coords-3067 (gis/wgs84->tm35fin-no-wrap coords)]
+         {:type "Feature"
+          :geometry
+          {:type        "Point"
+           :coordinates coords}
+          :properties
+          (merge
+           {:id               (-> pop-entry :_source :id_nro)
+            :grid_id          (-> pop-entry :_source :grd_id)
+            :epsg3067         coords-3067
+            #_#_:sports-sites (map :_id (:sports-sites pop-entry))
+            :envelope_wgs84   (gis/epsg3067-point->wgs84-envelope coords-3067 125)
+            :diversity_idx    (:diversity-index pop-entry)
+            #_#_:age_0_14     (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
+            #_#_:age_15_64    (-> pop-entry :_source :ika_15_64 utils/->int anonymize)
+            #_#_:age_65_      (-> pop-entry :_source :ika_65_ utils/->int anonymize)
+            :population       (-> pop-entry :_source :vaesto utils/->int common/anonymize)}
+           (:categories pop-entry))}))
+     pop-data)}))
 
 (defn prepare-categories [categories]
   (map #(update % :type-codes set) categories))
@@ -137,7 +156,7 @@
 (defn calc-aggs [pop-entries]
   (let [idxs      (map :diversity-index pop-entries)
         total-pop (->> pop-entries
-                       (map (comp (partial max 0) utils/->int :vaesto :_source))
+                       (map (comp (partial max 0) (fnil utils/->int 0) :vaesto :_source))
                        (apply +))]
     {:diversity-idx-mean       (utils/mean idxs)
      :diversity-idx-median     (utils/median idxs)
@@ -163,7 +182,6 @@
         buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
         buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
         buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
-        statuses   #{"active" "out-of-service-temporarily"}
 
         pop-data  (future
                     (common/get-population-data search analysis-area-fcoll analysis-radius-km))
@@ -193,6 +211,123 @@
                 (map
                  (fn [f] (assoc f :properties props))
                  (-> m :_source :search-meta :location :simple-geoms :features))))))}}))
+
+;;; Pre-calculated impl ;;;
+
+(defn fetch-grid
+  [search fcoll analysis-radius-km]
+  (let [geom (-> fcoll :features first)
+        query {:size 10000
+               :query
+               {:bool
+                {:filter
+                 {:geo_shape
+                  {:WKT
+                   {:shape    (if (= "Point" (-> geom :geometry :type))
+                                {:type        "circle"
+                                 :coordinates (-> geom :geometry :coordinates)
+                                 :radius      (str analysis-radius-km "km")}
+                                (:geometry geom))
+                    :relation "intersects"}}}}}}]
+    (->> (search/search search :diversity query)
+         :body
+         :hits
+         :hits)))
+
+(defn calc-diversity-indices-2
+  [search
+   {:keys [analysis-area-fcoll categories max-distance-m analysis-radius-km distance-mode]
+    :or   {max-distance-m 800 analysis-radius-km 5}
+    :as   opts}]
+  (let [categories (prepare-categories categories)
+        buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
+        buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
+        buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
+        statuses   #{"active" "out-of-service-temporarily"}
+
+        pop-data-with-distances (fetch-grid search buff-fcoll buff-dist)
+        pop-data-with-indices   (calc-indices pop-data-with-distances categories
+                                              (assoc opts
+                                                     :statuses statuses
+                                                     :sports-sites-fn   (comp :sports-sites
+                                                                              :_source)
+                                                     :site->status-fn :status
+                                                     :site->distance-fn (comp :distance-m
+                                                                              :foot
+                                                                              :osrm)))]
+
+    {:grid (->grid-geojson pop-data-with-indices {:coords-fn (comp gis/wkt-point->coords :WKT)})
+     :aggs (calc-aggs pop-data-with-indices)}))
+
+(def all-type-codes (keys types/all))
+
+(defn- resolve-dests [site on-error]
+    (try
+      (-> site
+          :_source
+          :search-meta
+          :location
+          :simple-geoms
+          gis/->coord-pair-strs)
+      (catch Exception e
+        (on-error {:site site :error e})
+        [])))
+
+(defn- resolve-min
+  [coll]
+  (let [min* (partial apply min)]
+    (->> coll (remove nil?) min*)))
+
+(defn- apply-mins [m]
+  (reduce-kv
+   (fn [res k v]
+     (assoc res k
+            (some-> v
+                    (update :distances #(-> % first not-empty (some-> resolve-min)))
+                    (update :durations #(-> % first not-empty (some-> resolve-min)))
+                    (dissoc :code)
+                    (set/rename-keys {:distances :distance-m
+                                      :durations :duration-s}))))
+   {}
+   m))
+
+(defn process-grid-item
+  [search dist-km m on-error]
+  (let [coords      (-> m :WKT gis/wkt-point->coords)
+        point-fcoll (gis/->fcoll
+                     [(gis/->feature {:type        "Point"
+                                      :coordinates coords})])
+        site-data   (common/get-sports-site-data
+                     search
+                     point-fcoll
+                     dist-km
+                     all-type-codes
+                     statuses)]
+    (assoc m :sports-sites
+           (map (fn [site]
+                  {:id        (:_id site)
+                   :type-code (-> site :_source :type :type-code)
+                   :status    (-> site :_source :status)
+                   :osrm      (-> (osrm/get-distances-and-travel-times
+                                   {:profiles     [:car :bicycle :foot]
+                                    :sources      [(str/join "," coords)]
+                                    :destinations (resolve-dests site on-error)})
+                                  (some-> apply-mins))})
+                (:hits site-data)))))
+
+(defn recalc-grid!
+  [search fcoll]
+  (let [on-error       prn
+        buffer-dist-km 2
+        buffer-geom    (gis/calc-buffer fcoll (* buffer-dist-km 1000))
+        buffer-fcoll   (gis/->fcoll [(gis/->feature buffer-geom)])
+        grid-items     (fetch-grid search buffer-fcoll buffer-dist-km)]
+    (->> grid-items
+         (map :_source)
+         (map #(process-grid-item search buffer-dist-km % on-error))
+         (search/->bulk :diversity :grd_id)
+         (search/bulk-index! search)
+         deref)))
 
 (comment
   (require '[lipas.backend.search])
@@ -332,9 +467,13 @@
 
   (calc-diversity-indices search route-params)
 
-  )
+  (def params {:analysis-area-fcoll point2-fcoll
+               :categories          route-categoriez
+               :max-distance-m      800
+               :analysis-radius-km  5})
 
-;; valmiit alueet: Kunta -> postinumeroalueet
-;; kategoriahärvelin --> uusi kategoria, pyyhi teksti
-;; vain aktiiviset ja väliaikaisesti pois käytöstä
-;; Selitetekstit + käännökset (Tapani)
+
+  (time (calc-diversity-indices-2 search params))
+  (prepare-categories categoriez)
+
+  )
