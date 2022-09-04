@@ -318,6 +318,12 @@
       5000 (population-styles 4)
       (population-styles 5))))
 
+(def analysis-style
+  (ol/style.Style.
+   #js{:stroke
+       (ol/style.Stroke.
+        #js{:width 3 :color "blue" :lineDash #js[2 10]})}))
+
 (defn population-hover-style
   [f _resolution]
   (let [n (.get f "vaesto")]
@@ -390,6 +396,53 @@
           #js{:radius (min 10 (* 0.1 (js/Math.abs n)))
               :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
               :stroke hover-stroke})})))
+
+(defn density [n]
+  (cond
+    (nil? n) 0.1
+    (> 10 n) 0.1
+    (> 25 n) 0.2
+    (> 50 n) 0.3
+    (> 100 n) 0.4
+    (> 250 n) 0.5
+    :else 0.7))
+
+(defn population-style3
+  [f resolution]
+  (let [n     (.get f "vaesto")
+        color (.get f "color")
+        dens  (density n)]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color color})
+         :fill (ol/style.Fill. #js{:color color})
+         :image
+         (ol/style.RegularShape.
+          #js{:radius (/ 175 resolution)
+              :points 4
+              :angle  (/ js/Math.PI 4)
+              :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
+              :stroke (ol/style.Stroke. #js{:color color :width 2})})})))
+
+(defn population-hover-style3
+  [f resolution]
+  (let [n     (.get f "vaesto")
+        color (.get f "color")
+        dens (density n)]
+    (ol/style.Style.
+     #js{:stroke
+         (ol/style.Stroke.
+          #js{:width 3 :color color})
+         :fill (ol/style.Fill. #js{:color color})
+         :image
+         (ol/style.RegularShape.
+          #js{:radius (/ 175 resolution)
+              :points 4
+              :angle  (/ js/Math.PI 4)
+              :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
+              :stroke hover-stroke})})))
+
 
 (def school-colors
   {"Peruskoulut"
