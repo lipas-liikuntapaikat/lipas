@@ -389,7 +389,7 @@
          ]]
 
        ;; No data available
-       [:div {:style {:width "200px" :padding "0.5em"}}
+       [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
         [mui/typography {:paragraph true}
          "Analyysiä ei ole tehty"]
         [mui/typography {:paragraph true :variant "caption"}

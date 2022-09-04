@@ -294,7 +294,12 @@
                         :city         {:name (-> city-code cities :name)}
                         :province     {:name (:name province)}
                         :avi-area     {:name (:name avi-area)}
-                        :simple-geoms (gis/simplify fcoll)}
+                        :simple-geoms (let [simplified (gis/simplify fcoll)]
+                                        (if (gis/contains-coords? simplified)
+                                          simplified
+                                          ;; If simplification removes all coords
+                                          ;; fallback to original geoms
+                                          fcoll))}
                        :type
                        {:name          (-> type-code types :name)
                         :tags          (-> type-code types :tags)
@@ -352,7 +357,8 @@
      (let [resp (upsert-sports-site! tx user sports-site draft?)]
        (when-not draft?
          (index! search resp :sync)
-         (add-to-integration-out-queue! tx resp))
+         (add-to-integration-out-queue! tx resp)
+         (diversity/recalc-grid! search (-> resp :location :geometries)))
        resp))))
 
 ;;; Cities ;;;
@@ -467,7 +473,7 @@
        (excel/save-workbook-into-stream! out)))
 
 (defn calc-diversity-indices [search params]
-  (diversity/calc-diversity-indices search params))
+  (diversity/calc-diversity-indices-2 search params))
 
 (comment
   (require '[lipas.backend.config :as config])

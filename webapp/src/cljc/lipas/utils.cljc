@@ -69,9 +69,11 @@
     #?(:cljs (catch :default ex)
        :clj  (catch Exception ex))))
 
-(defn ->int [s]
-  (when-let [num (->number s)]
-    (int num)))
+(defn ->int [x]
+  (cond
+    (number? x) (int x)
+    (string? x) (when-let [num (->number x)]
+                  (int num))))
 
 (defn ->uuid [s]
   #?(:clj (java.util.UUID/fromString s)
