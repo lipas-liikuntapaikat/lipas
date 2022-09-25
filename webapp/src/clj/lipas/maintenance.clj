@@ -180,4 +180,10 @@
   (-main ":index-city-finance-data")
   (-main ":index-subsidies")
   ;; Valtimo -> Nurmes
-  (-main ":merge-cities" "911" "541" "2020-01-01T00:00:00.000Z"))
+  (-main ":merge-cities" "911" "541" "2020-01-01T00:00:00.000Z")
+
+  (def config (select-keys config/default-config [:db :search]))
+  (def system (backend/start-system! config))
+  (index-subsidies! system)
+
+  )
