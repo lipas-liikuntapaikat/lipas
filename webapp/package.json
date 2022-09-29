@@ -38,7 +38,7 @@
     "react-dom": "^16.8.6",
     "react-select-material-ui": "^2.1.1",
     "react-virtualized": "^9.21.1",
-    "recharts": "^1.7.1",
+    "recharts": "^2.1.14",
     "shpjs": "^4.0.2",
     "togpx": "^0.5.4",
     "zipcelx-es5-cjs": "^1.6.0"
