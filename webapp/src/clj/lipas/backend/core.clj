@@ -257,6 +257,15 @@
 (defmethod fix-geoms "Polygon" [sports-site]
   (update-in sports-site [:location :geometries] gis/dedupe-polygon-coords))
 
+(defn- simplify
+  [fcoll]
+  (let [simplified (gis/simplify fcoll)]
+    (if (gis/contains-coords? simplified)
+      simplified
+      ;; If simplification removes all coords
+      ;; fallback to original geoms
+      fcoll)))
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -294,12 +303,7 @@
                         :city         {:name (-> city-code cities :name)}
                         :province     {:name (:name province)}
                         :avi-area     {:name (:name avi-area)}
-                        :simple-geoms (let [simplified (gis/simplify fcoll)]
-                                        (if (gis/contains-coords? simplified)
-                                          simplified
-                                          ;; If simplification removes all coords
-                                          ;; fallback to original geoms
-                                          fcoll))}
+                        :simple-geoms (simplify fcoll)}
                        :type
                        {:name          (-> type-code types :name)
                         :tags          (-> type-code types :tags)
@@ -345,6 +349,9 @@
 (defn add-to-integration-out-queue! [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
+(defn add-to-analysis-queue! [db sports-site]
+  (db/add-to-analysis-queue! db (:lipas-id sports-site)))
+
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
 (defn save-sports-site!
@@ -358,7 +365,7 @@
        (when-not draft?
          (index! search resp :sync)
          (add-to-integration-out-queue! tx resp)
-         (diversity/recalc-grid! search (-> resp :location :geometries)))
+         (add-to-analysis-queue! tx resp))
        resp))))
 
 ;;; Cities ;;;
@@ -474,6 +481,31 @@
 
 (defn calc-diversity-indices [search params]
   (diversity/calc-diversity-indices-2 search params))
+
+(defn process-analysis-queue!
+  [db search]
+  (let [entries (->> (db/get-analysis-queue db))]
+    (log/info "Processing" (count entries) "entries from analysis queue")
+
+    ;; Lock
+    (jdbc/with-db-transaction [tx db]
+      (doseq [{:keys [lipas-id]} entries]
+        (db/update-analysis-status! tx lipas-id "in-progress")))
+
+    ;; Process
+    (doseq [{:keys [lipas-id]} entries]
+      (log/info "Processing analysis for" lipas-id)
+      (try
+        (let [fcoll (-> (get-sports-site db lipas-id)
+                        :location
+                        :geometries
+                        simplify)]
+          (diversity/recalc-grid! search fcoll)
+          (db/delete-from-analysis-queue! db lipas-id)
+          (log/info "Analysis for" lipas-id "completed successfully!"))
+        (catch Exception ex
+          (log/error ex)
+          (db/update-analysis-status! db lipas-id "failed"))))))
 
 (comment
   (require '[lipas.backend.config :as config])

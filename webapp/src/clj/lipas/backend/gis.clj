@@ -177,9 +177,12 @@
   (if (point? fcoll)
     [(-> fcoll :features first :geometry :coordinates
          (->> (str/join ",")))]
-    (-> fcoll
-        ->single-linestring-coords
-        (->> (map #(str/join "," %))))))
+    (let [points (->flat-coords fcoll)]
+      (if (> 10 (count points))
+        (map #(str/join "," %) points)
+        (-> fcoll
+            ->single-linestring-coords
+            (->> (map #(str/join "," %))))))))
 
 (defn dedupe-polygon-coords
   [fcoll]
