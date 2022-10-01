@@ -195,6 +195,9 @@ services:
     links:
       - postgres
       - elasticsearch
+      - osrm-foot
+      - osrm-bicycle
+      - osrm-car
 
   integrations:
     extends:

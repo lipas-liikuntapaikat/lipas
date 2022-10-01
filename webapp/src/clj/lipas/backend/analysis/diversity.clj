@@ -24,6 +24,16 @@
 ;; - calculate weighted diversity index (by population) for the whole area
 ;; - return as GeoJSON
 
+(def mappings
+  {:mappings
+   {:properties
+    {:WKT {:type "geo_point"}
+     :sports-sites {:type "nested"}}}})
+
+(defn create-index!
+  [search]
+  (search/create-index! search :diversity mappings))
+
 (def statuses
   "Relevant sports site statuses for diversity index calculation."
   #{"active" "out-of-service-temporarily"})
@@ -261,7 +271,7 @@
 
 (def all-type-codes (keys types/all))
 
-(defn- resolve-dests [site on-error]
+(defn resolve-dests [site on-error]
     (try
       (-> site
           :_source
@@ -278,7 +288,7 @@
   (let [min* (partial apply min)]
     (->> coll (remove nil?) min*)))
 
-(defn- apply-mins [m]
+(defn apply-mins [m]
   (reduce-kv
    (fn [res k v]
      (assoc res k
