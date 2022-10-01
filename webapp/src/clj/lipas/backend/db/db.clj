@@ -2,6 +2,7 @@
   (:require
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
+   [lipas.backend.db.analysis :as analysis]
    [lipas.backend.db.city :as city]
    [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
@@ -188,6 +189,27 @@
   (->> {:lipas-id lipas-id}
        utils/->snake-case-keywords
        (integration/delete-from-out-queue! db-spec)))
+
+;; Analysis queue ;;
+
+(defn add-to-analysis-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       analysis/marshall
+       (analysis/add-to-queue! db-spec)))
+
+(defn delete-from-analysis-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       analysis/marshall
+       (analysis/delete-from-queue! db-spec)))
+
+(defn update-analysis-status! [db-spec lipas-id status]
+  (->> {:lipas-id lipas-id :status status}
+       analysis/marshall
+       (analysis/update-status! db-spec)))
+
+(defn get-analysis-queue [db-spec]
+  (->> (analysis/get-queue db-spec)
+       (map analysis/unmarshall)))
 
 ;; City ;;
 
