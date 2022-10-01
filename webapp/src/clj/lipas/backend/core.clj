@@ -334,9 +334,9 @@
   ([search sports-site]
    (index! search sports-site false))
   ([search sports-site sync?]
-   (let [idx-name "sports_sites_current"]
-     (let [data (enrich sports-site)]
-       (search/index! search idx-name :lipas-id data sync?)))))
+   (let [idx-name "sports_sites_current"
+         data     (enrich sports-site)]
+     (search/index! search idx-name :lipas-id data sync?))))
 
 (defn search [search params]
   (let [idx-name "sports_sites_current"]
