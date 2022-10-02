@@ -25,6 +25,19 @@
    (:categories settings)))
 
 (re-frame/reg-sub
+ ::category-presets
+ :<- [::diversity]
+ (fn [diversity _]
+   (->> (:category-presets diversity)
+        (map (fn [[k v]] {:label (:name v) :value k})))))
+
+(re-frame/reg-sub
+ ::selected-category-preset
+ :<- [::diversity]
+ (fn [diversity _]
+   (:selected-category-preset diversity)))
+
+(re-frame/reg-sub
  ::analysis-area-fcoll
  :<- [::settings]
  (fn [settings _]
@@ -45,14 +58,14 @@
 (re-frame/reg-sub
  ::analysis-candidates-table-rows
  :<- [::analysis-candidates]
- (fn [m _]   
+ (fn [m _]
    (->> (vals m)
         (map :properties))))
 
 (re-frame/reg-sub
  ::analysis-candidates-table-headers
  :<- [::analysis-candidates-table-rows]
- (fn [candidates _]   
+ (fn [candidates _]
    (-> candidates first keys
        (->> (reduce (fn [m k] (assoc m k {:label (name k)})) {})))))
 

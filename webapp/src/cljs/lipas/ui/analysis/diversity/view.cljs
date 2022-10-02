@@ -166,8 +166,10 @@
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
 
 (defn settings []
-  (let [tr             (<== [:lipas.ui.subs/translator])
-        max-distance-m (<== [::subs/max-distance-m])]
+  (let [tr               (<== [:lipas.ui.subs/translator])
+        max-distance-m   (<== [::subs/max-distance-m])
+        selected-preset  (<== [::subs/selected-category-preset])
+        category-presets (<== [::subs/category-presets])]
     [:<>
 
      [mui/grid {:container true}
@@ -193,6 +195,15 @@
           [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
            [mui/typography {:variant "body1" :paragraph false}
             (tr :analysis/categories-help)]]]
+
+         ;; Preset category selector
+         [mui/grid {:item true :xs 12 :md 12}
+          [mui/form-group {:style {:padding "0.5em" :margin-bottom "1em"}}
+           [lui/select
+            {:value     selected-preset
+             :on-change #(==> [::events/select-cateogry-preset %])
+             :label     "Valmiit luokittelut"
+             :items     category-presets}]]]
 
          ;; Add new category button
          [mui/grid {:item true :xs 12 :md 6}
