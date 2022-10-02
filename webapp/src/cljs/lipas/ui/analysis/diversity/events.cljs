@@ -131,9 +131,18 @@
          (assoc-in [:analysis :diversity :import :batch-id] (gensym))))))
 
 (re-frame/reg-event-db
+ ::select-cateogry-preset
+ (fn [db [_ preset-kw]]
+   (prn preset-kw)
+   (let [categories (get-in db [:analysis :diversity :category-presets preset-kw :categories])]
+     (-> db
+         (assoc-in [:analysis :diversity :settings :categories] categories)
+         (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
+
+(re-frame/reg-event-db
  ::reset-default-categories
  (fn [db _]
-   (let [defaults (-> db/default-db :settings :categories)]
+   (let [defaults (-> db/default-db :categories :default :categories)]
      (assoc-in db [:analysis :diversity :settings :categories] defaults))))
 
 (re-frame/reg-event-db
