@@ -3,7 +3,7 @@
    [clojure.string :as str]
    [lipas.ui.analysis.diversity.events :as events]
    [lipas.ui.analysis.diversity.subs :as subs]
-   [lipas.ui.charts :as charts]
+   #_[lipas.ui.charts :as charts]
    #_[lipas.ui.components :as lui]
    #_[lipas.ui.map.events :as map-events]
    #_[lipas.ui.map.subs :as map-subs]
@@ -166,8 +166,13 @@
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
 
 (defn settings []
-  (let [tr             (<== [:lipas.ui.subs/translator])
-        max-distance-m (<== [::subs/max-distance-m])]
+  (let [tr                (<== [:lipas.ui.subs/translator])
+        max-distance-m    (<== [::subs/max-distance-m])
+        selected-preset   (<== [::subs/selected-category-preset])
+        category-presets  (<== [::subs/category-presets])
+        summer-enabled?   (<== [::subs/seasonality-enabled? "summer"])
+        winter-enabled?   (<== [::subs/seasonality-enabled? "winter"])
+        all-year-enabled? (<== [::subs/seasonality-enabled? "all-year"])]
     [:<>
 
      [mui/grid {:container true}
@@ -189,21 +194,60 @@
         [mui/grid {:container true :spacing 2}
 
          ;; Helper text
-         [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+         [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
           [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
            [mui/typography {:variant "body1" :paragraph false}
             (tr :analysis/categories-help)]]]
 
+         ;; Preset category selector
+         [mui/grid {:item true :xs 12 :md 12}
+          [mui/form-group {:style {:padding "0.5em" :margin-bottom "0.5em"}}
+           [lui/select
+            {:value     selected-preset
+             :on-change #(==> [::events/select-category-preset %])
+             :label     "Valmiit luokittelut"
+             :items     category-presets}]]]
+
+         ;; Seasonality switches
+         [mui/grid {:item true :xs 12 :md 12}
+          [mui/grid {:container true :style {:padding "0.5em"}}
+
+           [mui/grid {:item true :xs 12}
+            [mui/typography {:variant "caption"} "Rajaukset"]]
+
+           ;; Summer season filter
+           [mui/grid {:item true}
+            [lui/switch
+             {:label     "Käytössä kesällä"
+              :value     summer-enabled?
+              :on-change #(==> [::events/toggle-seasonality "summer" %])}]]
+
+           ;; Winter season filter
+           [mui/grid {:item true}
+            [lui/switch
+             {:label     "Käytössä talvella"
+              :value winter-enabled?
+              :on-change #(==> [::events/toggle-seasonality "winter" %])}]]
+
+           ;; All-year filter
+           [mui/grid {:item true}
+            [lui/switch
+             {:label     "Käytössä vuoden ympäri"
+              :value all-year-enabled?
+              :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
+
          ;; Add new category button
          [mui/grid {:item true :xs 12 :md 6}
           [mui/button
-           {:on-click #(==> [::events/add-new-category])}
+           {:variant  "default"
+            :on-click #(==> [::events/add-new-category])}
            "Uusi kategoria"]]
 
          ;; Reset default categories button
          [mui/grid {:item true :xs 12 :md 6}
           [mui/button
-           {:on-click #(==> [::events/reset-default-categories])}
+           {:variant  "default"
+            :on-click #(==> [::events/reset-default-categories])}
            "Palauta oletuskategoriat"]]
 
          ;; Category builder

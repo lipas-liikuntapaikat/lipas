@@ -46,7 +46,7 @@
 (defn get-distances-and-travel-times
   [{:keys [profiles]
     :or   {profiles [:car :bicycle :foot]}
-    :as   m}]  
+    :as   m}]
   (->> profiles
        (mapv (fn [p] (vector p (future (get-data (assoc m :profile p))))))
        (reduce (fn [res [p f]] (assoc res p (deref f))) {})))

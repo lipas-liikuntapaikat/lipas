@@ -122,11 +122,16 @@
            "LineString"
            (into res (:coordinates g))
 
-           "Polygon"
-           (into res (->> g :coordinates (mapcat identity)))))
+           ("Polygon" "MultiLineString")
+           (into res (->> g :coordinates (filter seq) (mapcat identity) (filter seq)))
+
+           ("MultiPolygon")
+           (into res (->> g :coordinates  (mapcat identity) (mapcat identity) (filter seq)))))
        [])
       (into [] #_(distinct))))
 
+(defn contains-coords? [fcoll]
+  (boolean (seq (->flat-coords fcoll))))
 
 (defn ->jts-point [lon lat]
   (geo/jts-point lat lon))
@@ -172,9 +177,12 @@
   (if (point? fcoll)
     [(-> fcoll :features first :geometry :coordinates
          (->> (str/join ",")))]
-    (-> fcoll
-        ->single-linestring-coords
-        (->> (map #(str/join "," %))))))
+    (let [points (->flat-coords fcoll)]
+      (if (> 10 (count points))
+        (map #(str/join "," %) points)
+        (-> fcoll
+            ->single-linestring-coords
+            (->> (map #(str/join "," %))))))))
 
 (defn dedupe-polygon-coords
   [fcoll]
@@ -219,7 +227,7 @@
 
   (distance-point (-> test-point :features first :geometry)
                   (-> test-point2 :features first :geometry))
-  
+
   (def buff (calc-buffer test-point 10))
 
   (json/encode
@@ -347,8 +355,35 @@
              62.240251303552284])
 
   (def p101 (wgs84->tm35fin p100))
-  
+
   (def envelope
-    (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))  
-  
+    (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))
+
+  (def test-polygon-empty
+    {:type "FeatureCollection",
+     :features
+     [{:type "Feature",
+       :properties {}
+       :geometry
+       {:type "Polygon",
+        :coordinates
+        [[[],
+          []
+          []]]}},
+      {:type "Feature",
+       :properties {}
+       :geometry
+       {:type "Polygon",
+        :coordinates
+        [[[],
+          []
+          []]]}}]})
+
+  (->flat-coords test-polygon-empty)
+
+  (contains-coords? test-point)
+  (contains-coords? test-route)
+  (contains-coords? test-polygon)
+  (contains-coords? test-polygon-empty)
+
   )

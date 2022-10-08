@@ -25,7 +25,7 @@
                      :coordinates (-> geom :geometry :coordinates)
                      :radius      (str distance-km "km")}
                     (:geometry geom))
-        :relation "within"}}}}}})
+        :relation "intersects"}}}}}})
 
 (defn get-sports-site-data
   ([search fcoll distance-km type-codes]
@@ -34,6 +34,7 @@
    (let [geom  (-> fcoll :features first)
          query (-> (build-query geom distance-km)
                    (assoc :_source [:name
+                                    :status
                                     :type.type-code
                                     :search-meta.location.simple-geoms])
                    (update-in [:query :bool :filter :geo_shape] set/rename-keys
