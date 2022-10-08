@@ -151,7 +151,7 @@
             :grid_id          (-> pop-entry :_source :grd_id)
             :epsg3067         coords-3067
             #_#_:sports-sites (map :_id (:sports-sites pop-entry))
-            :envelope_wgs84   (gis/epsg3067-point->wgs84-envelope coords-3067 125)
+            #_#_:envelope_wgs84   (gis/epsg3067-point->wgs84-envelope coords-3067 125)
             :diversity_idx    (:diversity-index pop-entry)
             #_#_:age_0_14     (-> pop-entry :_source :ika_0_14 utils/->int anonymize)
             #_#_:age_15_64    (-> pop-entry :_source :ika_15_64 utils/->int anonymize)

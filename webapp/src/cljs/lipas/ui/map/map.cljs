@@ -448,23 +448,7 @@
 
       (doseq [fcoll (map :grid (vals results))
               f     (:features fcoll)]
-        (let [[nw se] (-> f :properties :envelope_wgs84)
-              min-x   (first se)
-              max-x   (first nw)
-              min-y   (second nw)
-              max-y   (second se)
-              coords  #js[#js[#js[min-x max-y]
-                              #js[max-x max-y]
-                              #js[max-x min-y]
-                              #js[min-x min-y]
-                              #js[min-x max-y]]]
-              geojson #js{:type       "Feature"
-                          :geometry   #js{:type        "Polygon"
-                                          :coordinates coords}
-                          :properties (clj->js (:properties f))}
-              ol-f    (map-utils/->ol-feature geojson)]
-          (.addFeature source ol-f)))))
-
+        (.addFeature source (-> f clj->js map-utils/->ol-feature)))))
 
   map-ctx)
 
