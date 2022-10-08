@@ -133,7 +133,6 @@
 (re-frame/reg-event-db
  ::select-cateogry-preset
  (fn [db [_ preset-kw]]
-   (prn preset-kw)
    (let [categories (get-in db [:analysis :diversity :category-presets preset-kw :categories])]
      (-> db
          (assoc-in [:analysis :diversity :settings :categories] categories)
