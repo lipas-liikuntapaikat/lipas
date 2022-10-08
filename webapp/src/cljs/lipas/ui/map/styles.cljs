@@ -497,23 +497,38 @@
   (sort-by first diversity-colors)
   (reverse (range 30)))
 
-(defn diversity-grid-style [f _resolution]
+(defn diversity-grid-style
+  [f resolution]
   (let [diversity-idx (.get f "diversity_idx")
-        fill-color (get diversity-colors diversity-idx diversity-base-color)]
+        color (get diversity-colors diversity-idx diversity-base-color)]
     (ol/style.Style.
      #js{:stroke
          (ol/style.Stroke.
-          #js{:width 3 :color "#0D3BC1"})
-         :fill (ol/style.Fill. #js{:color fill-color})})))
+          #js{:width 3 :color color})
+         :fill (ol/style.Fill. #js{:color color})
+         :image
+         (ol/style.RegularShape.
+          #js{:radius (/ 175 resolution)
+              :points 4
+              :angle  (/ js/Math.PI 4)
+              :fill   (ol/style.Fill. #js{:color color})
+              :stroke (ol/style.Stroke. #js{:color "blue" :width 1})})})))
 
 (defn diversity-grid-hover-style [f resolution]
   (let [diversity-idx (.get f "diversity_idx")
-        fill-color (get diversity-colors diversity-idx diversity-base-color)]
+        color (get diversity-colors diversity-idx diversity-base-color)]
     (ol/style.Style.
      #js{:stroke
          (ol/style.Stroke.
-          #js{:width 3 :color mui/secondary})
-         :fill (ol/style.Fill. #js{:color fill-color})})))
+          #js{:width 3 :color color})
+         :fill (ol/style.Fill. #js{:color color})
+         :image
+         (ol/style.RegularShape.
+          #js{:radius (/ 175 resolution)
+              :points 4
+              :angle  (/ js/Math.PI 4)
+              :fill   (ol/style.Fill. #js{:color color})
+              :stroke (ol/style.Stroke. #js{:color "blue" :width 2})})})))
 
 (defn diversity-area-style [f _resolution]
   (let [diversity-idx (js/Math.round (.get f "population-weighted-mean"))
