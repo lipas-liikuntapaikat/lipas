@@ -40,24 +40,30 @@
          feat  (get-in db [:analysis :diversity :areas id])
          fcoll {:type     "FeatureCollection"
                 :features [feat]}]
-     {:db       (assoc-in db [:analysis :diversity :loading?] true)
-      :http-xhrio
-      {:method          :post
-       :uri             url
-       :params          (-> db
-                            :analysis
-                            :diversity
-                            :settings
-                            (assoc :analysis-area-fcoll fcoll))
-       :format          (ajax/transit-request-format)
-       :response-format (ajax/transit-response-format)
-       :on-success      [::calc-success id]
-       :on-failure      [::calc-failure]}
-      :ga/event ["analysis" "calculate-analysis" "diversity"]
 
-      :dispatch-n
-      [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-         [:lipas.ui.search.events/set-type-filter type-codes])]})))
+     ;; Flood prevention
+     (if (-> db :analysis :diversity :loading?)
+       (do
+         (println "kiskis")
+         {})
+       {:db       (assoc-in db [:analysis :diversity :loading?] true)
+        :http-xhrio
+        {:method          :post
+         :uri             url
+         :params          (-> db
+                              :analysis
+                              :diversity
+                              :settings
+                              (assoc :analysis-area-fcoll fcoll))
+         :format          (ajax/transit-request-format)
+         :response-format (ajax/transit-response-format)
+         :on-success      [::calc-success id]
+         :on-failure      [::calc-failure]}
+        :ga/event ["analysis" "calculate-analysis" "diversity"]
+
+        :dispatch-n
+        [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
+           [:lipas.ui.search.events/set-type-filter type-codes])]}))))
 
 (re-frame/reg-event-db
  ::clear
@@ -124,10 +130,171 @@
          (assoc-in [:analysis :diversity :areas] fs)
          (assoc-in [:analysis :diversity :import :batch-id] (gensym))))))
 
+(def seasonalities
+  {1530 "winter",
+   1520 "winter",
+   2320 "all-year",
+   6130 "summer",
+   1395 "summer",
+   6210 "summer",
+   1370 "summer",
+   1360 "summer",
+   110  "all-year",
+   2360 "all-year",
+   5310 "summer",
+   1560 "winter",
+   205  "summer",
+   2150 "all-year",
+   2210 "all-year",
+   101  "all-year",
+   102  "all-year",
+   1110 "all-year",
+   6220 "all-year",
+   4530 "all-year",
+   4720 "summer",
+   1330 "summer",
+   206  "all-year",
+   4830 "all-year",
+   1180 "summer",
+   4422 "winter",
+   4430 "all-year",
+   204  "all-year",
+   4610 "winter",
+   2610 "all-year",
+   2110 "all-year",
+   104  "all-year",
+   2330 "all-year",
+   2280 "all-year",
+   2140 "all-year",
+   4220 "all-year",
+   2230 "all-year",
+   1350 "summer",
+   4840 "summer",
+   1510 "winter",
+   5350 "summer",
+   4440 "winter",
+   2520 "all-year",
+   4710 "summer",
+   304  "all-year",
+   4412 "all-year",
+   4820 "all-year",
+   1170 "summer",
+   4404 "all-year",
+   108  "all-year",
+   4401 "all-year",
+   2350 "all-year",
+   2340 "all-year",
+   2120 "all-year",
+   109  "all-year",
+   5160 "all-year",
+   1550 "winter",
+   3230 "summer",
+   5130 "summer",
+   5110 "summer",
+   3240 "winter",
+   4510 "all-year",
+   4240 "all-year",
+   2270 "all-year",
+   4210 "all-year",
+   301  "all-year",
+   111  "all-year",
+   4630 "winter",
+   4810 "summer",
+   1540 "winter",
+   5320 "summer",
+   3210 "summer",
+   4640 "winter",
+   1150 "summer",
+   2310 "all-year",
+   5210 "all-year",
+   2380 "all-year",
+   103  "all-year",
+   201  "all-year",
+   1220 "summer",
+   4411 "all-year",
+   1140 "summer",
+   4520 "all-year",
+   6110 "summer",
+   1120 "summer",
+   1390 "summer",
+   5340 "summer",
+   302  "all-year",
+   4405 "all-year",
+   6120 "all-year",
+   1310 "summer",
+   202  "all-year",
+   1620 "summer",
+   2250 "all-year",
+   2530 "all-year",
+   112  "all-year",
+   2130 "all-year",
+   3220 "summer",
+   5330 "summer",
+   4230 "all-year",
+   4320 "all-year",
+   3130 "all-year",
+   3110 "all-year",
+   203  "summer",
+   4402 "winter",
+   4620 "winter",
+   5360 "summer",
+   2290 "all-year",
+   2260 "all-year",
+   1160 "summer",
+   1210 "summer",
+   5140 "summer",
+   4310 "all-year",
+   1130 "summer",
+   5120 "summer",
+   4110 "winter",
+   4452 "summer",
+   5370 "winter",
+   2240 "all-year",
+   2510 "all-year",
+   1640 "summer",
+   1380 "summer",
+   4451 "summer",
+   4403 "all-year",
+   5150 "summer",
+   1630 "all-year",
+   2295 "all-year",
+   2370 "all-year",
+   1340 "summer",
+   1610 "summer",
+   4421 "winter",
+   2220 "all-year",
+   1320 "summer"})
+
+(defn ->seasonal
+  [categories seasons-pred]
+  (->> categories
+       (map (fn [c] (update c :type-codes #(filter (comp seasons-pred seasonalities) %))))
+       (remove (fn [c] (empty? (:type-codes c))))
+       vec))
+
+(re-frame/reg-event-fx
+ ::toggle-seasonality
+ (fn [{:keys [db]} [_ s enable?]]
+   (let [op (if enable? conj disj)]
+     {:db (update-in db [:analysis :diversity :selected-seasonalities] op s)
+      :dispatch
+      [::select-category-preset (get-in db [:analysis :diversity :selected-category-preset])]})))
+
+(re-frame/reg-event-db
+ ::select-category-preset
+ (fn [db [_ preset-kw]]
+   (let [seasonalities (get-in db [:analysis :diversity :selected-seasonalities])
+         categories    (-> db
+                           (get-in [:analysis :diversity :category-presets preset-kw :categories])
+                           (->seasonal seasonalities))]
+     (-> db
+         (assoc-in [:analysis :diversity :settings :categories] categories)
+         (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
+
 (re-frame/reg-event-db
  ::reset-default-categories
  (fn [db _]
-   (let [defaults (-> db/default-db :settings :categories)]
+   (let [defaults (-> db/default-db :categories :default :categories)]
      (assoc-in db [:analysis :diversity :settings :categories] defaults))))
 
 (re-frame/reg-event-db

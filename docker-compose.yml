@@ -195,6 +195,9 @@ services:
     links:
       - postgres
       - elasticsearch
+      - osrm-foot
+      - osrm-bicycle
+      - osrm-car
 
   integrations:
     extends:
@@ -216,6 +219,10 @@ services:
     entrypoint: lein trampoline run -m lipas.worker
     links:
       - postgres
+      - elasticsearch
+      - osrm-foot
+      - osrm-bicycle
+      - osrm-car
 
   node-base:
     image: node:10-alpine
