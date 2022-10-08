@@ -105,7 +105,7 @@
    3130 "all-year",
    3110 "all-year",
    203  "summer",
-   4420 "winter",
+   4402 "winter",
    4620 "winter",
    5360 "summer",
    2290 "all-year",
@@ -307,7 +307,7 @@
      {:name "Voimailusali", :factor 1, :type-codes [2130]}
      {:name "Frisbeegolf", :factor 1, :type-codes [1180]}
      {:name "Miekkailu", :factor 1, :type-codes [2340]}
-     {:name "Hiihto", :factor 1, :type-codes [4220 4640 4420 4630]}
+     {:name "Hiihto", :factor 1, :type-codes [4220 4640 4402 4630]}
      {:name "Sulkapallo", :factor 1, :type-codes [2260]}
      {:name "Kiipeily", :factor 1, :type-codes [2370 4710 4720]}
      {:name "Ratapyöräily", :factor 1, :type-codes [1170]}
@@ -374,7 +374,7 @@
      {:name "Pallokenttä", :factor 1, :type-codes [1340]}
      {:name "Voimailusali", :factor 1, :type-codes [2130]}
      {:name "Frisbeegolf", :factor 1, :type-codes [1180]}
-     {:name "Hiihto", :factor 1, :type-codes [4220 4640 4420]}
+     {:name "Hiihto", :factor 1, :type-codes [4220 4640 4402]}
      {:name "Sulkapallo", :factor 1, :type-codes [2260]}
      {:name "Kiipeily", :factor 1, :type-codes [2370]}
      {:name "Suunnistus", :factor 1, :type-codes [4510 4520 4530]}
@@ -421,7 +421,8 @@
   (->> categories
        (map (fn [c]
               (update c :type-codes #(filter (comp #{"all-year" season} seasonalities) %))))
-       (remove (fn [c] (empty? (:type-codes c))))))
+       (remove (fn [c] (empty? (:type-codes c))))
+       vec))
 
 (def categories
   {:default default-category
