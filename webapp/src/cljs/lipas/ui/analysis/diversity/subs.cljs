@@ -22,7 +22,7 @@
  ::categories
  :<- [::settings]
  (fn [settings _]
-   (:categories settings)))
+   (sort-by :name (:categories settings))))
 
 (re-frame/reg-sub
  ::category-presets
@@ -30,6 +30,14 @@
  (fn [diversity _]
    (->> (:category-presets diversity)
         (map (fn [[k v]] {:label (:name v) :value k})))))
+
+(re-frame/reg-sub
+ ::seasonality-enabled?
+ :<- [::diversity]
+ (fn [diversity [_ s]]
+   (->  diversity
+        :selected-seasonalities
+        (contains? s))))
 
 (re-frame/reg-sub
  ::selected-category-preset
