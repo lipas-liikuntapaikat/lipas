@@ -269,6 +269,10 @@
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
+(def population-grid-radius
+  "Population grid is 250x250m"
+  (/ (* 250 (Math/sqrt 2)) 2))
+
 ;; Color scheme from Tilastokeskus
 ;; http://www.stat.fi/org/avoindata/paikkatietoaineistot/vaestoruutuaineisto_1km.html
 (def population-colors
@@ -419,7 +423,7 @@
          :fill (ol/style.Fill. #js{:color color})
          :image
          (ol/style.RegularShape.
-          #js{:radius (/ 175 resolution)
+          #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
               :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
@@ -437,7 +441,7 @@
          :fill (ol/style.Fill. #js{:color color})
          :image
          (ol/style.RegularShape.
-          #js{:radius (/ 175 resolution)
+          #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
               :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
@@ -463,7 +467,6 @@
 (defn school-hover-style [f resolution]
   (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24 :hover? true})))
-
 
 (def diversity-base-color "#9D191A")
 (def transparent "rgba(0,0,0,0.25)")
@@ -508,7 +511,7 @@
          :fill (ol/style.Fill. #js{:color color})
          :image
          (ol/style.RegularShape.
-          #js{:radius (/ 175 resolution)
+          #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
               :fill   (ol/style.Fill. #js{:color color})
@@ -524,7 +527,7 @@
          :fill (ol/style.Fill. #js{:color color})
          :image
          (ol/style.RegularShape.
-          #js{:radius (/ 175 resolution)
+          #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
               :fill   (ol/style.Fill. #js{:color color})
