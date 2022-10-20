@@ -250,12 +250,12 @@
     :or   {max-distance-m 800 analysis-radius-km 5}
     :as   opts}]
   (let [categories (prepare-categories categories)
-        buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
-        buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
+        #_#_buff-geom  (gis/calc-buffer analysis-area-fcoll max-distance-m)
+        #_#_buff-fcoll (gis/->fcoll [(gis/->feature buff-geom)])
         buff-dist  (double (+ analysis-radius-km (/ max-distance-m 1000)))
         statuses   #{"active" "out-of-service-temporarily"}
 
-        pop-data-with-distances (fetch-grid search buff-fcoll buff-dist)
+        pop-data-with-distances (fetch-grid search analysis-area-fcoll buff-dist)
         pop-data-with-indices   (calc-indices pop-data-with-distances categories
                                               (assoc opts
                                                      :statuses statuses
