@@ -116,7 +116,8 @@
                                   (and
                                    (statuses (site->status-fn site))
                                    (type-codes (site->type-code-fn site))
-                                   (> max-distance-m (site->distance-fn site)))))
+                                   (> max-distance-m (or (site->distance-fn site)
+                                                         max-distance-m)))))
                                first
                                some?
                                bool->num
