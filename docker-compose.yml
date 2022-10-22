@@ -359,7 +359,7 @@ services:
       - "./legacy-api-worker.jar:/worker.jar:z"
 
   geoserver:
-    image: kartoza/geoserver:2.18.2
+    image: kartoza/geoserver:2.21.1
     logging:
       driver: "gelf"
       options:
