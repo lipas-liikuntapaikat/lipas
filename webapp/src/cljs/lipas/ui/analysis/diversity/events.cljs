@@ -47,7 +47,10 @@
  ::calc-all-diversity-indices
  (fn [{:keys [db]}]
    (let [ids (keys (get-in db [:analysis :diversity :areas]))]
-     {:dispatch [::calc-all-diversity-indices* ids]})))
+     {:dispatch-n
+      [[::calc-all-diversity-indices* ids]
+       ;; Disable grid because otherwise the map will flicker
+       [:lipas.ui.map.events/set-overlay false :diversity-grid]]})))
 
 (re-frame/reg-event-fx
  ::calc-diversity-indices
