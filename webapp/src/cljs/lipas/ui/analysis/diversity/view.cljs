@@ -51,9 +51,6 @@
          (tr :analysis/diversity-help3)]]]]
 
      [mui/grid {:item true :xs 12}
-      [mui/typography "Valitse lähde"]]
-
-     [mui/grid {:item true :xs 12}
 
       [lui/expansion-panel {:label            "Käytä postinumeroalueita"
                             :default-expanded true}
@@ -80,15 +77,20 @@
          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
 
       (when (seq candidates)
-        (lui/table-v2
-         {:headers            headers
-          :items              candidates
-          :in-progress?       loading?
-          :action-icon        "refresh"
-          :action-label       "Laske monipuolisuus"
-          :on-select          #(==> [::events/calc-diversity-indices %])
-          #_#_:allow-editing? (constantly true)
-          #_#_:multi-select?  true}))]]))
+        [:<>
+         [mui/grid {:item true :xs 12 :style {:margin-top "0.5em"}}
+          [mui/button {:on-click  #(==> [::events/calc-all-diversity-indices])}
+           [mui/icon {:style {:margin-right "0.25em"}} "refresh"]
+           "Laske kaikki"]]
+         [lui/table-v2
+          {:headers            headers
+           :items              candidates
+           :in-progress?       loading?
+           :action-icon        "refresh"
+           :action-label       "Laske monipuolisuus"
+           :on-select          #(==> [::events/calc-diversity-indices %])
+           #_#_:allow-editing? (constantly true)
+           #_#_:multi-select?  true}]])]]))
 
 (defn seq-indexed [coll]
   (map-indexed vector coll))
