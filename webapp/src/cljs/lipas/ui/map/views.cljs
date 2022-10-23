@@ -343,10 +343,23 @@
       {:padding "0.5em"}}
 
      (if (or (:population-weighted-mean data) (:population data))
-
        ;; Results table
        [mui/table {:padding "dense"}
         [mui/table-body
+
+         ;; Area name
+         (when-let [s (:nimi data)]
+           [mui/table-row
+            [mui/table-cell
+             [mui/typography "Alue"]]
+            [mui/table-cell s]])
+
+         ;; Postal code
+         (when-let [s (:posti_alue data)]
+           [mui/table-row
+            [mui/table-cell
+             [mui/typography "Postinumero"]]
+            [mui/table-cell s]])
 
          ;; Population weighted mean
          [mui/table-row
@@ -391,6 +404,8 @@
        ;; No data available
        [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
         [mui/typography {:paragraph true}
+         (str (:nimi data) " " (:posti_alue data))]
+        [mui/typography {:paragraph true :variant "caption"}
          "Analyysiä ei ole tehty"]
         [mui/typography {:paragraph true :variant "caption"}
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
