@@ -34,8 +34,24 @@
    (assoc-in db [:analysis :diversity :settings :analysis-area-fcoll] fcoll)))
 
 (re-frame/reg-event-fx
+ ::calc-all-diversity-indices*
+ (fn [_ [_ ids]]
+   (if (seq ids)
+     {:dispatch [::calc-diversity-indices
+                 {:id (first ids)}
+                 #(==> [::calc-all-diversity-indices* (rest ids)])
+                 :skip-search]}
+     {})))
+
+(re-frame/reg-event-fx
+ ::calc-all-diversity-indices
+ (fn [{:keys [db]}]
+   (let [ids (keys (get-in db [:analysis :diversity :areas]))]
+     {:dispatch [::calc-all-diversity-indices* ids]})))
+
+(re-frame/reg-event-fx
  ::calc-diversity-indices
- (fn [{:keys [db]} [_ {:keys [id] :as candidate}]]
+ (fn [{:keys [db]} [_ {:keys [id] :as candidate} cb skip-search]]
    (let [url   (str (:backend-url db) "/actions/calc-diversity-indices")
          feat  (get-in db [:analysis :diversity :areas id])
          fcoll {:type     "FeatureCollection"
@@ -43,9 +59,7 @@
 
      ;; Flood prevention
      (if (-> db :analysis :diversity :loading?)
-       (do
-         (println "kiskis")
-         {})
+       {}
        {:db       (assoc-in db [:analysis :diversity :loading?] true)
         :http-xhrio
         {:method          :post
@@ -57,13 +71,14 @@
                               (assoc :analysis-area-fcoll fcoll))
          :format          (ajax/transit-request-format)
          :response-format (ajax/transit-response-format)
-         :on-success      [::calc-success id]
+         :on-success      [::calc-success id cb]
          :on-failure      [::calc-failure]}
         :ga/event ["analysis" "calculate-analysis" "diversity"]
 
         :dispatch-n
-        [(let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-           [:lipas.ui.search.events/set-type-filter type-codes])]}))))
+        [(when-not skip-search
+           (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
+            [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
 
 (re-frame/reg-event-db
  ::clear
@@ -72,7 +87,8 @@
 
 (re-frame/reg-event-db
  ::calc-success
- (fn [db [_ candidate-id resp]]
+ (fn [db [_ candidate-id cb resp]]
+   (when cb (cb))
    (-> db
        (assoc-in [:analysis :diversity :loading?] false)
        (assoc-in [:analysis :diversity :results candidate-id] resp))))
