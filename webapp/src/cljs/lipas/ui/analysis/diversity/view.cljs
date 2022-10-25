@@ -249,7 +249,7 @@
          [mui/grid {:item true :xs 12 :md 6}
           [mui/button
            {:variant  "default"
-            :on-click #(==> [::events/reset-default-categories])}
+            :on-click #(==> [::events/select-category-preset :default])}
            "Palauta oletuskategoriat"]]
 
          ;; Category builder
