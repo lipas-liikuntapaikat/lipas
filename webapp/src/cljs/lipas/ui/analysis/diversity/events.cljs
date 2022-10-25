@@ -311,12 +311,6 @@
          (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
 
 (re-frame/reg-event-db
- ::reset-default-categories
- (fn [db _]
-   (let [defaults (-> db/default-db :categories :default :categories)]
-     (assoc-in db [:analysis :diversity :settings :categories] defaults))))
-
-(re-frame/reg-event-db
  ::set-category-name
  (fn [db [_ idx name]]
    (assoc-in db [:analysis :diversity :settings :categories idx :name] name)))
