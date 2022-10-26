@@ -106,6 +106,11 @@ services:
       OSRM_CAR_URL:
       OSRM_BICYCLE_URL:
       OSRM_FOOT_URL:
+      MAILCHIMP_CAMPAIGN_FOLDER_ID:
+      MAILCHIMP_LIST_ID:
+      MAILCHIMP_NEWSLETTER_INTEREST_ID:
+      MAILCHIMP_API_URL:
+      MAILCHIMP_API_KEY:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
