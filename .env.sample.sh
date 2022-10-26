@@ -64,3 +64,11 @@ export GEOSERVER_MAX_MEMORY=2G
 export OSRM_CAR_URL="http://osrm-car:5000/table/v1/car/"
 export OSRM_BICYCLE_URL="http://osrm-bicycle:5000/table/v1/bicycle/"
 export OSRM_FOOT_URL="http://osrm-foot:5000/table/v1/foot/"
+
+# Mailchimp
+export MAILCHIMP_CAMPAIGN_FOLDER_ID=58eea4f241 # testit
+export MAILCHIMP_CAMPAIGN_FOLDER_ID=11df5ce8ec # uutiskirjeet
+export MAILCHIMP_LIST_ID=a70cd3d18a
+export MAILCHIMP_NEWSLETTER_INTEREST_ID=93a8beea4a
+export MAILCHIMP_API_URL=https://us20.api.mailchimp.com/3.0
+export MAILCHIMP_API_KEY=***FILL_THIS***
