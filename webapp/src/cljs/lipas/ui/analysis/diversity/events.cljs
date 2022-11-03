@@ -361,7 +361,9 @@
  (fn [{:keys [db]} [_ fmt]]
    (let [fcolls (-> db :analysis :diversity :results (->> (map (comp :grid second))))
          fcoll   {:type     "FeatureCollection"
-                  :features (mapcat :features fcolls)}]
+                  :features (->> fcolls
+                                 (mapcat :features)
+                                 (map (fn [f] (update f :properties dissoc :population))))}]
      {:lipas.ui.effects/save-as!
       {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
        :filename (str "monipuolisuus_ruudukko" "." fmt)}})))
