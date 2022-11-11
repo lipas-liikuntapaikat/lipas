@@ -47,6 +47,6 @@
     "json-loader": "^0.5.7",
     "webpack": "^4.35.3",
     "webpack-bundle-analyzer": "^3.3.2",
-    "webpack-cli": "^3.3.6"
+    "webpack-cli": "^3.3.12"
   }
 }
