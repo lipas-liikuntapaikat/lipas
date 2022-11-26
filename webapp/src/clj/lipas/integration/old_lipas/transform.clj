@@ -59,11 +59,11 @@
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
   ([m]
    (->old-lipas-sports-site* m (-> m :type :type-code types/all :props keys)))
-  ([m prop-keys]  
+  ([m prop-keys]
    (let [type-code (-> m :type :type-code)]
      (-> m
 
-         (select-keys [:name :email :www :phone-number :renovation-years
+         (select-keys [:name :marketing-name :email :www :phone-number :renovation-years
                        :construction-year :location :properties])
 
          (assoc :last-modified (-> m :event-date UTC->last-modified)
@@ -115,7 +115,7 @@
     (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defmethod ->old-lipas-sports-site 3110
-  [m]  
+  [m]
   (let [m1 (-> m
                (update :properties select-keys (-> 3110 types/all :props keys))
                old/add-swimming-pool-props)]
@@ -136,7 +136,7 @@
      :event-date        (-> m :lastModified last-modified->UTC)
      :status            "active"
      :name              (-> m :name)
-     :marketing-name    nil
+     :marketing-name    (-> m :marketingName)
      :admin             (get old/admins (:admin m))
      :owner             (get old/owners (:owner m))
      :www               (-> m :www trim not-empty)
@@ -194,7 +194,7 @@
       utils/clean))
 
 (comment
-  
+
   (map last-modified->UTC ["2019-01-03 00:00:00.000"
                            "2019-01-03 00:00:00.00"
                            "2019-01-03 00:00:00"])
