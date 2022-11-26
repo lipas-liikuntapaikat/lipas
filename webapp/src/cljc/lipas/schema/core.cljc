@@ -1345,6 +1345,18 @@
                    :lipas.sports-site-like/location]
           :opt-un [:lipas.sports-site/lipas-id]))
 
+;;; Floorball ;;;
+
+(s/def :lipas.floorball.type/type-code #{2240})
+
+(s/def :lipas.floorball/type
+  (s/merge
+   :lipas.sports-site/type
+   (s/keys :req-un [:lipas.floorball.type/type-code])))
+
+(s/def :lipas.floorball.circumstances/teams-using
+  (str-in 0 1024))
+
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})

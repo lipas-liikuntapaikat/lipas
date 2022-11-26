@@ -23,7 +23,8 @@
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [lipas.ui.sports-sites.floorball :as floorball]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))
@@ -559,10 +560,15 @@
                 :sub-headings? true}]]]
 
           ;; Properties tab
-          1 (if false #_portal
-                [mui/button {:href (str "/" portal "/hallit/" lipas-id)}
-                 [mui/icon "arrow_right"]
-                 (tr :lipas.sports-site/details-in-portal portal)]
+          1 (if (#{2240} type-code)
+              [floorball/circumstances-form
+               {:tr           tr
+                :type-code    (or (-> edit-data :type :type-code) type-code)
+                :read-only?   (not editing?)
+                :on-change    (partial set-field :circumstances)
+                :display-data (:circumstances display-data)
+                :edit-data    (:circumstances edit-data)
+                :key          (-> edit-data :type :type-code)}]
 
                 ^{:key (str "props-" lipas-id)}
                 [sports-sites/properties-form
