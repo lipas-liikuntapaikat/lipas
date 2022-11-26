@@ -218,6 +218,7 @@ services:
   worker:
     extends:
       service: backend-base
+    restart: unless-stopped
     logging:
       options:
         tag: "worker"
