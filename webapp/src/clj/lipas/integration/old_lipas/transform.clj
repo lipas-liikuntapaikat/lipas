@@ -64,7 +64,7 @@
      (-> m
 
          (select-keys [:name :marketing-name :email :www :phone-number :renovation-years
-                       :construction-year :location :properties])
+                       :construction-year :location :properties :reservations-link])
 
          (assoc :last-modified (-> m :event-date UTC->last-modified)
                 :nameSe (-> m :name-localized :se)
@@ -157,6 +157,7 @@
                                    (first (old/resolve-surface-material props)))
                             (assoc :surface-material-info
                                    (second (old/resolve-surface-material props))))
+     :reservations-link (-> m :reservationsLink trim not-empty)
      :phone-number      (-> m :phoneNumber trim not-empty)
      :construction-year (-> m :constructionYear)
      :renovation-years  (-> m :renovationYears)
