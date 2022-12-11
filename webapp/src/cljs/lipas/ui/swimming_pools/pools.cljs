@@ -97,7 +97,7 @@
        :value     (:temperature-c data)
        :spec      :lipas.swimming-pool.pool/temperature-c
        :on-change #(set-field :temperature-c %)}]
-     
+
      ;; Volume m3
      #_[lui/text-field
       {:type      "number"
@@ -106,7 +106,7 @@
        :value     (:volume-m3 data)
        :spec      :lipas.swimming-pool.pool/volume-m3
        :on-change #(set-field :volume-m3 %)}]
-     
+
      ;; Accessibility features
      #_[lui/multi-select
       {:label     (tr :lipas.swimming-pool.pool/accessibility)
@@ -140,7 +140,7 @@
    [:width-m (tr :dimensions/width-m)]
    [:area-m2 (tr :dimensions/surface-area-m2)]
    [:depth-min-m (tr :dimensions/depth-min-m)]
-   [:depth-max-m (tr :dimensions/depth-max-m)]   
+   [:depth-max-m (tr :dimensions/depth-max-m)]
    [:temperature-c (tr :physical-units/temperature-c)]
    #_[:structure (tr :general/structure)]
    #_[:accessibility (tr :lipas.swimming-pool.pool/accessibility)]
@@ -150,7 +150,7 @@
   (update pool :accessibility
           #(map (fn [f] (tr (keyword :accessibility f))) %)))
 
-(defn table [{:keys [tr items lipas-id add-btn-size]}]
+(defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   (let [localize (partial utils/localize-field tr)]
     [lui/form-table
      {:headers         (make-headers tr)
@@ -160,6 +160,7 @@
            (map (partial localize :structure :pool-structures))
            (map (partial localize-accessibility tr))
            (sort-by :length-m utils/reverse-cmp))
+      :max-width       max-width
       :add-tooltip     (tr :lipas.swimming-pool.pools/add-pool)
       :add-btn-size    add-btn-size
       :edit-tooltip    (tr :actions/edit)

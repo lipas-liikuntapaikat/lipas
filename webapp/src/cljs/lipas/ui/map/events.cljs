@@ -1,9 +1,9 @@
 (ns lipas.ui.map.events
   (:require
    ["ol" :as ol]
-   [ajax.core :as ajax]   
+   [ajax.core :as ajax]
    [goog.string :as gstring]
-   [goog.string.format]   
+   [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    proj4
@@ -423,6 +423,7 @@
    (let [draft? false
          type   (get-in db [:sports-sites :types (-> data :type :type-code)])
          data   (-> data
+                    utils/make-saveable
                     (assoc :event-date (utils/timestamp))
                     (update :properties #(select-keys % (-> type :props keys))))]
      {:dispatch

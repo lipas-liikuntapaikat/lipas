@@ -61,6 +61,22 @@
  (fn [db _]
    (-> db :map :popup)))
 
+(re-frame/reg-sub
+ ::drawer-width
+ :<- [:lipas.ui.search.subs/search-results-view]
+ :<- [::selected-sports-site]
+ :<- [::mode-name]
+ (fn [[result-view selected-site mode-name] [_ media-width]]
+   (cond
+     (#{"xs"} media-width)         "100%"
+     (and (#{"sm"} media-width)
+          (= :table result-view))  "100%"
+     (and (= :table result-view)
+          (empty? selected-site))  "100%"
+     (and (not (#{"xs" "sm"} media-width))
+          (= :analysis mode-name)) "700px"
+     :else                         "430px")))
+
 (re-frame/reg-sub-raw
  ::selected-sports-site
  (fn [app-db _event]

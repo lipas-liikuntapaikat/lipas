@@ -38,13 +38,18 @@
 (re-frame/reg-event-db
  ::save-rink
  (fn [db [_ lipas-id value]]
-   (let [path [:sports-sites lipas-id :editing :rinks]]
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :rinks]
+                [:new-sports-site :data :rinks])]
      (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::remove-rink
  (fn [db [_ lipas-id {:keys [id]}]]
-   (update-in db [:sports-sites lipas-id :editing :rinks] dissoc id)))
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :rinks]
+                [:new-sports-site :data :inks])]
+     (update-in db path dissoc id))))
 
 (re-frame/reg-event-fx
  ::display-site

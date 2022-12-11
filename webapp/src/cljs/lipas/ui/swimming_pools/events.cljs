@@ -33,35 +33,50 @@
 (re-frame/reg-event-db
  ::save-sauna
  (fn [db [_ lipas-id value]]
-   (let [path [:sports-sites lipas-id :editing :saunas]]
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :saunas]
+                [:new-sports-site :data :saunas])]
      (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::save-pool
  (fn [db [_ lipas-id value]]
-   (let [path [:sports-sites lipas-id :editing :pools]]
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :pools]
+                [:new-sports-site :data :pools])]
      (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::save-slide
  (fn [db [_ lipas-id value]]
-   (let [path [:sports-sites lipas-id :editing :slides]]
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :slides]
+                [:new-sports-site :data :slides])]
      (utils/save-entity db path value))))
 
 (re-frame/reg-event-db
  ::remove-sauna
  (fn [db [_ lipas-id {:keys [id]}]]
-   (update-in db [:sports-sites lipas-id :editing :saunas] dissoc id)))
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :saunas]
+                [:new-sports-site :data :saunas])]
+     (update-in db path dissoc id))))
 
 (re-frame/reg-event-db
  ::remove-pool
  (fn [db [_ lipas-id {:keys [id]}]]
-   (update-in db [:sports-sites lipas-id :editing :pools] dissoc id)))
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :pools]
+                [:new-sports-site :data :pools])]
+     (update-in db path dissoc id))))
 
 (re-frame/reg-event-db
  ::remove-slide
  (fn [db [_ lipas-id {:keys [id]}]]
-   (update-in db [:sports-sites lipas-id :editing :slides] dissoc id)))
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :slides]
+                [:new-sports-site :data :slides])]
+     (update-in db path dissoc id))))
 
 (re-frame/reg-event-db
  ::reset-dialog
