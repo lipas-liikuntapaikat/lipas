@@ -47,11 +47,12 @@
   [[:length-m (tr :dimensions/length-m)]
    [:width-m (tr :dimensions/width-m)]])
 
-(defn table [{:keys [tr items lipas-id add-btn-size]}]
+(defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   [lui/form-table
    {:headers         (make-headers tr)
     :items           (vals items)
     :add-btn-size    add-btn-size
+    :max-width       max-width
     :on-add          #(==> [::events/toggle-dialog :rink {}])
     :on-edit         #(==> [::events/toggle-dialog :rink %])
     :on-delete       #(==> [::events/remove-rink lipas-id %])

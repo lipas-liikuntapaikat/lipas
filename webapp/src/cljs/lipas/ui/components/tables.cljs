@@ -260,7 +260,8 @@
 
 (defn form-table [{:keys [headers items key-fn add-tooltip
                           edit-tooltip delete-tooltip confirm-tooltip
-                          read-only? on-add on-edit on-delete add-btn-size]
+                          read-only? on-add on-edit on-delete add-btn-size
+                          max-width]
                    :or   {add-btn-size "large"}
                    :as   props}]
   (if read-only?
@@ -279,7 +280,11 @@
         :align-items "center"}
 
        ;; Table
-       [mui/grid {:item true :xs 12}
+       [mui/grid {:item true :xs 12
+                  :style (merge {} (when max-width
+                                     ;; Hacky place to do this here
+                                     ;; TODO: move to smarter place
+                                     {:width (str "calc(" max-width " - 24px)")}))}
 
         ;; Handle horizontal overflow with scrollbar
         [:div {:style {:overflow-x "auto"}}

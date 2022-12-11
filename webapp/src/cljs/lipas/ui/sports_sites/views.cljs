@@ -330,10 +330,14 @@
   (#{3110 3130 2510 2520} type-code))
 
 (defn pools-field
-  [{:keys [tr read-only?] :as props}]
-  (let [dialogs  (<== [:lipas.ui.swimming-pools.subs/dialogs])
-        data     (<== [:lipas.ui.map.subs/selected-sports-site])
-        lipas-id (-> data :edit-data :lipas-id)]
+  [{:keys [tr read-only? width] :as props}]
+  (let [dialogs   (<== [:lipas.ui.swimming-pools.subs/dialogs])
+        add-data  (<== [:lipas.ui.sports-sites.subs/new-site-data])
+        data      (if add-data
+                    {:edit-data add-data}
+                    (<== [:lipas.ui.map.subs/selected-sports-site]))
+        max-width (<== [:lipas.ui.map.subs/drawer-width width])
+        lipas-id  (-> data :edit-data :lipas-id)]
     [:<>
      (when (-> dialogs :pool :open?)
        [pools/dialog {:tr tr :lipas-id lipas-id}])
@@ -348,17 +352,22 @@
         {:tr           tr
          :add-btn-size "small"
          :items        (-> data :edit-data :pools)
+         :max-width    max-width
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
 (defn slides-field
-  [{:keys [tr read-only?] :as props}]
-  (let [dialogs  (<== [:lipas.ui.swimming-pools.subs/dialogs])
-        data     (<== [:lipas.ui.map.subs/selected-sports-site])
-        lipas-id (-> data :edit-data :lipas-id)]
+  [{:keys [tr read-only? width] :as props}]
+  (let [dialogs   (<== [:lipas.ui.swimming-pools.subs/dialogs])
+        add-data  (<== [:lipas.ui.sports-sites.subs/new-site-data])
+        data      (if add-data
+                    {:edit-data add-data}
+                    (<== [:lipas.ui.map.subs/selected-sports-site]))
+        max-width (<== [:lipas.ui.map.subs/drawer-width width])
+        lipas-id  (-> data :edit-data :lipas-id)]
     [:<>
      (when (-> dialogs :slide :open?)
        [slides/dialog {:tr tr :lipas-id lipas-id}])
-     
+
      (if read-only?
        [:<>
         [slides/read-only-table
@@ -369,17 +378,22 @@
         {:tr           tr
          :add-btn-size "small"
          :items        (-> data :edit-data :slides)
+         :max-width    max-width
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
 (defn rinks-field
-  [{:keys [tr read-only?] :as props}]
-  (let [dialogs  (<== [:lipas.ui.ice-stadiums.subs/dialogs])
-        data     (<== [:lipas.ui.map.subs/selected-sports-site])
-        lipas-id (-> data :edit-data :lipas-id)]
+  [{:keys [tr read-only? width] :as props}]
+  (let [dialogs   (<== [:lipas.ui.ice-stadiums.subs/dialogs])
+        add-data  (<== [:lipas.ui.sports-sites.subs/new-site-data])
+        data      (if add-data
+                    {:edit-data add-data}
+                    (<== [:lipas.ui.map.subs/selected-sports-site]))
+        max-width (<== [:lipas.ui.map.subs/drawer-width width])
+        lipas-id  (-> data :edit-data :lipas-id)]
     [:<>
      (when (-> dialogs :rink :open?)
        [rinks/dialog {:tr tr :lipas-id lipas-id}])
-     
+
      (if read-only?
        [:<>
         [rinks/read-only-table
@@ -389,12 +403,13 @@
        [rinks/table
         {:tr           tr
          :add-btn-size "small"
+         :max-width    max-width
          :items        (-> data :edit-data :rinks)
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
-           key geoms geom-type problems?]}]
+           key geoms geom-type problems? width]}]
   (let [locale      (tr)
         types-props (<== [::subs/types-props type-code])
         types-props (if false #_(special-case? type-code)
@@ -414,6 +429,7 @@
           (tr :lipas.swimming-pool.pools/headline)]
          [pools-field
           {:tr         tr
+           :width      width
            :read-only? read-only?}]
 
          ;; Slides
@@ -421,6 +437,7 @@
           (tr :lipas.swimming-pool.slides/headline)]
          [slides-field
           {:tr         tr
+           :width      width
            :read-only? read-only?}]])
 
       ;; Ice stadiums
@@ -432,11 +449,12 @@
           (tr :lipas.ice-stadium.rinks/headline)]
          [rinks-field
           {:tr         tr
+           :width      width
            :read-only? read-only?}]])]
 
      (sort-by
       (juxt (comp - :priority) #(or (:sort %) (:label %)))
-      
+
       (into
        (for [[k v] types-props
              :let  [label     (-> types-props k :name locale)
@@ -617,7 +635,7 @@
                 :spec      :lipas.ice-stadium.rink/area-m2
                 :on-change #(on-change 2 :area-m2 %)}]}
 
-             
+
              ]))
 
         ;; Swimming pool special props

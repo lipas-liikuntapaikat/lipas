@@ -535,22 +535,23 @@
 
           ;; Properties tab
           1 (if false #_portal
-              [mui/button {:href (str "/" portal "/hallit/" lipas-id)}
-               [mui/icon "arrow_right"]
-               (tr :lipas.sports-site/details-in-portal portal)]
+                [mui/button {:href (str "/" portal "/hallit/" lipas-id)}
+                 [mui/icon "arrow_right"]
+                 (tr :lipas.sports-site/details-in-portal portal)]
 
-              ^{:key (str "props-" lipas-id)}
-              [sports-sites/properties-form
-               {:tr           tr
-                :type-code    (or (-> edit-data :type :type-code) type-code)
-                :read-only?   (not editing?)
-                :on-change    (partial set-field :properties)
-                :display-data (:properties display-data)
-                :edit-data    (:properties edit-data)
-                :geoms        (-> edit-data :location :geometries)
-                :geom-type    geom-type
-                :problems?    problems?
-                :key          (-> edit-data :type :type-code)}])
+                ^{:key (str "props-" lipas-id)}
+                [sports-sites/properties-form
+                 {:tr           tr
+                  :type-code    (or (-> edit-data :type :type-code) type-code)
+                  :read-only?   (not editing?)
+                  :on-change    (partial set-field :properties)
+                  :width        width
+                  :display-data (:properties display-data)
+                  :edit-data    (:properties edit-data)
+                  :geoms        (-> edit-data :location :geometries)
+                  :geom-type    geom-type
+                  :problems?    problems?
+                  :key          (-> edit-data :type :type-code)}])
 
           ;; Accessibility
           2 [accessibility/view {:lipas-id lipas-id}])]
@@ -865,7 +866,8 @@
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
 
-(defn add-sports-site-view [{:keys [tr]}]
+(defn add-sports-site-view
+  [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom 0)]
     (let [locale                                   (tr)
@@ -1135,6 +1137,7 @@
                    :tr         tr
                    :type-code  (-> data :type :type-code)
                    :read-only? false
+                   :width      width
                    :on-change  (partial set-field :properties)
                    :edit-data  (:properties data)
                    :geoms      (-> data :location :geometries)
@@ -1223,7 +1226,7 @@
     [:<>
      ;; Search, filters etc.
      (case view
-       :adding   [add-sports-site-view {:tr tr}]
+       :adding   [add-sports-site-view {:tr tr :width width}]
        :analysis [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :search   [search/search-view
@@ -1241,18 +1244,7 @@
   (let [tr            (<== [:lipas.ui.subs/translator])
         logged-in?    (<== [:lipas.ui.subs/logged-in?])
         drawer-open?  (<== [::subs/drawer-open?])
-        result-view   (<== [:lipas.ui.search.subs/search-results-view])
-        selected-site (<== [::subs/selected-sports-site])
-        mode-name     (<== [::subs/mode-name])
-        drawer-width  (cond
-                        (#{"xs"} width)               "100%"
-                        (and (#{"sm"} width)
-                             (= :table result-view))  "100%"
-                        (and (= :table result-view)
-                             (empty? selected-site))  "100%"
-                        (and (not (#{"xs" "sm"} width))
-                             (= :analysis mode-name)) "700px"
-                        :else                         "430px")]
+        drawer-width  (<== [::subs/drawer-width width])]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
