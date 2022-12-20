@@ -522,7 +522,14 @@
          (when (and (not (utils/prod?)) accessibility-type?)
            [mui/tab
             {:style {:min-width 0}
-             :label "Esteettömyys"}])]
+             :value 2
+             :label "Esteettömyys"}])
+
+         (when (#{2240} type-code)
+           [mui/tab
+            {:style {:min-width 0}
+             :value 3
+             :label "Olosuhteet"}])]
 
         (when delete-dialog-open?
           [sports-sites/delete-dialog
@@ -560,32 +567,30 @@
                 :sub-headings? true}]]]
 
           ;; Properties tab
-          1 (if (#{2240} type-code)
-              [floorball/circumstances-form
+          1 [sports-sites/properties-form
+             {:tr           tr
+              :type-code    (or (-> edit-data :type :type-code) type-code)
+              :read-only?   (not editing?)
+              :on-change    (partial set-field :properties)
+              :display-data (:properties display-data)
+              :edit-data    (:properties edit-data)
+              :geoms        (-> edit-data :location :geometries)
+              :geom-type    geom-type
+              :problems?    problems?
+              :key          (-> edit-data :type :type-code)}]
+
+          ;; Accessibility
+          2 [accessibility/view {:lipas-id lipas-id}]
+
+          ;; Floorball conditions
+          3 [floorball/circumstances-form
                {:tr           tr
                 :type-code    (or (-> edit-data :type :type-code) type-code)
                 :read-only?   (not editing?)
                 :on-change    (partial set-field :circumstances)
                 :display-data (:circumstances display-data)
                 :edit-data    (:circumstances edit-data)
-                :key          (-> edit-data :type :type-code)}]
-
-                ^{:key (str "props-" lipas-id)}
-                [sports-sites/properties-form
-                 {:tr           tr
-                  :type-code    (or (-> edit-data :type :type-code) type-code)
-                  :read-only?   (not editing?)
-                  :on-change    (partial set-field :properties)
-                  :width        width
-                  :display-data (:properties display-data)
-                  :edit-data    (:properties edit-data)
-                  :geoms        (-> edit-data :location :geometries)
-                  :geom-type    geom-type
-                  :problems?    problems?
-                  :key          (-> edit-data :type :type-code)}])
-
-          ;; Accessibility
-          2 [accessibility/view {:lipas-id lipas-id}])]
+                :key          (-> edit-data :type :type-code)}])]
 
        ;; "Landing bay" for floating tools
        [mui/grid {:item true :xs 12 :style {:height "3em"}}]
