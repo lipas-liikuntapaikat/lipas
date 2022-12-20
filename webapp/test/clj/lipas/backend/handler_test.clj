@@ -48,7 +48,7 @@
   (mock/header req "Authorization" (str "Token " token)))
 
 (def config (-> config/default-config
-                (select-keys [:db :app :search])
+                (select-keys [:db :app :search :mailchimp])
                 (assoc-in [:app :emailer] (email/->TestEmailer))))
 (def system (system/start-system! config))
 (def db (:db system))
