@@ -1,4 +1,4 @@
-(defproject lipas "0.1.0-SNAPSHOT"
+x(defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
    [org.clojure/clojure "1.11.1"]
@@ -41,7 +41,7 @@
    [tea-time "1.0.0"]
    [etaoin "0.2.8-SNAPSHOT"]
    [clj-http "3.9.1"]
-   [factual/geo "3.0.0-rc-2"]   
+   [factual/geo "3.0.1"]
    [org.apache.commons/commons-math3 "3.6.1"]
    [org.apache.commons/commons-lang3 "3.12.0"]
    [org.apache.commons/commons-math "2.2"]
@@ -105,7 +105,7 @@
      [org.clojure/test.check "0.9.0"]
      [metasoarous/oz "2.0.0-alpha5"]]
 
-    :plugins [[lein-figwheel "0.5.18"]
+    :plugins [[lein-figwheel "0.5.20"]
               [lein-doo "0.1.10"]]}
    :uberjar
    {:main         lipas.aot
