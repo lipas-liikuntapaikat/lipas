@@ -28,13 +28,10 @@ docker-compose run htpasswd admin $ADMIN_PASSWORD > nginx/htpasswd
 printf "\n *** Fetching npm dependencies *** \n\n"
 docker-compose run frontend-npm-deps
 
-printf "\n *** Bundling npm dependencies *** \n\n"
-docker-compose run frontend-npm-bundle
-
 ### Start services ###
 
 printf "\n *** Starting backend services *** \n\n"
 docker-compose up -d proxy-dev
 
-printf "\n *** Starting Figwheel *** \n\n"
-lein figwheel
+printf "\n *** Starting shadow-cljs *** \n\n"
+npx shadow-cljs watch app

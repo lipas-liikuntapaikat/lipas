@@ -2,8 +2,23 @@
   "NOTE: make sure `lipas.ui.map.projection` is loaded first for the
   necessary side-effects to take effect.`"
   (:require
+   ["@turf/clean-coords$default" :as turf-clean-coords]
+   ["@turf/buffer$default" :as turf-buffer]
+   ["@turf/kinks$default" :as turf-kinks]
+   ["@turf/length$default" :as turf-length]
+   ["@turf/truncate$default" :as turf-truncate]
+   ["@turf/combine$default" :as turf-combine]
+   ["@turf/line-split$default" :as turf-line-split]
+   ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
    ["ol" :as ol]
-   ["turf" :as turf]
+   ["ol/proj" :as proj]
+   ["ol/events/condition" :as events-condition]
+   ["ol/extent" :as extent]
+   ["ol/format/GeoJSON$default" :as GeoJSON]
+   ["ol/format/WKT$default" :as WKT]
+   ["ol/interaction" :as interaction]
+   ["ol/geom/Circle$default" :as Circle]
+   ["shpjs" :as shp]
    [clojure.reader :refer [read-string]]
    [clojure.string :as string]
    [goog.array :as garray]
@@ -13,11 +28,11 @@
    [lipas.ui.map.styles :as styles]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(def geoJSON (ol/format.GeoJSON. #js{:dataProjection    "EPSG:4326"
-                                     :featureProjection "EPSG:3067"}))
+(def geoJSON (GeoJSON. #js{:dataProjection    "EPSG:4326"
+                           :featureProjection "EPSG:3067"}))
 
-(def WKT (ol/format.WKT. #js{:dataProjection    "EPSG:4326"
-                             :featureProjection "EPSG:3067"}))
+(def wkt (WKT. #js{:dataProjection    "EPSG:4326"
+                   :featureProjection "EPSG:3067"}))
 
 (def temp-fid-prefix "temp")
 
@@ -36,11 +51,11 @@
 (def ->geoJSON-clj (comp ->clj ->geoJSON))
 
 (defn ->wkt [ol-feature]
-  (.writeFeature WKT ol-feature))
+  (.writeFeature wkt ol-feature))
 
-(defn <-wkt [wkt]
-  (.readFeature WKT wkt #js{:dataProjection    "EPSG:4326"
-                            :featureProjection "EPSG:3067"}))
+(defn <-wkt [s]
+  (.readFeature wkt s #js{:dataProjection    "EPSG:4326"
+                          :featureProjection "EPSG:3067"}))
 
 (defn ->geom-coll [fcoll]
   {:type "GeometryCollection"
@@ -67,7 +82,7 @@
 (defmulti file->geoJSON :ext)
 
 (defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
-  (-> file .arrayBuffer (.then js/shp) (.then cb)))
+  (-> file .arrayBuffer (.then shp) (.then cb)))
 
 (defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
 (defmethod file->geoJSON "kml" [params] (text->geoJSON params))
@@ -229,7 +244,7 @@
   map-ctx)
 
 (defn- enable-hover!
-  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx} k]
+  [{:keys [^js lmap interactions*] :as map-ctx} k]
   (let [hover (k interactions*)]
     (-> hover .getFeatures .clear)
     (.addInteraction lmap hover)
@@ -260,24 +275,24 @@
   (enable-hover! map-ctx :diversity-area-hover))
 
 (defn enable-edits-hover!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+  [{:keys [^js lmap layers] :as map-ctx}]
   (let [layer (-> layers :overlays :edits)
-        hover (ol/interaction.Select.
+        hover (interaction/Select.
                #js{:layers    #js[layer]
                    :style     #js[styles/editing-hover-style styles/vertices-style]
-                   :condition ol/events.condition.pointerMove})]
+                   :condition events-condition/pointerMove})]
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions :edits-hover] hover)))
 
 (defn enable-select!
-  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  [{:keys [^js lmap interactions*] :as map-ctx}]
   (let [select (:select interactions*)]
     (-> select .getFeatures .clear)
     (.addInteraction lmap select)
     (assoc-in map-ctx [:interactions :select] select)))
 
 (defn enable-diversity-area-select!
-  [{:keys [^js/ol.Map lmap interactions*] :as map-ctx}]
+  [{:keys [^js lmap interactions*] :as map-ctx}]
   (let [select (:diversity-area-select interactions*)]
     (-> select .getFeatures .clear)
     (.addInteraction lmap select)
@@ -312,7 +327,7 @@
 (defn fit-to-extent!
   ([map-ctx extent]
    (fit-to-extent! map-ctx extent {}))
-  ([{:keys [^js/ol.View view ^js.ol.Map lmap] :as map-ctx} extent opts]
+  ([{:keys [^js view ^js lmap] :as map-ctx} extent opts]
    (let [padding (or (-> map-ctx :mode :content-padding) #js[0 0 0 0])]
      (when (and view lmap (some finite? extent))
        (.fit view extent (clj->js
@@ -326,7 +341,7 @@
 (defn fit-to-features! [map-ctx fs opts]
   (let [extent (-> fs first .getGeometry .getExtent)]
     (doseq [f (rest fs)]
-      (ol/extent.extend extent (-> f .getGeometry .getExtent)))
+      (extent/extend extent (-> f .getGeometry .getExtent)))
     (fit-to-extent! map-ctx extent opts)))
 
 (defn fit-to-fcoll! [map-ctx fcoll]
@@ -343,12 +358,12 @@
          (fit-to-features! fs fit-opts))
      (unselect-features! map-ctx))))
 
-(defn update-center! [{:keys [^js/ol.View view] :as map-ctx}
+(defn update-center! [{:keys [^js view] :as map-ctx}
                       {:keys [lon lat] :as center}]
   (.setCenter view #js[lon lat])
   (assoc map-ctx :center center))
 
-(defn update-zoom! [{:keys [^js/ol.View view] :as map-ctx} zoom]
+(defn update-zoom! [{:keys [^js view] :as map-ctx} zoom]
   (.setZoom view zoom)
   (assoc map-ctx :zoom zoom))
 
@@ -359,7 +374,7 @@
     (.addFeatures source fs)
     map-ctx))
 
-(defn clear-interactions! [{:keys [^js/ol.Map lmap interactions interactions*]
+(defn clear-interactions! [{:keys [^js lmap interactions interactions*]
                             :as   map-ctx}]
   ;; Special treatment for 'singleton' interactions*. OpenLayers
   ;; doesn't treat 'copies' identical to original ones. Therefore we
@@ -384,12 +399,12 @@
     (case (count fs)
       1 (first fs)
       (-> fcoll
-          turf/combine
+          turf-combine
           (gobj/getValueByKeys "features" 0)))))
 
 (defn- split-by-features [f kinks]
   (let [splitter (->splitter kinks)
-        splitted (turf/lineSplit f splitter)]
+        splitted (turf-line-split f splitter)]
     (garray/forEach (gobj/get splitted "features")
                     (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
     splitted))
@@ -397,13 +412,13 @@
 (defn split-at-coords [ol-feature coords]
   (let [point   #js{:type "Point" :coordinates coords}
         line    (.writeFeatureObject geoJSON ol-feature)
-        nearest (turf/nearestPointOnLine line point)]
+        nearest (turf-nearest-point-on-line line point)]
     (-> line
         (split-by-features nearest)
         ->ol-features)))
 
 (defn fix-kinks* [f]
-  (let [kinks (turf/kinks f)]
+  (let [kinks (turf-kinks f)]
     (if (-> kinks (gobj/get "features") not-empty)
       (-> (split-by-features f kinks)
           (gobj/get "features"))
@@ -425,16 +440,16 @@
   (-> fcoll
       :features
       clj->js
-      (garray/concatMap #(-> % turf/kinks (gobj/get "features")))
+      (garray/concatMap #(-> % turf-kinks (gobj/get "features")))
       ->fcoll
       ->clj))
 
 (defn strip-z [fcoll]
   (-> fcoll
       clj->js
-      (turf/truncate #js{:coordinates 2 :mutate true})
+      (turf-truncate #js{:coordinates 2 :mutate true})
       (gobj/get "features")
-      (garray/map turf/cleanCoords)
+      (garray/map turf-clean-coords)
       ->fcoll
       ->clj))
 
@@ -451,14 +466,14 @@
   [fcoll]
   (-> fcoll
       clj->js
-      turf/length
+      turf-length
       ->clj
       (utils/round-safe 2)
       read-string))
 
 (defn wgs84->epsg3067 [wgs84-coords]
-  (let [proj      (.get ol/proj "EPSG:3067")]
-    (ol/proj.fromLonLat wgs84-coords proj)))
+  (let [proj      (proj/get "EPSG:3067")]
+    (proj/fromLonLat wgs84-coords proj)))
 
 (defn calc-buffer-geom [geoms distance-km]
   (case (-> geoms :features first :geometry :type)
@@ -469,8 +484,8 @@
     ("LineString" "Polygon")
     (-> geoms
         clj->js
-        (turf/combine)
-        (turf/buffer distance-km #js{:units "kilometers"})
+        (turf-combine)
+        (turf-buffer distance-km #js{:units "kilometers"})
         (js->clj :keywordize-keys true))
 
     nil))
@@ -488,8 +503,8 @@
                "Point"
                (when (and (:lon center) (:lat center))
                  (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
-                   (ol.Feature.
-                    #js{:geometry (ol.geom.Circle. center (* distance-km 1000))})))
+                   (ol/Feature.
+                    #js{:geometry (Circle. center (* distance-km 1000))})))
 
                ("LineString" "Polygon")
                (-> buffer-geom :features first clj->js ->ol-feature)
@@ -634,10 +649,10 @@
 ;;                   (fn [res f]
 ;;                     (into res (-> f
 ;;                                   clj->js
-;;                                   (turf/lineSplit splitter)
+;;                                   (turf-line-split splitter)
 ;;                                   (gobj/get "features")
-;;                                   ;;(garray/map turf/truncate)
-;;                                   ;;(garray/map turf/cleanCoords)
+;;                                   ;;(garray/map turf-truncate)
+;;                                   ;;(garray/map turf-clean-coords)
 ;;                                   ->clj
 ;;                                   (->>
 ;;                                    ;;(map sensify)
@@ -661,8 +676,8 @@
 ;;                            (if (and l1 l2)
 ;;                              (-> (turf/lineIntersect l1 l2)
 ;;                                  (gobj/get "features")
-;;                                  ;;(garray/map turf/truncate)
-;;                                  ;;(garray/map turf/cleanCoords)
+;;                                  ;;(garray/map turf-truncate)
+;;                                  ;;(garray/map turf-clean-coords)
 ;;                                  ->clj)))))
 ;;                  #{}))]
 ;;     (assoc fcoll :features fs)))
@@ -687,7 +702,7 @@
 ;;   [ol-features]
 ;;   (-> ol-features
 ;;       ->geoJSON
-;;       turf/truncate
+;;       turf-truncate
 ;;       ->clj
 ;;       merge-linestrings
 ;;       (update :features #(filterv valid-line? %))
@@ -915,7 +930,7 @@
 ;; (def killer-geom {:type "LineString" :coordinates killer-coords})
 ;; (def killer-feature {:type "Feature" :geometry killer-geom})
 
-;; (turf/truncate (clj->js killer-geom))
+;; (turf-truncate (clj->js killer-geom))
 
 
 ;; (-> dying-geom :features count)
@@ -1032,10 +1047,10 @@
 ;; (def fcoll {:type "FeatureCollection" :features [f1 f2]})
 
 ;; (->clj
-;;  (turf/lineSplit (clj->js f1) (-> spltr :features first clj->js)))
+;;  (turf-line-split (clj->js f1) (-> spltr :features first clj->js)))
 
 ;; (->clj
-;;  (turf/lineSplit (clj->js f2) (-> spltr :features first clj->js)))
+;;  (turf-line-split (clj->js f2) (-> spltr :features first clj->js)))
 
 ;; (find-intersections fcoll)
 ;; (split-by-intersections2 fcoll)
@@ -1080,10 +1095,10 @@
 ;; (split-by-features f1 (turf/lineIntersect g1 g2))
 
 ;; (turf/lineIntersect g1 g2)
-;; (turf/combine (turf/lineIntersect g1 g2))
+;; (turf-combine (turf/lineIntersect g1 g2))
 ;; (def splitter (-> (turf/lineIntersect g1 g2) ->splitter))
-;; (turf/lineSplit f1 splitter)
-;; (turf/lineSplit f2 splitter)
+;; (turf-line-split f1 splitter)
+;; (turf-line-split f2 splitter)
 
 ;; (defn debug-fcoll [x]
 ;;   (-> x

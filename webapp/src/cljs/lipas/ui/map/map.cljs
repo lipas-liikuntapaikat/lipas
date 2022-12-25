@@ -1,6 +1,17 @@
 (ns lipas.ui.map.map
   (:require
    ["ol" :as ol]
+   ["ol/events/condition" :as events-condition]
+   ["ol/extent" :as extent]
+   ["ol/interaction/Select$default" :as SelectInteraction]
+   ["ol/layer/Image$default" :as ImageLayer]
+   ["ol/layer/Tile$default" :as TileLayer]
+   ["ol/layer/Vector$default" :as VectorLayer]
+   ["ol/proj" :as ol-proj]
+   ["ol/source/ImageWMS$default" :as ImageWMSSource]
+   ["ol/source/Vector$default" :as VectorSource]
+   ["ol/source/WMTS$default" :as WMTSSource]
+   ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
    [goog.object :as gobj]
    [lipas.ui.analysis.reachability.events :as analysis-events]
    [lipas.ui.map.editing :as editing]
@@ -43,17 +54,17 @@
            min-res     0.25
            resolutions mml-resolutions
            matrix-ids  mml-matrix-ids}}]
-  (ol/layer.Tile.
+  (TileLayer.
    #js{:visible       visible?
        :minResolution min-res
        :maxResolution max-res
        :source
-       (ol/source.WMTS.
+       (WMTSSource.
         #js{:url             url
             :layer           layer-name
             :projection      "EPSG:3067"
             :matrixSet       "mml_grid"
-            :tileGrid        (ol/tilegrid.WMTS.
+            :tileGrid        (WMTSTileGrid.
                               #js{:origin      proj/epsg3067-top-left
                                   :extent      proj/epsg3067-extent
                                   :resolutions resolutions
@@ -74,65 +85,65 @@
      {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :name       "vectors"
          :style      styles/feature-style
          :renderMode "image"})
     :edits
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      #js[styles/edit-style styles/vertices-style]
          :renderMode "vector"})
     :markers
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/blue-marker-style
          :renderMode "image"})
     :analysis
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/analysis-style
          :name       "analysis"
          :renderMode "image"})
     :population
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/population-style3
          :name       "population"
          :renderMode "image"})
     :schools
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/school-style
          :name       "schools"
          :renderMode "image"})
     :diversity-grid
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/diversity-grid-style
          :name       "diversity-grid"
          :renderMode "image"})
     :diversity-area
-    (ol/layer.Vector.
-     #js{:source     (ol/source.Vector.)
+    (VectorLayer.
+     #js{:source     (VectorSource.)
          :style      styles/diversity-area-style
          :name       "diversity-area"
          :renderMode "image"})
     :light-traffic
-    (ol/layer.Image.
+    (ImageLayer.
      #js{:visible false
          :source
-         (ol/source.ImageWMS.
+         (ImageWMSSource.
           #js{:url         "https://julkinen.vayla.fi/inspirepalvelu/avoin/wms"
               :params      #js{:LAYERS "TL166"}
               :serverType  "geoserver"
               :crossOrigin "anonymous"})})
     :retkikartta-snowmobile-tracks
-    (ol/layer.Image.
+    (ImageLayer.
      #js{:visible false
          :source
-         (ol/source.ImageWMS.
+         (ImageWMSSource.
           #js{:url         "/geoserver/lipas/wms?"
               :params      #js{:LAYERS "lipas:metsahallitus_urat2019"}
               :serverType  "geoserver"
@@ -207,47 +218,47 @@
                   :overlays #js[popup-overlay]
                   :view     view}
 
-        vector-hover (ol/interaction.Select.
+        vector-hover (SelectInteraction.
                       #js{:layers    #js[(-> layers :overlays :vectors)]
                           :style     styles/feature-style-hover
                           :multi     true
-                          :condition ol/events.condition.pointerMove})
+                          :condition events-condition/pointerMove})
 
-        marker-hover (ol/interaction.Select.
+        marker-hover (SelectInteraction.
                       #js{:layers    #js[(-> layers :overlays :markers)]
                           :style     styles/feature-style-hover
                           :multi     true
-                          :condition ol/events.condition.pointerMove})
+                          :condition events-condition/pointerMove})
 
-        population-hover (ol/interaction.Select.
+        population-hover (SelectInteraction.
                           #js{:layers    #js[(-> layers :overlays :population)]
                               :style     styles/population-hover-style3
                               :multi     false
-                              :condition ol/events.condition.pointerMove})
+                              :condition events-condition/pointerMove})
 
-        schools-hover (ol/interaction.Select.
+        schools-hover (SelectInteraction.
                        #js{:layers    #js[(-> layers :overlays :schools)]
                            :style     styles/school-hover-style
                            :multi     false
-                           :condition ol/events.condition.pointerMove})
+                           :condition events-condition/pointerMove})
 
-        diversity-grid-hover (ol/interaction.Select.
+        diversity-grid-hover (SelectInteraction.
                               #js{:layers    #js[(-> layers :overlays :diversity-grid)]
                                   :style     styles/diversity-grid-hover-style
                                   :multi     false
-                                  :condition ol/events.condition.pointerMove})
+                                  :condition events-condition/pointerMove})
 
-        diversity-area-hover (ol/interaction.Select.
+        diversity-area-hover (SelectInteraction.
                               #js{:layers    #js[(-> layers :overlays :diversity-area)]
                                   :style     styles/diversity-area-hover-style
                                   :multi     false
-                                  :condition ol/events.condition.pointerMove})
+                                  :condition events-condition/pointerMove})
 
-        diversity-area-select (ol/interaction.Select.
+        diversity-area-select (SelectInteraction.
                                #js{:layers #js[(-> layers :overlays :diversity-area)]})
 
-        select (ol/interaction.Select. #js{:layers #js[(-> layers :overlays :vectors)]
-                                           :style  styles/feature-style-selected})
+        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)]
+                                       :style  styles/feature-style-selected})
 
         lmap (ol/Map. opts)]
 
@@ -361,14 +372,15 @@
     (.on lmap "moveend"
          (fn [_]
            (let [center (.getCenter view)
-                 lonlat (ol/proj.toLonLat center proj/epsg3067)
+                 lonlat (ol-proj/toLonLat center proj/epsg3067)
                  zoom   (.getZoom view)
                  extent (.calculateExtent view)
-                 width  (.getWidth ol/extent extent)
-                 height (.getHeight ol/extent extent)]
+                 width  (extent/getWidth extent)
+                 height (extent/getHeight extent)]
 
              (when (and (> width 0) (> height 0))
                (==> [::events/set-view center lonlat zoom extent width height])))))
+
 
     {:lmap     lmap
      :view     view
@@ -465,8 +477,8 @@
       map-utils/enable-marker-hover!
       map-utils/enable-select!
       (cond->
-        lipas-id  (map-utils/select-sports-site! lipas-id)
-        address   (map-utils/show-address-marker! address))))
+          lipas-id  (map-utils/select-sports-site! lipas-id)
+          address   (map-utils/show-address-marker! address))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
@@ -535,7 +547,7 @@
         (cond->
             lipas-id (map-utils/select-sports-site! lipas-id)
             fit? (map-utils/fit-to-extent!
-                      (-> layers :overlays :vectors .getSource .getExtent)))
+                  (-> layers :overlays :vectors .getSource .getExtent)))
         (map-utils/enable-population-hover!)
         (show-population! reachability)
         (show-schools! reachability)

@@ -1,7 +1,8 @@
 (ns lipas.ui.search.db)
 
 (def default-db
-  {:string       nil
+  {:save-dialog-open? false
+   :string            nil
    :filters
    {:statuses      #{"active" "out-of-service-temporarily"}
     :type-codes    #{}
@@ -10,7 +11,7 @@
    :sort
    {:asc?    false
     :sort-fn :score}
-   :results-view :list
+   :results-view      :list
    :selected-results-table-columns
    [:name :event-date :admin.name :owner.name :type.name :location.city.name]
    :pagination
