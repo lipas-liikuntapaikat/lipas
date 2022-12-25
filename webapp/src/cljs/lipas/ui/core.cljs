@@ -1,7 +1,7 @@
 (ns lipas.ui.core
   (:require
-   [cljsjs.babel-polyfill]
-   [cljsjs.google-analytics]
+   #_[cljsjs.babel-polyfill]
+   #_[cljsjs.google-analytics]
    [day8.re-frame.http-fx]
    [district0x.re-frame.google-analytics-fx]
    [lipas.ui.config :as config]
@@ -15,6 +15,7 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [lipas.ui.views :as views]
    [re-frame.core :as re-frame]
+   [reagent.dom :as reagent-dom]
    [reagent.core :as reagent]))
 
 (def dev-backend-url "http://localhost:8091/api")
@@ -44,17 +45,16 @@
 
 (defn qa-setup []
   (when-not (utils/prod?)
-    (let [tr (<== [::subs/translator])]
-      (==> [::events/set-active-disclaimer (tr :disclaimer/test-version)]))))
+    (==> [::events/show-test-version-disclaimer])))
 
 (defn mount-root []
   (re-frame/clear-subscription-cache!)
   (routes/init!)
-  (reagent/render
+  (reagent-dom/render
    [:> (mui/with-width* (reagent/reactify-component views/main-panel))]
    (.getElementById js/document "app")))
 
-(defn ^:export init []
+(defn init []
   (track!)
   (re-frame/dispatch-sync [::events/initialize-db])
   (dev-setup)

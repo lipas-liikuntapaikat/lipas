@@ -1,4 +1,4 @@
-x(defproject lipas "0.1.0-SNAPSHOT"
+(defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
    [org.clojure/clojure "1.11.1"]
@@ -9,19 +9,13 @@ x(defproject lipas "0.1.0-SNAPSHOT"
    [metosin/reitit "0.5.18"]
 
    ;;; Frontend ;;;
+   [thheller/shadow-cljs "2.20.15"]
    [org.clojure/clojurescript "1.11.60"]
-   [cljsjs/create-react-class "15.6.0-2"]
-   [reagent "0.8.1" :exclusions [[cljsjs/react]
-                                 [cljsjs/react-dom]
-                                 [cljsjs/create-react-class]
-                                 [cljsjs/react-dom-server]]]
-   [re-frame "0.10.6"]
-   ;; [ns-tracker "0.3.0"]
+   [reagent "1.1.1"]
+   [re-frame "1.3.0"]
    [tongue "0.2.6"]
    [day8.re-frame/http-fx "0.1.6"]
-   [cljsjs/google-analytics "2015.04.13-0"]
    [district0x.re-frame/google-analytics-fx "1.0.0"]
-   [cljsjs/babel-polyfill "6.20.0-2"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
@@ -75,8 +69,6 @@ x(defproject lipas "0.1.0-SNAPSHOT"
   :clean-targets ^{:protect false}
   ["resources/public/js/compiled" "target" "test/js"]
 
-  :figwheel {:css-dirs ["resources/public/css"]}
-
   :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
 
   :migratus
@@ -92,21 +84,16 @@ x(defproject lipas "0.1.0-SNAPSHOT"
   :profiles
   {:dev
    {:repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+    :source-paths ["src/cljs" "src/cljc" "src/js"]
     :dependencies
     [;;; Frontend ;;;
-     [binaryage/devtools "0.9.10"]
-     [day8.re-frame/re-frame-10x "0.3.7-react16"]
-     [re-frisk "0.5.3"]
-     [figwheel-sidecar "0.5.18"]
+     [binaryage/devtools "1.0.6"]
+     [day8.re-frame/re-frame-10x "1.5.0"]
      [cider/piggieback "0.4.0"]
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
-     [org.clojure/test.check "0.9.0"]
-     [metasoarous/oz "2.0.0-alpha5"]]
-
-    :plugins [[lein-figwheel "0.5.20"]
-              [lein-doo "0.1.10"]]}
+     [org.clojure/test.check "0.9.0"]]}
    :uberjar
    {:main         lipas.aot
     :aot          [lipas.aot]
@@ -116,71 +103,4 @@ x(defproject lipas "0.1.0-SNAPSHOT"
     ;; afterwards.
     :target-path  "/tmp/%s"
     :compile-path "%s/classy-files"
-    :uberjar-name "backend.jar"}}
-
-  :cljsbuild
-  {:builds
-   [{:id           "dev"
-     :source-paths ["src/cljs" "src/cljc"]
-     :figwheel     {:on-jsload "lipas.ui.core/mount-root"}
-     :compiler
-     {:main                 lipas.ui.core
-      :npm-deps             false
-      :infer-externs        true
-      :foreign-libs
-      [{:file           "dist/index.bundle.js"
-        :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
-                         "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest"
-                         "turf" "react-select" "rcslider" "shp"]
-        :global-exports {ol        ol        zipcelx            zipcelx
-                         filesaver filesaver react              React
-                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
-                         mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         turf      turf      react-select       ReactSelect
-                         rcslider  rcslider  shp                shp }}]
-      :output-to            "resources/public/js/compiled/app.js"
-      :output-dir           "resources/public/js/compiled/out"
-      :asset-path           "/js/compiled/out"
-      :source-map-timestamp true
-      :preloads             [devtools.preload day8.re-frame-10x.preload
-                                        ;Re-frisk.preload
-                             ]
-      :closure-defines      {"re_frame.trace.trace_enabled_QMARK_" true}
-      :external-config      {:devtools/config {:features-to-install :all}}}}
-
-    {:id           "min"
-     :source-paths ["src/cljs" "src/cljc"]
-     :compiler
-     {:main            lipas.ui.core
-      :verbose         false
-      :npm-deps        false
-      :infer-externs   true
-      :externs         ["src/js/ol_externs.js"]
-      :parallel-build  true
-      :foreign-libs
-      [{:file           "dist/index.bundle.js"
-        :provides       ["ol" "zipcelx" "filesaver" "react" "react-dom"
-                         "react-dom/server" "mui" "cljsjs.react" "cljsjs.react.dom"
-                         "recharts" "proj4" "cljsjs.react-autosuggest"
-                         "turf" "react-select" "shp"]
-        :global-exports {ol        ol        zipcelx            zipcelx
-                         filesaver filesaver react              React
-                         react-dom ReactDOM  "react-dom/server" ReactDOMServer
-                         mui       mui       proj4              proj4
-                         recharts  recharts  react-autosuggest  "cljsjs.react-autosuggest"
-                         turf      turf      react-select       ReactSelect
-                         shp       shp}}]
-      :output-to       "resources/public/js/compiled/app.js"
-      :optimizations   :advanced
-      :closure-defines {goog.DEBUG false}
-      :pretty-print    false}}
-
-    {:id           "test"
-     :source-paths ["src/cljs" "src/cljc" "test/cljs"]
-     :compiler
-     {:main          lipas.ui.runner
-      :output-to     "resources/public/js/compiled/test.js"
-      :output-dir    "resources/public/js/compiled/test/out"
-      :optimizations :none}}]})
+    :uberjar-name "backend.jar"}})

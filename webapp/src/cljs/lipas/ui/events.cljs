@@ -49,6 +49,12 @@
    (assoc db :active-notification notification)))
 
 (re-frame/reg-event-db
+ ::show-test-version-disclaimer
+ (fn [db _]
+   (let [tr (:translator db)]
+     (assoc db :active-disclaimer (tr :disclaimer/test-version)))))
+
+(re-frame/reg-event-db
  ::set-active-disclaimer
  (fn [db [_ disclaimer]]
    (assoc db :active-disclaimer disclaimer)))

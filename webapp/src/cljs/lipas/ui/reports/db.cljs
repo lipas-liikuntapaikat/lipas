@@ -3,6 +3,7 @@
    [lipas.reports :as reports]))
 
 (def default-db
-  {:dialog-open?    false
-   :fields          reports/fields
-   :selected-fields (keys reports/default-fields)})
+  {:dialog-open?      false
+   :save-dialog-open? false
+   :fields            reports/fields
+   :selected-fields   (keys reports/default-fields)})

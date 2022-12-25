@@ -246,15 +246,10 @@ services:
       service: node-base
     command: npm install --quiet
 
-  frontend-npm-bundle:
-    extends:
-      service: node-base
-    command: npx webpack
-
   frontend-build:
     extends:
       service: backend-base
-    command: lein cljsbuild once min
+    command: lein run -m shadow.cljs.devtools.cli release app
 
   headless-chrome:
     image: robcherry/docker-chromedriver

@@ -1,6 +1,12 @@
 (ns lipas.ui.map.editing
   (:require
-   ["ol" :as ol]
+   ["ol-ext/interaction/DrawHole$default" :as DrawHole]
+   ["ol/events/condition" :as events-condition]
+   ["ol/interaction/Draw$default" :as Draw]
+   ["ol/interaction/Modify$default" :as Modify]
+   ["ol/interaction/Select$default" :as Select]
+   ["ol/interaction/Snap$default" :as Snap]
+   ["ol/proj" :as proj]
    [goog.object :as gobj]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.styles :as styles]
@@ -15,17 +21,17 @@
 ;; interactions in order for its map browser event handlers to be
 ;; fired first. Its handlers are responsible of doing the snapping.
 (defn enable-snapping!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx}]
+  [{:keys [^js lmap layers] :as map-ctx}]
   (let [source (-> layers :overlays :edits .getSource)
-        snap   (ol/interaction.Snap. #js{:source source :pixelTolerance 5})]
+        snap   (Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
 (defn enable-delete!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-delete]
+  [{:keys [^js lmap layers] :as map-ctx} on-delete]
   (let [layer  (-> layers :overlays :edits)
-        delete (ol/interaction.Select. #js{:layers #js[layer]
-                                           :style  styles/hover-style})
+        delete (Select. #js{:layers #js[layer]
+                            :style  styles/hover-style})
         source (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
@@ -44,17 +50,17 @@
         (assoc-in[:interactions :delete] delete))))
 
 (defn enable-splitting!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modify]
+  [{:keys [^js lmap layers] :as map-ctx} on-modify]
   (let [layer  (-> layers :overlays :edits)
-        split  (ol/interaction.Select. #js{:layers #js[layer]
-                                           :style  styles/hover-style})
+        split  (Select. #js{:layers #js[layer]
+                            :style  styles/hover-style})
         source (.getSource layer)]
     (.addInteraction lmap split)
     (.on split "select"
          (fn [e]
            (let [selected (gobj/get e "selected")
                  euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 wgs      (ol/proj.toLonLat euref "EPSG:3067")]
+                 wgs      (proj/toLonLat euref "EPSG:3067")]
              (when (not-empty selected)
                (doseq [f selected]
                  (when-let [splitted (map-utils/split-at-coords f wgs)]
@@ -68,9 +74,9 @@
         (assoc-in [:interactions :split] split))))
 
 (defn start-drawing-hole!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx} on-modifyend]
+  [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
   (let [layer     (-> layers :overlays :edits)
-        draw-hole (ol/interaction.DrawHole. #js{:layers #js[layer]})
+        draw-hole (DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
@@ -79,17 +85,17 @@
     (assoc-in map-ctx [:interactions :draw-hole] draw-hole)))
 
 (defn start-editing!
-  [{:keys [^js/ol.Map lmap layers] :as map-ctx} geoJSON-feature on-modifyend]
+  [{:keys [^js lmap layers] :as map-ctx} geoJSON-feature on-modifyend]
   (let [layer    (-> layers :overlays :edits)
         source   (.getSource layer)
         _        (.clear source)
         features (-> geoJSON-feature clj->js map-utils/->ol-features)
         _        (.addFeatures source features)
-        modify   (ol/interaction.Modify. #js{:source source})
-        hover    (ol/interaction.Select.
+        modify   (Modify. #js{:source source})
+        hover    (Select.
                   #js{:layers    #js[layer]
                       :style     #js[styles/editing-hover-style styles/vertices-style]
-                      :condition ol/events.condition.pointerMove})]
+                      :condition events-condition/pointerMove})]
 
     (.addInteraction lmap hover)
     (.addInteraction lmap modify)
@@ -125,13 +131,11 @@
     (start-editing! map-ctx geoms on-modifyend)))
 
 (defn start-drawing!
-  [{:keys [^js/ol.Map lmap layers]
+  [{:keys [^js lmap layers]
     :as   map-ctx} geom-type on-draw-end]
   (let [layer  (-> layers :overlays :edits)
         source (.getSource layer)
-        draw   (ol/interaction.Draw.
-                #js{:snapTolerance 0 :source source :type geom-type})]
-
+        draw   (Draw. #js{:snapTolerance 0 :source source :type geom-type})]
 
     (.addInteraction lmap draw)
     (.on draw "drawend"

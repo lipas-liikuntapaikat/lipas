@@ -1,14 +1,9 @@
 (ns lipas.ui.map.subs
   (:require
-   ["turf" :as turf]
-   [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
-   [lipas.utils :as utils]
-   [lipas.ui.utils :as ui-utils]
    [re-frame.core :as re-frame]
-   [reagent.ratom :as ratom]
-   [lipas.ui.analysis.reachability.views :as reachability]))
+   [reagent.ratom :as ratom]))
 
 (re-frame/reg-sub
  ::view
@@ -212,7 +207,7 @@
 (re-frame/reg-sub
  ::drawer-open?
  (fn [db _]
-   (-> db :map :drawer-open?)))
+   (-> db :map :drawer-open? boolean)))
 
 ;; Import geoms ;;
 

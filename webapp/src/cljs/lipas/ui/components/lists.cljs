@@ -1,9 +1,9 @@
 (ns lipas.ui.components.lists
   (:require
+   ["react-virtualized" :refer [AutoSizer List InfiniteLoader]]
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))
-
 
 (defn row-renderer
   [{:keys [items label-fn label2-fn on-item-click]} js-opts]
@@ -24,13 +24,13 @@
          :secondary-typography-props {:no-wrap true}}]]])))
 
 (defn virtualized-list [{:keys [items] :as props}]
-  [:> js/reactVirtualized.AutoSizer
+  [:> AutoSizer
    (fn [m]
      (let [row-height 64
            width      (gobj/get m "width")
            height     (max (gobj/get m "height") (* 5 row-height))]
        (r/as-element
-        [:> js/reactVirtualized.List
+        [:> List
          {:row-width    width
           :width        width
           :height       height
@@ -39,13 +39,13 @@
           :row-count    (inc (count items))}])))])
 
 (defn inifinite-list [{:keys [items] :as props}]
-  [:> js/reactVirtualized.InfiniteLoader
+  [:> InfiniteLoader
    (fn [m]
      (let [row-height 64
            width      (gobj/get m "width")
            height     (gobj/get m "height")]
        (r/as-element
-        [:> js/reactVirtualized.List
+        [:> List
          {:row-width    width
           :width        width
           :height       height

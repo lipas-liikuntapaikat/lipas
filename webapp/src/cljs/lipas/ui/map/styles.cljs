@@ -1,16 +1,22 @@
 (ns lipas.ui.map.styles
   (:require
-   ["ol" :as ol]
+   ["ol/geom/MultiPoint$default" :as MultiPoint]
+   ["ol/style/Fill$default" :as Fill]
+   ["ol/style/Icon$default" :as Icon]
+   ["ol/style/Stroke$default" :as Stroke]
+   ["ol/style/Style$default" :as Style]
+   ["ol/style/Circle$default" :as Circle]
+   ["ol/style/RegularShape$default" :as RegularShape]
    [goog.color :as gcolor]
    [goog.color.alpha :as gcolora]
+   [lipas.data.styles :as styles]
    [lipas.ui.mui :as mui]
-   [lipas.ui.svg :as svg]
-   [lipas.data.styles :as styles]))
+   [lipas.ui.svg :as svg]))
 
 (defn ->marker-style [opts]
-  (ol/style.Style.
+  (Style.
    #js{:image
-       (ol/style.Icon.
+       (Icon.
         #js{:src    (str "data:image/svg+xml;charset=utf-8,"
                          (-> opts
                              svg/->marker-str
@@ -19,9 +25,9 @@
             :offset #js[0 0]})}))
 
 (defn ->school-style [opts]
-  (ol/style.Style.
+  (Style.
    #js{:image
-       (ol/style.Icon.
+       (Icon.
         #js{:src    (str "data:image/svg+xml;charset=utf-8,"
                          (-> opts
                              svg/->school-str
@@ -31,20 +37,20 @@
 
 (def blue-marker-style (->marker-style {}))
 (def red-marker-style (->marker-style {:color mui/secondary}))
-(def default-stroke (ol/style.Stroke. #js{:color "#3399CC" :width 3}))
-(def default-fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.4)"}))
-(def hover-stroke (ol/style.Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
-(def hover-fill (ol/style.Fill. #js{:color "rgba(255,0,0,0.4)"}))
+(def default-stroke (Stroke. #js{:color "#3399CC" :width 3}))
+(def default-fill (Fill. #js{:color "rgba(255,255,0,0.4)"}))
+(def hover-stroke (Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
+(def hover-fill (Fill. #js{:color "rgba(255,0,0,0.4)"}))
 
 ;; Draw circles to all LineString and Polygon vertices
 (def vertices-style
-  (ol/style.Style.
+  (Style.
    #js{:image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 5
-            :stroke (ol/style.Stroke.
+            :stroke (Stroke.
                      #js{:color mui/primary})
-            :fill   (ol/style.Fill.
+            :fill   (Fill.
                      #js{:color mui/secondary2})})
        :geometry
        (fn [f]
@@ -59,59 +65,59 @@
                            "LineString" (-> f .getGeometry .getCoordinates)
                            nil)]
            (when coords
-             (ol/geom.MultiPoint. coords))))}))
+             (MultiPoint. coords))))}))
 
 (def edit-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke
-       (ol/style.Stroke.
+       (Stroke.
         #js{:width 3 :color "blue"})
        :fill default-fill
        :image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 7
-            :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+            :fill (Fill. #js{:color "rgba(255,255,0,0.85)"})
             :stroke default-stroke})}))
 
 (def invalid-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke
-       (ol/style.Stroke.
+       (Stroke.
         #js{:width 3
             :color "red"})
        :fill default-fill
        :image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 5
             :fill   default-fill
             :stroke default-stroke})}))
 
 (def default-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke default-stroke
        :fill default-fill
        :image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 5
             :fill   default-fill
             :stroke default-stroke})}))
 
 (def hover-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke hover-stroke
        :fill   default-fill
        :image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 7
             :fill   default-fill
             :stroke hover-stroke})}))
 
 (def editing-hover-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke hover-stroke
-       :fill   (ol/style.Fill. #js{:color "rgba(255,255,0,0.2)"})
+       :fill   (Fill. #js{:color "rgba(255,255,0,0.2)"})
        :image
-       (ol/style.Circle.
+       (Circle.
         #js{:radius 7
             :fill   default-fill
             :stroke hover-stroke})}))
@@ -130,7 +136,7 @@
                        "polygon" (if hover? 0.3 0.2)
                        0.85)
         fill-color   (-> m :fill :color (->rgba fill-alpha))
-        fill         (ol/style.Fill. #js{:color fill-color})
+        fill         (Fill. #js{:color fill-color})
         stroke-alpha (case (:shape m)
                        "polygon" 0.6
                        0.9)
@@ -138,9 +144,9 @@
         stroke-width       (-> m :stroke :width)
         stroke-hover-width (* 2 stroke-width)
         stroke-color       (-> m :stroke :color (->rgba stroke-alpha))
-        stroke-black       (ol/style.Stroke. #js{:color "#00000" :width 1})
+        stroke-black       (Stroke. #js{:color "#00000" :width 1})
 
-        stroke-planned (ol/style.Stroke.
+        stroke-planned (Stroke.
                         #js{:color    "#3b3b3b"
                             :lineDash #js[2 20]
                                         ; :lineDashOffset 1
@@ -149,7 +155,7 @@
                                         ("circle")               5
                                         ("square")               4)})
 
-        stroke-planning (ol/style.Stroke.
+        stroke-planning (Stroke.
                          #js{:color    "#ee00ee"
                              :lineDash #js[2 20]
                                         ; :lineDashOffset 1
@@ -158,7 +164,7 @@
                                          ("circle")               5
                                          ("square")               4)})
 
-        stroke         (ol/style.Stroke.
+        stroke         (Stroke.
                         #js{:color    stroke-color
                             :lineDash (when (or selected? hover?)
                                         #js[2 8])
@@ -169,7 +175,7 @@
         line-dash      (case (:shape m) ("square") #js[1 4] #js[2 5])
         line-cap       (case (:shape m) ("square") "square" "round")
         stroke-width   (case (:shape m) ("square") 2 3)
-        style          (ol/style.Style.
+        style          (Style.
                         #js{:stroke stroke
                             :fill   fill
                             :zIndex (condp = (:shape m)
@@ -179,12 +185,12 @@
                             :image
                             (when-not (#{"polygon" "linestring"} (:shape m))
                               (let [stroke (cond
-                                             planning? (ol/style.Stroke.
+                                             planning? (Stroke.
                                                         #js{:color    "#ee00ee"
                                                             :width    stroke-width
                                                             :lineCap  line-cap
                                                             :lineDash line-dash})
-                                             planned?  (ol/style.Stroke.
+                                             planned?  (Stroke.
                                                         #js{:color    "black"
                                                             :width    stroke-width
                                                             :lineCap  line-cap
@@ -197,21 +203,21 @@
                                              planned?  7
                                              :else     7)]
                                 (case (:shape m)
-                                  ("square") (ol/style.RegularShape.
+                                  ("square") (RegularShape.
                                               #js{:fill   fill
                                                   :stroke stroke
                                                   :points 4
                                                   :radius (inc (inc radius))
                                                   :angle  (/ js/Math.PI 4)})
                                   ;; Default
-                                  (ol/style.Circle.
+                                  (Circle.
                                    #js{:radius radius
                                        :fill   fill
                                        :stroke stroke}))))})
-        planned-stroke (ol/style.Style.
+        planned-stroke (Style.
                         #js{:stroke stroke-planned})
 
-        planning-stroke (ol/style.Style.
+        planning-stroke (Style.
                          #js{:stroke stroke-planning})]
 
     (if (and selected? (:shape m))
@@ -289,11 +295,11 @@
    (->> population-colors
         (map-indexed
          (fn [idx color]
-           [idx (ol/style.Style.
+           [idx (Style.
                  #js{:stroke (if hover?
-                               (ol/style.Stroke. #js{:color stroke-color :width 5})
-                               (ol/style.Stroke. #js{:color "black" :width 2}))
-                     :fill   (ol/style.Fill. #js{:color color})})]))
+                               (Stroke. #js{:color stroke-color :width 5})
+                               (Stroke. #js{:color "black" :width 2}))
+                     :fill   (Fill. #js{:color color})})]))
         (into {}))))
 
 (def population-styles
@@ -323,9 +329,9 @@
       (population-styles 5))))
 
 (def analysis-style
-  (ol/style.Style.
+  (Style.
    #js{:stroke
-       (ol/style.Stroke.
+       (Stroke.
         #js{:width 3 :color "blue" :lineDash #js[2 10]})}))
 
 (defn population-hover-style
@@ -376,29 +382,29 @@
   [f _resolution]
   (let [n     (.get f "vaesto")
         color (.get f "color")]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color color})
-         :fill (ol/style.Fill. #js{:color color})
+         :fill (Fill. #js{:color color})
          :image
-         (ol/style.Circle.
+         (Circle.
           #js{:radius (min 7 (* 0.01 (js/Math.abs n)))
-              :fill   (ol/style.Fill. #js{:color color})
-              :stroke (ol/style.Stroke. #js{:color color :width 3})})})))
+              :fill   (Fill. #js{:color color})
+              :stroke (Stroke. #js{:color color :width 3})})})))
 
 (defn population-hover-style2
   [f _resolution]
   (let [n (.get f "vaesto")]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color "blue"})
          :fill default-fill
          :image
-         (ol/style.Circle.
+         (Circle.
           #js{:radius (min 10 (* 0.1 (js/Math.abs n)))
-              :fill (ol/style.Fill. #js{:color "rgba(255,255,0,0.85)"})
+              :fill (Fill. #js{:color "rgba(255,255,0,0.85)"})
               :stroke hover-stroke})})))
 
 (defn density [n]
@@ -416,35 +422,35 @@
   (let [n     (.get f "vaesto")
         color (.get f "color")
         dens  (density n)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color color})
-         :fill (ol/style.Fill. #js{:color color})
+         :fill (Fill. #js{:color color})
          :image
-         (ol/style.RegularShape.
+         (RegularShape.
           #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
-              :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
-              :stroke (ol/style.Stroke. #js{:color color :width 2})})})))
+              :fill   (Fill. #js{:color (->rgba color dens)})
+              :stroke (Stroke. #js{:color color :width 2})})})))
 
 (defn population-hover-style3
   [f resolution]
   (let [n     (.get f "vaesto")
         color (.get f "color")
         dens (density n)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color color})
-         :fill (ol/style.Fill. #js{:color color})
+         :fill (Fill. #js{:color color})
          :image
-         (ol/style.RegularShape.
+         (RegularShape.
           #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
-              :fill   (ol/style.Fill. #js{:color (->rgba color dens)})
+              :fill   (Fill. #js{:color (->rgba color dens)})
               :stroke hover-stroke})})))
 
 
@@ -504,49 +510,49 @@
   [f resolution]
   (let [diversity-idx (.get f "diversity_idx")
         color (get diversity-colors diversity-idx diversity-base-color)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color color})
-         :fill (ol/style.Fill. #js{:color color})
+         :fill (Fill. #js{:color color})
          :image
-         (ol/style.RegularShape.
+         (RegularShape.
           #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
-              :fill   (ol/style.Fill. #js{:color color})
-              :stroke (ol/style.Stroke. #js{:color "blue" :width 1})})})))
+              :fill   (Fill. #js{:color color})
+              :stroke (Stroke. #js{:color "blue" :width 1})})})))
 
 (defn diversity-grid-hover-style [f resolution]
   (let [diversity-idx (.get f "diversity_idx")
         color (get diversity-colors diversity-idx diversity-base-color)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color color})
-         :fill (ol/style.Fill. #js{:color color})
+         :fill (Fill. #js{:color color})
          :image
-         (ol/style.RegularShape.
+         (RegularShape.
           #js{:radius (/ population-grid-radius resolution)
               :points 4
               :angle  (/ js/Math.PI 4)
-              :fill   (ol/style.Fill. #js{:color color})
-              :stroke (ol/style.Stroke. #js{:color "blue" :width 2})})})))
+              :fill   (Fill. #js{:color color})
+              :stroke (Stroke. #js{:color "blue" :width 2})})})))
 
 (defn diversity-area-style [f _resolution]
   (let [diversity-idx (js/Math.round (.get f "population-weighted-mean"))
         fill-color (get diversity-colors-alpha diversity-idx transparent)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 3 :color "#0D3BC1"})
-         :fill (ol/style.Fill. #js{:color fill-color})})))
+         :fill (Fill. #js{:color fill-color})})))
 
 (defn diversity-area-hover-style [f _resolution]
   (let [diversity-idx (js/Math.round (.get f "population-weighted-mean"))
         fill-color (get diversity-colors-alpha diversity-idx transparent)]
-    (ol/style.Style.
+    (Style.
      #js{:stroke
-         (ol/style.Stroke.
+         (Stroke.
           #js{:width 5 :color diversity-hover-stroke})
-         :fill (ol/style.Fill. #js{:color fill-color})})))
+         :fill (Fill. #js{:color fill-color})})))

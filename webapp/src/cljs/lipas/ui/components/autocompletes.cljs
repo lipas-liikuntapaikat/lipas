@@ -1,12 +1,12 @@
 (ns lipas.ui.components.autocompletes
   (:require
-   [cljsjs.react-autosuggest]
+   ["react-autosuggest" :as Autosuggest]
+   ["react-select-material-ui" :refer [SingleSelect MultipleSelect]]
    [clojure.spec.alpha :as s]
    [clojure.string :refer [trim] :as string]
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :as utils]
-   [react-select :as ReactSelect]
    [reagent.core :as r]))
 
 (def lower-case (fnil string/lower-case ""))
@@ -64,7 +64,7 @@
 
      ;; Input field
      [mui/grid {:item true}
-      [:> js/Autosuggest
+      [:> Autosuggest
        {:id                 @id
         :suggestions        (sort-by sort-fn @suggs)
         :getSuggestionValue #(label-fn (js->clj* %1))
@@ -145,7 +145,7 @@
            sort-fn        label-fn
            value-fn       :value}}]
   (r/with-let [state   (r/atom value)]
-    [:> (if multi? js/ReactSelect.MultipleSelect js/ReactSelect.SingleSelect)
+    [:> (if multi? MultipleSelect SingleSelect)
      {(if multi?
         :values
         :value)    @state

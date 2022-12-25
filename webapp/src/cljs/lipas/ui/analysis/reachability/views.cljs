@@ -1,29 +1,30 @@
 (ns lipas.ui.analysis.reachability.views
   (:require
+   ["rc-slider" :as Slider]
+   ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
    [clojure.string :as string]
-   [goog.date.duration :as gduration]
    [lipas.ui.analysis.reachability.events :as events]
    [lipas.ui.analysis.reachability.subs :as subs]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
-   [lipas.ui.map.events :as map-events]   
+   [lipas.ui.map.events :as map-events]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(def ^js Slider (.-Slider js/rcslider))
+#_(def ^js Slider (.-Slider js/rcslider))
 (def ^js RangeSlider (.createSliderWithTooltip Slider (.-Range Slider)))
 
 (defn sports-sites-tab
   [{:keys [tr]}]
-  (let [sports-sites-list                (<== [::subs/sports-sites-list])
-        sports-sites-view                (<== [::subs/sports-sites-view])
-        sports-sites-chart-data          (<== [::subs/sports-sites-chart-data-v2])
-        selected-types                   (<== [:lipas.ui.search.subs/types-filter])
-        labels                           (<== [::subs/population-labels])
-        zones                            (<== [::subs/zones-by-selected-metric])
-        metric                           (<== [::subs/selected-travel-metric])
-        zone-colors                      (<== [::subs/zone-colors metric])]
+  (let [sports-sites-list       (<== [::subs/sports-sites-list])
+        sports-sites-view       (<== [::subs/sports-sites-view])
+        sports-sites-chart-data (<== [::subs/sports-sites-chart-data-v2])
+        selected-types          (<== [:lipas.ui.search.subs/types-filter])
+        labels                  (<== [::subs/population-labels])
+        zones                   (<== [::subs/zones-by-selected-metric])
+        metric                  (<== [::subs/selected-travel-metric])
+        zone-colors             (<== [::subs/zone-colors metric])]
     [:<>
 
      ;; Tools
@@ -101,7 +102,7 @@
         {:on-click #(==> [::events/select-travel-profile :direct])
          :disabled (= metric :travel-time)
          :color    (if (= profile :direct) "secondary" "default")}
-        [:> js/materialIcons.MapMarkerDistance]]]]
+        [:> MapMarkerDistance]]]]
 
      ;; Car
      [mui/grid {:item true}
@@ -203,7 +204,7 @@
         [charts/population-area-chart
          {:data   data-area
           :labels labels}]])
-     
+
      ;; Tilastokeskus copyright notice (demographics data)
      [mui/grid {:item true :xs 12}
       [mui/typography {:variant "caption"}
@@ -258,7 +259,7 @@
         [charts/schools-area-chart
          {:data   schools-chart-data
           :labels labels}]
-        
+
         ;; Cumulative / non-cumulative selector
         [mui/grid {:item true :xs 12 :style {:padding-left "1em"}}
          [lui/checkbox
@@ -275,9 +276,9 @@
         zones-count     (<== [::subs/zones-count metric])
         zones-count-max (<== [::subs/zones-count-max metric])]
     (r/with-let [value* (r/atom value)]
-      
+
       [mui/grid {:container true}
-   
+
        ;; Slider
        [mui/grid {:item true :xs 10 :style {:padding "1em"}}
         [:> RangeSlider
@@ -440,8 +441,8 @@
              [mui/icon-button
               {:on-click #(==> [::events/clear])
                :size     "small"}
-              [mui/icon "clear"]]]]]]         
-         
+              [mui/icon "clear"]]]]]]
+
          ;; Craete report butotn
          [mui/grid {:item true :style {:padding-right "1em"}}
           [lui/download-button
