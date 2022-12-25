@@ -1,6 +1,7 @@
 (ns lipas.ui.analysis.diversity.view
   (:require
    [clojure.string :as str]
+   ["rc-slider$default" :as Slider]
    [lipas.ui.analysis.diversity.events :as events]
    [lipas.ui.analysis.diversity.subs :as subs]
    #_[lipas.ui.charts :as charts]
@@ -12,7 +13,7 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(def ^js Slider (.-default (.-Slider js/rcslider)))
+#_(def ^js Slider (.-default (.-Slider js/rcslider)))
 
 (def import-formats [".zip" ".kml" ".json" ".geojson"])
 (def import-formats-str (str/join " " import-formats))
@@ -30,8 +31,6 @@
         candidates (<== [::subs/analysis-candidates-table-rows])
         headers    (<== [::subs/analysis-candidates-table-headers])
         loading?   (<== [::subs/loading?])]
-
-    #_[:> js/materialIcons.FileUpload props]
 
     [mui/grid {:container true :spacing 16}
 
@@ -167,14 +166,108 @@
         :value     show-diversity-grid?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
 
-(defn settings []
+(defn categories-settings []
   (let [tr                (<== [:lipas.ui.subs/translator])
-        max-distance-m    (<== [::subs/max-distance-m])
         selected-preset   (<== [::subs/selected-category-preset])
         category-presets  (<== [::subs/category-presets])
         summer-enabled?   (<== [::subs/seasonality-enabled? "summer"])
         winter-enabled?   (<== [::subs/seasonality-enabled? "winter"])
         all-year-enabled? (<== [::subs/seasonality-enabled? "all-year"])]
+
+    [mui/grid {:container true :spacing 2}
+
+     ;; Helper text
+     [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
+      [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
+       [mui/typography {:variant "body1" :paragraph false}
+        (tr :analysis/categories-help)]]]
+
+     ;; Preset category selector
+     [mui/grid {:item true :xs 12 :md 12}
+      [mui/form-group {:style {:padding "0.5em" :margin-bottom "0.5em"}}
+       [lui/select
+        {:value     selected-preset
+         :on-change #(==> [::events/select-category-preset %])
+         :label     "Valmiit luokittelut"
+         :items     category-presets}]]]
+
+     ;; Seasonality switches
+     [mui/grid {:item true :xs 12 :md 12}
+      [mui/grid {:container true :style {:padding "0.5em"}}
+
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "caption"} "Rajaukset"]]
+
+       ;; Summer season filter
+       [mui/grid {:item true}
+        [lui/switch
+         {:label     "Käytössä kesällä"
+          :value     summer-enabled?
+          :on-change #(==> [::events/toggle-seasonality "summer" %])}]]
+
+       ;; Winter season filter
+       [mui/grid {:item true}
+        [lui/switch
+         {:label     "Käytössä talvella"
+          :value     winter-enabled?
+          :on-change #(==> [::events/toggle-seasonality "winter" %])}]]
+
+       ;; All-year filter
+       [mui/grid {:item true}
+        [lui/switch
+         {:label     "Käytössä vuoden ympäri"
+          :value     all-year-enabled?
+          :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
+
+     ;; Add new category button
+     [mui/grid {:item true :xs 12 :md 6}
+      [mui/button
+       {:variant  "default"
+        :on-click #(==> [::events/add-new-category])}
+       "Uusi kategoria"]]
+
+     ;; Reset default categories button
+     [mui/grid {:item true :xs 12 :md 6}
+      [mui/button
+       {:variant  "default"
+        :on-click #(==> [::events/select-category-preset :default])}
+       "Palauta oletuskategoriat"]]
+
+     ;; Category builder
+     [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
+      [category-builder]]]))
+
+(defn distance-settings []
+  (let [max-distance-m    (<== [::subs/max-distance-m])]
+    [mui/grid {:container true :spacing 2}
+
+     ;; Helper text
+     [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+      [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
+       [mui/typography {:variant "body1" :paragraph false}
+        "Monipuolisuus lasketaan jokaiselle väestöruudulle siten, että monipuolisuuteen vaikuttavat ne liikuntapaikat, jotka ovat annetun metrimäärän kävelyetäisyydellä tieverkkoa pitkin väestöruudun keskipisteestä."]]]
+
+     ;; Distance zones selector
+     [mui/grid {:item true :xs 12 :style {:margin-top    "1em"
+                                          :margin-left   "1em"
+                                          :margin-right  "1em"
+                                          :margin-bottom "5em"}}
+
+      (let [min 500 max 1500 step 100]
+        [:> Slider
+         {:min       min
+          :max       max
+          :step      step
+          :value     max-distance-m
+          :dots      true
+          :marks     (into {}
+                           (map (juxt identity #(str % "m")))
+                           (range min (+ max step) step))
+          :style     {:font-family "Lato, sans-serif"}
+          :on-change #(==> [::events/set-max-distance-m %])}])]]))
+
+(defn settings []
+  (let [tr (<== [:lipas.ui.subs/translator])]
     [:<>
 
      [mui/grid {:container true}
@@ -184,8 +277,6 @@
        [lui/expansion-panel
         {:label            (tr :analysis/settings-map)
          :default-expanded false}
-
-        ;; Switches
         [overlay-switches]]]
 
       ;; Categories
@@ -193,100 +284,14 @@
        [lui/expansion-panel
         {:label            (tr :analysis/categories)
          :default-expanded false}
-        [mui/grid {:container true :spacing 2}
-
-         ;; Helper text
-         [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
-          [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
-           [mui/typography {:variant "body1" :paragraph false}
-            (tr :analysis/categories-help)]]]
-
-         ;; Preset category selector
-         [mui/grid {:item true :xs 12 :md 12}
-          [mui/form-group {:style {:padding "0.5em" :margin-bottom "0.5em"}}
-           [lui/select
-            {:value     selected-preset
-             :on-change #(==> [::events/select-category-preset %])
-             :label     "Valmiit luokittelut"
-             :items     category-presets}]]]
-
-         ;; Seasonality switches
-         [mui/grid {:item true :xs 12 :md 12}
-          [mui/grid {:container true :style {:padding "0.5em"}}
-
-           [mui/grid {:item true :xs 12}
-            [mui/typography {:variant "caption"} "Rajaukset"]]
-
-           ;; Summer season filter
-           [mui/grid {:item true}
-            [lui/switch
-             {:label     "Käytössä kesällä"
-              :value     summer-enabled?
-              :on-change #(==> [::events/toggle-seasonality "summer" %])}]]
-
-           ;; Winter season filter
-           [mui/grid {:item true}
-            [lui/switch
-             {:label     "Käytössä talvella"
-              :value winter-enabled?
-              :on-change #(==> [::events/toggle-seasonality "winter" %])}]]
-
-           ;; All-year filter
-           [mui/grid {:item true}
-            [lui/switch
-             {:label     "Käytössä vuoden ympäri"
-              :value all-year-enabled?
-              :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
-
-         ;; Add new category button
-         [mui/grid {:item true :xs 12 :md 6}
-          [mui/button
-           {:variant  "default"
-            :on-click #(==> [::events/add-new-category])}
-           "Uusi kategoria"]]
-
-         ;; Reset default categories button
-         [mui/grid {:item true :xs 12 :md 6}
-          [mui/button
-           {:variant  "default"
-            :on-click #(==> [::events/select-category-preset :default])}
-           "Palauta oletuskategoriat"]]
-
-         ;; Category builder
-         [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
-          [category-builder]]]]]
+        [categories-settings]]]
 
       ;; Distances
       [mui/grid {:item true :xs 12}
        [lui/expansion-panel
         {:label            (tr :analysis/distance)
          :default-expanded false}
-        [mui/grid {:container true :spacing 2}
-
-         ;; Helper text
-         [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
-          [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
-           [mui/typography {:variant "body1" :paragraph false}
-            "Monipuolisuus lasketaan jokaiselle väestöruudulle siten, että monipuolisuuteen vaikuttavat ne liikuntapaikat, jotka ovat annetun metrimäärän kävelyetäisyydellä tieverkkoa pitkin väestöruudun keskipisteestä."]]]
-
-         ;; Distance zones selector
-         [mui/grid {:item true :xs 12 :style {:margin-top    "1em"
-                                              :margin-left   "1em"
-                                              :margin-right  "1em"
-                                              :margin-bottom "5em"}}
-
-          (let [min 500 max 1500 step 100]
-            [:> Slider
-             {:min       min
-              :max       max
-              :step      step
-              :value     max-distance-m
-              :dots      true
-              :marks     (into {}
-                               (map (juxt identity #(str % "m")))
-                               (range min (+ max step) step))
-              :style     {:font-family "Lato, sans-serif"}
-              :on-change #(==> [::events/set-max-distance-m %])}])]]]]]]))
+        [distance-settings]]]]]))
 
 (defn export []
   (let [selected-format "geojson"]

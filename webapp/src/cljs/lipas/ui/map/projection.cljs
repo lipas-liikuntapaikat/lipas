@@ -3,7 +3,9 @@
   object (js/ol)."
   (:require
    ["proj4" :as proj4]
-   ["ol" :as ol]))
+   ["ol/proj/proj4" :refer [register]]
+   ["ol/proj" :as proj]
+   ["ol/extent" :as extent]))
 
 (def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
 
@@ -17,13 +19,13 @@
 
 (defn init! []
   (proj4/defs "EPSG:3067" epsg3067-defs)
-  (ol/proj.proj4.register proj4)
+  (register proj4)
 
-  (let [proj (ol/proj.get "EPSG:3067")]
+  (let [proj (proj/get "EPSG:3067")]
     (.setExtent proj epsg3067-extent)
     {:proj4 proj4 :epsg3067 proj}))
 
 (def proj (init!))
 
-(def ^js/ol.proj.Projection epsg3067 (:epsg3067 proj))
-(def epsg3067-top-left (ol/extent.getTopLeft (.getExtent epsg3067)))
+(def ^js epsg3067 (:epsg3067 proj))
+(def epsg3067-top-left (extent/getTopLeft (.getExtent epsg3067)))

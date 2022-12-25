@@ -1,6 +1,5 @@
 (ns lipas.ui.components.selects
   (:require
-   [cljsjs.react-autosuggest]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
@@ -104,7 +103,7 @@
     :or   {years (range 2000 utils/this-year)}}]
   [year-selector
    (merge
-    props
+    (dissoc props :tr)
     {:label        (tr :stats/select-years)
      :multi?       true
      :render-value (fn [vs]

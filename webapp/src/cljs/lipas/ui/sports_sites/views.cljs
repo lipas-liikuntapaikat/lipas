@@ -785,7 +785,7 @@
 (defn visitors-view
   [{:keys [tr display-data lipas-id editing? close spectators?
            user-can-publish?]
-    :or   [spectators? false]}]
+    :or   {spectators? false}}]
   (r/with-let [selected-year (r/atom {})
                selected-tab  (r/atom 0)]
 

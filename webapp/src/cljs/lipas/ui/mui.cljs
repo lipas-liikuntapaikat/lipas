@@ -2,21 +2,24 @@
   (:refer-clojure :exclude [list])
   (:require
    [goog.object :as gobj]
+   ["@material-ui/core" :as mui]
    [clojure.string :as s]
    [reagent.core :as r]
    [camel-snake-kebab.core :refer [convert-case]]
    [camel-snake-kebab.extras :refer [transform-keys]]
    [lipas.utils :as utils]))
 
-(comment (= (keyword->PasCamelCase :kissa-metso) :kissaMetso))
-(comment (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
 (defn keyword->PasCamelCase
   "Converts keywords to PascalCase or camelCase
   respecting case of the first character."
   [kw & rest]
   (keyword (convert-case identity s/capitalize "" (name kw) rest)))
 
-(def create-mui-theme (gobj/get js/mui "createMuiTheme"))
+(comment
+  (= (keyword->PasCamelCase :kissa-metso) :kissaMetso)
+  (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
+
+(def create-mui-theme (gobj/get mui "createMuiTheme"))
 
 (defn ->mui-theme [opts]
   (->> opts
@@ -24,7 +27,7 @@
        clj->js
        create-mui-theme))
 
-(def primary "#002957 ")
+(def primary "#002957")
 (def primary2 "rgb(0, 41, 87, 0.5)")
 (def primary3 "rgb(0, 41, 87, 0.3)")
 (def secondary "#f1563f")
@@ -34,6 +37,7 @@
 (def gray1 "rgba(199, 201, 200, 1.0)")
 (def gray2 "rgba(199, 201, 200, 0.5)")
 (def gray3 "rgba(199, 201, 200, 0.3)")
+
 
 (def headline-aleo
   {:font-family    "Aleo, serif"
@@ -72,7 +76,7 @@
    {:type      "dark"
     :primary   {:main primary}
     :secondary {:main secondary}
-    :text      {:disabled "rgba(255, 255, 255, 0.88)"}}
+    :text      {:disabled "rgba(255,255,255,0.88)"}}
    :overrides
    {:Mui-card-header
     {:title
@@ -83,18 +87,18 @@
     {:tooltip
      {:font-size "0.8rem"}}
     :Mui-step-icon
-    {:root      {:fill "rgba(0, 0, 0, 0.5)"}
+    {:root      {:fill "rgba(0,0,0,0.5)"}
      :active    {:fill primary}
      :completed {:fill primary}
      :text
-     {:fill "white"}}}})
+     {:fill "#fff"}}}})
 
 (def jyu-styles-light
   (utils/deep-merge
    jyu-styles-dark
    {:palette
     {:type "light"
-     :text {:disabled "rgba(0, 0, 0, 0.88)"}}
+     :text {:disabled "rgba(0,0,0,0.88)"}}
     :typography
     {:body1 {:color primary}
      :body2 {:color primary}}
@@ -106,7 +110,7 @@
 (def jyu-theme-light (->mui-theme jyu-styles-light))
 
 (defn mui->reagent [mui-name]
-  (r/adapt-react-class (gobj/get js/mui mui-name)))
+  (r/adapt-react-class (gobj/get mui mui-name)))
 
 (def app-bar (mui->reagent "AppBar"))
 (def avatar (mui->reagent "Avatar"))
@@ -184,4 +188,4 @@
 (def typography (mui->reagent "Typography"))
 (def zoom (mui->reagent "Zoom"))
 
-(def with-width* (.withWidth js/mui))
+(def with-width* (.withWidth mui))

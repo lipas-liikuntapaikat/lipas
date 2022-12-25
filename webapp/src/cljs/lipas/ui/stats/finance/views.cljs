@@ -174,7 +174,7 @@
          [mui/icon-button {:on-click #(==> [::events/toggle-chart-type])}
           [mui/icon {:font-size "large" :color (if (= "ranking" chart-type)
                                                  "secondary"
-                                                 "default")}
+                                                 "inherit")}
            "sort"]]]]
 
        ;; Clear filters button

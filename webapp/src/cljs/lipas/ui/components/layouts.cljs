@@ -5,7 +5,7 @@
 
 (defn floating-container
   [{:keys [top right bottom left background-color]
-    :or   [background-color mui/gray2]} & children]
+    :or   {background-color mui/gray2}} & children]
   (into
    [:div.no-print
     {:style

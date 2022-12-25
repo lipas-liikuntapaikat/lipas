@@ -103,6 +103,5 @@ See [certs/README.md](certs/README.md).
 
 ```bash
 docker-compose run frontend-npm-deps
-docker-compose run frontend-npm-bundle
 docker-compose run frontend-build
 ```

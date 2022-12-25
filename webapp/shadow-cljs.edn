@@ -1,0 +1,13 @@
+{:lein true
+ :dev-http {3449 "resources/public"}
+ :builds
+ {:app
+  {:target     :browser
+   :output-dir "resources/public/js/compiled"
+   :dev {:closure-defines {re-frame.trace.trace-enabled? true}}
+   :modules
+   {:app {:init-fn lipas.ui.core/init}}
+   :devtools
+   {:after-load lipas.ui.core/init
+    :preloads   [devtools.preload
+                 day8.re-frame-10x.preload]}}}}

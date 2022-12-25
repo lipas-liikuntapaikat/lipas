@@ -2,8 +2,8 @@
   (:require
    [re-frame.core :as re-frame]
    [lipas.ui.routes :as routes]
-   ["zipcelx"]
-   ["filesaver"]))
+   ["zipcelx$default" :as zipcelx]
+   ["file-saver" :as filesaver]))
 
 (re-frame/reg-fx
  ::reset-scroll!

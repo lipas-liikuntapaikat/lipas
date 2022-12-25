@@ -1,5 +1,10 @@
 (ns lipas.ui.map.views
   (:require
+   ["mdi-material-ui/ContentCut$default" :as ContentCut]
+   ["mdi-material-ui/Eraser$default" :as Eraser]
+   ["mdi-material-ui/FileUpload$default" :as FileUpload]
+   ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
+   ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
@@ -227,7 +232,7 @@
 (defn user-location-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :map/zoom-to-user)}
    [mui/icon-button {:on-click #(==> [::events/zoom-to-users-position])}
-    [mui/icon {:color "default" :font-size "default"}
+    [mui/icon {:color "inherit" :font-size "default"}
      "my_location"]]])
 
 (defn type-selector-single [{:keys [tr value on-change types]}]
@@ -559,7 +564,7 @@
        ;; Actions
        [:<>
         [mui/grid {:item true :xs 12 :style {:height "75px"}}]
-        [lui/floating-container {:bottom 0 :background "transparent"}
+        [lui/floating-container {:bottom 0 :background-color "transparent"}
          (into
           [mui/grid
            {:container true :align-items "center" :spacing 8
@@ -598,7 +603,7 @@
                [mui/fab
                 {:size     "small"
                  :on-click #() ; noop
-                 :color    "default"}
+                 :color    "inherit"}
                 (let [props {:color "secondary"}]
                   (case sub-mode
                     :drawing         (case geom-type
@@ -607,9 +612,9 @@
                                        "Polygon"    [mui/icon props "change_history"])
                     :drawing-hole    [mui/icon props "vignette"]
                     (:editing :undo) [mui/icon props "edit"]
-                    :importing       [:> js/materialIcons.FileUpload props]
-                    :deleting        [:> js/materialIcons.Eraser props]
-                    :splitting       [:> js/materialIcons.ContentCut props]))]])
+                    :importing       [:> FileUpload props]
+                    :deleting        [:> Eraser props]
+                    :splitting       [:> ContentCut props]))]])
 
             ;; Tool select button
             (when (and editing? (#{"LineString" "Polygon"} geom-type))
@@ -634,7 +639,7 @@
                                                (==> [::events/close-more-tools-menu])
                                                (==> [::events/toggle-import-dialog]))}
                    [mui/list-item-icon
-                    [:> js/materialIcons.FileUpload]]
+                    [:> FileUpload]]
                    [mui/list-item-text (tr :map.import/tooltip)]])
 
                 ;; Draw hole
@@ -646,7 +651,7 @@
                        (==> [::events/start-editing lipas-id :drawing-hole geom-type]))}
                    [mui/list-item-icon
                     [mui/icon
-                     {:color (if (= sub-mode :drawing-hole) "secondary" "default")}
+                     {:color (if (= sub-mode :drawing-hole) "secondary" "inherit")}
                      "vignette"]]
                    [mui/list-item-text (tr :map/draw-hole)]])
 
@@ -663,8 +668,8 @@
                       [mui/icon
                        {:color (if (= sub-mode :drawing)
                                  "secondary"
-                                 "default")} "timeline"]
-                      [mui/icon {:color (if (= sub-mode :drawing) "secondary" "default")}
+                                 "inherit")} "timeline"]
+                      [mui/icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
                        "change_history"])]
                    [mui/list-item-text (case geom-type
                                          "LineString" (tr :map/draw-linestring)
@@ -678,8 +683,8 @@
                        (==> [::events/close-more-tools-menu])
                        (==> [::events/start-editing lipas-id :deleting geom-type]))}
                    [mui/list-item-icon
-                    [:> js/materialIcons.Eraser
-                     {:color (if (= sub-mode :deleting) "secondary" "default")}]]
+                    [:> Eraser
+                     {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
                    [mui/list-item-text (case geom-type
                                          "LineString" (tr :map/remove-linestring)
                                          "Polygon"    (tr :map/remove-polygon))]])
@@ -692,8 +697,8 @@
                        (==> [::events/close-more-tools-menu])
                        (==> [::events/start-editing lipas-id :splitting geom-type]))}
                    [mui/list-item-icon
-                    [:> js/materialIcons.ContentCut
-                     {:color (if (= sub-mode :splitting) "secondary" "default")}]]
+                    [:> ContentCut
+                     {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
                    [mui/list-item-text (tr :map/split-linestring)]])
 
                 ;; Edit tool
@@ -705,7 +710,7 @@
                        (==> [::events/start-editing lipas-id :editing geom-type]))}
                    [mui/list-item-icon
                     [mui/icon
-                     {:color (if (= sub-mode :editing) "secondary" "default")}
+                     {:color (if (= sub-mode :editing) "secondary" "inherit")}
                      "edit"]]
                    [mui/list-item-text (tr :map.tools/edit-tool)]])]])
 
@@ -715,7 +720,7 @@
                [mui/fab
                 {:size     "small"
                  :on-click #(==> [::events/download-gpx lipas-id])
-                 :color    "default"}
+                 :color    "inherit"}
                 [mui/icon "save_alt"]]])
 
             ;; Zoom to site
@@ -724,8 +729,8 @@
                [mui/fab
                 {:size     "small"
                  :on-click #(==> [::events/zoom-to-site lipas-id width])
-                 :color    "default"}
-                [mui/icon {:color "default"}
+                 :color    "inherit"}
+                [mui/icon {:color "inherit"}
                  "place"]]])
 
             ;; Add reminder
@@ -741,7 +746,7 @@
                [mui/fab
                 {:size     "small"
                  :on-click #(==> [::events/duplicate-sports-site lipas-id])}
-                [:> js/materialIcons.ContentDuplicate]]])
+                [:> ContentDuplicate]]])
 
             ;; Resurrect button
             (when (and dead? logged-in? editing-allowed?)
@@ -765,8 +770,8 @@
             ;;    [mui/fab
             ;;     {:size     "small"
             ;;      :on-click #(==> [::events/toggle-import-dialog])
-            ;;      :color    "default"}
-            ;;     [:> js/materialIcons.FileUpload]]])
+            ;;      :color    "inherit"}
+            ;;     [:> FileUpload]]])
 
             ;; ;; Draw hole
             ;; (when (and editing? (#{"Polygon"} geom-type))
@@ -778,7 +783,7 @@
             ;;                   (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
             ;;      :style    (when (= sub-mode :drawing-hole)
             ;;                  {:border (str "5px solid " mui/secondary)})
-            ;;      :color    "default"}
+            ;;      :color    "inherit"}
             ;;     [mui/icon "vignette"]]])
 
             ;; ;; Add new geom
@@ -793,7 +798,7 @@
             ;;                   (==> [::events/start-editing lipas-id :drawing geom-type]))
             ;;      :style    (when (= sub-mode :drawing)
             ;;                  {:border (str "5px solid " mui/secondary)})
-            ;;      :color    "default"}
+            ;;      :color    "inherit"}
             ;;     (if (= geom-type "LineString")
             ;;       [mui/icon "timeline"]
             ;;       [mui/icon "change_history"])]])
@@ -810,8 +815,8 @@
             ;;                   (==> [::events/start-editing lipas-id :deleting geom-type]))
             ;;      :style    (when (= sub-mode :deleting)
             ;;                  {:border (str "5px solid " mui/secondary)})
-            ;;      :color    "default"}
-            ;;     [:> js/materialIcons.Eraser]]])
+            ;;      :color    "inherit"}
+            ;;     [:> Eraser]]])
 
             ;; ;; Split linestring
             ;; (when (and editing? (#{"LineString"} geom-type))
@@ -823,8 +828,8 @@
             ;;                   (==> [::events/start-editing lipas-id :splitting geom-type]))
             ;;      :style    (when (= sub-mode :splitting)
             ;;                  {:border (str "5px solid " mui/secondary)})
-            ;;      :color    "default"}
-            ;;     [:> js/materialIcons.ContentCut]]])
+            ;;      :color    "inherit"}
+            ;;     [:> ContentCut]]])
 
             ;; Helper text
             ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
@@ -1019,7 +1024,7 @@
                       :style    (when (= sub-mode :deleting)
                                   {:outline (str "2px solid " mui/secondary)})
                       :variant  "contained"}
-                     [:> js/materialIcons.Eraser]]]])
+                     [:> Eraser]]]])
 
                 ;; Split
                 (when (#{"LineString"} geom-type)
@@ -1034,7 +1039,7 @@
                       :style    (when (= sub-mode :splitting)
                                   {:outline (str "2px solid " mui/secondary)})
                       :variant  "contained"}
-                     [:> js/materialIcons.ContentCut]]]])
+                     [:> ContentCut]]]])
 
                 ;; Delete vertices helper text
                 (when (#{"LineString" "Polygon"} geom-type)
@@ -1146,7 +1151,7 @@
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}
         [mui/grid {:item true :xs 12 :style {:height "50px"}}
-         [lui/floating-container {:bottom 0 :background "transparent"}
+         [lui/floating-container {:bottom 0 :background-color "transparent"}
           [mui/grid
            {:container true :align-items "center" :spacing 8
             :style     {:padding-bottom "0.5em"}}
@@ -1175,7 +1180,7 @@
              [mui/fab
               {:size     "small"
                :on-click #(==> [::events/toggle-address-search-dialog])}
-              [:> js/materialIcons.MapSearchOutline]]]]]]]]])))
+              [:> MapSearchOutline]]]]]]]]])))
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
@@ -1183,7 +1188,7 @@
         admin?      (<== [:lipas.ui.user.subs/admin?])]
     [:<>
      [address-search-dialog]
-     [lui/floating-container {:bottom 0 :background "transparent"}
+     [lui/floating-container {:bottom 0 :background-color "transparent"}
       [mui/grid
        {:container true :align-items "center" :spacing 8
         :style     {:padding-bottom "0.5em"}}
@@ -1198,7 +1203,7 @@
         [mui/grid {:item true}
          [mui/fab
           {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
-          [:> js/materialIcons.MapSearchOutline]]]]
+          [:> MapSearchOutline]]]]
 
        ;; Create Excel report btn
        (when (= :list result-view)
@@ -1280,7 +1285,7 @@
         {:on-click #(==> [::events/toggle-drawer])
          :style    {:min-height "36px" :margin-bottom "1em"}
          :variant  "outlined"
-         :color    "default"}
+         :color    "inherit"}
         [mui/icon "expand_less"]]
 
        ;; Content
