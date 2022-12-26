@@ -356,7 +356,7 @@
        [lui/expansion-panel
         {:label            (tr :analysis/settings-zones)
          :default-expanded true}
-        [mui/grid {:container true :spacing 2}
+        [mui/grid {:container true :spacing 8}
 
          ;; Helper text
          [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
@@ -391,7 +391,7 @@
         {:item        true :xs 12
          :container   true
          :align-items "center"
-         :spacing     4}
+         :spacing     8}
 
         [mui/grid {:item true}
          [mui/typography

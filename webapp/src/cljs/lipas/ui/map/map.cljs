@@ -351,7 +351,7 @@
                  f1       (when (seq selected) (aget selected 0))
                  fid      (when f1 (.get f1 "id"))]
              (when fid
-               (==> [:lipas.ui.analysis.diversity.events/calc-diversity-indices {:id (symbol fid)}])))))
+               (==> [:lipas.ui.analysis.diversity.events/calc-diversity-indices {:id fid}])))))
 
     ;; It's not possible to have multiple selects with
     ;; same "condition" (at least I couldn't get it

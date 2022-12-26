@@ -94,7 +94,8 @@
    (when cb (cb))
    (-> db
        (assoc-in [:analysis :diversity :loading?] false)
-       (assoc-in [:analysis :diversity :results candidate-id] resp))))
+       (assoc-in [:analysis :diversity :results candidate-id] resp)
+       (update-in [:analysis :diversity :selected-result-areas] conj candidate-id))))
 
 (re-frame/reg-event-db
  ::clear-results
@@ -140,14 +141,14 @@
                     (filter (comp #{geom-type} :type :geometry))
                     (reduce
                      (fn [res f]
-                       (let [id (gensym)]
+                       (let [id (str (gensym))]
                          (assoc res id (assoc-in f [:properties :id] id))))
                      {})
                     (merge (map-utils/normalize-geom-colls fcoll geom-type)
                            (map-utils/normalize-multi-geoms fcoll geom-type)))]
      (-> db
          (assoc-in [:analysis :diversity :areas] fs)
-         (assoc-in [:analysis :diversity :import :batch-id] (gensym))))))
+         (assoc-in [:analysis :diversity :import :batch-id] (str (gensym)))))))
 
 (def seasonalities
   {1530 "winter",
@@ -419,6 +420,11 @@
       :dispatch     [:lipas.ui.events/set-active-notification
                      {:message  (tr :notifications/get-failed)
                       :success? false}]})))
+
+(re-frame/reg-event-db
+ ::select-analysis-chart-areas
+ (fn [db [_ v]]
+   (assoc-in db [:analysis :diversity :selected-result-areas] v)))
 
 (comment
   (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))

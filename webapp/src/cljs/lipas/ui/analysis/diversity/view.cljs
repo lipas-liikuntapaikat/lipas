@@ -1,22 +1,19 @@
 (ns lipas.ui.analysis.diversity.view
   (:require
-   [clojure.string :as str]
    ["rc-slider$default" :as Slider]
+   ["recharts" :as rc]
+   [clojure.string :as str]
+   [goog.color :as gcolor]
+   [goog.object :as gobj]
    [lipas.ui.analysis.diversity.events :as events]
    [lipas.ui.analysis.diversity.subs :as subs]
-   #_[lipas.ui.charts :as charts]
-   #_[lipas.ui.components :as lui]
-   #_[lipas.ui.map.events :as map-events]
-   #_[lipas.ui.map.subs :as map-subs]
-   [lipas.ui.mui :as mui]
+   [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-#_(def ^js Slider (.-default (.-Slider js/rcslider)))
-
 (def import-formats [".zip" ".kml" ".json" ".geojson"])
-(def import-formats-str (str/join " " import-formats))
 (def geom-type "Polygon")
 
 (defn helper [{:keys [label tooltip]}]
@@ -174,7 +171,7 @@
         winter-enabled?   (<== [::subs/seasonality-enabled? "winter"])
         all-year-enabled? (<== [::subs/seasonality-enabled? "all-year"])]
 
-    [mui/grid {:container true :spacing 2}
+    [mui/grid {:container true :spacing 8}
 
      ;; Helper text
      [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
@@ -222,14 +219,14 @@
      ;; Add new category button
      [mui/grid {:item true :xs 12 :md 6}
       [mui/button
-       {:variant  "default"
+       {:variant  "text"
         :on-click #(==> [::events/add-new-category])}
        "Uusi kategoria"]]
 
      ;; Reset default categories button
      [mui/grid {:item true :xs 12 :md 6}
       [mui/button
-       {:variant  "default"
+       {:variant  "text"
         :on-click #(==> [::events/select-category-preset :default])}
        "Palauta oletuskategoriat"]]
 
@@ -317,9 +314,81 @@
        {:on-click #(==> [::events/export-grid selected-format])}
        "Lataa ruudukko"]]]))
 
+(def diversity-base-color "#9D191A")
+
+(def diversity-colors
+  (into {}
+        (for [n (range 30)]
+          [(- (dec 30) n)
+           (-> diversity-base-color
+               gcolor/hexToRgb
+               (gcolor/lighten (/ n 40))
+               gcolor/rgbArrayToHex)])))
+
+(defn results-chart []
+  (let [chart-data (<== [::subs/bar-chart-data])
+        labels     {:population    "Väestö"
+                    :diversity-idx "Monipuolisuusindeksi"}]
+    [:> rc/ResponsiveContainer {:width "100%" :height 300}
+     (into
+      [:> rc/BarChart
+       {:data     chart-data
+        :layout   "horizontal"
+        #_#_:on-click #(println %)
+        :margin   {:bottom 20 :left 20}}
+       [:> rc/CartesianGrid]
+       [:> rc/Tooltip {:content (fn [props]
+                                  (gobj/set props "label" "")
+                                  (charts/labeled-tooltip labels props))}]
+       [:> rc/XAxis
+        {:dataKey       "diversity-idx"
+         :type          "number"
+         :allowDecimals false
+         :label         (merge {:value (:diversity-idx labels) :position "bottom"}
+                               charts/font-styles)
+         :tick          charts/font-styles
+         :tickCount     10
+         :domain        #js["dataMin" "dataMax"]
+         :padding       #js{:left 16 :right 16}}]
+       [:> rc/YAxis
+        {:tick  charts/font-styles
+         :label (merge {:value (:population labels) :angle -90 :position "left"}
+                       charts/font-styles)}]
+       (into
+        [:> rc/Bar {:dataKey "population" :fill "#9D191A"}]
+        (for [diversity-idx (->> chart-data (map :diversity-idx) set)]
+          [:> rc/Cell {:fill (diversity-colors diversity-idx)}]))])]))
+
+(defn areas-selector []
+  (let [result-areas   (<== [::subs/result-area-options])
+        selected-areas (<== [::subs/selected-result-areas])]
+    [lui/autocomplete2
+     {:on-change #(==> [::events/select-analysis-chart-areas %])
+      :multi? true
+      :label "Valitse alueet"
+      :items     result-areas
+      :value     selected-areas}]))
+
+(defn results []
+  [:<>
+   [lui/expansion-panel
+    {:label            "Kuvaaja"
+     :default-expanded true}
+    [mui/grid {:container true :spacing 24}
+     [mui/grid {:item true :xs 12}
+      [areas-selector]]
+     [mui/grid {:item true :xs 12}
+      [results-chart]]]]
+   [lui/expansion-panel
+    {:label            "Lataa tiedostona"
+     :default-expanded false}
+    [export]]])
+
+
 (defn view []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        selected-tab (<== [::subs/selected-analysis-tab])]
+  (let [tr                 (<== [:lipas.ui.subs/translator])
+        selected-tab       (<== [::subs/selected-analysis-tab])
+        any-analysis-done? (<== [::subs/any-analysis-done?])]
     [:<>
      [mui/grid {:container true :spacing 16}
 
@@ -332,8 +401,8 @@
                   :style      {:margin-bottom "1em" :margin-top "1em"}
                   :text-color "secondary"}
         [mui/tab {:label "Analyysialueet" :value "analysis-area"}]
-        [mui/tab {:label (tr :analysis/settings) :value "settings"}]
-        [mui/tab {:label (tr :analysis/results) :value "export"}]]]
+        [mui/tab {:label (tr :analysis/results) :value "results"}]
+        [mui/tab {:label (tr :analysis/settings) :value "settings"}]]]
 
       [mui/grid {:item true :xs 12}
        (when (= selected-tab "analysis-area")
@@ -342,5 +411,9 @@
        (when (= selected-tab "settings")
          [settings])
 
-       (when (= selected-tab "export")
-         [export])]]]))
+       (when (= selected-tab "results")
+         (if any-analysis-done?
+           [results]
+           [mui/typography "Analyysejä ei ole tehty."]))]]]))
+
+;; TODO translations

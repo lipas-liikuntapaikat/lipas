@@ -1,7 +1,6 @@
 (ns lipas.ui.charts
   (:require
    ["recharts" :as rc]
-   [cljs.pprint :as pprint]
    [clojure.set :refer [rename-keys map-invert]]
    [clojure.string :as string]
    [goog.object :as gobj]
@@ -357,8 +356,8 @@
       [:> rc/Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
        [:> rc/LabelList {:position "right"}]]]]))
 
-(defn subsidies-tooltip
-  ([labels props] (subsidies-tooltip labels :label props))
+(defn labeled-tooltip
+  ([labels props] (labeled-tooltip labels :label props))
   ([labels sort-fn props]
    (let [payload-fn (fn [payload]
                       (let [entry (-> payload
@@ -373,6 +372,8 @@
                                   res))
                               []))))]
      (tooltip payload-fn labels sort-fn props))))
+
+(def subsidies-tooltip labeled-tooltip)
 
 (defn subsidies-chart
   [{:keys [data labels on-click]}]

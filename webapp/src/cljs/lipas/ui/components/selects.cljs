@@ -90,7 +90,7 @@
                       :as   props}]
   (let [years     (or years (range 1900 (inc (.getFullYear (js/Date.)))))
         component (if multi? multi-select select)]
-    [component (merge (dissoc props :multi?)
+    [component (merge (dissoc props :multi? :tr)
                       {:label     label
                        :items     (map #(hash-map :label % :value %) years)
                        :on-change on-change
