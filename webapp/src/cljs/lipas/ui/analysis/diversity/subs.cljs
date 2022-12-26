@@ -81,3 +81,65 @@
  ::loading?
  (fn [db _]
    (-> db :analysis :diversity :loading?)))
+
+(re-frame/reg-sub
+ ::analysis-results
+ :<- [::diversity]
+ (fn [diversity _]
+   (:results diversity)))
+
+(re-frame/reg-sub
+ ::chart-data
+ :<- [::analysis-candidates]
+ :<- [::analysis-results]
+ (fn [[areas results] _]
+   (into {}
+         (for [[k v] results]
+           [k (assoc v :area (get areas k))]))))
+
+(re-frame/reg-sub
+ ::bar-chart-data
+ :<- [::chart-data]
+ :<- [::selected-result-areas]
+ (fn [[chart-data selected-areas]  _]
+   (->> (for [[area-id m] chart-data
+              :when (some #{area-id} selected-areas)
+              f (:features (:grid m))]
+          {:area-id area-id
+           :population (get-in f [:properties :population] 0)
+           :diversity-idx (get-in f [:properties :diversity_idx] 0)})
+        (reduce
+         (fn [res {:keys [diversity-idx population]}]
+           (update res diversity-idx + population))
+         {})
+        (reduce-kv
+         (fn [res k v]
+           (conj res {:diversity-idx k :population v}))
+         []))))
+
+(defn guess-name
+  [id f]
+  (let [props (:properties f)
+        {:keys [nimi name namn label]} props]
+    (str (some identity (into [nimi name namn label] (conj (vals props) id))))))
+
+(re-frame/reg-sub
+ ::result-area-options
+ :<- [::chart-data]
+ (fn [results _]
+   (map
+    (fn [[area-id m]]
+      {:value area-id :label (guess-name area-id (:area m))})
+    results)))
+
+(re-frame/reg-sub
+ ::selected-result-areas
+ :<- [::diversity]
+ (fn [diversity _]
+   (:selected-result-areas diversity)))
+
+(re-frame/reg-sub
+ ::any-analysis-done?
+ :<- [::analysis-results]
+ (fn [results _]
+   (some? results)))
