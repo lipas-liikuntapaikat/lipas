@@ -275,6 +275,7 @@
            [:ul
             [lui/li (tr :sport/up-to-date-information)]
             [lui/li (tr :sport/updating-tools)]
+            [lui/li (tr :sport/analysis-tools)]
             [lui/li (tr :sport/open-interfaces)]]]
 
           ;; Ice stadiums portal
@@ -309,8 +310,9 @@
            [mui/typography {:variant "body1" :style {:height "4em"}}
             (tr :stats/description)]
            [:ul
-            [lui/li (tr :stats/bullet1)]
             [lui/li (tr :stats/bullet2)]
+            [lui/li (tr :stats/bullet4)]
+            [lui/li (tr :stats/bullet1)]
             [lui/li (tr :stats/bullet3)]]]
 
           ;; Open Data

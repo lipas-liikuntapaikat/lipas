@@ -5,26 +5,26 @@
 (def dicts
   {:fi
    {:newsletter
-    {:subscribe-short "Tilaa"
-     :subscribe "Tilaa uutiskirje"
-     :subscription-failed "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."
+    {:subscribe-short      "Tilaa"
+     :subscribe            "Tilaa uutiskirje"
+     :subscription-failed  "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."
      :subscription-success "Uutiskirje tilattu!"}
     :analysis
     {:headline                   "Analyysityökalu (beta)"
      :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
-     :results "Tulokset"
-     :mean "Keskiarvo"
-     :population-weighted-mean "Väestöpainotettu monipuolisuusindeksi"
-     :median "Mediaani"
-     :mode "Moodi"
-     :reachability "Saavutettavuus"
+     :results                    "Tulokset"
+     :mean                       "Keskiarvo"
+     :population-weighted-mean   "Väestöpainotettu monipuolisuusindeksi"
+     :median                     "Mediaani"
+     :mode                       "Moodi"
+     :reachability               "Saavutettavuus"
      :categories                 "Kategoriat"
-     :diversity "Monipuolisuus"
-     :diversity-grid "Tulosruudukko"
-     :diversity-help1 "Monipuolisuustyökalulla voi arvioida ja vertailla liikuntaolosuhteiden monipuolisuutta asukkaiden lähiympäristössä  ruutu- ja aluetasolla. Monipuolisuustyökalun laskema monipuolisuusindeksi kuvaa, kuinka monipuolisesti erilaisia liikunnan harrastusmahdollisuuksia asukas voi saavuttaa valitun etäisyyden sisällä tie- ja polkuverkostoja pitkin (oletuksena 800 m). Mitä korkeampi indeksin antama arvo on, sitä enemmän alueella on erilaisia liikuntapaikkoja asukkaiden lähiympäristössä on."
-     :diversity-help2 "Oletuksena työkalussa käytetään postinumeroihin perustuvaa aluejakoa. Jako voidaan tehdä myös muun olemassa olevan aluejaon perusteella tuomalla haluttu geometriatiedosto (Shapefile, GeoJSON tai KML)."
-     :diversity-help3 "Laskenta tehdään Tilastokeskuksen 250 x 250 m väestöruuduittain. Aluetason tulokset kertovat keskimääräisestä liikunnan olosuhteiden monipuolisuudesta alueen asukkaiden lähiympäristöissä (monipuolisuusindeksin väestöpainotettu keskiarvo). Monipuolisuustyökalun laskentaetäisyys perustuu OpenStreetMapin tieverkostoaineistoon ja OSRM-työkaluun."
-     :analysis-areas "Analyysialueet"
+     :diversity                  "Monipuolisuus"
+     :diversity-grid             "Tulosruudukko"
+     :diversity-help1            "Monipuolisuustyökalulla voi arvioida ja vertailla liikuntaolosuhteiden monipuolisuutta asukkaiden lähiympäristössä  ruutu- ja aluetasolla. Monipuolisuustyökalun laskema monipuolisuusindeksi kuvaa, kuinka monipuolisesti erilaisia liikunnan harrastusmahdollisuuksia asukas voi saavuttaa valitun etäisyyden sisällä tie- ja polkuverkostoja pitkin (oletuksena 800 m). Mitä korkeampi indeksin antama arvo on, sitä enemmän alueella on erilaisia liikuntapaikkoja asukkaiden lähiympäristössä on."
+     :diversity-help2            "Oletuksena työkalussa käytetään postinumeroihin perustuvaa aluejakoa. Jako voidaan tehdä myös muun olemassa olevan aluejaon perusteella tuomalla haluttu geometriatiedosto (Shapefile, GeoJSON tai KML)."
+     :diversity-help3            "Laskenta tehdään Tilastokeskuksen 250 x 250 m väestöruuduittain. Aluetason tulokset kertovat keskimääräisestä liikunnan olosuhteiden monipuolisuudesta alueen asukkaiden lähiympäristöissä (monipuolisuusindeksin väestöpainotettu keskiarvo). Monipuolisuustyökalun laskentaetäisyys perustuu OpenStreetMapin tieverkostoaineistoon ja OSRM-työkaluun."
+     :analysis-areas             "Analyysialueet"
      :categories-help            "Samaan kategoriaan kuuluvat liikuntapaikkatyypit vaikuttavat monipuolisuusindeksiin vain yhden kerran."
      :description2               "Väestöaineistona käytetään Tilastokeskuksen 250x250m ja 1x1km ruutuaineistoja, joista selviää kussakin ruudussa olevan väestön jakauma kolmessa ikäryhmässä (0-14, 15-65, 65-)."
      :description3               "Matka-aikojen laskeminen eri kulkutavoilla (kävellen, polkupyörällä, autolla) perustuu avoimeen OpenStreetMap-aineistoon ja OSRM-työkaluun."
@@ -58,7 +58,8 @@
      :open-interfaces "Avoimet rajapinnat",
      :up-to-date-information
      "Ajantasainen tieto Suomen liikuntapaikoista",
-     :updating-tools  "Päivitystyökalut tiedontuottajille"},
+     :updating-tools  "Päivitystyökalut tiedontuottajille"
+     :analysis-tools  "Liikuntaolosuhteiden analysointityökalut"},
     :confirm
     {:discard-changes?      "Tahdotko kumota tekemäsi muutokset?",
      :headline              "Varmistus",
@@ -440,18 +441,18 @@
     :restricted
     {:login-or-register "Kirjaudu sisään tai rekisteröidy"},
     :lipas.ice-stadium.rinks
-    {:rink1-width "Kentän 1 leveys m"
-     :rink2-width "Kentän 2 leveys m"
-     :rink3-width "Kentän 3 leveys m"
-     :rink1-length "Kentän 1 pituus m"
-     :rink2-length "Kentän 2 pituus m"
-     :rink3-length "Kentän 3 pituus m"
+    {:rink1-width   "Kentän 1 leveys m"
+     :rink2-width   "Kentän 2 leveys m"
+     :rink3-width   "Kentän 3 leveys m"
+     :rink1-length  "Kentän 1 pituus m"
+     :rink2-length  "Kentän 2 pituus m"
+     :rink3-length  "Kentän 3 pituus m"
      :rink1-area-m2 "Kentän 1 pinta-ala m²"
      :rink2-area-m2 "Kentän 2 pinta-ala m²"
      :rink3-area-m2 "Kentän 3 pinta-ala m²"
-     :add-rink  "Lisää kenttä",
-     :edit-rink "Muokkaa kenttää",
-     :headline  "Kentät"},
+     :add-rink      "Lisää kenttä",
+     :edit-rink     "Muokkaa kenttää",
+     :headline      "Kentät"},
     :lipas.sports-site
     {:properties        "Lisätiedot",
      :delete-tooltip    "Poista liikuntapaikka...",
@@ -762,6 +763,7 @@
      :select-issuer        "Valitse myöntäjä",
      :select-unit          "Valitse yksikkö",
      :bullet3              "Avustukset",
+     :bullet4              "Liikuntapaikkojen rakennusvuodet",
      :finance-stats        "Talous​tiedot",
      :select-city          "Valitse kunta",
      :area-m2-min          "Liikuntapinta-ala m² min",
@@ -921,20 +923,21 @@
      :open-interfaces "Öppna gränssnitt",
      :up-to-date-information
      "Aktuell data om finska idrottsanläggningar",
-     :updating-tools  "Uppdateringsverktyg"}
+     :updating-tools  "Uppdateringsverktyg"
+     :analysis-tools  "Liikuntaolosuhteiden analysointityökalut"}
     :lipas.ice-stadium.rinks
-    {:rink1-width "1. planens bredd m"
-     :rink2-width "2. planens bredd m"
-     :rink3-width "3. planens bredd m"
-     :rink1-length "1. planens längd m"
-     :rink2-length "2. planens längd m"
-     :rink3-length "3. planens längd m"
+    {:rink1-width   "1. planens bredd m"
+     :rink2-width   "2. planens bredd m"
+     :rink3-width   "3. planens bredd m"
+     :rink1-length  "1. planens längd m"
+     :rink2-length  "2. planens längd m"
+     :rink3-length  "3. planens längd m"
      :rink1-area-m2 "1. planens areal m²"
      :rink2-area-m2 "2. planens areal m²"
      :rink3-area-m2 "3. planens areal m²"
-     :add-rink  "Lisää kenttä",
-     :edit-rink "Muokkaa kenttää",
-     :headline  "Kentät"},,
+     :add-rink      "Lisää kenttä",
+     :edit-rink     "Muokkaa kenttää",
+     :headline      "Kentät"},,
     :confirm
     {:discard-changes?      "Vill du förkasta ändringar?",
      :headline              "Bekräftelse",
@@ -1526,6 +1529,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :select-issuer        "Välj understödare",
      :select-unit          "Välj måttenhet",
      :bullet3              "Bidrag",
+     :bullet4              "Liikuntapaikkojen rakennusvuodet",
      :finance-stats        "Ekonomiska uppgifter",
      :select-city          "Välj kommun",
      :area-m2-min          "Minimum idrottsareal m²",
@@ -1701,7 +1705,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :open-interfaces "Open data and APIs",
      :up-to-date-information
      "Up-to-date information about sports facilities",
-     :updating-tools  "Tools for data maintainers"},
+     :updating-tools  "Tools for data maintainers"
+     :analysis-tools  "Analysis tools"},
     :confirm
     {:discard-changes?      "Do you want to discard all changes?",
      :headline              "Confirmation",
@@ -2073,15 +2078,15 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :select-rink    "Select stadium"},
     :restricted       {:login-or-register "Please login or register"},
     :lipas.ice-stadium.rinks
-    {:add-rink "Add rink",
-     :edit-rink "Edit rink",
-     :headline "Rinks"
-     :rink1-width "Rink 1 width m"
-     :rink2-width "Rink 2 width m"
-     :rink3-width "Rink 3 width m"
-     :rink1-length "Rink 1 length m"
-     :rink2-length "Rink 2 length m"
-     :rink3-length "Rink 3 length m"
+    {:add-rink      "Add rink",
+     :edit-rink     "Edit rink",
+     :headline      "Rinks"
+     :rink1-width   "Rink 1 width m"
+     :rink2-width   "Rink 2 width m"
+     :rink3-width   "Rink 3 width m"
+     :rink1-length  "Rink 1 length m"
+     :rink2-length  "Rink 2 length m"
+     :rink3-length  "Rink 3 length m"
      :rink1-area-m2 "Rink 1 area m²"
      :rink2-area-m2 "Rink 2 area m²"
      :rink3-area-m2 "Rink 3 area m²"},
@@ -2365,7 +2370,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :headline            "Profile",
      :ice-stadiums-link   "Ice stadiums",
      :promo1-headline     "Important",
-     :promo1-topic "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
+     :promo1-topic        "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
      :promo1-text         "View PDF",
      :swimming-pools-link "Swimming pools"},
     :building-materials
@@ -2390,6 +2395,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :select-issuer        "Select issuer",
      :select-unit          "Select unit",
      :bullet3              "Subsidies",
+     :bullet4              "Construction years",
      :finance-stats        "Finances",
      :select-city          "Select city",
      :area-m2-min          "Min area m²",
