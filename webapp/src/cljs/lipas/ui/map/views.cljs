@@ -1,10 +1,11 @@
 (ns lipas.ui.map.views
   (:require
    ["mdi-material-ui/ContentCut$default" :as ContentCut]
+   ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
-   ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+   [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
@@ -874,7 +875,7 @@
 (defn add-sports-site-view
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
-               geom-tab     (r/atom 0)]
+               geom-tab     (r/atom "draw")]
     (let [locale                                   (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
@@ -929,18 +930,21 @@
                [mui/grid {:container true :spacing 16 :align-items "center"}
 
                 ;; Tabs for selecting btw drawing and importing geoms
-                (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true}
+                #_(when (#{"LineString" "Polygon"} geom-type))
+                [mui/grid {:item true}
 
-                   [mui/tabs {:value      @geom-tab
-                              :on-change  #(reset! geom-tab %2)
-                              :style      {:margin-bottom "1em"}
-                              :text-color "secondary"}
-                    [mui/tab {:label (tr :map/draw-geoms)}]
-                    [mui/tab {:label (tr :map.import/tab-header)}]]])
+                 [mui/tabs {:value      @geom-tab
+                            :on-change  #(reset! geom-tab %2)
+                            :style      {:margin-bottom "1em"}
+                            :text-color "secondary"}
+                  [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
+                  (when (#{"LineString" "Polygon"} geom-type)
+                    [mui/tab {:value "import" :label (tr :map.import/tab-header)}])
+                  (when (#{"Point"} geom-type)
+                    [mui/tab {:value "coords" :label "Syötä koordinaatit"}])]]
 
                 ;; Draw
-                (when (= 0 @geom-tab)
+                (when (= "draw" @geom-tab)
                   [:<>
                    ;; Helper text
                    [mui/grid {:item true :xs 12}
@@ -963,7 +967,56 @@
                      [mui/icon "add_location"]
                      (tr :map/add-to-map)]]])
 
-                (when (= 1 @geom-tab)
+                ;; Enter coordinates
+                (when (= "coords" @geom-tab)
+                  (r/with-let [state (r/atom {:crs :epsg4326
+                                              :lon nil
+                                              :lat nil})]
+                    (let [[lon-spec lat-spec] (condp = (:crs @state)
+                                                :epsg4326 [:lipas.location.coordinates/lon
+                                                           :lipas.location.coordinates/lat]
+                                                :epsg3067 [:lipas.location.coordinates/lon-euref
+                                                           :lipas.location.coordinates/lat-euref])]
+                      [:<>
+                       [mui/grid {:item true :xs 12}
+                        [lui/select
+                         {:style     {:min-width "150px"}
+                          :label     "CRS"
+                          :items     [{:value :epsg3067 :label "TM25FIN EUREF"}
+                                      {:value :epsg4326 :label "WGS84"}]
+                          :value     (:crs @state)
+                          :on-change #(swap! state assoc :crs %1)}]]
+                       [mui/grid {:item true :xs 6}
+                        [lui/text-field
+                         {:label     (condp = (:crs @state)
+                                       :epsg4326 "Lon"
+                                       :epsg3067 "N")
+                          :type      "number"
+                          :spec      lon-spec
+                          :value     (:lon @state)
+                          :on-change #(swap! state assoc :lon %1)}]]
+                       [mui/grid {:item true :xs 6}
+                        [lui/text-field
+                         {:label     (condp = (:crs @state)
+                                       :epsg4326 "Lat"
+                                       :epsg3067 "E")
+                          :type      "number"
+                          :spec      lat-spec
+                          :value     (:lat @state)
+                          :on-change #(swap! state assoc :lat %1)}]]
+                       [mui/grid {:item true}
+                        [mui/button
+                         {:color    "secondary"
+                          :disabled (not (and
+                                          (s/valid? lon-spec (:lon @state))
+                                          (s/valid? lat-spec (:lat @state))))
+                          :variant  "contained"
+                          :on-click #(==> [::events/add-point-from-coords @state])}
+                         [mui/icon "add_location"]
+                         (tr :map/add-to-map)]]])))
+
+                ;; Import geoms
+                (when (= "import" @geom-tab)
                   (when (#{"LineString" "Polygon"} geom-type)
                     [:<>
                      ;; Supported formats helper text
