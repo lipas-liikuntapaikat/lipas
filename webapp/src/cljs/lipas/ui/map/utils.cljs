@@ -475,6 +475,10 @@
   (let [proj      (proj/get "EPSG:3067")]
     (proj/fromLonLat wgs84-coords proj)))
 
+(defn epsg3067->wgs84 [epsg3067-coords]
+  (let [proj      (proj/get "EPSG:3067")]
+    (proj/toLonLat epsg3067-coords proj)))
+
 (defn calc-buffer-geom [geoms distance-km]
   (case (-> geoms :features first :geometry :type)
 

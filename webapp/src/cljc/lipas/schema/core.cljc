@@ -238,6 +238,11 @@
                                                     :NaN? false
                                                     :infinite? false))
 
+;; Northing
+(s/def :lipas.location.coordinates/lat-euref (s/int-in -548576 1548576))
+;; Easting
+(s/def :lipas.location.coordinates/lon-euref (s/int-in 1548576 8388608))
+
 ;; NOTE: generator supports only point features atm
 (s/def :lipas.location/geometries (s/with-gen
                                     ::geojson/feature-collection

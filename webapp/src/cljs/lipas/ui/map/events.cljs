@@ -720,4 +720,13 @@
                     :postal-code "12345"}}]
      {:dispatch-n
       [[::start-adding-new-site template]]})))
-<
+
+(re-frame/reg-event-fx
+ ::add-point-from-coords
+ (fn [_ [_ {:keys [crs lon lat]}]]
+   (let [coords (if (= :epsg3067 crs)
+                  (epsg3067->wgs84-fast #js[lat lon])
+                  [lon lat])
+         fcoll  {:type     "FeatureCollection"
+                 :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]
+     {:dispatch-n [[::new-geom-drawn fcoll]]})))
