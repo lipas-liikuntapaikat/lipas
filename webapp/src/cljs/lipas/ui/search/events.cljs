@@ -485,8 +485,12 @@
                     ->es-search-body
                     (assoc-in [:_source :includes] ["*"] )
                     (assoc-in [:_source :excludes] ["location.geometries"])
-                    ;; track_total_hits is not supported by scroll
-                    (dissoc :track_total_hits))
+                    ;; :track_total_hits is not supported by scroll
+                    ;; :from doesn't make sense when creating a report
+                    (dissoc :track_total_hits :from)
+                    ;; :size is set to a 'good guess' for optimal
+                    ;; scrolling
+                    (assoc :size 1000))
          fields (-> db :reports :selected-fields)]
      {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
 
