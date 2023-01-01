@@ -167,17 +167,21 @@
 (defn tooltip
   "`payload-fn` should return a map with
   keys :label :value (:icon :color)."
-  ([payload-fn labels ^js props] (tooltip payload-fn labels :label props))
+  ([payload-fn labels ^js props]
+   (tooltip payload-fn labels :label false props))
   ([payload-fn labels sort-fn ^js props]
+   (tooltip payload-fn labels sort-fn false props))
+  ([payload-fn labels sort-fn hide-header? ^js props]
    (let [label   (gobj/get props "label")
          payload (gobj/get props "payload")]
      (r/as-element
       [mui/paper {:style {:padding "0.5em"}}
 
        ;; Tooltip header
-       [mui/typography
-        {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
-        label]
+       (when-not hide-header?
+         [mui/typography
+          {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
+          label])
 
        ;; Content table
        [mui/table {:style {:width "350"} :padding "dense"}
@@ -357,8 +361,11 @@
        [:> rc/LabelList {:position "right"}]]]]))
 
 (defn labeled-tooltip
-  ([labels ^js props] (labeled-tooltip labels :label props))
+  ([labels ^js props]
+   (labeled-tooltip labels :label false props))
   ([labels sort-fn ^js props]
+   (labeled-tooltip labels sort-fn false props))
+  ([labels sort-fn hide-header? ^js props]
    (let [payload-fn (fn [^js payload]
                       (let [entry (-> payload
                                       first
@@ -371,7 +378,7 @@
                                   (conj res {:label label :value (if (nil? v) "<10" v)})
                                   res))
                               []))))]
-     (tooltip payload-fn labels sort-fn props))))
+     (tooltip payload-fn labels sort-fn hide-header? props))))
 
 (def subsidies-tooltip labeled-tooltip)
 

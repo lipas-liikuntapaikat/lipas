@@ -5,6 +5,7 @@
   {:target     :browser
    :asset-path "js/compiled"
    :output-dir "resources/public/js/compiled"
+   :compiler-options {:infer-externs :auto}
    :dev {:closure-defines {re-frame.trace.trace-enabled? true}}
    :modules
    {:app {:init-fn lipas.ui.core/init}}
