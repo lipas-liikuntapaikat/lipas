@@ -1,5 +1,7 @@
 (ns lipas.ui.analysis.diversity.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require
+   [re-frame.core :as re-frame]
+   [lipas.ui.utils :as utils]))
 
 (re-frame/reg-sub
  ::diversity
@@ -98,7 +100,7 @@
            [k (assoc v :area (get areas k))]))))
 
 (re-frame/reg-sub
- ::bar-chart-data
+ ::grid-chart-data
  :<- [::chart-data]
  :<- [::selected-result-areas]
  (fn [[chart-data selected-areas]  _]
@@ -124,12 +126,30 @@
     (str (some identity (into [nimi name namn label] (conj (vals props) id))))))
 
 (re-frame/reg-sub
+ ::area-chart-data
+ :<- [::chart-data]
+ :<- [::selected-result-areas]
+ (fn [[chart-data selected-areas]  _]
+   (->>
+    (for [[area-id m] chart-data
+          :when       (some #{area-id} selected-areas)]
+      {:name                 (guess-name area-id (:area m))
+       :population           (-> m :aggs :population)
+       :anonymized-count     (-> m :aggs :anonymized-count)
+       :population-age-0-14  (-> m :aggs :population-age-0-14)
+       :population-age-15-64 (-> m :aggs :population-age-15-64)
+       :population-age-65-   (-> m :aggs :population-age-65-)
+       :pwm                  (-> m :aggs :population-weighted-mean utils/round-safe)})
+    (sort-by :population utils/reverse-cmp))))
+
+(re-frame/reg-sub
  ::result-area-options
  :<- [::chart-data]
  (fn [results _]
    (map
     (fn [[area-id m]]
-      {:value area-id :label (guess-name area-id (:area m))})
+      {:value area-id :label (guess-name
+                              area-id (:area m))})
     results)))
 
 (re-frame/reg-sub
@@ -143,3 +163,9 @@
  :<- [::analysis-results]
  (fn [results _]
    (some? results)))
+
+(re-frame/reg-sub
+ ::selected-analysis-chart-tab
+ :<- [::diversity]
+ (fn [diversity _]
+   (:selected-chart-tab diversity)))

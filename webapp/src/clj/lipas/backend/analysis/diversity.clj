@@ -165,14 +165,28 @@
   (map #(update % :type-codes set) categories))
 
 (defn calc-aggs [pop-entries]
-  (let [idxs      (map :diversity-index pop-entries)
-        total-pop (->> pop-entries
-                       (map (comp (partial max 0) (fnil utils/->int 0) :vaesto :_source))
-                       (apply +))]
+  (let [sum-field   (fn [k]
+                    (->> pop-entries
+                         (map (comp (partial max 0)
+                                    (fnil utils/->int 0)
+                                    k
+                                    :_source))
+                         (apply +)))
+        idxs        (map :diversity-index pop-entries)
+        total-pop   (sum-field :vaesto)
+        age-0-14    (sum-field :ika_0_14)
+        age-15-64   (sum-field :ika_15_64)
+        age-65-     (sum-field :ika_65_)
+        anonymized (- total-pop (+ age-0-14 age-15-64 age-65-
+                                    ))]
     {:diversity-idx-mean       (utils/mean idxs)
      :diversity-idx-median     (utils/median idxs)
      :diversity-idx-mode       (utils/mode idxs)
      :population               total-pop
+     :anonymized-count         anonymized
+     :population-age-0-14      age-0-14
+     :population-age-15-64     age-15-64
+     :population-age-65-       age-65-
      :population-weighted-mean (when (pos? total-pop)
                                  (double
                                   (/ (->> pop-entries
@@ -486,5 +500,6 @@
 
   (time (calc-diversity-indices-2 search params))
   (prepare-categories categoriez)
+  (time (+ 1 1))
 
   )

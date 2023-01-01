@@ -1,7 +1,5 @@
 (ns lipas.ui.core
   (:require
-   #_[cljsjs.babel-polyfill]
-   #_[cljsjs.google-analytics]
    [day8.re-frame.http-fx]
    [district0x.re-frame.google-analytics-fx]
    [lipas.ui.config :as config]

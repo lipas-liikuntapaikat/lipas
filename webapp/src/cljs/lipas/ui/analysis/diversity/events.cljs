@@ -95,7 +95,7 @@
    (-> db
        (assoc-in [:analysis :diversity :loading?] false)
        (assoc-in [:analysis :diversity :results candidate-id] resp)
-       (update-in [:analysis :diversity :selected-result-areas] conj candidate-id))))
+       (update-in [:analysis :diversity :selected-result-areas] (comp set conj) candidate-id))))
 
 (re-frame/reg-event-db
  ::clear-results
@@ -425,6 +425,11 @@
  ::select-analysis-chart-areas
  (fn [db [_ v]]
    (assoc-in db [:analysis :diversity :selected-result-areas] v)))
+
+(re-frame/reg-event-db
+ ::select-analysis-chart-tab
+ (fn [db [_ v]]
+   (assoc-in db [:analysis :diversity :selected-chart-tab] v)))
 
 (comment
   (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))
