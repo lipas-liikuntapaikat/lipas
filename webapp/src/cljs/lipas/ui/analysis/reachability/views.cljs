@@ -92,7 +92,7 @@
   [{:keys [tr]}]
   (let [profile (<== [::subs/selected-travel-profile])
         metric  (<== [::subs/selected-travel-metric])]
-    [mui/grid {:container true :spacing 2 :align-items "center"}
+    [mui/grid {:container true :spacing 8 :align-items "center"}
 
      ;; Direct
      [mui/grid {:item true}

@@ -9,6 +9,7 @@
    [lipas.ui.analysis.diversity.subs :as subs]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.misc :as misc]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -325,8 +326,14 @@
                (gcolor/lighten (/ n 40))
                gcolor/rgbArrayToHex)])))
 
-(defn results-chart []
-  (let [chart-data (<== [::subs/bar-chart-data])
+(def population-base-color "#006190")
+
+(comment
+  (->> diversity-colors
+       (sort-by first)))
+
+(defn population-vs-diversity-chart []
+  (let [chart-data (<== [::subs/grid-chart-data])
         labels     {:population    "Väestö"
                     :diversity-idx "Monipuolisuusindeksi"}]
     [:> rc/ResponsiveContainer {:width "100%" :height 300}
@@ -338,8 +345,7 @@
         :margin   {:bottom 20 :left 20}}
        [:> rc/CartesianGrid]
        [:> rc/Tooltip {:content (fn [props]
-                                  (gobj/set props "label" "")
-                                  (charts/labeled-tooltip labels props))}]
+                                  (charts/labeled-tooltip labels :label :hide-header props))}]
        [:> rc/XAxis
         {:dataKey       "diversity-idx"
          :type          "number"
@@ -350,14 +356,119 @@
          :tickCount     10
          :domain        #js["dataMin" "dataMax"]
          :padding       #js{:left 16 :right 16}}]
+
        [:> rc/YAxis
         {:tick  charts/font-styles
          :label (merge {:value (:population labels) :angle -90 :position "left"}
                        charts/font-styles)}]
        (into
         [:> rc/Bar {:dataKey "population" :fill "#9D191A"}]
-        (for [diversity-idx (->> chart-data (map :diversity-idx) set)]
+        (for [diversity-idx (->> chart-data (map :diversity-idx))]
           [:> rc/Cell {:fill (diversity-colors diversity-idx)}]))])]))
+
+(defn aggs-chart []
+  (let [tr         (<== [:lipas.ui.subs/translator])
+        chart-data (<== [::subs/area-chart-data])
+        labels     {:population           "Kokonaisväestö"
+                    :diversity-idx        "Monipuolisuusindeksi"
+                    :pwm                  "Väestöpainotettu monipuolisuusindeksi"
+                    :anonymized-count     "Ikä anonymisoitu"
+                    :population-age-0-14  (str "0-14" (tr :duration/years-short))
+                    :population-age-15-64 (str "15-64" (tr :duration/years-short))
+                    :population-age-65-   (str "65" (tr :duration/years-short) "-")
+                    :name                 "Nimi"}]
+
+    [:> rc/ResponsiveContainer {:width "100%" :height (+ 100 (* 50 (count chart-data)))}
+     [:> rc/BarChart
+      {:data         chart-data
+       :layout       "vertical"
+       #_#_:on-click #(println %)
+       :margin       {:top 20 :bottom 20 :left 120}}
+      [:> rc/CartesianGrid]
+
+      [:> rc/Tooltip
+       {:content (fn [^js props] (charts/labeled-tooltip labels :label :hide-header props))}]
+
+      [:> rc/Legend
+       {:verticalAlign "top"
+        :content       (fn [^js props]
+                         #_(charts/legend labels props)
+                         (let [payload (gobj/get props "payload")]
+                           (r/as-element
+                            (->> payload
+                                 (map
+                                  (fn [obj]
+                                    {:label (or (labels (gobj/get obj "value"))
+                                                (labels (keyword (gobj/get obj "value"))))
+                                     :color (gobj/get obj "color")
+                                     :type  (gobj/get obj "type")}))
+                                 (sort-by :label)
+                                 (map
+                                  (fn [{:keys [label color type]}]
+                                    [mui/grid {:item true}
+                                     [misc/icon-text3
+                                      {:icon       (charts/legend-icons type)
+                                       :icon-color color
+                                       :text       label}]]))
+                                 (into
+                                  [mui/grid
+                                   {:container true
+                                    :style     {:margin-bottom "1.5em"}
+                                    :justify   "center"}])))))}]
+
+      ;; Area names on y-axis
+      [:> rc/YAxis
+       {:dataKey "name"
+        :type    "category"
+        :tick    charts/font-styles}]
+
+      ;; 1st x-axis for population bars
+      [:> rc/XAxis
+       {:xAxisId     "population"
+        :orientation "top"
+        :label       (merge {:value (:population labels) :position "top"}
+                            charts/font-styles)
+        :type        "number"
+        :dataKey     "population"
+        :tick        charts/font-styles
+        :padding     #js{:left 16 :right 16}}]
+
+      [:> rc/Bar
+       {:xAxisId "population"
+        :dataKey "population-age-0-14"
+        :stackId "population"
+        :fill    (:age-0-14 charts/age-groups)}]
+      [:> rc/Bar
+       {:xAxisId "population"
+        :dataKey "population-age-15-64"
+        :stackId "population"
+        :fill    (:age-15-64 charts/age-groups)}]
+      [:> rc/Bar
+       {:xAxisId "population"
+        :dataKey "population-age-65-"
+        :stackId "population"
+        :fill    (:age-65- charts/age-groups)}]
+      [:> rc/Bar
+       {:xAxisId "population"
+        :dataKey "anonymized-count"
+        :stackId "population"
+        :fill    mui/gray1}]
+
+      ;; 2nd x-axis for population weighted mean diversity bars
+      [:> rc/XAxis
+       {:xAxisId     "pwm"
+        :orientation "bottom"
+        :label       (merge {:value (:pwm labels) :position "bottom"}
+                            charts/font-styles)
+        :type        "number"
+        :dataKey     "pwm"
+        :tick        charts/font-styles
+        :padding     #js{:left 16 :right 16}}]
+
+      (into
+       [:> rc/Bar {:xAxisId "pwm" :dataKey "pwm" :fill (get diversity-colors 8)}]
+       (for [diversity-idx (->> chart-data (map (comp js/Math.round :pwm)))]
+         [:> rc/Cell {:fill (get diversity-colors diversity-idx)}]))]]))
 
 (defn areas-selector []
   (let [result-areas   (<== [::subs/result-area-options])
@@ -370,19 +481,30 @@
       :value     selected-areas}]))
 
 (defn results []
-  [:<>
-   [lui/expansion-panel
-    {:label            "Kuvaaja"
-     :default-expanded true}
-    [mui/grid {:container true :spacing 24}
-     [mui/grid {:item true :xs 12}
-      [areas-selector]]
-     [mui/grid {:item true :xs 12}
-      [results-chart]]]]
-   [lui/expansion-panel
-    {:label            "Lataa tiedostona"
-     :default-expanded false}
-    [export]]])
+  (let [selected-chart-tab (<== [::subs/selected-analysis-chart-tab])]
+    [:<>
+     [lui/expansion-panel
+      {:label            "Kuvaajat"
+       :default-expanded true}
+      [mui/grid {:container true :spacing 24}
+       [mui/grid {:item true :xs 12}
+        [areas-selector]]
+       [mui/grid {:item true :xs 12}
+        [mui/tabs
+         {:size      "small"
+          :value     selected-chart-tab
+          :on-change #(==> [::events/select-analysis-chart-tab %2])}
+         [mui/tab {:label "Alueittain" :value "area"}]
+         [mui/tab {:label "Ruuduittain" :value "grid"}]]]
+       [mui/grid {:item true :xs 12}
+        (when (= "area" selected-chart-tab)
+          [aggs-chart])
+        (when (= "grid" selected-chart-tab)
+          [population-vs-diversity-chart])]]]
+     [lui/expansion-panel
+      {:label            "Lataa tiedostona"
+       :default-expanded false}
+      [export]]]))
 
 
 (defn view []
