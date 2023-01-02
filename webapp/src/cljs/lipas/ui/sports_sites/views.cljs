@@ -1,18 +1,18 @@
 (ns lipas.ui.sports-sites.views
   (:require
-   [clojure.string :as str]
+   ["mdi-material-ui/Calculator$default" :as Calculator]
    [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
    [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.energy.views :as energy]
+   [lipas.ui.ice-stadiums.rinks :as rinks]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.events :as events]
    [lipas.ui.sports-sites.subs :as subs]
    [lipas.ui.swimming-pools.pools :as pools]
    [lipas.ui.swimming-pools.slides :as slides]
-   [lipas.ui.ice-stadiums.rinks :as rinks]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
@@ -320,7 +320,7 @@
     [mui/tooltip {:title (tr :map/calculate-route-length)}
      [mui/icon-button
       {:on-click #(-> geoms map-utils/calculate-length on-change)}
-      [:> js/materialIcons.Calculator]]]]])
+      [:> Calculator]]]]])
 
 (defn show-calc? [k geom-type]
   (and (= :route-length-km k) (#{"LineString"} geom-type)))
