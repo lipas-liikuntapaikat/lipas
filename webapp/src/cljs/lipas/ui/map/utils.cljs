@@ -2,22 +2,23 @@
   "NOTE: make sure `lipas.ui.map.projection` is loaded first for the
   necessary side-effects to take effect.`"
   (:require
-   ["@turf/clean-coords$default" :as turf-clean-coords]
+   ["@mapbox/togeojson" :as toGeoJSON]
    ["@turf/buffer$default" :as turf-buffer]
+   ["@turf/clean-coords$default" :as turf-clean-coords]
+   ["@turf/combine$default" :as turf-combine]
    ["@turf/kinks$default" :as turf-kinks]
    ["@turf/length$default" :as turf-length]
-   ["@turf/truncate$default" :as turf-truncate]
-   ["@turf/combine$default" :as turf-combine]
    ["@turf/line-split$default" :as turf-line-split]
    ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
+   ["@turf/truncate$default" :as turf-truncate]
    ["ol" :as ol]
-   ["ol/proj" :as proj]
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
    ["ol/format/GeoJSON$default" :as GeoJSON]
    ["ol/format/WKT$default" :as WKT]
-   ["ol/interaction" :as interaction]
    ["ol/geom/Circle$default" :as Circle]
+   ["ol/interaction" :as interaction]
+   ["ol/proj" :as proj]
    ["shpjs" :as shp]
    [clojure.reader :refer [read-string]]
    [clojure.string :as string]
@@ -72,8 +73,8 @@
                        parsed (condp = ext
                                 "geojson" (js/JSON.parse text)
                                 "json"    (js/JSON.parse text)
-                                "kml"     (-> text parse-dom js/toGeoJSON.kml)
-                                "gpx"     (-> text parse-dom js/toGeoJSON.gpx))]
+                                "kml"     (-> text parse-dom toGeoJSON/kml)
+                                "gpx"     (-> text parse-dom toGeoJSON/gpx))]
                    (cb parsed)))]
     (set! (.-onload reader) cb)
     (.readAsText reader file enc)
