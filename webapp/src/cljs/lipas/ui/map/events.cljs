@@ -1,6 +1,7 @@
 (ns lipas.ui.map.events
   (:require
    ["ol/proj" :as proj]
+   ["togpx" :as togpx]
    [ajax.core :as ajax]
    [goog.string :as gstring]
    [goog.string.format]
@@ -537,7 +538,7 @@
          xml-str (-> site :location :geometries
                      (update :features #(mapv (partial add-gpx-props data) %))
                      clj->js
-                     (js/togpx #js{:creator "LIPAS"}))]
+                     (togpx #js{:creator "LIPAS"}))]
      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
 
 ;; Address search ;;
