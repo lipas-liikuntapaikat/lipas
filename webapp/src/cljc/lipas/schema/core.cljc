@@ -798,9 +798,12 @@
 (s/def :lipas.ice-stadium.rink/length-m (number-in :min 0 :max 100))
 (s/def :lipas.ice-stadium.rink/area-m2 (number-in :min 0 :max 5000))
 
-(s/def :lipas.ice-stadium/rink (s/keys :req-un [:lipas.ice-stadium.rink/width-m
-                                                :lipas.ice-stadium.rink/length-m]
-                                       :opt-un [:lipas.ice-stadium.rink/area-m2]))
+(s/def :lipas.ice-stadium/rink
+  (s/keys :req-un []
+          :opt-un [:lipas.ice-stadium.rink/width-m
+                   :lipas.ice-stadium.rink/length-m
+                   :lipas.ice-stadium.rink/area-m2]))
+
 (s/def :lipas.ice-stadium/rinks
   (s/coll-of :lipas.ice-stadium/rink
              :min-count 0
