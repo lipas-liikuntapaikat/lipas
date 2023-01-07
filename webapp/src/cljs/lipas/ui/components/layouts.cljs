@@ -27,7 +27,7 @@
 
 (defn expansion-panel
   [{:keys [label label-color default-expanded style]
-    :or   {label-color "default" style {:margin-top "1em"}}} & children]
+    :or   {label-color "inherit" style {:margin-top "1em"}}} & children]
   [mui/expansion-panel
    {:default-expanded default-expanded :style style}
    [mui/expansion-panel-summary

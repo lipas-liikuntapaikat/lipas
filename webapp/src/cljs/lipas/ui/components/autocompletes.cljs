@@ -157,9 +157,11 @@
       :options     (->> items
                         (map (partial ->opt label-fn value-fn))
                         (sort-by :label))
-      :required    required
-      :style       {:font-family "Lato"}}]))
+      :InputLabelProps
+      {:error    (and required (not @state))
+       :required required}
 
-(comment
-  {:getOptionLabel (fn [opt] (label-fn (js->clj opt :keywordize-keys true)))
-   :getOptionValue (fn [opt] (value-fn (js->clj opt :keywordize-keys true)))})
+      :style (merge
+              {:font-family (-> mui/jyu-styles-dark :typography :font-family)
+               :font-size   "initial"}
+              (-> mui/jyu-styles-dark :typography :body1))}]))

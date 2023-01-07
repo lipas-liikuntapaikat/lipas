@@ -22,7 +22,7 @@
      ;; Submit
      [mui/button
       {:on-click #(==> [::events/request-password-reset @email])
-       :variant  "raised"
+       :variant  "contained"
        :color    "secondary"
        :style    {:margin-top "1em"}
        :disabled (not (s/valid? :lipas.user/email @email))}
@@ -85,7 +85,7 @@
      ;; Submit
      [mui/button
       {:on-click #(==> [::events/reset-password @password token])
-       :variant  "raised"
+       :variant  "contained"
        :color    "secondary"
        :style    {:margin-top "1em"}
        :disabled (not (s/valid? :lipas.user/password @password))}

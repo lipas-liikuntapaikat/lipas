@@ -74,7 +74,7 @@
 (defn li [text & children]
   (into
    [:li
-    [mui/typography {:variant "body2" :color :default}
+    [mui/typography {:variant "body2" :color "inherit"}
      text]]
    children))
 

@@ -245,7 +245,7 @@
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
 
 (defn shift-likely-overlapping!
-  [type-code style resolution f]
+  [type-code ^js style resolution f]
   (when (#{4402 4440} type-code)
     (let [delta (* resolution 4)
           copy  (-> f .getGeometry .clone)]

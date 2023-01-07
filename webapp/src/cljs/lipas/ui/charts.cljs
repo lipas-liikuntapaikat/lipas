@@ -175,7 +175,7 @@
    (let [label   (gobj/get props "label")
          payload (gobj/get props "payload")]
      (r/as-element
-      [mui/paper {:style {:padding "0.5em"}}
+      [mui/paper {:style {:padding "1em"}}
 
        ;; Tooltip header
        (when-not hide-header?
@@ -184,22 +184,22 @@
           label])
 
        ;; Content table
-       [mui/table {:style {:width "350"} :padding "dense"}
+       [mui/table {:style {:width "350"} :padding "default" :size "small"}
         (->> payload
              payload-fn
              (sort-by sort-fn)
              (map
               (fn [{:keys [label value icon color]}]
-                [mui/table-row {:style {:height "24px"}}
+                [mui/table-row #_{:style {:height "24px"}}
                  (when icon
-                   [mui/table-cell {:padding "checkbox"}
+                   [mui/table-cell {:padding "none"}
                     [mui/icon {:style {:color color}}
                      icon]])
                  [mui/table-cell
                   [mui/typography {:variant "caption"}
                    label]]
                  [mui/table-cell
-                  [mui/typography
+                  [mui/typography {:variant "caption"}
                    value]]]))
              (into [mui/table-body]))]]))))
 

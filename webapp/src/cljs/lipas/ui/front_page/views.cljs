@@ -145,7 +145,7 @@
       (js/FB.XFBML.parse))
     :reagent-render
     (fn []
-      [mui/grid {:container true :justify "center"}
+      [mui/grid {:container true :justify-content "center"}
        [mui/grid {:item true}
         [:div
          {:class                      "fb-page"
@@ -204,7 +204,7 @@
   (let [newsletter-data         (<== [::subs/newsletter-data])
         newsletter-error        (<== [::subs/newsletter-error])
         newsletter-in-progress? (<== [::subs/newsletter-in-progress?])]
-    [mui/grid {:container true :spacing 8}
+    [mui/grid {:container true :spacing 2}
      [mui/grid {:item true :xs 12}
       (when newsletter-in-progress?
         [mui/circular-progress])
@@ -252,8 +252,8 @@
 
        ;; Main section with background image
        [mui/grid
-        {:container true
-         :justify   "flex-start"
+        {:container       true
+         :justify-content "flex-start"
          ;;:align-items ""
          :style
          {:padding             "8px"
@@ -400,9 +400,9 @@
         ;; Known LIPAS users
         [grid-card {:xs 12 :md 12 :lg 12 :xl 6 :title (tr :data-users/headline)}
          (into
-          [mui/grid {:container true :spacing 8}]
+          [mui/grid {:container true :spacing 2}]
           (map ->link known-users))
-         [mui/grid {:container true :spacing 16 :style {:margin-top "1em"}}
+         [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
           [mui/grid {:item true}
            [mui/typography {:variant "h6" :color "primary"}
             (tr :data-users/data-user?)]]
@@ -421,7 +421,7 @@
        ;;Partner logos
        [footer {:title (tr :partners/headline) :bg-color mui/gray2}
         (into
-         [mui/grid {:container true :align-items "center"}]
+         [mui/grid {:container true :align-items "center" :spacing 4}]
          (map ->logo logos))]])))
 
 (defn main []

@@ -19,7 +19,7 @@
   (= (keyword->PasCamelCase :kissa-metso) :kissaMetso)
   (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
 
-(def create-mui-theme (gobj/get mui "createMuiTheme"))
+(def create-mui-theme (gobj/get mui "createTheme"))
 
 (defn ->mui-theme [opts]
   (->> opts
@@ -130,10 +130,10 @@
 (def dialog-title (mui->reagent "DialogTitle"))
 (def divider (mui->reagent "Divider"))
 (def drawer (mui->reagent "Drawer"))
-(def expansion-panel (mui->reagent "ExpansionPanel"))
-(def expansion-panel-actions (mui->reagent "ExpansionPanelActions"))
-(def expansion-panel-details (mui->reagent "ExpansionPanelDetails"))
-(def expansion-panel-summary (mui->reagent "ExpansionPanelSummary"))
+(def expansion-panel (mui->reagent "Accordion"))
+(def expansion-panel-actions (mui->reagent "AccordionActions"))
+(def expansion-panel-details (mui->reagent "AccordionDetails"))
+(def expansion-panel-summary (mui->reagent "AccordionSummary"))
 (def fab (mui->reagent "Fab"))
 (def fade (mui->reagent "Fade"))
 (def form-control (mui->reagent "FormControl"))

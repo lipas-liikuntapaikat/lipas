@@ -14,23 +14,26 @@
   (let [tr  (<== [:lipas.ui.subs/translator])
         tab (<== [::subs/selected-tab])]
 
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/paper {:square true :style {:padding "1em"}}
+    [mui/paper {:square true :style {:padding "1em"}}
 
-       ;; Tabs for choosing between different stats pages
-       [mui/grid {:item true}
-        [mui/tabs {:value tab :variant "scrollable" :on-change #(==> [::events/navigate %2])}
-         [mui/tab {:value "sport" :label (tr :stats/sports-stats)}]
-         [mui/tab {:value "age-structure" :label (tr :stats/age-structure-stats)}]
-         [mui/tab {:value "city" :label (tr :stats/city-stats)}]
-         [mui/tab {:value "finance" :label (tr :stats/finance-stats)}]
-         [mui/tab {:value "subsidies" :label (tr :stats/subsidies)}]]]
+     [mui/grid {:container true :spacing 4}
 
-       [mui/grid {:item true}
-        (condp = tab
-          "sport"         [sport-stats/view]
-          "age-structure" [age-structure-stats/view]
-          "city"          [city-stats/view]
-          "finance"       [finance-stats/view]
-          "subsidies"     [subsidies/view])]]]]))
+      ;; Tabs for choosing between different stats pages
+      [mui/grid {:item true :xs 12}
+       [mui/tabs
+        {:value     tab
+         :variant   "fullWidth"
+         :on-change #(==> [::events/navigate %2])}
+        [mui/tab {:value "sport" :label (tr :stats/sports-stats)}]
+        [mui/tab {:value "age-structure" :label (tr :stats/age-structure-stats)}]
+        [mui/tab {:value "city" :label (tr :stats/city-stats)}]
+        [mui/tab {:value "finance" :label (tr :stats/finance-stats)}]
+        [mui/tab {:value "subsidies" :label (tr :stats/subsidies)}]]]
+
+      [mui/grid {:item true :xs 12}
+       (condp = tab
+         "sport"         [sport-stats/view]
+         "age-structure" [age-structure-stats/view]
+         "city"          [city-stats/view]
+         "finance"       [finance-stats/view]
+         "subsidies"     [subsidies/view])]]]))

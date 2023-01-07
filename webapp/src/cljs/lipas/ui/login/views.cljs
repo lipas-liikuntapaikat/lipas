@@ -18,7 +18,7 @@
   (let [error (or (-> error :response :error)
                   (-> error :response :type))]
     [mui/grid {:container true
-               :spacing   8
+               :spacing   1
                :style     {:margin-top "0.5em"}}
 
      ;; Error message
@@ -42,7 +42,7 @@
         error         (<== [::subs/login-error])
         link-ordered? (<== [::subs/magic-link-ordered?])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 2}
 
      ;; Helper text
      [mui/grid
@@ -93,7 +93,7 @@
   (let [form-data (<== [::subs/login-form])
         error     (<== [::subs/login-error])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 2}
 
      ;; Helper text
      [mui/grid {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
@@ -172,9 +172,9 @@
   (let [login-mode (<== [::subs/login-mode])
         card-props {:square true :style {:height "100%"}}]
     [mui/grid
-     {:container true
-      :justify   "center"
-      :style     {:padding "1em"}}
+     {:container       true
+      :justify-content "center"
+      :style           {:padding "1em"}}
      [mui/grid {:item true :xs 12 :md 8 :lg 6}
       [mui/card card-props
        [mui/card-header

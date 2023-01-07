@@ -7,6 +7,7 @@
    ["ol/layer/Image$default" :as ImageLayer]
    ["ol/layer/Tile$default" :as TileLayer]
    ["ol/layer/Vector$default" :as VectorLayer]
+   ["ol/layer/VectorImage$default" :as VectorImageLayer]
    ["ol/proj" :as ol-proj]
    ["ol/source/ImageWMS$default" :as ImageWMSSource]
    ["ol/source/Vector$default" :as VectorSource]
@@ -25,7 +26,7 @@
    [re-frame.core :as re-frame]
    [reagent.core :as r]))
 
-;; (set! *warn-on-infer* true)
+#_(set! *warn-on-infer* true)
 
 (def mml-resolutions
   #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
@@ -85,51 +86,44 @@
      {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors
-    (VectorLayer.
+    (VectorImageLayer.
      #js{:source     (VectorSource.)
          :name       "vectors"
-         :style      styles/feature-style
-         :renderMode "image"})
+         :style      styles/feature-style})
     :edits
     (VectorLayer.
      #js{:source     (VectorSource.)
-         :style      #js[styles/edit-style styles/vertices-style]
-         :renderMode "vector"})
+         :style      #js[styles/edit-style styles/vertices-style]})
     :markers
     (VectorLayer.
      #js{:source     (VectorSource.)
-         :style      styles/blue-marker-style
-         :renderMode "image"})
+         :style      styles/blue-marker-style})
     :analysis
     (VectorLayer.
      #js{:source     (VectorSource.)
          :style      styles/analysis-style
-         :name       "analysis"
-         :renderMode "image"})
+         :name       "analysis"})
     :population
-    (VectorLayer.
+    (VectorImageLayer.
      #js{:source     (VectorSource.)
          :style      styles/population-style3
-         :name       "population"
-         :renderMode "image"})
+         :name       "population"})
+
     :schools
-    (VectorLayer.
+    (VectorImageLayer.
      #js{:source     (VectorSource.)
          :style      styles/school-style
-         :name       "schools"
-         :renderMode "image"})
+         :name       "schools"})
     :diversity-grid
-    (VectorLayer.
+    (VectorImageLayer.
      #js{:source     (VectorSource.)
          :style      styles/diversity-grid-style
-         :name       "diversity-grid"
-         :renderMode "image"})
+         :name       "diversity-grid"})
     :diversity-area
-    (VectorLayer.
+    (VectorImageLayer.
      #js{:source     (VectorSource.)
          :style      styles/diversity-area-style
-         :name       "diversity-area"
-         :renderMode "image"})
+         :name       "diversity-area"})
     :light-traffic
     (ImageLayer.
      #js{:visible false
@@ -182,6 +176,7 @@
 (defn init-view [center zoom]
   (ol/View. #js{:center         #js[(:lon center) (:lat center)]
                 :extent         proj/epsg3067-extent
+                :showFullExtent true
                 :zoom           zoom
                 :projection     "EPSG:3067"
                 :resolutions    mml-resolutions
@@ -406,9 +401,10 @@
   [{:keys [layers] :as map-ctx}
    {:keys [population geoms lipas-id zones] :as analysis}]
 
-  (let [source  (-> layers :overlays :population .getSource)
-        metric  (:selected-travel-metric analysis)
-        profile (:selected-travel-profile analysis)]
+  (let [^js layer (-> layers :overlays :population)
+        source    (.getSource layer)
+        metric    (:selected-travel-metric analysis)
+        profile   (:selected-travel-profile analysis)]
 
     (.clear source)
 
@@ -418,8 +414,8 @@
       (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
 
     (when-let [data (:data population)]
-      (doseq [m    data
-              :let [f (map-utils/<-wkt (:coords m))
+      (doseq [m     data
+              :let  [f (map-utils/<-wkt (:coords m))
                     zone-id (get-in m [:zone profile metric])]
               :when zone-id]
         (.set f "vaesto" (:vaesto m))
@@ -432,35 +428,36 @@
 (defn show-schools!
   [{:keys [layers] :as map-ctx}
    {:keys [schools geoms lipas-id]}]
-  (-> layers :overlays :schools .getSource .clear)
+  (let [^js layer (-> layers :overlays :schools)]
+    (-> layer .getSource .clear)
 
-  ;; Add selected style to sports-site feature
-  ;;(when lipas-id (display-as-selected map-ctx lipas-id))
-  (when lipas-id
-    (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
+    ;; Add selected style to sports-site feature
+    ;;(when lipas-id (display-as-selected map-ctx lipas-id))
+    (when lipas-id
+      (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
 
-  (when-let [data (:data schools)]
-    (doseq [m data]
-      (let [source (-> layers :overlays :schools .getSource)
-            f      (map-utils/<-wkt (:coords m))]
-        (.set f "name" (:name m))
-        (.set f "type" (:type m))
-        #_(.set f "selected" true)
-        (.addFeature source f))))
+    (when-let [data (:data schools)]
+      (doseq [m data]
+        (let [source (.getSource layer)
+              f      (map-utils/<-wkt (:coords m))]
+          (.set f "name" (:name m))
+          (.set f "type" (:type m))
+          #_(.set f "selected" true)
+          (.addFeature source f)))))
 
   map-ctx)
 
 (defn show-diversity-grid!
   [{:keys [layers] :as map-ctx}
    {:keys [data results]}]
-  (-> layers :overlays :diversity-grid .getSource .clear)
+  (let [^js layer (-> layers :overlays :diversity-grid)]
+    (-> layer .getSource .clear)
 
-  (when (seq results)
-    (let [source (-> layers :overlays :diversity-grid .getSource)]
-
-      (doseq [fcoll (map :grid (vals results))
-              f     (:features fcoll)]
-        (.addFeature source (-> f clj->js map-utils/->ol-feature)))))
+    (when (seq results)
+      (let [source (.getSource layer)]
+        (doseq [fcoll (map :grid (vals results))
+                f     (:features fcoll)]
+          (.addFeature source (-> f clj->js map-utils/->ol-feature))))))
 
   map-ctx)
 
@@ -483,16 +480,16 @@
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce address]}]
-  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
+  (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
+        ^js layer (-> layers :overlays :vectors) ]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (cond->
             lipas-id  (map-utils/select-sports-site! lipas-id)
-            fit?      (map-utils/fit-to-extent!
-                       (-> layers :overlays :vectors .getSource .getExtent))
-            address   (map-utils/show-address-marker! address)))))
+            fit?    (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
+            address (map-utils/show-address-marker! address)))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]
@@ -515,7 +512,8 @@
 (defn set-diversity-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [analysis] :as mode}]
-  (let [diversity (:diversity analysis)]
+  (let [diversity (:diversity analysis)
+        ^js layer (-> layers :overlays :diversity-area)]
     (-> map-ctx
         editing/clear-edits!
         map-utils/clear-population!
@@ -527,7 +525,7 @@
         (map-utils/enable-diversity-area-hover!)
         (map-utils/enable-diversity-grid-hover!)
         (show-diversity-grid! diversity)
-        (map-utils/fit-to-extent! (-> layers :overlays :diversity-area .getSource .getExtent)))))
+        (map-utils/fit-to-extent! (-> layer .getSource .getExtent)))))
 
 (defn set-analysis-mode!
   [map-ctx {:keys [sub-mode] :as mode}]
@@ -538,16 +536,16 @@
 (defn update-reachability-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce analysis]}]
-  (let [reachability (:reachability analysis)
-        fit?         (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))]
+  (let [reachability      (:reachability analysis)
+        fit?              (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
+        ^js vectors-layer (-> layers :overlays :vectors)]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (cond->
             lipas-id (map-utils/select-sports-site! lipas-id)
-            fit? (map-utils/fit-to-extent!
-                  (-> layers :overlays :vectors .getSource .getExtent)))
+            fit? (map-utils/fit-to-extent! (-> vectors-layer .getSource .getExtent)))
         (map-utils/enable-population-hover!)
         (show-population! reachability)
         (show-schools! reachability)
@@ -557,7 +555,8 @@
 (defn update-diversity-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce sub-mode analysis]}]
-  (let [diversity (:diversity analysis)]
+  (let [diversity (:diversity analysis)
+        ^js layer (-> layers :overlays :diversity-area)]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
@@ -566,7 +565,7 @@
         (map-utils/enable-diversity-grid-hover!)
         (map-utils/enable-diversity-area-hover!)
         (map-utils/draw-diversity-areas! diversity)
-        (map-utils/fit-to-extent! (-> layers :overlays :diversity-area .getSource .getExtent)))))
+        (map-utils/fit-to-extent! (-> layer .getSource .getExtent)))))
 
 (defn update-analysis-mode!
   [map-ctx

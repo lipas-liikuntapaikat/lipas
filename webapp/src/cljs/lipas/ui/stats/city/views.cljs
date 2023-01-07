@@ -65,10 +65,10 @@
         labels       (<== [::subs/finance-labels])
         headers      (<== [::subs/finance-headers])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 4}
 
      [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h3"}
+      [mui/typography {:variant "h4"}
        (tr :stats/city-stats)]]
 
      ;; City selector
@@ -80,7 +80,7 @@
 
      ;; Headline
      [mui/grid {:item true :xs 12 :style {:margin-top "1em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h4"}
+      [mui/typography {:variant "h5"}
        (tr :stats/finance-stats)]]
 
      ;; Disclaimers
@@ -91,7 +91,7 @@
 
      ;; Selectors
      [mui/grid {:item true}
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 4}
 
        ;; Unit selector
        [mui/grid {:item true}
@@ -120,7 +120,7 @@
           :value     years
           :on-change #(==> [::events/select-finance-years %])}]]]]
 
-     [mui/grid {:container true :item true :xs 12 :spacing 16}
+     [mui/grid {:container true :item true :xs 12 :spacing 4}
 
       ;; Tabs for choosing between chart/table views
       [mui/grid {:item true}

@@ -41,7 +41,7 @@
         school-use?       (<== [::subs/school-use-filter])]
 
     ^{:key @ugly-forcer}
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 2}
 
      ;; Permissions filter
      (when logged-in?
@@ -124,7 +124,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/filter-area-m2)]
 
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 2}
 
        ;; Area min filter
        [mui/grid {:item true :xs 6}
@@ -149,7 +149,7 @@
       [mui/typography {:variant "caption"}
        (tr :actions/filter-construction-year)]
 
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 2}
 
        ;; Construction year min filter
        [mui/grid {:item true :xs 6}
@@ -193,12 +193,12 @@
              page  (gobj/get props "page")]
          (tr :search/pagination from to total page)))
      :count                 (or total 0)
-     :on-change-page        #(==> [::events/change-result-page %2])
+     :on-page-change        #(==> [::events/change-result-page %2])
 
      :page page}
     (when change-page-size?
       {:rows-per-page-options   (clj->js page-sizes)
-       :on-change-rows-per-page #(==> [::events/change-result-page-size
+       :on-rows-per-page-change #(==> [::events/change-result-page-size
                                        (-> %1 .-target .-value)])
        :label-rows-per-page     (tr :search/page-size)})
     (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
@@ -218,10 +218,10 @@
         page             (-> pagination-opts :page)]
 
     [mui/grid
-     {:container   true
-      :align-items "center"
-      :justify     "space-between"
-      :style       {:padding "0.5em"}}
+     {:container       true
+      :align-items     "center"
+      :justify-content "space-between"
+      :style           {:padding "0.5em"}}
 
      ;; Pagination
      [mui/grid {:item true}
@@ -302,7 +302,8 @@
         :page              page
         :page-size         page-size
         :page-sizes        page-sizes
-        :change-page-size? true}]]
+        :change-page-size? true
+        :style             {:padding-right 0 :padding-left 0}}]]
 
      (if in-progress?
        ;; Spinner
@@ -376,11 +377,11 @@
        [save-dialog])
 
      [mui/grid
-      {:container   true
-       :style       {:padding "0em 1em 0.5em 1em"}
-       :align-items "flex-start"
-       :justify     "flex-start"
-       :direction   "row"}
+      {:container       true
+       :style           {:padding "0em 1em 0.5em 1em"}
+       :align-items     "flex-start"
+       :justify-content "flex-start"
+       :direction       "row"}
 
       ;; Search input and button
       [mui/grid {:item true :xs 12}
@@ -411,7 +412,6 @@
       [mui/grid {:item true :xs 12}
        [lui/expansion-panel
         {:label            (tr :search/filters)
-         :label-color      "default"
          :style            {}
          :default-expanded false}
         [filters {:tr tr}]]]
@@ -419,12 +419,12 @@
       ;; Results count, clear filters button and result view selectors
       [mui/grid {:item true :xs 12}
        [mui/grid
-        {:container   true
-         :justify     "space-between"
-         :align-items "center"
-         :style       {:padding-top "0.5em" :padding-bottom "0.5em"}}
+        {:container       true
+         :justify-content "space-between"
+         :align-items     "center"
+         :style           {:padding-top "0.5em" :padding-bottom "0.5em"}}
         [mui/grid {:item true}
-         [mui/grid {:container true :align-items "center" :spacing 16}
+         [mui/grid {:container true :align-items "center" :spacing 2}
 
           ;; Results ocunt
           [mui/grid {:item true}

@@ -167,10 +167,11 @@
        (utils/index-by (comp :id :properties))))
 
 (defn add-marker!
-  [{:keys [layers] :as map-ctx} f style]
-  (.setStyle f style)
-  (-> layers :overlays :markers .getSource (.addFeature f))
-  map-ctx)
+  [{:keys [layers] :as map-ctx} ^js f style]
+  (let [^js marker-layer (-> layers :overlays :markers)]
+    (.setStyle f style)
+    (-> marker-layer .getSource (.addFeature f))
+    map-ctx))
 
 (defn show-address-marker!
   [map-ctx address]
@@ -178,11 +179,13 @@
     (add-marker! map-ctx f styles/blue-marker-style)))
 
 (defn clear-problems! [{:keys [layers] :as map-ctx}]
-  (-> layers :overlays :markers .getSource .clear)
+  (let [^js marker-layer (-> layers :overlays :markers)]
+    (-> marker-layer .getSource .clear))
   map-ctx)
 
 (defn clear-population! [{:keys [layers] :as map-ctx}]
-  (-> layers :overlays :population .getSource .clear)
+  (let [^js pop-layer (-> layers :overlays :population)]
+    (-> pop-layer .getSource .clear))
   map-ctx)
 
 (defn show-problems!
@@ -200,8 +203,8 @@
 
 (defn update-geoms!
   [{:keys [layers] :as map-ctx} geoms]
-  (let [vectors (-> layers :overlays :vectors)
-        source  (.getSource vectors)]
+  (let [^js vectors (-> layers :overlays :vectors)
+        source      (.getSource vectors)]
 
     ;; Remove existing features
     (.clear source)
@@ -229,7 +232,7 @@
 
 (defn select-features!
   [{:keys [interactions] :as map-ctx} features]
-  (let [select (-> interactions :select)]
+  (let [^js select (-> interactions :select)]
     (doto (.getFeatures select)
       (.clear)
       (.extend features))
@@ -237,16 +240,18 @@
 
 (defn unselect-features!
   [{:keys [interactions*] :as map-ctx}]
-  (-> interactions* :select .getFeatures .clear)
+  (let [^js select (:select interactions*)]
+    (-> select .getFeatures .clear))
   map-ctx)
 
 (defn clear-markers! [{:keys [layers] :as map-ctx}]
-  (-> layers :overlays :markers .getSource .clear)
+  (let [^js marker-layer (-> layers :overlays :markers)]
+    (-> marker-layer .getSource .clear))
   map-ctx)
 
 (defn- enable-hover!
   [{:keys [^js lmap interactions*] :as map-ctx} k]
-  (let [hover (k interactions*)]
+  (let [^js hover (k interactions*)]
     (-> hover .getFeatures .clear)
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions k] hover)))
@@ -287,29 +292,29 @@
 
 (defn enable-select!
   [{:keys [^js lmap interactions*] :as map-ctx}]
-  (let [select (:select interactions*)]
+  (let [^js select (:select interactions*)]
     (-> select .getFeatures .clear)
     (.addInteraction lmap select)
     (assoc-in map-ctx [:interactions :select] select)))
 
 (defn enable-diversity-area-select!
   [{:keys [^js lmap interactions*] :as map-ctx}]
-  (let [select (:diversity-area-select interactions*)]
+  (let [^js select (:diversity-area-select interactions*)]
     (-> select .getFeatures .clear)
     (.addInteraction lmap select)
     (assoc-in map-ctx [:interactions :select] select)))
 
 (defn find-feature-by-id
   [{:keys [layers]} fid]
-  (let [layer  (-> layers :overlays :vectors)
-        source (.getSource layer)]
+  (let [^js layer (-> layers :overlays :vectors)
+        source    (.getSource layer)]
     (.getFeatureById source fid)))
 
 (defn find-features-by-lipas-id
   [{:keys [layers]} lipas-id]
-  (let [layer  (-> layers :overlays :vectors)
-        source (.getSource layer)
-        res    #js[]]
+  (let [^js layer (-> layers :overlays :vectors)
+        source    (.getSource layer)
+        res       #js[]]
     (.forEachFeature source
                      (fn [f]
                        (when (-> (.getId f)
@@ -340,8 +345,9 @@
      map-ctx)))
 
 (defn fit-to-features! [map-ctx fs opts]
-  (let [extent (-> fs first .getGeometry .getExtent)]
-    (doseq [f (rest fs)]
+  (let [^js f      (first fs)
+        ^js extent (-> f .getGeometry .getExtent)]
+    (doseq [^js f (rest fs)]
       (extent/extend extent (-> f .getGeometry .getExtent)))
     (fit-to-extent! map-ctx extent opts)))
 
@@ -359,19 +365,22 @@
          (fit-to-features! fs fit-opts))
      (unselect-features! map-ctx))))
 
-(defn update-center! [{:keys [^js view] :as map-ctx}
-                      {:keys [lon lat] :as center}]
+(defn update-center!
+  [{:keys [^js view] :as map-ctx}
+   {:keys [lon lat] :as center}]
   (.setCenter view #js[lon lat])
   (assoc map-ctx :center center))
 
-(defn update-zoom! [{:keys [^js view] :as map-ctx} zoom]
+(defn update-zoom!
+  [{:keys [^js view] :as map-ctx} zoom]
   (.setZoom view zoom)
   (assoc map-ctx :zoom zoom))
 
-(defn show-feature! [{:keys [layers] :as map-ctx} geoJSON-feature]
-  (let [vectors (-> layers :overlays :edits)
-        source  (.getSource vectors)
-        fs      (-> geoJSON-feature clj->js ->ol-features)]
+(defn show-feature!
+  [{:keys [layers] :as map-ctx} geoJSON-feature]
+  (let [^js vectors (-> layers :overlays :edits)
+        source      (.getSource vectors)
+        fs          (-> geoJSON-feature clj->js ->ol-features)]
     (.addFeatures source fs)
     map-ctx))
 
@@ -388,8 +397,8 @@
 
 (defn refresh-select!
   [{:keys [interactions] :as map-ctx} lipas-id]
-  (let [select (-> interactions :select)
-        fs     (find-features-by-lipas-id map-ctx lipas-id)]
+  (let [^js select (-> interactions :select)
+        fs         (find-features-by-lipas-id map-ctx lipas-id)]
     (doto (.getFeatures select)
       (.clear)
       (.extend fs))
@@ -499,28 +508,26 @@
   [{:keys [layers] :as map-ctx}
    {:keys [buffer-geom center distance-km]}]
 
-  ;; Clear existing buffer
-  (-> layers :overlays :analysis .getSource .clear)
+  (let [^js analysis-layer (-> layers :overlays :analysis)]
 
-  (when-let [buff-feature
-             (case (-> buffer-geom :features first :geometry :type)
+    ;; Clear existing buffer
+    (-> analysis-layer .getSource .clear)
 
-               "Point"
-               (when (and (:lon center) (:lat center))
-                 (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
-                   (ol/Feature.
-                    #js{:geometry (Circle. center (* distance-km 1000))})))
+    (when-let [buff-feature
+               (case (-> buffer-geom :features first :geometry :type)
 
-               ("LineString" "Polygon")
-               (-> buffer-geom :features first clj->js ->ol-feature)
+                 "Point"
+                 (when (and (:lon center) (:lat center))
+                   (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
+                     (ol/Feature.
+                      #js{:geometry (Circle. center (* distance-km 1000))})))
 
-               nil)]
+                 ("LineString" "Polygon")
+                 (-> buffer-geom :features first clj->js ->ol-feature)
 
-    (-> layers
-        :overlays
-        :analysis
-        .getSource
-        (.addFeature buff-feature)))
+                 nil)]
+
+      (-> analysis-layer .getSource (.addFeature buff-feature))))
 
   map-ctx)
 
@@ -528,15 +535,17 @@
   [{:keys [layers] :as map-ctx}
    {:keys [areas results]}]
 
-  ;; Clear existing geoms
-  (-> layers :overlays :diversity-area .getSource .clear)
+  (let [^js area-layer (-> layers :overlays :diversity-area)]
 
-  (doseq [[id feat] areas]
-    (let [aggs (get-in results [id :aggs])
-          ol-feat (->ol-feature (clj->js (update feat :properties merge aggs)))]
+    ;; Clear existing geoms
+    (-> area-layer .getSource .clear)
 
-      #_(.setStyle ol-feat styles/diversity-aggs-style)
-      (-> layers :overlays :diversity-area .getSource (.addFeature ol-feat))))
+    (doseq [[id feat] areas]
+      (let [aggs (get-in results [id :aggs])
+            ol-feat (->ol-feature (clj->js (update feat :properties merge aggs)))]
+
+        #_(.setStyle ol-feat styles/diversity-aggs-style)
+        (-> area-layer .getSource (.addFeature ol-feat)))))
 
   map-ctx)
 

@@ -11,4 +11,4 @@
     :controllers
     [{:stop
       (fn [& params]
-        (==> [:lipas.ui..register.events/reset]))}]}])
+        (==> [:lipas.ui.register.events/reset-form]))}]}])
