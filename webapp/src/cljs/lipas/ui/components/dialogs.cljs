@@ -61,9 +61,10 @@
 (defn confirmation-dialog
   [{:keys [title message on-cancel on-decline decline-label
            cancel-label on-confirm confirm-label]}]
-  [mui/dialog {:open                    true
-               :disable-backdrop-click  true
-               :disable-escape-key-down true}
+  [mui/dialog
+   {:open                    true
+    :on-close                #()
+    :disable-escape-key-down true}
    [mui/dialog-title title]
    [mui/dialog-content
     [mui/typography message]]

@@ -97,7 +97,7 @@
         headers        (<== [::subs/headers])
         view           (<== [::subs/selected-view])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 4}
 
      ;; Headline
      [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
@@ -112,7 +112,7 @@
 
      [mui/grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 4}
 
        ;; Region selector
        [mui/grid {:item true :xs 12}
@@ -214,7 +214,7 @@
               :labels   labels}]]
 
            ;; Ranking chart
-           [mui/grid {:container true :item true :direction "column" :spacing 16}
+           [mui/grid {:container true :item true :direction "column" :spacing 4}
             [mui/grid {:item true :xs 12 :md 6}
              [charts/finance-ranking-chart
               {:data     ranking-data

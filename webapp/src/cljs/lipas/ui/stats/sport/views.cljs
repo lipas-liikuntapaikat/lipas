@@ -44,7 +44,7 @@
         labels   (<== [::subs/labels])
         headers  (<== [::subs/headers])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 4}
 
      ;; Headline
      [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
@@ -52,15 +52,16 @@
        (tr :stats/sports-stats)]]
 
      ;; Disclaimers
-     [common/disclaimer
-      {:label (tr :stats/disclaimer-headline)
-       :texts [(tr :stats/general-disclaimer-1)
-               (tr :stats/general-disclaimer-2)
-               (tr :stats/general-disclaimer-3)]}]
+     [mui/grid {:item true :xs 12}
+      [common/disclaimer
+       {:label (tr :stats/disclaimer-headline)
+        :texts [(tr :stats/general-disclaimer-1)
+                (tr :stats/general-disclaimer-2)
+                (tr :stats/general-disclaimer-3)]}]]
 
      [mui/grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 4}
 
        ;; Region selector
        [mui/grid {:item true :xs 12}
@@ -99,7 +100,7 @@
           :value     metric
           :on-change #(==> [::events/select-metric %])}]]]]
 
-     [mui/grid {:container true :item true :xs 12 :spacing 16}
+     [mui/grid {:container true :item true :xs 12 :spacing 4}
 
       ;; Tabs for choosing between chart/table views
       [mui/grid {:item true}

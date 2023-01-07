@@ -49,7 +49,7 @@
       :items       items
       :label-fn    (comp locale second)
       :value-fn    first
-      :spacing     8
+      :spacing     1
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
 
@@ -87,7 +87,7 @@
        [mui/tooltip {:title (tr :reports/tooltip)}
         (if (= btn-variant :fab)
           [mui/fab
-           {:variant "round" :color "default" :on-click toggle :size "small"}
+           {:variant "circular" :color "default" :on-click toggle :size "small"}
            [mui/icon "list_alt"]]
           [mui/button {:variant "contained" :color "secondary" :on-click toggle}
            (tr :reports/download-as-excel)])])
@@ -98,7 +98,10 @@
      ;; Dialog
      [mui/dialog {:open open? :full-width true :on-close toggle}
       [mui/dialog-title
-       [mui/grid {:container true :justify "space-between" :align-items "baseline"}
+       [mui/grid
+        {:container       true
+         :justify-content "space-between"
+         :align-items     "baseline"}
         [mui/grid {:item true}
          (tr :reports/select-fields)]
 
@@ -111,7 +114,7 @@
              [mui/icon "save"]]]])]]
 
       [mui/dialog-content
-       [mui/grid {:container true :spacing 8}
+       [mui/grid {:container true :spacing 1}
 
         ;; Saved reports
         (when saved-reports

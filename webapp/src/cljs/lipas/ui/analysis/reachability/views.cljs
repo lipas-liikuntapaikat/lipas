@@ -49,7 +49,7 @@
             [mui/icon {:color "secondary"} "filter_alt"]]]])]]
 
      ;; Tabs
-     [mui/grid {:item :true :xs 12}
+     [mui/grid {:item true :xs 12}
       [mui/tabs {:value          sports-sites-view
                  :indicatorColor "primary"
                  :variant        "fullWidth"
@@ -60,7 +60,7 @@
 
      ;; List view
      (when (= sports-sites-view "list")
-       [mui/grid {:item :true :xs 12}
+       [mui/grid {:item true :xs 12}
         (into [mui/list]
               (for [m sports-sites-list]
                 [mui/list-item
@@ -71,7 +71,7 @@
 
      ;; Chart view
      (when (= sports-sites-view "chart")
-       [mui/grid {:item :true :xs 12}
+       [mui/grid {:item true :xs 12}
         [charts/sports-sites-bar-chart
          {:data        sports-sites-chart-data
           :labels      labels
@@ -92,17 +92,18 @@
   [{:keys [tr]}]
   (let [profile (<== [::subs/selected-travel-profile])
         metric  (<== [::subs/selected-travel-metric])]
-    [mui/grid {:container true :spacing 8 :align-items "center"}
+    [mui/grid {:container true :spacing 2 :align-items "center"}
 
      ;; Direct
      [mui/grid {:item true}
       [mui/tooltip
        {:title (tr :analysis/direct)}
-       [mui/icon-button
-        {:on-click #(==> [::events/select-travel-profile :direct])
-         :disabled (= metric :travel-time)
-         :color    (if (= profile :direct) "secondary" "default")}
-        [:> MapMarkerDistance]]]]
+       [:span
+        [mui/icon-button
+         {:on-click #(==> [::events/select-travel-profile :direct])
+          :disabled (= metric :travel-time)
+          :color    (if (= profile :direct) "secondary" "default")}
+         [:> MapMarkerDistance]]]]]
 
      ;; Car
      [mui/grid {:item true}
@@ -356,7 +357,7 @@
        [lui/expansion-panel
         {:label            (tr :analysis/settings-zones)
          :default-expanded true}
-        [mui/grid {:container true :spacing 8}
+        [mui/grid {:container true :spacing 1}
 
          ;; Helper text
          [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
@@ -382,7 +383,7 @@
 
     [mui/grid
      {:container true
-      :spacing   16
+      :spacing   2
       :style     {:padding (if (empty? selected-site) "1em" "0.5em")}}
 
      ;; Helper text
@@ -391,7 +392,7 @@
         {:item        true :xs 12
          :container   true
          :align-items "center"
-         :spacing     8}
+         :spacing     1}
 
         [mui/grid {:item true}
          [mui/typography

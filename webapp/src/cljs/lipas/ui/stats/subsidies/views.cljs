@@ -58,7 +58,7 @@
         issuers      (<== [::subs/selected-issuers])
         view         (<== [::subs/selected-view])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 4}
 
      ;; Headline
      [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
@@ -66,15 +66,16 @@
        (tr :stats/subsidies)]]
 
      ;; Disclaimers
-     [common/disclaimer
-      {:label (tr :stats/disclaimer-headline)
-       :texts [(tr :stats/general-disclaimer-1)
-               (tr :stats/general-disclaimer-2)
-               (tr :stats/general-disclaimer-3)]}]
+     [mui/grid {:item true}
+      [common/disclaimer
+       {:label (tr :stats/disclaimer-headline)
+        :texts [(tr :stats/general-disclaimer-1)
+                (tr :stats/general-disclaimer-2)
+                (tr :stats/general-disclaimer-3)]}]]
 
      [mui/grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 16}
+      [mui/grid {:container true :spacing 4}
 
        ;; Region filter
        [mui/grid {:item true :xs 12}

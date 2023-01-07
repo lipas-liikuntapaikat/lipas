@@ -1,6 +1,7 @@
 (ns lipas.ui.components.text-fields
   (:require
    [clojure.reader :refer [read-string]]
+   [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :refer [trim] :as string]
    [goog.functions :as gfun]
@@ -53,6 +54,7 @@
                      patched-textarea
                      patched-input)
         props      (-> (dissoc props :read-only? :defer-ms)
+                       (set/rename-keys {:rows :min-rows})
                        (as-> $ (if (= "number" type) (dissoc $ :type) $))
                        (assoc :error (error? spec value required))
                        (assoc :Input-props

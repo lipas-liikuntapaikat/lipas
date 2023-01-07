@@ -268,6 +268,7 @@
            mui/headline-aleo
            {:display         "inline"
             :font-size       "1em"
+            :color           "#ffffff"
             :text-transform  "none"
             :text-decoration "none"})}
          (tr :menu/jyu)]
@@ -284,6 +285,7 @@
           mui/headline-aleo
           {:display         "inline"
            :font-size       "1em"
+           :color           "#ffffff"
            :text-transform  "none"
            :text-decoration "none"})}
         (tr :menu/headline)]
@@ -301,6 +303,7 @@
             mui/headline-aleo
             {:display         "inline"
              :font-size       "1em"
+             :color           "#ffffff"
              :text-transform  "none"
              :text-decoration "none"})}
           (:text sub-page)])]

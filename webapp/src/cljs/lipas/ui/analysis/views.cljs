@@ -10,16 +10,22 @@
 
 (defn view []
   (let [selected-tool (<== [::subs/selected-tool])]
-    [mui/grid {:container true :style {:padding "1em"}}
+    [mui/grid
+     {:container true
+      :spacing   2
+      :style     {:padding "1em"}}
 
      ;; Header and close button
-     [mui/grid {:item true :container true :justify "space-between"}
+     [mui/grid
+      {:item      true
+       :container true
+       :justify   "space-between"}
       [mui/grid {:item true :xs 10}
        [mui/tabs
-        {:value selected-tool
-         :on-change #(==> [::events/select-tool %2])
-         :variant "fullWidth"
-         :centered true
+        {:value          selected-tool
+         :on-change      #(==> [::events/select-tool %2])
+         :variant        "fullWidth"
+         :centered       true
          :indicatorColor "primary"}
         [mui/tab {:value "reachability" :label "Saavutettavuus (beta)"}]
         [mui/tab {:value "diversity" :label "Monipuolisuus (beta)"}]]]
@@ -30,4 +36,4 @@
      [mui/grid {:item true :xs 12}
       (condp = selected-tool
         "reachability" [reachability/analysis-view]
-        "diversity" [diversity/view])]]))
+        "diversity"    [diversity/view])]]))

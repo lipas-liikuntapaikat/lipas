@@ -13,26 +13,29 @@
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [<== ==>] :as utils]))
 
-(defn clear-edits! [{:keys [layers] :as map-ctx}]
-  (-> layers :overlays :edits .getSource .clear)
-  map-ctx)
+(defn clear-edits!
+  [{:keys [layers] :as map-ctx}]
+  (let [^js layer  (-> layers :overlays :edits)]
+    (-> layer .getSource .clear)
+    map-ctx))
 
 ;; The snap interaction must be added after the Modify and Draw
 ;; interactions in order for its map browser event handlers to be
 ;; fired first. Its handlers are responsible of doing the snapping.
 (defn enable-snapping!
   [{:keys [^js lmap layers] :as map-ctx}]
-  (let [source (-> layers :overlays :edits .getSource)
-        snap   (Snap. #js{:source source :pixelTolerance 5})]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        snap      (Snap. #js{:source source :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
 (defn enable-delete!
   [{:keys [^js lmap layers] :as map-ctx} on-delete]
-  (let [layer  (-> layers :overlays :edits)
-        delete (Select. #js{:layers #js[layer]
-                            :style  styles/hover-style})
-        source (.getSource layer)]
+  (let [^js layer (-> layers :overlays :edits)
+        delete    (Select. #js{:layers #js[layer]
+                               :style  styles/hover-style})
+        source    (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
          (fn [e]
@@ -51,10 +54,10 @@
 
 (defn enable-splitting!
   [{:keys [^js lmap layers] :as map-ctx} on-modify]
-  (let [layer  (-> layers :overlays :edits)
-        split  (Select. #js{:layers #js[layer]
-                            :style  styles/hover-style})
-        source (.getSource layer)]
+  (let [^js layer (-> layers :overlays :edits)
+        split     (Select. #js{:layers #js[layer]
+                               :style  styles/hover-style})
+        source    (.getSource layer)]
     (.addInteraction lmap split)
     (.on split "select"
          (fn [e]
@@ -75,7 +78,7 @@
 
 (defn start-drawing-hole!
   [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
-  (let [layer     (-> layers :overlays :edits)
+  (let [^js layer (-> layers :overlays :edits)
         draw-hole (DrawHole. #js{:layers #js[layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
@@ -86,22 +89,30 @@
 
 (defn start-editing!
   [{:keys [^js lmap layers] :as map-ctx} geoJSON-feature on-modifyend]
-  (let [layer    (-> layers :overlays :edits)
-        source   (.getSource layer)
-        _        (.clear source)
-        features (-> geoJSON-feature clj->js map-utils/->ol-features)
-        _        (.addFeatures source features)
-        modify   (Modify. #js{:source source})
-        hover    (Select.
-                  #js{:layers    #js[layer]
-                      :style     #js[styles/editing-hover-style styles/vertices-style]
-                      :condition events-condition/pointerMove})]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoJSON-feature clj->js map-utils/->ol-features)
+        _         (.addFeatures source features)
+        modify    (Modify. #js{:source source})
+        hover     (Select.
+                   #js{:layers    #js[layer]
+                       :style     #js[styles/editing-hover-style styles/vertices-style]
+                       :condition (fn [^js evt]
+                                    ;; Without this check modify
+                                    ;; control doesn't work properly
+                                    ;; and linestrings / polygons
+                                    ;; can't be edited
+                                    (if (.-dragging evt)
+                                      false
+                                      (events-condition/pointerMove evt)))})]
 
-    (.addInteraction lmap hover)
     (.addInteraction lmap modify)
+    (.addInteraction lmap hover)
 
     (.on modify "modifyend"
          (fn [_]
+
            (let [fixed (-> source .getFeatures map-utils/fix-features)]
 
              (.clear source)
@@ -120,9 +131,9 @@
 
 (defn start-editing-site!
   [{:keys [layers] :as map-ctx} lipas-id geoms on-modifyend]
-  (let [layer    (-> layers :overlays :vectors)
-        source   (.getSource layer)
-        features (map-utils/find-features-by-lipas-id map-ctx lipas-id)]
+  (let [^js layer (-> layers :overlays :vectors)
+        source    (.getSource layer)
+        features  (map-utils/find-features-by-lipas-id map-ctx lipas-id)]
     ;; Remove from original source so we won't display duplicate when
     ;; feature is added to :edits layer.
     (.forEach features
@@ -133,18 +144,18 @@
 (defn start-drawing!
   [{:keys [^js lmap layers]
     :as   map-ctx} geom-type on-draw-end]
-  (let [layer  (-> layers :overlays :edits)
-        source (.getSource layer)
-        draw   (Draw. #js{:snapTolerance 0 :source source :type geom-type})]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        draw      (Draw. #js{:snapTolerance 0 :source source :type geom-type})]
 
     (.addInteraction lmap draw)
     (.on draw "drawend"
          (fn [e]
-           (let [f        (gobj/get e "feature")
-                 _        (.setId f (str (gensym map-utils/temp-fid-prefix)))
-                 fs       (.getFeatures source)
-                 _        (.push fs f)
-                 fixed    (map-utils/fix-features fs)]
+           (let [f     (gobj/get e "feature")
+                 _     (.setId f (str (gensym map-utils/temp-fid-prefix)))
+                 fs    (.getFeatures source)
+                 _     (.push fs f)
+                 fixed (map-utils/fix-features fs)]
 
              (.clear source)
              (.addFeatures source fixed)
@@ -162,8 +173,9 @@
 (defn refresh-edits!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id geoms]}]
-  (let [source   (-> layers :overlays :edits .getSource)
-        features (-> geoms clj->js map-utils/->ol-features)]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        features  (-> geoms clj->js map-utils/->ol-features)]
 
     ;; Remove existing features
     (doseq [f (.getFeatures source)]
@@ -212,8 +224,8 @@
 
 (defn continue-editing!
   [{:keys [layers] :as map-ctx} on-modifyend]
-  (let [layer (-> layers :overlays :edits)
-        fs    (-> layer .getSource .getFeatures map-utils/->geoJSON-clj)]
+  (let [^js layer (-> layers :overlays :edits)
+        fs        (-> layer .getSource .getFeatures map-utils/->geoJSON-clj)]
     (-> map-ctx
         clear-edits!
         (start-editing! fs on-modifyend))))
@@ -221,8 +233,9 @@
 (defn undo-edits!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id undo-geoms]}]
-  (let [source   (-> layers :overlays :edits .getSource)
-        features (-> undo-geoms clj->js map-utils/->ol-features)]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        features  (-> undo-geoms clj->js map-utils/->ol-features)]
 
     (doseq [f (.getFeatures source)]
       (.removeFeature source f))

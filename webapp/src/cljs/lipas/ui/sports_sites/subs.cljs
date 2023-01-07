@@ -73,7 +73,7 @@
                :lipas/sports-site)]
     (as-> sports-site $
       (utils/make-saveable $)
-      ;; (do (s/explain spec $) $)
+      (do (tap> (with-out-str (s/explain spec $))) $)
       (s/valid? spec $))))
 
 (re-frame/reg-sub
@@ -310,7 +310,7 @@
            :neighborhood (-> latest :location :city :neighborhood)}}
 
          :building (:building latest)}
-        
+
         (when (#{3110 3130} (:type-code type))
           (let [get-pool-type     #(get-in pool-types [% locale])
                 get-accessibility #(get-in pool-accessibility [% locale])]

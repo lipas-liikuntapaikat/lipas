@@ -102,10 +102,10 @@
 
         experimental-features? (<== [::subs/experimental-features?])]
 
-    [mui/grid {:container true :spacing 8 :style {:padding 8}}
+    [mui/grid {:container true :spacing 1 :style {:padding "0.5em"}}
 
      [mui/grid {:item true :xs 12 :lg 6}
-      [mui/grid {:container true :spacing 8}
+      [mui/grid {:container true :spacing 1}
 
        ;; Profile card
        [mui/grid {:item true :xs 12}
@@ -221,7 +221,7 @@
               :on-change #(==> [::events/select-saved-search %])}]]]])]]
 
      [mui/grid {:item true :xs 12 :lg 6}
-      [mui/grid {:container true :spacing 8}
+      [mui/grid {:container true :spacing 1}
 
        ;; Promo card
        [mui/grid {:item true :xs 12}
@@ -237,7 +237,7 @@
             :href    (str "/pdf/tiedote_" (name (tr)) ".pdf")
             :target  "_blank"}
            (tr :user/promo1-text)]
-          
+
           #_[:ul {:dense true}
            [:li "Liikuntapaikat, kaikki yhteensä"]
            [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]

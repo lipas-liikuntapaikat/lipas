@@ -42,8 +42,9 @@
                       (dissoc :active?)
                       (merge {:on-click on-click}))]
     [mui/tooltip {:title (or tooltip "") :placement "top"}
-     [mui/fab btn-props
-      [mui/icon "edit_icon"]]]))
+     [:span
+      [mui/fab btn-props
+       [mui/icon "edit_icon"]]]]))
 
 (defn save-button [{:keys [on-click tooltip disabled disabled-tooltip color]
                     :or   {color "secondary"} :as props}]
@@ -61,46 +62,50 @@
 
 (defn publish-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title "" :placement "top"}
-   [mui/button
-    (merge props {:variant "contained" :on-click on-click :color "secondary"})
-    tooltip
-    [mui/icon {:style {:margin-left "0.25em"}}
-     "cloud_upload"]]])
+   [:span
+    [mui/button
+     (merge props {:variant "contained" :on-click on-click :color "secondary"})
+     tooltip
+     [mui/icon {:style {:margin-left "0.25em"}}
+      "cloud_upload"]]]])
 
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/fab (merge props {:on-click on-click :size "small"})
-    [mui/icon {:class "material-icons-outlined"} "close"]]])
+   [:span
+    [mui/fab (merge props {:on-click on-click :size "small"})
+     [mui/icon {:class "material-icons-outlined"} "close"]]]])
 
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
-   [mui/fab (merge props {:on-click on-click :size "small"})
-    [mui/icon "delete"]]])
+   [:span
+    [mui/fab (merge props {:on-click on-click :size "small"})
+     [mui/icon "delete"]]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
   (r/with-let [timeout  10000
                clicked? (r/atom false)
                timeout* (r/atom nil)]
 
-    [:span
+    [:<>
      [mui/tooltip
       {:title     (or tooltip "")
        :placement "top"}
-      [mui/icon-button
-       {:on-click #(if @clicked?
-                     (do
-                       (js/clearTimeout @timeout*)
-                       (reset! clicked? false)
-                       (on-delete %))
-                     (do
-                       (reset! timeout*
-                               (js/setTimeout
-                                (fn []
-                                  (reset! clicked? false)) timeout))
-                       (reset! clicked? true)))}
-       (if @clicked?
-         [mui/icon "delete_forever"]
-         [mui/icon "delete"])]]
+      [:span
+       [mui/icon-button
+        {:on-click #(if @clicked?
+                      (do
+                        (js/clearTimeout @timeout*)
+                        (reset! clicked? false)
+                        (on-delete %))
+                      (do
+                        (reset! timeout*
+                                (js/setTimeout
+                                 (fn []
+                                   (reset! clicked? false)) timeout))
+                        (reset! clicked? true)))}
+        (if @clicked?
+          [mui/icon "delete_forever"]
+          [mui/icon "delete"])]]]
      (when @clicked?
        [mui/typography {:style {:display "inline"} :color :error}
         confirm-tooltip])]))

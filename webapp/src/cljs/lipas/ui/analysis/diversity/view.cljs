@@ -30,7 +30,7 @@
         headers    (<== [::subs/analysis-candidates-table-headers])
         loading?   (<== [::subs/loading?])]
 
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 2}
 
      [mui/grid {:item true :xs 12}
       [lui/expansion-panel {:label            "Info"
@@ -68,7 +68,7 @@
                              (-> % .-target .-files)
                              geom-type])}]]
         [mui/grid {:item true}
-         [mui/typography {:inline true} (str (tr :help/headline) ":")]
+         [mui/typography {:display "inline"} (str (tr :help/headline) ":")]
          [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
          [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
@@ -172,7 +172,7 @@
         winter-enabled?   (<== [::subs/seasonality-enabled? "winter"])
         all-year-enabled? (<== [::subs/seasonality-enabled? "all-year"])]
 
-    [mui/grid {:container true :spacing 8}
+    [mui/grid {:container true :spacing 1}
 
      ;; Helper text
      [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
@@ -293,7 +293,7 @@
 
 (defn export []
   (let [selected-format "geojson"]
-    [mui/grid {:container true :spacing 16}
+    [mui/grid {:container true :spacing 2}
 
      ;; Format selector
      [mui/grid {:item true :xs 12}
@@ -378,7 +378,9 @@
                     :population-age-65-   (str "65" (tr :duration/years-short) "-")
                     :name                 "Nimi"}]
 
-    [:> rc/ResponsiveContainer {:width "100%" :height (+ 100 (* 50 (count chart-data)))}
+    [:> rc/ResponsiveContainer
+     {:width "100%"
+      :height (+ 100 (* 50 (count chart-data)))}
      [:> rc/BarChart
       {:data         chart-data
        :layout       "vertical"
@@ -486,7 +488,7 @@
      [lui/expansion-panel
       {:label            "Kuvaajat"
        :default-expanded true}
-      [mui/grid {:container true :spacing 24}
+      [mui/grid {:container true :spacing 2}
        [mui/grid {:item true :xs 12}
         [areas-selector]]
        [mui/grid {:item true :xs 12}
@@ -511,31 +513,33 @@
   (let [tr                 (<== [:lipas.ui.subs/translator])
         selected-tab       (<== [::subs/selected-analysis-tab])
         any-analysis-done? (<== [::subs/any-analysis-done?])]
-    [:<>
-     [mui/grid {:container true :spacing 16}
 
-      #_[mui/grid {:item true :xs 12}
-       [overlay-switches]]
+    [mui/grid {:container true :spacing 2}
 
-      [mui/grid {:item true :xs 12}
-       [mui/tabs {:value      selected-tab
-                  :on-change  #(==> [::events/select-analysis-tab %2])
-                  :style      {:margin-bottom "1em" :margin-top "1em"}
-                  :text-color "secondary"}
-        [mui/tab {:label "Analyysialueet" :value "analysis-area"}]
-        [mui/tab {:label (tr :analysis/results) :value "results"}]
-        [mui/tab {:label (tr :analysis/settings) :value "settings"}]]]
+     #_[mui/grid {:item true :xs 12}
+        [overlay-switches]]
 
-      [mui/grid {:item true :xs 12}
-       (when (= selected-tab "analysis-area")
-         [analysis-area-selector])
+     [mui/grid {:item true :xs 12}
+      [mui/tabs {:value      selected-tab
+                 :on-change  #(==> [::events/select-analysis-tab %2])
+                 :variant    "fullWidth"
+                 :centered   true
+                 :text-color "secondary"}
+       [mui/tab {:label "Analyysialueet" :value "analysis-area"}]
+       [mui/tab {:label (tr :analysis/results) :value "results"}]
+       [mui/tab {:label (tr :analysis/settings) :value "settings"}]]]
 
-       (when (= selected-tab "settings")
-         [settings])
+     [mui/grid {:item true :xs 12}
+      (when (= selected-tab "analysis-area")
+        [analysis-area-selector])
 
-       (when (= selected-tab "results")
-         (if any-analysis-done?
-           [results]
-           [mui/typography "Analyysejä ei ole tehty."]))]]]))
+      (when (= selected-tab "settings")
+        [settings])
+
+      (when (= selected-tab "results")
+        (if any-analysis-done?
+          [results]
+          [mui/typography "Analyysejä ei ole tehty."]))]
+     [mui/grid {:item true :xs 12 :style {:height "3em"}}]]))
 
 ;; TODO translations
