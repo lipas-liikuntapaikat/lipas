@@ -6,6 +6,9 @@
 /.cljs_rhino_repl
 /.lein-env
 /.lein-failures
+/.clj-kondo/*
+!/.clj-kondo/config.edn
 /node_modules
 /dist
+/.lsp
 out
