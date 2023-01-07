@@ -6,3 +6,5 @@
 *.jar
 /geoserver/*
 !/geoserver/README.md
+/.clj-kondo
+/.lsp
