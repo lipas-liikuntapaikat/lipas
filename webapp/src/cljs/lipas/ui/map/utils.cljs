@@ -11,7 +11,7 @@
    ["@turf/line-split$default" :as turf-line-split]
    ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
    ["@turf/truncate$default" :as turf-truncate]
-   ["ol" :as ol]
+   ["ol/Feature$default" :as Feature]
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
    ["ol/format/GeoJSON$default" :as GeoJSON]
@@ -519,7 +519,7 @@
                  "Point"
                  (when (and (:lon center) (:lat center))
                    (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
-                     (ol/Feature.
+                     (Feature.
                       #js{:geometry (Circle. center (* distance-km 1000))})))
 
                  ("LineString" "Polygon")

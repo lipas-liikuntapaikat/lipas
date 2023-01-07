@@ -1,13 +1,88 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
   (:require
-   [goog.object :as gobj]
-   ["@material-ui/core" :as mui]
-   [clojure.string :as s]
-   [reagent.core :as r]
+   ["@material-ui/core/Accordion$default" :as Accordion]
+   ["@material-ui/core/AccordionDetails$default" :as AccordionDetails]
+   ["@material-ui/core/AccordionSummary$default" :as AccordionSummary]
+   ["@material-ui/core/AppBar$default" :as AppBar]
+   ["@material-ui/core/Avatar$default" :as Avatar]
+   ["@material-ui/core/Button$default" :as Button]
+   ["@material-ui/core/Card$default" :as Card]
+   ["@material-ui/core/CardActions$default" :as CardActions]
+   ["@material-ui/core/CardContent$default" :as CardContent]
+   ["@material-ui/core/CardHeader$default" :as CardHeader]
+   ["@material-ui/core/Checkbox$default" :as Checkbox]
+   ["@material-ui/core/Chip$default" :as Chip]
+   ["@material-ui/core/CircularProgress$default" :as CircularProgress]
+   ["@material-ui/core/CssBaseline$default" :as CssBaseline]
+   ["@material-ui/core/Dialog$default" :as Dialog]
+   ["@material-ui/core/DialogActions$default" :as DialogActions]
+   ["@material-ui/core/DialogContent$default" :as DialogContent]
+   ["@material-ui/core/DialogTitle$default" :as DialogTitle]
+   ["@material-ui/core/Divider$default" :as Divider]
+   ["@material-ui/core/Drawer$default" :as Drawer]
+   ["@material-ui/core/Fab$default" :as Fab]
+   ["@material-ui/core/FormControl$default" :as FormControl]
+   ["@material-ui/core/FormControlLabel$default" :as FormControlLabel]
+   ["@material-ui/core/FormGroup$default" :as FormGroup]
+   ["@material-ui/core/FormHelperText$default" :as FormHelperText]
+   ["@material-ui/core/Grid$default" :as Grid]
+   ["@material-ui/core/Hidden$default" :as Hidden]
+   ["@material-ui/core/Icon$default" :as Icon]
+   ["@material-ui/core/IconButton$default" :as IconButton]
+   ["@material-ui/core/InputAdornment$default" :as InputAdornment]
+   ["@material-ui/core/InputLabel$default" :as InputLabel]
+   ["@material-ui/core/Link$default" :as Link]
+   ["@material-ui/core/List$default" :as List]
+   ["@material-ui/core/ListItem$default" :as ListItem]
+   ["@material-ui/core/ListItemIcon$default" :as ListItemIcon]
+   ["@material-ui/core/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+   ["@material-ui/core/ListItemText$default" :as ListItemText]
+   ["@material-ui/core/Menu$default" :as Menu]
+   ["@material-ui/core/MenuItem$default" :as MenuItem]
+   ["@material-ui/core/Paper$default" :as Paper]
+   ["@material-ui/core/Popper$default" :as Popper]
+   ["@material-ui/core/Select$default" :as Select]
+   ["@material-ui/core/Slide$default" :as Slide]
+   ["@material-ui/core/Snackbar$default" :as Snackbar]
+   ["@material-ui/core/SnackbarContent$default" :as SnackbarContent]
+   ["@material-ui/core/Step$default" :as Step]
+   ["@material-ui/core/StepContent$default" :as StepContent]
+   ["@material-ui/core/StepLabel$default" :as StepLabel]
+   ["@material-ui/core/Stepper$default" :as Stepper]
+   ["@material-ui/core/SvgIcon$default" :as SvgIcon]
+   ["@material-ui/core/SwipeableDrawer$default" :as SwipeableDrawer]
+   ["@material-ui/core/Switch$default" :as Switch]
+   ["@material-ui/core/Tab$default" :as Tab]
+   ["@material-ui/core/Table$default" :as Table]
+   ["@material-ui/core/TableBody$default" :as TableBody]
+   ["@material-ui/core/TableCell$default" :as TableCell]
+   ["@material-ui/core/TableHead$default" :as TableHead]
+   ["@material-ui/core/TablePagination$default" :as TablePagination]
+   ["@material-ui/core/TableRow$default" :as TableRow]
+   ["@material-ui/core/TableSortLabel$default" :as TableSortLabel]
+   ["@material-ui/core/Tabs$default" :as Tabs]
+   ["@material-ui/core/TextField$default" :as TextField]
+   ["@material-ui/core/Toolbar$default" :as Toolbar]
+   ["@material-ui/core/Tooltip$default" :as Tooltip]
+   ["@material-ui/core/Typography$default" :as Typography]
+   ["@material-ui/core/styles" :refer [createTheme ThemeProvider]]
+   ["@material-ui/core/withWidth$default" :as withWidth]
+   #_["@material-ui/core/CardMedia$default" :as CardMedia]
+   #_["@material-ui/core/AccordionActions$default" :as AccordionActions]
+   #_["@material-ui/core/Fade$default" :as Fade]
+   #_["@material-ui/core/FormLabel$default" :as FormLabel]
+   #_["@material-ui/core/Grow$default" :as Grow]
+   #_["@material-ui/core/MenuList$default" :as MenuList]
+   #_["@material-ui/core/Radio$default" :as Radio]
+   #_["@material-ui/core/RadioGroup$default" :as RadioGroup]
+   #_["@material-ui/core/Zoom$default" :as Zoom]
    [camel-snake-kebab.core :refer [convert-case]]
    [camel-snake-kebab.extras :refer [transform-keys]]
-   [lipas.utils :as utils]))
+   [clojure.string :as s]
+   [goog.object :as gobj]
+   [lipas.utils :as utils]
+   [reagent.core :as r]))
 
 (defn keyword->PasCamelCase
   "Converts keywords to PascalCase or camelCase
@@ -19,13 +94,11 @@
   (= (keyword->PasCamelCase :kissa-metso) :kissaMetso)
   (= (keyword->PasCamelCase :Kissa-metso) :KissaMetso))
 
-(def create-mui-theme (gobj/get mui "createTheme"))
-
 (defn ->mui-theme [opts]
   (->> opts
        (transform-keys keyword->PasCamelCase)
        clj->js
-       create-mui-theme))
+       createTheme))
 
 (def primary "#002957")
 (def primary2 "rgb(0, 41, 87, 0.5)")
@@ -109,83 +182,80 @@
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))
 
-(defn mui->reagent [mui-name]
-  (r/adapt-react-class (gobj/get mui mui-name)))
+(def app-bar (r/adapt-react-class AppBar))
+(def avatar (r/adapt-react-class Avatar))
+(def button (r/adapt-react-class Button))
+(def card (r/adapt-react-class Card))
+(def card-actions (r/adapt-react-class CardActions))
+(def card-content (r/adapt-react-class CardContent))
+(def card-header (r/adapt-react-class CardHeader))
+#_(def card-media (r/adapt-react-class CardMedia))
+(def checkbox (r/adapt-react-class Checkbox))
+(def chip (r/adapt-react-class Chip))
+(def circular-progress (r/adapt-react-class CircularProgress))
+(def css-baseline (r/adapt-react-class CssBaseline))
+(def dialog (r/adapt-react-class Dialog))
+(def dialog-actions (r/adapt-react-class DialogActions))
+(def dialog-content (r/adapt-react-class DialogContent))
+(def dialog-title (r/adapt-react-class DialogTitle))
+(def divider (r/adapt-react-class Divider))
+(def drawer (r/adapt-react-class Drawer))
+(def expansion-panel (r/adapt-react-class Accordion))
+#_(def expansion-panel-actions (r/adapt-react-class AccordionActions))
+(def expansion-panel-details (r/adapt-react-class AccordionDetails))
+(def expansion-panel-summary (r/adapt-react-class AccordionSummary))
+(def fab (r/adapt-react-class Fab))
+#_(def fade (r/adapt-react-class Fade))
+(def form-control (r/adapt-react-class FormControl))
+(def form-control-label (r/adapt-react-class FormControlLabel))
+(def form-group (r/adapt-react-class FormGroup))
+(def form-helper-text (r/adapt-react-class FormHelperText))
+#_(def form-label (r/adapt-react-class FormLabel))
+(def grid (r/adapt-react-class Grid))
+#_(def grow (r/adapt-react-class Grow))
+(def hidden (r/adapt-react-class Hidden))
+(def icon (r/adapt-react-class Icon))
+(def icon-button (r/adapt-react-class IconButton))
+(def input-adornment (r/adapt-react-class InputAdornment))
+(def input-label (r/adapt-react-class InputLabel))
+(def link (r/adapt-react-class Link))
+(def list (r/adapt-react-class List))
+(def list-item (r/adapt-react-class ListItem))
+(def list-item-icon (r/adapt-react-class ListItemIcon))
+(def list-item-secondary-action (r/adapt-react-class ListItemSecondaryAction))
+(def list-item-text (r/adapt-react-class ListItemText))
+(def menu (r/adapt-react-class Menu))
+(def menu-item (r/adapt-react-class MenuItem))
+#_(def menu-list (r/adapt-react-class MenuList))
+(def mui-theme-provider (r/adapt-react-class ThemeProvider))
+(def paper (r/adapt-react-class Paper))
+(def popper (r/adapt-react-class Popper))
+#_(def radio (r/adapt-react-class Radio))
+#_(def radio-group (r/adapt-react-class RadioGroup))
+(def select (r/adapt-react-class Select))
+(def slide (r/adapt-react-class Slide))
+(def snackbar (r/adapt-react-class Snackbar))
+(def snackbar-content (r/adapt-react-class SnackbarContent))
+(def step (r/adapt-react-class Step))
+(def step-content (r/adapt-react-class StepContent))
+(def step-label (r/adapt-react-class StepLabel))
+(def stepper (r/adapt-react-class Stepper))
+(def svg-icon (r/adapt-react-class SvgIcon))
+(def swipeable-drawer (r/adapt-react-class SwipeableDrawer))
+(def switch (r/adapt-react-class Switch))
+(def tab (r/adapt-react-class Tab))
+(def table (r/adapt-react-class Table))
+(def table-body (r/adapt-react-class TableBody))
+(def table-cell (r/adapt-react-class TableCell))
+(def table-head (r/adapt-react-class TableHead))
+(def table-pagination (r/adapt-react-class TablePagination))
+(def table-row (r/adapt-react-class TableRow))
+(def table-sort-label (r/adapt-react-class TableSortLabel))
+(def tabs (r/adapt-react-class Tabs))
+(def text-field (r/adapt-react-class TextField))
+(def tool-bar (r/adapt-react-class Toolbar))
+(def tooltip (r/adapt-react-class Tooltip))
+(def typography (r/adapt-react-class Typography))
+#_(def zoom (r/adapt-react-class Zoom))
 
-(def app-bar (mui->reagent "AppBar"))
-(def avatar (mui->reagent "Avatar"))
-(def button (mui->reagent "Button"))
-(def card (mui->reagent "Card"))
-(def card-actions (mui->reagent "CardActions"))
-(def card-content (mui->reagent "CardContent"))
-(def card-header (mui->reagent "CardHeader"))
-(def card-media (mui->reagent "CardMedia"))
-(def checkbox (mui->reagent "Checkbox"))
-(def chip (mui->reagent "Chip"))
-(def circular-progress (mui->reagent "CircularProgress"))
-(def css-baseline (mui->reagent "CssBaseline"))
-(def dialog (mui->reagent "Dialog"))
-(def dialog-actions (mui->reagent "DialogActions"))
-(def dialog-content (mui->reagent "DialogContent"))
-(def dialog-title (mui->reagent "DialogTitle"))
-(def divider (mui->reagent "Divider"))
-(def drawer (mui->reagent "Drawer"))
-(def expansion-panel (mui->reagent "Accordion"))
-(def expansion-panel-actions (mui->reagent "AccordionActions"))
-(def expansion-panel-details (mui->reagent "AccordionDetails"))
-(def expansion-panel-summary (mui->reagent "AccordionSummary"))
-(def fab (mui->reagent "Fab"))
-(def fade (mui->reagent "Fade"))
-(def form-control (mui->reagent "FormControl"))
-(def form-control-label (mui->reagent "FormControlLabel"))
-(def form-group (mui->reagent "FormGroup"))
-(def form-helper-text (mui->reagent "FormHelperText"))
-(def form-label (mui->reagent "FormLabel"))
-(def grid (mui->reagent "Grid"))
-(def grow (mui->reagent "Grow"))
-(def hidden (mui->reagent "Hidden"))
-(def icon (mui->reagent "Icon"))
-(def icon-button (mui->reagent "IconButton"))
-(def input-adornment (mui->reagent "InputAdornment"))
-(def input-label (mui->reagent "InputLabel"))
-(def link (mui->reagent "Link"))
-(def list (mui->reagent "List"))
-(def list-item (mui->reagent "ListItem"))
-(def list-item-icon (mui->reagent "ListItemIcon"))
-(def list-item-secondary-action (mui->reagent "ListItemSecondaryAction"))
-(def list-item-text (mui->reagent "ListItemText"))
-(def menu (mui->reagent "Menu"))
-(def menu-item (mui->reagent "MenuItem"))
-(def menu-list (mui->reagent "MenuList"))
-(def mui-theme-provider (mui->reagent "MuiThemeProvider"))
-(def paper (mui->reagent "Paper"))
-(def popper (mui->reagent "Popper"))
-(def radio (mui->reagent "Radio"))
-(def radio-group (mui->reagent "RadioGroup"))
-(def select (mui->reagent "Select"))
-(def slide (mui->reagent "Slide"))
-(def snackbar (mui->reagent "Snackbar"))
-(def snackbar-content (mui->reagent "SnackbarContent"))
-(def step (mui->reagent "Step"))
-(def step-content (mui->reagent "StepContent"))
-(def step-label (mui->reagent "StepLabel"))
-(def stepper (mui->reagent "Stepper"))
-(def svg-icon (mui->reagent "SvgIcon"))
-(def swipeable-drawer (mui->reagent "SwipeableDrawer"))
-(def switch (mui->reagent "Switch"))
-(def tab (mui->reagent "Tab"))
-(def table (mui->reagent "Table"))
-(def table-body (mui->reagent "TableBody"))
-(def table-cell (mui->reagent "TableCell"))
-(def table-head (mui->reagent "TableHead"))
-(def table-pagination (mui->reagent "TablePagination"))
-(def table-row (mui->reagent "TableRow"))
-(def table-sort-label (mui->reagent "TableSortLabel"))
-(def tabs (mui->reagent "Tabs"))
-(def text-field (mui->reagent "TextField"))
-(def tool-bar (mui->reagent "Toolbar"))
-(def tooltip (mui->reagent "Tooltip"))
-(def typography (mui->reagent "Typography"))
-(def zoom (mui->reagent "Zoom"))
-
-(def with-width* (.withWidth mui))
+(def with-width* withWidth)

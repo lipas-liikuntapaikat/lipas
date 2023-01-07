@@ -1,6 +1,21 @@
 (ns lipas.ui.charts
   (:require
-   ["recharts" :as rc]
+   ["recharts/es6/cartesian/Area" :refer [Area]]
+   ["recharts/es6/cartesian/Bar" :refer [Bar]]
+   ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
+   ["recharts/es6/cartesian/Line" :refer [Line]]
+   ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
+   ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
+   ["recharts/es6/chart/AreaChart" :refer [AreaChart]]
+   ["recharts/es6/chart/BarChart" :refer [BarChart]]
+   ["recharts/es6/chart/ComposedChart" :refer [ComposedChart]]
+   ["recharts/es6/chart/PieChart" :refer [PieChart]]
+   ["recharts/es6/component/Cell" :refer [Cell]]
+   ["recharts/es6/component/LabelList" :refer [LabelList]]
+   ["recharts/es6/component/Legend" :refer [Legend]]
+   ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
+   ["recharts/es6/component/Tooltip" :refer [Tooltip]]
+   ["recharts/es6/polar/Pie" :refer [Pie]]
    [clojure.set :refer [rename-keys map-invert]]
    [clojure.string :as string]
    [goog.object :as gobj]
@@ -69,14 +84,14 @@
 (defn energy-chart
   [{:keys [data energy energy-label]}]
   (let [data (map #(rename-keys % {energy energy-label}) data)]
-   [:> rc/ResponsiveContainer {:width "100%" :height 300}
-    [:> rc/BarChart {:data data}
-     [:> rc/CartesianGrid]
-     [:> rc/Legend {:wrapperStyle font-styles}]
-     [:> rc/Tooltip tooltip-styles]
-     [:> rc/YAxis {:tick font-styles}]
-     [:> rc/XAxis {:dataKey :name :label false :tick false}]
-     [:> rc/Bar {:dataKey energy-label :label false :fill (get colors energy)}]]]))
+   [:> ResponsiveContainer {:width "100%" :height 300}
+    [:> BarChart {:data data}
+     [:> CartesianGrid]
+     [:> Legend {:wrapperStyle font-styles}]
+     [:> Tooltip tooltip-styles]
+     [:> YAxis {:tick font-styles}]
+     [:> XAxis {:dataKey :name :label false :tick false}]
+     [:> Bar {:dataKey energy-label :label false :fill (get colors energy)}]]]))
 
 (defn monthly-chart
   [{:keys [data labels]}]
@@ -90,16 +105,16 @@
         data      (->> data
                    (map #(rename-keys % labels))
                    (map #(update % :month labels)))]
-    [:> rc/ResponsiveContainer {:width "100%" :height 300}
+    [:> ResponsiveContainer {:width "100%" :height 300}
      (into
-      [:> rc/BarChart {:data data}
-       [:> rc/Legend {:wrapperStyle font-styles}]
-       [:> rc/Tooltip tooltip-styles]
-       [:> rc/YAxis {:tick font-styles}]
-       [:> rc/XAxis {:dataKey :month :tick font-styles}]]
+      [:> BarChart {:data data}
+       [:> Legend {:wrapperStyle font-styles}]
+       [:> Tooltip tooltip-styles]
+       [:> YAxis {:tick font-styles}]
+       [:> XAxis {:dataKey :month :tick font-styles}]]
       (for [k data-keys]
         (when (some #(get % k) data)
-          [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
+          [:> Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
 
 (defn yearly-chart
   [{:keys [data labels on-click]}]
@@ -111,31 +126,31 @@
                                              :spectators-count]))
         lookup    (map-invert labels)
         data      (->> data (map #(rename-keys % labels)))]
-    [:> rc/ResponsiveContainer {:width "100%" :height 300}
+    [:> ResponsiveContainer {:width "100%" :height 300}
      (into
-      [:> rc/BarChart {:data data :on-click on-click}
-       [:> rc/Legend {:wrapperStyle font-styles}]
-       [:> rc/Tooltip tooltip-styles]
-       [:> rc/YAxis {:tick font-styles}]
-       [:> rc/XAxis {:dataKey :year :tick font-styles}]]
+      [:> BarChart {:data data :on-click on-click}
+       [:> Legend {:wrapperStyle font-styles}]
+       [:> Tooltip tooltip-styles]
+       [:> YAxis {:tick font-styles}]
+       [:> XAxis {:dataKey :year :tick font-styles}]]
       (for [k data-keys]
         (when (some #(get % k) data)
-          [:> rc/Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
+          [:> Bar {:dataKey k :label false :fill (get colors (get lookup k))}])))]))
 
 (defn energy-totals-gauge
   [{:keys [data energy-type]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 150}
-   [:> rc/PieChart {:data data}
-    [:> rc/Pie
+  [:> ResponsiveContainer {:width "100%" :height 150}
+   [:> PieChart {:data data}
+    [:> Pie
      {:startAngle  180
       :endAngle    0
       :data        data
       :cy          110
       :outerRadius 100
       :dataKey     :value}
-     [:> rc/Cell {:fill (colors energy-type)}]
-     [:> rc/Cell] {:fill mui/gray1}]
-    [:> rc/Legend
+     [:> Cell {:fill (colors energy-type)}]
+     [:> Cell] {:fill mui/gray1}]
+    [:> Legend
      {:wrapperStyle font-styles}]]])
 
 (def legend-icons
@@ -162,7 +177,7 @@
                [misc/icon-text2
                 {:icon (legend-icons type) :icon-color color :text label}]]))
            (into
-            [mui/grid {:container true :justify "center"}]))))))
+            [mui/grid {:container true :justify-content "center"}]))))))
 
 (defn tooltip
   "`payload-fn` should return a map with
@@ -184,7 +199,7 @@
           label])
 
        ;; Content table
-       [mui/table {:style {:width "350"} :padding "default" :size "small"}
+       [mui/table {:style {:width "350"} :padding "normal" :size "small"}
         (->> payload
              payload-fn
              (sort-by sort-fn)
@@ -228,21 +243,21 @@
 
 (defn city-finance-chart
   [{:keys [data metrics labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 500}
-   (-> [:> rc/ComposedChart {:data data :on-click on-click}
-        [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-        [:> rc/Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
-        [:> rc/YAxis {:tick font-styles}]
-        [:> rc/XAxis {:dataKey :year :tick font-styles}]]
+  [:> ResponsiveContainer {:width "100%" :height 500}
+   (-> [:> ComposedChart {:data data :on-click on-click}
+        [:> Legend {:content (fn [^js props] (legend labels props))}]
+        [:> Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
+        [:> YAxis {:tick font-styles}]
+        [:> XAxis {:dataKey :year :tick font-styles}]]
        (into
         (for [m    metrics
               :let [k (keyword m)]]
-          [:> rc/Bar {:dataKey k :label false :fill (get colors k)}]))
+          [:> Bar {:dataKey k :label false :fill (get colors k)}]))
        (into
         (for [m    metrics
               :let [k1 (keyword m)
                     k2 (keyword (str m "-avg"))]]
-          [:> rc/Line
+          [:> Line
            {:type    "monotone"
             :dataKey k2
             :stroke  (get colors k1)}])))])
@@ -260,21 +275,21 @@
 
 (defn age-structure-chart
   [{:keys [data labels]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/BarChart {:data data}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (age-structure-tooltip labels props))}]
-     [:> rc/YAxis
+    [:> BarChart {:data data}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (age-structure-tooltip labels props))}]
+     [:> YAxis
       {:tick font-styles
        :label
        {:value    (:y-axis labels)
         :angle    -90
         :offset   10
         :position "insideBottomLeft"}}]
-     [:> rc/XAxis {:dataKey :construction-year :tick font-styles}]]
+     [:> XAxis {:dataKey :construction-year :tick font-styles}]]
     (for [k (->> data (mapcat keys) set (remove #(= :construction-year %)) sort)]
-      [:> rc/Bar
+      [:> Bar
        {:stackId "a"
         :dataKey k
         :label   false
@@ -308,18 +323,18 @@
                      :type-name)
         precision (if (= metric "length-km-pc") 8 2)
         formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))]
-    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
-     [:> rc/BarChart
+    [:> ResponsiveContainer {:width "100%" :height (+ 60 (* 30 (count data)))}
+     [:> BarChart
       {:data     data
        :layout   "vertical"
        :margin   margin
        :on-click on-click}
-      [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-      [:> rc/Tooltip {:content (fn [^js props] (sports-stats-tooltip labels props))}]
-      [:> rc/XAxis {:tick font-styles :type "number"}]
-      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
-      [:> rc/Bar {:dataKey (keyword metric) :fill "orange"}
-       [:> rc/LabelList {:position "right" :formatter formatter}]]]]))
+      [:> Legend {:content (fn [^js props] (legend labels props))}]
+      [:> Tooltip {:content (fn [^js props] (sports-stats-tooltip labels props))}]
+      [:> XAxis {:tick font-styles :type "number"}]
+      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      [:> Bar {:dataKey (keyword metric) :fill "orange"}
+       [:> LabelList {:position "right" :formatter formatter}]]]]))
 
 (defn angled-tick [props]
   (let [x       (gobj/get props "x")
@@ -335,30 +350,30 @@
 (defn finance-chart
   [{:keys [data metrics labels on-click]}]
   (let [x-interval (if (> (count data) 50) 5 0)]
-    [:> rc/ResponsiveContainer {:width "100%" :height 500}
+    [:> ResponsiveContainer {:width "100%" :height 500}
      (->
-      [:> rc/ComposedChart {:data data :on-click on-click :margin {:bottom 135}}
-       [:> rc/Legend {:content (fn [^js props] (legend labels props)) :verticalAlign "top"}]
-       [:> rc/Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
-       [:> rc/YAxis {:tick font-styles}]
-       [:> rc/XAxis {:dataKey :region :tick angled-tick :interval x-interval}]]
+      [:> ComposedChart {:data data :on-click on-click :margin {:bottom 135}}
+       [:> Legend {:content (fn [^js props] (legend labels props)) :verticalAlign "top"}]
+       [:> Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
+       [:> YAxis {:tick font-styles}]
+       [:> XAxis {:dataKey :region :tick angled-tick :interval x-interval}]]
       (into
        (for [metric metrics]
-         [:> rc/Bar
+         [:> Bar
           {:dataKey metric :label false :fill (get colors (keyword metric))}])))]))
 
 (defn finance-ranking-chart
   [{:keys [data labels metric]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key :region]
-    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
-     [:> rc/BarChart {:data data :layout "vertical" :margin margin}
-      [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-      [:> rc/Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
-      [:> rc/XAxis {:tick font-styles :type "number"}]
-      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
-      [:> rc/Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
-       [:> rc/LabelList {:position "right"}]]]]))
+    [:> ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+     [:> BarChart {:data data :layout "vertical" :margin margin}
+      [:> Legend {:content (fn [^js props] (legend labels props))}]
+      [:> Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
+      [:> XAxis {:tick font-styles :type "number"}]
+      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      [:> Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
+       [:> LabelList {:position "right"}]]]]))
 
 (defn labeled-tooltip
   ([labels ^js props]
@@ -384,26 +399,26 @@
 
 (defn subsidies-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 500}
-   [:> rc/BarChart {:data data :on-click on-click}
-    [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-    [:> rc/Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
-    [:> rc/YAxis {:tick font-styles :data-key :amount}]
-    [:> rc/XAxis {:dataKey :group :tick font-styles}]
-    [:> rc/Bar {:dataKey :amount :label false :fill "#0a9bff"}]]])
+  [:> ResponsiveContainer {:width "100%" :height 500}
+   [:> BarChart {:data data :on-click on-click}
+    [:> Legend {:content (fn [^js props] (legend labels props))}]
+    [:> Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
+    [:> YAxis {:tick font-styles :data-key :amount}]
+    [:> XAxis {:dataKey :group :tick font-styles}]
+    [:> Bar {:dataKey :amount :label false :fill "#0a9bff"}]]])
 
 (defn subsidies-ranking-chart
   [{:keys [data labels on-click]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
         y-axis-key :group]
-    [:> rc/ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
-     [:> rc/BarChart {:data data :layout "vertical" :margin margin :on-click on-click}
-      [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-      [:> rc/Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
-      [:> rc/XAxis {:tick font-styles :type "number"}]
-      [:> rc/YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
-      [:> rc/Bar {:dataKey :amount :fill "#0a9bff"}
-       [:> rc/LabelList {:position "right"}]]]]))
+    [:> ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+     [:> BarChart {:data data :layout "vertical" :margin margin :on-click on-click}
+      [:> Legend {:content (fn [^js props] (legend labels props))}]
+      [:> Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
+      [:> XAxis {:tick font-styles :type "number"}]
+      [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
+      [:> Bar {:dataKey :amount :fill "#0a9bff"}
+       [:> LabelList {:position "right"}]]]]))
 
 (defn ->payload [evt]
   (when-let [arr (gobj/get evt "activePayload")]
@@ -430,15 +445,15 @@
 
 (defn population-bar-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "group" :tick font-styles :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "group" :tick font-styles :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [zone [:zone1 :zone2 :zone3 :zone4]]
-      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
+      [:> Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
 
 (defn fixed-tick [props]
   (let [x       (gobj/get props "x")
@@ -454,75 +469,75 @@
 
 (defn population-area-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "zone" :tick fixed-tick :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "zone" :tick fixed-tick :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [k [:age-0-14 :age-15-64 :age-65-]]
-      [:> rc/Area
+      [:> Area
        {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
 
 (defn population-area-chart-v2
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "zone" :tick true :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "zone" :tick true :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [k [:age-0-14 :age-15-64 :age-65-]]
-      [:> rc/Area
+      [:> Area
        {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
 
 (defn sports-sites-bar-chart
   [{:keys [data labels on-click zones zone-colors]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels (comp parse-number :label) props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels parse-number props))}]
-     [:> rc/XAxis {:dataKey "type" :tick font-styles :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels (comp parse-number :label) props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels parse-number props))}]
+     [:> XAxis {:dataKey "type" :tick font-styles :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [zone (->> zones (map :id) sort)]
-      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
+      [:> Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
 
 #_(defn sports-sites-area-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (partial subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "zone" :tick true :type "category"}]
-     [:> rc/YAxis {:dataKey "count" :tick font-styles}]]
+    [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (partial subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "zone" :tick true :type "category"}]
+     [:> YAxis {:dataKey "count" :tick font-styles}]]
     (for [type (->> data (map :type))]
-      [:> rc/Bar {:dataKey type :stackId "a"}]))])
+      [:> Bar {:dataKey type :stackId "a"}]))])
 
 #_(defn schools-bar-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/BarChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "type" :tick font-styles :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> BarChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "type" :tick font-styles :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [zone [:zone1 :zone2 :zone3 :zone4]]
-      [:> rc/Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
+      [:> Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
 
 (defn schools-area-chart
   [{:keys [data labels on-click]}]
-  [:> rc/ResponsiveContainer {:width "100%" :height 300}
+  [:> ResponsiveContainer {:width "100%" :height 300}
    (into
-    [:> rc/AreaChart {:data data :layout "horizontal" :on-click on-click}
-     [:> rc/Legend {:content (fn [^js props] (legend labels props))}]
-     [:> rc/Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> rc/XAxis {:dataKey "zone" :tick true :type "category"}]
-     [:> rc/YAxis {:tick font-styles}]]
+    [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
+     [:> Legend {:content (fn [^js props] (legend labels props))}]
+     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
+     [:> XAxis {:dataKey "zone" :tick true :type "category"}]
+     [:> YAxis {:tick font-styles}]]
     (for [k [:vaka :lukiot :perus+lukio :peruskoulut :erityis]]
-      [:> rc/Area
+      [:> Area
        {:dataKey k :stackId "a" :fill (school-types k) :stroke (school-types k)}]))])
