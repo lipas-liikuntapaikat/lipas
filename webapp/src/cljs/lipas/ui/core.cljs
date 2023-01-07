@@ -49,7 +49,7 @@
   (re-frame/clear-subscription-cache!)
   (routes/init!)
   (reagent-dom/render
-   [:> (mui/with-width* (reagent/reactify-component views/main-panel))]
+   [:> ((mui/with-width*) (reagent/reactify-component views/main-panel))]
    (.getElementById js/document "app")))
 
 (defn init []
