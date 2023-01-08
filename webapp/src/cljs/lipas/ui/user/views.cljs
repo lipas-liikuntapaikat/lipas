@@ -102,7 +102,7 @@
 
         experimental-features? (<== [::subs/experimental-features?])]
 
-    [mui/grid {:container true :spacing 1 :style {:padding "0.5em"}}
+    [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
      [mui/grid {:item true :xs 12 :lg 6}
       [mui/grid {:container true :spacing 1}
