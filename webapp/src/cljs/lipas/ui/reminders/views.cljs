@@ -34,12 +34,12 @@
       :save-label    (tr :actions/save)
       :cancel-label  (tr :actions/close)}
 
-     [mui/grid {:container true :spacing 16}
+     [mui/grid {:container true :spacing 2}
 
       [mui/grid {:item true :xs 12}
 
        (into
-        [mui/grid {:container true :spacing 8}]
+        [mui/grid {:container true :spacing 1}]
         (for [[k v] preselect-opts]
           [mui/grid {:item true}
            [mui/button

@@ -937,7 +937,7 @@
      [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}
       (into
        [mui/grid
-        {:container true :align-items "center" :spacing 8}]
+        {:container true :align-items "center" :spacing 1}]
        (for [c     bottom-actions
              :when (some? c)]
          [mui/grid {:item true}

@@ -81,7 +81,7 @@
           [mui/icon {:style {:margin-right "0.25em"}} "save"]
           (tr :actions/save)])]}
 
-     [mui/grid {:container true :spacing 8}
+     [mui/grid {:container true :spacing 1}
 
       [magic-link-dialog {:tr tr}]
 
@@ -312,7 +312,7 @@
           ;; Full-screen user dialog
           [user-dialog tr]
 
-          [mui/grid {:container true :spacing 32}
+          [mui/grid {:container true :spacing 4}
 
            ;; Add user button
            [mui/grid {:item true :style {:flex-grow 1}}
