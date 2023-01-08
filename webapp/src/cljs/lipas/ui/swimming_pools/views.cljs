@@ -113,7 +113,7 @@
            [mui/icon {:color "secondary"}
             "place"]]]))}
 
-     [mui/grid {:container true :spacing 8}
+     [mui/grid {:container true :spacing 1}
 
       ;;; General info
       [lui/form-card {:title (tr :general/general-info)}

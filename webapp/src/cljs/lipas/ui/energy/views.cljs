@@ -304,7 +304,7 @@
     (if-not logged-in?
 
       [mui/paper {:style {:padding "1em"}}
-       [mui/grid {:container true :spacing 16}
+       [mui/grid {:container true :spacing 2}
 
         [mui/grid {:item true}
          [mui/typography {:variant "h5" :color "secondary"}
@@ -383,7 +383,7 @@
        ;; [mui/card-header {:title (tr :lipas.energy-stats/headline year)}]
        [mui/card-content
 
-        [mui/grid {:container true :spacing 16 :style {:margin-bottom "1em"}}
+        [mui/grid {:container true :spacing 2 :style {:margin-bottom "1em"}}
 
          [mui/grid {:item true :xs 12 :style {:margin-top "1em"}}
           [mui/typography {:variant "h3" :color "secondary"}
@@ -424,7 +424,7 @@
           :energy-label (tr (keyword :lipas.energy-stats energy-type))
           :data         (:data-points stats)}]
 
-        [mui/grid {:container true :spacing 16 :align-items "center" :justify-content "flex-start"}
+        [mui/grid {:container true :spacing 2 :align-items "center" :justify-content "flex-start"}
          [mui/grid {:item true :xs 12}
 
           ;; Is your hall missing from the chart? -> Report consumption
