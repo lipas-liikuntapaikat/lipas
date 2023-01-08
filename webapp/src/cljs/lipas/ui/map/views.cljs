@@ -946,7 +946,7 @@
              (if-not geom
 
                ;; Draw new geom
-               [mui/grid {:container true :spacing 2 :align-items "center"}
+               [mui/grid {:container true :spacing 1 :align-items "center"}
 
                 ;; Tabs for selecting btw drawing and importing geoms
                 #_(when (#{"LineString" "Polygon"} geom-type))
@@ -1052,7 +1052,7 @@
                        (tr :map.import/tooltip)]]]))]
 
                ;; Modify new geom
-               [mui/grid {:container true :spacing 2}
+               [mui/grid {:container true :spacing 1}
 
                 [mui/grid {:item true}
                  (when (not zoomed?)
@@ -1172,19 +1172,19 @@
            {:style
             {:margin-left  "-24px" ;; Undo Stepper default padding
              :margin-right "-24px"
-             :margin-top   "1em"
+             :margin-top   "1.5em"
              :padding      0 }}
            [mui/grid {:container true :style {:flex-direction "column"}}
 
             ;; Tabs
             [mui/grid {:item true}
-             [mui/tool-bar
-              [mui/tabs
-               {:value     @selected-tab
-                :on-change #(reset! selected-tab %2)
-                :style     {:margin-bottom "1em"}}
-               [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-               [mui/tab {:label (tr :lipas.sports-site/properties)}]]]
+             [mui/tabs
+              {:value     @selected-tab
+               :on-change #(reset! selected-tab %2)
+               :variant   "fullWidth"
+               :style     {:margin-bottom "1em" :margin-top "1em"}}
+              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+              [mui/tab {:label (tr :lipas.sports-site/properties)}]]
 
              (case @selected-tab
 
