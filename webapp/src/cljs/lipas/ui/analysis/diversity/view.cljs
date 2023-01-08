@@ -387,7 +387,7 @@
                     :name                 "Nimi"}]
 
     [:> ResponsiveContainer
-     {:width "100%"
+     {:width  "100%"
       :height (+ 100 (* 50 (count chart-data)))}
      [:> BarChart
       {:data         chart-data
@@ -422,9 +422,9 @@
                                        :text       label}]]))
                                  (into
                                   [mui/grid
-                                   {:container true
-                                    :style     {:margin-bottom "1.5em"}
-                                    :justify   "center"}])))))}]
+                                   {:container       true
+                                    :style           {:margin-bottom "1.5em"}
+                                    :justify-content "center"}])))))}]
 
       ;; Area names on y-axis
       [:> YAxis

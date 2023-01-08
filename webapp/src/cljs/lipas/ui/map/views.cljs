@@ -91,7 +91,11 @@
 
        ;; File selector, helpers and encoding selector
        [mui/grid {:item true :xs 12}
-        [mui/grid {:container true :spacing 4 :align-items "flex-end" :justify "space-between"}
+        [mui/grid
+         {:container       true
+          :spacing         4
+          :align-items     "flex-end"
+          :justify-content "space-between"}
 
          ;; File selector
          [mui/grid {:item true}

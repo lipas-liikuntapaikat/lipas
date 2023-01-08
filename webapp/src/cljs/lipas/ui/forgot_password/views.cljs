@@ -32,7 +32,7 @@
   (let [error   (<== [::subs/error])
         success (<== [::subs/success])]
 
-    [mui/grid {:container true :justify "center" :style {:padding "1em"}}
+    [mui/grid {:container true :justify-content "center" :style {:padding "1em"}}
      [mui/grid {:item true :xs 12 :md 8 :lg 6}
       [mui/card {:square true :style {:height "100%"}}
 

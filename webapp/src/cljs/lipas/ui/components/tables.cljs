@@ -274,13 +274,13 @@
     (r/with-let [selected-item (r/atom nil)
                  key-fn (or key-fn (constantly nil))]
       [mui/grid
-       {:container   true
-        :spacing     8
-        :justify     "flex-end"
-        :align-items "center"}
+       {:container       true
+        :spacing         8
+        :justify-content "flex-end"
+        :align-items     "center"}
 
        ;; Table
-       [mui/grid {:item true :xs 12
+       [mui/grid {:item  true :xs 12
                   :style (merge {} (when max-width
                                      ;; Hacky place to do this here
                                      ;; TODO: move to smarter place
