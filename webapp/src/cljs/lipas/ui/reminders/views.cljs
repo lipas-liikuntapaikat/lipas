@@ -51,18 +51,24 @@
 
        [mui/form-group
 
-        [lui/date-picker
-         {:type      "date"
-          :label     (tr :reminders/select-date)
-          :required  true
-          :value     (-> form :data :date)
-          :on-change #(==> [::events/set-date %])}]
+        [mui/grid {:container true :spacing 2}
 
-        [lui/text-field
-         {:label     (tr :reminders/message)
-          :multiline true
-          :required  true
-          :value     (-> form :data :body :message)
-          :on-change #(==> [::events/set-message %])}]]
+         [mui/grid {:item true :xs 12}
+          [lui/date-picker
+           {:type      "date"
+            :fullWidth true
+            :label     (tr :reminders/select-date)
+            :required  true
+            :value     (-> form :data :date)
+            :on-change #(==> [::events/set-date %])}]]
+
+         [mui/grid {:item true :xs 12}
+          [lui/text-field
+           {:label     (tr :reminders/message)
+            :multiline true
+            :fullWidth true
+            :required  true
+            :value     (-> form :data :body :message)
+            :on-change #(==> [::events/set-message %])}]]]]
 
        [mui/form-helper-text (tr :reminders/description)]]]]))

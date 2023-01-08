@@ -127,16 +127,19 @@
      :label-fn  #(str % unit)}
     props)])
 
-(defn date-picker [{:keys [label value on-change type required]
-                    :or   {type "date"}}]
+(defn date-picker
+  [{:keys [value on-change type required]
+    :or   {type "date"}
+    :as   props}]
   [mui/text-field
-   {:type          type
-    :required      required
-    :label         label
-    :value         (or value "")
-    :Input-label-props
-    {:shrink true} ; This makes the label show actually
-    :on-change     #(on-change (-> % .-target .-value))}])
+   (merge
+    props
+    {:type      type
+     :value     (or value "")
+     :Input-label-props
+     {:error  (and required (empty? value))
+      :shrink true} ; This makes the label show actually
+     :on-change (fn [evt] (on-change (-> evt .-target .-value)))})])
 
 (defn- id-parser [prefix]
   (comp
