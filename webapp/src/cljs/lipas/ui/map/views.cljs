@@ -903,325 +903,336 @@
           set-field set-new-site-field
           geom-type (:geometry-type type)]
 
-      [mui/grid
-       {:container true
-        :direction "row"
-        :style     {:padding "0.5em 1em 0.5em 1em" :flex 1}}
+      [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
-       [mui/grid {:item true :xs 12 :style {:padding-top "1em" :flex 1}}
+       [mui/grid {:item true :xs 12}
 
         [import-geoms-view
          {:geom-type     geom-type
           :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
 
-        [mui/typography {:variant "h6"}
+        [mui/typography {:variant "h6" :style {:margin-left "8px"}}
          (if-let [type-name (get-in type [:name locale])]
            (tr :lipas.sports-site/new-site-of-type type-name)
-           (tr :lipas.sports-site/new-site {:type type :locale locale}))]
+           (tr :lipas.sports-site/new-site {:type type :locale locale}))]]
 
-        ;; Steps
+       ;; Steps
+       [mui/grid {:item true :xs 12}
         [mui/stepper
-         {:active-step active-step
-          :orientation "vertical"}
+         {:active-step      active-step
+          :alternativeLabel true
+          :style            {:padding-left 0 :padding-right 0
+                             :margin-left "-18px"}
+          :orientation      "horizontal"}
 
          ;; Step 1 - Select type
-         [mui/step
-          [mui/step-label (tr :actions/select-type)]
-          [mui/step-content
-           [mui/grid {:item true :xs 12}
-            [type-selector-single
-             {:value     (when type [(:type-code type)])
-              :tr        tr
-              :types     types
-              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]]]
+         [mui/step {:active (= (dec 1) active-step)}
+          [mui/step-label (tr :actions/select-type)]]
 
          ;; Step 2 - Add to map
-         [mui/step
-          [mui/step-label (tr :map/draw)]
-          [mui/step-content {:style {:padding-top "1em"}}
-
-           (let [type-code (:type-code type)]
-
-             (if-not geom
-
-               ;; Draw new geom
-               [mui/grid {:container true :spacing 1 :align-items "center"}
-
-                ;; Tabs for selecting btw drawing and importing geoms
-                #_(when (#{"LineString" "Polygon"} geom-type))
-                [mui/grid {:item true}
-
-                 [mui/tabs {:value      @geom-tab
-                            :on-change  #(reset! geom-tab %2)
-                            :style      {:margin-bottom "1em"}
-                            :text-color "secondary"}
-                  [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
-                  (when (#{"LineString" "Polygon"} geom-type)
-                    [mui/tab {:value "import" :label (tr :map.import/tab-header)}])
-                  (when (#{"Point"} geom-type)
-                    [mui/tab {:value "coords" :label "Syötä koordinaatit"}])]]
-
-                ;; Draw
-                (when (= "draw" @geom-tab)
-                  [:<>
-                   ;; Helper text
-                   [mui/grid {:item true :xs 12}
-                    [mui/typography {:variant "body2"}
-                     (tr :map/zoom-to-site)]]
-
-                   ;; Zoom closer info text
-                   (when (not zoomed?)
-                     [mui/grid {:item true :xs 12}
-                      [mui/typography {:variant "body2" :color :error}
-                       (tr :map/zoom-closer)]])
-
-                   ;; Add initial geom button
-                   [mui/grid {:item true}
-                    [mui/button
-                     {:disabled (not zoomed?)
-                      :color    "secondary"
-                      :variant  "contained"
-                      :on-click #(==> [::events/start-adding-geom geom-type])}
-                     [mui/icon "add_location"]
-                     (tr :map/add-to-map)]]])
-
-                ;; Enter coordinates
-                (when (= "coords" @geom-tab)
-                  (r/with-let [state (r/atom {:crs :epsg4326
-                                              :lon nil
-                                              :lat nil})]
-                    (let [[lon-spec lat-spec] (condp = (:crs @state)
-                                                :epsg4326 [:lipas.location.coordinates/lon
-                                                           :lipas.location.coordinates/lat]
-                                                :epsg3067 [:lipas.location.coordinates/lon-euref
-                                                           :lipas.location.coordinates/lat-euref])]
-                      [:<>
-                       [mui/grid {:item true :xs 12}
-                        [lui/select
-                         {:style     {:min-width "150px"}
-                          :label     "CRS"
-                          :items     [{:value :epsg3067 :label "TM25FIN EUREF"}
-                                      {:value :epsg4326 :label "WGS84"}]
-                          :value     (:crs @state)
-                          :on-change #(swap! state assoc :crs %1)}]]
-                       [mui/grid {:item true :xs 6}
-                        [lui/text-field
-                         {:label     (condp = (:crs @state)
-                                       :epsg4326 "Lon"
-                                       :epsg3067 "N")
-                          :type      "number"
-                          :spec      lon-spec
-                          :value     (:lon @state)
-                          :on-change #(swap! state assoc :lon %1)}]]
-                       [mui/grid {:item true :xs 6}
-                        [lui/text-field
-                         {:label     (condp = (:crs @state)
-                                       :epsg4326 "Lat"
-                                       :epsg3067 "E")
-                          :type      "number"
-                          :spec      lat-spec
-                          :value     (:lat @state)
-                          :on-change #(swap! state assoc :lat %1)}]]
-                       [mui/grid {:item true}
-                        [mui/button
-                         {:color    "secondary"
-                          :disabled (not (and
-                                          (s/valid? lon-spec (:lon @state))
-                                          (s/valid? lat-spec (:lat @state))))
-                          :variant  "contained"
-                          :on-click #(==> [::events/add-point-from-coords @state])}
-                         [mui/icon "add_location"]
-                         (tr :map/add-to-map)]]])))
-
-                ;; Import geoms
-                (when (= "import" @geom-tab)
-                  (when (#{"LineString" "Polygon"} geom-type)
-                    [:<>
-                     ;; Supported formats helper text
-                     [mui/grid {:item true :xs 12}
-                      [mui/typography {:variant "body2"}
-                       (tr :map.import/supported-formats import-formats-str)]]
-
-                     ;; Open import dialog button
-                     [mui/grid {:item true}
-                      [mui/button
-                       {:color    "secondary"
-                        :variant  "contained"
-                        :on-click #(==> [::events/toggle-import-dialog])}
-                       (tr :map.import/tooltip)]]]))]
-
-               ;; Modify new geom
-               [mui/grid {:container true :spacing 1}
-
-                [mui/grid {:item true}
-                 (when (not zoomed?)
-                   [mui/typography {:variant "body2" :color "error"}
-                    (tr :map/zoom-closer)])]
-
-                [mui/grid {:item true}
-                 [mui/typography {:variant "body2"}
-                  (case geom-type
-                    "LineString" (tr :map/modify-linestring)
-                    "Polygon"    (tr :map/modify-polygon)
-                    (tr :map/modify))]
-                 [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
-                  (tr :map/edit-later-hint)]]
-
-                ;; Add additional geom button
-                (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true}
-                   [mui/button
-                    {:on-click #(==> [::events/start-adding-geom geom-type])
-                     :variant  "contained"
-                     :color    "secondary"}
-                    (case geom-type
-                      "LineString" (tr :map/draw-linestring)
-                      "Polygon"    (tr :map/draw-polygon)
-                      (tr :map/draw))]])
-
-                ;; Delete geom
-                (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true}
-                   [mui/tooltip
-                    {:title (case geom-type
-                              "LineString" (tr :map/remove-linestring)
-                              "Polygon"    (tr :map/remove-polygon)
-                              (tr :map/remove))}
-                    [:span
-                     [mui/button
-                      {:on-click #(if (= sub-mode :deleting)
-                                    (==> [::events/stop-deleting-geom geom-type])
-                                    (==> [::events/start-deleting-geom geom-type]))
-                       :disabled (-> geom :features empty?)
-                       :style    (when (= sub-mode :deleting)
-                                   {:outline (str "2px solid " mui/secondary)})
-                       :variant  "contained"}
-                      [:> Eraser]]]]])
-
-                ;; Split
-                (when (#{"LineString"} geom-type)
-                  [mui/grid {:item true}
-                   [mui/tooltip {:title (tr :map/split-linestring)}
-                    [:span
-                     [mui/button
-                      {:on-click #(if (= sub-mode :splitting)
-                                    (==> [::events/stop-splitting-geom geom-type])
-                                    (==> [::events/start-splitting-geom geom-type]))
-                       :disabled (-> geom :features empty?)
-                       :style    (when (= sub-mode :splitting)
-                                   {:outline (str "2px solid " mui/secondary)})
-                       :variant  "contained"}
-                      [:> ContentCut]]]]])
-
-                ;; Delete vertices helper text
-                (when (#{"LineString" "Polygon"} geom-type)
-                  [mui/grid {:item true}
-                   [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
-                    (tr :map/delete-vertices-hint)]])
-
-                ;; Undo & Redo
-                [mui/grid {:item true}
-                 [mui/grid {:container true}
-
-                  ;; Undo
-                  [mui/grid {:item true}
-                   [mui/tooltip {:title "Undo"}
-                    [:span
-                     [mui/icon-button
-                      {:disabled (not undo)
-                       :on-click #(==> [::events/undo "new"])}
-                      [mui/icon "undo"]]]]]
-
-                  ;; Redo
-                  [mui/grid {:item true}
-                   [mui/tooltip {:title "Redo"}
-                    [:span
-                     [mui/icon-button
-                      {:disabled (not redo)
-                       :on-click #(==> [::events/redo "new"])}
-                      [mui/icon "redo"]]]]]]]
-
-                ;; Done button
-                [mui/grid {:item true :xs 12}
-                 [mui/button
-                  {:on-click #(==> [::events/finish-adding-geom geom type-code])
-                   :variant  "contained"
-                   :disabled (-> geom :features empty?)
-                   :color    "secondary"}
-                  (tr :general/done)]]
-
-                ;; Retkikartta Problems
-                (when (and (#{"LineString"} geom-type) problems?)
-                  [mui/grid {:item true}
-                   [mui/tooltip
-                    {:placement "right"
-                     :title     (str
-                                 (tr :map/retkikartta-problems-warning)
-                                 " "
-                                 (tr :map/retkikartta-checkbox-reminder))}
-                    [:span
-                     [lui/icon-text
-                      {:icon "warning"
-                       :text "Retkikartta.fi"}]]]])]))]]
+         [mui/step {:active (= (dec 2) active-step)}
+          [mui/step-label (tr :map/draw)]]
 
          ;; Step 3 - Fill data
-         [mui/step
-          [mui/step-label (tr :actions/fill-data)]
-          [mui/step-content
-           {:style
-            {:margin-left  "-24px" ;; Undo Stepper default padding
-             :margin-right "-24px"
-             :margin-top   "1.5em"
-             :padding      0 }}
-           [mui/grid {:container true :style {:flex-direction "column"}}
+         [mui/step {:active (= (dec 3) active-step)}
+          [mui/step-label (tr :actions/fill-data)]]]]
 
-            ;; Tabs
-            [mui/grid {:item true}
-             [mui/tabs
-              {:value     @selected-tab
-               :on-change #(reset! selected-tab %2)
-               :variant   "fullWidth"
-               :style     {:margin-bottom "1em" :margin-top "1em"}}
-              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-              [mui/tab {:label (tr :lipas.sports-site/properties)}]]
+       [mui/grid {:item true :xs 12}
 
-             (case @selected-tab
+        ;; Step 1 content
+        (when (= active-step (dec 1))
+          #_[mui/grid {:item true :xs 12}]
+          [type-selector-single
+           {:value     (when type [(:type-code type)])
+            :tr        tr
+            :types     types
+            :on-change #(==> [::sports-site-events/select-new-site-type %])}])
 
-               ;; Basic info tab
-               0 [mui/grid {:container true}
+        ;; Step 2 content
+        (when (= active-step (dec 2))
+          (let [type-code (:type-code type)]
+            (if-not geom
+
+              ;; Draw new geom
+              [mui/grid {:container true :spacing 2}
+
+               ;; Tabs for selecting btw drawing and importing geoms
+               #_(when (#{"LineString" "Polygon"} geom-type))
+               [mui/grid {:item true :xs 12}
+
+                [mui/tabs {:value      @geom-tab
+                           :on-change  #(reset! geom-tab %2)
+                           :variant    "fullWidth"
+                           :text-color "secondary"}
+                 [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
+                 (when (#{"LineString" "Polygon"} geom-type)
+                   [mui/tab {:value "import" :label (tr :map.import/tab-header)}])
+                 (when (#{"Point"} geom-type)
+                   [mui/tab {:value "coords" :label "Syötä koordinaatit"}])]]
+
+               ;; Draw
+               (when (= "draw" @geom-tab)
+                 [:<>
+                  ;; Helper text
                   [mui/grid {:item true :xs 12}
+                   [mui/typography {:variant "body2"}
+                    (tr :map/zoom-to-site)]]
 
-                   [sports-sites/form
-                    {:tr              tr
-                     :edit-data       data
-                     :read-only?      false
-                     :types           (vals types)
-                     :size-categories size-categories
-                     :admins          admins
-                     :owners          owners
-                     :on-change       set-field
-                     :sub-headings?   true}]
+                  ;; Zoom closer info text
+                  (when (not zoomed?)
+                    [mui/grid {:item true :xs 12}
+                     [mui/typography {:variant "body2" :color :error}
+                      (tr :map/zoom-closer)]])
 
-                   [sports-sites/location-form
-                    {:tr            tr
-                     :read-only?    false
-                     :cities        (vals cities)
-                     :edit-data     (:location data)
-                     :on-change     (partial set-field :location)
-                     :sub-headings? true}]]]
+                  ;; Add initial geom button
+                  [mui/grid {:item true}
+                   [mui/button
+                    {:disabled (not zoomed?)
+                     :color    "secondary"
+                     :variant  "contained"
+                     :on-click #(==> [::events/start-adding-geom geom-type])}
+                    [mui/icon "add_location"]
+                    (tr :map/add-to-map)]]])
 
-               ;; Properties tab
-               1 [sports-sites/properties-form
-                  {:key        (-> data :type :type-code)
-                   :tr         tr
-                   :type-code  (-> data :type :type-code)
-                   :read-only? false
-                   :width      width
-                   :on-change  (partial set-field :properties)
-                   :edit-data  (:properties data)
-                   :geoms      (-> data :location :geometries)
-                   :problems?  problems?}])]]]]]]
+               ;; Enter coordinates
+               (when (= "coords" @geom-tab)
+                 (r/with-let [state (r/atom {:crs :epsg4326
+                                             :lon nil
+                                             :lat nil})]
+                   (let [[lon-spec lat-spec] (condp = (:crs @state)
+                                               :epsg4326 [:lipas.location.coordinates/lon
+                                                          :lipas.location.coordinates/lat]
+                                               :epsg3067 [:lipas.location.coordinates/lon-euref
+                                                          :lipas.location.coordinates/lat-euref])]
+                     [:<>
+                      [mui/grid {:item true :xs 12}
+                       [lui/select
+                        {:style     {:min-width "150px"}
+                         :label     "CRS"
+                         :items     [{:value :epsg3067 :label "TM35FIN EUREF"}
+                                     {:value :epsg4326 :label "WGS84"}]
+                         :value     (:crs @state)
+                         :on-change #(swap! state assoc :crs %1)}]]
+                      [mui/grid {:item true :xs 6}
+                       [lui/text-field
+                        {:label     (condp = (:crs @state)
+                                      :epsg4326 "Lon"
+                                      :epsg3067 "N")
+                         :type      "number"
+                         :spec      lon-spec
+                         :value     (:lon @state)
+                         :on-change #(swap! state assoc :lon %1)}]]
+                      [mui/grid {:item true :xs 6}
+                       [lui/text-field
+                        {:label     (condp = (:crs @state)
+                                      :epsg4326 "Lat"
+                                      :epsg3067 "E")
+                         :type      "number"
+                         :spec      lat-spec
+                         :value     (:lat @state)
+                         :on-change #(swap! state assoc :lat %1)}]]
+                      [mui/grid {:item true}
+                       [mui/button
+                        {:color    "secondary"
+                         :disabled (not (and
+                                         (s/valid? lon-spec (:lon @state))
+                                         (s/valid? lat-spec (:lat @state))))
+                         :variant  "contained"
+                         :on-click #(==> [::events/add-point-from-coords @state])}
+                        [mui/icon "add_location"]
+                        (tr :map/add-to-map)]]])))
+
+               ;; Import geoms
+               (when (= "import" @geom-tab)
+                 (when (#{"LineString" "Polygon"} geom-type)
+                   [:<>
+                    ;; Supported formats helper text
+                    [mui/grid {:item true :xs 12}
+                     [mui/typography {:variant "body2"}
+                      (tr :map.import/supported-formats import-formats-str)]]
+
+                    ;; Open import dialog button
+                    [mui/grid {:item true}
+                     [mui/button
+                      {:color    "secondary"
+                       :variant  "contained"
+                       :on-click #(==> [::events/toggle-import-dialog])}
+                      (tr :map.import/tooltip)]]]))]
+
+              ;; Modify new geom
+              [mui/grid {:container true :spacing 1}
+
+               [mui/grid {:item true}
+                (when (not zoomed?)
+                  [mui/typography {:variant "body2" :color "error"}
+                   (tr :map/zoom-closer)])]
+
+               [mui/grid {:item true}
+                [mui/typography {:variant "body2"}
+                 (case geom-type
+                   "LineString" (tr :map/modify-linestring)
+                   "Polygon"    (tr :map/modify-polygon)
+                   (tr :map/modify))]
+                [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+                 (tr :map/edit-later-hint)]]
+
+               ;; Add additional geom button
+               (when (#{"LineString" "Polygon"} geom-type)
+                 [mui/grid {:item true}
+                  [mui/button
+                   {:on-click #(==> [::events/start-adding-geom geom-type])
+                    :variant  "contained"
+                    :color    "secondary"}
+                   (case geom-type
+                     "LineString" (tr :map/draw-linestring)
+                     "Polygon"    (tr :map/draw-polygon)
+                     (tr :map/draw))]])
+
+               ;; Delete geom
+               (when (#{"LineString" "Polygon"} geom-type)
+                 [mui/grid {:item true}
+                  [mui/tooltip
+                   {:title (case geom-type
+                             "LineString" (tr :map/remove-linestring)
+                             "Polygon"    (tr :map/remove-polygon)
+                             (tr :map/remove))}
+                   [:span
+                    [mui/button
+                     {:on-click #(if (= sub-mode :deleting)
+                                   (==> [::events/stop-deleting-geom geom-type])
+                                   (==> [::events/start-deleting-geom geom-type]))
+                      :disabled (-> geom :features empty?)
+                      :style    (when (= sub-mode :deleting)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [:> Eraser]]]]])
+
+               ;; Split
+               (when (#{"LineString"} geom-type)
+                 [mui/grid {:item true}
+                  [mui/tooltip {:title (tr :map/split-linestring)}
+                   [:span
+                    [mui/button
+                     {:on-click #(if (= sub-mode :splitting)
+                                   (==> [::events/stop-splitting-geom geom-type])
+                                   (==> [::events/start-splitting-geom geom-type]))
+                      :disabled (-> geom :features empty?)
+                      :style    (when (= sub-mode :splitting)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [:> ContentCut]]]]])
+
+               ;; Delete vertices helper text
+               (when (#{"LineString" "Polygon"} geom-type)
+                 [mui/grid {:item true}
+                  [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+                   (tr :map/delete-vertices-hint)]])
+
+               ;; Done button and undo / redo
+               [mui/grid {:item true :xs 12}
+                [mui/grid
+                 {:container       true
+                  :justify-content "flex-start"
+                  :align-items     "center"
+                  :spacing         1}
+
+                 ;; Ready button
+                 [mui/grid {:item true}
+                  [mui/button
+                   {:on-click #(==> [::events/finish-adding-geom geom type-code])
+                    :variant  "contained"
+                    :disabled (-> geom :features empty?)
+                    :color    "secondary"}
+                   (tr :general/done)]]
+                 [mui/grid {:item true}
+                  [mui/grid {:item true}
+
+                ;; Undo & Redo
+                   [mui/grid {:container true}
+
+                 ;; Undo
+                    [mui/grid {:item true}
+                     [mui/tooltip {:title "Undo"}
+                   [:span
+                    [mui/icon-button
+                     {:disabled (not undo)
+                      :on-click #(==> [::events/undo "new"])}
+                     [mui/icon "undo"]]]]]
+
+                 ;; Redo
+                    [mui/grid {:item true}
+                     [mui/tooltip {:title "Redo"}
+                   [:span
+                    [mui/icon-button
+                     {:disabled (not redo)
+                      :on-click #(==> [::events/redo "new"])}
+                     [mui/icon "redo"]]]]]]]]]]
+
+               ;; Retkikartta Problems
+               (when (and (#{"LineString"} geom-type) problems?)
+                 [mui/grid {:item true}
+                  [mui/tooltip
+                   {:placement "right"
+                    :title     (str
+                                (tr :map/retkikartta-problems-warning)
+                                " "
+                                (tr :map/retkikartta-checkbox-reminder))}
+                   [:span
+                    [lui/icon-text
+                     {:icon "warning"
+                      :text "Retkikartta.fi"}]]]])])))
+
+        ;; Step3 content
+        (when (= active-step (dec 3))
+          [mui/grid {:container true :style {:flex-direction "column"}}
+
+           ;; Tabs
+           [mui/grid {:item true}
+            [mui/tabs
+             {:value     @selected-tab
+              :on-change #(reset! selected-tab %2)
+              :variant   "fullWidth"
+              :style     {:margin-bottom "1em" :margin-top "1em"}}
+             [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
+             [mui/tab {:label (tr :lipas.sports-site/properties)}]]
+
+            (case @selected-tab
+
+              ;; Basic info tab
+              0 [mui/grid {:container true}
+                 [mui/grid {:item true :xs 12}
+
+                  [sports-sites/form
+                   {:tr              tr
+                    :edit-data       data
+                    :read-only?      false
+                    :types           (vals types)
+                    :size-categories size-categories
+                    :admins          admins
+                    :owners          owners
+                    :on-change       set-field
+                    :sub-headings?   true}]
+
+                  [sports-sites/location-form
+                   {:tr            tr
+                    :read-only?    false
+                    :cities        (vals cities)
+                    :edit-data     (:location data)
+                    :on-change     (partial set-field :location)
+                    :sub-headings? true}]]]
+
+              ;; Properties tab
+              1 [sports-sites/properties-form
+                 {:key        (-> data :type :type-code)
+                  :tr         tr
+                  :type-code  (-> data :type :type-code)
+                  :read-only? false
+                  :width      width
+                  :on-change  (partial set-field :properties)
+                  :edit-data  (:properties data)
+                  :geoms      (-> data :location :geometries)
+                  :problems?  problems?}])]])]
 
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}

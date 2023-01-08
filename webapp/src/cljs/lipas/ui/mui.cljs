@@ -161,10 +161,9 @@
      {:font-size "0.8rem"}}
     :Mui-step-icon
     {:root      {:fill "rgba(0,0,0,0.5)"}
-     :active    {:fill primary}
-     :completed {:fill primary}
-     :text
-     {:fill "#fff"}}}})
+     :active    {:fill secondary}
+     :completed {:fill primary}}}})
+
 
 (def jyu-styles-light
   (utils/deep-merge
