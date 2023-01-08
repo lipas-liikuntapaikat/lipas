@@ -663,7 +663,7 @@
         [mui/paper
 
          ;; Sites filter
-         [mui/grid {:container true :justify "flex-end"}
+         [mui/grid {:container true :justify-content "flex-end"}
           [mui/grid {:item true :style {:padding "1em 1em 0em 0em"}}
            [lui/text-field
             {:label     (tr :search/search)

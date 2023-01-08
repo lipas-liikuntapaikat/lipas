@@ -17,9 +17,9 @@
 
      ;; Header and close button
      [mui/grid
-      {:item      true
-       :container true
-       :justify   "space-between"}
+      {:item            true
+       :container       true
+       :justify-content "space-between"}
       [mui/grid {:item true :xs 10}
        [mui/tabs
         {:value          selected-tool

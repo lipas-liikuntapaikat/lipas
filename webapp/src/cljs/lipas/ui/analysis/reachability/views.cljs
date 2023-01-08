@@ -297,7 +297,7 @@
 
        ;; Zone count selector
        [mui/grid {:item true :xs 2}
-        [mui/grid {:container true :justify "center"}
+        [mui/grid {:container true :justify-content "center"}
          [mui/grid {:item true}
           [lui/number-selector
            {:value     zones-count
@@ -424,12 +424,12 @@
 
         ;; Site name
         [mui/grid
-         {:item        true
-          :xs          12
-          :container   true
-          :style       {:margin-top "1em"}
-          :justify     "space-between"
-          :align-items "center"}
+         {:item            true
+          :xs              12
+          :container       true
+          :style           {:margin-top "1em"}
+          :justify-content "space-between"
+          :align-items     "center"}
          [mui/grid {:item true}
           [mui/grid {:container true :align-items "center"}
            #_[mui/grid {:item true :style {:margin-right "0.5em" :margin-left "0.5em"}}

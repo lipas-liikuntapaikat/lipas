@@ -424,7 +424,7 @@
           :energy-label (tr (keyword :lipas.energy-stats energy-type))
           :data         (:data-points stats)}]
 
-        [mui/grid {:container true :spacing 16 :align-items "center" :justify "flex-start"}
+        [mui/grid {:container true :spacing 16 :align-items "center" :justify-content "flex-start"}
          [mui/grid {:item true :xs 12}
 
           ;; Is your hall missing from the chart? -> Report consumption
