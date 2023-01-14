@@ -399,9 +399,10 @@
 
 (defn show-population!
   [{:keys [layers] :as map-ctx}
-   {:keys [population geoms lipas-id zones] :as analysis}]
+   {:keys [selected-sports-site zones] :as analysis}]
 
-  (let [^js layer (-> layers :overlays :population)
+  (let [{:keys [population]} (get-in analysis [:runs selected-sports-site])
+        ^js layer (-> layers :overlays :population)
         source    (.getSource layer)
         metric    (:selected-travel-metric analysis)
         profile   (:selected-travel-profile analysis)]
@@ -410,8 +411,8 @@
 
     ;; Add selected style to sports-site feature
     ;;(when lipas-id (display-as-selected map-ctx lipas-id))
-    (when lipas-id
-      (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
+    (when selected-sports-site
+      (map-utils/select-sports-site! map-ctx selected-sports-site {:maxZoom 7}))
 
     (when-let [data (:data population)]
       (doseq [m     data
@@ -427,14 +428,15 @@
 
 (defn show-schools!
   [{:keys [layers] :as map-ctx}
-   {:keys [schools geoms lipas-id]}]
-  (let [^js layer (-> layers :overlays :schools)]
+   {:keys [selected-sports-site] :as analysis}]
+  (let [{:keys [schools]} (get-in analysis [:runs selected-sports-site])
+        ^js layer         (-> layers :overlays :schools)]
     (-> layer .getSource .clear)
 
     ;; Add selected style to sports-site feature
     ;;(when lipas-id (display-as-selected map-ctx lipas-id))
-    (when lipas-id
-      (map-utils/select-sports-site! map-ctx lipas-id {:maxZoom 7}))
+    (when selected-sports-site
+      (map-utils/select-sports-site! map-ctx selected-sports-site {:maxZoom 7}))
 
     (when-let [data (:data schools)]
       (doseq [m data]

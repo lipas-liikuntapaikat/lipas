@@ -2,7 +2,6 @@
   (:require
    ["rc-slider" :as Slider]
    ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
-   [clojure.string :as string]
    [lipas.ui.analysis.reachability.events :as events]
    [lipas.ui.analysis.reachability.subs :as subs]
    [lipas.ui.charts :as charts]
@@ -142,7 +141,7 @@
        {:on-click #(==> [::events/select-analysis-tab "settings"])}
        [mui/icon "settings"]]]]))
 
-(defn population-v2-tab [{:keys [tr]}]
+(defn population-tab [{:keys [tr]}]
   (let [data       (<== [::subs/population-chart-data-v3])
         labels     (<== [::subs/population-labels])
         chart-mode (<== [::subs/population-chart-mode])]
@@ -151,7 +150,7 @@
      ;; Area chart
      (when (seq data)
        [mui/grid {:item true :xs 12}
-        [charts/population-area-chart-v2
+        [charts/population-area-chart
          {:data   data
           :labels (merge labels
                          {:naiset "Naiset"
@@ -185,45 +184,6 @@
        "."]
       [mui/typography {:variant "caption"}
        "© Tilastokeskus väestörakenne 2020"]]]))
-
-(defn population-tab [{:keys [tr]}]
-  (let [data-bar  (<== [::subs/population-bar-chart-data])
-        data-area (<== [::subs/population-area-chart-data])
-        labels    (<== [::subs/population-labels])]
-    [:<>
-
-     ;; Bar chart
-     (when (seq data-bar)
-       [mui/grid {:item true :xs 12}
-        [charts/population-bar-chart
-         {:data   data-bar
-          :labels labels}]])
-
-     ;; Area chart
-     (when (seq data-area)
-       [mui/grid {:item true :xs 12}
-        [charts/population-area-chart
-         {:data   data-area
-          :labels labels}]])
-
-     ;; Tilastokeskus copyright notice (demographics data)
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:variant "caption"}
-       "© "
-       (tr :map.demographics/copyright1)
-       " "
-       [mui/link
-        {:href      "https://bit.ly/2WzrRwf"
-         :underline "always"}
-        (tr :map.demographics/copyright2)]
-       " "
-       (tr :map.demographics/copyright3)
-       " "
-       [mui/link
-        {:href      "https://creativecommons.org/licenses/by/4.0/deed.fi"
-         :underline "always"}
-        "CC BY 4.0"]
-       (tr :map.demographics/copyright4)]]]))
 
 (defn schools-tab [{:keys [tr]}]
   (let [schools-list       (<== [::subs/schools-list])
@@ -376,18 +336,19 @@
           [zones-selector {:tr tr :metric :travel-time}]]]]]]]))
 
 (defn analysis-view []
-  (let [tr            (<== [:lipas.ui.subs/translator])
-        selected-site (<== [::subs/selected-analysis-center])
-        loading?      (<== [::subs/loading?])
-        selected-tab  (<== [::subs/selected-analysis-tab])]
+  (let [tr                 (<== [:lipas.ui.subs/translator])
+        sites              (<== [::subs/sports-sites-with-analysis])
+        selected-site      (<== [::subs/selected-sports-site])
+        loading?           (<== [::subs/loading?])
+        selected-tab       (<== [::subs/selected-analysis-tab])]
 
     [mui/grid
      {:container true
       :spacing   2
-      :style     {:padding (if (empty? selected-site) "1em" "0.5em")}}
+      :style     {:padding (if selected-site "1em" "0.5em")}}
 
      ;; Helper text
-     (when (empty? selected-site)
+     (when (empty? sites)
        [mui/grid
         {:item        true :xs 12
          :container   true
@@ -419,83 +380,84 @@
           [mui/typography {:variant "body1" :paragraph true}
            (tr :analysis/description4)]]]])
 
+     ;; Site selector
+     (when (and (seq sites) (not loading?))
+       [mui/grid
+        {:item            true
+         :xs              12
+         :container       true
+         :justify-content "space-between"
+         :align-items     "center"}
+        [mui/grid {:item true}
+
+         [mui/grid {:container true :align-items "center" :spacing 1}
+          [mui/grid {:item true}
+           [lui/select
+            {:items     sites
+             :value     selected-site
+             :style     {:fontFamily    "Lato, serif",
+                         :fontWeight    700,
+                         :fontSize      "1.25rem",
+                         :lineHeight    1.6,
+                         :textTransform "uppercase"}
+             :label-fn  :site-name
+             :value-fn  :lipas-id
+             :on-change #(==> [::events/select-sports-site %])}]]
+
+          [mui/grid {:item true}
+           [mui/tooltip {:title "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla"}
+            [mui/icon-button
+             {:on-click #()
+              :color    "secondary"
+              :size     "medium"}
+             [mui/icon "add"]]]]]]
+
+        ;; Craete report button
+        (when selected-site
+          [mui/grid {:item true :style {:padding-right "1em"}}
+           [lui/download-button
+            {:size     "small"
+             :disabled loading?
+             :on-click #(==> [::events/create-report])
+             :label    (tr :reports/download-as-excel)}]])])
+
+     ;; Travel profile selector
      (when selected-site
-       [:<>
+       [mui/grid {:item true :xs 12}
+        [travel-profile-selector {:tr tr}]])
 
-        ;; Site name
-        [mui/grid
-         {:item            true
-          :xs              12
-          :container       true
-          :style           {:margin-top "1em"}
-          :justify-content "space-between"
-          :align-items     "center"}
-         [mui/grid {:item true}
-          [mui/grid {:container true :align-items "center"}
-           #_[mui/grid {:item true :style {:margin-right "0.5em" :margin-left "0.5em"}}
-            [mui/icon "location_on"]]
-           [mui/grid {:item true}
-            [mui/typography {:variant "h6"}
-             selected-site]]
-           [mui/grid {:item true}
-            [mui/tooltip {:title "Poista valinta"}
-             [mui/icon-button
-              {:on-click #(==> [::events/clear])
-               :size     "small"}
-              [mui/icon "clear"]]]]]]
+     ;; Analysis tabs
+     (when selected-site
+       [mui/grid {:item true :xs 12}
+        [mui/tabs {:value      selected-tab
+                   :on-change  #(==> [::events/select-analysis-tab %2])
+                   :style      {:margin-bottom "1em"}
+                   :text-color "secondary"}
+         [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
+         [mui/tab {:label (tr :analysis/population) :value :population}]
+         [mui/tab {:label (tr :analysis/schools) :value :schools}]
+         [mui/tab {:label (tr :analysis/settings) :value :settings}]]])
 
-         ;; Craete report butotn
-         [mui/grid {:item true :style {:padding-right "1em"}}
-          [lui/download-button
-           {:size     "small"
-            :disabled loading?
-            :on-click #(==> [::events/create-report])
-            :label    (tr :reports/download-as-excel)}]]]
+     ;; No data available text
+     #_(when (and selected-site (empty? data-bar))
+         [mui/grid {:item true :xs 12}
+          [mui/typography {:color "error"}
+           (tr :error/no-data)]])
 
-        ;; Travel profile selector
-        [mui/grid {:item true :xs 12}
-         [travel-profile-selector {:tr tr}]]
+     (when selected-site
+       [mui/grid {:item true :xs 12}
+        [mui/divider]])
 
-        ;; Analysis tabs
-        [mui/grid {:item true :xs 12}
-         [mui/tabs {:value      selected-tab
-                    :on-change  #(==> [::events/select-analysis-tab %2])
-                    :style      {:margin-bottom "1em"}
-                    :text-color "secondary"}
-          [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
-          [mui/tab {:label (tr :analysis/population) :value :population}]
-          [mui/tab {:label (tr :analysis/schools) :value :schools}]
-          [mui/tab {:label (tr :analysis/settings) :value :settings}]]]
+     (when loading?
+       [mui/grid {:item true :xs 12}
+        [mui/circular-progress]])
 
-        ;; No data available text
-        #_(when (and selected-site (empty? data-bar))
-            [mui/grid {:item true :xs 12}
-             [mui/typography {:color "error"}
-              (tr :error/no-data)]])
-
-        [mui/grid {:item true :xs 12}
-         [mui/divider]]
-
-        (if (and loading? (not= selected-tab "settings"))
-          [mui/grid {:item true :xs 12}
-           [mui/circular-progress]]
-
-          [:<>
-
-           (when (= selected-tab "settings")
-             [settings-tab {:tr tr}])
-
-           ;; Sports-sites tab
-           (when (= selected-tab "sports-sites")
-             [sports-sites-tab {:tr tr}])
-
-           ;; Population tab
-           (when (= selected-tab "population")
-             [population-v2-tab {:tr tr}])
-
-           ;; Schools tab
-           (when (= selected-tab "schools")
-             [schools-tab {:tr tr}])])])
+     (when (and selected-site (not loading?))
+       (condp = selected-tab
+         "settings"     [settings-tab {:tr tr}]
+         "sports-sites" [sports-sites-tab {:tr tr}]
+         "population"   [population-tab {:tr tr}]
+         "schools"      [schools-tab {:tr tr}]))
 
      ;; Small nest where floating controls can "land"
      [mui/grid {:item true :xs 12 :style {:height "70px"}}]]))

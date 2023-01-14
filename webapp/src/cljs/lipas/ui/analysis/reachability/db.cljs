@@ -31,7 +31,9 @@
 
 (def default-db
   {:selected-tab            "sports-sites"
+   :runs                    {}
    :distance-km             10
+   :selected-sports-site    nil
    :travel-profiles         [:car :foot :bicycle :direct]
    :selected-travel-profile :car
    :selected-travel-metric  :travel-time

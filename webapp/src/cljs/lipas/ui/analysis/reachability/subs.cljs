@@ -16,19 +16,44 @@
  ::loading?
  :<- [::reachability]
  (fn [analysis _]
-   (:loading? analysis)))
+   (or (:loading? analysis)
+       (->> analysis :runs vals (some :loading?)))))
+
+(re-frame/reg-sub
+ ::selected-sports-site
+ :<- [::reachability]
+ (fn [analysis _]
+   (:selected-sports-site analysis)))
+
+(re-frame/reg-sub
+ ::selected-sports-site-name
+ :<- [::reachability]
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:runs lipas-id :site-name])))
+
+(re-frame/reg-sub
+ ::sports-sites-with-analysis
+ :<- [::reachability]
+ (fn [analysis _]
+   (->> analysis
+        :runs
+        vals
+        (map #(select-keys % [:lipas-id :site-name])))))
 
 (re-frame/reg-sub
  ::population-data
  :<- [::reachability]
- (fn [analysis _]
-   (-> analysis :population :data)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in  analysis [:runs lipas-id :population :data])))
 
 (re-frame/reg-sub
  ::population-stats
  :<- [::reachability]
- (fn [analysis _]
-   (-> analysis :population :stats)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:runs lipas-id :population :stats])))
 
 (re-frame/reg-sub
  ::population-chart-mode
@@ -39,8 +64,9 @@
 (re-frame/reg-sub
  ::schools-data
  :<- [::reachability]
- (fn [analysis _]
-   (-> analysis :schools :data)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:schools :runs lipas-id :data])))
 
 (re-frame/reg-sub
  ::schools-chart-mode
@@ -57,8 +83,9 @@
 (re-frame/reg-sub
  ::analytics-center-fcoll
  :<- [::reachability]
- (fn [analysis _]
-   (:geoms analysis)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:runs lipas-id :geoms])))
 
 (re-frame/reg-sub
  ::analytics-center-point
@@ -81,6 +108,7 @@
     {:age-0-14    (str "0-14" (tr :duration/years-short))
      :age-15-64   (str "15-64" (tr :duration/years-short))
      :age-65-     (str "65" (tr :duration/years-short) "-")
+     :anonymized  (tr :general/age-anonymized)
      :men         (tr :general/men)
      :women       (tr :general/women)
      :total       (tr :general/total-short)
@@ -139,20 +167,21 @@
  :<- [::zones-by-selected-metric]
  (fn [[stats profile metric labels chart-mode zones] _]
    (let [zone-ids (map :id zones)
-         res (-> (get-in stats [metric profile])
-                 (select-keys zone-ids)
-                 (->>
-                  (reduce
-                   (fn [res [zone m]]
-                     (conj res
-                           {:zone      (labels zone)
-                            :zone*     zone
-                            :age-0-14  (:ika_0_14 m)
-                            :age-15-64 (:ika_15_64 m)
-                            :age-65-   (:ika_65_ m)
-                            :vaesto    (:vaesto m)})) [])
+         res      (-> (get-in stats [metric profile])
+                      (select-keys zone-ids)
+                      (->>
+                       (reduce
+                        (fn [res [zone m]]
+                          (conj res
+                                {:zone       (labels zone)
+                                 :zone*      zone
+                                 :age-0-14   (:ika_0_14 m)
+                                 :age-15-64  (:ika_15_64 m)
+                                 :age-65-    (:ika_65_ m)
+                                 :anonymized (:anonymisoitu m)
+                                 :vaesto     (:vaesto m)})) [])
 
-                  (sort-by :zone*)))]
+                       (sort-by :zone*)))]
 
      (if (= "non-cumulative" chart-mode)
        res
@@ -165,7 +194,8 @@
                             (update :age-0-14 #(+ % (:age-0-14 prev-zone)))
                             (update :age-15-64 #(+ % (:age-15-64 prev-zone)))
                             (update :age-65- #(+ % (:age-65- prev-zone)))
-                            (update :vaesto #(+ % (:vaesto prev-zone))))
+                            (update :vaesto #(+ % (:vaesto prev-zone)))
+                            (update :ananymized #(+ % (:anonymized prev-zone))))
                         zone)]
              [(conj res zone) zone]))
          [[]]
@@ -174,8 +204,9 @@
 (re-frame/reg-sub
  ::schools-data-v2
  :<- [::reachability]
- (fn [analysis _]
-   (-> analysis :schools :data)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:runs lipas-id :schools :data])))
 
 (re-frame/reg-sub
  ::schools-chart-data-v2
@@ -252,8 +283,9 @@
 (re-frame/reg-sub
  ::sports-sites-data
  :<- [::reachability]
- (fn [analysis _]
-   (-> analysis :sports-sites :data)))
+ :<- [::selected-sports-site]
+ (fn [[analysis lipas-id] _]
+   (get-in analysis [:runs lipas-id :sports-sites :data])))
 
 (re-frame/reg-sub
  ::sports-sites-list
