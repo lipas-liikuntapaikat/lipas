@@ -89,24 +89,32 @@
         ;; Combine distance and travel-time calculations to demographics
        (map
         (fn [{:keys [id_nro] :as m}]
-          (-> m
-              (select-keys [:id_nro :ika_65_ :ika_15_64 :ika_0_14 :kunta
-                            #_:naiset #_:miehet :vaesto :coords])
-              (update :ika_65_ utils/->int)
-              (update :ika_15_64 utils/->int)
-              (update :ika_0_14 utils/->int)
-              (update :kunta utils/->int)
-              #_(update :naiset utils/->int)
-              #_(update :miehet utils/->int)
-              (update :vaesto utils/->int)
-              (assoc :route
-                     (into {}
-                           (for [p profiles]
-                             [p (get-in pop-travel-times [p id_nro])])))
-              (assoc-in [:route :direct :distance-m]
-                        (double
-                         (Math/round
-                          (get-in pop-distances [id_nro :distance-m])))))))
+          (let [ika_65_   (utils/->int (:ika_65_ m))
+                ika_15_64 (utils/->int (:ika_15_64 m))
+                ika_0_14  (utils/->int (:ika_0_14 m))
+                vaesto    (utils/->int (:vaesto m))]
+            (-> m
+                (select-keys [:id_nro :ika_65_ :ika_15_64 :ika_0_14 :kunta
+                              #_:naiset #_:miehet :vaesto :coords])
+                (assoc :ika_65_ ika_65_)
+                (assoc :ika_15_64 ika_15_64)
+                (assoc :ika_0_14 ika_0_14)
+                (assoc :anonymisoitu (- (max vaesto 0)
+                                        (+ (max ika_0_14 0)
+                                           (max ika_15_64 0)
+                                           (max ika_65_ 0))))
+                (update :kunta utils/->int)
+                #_(update :naiset utils/->int)
+                #_(update :miehet utils/->int)
+                (update :vaesto utils/->int)
+                (assoc :route
+                       (into {}
+                             (for [p profiles]
+                               [p (get-in pop-travel-times [p id_nro])])))
+                (assoc-in [:route :direct :distance-m]
+                          (double
+                           (Math/round
+                            (get-in pop-distances [id_nro :distance-m]))))))))
 
         ;; Resolve zones
        (map
@@ -137,7 +145,6 @@
      (->> pop-data-with-zones
           (map
            (fn [{:keys [id_nro] :as m}]
-             ;; TODO Figure out if it's OK to expose grid id's or not
              (-> m
                  (select-keys [:vaesto :coords :zone])
                  (update :vaesto common/anonymize)))))
@@ -158,6 +165,7 @@
                      (update-in [:distance profile d-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
                      (update-in [:distance profile d-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
                      (update-in [:distance profile d-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                     (update-in [:distance profile d-zone :anonymisoitu] #(+ (or % 0) (:anonymisoitu m)))
                      (update-in [:distance profile d-zone :vaesto] #(+ (or % 0) (:vaesto m))))
 
                     tt-zone
@@ -165,6 +173,7 @@
                      (update-in [:travel-time profile tt-zone :ika_65_] #(+ (or % 0) (:ika_65_ m)))
                      (update-in [:travel-time profile tt-zone :ika_15_64] #(+ (or % 0) (:ika_15_64 m)))
                      (update-in [:travel-time profile tt-zone :ika_0_14] #(+ (or % 0) (:ika_0_14 m)))
+                     (update-in [:travel-time profile tt-zone :anonymisoitu] #(+ (or % 0) (:anonymisoitu m)))
                      (update-in [:travel-time profile tt-zone :vaesto] #(+ (or % 0) (:vaesto m)))))))
               res
               (conj profiles :direct)))
@@ -308,21 +317,21 @@
 
 ;;; Report generation ;;;;
 
-(def categories
-  {:travel-time
-   {:car     "Travel time by car"
-    :bicycle "Travel time by bicycle"
-    :foot    "Travel time by foot"}
-   :distance
-   {:car     "Distance by car"
-    :bicycle "Disntace by bicycle"
-    :foot    "Distance by foot"}})
+(def metrics
+  {:travel-time {:fi "Matka-aika" :en "Travel time"}
+   :distance    {:fi "Etäisyys" :en "Distance"}})
+
+(def profiles
+  {:car     {:en "By car" :fi "Autolla"}
+   :bicycle {:en "By bicycle" :fi "Polkupyörällä"}
+   :foot    {:en "By foot" :fi "Kävellen"}})
 
 (def population-fields
-  {:ika_65_   "Age 65-"
-   :ika_15_64 "Age 15-64"
-   :ika_0_14  "Age 0-14"
-   :vaesto    "People total"})
+  {:ika_65_      {:en "Age 65-" :fi "Ikä 65-"}
+   :ika_15_64    {:en "Age 15-64" :fi "Ikä 15-64"}
+   :ika_0_14     {:en "Age 0-14" :fi "Ikä 0-14"}
+   :anonymisoitu {:en "Age anonymized" :fi "Ikä anonymisoitu"}
+   :vaesto       {:en "People total" :fi "Kokonaisväestö"}})
 
 (def school-fields
   {:vaka        "Varhaiskasvatusyksikkö"
@@ -331,23 +340,6 @@
    :perus+lukio "Perus- ja lukioasteen koulut"
    :erityis     "Peruskouluasteen erityiskoulut"})
 
-(def school-fields-invert (set/map-invert school-fields))
-
-(def sports-site-fields
-  (into {}
-        (map (juxt first (comp :fi :name second)))
-        types/all))
-
-(def sports-site-to-sub-cat-fields
-  (into {}
-        (map (juxt first (comp :fi :name types/sub-categories :sub-category second)))
-        types/all))
-
-(def sports-site-to-main-cat-fields
-  (into {}
-        (map (juxt first (comp :fi :name types/main-categories :main-category second)))
-        types/all))
-
 (def units
   {:travel-time "min"
    :distance    "km"})
@@ -355,104 +347,107 @@
 (defn make-zone-name [zone suffix]
   (str (:min zone) "-" (:max zone) suffix))
 
-(defn- create-sheet
-  [data zones metric fields]
-  (let [m-zones (metric zones)]
-
-    (into [] cat
-          (for [[profile p-name] (get categories metric)
-                :let [by-zone (->> data
-                                   (map
-                                    (fn [m]
-                                      (assoc m :zone (resolve-zone zones m profile metric))))
-                                   (group-by :zone))]]
-            (into [[p-name ""]] cat
-                  (for [zone m-zones]
-                    (into [[(make-zone-name zone (units metric)) ""]]
-                          (for [[k f-name] fields]
-                            [f-name (->> (:id zone)
-                                         by-zone
-                                         (map #(get % k))
-                                         (reduce +))]))))))))
-
+(def zone-sorter (juxt :zone1 :zone2 :zone3 :zone4 :zone5 :zone6 :zone7 :zone8 :zone9))
 (defn create-population-sheet
-  [data metric]
-  (let [zones (-> data :zones metric (->> (utils/index-by :id)))
-        stats (-> data :population :stats metric)]
-    (into [] cat
-          (for [[profile zone] stats]
-            (into [[(get-in categories [metric profile])]] cat
-                  (for [[zkey zpop] zone]
-                    (into [[(make-zone-name (get zones zkey) (units metric)) ""]]
-                          (for [[popk popv] zpop]
-                            [(popk population-fields) popv]))))))))
+  [{:keys [zones] :as data}]
+  (let [locale :fi
+        headers (into ["Suure" "Kulkutapa" "Etäisyys" "Väestöryhmä"]
+                      (->> data :runs vals (map :site-name)))]
+    (into [headers]
+          (for [metric    [:travel-time :distance]
+                :let      [zones-by-id (->> zones metric (utils/index-by :id))]
+                profile   [:car :foot :bicycle]
+                zone-id   (->> zones metric (map :id) (sort-by zone-sorter))
+                pop-group [:ika_0_14 :ika_15_64 :ika_65_ :anonymisoitu :vaesto]]
+            (into
+             [(get-in metrics [metric locale])
+              (get-in profiles [profile locale])
+              (make-zone-name (zones-by-id zone-id) (units metric))
+              (get-in population-fields [pop-group locale])]
+             (map (fn [m] (get-in m [metric profile zone-id pop-group]))
+                  (->> data :runs vals (map (comp :stats :population)))))))))
 
 (defn create-schools-sheet
-  [data metric]
-  (create-sheet  (->> data
-                      :schools
-                      :data
-                      (map
-                       (fn [m]
-                         (let [k (school-fields-invert (:type m))
-                               ks (set/difference (set (keys school-fields)) #{k})]
-                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
-                 (:zones data)
-                 metric
-                 school-fields))
+  [{:keys [zones] :as data}]
+  (let [locale  :fi
+        headers (into ["Suure" "Kulkutapa" "Etäisyys" "Oppilaitostyyppi"]
+                      (->> data :runs vals (map :site-name)))]
+    (into [headers]
+          (for [metric      [:travel-time :distance]
+                :let        [zones-by-id (->> zones metric (utils/index-by :id))]
+                profile     [:car :foot :bicycle]
+                zone-id     (->> zones metric (map :id) (sort-by zone-sorter))
+                school-type (vals school-fields)]
+            (into
+             [(get-in metrics [metric locale])
+              (get-in profiles [profile locale])
+              (make-zone-name (zones-by-id zone-id) (units metric))
+              school-type]
+             (map (fn [lipas-id]
+                    (let [schools (get-in data [:runs lipas-id :schools :data])]
+                      (->> schools
+                           (filter
+                            (fn [m]
+                              (and
+                               (= school-type (:type m))
+                               (= zone-id (resolve-zone zones m profile metric)))))
+                           count)))
+                  (->> data :runs keys)))))))
+
+(def type-code->name
+  (into {}
+        (map (juxt first (comp :fi :name second)))
+        types/all))
+
+(def type-code->sub-cat
+  (into {}
+        (map (juxt first (comp :fi :name types/sub-categories :sub-category second)))
+        types/all))
+
+(def type-code->main-cat
+  (into {}
+        (map (juxt first (comp :fi :name types/main-categories :main-category second)))
+        types/all))
 
 (defn create-sports-sites-sheet
-  [data metric]
-  (create-sheet  (->> data
-                      :sports-sites
-                      :data
-                      (map
-                       (fn [m]
-                         (let [k (-> m :type :type-code)
-                               ks (set/difference (set (keys sports-site-fields)) #{k})]
-                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
-                 (:zones data)
-                 metric
-                 sports-site-fields))
-
-(defn create-sports-sites-sheet-main-cat
-  [data metric]
-  (create-sheet  (->> data
-                      :sports-sites
-                      :data
-                      (map
-                       (fn [m]
-                         (let [k  (-> m :type :type-code sports-site-to-main-cat-fields)
-                               ks (set/difference
-                                   (set (vals sports-site-to-main-cat-fields))
-                                   #{k})]
-                           (apply assoc (into [m k 1] (interleave ks (repeat 0))))))))
-                 (:zones data)
-                 metric
-                 sports-site-to-main-cat-fields))
+  [{:keys [zones] :as data}]
+  (let [locale  :fi
+        headers (into ["Suure" "Kulkutapa" "Etäisyys" "Pääryhmä" "Alaryhmä"
+                       "Liikuntapaikkatyyppi"]
+                      (->> data :runs vals (map :site-name)))]
+    (into [headers]
+          (for [metric    [:travel-time :distance]
+                :let      [zones-by-id (->> zones metric (utils/index-by :id))]
+                profile   [:car :foot :bicycle]
+                zone-id   (->> zones metric (map :id) (sort-by zone-sorter))
+                type-code (->> (keys types/all) sort)]
+            (into
+             [(get-in metrics [metric locale])
+              (get-in profiles [profile locale])
+              (make-zone-name (zones-by-id zone-id) (units metric))
+              (type-code->main-cat type-code)
+              (type-code->sub-cat type-code)
+              (type-code->name type-code)]
+             (map (fn [lipas-id]
+                    (let [sports-sites (get-in data [:runs lipas-id :sports-sites :data])]
+                      (->> sports-sites
+                           (filter
+                            (fn [m]
+                              (and
+                               (= type-code (-> m :type :type-code))
+                               (= zone-id (resolve-zone zones m profile metric)))))
+                           count)))
+                  (->> data :runs keys)))))))
 
 (defn create-report [data]
-  ["Population travel-time" (create-population-sheet data :travel-time)
-   "Population distance" (create-population-sheet data :distance)
-   "Schools travel-time" (create-schools-sheet data :travel-time)
-   "Schools distance" (create-schools-sheet data :distance)
-   "Sports facility distance (all types)" (create-sports-sites-sheet data :distance)
-   "Sports facility travel-time (all types)" (create-sports-sites-sheet data :travel-time)])
+  ["Väestö" (create-population-sheet data)
+   "Koulut" (create-schools-sheet data)
+   "Liikuntapaikat" (create-sports-sites-sheet data)])
 
 (comment
   (def data (read-string (slurp "/Users/tipo/kana.edn")))
   (-> data :zones :travel-time)
-
-  (create-population-sheet data :travel-time)
-  (create-population-sheet data :distance)
-  (create-schools-sheet data :travel-time)
-  (create-schools-sheet data :distance)
-  (create-sports-sites-sheet data :travel-time)
-  (create-sports-sites-sheet-main-cat data :travel-time)
-
   (require '[clojure.java.io :as io])
-
-
   (require '[cognitect.transit :as transit])
 
   (import [java.io ByteArrayInputStream ByteArrayOutputStream])
@@ -461,4 +456,25 @@
   (def reader (transit/reader in :json))
 
   (spit "/tmp/cc-output.edn" (transit/read reader))
+
+  (def data2 (read-string (slurp "/Users/tipo/lipas/reachability/data.edn")))
+  (keys data2)
+  (->> data2 :runs keys)
+  (get-in data2 [:runs 502918])
+  (get-in data2 [:runs 502918 :schools])
+  (get-in data2 [:runs 502918 :population :stats])
+
+  (def zone-sorter (juxt :zone1 :zone2 :zone3 :zone4 :zone5 :zone6 :zone7 :zone8 :zone9))
+  (->> data2 :zones :travel-time (map :id) (sort-by zone-sorter))
+  (:zones data2)
+  (create-population-sheet data2)
+  (:zones data2)
+  (->> data2 :zones :travel-time (some (comp #{:zone1} :id)))
+  (create-report data2)
+
+  (->> data2 :runs vals (mapcat (comp :data :schools)))
+  (create-schools-sheet data2)
+
+  (->> data2 :runs vals first :sports-sites)
+  (create-sports-sites-sheet data2)
   )

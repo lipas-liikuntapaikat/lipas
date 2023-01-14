@@ -2,9 +2,7 @@
   (:require
    [ajax.core :as ajax]
    [ajax.protocols :as ajaxp]
-   [goog.object :as gobj]
-   [goog.string :as gstring]
-   [goog.string.format]
+   [clojure.string :as str]
    [lipas.ui.analysis.reachability.db :as db]
    [lipas.ui.map.utils :as map-utils]
    [lipas.utils :as cutils]
@@ -12,18 +10,23 @@
 
 (re-frame/reg-event-fx
  ::calc-distances-and-travel-times
- (fn [{:keys [db]} [_ body]]
+ (fn [{:keys [db]} [_ lipas-id body]]
    (let [url (str (:backend-url db) "/actions/calc-distances-and-travel-times")]
-     {:db (assoc-in db [:analysis :reachability :loading?] true)
+     {:db (assoc-in db [:analysis :reachability :runs lipas-id :loading?] true)
       :http-xhrio
       {:method          :post
        :uri             url
        :params          body
        :format          (ajax/transit-request-format)
        :response-format (ajax/transit-response-format)
-       :on-success      [::calc-success]
-       :on-failure      [::calc-failure]}
+       :on-success      [::calc-success lipas-id]
+       :on-failure      [::calc-failure lipas-id]}
       :ga/event ["analysis" "calculate-analysis" (-> db :analysis :lipas-id)]})))
+
+(re-frame/reg-event-db
+ ::select-sports-site
+ (fn [db [_ lipas-id]]
+   (assoc-in db [:analysis :reachability :selected-sports-site] lipas-id)))
 
 (re-frame/reg-event-db
  ::clear
@@ -32,20 +35,21 @@
 
 (re-frame/reg-event-db
  ::calc-success
- (fn [db [_ resp]]
+ (fn [db [_ lipas-id resp]]
    (-> db
-       (assoc-in [:analysis :reachability :loading?] false)
-       (assoc-in [:analysis :reachability :population :data] (:population resp))
-       (assoc-in [:analysis :reachability :population :stats] (:population-stats resp))
-       (assoc-in [:analysis :reachability :schools :data] (:schools resp))
-       (assoc-in [:analysis :reachability :sports-sites :data] (:sports-sites resp)))))
+       (assoc-in [:analysis :reachability :runs lipas-id :loading?] false)
+       (assoc-in [:analysis :reachability :runs lipas-id :population :data] (:population resp))
+       (assoc-in [:analysis :reachability :runs lipas-id :population :stats] (:population-stats resp))
+       (assoc-in [:analysis :reachability :runs lipas-id :schools :data] (:schools resp))
+       (assoc-in [:analysis :reachability :runs lipas-id :sports-sites :data] (:sports-sites resp))
+       (assoc-in [:analysis :reachability :selected-sports-site] lipas-id))))
 
 (re-frame/reg-event-fx
  ::calc-failure
- (fn [{:keys [db]} [_ error]]
+ (fn [{:keys [db]} [_ lipas-id error]]
    (let [fatal? false
          tr     (-> db :translator)]
-     {:db           (assoc-in db [:analysis :reachability :loading?] false)
+     {:db           (assoc-in db [:analysis :reachability :runs lipas-id :loading?] false)
       :ga/exception [(:message error) fatal?]
       :dispatch     [:lipas.ui.events/set-active-notification
                      {:message  (tr :notifications/get-failed)
@@ -93,10 +97,10 @@
          [lon lat] (resolve-coords geoms)
          coords    {:lon lon :lat lat}]
      {:db       (-> db
-                    (assoc-in [:analysis :reachability :geoms] geoms)
-                    (assoc-in [:analysis :reachability :lipas-id] lipas-id)
-                    (assoc-in [:analysis :reachability :center] coords)
-                    (assoc-in [:analysis :reachability :site-name] (:name rev)))
+                    (assoc-in [:analysis :reachability :runs lipas-id :geoms] geoms)
+                    (assoc-in [:analysis :reachability :runs lipas-id :lipas-id] lipas-id)
+                    (assoc-in [:analysis :reachability :runs lipas-id :center] coords)
+                    (assoc-in [:analysis :reachability :runs lipas-id :site-name] (:name rev)))
       :dispatch-n
       [[:lipas.ui.search.events/clear-filters]
        [:lipas.ui.map.events/show-analysis*]
@@ -108,38 +112,50 @@
  (fn [db [_ tab]]
    (assoc-in db [:analysis :reachability :selected-tab] tab)))
 
-(defn calc-buffer-geom [db]
-  (let [fcoll       (-> db :analysis :reachability :geoms)
+(defn calc-buffer-geom [db lipas-id]
+  (let [fcoll       (get-in db [:analysis :reachability :runs lipas-id :geoms])
         distance-km (-> db :analysis :reachability :distance-km)]
     (map-utils/calc-buffer-geom fcoll distance-km)))
 
 (re-frame/reg-event-fx
  ::set-analysis-distance-km
  (fn [{:keys [db]} [_ v]]
-   (let [buff-geom (calc-buffer-geom db)]
-     {:db (-> db
-              (assoc-in [:analysis :reachability :distance-km] v)
-              (assoc-in [:analysis :reachability :buffer-geom] buff-geom))})))
+   (let [lipas-ids (-> db :analysis :reachability :runs keys)]
+     {:db (reduce
+           (fn [db lipas-id]
+             (let [buff-geom (calc-buffer-geom db lipas-id)]
+               (assoc-in db [:analysis :reachability :runs lipas-id :buffer-geom] buff-geom)))
+           (assoc-in db [:analysis :reachability :distance-km] v)
+           lipas-ids)})))
 
 (re-frame/reg-event-fx
  ::refresh-analysis
  (fn [{:keys [db]} _]
-   (let [profiles    (-> db :analysis :reachability :travel-profiles)
-         fcoll       (-> db :analysis :reachability :geoms)
+   (let [lipas-ids (-> db :analysis :reachability :runs keys)
+         profiles    (-> db :analysis :reachability :travel-profiles)
          distance-km (-> db :analysis :reachability :distance-km)
          type-codes  (-> db :analysis :reachability :sports-sites :type-codes)
          zones       (-> db :analysis :reachability :zones)
-         buff-geom   (calc-buffer-geom db)
-         params      {:distance-km  distance-km
-                      :profiles     profiles
-                      :zones        zones
-                      :search-fcoll fcoll
-                      :buffer-fcoll buff-geom
-                      :type-codes   type-codes}]
-     {:db (assoc-in db [:analysis :reachability :buffer-geom] buff-geom)
+         buff-geoms (->> lipas-ids
+                         (map (fn [lipas-id] [lipas-id (calc-buffer-geom db lipas-id)]))
+                         (into {}))]
+     {:db (reduce
+           (fn [db lipas-id]
+             (let [path [:analysis :reachability :runs lipas-id :buffer-geom]]
+               (assoc-in db path (buff-geoms lipas-id))))
+           db
+           lipas-ids)
       :dispatch-n
-      [[::calc-distances-and-travel-times params]
-       [:lipas.ui.search.events/submit-search false]]})))
+      (into [[:lipas.ui.search.events/submit-search false]]
+            (for [lipas-id lipas-ids]
+             (let [fcoll  (get-in db [:analysis :reachability :runs lipas-id :geoms])
+                   params {:distance-km  distance-km
+                           :profiles     profiles
+                           :zones        zones
+                           :search-fcoll fcoll
+                           :buffer-fcoll (calc-buffer-geom db lipas-id)
+                           :type-codes   type-codes}]
+               [::calc-distances-and-travel-times lipas-id params])))})))
 
 (re-frame/reg-event-db
  ::select-sports-sites-view
@@ -210,7 +226,8 @@
 (re-frame/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
-   (let [params (-> db :analysis :reachability)]
+   (let [params    (-> db :analysis :reachability)
+         lipas-ids (-> db :analysis :reachability :runs keys)]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/create-analysis-report")
@@ -223,7 +240,7 @@
        :on-success      [::report-success]
        :on-failure      [::report-failure]}
       :db       (assoc-in db [:analysis :reachability :loading?] true)
-      :ga/event ["analysis" "download-report" (:lipas-id params)]})))
+      :ga/event ["analysis" "download-reachability-report" (str/join "," lipas-ids)]})))
 
 (re-frame/reg-event-fx
  ::report-success

@@ -506,9 +506,10 @@
 
 (defn draw-analytics-buffer!
   [{:keys [layers] :as map-ctx}
-   {:keys [buffer-geom center distance-km]}]
+   {:keys [distance-km selected-sports-site] :as analysis}]
 
-  (let [^js analysis-layer (-> layers :overlays :analysis)]
+  (let [{:keys [buffer-geom center]} (get-in analysis [:runs selected-sports-site])
+        ^js analysis-layer (-> layers :overlays :analysis)]
 
     ;; Clear existing buffer
     (-> analysis-layer .getSource .clear)

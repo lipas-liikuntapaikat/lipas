@@ -434,7 +434,8 @@
 (def age-groups
   {:age-0-14  "#006190"
    :age-15-64 "#5b8caa"
-   :age-65-   "#9cb7c5"})
+   :age-65-   "#9cb7c5"
+   :anonymized mui/gray1})
 
 (def school-types
   {:vaka        "#006190"
@@ -443,7 +444,7 @@
    :perus+lukio "#709ab3"
    :erityis     "#c8d4d9"})
 
-(defn population-bar-chart
+#_(defn population-bar-chart
   [{:keys [data labels on-click]}]
   [:> ResponsiveContainer {:width "100%" :height 300}
    (into
@@ -455,7 +456,7 @@
     (for [zone [:zone1 :zone2 :zone3 :zone4]]
       [:> Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
 
-(defn fixed-tick [props]
+#_(defn fixed-tick [props]
   (let [x       (gobj/get props "x")
         y       (gobj/get props "y")
         payload (gobj/get props "payload")
@@ -474,22 +475,9 @@
     [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
      [:> Legend {:content (fn [^js props] (legend labels props))}]
      [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
-     [:> XAxis {:dataKey "zone" :tick fixed-tick :type "category"}]
-     [:> YAxis {:tick font-styles}]]
-    (for [k [:age-0-14 :age-15-64 :age-65-]]
-      [:> Area
-       {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
-
-(defn population-area-chart-v2
-  [{:keys [data labels on-click]}]
-  [:> ResponsiveContainer {:width "100%" :height 300}
-   (into
-    [:> AreaChart {:data data :layout "horizontal" :on-click on-click}
-     [:> Legend {:content (fn [^js props] (legend labels props))}]
-     [:> Tooltip {:content (fn [^js props] (subsidies-tooltip labels props))}]
      [:> XAxis {:dataKey "zone" :tick true :type "category"}]
      [:> YAxis {:tick font-styles}]]
-    (for [k [:age-0-14 :age-15-64 :age-65-]]
+    (for [k [:age-0-14 :age-15-64 :age-65- :anonymized]]
       [:> Area
        {:dataKey k :stackId "a" :fill (age-groups k) :stroke (age-groups k)}]))])
 

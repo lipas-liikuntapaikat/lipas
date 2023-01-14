@@ -288,7 +288,7 @@
     [mui/paper
      {:style
       {:padding "0.5em"}}
-     [mui/table {:padding "dense"}
+     [mui/table {:padding "normal" :size "small"}
       [mui/table-body
 
        ;; Population

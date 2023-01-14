@@ -175,6 +175,7 @@
     {:description   "Kuvaus",
      :hall          "Halli",
      :women         "Naiset",
+     :age-anonymized "Ikä anonymisoitu"
      :total-short   "Yht.",
      :done          "Valmis",
      :updated       "Päivitetty",
@@ -1826,6 +1827,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     {:description   "Description",
      :hall          "Hall",
      :women         "Women",
+     :age-anonymized "Age anonymized"
      :total-short   "Total",
      :done          "Done",
      :updated       "Updated",
