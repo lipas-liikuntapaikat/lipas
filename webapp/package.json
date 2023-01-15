@@ -45,6 +45,6 @@
     "zipcelx": "^1.6.2"
   },
   "devDependencies": {
-    "shadow-cljs": "^2.20.15"
+    "shadow-cljs": "^2.20.20"
   }
 }
