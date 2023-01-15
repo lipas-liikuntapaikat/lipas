@@ -218,15 +218,15 @@
 
 (defn set-basemap!
   [{:keys [layers] :as map-ctx} basemap]
-  (doseq [[k v] (:basemaps layers)
-          :let  [visible? (= k basemap)]]
+  (doseq [[k ^js v] (:basemaps layers)
+          :let      [visible? (= k basemap)]]
     (.setVisible v visible?))
   map-ctx)
 
 (defn set-overlays!
   [{:keys [layers] :as map-ctx} selected-overlays]
-  (doseq [[k v] (:overlays layers)
-          :let  [visible? (contains? selected-overlays k)]]
+  (doseq [[k ^js v] (:overlays layers)
+          :let      [visible? (contains? selected-overlays k)]]
     (.setVisible v visible?))
   map-ctx)
 
