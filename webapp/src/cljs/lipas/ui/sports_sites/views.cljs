@@ -35,8 +35,9 @@
    (= (:status display-data) (tr (keyword :status "planned")))
    (= (:status display-data) (tr (keyword :status "planning")))))
 
-(defn form [{:keys [tr display-data edit-data types size-categories
-                    admins owners on-change read-only? sub-headings?]}]
+(defn form
+  [{:keys [tr display-data edit-data types size-categories
+           admins owners on-change read-only? sub-headings?]}]
 
   (let [locale (tr)]
 
@@ -48,6 +49,14 @@
 
      (when sub-headings?
        [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
+
+     ;; Last modified
+     {:label      (tr :general/last-modified)
+      :value      (-> display-data :event-date)
+      :form-field [lui/text-field
+                   {:value     (-> display-data :event-date)
+                    :on-change #()
+                    :disabled  true}]}
 
      ;; Status
      (when (allow-editing-status? tr display-data)

@@ -8,6 +8,7 @@
    [clojure.walk :as walk]
    [goog.crypt.base64 :as b64]
    [goog.labs.userAgent.browser :as gbrowser]
+   [goog.date :as gdate]
    [lipas.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -44,9 +45,6 @@
     (update m k #(tr (keyword prefix %)))
     m))
 
-(comment
-  (resolve-year 2014)
-  (resolve-year "2014-12-02"))
 (defn resolve-year [timestamp]
   (read-string (reduce str (take 4 (str timestamp)))))
 
@@ -66,12 +64,14 @@
 
 (def reverse-cmp utils/reverse-cmp)
 
-(comment (prev-or-first [1 3 5] 4))
-(comment (prev-or-first ["2005" "2012" "2001"] "2006"))
 (defn prev-or-first [coll x]
   (let [ordered   (->> (conj coll x) (sort reverse-cmp))
         head-at-x (drop-while #(not= x %) ordered)]
     (or (fnext head-at-x) (last (drop-last ordered)))))
+
+(comment
+  (prev-or-first [1 3 5] 4)
+  (prev-or-first ["2005" "2012" "2001"] "2006"))
 
 (defn resolve-prev-rev [history rev-ts]
   (let [closest (prev-or-first (keys history) rev-ts)]
@@ -189,11 +189,13 @@
         event-dates (conj (keys history) event-date)]
     (= event-date (first (sort reverse-cmp event-dates)))))
 
-(comment (->basic-auth {:username "kissa" :password "koira"}))
 (defn ->basic-auth
   "Creates base64 encoded Authorization header value"
   [{:keys [username password]}]
   (str "Basic " (b64/encodeString (str username ":" password))))
+
+(comment
+  (->basic-auth {:username "kissa" :password "koira"}))
 
 (defn decode-jwt-payload [s]
   (-> s
@@ -349,6 +351,12 @@
       (string/split "-")
       reverse
       (->> (string/join "."))))
+
+(defn ->human-date-time-at-user-tz [s]
+  (let [gd (gdate/DateTime.fromIsoString s)]
+    (str (->human-date (.toIsoString gd true))
+         " "
+         (.toIsoTimeString gd))))
 
 (defn navigate!
   ([path]
