@@ -276,6 +276,7 @@
 
        (merge
         {:status            (-> status locale)
+         :event-date        (-> latest :event-date utils/->human-date-time-at-user-tz)
          :lipas-id          (-> latest :lipas-id)
          :name              (-> latest :name)
          :name-localized    (-> latest :name-localized)
