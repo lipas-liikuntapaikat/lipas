@@ -9,7 +9,7 @@
    [metosin/reitit "0.5.18"]
 
    ;;; Frontend ;;;
-   [thheller/shadow-cljs "2.20.15"]
+   [thheller/shadow-cljs "2.20.20"]
    [org.clojure/clojurescript "1.11.60"]
    [reagent "1.1.1"]
    [re-frame "1.3.0"]
