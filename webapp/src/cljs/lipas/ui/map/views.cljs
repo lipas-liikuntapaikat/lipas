@@ -578,6 +578,9 @@
           ;; Accessibility
           2 [accessibility/view {:lipas-id lipas-id}])]
 
+       ;; "Landing bay" for floating tools
+       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
+
        ;; Actions
        [lui/floating-container
         {:bottom 0 :background-color "transparent"}
@@ -1325,10 +1328,9 @@
        :analysis [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :search   [search/search-view
-                  {:tr tr
-                   :on-result-click
-                   (fn [{:keys [lipas-id]}]
-                     (==> [::events/show-sports-site lipas-id]))}])
+                  {:tr              tr
+                   :on-result-click (fn [{:keys [lipas-id]}]
+                                      (==> [::events/show-sports-site lipas-id]))}])
 
      ;; Floating bottom toolbar
      (when show-tools?
