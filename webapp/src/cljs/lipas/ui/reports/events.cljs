@@ -104,7 +104,7 @@
 (re-frame/reg-event-fx
  ::open-saved-report
  (fn [_ [_ fields]]
-   {:dispatch [::select-fields fields]
+   {:dispatch [::set-selected-fields fields]
     :ga/event ["user" "open-my-report"]}))
 
 (re-frame/reg-event-db
