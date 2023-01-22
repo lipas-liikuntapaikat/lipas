@@ -429,7 +429,8 @@
      :save-success "Tallennus onnistui"
      :ie           (str "Internet Explorer ei ole tuettu selain. "
                         "Suosittelemme käyttämään toista selainta, "
-                        "esim. Chrome, Firefox tai Edge.")},
+                        "esim. Chrome, Firefox tai Edge.")
+     :thank-you-for-feedback "Kiitos palautteesta!"},
     :lipas.swimming-pool.energy-saving
     {:filter-rinse-water-heat-recovery?
      "Suodattimien huuhteluveden lämmöntalteenotto",
@@ -2068,7 +2069,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     {:get-failed   "Couldn't get data.",
      :save-failed  "Saving failed",
      :save-success "Saving succeeded"
-     :ie           "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge."},
+     :ie           "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge."
+     :thank-you-for-feedback "Thank you for feedback!"},
     :lipas.swimming-pool.energy-saving
     {:filter-rinse-water-heat-recovery?
      "Filter rinse water heat recovery?",

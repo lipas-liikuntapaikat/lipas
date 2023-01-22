@@ -6,6 +6,7 @@
    [hiposfer.geojson.specs :as geojson]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
+   [lipas.data.feedback :as feedback]
    [lipas.data.ice-stadiums :as ice-stadiums]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
@@ -1207,10 +1208,13 @@
   (s/keys :req-un [:lipas.sports-site.type/type-code
                    :lipas.api.energy-report.req/year]))
 
+(s/def :lipas.api.sports-sites-report/format #{"xlsx" "geojson" "geojsonl"})
+
 (s/def :lipas.api.sports-site-report/req
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query
                    :lipas.api.sports-site-report.req/fields
-                   :lipas/locale]))
+                   :lipas/locale]
+          :opt-un [:lipas.api.sports-sites-report/format]))
 
 (s/def :lipas.api.report.req/city-codes
   (s/coll-of :lipas.location.city/city-code
@@ -1280,3 +1284,14 @@
           :opt-un [:lipas.api.diversity-indices/analysis-radius-km
                    :lipas.api.diversity-indices/max-distance-m
                    :lipas.api.diversity-indices/distance-mode]))
+
+;;; Feedback
+
+(s/def :lipas.feedback/type (into #{} (keys feedback/types)))
+(s/def :lipas.feedback/text (str-in 2 10000))
+(s/def :lipas.feedback/sender :lipas/email)
+
+(s/def :lipas.feedback/payload
+  (s/keys :req [:lipas.feedback/type
+                :lipas.feedback/text]
+          :opt [:lipas.feedback/sender]))

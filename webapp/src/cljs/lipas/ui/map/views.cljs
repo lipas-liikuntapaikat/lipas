@@ -11,6 +11,7 @@
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
+   [lipas.ui.feedback.views :as feedback]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
@@ -592,7 +593,7 @@
            :spacing       1
            :style         {:padding "0.5em 0em 0.5em 0em"}}]
          (->>
-          [;; Undo
+          [ ;; Undo
            (when editing?
              [mui/tooltip {:title (tr :actions/undo)}
               [:span
@@ -1396,6 +1397,10 @@
         :style       {:background-color mui/gray2
                       :border-radius    "4px"}
         :wrap        "nowrap"}
+
+       ;; Feedback fab
+       [mui/grid {:item true}
+        [feedback/fab]]
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
