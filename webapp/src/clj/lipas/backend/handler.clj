@@ -459,7 +459,7 @@
         {:handler
          (fn [_]
            {:status 200
-            :body (core/get-newsletter mailchimp)})}}]
+            :body   (core/get-newsletter mailchimp)})}}]
 
       ;; Subscribe newsletter
       ["/actions/subscribe-newsletter"
@@ -470,21 +470,33 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body (core/subscribe-newsletter mailchimp body-params)})}}]
+            :body   (core/subscribe-newsletter mailchimp body-params)})}}]
 
       ;; Calculate diversity indices
       ["/actions/calc-diversity-indices"
        {:post
-        {:no-doc false
+        {:no-doc     false
          :parameters {:body map?}
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
              (if (s/valid? :lipas.api.diversity-indices/req body)
-               {:status  200
-                :body (core/calc-diversity-indices search body)}
+               {:status 200
+                :body   (core/calc-diversity-indices search body)}
                {:status 400
-                :body {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]]]
+                :body   {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]
+
+      ;; Send feedback
+      ["/actions/send-feedback"
+       {:post
+        {:parameters
+         {:body :lipas.feedback/payload}
+         :handler
+         (fn [{:keys [body-params]}]
+           (core/send-feedback! emailer body-params)
+           {:status 200
+            :body   {:status "OK"}})}}]]]
+
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance

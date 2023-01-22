@@ -115,6 +115,15 @@
                                 (str/replace "{{link}}" link)
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
+(defn send-feedback-email!
+  [emailer to feedback]
+  (.send! emailer {:subject "LIPAS-palaute"
+                   :to      to
+                   :plain   (with-out-str (pprint/pprint feedback))
+                   :html    (str "<html><body>"
+                                 (with-out-str (pprint/pprint feedback))
+                                 "</body></html>")}))
+
 (defrecord SMTPEmailer [config]
   Emailer
   (send! [_ message] (send*! config message)))

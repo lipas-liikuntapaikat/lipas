@@ -514,6 +514,9 @@
 (defn subscribe-newsletter [config user]
   (newsletter/subscribe config user))
 
+(defn send-feedback! [emailer feedback]
+  (email/send-feedback-email! emailer "lipasinfo@jyu.fi" feedback))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
@@ -523,6 +526,22 @@
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
+
+  (def results (atom []))
+  (require '[cheshire.core :as json])
+
+  (async/go
+    (let [ch (search/scroll search2 "sports_sites_current" {:query
+                                                            {:term {:type.type-code 1170}}})]
+      (loop []
+        (when-let [page (async/<! ch)]
+          ;; todo GeoJSON writing to stream
+          (swap! results conj page)
+          (recur)))))
+
+
+  @results
+  (count @results)
 
   (let [statuses ["active" "out-of-service-temporarily"]
         grouping "location.city.city-code"
