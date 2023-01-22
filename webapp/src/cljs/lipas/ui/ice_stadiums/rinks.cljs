@@ -44,8 +44,8 @@
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
-  [[:length-m (tr :dimensions/length-m)]
-   [:width-m (tr :dimensions/width-m)]])
+  [[:width-m (tr :dimensions/width-m)]
+   [:length-m (tr :dimensions/length-m)]])
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   [lui/form-table
