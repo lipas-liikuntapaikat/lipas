@@ -523,13 +523,31 @@
         (when (#{2510 2520} type-code)
           (let [data         (<== [:lipas.ui.map.subs/selected-sports-site])
                 lipas-id     (-> data :display-data :lipas-id)
-                on-change    (fn [n k v] (==> [::events/edit-field lipas-id [:rinks n k] v]))
-                edit-data    (-> data :edit-data)
+                on-change    (fn [n k v] (if lipas-id
+                                           ;; Existing site
+                                           (==> [::events/edit-field lipas-id [:rinks n k] v])
+                                           (==> [::events/edit-new-site-field [:rinks n k] v])))
+                edit-data    (or (-> data :edit-data)
+                                 (<== [:lipas.ui.sports-sites.subs/new-site-data]))
                 display-data (-> data :display-data)]
 
-            [;; Rink 1 length
+
+            [;; Rink 1 width
+            {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
+             :sort     "1A"
+             :priority 1
+             :value    (get-in display-data [:rinks 0 :width-m])
+             :form-field
+             [lui/text-field
+              {:adornment "m"
+               :type      "number"
+               :value     (get-in edit-data [:rinks 0 :width-m])
+               :spec      :lipas.ice-stadium.rink/width-m
+               :on-change #(on-change 0 :width-m %)}]}
+
+             ;; Rink 1 length
              {:label    (tr :lipas.ice-stadium.rinks/rink1-length)
-              :sort     "1A"
+              :sort     "1B"
               :priority 1
               :value    (get-in display-data [:rinks 0 :length-m])
               :form-field
@@ -539,19 +557,6 @@
                 :value     (get-in edit-data [:rinks 0 :length-m])
                 :spec      :lipas.ice-stadium.rink/length-m
                 :on-change #(on-change 0 :length-m %)}]}
-
-             ;; Rink 1 width
-             {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
-              :sort     "1B"
-              :priority 1
-              :value    (get-in display-data [:rinks 0 :width-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type      "number"
-                :value     (get-in edit-data [:rinks 0 :width-m])
-                :spec      :lipas.ice-stadium.rink/width-m
-                :on-change #(on-change 0 :width-m %)}]}
 
              ;; Rink 1 area m2
              {:label    (tr :lipas.ice-stadium.rinks/rink1-area-m2)
@@ -566,22 +571,9 @@
                 :spec      :lipas.ice-stadium.rink/area-m2
                 :on-change #(on-change 0 :area-m2 %)}]}
 
-             ;; Rink 2 length
-             {:label    (tr :lipas.ice-stadium.rinks/rink2-length)
-              :sort     "2A"
-              :priority 1
-              :value    (get-in display-data [:rinks 1 :length-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type      "number"
-                :value     (get-in edit-data [:rinks 1 :length-m])
-                :spec      :lipas.ice-stadium.rink/length-m
-                :on-change #(on-change 1 :length-m %)}]}
-
              ;; Rink 2 width
              {:label    (tr :lipas.ice-stadium.rinks/rink2-width)
-              :sort     "2B"
+              :sort     "2A"
               :priority 1
               :value    (get-in display-data [:rinks 1 :width-m])
               :form-field
@@ -591,6 +583,19 @@
                 :value     (get-in edit-data [:rinks 1 :width-m])
                 :spec      :lipas.ice-stadium.rink/width-m
                 :on-change #(on-change 1 :width-m %)}]}
+
+             ;; Rink 2 length
+             {:label    (tr :lipas.ice-stadium.rinks/rink2-length)
+              :sort     "2B"
+              :priority 1
+              :value    (get-in display-data [:rinks 1 :length-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 1 :length-m])
+                :spec      :lipas.ice-stadium.rink/length-m
+                :on-change #(on-change 1 :length-m %)}]}
 
              ;; Rink 2 area m2
              {:label    (tr :lipas.ice-stadium.rinks/rink2-area-m2)
@@ -605,22 +610,9 @@
                 :spec      :lipas.ice-stadium.rink/area-m2
                 :on-change #(on-change 1 :area-m2 %)}]}
 
-             ;; Rink 3 length
-             {:label    (tr :lipas.ice-stadium.rinks/rink3-length)
-              :sort     "3A"
-              :priority 1
-              :value    (get-in display-data [:rinks 2 :length-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type      "number"
-                :value     (get-in edit-data [:rinks 2 :length-m])
-                :spec      :lipas.ice-stadium.rink/length-m
-                :on-change #(on-change 2 :length-m %)}]}
-
              ;; Rink 3 width
              {:label    (tr :lipas.ice-stadium.rinks/rink3-width)
-              :sort     "3B"
+              :sort     "3A"
               :priority 1
               :value    (get-in display-data [:rinks 2 :width-m])
               :form-field
@@ -630,6 +622,20 @@
                 :value     (get-in edit-data [:rinks 2 :width-m])
                 :spec      :lipas.ice-stadium.rink/width-m
                 :on-change #(on-change 2 :width-m %)}]}
+
+
+             ;; Rink 3 length
+             {:label    (tr :lipas.ice-stadium.rinks/rink3-length)
+              :sort     "3B"
+              :priority 1
+              :value    (get-in display-data [:rinks 2 :length-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 2 :length-m])
+                :spec      :lipas.ice-stadium.rink/length-m
+                :on-change #(on-change 2 :length-m %)}]}
 
              ;; Rink 3 area m2
              {:label    (tr :lipas.ice-stadium.rinks/rink3-area-m2)
