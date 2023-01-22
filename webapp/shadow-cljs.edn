@@ -6,7 +6,7 @@
    :asset-path "js/compiled"
    :output-dir "resources/public/js/compiled"
    :compiler-options
-   {:infer-externs :auto}
+   {:infer-externs :true}
    :dev
    {:closure-defines
     {re-frame.trace.trace-enabled? true}}
