@@ -1,6 +1,7 @@
 (ns lipas.ui.navbar
   (:require
    [clojure.string :as string]
+   [lipas.ui.feedback.views :as feedback]
    [lipas.ui.mui :as mui]
    [lipas.ui.subs :as subs]
    [lipas.ui.svg :as svg]
@@ -320,5 +321,6 @@
 
 (defn mini-nav [{:keys [tr logged-in?]}]
   [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
+   [feedback/feedback-btn]
    [account-menu-button {:tr tr :logged-in? logged-in?}]
    [menu-button {:tr tr}]])
