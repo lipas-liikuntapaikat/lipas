@@ -221,8 +221,9 @@
               :value     (str v)
               :on-change #()}]]
            [mui/list-item-text
-            {:primaryTypographyProps {:style {:margin-right "2em"}}
-             :primary                label :secondary label2}]
+            {:primaryTypographyProps   {:style {:font-size "0.9em" :margin-right "2em"}}
+             :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
+             :primary                  label :secondary label2}]
            [mui/list-item-icon
             icon]]))
 
