@@ -162,7 +162,10 @@
     :Mui-step-icon
     {:root      {:fill "rgba(0,0,0,0.5)"}
      :active    {:fill secondary}
-     :completed {:fill primary}}}})
+     :completed {:fill primary}}
+    :MuiInputLabel
+    {:root   {:color "gray"}
+     :shrink {:color "inherit"}}}})
 
 
 (def jyu-styles-light
@@ -180,6 +183,9 @@
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))
+
+(comment
+  (-> jyu-theme-dark (js->clj :keywordize-keys true)))
 
 (def app-bar (r/adapt-react-class AppBar))
 (def avatar (r/adapt-react-class Avatar))
