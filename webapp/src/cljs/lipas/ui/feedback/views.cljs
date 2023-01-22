@@ -6,7 +6,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>]]))
 
-(defn fab []
+(defn feedback-btn []
   (let [tr          (<== [:lipas.ui.subs/translator])
         modal-open? (<== [::subs/modal-open?])
         types       (<== [::subs/types-select-items])
@@ -57,8 +57,9 @@
 
      ;; The button
      [mui/tooltip {:title "Anna palautetta"}
-      [mui/fab
+      [mui/icon-button
        {:size     "medium"
-        :color    "primary"
+        :style {:margin-right "0.2em"}
+        #_#_:color    "primary"
         :on-click #(==> [::events/open-modal])}
        [mui/icon "feedback"]]]]))

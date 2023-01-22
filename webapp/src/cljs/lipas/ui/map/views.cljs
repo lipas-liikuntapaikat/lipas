@@ -11,7 +11,7 @@
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
-   [lipas.ui.feedback.views :as feedback]
+   #_[lipas.ui.feedback.views :as feedback]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
@@ -1399,9 +1399,10 @@
                       :border-radius    "4px"}
         :wrap        "nowrap"}
 
-       ;; Feedback fab
-       [mui/grid {:item true}
-        [feedback/fab]]
+       ;; Feedback btn
+       #_[mui/grid {:item true}
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
