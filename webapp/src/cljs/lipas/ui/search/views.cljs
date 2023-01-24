@@ -280,7 +280,17 @@
         :on-item-save   #(==> [::events/save-edits %])
         :on-sort-change #(==> [::events/change-sort-order %])
         :on-edit-start  #(==> [:lipas.ui.sports-sites.events/get (:lipas-id %)])
-        :headers        headers}]]]))
+        :headers        headers}]]
+
+     ;; Pagination vol 2
+     [mui/grid {:item true}
+      [pagination
+       {:tr                tr
+        :total             total
+        :page              page
+        :page-size         page-size
+        :page-sizes        page-sizes
+        :change-page-size? true}]]]))
 
 (defn results-list [{:keys [on-result-click]}]
   (let [tr           (<== [:lipas.ui.subs/translator])
