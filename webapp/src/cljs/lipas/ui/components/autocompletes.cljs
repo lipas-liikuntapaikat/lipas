@@ -159,11 +159,14 @@
                         (sort-by :label))
       :SelectProps
       #js{:theme (fn [^js theme]
-                   (set! (.-primary (.-colors theme)) mui/secondary)
-                   (set! (.-primary75 (.-colors theme)) mui/secondary2)
-                   (set! (.-primary50 (.-colors theme)) mui/secondary3)
-                   (set! (.-primary25 (.-colors theme)) mui/secondary3)
-                   theme)}
+                   (set! (.-primary (.-colors theme)) "rgba(0, 0, 0, 0.08)")
+                   (set! (.-primary75 (.-colors theme)) "rgba(0, 0, 0, 0.08)")
+                   (set! (.-primary50 (.-colors theme)) "rgba(0, 0, 0, 0.08)")
+                   (set! (.-primary25 (.-colors theme)) "rgba(0, 0, 0, 0.04)")
+                   theme)
+          :styles #js{:option (fn [^js styles ^js _state]
+                                (set! (.-color styles) "black")
+                                styles)}}
 
       :InputLabelProps
       {:error    (and required (not @state))
