@@ -18,6 +18,11 @@
      (update-in db [:reports :selected-fields] (comp set into) v)
      (assoc-in db [:reports :selected-fields] v))))
 
+(re-frame/reg-event-db
+ ::set-selected-format
+ (fn [db [_ v]]
+   (assoc-in db [:reports :selected-format] v)))
+
 (def basic-fields
   ["lipas-id"
    "name"
@@ -51,29 +56,33 @@
 
 (re-frame/reg-event-fx
  ::create-report
- (fn [{:keys [db]} [_ query fields]]
-   (let [fields (sort-headers fields)]
+ (fn [{:keys [db]} [_ query fields fmt]]
+   (let [fields       (sort-headers fields)
+         content-type (condp = fmt
+                        "xlsx"    (:xlsx cutils/content-type)
+                        "geojson" "application/json")]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/create-sports-sites-report")
        :params          {:search-query query
+                         :format       fmt
                          :fields       fields
                          :locale       (-> db :translator (apply []))}
        :format          (ajax/transit-request-format)
        :response-format {:type         :blob
-                         :content-type (-> cutils/content-type :xlsx)
-                         :description  (-> cutils/content-type :xlsx)
+                         :content-type content-type
+                         :description  content-type
                          :read         ajaxp/-body}
-       :on-success      [::report-success]
+       :on-success      [::report-success fmt content-type]
        :on-failure      [::report-failure]}
       :db (assoc-in db [:reports :downloading?] true)})))
 
 (re-frame/reg-event-fx
  ::report-success
- (fn [{:keys [db ]} [_ blob]]
+ (fn [{:keys [db ]} [_ fmt content-type blob]]
    {:lipas.ui.effects/save-as! {:blob         blob
-                                :filename     "lipas.xlsx"
-                                :content-type (-> cutils/content-type :xlsx)}
+                                :filename     (str "lipas." fmt)
+                                :content-type content-type}
     :db (assoc-in db [:reports :downloading?] false)}))
 
 (re-frame/reg-event-fx

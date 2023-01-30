@@ -172,24 +172,24 @@
      :mobile-lift     "Siirrettävä allasnostin",
      :slope           "Luiska"},
     :general
-    {:description   "Kuvaus",
-     :hall          "Halli",
-     :women         "Naiset",
+    {:description    "Kuvaus",
+     :hall           "Halli",
+     :women          "Naiset",
      :age-anonymized "Ikä anonymisoitu"
-     :total-short   "Yht.",
-     :done          "Valmis",
-     :updated       "Päivitetty",
-     :name          "Nimi",
-     :reported      "Ilmoitettu",
-     :type          "Tyyppi",
-     :last-modified "Muokattu viimeksi",
-     :here          "tästä",
-     :event         "Tapahtuma",
-     :structure     "Rakenne",
-     :general-info  "Yleiset tiedot",
-     :comment       "Kommentti",
-     :measures      "Mitat",
-     :men           "Miehet"},
+     :total-short    "Yht.",
+     :done           "Valmis",
+     :updated        "Päivitetty",
+     :name           "Nimi",
+     :reported       "Ilmoitettu",
+     :type           "Tyyppi",
+     :last-modified  "Muokattu viimeksi",
+     :here           "tästä",
+     :event          "Tapahtuma",
+     :structure      "Rakenne",
+     :general-info   "Yleiset tiedot",
+     :comment        "Kommentti",
+     :measures       "Mitat",
+     :men            "Miehet"},
     :dryer-duty-types   {:automatic "Automaattinen", :manual "Manuaali"},
     :swim-energy
     {:description
@@ -346,7 +346,7 @@
      :fill-required-fields     "Täytä pakolliset kentät",
      :undo                     "Kumoa",
      :browse-to-portal         "Siirry portaaliin",
-     :download-excel           "Lataa Excel",
+     :download-excel           "Lataa",
      :fill-data                "Täytä tiedot",
      :select-statuses          "Liikuntapaikan tila",
      :select-cities            "Valitse kunnat",
@@ -424,10 +424,10 @@
      :edit-slide "Muokkaa liukumäkeä",
      :headline   "Liukumäet"},
     :notifications
-    {:get-failed   "Tietojen hakeminen epäonnistui.",
-     :save-failed  "Tallennus epäonnistui",
-     :save-success "Tallennus onnistui"
-     :ie           (str "Internet Explorer ei ole tuettu selain. "
+    {:get-failed             "Tietojen hakeminen epäonnistui.",
+     :save-failed            "Tallennus epäonnistui",
+     :save-success           "Tallennus onnistui"
+     :ie                     (str "Internet Explorer ei ole tuettu selain. "
                         "Suosittelemme käyttämään toista selainta, "
                         "esim. Chrome, Firefox tai Edge.")
      :thank-you-for-feedback "Kiitos palautteesta!"},
@@ -575,7 +575,8 @@
      :select-fields     "Valitse raportin kentät",
      :selected-fields   "Valitut kentät",
      :shortcuts         "Pikavalinnat",
-     :tooltip           "Luo Excel-raportti hakutuloksista"},
+     :tooltip           "Luo Excel-raportti hakutuloksista"
+     :file-format       "Tiedostotyyppi"},
     :heat-sources
     {:district-heating      "Kaukolämpö",
      :private-power-station "Oma voimalaitos"},
@@ -1176,7 +1177,7 @@
      :fill-required-fields     "Fyll i obligatoriska fält",
      :undo                     "Ångra",
      :browse-to-portal         "Flytta dig till portalen",
-     :download-excel           "Ladda ner Excel",
+     :download-excel           "Ladda",
      :fill-data                "Fyll i informationen",
      :select-statuses          "Status",
      :select-cities            "Välj kommuner",
@@ -1825,24 +1826,24 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :mobile-lift     "Mobile pool lift",
      :slope           "Slope"},
     :general
-    {:description   "Description",
-     :hall          "Hall",
-     :women         "Women",
+    {:description    "Description",
+     :hall           "Hall",
+     :women          "Women",
      :age-anonymized "Age anonymized"
-     :total-short   "Total",
-     :done          "Done",
-     :updated       "Updated",
-     :name          "Name",
-     :reported      "Reported",
-     :type          "Type",
-     :last-modified "Last modified",
-     :here          "here",
-     :event         "Event",
-     :structure     "Structure",
-     :general-info  "General information",
-     :comment       "Comment",
-     :measures      "Measures",
-     :men           "Men"},
+     :total-short    "Total",
+     :done           "Done",
+     :updated        "Updated",
+     :name           "Name",
+     :reported       "Reported",
+     :type           "Type",
+     :last-modified  "Last modified",
+     :here           "here",
+     :event          "Event",
+     :structure      "Structure",
+     :general-info   "General information",
+     :comment        "Comment",
+     :measures       "Measures",
+     :men            "Men"},
     :dryer-duty-types {:automatic "Automatic", :manual "Manual"},
     :swim-energy
     {:description
@@ -1994,7 +1995,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :fill-required-fields     "Please fill all required fields",
      :undo                     "Undo",
      :browse-to-portal         "Enter portal",
-     :download-excel           "Download Excel",
+     :download-excel           "Download",
      :fill-data                "Fill",
      :select-statuses          "Status",
      :select-cities            "Select cities",
@@ -2066,10 +2067,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :edit-slide "Edit slide",
      :headline   "Slides"},
     :notifications
-    {:get-failed   "Couldn't get data.",
-     :save-failed  "Saving failed",
-     :save-success "Saving succeeded"
-     :ie           "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge."
+    {:get-failed             "Couldn't get data.",
+     :save-failed            "Saving failed",
+     :save-success           "Saving succeeded"
+     :ie                     "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge."
      :thank-you-for-feedback "Thank you for feedback!"},
     :lipas.swimming-pool.energy-saving
     {:filter-rinse-water-heat-recovery?
@@ -2212,6 +2213,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :select-fields     "Select field",
      :selected-fields   "Selected fields",
      :shortcuts         "Shortcuts",
+     :file-format       "Format"
      :tooltip           "Create Excel from search results"},
     :heat-sources
     {:district-heating      "District heating",

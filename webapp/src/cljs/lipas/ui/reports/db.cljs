@@ -6,4 +6,5 @@
   {:dialog-open?      false
    :save-dialog-open? false
    :fields            reports/fields
-   :selected-fields   (keys reports/default-fields)})
+   :selected-fields   (keys reports/default-fields)
+   :selected-format   "xlsx"})
