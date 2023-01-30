@@ -53,6 +53,17 @@
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
 
+(defn format-selector [{:keys [tr value on-change]}]
+  (let [items [{:label "Excel" :value "xlsx"}
+               {:label "GeoJSON" :value "geojson"}]]
+    ^{:key value}
+    [lui/select
+     {:value     value
+      #_#_:label     (tr :reports/file-format)
+      :items     items
+      :style     {:width "100px"}
+      :on-change on-change}]))
+
 (defn save-dialog []
   (r/with-let [name' (r/atom nil)]
     (let [tr        (<== [:lipas.ui.subs/translator])
@@ -75,6 +86,7 @@
   (let [open?           (<== [::subs/dialog-open?])
         toggle          #(==> [::events/toggle-dialog])
         selected-fields (<== [::subs/selected-fields])
+        selected-format (<== [::subs/selected-format])
         downloading?    (<== [::subs/downloading?])
         results-count   (<== [:lipas.ui.search.subs/search-results-total-count])
         logged-in?      (<== [:lipas.ui.subs/logged-in?])
@@ -161,14 +173,30 @@
 
       ;; Cancel / download buttons
       [mui/dialog-actions
-       [mui/typography {:variant "caption"}
+
+       ;; Result count
+       [mui/typography
+        {:variant "caption"}
         (tr :search/results-count results-count)]
+
+       [:span {:style {:width "12px"}}]
+
+       ;; Format selector
+       [format-selector
+        {:tr        tr
+         :value     selected-format
+         :on-change #(==> [::events/set-selected-format %])}]
+
        (when downloading?
          [mui/circular-progress])
+
+       ;; Cancel button
        [mui/button {:on-click toggle :disabled downloading?}
         (tr :actions/cancel)]
+
+       ;; Download button
        [mui/button
         {:disabled (or downloading? (empty? selected-fields))
          :color    "secondary"
-         :on-click #(==> [::search-events/create-report-from-current-search])}
+         :on-click #(==> [::search-events/create-report-from-current-search selected-format])}
         (tr :actions/download-excel)]]]]))

@@ -479,7 +479,7 @@
 
 (re-frame/reg-event-fx
  ::create-report-from-current-search
- (fn [{:keys [db]} _]
+ (fn [{:keys [db]} [_ fmt]]
    (let [params (-> db
                     collect-search-data
                     ->es-search-body
@@ -492,7 +492,7 @@
                     ;; scrolling
                     (assoc :size 1000))
          fields (-> db :reports :selected-fields)]
-     {:dispatch [:lipas.ui.reports.events/create-report params fields]})))
+     {:dispatch [:lipas.ui.reports.events/create-report params fields fmt]})))
 
 (re-frame/reg-event-fx
  ::set-results-view

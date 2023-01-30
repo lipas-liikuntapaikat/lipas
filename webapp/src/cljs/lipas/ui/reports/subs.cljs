@@ -28,6 +28,11 @@
    (-> db :reports :selected-fields)))
 
 (re-frame/reg-sub
+ ::selected-format
+ (fn [db _]
+   (-> db :reports :selected-format)))
+
+(re-frame/reg-sub
  ::save-dialog-open?
  (fn [db _]
    (-> db :reports :save-dialog-open?)))

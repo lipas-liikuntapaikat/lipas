@@ -318,7 +318,7 @@
          :handler
          (fn [{:keys [identity]}]
            {:status 200
-            :body   (core/get-users-pending-reminders! identity)})}}]
+            :body   (core/get-users-pending-reminders! db identity)})}}]
 
       ["/actions/create-energy-report"
        {:post
@@ -337,16 +337,22 @@
          {:body :lipas.api.sports-site-report/req}
          :handler
          (fn [{:keys [parameters]}]
-           (let [query  (-> parameters :body :search-query)
-                 fields (-> parameters :body :fields)
-                 locale (-> parameters :body :locale)]
+           (let [query   (-> parameters :body :search-query)
+                 fields  (-> parameters :body :fields)
+                 locale  (-> parameters :body :locale)
+                 format* (or (-> parameters :body :format) "xlsx")]
              {:status  200
-              :headers {"Content-Type"        (-> utils/content-type :xlsx)
-                        "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+              :headers (condp = format*
+                         "xlsx"    {"Content-Type"        (-> utils/content-type :xlsx)
+                                    "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+                         "geojson" {"Content-Type"        "application/json"
+                                    "Content-Disposition" "inline; filename=\"lipas.geojson\""})
               :body
               (ring-io/piped-input-stream
                (fn [out]
-                 (core/sports-sites-report search query fields locale out)))}))}}]
+                 (condp = format*
+                   "xlsx"    (core/sports-sites-report-excel search query fields locale out)
+                   "geojson" (core/sports-sites-report-geojson search query fields locale out))))}))}}]
 
       ;; Old simple db version
       ["/actions/create-finance-report"

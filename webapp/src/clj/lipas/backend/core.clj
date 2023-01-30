@@ -1,6 +1,7 @@
 (ns lipas.backend.core
   (:require
    [buddy.hashers :as hashers]
+   [cheshire.core :as json]
    [clojure.core.async :as async]
    [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
@@ -21,7 +22,9 @@
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
    [lipas.utils :as utils]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -63,7 +66,8 @@
   ([db user evt-name]
    (add-user-event! db user evt-name {}))
   ([db user evt-name data]
-   (let [defaults {:event-date (utils/timestamp) :event evt-name}
+   (let [user     (db/get-user-by-id db user)
+         defaults {:event-date (utils/timestamp) :event evt-name}
          evt      (merge defaults data)
          user     (update-in user [:history :events] conj evt)]
      (db/update-user-history! db user))))
@@ -401,7 +405,8 @@
   (let [data (get-sports-sites-by-type-code db type-code {:revs year})]
     (reports/energy-report data)))
 
-(defn sports-sites-report [search params fields locale out]
+(defn sports-sites-report-excel
+  [search params fields locale out]
   (let [idx-name  "sports_sites_current"
         in-chan   (search/scroll search idx-name params)
         locale    (or locale :fi)
@@ -419,6 +424,39 @@
     (->> (async/<!! data-chan)
          (excel/create-workbook "lipas")
          (excel/save-workbook-into-stream! out))))
+
+(defn sports-sites-report-geojson
+  [search params fields locale out]
+  (let [idx-name "sports_sites_current"
+        in-chan  (search/scroll search idx-name (update params :_source dissoc :excludes))
+        locale   (or locale :fi)
+        headers  (mapv #(get-in reports/fields [% locale]) fields)
+        localize (partial i18n/localize locale)
+        ->row    (partial reports/->row fields)]
+    (with-open [writer (OutputStreamWriter. out)]
+      (.write writer "{\"type\":\"FeatureCollection\",\"Features\":[")
+      (loop [page-num 0]
+        (when-let [page (async/<!! in-chan)]
+          (let [ms    (-> page :body :hits :hits)
+                feats (mapcat
+                       (fn [m]
+                         (let [props (-> m
+                                         :_source
+                                         localize
+                                         ->row
+                                         (->> (zipmap headers)))]
+                           (->> m :_source :location :geometries :features
+                                (map (fn [f] (assoc f :properties props))))))
+                           ms)]
+            (loop [feat-num 0
+                   f    (first feats)
+                   fs   (rest feats)]
+              (.write writer (str (when-not (= 0 page-num feat-num) ",")
+                                  (json/encode f)))
+              (when-let [next-f (first fs)]
+                (recur (inc feat-num) next-f (rest fs)))))
+          (recur (inc page-num))))
+      (.write writer "]}"))))
 
 (defn finance-report [db {:keys [city-codes]}]
   (let [data (get-cities db)]
