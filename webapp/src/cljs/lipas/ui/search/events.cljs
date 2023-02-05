@@ -15,6 +15,7 @@
 
 (defn ->sort-key [k locale]
   (case k
+    (:lipas-id)         :lipas-id
     (:location.city.name
      :type.name
      :admin.name
