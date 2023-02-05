@@ -235,7 +235,7 @@
     [:email                  {:label (tr :lipas.sports-site/email-public)}]
     [:phone-number           {:label (tr :lipas.sports-site/phone-number)}]
     [:event-date             {:label (tr :lipas.sports-site/event-date)}]
-    [:lipas-id               {:label (tr :lipas.sports-site/id)}]]))
+    [:lipas-id               {:label "Lipas-id"}]]))
 
 (re-frame/reg-sub
  ::selected-results-table-columns
@@ -310,7 +310,7 @@
      [:phone-number           {:label (tr :lipas.sports-site/phone-number)
                                :form  {:component lui/text-field}}]
      [:event-date             {:label (tr :lipas.sports-site/event-date)}]
-     [:lipas-id               {:label (tr :lipas.sports-site/id)}]]
+     [:lipas-id               {:label "Lipas-id"}]]
     (reduce
      (fn [res [k v]]
        (conj res [k (-> v
