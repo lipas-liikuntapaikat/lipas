@@ -454,12 +454,18 @@
       ->fcoll
       ->clj))
 
+(defn clean-coords-safe [f]
+  (try
+    (turf-clean-coords f)
+    (catch js/Error _e)))
+
 (defn strip-z [fcoll]
   (-> fcoll
       clj->js
       (turf-truncate #js{:coordinates 2 :mutate true})
       (gobj/get "features")
-      (garray/map turf-clean-coords)
+      (garray/map clean-coords-safe)
+      (garray/filter some?)
       ->fcoll
       ->clj))
 
