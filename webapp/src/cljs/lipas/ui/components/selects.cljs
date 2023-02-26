@@ -28,10 +28,7 @@
   (let [on-change #(on-change (-> %
                                   .-target
                                   .-value
-                                  read-string
-                                  (as-> $ (if (and deselect? (= $ value))
-                                            nil ; toggle
-                                            $))))
+                                  read-string))
         props     (-> props
                       (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
                               :deselect?)
@@ -49,7 +46,11 @@
       {:required required
        :error    (error? spec value required)}
       (when label [mui/input-label label])
-      (into [mui/select props]
+      (into [mui/select props
+             (when deselect?
+               [mui/menu-item {:key   "deselect"
+                               :value nil}
+                "-"])]
             (for [i (sort-by sort-fn sort-cmp items)]
               (let [value (value-fn i)
                     label (label-fn i)]
