@@ -174,14 +174,15 @@
       :layer-name "MML-Kuntarajat"})}})
 
 (defn init-view [center zoom]
-  (ol/View. #js{:center         #js[(:lon center) (:lat center)]
-                :extent         proj/epsg3067-extent
-                :showFullExtent true
-                :zoom           zoom
-                :projection     "EPSG:3067"
-                :resolutions    mml-resolutions
-                :units          "m"
-                :enableRotation false}))
+  (ol/View. #js{:center              #js[(:lon center) (:lat center)]
+                :extent              proj/epsg3067-extent
+                :showFullExtent      true
+                :constrainOnlyCenter true
+                :zoom                zoom
+                :projection          "EPSG:3067"
+                :resolutions         mml-resolutions
+                :units               "m"
+                :enableRotation      false}))
 
 (defn init-overlay []
   (ol/Overlay. #js{:offset #js[-15 0]
