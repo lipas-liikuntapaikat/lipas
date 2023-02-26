@@ -550,8 +550,9 @@
  ::set-filters-by-permissions
  (fn [{:keys [db]} _]
    (let [permissions (-> db :user :login :permissions)]
-     {:db (assoc-in db [:search :filters] {:type-codes (-> permissions :types)
-                                           :city-codes (-> permissions :cities)})
+     {:db (assoc-in db [:search :filters] (merge (:filters db/default-db)
+                                                 {:type-codes (-> permissions :types)
+                                                  :city-codes (-> permissions :cities)}))
       :dispatch [::submit-search]})))
 
 (defn- kw->path [kw]
