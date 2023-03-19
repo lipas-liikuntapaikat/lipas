@@ -375,12 +375,15 @@
 
 ;;; Cities ;;;
 
-(defn get-cities [db]
-  (or
-   (:all-cities @cache)
-   (->> (db/get-cities db)
-        (swap! cache assoc :all-cities)
-        :all-cities)))
+(defn get-cities
+  ([db]
+   (get-cities db false))
+  ([db no-cache]
+   (or
+    (and (not no-cache) (:all-cities @cache))
+    (->> (db/get-cities db)
+         (swap! cache assoc :all-cities)
+         :all-cities))))
 
 (defn get-populations [db year]
   (->> (get-cities db)

@@ -278,21 +278,33 @@
                        "properties.area-m2"]))
 
 (def stats-metrics
-  {"investments"        {:fi "Investoinnit"
-                         :se "Investeringar"
-                         :en "Investments"}
-   "operating-expenses" {:fi "Käyttökustannukset"
-                         :se "Driftskostnader"
-                         :en "Operating expenses"}
-   "operating-incomes"  {:fi "Käyttötuotot"
-                         :se "Driftsintäkter"
-                         :en "Operating incomes"}
-   "subsidies"          {:fi "Kunnan myöntämät avustukset"
-                         :se "Understöd och bidrag från kommunen"
-                         :en "Subsidies"}
-   "net-costs"          {:fi "Nettokustannukset"
-                         :se "Nettokostnader"
-                         :en "Net costs"}})
+  {"investments"          {:fi "Investoinnit"
+                           :se "Investeringar"
+                           :en "Investments"}
+   "operating-expenses"   {:fi "Käyttökustannukset"
+                           :se "Driftskostnader"
+                           :en "Operating expenses"}
+   "operating-incomes"    {:fi "Käyttötuotot"
+                           :se "Driftsintäkter"
+                           :en "Operating incomes"}
+   "subsidies"            {:fi "Kunnan myöntämät avustukset"
+                           :se "Understöd och bidrag från kommunen"
+                           :en "Subsidies"}
+   "net-costs"            {:fi "Nettokustannukset"
+                           :se "Nettokostnader"
+                           :en "Net costs"}
+   "operational-expenses" {:fi "Toimintakulut"
+                           :se "Driftskostnader"
+                           :en "Operational expenses"}
+   "operational-income"   {:fi "Toimintatuotot"
+                           :se "Driftsintäkter"
+                           :en "Operational income"}
+   "surplus"              {:fi "Tilikauden ylijäämä"
+                           :se "Surplus"
+                           :en "Surplus"}
+   "deficit"              {:fi "Tilikauden alijäämä"
+                           :se "Deficit"
+                           :en "Deficit"}})
 
 (def city-services
   {"sports-services" {:fi "Liikuntatoimi"

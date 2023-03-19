@@ -109,7 +109,9 @@
     (merge
      {:population {:stats {:field :population}}}
      (->>
-      [:net-costs :operating-expenses :operating-incomes :investments :subsidies]
+      [:net-costs :operating-expenses :operating-incomes :investments :subsidies
+       ;; Added 2021->
+       :operational-expenses :operational-income :surplus :deficit]
       (reduce
        (fn [m k]
          (let [f (keyword (str city-service (when per-capita? "-pc") "-" (name k)))]
