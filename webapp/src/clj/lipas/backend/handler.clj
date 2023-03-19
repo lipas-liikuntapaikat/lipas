@@ -97,6 +97,8 @@
        {:post
         {:no-doc     false
          :middleware [mw/token-auth mw/auth]
+         :responses  {201 {:body :lipas/sports-site}
+                      400 {:body map?}}
          :parameters
          {:query (s/keys :opt-un [:lipas.api/draft])
           :body  :lipas/new-or-existing-sports-site}
@@ -115,6 +117,8 @@
        {:get
         {:no-doc     false
          :parameters {:path {:lipas-id int?}}
+         :responses  {200 {:body :lipas/sports-site}
+                      404 {:body map?}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            (if-let [res (core/get-sports-site db lipas-id)]
@@ -125,6 +129,7 @@
        {:get
         {:no-doc     false
          :parameters {:path {:lipas-id int?}}
+         :responses  {200 {:body (s/coll-of :lipas/sports-site)}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            {:status 200
@@ -132,7 +137,8 @@
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:no-doc false
+        {:no-doc    true
+         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
          :parameters
          {:path  {:type-code :lipas.sports-site.type/type-code}
           :query :lipas.api/query-params}
@@ -179,7 +185,7 @@
 
       ["/actions/login"
        {:post
-        {:no-doc     false
+        {:no-doc     true
          :middleware [(mw/basic-auth db) mw/auth]
          :handler
          (fn [{:keys [identity]}]
@@ -188,7 +194,7 @@
 
       ["/actions/refresh-login"
        {:get
-        {:no-doc     false
+        {:no-doc     true
          :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
