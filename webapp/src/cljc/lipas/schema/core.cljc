@@ -15,18 +15,48 @@
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
    [lipas.reports :as reports]
-   [lipas.utils :as utils]))
+   [lipas.utils :as utils]
+   [spec-tools.core :as st]))
 
 ;;; Utils ;;;
 
 (defn str-in [min max]
-  (s/and string? #(<= min (count %) max)))
+  (st/spec
+   {:spec              (s/and string? #(<= min (count %) max))
+    :swagger/minLength min
+    :swagger/maxLength max}))
 
 (defn number-in
   "Returns a spec that validates numbers in the range from
   min (inclusive) to max (exclusive)."
   [& {:keys [min max]}]
-  (s/and number? #(<= min % (dec max))))
+  (st/spec
+   {:spec            (s/and number? #(<= min % (dec max)))
+    :swagger/type    "number"
+    :swagger/minimum min
+    :swagger/maximum max}))
+
+(defn double-in
+  [& {:keys [min max infinite? NaN?]}]
+  (st/spec
+   {:spec            (s/double-in :min min :max max :NaN? NaN? :infinite? infinite?)
+    :swagger/type    "number"
+    :swagger/format  "double"
+    :swagger/minimum min
+    :swagger/maximum max}))
+
+(defn int-in
+  "Returns a spec that validates integers in the range from
+  min (inclusive) to max (exclusive)."
+  [min max]
+  (st/spec
+   {:spec            (s/int-in min max)
+    :type            :long
+    :swagger/type    "number"
+    :swagger/format  "int64"
+    :swagger/minimum min
+    :swagger/maximum max}))
+
 
 ;;; Regexes ;;;
 
@@ -52,8 +82,9 @@
                (apply str (repeatedly n #(rand-nth chars))))
              (s/gen (s/int-in min max)))))
 
-(defn email-gen []
+(defn email-gen
   "Function that returns a Generator for email addresses"
+  []
   (gen/fmap
    (fn [[name host tld]]
      (str name "@" host "." tld))
@@ -62,8 +93,9 @@
     (gen-str 1 15)
     (gen-str 2 5))))
 
-(defn postal-code-gen []
+(defn postal-code-gen
   "Function that returns a Generator for Finnish postal codes"
+  []
   (gen/fmap
    (partial reduce str)
    (s/gen
@@ -108,12 +140,22 @@
 ;; Specs ;;
 
 (s/def :lipas/timestamp-type (s/and string? #(re-matches timestamp-regex %)))
-(s/def :lipas/timestamp (s/with-gen :lipas/timestamp-type timestamp-gen))
+(s/def :lipas/timestamp
+  (st/spec
+   {:spec         (s/with-gen :lipas/timestamp-type timestamp-gen)
+    :swagger/type "string"
+    :swagger/format "date-time"}))
 
 (s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
 (s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
+
+(s/def :lipas/locale* #{:fi :se :en})
+(s/def :lipas/locale
+  (st/spec
+   {:spec         :lipas/locale*
+    :swagger/type "enum"}))
 
 ;;; Reminder ;;;
 
@@ -222,27 +264,36 @@
                        postal-code-gen))
 
 (s/def :lipas.location/postal-office (str-in 0 50))
-(s/def :lipas.location.city/city-code (into #{} (map :city-code) cities/all))
+
+(def city-codes (into #{} (map :city-code) cities/all))
+(s/def :lipas.location.city/city-code* city-codes)
+(s/def :lipas.location.city/city-code
+  (st/spec
+   {:spec         :lipas.location.city/city-code*
+    :type         :long
+    :swagger/type "number"
+    :swagger/enum city-codes}))
+
 (s/def :lipas.location.city/neighborhood (str-in 1 100))
 
 (s/def :lipas.location/city
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
-(s/def :lipas.location.coordinates/lat (s/double-in :min 59.846373196
-                                                    :max 70.1641930203
-                                                    :NaN? false
-                                                    :infinite? false))
+(s/def :lipas.location.coordinates/lat (double-in :min 59.846373196
+                                                  :max 70.1641930203
+                                                  :NaN? false
+                                                  :infinite? false))
 
-(s/def :lipas.location.coordinates/lon (s/double-in :min 20.6455928891
-                                                    :max 31.5160921567
-                                                    :NaN? false
-                                                    :infinite? false))
+(s/def :lipas.location.coordinates/lon (double-in :min 20.6455928891
+                                                  :max 31.5160921567
+                                                  :NaN? false
+                                                  :infinite? false))
 
 ;; Northing
-(s/def :lipas.location.coordinates/lat-euref (s/int-in -548576 1548576))
+(s/def :lipas.location.coordinates/lat-euref (int-in -548576 1548576))
 ;; Easting
-(s/def :lipas.location.coordinates/lon-euref (s/int-in 1548576 8388608))
+(s/def :lipas.location.coordinates/lon-euref (int-in 1548576 8388608))
 
 ;; NOTE: generator supports only point features atm
 (s/def :lipas.location/geometries (s/with-gen
@@ -256,16 +307,40 @@
 
 ;;; Sports site ;;;
 
-(s/def :lipas.sports-site/lipas-id (s/int-in 0 2147483647)) ; PSQL integer max
+(s/def :lipas.sports-site/status* (into #{} (keys sports-sites/statuses)))
+(s/def :lipas.sports-site/status
+  (st/spec
+   {:spec :lipas.sports-site/status*
+    :swagger/type "string"
+    :swagger/enum (keys sports-sites/statuses)}))
+
+(s/def :lipas.sports-site/lipas-id (int-in 0 2147483647)) ; PSQL integer max
 (s/def :lipas.sports-site/hall-id (str-in 2 20))
-(s/def :lipas.sports-site/status (into #{} (keys sports-sites/statuses)))
 (s/def :lipas.sports-site/name (str-in 2 100))
 (s/def :lipas.sports-site/marketing-name (str-in 2 100))
-(s/def :lipas.sports-site/name-localized
-  (s/map-of #{:fi :se :en} :lipas.sports-site/name))
 
-(s/def :lipas.sports-site/owner (into #{} (keys owners/all)))
-(s/def :lipas.sports-site/admin (into #{} (keys admins/all)))
+(s/def :lipas.sports-site.name/fi :lipas.sports-site/name)
+(s/def :lipas.sports-site.name/en :lipas.sports-site/name)
+(s/def :lipas.sports-site.name/se :lipas.sports-site/name)
+
+(s/def :lipas.sports-site/name-localized
+  (s/keys :opt-un [:lipas.sports-site.name/fi
+                   :lipas.sports-site.name/se
+                   :lipas.sports-site.name/en]))
+
+(s/def :lipas.sports-site/owner* (into #{} (keys owners/all)))
+(s/def :lipas.sports-site/owner
+  (st/spec
+   {:spec         :lipas.sports-site/owner*
+    :swagger/type "string"
+    :swagger/enum (keys owners/all)}))
+
+(s/def :lipas.sports-site/admin* (into #{} (keys admins/all)))
+(s/def :lipas.sports-site/admin
+  (st/spec
+   {:spec         :lipas.sports-site/admin*
+    :swagger/type "string"
+    :swagger/enum (keys admins/all)}))
 
 (s/def :lipas.sports-site/phone-number (str-in 1 50))
 (s/def :lipas.sports-site/www (str-in 1 200))
@@ -274,36 +349,69 @@
 
 (s/def :lipas.sports-site/comment (str-in 1 2048))
 
-(s/def :lipas.sports-site.type/type-code
-  (into #{} (keys sports-site-types/all)))
+(def type-codes (keys sports-site-types/all))
 
-(s/def :lipas.sports-site/construction-year
+(s/def :lipas.sports-site.type/type-code*
+  (into #{} type-codes))
+
+(s/def :lipas.sports-site.type/type-code
+  (st/spec
+   {:spec         :lipas.sports-site.type/type-code*
+    :type         :long
+    :swagger/type "number"
+    :swagger/enum type-codes}))
+
+(s/def :lipas.sports-site/construction-year*
   (into #{} (range 1800 (inc utils/this-year))))
 
+(s/def :lipas.sports-site/construction-year
+  (st/spec
+   {:spec         :lipas.sports-site/construction-year*
+    :swagger/type "number"}))
+
+(s/def :lipas.sports-site/renovation-year*
+  (int-in 1900 (inc utils/this-year)))
+
+(s/def :lipas.sports-site/renovation-year
+  (st/spec
+   {:spec         :lipas.sports-site/renovation-year*
+    :swagger/type "number"}))
+
 (s/def :lipas.sports-site/renovation-years
-  (s/coll-of (s/int-in 1900 (inc utils/this-year))
+  (s/coll-of :lipas.sports-site/renovation-year
              :distinct true :into []))
 
 ;;;; Additional properties ;;;;
 
-(s/def :lipas.sports-site.properties/surface-material
+(s/def :lipas.sports-site.properties/surface-material*
   (s/coll-of (into #{} (keys materials/surface-materials))
              :min-count 0
              :max-count (count materials/surface-materials)
              :distinct true
              :into []))
 
+(s/def :lipas.sports-site.properties/surface-material
+  (st/spec
+   {:spec :lipas.sports-site.properties/surface-material*
+    :swagger/type "string"
+    :swagger/enum (keys materials/surface-materials)}))
+
 (def pos-infinity #?(:clj Double/POSITIVE_INFINITY :cljs js/Infinity))
 (def neg-infinity #?(:clj Double/NEGATIVE_INFINITY :cljs js/Infinity))
 (def NaN #?(:clj Double/NaN :cljs js/NaN))
 
 ;; From https://github.com/SparkFund/useful-specs
-(s/def ::real
+(s/def ::real*
   (s/spec (fn [x] (and (number? x)
                        (not= pos-infinity x)
                        (not= neg-infinity x)
                        (not= NaN x)))
           :gen #(gen/double* {:infinite? false :NaN? false})))
+
+(s/def ::real
+  (st/spec
+   {:spec         ::real*
+    :swagger/type "number"}))
 
 (s/def :lipas.sports-site.properties/height-m ::real)
 (s/def :lipas.sports-site.properties/heating? boolean?)
@@ -630,8 +738,14 @@
 (s/def :lipas.sport-site.type/type-code
   (into #{} (keys sports-site-types/all)))
 
-(s/def :lipas.sports-site.type/size-category
+(s/def :lipas.sports-site.type/size-category*
   (into #{} (keys ice-stadiums/size-categories)))
+
+(s/def :lipas.sports-site.type/size-category
+  (st/spec
+   {:spec         :lipas.sports-site.type/size-category*
+    :swagger/type "string"
+    :swagger/enum (keys ice-stadiums/size-categories)}))
 
 (s/def :lipas.sports-site/type
   (s/keys :req-un [:lipas.sports-site.type/type-code]
@@ -663,22 +777,68 @@
                    :lipas.energy-consumption/operating-hours
                    :lipas.energy-consumption/comment]))
 
-(def months #{:jan :feb :mar :apr :may :jun :jul :aug :sep :oct :nov :dec})
+(s/def :lipas.energy-consumption/jan :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/feb :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/mar :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/apr :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/may :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/jun :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/jul :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/aug :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/sep :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/oct :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/nov :lipas/energy-consumption)
+(s/def :lipas.energy-consumption/dec :lipas/energy-consumption)
 
 (s/def :lipas/energy-consumption-monthly
-  (s/map-of months :lipas/energy-consumption))
+  (s/keys :opt-un [:lipas.energy-consumption/jan
+                   :lipas.energy-consumption/feb
+                   :lipas.energy-consumption/mar
+                   :lipas.energy-consumption/apr
+                   :lipas.energy-consumption/may
+                   :lipas.energy-consumption/jun
+                   :lipas.energy-consumption/jul
+                   :lipas.energy-consumption/aug
+                   :lipas.energy-consumption/sep
+                   :lipas.energy-consumption/oct
+                   :lipas.energy-consumption/nov
+                   :lipas.energy-consumption/dec]))
 
 ;; Visitors ;;
 
-(s/def :lipas.visitors/total-count (s/int-in 0 1000000))      ; Users
-(s/def :lipas.visitors/spectators-count (s/int-in 0 1000000)) ; Spectators
+(s/def :lipas.visitors/total-count (int-in 0 1000000))      ; Users
+(s/def :lipas.visitors/spectators-count (int-in 0 1000000)) ; Spectators
 
 (s/def :lipas/visitors
   (s/keys :opt-un [:lipas.visitors/total-count
                    :lipas.visitors/spectators-count]))
 
+(s/def :lipas.visitors/jan :lipas/visitors)
+(s/def :lipas.visitors/feb :lipas/visitors)
+(s/def :lipas.visitors/mar :lipas/visitors)
+(s/def :lipas.visitors/apr :lipas/visitors)
+(s/def :lipas.visitors/may :lipas/visitors)
+(s/def :lipas.visitors/jun :lipas/visitors)
+(s/def :lipas.visitors/jul :lipas/visitors)
+(s/def :lipas.visitors/aug :lipas/visitors)
+(s/def :lipas.visitors/sep :lipas/visitors)
+(s/def :lipas.visitors/oct :lipas/visitors)
+(s/def :lipas.visitors/nov :lipas/visitors)
+(s/def :lipas.visitors/dec :lipas/visitors)
+
 (s/def :lipas/visitors-monthly
-  (s/map-of months :lipas/visitors))
+  (s/keys :opt-un [:lipas.visitors/jan
+                   :lipas.visitors/feb
+                   :lipas.visitors/mar
+                   :lipas.visitors/apr
+                   :lipas.visitors/may
+                   :lipas.visitors/jun
+                   :lipas.visitors/jul
+                   :lipas.visitors/aug
+                   :lipas.visitors/sep
+                   :lipas.visitors/oct
+                   :lipas.visitors/nov
+                   :lipas.visitors/dec]))
 
 (s/def :lipas/new-sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
@@ -735,8 +895,8 @@
 (s/def :lipas.building/total-water-area-m2 (number-in :min 10 :max (inc 10000)))
 (s/def :lipas.building/heat-sections? boolean?)
 (s/def :lipas.building/piled? boolean?)
-(s/def :lipas.building/staff-count (s/int-in 0 (inc 1000)))
-(s/def :lipas.building/seating-capacity (s/int-in 0 (inc 50000)))
+(s/def :lipas.building/staff-count (int-in 0 (inc 1000)))
+(s/def :lipas.building/seating-capacity (int-in 0 (inc 50000)))
 (s/def :lipas.building/heat-source (into #{} (keys swimming-pools/heat-sources)))
 (s/def :lipas.building/heat-sources
   (s/coll-of :lipas.building/heat-source
@@ -745,7 +905,7 @@
              :distinct true
              :into []))
 
-(s/def :lipas.building/ventilation-units-count (s/int-in 0 (inc 100)))
+(s/def :lipas.building/ventilation-units-count (int-in 0 (inc 100)))
 
 (s/def :lipas.building/main-construction-materials
   (s/coll-of :lipas.building/main-construction-material
@@ -829,19 +989,19 @@
              :into []))
 
 (s/def :lipas.ice-stadium.refrigeration/power-kw
-  (s/int-in 0 (inc 10000)))
+  (int-in 0 (inc 10000)))
 
 (s/def :lipas.ice-stadium.refrigeration/refrigerant
   (into #{} (keys ice-stadiums/refrigerants)))
 
 (s/def :lipas.ice-stadium.refrigeration/refrigerant-amount-kg
-  (s/int-in 0 (inc 10000)))
+  (int-in 0 (inc 10000)))
 
 (s/def :lipas.ice-stadium.refrigeration/refrigerant-solution
   (into #{} (keys ice-stadiums/refrigerant-solutions)))
 
 (s/def :lipas.ice-stadium.refrigeration/refrigerant-solution-amount-l
-  (s/int-in 0 (inc 30000)))
+  (int-in 0 (inc 30000)))
 
 (s/def :lipas.ice-stadium/refrigeration
   (s/keys :opt-un [:lipas.ice-stadium.refrigeration/original?
@@ -856,37 +1016,37 @@
 
 ;; Conditions ;;
 
-(s/def :lipas.ice-stadium.conditions/air-humidity-min (s/int-in 0 (inc 100)))
-(s/def :lipas.ice-stadium.conditions/air-humidity-max (s/int-in 0 (inc 100)))
-(s/def :lipas.ice-stadium.conditions/stand-temperature-c (s/int-in -10 (inc 50)))
+(s/def :lipas.ice-stadium.conditions/air-humidity-min (int-in 0 (inc 100)))
+(s/def :lipas.ice-stadium.conditions/air-humidity-max (int-in 0 (inc 100)))
+(s/def :lipas.ice-stadium.conditions/stand-temperature-c (int-in -10 (inc 50)))
 (s/def :lipas.ice-stadium.conditions/daily-open-hours :lipas/hours-in-day)
-(s/def :lipas.ice-stadium.conditions/open-months (s/int-in 0 (inc 12)))
+(s/def :lipas.ice-stadium.conditions/open-months (int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
-  (s/int-in -10 (inc 0)))
+  (int-in -10 (inc 0)))
 
 (s/def :lipas.ice-stadium.conditions/skating-area-temperature-c
-  (s/int-in -15 (inc 20)))
+  (int-in -15 (inc 20)))
 
 (s/def :lipas.ice-stadium.conditions/daily-maintenances-week-days
-  (s/int-in 0 (inc 50)))
+  (int-in 0 (inc 50)))
 
 (s/def :lipas.ice-stadium.conditions/daily-maintenances-weekends
-  (s/int-in 0 (inc 50)))
+  (int-in 0 (inc 50)))
 
-(s/def :lipas.ice-stadium.conditions/weekly-maintenances (s/int-in 0 (inc 100)))
+(s/def :lipas.ice-stadium.conditions/weekly-maintenances (int-in 0 (inc 100)))
 
 (s/def :lipas.ice-stadium.conditions/average-water-consumption-l
-  (s/int-in 0 (inc 1000)))
+  (int-in 0 (inc 1000)))
 
 (s/def :lipas.ice-stadium.conditions/maintenance-water-temperature-c
-  (s/int-in 0 100))
+  (int-in 0 100))
 
 (s/def :lipas.ice-stadium.conditions/ice-resurfacer-fuel
   (into #{} (keys ice-stadiums/ice-resurfacer-fuels)))
 
 (s/def :lipas.ice-stadium.conditions/ice-average-thickness-mm
-  (s/int-in 0 (inc 150)))
+  (int-in 0 (inc 150)))
 
 (s/def :lipas.ice-stadium/conditions
   (s/keys :opt-un [:lipas.ice-stadium.conditions/air-humidity-min
@@ -907,7 +1067,7 @@
 ;; Ventilation ;;
 
 (s/def :lipas.ice-stadium.ventilation/heat-recovery-efficiency
-  (s/int-in 0 (inc 100)))
+  (int-in 0 (inc 100)))
 
 (s/def :lipas.ice-stadium.ventilation/heat-recovery-type
   (into #{} (keys ice-stadiums/heat-recovery-types)))
@@ -1074,25 +1234,25 @@
 
 ;; Other facilities ;;
 
-(s/def :lipas.swimming-pool.facilities/platforms-1m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.facilities/platforms-3m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.facilities/platforms-5m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.facilities/platforms-7.5m-count (s/int-in 0 100))
-(s/def :lipas.swimming-pool.facilities/platforms-10m-count (s/int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-1m-count (int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-3m-count (int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-5m-count (int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-7.5m-count (int-in 0 100))
+(s/def :lipas.swimming-pool.facilities/platforms-10m-count (int-in 0 100))
 (s/def :lipas.swimming-pool.facilities/hydro-massage-spots-count
-  (s/int-in 0 100))
+  (int-in 0 100))
 (s/def :lipas.swimming-pool.facilities/hydro-neck-massage-spots-count
-  (s/int-in 0 100))
+  (int-in 0 100))
 (s/def :lipas.swimming-pool.facilities/kiosk? boolean?)
 (s/def :lipas.swimming-pool.facilities/gym? boolean?)
 
 ;; Showers and lockers ;;
-(s/def :lipas.swimming-pool.facilities/showers-men-count (s/int-in 0 200))
-(s/def :lipas.swimming-pool.facilities/showers-women-count (s/int-in 0 200))
-(s/def :lipas.swimming-pool.facilities/showers-unisex-count (s/int-in 0 200))
-(s/def :lipas.swimming-pool.facilities/lockers-men-count (s/int-in 0 1000))
-(s/def :lipas.swimming-pool.facilities/lockers-women-count (s/int-in 0 1000))
-(s/def :lipas.swimming-pool.facilities/lockers-unisex-count (s/int-in 0 1000))
+(s/def :lipas.swimming-pool.facilities/showers-men-count (int-in 0 200))
+(s/def :lipas.swimming-pool.facilities/showers-women-count (int-in 0 200))
+(s/def :lipas.swimming-pool.facilities/showers-unisex-count (int-in 0 200))
+(s/def :lipas.swimming-pool.facilities/lockers-men-count (int-in 0 1000))
+(s/def :lipas.swimming-pool.facilities/lockers-women-count (int-in 0 1000))
+(s/def :lipas.swimming-pool.facilities/lockers-unisex-count (int-in 0 1000))
 
 (s/def :lipas.swimming-pool/facilities
   (s/keys :opt-un [:lipas.swimming-pool.facilities/platforms-1m-count
@@ -1111,7 +1271,7 @@
 
 ;; Conditions ;;
 
-(s/def :lipas.swimming-pool.conditions/open-days-in-year (s/int-in 0 (inc 365)))
+(s/def :lipas.swimming-pool.conditions/open-days-in-year (int-in 0 (inc 365)))
 (s/def :lipas.swimming-pool.conditions/daily-open-hours :lipas/hours-in-day)
 (s/def :lipas.swimming-pool.conditions/open-hours-mon :lipas/hours-in-day)
 (s/def :lipas.swimming-pool.conditions/open-hours-tue :lipas/hours-in-day)
@@ -1185,11 +1345,10 @@
 
 (s/def :lipas.api/revs #{"latest" "yearly"})
 (s/def :lipas.api/lang #{"fi" "en" "se"})
-(s/def :lipas.api/draft #{"true" "false"})
+(s/def :lipas.api/draft boolean?)
 (s/def :lipas.api/query-params
   (s/keys :opt-un [:lipas.api/revs
-                   :lipas.api/lang
-                   :lipas.api/draft]))
+                   :lipas.api/lang]))
 
 (s/def :lipas.report/field (into #{} (keys reports/fields)))
 
@@ -1202,7 +1361,7 @@
              :into []))
 
 (s/def :lipas.api.energy-report.req/year
-  (s/int-in 2000 (inc utils/this-year)))
+  (int-in 2000 (inc utils/this-year)))
 
 (s/def :lipas.api.energy-report/req
   (s/keys :req-un [:lipas.sports-site.type/type-code
@@ -1232,7 +1391,7 @@
 (s/def :lipas.api.finance-report.req/unit (keys reports/stats-units))
 (s/def :lipas.api.finance-report.req/city-service (keys reports/city-services))
 (s/def :lipas.api.finance-report.req/years
-  (s/coll-of (s/int-in 2000 utils/this-year) :distinct true :into []))
+  (s/coll-of (int-in 2000 utils/this-year) :distinct true :into []))
 
 (s/def :lipas.api.finance-report/req
   (s/keys :req-un [:lipas.api.report.req/city-codes]

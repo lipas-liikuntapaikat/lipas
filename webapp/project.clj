@@ -7,6 +7,7 @@
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.5.18"]
+   [metosin/spec-tools "0.10.5"]
 
    ;;; Frontend ;;;
    [thheller/shadow-cljs "2.20.20"]
