@@ -70,12 +70,6 @@
            :headers {"Content-Type" "text/html"}
            :body    (io/input-stream (io/resource "public/index.html"))})}}]
 
-     ["/swagger.json"
-      {:get
-       {:no-doc  true
-        :swagger {:info {:title "my-api"}}
-        :handler (swagger/create-swagger-handler)}}]
-
      ["/api"
       {:middleware [mw/cors]
        :no-doc     true
@@ -85,9 +79,16 @@
           {:status 200
            :body   {:status "OK"}})}}
 
+      ["/swagger.json"
+       {:get
+        {:no-doc  true
+         :swagger {:info {:title "Lipas-API v2"}}
+         :handler (swagger/create-swagger-handler)}}]
+
       ["/health"
        {:get
-        {:handler
+        {:no-doc true
+         :handler
          (fn [_]
            {:status 200
             :body   {:status "OK"}})}}]
@@ -97,8 +98,8 @@
         {:no-doc     false
          :middleware [mw/token-auth mw/auth]
          :parameters
-         {:query :lipas.api/query-params
-          :body  map?}
+         {:query (s/keys :opt-un [:lipas.api/draft])
+          :body  :lipas/new-or-existing-sports-site}
          :handler
          (fn [{:keys [body-params identity] :as req}]
            (let [spec   :lipas/new-or-existing-sports-site
@@ -122,7 +123,8 @@
 
       ["/sports-sites/history/:lipas-id"
        {:get
-        {:parameters {:path {:lipas-id int?}}
+        {:no-doc     false
+         :parameters {:path {:lipas-id int?}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            {:status 200
@@ -130,8 +132,9 @@
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:parameters
-         {:path  {:type-code int?}
+        {:no-doc false
+         :parameters
+         {:path  {:type-code :lipas.sports-site.type/type-code}
           :query :lipas.api/query-params}
          :handler
          (fn [{:keys [parameters]}]
@@ -148,7 +151,8 @@
 
       ["/users"
        {:get
-        {:middleware [mw/token-auth mw/auth mw/admin]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth mw/admin]
          :handler
          (fn [_]
            {:status 200
@@ -163,7 +167,8 @@
 
       ["/actions/register"
        {:post
-        {:handler
+        {:no-doc true
+         :handler
          (fn [req]
            (let [user (-> req
                           :body-params
@@ -174,7 +179,8 @@
 
       ["/actions/login"
        {:post
-        {:middleware [(mw/basic-auth db) mw/auth]
+        {:no-doc     false
+         :middleware [(mw/basic-auth db) mw/auth]
          :handler
          (fn [{:keys [identity]}]
            (core/login! db identity)
@@ -182,7 +188,8 @@
 
       ["/actions/refresh-login"
        {:get
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
            (let [user (core/get-user! db (-> identity :id))]
@@ -192,7 +199,8 @@
 
       ["/actions/request-password-reset"
        {:post
-        {:parameters {:body {:email string?}}
+        {:no-doc     true
+         :parameters {:body {:email string?}}
          :handler
          (fn [{:keys [body-params]}]
            (let [_ (core/send-password-reset-link! db emailer body-params)]
@@ -201,7 +209,8 @@
 
       ["/actions/reset-password"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :parameters {:body {:password string?}}
          :handler
          (fn [req]
@@ -213,7 +222,8 @@
 
       ["/actions/update-user-permissions"
        {:post
-        {:middleware [mw/token-auth mw/auth mw/admin]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth mw/admin]
          :parameters
          {:body
           {:id          string?
@@ -228,7 +238,8 @@
 
       ["/actions/update-user-status"
        {:post
-        {:middleware [mw/token-auth mw/auth mw/admin]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth mw/admin]
          :parameters
          {:body
           {:id     string?
@@ -240,7 +251,8 @@
 
       ["/actions/update-user-data"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.user/user-data}
          :handler
@@ -252,7 +264,8 @@
 
       ["/actions/order-magic-link"
        {:post
-        {:parameters
+        {:no-doc true
+         :parameters
          {:body
           {:email     :lipas/email
            :login-url :lipas.magic-link/login-url
@@ -270,7 +283,8 @@
 
       ["/actions/send-magic-link"
        {:post
-        {:middleware [mw/token-auth mw/auth mw/admin]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth mw/admin]
          :parameters
          {:body
           {:login-url string?
@@ -290,7 +304,8 @@
 
       ["/actions/add-reminder"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas/new-reminder}
          :handler
@@ -301,7 +316,8 @@
 
       ["/actions/update-reminder-status"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :parameters
          {:body
           {:id     uuid?
@@ -314,7 +330,8 @@
 
       ["/actions/get-upcoming-reminders"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
            {:status 200
@@ -322,7 +339,8 @@
 
       ["/actions/create-energy-report"
        {:post
-        {:parameters
+        {:no-doc true
+         :parameters
          {:body :lipas.api.energy-report/req}
          :handler
          (fn [{:keys [parameters]}]
@@ -333,7 +351,8 @@
 
       ["/actions/create-sports-sites-report"
        {:post
-        {:parameters
+        {:no-doc false
+         :parameters
          {:body :lipas.api.sports-site-report/req}
          :handler
          (fn [{:keys [parameters]}]
@@ -357,7 +376,8 @@
       ;; Old simple db version
       ["/actions/create-finance-report"
        {:post
-        {:parameters
+        {:no-doc true
+         :parameters
          {:body :lipas.api.finance-report/req}
          :handler
          (fn [{:keys [parameters]}]
@@ -368,7 +388,8 @@
       ;; New version that uses ES backend
       ["/actions/query-finance-report"
        {:post
-        {:parameters
+        {:no-doc true
+         :parameters
          {:body map?}
          :handler
          (fn [{:keys [parameters]}]
@@ -379,7 +400,8 @@
       ;; Subsidies
       ["/actions/query-subsidies"
        {:post
-        {:parameters
+        {:no-doc true
+         :parameters
          {:body map?}
          :handler
          (fn [{:keys [parameters]}]
@@ -389,7 +411,8 @@
 
       ["/actions/calculate-stats"
        {:post
-        {:parameters {}
+        {:no-doc     true
+         :parameters {}
          :handler
          (fn [{:keys [body-params]}]
            (let [city-codes (-> body-params :city-codes)
@@ -401,7 +424,8 @@
       ;; Accessibility
       ["/actions/get-accessibility-statements"
        {:post
-        {:parameters {:lipas-id int?}
+        {:no-doc     true
+         :parameters {:lipas-id int?}
          :handler
          (fn [{:keys [body-params]}]
            (let [lipas-id (-> body-params :lipas-id)]
@@ -410,7 +434,8 @@
 
       ["/actions/get-accessibility-app-url"
        {:post
-        {:middleware [mw/token-auth mw/auth]
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth]
          :parameters {:lipas-id int?}
          :handler
          (fn [{:keys [body-params identity]}]
@@ -423,7 +448,7 @@
       ;; Search Schools
       ["/actions/search-schools"
        {:post
-        {:no-doc false
+        {:no-doc true
          :handler
          (fn [{:keys [body-params]}]
            (core/search-schools search body-params))}}]
@@ -431,7 +456,7 @@
       ;; Search population
       ["/actions/search-population"
        {:post
-        {:no-doc false
+        {:no-doc true
          :handler
          (fn [{:keys [body-params]}]
            (core/search-population search body-params))}}]
@@ -439,7 +464,7 @@
       ;; Calc distances and travel-times
       ["/actions/calc-distances-and-travel-times"
        {:post
-        {:no-doc false
+        {:no-doc true
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -448,7 +473,7 @@
       ;; Create analysis report
       ["/actions/create-analysis-report"
        {:post
-        {:no-doc false
+        {:no-doc true
          :handler
          (fn [{:keys [body-params]}]
            {:status  200
@@ -462,7 +487,8 @@
       ;; Get newsletter
       ["/actions/get-newsletter"
        {:post
-        {:handler
+        {:no-doc false
+         :handler
          (fn [_]
            {:status 200
             :body   (core/get-newsletter mailchimp)})}}]
@@ -470,7 +496,8 @@
       ;; Subscribe newsletter
       ["/actions/subscribe-newsletter"
        {:post
-        {:parameters
+        {:no-doc false
+         :parameters
          {:body
           {:email :lipas/email}}
          :handler
@@ -481,7 +508,7 @@
       ;; Calculate diversity indices
       ["/actions/calc-diversity-indices"
        {:post
-        {:no-doc     false
+        {:no-doc     true
          :parameters {:body map?}
          :handler
          (fn [{:keys [parameters]}]
@@ -495,7 +522,8 @@
       ;; Send feedback
       ["/actions/send-feedback"
        {:post
-        {:parameters
+        {:no-doc false
+         :parameters
          {:body :lipas.feedback/payload}
          :handler
          (fn [{:keys [body-params]}]
@@ -521,5 +549,5 @@
                    ;; coercing request parameters
                    coercion/coerce-request-middleware]}})
    (ring/routes
-    (swagger-ui/create-swagger-ui-handler {:path "/"})
+    (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
     (ring/create-default-handler))))
