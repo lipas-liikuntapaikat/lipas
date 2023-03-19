@@ -38,11 +38,15 @@
    :spectators-count "#72a4f7"
 
    ;; City finance
-   :investments        "#1e6ed6"
-   :operating-expenses "#ff6f0f"
-   :operating-incomes  "#3ba12f"
-   :subsidies          "#8ddd21"
-   :net-costs          "#d51a0d"
+   :investments          "#1e6ed6"
+   :operating-expenses   "#ff6f0f"
+   :operating-incomes    "#3ba12f"
+   :subsidies            "#8ddd21"
+   :net-costs            "#d51a0d"
+   :operational-expenses "#ff6f0f"
+   :operational-income   "#3ba12f"
+   :surplus              "#efc700"
+   :deficit              "#ff503c"
 
    ;;; Age structure
 

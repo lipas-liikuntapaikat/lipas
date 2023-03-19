@@ -39,43 +39,43 @@
 (defn- calc-per-capita [m population]
   (reduce-kv
    (fn [m k v]
-     (when (and v population)
-       (assoc m k (/ (* 1000 v) population))))
+     (let [v (when (and v population) (/ (* 1000 v) population))]
+       (assoc m k v)))
    {}
    m))
 
 (defn- ->city-finance-entries [data]
-  (->> data
-       (reduce
-        (fn [res {:keys [city-code stats]}]
-          (into res
-                (for [[year data] stats
-                      :let        [youth (-> data :services :youth-services)
-                                   sports (-> data :services :sports-services)
-                                   city (all-cities city-code)
-                                   province (cities/provinces (:province-id city))
-                                   avi (cities/avi-areas (:avi-id city))
-                                   popl (:population data)]]
-                  (merge
-                   (select-keys city [:province-id :avi-id])
-                   {:id         (str city-code "-" year)
-                    :date       (str year "-01-01")
-                    :city-code  city-code
-                    :year       year
-                    :population popl
-                    :search_meta
-                    {:city-name     (:name city)
-                     :province-name (:name province)
-                     :avi-name      (:name avi)}}
-                   (utils/->prefix-map youth "youth-services-")
-                   (utils/->prefix-map sports "sports-services-")
-                   (-> youth
-                       (calc-per-capita popl)
-                       (utils/->prefix-map "youth-services-pc-"))
-                   (-> sports
-                       (calc-per-capita popl)
-                       (utils/->prefix-map "sports-services-pc-"))))))
-        [])))
+  (reduce
+   (fn [res {:keys [city-code stats]}]
+     (into res
+           (for [[year data] stats
+                 :let        [youth (-> data :services :youth-services)
+                              sports (-> data :services :sports-services)
+                              city (all-cities city-code)
+                              province (cities/provinces (:province-id city))
+                              avi (cities/avi-areas (:avi-id city))
+                              popl (:population data)]]
+             (merge
+              (select-keys city [:province-id :avi-id])
+              {:id         (str city-code "-" year)
+               :date       (str year "-01-01")
+               :city-code  city-code
+               :year       year
+               :population popl
+               :search_meta
+               {:city-name     (:name city)
+                :province-name (:name province)
+                :avi-name      (:name avi)}}
+              (utils/->prefix-map youth "youth-services-")
+              (utils/->prefix-map sports "sports-services-")
+              (-> youth
+                  (calc-per-capita popl)
+                  (utils/->prefix-map "youth-services-pc-"))
+              (-> sports
+                  (calc-per-capita popl)
+                  (utils/->prefix-map "sports-services-pc-"))))))
+   []
+   data))
 
 ;; `year`-`city` is used as primary key
 (defn index-city-finance-data!
@@ -83,7 +83,7 @@
   [{:keys [db search]}]
   (let [es-index "city_stats"]
     (log/info "Starting to index city finance data to" es-index)
-    (->> (core/get-cities db)
+    (->> (core/get-cities db :no-cache)
          ->city-finance-entries
          (search/->bulk es-index :id)
          (search/bulk-index! search)
@@ -185,5 +185,26 @@
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
   (index-subsidies! system)
+  (index-city-finance-data! system)
+  (def city-data (core/get-cities (:db system) :no-cache))
+
+  (utils/->prefix-map
+   (calc-per-capita
+    {:net-costs 17.0,
+     :subsidies 4.0,
+     :investments 0.0,
+     :operating-incomes 0.0,
+     :operating-expenses 17.0}
+    2500)
+   "kissa-komodo-")
+
+  (-> city-data
+      ->city-finance-entries
+      (->> (filter #(= 2021 (:year %)))))
+
+  (def aki (filter #(= 992 (:city-code %)) city-data))
+  (def kair (first aki))
+
+  (->city-finance-entries [(update kair :stats select-keys [2021])])
 
   )

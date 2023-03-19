@@ -112,16 +112,20 @@
                                           "province" provinces
                                           "city"     cities)]]
                        (merge
-                        {k                   key
-                         :year               (:key b)
-                         :region             (get-in region [key :name locale])
-                         :count              (-> b :doc_count)
-                         :operating-expenses (-> b :operating-expenses op)
-                         :operating-incomes  (-> b :operating-incomes op)
-                         :net-costs          (-> b :net-costs op)
-                         :subsidies          (-> b :subsidies op)
-                         :investments        (-> b :investments op)
-                         :population         (-> b :population :sum)}
+                        {k                     key
+                         :year                 (:key b)
+                         :region               (get-in region [key :name locale])
+                         :count                (-> b :doc_count)
+                         :operating-expenses   (-> b :operating-expenses op)
+                         :operating-incomes    (-> b :operating-incomes op)
+                         :net-costs            (-> b :net-costs op)
+                         :subsidies            (-> b :subsidies op)
+                         :investments          (-> b :investments op)
+                         :population           (-> b :population :sum)
+                         :operational-expenses (-> b :operational-expenses op)
+                         :operational-income   (-> b :operational-income op)
+                         :surplus              (-> b :surplus op)
+                         :deficit              (-> b :deficit op)}
                         (when (= "city" grouping)
                           {:avi-name      (get-avi key)
                            :province-name (get-province key)}))))))
@@ -154,7 +158,11 @@
      [:net-costs (tr :stats-metrics/net-costs)]
      [:operating-expenses (tr :stats-metrics/operating-expenses)]
      [:operating-incomes (tr :stats-metrics/operating-incomes)]
-     [:subsidies (tr :stats-metrics/subsidies)]]
+     [:subsidies (tr :stats-metrics/subsidies)]
+     [:operational-expenses (tr :stats-metrics/operational-expenses)]
+     [:operational-income (tr :stats-metrics/operational-income)]
+     [:surplus (tr :stats-metrics/surplus)]
+     [:deficit (tr :stats-metrics/deficit)]]
     (remove nil?))))
 
 (re-frame/reg-sub

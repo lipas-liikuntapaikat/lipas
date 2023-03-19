@@ -6,7 +6,7 @@
 (def default-db
   {:selected-view           "chart"
    :selected-cities         [] ; whole country
-   :selected-year           (dec utils/this-year)
+   :selected-year           #_(dec utils/this-year) 2021
    :units                   reports/stats-units
    :selected-unit           "euros-per-capita"
    :city-services           reports/city-services

@@ -428,8 +428,8 @@
      :save-failed            "Tallennus epäonnistui",
      :save-success           "Tallennus onnistui"
      :ie                     (str "Internet Explorer ei ole tuettu selain. "
-                        "Suosittelemme käyttämään toista selainta, "
-                        "esim. Chrome, Firefox tai Edge.")
+                                  "Suosittelemme käyttämään toista selainta, "
+                                  "esim. Chrome, Firefox tai Edge.")
      :thank-you-for-feedback "Kiitos palautteesta!"},
     :lipas.swimming-pool.energy-saving
     {:filter-rinse-water-heat-recovery?
@@ -720,11 +720,15 @@
      :sauna          "Sauna",
      :steam-sauna    "Höyrysauna"},
     :stats-metrics
-    {:investments        "Investoinnit",
-     :net-costs          "Nettokustannukset",
-     :operating-expenses "Käyttökustannukset",
-     :operating-incomes  "Käyttötuotot",
-     :subsidies          "Kunnan myöntämät avustukset"},
+    {:investments          "Investoinnit",
+     :net-costs            "Nettokustannukset",
+     :operating-expenses   "Käyttökustannukset",
+     :operating-incomes    "Käyttötuotot",
+     :subsidies            "Kunnan myöntämät avustukset"
+     :operational-expenses "Toimintakulut"
+     :operational-income   "Toimintatuotot"
+     :surplus              "Tilikauden ylijäämä"
+     :deficit              "Tilikauden alijäämä"},
     :refrigerant-solutions
     {:CO2             "CO2",
      :H2ONH3          "H2O/NH3",
