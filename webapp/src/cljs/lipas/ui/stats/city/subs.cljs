@@ -86,8 +86,12 @@
                       avgs     (get avgs year)]]
 
             (merge
-             (select-keys service* fields)
-             (get-averages avgs service fields)
+             (-> (select-keys service* fields)
+                 (update :deficit abs)
+                 (update :deficit-pc abs))
+             (-> (get-averages avgs service fields)
+                 (update :deficit-avg abs)
+                 (update :deficit-pc-avg abs))
              {:city-code  (-> m :city-code)
               :year       year
               :population (get-in m [:stats year :population])})))))
