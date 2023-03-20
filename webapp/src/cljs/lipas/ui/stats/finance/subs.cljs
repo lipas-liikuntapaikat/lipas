@@ -125,7 +125,7 @@
                          :operational-expenses (-> b :operational-expenses op)
                          :operational-income   (-> b :operational-income op)
                          :surplus              (-> b :surplus op)
-                         :deficit              (-> b :deficit op)}
+                         :deficit              (-> b :deficit op abs)}
                         (when (= "city" grouping)
                           {:avi-name      (get-avi key)
                            :province-name (get-province key)}))))))
