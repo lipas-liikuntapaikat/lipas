@@ -57,7 +57,8 @@
    {:label "Karttaselain" :href "https://www.karttaselain.fi/"}
    {:label "Go SportY" :href "https://www.gosporty.fi/"}
    {:label "FLUENT" :href "https://www.fluentprogress.fi/fluent-outdoors-latutilanne-ja-liikuntapaikat"}
-   {:label "ulkoilutampereenseutu.fi" :href "https://ulkoilutampereenseutu.fi/"}])
+   {:label "ulkoilutampereenseutu.fi" :href "https://ulkoilutampereenseutu.fi/"}
+   {:label "RetkiSuomi" :href "https://retkisuomi.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
