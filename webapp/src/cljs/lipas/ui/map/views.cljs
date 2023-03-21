@@ -245,11 +245,11 @@
     (let [locale (tr)]
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
-        [lui/autocomplete2
+        [lui/autocomplete3
          {:multi?    false
           ;;:show-all? true
           :items     (vals types)
-          :value     value
+          :value     @selected-type
           :label     (tr :type/name)
           :value-fn  :type-code
           :label-fn  (comp locale :name)

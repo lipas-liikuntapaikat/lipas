@@ -2,12 +2,15 @@
   (:require
    ["react-autosuggest" :as Autosuggest]
    ["react-select-material-ui" :refer [SingleSelect MultipleSelect]]
+   ["@material-ui/core/TextField$default" :as TextField]
    [clojure.spec.alpha :as s]
    [clojure.string :refer [trim] :as string]
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [clojure.edn :as edn]
+   [clojure.string :as str]))
 
 (def lower-case (fnil string/lower-case ""))
 
@@ -139,7 +142,7 @@
 
 (defn autocomplete2
   [{:keys [label items value value-fn label-fn on-change spec multi?
-           required helper-text]
+           required helper-text deselect?]
     :or   {label-fn       :label
            label-style-fn (fn [item label] label)
            sort-fn        label-fn
@@ -166,7 +169,8 @@
                    theme)
           :styles #js{:option (fn [^js styles ^js _state]
                                 (set! (.-color styles) "black")
-                                styles)}}
+                                styles)}
+          :isClearable (boolean deselect?)}
 
       :InputLabelProps
       {:error    (and required (not @state))
@@ -176,3 +180,56 @@
               {:font-family (-> mui/jyu-styles-dark :typography :font-family)
                :font-size   "initial"}
               (-> mui/jyu-styles-dark :typography :body1))}]))
+
+(defn autocomplete3
+  [{:keys [label items value value-fn label-fn on-change sort-fn spec multi?
+           required helper-text deselect? sort-cmp]
+    :or   {label-fn :label
+           sort-fn  label-fn
+           sort-cmp compare
+           value-fn :value}}]
+  (let [items-by-vals (utils/index-by (comp pr-str value-fn) items)]
+    (r/with-let [state   (r/atom "")]
+      [mui/autocomplete
+       {:multiple             multi?
+        :value                (if multi?
+                                (clj->js (map pr-str value))
+                                (pr-str value))
+        :label                label
+        :disableCloseOnSelect multi?
+        :disableClearable     (not deselect?)
+        :on-change            (fn [_evt v]
+                                (on-change
+                                 (if multi?
+                                   (->> v
+                                        (select-keys items-by-vals)
+                                        vals
+                                        (map value-fn))
+                                   (-> v items-by-vals value-fn))))
+        :on-input-change      (fn [_evt v] (reset! state v))
+        :renderInput          (fn [^js params]
+                                (set! (.-label params) label)
+                                (set! (.-required params) (boolean required))
+                                #_(set! (.-shrink (.-InputLabelProps params))
+                                      (boolean (or (and (coll? value) (seq value))
+                                                   (seq @state))))
+                                (when (and required (not value))
+                                  (set! (.-error (.-InputLabelProps params)) true))
+                                (r/create-element TextField params))
+        :getOptionLabel       (fn [opt]
+                                (-> opt items-by-vals label-fn str))
+        :options              (->> items
+                                   (sort-by sort-fn sort-cmp)
+                                   (map (comp pr-str value-fn)))}])))
+
+(defn year-selector [{:keys [label value on-change required years multi?]
+                      :as   props}]
+  (let [years     (or years (range 1900 (inc (.getFullYear (js/Date.)))))]
+    [autocomplete3
+     (merge props
+            {:label     label
+             :items     (map #(hash-map :label % :value %) years)
+             :on-change on-change
+             :sort-cmp  utils/reverse-cmp
+             :value     value
+             :required  required})]))

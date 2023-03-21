@@ -70,7 +70,7 @@
      ;; Type
      {:label      (tr :type/name)
       :value      (-> display-data :type :name)
-      :form-field [autocompletes/autocomplete2
+      :form-field [autocompletes/autocomplete3
                    {:value     (-> edit-data :type :type-code)
                     :required  true
                     :multi?    false
@@ -127,7 +127,7 @@
      ;; Construction year
      {:label      (tr :lipas.sports-site/construction-year)
       :value      (-> display-data :construction-year)
-      :form-field [lui/year-selector
+      :form-field [lui/year-selector2
                    {:value     (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)
                     :deselect? true}]}
@@ -253,7 +253,7 @@
      ;; City
      {:label      (tr :lipas.location/city)
       :value      (-> display-data :city :name)
-      :form-field [autocompletes/autocomplete2
+      :form-field [autocompletes/autocomplete3
                    {:value     (-> edit-data :city :city-code)
                     :required  true
                     :spec      :lipas.location.city/city-code
@@ -274,7 +274,7 @@
   [{:keys [tr value on-change label multi? spec tooltip]}]
   (let [locale (tr)
         items  (<== [::subs/surface-materials])]
-    [lui/autocomplete2
+    [lui/autocomplete3
      {:value       value
       :multi?      multi?
       :helper-text tooltip

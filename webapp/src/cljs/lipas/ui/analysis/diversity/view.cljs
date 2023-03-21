@@ -483,10 +483,10 @@
 (defn areas-selector []
   (let [result-areas   (<== [::subs/result-area-options])
         selected-areas (<== [::subs/selected-result-areas])]
-    [lui/autocomplete2
+    [lui/autocomplete3
      {:on-change #(==> [::events/select-analysis-chart-areas %])
-      :multi? true
-      :label "Valitse alueet"
+      :multi?    true
+      :label     "Valitse alueet"
       :items     result-areas
       :value     selected-areas}]))
 
