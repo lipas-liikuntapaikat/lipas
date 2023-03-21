@@ -68,6 +68,7 @@
    ["@material-ui/core/Typography$default" :as Typography]
    ["@material-ui/core/styles" :refer [createTheme ThemeProvider]]
    ["@material-ui/core/withWidth$default" :as withWidth]
+   ["@material-ui/lab/Autocomplete$default" :as Autocomplete]
    #_["@material-ui/core/CardMedia$default" :as CardMedia]
    #_["@material-ui/core/AccordionActions$default" :as AccordionActions]
    #_["@material-ui/core/Fade$default" :as Fade]
@@ -187,6 +188,7 @@
 (comment
   (-> jyu-theme-dark (js->clj :keywordize-keys true)))
 
+(def autocomplete (r/adapt-react-class Autocomplete))
 (def app-bar (r/adapt-react-class AppBar))
 (def avatar (r/adapt-react-class Avatar))
 (def button (r/adapt-react-class Button))
