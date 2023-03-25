@@ -224,7 +224,7 @@
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
-  (let [years     (or years (range 1900 (inc (.getFullYear (js/Date.)))))]
+  (let [years     (or years (range 1850 (inc (.getFullYear (js/Date.)))))]
     [autocomplete3
      (merge props
             {:label     label
