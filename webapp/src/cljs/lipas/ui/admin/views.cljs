@@ -152,6 +152,7 @@
          {:items     sites
           :label     (tr :lipas.user.permissions/sports-sites)
           :value     (-> user :permissions :sports-sites)
+          :multi?    true
           :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
 
         ;; Permission to individual types
@@ -159,6 +160,7 @@
          {:items     types
           :label     (tr :lipas.user.permissions/types)
           :value     (-> user :permissions :types)
+          :multi?    true
           :on-change #(==> [::events/edit-user [:permissions :types] %])}]
 
         ;; Permission to individual cities
@@ -166,6 +168,7 @@
          {:items     cities
           :label     (tr :lipas.user.permissions/cities)
           :value     (-> user :permissions :cities)
+          :multi?    true
           :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]
 
       ;;; History

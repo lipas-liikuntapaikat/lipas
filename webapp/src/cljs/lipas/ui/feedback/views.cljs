@@ -26,7 +26,7 @@
 
        ;; Feedback type
        [mui/grid {:item true :xs 12}
-        [lui/autocomplete3
+        [lui/autocomplete
          {:label     "Palautteen aihe"
           :required  true
           :style     {:min-width "170px"}

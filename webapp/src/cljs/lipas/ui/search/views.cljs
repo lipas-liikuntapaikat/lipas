@@ -171,8 +171,6 @@
 
      ;; Statuses filter
      [filter-layout {}
-      [mui/typography {:variant "caption"}
-       (tr :actions/select-statuses)]
       [lui/status-selector
        {:multi?    true
         :value     statuses

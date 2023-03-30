@@ -245,7 +245,7 @@
     (let [locale (tr)]
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
-        [lui/autocomplete3
+        [lui/autocomplete
          {:multi?    false
           ;;:show-all? true
           :items     (vals types)
