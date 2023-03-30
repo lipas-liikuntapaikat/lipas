@@ -133,7 +133,8 @@
   [{:keys [layers] :as map-ctx} lipas-id geoms on-modifyend]
   (let [^js layer (-> layers :overlays :vectors)
         source    (.getSource layer)
-        features  (map-utils/find-features-by-lipas-id map-ctx lipas-id)]
+        features  (map-utils/find-features-by-lipas-id map-ctx lipas-id)
+        geoms     (map-utils/strip-z geoms)]
     ;; Remove from original source so we won't display duplicate when
     ;; feature is added to :edits layer.
     (.forEach features
