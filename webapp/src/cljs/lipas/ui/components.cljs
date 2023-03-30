@@ -47,8 +47,6 @@
 (def status-selector-single selects/status-selector-single)
 (def date-picker selects/date-picker)
 (def autocomplete autocompletes/autocomplete)
-(def autocomplete2 autocompletes/autocomplete2)
-(def autocomplete3 autocompletes/autocomplete3)
 (def table tables/table)
 (def table-v2 tables/table-v2)
 (def form-table tables/form-table)

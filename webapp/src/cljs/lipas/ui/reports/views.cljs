@@ -46,6 +46,7 @@
     [lui/autocomplete
      {:value       value
       :label       (tr :search/search-more)
+      :multi?      true
       :items       items
       :label-fn    (comp locale second)
       :value-fn    first

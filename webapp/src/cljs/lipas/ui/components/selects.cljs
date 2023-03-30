@@ -8,7 +8,8 @@
    [lipas.ui.components.autocompletes :as autocompletes]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<==] :as utils]
-   [lipas.utils :as cutils]))
+   [lipas.utils :as cutils]
+   [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
 
@@ -171,27 +172,30 @@
 (defn strong2 [text] [:strong {:style {:text-transform "uppercase"}} text])
 
 (defn region-selector [{:keys [value on-change regions]}]
-  (let [regions   (or regions
-                      (<== [:lipas.ui.sports-sites.subs/regions]))
-        tr        (<== [:lipas.ui.subs/translator])
-        locale    (tr)
-        avis      cities/by-avi-id
-        provinces cities/by-province-id]
+  (let [regions      (or regions
+                         (<== [:lipas.ui.sports-sites.subs/regions]))
+        regions-by-v (utils/index-by :region-id regions)
+        tr           (<== [:lipas.ui.subs/translator])
+        locale       (tr)
+        avis         cities/by-avi-id
+        provinces    cities/by-province-id]
     ^{:key value}
     [autocompletes/autocomplete
-     {:items          regions
-      :value          (map (partial str "city-") value)
-      :show-all?      true
-      :label          (tr :search/search)
-      :value-fn       :region-id
-      :label-fn       (comp locale :name)
-      :label-style-fn (fn [item label]
-                        (let [id (get item :region-id "")]
-                          (cond
-                            (string/includes? id "province-") (strong1 label)
-                            (string/includes? id "avi-")      (strong2 label)
-                            :else                             label)))
-      :on-change      (comp on-change (partial ->city-codes avis provinces))}]))
+     {:items            regions
+      :value            (map (partial str "city-") value)
+      :label            (tr :search/search)
+      :multi?           true
+      :value-fn         :region-id
+      :label-fn         (comp locale :name)
+      :render-option-fn (fn [option]
+                          (let [v (-> option read-string regions-by-v :name locale)]
+                            (r/as-element
+                             [mui/typography
+                              (cond
+                                (string/includes? option "province-") (strong1 v)
+                                (string/includes? option "avi-")      (strong2 v)
+                                :else                                 v)])))
+      :on-change        (comp on-change (partial ->city-codes avis provinces))}]))
 
 (def parse-main-cats (id-parser "main-cat-"))
 (def parse-sub-cats (id-parser "sub-cat-"))
@@ -215,29 +219,33 @@
 (defn type-category-selector [{:keys [value on-change label]}]
   (let [cats         (<== [:lipas.ui.sports-sites.subs/type-categories])
         tr           (<== [:lipas.ui.subs/translator])
+        cats-by-v    (utils/index-by :cat-id cats)
         locale       (tr)
         by-main-cats types/by-main-category
         by-sub-cats  types/by-sub-category]
 
     ^{:key value}
     [autocompletes/autocomplete
-     {:items          cats
-      :value          (map (partial str "type-") value)
-      :show-all?      true
-      :label          (or label (tr :search/search))
-      :value-fn       :cat-id
-      :label-fn       (fn [item] (str (:type-code item) " " (-> item :name locale)))
-      :label-style-fn (fn [item label]
-                        (let [cat-id (get item :cat-id "")]
-                          (cond
-                            (string/includes? cat-id "sub-cat")  (strong1 label)
-                            (string/includes? cat-id "main-cat") (strong2 label)
-                            :else                                label)))
-      :sort-fn        (fn [{:keys [type-code]}]
-                        (case type-code
-                          (1 2) (* 100 type-code)
-                          type-code))
-      :on-change      (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
+     {:items            cats
+      :value            (map (partial str "type-") value)
+      :label            (or label (tr :search/search))
+      :multi?           true
+      :value-fn         :cat-id
+      :label-fn         (fn [item] (str (:type-code item) " " (-> item :name locale)))
+      :render-option-fn (fn [option]
+                          (let [c (-> option read-string cats-by-v)
+                                v (str (:type-code c) " " (-> c :name locale))]
+                            (r/as-element
+                             [mui/typography
+                              (cond
+                                (string/includes? option "sub-cat")  (strong1 v)
+                                (string/includes? option "main-cat") (strong2 v)
+                                :else                                v)])))
+      :sort-fn          (fn [{:keys [type-code]}]
+                          (case type-code
+                            (1 2) (* 100 type-code)
+                            type-code))
+      :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
 
 (defn type-selector [{:keys [value on-change]}]
@@ -248,7 +256,7 @@
     [autocompletes/autocomplete
      {:items     types
       :value     value
-      :show-all? true
+      :multi?    true
       :label     (tr :search/search)
       :value-fn  :type-code
       :label-fn  (comp locale :name)
@@ -273,7 +281,7 @@
         cities (or cities
                    (<== [:lipas.ui.sports-sites.subs/cities-by-city-code]))]
     ^{:key value}
-    [autocompletes/autocomplete2
+    [autocompletes/autocomplete
      {:items     cities
       :value     value
       :style     select-style
@@ -290,7 +298,7 @@
     [autocompletes/autocomplete
      {:items     cities
       :value     value
-      :show-all? true
+      :multi?    true
       :label     (tr :search/search)
       :value-fn  :city-code
       :label-fn  (comp locale :name)
@@ -304,7 +312,7 @@
     [autocompletes/autocomplete
      {:value     value
       :label     (tr :search/search)
-      :show-all? true
+      :multi?    true
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
@@ -319,7 +327,7 @@
      {:style     {:min-width "150px"}
       :value     value
       :deselect? true
-      :show-all? true
+      :multi?    true
       :label     (tr :search/search)
       :items     items
       :label-fn  (comp locale second)
@@ -346,7 +354,7 @@
     [autocompletes/autocomplete
      {:style     {:min-width "150px"}
       :value     value
-      :show-all? true
+      :multi?    true?
       :deselect? true
       :label     (tr :search/search)
       :items     items
@@ -387,7 +395,7 @@
     [autocompletes/autocomplete
      {:value        value
       :items        items
-      :show-all?    true
+      :multi?       true
       :style        {:min-width "170px"}
       :label-fn     (comp locale second)
       :value-fn     first

@@ -70,7 +70,7 @@
      ;; Type
      {:label      (tr :type/name)
       :value      (-> display-data :type :name)
-      :form-field [autocompletes/autocomplete3
+      :form-field [autocompletes/autocomplete
                    {:value     (-> edit-data :type :type-code)
                     :required  true
                     :multi?    false
@@ -253,7 +253,7 @@
      ;; City
      {:label      (tr :lipas.location/city)
       :value      (-> display-data :city :name)
-      :form-field [autocompletes/autocomplete3
+      :form-field [autocompletes/autocomplete
                    {:value     (-> edit-data :city :city-code)
                     :required  true
                     :spec      :lipas.location.city/city-code
@@ -274,7 +274,7 @@
   [{:keys [tr value on-change label multi? spec tooltip]}]
   (let [locale (tr)
         items  (<== [::subs/surface-materials])]
-    [lui/autocomplete3
+    [lui/autocomplete
      {:value       value
       :multi?      multi?
       :helper-text tooltip
