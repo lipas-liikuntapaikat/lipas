@@ -1,7 +1,6 @@
 (ns lipas.ui.components.text-fields
   (:require
    [clojure.reader :refer [read-string]]
-   [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.ui.mui :as mui]
@@ -46,6 +45,7 @@
     :or   {defer-ms 200 tooltip ""}
     :as   props} & children]
 
+
   (let [on-change2 (fn [e]
                      (let [new-val (->> e .-target .-value (coerce type))]
                        (on-change new-val)))
@@ -53,7 +53,6 @@
                      patched-textarea
                      patched-input)
         props      (-> (dissoc props :read-only? :defer-ms)
-                       (set/rename-keys {:rows :min-rows})
                        (as-> $ (if (= "number" type) (dissoc $ :type) $))
                        (assoc :error (error? spec value required))
                        (assoc :Input-props
@@ -70,6 +69,7 @@
                                                 on-change))))
                        (assoc :value value)
                        (assoc :on-change on-change2))]
+
     [mui/tooltip {:title tooltip}
      (into [mui/text-field props] children)]))
 
