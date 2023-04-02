@@ -4,15 +4,14 @@
    [lipas.ui.admin.routes :as admin]
    [lipas.ui.forgot-password.routes :as forgot-password]
    [lipas.ui.front-page.routes :as front-page]
-   [lipas.ui.ice-stadiums.routes :as ice-stadiums]
+   #_[lipas.ui.ice-stadiums.routes :as ice-stadiums]
    [lipas.ui.login.routes :as login]
    [lipas.ui.map.routes :as lmap]
    [lipas.ui.register.routes :as register]
    [lipas.ui.stats.routes :as stats]
-   [lipas.ui.swimming-pools.routes :as swimming-pools]
+   #_[lipas.ui.swimming-pools.routes :as swimming-pools]
    [lipas.ui.user.routes :as user]
    [lipas.ui.utils :refer [==>] :as utils]
-   [reitit.coercion :as rc]
    [reitit.coercion.spec :as rss]
    [reitit.frontend :as rf]
    [reitit.frontend.easy :as rfe]))
@@ -43,8 +42,8 @@
     lmap/routes
     admin/routes
     stats/routes
-    ice-stadiums/routes
-    swimming-pools/routes]
+    #_ice-stadiums/routes
+    #_swimming-pools/routes]
    {:data {:coercion rss/coercion}}))
 
 (defn match-by-path [path]

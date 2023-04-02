@@ -1,6 +1,5 @@
 (ns lipas.ui.db
   (:require
-   [clojure.spec.alpha :as s]
    [lipas.data.cities :as cities]
    [lipas.i18n.core :as i18n]
    [lipas.schema.core :as specs]
@@ -9,14 +8,14 @@
    [lipas.ui.energy.db :as energy]
    [lipas.ui.feedback.db :as feedback]
    [lipas.ui.front-page.db :as front-page]
-   [lipas.ui.ice-stadiums.db :as ice-stadiums]
+   #_[lipas.ui.ice-stadiums.db :as ice-stadiums]
    [lipas.ui.map.db :as map]
    [lipas.ui.reminders.db :as reminders]
    [lipas.ui.reports.db :as reports]
    [lipas.ui.search.db :as search]
    [lipas.ui.sports-sites.db :as sports-sites]
    [lipas.ui.stats.db :as stats]
-   [lipas.ui.swimming-pools.db :as swimming-pools]
+   #_[lipas.ui.swimming-pools.db :as swimming-pools]
    [lipas.ui.user.db :as user]))
 
 (def default-db
@@ -47,7 +46,7 @@
    :front-page front-page/default-db
 
    ;; Ice stadiums
-   :ice-stadiums ice-stadiums/default-db
+   #_#_:ice-stadiums ice-stadiums/default-db
 
    ;; Map
    :map map/default-db
@@ -56,7 +55,7 @@
    :sports-sites sports-sites/default-db
 
    ;; Swimming pools
-   :swimming-pools swimming-pools/default-db
+   #_#_:swimming-pools swimming-pools/default-db
 
    ;; User
    :user user/default-db

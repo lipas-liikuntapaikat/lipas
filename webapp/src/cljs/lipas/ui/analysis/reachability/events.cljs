@@ -56,30 +56,12 @@
                       :success? false}]})))
 
 (re-frame/reg-event-fx
- ::set-selected-population-grid
- (fn [{:keys [db]} [_ fcoll]]
-   {:db (assoc-in db [:analysis :reachability :population :selected] fcoll)}))
-
-(re-frame/reg-event-fx
- ::unselect-analysis
- (fn [{:keys [db]} _]
-   {:dispatch [:lipas.ui.map.events/hide-analysis]}))
-
-(re-frame/reg-event-fx
  ::show-analysis
  (fn [_ [_ lipas-id]]
    (if lipas-id
      (let [on-success [[::show-analysis* lipas-id]]]
        {:dispatch [:lipas.ui.sports-sites.events/get lipas-id on-success]})
      {})))
-
-;; TODO resolve closest point in case of LineString / Polygon
-(defn resolve-coords-js [js-fcoll]
-  (let [geom (-> js-fcoll .-features (aget 0) .-geometry)]
-    (case (.-type geom)
-      "Point"      (-> geom .-coordinates)
-      "LineString" (-> geom .-coordinates (aget 0))
-      "Polygon"    (-> geom .-coordinates (aget 0) (aget 0)))))
 
 (defn resolve-coords [fcoll]
   (let [geom (-> fcoll :features first :geometry)]
