@@ -354,7 +354,7 @@
     [autocompletes/autocomplete
      {:style     {:min-width "150px"}
       :value     value
-      :multi?    true?
+      :multi?    true
       :deselect? true
       :label     (tr :search/search)
       :items     items
