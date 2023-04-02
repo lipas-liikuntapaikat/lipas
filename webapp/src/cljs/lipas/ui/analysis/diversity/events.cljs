@@ -2,7 +2,6 @@
   (:require
    [ajax.core :as ajax]
    [goog.string.format]
-   [lipas.ui.analysis.diversity.db :as db]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
    [re-frame.core :as re-frame]))
@@ -27,11 +26,6 @@
  ::select-analysis-tab
  (fn [db [_ tab]]
    (assoc-in db [:analysis :diversity :selected-tab] tab)))
-
-(re-frame/reg-event-db
- ::set-analysis-area-fcoll
- (fn [db [_ fcoll]]
-   (assoc-in db [:analysis :diversity :settings :analysis-area-fcoll] fcoll)))
 
 (re-frame/reg-event-fx
  ::calc-all-diversity-indices*
@@ -82,11 +76,6 @@
         [(when-not skip-search
            (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
             [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
-
-(re-frame/reg-event-db
- ::clear
- (fn [db _]
-   (assoc-in db [:analysis :diversity] db/default-db)))
 
 (re-frame/reg-event-db
  ::calc-success

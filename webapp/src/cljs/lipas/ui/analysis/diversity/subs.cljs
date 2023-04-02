@@ -48,12 +48,6 @@
    (:selected-category-preset diversity)))
 
 (re-frame/reg-sub
- ::analysis-area-fcoll
- :<- [::settings]
- (fn [settings _]
-   (:analysis-area-fcoll settings)))
-
-(re-frame/reg-sub
  ::max-distance-m
  :<- [::settings]
  (fn [settings _]
