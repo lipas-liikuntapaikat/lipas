@@ -1,1 +1,2 @@
-mapproxy-seed --cleanup=mml_all -f mapproxy.yaml -s mml_cleanup.yaml
+#!/bin/bash
+mapproxy-seed --cleanup=mml_all -f /lipas/mapproxy.yaml -s /lipas/mml_cleanup.yaml
