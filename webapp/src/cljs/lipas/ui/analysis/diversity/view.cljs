@@ -59,8 +59,10 @@
 
       [lui/expansion-panel {:label            "Käytä postinumeroalueita"
                             :default-expanded true}
-       [lui/city-selector-single
-        {:on-change #(==> [::events/fetch-postal-code-areas %])}]]
+       [mui/grid {:container true}
+        [mui/grid {:item true :xs 12}
+         [lui/city-selector-single
+          {:on-change #(==> [::events/fetch-postal-code-areas %])}]]]]
 
       [lui/expansion-panel {:label            "Tuo omat alueet"
                             :default-expanded false}
