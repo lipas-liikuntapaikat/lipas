@@ -40,7 +40,6 @@
 (def default-stroke (Stroke. #js{:color "#3399CC" :width 3}))
 (def default-fill (Fill. #js{:color "rgba(255,255,0,0.4)"}))
 (def hover-stroke (Stroke. #js{:color "rgba(255,0,0,0.4)" :width 3.5}))
-(def hover-fill (Fill. #js{:color "rgba(255,0,0,0.4)"}))
 
 ;; Draw circles to all LineString and Polygon vertices
 (def vertices-style
@@ -79,29 +78,6 @@
             :fill (Fill. #js{:color "rgba(255,255,0,0.85)"})
             :stroke default-stroke})}))
 
-(def invalid-style
-  (Style.
-   #js{:stroke
-       (Stroke.
-        #js{:width 3
-            :color "red"})
-       :fill default-fill
-       :image
-       (Circle.
-        #js{:radius 5
-            :fill   default-fill
-            :stroke default-stroke})}))
-
-(def default-style
-  (Style.
-   #js{:stroke default-stroke
-       :fill default-fill
-       :image
-       (Circle.
-        #js{:radius 5
-            :fill   default-fill
-            :stroke default-stroke})}))
-
 (def hover-style
   (Style.
    #js{:stroke hover-stroke
@@ -121,8 +97,6 @@
         #js{:radius 7
             :fill   default-fill
             :stroke hover-stroke})}))
-
-(def hover-styles #js[hover-style blue-marker-style])
 
 (defn ->rgba [hex alpha]
   (when (and hex alpha)
@@ -279,133 +253,11 @@
   "Population grid is 250x250m"
   (/ (* 250 (Math/sqrt 2)) 2))
 
-;; Color scheme from Tilastokeskus
-;; http://www.stat.fi/org/avoindata/paikkatietoaineistot/vaestoruutuaineisto_1km.html
-(def population-colors
-  ["rgba(255,237,169,0.5)"
-   "rgba(255,206,123,0.5)"
-   "rgba(247,149,72,0.5)"
-   "rgba(243,112,67,0.5)"
-   "rgba(237,26,59,0.5)"
-   "rgba(139,66,102,0.5)"])
-
-(defn make-population-styles
-  ([] (make-population-styles false "LawnGreen"))
-  ([hover? stroke-color]
-   (->> population-colors
-        (map-indexed
-         (fn [idx color]
-           [idx (Style.
-                 #js{:stroke (if hover?
-                               (Stroke. #js{:color stroke-color :width 5})
-                               (Stroke. #js{:color "black" :width 2}))
-                     :fill   (Fill. #js{:color color})})]))
-        (into {}))))
-
-(def population-styles
-  (make-population-styles))
-
-(def population-hover-styles
-  (make-population-styles :hover "LawnGreen"))
-
-(def population-zone1
-  (make-population-styles :hover "#008000"))
-
-(def population-zone2
-  (make-population-styles :hover "#2db92d"))
-
-(def population-zone3
-  (make-population-styles :hover "#73e600"))
-
-(defn population-style
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (condp > n
-      5    (population-styles 0)
-      20   (population-styles 1)
-      50   (population-styles 2)
-      500  (population-styles 3)
-      5000 (population-styles 4)
-      (population-styles 5))))
-
 (def analysis-style
   (Style.
    #js{:stroke
        (Stroke.
         #js{:width 3 :color "blue" :lineDash #js[2 10]})}))
-
-(defn population-hover-style
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (condp > n
-      5    (population-hover-styles 0)
-      20   (population-hover-styles 1)
-      50   (population-hover-styles 2)
-      500  (population-hover-styles 3)
-      5000 (population-hover-styles 4)
-      (population-styles 5))))
-
-(defn population-zone1-fn
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (condp > n
-      5    (population-zone1 0)
-      20   (population-zone1 1)
-      50   (population-zone1 2)
-      500  (population-zone1 3)
-      5000 (population-zone1 4)
-      (population-zone1 5))))
-
-(defn population-zone2-fn
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (condp > n
-      5    (population-zone2 0)
-      20   (population-zone2 1)
-      50   (population-zone2 2)
-      500  (population-zone2 3)
-      5000 (population-zone2 4)
-      (population-zone2 5))))
-
-(defn population-zone3-fn
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (condp > n
-      5    (population-zone3 0)
-      20   (population-zone3 1)
-      50   (population-zone3 2)
-      500  (population-zone3 3)
-      5000 (population-zone3 4)
-      (population-zone3 5))))
-
-(defn population-style2
-  [f _resolution]
-  (let [n     (.get f "vaesto")
-        color (.get f "color")]
-    (Style.
-     #js{:stroke
-         (Stroke.
-          #js{:width 3 :color color})
-         :fill (Fill. #js{:color color})
-         :image
-         (Circle.
-          #js{:radius (min 7 (* 0.01 (js/Math.abs n)))
-              :fill   (Fill. #js{:color color})
-              :stroke (Stroke. #js{:color color :width 3})})})))
-
-(defn population-hover-style2
-  [f _resolution]
-  (let [n (.get f "vaesto")]
-    (Style.
-     #js{:stroke
-         (Stroke.
-          #js{:width 3 :color "blue"})
-         :fill default-fill
-         :image
-         (Circle.
-          #js{:radius (min 10 (* 0.1 (js/Math.abs n)))
-              :fill (Fill. #js{:color "rgba(255,255,0,0.85)"})
-              :stroke hover-stroke})})))
 
 (defn density [n]
   (cond
