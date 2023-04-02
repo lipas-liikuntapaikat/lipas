@@ -60,15 +60,6 @@
      [mui/icon {:style {:margin-left "0.25em"}}
       "save_icon"]]]])
 
-(defn publish-button [{:keys [on-click tooltip] :as props}]
-  [mui/tooltip {:title "" :placement "top"}
-   [:span
-    [mui/button
-     (merge props {:variant "contained" :on-click on-click :color "secondary"})
-     tooltip
-     [mui/icon {:style {:margin-left "0.25em"}}
-      "cloud_upload"]]]])
-
 (defn discard-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
    [:span

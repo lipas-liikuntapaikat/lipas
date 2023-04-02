@@ -349,31 +349,3 @@
            :size     add-btn-size
            :color    "secondary"}
           [mui/icon "add"]]]]])))
-
-(defn info-table [{:keys [data]}]
-  [mui/table
-   (into
-    [mui/table-body]
-    (for [row data]
-      [mui/table-row
-       [mui/table-cell
-        [mui/typography {:variant "caption"}
-         (first row)]]
-       [mui/table-cell (-> row second utils/display-value)]]))])
-
-(defn table-form [{:keys [read-only?]} & fields]
-  [:div {:style {:overflow-x "auto" :max-width "600px"}}
-   [mui/table
-    (into
-     [mui/table-body]
-     (for [row  (remove nil? fields)
-           :let [{:keys [label value form-field]} row]]
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography {:variant "caption"}
-          label]]
-        [mui/table-cell {:numeric true :style {:text-overflow :ellipsis}}
-         (if read-only?
-           (utils/display-value value)
-           [mui/form-group
-            form-field])]]))]])
