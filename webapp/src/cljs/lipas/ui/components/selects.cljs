@@ -290,20 +290,6 @@
       :label-fn  (comp locale :name second)
       :on-change on-change}]))
 
-(defn city-selector [{:keys [value on-change]}]
-  (let [tr     (<== [:lipas.ui.subs/translator])
-        locale (tr)
-        cities (<== [:lipas.ui.sports-sites.subs/cities-list])]
-    ^{:key value}
-    [autocompletes/autocomplete
-     {:items     cities
-      :value     value
-      :multi?    true
-      :label     (tr :search/search)
-      :value-fn  :city-code
-      :label-fn  (comp locale :name)
-      :on-change on-change}]))
-
 (defn surface-material-selector [{:keys [value on-change]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)

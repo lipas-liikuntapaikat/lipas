@@ -3,8 +3,7 @@
    [clojure.reader :refer [read-string]]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
-   [clojure.string :refer [trim] :as string]
-   [goog.functions :as gfun]
+   [clojure.string :as string]
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))
 
