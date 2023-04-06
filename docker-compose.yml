@@ -3,6 +3,8 @@ services:
 
   proxy-base:
     image: nginx
+    environment:
+      DIGITRANSIT_SUBSCRIPTION_KEY:
     ports:
       - '80:80'
       - '443:443'
@@ -28,7 +30,7 @@ services:
       - legacy-api
       - geoserver
     volumes:
-      - './nginx/proxy.conf:/etc/nginx/conf.d/default.conf:z'
+      - './nginx/proxy.conf:/etc/nginx/templates/default.conf.template:z'
 
   # Only difference is added X-Robots-tag 'noindex'
   # to make search engines ignore dev-site(s)
@@ -43,7 +45,7 @@ services:
       - legacy-api
       - geoserver
     volumes:
-      - './nginx/proxy_dev.conf:/etc/nginx/conf.d/default.conf:z'
+      - './nginx/proxy_dev.conf:/etc/nginx/templates/default.conf.template:z'
 
   htpasswd:
     image: lipas/htpasswd

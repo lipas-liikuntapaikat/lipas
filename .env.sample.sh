@@ -72,3 +72,6 @@ export MAILCHIMP_LIST_ID=a70cd3d18a
 export MAILCHIMP_NEWSLETTER_INTEREST_ID=93a8beea4a
 export MAILCHIMP_API_URL=https://us20.api.mailchimp.com/3.0
 export MAILCHIMP_API_KEY=***FILL_THIS***
+
+# Digitransit
+export DIGITRANSIT_SUBSCRIPTION_KEY=***FILL_THIS***

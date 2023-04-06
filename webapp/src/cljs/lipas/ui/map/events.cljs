@@ -565,18 +565,21 @@
 ;; https://www.digitransit.fi/en/developers/apis/2-geocoding-api/autocomplete/
 (re-frame/reg-event-fx
  ::search-address
- (fn [{:keys [db]} [_ s]]
-   (let [base-url (-> db :map :address-search :base-url)]
-     (if (not-empty s)
-       {:http-xhrio
-        {:method          :get
-         :uri             (str base-url "/autocomplete?"
-                               "sources=oa,osm"
-                               "&text=" s)
-         :response-format (ajax/json-response-format {:keywords? true})
-         :on-success      [::address-search-success]
-         :on-failure      [::address-search-failure]}}
-       {:dispatch [::clear-address-search-results]}))))
+ (fn [_ [_ s]]
+   (if (not-empty s)
+     {:http-xhrio
+      {:method          :get
+       :uri             (str "https://"
+                             (utils/domain)
+                             "/digitransit"
+                             "/geocoding/v1"
+                             "/autocomplete?"
+                             "sources=oa,osm"
+                             "&text=" s)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::address-search-success]
+       :on-failure      [::address-search-failure]}}
+     {:dispatch [::clear-address-search-results]})))
 
 (re-frame/reg-event-fx
  ::address-search-success
