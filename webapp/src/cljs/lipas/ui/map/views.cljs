@@ -50,20 +50,21 @@
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [lui/text-field
-        {:style      {:width "250px"}
-         :auto-focus true
+        {:auto-focus true
+         :fullWidth  true
          :defer-ms   150
          :label      (tr :search/search)
          :value      value
          :on-change  #(==> [::events/update-address-search-keyword %])}]]
-      (into
-       [mui/list]
-       (for [m results]
-         [mui/list-item
-          {:button   true
-           :on-click #(==> [::events/show-address m])}
-          [mui/list-item-text
-           (:label m)]]))]]))
+      [mui/grid {:item true :xs 12}
+       (into
+        [mui/list]
+        (for [m results]
+          [mui/list-item
+           {:button   true
+            :on-click #(==> [::events/show-address m])}
+           [mui/list-item-text
+            (:label m)]]))]]]))
 
 (defn import-geoms-view [{:keys [on-import show-replace? geom-type]
                           :or   {show-replace? true}}]
