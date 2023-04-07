@@ -1,6 +1,5 @@
 (ns lipas.ui.accessibility.views
   (:require
-   [cljs.pprint :as pprint]
    [lipas.ui.mui :as mui]
    [lipas.ui.accessibility.events :as events]
    [lipas.ui.accessibility.subs :as subs]
