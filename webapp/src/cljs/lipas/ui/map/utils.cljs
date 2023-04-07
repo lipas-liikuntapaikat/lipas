@@ -153,7 +153,11 @@
            :properties
            (merge
             props
-            {:id (gensym)})}))))
+            {:id (gensym)}
+            (when-let [s (:nimi props)]
+              {:nimi (str s " osa " (inc idx))})
+            (when-let [s (:name props)]
+              {:name (str s " part " (inc idx))}))}))))
 
 (defn normalize-multi-geoms
   "Makes an effort to convert multi-geoms into single geoms."
