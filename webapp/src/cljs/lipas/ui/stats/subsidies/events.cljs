@@ -2,7 +2,6 @@
   (:require
    [ajax.core :as ajax]
    [lipas.ui.utils :as utils]
-   [cljs.pprint :as pprint]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -115,7 +114,6 @@
  (fn [{:keys [db]} [_ params]]
    (let [body (->query params)
          url  (str (:backend-url db) "/actions/query-subsidies")]
-     ;;p(pprint/pprint body)
      {:http-xhrio
       {:method          :post
        :uri             url
