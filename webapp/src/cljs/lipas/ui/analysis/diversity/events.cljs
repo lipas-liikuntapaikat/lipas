@@ -75,7 +75,7 @@
         :dispatch-n
         [(when-not skip-search
            (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-            [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
+             [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
 
 (re-frame/reg-event-db
  ::calc-success
@@ -91,7 +91,7 @@
  (fn [db _]
    (assoc-in db [:analysis :diversity :results] {})))
 
- (re-frame/reg-event-fx
+(re-frame/reg-event-fx
  ::calc-failure
  (fn [{:keys [db]} [_ error]]
    (let [fatal? false
@@ -332,31 +332,80 @@
  (fn [db [_ n]]
    (assoc-in db [:analysis :diversity :settings :max-distance-m] n)))
 
+(re-frame/reg-event-db
+ ::select-export-format
+ (fn [db [_ s]]
+   (assoc-in db [:analysis :diversity :selected-export-format] s)))
+
+(defn ->areas-excel-data
+  [{:keys [areas results]}]
+  (for [[id m] areas
+        :let [aggs (get-in results [id :aggs])]
+        :when aggs]
+    (merge
+     (:properties m)
+     (dissoc aggs :diversity-idx-median :diversity-idx-mode))))
+
+(defn- export-aggs-excel
+  [db fmt]
+  (let [data    (->areas-excel-data (get-in db [:analysis :diversity]))
+        headers (-> data first keys (->> (map (juxt identity name)) (sort-by second)))
+        config  {:filename "diversity_report_areas"
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+    {:lipas.ui.effects/download-excel! config}))
+
+(defn- export-aggs-geojson
+  [db fmt]
+  (let [results (-> db :analysis :diversity :results)
+        feats   (-> db :analysis :diversity :areas)
+        fcoll   {:type     "FeatureCollection"
+                 :features (for [[id f] feats
+                                 :let   [aggs (get-in results [id :aggs])]
+                                 :when  aggs]
+                             (update f :properties merge (dissoc aggs
+                                                                 :diversity-idx-mode
+                                                                 :diversity-idx-median)))}]
+    {:lipas.ui.effects/save-as!
+     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+      :filename (str "monipuolisuus_alueet" "." fmt)}}))
+
 (re-frame/reg-event-fx
  ::export-aggs
  (fn [{:keys [db]} [_ fmt]]
-   (let [results (-> db :analysis :diversity :results)
-         feats   (-> db :analysis :diversity :areas)
-         fcoll   {:type     "FeatureCollection"
-                  :features (for [[id f] feats
-                                  :let   [aggs (get-in results [id :aggs])]
-                                  :when  aggs]
-                              (update f :properties merge aggs))}]
-     {:lipas.ui.effects/save-as!
-      {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
-       :filename (str "monipuolisuus_alueet" "." fmt)}})))
+   (condp = fmt
+     "geojson" (export-aggs-geojson db fmt)
+     "excel" (export-aggs-excel db fmt))))
+
+(defn- export-grid-excel
+  [db _fmt]
+  (let [fcolls (-> db :analysis :diversity :results (->> (map (comp :grid second))))
+        data   (->> fcolls
+                  (mapcat :features)
+                  (map (fn [f] (-> f :properties (dissoc :population)))))
+        headers (-> data first keys (->> (map (juxt identity name)) (sort-by second)))
+        config  {:filename "diversity_report_grid"
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+    {:lipas.ui.effects/download-excel! config}))
+
+(defn- export-grid-geojson
+  [db fmt]
+  (let [fcolls (-> db :analysis :diversity :results (->> (map (comp :grid second))))
+        fcoll   {:type     "FeatureCollection"
+                 :features (->> fcolls
+                                (mapcat :features)
+                                (map (fn [f] (update f :properties dissoc :population))))}]
+    {:lipas.ui.effects/save-as!
+     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+      :filename (str "monipuolisuus_ruudukko" "." fmt)}}))
 
 (re-frame/reg-event-fx
  ::export-grid
  (fn [{:keys [db]} [_ fmt]]
-   (let [fcolls (-> db :analysis :diversity :results (->> (map (comp :grid second))))
-         fcoll   {:type     "FeatureCollection"
-                  :features (->> fcolls
-                                 (mapcat :features)
-                                 (map (fn [f] (update f :properties dissoc :population))))}]
-     {:lipas.ui.effects/save-as!
-      {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
-       :filename (str "monipuolisuus_ruudukko" "." fmt)}})))
+   (condp = fmt
+     "geojson" (export-grid-geojson db fmt)
+     "excel" (export-grid-excel db fmt))))
 
 ;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
 

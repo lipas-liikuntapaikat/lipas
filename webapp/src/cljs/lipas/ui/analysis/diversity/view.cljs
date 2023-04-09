@@ -306,27 +306,29 @@
         [distance-settings]]]]]))
 
 (defn export []
-  (let [selected-format "geojson"]
+  (let [fmt (<== [::subs/selected-export-format])]
     [mui/grid {:container true :spacing 2}
 
      ;; Format selector
      [mui/grid {:item true :xs 12}
       [lui/select
-       {:label "Formaatti"
-        :items [{:label "GeoJSON" :value "geojson"}]
-        :value selected-format}]]
+       {:label     "Formaatti"
+        :items     [{:label "Excel" :value "excel"}
+                    {:label "GeoJSON" :value "geojson"}]
+        :on-change #(==> [::events/select-export-format %])
+        :value     fmt}]]
 
      ;; Export aggregate results
      [mui/grid {:item true :xs 12}
 
       [mui/button
-       {:on-click #(==> [::events/export-aggs selected-format])}
+       {:on-click #(==> [::events/export-aggs fmt])}
        "Lataa alueet"]]
 
      ;; Export grid
      [mui/grid {:item true :xs 12}
       [mui/button
-       {:on-click #(==> [::events/export-grid selected-format])}
+       {:on-click #(==> [::events/export-grid fmt])}
        "Lataa ruudukko"]]]))
 
 (def diversity-base-color "#9D191A")

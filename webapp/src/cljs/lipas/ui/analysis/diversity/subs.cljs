@@ -60,6 +60,12 @@
    (diversity :areas)))
 
 (re-frame/reg-sub
+ ::selected-export-format
+ :<- [::diversity]
+ (fn [diversity _]
+   (:selected-export-format diversity)))
+
+(re-frame/reg-sub
  ::analysis-candidates-table-rows
  :<- [::analysis-candidates]
  (fn [m _]
