@@ -3,6 +3,7 @@
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
+   [goog.functions :as gfun]
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))
 
@@ -44,33 +45,34 @@
            adornment multiline read-only? tooltip]
     :or   {defer-ms 200 tooltip ""}
     :as   props} & children]
+  (r/with-let [tf-state (r/atom value)]
+    (let [on-change2 (gfun/debounce #(on-change @tf-state) defer-ms)
+          on-change3 (fn [e]
+                       (let [new-val (->> e .-target .-value (coerce type))]
+                         (reset! tf-state new-val)
+                         (on-change2)))
+          input      (if multiline
+                       patched-textarea
+                       patched-input)
+          props      (-> (dissoc props :read-only? :defer-ms)
+                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                         (assoc :error (error? spec value required))
+                         (assoc :Input-props
+                                (merge Input-props
+                                       {:input-component input}
+                                       (when adornment
+                                         (->adornment adornment))))
+                         (assoc :on-blur #(if (= "number" type)
+                                            (on-change (read-string (str value)))
+                                            (when (string? value)
+                                              (-> value
+                                                  string/trim
+                                                  not-empty
+                                                  on-change))))
+                         (assoc :value @tf-state)
+                         (assoc :on-change on-change3))]
 
-
-  (let [on-change2 (fn [e]
-                     (let [new-val (->> e .-target .-value (coerce type))]
-                       (on-change new-val)))
-        input      (if multiline
-                     patched-textarea
-                     patched-input)
-        props      (-> (dissoc props :read-only? :defer-ms)
-                       (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                       (assoc :error (error? spec value required))
-                       (assoc :Input-props
-                              (merge Input-props
-                                     {:input-component input}
-                                     (when adornment
-                                       (->adornment adornment))))
-                       (assoc :on-blur #(if (= "number" type)
-                                          (on-change (read-string (str value)))
-                                          (when (string? value)
-                                            (-> value
-                                                string/trim
-                                                not-empty
-                                                on-change))))
-                       (assoc :value value)
-                       (assoc :on-change on-change2))]
-
-    [mui/tooltip {:title tooltip}
-     (into [mui/text-field props] children)]))
+      [mui/tooltip {:title tooltip}
+       (into [mui/text-field props] children)])))
 
 (def text-field text-field-controlled)
