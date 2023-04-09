@@ -8,14 +8,14 @@
    [lipas.ui.energy.db :as energy]
    [lipas.ui.feedback.db :as feedback]
    [lipas.ui.front-page.db :as front-page]
-   #_[lipas.ui.ice-stadiums.db :as ice-stadiums]
+   [lipas.ui.ice-stadiums.db :as ice-stadiums]
    [lipas.ui.map.db :as map]
    [lipas.ui.reminders.db :as reminders]
    [lipas.ui.reports.db :as reports]
    [lipas.ui.search.db :as search]
    [lipas.ui.sports-sites.db :as sports-sites]
    [lipas.ui.stats.db :as stats]
-   #_[lipas.ui.swimming-pools.db :as swimming-pools]
+   [lipas.ui.swimming-pools.db :as swimming-pools]
    [lipas.ui.user.db :as user]))
 
 (def default-db
@@ -46,7 +46,7 @@
    :front-page front-page/default-db
 
    ;; Ice stadiums
-   #_#_:ice-stadiums ice-stadiums/default-db
+   :ice-stadiums ice-stadiums/default-db
 
    ;; Map
    :map map/default-db
@@ -55,7 +55,7 @@
    :sports-sites sports-sites/default-db
 
    ;; Swimming pools
-   #_#_:swimming-pools swimming-pools/default-db
+   :swimming-pools swimming-pools/default-db
 
    ;; User
    :user user/default-db
