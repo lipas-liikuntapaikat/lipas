@@ -301,6 +301,7 @@
    :selected-category-preset :default
    :selected-seasonalities #{"all-year" "summer" "winter"}
    :selected-chart-tab "area"
+   :selected-export-format "excel"
    :settings
    {:max-distance-m      800,
     :analysis-radius-km  5,
