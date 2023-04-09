@@ -109,9 +109,9 @@
       [mui/table-row
        [mui/table-cell "Kategoria"]
        [mui/table-cell "Liikuntapaikkatyypit"]]]
-     (into [mui/table-body]
+     (into [mui/table-body {:key (count categories)}]
            (for [[idx category] (seq-indexed categories)]
-             [mui/table-row
+             [mui/table-row {}
 
               ;; Category name
               [mui/table-cell {:style {:width "40%"}}
@@ -123,7 +123,7 @@
 
               ;; Types + delete
               [mui/table-cell {:style {:width "60%"}}
-               [mui/grid {:container true :align-items "center"}
+               [mui/grid {:container true :align-items "center" :spacing 2}
 
                 ;; Type selector
                 [mui/grid {:item true :xs 8}
@@ -135,7 +135,7 @@
                 [mui/grid {:item true :xs 2}
                  [lui/select
                   {:label     "Kerroin"
-                   :items     (map (fn [n] {:label n :value n}) [1 2 3 4 5])
+                   :items     (map (fn [n] {:label n :value n}) [0 1 2 3 4 5])
                    :on-change #(==> [::events/set-category-factor idx %])
                    :value     (:factor category)}]]
 
@@ -238,7 +238,11 @@
      [mui/grid {:item true :xs 12 :md 6}
       [mui/button
        {:variant  "text"
-        :on-click #(==> [::events/select-category-preset :default])}
+        :on-click (fn [_]
+                    (==> [:lipas.ui.events/confirm
+                          "Tahdotko varmasti palauttaa oletuskategoriat?"
+                          #(==> [::events/select-category-preset :default])
+                          #()]))}
        "Palauta oletuskategoriat"]]
 
      ;; Category builder

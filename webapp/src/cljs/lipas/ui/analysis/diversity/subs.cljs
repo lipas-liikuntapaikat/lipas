@@ -24,7 +24,7 @@
  ::categories
  :<- [::settings]
  (fn [settings _]
-   (sort-by :name (:categories settings))))
+   (:categories settings)))
 
 (re-frame/reg-sub
  ::category-presets
