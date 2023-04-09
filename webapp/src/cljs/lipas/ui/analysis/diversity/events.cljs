@@ -318,7 +318,7 @@
 (re-frame/reg-event-db
  ::add-new-category
  (fn [db _]
-   (let [category {:name "" :type-codes []}]
+   (let [category {:name "" :type-codes [] :factor 1}]
      (update-in db [:analysis :diversity :settings :categories] #(into [category] %)))))
 
 (re-frame/reg-event-db
