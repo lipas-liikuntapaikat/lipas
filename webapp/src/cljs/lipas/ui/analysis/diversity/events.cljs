@@ -1,7 +1,7 @@
 (ns lipas.ui.analysis.diversity.events
   (:require
-   [clojure.spec.alpha :as s]
    [ajax.core :as ajax]
+   [clojure.string :as str]
    [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
@@ -383,7 +383,7 @@
                                                                  :diversity-idx-median)))}]
     {:lipas.ui.effects/save-as!
      {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
-      :filename (str "monipuolisuus_alueet" "." fmt)}}))
+      :filename (str "diversity_report_areas" "." fmt)}}))
 
 (re-frame/reg-event-fx
  ::export-aggs
@@ -413,7 +413,7 @@
                                 (map (fn [f] (update f :properties dissoc :population))))}]
     {:lipas.ui.effects/save-as!
      {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
-      :filename (str "monipuolisuus_ruudukko" "." fmt)}}))
+      :filename (str "diversity_report_grid" "." fmt)}}))
 
 (re-frame/reg-event-fx
  ::export-grid
@@ -421,6 +421,30 @@
    (condp = fmt
      "geojson" (export-grid-geojson db fmt)
      "excel" (export-grid-excel db fmt))))
+
+(defn export-categories-excel
+  [db _fmt]
+  (let [data    (-> db :analysis :diversity :settings :categories
+                    (->> (map (fn [m] (update m :type-codes #(str/join "," %))))))
+        headers (-> data first keys (->> (map (juxt identity name)) (sort-by second)))
+        config  {:filename "diversity_report_categories"
+                 :sheet
+                 {:data (utils/->excel-data headers data)}}]
+    {:lipas.ui.effects/download-excel! config}))
+
+(defn export-categories-json
+  [db _fmt]
+  (let [categories (-> db :analysis :diversity :settings :categories)]
+    {:lipas.ui.effects/save-as!
+     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js categories))])
+      :filename (str "diversity_report_categories" ".json")}}))
+
+(re-frame/reg-event-fx
+ ::export-categories
+ (fn [{:keys [db]} [_ fmt]]
+   (condp = fmt
+     "geojson" (export-categories-json db fmt)
+     "excel" (export-categories-excel db fmt))))
 
 ;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
 
