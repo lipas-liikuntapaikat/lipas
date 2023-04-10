@@ -355,7 +355,13 @@
      [mui/grid {:item true :xs 12}
       [mui/button
        {:on-click #(==> [::events/export-grid fmt])}
-       "Lataa ruudukko"]]]))
+       "Lataa ruudukko"]]
+
+     ;; Export categories
+     [mui/grid {:item true :xs 12}
+      [mui/button
+       {:on-click #(==> [::events/export-categories fmt])}
+       "Lataa kategoriat"]]]))
 
 (def diversity-base-color "#9D191A")
 
