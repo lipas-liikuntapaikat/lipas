@@ -23,8 +23,7 @@
  ::update-user-data-success
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]
-     {:db (assoc-in db [:reports :downloading?] false)
-      :dispatch-n
+     {:dispatch-n
       [[:lipas.ui.login.events/refresh-login]
        [:lipas.ui.events/set-active-notification
         {:message  (tr :notifications/save-success)

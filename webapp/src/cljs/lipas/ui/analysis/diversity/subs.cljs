@@ -1,7 +1,8 @@
 (ns lipas.ui.analysis.diversity.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils]))
+   [clojure.spec.alpha :as s]
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::diversity
@@ -29,8 +30,8 @@
 (re-frame/reg-sub
  ::category-presets
  :<- [::diversity]
- (fn [diversity _]
-   (->> (:category-presets diversity)
+ (fn [{:keys [category-presets user-category-presets]} _]
+   (->> (merge user-category-presets category-presets)
         (map (fn [[k v]] {:label (:name v) :value k})))))
 
 (re-frame/reg-sub
@@ -169,3 +170,22 @@
  :<- [::diversity]
  (fn [diversity _]
    (:selected-chart-tab diversity)))
+
+(re-frame/reg-sub
+ ::category-save-dialog-open?
+ :<- [::diversity]
+ (fn [diversity _]
+   (:category-save-dialog-open? diversity)))
+
+(re-frame/reg-sub
+ ::new-preset-name
+ :<- [::diversity]
+ (fn [diversity _]
+   (:new-preset-name diversity)))
+
+(re-frame/reg-sub
+ ::new-preset-name-valid?
+ :<- [::new-preset-name]
+ (fn [s _]
+   (and (s/valid? :lipas.diversity.settings.categories/name s)
+        )))

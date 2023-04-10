@@ -1,5 +1,6 @@
 (ns lipas.ui.analysis.diversity.events
   (:require
+   [clojure.spec.alpha :as s]
    [ajax.core :as ajax]
    [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
@@ -293,8 +294,10 @@
  ::select-category-preset
  (fn [db [_ preset-kw]]
    (let [seasonalities (get-in db [:analysis :diversity :selected-seasonalities])
-         categories    (-> db
-                           (get-in [:analysis :diversity :category-presets preset-kw :categories])
+         presets       (merge (-> db :analysis :diversity :category-presets)
+                              (-> db :analysis :diversity :user-category-presets))
+         categories    (-> presets
+                           (get-in [preset-kw :categories])
                            (->seasonal seasonalities))]
      (-> db
          (assoc-in [:analysis :diversity :settings :categories] categories)
@@ -326,6 +329,18 @@
  (fn [db [_ idx]]
    (update-in db [:analysis :diversity :settings :categories]
               #(into (subvec % 0 idx) (subvec % (inc idx))))))
+
+(re-frame/reg-event-fx
+ ::save-category-preset
+ (fn [{:keys [db]} [_ name]]
+   (let [preset {:name name
+                 :categories (-> db :analysis :diversity :settings :categories)}
+         user-data (-> db
+                       :user
+                       :login
+                       :user-data
+                       (update-in [:saved-diversity-settings :category-presets] conj preset))]
+     {:dispatch [:lipas.ui.user.events/update-user-data user-data]})))
 
 (re-frame/reg-event-db
  ::set-max-distance-m
@@ -468,6 +483,16 @@
  ::select-analysis-chart-tab
  (fn [db [_ v]]
    (assoc-in db [:analysis :diversity :selected-chart-tab] v)))
+
+(re-frame/reg-event-db
+ ::toggle-category-save-dialog
+ (fn [db [_ _]]
+   (update-in db [:analysis :diversity :category-save-dialog-open?] not)))
+
+(re-frame/reg-event-db
+ ::set-new-preset-name
+ (fn [db [_ s]]
+   (assoc-in db [:analysis :diversity :new-preset-name] s)))
 
 (comment
   (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))

@@ -296,18 +296,19 @@
    :tea-viisari   tea-viisari})
 
 (def default-db
-  {:selected-tab "analysis-area"
-   :category-presets categories
-   :selected-category-preset :default
-   :selected-seasonalities #{"all-year" "summer" "winter"}
-   :selected-chart-tab "area"
-   :selected-export-format "excel"
+  {:selected-tab               "analysis-area"
+   :category-presets           categories
+   :category-save-dialog-open? false
+   :selected-category-preset   :default
+   :selected-seasonalities     #{"all-year" "summer" "winter"}
+   :selected-chart-tab         "area"
+   :selected-export-format     "excel"
    :settings
    {:max-distance-m      800,
     :analysis-radius-km  5,
     :distance-mode       "route",
     :analysis-area-fcoll nil
-    :categories (-> categories :default :categories)}})
+    :categories          (-> categories :default :categories)}})
 
 (comment
   (-> default-db :settings :categories count))
