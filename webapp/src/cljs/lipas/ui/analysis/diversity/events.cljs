@@ -340,7 +340,9 @@
                        :login
                        :user-data
                        (update-in [:saved-diversity-settings :category-presets] conj preset))]
-     {:dispatch [:lipas.ui.user.events/update-user-data user-data]})))
+     {:dispatch-n
+      [[:lipas.ui.user.events/update-user-data user-data]
+       [::toggle-category-save-dialog]]})))
 
 (re-frame/reg-event-db
  ::set-max-distance-m
