@@ -109,6 +109,12 @@
    (-> user :user-data :saved-searches)))
 
 (re-frame/reg-sub
+ ::saved-diversity-settings
+ :<- [::user-data]
+ (fn [user _]
+   (-> user :user-data :saved-diversity-settings)))
+
+(re-frame/reg-sub
  ::experimental-features?
  (fn [db _]
    (-> db :user :experimental-features?)))

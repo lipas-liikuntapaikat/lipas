@@ -203,10 +203,14 @@
              :max-count 1000
              :into []))
 
+(s/def :lipas.user.user-data/saved-diversity-settings
+  (s/keys :req-un [:lipas.diversity.settings/category-presets]))
+
 (s/def :lipas.user/user-data
   (s/keys :req-un [:lipas.user/firstname
                    :lipas.user/lastname]
-          :opt-un [:lipas.user.user-data/saved-reports]))
+          :opt-un [:lipas.user.user-data/saved-reports
+                   :lipas.user.user-data/saved-diversity-settings]))
 
 (s/def :lipas.user.permissions/sports-sites
   (s/coll-of :lipas.sports-site/lipas-id
@@ -1382,7 +1386,7 @@
              :into []))
 
 (s/def :lipas.api.report.req/type-codes
-  (s/coll-of :lipas.type/type-code
+  (s/coll-of :lipas.sports-site.type/type-code
              :min-count 0
              :distinct true
              :into []))
@@ -1414,35 +1418,47 @@
         :prod4 #(string/starts-with? % "https://www.lipas.fi")
         :prod5 #(string/starts-with? % "https://lipas.fi")))
 
-(s/def :lipas.api.diversity-indices/analysis-area-fcoll ::geojson/feature-collection)
-(s/def :lipas.api.diversity-indices.categories/factor ::real)
-(s/def :lipas.api.diversity-indices.categories/name (str-in 2 100))
-(s/def :lipas.api.diversity-indices.categories/type-codes
+
+;;; Diversity index calculation
+
+(s/def :lipas.diversity.settings.category/name (str-in 1 128))
+(s/def :lipas.diversity.settings.category/factor ::real)
+(s/def :lipas.diversity.settings.category/type-codes
   (s/coll-of :lipas.sports-site.type/type-code
              :min-count 1
              :distinct true
              :into []))
 
-(s/def :lipas.api.diversity-indices/category
-  (s/keys :req-un [:lipas.api.diversity-indices.categories/factor
-                   :lipas.api.diversity-indices.categories/type-codes]))
+(s/def :lipas.diversity.settings/category
+  (s/keys :req-un [:lipas.diversity.settings.category/name
+                   :lipas.diversity.settings.category/factor
+                   :lipas.diversity.settings.category/type-codes]))
 
-(s/def :lipas.api.diversity-indices/categories
-  (s/coll-of :lipas.api.diversity-indices/category
+(s/def :lipas.diversity.settings.categories/name (str-in 1 128))
+(s/def :lipas.diversity.settings.categories/categories
+  (s/coll-of :lipas.diversity.settings/category
              :min-count 1
              :distinct true
              :into []))
 
-(s/def :lipas.api.diversity-indices/analysis-radius-km ::real)
-(s/def :lipas.api.diversity-indices/max-distance-m ::real)
-(s/def :lipas.api.diversity-indices/distance-mode #{"euclid" "route"})
+(s/def :lipas.diversity.settings/category-preset
+  (s/keys :req-un [:lipas.diversity.settings.categories/name
+                   :lipas.diversity.settings.categories/categories]))
+
+(s/def :lipas.diversity.settings/category-presets
+  (s/coll-of :lipas.diversity.settings/category-preset))
+
+(s/def :lipas.diversity.settings/analysis-area-fcoll ::geojson/feature-collection)
+(s/def :lipas.diversity.settings/analysis-radius-km ::real)
+(s/def :lipas.diversity.settings/max-distance-m ::real)
+(s/def :lipas.diversity.settings/distance-mode #{"euclid" "route"})
 
 (s/def :lipas.api.diversity-indices/req
-  (s/keys :req-un [:lipas.api.diversity-indices/categories
-                   :lipas.api.diversity-indices/analysis-area-fcoll]
-          :opt-un [:lipas.api.diversity-indices/analysis-radius-km
-                   :lipas.api.diversity-indices/max-distance-m
-                   :lipas.api.diversity-indices/distance-mode]))
+  (s/keys :req-un [:lipas.diversity.settings.categories/categories
+                   :lipas.diversity.settings/analysis-area-fcoll]
+          :opt-un [:lipas.diversity.settings/analysis-radius-km
+                   :lipas.diversity.settings/max-distance-m
+                   :lipas.diversity.settings/distance-mode]))
 
 ;;; Feedback
 

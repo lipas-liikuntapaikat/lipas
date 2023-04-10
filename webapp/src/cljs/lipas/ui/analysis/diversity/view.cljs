@@ -175,12 +175,15 @@
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
 
 (defn categories-settings []
-  (let [tr                (<== [:lipas.ui.subs/translator])
-        selected-preset   (<== [::subs/selected-category-preset])
-        category-presets  (<== [::subs/category-presets])
-        summer-enabled?   (<== [::subs/seasonality-enabled? "summer"])
-        winter-enabled?   (<== [::subs/seasonality-enabled? "winter"])
-        all-year-enabled? (<== [::subs/seasonality-enabled? "all-year"])]
+  (let [tr                     (<== [:lipas.ui.subs/translator])
+        selected-preset        (<== [::subs/selected-category-preset])
+        category-presets       (<== [::subs/category-presets])
+        summer-enabled?        (<== [::subs/seasonality-enabled? "summer"])
+        winter-enabled?        (<== [::subs/seasonality-enabled? "winter"])
+        all-year-enabled?      (<== [::subs/seasonality-enabled? "all-year"])
+        save-dialog-open?      (<== [::subs/category-save-dialog-open?])
+        new-preset-name        (<== [::subs/new-preset-name])
+        new-preset-name-valid? (<== [::subs/new-preset-name-valid?])]
 
     [mui/grid {:container true :spacing 1}
 
@@ -228,22 +231,45 @@
           :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
 
      ;; Add new category button
-     [mui/grid {:item true :xs 12 :md 6}
-      [mui/button
-       {:variant  "text"
-        :on-click #(==> [::events/add-new-category])}
-       "Uusi kategoria"]]
+     [mui/grid {:item true :xs 12}
 
-     ;; Reset default categories button
-     [mui/grid {:item true :xs 12 :md 6}
-      [mui/button
-       {:variant  "text"
-        :on-click (fn [_]
-                    (==> [:lipas.ui.events/confirm
-                          "Tahdotko varmasti palauttaa oletuskategoriat?"
-                          #(==> [::events/select-category-preset :default])
-                          #()]))}
-       "Palauta oletuskategoriat"]]
+      [mui/grid {:container true :align-items "center"}
+
+       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [mui/button
+         {:variant  "text"
+          :on-click #(==> [::events/add-new-category])}
+         "Uusi kategoria"]]
+
+       ;; Reset default categories button
+       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [mui/button
+         {:variant  "text"
+          :on-click (fn [_]
+                      (==> [:lipas.ui.events/confirm
+                            "Tahdotko varmasti palauttaa oletuskategoriat?"
+                            #(==> [::events/select-category-preset :default])
+                            #()]))}
+         "Palauta oletuskategoriat"]]
+
+       [lui/dialog {:open?         save-dialog-open?
+                    :title         "Tallenna kategorisointi"
+                    :on-close      #(==> [::events/toggle-category-save-dialog])
+                    :cancel-label  (tr :actions/cancel)
+                    :save-label    (tr :actions/save)
+                    :on-save       #(==> [::events/save-category-preset new-preset-name])
+                    :save-enabled? new-preset-name-valid?}
+        [lui/text-field {:full-width true
+                         :label      "Kategorisoinnin nimi"
+                         :value      new-preset-name
+                         :on-change  #(==> [::events/set-new-preset-name %])}]]
+
+       ;; Save category preset button
+       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [mui/button
+         {:variant  "text"
+          :on-click #(==> [::events/toggle-category-save-dialog])}
+         "Tallenna kategoriat"]]]]
 
      ;; Category builder
      [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
@@ -559,3 +585,7 @@
      [mui/grid {:item true :xs 12 :style {:height "3em"}}]]))
 
 ;; TODO translations
+
+(comment
+  (==> [::events/toggle-category-save-dialog])
+  )
