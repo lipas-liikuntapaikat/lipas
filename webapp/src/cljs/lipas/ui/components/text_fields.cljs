@@ -45,34 +45,37 @@
            adornment multiline read-only? tooltip]
     :or   {defer-ms 200 tooltip ""}
     :as   props} & children]
-  (r/with-let [tf-state (r/atom value)]
-    (let [on-change2 (gfun/debounce #(on-change @tf-state) defer-ms)
-          on-change3 (fn [e]
-                       (let [new-val (->> e .-target .-value (coerce type))]
-                         (reset! tf-state new-val)
-                         (on-change2)))
-          input      (if multiline
-                       patched-textarea
-                       patched-input)
-          props      (-> (dissoc props :read-only? :defer-ms)
-                         (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                         (assoc :error (error? spec value required))
-                         (assoc :Input-props
-                                (merge Input-props
-                                       {:input-component input}
-                                       (when adornment
-                                         (->adornment adornment))))
-                         (assoc :on-blur #(if (= "number" type)
-                                            (on-change (read-string (str value)))
-                                            (when (string? value)
-                                              (-> value
-                                                  string/trim
-                                                  not-empty
-                                                  on-change))))
-                         (assoc :value @tf-state)
-                         (assoc :on-change on-change3))]
+  #_(r/with-let [tf-state (r/atom value)])
+  (let [#_#_on-change2 (gfun/debounce #(on-change @tf-state) defer-ms)
+        #_#_on-change3 (fn [e]
+                     (let [new-val (->> e .-target .-value (coerce type))]
+                       (reset! tf-state new-val)
+                       (on-change2)))
+        input      (if multiline
+                     patched-textarea
+                     patched-input)
+        props      (-> (dissoc props :read-only? :defer-ms)
+                       (as-> $ (if (= "number" type) (dissoc $ :type) $))
+                       (assoc :error (error? spec value required))
+                       (assoc :Input-props
+                              (merge Input-props
+                                     {:input-component input}
+                                     (when adornment
+                                       (->adornment adornment))))
+                       (assoc :on-blur #(if (= "number" type)
+                                          (on-change (read-string (str value)))
+                                          (when (string? value)
+                                            (-> value
+                                                string/trim
+                                                not-empty
+                                                on-change))))
+                       #_(assoc :value @tf-state)
+                       #_(assoc :on-change on-change3)
+                       (assoc :value value)
+                       (assoc :on-change (fn [e]
+                                           (on-change (->> e .-target .-value (coerce type))))))]
 
-      [mui/tooltip {:title tooltip}
-       (into [mui/text-field props] children)])))
+    [mui/tooltip {:title tooltip}
+     (into [mui/text-field props] children)]))
 
 (def text-field text-field-controlled)
