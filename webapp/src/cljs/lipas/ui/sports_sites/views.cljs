@@ -11,6 +11,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.events :as events]
    [lipas.ui.sports-sites.floorball :as floorball]
+   [lipas.ui.sports-sites.football :as football]
    [lipas.ui.sports-sites.subs :as subs]
    [lipas.ui.swimming-pools.pools :as pools]
    [lipas.ui.swimming-pools.slides :as slides]

@@ -24,7 +24,8 @@
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]
-   [lipas.ui.sports-sites.floorball :as floorball]))
+   [lipas.ui.sports-sites.floorball :as floorball]
+   [lipas.ui.sports-sites.football :as football]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))
@@ -525,7 +526,9 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when (#{2240} type-code)
+         (when (or
+                (floorball/type-codes type-code)
+                (football/type-codes type-code))
            [mui/tab
             {:style {:min-width 0}
              :value 3
@@ -582,15 +585,29 @@
           ;; Accessibility
           2 [accessibility/view {:lipas-id lipas-id}]
 
-          ;; Floorball conditions
-          3 [floorball/circumstances-form
+          3 (condp contains? type-code
+
+              ;; Floorball conditions
+              floorball/type-codes
+              [floorball/circumstances-form
+                 {:tr           tr
+                  :type-code    (or (-> edit-data :type :type-code) type-code)
+                  :read-only?   (not editing?)
+                  :on-change    (partial set-field :circumstances)
+                  :display-data (:circumstances display-data)
+                  :edit-data    (:circumstances edit-data)
+                  :key          (-> edit-data :type :type-code)}]
+
+              ;; Football conditions
+              football/type-codes
+              [football/circumstances-form
                {:tr           tr
                 :type-code    (or (-> edit-data :type :type-code) type-code)
                 :read-only?   (not editing?)
                 :on-change    (partial set-field :circumstances)
                 :display-data (:circumstances display-data)
                 :edit-data    (:circumstances edit-data)
-                :key          (-> edit-data :type :type-code)}])]
+                :key          (-> edit-data :type :type-code)}]))]
 
        ;; "Landing bay" for floating tools
        [mui/grid {:item true :xs 12 :style {:height "3em"}}]

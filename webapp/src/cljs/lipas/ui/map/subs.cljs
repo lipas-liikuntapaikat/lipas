@@ -70,7 +70,7 @@
           (empty? selected-site))  "100%"
      (and (not (#{"xs" "sm"} media-width))
           (= :analysis mode-name)) "700px"
-     :else                         "430px")))
+     :else                         "530px")))
 
 (re-frame/reg-sub-raw
  ::selected-sports-site
