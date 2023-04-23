@@ -8,3 +8,5 @@
 !/geoserver/README.md
 /.clj-kondo
 /.lsp
+/osrm/*
+!/osrm/README.md

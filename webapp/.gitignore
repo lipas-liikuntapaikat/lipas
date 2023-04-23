@@ -12,3 +12,6 @@
 /dist
 /.lsp
 out
+/.shadow-cljs
+.lein-repl-history
+\#*\#
