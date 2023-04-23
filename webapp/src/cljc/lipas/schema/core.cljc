@@ -1357,6 +1357,18 @@
 (s/def :lipas.floorball.circumstances/teams-using
   (str-in 0 1024))
 
+;;; Football ;;;
+
+(s/def :lipas.football.type/type-code #{2240})
+
+(s/def :lipas.football/type
+  (s/merge
+   :lipas.sports-site/type
+   (s/keys :req-un [:lipas.football.type/type-code])))
+
+(s/def :lipas.football.circumstances/teams-using
+  (str-in 0 1024))
+
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})

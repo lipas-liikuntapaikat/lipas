@@ -18,6 +18,9 @@
 
    :prop-types prop-types/used
 
+   ;;lol
+   :football {:dialog-open? false}
+
    :materials             materials/all
    :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures

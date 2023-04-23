@@ -54,7 +54,7 @@
         input      (if multiline
                      patched-textarea
                      patched-input)
-        props      (-> (dissoc props :read-only? :defer-ms)
+        props      (-> (dissoc props :read-only? :defer-ms :spec)
                        (as-> $ (if (= "number" type) (dissoc $ :type) $))
                        (assoc :error (error? spec value required))
                        (assoc :Input-props
