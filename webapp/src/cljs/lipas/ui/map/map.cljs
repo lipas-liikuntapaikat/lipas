@@ -139,7 +139,7 @@
          :source
          (ImageWMSSource.
           #js{:url         "/geoserver/lipas/wms?"
-              :params      #js{:LAYERS "lipas:metsahallitus_urat2019"}
+              :params      #js{:LAYERS "lipas:metsahallitus_urat2023"}
               :serverType  "geoserver"
               :crossOrigin "anonymous"})})
     :mml-kiinteisto
