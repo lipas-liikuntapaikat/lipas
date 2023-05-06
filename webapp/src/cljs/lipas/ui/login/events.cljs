@@ -29,7 +29,6 @@
  (fn [{:keys [db]} [_ login-type body]]
    (let [admin?             (-> body :permissions :admin?)
          refresh-interval-s 900] ; 15 minutes
-     (println body)
      (merge
       {:db (-> db
                (assoc-in [:logged-in?] true)

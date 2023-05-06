@@ -16,7 +16,7 @@
                   valid-seconds 7200}}] ;; 2 hours
   (let [fields  (if terse?
                   [:id]
-                  [:id :email :username :user-data :permissions])
+                  [:id :email :username :permissions])
         payload (-> user
                     (select-keys fields)
                     (assoc :exp (.plusSeconds
