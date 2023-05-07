@@ -40,4 +40,4 @@
     :port 8091}
    :nrepl
    {:port 7888
-    :bind "localhost"}})
+    :bind "0.0.0.0"}})
