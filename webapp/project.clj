@@ -24,6 +24,7 @@
    [buddy "2.0.0"]
    [com.layerware/hugsql "0.4.8"]
    [org.postgresql/postgresql  "42.2.2"]
+   [nrepl "1.0.0"]
    [hikari-cp "2.7.0"]
    [cc.qbits/spandex "0.6.4"]
    [integrant "0.6.3"]

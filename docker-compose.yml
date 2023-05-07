@@ -124,6 +124,7 @@ services:
     command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar
     ports:
       - '8091:8091'
+      - '7888:7888'
     links:
       - postgres
       - elasticsearch
@@ -138,6 +139,7 @@ services:
     hostname: backend
     ports:
       - '8091:8091'
+      - '7888:7888'
     links:
       - postgres
       - elasticsearch
