@@ -7,6 +7,7 @@
    [lipas.backend.email :as email]
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
+   [nrepl.server :as nrepl]
    [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
@@ -36,6 +37,12 @@
 (defmethod ig/halt-key! :server [_ server]
   (.stop server))
 
+(defmethod ig/init-key :nrepl [_ {:keys [port bind]}]
+  (nrepl/start-server :port port :bind bind))
+
+(defmethod ig/halt-key! :nrepl [_ server]
+  (nrepl/stop-server server))
+
 (defn mask [s]
   "[secret]")
 
@@ -49,7 +56,10 @@
                  (update-in [:db :password] mask)
                  (update-in [:emailer :pass] mask)
                  (update-in [:search :pass] mask)
-                 (update-in [:mailchimp :api-key] mask)))
+                 (update-in [:mailchimp :api-key] mask)
+                 (update-in [:app
+                             :accessibility-register
+                             :accessibility-register-secret-key] mask)))
      system)))
 
 (defn stop-system! [system]

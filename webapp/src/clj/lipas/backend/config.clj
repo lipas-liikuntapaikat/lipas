@@ -37,4 +37,7 @@
      :secret-key (:accessibility-register-secret-key env)}}
    :server
    {:app  (ig/ref :app)
-    :port 8091}})
+    :port 8091}
+   :nrepl
+   {:port 7888
+    :bind "localhost"}})
