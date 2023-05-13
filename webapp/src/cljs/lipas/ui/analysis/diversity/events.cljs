@@ -451,6 +451,33 @@
      "geojson" (export-categories-json db fmt)
      "excel" (export-categories-excel db fmt))))
 
+(defn export-settings-excel
+  [db _fmt]
+  (let [data    (-> db :analysis :diversity :settings
+                    (select-keys [:max-distance-m :analysis-radius-km :distance-mode]))
+        headers (-> data keys (->> (map (juxt identity name)) (sort-by second)))
+        config  {:filename "diversity_report_parameters"
+                 :sheet
+                 {:data (utils/->excel-data headers [data])}}]
+    {:lipas.ui.effects/download-excel! config}))
+
+(defn export-settings-json
+  [db _fmt]
+  (let [data (-> db :analysis :diversity :settings
+                 (select-keys [:max-distance-m
+                               :analysis-radius-km
+                               :distance-mode]))]
+    {:lipas.ui.effects/save-as!
+     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js data))])
+      :filename (str "diversity_report_parameters" ".json")}}))
+
+(re-frame/reg-event-fx
+ ::export-settings
+ (fn [{:keys [db]} [_ fmt]]
+   (condp = fmt
+     "geojson" (export-settings-json db fmt)
+     "excel" (export-settings-excel db fmt))))
+
 ;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
 
 (re-frame/reg-event-fx
