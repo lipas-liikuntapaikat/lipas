@@ -34,12 +34,10 @@
                (assoc-in [:logged-in?] true)
                (assoc-in [:user :login] body)
                (assoc-in [:analysis :diversity :user-category-presets]
-                         (reduce (fn [res m] (assoc res (:name m) m))
-                                 {}
-                                 (get-in body [:user-data
-                                               :saved-diversity-settings
-                                               :category-presets]
-                                         []))))
+                         (utils/index-by :name
+                                         (get-in body [:user-data
+                                                       :saved-diversity-settings
+                                                       :category-presets]))))
 
        ::local-storage/set! [:login-data body]
 
