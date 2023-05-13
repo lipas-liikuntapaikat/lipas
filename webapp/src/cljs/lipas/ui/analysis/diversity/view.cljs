@@ -340,7 +340,7 @@
       [lui/select
        {:label     "Formaatti"
         :items     [{:label "Excel" :value "excel"}
-                    {:label "GeoJSON" :value "geojson"}]
+                    {:label "JSON" :value "geojson"}]
         :on-change #(==> [::events/select-export-format %])
         :value     fmt}]]
 
@@ -361,7 +361,13 @@
      [mui/grid {:item true :xs 12}
       [mui/button
        {:on-click #(==> [::events/export-categories fmt])}
-       "Lataa kategoriat"]]]))
+       "Lataa kategoriat"]]
+
+     ;; Export settings
+     [mui/grid {:item true :xs 12}
+      [mui/button
+       {:on-click #(==> [::events/export-settings fmt])}
+       "Lataa parametrit"]]]))
 
 (def diversity-base-color "#9D191A")
 
