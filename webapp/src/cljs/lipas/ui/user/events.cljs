@@ -1,7 +1,8 @@
 (ns lipas.ui.user.events
   (:require
    [ajax.core :as ajax]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as re-frame]
+   [lipas.ui.utils :as utils]))
 
 (re-frame/reg-event-fx
  ::get-users-sports-sites
@@ -23,7 +24,12 @@
  ::update-user-data-success
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]
-     {:dispatch-n
+     {:db (-> db
+              (assoc-in [:user :login :user-data] resp)
+              (assoc-in [:analysis :diversity :user-category-presets]
+                        (utils/index-by :name (get-in resp [:saved-diversity-settings
+                                                            :category-presets]))))
+      :dispatch-n
       [[:lipas.ui.login.events/refresh-login]
        [:lipas.ui.events/set-active-notification
         {:message  (tr :notifications/save-success)

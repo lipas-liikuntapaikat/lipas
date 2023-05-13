@@ -333,13 +333,16 @@
 (re-frame/reg-event-fx
  ::save-category-preset
  (fn [{:keys [db]} [_ name]]
-   (let [preset {:name name
-                 :categories (-> db :analysis :diversity :settings :categories)}
-         user-data (-> db
-                       :user
-                       :login
-                       :user-data
-                       (update-in [:saved-diversity-settings :category-presets] conj preset))]
+   (let [new-preset {:name       name
+                     :categories (-> db :analysis :diversity :settings :categories)}
+         presets    (-> (get-in db [:analysis :diversity :user-category-presets])
+                        (assoc name new-preset)
+                        vals)
+         user-data  (-> db
+                        :user
+                        :login
+                        :user-data
+                        (assoc-in [:saved-diversity-settings :category-presets] presets))]
      {:dispatch-n
       [[:lipas.ui.user.events/update-user-data user-data]
        [::toggle-category-save-dialog]]})))
