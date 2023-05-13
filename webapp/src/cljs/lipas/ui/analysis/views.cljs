@@ -27,8 +27,8 @@
          :variant        "fullWidth"
          :centered       true
          :indicatorColor "primary"}
-        [mui/tab {:value "reachability" :label "Saavutettavuus (beta)"}]
-        [mui/tab {:value "diversity" :label "Monipuolisuus (beta)"}]]]
+        [mui/tab {:value "reachability" :label "Saavutettavuus"}]
+        [mui/tab {:value "diversity" :label "Monipuolisuus"}]]]
       [mui/grid {:item true}
        [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
         [mui/icon "close"]]]]
