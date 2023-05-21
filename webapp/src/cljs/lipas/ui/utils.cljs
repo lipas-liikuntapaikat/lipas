@@ -235,8 +235,8 @@
       (update-in [:fields] (fn [fields] (remove empty? fields)))
 
       ;; Circumstances -> locker rooms
-      (update-in [:circumstances :locker-rooms] (comp not-empty remove-ids vals))
-      (update-in [:circumstances :locker-rooms] (fn [rooms] (remove empty? rooms)))
+      (update-in [:locker-rooms] (comp not-empty remove-ids vals))
+      (update-in [:locker-rooms] (fn [rooms] (remove empty? rooms)))
 
       clean))
 
@@ -255,7 +255,7 @@
       (update-in [:fields] ->indexed-map)
 
       ;; Locker rooms
-      (update-in [:circumstances :locker-rooms] ->indexed-map)))
+      (update-in [:locker-rooms] ->indexed-map)))
 
 (defn valid? [sports-site] ;; TODO maybe multimethod?
   (let [spec (case (-> sports-site :type :type-code)
