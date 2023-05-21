@@ -1003,23 +1003,23 @@
 (s/def :lipas.sports-site.circumstances/open-floor-space-area-m2
   (number-in :min 0 :max (inc 10000)))
 
-(s/def :lipas.sports-site.circumstances.locker-room/surface-area-m2
+(s/def :lipas.sports-site.locker-room/surface-area-m2
   (number-in :min 0 :max (inc 2000)))
 
-(s/def :lipas.sports-site.circumstances.locker-room/showers-count
+(s/def :lipas.sports-site.locker-room/showers-count
   (s/int-in 0 100))
 
-(s/def :lipas.sports-site.circumstances.locker-room/toilets-count
+(s/def :lipas.sports-site.locker-room/toilets-count
   (s/int-in 0 100))
 
-(s/def :lipas.sports-site.circumstances/locker-room
+(s/def :lipas.sports-site/locker-room
   (s/keys :req-un []
-          :opt-un [:lipas.sports-site.circumstances.locker-room/surface-area-m2
-                   :lipas.sports-site.circumstances.locker-room/showers-count
-                   :lipas.sports-site.circumstances.locker-room/toilets-count]))
+          :opt-un [:lipas.sports-site.locker-room/surface-area-m2
+                   :lipas.sports-site.locker-room/showers-count
+                   :lipas.sports-site.locker-room/toilets-count]))
 
-(s/def :lipas.sports-site.circumstances/locker-rooms
-  (s/coll-of :lipas.sports-site.circumstances/locker-room
+(s/def :lipas.sports-site/locker-rooms
+  (s/coll-of :lipas.sports-site/locker-room
              :into []))
 
 (s/def :lipas.sports-site.circumstances/saunas-count
@@ -1163,7 +1163,6 @@
                    :lipas.sports-site.circumstances.floorball/iff-certified-rink?
                    :lipas.sports-site.circumstances.floorball/goal-shrinking-elements-count
                    :lipas.sports-site.circumstances.floorball/corner-pieces-count
-                   :lipas.sports-site.circumstances/locker-rooms
                    :lipas.sports-site.circumstances/saunas-count
                    :lipas.sports-site.circumstances/separate-referee-locker-room?
                    :lipas.sports-site.circumstances/locker-room-quality-comment
@@ -1241,6 +1240,7 @@
                    :lipas/visitors-monthly
                    :lipas.sports-site/properties
                    :lipas.sports-site/fields
+                   :lipas.sports-site/locker-rooms
                    :lipas.sports-site/circumstances]))
 
 (s/def :lipas/sports-site

@@ -352,9 +352,11 @@
   (let [locale  (tr)
         headers (map (juxt first (comp locale second)) fields-table-headers)]
     (if read-only?
-      [lui/table
-       {:headers headers
-        :items   display-data}]
+      (if (empty? display-data)
+        [mui/typography "Ei tietoa"]
+        [lui/table
+         {:headers headers
+          :items   display-data}])
       [lui/form-table
        {:read-only?      read-only?
         :headers         headers
@@ -379,7 +381,7 @@
     :form-field
     [lui/text-field
      {:type      "number"
-      :spec      :lipas.sports-site.circumstances.locker-room/surface-area-m2
+      :spec      :lipas.sports-site.locker-room/surface-area-m2
       :adornment "m²"
       :value     (-> edit-data :surface-area-m2)
       :on-change #(on-change :surface-area-m2 %)}]}
@@ -390,7 +392,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          :lipas.sports-site.circumstances.locker-room/showers-count
+      :spec          :lipas.sports-site.locker-room/showers-count
       :value         (-> edit-data :showers-count)
       :on-change     #(on-change :showers-count %)}]}
 
@@ -400,7 +402,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          :lipas.sports-site.circumstances.locker-room/toilets-count
+      :spec          :lipas.sports-site.locker-room/toilets-count
       :value         (-> edit-data :toilets-count)
       :on-change     #(on-change :toilets-count %)}]}])
 
@@ -437,12 +439,15 @@
 
 (defn locker-rooms-table
   [{:keys [tr display-data edit-data read-only? lipas-id]}]
+  (println display-data)
   (let [locale  (tr)
         headers (map (juxt first (comp locale second)) locker-rooms-table-headers)]
     (if read-only?
-      [lui/table
-       {:headers headers
-        :items   display-data}]
+      (if (empty? display-data)
+        [mui/typography "Ei tietoa"]
+        [lui/table
+         {:headers headers
+          :items   display-data}])
       [lui/form-table
        {:read-only?      read-only?
         :headers         headers
@@ -961,11 +966,7 @@
     :form-field
     [lui/date-picker
      {:value     (-> edit-data :audit-date)
-      :on-change #(on-change :audit-date %)}]}
-
-;; Muita Lipas-järjestelmässä kysyttyjä tietoja (jotka voisivat olla tässä kiinnostavia)
-
-   ])
+      :on-change #(on-change :audit-date %)}]}])
 
 (defn form
   [{:keys [tr read-only? on-change display-data edit-data type-code lipas-id]}]

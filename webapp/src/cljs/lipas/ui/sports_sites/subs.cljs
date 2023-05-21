@@ -329,7 +329,8 @@
         (when (or (#{2240} (:type-code type)) ; floorball
                   (#{2230 1350 1340} (:type-code type))) ; football
           {:circumstances (:circumstances latest)
-           :fields        (:fields latest)}))))))
+           :fields        (:fields latest)
+           :locker-rooms  (:locker-rooms latest)}))))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]
