@@ -258,16 +258,19 @@
                       {:style {:font-size "1em"} :variant "body1" :no-wrap false}
                       (utils/display-value v)]]])]))]))]]])))
 
-(defn form-table [{:keys [headers items key-fn add-tooltip
-                          edit-tooltip delete-tooltip confirm-tooltip
-                          read-only? on-add on-edit on-delete add-btn-size
-                          max-width]
-                   :or   {add-btn-size "large"}
-                   :as   props}]
+(defn form-table
+  [{:keys [headers items key-fn add-tooltip
+           edit-tooltip delete-tooltip confirm-tooltip
+           read-only? on-add on-edit on-delete add-btn-size
+           max-width empty-label]
+    :or   {add-btn-size "large"}
+    :as   props}]
   (if read-only?
 
     ;; Normal read-only table
-    [table props]
+    (if (empty? items)
+      [mui/typography (or empty-label "-")]
+      [table props])
 
     ;; Table with selectable rows and 'edit' 'delete' and 'add'
     ;; actions
@@ -275,49 +278,50 @@
                  key-fn (or key-fn (constantly nil))]
       [mui/grid
        {:container       true
-        :spacing         8
+        :spacing         1
         :justify-content "flex-end"
         :align-items     "center"}
 
        ;; Table
-       [mui/grid {:item  true :xs 12
-                  :style (merge {} (when max-width
-                                     ;; Hacky place to do this here
-                                     ;; TODO: move to smarter place
-                                     {:width (str "calc(" max-width " - 24px)")}))}
+       (when-not (empty? items)
+         [mui/grid {:item  true :xs 12
+                    :style (merge {} (when max-width
+                                       ;; Hacky place to do this here
+                                       ;; TODO: move to smarter place
+                                       {:width (str "calc(" max-width " - 24px)")}))}
 
-        ;; Handle horizontal overflow with scrollbar
-        [:div {:style {:overflow-x "auto"}}
-         [mui/table
+          ;; Handle horizontal overflow with scrollbar
+          [:div {:style {:overflow-x "auto"}}
+           [mui/table
 
-          ;; Headear row
-          [mui/table-head
-           (into [mui/table-row {:hover true}
-                  [mui/table-cell ""]]
-                 (for [[_ header] headers]
-                   [mui/table-cell header]))]
+            ;; Headear row
+            [mui/table-head
+             (into [mui/table-row {:hover true}
+                    [mui/table-cell ""]]
+                   (for [[_ header] headers]
+                     [mui/table-cell header]))]
 
-          ;; Body
-          [mui/table-body
+            ;; Body
+            [mui/table-body
 
-           ;; Rows
-           (doall
-            (for [item items
-                  :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
-              [mui/table-row {:key id :hover true}
-               [mui/table-cell {:padding "checkbox"}
-                [mui/checkbox
-                 {:checked   (= item @selected-item)
-                  :on-change (fn [_ checked?]
-                               (let [v (when checked? item)]
-                                 (reset! selected-item v)))}]]
+             ;; Rows
+             (doall
+              (for [item items
+                    :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
+                [mui/table-row {:key id :hover true}
+                 [mui/table-cell {:padding "checkbox"}
+                  [mui/checkbox
+                   {:checked   (= item @selected-item)
+                    :on-change (fn [_ checked?]
+                                 (let [v (when checked? item)]
+                                   (reset! selected-item v)))}]]
 
-               ;; Cells
-               (doall
-                (for [[k _] headers
-                      :let  [v (get item k)]]
-                  [mui/table-cell {:key (str id k) :padding "dense"}
-                   (utils/display-value v)]))]))]]]]
+                 ;; Cells
+                 (doall
+                  (for [[k _] headers
+                        :let  [v (get item k)]]
+                    [mui/table-cell {:key (str id k) :padding "normal"}
+                     (utils/display-value v)]))]))]]]])
 
        ;; Editing tools
        [mui/grid {:item true :xs 10 :class-name :no-print}

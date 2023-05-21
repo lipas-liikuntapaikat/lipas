@@ -119,7 +119,10 @@
                                     :en "Deinked pulp"}
    "woodchips"                     {:fi "Hake"
                                     :se "Fils"
-                                    :en "Woodchips"}})
+                                    :en "Woodchips"}
+   "resin"                         {:fi "Massa"
+                                    :se "Kåda"
+                                    :en "Resin"}})
 
 (def building-materials
   (select-keys all ["concrete" "brick""steel" "wood" "solid-rock"]))
@@ -146,4 +149,13 @@
                     "rock-dust" "fiberglass" "soil" "metal" "synthetic" "grass"
                     "wood" "sawdust" "deinked-pulp" "gravel" "textile"
                     "brick-crush" "water" "artificial-turf"
-                    "sand-infilled-artificial-turf"]))
+                    "sand-infilled-artificial-turf" "resin"]))
+
+(def field-surface-materials
+  (merge (select-keys surface-materials ["resin" "wood" "synthetic"])
+         {"carpet" {:fi "Matto"
+                    :se "Matta"
+                    :en "Carpet"}}))
+
+(def floorball-field-surface-materials
+  (select-keys field-surface-materials ["resin" "wood" "carpet"]))

@@ -230,6 +230,14 @@
       (update-in [:rinks] (comp not-empty remove-ids vals))
       (update-in [:rinks] (fn [rinks] (remove empty? rinks)))
 
+      ;; Fields
+      (update-in [:fields] (comp not-empty remove-ids vals))
+      (update-in [:fields] (fn [fields] (remove empty? fields)))
+
+      ;; Circumstances -> locker rooms
+      (update-in [:circumstances :locker-rooms] (comp not-empty remove-ids vals))
+      (update-in [:circumstances :locker-rooms] (fn [rooms] (remove empty? rooms)))
+
       clean))
 
 (defn make-editable [sports-site]
@@ -241,7 +249,13 @@
       (update-in [:slides] ->indexed-map)
 
       ;; Ice Stadiums
-      (update-in [:rinks] ->indexed-map)))
+      (update-in [:rinks] ->indexed-map)
+
+      ;; Fields
+      (update-in [:fields] ->indexed-map)
+
+      ;; Locker rooms
+      (update-in [:circumstances :locker-rooms] ->indexed-map)))
 
 (defn valid? [sports-site] ;; TODO maybe multimethod?
   (let [spec (case (-> sports-site :type :type-code)

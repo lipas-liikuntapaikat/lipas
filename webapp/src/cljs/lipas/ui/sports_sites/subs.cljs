@@ -312,7 +312,7 @@
 
          :building (:building latest)}
 
-        (when (#{3110 3130} (:type-code type))
+        (when (#{3110 3130} (:type-code type)) ; swimming pools
           (let [get-pool-type     #(get-in pool-types [% locale])
                 get-accessibility #(get-in pool-accessibility [% locale])]
             {:pools
@@ -323,8 +323,13 @@
              :slides     (:slides latest)
              :facilities (:facilities latest)}))
 
-        (when (#{2510 2520} (:type-code type))
-          {:rinks (:rinks latest)}))))))
+        (when (#{2510 2520} (:type-code type)) ; ice stadiums
+          {:rinks (:rinks latest)})
+
+        (when (or (#{2240} (:type-code type)) ; floorball
+                  (#{2230 1350 1340} (:type-code type))) ; football
+          {:circumstances (:circumstances latest)
+           :fields        (:fields latest)}))))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]
