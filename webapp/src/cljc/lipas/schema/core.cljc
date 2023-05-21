@@ -7,6 +7,7 @@
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.feedback :as feedback]
+   [lipas.data.floorball :as floorball]
    [lipas.data.ice-stadiums :as ice-stadiums]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
@@ -66,6 +67,9 @@
 ;; https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime
 (def timestamp-regex
   #"\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)")
+
+(def date-regex
+  #"\d{4}-[01]\d-[0-3]\d")
 
 ;;; Generators ;;;
 
@@ -145,6 +149,15 @@
    {:spec         (s/with-gen :lipas/timestamp-type timestamp-gen)
     :swagger/type "string"
     :swagger/format "date-time"}))
+
+(s/def :lipas/date-type
+  (s/and string? #(re-matches date-regex %)))
+
+(s/def :lipas/date
+  (st/spec
+   {:spec           :lipas/date-type
+    :swagger/type   "string"
+    :swagger/format "date"}))
 
 (s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
@@ -844,6 +857,365 @@
                    :lipas.visitors/nov
                    :lipas.visitors/dec]))
 
+(s/def :lipas.sports-site.fields.field/type
+  #{"football-field" "floorball-field"})
+
+(s/def :lipas.sports-site.fields.field/name (str-in 2 100))
+(s/def :lipas.sports-site.fields.field/length-m (number-in :min 0 :max (inc 200)))
+(s/def :lipas.sports-site.fields.field/width-m (number-in :min 0 :max (inc 200)))
+(s/def :lipas.sports-site.fields.field/height-m (number-in :mina 0 :max (inc 100)))
+(s/def :lipas.sports-site.fields.field/surface-area-m2 (number-in :min 0 :max (inc 20000)))
+
+(s/def :lipas.sports-site.fields/field
+  (s/keys :req-un [:lipas.sports-site.fields.field/type]
+          :opt-un [:lipas.sports-site.fields.field/name
+                   :lipas.sports-site.fields.field/length-m
+                   :lipas.sports-site.fields.field/width-m
+                   :lipas.sports-site.fields.field/height-m
+                   :lipas.sports-site.fields.field/surface-area-m2]))
+
+(s/def :lipas.sports-site.fields.floorball/type
+  #{"floorball-field"})
+
+(s/def :lipas.sports-site.fields.floorball/minimum-height-m ::real)
+
+(s/def :lipas.sports-site.fields.floorball/surface-material
+  (into #{} (keys materials/floorball-field-surface-materials)))
+
+(s/def :lipas.sports-site.fields.floorball/surface-material-product
+  (str-in 2 100))
+
+(s/def :lipas.sports-site.fields.floorball/surface-material-color
+  (str-in 2 100))
+
+(s/def :lipas.sports-site.fields.floorball/floor-elasticity
+  (into #{} (keys floorball/floor-elasticity)))
+
+(s/def :lipas.properties/lighting-lux
+  (s/int-in 0 3000))
+
+(s/def :lipas.sports-site.fields.floorball/lighting-corner-1-1-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-corner-1-2-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-corner-2-1-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-corner-2-2-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-goal-1-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-goal-2-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/lighting-center-point-lux
+  :lipas.properties/lighting-lux)
+
+(s/def :lipas.sports-site.fields.floorball/rink-product
+  (str-in 2 100))
+
+(s/def :lipas.sports-site.fields.floorball/rink-color
+  (str-in 2 100))
+
+(s/def :lipas.sports-site.fields.floorball/scoreboard-visible-to-benches?
+  boolean?)
+
+(s/def :lipas.sports-site.fields.floorball/scoreboard-visible-to-officials?
+  boolean?)
+
+(s/def :lipas.sports-site.fields.floorball/stands-total-capacity-person
+  (s/int-in 0 100000))
+
+(s/def :lipas.sports-site.fields.floorball/seating-area-capacity-person
+  (s/int-in 0 100000))
+
+(s/def :lipas.sports-site.fields.floorball/standing-area-capacity-person
+  (s/int-in 0 100000))
+
+(s/def :lipas.sports-site.fields.floorball/accessible-seating-capacity-person
+  (s/int-in 0 100000))
+
+(s/def :lipas.sports-site.fields.floorball/audience-stand-access
+  (into #{} (keys floorball/audience-stand-access)))
+
+(s/def :lipas.sports-site.fields.floorball/field-accessible-without-strairs?
+  boolean?)
+
+(s/def :lipas.sports-site.fields/floorball
+  (s/merge :lipas.sports-site.fields/field
+           (s/keys
+            :req-un [:lipas.sports-site.fields.floorball/type]
+            :opt-un [:lipas.sports-site.fields.floorball/minimum-height-m
+                     :lipas.sports-site.fields.floorball/surface-material
+                     :lipas.sports-site.fields.floorball/floor-elasticity
+                     :lipas.sports-site.fields.floorball/surface-material-product
+                     :lipas.sports-site.fields.floorball/surface-material-color
+                     :lipas.sports-site.fields.floorball/rink-product
+                     :lipas.sports-site.fields.floorball/rink-color
+                     :lipas.sports-site.fields.floorball/lighting-corner-1-1-lux
+                     :lipas.sports-site.fields.floorball/lighting-corner-1-2-lux
+                     :lipas.sports-site.fields.floorball/lighting-corner-2-1-lux
+                     :lipas.sports-site.fields.floorball/lighting-corner-2-2-lux
+                     :lipas.sports-site.fields.floorball/lighting-goal-1-lux
+                     :lipas.sports-site.fields.floorball/lighting-goal-2-lux
+                     :lipas.sports-site.fields.floorball/lighting-center-point-lux
+                     :lipas.sports-site.fields.floorball/scoreboard-visible-to-benches?
+                     :lipas.sports-site.fields.floorball/scoreboard-visible-to-officials?
+                     :lipas.sports-site.fields.floorball/stands-total-capacity-person
+                     :lipas.sports-site.fields.floorball/seating-area-capacity-person
+                     :lipas.sports-site.fields.floorball/standing-area-capacity-person
+                     :lipas.sports-site.fields.floorball/accessible-seating-capacity-person
+                     :lipas.sports-site.fields.floorball/audience-stand-access
+                     :lipas.sports-site.fields.floorball/field-accessible-without-strairs?
+                     ])))
+
+(s/def :lipas.sports-site.circumstances.floorball/available-goals-count
+  (s/int-in 0 200))
+
+(s/def :lipas.sports-site.circumstances.floorball/iff-certification-stickers-in-goals?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances.floorball/iff-certified-rink?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances.floorball/goal-shrinking-elements-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances.floorball/corner-pieces-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/teams-using
+  (str-in 0 1024))
+
+(s/def :lipas.sports-site.circumstances/storage-capacity-comment
+  (str-in 0 2048))
+
+(s/def :lipas.sports-site.circumstances/open-floor-space-width-m
+  (number-in :min 0 :max (inc 200)))
+
+(s/def :lipas.sports-site.circumstances/open-floor-space-length-m
+  (number-in :min 0 :max (inc 200)))
+
+(s/def :lipas.sports-site.circumstances/open-floor-space-area-m2
+  (number-in :min 0 :max (inc 10000)))
+
+(s/def :lipas.sports-site.circumstances.locker-room/surface-area-m2
+  (number-in :min 0 :max (inc 2000)))
+
+(s/def :lipas.sports-site.circumstances.locker-room/showers-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances.locker-room/toilets-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/locker-room
+  (s/keys :req-un []
+          :opt-un [:lipas.sports-site.circumstances.locker-room/surface-area-m2
+                   :lipas.sports-site.circumstances.locker-room/showers-count
+                   :lipas.sports-site.circumstances.locker-room/toilets-count]))
+
+(s/def :lipas.sports-site.circumstances/locker-rooms
+  (s/coll-of :lipas.sports-site.circumstances/locker-room
+             :into []))
+
+(s/def :lipas.sports-site.circumstances/saunas-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/separate-referee-locker-room?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/locker-room-quality-comment
+  (str-in 2 2048))
+
+(s/def :lipas.sports-site.circumstances/defilbrillator?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/stretcher?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/first-aid-comment
+  (str-in 2 2048))
+
+(s/def :lipas.sports-site.circumstances/scoreboard-count
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/player-enterance
+  (into #{} (keys floorball/player-entrance)))
+
+(s/def :lipas.sports-site.circumstances/side-training-space?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/gym?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/audience-toilets-count
+  (s/int-in 0 1000))
+
+(s/def :lipas.sports-site.circumstances/vip-area?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/vip-area-comment
+  (str-in 2 2048))
+
+(s/def :lipas.sports-site.circumstances/field-level-loading-doors?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/loading-equipment-available?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/detached-chairs-quantity
+  (s/int-in 0 1000))
+
+(s/def :lipas.sports-site.circumstances/detached-tables-quantity
+  (s/int-in 0 1000))
+
+(s/def :lipas.sports-site.circumstances/cafeteria-and-restaurant-capacity-person
+  (s/int-in 0 10000))
+
+(s/def :lipas.sports-site.circumstances/restaurateur-contact-info
+  (str-in 2 2048))
+
+(s/def :lipas.sports-site.circumstances/cafe-or-restaurant-has-exclusive-rights-for-products?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/conference-space-quantity
+  (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/conference-space-total-capacity-person
+  (s/int-in 0 10000))
+
+(s/def :lipas.sports-site.circumstances/press-conference-space?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/ticket-sales-operator
+  (str-in 2 100))
+
+(s/def :lipas.sports-site.circumstances/bus-parking-capacity
+  (number-in :min 0 :max (inc 1000)))
+
+(s/def :lipas.sports-site.circumstances/car-parking-capacity
+  (number-in :min 0 :max 10000))
+
+(s/def :lipas.sports-site.circumstances/car-parking-economics-model
+  (into #{} (keys floorball/car-parking-economics-model)))
+
+(s/def :lipas.sports-site.circumstances/roof-trusses?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/roof-trusses-capacity-kg
+  (s/int-in 0 10000))
+
+(s/def :lipas.sports-site.circumstances/roof-trusses-operation-model
+  (into #{} (keys floorball/roof-trussess-operation-model)))
+
+(s/def :lipas.sports-site.circumstances/speakers-aligned-towards-stands?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/audio-mixer-available?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/wireless-microphone-quantity
+  (s/int-in 0 200))
+
+(s/def :lipas.sports-site.circumstances/wired-microphone-quantity
+  (s/int-in 0 200))
+
+(s/def :lipas.sports-site.circumstances/camera-stands?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/fixed-cameras?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/broadcast-car-park?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/wifi-available?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/wifi-capacity-sufficient-for-streaming?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/electrical-plan-available?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/three-phase-electric-power?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/audit-date
+  :lipas/date)
+
+(s/def :lipas.sports-site.circumstances/floorball
+  (s/keys :req-un []
+          :opt-un [:lipas.sports-site.circumstances/teams-using
+                   :lipas.sports-site.circumstances/storage-capacity-comment
+                   :lipas.sports-site.circumstances/open-floor-space-width-m
+                   :lipas.sports-site.circumstances/open-floor-space-length-m
+                   :lipas.sports-site.circumstances/open-floor-space-area-m2
+                   :lipas.sports-site.circumstances.floorball/available-goals-count
+                   :lipas.sports-site.circumstances.floorball/iff-certification-stickers-in-goals?
+                   :lipas.sports-site.circumstances.floorball/iff-certified-rink?
+                   :lipas.sports-site.circumstances.floorball/goal-shrinking-elements-count
+                   :lipas.sports-site.circumstances.floorball/corner-pieces-count
+                   :lipas.sports-site.circumstances/locker-rooms
+                   :lipas.sports-site.circumstances/saunas-count
+                   :lipas.sports-site.circumstances/separate-referee-locker-room?
+                   :lipas.sports-site.circumstances/locker-room-quality-comment
+                   :lipas.sports-site.circumstances/defilbrillator?
+                   :lipas.sports-site.circumstances/stretcher?
+                   :lipas.sports-site.circumstances/first-aid-comment
+                   :lipas.sports-site.circumstances/scoreboard-count
+                   :lipas.sports-site.circumstances/player-enterance
+                   :lipas.sports-site.circumstances/side-training-space?
+                   :lipas.sports-site.circumstances/gym?
+                   :lipas.sports-site.circumstances/audience-toilets-count
+                   :lipas.sports-site.circumstances/vip-area?
+                   :lipas.sports-site.circumstances/vip-area-comment
+                   :lipas.sports-site.circumstances/field-level-loading-doors?
+                   :lipas.sports-site.circumstances/loading-equipment-available?
+                   :lipas.sports-site.circumstances/detached-chairs-quantity
+                   :lipas.sports-site.circumstances/detached-tables-quantity
+                   :lipas.sports-site.circumstances/cafeteria-and-restaurant-capacity-person
+                   :lipas.sports-site.circumstances/restaurateur-contact-info
+                   :lipas.sports-site.circumstances/cafe-or-restaurant-has-exclusive-rights-for-products?
+                   :lipas.sports-site.circumstances/conference-space-quantity
+                   :lipas.sports-site.circumstances/conference-space-total-capacity-person
+                   :lipas.sports-site.circumstances/press-conference-space?
+                   :lipas.sports-site.circumstances/ticket-sales-operator
+                   :lipas.sports-site.circumstances/bus-parking-capacity
+                   :lipas.sports-site.circumstances/car-parking-capacity
+                   :lipas.sports-site.circumstances/car-parking-economics-model
+                   :lipas.sports-site.circumstances/roof-trusses?
+                   :lipas.sports-site.circumstances/roof-trusses-capacity-kg
+                   :lipas.sports-site.circumstances/roof-trusses-operation-model
+                   :lipas.sports-site.circumstances/speakers-aligned-towards-stands?
+                   :lipas.sports-site.circumstances/audio-mixer-available?
+                   :lipas.sports-site.circumstances/wireless-microphone-quantity
+                   :lipas.sports-site.circumstances/wired-microphone-quantity
+                   :lipas.sports-site.circumstances/camera-stands?
+                   :lipas.sports-site.circumstances/fixed-cameras?
+                   :lipas.sports-site.circumstances/broadcast-car-park?
+                   :lipas.sports-site.circumstances/wifi-available?
+                   :lipas.sports-site.circumstances/wifi-capacity-sufficient-for-streaming?
+                   :lipas.sports-site.circumstances/electrical-plan-available?
+                   :lipas.sports-site.circumstances/three-phase-electric-power?
+                   :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
+                   :lipas.sports-site.circumstances/audit-date]))
+
+(s/def :lipas.sports-site/circumstances
+  (s/or :circumstances/floorball :lipas.sports-site.circumstances/floorball))
+
+(s/def :lipas.sports-site/fields
+  (s/coll-of (s/or :field/generic :lipas.sports-site.fields/field
+                   :field/floorball :lipas.sports-site.fields/floorball)
+             :into []))
+
 (s/def :lipas/new-sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
                    :lipas.sports-site/status
@@ -867,7 +1239,9 @@
                    :lipas/energy-consumption
                    :lipas/visitors
                    :lipas/visitors-monthly
-                   :lipas.sports-site/properties]))
+                   :lipas.sports-site/properties
+                   :lipas.sports-site/fields
+                   :lipas.sports-site/circumstances]))
 
 (s/def :lipas/sports-site
   (s/merge
@@ -1354,9 +1728,6 @@
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.floorball.type/type-code])))
 
-(s/def :lipas.floorball.circumstances/teams-using
-  (str-in 0 1024))
-
 ;;; Football ;;;
 
 (s/def :lipas.football.type/type-code #{2240})
@@ -1365,9 +1736,6 @@
   (s/merge
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.football.type/type-code])))
-
-(s/def :lipas.football.circumstances/teams-using
-  (str-in 0 1024))
 
 ;;; HTTP-API ;;;
 

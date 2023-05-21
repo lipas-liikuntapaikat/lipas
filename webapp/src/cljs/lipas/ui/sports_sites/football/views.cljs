@@ -1,11 +1,11 @@
-(ns lipas.ui.sports-sites.football
+(ns lipas.ui.sports-sites.football.views
   (:require
    [lipas.ui.mui :as mui]
    [lipas.ui.components :as lui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.sports-sites.football.subs :as subs]
+   [lipas.ui.sports-sites.football.events :as events]
    [re-frame.core :as re-frame]))
-
-(def type-codes #{2230 1350 1340}) ; Jalkapallohalli, stadion, pallokenttä,
 
 (re-frame/reg-event-db
  ::save-pool
@@ -216,7 +216,7 @@
         add-data     (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data         (if add-data
                        {:edit-data add-data}
-                    (<== [:lipas.ui.map.subs/selected-sports-site]))
+                       (<== [:lipas.ui.map.subs/selected-sports-site]))
         max-width    (<== [:lipas.ui.map.subs/drawer-width width])
         lipas-id     (-> data :edit-data :lipas-id)]
     [:<>

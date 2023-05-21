@@ -6,6 +6,8 @@
    [lipas.data.prop-types :as prop-types]
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.types :as types]
+   [lipas.ui.sports-sites.floorball.db :as floorball]
+   [lipas.ui.sports-sites.football.db :as football]
    [lipas.ui.utils :as utils]))
 
 (def default-db
@@ -18,9 +20,6 @@
 
    :prop-types prop-types/used
 
-   ;;lol
-   :football {:dialog-open? false}
-
    :materials             materials/all
    :building-materials    materials/building-materials
    :supporting-structures materials/supporting-structures
@@ -31,4 +30,7 @@
    :delete-dialog
    {:open?           false
     :selected-status nil
-    :selected-year   utils/this-year}})
+    :selected-year   utils/this-year}
+
+   :football football/default-db
+   :floorball floorball/default-db})

@@ -5,13 +5,13 @@
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+   #_[lipas.ui.feedback.views :as feedback]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
-   #_[lipas.ui.feedback.views :as feedback]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
@@ -21,11 +21,11 @@
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
+   [lipas.ui.sports-sites.floorball.views :as floorball]
+   [lipas.ui.sports-sites.football.views :as football]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]
-   [lipas.ui.sports-sites.floorball :as floorball]
-   [lipas.ui.sports-sites.football :as football]))
+   [reagent.core :as r]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))
@@ -462,6 +462,8 @@
           edit-data    (:edit-data site-data)
 
           type-code           (-> display-data :type :type-code)
+          floorball-types     (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+          football-types      (<== [:lipas.ui.sports-sites.football.subs/type-codes])
           accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
           {:keys [types cities admins owners editing? edits-valid?
@@ -526,9 +528,8 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when (or
-                (floorball/type-codes type-code)
-                (football/type-codes type-code))
+         (when (or (floorball-types type-code)
+                   (football-types type-code))
            [mui/tab
             {:style {:min-width 0}
              :value 3
@@ -588,18 +589,27 @@
           3 (condp contains? type-code
 
               ;; Floorball conditions
-              floorball/type-codes
-              [floorball/circumstances-form
-                 {:tr           tr
-                  :type-code    (or (-> edit-data :type :type-code) type-code)
-                  :read-only?   (not editing?)
-                  :on-change    (partial set-field :circumstances)
-                  :display-data (:circumstances display-data)
-                  :edit-data    (:circumstances edit-data)
-                  :key          (-> edit-data :type :type-code)}]
+              floorball-types
+              [floorball/form
+               {:tr           tr
+                :lipas-id     lipas-id
+                :type-code    (or (-> edit-data :type :type-code) type-code)
+                :read-only?   (not editing?)
+                :on-change    set-field
+                :display-data display-data
+                :edit-data    edit-data
+                :key          (-> edit-data :type :type-code)}]
+              #_ [floorball/circumstances-form
+                  {:tr           tr
+                   :type-code    (or (-> edit-data :type :type-code) type-code)
+                   :read-only?   (not editing?)
+                   :on-change    (partial set-field :circumstances)
+                   :display-data (:circumstances display-data)
+                   :edit-data    (:circumstances edit-data)
+                   :key          (-> edit-data :type :type-code)}]
 
               ;; Football conditions
-              football/type-codes
+              football-types
               [football/circumstances-form
                {:tr           tr
                 :type-code    (or (-> edit-data :type :type-code) type-code)
