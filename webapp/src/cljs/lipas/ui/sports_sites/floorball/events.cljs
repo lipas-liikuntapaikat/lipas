@@ -4,6 +4,12 @@
    [lipas.ui.utils :as utils :refer [==>]]))
 
 (re-frame/reg-event-db
+ ::set-field-field
+ (fn [db [_ lipas-id field value]]
+   (let [path [:sports-sites lipas-id :editing :fields 0 field]]
+     (utils/set-field db path value))))
+
+(re-frame/reg-event-db
  ::set-dialog-field
  (fn [db [_ dialog field value]]
    (let [path [:sports-sites :floorball :dialogs dialog :data field]]
@@ -30,7 +36,7 @@
                 [:new-sports-site :data entities-k])]
      (utils/save-entity db path value))))
 
-(re-frame/reg-event-db
+#_(re-frame/reg-event-db
  ::remove-field
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id
