@@ -274,7 +274,7 @@
       :on-change #(on-change :scoreboard-visible-to-officials? %)}]}
 
    ;; Katsomokartta
-   ;; TODO selvennä
+   ;; => out of scope
 
    ;; Pääseekö kenttätasolle ilman rappusia (KYLLÄ/EI)
    {:label "Pääseekö kenttätasolle ilman rappusia"
@@ -294,7 +294,7 @@
       :value     (-> edit-data :audience-stand-access)
       :on-change #(on-change :audience-stand-access %)}]}])
 
-(defn field-dialog
+#_(defn field-dialog
   [{:keys [tr lipas-id]}]
   (let [open?  (<== [::subs/dialog-open? :field])
         data   (<== [::subs/dialog-data :field])
@@ -320,7 +320,7 @@
        :on-change    (fn [field value]
                        (==> [::events/set-dialog-field :field field value]))}]]))
 
-(def fields-table-headers
+#_(def fields-table-headers
   [[:name {:fi "Nimi"}]
    [:length-m {:fi "Pituus (m)"}]
    [:width-m {:fi "Leveys (m)"}]
@@ -347,7 +347,7 @@
    [:audience-stand-access {:fi "Yleisön kulku katsomoon"}]
    [:field-accessible-without-strairs? {:fi "Pääseekö kenttätasolle ilman rappusia"}]])
 
-(defn fields-table
+#_(defn fields-table
   [{:keys [tr display-data edit-data read-only? lipas-id]}]
   (let [locale  (tr)
         headers (map (juxt first (comp locale second)) fields-table-headers)]
@@ -975,14 +975,22 @@
    [field-dialog {:tr tr :lipas-id lipas-id}]
    [locker-room-dialog {:tr tr :lipas-id lipas-id}]
 
-   [lui/sub-heading {:label "Kentät"}]
+   [lui/sub-heading {:label "Kenttä"}]
 
-   [fields-table
+   #_[fields-table
+      {:tr           tr
+       :lipas-id     lipas-id
+       :read-only?   read-only?
+       :display-data (:fields display-data)
+       :edit-data    (:fields edit-data)}]
+
+   [field-form
     {:tr           tr
-     :lipas-id     lipas-id
      :read-only?   read-only?
-     :display-data (:fields display-data)
-     :edit-data    (:fields edit-data)}]
+     :edit-data    (-> edit-data :fields first second)
+     :display-data (-> display-data :fields first)
+     :on-change    (fn [field value]
+                     (==> [::events/set-field-field lipas-id field value]))}]
 
    [lui/sub-heading {:label "Pukuhuoneet"}]
 
