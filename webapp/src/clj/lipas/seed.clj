@@ -21,6 +21,18 @@
     :lastname            "Halli"
     :permissions-request "Haluan oikeudet päivittää Jyväskylän kilpajäähallin tietoja."}})
 
+(def sb-demo
+  {:email    "sb@lipas.fi"
+   :username "sbdemo"
+   :password "atk-on-ihanaa"
+   :permissions
+   {:type-codes [2240]
+    :all-cities? true}
+   :user-data
+   {:firstname           "Testi"
+    :lastname            "Testinen"
+    :permissions-request "Kaikki salibandyhallit"}})
+
 (def uh-demo
   {:email    "uh@lipas.fi"
    :username "uhdemo"
