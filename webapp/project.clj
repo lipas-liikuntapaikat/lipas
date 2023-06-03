@@ -68,7 +68,7 @@
    :integration :integration}
 
   :clean-targets ^{:protect false}
-  ["resources/public/js/compiled" "target" "test/js"]
+  ["target"]
 
   :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
 
