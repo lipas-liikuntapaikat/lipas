@@ -38,10 +38,11 @@
    (= (:status display-data) (tr (keyword :status "planning")))))
 
 (defn form
-  [{:keys [tr display-data edit-data types size-categories
-           admins owners on-change read-only? sub-headings?]}]
+  [{:keys [tr display-data edit-data types size-categories admins
+           owners on-change read-only? sub-headings?  lipas-id]}]
 
-  (let [locale (tr)]
+  (let [locale         (tr)
+        name-conflict? (<== [::subs/sports-site-name-conflict?])]
 
     [lui/form {:read-only? read-only?}
 
@@ -103,7 +104,14 @@
                    {:spec      :lipas.sports-site/name
                     :required  true
                     :value     (-> edit-data :name)
-                    :on-change #(on-change :name %)}]}
+                    :on-change #(on-change :name %)
+                    :adornment (when name-conflict?
+                                 (r/as-element [mui/icon {:color "secondary"} "warning"]))
+                    :helper-text (when name-conflict?
+                                   "Nimi on jo käytössä toisella
+                                   liikuntapaikalla. Keksi
+                                   yksilöivämpi nimi.") ; TODO translations
+                    :on-blur   #(==> [::events/check-sports-site-name lipas-id %])}]}
 
      ;; Localized name(s)
      (into

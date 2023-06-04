@@ -515,7 +515,7 @@
       ["/actions/calc-diversity-indices"
        {:post
         {:no-doc     true
-         :parameters {:body map?}
+         :parameters {:body map?} ;; TODO proper spec
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
@@ -535,7 +535,18 @@
          (fn [{:keys [body-params]}]
            (core/send-feedback! emailer body-params)
            {:status 200
-            :body   {:status "OK"}})}}]]]
+            :body   {:status "OK"}})}}]
+
+      ;; Check sports-site name
+      ["/actions/check-sports-site-name"
+       {:post
+        {:no-doc true
+         :parameters
+         {:body :lipas.api.check-sports-site-name/payload}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/check-sports-site-name search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

@@ -558,6 +558,22 @@
 (defn send-feedback! [emailer feedback]
   (email/send-feedback-email! emailer "lipasinfo@jyu.fi" feedback))
 
+(defn check-sports-site-name [search-cli {:keys [lipas-id name]}]
+  (let [query {:size    1
+               :_source {:includes ["lipas-id" "name" "status"]}
+               :query
+               {:bool
+                {:must     [{:match_phrase {:name.keyword name}}
+                            {:terms {:status.keyword ["active" "out-of-service-temporarily"]}}]
+                 :must_not {:term {:lipas-id lipas-id}}}}}
+        resp  (search search-cli query)]
+    (merge
+     {:status (if (-> resp :body :hits :total :value (>= 1))
+                :conflict
+                :ok)}
+     (when-let [conflict (-> resp :body :hits :hits first :_source)]
+       {:conflict conflict}))))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
@@ -567,6 +583,11 @@
                "location.city.city-code"])
   (reset! cache {})
   (:all-cities @cache)
+
+  (check-sports-site-name search2 {:lipas-id 89212 :name "Tapanilan Urheilukeskus / Salibandyhalli"})
+
+  (check-sports-site-name search2 {:lipas-id 89211 :name "Tapanilan Urheilukeskus / "})
+  (check-sports-site-name search2 {:lipas-id 0 :name "Kirkonkylän kaukalo"})
 
   (def results (atom []))
   (require '[cheshire.core :as json])

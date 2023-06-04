@@ -42,7 +42,7 @@
 
 (defn text-field-controlled
   [{:keys [value type on-change spec required defer-ms Input-props
-           adornment multiline read-only? tooltip]
+           adornment multiline read-only? tooltip on-blur]
     :or   {defer-ms 200 tooltip ""}
     :as   props} & children]
   #_(r/with-let [tf-state (r/atom value)])
@@ -65,10 +65,10 @@
                        (assoc :on-blur #(if (= "number" type)
                                           (on-change (read-string (str value)))
                                           (when (string? value)
-                                            (-> value
-                                                string/trim
-                                                not-empty
-                                                on-change))))
+                                            (let [value (-> value string/trim not-empty)]
+                                              (on-change value)
+                                              (when on-blur
+                                                (on-blur value))))))
                        #_(assoc :value @tf-state)
                        #_(assoc :on-change on-change3)
                        (assoc :value value)

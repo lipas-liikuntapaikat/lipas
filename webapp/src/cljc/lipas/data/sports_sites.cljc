@@ -35,3 +35,9 @@
    {:fi "Väärä tieto"
     :se "Fel information"
     :en "Out of service"}})
+
+(def field-types
+  {"floorball-field"
+   {:fi "Salibandykenttä"
+    :en "Floorball field"
+    :se "Innebandyplan"}})

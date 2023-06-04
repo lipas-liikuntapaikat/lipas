@@ -463,7 +463,7 @@
 
           type-code           (-> display-data :type :type-code)
           floorball-types     (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          #_#_football-types      (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+          #_#_football-types  (<== [:lipas.ui.sports-sites.football.subs/type-codes])
           accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
           {:keys [types cities admins owners editing? edits-valid?
@@ -558,6 +558,7 @@
                 :admins          admins
                 :owners          owners
                 :on-change       set-field
+                :lipas-id        lipas-id
                 :sub-headings?   true}]
 
               ^{:key (str "location-" lipas-id)}
@@ -959,7 +960,7 @@
          {:active-step      active-step
           :alternativeLabel true
           :style            {:padding-left 0 :padding-right 0
-                             :margin-left "-18px"}
+                             :margin-left  "-18px"}
           :orientation      "horizontal"}
 
          ;; Step 1 - Select type
@@ -1248,7 +1249,8 @@
                     :admins          admins
                     :owners          owners
                     :on-change       set-field
-                    :sub-headings?   true}]
+                    :sub-headings?   true
+                    :lipas-id        0}]
 
                   [sports-sites/location-form
                    {:tr            tr
