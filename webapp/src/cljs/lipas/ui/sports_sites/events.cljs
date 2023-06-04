@@ -13,12 +13,23 @@
          rev  (-> (utils/make-revision site (utils/timestamp))
                   (utils/make-editable))]
      (-> db
-         (assoc-in [:sports-sites lipas-id :editing] rev)))))
+         (assoc-in [:sports-sites lipas-id :editing] rev)
+         (assoc-in [:sports-sites :name-check] {})))))
+
+(defmulti calc-derived-fields (comp :type-code :type))
+(defmethod calc-derived-fields :default [sports-site] sports-site)
 
 (re-frame/reg-event-db
+ ::calc-derived-fields
+ (fn [db [_ lipas-id sports-site]]
+   (assoc-in db [:sports-sites lipas-id :editing] (calc-derived-fields sports-site))))
+
+(re-frame/reg-event-fx
  ::edit-field
- (fn [db [_ lipas-id path value]]
-   (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)))
+ (fn [{:keys [db]} [_ lipas-id path value]]
+   (let [new-db (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)]
+     {:db       new-db
+      :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
 (re-frame/reg-event-db
  ::discard-edits
@@ -163,7 +174,8 @@
                   (assoc-in [:new-sports-site :adding?] true)
                   (assoc-in [:new-sports-site :template] template))
     :dispatch-n [[:lipas.ui.search.events/clear-filters]
-                 [:lipas.ui.search.events/set-results-view :list]]}))
+                 [:lipas.ui.search.events/set-results-view :list]
+                 [::clear-name-check]]}))
 
 (re-frame/reg-event-db
  ::discard-new-site
@@ -253,3 +265,32 @@
                    (assoc :status "active"))
          draft false]
      {:dispatch [::commit-rev rev draft on-success on-failure]})))
+
+(re-frame/reg-event-fx
+ ::check-sports-site-name
+ [interceptors/check-token]
+ (fn [{:keys [db]} [_ lipas-id name]]
+   (let [params {:lipas-id lipas-id :name name}]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) (str "/actions/check-sports-site-name"))
+       :params          params
+       :format          (ajax/transit-request-format)
+       :response-format (ajax/transit-response-format)
+       :on-success      [::check-sports-site-name-success]
+       :on-failure      [::check-sports-site-name-failure]}})))
+
+(re-frame/reg-event-db
+ ::check-sports-site-name-success
+ (fn [db [_ resp]]
+   (assoc-in db [:sports-sites :name-check :response] resp)))
+
+(re-frame/reg-event-db
+ ::check-sports-site-name-failure
+ (fn [db [_ resp]]
+   (assoc-in db [:sports-sites :name-check :error] resp)))
+
+(re-frame/reg-event-db
+ ::clear-name-check
+ (fn [db [_ resp]]
+   (assoc-in db [:sports-sites :name-check] {})))

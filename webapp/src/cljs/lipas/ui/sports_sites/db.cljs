@@ -13,6 +13,7 @@
 (def default-db
   {:statuses          sports-sites/statuses
    :document-statuses sports-sites/document-statuses ;; unused?
+   :field-types       sports-sites/field-types
 
    :admins admins/all
    :owners owners/all
@@ -32,5 +33,5 @@
     :selected-status nil
     :selected-year   utils/this-year}
 
-   :football football/default-db
+   :football  football/default-db
    :floorball floorball/default-db})

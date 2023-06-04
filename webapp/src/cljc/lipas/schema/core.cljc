@@ -915,6 +915,9 @@
 (s/def :lipas.sports-site.fields.floorball/lighting-center-point-lux
   :lipas.properties/lighting-lux)
 
+(s/def :lipas.sports-site.fields.floorball/lighting-average-lux
+  :lipas.properties/lighting-lux)
+
 (s/def :lipas.sports-site.fields.floorball/rink-product
   (str-in 2 100))
 
@@ -963,6 +966,7 @@
                      :lipas.sports-site.fields.floorball/lighting-goal-1-lux
                      :lipas.sports-site.fields.floorball/lighting-goal-2-lux
                      :lipas.sports-site.fields.floorball/lighting-center-point-lux
+                     :lipas.sports-site.fields.floorball/lighting-average-lux
                      :lipas.sports-site.fields.floorball/scoreboard-visible-to-benches?
                      :lipas.sports-site.fields.floorball/scoreboard-visible-to-officials?
                      :lipas.sports-site.fields.floorball/stands-total-capacity-person
@@ -1026,6 +1030,9 @@
   (s/int-in 0 100))
 
 (s/def :lipas.sports-site.circumstances/separate-referee-locker-room?
+  boolean?)
+
+(s/def :lipas.sports-site.circumstances/doping-test-facilities?
   boolean?)
 
 (s/def :lipas.sports-site.circumstances/locker-room-quality-comment
@@ -1165,6 +1172,7 @@
                    :lipas.sports-site.circumstances.floorball/corner-pieces-count
                    :lipas.sports-site.circumstances/saunas-count
                    :lipas.sports-site.circumstances/separate-referee-locker-room?
+                   :lipas.sports-site.circumstances/doping-test-facilities?
                    :lipas.sports-site.circumstances/locker-room-quality-comment
                    :lipas.sports-site.circumstances/defilbrillator?
                    :lipas.sports-site.circumstances/stretcher?
@@ -1862,3 +1870,8 @@
   (s/keys :req [:lipas.feedback/type
                 :lipas.feedback/text]
           :opt [:lipas.feedback/sender]))
+
+;;; Check sports-site name
+(s/def :lipas.api.check-sports-site-name/payload
+  (s/keys :req-un [:lipas.sports-site/lipas-id
+                   :lipas.sports-site/name]))

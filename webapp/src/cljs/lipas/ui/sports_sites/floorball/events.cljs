@@ -1,13 +1,44 @@
 (ns lipas.ui.sports-sites.floorball.events
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils :refer [==>]]))
+   [clojure.string :as str]
+   [lipas.ui.sports-sites.events :as sports-sites.events]
+   [lipas.ui.utils :as utils :refer [==>]]
+   [re-frame.core :as re-frame]))
 
-(re-frame/reg-event-db
+(def prop-k->derive-fn
+  {:field-length-m         (fn [sports-site]
+                             (-> sports-site :fields first second :length-m))
+   :field-width-m          (fn [sports-site]
+                             (-> sports-site :fields first second :width-m))
+   :height-m               (fn [sports-site]
+                             (-> sports-site :fields first second :minimum-height-m))
+   :area-m2                (fn [sports-site]
+                             (-> sports-site :fields first second :surface-area-m2))
+   :surface-material       (fn [sports-site]
+                             (->> sports-site :fields vals (map :surface-material)))
+   :surface-material-info  (fn [sports-site]
+                             (->> sports-site :fields vals (map :surface-material-product)
+                                  (str/join ", ")))
+   :floorball-fields-count (fn [sports-site]
+                             (->> sports-site :fields count))})
+
+(defmethod sports-sites.events/calc-derived-fields 2240
+  [sports-site]
+  (-> sports-site
+      (update :properties (fn [props]
+                            (reduce-kv
+                             (fn [props prop-k derive-fn]
+                               (if-let [v (derive-fn sports-site)]
+                                 (assoc props prop-k v)
+                                 props))
+                             props
+                             prop-k->derive-fn)))))
+
+(re-frame/reg-event-fx
  ::set-field-field
- (fn [db [_ lipas-id field value]]
-   (let [path [:sports-sites lipas-id :editing :fields 0 field]]
-     (utils/set-field db path value))))
+ (fn [_ [_ lipas-id field value]]
+   (let [path [:fields 0 field]]
+     {:dispatch [::sports-sites.events/edit-field lipas-id path value]})))
 
 (re-frame/reg-event-db
  ::set-dialog-field
