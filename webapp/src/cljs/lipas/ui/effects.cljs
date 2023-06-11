@@ -45,7 +45,7 @@
 (re-frame/reg-fx
  :tracker/event!
  (fn [[category action k v]]
-   (println "Event!" category action k v)
+   #_(println "Event!" category action k v)
    (.push (.-_paq js/window) #js["trackEvent" category action k v])))
 
 (re-frame/reg-fx
