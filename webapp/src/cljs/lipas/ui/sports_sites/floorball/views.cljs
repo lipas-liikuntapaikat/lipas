@@ -217,6 +217,50 @@
         :value     (-> edit-data :lighting-average-lux)
         :on-change #(on-change :lighting-average-lux %)}]}
 
+     ;; Turva-alue pääty 1
+     {:label "Turva-alue, pääty 1"
+      :value (-> display-data :safety-area-end-1-m)
+      :form-field
+      [lui/text-field
+       {:type      "number"
+        :spec      :lipas.sports-site.fields.floorball/safety-area-end-1-m
+        :adornment "m"
+        :value     (-> edit-data :safety-area-end-1-m)
+        :on-change #(on-change :safety-area-end-1-m %)}]}
+
+     ;; Turva-alue pääty 2
+     {:label "Turva-alue, pääty 2"
+      :value (-> display-data :safety-area-end-2-m)
+      :form-field
+      [lui/text-field
+       {:type      "number"
+        :spec      :lipas.sports-site.fields.floorball/safety-area-end-2-m
+        :adornment "m"
+        :value     (-> edit-data :safety-area-end-2-m)
+        :on-change #(on-change :safety-area-end-2-m %)}]}
+
+     ;; Turva-alue sivu 1
+     {:label "Turva-alue, sivu 1"
+      :value (-> display-data :safety-area-side-1-m)
+      :form-field
+      [lui/text-field
+       {:type      "number"
+        :spec      :lipas.sports-site.fields.floorball/safety-area-side-1-m
+        :adornment "m"
+        :value     (-> edit-data :safety-area-side-1-m)
+        :on-change #(on-change :safety-area-side-1-m %)}]}
+
+     ;; Turva-alue sivu 2
+     {:label "Turva-alue, sivu 2"
+      :value (-> display-data :safety-area-side-2-m)
+      :form-field
+      [lui/text-field
+       {:type      "number"
+        :spec      :lipas.sports-site.fields.floorball/safety-area-side-2-m
+        :adornment "m"
+        :value     (-> edit-data :safety-area-side-2-m)
+        :on-change #(on-change :safety-area-side-2-m %)}]}
+
      ;; Kaukalon merkki
      {:label "Kaukalon merkki"
       :value (-> display-data :rink-product)
