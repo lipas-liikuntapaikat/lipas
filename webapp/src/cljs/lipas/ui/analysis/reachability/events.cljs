@@ -21,7 +21,6 @@
        :response-format (ajax/transit-response-format)
        :on-success      [::calc-success lipas-id]
        :on-failure      [::calc-failure lipas-id]}
-      :ga/event       ["analysis" "calculate-analysis" lipas-id]
       :tracker/event! ["analysis" "calculate-reachability" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-db
@@ -47,14 +46,13 @@
 
 (re-frame/reg-event-fx
  ::calc-failure
- (fn [{:keys [db]} [_ lipas-id error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:db           (assoc-in db [:analysis :reachability :runs lipas-id :loading?] false)
-      :ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ lipas-id _error]]
+   (let [tr     (-> db :translator)]
+     {:db             (assoc-in db [:analysis :reachability :runs lipas-id :loading?] false)
+      :tracker/event! ["error" "calculate-reachability-failure"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))
 
 (re-frame/reg-event-fx
  ::show-analysis
@@ -88,7 +86,6 @@
       [[:lipas.ui.search.events/clear-filters]
        [:lipas.ui.map.events/show-analysis*]
        [::refresh-analysis]]
-      :ga/event       ["analysis" "show-analysis" lipas-id]
       :tracker/event! ["analysis" "show-analysis" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-db
@@ -224,7 +221,6 @@
        :on-success      [::report-success]
        :on-failure      [::report-failure]}
       :db             (assoc-in db [:analysis :reachability :loading?] true)
-      :ga/event       ["analysis" "download-reachability-report" (str/join "," lipas-ids)]
       :tracker/event! ["analysis" "download-reachability-report"]})))
 
 (re-frame/reg-event-fx
@@ -238,14 +234,13 @@
 
 (re-frame/reg-event-fx
  ::report-failure
- (fn [{:keys [db]} [_ error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:db           (assoc-in db [:analysis :reachability :loading?] false)
-      :ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ _error]]
+   (let [tr (-> db :translator)]
+     {:db             (assoc-in db [:analysis :reachability :loading?] false)
+      :tracker/event! ["error" "reachability-report-failure"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))
 
 (re-frame/reg-event-db
  ::set-population-chart-mode

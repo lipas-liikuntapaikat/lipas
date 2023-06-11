@@ -15,10 +15,9 @@
 
 (re-frame/reg-event-fx
  ::report-failure
- (fn [{:keys [db]} [_ error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ _error]]
+   (let [tr     (-> db :translator)]
+     {:tracker/event! ["error" "stats-report-failed"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))

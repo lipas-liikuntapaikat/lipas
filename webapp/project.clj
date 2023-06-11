@@ -16,7 +16,6 @@
    [re-frame "1.3.0"]
    [tongue "0.2.6"]
    [day8.re-frame/http-fx "0.1.6"]
-   [district0x.re-frame/google-analytics-fx "1.0.0"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]

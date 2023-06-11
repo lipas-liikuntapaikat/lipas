@@ -62,7 +62,7 @@
    ;; `on-success` is a function that returns vector of events to be
    ;; dispatched.
    (let [tr              (-> db :translator)
-         status          (-> result :status)
+         #_#_status      (-> result :status)
          type            (-> result :type :type-code)
          lipas-id        (-> result :lipas-id)
          year            (dec utils/this-year)
@@ -78,14 +78,12 @@
                         (when (#{2510 2520 3110 3130} type)
                           [:lipas.ui.energy.events/fetch-energy-report year type])]
                        dispatch-extras)
-      :ga/event       ["save-sports-site" status type]
       :tracker/event! ["sports-site" "save" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-fx
  ::save-failure
  (fn [{:keys [db]} [_ on-failure error]]
-   (let [tr     (:translator db)
-         fatal? false]
+   (let [tr     (:translator db)]
      {:db           (-> db
                         (assoc-in [:sports-sites :errors (utils/timestamp)] error)
                         (assoc-in [:sports-sites :save-in-progress?] false))
@@ -94,7 +92,7 @@
                        {:message  (tr :notifications/save-failed)
                         :success? false}]]
                      (when on-failure (on-failure error)))
-      :ga/exception [(:message error) fatal?]})))
+      :tracker/event! ["error" "save-sports-site-failure"]})))
 
 (re-frame/reg-event-fx
  ::get-success

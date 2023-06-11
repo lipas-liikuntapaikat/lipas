@@ -32,15 +32,13 @@
      {:db             (-> db
                          (assoc-in [:accessibility :statements lipas-id] data)
                          (assoc-in [:accessibility :loading?] false))
-      :ga/event       ["accessibility" event "lipas-id" lipas-id]
       :tracker/event! ["accessibility" event "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-fx
  ::get-statements-failure
- (fn [{:keys [db]} [_ resp]]
-   (let [fatal? false]
-     {:db           (assoc-in db [:accessibility :loading?] false)
-      :ga/exception [(:message resp) fatal?]})))
+ (fn [{:keys [db]} [_ _resp]]
+   {:db             (assoc-in db [:accessibility :loading?] false)
+    :tracker/event! ["error" "get-accessibility-statements-failure"]}))
 
 (re-frame/reg-event-fx
  ::get-app-url
@@ -61,11 +59,9 @@
  (fn [_ [_ lipas-id data]]
    {:lipas.ui.effects/open-link-in-new-window! (:url data)
 
-    :ga/event       ["accessibility" "app-opened" "lipas-id" lipas-id]
     :tracker/event! ["accessibility" "app-opened" "lipas-id" lipas-id]}))
 
 (re-frame/reg-event-fx
  ::get-app-url-failure
- (fn [_ [_ resp]]
-   (let [fatal? false]
-     {:ga/exception [(:message resp) fatal?]})))
+ (fn [_ [_ _resp]]
+   {:tracker/event! ["error" "get-accessibility-app-url-failure"]}))

@@ -106,7 +106,6 @@
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config
-      :ga/event                         ["stats" "download-excel" "sports-stats"]
       :tracker/event!                   ["stats" "download-excel" "sports-stats"]})))
 
 (re-frame/reg-event-db
