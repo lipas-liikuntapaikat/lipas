@@ -49,12 +49,13 @@
 
 (re-frame/reg-event-fx
  ::send-failure
- (fn [{:keys [db]} [joo jo2]]
+ (fn [{:keys [db]} _]
    (let [tr           (:translator db)
          notification {:message  (tr :notifications/save-failed)
                        :success? false}]
-     {:db       (assoc-in db [:feedback :in-progress?] false)
-      :dispatch [:lipas.ui.events/set-active-notification notification]})))
+     {:db           (assoc-in db [:feedback :in-progress?] false)
+      :dispatch     [:lipas.ui.events/set-active-notification notification]
+      :track/event! ["feedback" "send" "status" "failure"]})))
 
 (re-frame/reg-event-fx
  ::send-success
@@ -66,4 +67,5 @@
                     (assoc-in [:feedback :in-progress?] false)
                     (update-in [:feedback :form] dissoc :lipas.feedback/text))
       :dispatch-n [[::close-modal]
-                   [:lipas.ui.events/set-active-notification notification]]})))
+                   [:lipas.ui.events/set-active-notification notification]]
+      :tracker/event! ["feedback" "send" "status" "success"]})))

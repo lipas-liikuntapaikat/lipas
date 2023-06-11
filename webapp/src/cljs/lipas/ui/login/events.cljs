@@ -50,14 +50,17 @@
           [:lipas.ui.search.events/set-logged-in-filters])]}
 
       (when (not= :refresh login-type)
-        {:ga/set   [{:dimension1 (if admin? "admin" "user")}]
-         :ga/event ["user" "login-success"]})))))
+        {:ga/set                 [{:dimension1 (if admin? "admin" "user")}]
+         :ga/event               ["user" "login-success"]
+         :tracker/set-dimension! ["user-type" (if admin? "admin" "user")]
+         :tracker/event!         ["user" "login-success"]})))))
 
 (re-frame/reg-event-fx
  ::login-failure
  (fn [{:keys [db]} [_ result]]
-   {:db       (assoc-in db [:user :login-error] result)
-    :ga/event ["user" "login-failed"]}))
+   {:db             (assoc-in db [:user :login-error] result)
+    :ga/event       ["user" "login-failed"]
+    :tracker/event! ["user" "login-failed"]}))
 
 (re-frame/reg-event-db
  ::clear-errors
@@ -114,7 +117,8 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::login-success :magic-link]
      :on-failure      [::logout]}
-    :ga/event ["user" "magic-link-opened"]}))
+    :ga/event       ["user" "magic-link-opened"]
+    :tracker/event! ["user" "magic-link-opened"]}))
 
 (re-frame/reg-event-fx
  ::logout
@@ -123,8 +127,9 @@
 
     ::local-storage/remove! :login-data
 
-    :dispatch [:lipas.ui.events/navigate "/kirjaudu"]
-    :ga/set   [{:dimension1 "logged-out"}]}))
+    :dispatch               [:lipas.ui.events/navigate "/kirjaudu"]
+    :ga/set                 [{:dimension1 "logged-out"}]
+    :tracker/set-dimension! ["user-type" "guest"]}))
 
 (re-frame/reg-event-fx
  ::order-magic-link
@@ -143,11 +148,13 @@
 (re-frame/reg-event-fx
  ::order-magic-link-success
  (fn [{:keys [db]} [_ result]]
-   {:db       (assoc-in db [:user :magic-link-ordered?] true)
-    :ga/event ["user" "magic-link-order-success"]}))
+   {:db             (assoc-in db [:user :magic-link-ordered?] true)
+    :ga/event       ["user" "magic-link-order-success"]
+    :tracker/event! ["user" "magic-link-order-success"]}))
 
 (re-frame/reg-event-fx
  ::order-magic-link-failed
  (fn [{:keys [db]} [_ result]]
-   {:db       (assoc-in db [:user :login-error] result)
-    :ga/event ["user" "magic-link-order-failed"]}))
+   {:db             (assoc-in db [:user :login-error] result)
+    :ga/event       ["user" "magic-link-order-failed"]
+    :tracker/event! ["user" "magic-link-order-failed"]}))

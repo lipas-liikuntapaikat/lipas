@@ -13,11 +13,12 @@
  ::request-success
  (fn [{:keys [db]} [_ _]]
    (let [tr (:translator db)]
-     {:dispatch [:lipas.ui.events/set-active-notification
-                 {:message  (tr :reset-password/reset-link-sent)
-                  :success? true}]
-      :db       (assoc-in db [:reset-password :success] :reset-link-sent)
-      :ga/event ["user" "reset-password-request"]})))
+     {:dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :reset-password/reset-link-sent)
+                        :success? true}]
+      :db             (assoc-in db [:reset-password :success] :reset-link-sent)
+      :ga/event       ["user" "reset-password-request"]
+      :tracker/event! ["user" "reset-password-request"]})))
 
 
 (re-frame/reg-event-fx
@@ -39,12 +40,13 @@
  ::reset-success
  (fn [{:keys [db]} [_ _]]
    (let [tr (:translator db)]
-     {:dispatch-n [[:lipas.ui.events/set-active-notification
-                    {:message  (tr :reset-password/reset-success)
-                     :success? true}]
+     {:dispatch-n     [[:lipas.ui.events/set-active-notification
+                        {:message  (tr :reset-password/reset-success)
+                         :success? true}]
                    [:lipas.ui.events/navigate "/kirjaudu"]]
-      :db         (assoc-in db [:reset-password :success] :reset-link-sent)
-      :ga/event   ["user" "reset-password-success"]})))
+      :db             (assoc-in db [:reset-password :success] :reset-link-sent)
+      :ga/event       ["user" "reset-password-success"]
+      :tracker/event! ["user" "reset-password-success"]})))
 
 
 (re-frame/reg-event-fx
@@ -69,8 +71,9 @@
                     (when (= 401 (:status resp)) :reset-token-expired)
                     :unknown)
          fatal? (= error :unknown)]
-     {:dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr (keyword :error error))
-                      :success? false}]
-      :db           (assoc-in db [:reset-password :error] error)
-      :ga/exception [(:message resp) fatal?]})))
+     {:dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr (keyword :error error))
+                        :success? false}]
+      :db             (assoc-in db [:reset-password :error] error)
+      :ga/exception   [(:message resp) fatal?]
+      :tracker/event! ["user" "reset-password-failure"]})))

@@ -58,7 +58,7 @@
      ;; Flood prevention
      (if (-> db :analysis :diversity :loading?)
        {}
-       {:db       (assoc-in db [:analysis :diversity :loading?] true)
+       {:db             (assoc-in db [:analysis :diversity :loading?] true)
         :http-xhrio
         {:method          :post
          :uri             url
@@ -71,7 +71,8 @@
          :response-format (ajax/transit-response-format)
          :on-success      [::calc-success id cb]
          :on-failure      [::calc-failure]}
-        :ga/event ["analysis" "calculate-analysis" "diversity"]
+        :ga/event       ["analysis" "calculate-analysis" "diversity"]
+        :tracker/event! ["analysis" "calculate-analysis" "diversity"]
 
         :dispatch-n
         [(when-not skip-search

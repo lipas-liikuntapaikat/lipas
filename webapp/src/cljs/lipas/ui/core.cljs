@@ -29,6 +29,7 @@
 
 (defn track! []
   (let [domain (resolve-cookie-domain)]
+    ;; Google Analytics
     (js/ga
      (fn []
        (js/ga "create" tracking-code domain)

@@ -78,7 +78,8 @@
                         (when (#{2510 2520 3110 3130} type)
                           [:lipas.ui.energy.events/fetch-energy-report year type])]
                        dispatch-extras)
-      :ga/event       ["save-sports-site" status type]})))
+      :ga/event       ["save-sports-site" status type]
+      :tracker/event! ["sports-site" "save" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-fx
  ::save-failure
