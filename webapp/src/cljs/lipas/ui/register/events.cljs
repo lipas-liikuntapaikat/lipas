@@ -34,7 +34,6 @@
      {:db             (-> db
               (assoc-in [:user :registration] result)
               (assoc-in [:user :registration-form] empty-form))
-      :ga/event       ["user" "registered"]
       :tracker/event! ["user" "registered"]})))
 
 (re-frame/reg-event-db

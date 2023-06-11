@@ -15,14 +15,12 @@
    (if-let [login-data (:login-data local-storage)]
      (let [admin? (-> login-data :permissions :admin?)]
        {:db                     (-> db/default-db
-                                  (assoc-in [:user :login] login-data)
-                                  (assoc :logged-in? true)
-                                  (assoc :search search-db/default-db-logged-in))
+                                    (assoc-in [:user :login] login-data)
+                                    (assoc :logged-in? true)
+                                    (assoc :search search-db/default-db-logged-in))
         :dispatch               [:lipas.ui.login.events/refresh-login]
-        :ga/set                 [{:dimension1 (if admin? "admin" "user")}]
         :tracker/set-dimension! [:user-type (if admin? "admin" "user")]})
      {:db                     db/default-db
-      :ga/set                 [{:dimension1 "guest"}]
       :tracker/set-dimension! [:user-type "guest"]})))
 
 (re-frame/reg-event-db
@@ -94,7 +92,6 @@
      (let [old-match (:current-route db)
            ctrls     (rfc/apply-controllers (:controllers old-match) new-match)]
        {:db                 (assoc db :current-route (assoc new-match :controllers ctrls))
-        :ga/page-view       [path]
         :tracker/page-view! [path]})
      {})))
 

@@ -17,7 +17,6 @@
                        {:message  (tr :reset-password/reset-link-sent)
                         :success? true}]
       :db             (assoc-in db [:reset-password :success] :reset-link-sent)
-      :ga/event       ["user" "reset-password-request"]
       :tracker/event! ["user" "reset-password-request"]})))
 
 
@@ -33,8 +32,7 @@
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::request-success]
      :on-failure      [::failure]}
-    :dispatch [::clear-feedback]
-    :ga/event ["user" "reset-password-request"]}))
+    :dispatch [::clear-feedback]}))
 
 (re-frame/reg-event-fx
  ::reset-success
@@ -45,7 +43,6 @@
                          :success? true}]
                    [:lipas.ui.events/navigate "/kirjaudu"]]
       :db             (assoc-in db [:reset-password :success] :reset-link-sent)
-      :ga/event       ["user" "reset-password-success"]
       :tracker/event! ["user" "reset-password-success"]})))
 
 
@@ -75,5 +72,4 @@
                        {:message  (tr (keyword :error error))
                         :success? false}]
       :db             (assoc-in db [:reset-password :error] error)
-      :ga/exception   [(:message resp) fatal?]
-      :tracker/event! ["user" "reset-password-failure"]})))
+      :tracker/event! [(if fatal? "error" "user") "reset-password-failure"]})))

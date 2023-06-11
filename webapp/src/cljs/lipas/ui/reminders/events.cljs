@@ -60,9 +60,8 @@
 
 (re-frame/reg-event-fx
  ::fetch-upcoming-failure
- (fn [_ [_ resp]]
-   (let [fatal? false]
-     {:ga/exception [(:message resp) fatal?]})))
+ (fn [_ [_ _resp]]
+   {:tracker/event! ["error" "fetch-upcoming-reminders-failure"]}))
 
 (re-frame/reg-event-fx
  ::fetch-upcoming-reminders
@@ -104,10 +103,9 @@
 
 (re-frame/reg-event-fx
  ::save-failure
- (fn [{:keys [db]} [_ resp]]
-   (let [tr    (:translator db)
-         fatal true]
-     {:dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/save-failed)
-                      :success? false}]
-      :ga/exception [(:message resp) fatal]})))
+ (fn [{:keys [db]} [_ _resp]]
+   (let [tr (:translator db)]
+     {:dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/save-failed)
+                        :success? false}]
+      :tracker/event! ["error" "save-reminder-failure"]})))

@@ -137,7 +137,6 @@
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config
-      :ga/event                         ["stats" "download-excel" "subsid"]
       :tracker/event!                   ["stats" "download-excel" "subsidies"]})))
 
 (re-frame/reg-event-fx

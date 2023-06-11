@@ -93,9 +93,8 @@
 
 (re-frame/reg-event-fx
  ::fetch-energy-report-failure
- (fn [_ [_ resp]]
-   (let [fatal? false]
-     {:ga/exception [(:message resp) fatal?]})))
+ (fn [_ [_ _resp]]
+   {:tracker/event! ["error" "fetch-energy-report-failure"]}))
 
 (re-frame/reg-event-fx
  ::fetch-energy-report

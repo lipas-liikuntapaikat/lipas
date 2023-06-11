@@ -87,5 +87,4 @@
                  :sheet
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config
-      :ga/event                         ["stats" "download-excel" "city-finance"]
       :tracker/event!                   ["stats" "download-excel" "city-finance"]})))

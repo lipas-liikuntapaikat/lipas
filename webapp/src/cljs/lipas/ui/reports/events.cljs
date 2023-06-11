@@ -87,14 +87,13 @@
 
 (re-frame/reg-event-fx
  ::report-failure
- (fn [{:keys [db]} [_ error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:db           (assoc-in db [:reports :downloading?] false)
-      :ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ _error]]
+   (let [tr     (-> db :translator)]
+     {:db             (assoc-in db [:reports :downloading?] false)
+      :tracker/event! ["error" "create-report-failure"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))
 
 (re-frame/reg-event-fx
  ::save-current-report
@@ -108,14 +107,12 @@
      {:dispatch-n
       [[:lipas.ui.user.events/update-user-data user-data]
        [::toggle-save-dialog]]
-      :ga/event       ["user" "save-my-report"]
       :tracker/event! ["user" "save-my-report"]})))
 
 (re-frame/reg-event-fx
  ::open-saved-report
  (fn [_ [_ fields]]
    {:dispatch       [::set-selected-fields fields]
-    :ga/event       ["user" "open-my-report"]
     :tracker/event! ["user" "open-my-report"]}))
 
 (re-frame/reg-event-db

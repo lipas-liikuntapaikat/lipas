@@ -357,7 +357,6 @@
  (fn [{:keys [db]} [_ fit-view?]]
    (let [kw (-> db :search :string)]
      {:dispatch        [::submit-search fit-view?]
-      :ga/event        ["search" "submit" (or kw "")]
       :tracker/search! [(or kw "")]})))
 
 (re-frame/reg-event-fx
@@ -611,7 +610,6 @@
      {:dispatch-n
       [[:lipas.ui.user.events/update-user-data user-data]
        [::toggle-save-dialog]]
-      :ga/event       ["user" "save-my-search"]
       :tracker/event! ["user" "save-my-search"]})))
 
 (re-frame/reg-event-fx
@@ -621,5 +619,4 @@
             (assoc-in [:search :filters] filters)
             (assoc-in [:search :string] string))
     :dispatch       [::submit-search]
-    :ga/event       ["user" "open-saved-search"]
     :tracker/event! ["user" "open-saved-search"]}))

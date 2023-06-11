@@ -71,7 +71,6 @@
          :response-format (ajax/transit-response-format)
          :on-success      [::calc-success id cb]
          :on-failure      [::calc-failure]}
-        :ga/event       ["analysis" "calculate-analysis" "diversity"]
         :tracker/event! ["analysis" "calculate-analysis" "diversity"]
 
         :dispatch-n
@@ -95,14 +94,13 @@
 
 (re-frame/reg-event-fx
  ::calc-failure
- (fn [{:keys [db]} [_ error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:db           (assoc-in db [:analysis :diversity :loading?] false)
-      :ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ _error]]
+   (let [tr (-> db :translator)]
+     {:db             (assoc-in db [:analysis :diversity :loading?] false)
+      :tracker/event! ["error" "calculate-diversity-indices-failure"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))
 
 
 (re-frame/reg-event-fx
@@ -522,14 +520,13 @@
 
 (re-frame/reg-event-fx
  ::fetch-postal-code-areas-failure
- (fn [{:keys [db]} [_ error]]
-   (let [fatal? false
-         tr     (-> db :translator)]
-     {:db           (assoc-in db [:analysis :diversity :loading?] false)
-      :ga/exception [(:message error) fatal?]
-      :dispatch     [:lipas.ui.events/set-active-notification
-                     {:message  (tr :notifications/get-failed)
-                      :success? false}]})))
+ (fn [{:keys [db]} [_ _error]]
+   (let [tr (-> db :translator)]
+     {:db             (assoc-in db [:analysis :diversity :loading?] false)
+      :tracker/event! ["error" "fetch-postal-code-areas-failure"]
+      :dispatch       [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]})))
 
 (re-frame/reg-event-db
  ::select-analysis-chart-areas
