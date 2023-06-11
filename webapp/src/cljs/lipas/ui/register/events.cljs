@@ -31,10 +31,11 @@
  ::registration-success
  (fn [{:keys [db]} [_ result]]
    (let [empty-form (-> default-db :user :registration-form)]
-     {:db (-> db
-           (assoc-in [:user :registration] result)
-           (assoc-in [:user :registration-form] empty-form))
-      :ga/event ["user" "registered"]})))
+     {:db             (-> db
+              (assoc-in [:user :registration] result)
+              (assoc-in [:user :registration-form] empty-form))
+      :ga/event       ["user" "registered"]
+      :tracker/event! ["user" "registered"]})))
 
 (re-frame/reg-event-db
  ::registration-failure

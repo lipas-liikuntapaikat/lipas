@@ -12,7 +12,7 @@
  ::calc-distances-and-travel-times
  (fn [{:keys [db]} [_ lipas-id body]]
    (let [url (str (:backend-url db) "/actions/calc-distances-and-travel-times")]
-     {:db (assoc-in db [:analysis :reachability :runs lipas-id :loading?] true)
+     {:db             (assoc-in db [:analysis :reachability :runs lipas-id :loading?] true)
       :http-xhrio
       {:method          :post
        :uri             url
@@ -21,7 +21,8 @@
        :response-format (ajax/transit-response-format)
        :on-success      [::calc-success lipas-id]
        :on-failure      [::calc-failure lipas-id]}
-      :ga/event ["analysis" "calculate-analysis" (-> db :analysis :lipas-id)]})))
+      :ga/event       ["analysis" "calculate-analysis" lipas-id]
+      :tracker/event! ["analysis" "calculate-reachability" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-db
  ::select-sports-site
@@ -78,7 +79,7 @@
          geoms     (-> rev :location :geometries)
          [lon lat] (resolve-coords geoms)
          coords    {:lon lon :lat lat}]
-     {:db       (-> db
+     {:db             (-> db
                     (assoc-in [:analysis :reachability :runs lipas-id :geoms] geoms)
                     (assoc-in [:analysis :reachability :runs lipas-id :lipas-id] lipas-id)
                     (assoc-in [:analysis :reachability :runs lipas-id :center] coords)
@@ -87,7 +88,8 @@
       [[:lipas.ui.search.events/clear-filters]
        [:lipas.ui.map.events/show-analysis*]
        [::refresh-analysis]]
-      :ga/event ["analysis" "show-analysis" lipas-id]})))
+      :ga/event       ["analysis" "show-analysis" lipas-id]
+      :tracker/event! ["analysis" "show-analysis" "lipas-id" lipas-id]})))
 
 (re-frame/reg-event-db
  ::select-analysis-tab
@@ -221,8 +223,9 @@
                          :read         ajaxp/-body}
        :on-success      [::report-success]
        :on-failure      [::report-failure]}
-      :db       (assoc-in db [:analysis :reachability :loading?] true)
-      :ga/event ["analysis" "download-reachability-report" (str/join "," lipas-ids)]})))
+      :db             (assoc-in db [:analysis :reachability :loading?] true)
+      :ga/event       ["analysis" "download-reachability-report" (str/join "," lipas-ids)]
+      :tracker/event! ["analysis" "download-reachability-report"]})))
 
 (re-frame/reg-event-fx
  ::report-success

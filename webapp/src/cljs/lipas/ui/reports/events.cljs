@@ -108,13 +108,15 @@
      {:dispatch-n
       [[:lipas.ui.user.events/update-user-data user-data]
        [::toggle-save-dialog]]
-      :ga/event ["user" "save-my-report"]})))
+      :ga/event       ["user" "save-my-report"]
+      :tracker/event! ["user" "save-my-report"]})))
 
 (re-frame/reg-event-fx
  ::open-saved-report
  (fn [_ [_ fields]]
-   {:dispatch [::set-selected-fields fields]
-    :ga/event ["user" "open-my-report"]}))
+   {:dispatch       [::set-selected-fields fields]
+    :ga/event       ["user" "open-my-report"]
+    :tracker/event! ["user" "open-my-report"]}))
 
 (re-frame/reg-event-db
  ::toggle-save-dialog
