@@ -10,8 +10,9 @@
 
 (defn floorball-user?
   [email]
-  (or (str/ends-with? email "@salibandy.fi")
-      (str/ends-with? email "@lipas.fi")))
+  (and email
+       (or (str/ends-with? email "@salibandy.fi")
+           (str/ends-with? email "@lipas.fi"))))
 
 (re-frame/reg-sub
  ::visibility
