@@ -948,6 +948,18 @@
 (s/def :lipas.sports-site.fields.floorball/field-accessible-without-strairs?
   boolean?)
 
+(s/def :lipas.sports-site.fields.floorball/safety-area-end-1-m
+  (number-in {:min 0 :max 10}))
+
+(s/def :lipas.sports-site.fields.floorball/safety-area-end-2-m
+  (number-in {:min 0 :max 10}))
+
+(s/def :lipas.sports-site.fields.floorball/safety-area-side-1-m
+  (number-in {:min 0 :max 10}))
+
+(s/def :lipas.sports-site.fields.floorball/safety-area-side-2-m
+  (number-in {:min 0 :max 10}))
+
 (s/def :lipas.sports-site.fields/floorball
   (s/merge :lipas.sports-site.fields/field
            (s/keys
@@ -967,6 +979,10 @@
                      :lipas.sports-site.fields.floorball/lighting-goal-2-lux
                      :lipas.sports-site.fields.floorball/lighting-center-point-lux
                      :lipas.sports-site.fields.floorball/lighting-average-lux
+                     :lipas.sports-site.fields.floorball/safety-area-end-1-m
+                     :lipas.sports-site.fields.floorball/safety-area-end-2-m
+                     :lipas.sports-site.fields.floorball/safety-area-side-1-m
+                     :lipas.sports-site.fields.floorball/safety-area-side-2-m
                      :lipas.sports-site.fields.floorball/scoreboard-visible-to-benches?
                      :lipas.sports-site.fields.floorball/scoreboard-visible-to-officials?
                      :lipas.sports-site.fields.floorball/stands-total-capacity-person
