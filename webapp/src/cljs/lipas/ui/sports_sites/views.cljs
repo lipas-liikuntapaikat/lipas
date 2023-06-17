@@ -101,17 +101,17 @@
      {:label      (tr :lipas.sports-site/name)
       :value      (-> display-data :name)
       :form-field [lui/text-field
-                   {:spec      :lipas.sports-site/name
-                    :required  true
-                    :value     (-> edit-data :name)
-                    :on-change #(on-change :name %)
-                    :adornment (when name-conflict?
-                                 (r/as-element [mui/icon {:color "secondary"} "warning"]))
+                   {:spec        :lipas.sports-site/name
+                    :required    true
+                    :value       (-> edit-data :name)
+                    :on-change   #(on-change :name %)
+                    :adornment   (when name-conflict?
+                                   (r/as-element [mui/icon {:color "secondary"} "warning"]))
                     :helper-text (when name-conflict?
                                    "Nimi on jo käytössä toisella
                                    liikuntapaikalla. Keksi
                                    yksilöivämpi nimi.") ; TODO translations
-                    :on-blur   #(==> [::events/check-sports-site-name lipas-id %])}]}
+                    :on-blur     #(==> [::events/check-sports-site-name lipas-id %])}]}
 
      ;; Localized name(s)
      (into
@@ -156,7 +156,7 @@
       :form-field
       [lui/text-field
        {:spec      :lipas.sports-site/comment
-        :rows      5
+        :min-rows  5
         :value     (-> edit-data :comment)
         :multiline true
         :on-change #(on-change :comment %)}]}

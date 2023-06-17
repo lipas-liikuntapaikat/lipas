@@ -70,7 +70,7 @@
        :spec        :lipas.user/permissions-request
        :value       (-> form-data :user-data :permissions-request)
        :on-change   #(set-field :user-data :permissions-request %)
-       :rows        3
+       :min-rows    3
        :placeholder (tr :lipas.user/permissions-example)
        :helper-text (tr :lipas.user/permissions-help)}]
 
