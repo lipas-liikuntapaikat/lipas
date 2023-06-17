@@ -9,7 +9,7 @@
     [text-fields/text-field
      {:label      label
       :multiline  multiline?
-      :rows       rows
+      :min-rows   rows
       :value      value
       :disabled   true
       :read-only? true}]))
