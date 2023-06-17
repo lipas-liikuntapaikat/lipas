@@ -67,7 +67,7 @@
                 [:new-sports-site :data entities-k])]
      (utils/save-entity db path value))))
 
-#_(re-frame/reg-event-db
+(re-frame/reg-event-db
  ::remove-field
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id

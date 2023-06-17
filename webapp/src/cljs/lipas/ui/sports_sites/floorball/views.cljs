@@ -363,7 +363,7 @@
           :value     (-> edit-data :audience-stand-access)
           :on-change #(on-change :audience-stand-access %)}]})]))
 
-#_(defn field-dialog
+(defn field-dialog
   [{:keys [tr lipas-id]}]
   (let [open?  (<== [::subs/dialog-open? :field])
         data   (<== [::subs/dialog-data :field])
@@ -389,7 +389,7 @@
        :on-change    (fn [field value]
                        (==> [::events/set-dialog-field :field field value]))}]]))
 
-#_(def fields-table-headers
+(def fields-table-headers
   [[:name {:fi "Nimi"}]
    [:length-m {:fi "Pituus (m)"}]
    [:width-m {:fi "Leveys (m)"}]
@@ -416,7 +416,7 @@
    [:audience-stand-access {:fi "Yleisön kulku katsomoon"}]
    [:field-accessible-without-strairs? {:fi "Pääseekö kenttätasolle ilman rappusia"}]])
 
-#_(defn fields-table
+(defn fields-table
   [{:keys [tr display-data edit-data read-only? lipas-id]}]
   (let [locale  (tr)
         headers (map (juxt first (comp locale second)) fields-table-headers)]
@@ -1090,14 +1090,14 @@
 
      [lui/sub-heading {:label "Kenttä"}]
 
-     #_[fields-table
-        {:tr           tr
-         :lipas-id     lipas-id
-         :read-only?   read-only?
-         :display-data (:fields display-data)
-         :edit-data    (:fields edit-data)}]
+     [fields-table
+      {:tr           tr
+       :lipas-id     lipas-id
+       :read-only?   read-only?
+       :display-data (:fields display-data)
+       :edit-data    (:fields edit-data)}]
 
-     [field-form
+     #_[field-form
       {:tr           tr
        :read-only?   read-only?
        :visibility   visibility
