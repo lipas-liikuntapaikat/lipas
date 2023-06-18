@@ -71,3 +71,9 @@
  :<- [::floorball]
  (fn [floorball _]
    (:roof-trussess-operation-model floorball)))
+
+(re-frame/reg-sub
+ ::field-surface-materials
+ :<- [::floorball]
+ (fn [floorball _]
+   (:field-surface-materials floorball)))

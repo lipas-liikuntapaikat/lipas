@@ -860,6 +860,8 @@
 (s/def :lipas.sports-site.fields.field/type
   #{"football-field" "floorball-field"})
 
+;; UUID just doesn't work with complex spec coercions
+(s/def :lipas.sports-site.fields.field/field-id (str-in 36 36))
 (s/def :lipas.sports-site.fields.field/name (str-in 2 100))
 (s/def :lipas.sports-site.fields.field/length-m (number-in :min 0 :max (inc 200)))
 (s/def :lipas.sports-site.fields.field/width-m (number-in :min 0 :max (inc 200)))
@@ -867,7 +869,8 @@
 (s/def :lipas.sports-site.fields.field/surface-area-m2 (number-in :min 0 :max (inc 20000)))
 
 (s/def :lipas.sports-site.fields/field
-  (s/keys :req-un [:lipas.sports-site.fields.field/type]
+  (s/keys :req-un [:lipas.sports-site.fields.field/type
+                   :lipas.sports-site.fields.field/field-id]
           :opt-un [:lipas.sports-site.fields.field/name
                    :lipas.sports-site.fields.field/length-m
                    :lipas.sports-site.fields.field/width-m
@@ -880,7 +883,7 @@
 (s/def :lipas.sports-site.fields.floorball/minimum-height-m ::real)
 
 (s/def :lipas.sports-site.fields.floorball/surface-material
-  (into #{} (keys materials/floorball-field-surface-materials)))
+  (into #{} (keys materials/field-surface-materials)))
 
 (s/def :lipas.sports-site.fields.floorball/surface-material-product
   (str-in 2 100))

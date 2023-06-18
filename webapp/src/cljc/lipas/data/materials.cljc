@@ -156,6 +156,3 @@
          {"carpet" {:fi "Matto"
                     :se "Matta"
                     :en "Carpet"}}))
-
-(def floorball-field-surface-materials
-  (select-keys field-surface-materials ["resin" "wood" "carpet"]))
