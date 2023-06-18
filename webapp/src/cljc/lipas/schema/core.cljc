@@ -1894,3 +1894,14 @@
 (s/def :lipas.api.check-sports-site-name/payload
   (s/keys :req-un [:lipas.sports-site/lipas-id
                    :lipas.sports-site/name]))
+
+(s/def :lipas.api.find-fields/field-types
+  (s/coll-of :lipas.sports-site.fields.field/type
+             :min-count 0
+             :max-count 100
+             :distinct true
+             :into []))
+
+;; Find fields
+(s/def :lipas.api.find-fields/payload
+  (s/keys :req-un [:lipas.api.find-fields/field-types]))
