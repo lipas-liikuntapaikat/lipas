@@ -137,7 +137,7 @@
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:no-doc    true
+        {:no-doc    false
          :responses {200 {:body (s/coll-of :lipas/sports-site)}}
          :parameters
          {:path  {:type-code :lipas.sports-site.type/type-code}
@@ -170,6 +170,16 @@
          :handler
          (fn [{:keys [body-params]}]
            (core/search search body-params))}}]
+
+      ["/actions/find-fields"
+       {:post
+        {:no-doc     false
+         :parameters {:body :lipas.api.find-fields/payload}
+         :responses  {200 {:body (s/coll-of :lipas/sports-site)}}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/search-fields search body-params)})}}]
 
       ["/actions/register"
        {:post

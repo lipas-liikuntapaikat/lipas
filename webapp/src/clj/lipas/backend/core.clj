@@ -298,6 +298,7 @@
         type-code     (-> sports-site :type :type-code)
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
+        field-types   (->> sports-site :fields (map :type) distinct)
         search-meta   {:admin {:name (-> sports-site :admin admins)}
                        :owner {:name (-> sports-site :owner owners)}
                        :location
@@ -313,7 +314,9 @@
                        {:name          (-> type-code types :name)
                         :tags          (-> type-code types :tags)
                         :main-category {:name (:name main-category)}
-                        :sub-category  {:name (:name sub-category)}}}]
+                        :sub-category  {:name (:name sub-category)}}
+                       :fields
+                       {:field-types field-types}}]
     (assoc sports-site :search-meta search-meta)))
 
 (defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
@@ -350,6 +353,22 @@
 (defn search [search params]
   (let [idx-name "sports_sites_current"]
     (search/search search idx-name params)))
+
+(defn search-fields [search {:keys [field-types]}]
+  (let [idx-name "sports_sites_current"
+        params   {:size             1000
+                  :track_total_hits 50000
+                  :_source
+                  {:excludes ["search-meta.*"]}
+                  :query
+                  {:bool
+                   {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
+                           {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
+    (-> (search/search search idx-name params)
+        :body
+        :hits
+        :hits
+        (->> (map :_source)))))
 
 (defn add-to-integration-out-queue! [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
@@ -588,6 +607,8 @@
 
   (check-sports-site-name search2 {:lipas-id 89211 :name "Tapanilan Urheilukeskus / "})
   (check-sports-site-name search2 {:lipas-id 0 :name "Kirkonkylän kaukalo"})
+
+  (search-fields search2 {:field-types ["floorball-field"]})
 
   (def results (atom []))
   (require '[cheshire.core :as json])
