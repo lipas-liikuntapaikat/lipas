@@ -1,4 +1,6 @@
-(ns lipas.data.floorball)
+(ns lipas.data.floorball
+  (:require
+   [lipas.data.materials :as materials]))
 
 (def floor-elasticity
   {"point" {:fi "Piste"
@@ -42,3 +44,6 @@
    "lift-required"  {:fi "Tarvitsee nostimen"
                      :se ""
                      :en "Lift is required"}})
+
+(def field-surface-materials
+  (select-keys materials/field-surface-materials ["resin" "wood" "carpet"]))

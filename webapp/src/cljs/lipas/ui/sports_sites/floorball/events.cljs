@@ -1,23 +1,31 @@
 (ns lipas.ui.sports-sites.floorball.events
   (:require
    [clojure.string :as str]
+   [lipas.data.materials :as materials]
    [lipas.ui.sports-sites.events :as sports-sites.events]
-   [lipas.ui.utils :as utils :refer [==>]]
+   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
+
+(def surface-materials-set (into #{} (keys materials/surface-materials)))
 
 (def prop-k->derive-fn
   {:field-length-m         (fn [sports-site]
-                             (-> sports-site :fields first second :length-m))
+                             (->> sports-site :fields first second :length-m))
    :field-width-m          (fn [sports-site]
-                             (-> sports-site :fields first second :width-m))
+                             (->> sports-site :fields first second :width-m))
    :height-m               (fn [sports-site]
-                             (-> sports-site :fields first second :minimum-height-m))
+                             (->> sports-site :fields first second :minimum-height-m))
    :area-m2                (fn [sports-site]
-                             (-> sports-site :fields first second :surface-area-m2))
+                             (->> sports-site :fields vals (keep :surface-area-m2) (apply +)))
    :surface-material       (fn [sports-site]
-                             (->> sports-site :fields vals (map :surface-material)))
+                             (->> sports-site
+                                  :fields
+                                  vals
+                                  (keep :surface-material)
+                                  distinct
+                                  (filter surface-materials-set)))
    :surface-material-info  (fn [sports-site]
-                             (->> sports-site :fields vals (map :surface-material-product)
+                             (->> sports-site :fields vals (keep :surface-material-product)
                                   (str/join ", ")))
    :floorball-fields-count (fn [sports-site]
                              (->> sports-site :fields count))})
@@ -33,12 +41,6 @@
                                  props))
                              props
                              prop-k->derive-fn)))))
-
-(re-frame/reg-event-fx
- ::set-field-field
- (fn [_ [_ lipas-id field value]]
-   (let [path [:fields 0 field]]
-     {:dispatch [::sports-sites.events/edit-field lipas-id path value]})))
 
 (re-frame/reg-event-db
  ::set-dialog-field
@@ -59,13 +61,19 @@
          (update-in [:sports-sites :floorball :dialogs dialog :open?] not)
          (assoc-in [:sports-sites :floorball :dialogs dialog :data] data)))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::save-dialog
- (fn [db [_ entities-k lipas-id value]]
-   (let [path (if lipas-id
-                [:sports-sites lipas-id :editing entities-k]
-                [:new-sports-site :data entities-k])]
-     (utils/save-entity db path value))))
+ (fn [{:keys [db]} [_ entities-k lipas-id value]]
+   (let [path     (if lipas-id
+                    [:sports-sites lipas-id :editing entities-k]
+                    [:new-sports-site :data entities-k])
+         new-db   (utils/save-entity db path value)
+         entities (get-in new-db path)]
+     {:db         new-db
+      :dispatch-n [(when lipas-id
+                     [:lipas.ui.sports-sites.events/edit-field lipas-id [entities-k] entities])
+                   (when-not lipas-id
+                     [:lipas.ui.sports-sites.events/edit-new-site-field [entities-k] entities])]})))
 
 (re-frame/reg-event-db
  ::remove-field

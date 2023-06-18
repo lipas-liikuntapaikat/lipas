@@ -354,8 +354,6 @@
                   #_(#{2230 1350 1340} (:type-code type))) ; football
           {:circumstances (-> latest
                               :circumstances
-                              (update :audience-stand-access
-                                      #(get-in audience-stand-access [% locale]))
                               (update :player-entrance
                                       #(get-in player-entrance [% locale]))
                               (update :car-parking-economics-model
@@ -457,7 +455,7 @@
  ::new-site-valid?
  :<- [::new-sports-site]
  (fn [new-sports-site _]
-   (let [data (-> new-sports-site :data)]
+   (let [data (-> new-sports-site :data utils/make-saveable)]
      (tap> (s/explain :lipas/new-sports-site data))
      (s/valid? :lipas/new-sports-site data))))
 

@@ -212,9 +212,16 @@
               (update :new-sports-site dissoc :template))})))
 
 (re-frame/reg-event-db
+ ::calc-new-site-derived-fields
+ (fn [db [_  sports-site]]
+   (assoc-in db [:new-sports-site :data] (calc-derived-fields sports-site))))
+
+(re-frame/reg-event-fx
  ::edit-new-site-field
- (fn [db [_ path value]]
-   (utils/set-field db (into [:new-sports-site :data] path) value)))
+ (fn [{:keys [db]} [_ path value]]
+   (let [new-db (utils/set-field db (into [:new-sports-site :data] path) value)]
+     {:db new-db
+      :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
 (re-frame/reg-event-db
  ::toggle-delete-dialog

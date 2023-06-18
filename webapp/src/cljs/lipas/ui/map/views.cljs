@@ -937,8 +937,9 @@
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
 
-          set-field set-new-site-field
-          geom-type (:geometry-type type)]
+          floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+          set-field       set-new-site-field
+          geom-type       (:geometry-type type)]
 
       [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
@@ -977,7 +978,7 @@
 
        [mui/grid {:item true :xs 12}
 
-        ;; Step 1 content
+        ;; Step 1 type
         (when (= active-step (dec 1))
           #_[mui/grid {:item true :xs 12}]
           [type-selector-single
@@ -986,7 +987,7 @@
             :types     types
             :on-change #(==> [::sports-site-events/select-new-site-type %])}])
 
-        ;; Step 2 content
+        ;; Step 2 geom
         (when (= active-step (dec 2))
           (let [type-code (:type-code type)]
             (if-not geom
@@ -1232,7 +1233,9 @@
               :variant   "fullWidth"
               :style     {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-             [mui/tab {:label (tr :lipas.sports-site/properties)}]]
+             [mui/tab {:label (tr :lipas.sports-site/properties)}]
+             (when (contains? floorball-types (-> data :type :type-code))
+               [mui/tab {:label "Olosuhteet"}])]
 
             (case @selected-tab
 
@@ -1270,7 +1273,31 @@
                   :on-change  (partial set-field :properties)
                   :edit-data  (:properties data)
                   :geoms      (-> data :location :geometries)
-                  :problems?  problems?}])]])]
+                  :problems?  problems?}]
+              2 (condp contains? (-> data :type :type-code)
+
+                  ;; Floorball specific
+                  floorball-types
+                  [floorball/form
+                   {:tr           tr
+                    :lipas-id     nil
+                    :type-code    (-> data :type :type-code)
+                    :read-only?   false
+                    :on-change    set-field
+                    :display-data data
+                    :edit-data    data
+                    :key          (-> data :type :type-code)}]
+
+                  ;; Football specific
+                  #_#_football-types
+                  [football/circumstances-form
+                   {:tr           tr
+                    :type-code    (or (-> edit-data :type :type-code) type-code)
+                    :read-only?   (not editing?)
+                    :on-change    (partial set-field :circumstances)
+                    :display-data (:circumstances display-data)
+                    :edit-data    (:circumstances edit-data)
+                    :key          (-> edit-data :type :type-code)}]))]])]
 
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}
