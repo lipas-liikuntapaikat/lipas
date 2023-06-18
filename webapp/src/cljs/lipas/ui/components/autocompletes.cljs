@@ -7,8 +7,9 @@
 
 (defn autocomplete
   [{:keys [label items value value-fn label-fn on-change sort-fn spec multi?
-           required helper-text deselect? sort-cmp render-option-fn]
+           required helper-text deselect? sort-cmp render-option-fn disabled]
     :or   {label-fn :label
+           disabled false
            sort-fn  label-fn
            sort-cmp compare
            value-fn :value}}]
@@ -20,6 +21,7 @@
          :value                (if multi?
                                  (clj->js (map pr-str value))
                                  (pr-str value))
+         :disabled             disabled
          :label                label
          :disableCloseOnSelect multi?
          :disableClearable     (not deselect?)
@@ -44,9 +46,9 @@
                                  (when (and required (not value))
                                    (set! (.-error (.-InputLabelProps params)) true))
                                  (r/create-element TextField params))
-         :getOptionLabel       (fn [opt]
+         :getOptionLabel (fn [opt]
                                  (-> opt items-by-vals label-fn str))
-         :options              (->> items
+         :options        (->> items
                                     (sort-by sort-fn sort-cmp)
                                     (map (comp pr-str value-fn)))}
         (when render-option-fn

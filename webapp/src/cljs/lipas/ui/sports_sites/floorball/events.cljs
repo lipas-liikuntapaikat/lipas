@@ -28,7 +28,11 @@
                              (->> sports-site :fields vals (keep :surface-material-product)
                                   (str/join ", ")))
    :floorball-fields-count (fn [sports-site]
-                             (->> sports-site :fields count))})
+                             (->> sports-site :fields count))
+   :stand-capacity-person (fn [sports-site]
+                            (->> sports-site :fields vals
+                                 (keep :stands-total-capacity-person)
+                                 (apply +)))})
 
 (defmethod sports-sites.events/calc-derived-fields 2240
   [sports-site]
