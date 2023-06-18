@@ -319,7 +319,7 @@
                        {:field-types field-types}}]
     (assoc sports-site :search-meta search-meta)))
 
-(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
+#_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
   (let [smaterial (-> envelope :base-floor-structure)
         area-m2   (-> building :total-ice-area-m2)]
     (-> ice-stadium
@@ -329,7 +329,7 @@
         utils/clean
         enrich*)))
 
-(defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
+#_(defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
   (-> swimming-pool
       (assoc-in [:properties :area-m2] (-> building :total-water-area-m2))
       utils/clean
@@ -337,10 +337,10 @@
 
 (defmulti enrich (comp :type-code :type))
 (defmethod enrich :default [sports-site] (enrich* sports-site))
-(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
-(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
-(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
-(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
+#_(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
+#_(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
+#_(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
+#_(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
   ([search sports-site]
