@@ -281,12 +281,13 @@
                     :on-change #(on-change :city :neighborhood %)}]}]))
 
 (defn surface-material-selector
-  [{:keys [tr value on-change label multi? spec tooltip]}]
+  [{:keys [tr value on-change label multi? spec tooltip disabled]}]
   (let [locale (tr)
         items  (<== [::subs/surface-materials])]
     [lui/autocomplete
      {:value       value
       :multi?      multi?
+      :disabled    disabled
       :helper-text tooltip
       :label       label
       :spec        spec
@@ -472,24 +473,29 @@
            :read-only? read-only?}]])]
 
      (sort-by
-      (juxt (comp - :priority) #(or (:sort %) (:label %)))
+      (juxt :disabled? (comp - :priority) #(or (:sort %) (:label %)))
 
       (into
        (for [[k v] types-props
              :let  [label     (-> types-props k :name locale)
                     data-type (:data-type v)
-                    tooltip   (-> v :description locale)
+                    tooltip   (if (:derived? v)
+                                "Lasketaan automaattisesti olosuhdetiedoista"
+                                (-> v :description locale))
                     spec      (keyword :lipas.sports-site.properties k)
                     value     (-> edit-data k)
-                    on-change #(on-change k %)]]
-         {:label    label
-          :value    (-> display-data k)
-          :priority (:priority v)
+                    on-change #(on-change k %)
+                    disabled?  (:derived? v)]]
+         {:label     label
+          :value     (-> display-data k)
+          :disabled? disabled?
+          :priority  (:priority v)
           :form-field
           (cond
             (material-field? k) [surface-material-selector
                                  {:tr        tr
                                   :multi?    (= :surface-material k)
+                                  :disabled  disabled?
                                   :tooltip   tooltip
                                   :spec      spec
                                   :label     label
@@ -519,9 +525,11 @@
             (= "boolean" data-type)  [lui/checkbox
                                       {:value     value
                                        :tooltip   tooltip
+                                       :disabled  disabled?
                                        :on-change on-change}]
             :else                    [lui/text-field
                                       {:value     value
+                                       :disabled  disabled?
                                        :tooltip   tooltip
                                        :spec      spec
                                        :type      (when (#{"numeric" "integer"} data-type)
@@ -543,17 +551,17 @@
 
 
             [;; Rink 1 width
-            {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
-             :sort     "1A"
-             :priority 1
-             :value    (get-in display-data [:rinks 0 :width-m])
-             :form-field
-             [lui/text-field
-              {:adornment "m"
-               :type      "number"
-               :value     (get-in edit-data [:rinks 0 :width-m])
-               :spec      :lipas.ice-stadium.rink/width-m
-               :on-change #(on-change 0 :width-m %)}]}
+             {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
+              :sort     "1A"
+              :priority 1
+              :value    (get-in display-data [:rinks 0 :width-m])
+              :form-field
+              [lui/text-field
+               {:adornment "m"
+                :type      "number"
+                :value     (get-in edit-data [:rinks 0 :width-m])
+                :spec      :lipas.ice-stadium.rink/width-m
+                :on-change #(on-change 0 :width-m %)}]}
 
              ;; Rink 1 length
              {:label    (tr :lipas.ice-stadium.rinks/rink1-length)
