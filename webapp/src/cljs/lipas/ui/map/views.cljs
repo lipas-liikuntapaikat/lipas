@@ -461,10 +461,11 @@
           lipas-id     (:lipas-id display-data)
           edit-data    (:edit-data site-data)
 
-          type-code           (-> display-data :type :type-code)
-          floorball-types     (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          #_#_football-types  (<== [:lipas.ui.sports-sites.football.subs/type-codes])
-          accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
+          type-code            (-> display-data :type :type-code)
+          floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+          #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+          accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
@@ -528,7 +529,8 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when (or (floorball-types type-code)
+         (when (or (and (floorball-types type-code)
+                        (= :floorball floorball-visibility))
                    #_(football-types type-code))
            [mui/tab
             {:style {:min-width 0}
@@ -591,15 +593,18 @@
 
               ;; Floorball specific
               floorball-types
-              [floorball/form
-               {:tr           tr
-                :lipas-id     lipas-id
-                :type-code    (or (-> edit-data :type :type-code) type-code)
-                :read-only?   (not editing?)
-                :on-change    set-field
-                :display-data display-data
-                :edit-data    edit-data
-                :key          (-> edit-data :type :type-code)}]
+              [:<>
+               [mui/tabs {:value "floorball" :variant "standard"}
+                [mui/tab {:value "floorball" :label "Salibandy"}]]
+               [floorball/form
+                {:tr           tr
+                 :lipas-id     lipas-id
+                 :type-code    (or (-> edit-data :type :type-code) type-code)
+                 :read-only?   (not editing?)
+                 :on-change    set-field
+                 :display-data display-data
+                 :edit-data    edit-data
+                 :key          (-> edit-data :type :type-code)}]]
 
               ;; Football specific
               #_#_football-types
@@ -937,9 +942,10 @@
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
 
-          floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          set-field       set-new-site-field
-          geom-type       (:geometry-type type)]
+          floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+          set-field            set-new-site-field
+          geom-type            (:geometry-type type)]
 
       [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
@@ -1234,7 +1240,8 @@
               :style     {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
              [mui/tab {:label (tr :lipas.sports-site/properties)}]
-             (when (contains? floorball-types (-> data :type :type-code))
+             (when (and (contains? floorball-types (-> data :type :type-code))
+                        (= :floorball floorball-visibility))
                [mui/tab {:label "Olosuhteet"}])]
 
             (case @selected-tab
@@ -1278,15 +1285,18 @@
 
                   ;; Floorball specific
                   floorball-types
-                  [floorball/form
-                   {:tr           tr
-                    :lipas-id     nil
-                    :type-code    (-> data :type :type-code)
-                    :read-only?   false
-                    :on-change    set-field
-                    :display-data data
-                    :edit-data    data
-                    :key          (-> data :type :type-code)}]
+                  [:<>
+                   [mui/tabs {:value "floorball" :variant "standard"}
+                    [mui/tab {:value "floorball" :label "Salibandy"}]]
+                   [floorball/form
+                    {:tr           tr
+                     :lipas-id     nil
+                     :type-code    (-> data :type :type-code)
+                     :read-only?   false
+                     :on-change    set-field
+                     :display-data data
+                     :edit-data    data
+                     :key          (-> data :type :type-code)}]]
 
                   ;; Football specific
                   #_#_football-types

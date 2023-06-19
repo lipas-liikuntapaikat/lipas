@@ -3,7 +3,8 @@
    [lipas.data.floorball :as floorball]))
 
 (def default-db
-  {:type-codes                    #{2240}
+  ;; salibandyhalli, liikuntasali, liikuntahalli, monitoimihalli
+  {:type-codes                    #{2240 2150 2210 2220}
    :floor-elasticity              floorball/floor-elasticity
    :player-entrance               floorball/player-entrance
    :audience-stand-access         floorball/audience-stand-access

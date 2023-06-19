@@ -272,17 +272,18 @@
     (re-frame/subscribe [:lipas.ui.subs/translator])
     (re-frame/subscribe [:lipas.ui.swimming-pools.subs/pool-types])
     (re-frame/subscribe [:lipas.ui.swimming-pools.subs/accessibility])
+    (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/type-codes])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/floor-elasticity])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/player-entrance])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/audience-stand-access])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/car-parking-economics-model])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/roof-trussess-operation-model])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/field-types])])
- (fn [[site cities admins owners types size-categories
-       materials statuses translator pool-types pool-accessibility
-       floor-elasticity player-entrance audience-stand-access
-       car-parking-economics-model roof-trussess-operation-model
-       field-types] _]
+ (fn [[site cities admins owners types size-categories materials
+       statuses translator pool-types pool-accessibility
+       floorball-types floor-elasticity player-entrance
+       audience-stand-access car-parking-economics-model
+       roof-trussess-operation-model field-types] _]
    (when site
      (let [locale        (translator)
            latest        (or (utils/latest-edit (:edits site))
@@ -350,7 +351,7 @@
         (when (#{2510 2520} (:type-code type)) ; ice stadiums
           {:rinks (:rinks latest)})
 
-        (when (or (#{2240} (:type-code type)) ; floorball
+        (when (or (contains? floorball-types (:type-code type)) ; floorball
                   #_(#{2230 1350 1340} (:type-code type))) ; football
           {:circumstances (-> latest
                               :circumstances
