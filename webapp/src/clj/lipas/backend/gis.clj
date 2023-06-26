@@ -4,11 +4,13 @@
    [clojure.string :as str]
    [geo.io :as gio]
    [geo.jts :as jts]
-   [geo.spatial :as geo])
+   [geo.spatial :as geo]
+   [taoensso.timbre :as log])
   (:import
    [org.locationtech.geowave.analytic GeometryHullTool]
    [org.locationtech.geowave.analytic.distance CoordinateEuclideanDistanceFn]
    [org.locationtech.jts.algorithm ConvexHull]
+   [org.locationtech.jts.geom Envelope]
    [org.locationtech.jts.geom.util GeometryCombiner]
    [org.locationtech.jts.operation.buffer BufferOp]
    [org.locationtech.jts.operation.distance DistanceOp]
@@ -79,13 +81,16 @@
               [(.getX transformed) (.getY transformed)]))
           envelope)))
 
-(defn ->jts-geom [f]
-  (-> f (update :features #(map dummy-props %))
-      json/encode
-      (gio/read-geojson srid)
-      (->> (map :geometry))
-      (GeometryCombiner.)
-      (.combine)))
+(defn ->jts-geom
+  ([f]
+   (->jts-geom f srid))
+  ([f srid]
+   (-> f (update :features #(map dummy-props %))
+       json/encode
+       (gio/read-geojson srid)
+       (->> (map :geometry))
+       (GeometryCombiner.)
+       (.combine))))
 
 (defn wgs84wkt->tm35fin-geom [s]
   (-> s
@@ -202,6 +207,82 @@
 (defn ->feature [geom]
   {:type "Feature" :geometry geom})
 
+(defn ->tm35fin-envelope
+  ([fcoll]
+   (->tm35fin-envelope fcoll 0))
+  ([fcoll buff-m]
+   (let [envelope (-> fcoll
+                      ->jts-geom
+                      .getEnvelope
+                      (jts/transform-geom srid tm35fin-srid)
+                      jts/get-envelope-internal
+                      (doto (.expandBy buff-m)))]
+     {:max-x (.getMaxX envelope)
+      :max-y (.getMaxY envelope)
+      :min-x (.getMinX envelope)
+      :min-y (.getMinY envelope)})))
+
+(defn get-envelope
+  ([jts-geom]
+   (get-envelope jts-geom 0))
+  ([jts-geom buff-m]
+   (let [envelope (-> jts-geom
+                      jts/get-envelope-internal
+                      (doto (.expandBy buff-m)))]
+     {:max-x (.getMaxX envelope)
+      :max-y (.getMaxY envelope)
+      :min-x (.getMinX envelope)
+      :min-y (.getMinY envelope)})))
+
+(defn intersects-envelope?
+  [{:keys [min-x max-x min-y max-y]} jts-geom]
+  (let [jts-envelope (-> [(jts/coordinate min-x min-y)
+                          (jts/coordinate min-x max-y)
+                          (jts/coordinate max-x max-y)
+                          (jts/coordinate max-x min-y)
+                          (jts/coordinate min-x min-y)]
+                         (jts/linear-ring tm35fin-srid)
+                         jts/polygon)]
+    (.intersects jts-envelope jts-geom)))
+
+(defn chunk-envelope
+  "Chunks given envelope to multiple envelopes of `max-size` squares +
+  possible reminder rectangles where sides don't exceed `max-size`."
+  [{:keys [min-x max-x min-y max-y]} max-size]
+  (let [n-max-x (Math/floor (/ (- max-x min-x) max-size))
+        n-max-y (Math/floor (/ (- max-y min-y) max-size))
+        rem-x   (mod (- max-x min-x) max-size)
+        rem-y   (mod (- max-y min-y) max-size)]
+    (into []
+          (for [row (range (if (zero? rem-y) n-max-y (inc n-max-y)))
+                col (range (if (zero? rem-x) n-max-x (inc n-max-x)))]
+            (let [cur-min-x (+ min-x (* col max-size))
+                  cur-max-x (+ min-x (* (inc col) max-size))
+                  cur-min-y (+ min-y (* row max-size))
+                  cur-max-y (+ min-y (* (inc row) max-size))]
+              {:min-x (if (> (+ cur-min-x max-size) max-x)
+                        (if (zero? rem-x) (- max-x max-size) (- max-x rem-x))
+                        cur-min-x)
+               :max-x (if (> (+ cur-min-x max-size) max-x)
+                        max-x
+                        cur-max-x)
+               :min-y (if (> (+ cur-min-y max-size) max-y)
+                        (if (zero? rem-y) (- max-y max-size) (- max-y rem-y))
+                        cur-min-y)
+               :max-y (if (> (+ cur-min-y max-size) max-y)
+                        max-y
+                        cur-max-y)})))))
+
+(comment
+  (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 100} 10)
+  (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 102} 10)
+  (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 10} 10)
+  (chunk-envelope {:min-x 0 :max-x 11 :min-y 0 :max-y 11} 10)
+  (chunk-envelope {:min-x 0 :max-x 21 :min-y 0 :max-y 21} 10)
+  (chunk-envelope {:min-x 10 :max-x 20 :min-y 10 :max-y 20} 10)
+  (chunk-envelope {:min-x 10 :max-x 21 :min-y 10 :max-y 21} 10)
+  (chunk-envelope {:min-x 10 :max-x 31 :min-y 10 :max-y 31} 10))
+
 (comment
 
   (wgs84->tm35fin [23.8259457479965 61.4952794263427])
@@ -215,6 +296,26 @@
        {:type        "Point",
         :coordinates [25.720539797408946,
                       62.62057217751676]}}]})
+
+  (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100}  test-point))
+  (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000}  test-point))
+
+  (-> test-point
+      ->flat-coords
+      (->> (map wgs84->tm35fin-no-wrap))
+      ->jts-multi-point
+      jts/get-envelope-internal
+      (doto (.expandBy 1)))
+  ;; "Env[434354.5312499977 : 434356.5312499977, 6943965.504886635 : 6943967.504886635]"
+  ;; "Env[434355.5312499977 : 434355.5312499977, 6943966.504886635 : 6943966.504886635]"
+  ;; "Env[434345.5312499977 : 434365.5312499977, 6943956.504886635 : 6943976.504886635]"
+  ;; "Env[434353.5312499977 : 434357.5312499977, 6943964.504886635 : 6943968.504886635]"
+  ;; "Env[434353.5312499977 : 434357.5312499977, 6943964.504886635 : 6943968.504886635]"
+
+  ;; => ([434355.5312499977 6943966.504886635])
+
+  (Math/round 434355.5312499977)
+  (->tm35fin-envelope test-point 2)
 
   (def test-point2
     {:type "FeatureCollection",
@@ -253,6 +354,8 @@
         :coordinates
         [[26.2436550567509, 63.9531552213109],
          [25.7583312263512, 63.9746827436437]]}}]})
+
+  (->tm35fin-envelope test-route)
 
   (-> test-route
       ->jts-geom
@@ -315,6 +418,8 @@
           [25.7583312263512, 63.9746827436437]
           [26.2436550567509, 63.9531552213109]]]}}]})
 
+  (->tm35fin-envelope test-polygon)
+
   (require '[lipas.backend.osrm :as osrm])
 
   (osrm/resolve-sources test-polygon)
@@ -337,6 +442,8 @@
         :coordinates [19.720539797408946,
                       65.62057217751676]}}]})
 
+  (geo/bounding-box test-point2)
+
   (calc-buffer test-point2 100)
 
   (->fcoll [(->feature (calc-buffer test-point2 100))])
@@ -356,7 +463,7 @@
 
   (def p101 (wgs84->tm35fin p100))
 
-  (def envelope
+  (def ->tm35fin-envelope
     (epsg3067-point->wgs84-envelope [(:easting p101) (:northing p101)] 125))
 
   (def test-polygon-empty

@@ -9,6 +9,7 @@
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.analysis.reachability :as reachability]
    [lipas.backend.db.db :as db]
+   [lipas.backend.elevation :as elevation]
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
    [lipas.backend.jwt :as jwt]
@@ -377,6 +378,9 @@
 (defn add-to-analysis-queue! [db sports-site]
   (db/add-to-analysis-queue! db (:lipas-id sports-site)))
 
+(defn add-to-elevation-queue! [db sports-site]
+  (db/add-to-elevation-queue! db (:lipas-id sports-site)))
+
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
 (defn save-sports-site!
@@ -568,6 +572,51 @@
         (catch Exception ex
           (log/error ex)
           (db/update-analysis-status! db lipas-id "failed"))))))
+
+(defn process-elevation-queue!
+  [db search]
+  (let [entries (->> (db/get-elevation-queue db))
+        user    (when (seq entries)
+                  (db/get-user-by-email db {:email "robot@lipas.fi"}))]
+    (log/info "Processing" (count entries) "entries from elevation queue")
+
+    ;; Lock
+    (jdbc/with-db-transaction [tx db]
+      (doseq [{:keys [lipas-id]} entries]
+        (db/update-elevation-status! tx lipas-id "in-progress")))
+
+    ;; Process
+    (doseq [{:keys [lipas-id]} entries]
+      (log/info "Processing elevation for" lipas-id)
+      (try
+        (let [orig  (get-sports-site db lipas-id)
+              fcoll (-> orig
+                        :location
+                        :geometries
+                        elevation/enrich-elevation)
+
+              ;; Because previous step might take a while, let's fetch
+              ;; the latest revision again fresh from the db before
+              ;; updating the geoms with elevation.
+              current      (get-sports-site db lipas-id)
+              still-valid? (= (:event-date current) (:event-date orig))]
+
+          (when still-valid?
+            (-> current
+                (assoc-in [:location :geometries] fcoll)
+                (->> (upsert-sports-site!* db user))
+                (as-> $ (index! search $ :sync)))
+
+            (db/delete-from-elevation-queue! db lipas-id)
+            (log/info "Elevation enrichment for" lipas-id "completed successfully!"))
+
+          (when-not still-valid?
+            (log/info "Sports site updated in meanwhile. Putting back into the queue.")
+            (db/update-elevation-status! db lipas-id "pending")))
+
+        (catch Exception ex
+          (log/error ex)
+          (db/update-elevation-status! db lipas-id "failed"))))))
 
 (defn get-newsletter [config]
   (newsletter/retrieve config))
