@@ -35,6 +35,10 @@
         (let [task (tt/every! 30 (fn [] (core/process-analysis-queue! db search)))]
           (swap! tasks assoc :analysis task)))
 
+      (when (some #{:elevation} task-ks)
+        (let [task (tt/every! 15 5 (fn [] (core/process-elevation-queue! db search)))]
+          (swap! tasks assoc :elevation task)))
+
       ;; Keep running forever
       (while true (Thread/sleep 100)))))
 

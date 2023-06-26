@@ -75,3 +75,7 @@ export MAILCHIMP_API_KEY=***FILL_THIS***
 
 # Digitransit
 export DIGITRANSIT_SUBSCRIPTION_KEY=***FILL_THIS***
+
+# MML API
+export MML_COVERAGE_URL="https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2"
+export MML_API_KEY=***FILL_THIS***

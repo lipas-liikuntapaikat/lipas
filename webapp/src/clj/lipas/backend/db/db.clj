@@ -4,6 +4,7 @@
    [hikari-cp.core :as hikari]
    [lipas.backend.db.analysis :as analysis]
    [lipas.backend.db.city :as city]
+   [lipas.backend.db.elevation :as elevation]
    [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
    [lipas.backend.db.reminder :as reminder]
@@ -210,6 +211,27 @@
 (defn get-analysis-queue [db-spec]
   (->> (analysis/get-queue db-spec)
        (map analysis/unmarshall)))
+
+;; Elevation queue ;;
+
+(defn add-to-elevation-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       elevation/marshall
+       (elevation/add-to-queue! db-spec)))
+
+(defn delete-from-elevation-queue! [db-spec lipas-id]
+  (->> {:lipas-id lipas-id}
+       elevation/marshall
+       (elevation/delete-from-queue! db-spec)))
+
+(defn update-elevation-status! [db-spec lipas-id status]
+  (->> {:lipas-id lipas-id :status status}
+       elevation/marshall
+       (elevation/update-status! db-spec)))
+
+(defn get-elevation-queue [db-spec]
+  (->> (elevation/get-queue db-spec)
+       (map elevation/unmarshall)))
 
 ;; City ;;
 

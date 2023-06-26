@@ -34,7 +34,10 @@
     :accessibility-register
     {:base-url   (:accessibility-register-base-url env)
      :system-id  (:accessibility-register-system-id env)
-     :secret-key (:accessibility-register-secret-key env)}}
+     :secret-key (:accessibility-register-secret-key env)}
+    :mml-api
+    {:api-key      (:mml-api-key env)
+     :coverage-url (:mml-coverage-url env)}}
    :server
    {:app  (ig/ref :app)
     :port 8091}

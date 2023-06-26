@@ -12,6 +12,7 @@
 
 (def jh-demo
   {:email    "jh@lipas.fi"
+   :status "active"
    :username "jhdemo"
    :password "jaahalli"
    :permissions
@@ -23,10 +24,11 @@
 
 (def sb-demo
   {:email    "sb@lipas.fi"
+   :status   "active"
    :username "sbdemo"
    :password "atk-on-ihanaa"
    :permissions
-   {:type-codes [2240]
+   {:type-codes  [2240]
     :all-cities? true}
    :user-data
    {:firstname           "Testi"
@@ -35,6 +37,7 @@
 
 (def uh-demo
   {:email    "uh@lipas.fi"
+   :status   "active"
    :username "uhdemo"
    :password "uimahalli"
    :permissions
@@ -47,6 +50,7 @@
 ;; Admin is a person who can login and act as a 'human'
 (def admin
   {:email    "admin@lipas.fi"
+   :status   "active"
    :username "admin"
    :password (:admin-password env)
    :permissions
@@ -58,9 +62,21 @@
 ;; Import user should be used for batch jobs such as data
 ;; migrations and not supposed to login ever.
 (def import-user
-  {:email    "import@lipas.fi"
-   :username "import"
-   :password (str (java.util.UUID/randomUUID)) ; no-one should know
+  {:email     "import@lipas.fi"
+   :status    "active"
+   :username  "import"
+   :password  (str (java.util.UUID/randomUUID)) ; no-one should know
+   :permissions
+   {:admin? true}
+   :user-data {}})
+
+;; Robot user is similar to import user but meant for predictable
+;; automated tasks instead of 'manual' import type of jobs.
+(def robot-user
+  {:email     "robot@lipas.fi"
+   :status    "active"
+   :username  "robot"
+   :password  (str (java.util.UUID/randomUUID)) ; no-one should know
    :permissions
    {:admin? true}
    :user-data {}})
@@ -153,6 +169,7 @@
   (log/info "Seeding default users 'admin' and 'import'")
   (core/add-user! db admin)
   (core/add-user! db import-user)
+  (core/add-user! db robot-user)
   (log/info "Seeding done!"))
 
 (defn seed-demo-users! [db]
