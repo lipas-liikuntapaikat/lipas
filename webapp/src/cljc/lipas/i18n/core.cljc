@@ -187,39 +187,41 @@
    localizations))
 
 (def localizations2
-  [
-   ;; Sports site
-   {:path         [:admin]
-    :target-path  [:admin-localized]
-    :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
-   {:path         [:owner]
-    :target-path  [:owner-localized]
-    :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
+  (->>
+   [
+    ;; Sports site
+    {:path         [:admin]
+     :target-path  [:admin-localized]
+     :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
+    {:path         [:owner]
+     :target-path  [:owner-localized]
+     :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
 
-   ;; Type
-   {:path         [:type :type-code]
-    :target-path  [:type :name-localized]
-    :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
+    ;; Type
+    {:path         [:type :type-code]
+     :target-path  [:type :name-localized]
+     :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
 
 
-   ;; Location
-   {:path         [:location :city :city-code]
-    :target-path  [:location :city :name-localized]
-    :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
+    ;; Location
+    {:path         [:location :city :city-code]
+     :target-path  [:location :city :name-localized]
+     :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
 
-   ;; Properties (prop type names)
-   {:path        [:properties]
-    :target-path [:properties-localized]
-    :translate-fn (fn [locales m]
-                    (into {}
-                          (for [k (keys m)]
-                            [k (-> k prop-types/all :name (select-keys locales))])))}
+    ;; Properties (prop type names)
+    {:path        [:properties]
+     :target-path [:properties-localized]
+     :translate-fn (fn [locales m]
+                     (into {}
+                           (for [k (keys m)]
+                             [k (-> k prop-types/all :name (select-keys locales))])))}
 
-   ;; Proerties->surface-material
-   {:path         [:properties :surface-material]
-    :target-path  [:properties :surface-material-localized]
-    :translate-fn (fn [locales vs]
-                    (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}])
+    ;; Proerties->surface-material
+    {:path         [:properties :surface-material]
+     :target-path  [:properties :surface-material-localized]
+     :translate-fn (fn [locales vs]
+                     (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}]
+   (map #(update % :translate-fn memoize))))
 
 (defn localize2
   "Doesn't mutilate original values like `localizations`. Instead assocs
@@ -230,9 +232,9 @@
      (if-let [value (get-in sports-site path)]
        (assoc-in sports-site target-path (apply translate-fn [locales value]))
        sports-site))
-   (assoc-in sports-site [:name-localized :fi] (:name sports-site))
-   localizations2))
+   (assoc-in sports-site [:name-localized :fi] (:name sports-site))))
 
 (comment
+  (->> localizations2 (map :target-path))
   (localize :fi {:admin "state"
                  :building {:supporting-structures ["concrete"]}}))
