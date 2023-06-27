@@ -390,11 +390,24 @@
    (save-sports-site! db search user sports-site false))
   ([db search user sports-site draft?]
    (jdbc/with-db-transaction [tx db]
-     (let [resp (upsert-sports-site! tx user sports-site draft?)]
+     (let [resp   (upsert-sports-site! tx user sports-site draft?)
+           route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
        (when-not draft?
+         ;; NOTE: routes will be re-indexed after elevation has been
+         ;; resolved.
          (index! search resp :sync)
-         (add-to-integration-out-queue! tx resp)
+
+         (when route?
+           (add-to-elevation-queue! tx resp))
+
+         (when-not route?
+           ;; Routes will be integrated only after elevation has been
+           ;; resolved. See `process-elevation-queue!`
+           (add-to-integration-out-queue! tx resp))
+
+         ;; Analysis doesn't require elevation information
          (add-to-analysis-queue! tx resp))
+
        resp))))
 
 ;;; Cities ;;;
@@ -606,6 +619,8 @@
                 (assoc-in [:location :geometries] fcoll)
                 (->> (upsert-sports-site!* db user))
                 (as-> $ (index! search $ :sync)))
+
+            (add-to-integration-out-queue! db current)
 
             (db/delete-from-elevation-queue! db lipas-id)
             (log/info "Elevation enrichment for" lipas-id "completed successfully!"))
