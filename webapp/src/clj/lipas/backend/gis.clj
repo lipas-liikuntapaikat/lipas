@@ -4,13 +4,11 @@
    [clojure.string :as str]
    [geo.io :as gio]
    [geo.jts :as jts]
-   [geo.spatial :as geo]
-   [taoensso.timbre :as log])
+   [geo.spatial :as geo])
   (:import
    [org.locationtech.geowave.analytic GeometryHullTool]
    [org.locationtech.geowave.analytic.distance CoordinateEuclideanDistanceFn]
    [org.locationtech.jts.algorithm ConvexHull]
-   [org.locationtech.jts.geom Envelope]
    [org.locationtech.jts.geom.util GeometryCombiner]
    [org.locationtech.jts.operation.buffer BufferOp]
    [org.locationtech.jts.operation.distance DistanceOp]

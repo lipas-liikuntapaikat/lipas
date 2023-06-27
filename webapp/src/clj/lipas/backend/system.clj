@@ -59,7 +59,8 @@
                  (update-in [:mailchimp :api-key] mask)
                  (update-in [:app
                              :accessibility-register
-                             :accessibility-register-secret-key] mask)))
+                             :accessibility-register-secret-key] mask)
+                 (update-in [:app :mml-api :api-key] mask)))
      system)))
 
 (defn stop-system! [system]

@@ -38,7 +38,8 @@
     :max-y 7782000}})
 
 (def query-envelope-size-m
-  "MML API has hard-limit of 10000 for the queried envelope size. "
+  "250x250m was selected as the grid size because of good perf/coverage
+  ratio with MML api."
   250)
 
 (defn describe-coverage
