@@ -234,9 +234,10 @@
    (get-sports-sites-by-type-code db type-code {}))
   ([db type-code {:keys [locale] :as opts}]
    (let [data (db/get-sports-sites-by-type-code db type-code opts)]
-     (if (#{:fi :en :se} locale)
-       (map (partial i18n/localize locale) data)
-       data))))
+     (cond
+       (#{:fi :en :se} locale) (map (partial i18n/localize locale) data)
+       (#{:all} locale)        (map (partial i18n/localize2 [:fi :se :en]) data)
+       :else                   data))))
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))

@@ -49,7 +49,7 @@ WHERE type_code = :type_code
 -- :doc Returns latests revisions of all sports sites by type_code
 SELECT *
 FROM sports_site_current
-WHERE type_code = :type_code
+WHERE type_code = :type_code AND document::jsonb->>'status' in ('active', 'out-of-service-temporarily')
 
 -- :name get-history
 -- :command :query

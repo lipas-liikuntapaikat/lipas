@@ -138,22 +138,22 @@
       ["/sports-sites/type/:type-code"
        {:get
         {:no-doc    false
-         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
+         :responses {200 {:body (s/coll-of map?)}}
          :parameters
          {:path  {:type-code :lipas.sports-site.type/type-code}
-          :query :lipas.api/query-params}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
-                 revs      (or (-> parameters :query :revs)
-                               "latest")
+                 #_#_revs  (or (-> parameters :query :revs)
+                                   "latest")
                  locale    (or (-> parameters :query :lang keyword)
                                :none)]
              {:status 200
               :body   (core/get-sports-sites-by-type-code db
                                                           type-code
-                                                          {:revs   revs
-                                                           :locale locale})}))}}]
+                                                          {#_#_:revs revs
+                                                           :locale   locale})}))}}]
 
       ["/users"
        {:get

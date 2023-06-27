@@ -1,16 +1,17 @@
 (ns lipas.i18n.core
   (:require
    [clojure.string :as s]
-   [lipas.data.sports-sites :as sports-sites]
    [lipas.data.admins :as admins]
+   [lipas.data.cities :as cities]
    [lipas.data.ice-stadiums :as ice]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
+   [lipas.data.prop-types :as prop-types]
+   [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as pools]
-   [lipas.data.cities :as cities]
    [lipas.data.types :as types]
-   [lipas.reports :as reports]
    [lipas.i18n.generated :as translations]
+   [lipas.reports :as reports]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 
@@ -184,6 +185,53 @@
        sports-site))
    sports-site
    localizations))
+
+(def localizations2
+  [
+   ;; Sports site
+   {:path         [:admin]
+    :target-path  [:admin-localized]
+    :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
+   {:path         [:owner]
+    :target-path  [:owner-localized]
+    :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
+
+   ;; Type
+   {:path         [:type :type-code]
+    :target-path  [:type :name-localized]
+    :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
+
+
+   ;; Location
+   {:path         [:location :city :city-code]
+    :target-path  [:location :city :name-localized]
+    :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
+
+   ;; Properties (prop type names)
+   {:path        [:properties]
+    :target-path [:properties-localized]
+    :translate-fn (fn [locales m]
+                    (into {}
+                          (for [k (keys m)]
+                            [k (-> k prop-types/all :name (select-keys locales))])))}
+
+   ;; Proerties->surface-material
+   {:path         [:properties :surface-material]
+    :target-path  [:properties :surface-material-localized]
+    :translate-fn (fn [locales vs]
+                    (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}])
+
+(defn localize2
+  "Doesn't mutilate original values like `localizations`. Instead assocs
+  localizations under `target-path`."
+  [locales sports-site]
+  (reduce
+   (fn [sports-site {:keys [path target-path translate-fn]}]
+     (if-let [value (get-in sports-site path)]
+       (assoc-in sports-site target-path (apply translate-fn [locales value]))
+       sports-site))
+   (assoc-in sports-site [:name-localized :fi] (:name sports-site))
+   localizations2))
 
 (comment
   (localize :fi {:admin "state"
