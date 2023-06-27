@@ -27,10 +27,8 @@
       resp)))
 
 (defn process-integration-out-queue!
-  "Reads lipas-ids from integration out queue, queries corresponding
-  timestamps from old-Lipas and checks which one is newer. If db
-  contains newer version they're pushed to old-Lipas, otherwise
-  ignored. Whole queue is read and processed one by one.
+  "Reads lipas-ids from integration out queue and pushes to old-Lipas.
+  Whole queue is read and processed one by one.
 
   Possible errors are collected and returned as a map under
   key :errors where keys are lipas-ids and values are caught
@@ -45,18 +43,6 @@
                      (db/get-sports-sites-by-lipas-ids db)
                      (utils/index-by :lipas-id))
 
-        ;; Query timestamps from old Lipas.
-        timestamps (->> (api/query-timestamps (keys changed))
-                        (utils/index-by :sportsPlaceId))
-
-        ;; Select only entries that are newer in this system.
-        updates (utils/filter-newer changed
-                                    :event-date
-                                    timestamps
-                                    #(-> % :lastModified transform/last-modified->UTC))
-
-        ignores (map first (set/difference (set changed) (set updates)))
-
         ;; Attempt to push each change individually
         resps (reduce (fn [res [lipas-id m]]
                         (try
@@ -65,13 +51,12 @@
                           (catch Exception e
                             (assoc-in res [:errors lipas-id] e))))
                       {}
-                      updates)]
+                      changed)]
 
     ;; Delete successfully integrated and ignored entries from queue
-    (doseq [lipas-id (into ignores (:updated resps))]
+    (doseq [lipas-id (:updated resps)]
       (db/delete-from-integration-out-queue! db lipas-id))
 
     (merge resps
-           {:total   (+ (count (:updated resps)) (count ignores))
-            :ignored ignores
+           {:total   (count (:updated resps))
             :latest  (->> changed vals (map :event-date) sort last)})))
