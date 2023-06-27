@@ -1773,6 +1773,10 @@
   (s/keys :opt-un [:lipas.api/revs
                    :lipas.api/lang]))
 
+(s/def :lipas.api.get-sports-sites-by-type-code/lang #{"fi" "en" "se" "all"})
+(s/def :lipas.api.get-sports-sites-by-type-code/query-params
+  (s/keys :opt-un [:lipas.api.get-sports-sites-by-type-code/lang]))
+
 (s/def :lipas.report/field (into #{} (keys reports/fields)))
 
 (s/def :lipas.api.sports-site-report.req/search-query map?)
