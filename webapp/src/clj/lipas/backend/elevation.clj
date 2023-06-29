@@ -100,16 +100,19 @@
                (update-in f [:geometry :coordinates]
                           (fn [coords]
                             (condp = (-> f :geometry :type)
-                              "Point"      (conj coords (resolve-elevation coords elevations))
+                              "Point"      (let [[x y] coords]
+                                             [x y (resolve-elevation coords elevations)])
                               "LineString" (mapv
                                             (fn [coords]
-                                              (conj coords (resolve-elevation coords elevations)))
+                                              (let [[x y] coords]
+                                                [x y (resolve-elevation coords elevations)]))
                                             coords)
                               "Polygon"    (mapv
                                             (fn [coords]
                                               (mapv
                                                (fn [coords]
-                                                 (conj coords (resolve-elevation coords elevations)))
+                                                 (let [[x y] coords]
+                                                   [x y (resolve-elevation coords elevations)]))
                                                coords))
                                             coords)
                               (throw (ex-info "Encountered unexpected geometry type" f))))))
@@ -325,6 +328,7 @@
   (- (:max-x lolx) (:min-x lolx))
 
   (get-elevation-coverage test-route)
+  (enrich-elevation test-route)
 
 
   )
