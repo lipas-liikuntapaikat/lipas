@@ -63,7 +63,7 @@
 
 (defn resolve-elevation
   [coords elevations]
-  (let [[lon lat]      (gis/wgs84->tm35fin-no-wrap coords)
+  (let [[lon lat]              (gis/wgs84->tm35fin-no-wrap coords)
         ;; Find the correct grid
         {:keys [headers data]} (->> elevations
                                     (some
@@ -119,7 +119,7 @@
              fs))))
 
 (defn parse-ascii-grid-headers
-    [lines]
+  [lines]
   (into {}
         (for [s lines]
           (let [[_ k v] (re-find #"(\w+)\s*(-?\d+\.?\d*)" s)
@@ -164,8 +164,8 @@
 (defn enrich-elevation
   [fcoll]
   (let [;; Add some tolerance because otherwise grid queries might
-        ;; break near the edges. 4 meters was found via experimentation.
-        buff-m    4
+        ;; break near the edges. 8 meters was found via experimentation.
+        buff-m    8
         fcoll-jts (-> fcoll gis/->jts-geom (gis/transform-crs gis/srid gis/tm35fin-srid))
         envelopes (-> (gis/get-envelope fcoll-jts buff-m)
                       (fit-to-coverage coverage-info)
