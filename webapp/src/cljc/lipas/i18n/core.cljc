@@ -189,10 +189,12 @@
 (def localizations2
   (->>
    [
-    ;; Sports site
+    ;; Admin
     {:path         [:admin]
      :target-path  [:admin-localized]
      :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
+
+    ;; Owner
     {:path         [:owner]
      :target-path  [:owner-localized]
      :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
@@ -232,7 +234,8 @@
      (if-let [value (get-in sports-site path)]
        (assoc-in sports-site target-path (apply translate-fn [locales value]))
        sports-site))
-   (assoc-in sports-site [:name-localized :fi] (:name sports-site))))
+   (assoc-in sports-site [:name-localized :fi] (:name sports-site))
+   localizations2))
 
 (comment
   (->> localizations2 (map :target-path))
