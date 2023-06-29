@@ -73,8 +73,8 @@
   (let [params {:basic-auth       [user pass]
                 :content-type     :json
                 :accept           :json
-                :socket-timeout   10000
-                :conn-timeout     10000
+                :socket-timeout   30000
+                :conn-timeout     30000
                 :throw-exceptions true
                 :body             (json/encode doc)}
 
