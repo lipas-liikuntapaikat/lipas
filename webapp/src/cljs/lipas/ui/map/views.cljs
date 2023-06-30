@@ -547,6 +547,11 @@
 
           ;; Basic info tab
           0 [mui/grid {:container true}
+
+             ;; lol
+             [mui/grid {:item true :xs 12}
+              [sports-sites/elevation-profile {:lipas-id lipas-id}]]
+
              [mui/grid {:item true :xs 12}
 
               ^{:key (str "basic-data-" lipas-id)}

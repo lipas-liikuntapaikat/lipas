@@ -1,6 +1,13 @@
 (ns lipas.ui.sports-sites.views
   (:require
    ["mdi-material-ui/Calculator$default" :as Calculator]
+   ["recharts/es6/cartesian/Area" :refer [Area]]
+   ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
+   ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
+      ["recharts/es6/chart/AreaChart" :refer [AreaChart]]
+   ["recharts/es6/component/Legend" :refer [Legend]]
+   ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
+   ["recharts/es6/component/Tooltip" :refer [Tooltip]]
    [goog.object :as gobj]
    [lipas.ui.charts :as charts]
    [lipas.ui.components :as lui]
@@ -979,6 +986,31 @@
      ;; Small footer on top of which floating container may scroll
      [mui/grid
       {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]]))
+
+(defn elevation-profile
+  [{:keys [lipas-id]}]
+  (r/with-let [selected-tab (r/atom 0)]
+    (let [elevation (<== [::subs/elevation lipas-id])
+          labels    {}]
+      [:<>
+       [:> ResponsiveContainer {:width "100%" :height 300}
+        [:> AreaChart
+         {:data   (nth elevation @selected-tab)
+          :layout "horizontal" :on-click #(js/alert "lol")}
+         [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
+         [:> Tooltip {:content (fn [^js props] (charts/subsidies-tooltip labels props))}]
+         [:> XAxis {:dataKey "distance-m" :tick true}]
+         [:> YAxis
+          {:tick    charts/font-styles
+           :dataKey :elevation-m
+           :domain  #js["dataMin" "dataMax"]}]
+         [:> Area
+          {:dataKey :elevation-m
+           :fill    (:energy-mwh charts/colors)
+           :stroke  (:electricity-mwh charts/colors)}]]]
+       (into [mui/tabs {:value @selected-tab :on-change #(reset! selected-tab %2)}]
+             (for [segment (range (count elevation))]
+               [mui/tab {:value segment :label (str "Seg-" segment)}]))])))
 
 (defn main []
   [mui/typography "Nothing here"])
