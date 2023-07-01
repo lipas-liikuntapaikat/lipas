@@ -466,7 +466,7 @@
 
 ;; Browsing and selecting features
 (defn set-default-mode!
-  [map-ctx {:keys [lipas-id address]}]
+  [map-ctx {:keys [lipas-id address elevation]}]
   (-> map-ctx
       editing/clear-edits!
       map-utils/clear-population!
@@ -478,11 +478,12 @@
       map-utils/enable-select!
       (cond->
           lipas-id  (map-utils/select-sports-site! lipas-id)
-          address   (map-utils/show-address-marker! address))))
+          address   (map-utils/show-address-marker! address)
+          elevation (map-utils/show-elevation-marker! elevation))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce address]}]
+   {:keys [lipas-id fit-nonce address elevation]}]
   (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
         ^js layer (-> layers :overlays :vectors) ]
     (-> map-ctx
@@ -492,7 +493,8 @@
         (cond->
             lipas-id  (map-utils/select-sports-site! lipas-id)
             fit?    (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
-            address (map-utils/show-address-marker! address)))))
+            address (map-utils/show-address-marker! address)
+            elevation (map-utils/show-elevation-marker! elevation)))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]
