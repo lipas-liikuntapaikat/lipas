@@ -6,6 +6,7 @@
    ["@turf/buffer$default" :as turf-buffer]
    ["@turf/clean-coords$default" :as turf-clean-coords]
    ["@turf/combine$default" :as turf-combine]
+   ["@turf/helpers" :refer [point]]
    ["@turf/kinks$default" :as turf-kinks]
    ["@turf/length$default" :as turf-length]
    ["@turf/line-split$default" :as turf-line-split]
@@ -180,6 +181,11 @@
 (defn show-address-marker!
   [map-ctx address]
   (let [f (.readFeature geoJSON (clj->js address))]
+    (add-marker! map-ctx f styles/blue-marker-style)))
+
+(defn show-elevation-marker!
+  [map-ctx elevation]
+  (let [f (.readFeature geoJSON (point (gobj/get elevation "coords") elevation))]
     (add-marker! map-ctx f styles/blue-marker-style)))
 
 (defn clear-problems! [{:keys [layers] :as map-ctx}]

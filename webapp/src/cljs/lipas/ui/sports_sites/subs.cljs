@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.subs
   (:require
-   ["@turf/distance$default" :as turf-distance]
+   ["@turf/helpers" :refer [lineString]]
+   ["@turf/length$default" :as turf-length]
    [clojure.spec.alpha :as s]
    [lipas.data.types :as types]
    [lipas.ui.utils :as utils]
@@ -269,14 +270,18 @@
      (-> rev :location :geometries :features
          (->> (map (comp :coordinates :geometry))
               (map (fn [coll]
-                     (let [start (-> coll first clj->js)]
-                       (map (fn [coords]
-                              (let [distance-km (turf-distance start (clj->js coords))]
-                                {:coords      coords
-                                 :elevation-m (utils/round-safe (get coords 2))
-                                 :distance-km (utils/round-safe distance-km)
-                                 :distance-m  (utils/round-safe (* 1000 distance-km))}))
-                            coll)))))))))
+                     (->> coll
+                          (map-indexed
+                           (fn [idx coords]
+                             (let [line        (when-not (zero? idx)
+                                                 (lineString (clj->js (subvec coll 0 (inc idx)))))
+                                   distance-km (if (zero? idx)
+                                                 0
+                                                 (turf-length line))]
+                               {:coords      coords
+                                :elevation-m (get coords 2)
+                                :distance-km distance-km
+                                :distance-m  (* 1000 distance-km)})))))))))))
 
 (re-frame/reg-sub
  ::display-site

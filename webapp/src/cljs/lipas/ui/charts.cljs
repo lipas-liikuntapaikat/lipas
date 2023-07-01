@@ -68,7 +68,10 @@
    "city-other"              "#d51a0d"
    "private-association"     "#3ba12f"
    "private-company"         "#0a9bff"
-   "private-foundation"      "#8E44AD"})
+   "private-foundation"      "#8E44AD"
+
+   ;; Elevation
+   :elevation-m "#bf682b"})
 
 (def font-styles
   {:font-family "lato"})

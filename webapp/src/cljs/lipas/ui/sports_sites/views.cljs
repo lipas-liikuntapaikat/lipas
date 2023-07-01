@@ -4,7 +4,7 @@
    ["recharts/es6/cartesian/Area" :refer [Area]]
    ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
    ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
-      ["recharts/es6/chart/AreaChart" :refer [AreaChart]]
+   ["recharts/es6/chart/AreaChart" :refer [AreaChart]]
    ["recharts/es6/component/Legend" :refer [Legend]]
    ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
    ["recharts/es6/component/Tooltip" :refer [Tooltip]]
@@ -991,26 +991,53 @@
   [{:keys [lipas-id]}]
   (r/with-let [selected-tab (r/atom 0)]
     (let [elevation (<== [::subs/elevation lipas-id])
-          labels    {}]
-      [:<>
-       [:> ResponsiveContainer {:width "100%" :height 300}
-        [:> AreaChart
-         {:data   (nth elevation @selected-tab)
-          :layout "horizontal" :on-click #(js/alert "lol")}
-         [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
-         [:> Tooltip {:content (fn [^js props] (charts/subsidies-tooltip labels props))}]
-         [:> XAxis {:dataKey "distance-m" :tick true}]
-         [:> YAxis
-          {:tick    charts/font-styles
-           :dataKey :elevation-m
-           :domain  #js["dataMin" "dataMax"]}]
-         [:> Area
-          {:dataKey :elevation-m
-           :fill    (:energy-mwh charts/colors)
-           :stroke  (:electricity-mwh charts/colors)}]]]
-       (into [mui/tabs {:value @selected-tab :on-change #(reset! selected-tab %2)}]
-             (for [segment (range (count elevation))]
-               [mui/tab {:value segment :label (str "Seg-" segment)}]))])))
+          labels    {:distance-m  "Etäisyys alusta (m)"
+                     :distance-km "Etäisyys alusta (km)"
+                     :elevation-m "Korkeus (m)"}]
+
+      [mui/grid {:container true :spacing 2}
+       [mui/grid {:item true :xs 12}
+        [lui/select
+         {:items     (range 0 (count elevation))
+          :value     @selected-tab
+          :value-fn  identity
+          :label-fn  (fn [n] (str "Osa " (inc n)))
+          :sort-fn   identity
+          :on-change #(reset! selected-tab %)}]]
+
+       [mui/grid {:item true :xs 12}
+        [:> ResponsiveContainer {:width "100%" :height 300}
+         [:> AreaChart
+          {:data        (nth elevation @selected-tab)
+           :layout      "horizontal"
+           :baseValue   "dataMin"
+           :onMouseMove (fn [evt]
+                          (when-let [payload (some-> evt
+                                                     (gobj/get "activePayload")
+                                                     first
+                                                     (gobj/get "payload"))]
+                            (==> [:lipas.ui.map.events/show-elevation-marker payload])))}
+          [:defs
+           [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
+            [:stop {:stopColor (:elevation-m charts/colors) :offset "5%" :stopOpacity "0.8"}]
+            [:stop {:stopColor (:elevation-m charts/colors) :offset "95%" :stopOpacity "0"}]]]
+          [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
+          [:> Tooltip {:content (fn [^js props] (charts/subsidies-tooltip labels props))}]
+          [:> XAxis
+           {:dataKey       "distance-km" :tick true :unit "km"
+            :domain        #js["dataMin" "dataMax"]
+            :type          "number"
+            :tickFormatter (fn [x] (utils/round-safe x 1))}]
+          [:> YAxis
+           {:tick          charts/font-styles
+            :dataKey       :elevation-m
+            :unit          "m"
+            :domain        #js["dataMin" "dataMax"]
+            :tickFormatter (fn [x] (utils/round-safe x 0))}]
+          [:> Area
+           {:dataKey :elevation-m
+            :fill    "url(#color-elevation)"
+            :stroke  (:elevation-m charts/colors)}]]]]])))
 
 (defn main []
   [mui/typography "Nothing here"])

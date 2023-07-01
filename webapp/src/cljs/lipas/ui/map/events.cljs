@@ -3,6 +3,7 @@
    ["ol/proj" :as proj]
    ["togpx" :as togpx]
    [ajax.core :as ajax]
+   [goog.object :as gobj]
    [goog.string :as gstring]
    [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
@@ -112,6 +113,11 @@
  ::show-popup
  (fn [db [_ feature]]
    (assoc-in db [:map :popup] feature)))
+
+(re-frame/reg-event-db
+ ::show-elevation-marker
+ (fn [db [_ js-obj]]
+   (assoc-in db [:map :mode :elevation] js-obj)))
 
 (re-frame/reg-event-db
  ::show-sports-site*
