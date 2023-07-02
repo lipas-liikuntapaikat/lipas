@@ -997,32 +997,54 @@
 
       [mui/grid {:container true :spacing 2}
        [mui/grid {:item true :xs 12}
-        [lui/select
-         {:items     (range 0 (count elevation))
-          :value     @selected-tab
-          :value-fn  identity
-          :label-fn  (fn [n] (str "Osa " (inc n)))
-          :sort-fn   identity
-          :on-change #(reset! selected-tab %)}]]
+        [mui/grid
+         {:container       true
+          :wrap            "no-rwap"
+          :spacing         2
+          :justify-content "flex-end"
+          :align-items     "center"}
+         [mui/grid {:item true}
+          [lui/select
+           {:items     (range 0 (count elevation))
+            :style     {:min-width "120px"}
+            :value     @selected-tab
+            :value-fn  identity
+            :label-fn  (fn [n] (str "Osa " (inc n)))
+            :sort-fn   identity
+            :on-change #(reset! selected-tab %)}]]
+         [mui/grid {:item true}
+          [mui/icon-button {:on-click #(swap! selected-tab (fn [n] (max 0 (dec n))))}
+           [mui/icon "navigate_before"]]
+          [mui/icon-button {:on-click #(swap! selected-tab (fn [n] (min (dec (count elevation)) (inc n))))}
+           [mui/icon "navigate_next"]]]]]
 
        [mui/grid {:item true :xs 12}
         [:> ResponsiveContainer {:width "100%" :height 300}
          [:> AreaChart
-          {:data        (nth elevation @selected-tab)
-           :layout      "horizontal"
-           :baseValue   "dataMin"
-           :onMouseMove (fn [evt]
-                          (when-let [payload (some-> evt
-                                                     (gobj/get "activePayload")
-                                                     first
-                                                     (gobj/get "payload"))]
-                            (==> [:lipas.ui.map.events/show-elevation-marker payload])))}
+          {:data         (nth elevation @selected-tab)
+           :layout       "horizontal"
+           :baseValue    "dataMin"
+           :onMouseMove  (fn [evt]
+                           (when-let [payload (some-> evt
+                                                      (gobj/get "activePayload")
+                                                      first
+                                                      (gobj/get "payload"))]
+                            (==> [:lipas.ui.map.events/show-elevation-marker payload])))
+           :onMouseLeave (fn [_]
+                           (==> [:lipas.ui.map.events/hide-elevation-marker]))}
           [:defs
            [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
             [:stop {:stopColor (:elevation-m charts/colors) :offset "5%" :stopOpacity "0.8"}]
             [:stop {:stopColor (:elevation-m charts/colors) :offset "95%" :stopOpacity "0"}]]]
           [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
-          [:> Tooltip {:content (fn [^js props] (charts/subsidies-tooltip labels props))}]
+          [:> Tooltip
+           {:content (fn [^js props]
+                       (charts/labeled-tooltip
+                        labels
+                        :label
+                        :hide-header
+                        #(utils/round-safe % 2)
+                        props))}]
           [:> XAxis
            {:dataKey       "distance-km" :tick true :unit "km"
             :domain        #js["dataMin" "dataMax"]
