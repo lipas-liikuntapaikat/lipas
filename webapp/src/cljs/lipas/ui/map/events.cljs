@@ -120,6 +120,11 @@
    (assoc-in db [:map :mode :elevation] js-obj)))
 
 (re-frame/reg-event-db
+ ::hide-elevation-marker
+ (fn [db _]
+   (assoc-in db [:map :mode :elevation] nil)))
+
+(re-frame/reg-event-db
  ::show-sports-site*
  (fn [db [_ lipas-id]]
    (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))]

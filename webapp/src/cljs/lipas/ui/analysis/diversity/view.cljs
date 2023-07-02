@@ -398,8 +398,10 @@
         #_#_:on-click #(println %)
         :margin   {:bottom 20 :left 20}}
        [:> CartesianGrid]
-       [:> Tooltip {:content (fn [props]
-                                  (charts/labeled-tooltip labels :label :hide-header props))}]
+       [:> Tooltip
+        {:content
+         (fn [props]
+           (charts/labeled-tooltip labels :label :hide-header identity props))}]
        [:> XAxis
         {:dataKey       "diversity-idx"
          :type          "number"
@@ -443,7 +445,8 @@
       [:> CartesianGrid]
 
       [:> Tooltip
-       {:content (fn [^js props] (charts/labeled-tooltip labels :label :hide-header props))}]
+       {:content (fn [^js props]
+                   (charts/labeled-tooltip labels :label :hide-header identity props))}]
 
       [:> Legend
        {:verticalAlign "top"

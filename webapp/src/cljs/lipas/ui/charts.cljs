@@ -384,10 +384,10 @@
 
 (defn labeled-tooltip
   ([labels ^js props]
-   (labeled-tooltip labels :label false props))
+   (labeled-tooltip labels :label false identity props))
   ([labels sort-fn ^js props]
-   (labeled-tooltip labels sort-fn false props))
-  ([labels sort-fn hide-header? ^js props]
+   (labeled-tooltip labels sort-fn false identity props))
+  ([labels sort-fn hide-header? value-fn ^js props]
    (let [payload-fn (fn [^js payload]
                       (let [entry (-> payload
                                       first
@@ -397,7 +397,9 @@
                              (reduce
                               (fn [res [k v]]
                                 (if-let [label (labels k)]
-                                  (conj res {:label label :value (if (nil? v) "<10" v)})
+                                  (conj res {:label label :value (if (nil? v)
+                                                                   "<10"
+                                                                   (value-fn v))})
                                   res))
                               []))))]
      (tooltip payload-fn labels sort-fn hide-header? props))))

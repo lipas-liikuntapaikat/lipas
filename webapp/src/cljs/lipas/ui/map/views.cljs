@@ -535,7 +535,13 @@
            [mui/tab
             {:style {:min-width 0}
              :value 3
-             :label "Olosuhteet"}])]
+             :label "Olosuhteet"}])
+
+         (when (#{"LineString"} geom-type)
+           [mui/tab
+            {:style {:min-width 0}
+             :value 4
+             :label "Korkeusprofiili"}])]
 
         (when delete-dialog-open?
           [sports-sites/delete-dialog
@@ -547,10 +553,6 @@
 
           ;; Basic info tab
           0 [mui/grid {:container true}
-
-             ;; lol
-             [mui/grid {:item true :xs 12}
-              [sports-sites/elevation-profile {:lipas-id lipas-id}]]
 
              [mui/grid {:item true :xs 12}
 
@@ -620,7 +622,11 @@
                 :on-change    (partial set-field :circumstances)
                 :display-data (:circumstances display-data)
                 :edit-data    (:circumstances edit-data)
-                :key          (-> edit-data :type :type-code)}]))]
+                :key          (-> edit-data :type :type-code)}])
+
+          4 (when (#{"LineString"} geom-type)
+              [mui/grid {:item true :xs 12 :style {:margin-top "0.5em"}}
+               [sports-sites/elevation-profile {:lipas-id lipas-id}]]))]
 
        ;; "Landing bay" for floating tools
        [mui/grid {:item true :xs 12 :style {:height "3em"}}]
