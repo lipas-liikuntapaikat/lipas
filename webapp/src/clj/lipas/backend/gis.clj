@@ -111,6 +111,12 @@
 (defn nearest-points [g1 g2]
   (DistanceOp/nearestPoints g1 g2))
 
+(defn strip-z
+  [coords]
+  (if (vector? coords)
+    (subvec coords 0 2)
+    (take 2 coords)))
+
 (defn ->flat-coords [fcoll]
   (->> fcoll
       :features
@@ -120,16 +126,16 @@
          (case (:type g)
 
            "Point"
-           (conj res (:coordinates g))
+           (conj res (-> g :coordinates strip-z))
 
            "LineString"
-           (into res (:coordinates g))
+           (into res (map strip-z) (:coordinates g))
 
            ("Polygon" "MultiLineString")
-           (into res (->> g :coordinates (filter seq) (mapcat identity) (filter seq)))
+           (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
 
            ("MultiPolygon")
-           (into res (->> g :coordinates  (mapcat identity) (mapcat identity) (filter seq)))))
+           (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
        [])
       (into [] #_(distinct))))
 
@@ -298,6 +304,8 @@
   (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100}  test-point))
   (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000}  test-point))
 
+  (-> test-point ->flat-coords)
+
   (-> test-point
       ->flat-coords
       (->> (map wgs84->tm35fin-no-wrap))
@@ -352,6 +360,8 @@
         :coordinates
         [[26.2436550567509, 63.9531552213109],
          [25.7583312263512, 63.9746827436437]]}}]})
+
+  (-> test-route ->flat-coords)
 
   (->tm35fin-envelope test-route)
 
@@ -415,6 +425,8 @@
         [[[26.2436550567509, 63.9531552213109],
           [25.7583312263512, 63.9746827436437]
           [26.2436550567509, 63.9531552213109]]]}}]})
+
+  (-> test-polygon ->flat-coords)
 
   (->tm35fin-envelope test-polygon)
 
