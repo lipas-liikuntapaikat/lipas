@@ -284,6 +284,23 @@
                                 :distance-m  (* 1000 distance-km)})))))))))))
 
 (re-frame/reg-sub
+ ::elevation-stats
+ (fn [[_ lipas-id]]
+   (re-frame/subscribe [:lipas.ui.sports-sites.subs/elevation lipas-id]))
+ (fn [elevation _]
+   (for [segment elevation]
+     (->> segment
+          (map :elevation-m)
+          (partition 2 1)
+          (reduce (fn [res [prev curr]]
+                    (let [d (- curr prev)]
+                      (cond
+                        (zero? d) res
+                        (pos? d)  (update res :ascend-m + d)
+                        (neg? d)  (update res :descend-m + (Math/abs d)))))
+                  {:ascend-m 0 :descend-m 0})))))
+
+(re-frame/reg-sub
  ::display-site
  (fn [[_ lipas-id] _]
    [(re-frame/subscribe [:lipas.ui.sports-sites.subs/sports-site lipas-id])
