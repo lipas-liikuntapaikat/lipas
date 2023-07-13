@@ -989,12 +989,13 @@
 
 (defn elevation-profile
   [{:keys [lipas-id]}]
-  (r/with-let [selected-tab (r/atom 0)]
-    (let [elevation (<== [::subs/elevation lipas-id])
-          labels    {:distance-m  "Etäisyys alusta (m)"
-                     :distance-km "Etäisyys alusta (km)"
-                     :elevation-m "Korkeus (m)"}]
-
+  (r/with-let [selected-segment (r/atom 0)]
+    (let [elevation  (<== [::subs/elevation lipas-id])
+          stats      (<== [::subs/elevation-stats lipas-id])
+          curr-stats (nth stats @selected-segment)
+          labels     {:distance-m  "Etäisyys alusta (m)"
+                      :distance-km "Etäisyys alusta (km)"
+                      :elevation-m "Korkeus merenpinnasta (m)"}]
       [mui/grid {:container true :spacing 2}
        [mui/grid {:item true :xs 12}
         [mui/grid
@@ -1007,21 +1008,25 @@
           [lui/select
            {:items     (range 0 (count elevation))
             :style     {:min-width "120px"}
-            :value     @selected-tab
+            :value     @selected-segment
             :value-fn  identity
             :label-fn  (fn [n] (str "Osa " (inc n)))
             :sort-fn   identity
-            :on-change #(reset! selected-tab %)}]]
+            :on-change #(reset! selected-segment %)}]]
          [mui/grid {:item true}
-          [mui/icon-button {:on-click #(swap! selected-tab (fn [n] (max 0 (dec n))))}
+          [mui/icon-button
+           {:disabled (= 0 @selected-segment)
+            :on-click #(swap! selected-segment (fn [n] (max 0 (dec n))))}
            [mui/icon "navigate_before"]]
-          [mui/icon-button {:on-click #(swap! selected-tab (fn [n] (min (dec (count elevation)) (inc n))))}
+          [mui/icon-button
+           {:disabled (= @selected-segment (dec (count elevation)))
+            :on-click #(swap! selected-segment (fn [n] (min (dec (count elevation)) (inc n))))}
            [mui/icon "navigate_next"]]]]]
 
        [mui/grid {:item true :xs 12}
         [:> ResponsiveContainer {:width "100%" :height 300}
          [:> AreaChart
-          {:data         (nth elevation @selected-tab)
+          {:data         (nth elevation @selected-segment)
            :layout       "horizontal"
            :baseValue    "dataMin"
            :onMouseMove  (fn [evt]
@@ -1029,7 +1034,7 @@
                                                       (gobj/get "activePayload")
                                                       first
                                                       (gobj/get "payload"))]
-                            (==> [:lipas.ui.map.events/show-elevation-marker payload])))
+                             (==> [:lipas.ui.map.events/show-elevation-marker payload])))
            :onMouseLeave (fn [_]
                            (==> [:lipas.ui.map.events/hide-elevation-marker]))}
           [:defs
@@ -1059,7 +1064,21 @@
           [:> Area
            {:dataKey :elevation-m
             :fill    "url(#color-elevation)"
-            :stroke  (:elevation-m charts/colors)}]]]]])))
+            :stroke  (:elevation-m charts/colors)}]]]]
+
+       ;; Total ascend / descend
+       [mui/grid {:item true :xs 12}
+        [mui/table {:size "medium"}
+         [mui/table-body
+          [mui/table-row
+           [mui/table-cell "Nousua yhteensä"]
+           [mui/table-cell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
+          [mui/table-row
+           [mui/table-cell "Laskua yhteensä"]
+           [mui/table-cell (str (-> curr-stats :descend-m  utils/round-safe) "m")]]]]]
+
+       ;; landing bay for fabs
+       [mui/grid {:item true :xs 12 :style {:height "3em"}}]])))
 
 (defn main []
   [mui/typography "Nothing here"])
