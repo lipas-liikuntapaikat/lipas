@@ -11,7 +11,9 @@
    [ring.adapter.jetty :as jetty]))
 
 (defmethod ig/init-key :db [_ db-spec]
-  (db/setup-connection-pool db-spec))
+  (if (:dev db-spec)
+    db-spec
+    (db/setup-connection-pool db-spec)))
 
 (defmethod ig/halt-key! :db [_ pool]
   (db/stop-connection-pool pool))

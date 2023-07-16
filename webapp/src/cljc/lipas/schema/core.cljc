@@ -168,6 +168,7 @@
 (s/def :lipas/locale
   (st/spec
    {:spec         :lipas/locale*
+    :type         :keyword
     :swagger/type "enum"}))
 
 ;;; Reminder ;;;

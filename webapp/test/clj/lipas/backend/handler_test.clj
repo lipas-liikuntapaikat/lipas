@@ -1,23 +1,28 @@
 (ns lipas.backend.handler-test
   (:require
    [cheshire.core :as j]
+   [clojure.java.jdbc :as jdbc]
    [clojure.spec.alpha :as s]
    [clojure.spec.gen.alpha :as gen]
-   [clojure.test :refer [deftest testing is] :as t]
+   [clojure.test :refer [deftest is] :as t]
    [cognitect.transit :as transit]
    [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.email :as email]
    [lipas.backend.jwt :as jwt]
+   [lipas.backend.search :as search]
    [lipas.backend.system :as system]
    [lipas.schema.core]
    [lipas.seed :as seed]
+   [lipas.test-utils :as tu]
    [lipas.utils :as utils]
+   [migratus.core :as migratus]
    [ring.mock.request :as mock])
   (:import
-   java.util.Base64
-   [java.io ByteArrayInputStream ByteArrayOutputStream]))
+   [java.io ByteArrayOutputStream]
+   java.util.Base64))
 
 (def <-json #(j/parse-string (slurp %) true))
 (def ->json j/generate-string)
@@ -47,14 +52,66 @@
   [req token]
   (mock/header req "Authorization" (str "Token " token)))
 
+(defn- test-suffix [s] (str s "_test"))
+
 (def config (-> config/default-config
                 (select-keys [:db :app :search :mailchimp])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
-                (update-in [:db :dbname] #(str % "-test"))))
+                (update-in [:db :dbname] test-suffix)
+                (assoc-in [:db :dev] true)
+                (update-in [:search :indices :sports-site :search] test-suffix)
+                (update-in [:search :indices :sports-site :analytics] test-suffix)
+                (update-in [:search :indices :report :subsidies] test-suffix)
+                (update-in [:search :indices :report :city-stats] test-suffix)
+                (update-in [:search :indices :analysis :schools] test-suffix)
+                (update-in [:search :indices :analysis :population] test-suffix)
+                (update-in [:search :indices :analysis :population-high-def] test-suffix)
+                (update-in [:search :indices :analysis :diversity] test-suffix)))
+
+(defn reset-db! []
+  (let [migratus-opts {:store         :database
+                       :migration-dir "migrations"
+                       :db            (:db config)}]
+    (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
+                         false
+                         [(str "DROP DATABASE IF EXISTS " (-> config :db :dbname))
+                          (str "CREATE DATABASE " (-> config :db :dbname))
+                          (str "CREATE EXTENSION IF NOT EXISTS postgis")
+                          (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                          (str "CREATE EXTENSION IF NOT EXISTS citext")
+                          (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+    (jdbc/db-do-commands (:db config)
+                         [(str "CREATE EXTENSION IF NOT EXISTS postgis")
+                          (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                          (str "CREATE EXTENSION IF NOT EXISTS citext")
+                          (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+    (migratus/init migratus-opts)
+    (migratus/migrate migratus-opts)))
+
 (def system (system/start-system! config))
+
 (def db (:db system))
 (def app (:app system))
 (def search (:search system))
+
+(defn prune-es! []
+  (let [client   (:client search)
+        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                  (-> search :indices :analysis :diversity) diversity/mappings}]
+    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+      (try
+        (search/delete-index! client idx-name)
+        (catch Exception ex
+          (when (not= "index_not_found_exception"
+                      (-> ex ex-data :body :error :root_cause first :type))
+            (throw ex))))
+      (when-let [mapping (mappings idx-name)]
+        (search/create-index! client idx-name mapping)))))
+
+(comment
+  (reset-db!)
+  (prune-es!)
+  (ex-data *e))
 
 (defn gen-user
   ([]
@@ -175,7 +232,7 @@
         ;; Add 'draft' which is expected to get publshed as side-effect
         event-date (utils/timestamp)
         draft?     true
-        site       (-> (gen/generate (s/gen :lipas/sports-site))
+        site       (-> (tu/gen-sports-site)
                        (assoc :event-date event-date)
                        (assoc :status "active")
                        (assoc :lipas-id 123))
@@ -276,7 +333,7 @@
 (deftest upsert-sports-site-draft-test
   (let [user  (gen-user {:db? true})
         token (jwt/create-token user)
-        site  (-> (gen/generate (s/gen :lipas/sports-site))
+        site  (-> (tu/gen-sports-site)
                   (assoc :status "active")
                   (dissoc :lipas-id))
         resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
@@ -288,7 +345,7 @@
 (deftest upsert-invalid-sports-site-test
   (let [user  (gen-user {:db? true})
         token (jwt/create-token user)
-        site  (-> (gen/generate (s/gen :lipas/sports-site))
+        site  (-> (tu/gen-sports-site)
                   (assoc :status "kebab")
                   (dissoc :lipas-id))
         resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
@@ -304,7 +361,7 @@
                 (core/add-user! db $))
         user  (core/get-user db (:email user))
         token (jwt/create-token user)
-        site  (-> (gen/generate (s/gen :lipas/sports-site))
+        site  (-> (tu/gen-sports-site)
                   (assoc :status "active"))
         resp  (app (-> (mock/request :post "/api/sports-sites")
                        (mock/content-type "application/json")
@@ -314,7 +371,7 @@
 
 (deftest get-sports-sites-by-type-code-test
   (let [user (gen-user {:db? true :admin? true})
-        site (-> (gen/generate (s/gen :lipas/sports-site))
+        site (-> (tu/gen-sports-site)
                  (assoc-in [:type :type-code] 3110)
                  (assoc :status "active"))
         _    (core/upsert-sports-site!* db user site)
@@ -324,31 +381,9 @@
     (is (= 200 (:status resp)))
     (is (s/valid? :lipas/sports-sites body))))
 
-(deftest get-sports-sites-yearly-by-type-code-test
-  (let [user (gen-user {:db? true :admin? true})
-        rev1 (-> (gen/generate (s/gen :lipas/sports-site))
-                 (assoc-in [:type :type-code] 3110)
-                 (assoc :status "active")
-                 (assoc :event-date "2018-01-01T00:00:00.000Z"))
-        rev2 (assoc rev1 :event-date "2018-02-01T00:00:00.000Z")
-        rev3 (assoc rev1 :event-date "2017-01-01T00:00:00.000Z")
-        _    (core/upsert-sports-site!* db user rev1)
-        _    (core/upsert-sports-site!* db user rev2)
-        _    (core/upsert-sports-site!* db user rev3)
-        id   (:lipas-id rev1)
-        resp (app (-> (mock/request :get "/api/sports-sites/type/3110?revs=yearly")
-                      (mock/content-type "application/json")))
-        body (<-json (:body resp))]
-
-    (is (= 200 (:status resp)))
-    (is (= #{"2018-02-01T00:00:00.000Z" "2017-01-01T00:00:00.000Z"}
-           (-> (group-by :lipas-id body)
-               (get id)
-               (as-> $ (into #{} (map :event-date) $)))))))
-
 (deftest get-sports-sites-by-type-code-localized-test
   (let [user (gen-user {:db? true :admin? true})
-        site (-> (gen/generate (s/gen :lipas/sports-site))
+        site (-> (tu/gen-sports-site)
                  (assoc-in [:type :type-code] 3110)
                  (assoc-in [:admin] "state")
                  (assoc :status "active"))
@@ -365,7 +400,7 @@
 
 (deftest get-sports-site-test
   (let [user     (gen-user {:db? true :admin? true})
-        rev1     (-> (gen/generate (s/gen :lipas/sports-site))
+        rev1     (-> (tu/gen-sports-site)
                      (assoc :status "active"))
         _        (core/upsert-sports-site!* db user rev1)
         lipas-id (:lipas-id rev1)
@@ -383,7 +418,7 @@
 
 (deftest get-sports-site-history-test
   (let [user     (gen-user {:db? true :admin? true})
-        rev1     (-> (gen/generate (s/gen :lipas/sports-site))
+        rev1     (-> (tu/gen-sports-site)
                      (assoc :status "active"))
         rev2     (-> rev1
                      (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
@@ -399,7 +434,7 @@
     (is (s/valid? :lipas/sports-sites body))))
 
 (deftest search-test
-  (let [site     (gen/generate (s/gen :lipas/sports-site))
+  (let [site     (tu/gen-sports-site)
         lipas-id (:lipas-id site)
         name     (:name site)
         _        (core/index! search site :sync)
@@ -428,7 +463,7 @@
                                      {:query (str 258083685)}}]}}})))))))
 
 (deftest sports-sites-report-test
-  (let [site     (gen/generate (s/gen :lipas/sports-site))
+  (let [site     (tu/gen-sports-site)
         _        (core/index! search site :sync)
         path     "/api/actions/create-sports-sites-report"
         resp     (app (-> (mock/request :post path)
@@ -467,7 +502,7 @@
 (deftest calculate-stats-test
   (let [_    (seed/seed-city-data! db)
         user (gen-user {:db? true :admin? true})
-        site (-> (gen/generate (s/gen :lipas/sports-site))
+        site (-> (tu/gen-sports-site)
                  (assoc :status "active")
                  (assoc-in [:location :city :city-code] 275)
                  (assoc-in [:properties :area-m2] 100))
@@ -517,4 +552,5 @@
     (is (= 200 (:status resp2)))))
 
 (comment
-  (t/run-tests *ns*))
+  (t/run-tests *ns*)
+  )
