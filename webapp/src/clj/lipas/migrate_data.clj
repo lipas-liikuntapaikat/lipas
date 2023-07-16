@@ -58,7 +58,7 @@
 
 (defn- migrate-changed!
   "Migrates modifications from data if they're newer than data in db."
-  [db search user data]
+  [db {:keys [indices client] :as search} user data]
   (let [;; Get last modification dates from db for all update
         ;; candidates.
         timestamps (->> (db/get-last-modified db (map :sportsPlaceId data))
@@ -87,14 +87,14 @@
                          (map utils/clean))
         valid-sites (filter (partial utils/validate-noisy :lipas/sports-site) sites)
         invalid     (set/difference (set sites) (set valid-sites))
-        idx-name    "sports_sites_current"]
+        idx-name    (get-in indices [:sports-site :search])]
 
     (db/upsert-sports-sites! db user valid-sites)
 
     (->> valid-sites
          (map core/enrich)
          (search/->bulk idx-name :lipas-id)
-         (search/bulk-index! search))
+         (search/bulk-index! client))
 
     {:total   (count data)
      :updated (map :lipas-id valid-sites)

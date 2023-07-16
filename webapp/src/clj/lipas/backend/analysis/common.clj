@@ -3,12 +3,7 @@
    [clojure.set :as set]
    [lipas.backend.search :as search]))
 
-(def population-index "vaestoruutu_1km_2019_kp")
-(def population-index-high-def "vaestoruutu_250m_2020_kp")
 (def population-high-def-threshold-km 10)
-
-(def schools-index "schools")
-(def sports-sites-index "sports_sites_current")
 (def default-statuses #{"planning" "planned" "active" "out-of-service-temporarily"})
 
 (defn build-query [geom distance-km]
@@ -30,9 +25,10 @@
 (defn get-sports-site-data
   ([search fcoll distance-km type-codes]
    (get-sports-site-data search fcoll distance-km type-codes default-statuses))
-  ([search fcoll distance-km type-codes statuses]
-   (let [geom  (-> fcoll :features first)
-         query (-> (build-query geom distance-km)
+  ([{:keys [indices client]} fcoll distance-km type-codes statuses]
+   (let [idx-name (get-in indices [:sports-sites :search])
+         geom     (-> fcoll :features first)
+         query    (-> (build-query geom distance-km)
                    (assoc :_source [:name
                                     :status
                                     :type.type-code
@@ -45,27 +41,28 @@
                                                    {:terms {:type.type-code type-codes}})
                        (seq statuses)   (update-in [:query :bool :must] conj
                                                    {:terms {:status statuses}})))]
-     (-> (search/search search sports-sites-index query)
+     (-> (search/search client idx-name query)
          :body
          :hits))))
 
 (defn get-es-data*
-  [idx-name search fcoll distance-km]
+  [idx-name client fcoll distance-km]
   (let [geom (-> fcoll :features first)]
-    (-> (search/search search idx-name (build-query geom distance-km))
+    (-> (search/search client idx-name (build-query geom distance-km))
         :body
         :hits)))
 
 (defn get-population-data
-  [search fcoll distance-km]
+  [{:keys [indices client]} fcoll distance-km]
   (let [idx (if (> distance-km population-high-def-threshold-km)
-              population-index
-              population-index-high-def)]
-    (get-es-data* idx search fcoll distance-km)))
+              (get-in indices [:analysis :population])
+              (get-in indices [:analysis :population-high-def]))]
+    (get-es-data* idx client fcoll distance-km)))
 
 (defn get-school-data
-  [search fcoll distance-km]
-  (get-es-data* schools-index search fcoll distance-km))
+  [{:keys [indices client]} fcoll distance-km]
+  (let [idx-name (get-in indices [:analysis :schools])]
+    (get-es-data* idx-name client fcoll distance-km)))
 
 (def anonymity-threshold 10)
 

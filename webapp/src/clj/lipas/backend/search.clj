@@ -1,8 +1,9 @@
 (ns lipas.backend.search
   (:require
+   [clojure.core.async :as async]
+   [clojure.string :as str]
    [qbits.spandex :as es]
-   [qbits.spandex.utils :as es-utils]
-   [clojure.core.async :as async]))
+   [qbits.spandex.utils :as es-utils]))
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
@@ -33,8 +34,8 @@
   []
   (-> (java.time.LocalDateTime/now)
       str
-      (clojure.string/lower-case)
-      (clojure.string/replace #"[:|.]" "-")))
+      (str/lower-case)
+      (str/replace #"[:|.]" "-")))
 
 (defn create-index!
   [client index mappings]

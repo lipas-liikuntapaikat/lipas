@@ -31,8 +31,9 @@
      :sports-sites {:type "nested"}}}})
 
 (defn create-index!
-  [search]
-  (search/create-index! search :diversity mappings))
+  [{:keys [indices client]}]
+  (let [idx-name (get-in indices [:analysis :diversity])]
+    (search/create-index! client idx-name mappings)))
 
 (def statuses
   "Relevant sports site statuses for diversity index calculation."
@@ -240,21 +241,22 @@
 ;;; Pre-calculated impl ;;;
 
 (defn fetch-grid
-  [search fcoll analysis-radius-km]
-  (let [geom (-> fcoll :features first)
-        query {:size 10000
-               :query
-               {:bool
-                {:filter
-                 {:geo_shape
-                  {:WKT
-                   {:shape    (if (= "Point" (-> geom :geometry :type))
-                                {:type        "circle"
-                                 :coordinates (-> geom :geometry :coordinates)
-                                 :radius      (str analysis-radius-km "km")}
-                                (:geometry geom))
-                    :relation "intersects"}}}}}}]
-    (->> (search/search search :diversity query)
+  [{:keys [indices client]} fcoll analysis-radius-km]
+  (let [idx-name (get-in indices [:analysis :diversity])
+        geom     (-> fcoll :features first)
+        query    {:size 10000
+                  :query
+                  {:bool
+                   {:filter
+                    {:geo_shape
+                     {:WKT
+                      {:shape    (if (= "Point" (-> geom :geometry :type))
+                                   {:type        "circle"
+                                    :coordinates (-> geom :geometry :coordinates)
+                                    :radius      (str analysis-radius-km "km")}
+                                   (:geometry geom))
+                       :relation "intersects"}}}}}}]
+    (->> (search/search client idx-name query)
          :body
          :hits
          :hits)))
@@ -341,8 +343,9 @@
                 (:hits site-data)))))
 
 (defn recalc-grid!
-  [search fcoll]
-  (let [on-error       prn
+  [{:keys [indices client] :as search} fcoll]
+  (let [idx-name (get-in indices [:analysis :diversity])
+        on-error       prn
         buffer-dist-km 2
         buffer-geom    (gis/calc-buffer fcoll (* buffer-dist-km 1000))
         buffer-fcoll   (gis/->fcoll [(gis/->feature buffer-geom)])
@@ -350,8 +353,8 @@
     (->> grid-items
          (map :_source)
          (map #(process-grid-item search buffer-dist-km % on-error))
-         (search/->bulk :diversity :grd_id)
-         (search/bulk-index! search)
+         (search/->bulk idx-name :grd_id)
+         (search/bulk-index! client)
          deref)))
 
 (comment

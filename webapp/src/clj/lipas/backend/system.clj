@@ -20,7 +20,8 @@
   (email/->SMTPEmailer config))
 
 (defmethod ig/init-key :search [_ config]
-  (search/create-cli config))
+  {:client  (search/create-cli config)
+   :indices (:indices config)})
 
 (defmethod ig/init-key :mailchimp [_ config]
   config)
