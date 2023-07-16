@@ -19,7 +19,19 @@
    :search
    {:hosts [(:search-host env)] ; Notice vector!
     :user  (:search-user env)
-    :pass  (:search-pass env)}
+    :pass  (:search-pass env)
+    :indices
+    {:sports-site
+     {:search    "sports_sites_current"
+      :analytics "analytics"}
+     :report
+     {:subsidies  "subsidies"
+      :city-stats "city_stats"}
+     :analysis
+     {:schools             "schools"
+      :population          "vaestoruutu_1km_2019_kp"
+      :population-high-def "vaestoruutu_250m_2020_kp"
+      :diversity           "diversity"}}}
    :mailchimp
    {:api-key                (:mailchimp-api-key env)
     :api-url                (:mailchimp-api-url env)

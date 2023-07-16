@@ -80,13 +80,13 @@
 ;; `year`-`city` is used as primary key
 (defn index-city-finance-data!
   "Re-indexes documents from db table 'city' into ES."
-  [{:keys [db search]}]
-  (let [es-index "city_stats"]
+  [{:keys [db {:keys [indices client]}]}]
+  (let [es-index (get-in indices [:report :city-stats])]
     (log/info "Starting to index city finance data to" es-index)
     (->> (core/get-cities db :no-cache)
          ->city-finance-entries
          (search/->bulk es-index :id)
-         (search/bulk-index! search)
+         (search/bulk-index! client)
          deref)
     (log/info "All done!")))
 
@@ -105,16 +105,16 @@
 (defn index-subsidies!
   "Deletes current index and creates new one with data from db-table
   'subsidy'."
-  [{:keys [db search]}]
-  (let [es-index "subsidies"]
+  [{:keys [db {:keys [indices client]}]}]
+  (let [es-index (get-in indices [:report :subsidies])]
     (log/info "Deleting index" es-index)
-    (search/delete-index! search es-index)
+    (search/delete-index! client es-index)
     (log/info "Deleted" es-index)
     (log/info "Starting to index subsidies data to" es-index)
     (->> (core/get-subsidies db)
          (map ->subsidy-entry)
          (search/->bulk es-index :id)
-         (search/bulk-index! search)
+         (search/bulk-index! client)
          deref)
     (log/info "All done!")))
 

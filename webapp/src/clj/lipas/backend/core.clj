@@ -347,17 +347,20 @@
 (defn index!
   ([search sports-site]
    (index! search sports-site false))
-  ([search sports-site sync?]
-   (let [idx-name "sports_sites_current"
+  ([{:keys [indices client]} sports-site sync?]
+   (let [idx-name (get-in indices [:sports-site :search])
          data     (enrich sports-site)]
-     (search/index! search idx-name :lipas-id data sync?))))
+     (search/index! client idx-name :lipas-id data sync?))))
 
-(defn search [search params]
-  (let [idx-name "sports_sites_current"]
-    (search/search search idx-name params)))
+(defn search
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:sports-site :search])]
+    (search/search client idx-name params)))
 
-(defn search-fields [search {:keys [field-types]}]
-  (let [idx-name "sports_sites_current"
+(defn search-fields
+  [{:keys [indices client]}
+   {:keys [field-types]}]
+  (let [idx-name (get-in indices [:sports-site :search])
         params   {:size             1000
                   :track_total_hits 50000
                   :_source
@@ -366,7 +369,7 @@
                   {:bool
                    {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
                            {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
-    (-> (search/search search idx-name params)
+    (-> (search/search client idx-name params)
         :body
         :hits
         :hits
@@ -436,8 +439,10 @@
 (defn get-subsidies [db]
   (db/get-subsidies db))
 
-(defn query-subsidies [search params]
-  (:body (search/search search "subsidies" params)))
+(defn query-subsidies
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:report :subsidies])]
+    (:body (search/search client idx-name params))))
 
 ;;; Reports ;;;
 
@@ -446,9 +451,9 @@
     (reports/energy-report data)))
 
 (defn sports-sites-report-excel
-  [search params fields locale out]
-  (let [idx-name  "sports_sites_current"
-        in-chan   (search/scroll search idx-name params)
+  [{:keys [indices client]} params fields locale out]
+  (let [idx-name  (get-in indices [:sports-site :search])
+        in-chan   (search/scroll client idx-name params)
         locale    (or locale :fi)
         headers   (mapv #(get-in reports/fields [% locale]) fields)
         data-chan (async/go
@@ -466,9 +471,9 @@
          (excel/save-workbook-into-stream! out))))
 
 (defn sports-sites-report-geojson
-  [search params fields locale out]
-  (let [idx-name "sports_sites_current"
-        in-chan  (search/scroll search idx-name (update params :_source dissoc :excludes))
+  [{:keys [indices client]} params fields locale out]
+  (let [idx-name (get-in indices [:sports-site :search])
+        in-chan  (search/scroll client idx-name (update params :_source dissoc :excludes))
         locale   (or locale :fi)
         headers  (mapv #(get-in reports/fields [% locale]) fields)
         localize (partial i18n/localize locale)
@@ -502,8 +507,10 @@
   (let [data (get-cities db)]
     (reports/finance-report city-codes data)))
 
-(defn query-finance-report [search params]
-  (:body (search/search search "city_stats" params)))
+(defn query-finance-report
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:report :city-stats])]
+    (:body (search/search client idx-name params))))
 
 (defn calculate-stats
   [db search* city-codes type-codes grouping]
@@ -541,13 +548,15 @@
 
 ;;; Analysis ;;;
 
-(defn search-schools [search params]
-  (let [idx-name "schools"]
-    (search/search search idx-name params)))
+(defn search-schools
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:analysis :schools])]
+    (search/search client idx-name params)))
 
-(defn search-population [search params]
-  (let [idx-name "vaestoruutu_1km_2019_kp"]
-    (search/search search idx-name params)))
+(defn search-population
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:analysis :population])]
+    (search/search client idx-name params)))
 
 (defn calc-distances-and-travel-times [search params]
   (reachability/calc-distances-and-travel-times search params))
