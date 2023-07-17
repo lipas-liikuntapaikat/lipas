@@ -1,7 +1,7 @@
 (ns lipas.ui.components.lists
   (:require
-   ["react-virtualized/dist/commonjs/Autosizer" :default AutoSizer]
-   ["react-virtualized/dist/commonjs/List" :default List]
+   ["react-virtualized/dist/commonjs/AutoSizer$default" :as AutoSizer]
+   ["react-virtualized/dist/commonjs/List$default" :as List]
    [goog.object :as gobj]
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))

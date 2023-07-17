@@ -10,7 +10,7 @@
    [metosin/spec-tools "0.10.5"]
 
    ;;; Frontend ;;;
-   [thheller/shadow-cljs "2.20.20"]
+   [thheller/shadow-cljs "2.22.9"]
    [org.clojure/clojurescript "1.11.60"]
    [reagent "1.1.1"]
    [re-frame "1.3.0"]
@@ -47,9 +47,7 @@
      [org.locationtech.geowave/geowave-adapter-raster]
      [org.locationtech.geowave/geowave-adapter-vector]]]]
 
-  :plugins [[lein-environ "1.1.0"]
-            [lein-cljsbuild "1.1.7"]
-            [lein-ring "0.12.5"]
+  :plugins [[lein-ring "0.12.5"]
             [migratus-lein "0.7.0"]]
 
   :ring {:handler      lipas.dev/dev-handler
