@@ -4,7 +4,8 @@
    [clojure.java.jdbc :as jdbc]
    [clojure.spec.alpha :as s]
    [clojure.spec.gen.alpha :as gen]
-   [clojure.test :refer [deftest is] :as t]
+   [clojure.string :as str]
+   [clojure.test :refer [deftest is use-fixtures] :as t]
    [cognitect.transit :as transit]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.analysis.diversity :as diversity]
@@ -23,6 +24,8 @@
   (:import
    [java.io ByteArrayOutputStream]
    java.util.Base64))
+
+;;; Setup ;;;
 
 (def <-json #(j/parse-string (slurp %) true))
 (def ->json j/generate-string)
@@ -58,7 +61,7 @@
                 (select-keys [:db :app :search :mailchimp])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
                 (update-in [:db :dbname] test-suffix)
-                (assoc-in [:db :dev] true)
+                (assoc-in [:db :dev] true) ;; No connection pool
                 (update-in [:search :indices :sports-site :search] test-suffix)
                 (update-in [:search :indices :sports-site :analytics] test-suffix)
                 (update-in [:search :indices :report :subsidies] test-suffix)
@@ -68,25 +71,41 @@
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
                 (update-in [:search :indices :analysis :diversity] test-suffix)))
 
-(defn reset-db! []
+(defn init-db! []
   (let [migratus-opts {:store         :database
                        :migration-dir "migrations"
                        :db            (:db config)}]
-    (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
-                         false
-                         [(str "DROP DATABASE IF EXISTS " (-> config :db :dbname))
-                          (str "CREATE DATABASE " (-> config :db :dbname))
-                          (str "CREATE EXTENSION IF NOT EXISTS postgis")
-                          (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                          (str "CREATE EXTENSION IF NOT EXISTS citext")
-                          (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
-    (jdbc/db-do-commands (:db config)
-                         [(str "CREATE EXTENSION IF NOT EXISTS postgis")
-                          (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                          (str "CREATE EXTENSION IF NOT EXISTS citext")
-                          (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+    (try
+      (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
+                           false
+                           [(str "CREATE DATABASE " (-> config :db :dbname))
+                            (str "CREATE EXTENSION IF NOT EXISTS postgis")
+                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                            (str "CREATE EXTENSION IF NOT EXISTS citext")
+                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+      (catch Exception e
+        (when-not (= "ERROR: database \"lipas_test\" already exists"
+                     (-> e .getCause .getMessage))
+          (throw e))))
     (migratus/init migratus-opts)
     (migratus/migrate migratus-opts)))
+
+(def tables
+  ["account"
+   "analysis_queue"
+   "city"
+   "elevation_queue"
+   "email_out_queue"
+   "integration_log"
+   "integration_out_queue"
+   "reminder"
+   "sports_site"
+   "subsidy"])
+
+(defn prune-db! []
+  (jdbc/execute! (:db config) [(str "TRUNCATE "
+                                    (str/join "," tables)
+                                    " RESTART IDENTITY CASCADE")]))
 
 (def system (system/start-system! config))
 
@@ -109,9 +128,11 @@
         (search/create-index! client idx-name mapping)))))
 
 (comment
-  (reset-db!)
+  (init-db!)
   (prune-es!)
-  (ex-data *e))
+  (prune-db!)
+  (ex-data *e)
+  )
 
 (defn gen-user
   ([]
@@ -126,6 +147,13 @@
          (core/add-user! db user)
          (assoc user :id (:id (core/get-user db (:email user)))))
        user))))
+
+;;; Fixtures ;;;
+
+(use-fixtures :once (fn [f] (init-db!) (f)))
+(use-fixtures :each (fn [f] (prune-db!) (prune-es!) (f)))
+
+;;; The tests ;;;
 
 (deftest register-user-test
   (let [user (gen-user)
@@ -450,17 +478,6 @@
     (is (= 200 (:status resp)))
     (is (some? (first (filter (comp #{lipas-id} :lipas-id) sites))))
     (is (s/valid? :lipas/sports-sites sites))))
-
-(comment
-  (<-json
-   (:body
-    (app (-> (mock/request :post "/api/actions/search")
-             (mock/content-type "application/json")
-             (mock/body (->json {:query
-                                 {:bool
-                                  {:must
-                                   [{:query_string
-                                     {:query (str 258083685)}}]}}})))))))
 
 (deftest sports-sites-report-test
   (let [site     (tu/gen-sports-site)
