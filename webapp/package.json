@@ -37,7 +37,7 @@
     "rc-slider": "^9.7.5",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-virtualized": "^9.21.1",
+    "react-virtualized": "9.21.1",
     "recharts": "^2.2.0",
     "shpjs": "^4.0.4",
     "togpx": "^0.5.4",

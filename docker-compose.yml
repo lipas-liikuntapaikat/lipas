@@ -237,7 +237,7 @@ services:
       - osrm-car
 
   node-base:
-    image: node:10-alpine
+    image: node:16-alpine
     working_dir: /usr/src/app
     logging:
       driver: "gelf"

@@ -78,15 +78,19 @@
     (try
       (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
                            false
-                           [(str "CREATE DATABASE " (-> config :db :dbname))
-                            (str "CREATE EXTENSION IF NOT EXISTS postgis")
-                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                            (str "CREATE EXTENSION IF NOT EXISTS citext")
-                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+                           [(str "CREATE DATABASE " (-> config :db :dbname))])
       (catch Exception e
         (when-not (= "ERROR: database \"lipas_test\" already exists"
                      (-> e .getCause .getMessage))
           (throw e))))
+
+    (jdbc/db-do-commands (:db config)
+                           false
+                           [(str "CREATE EXTENSION IF NOT EXISTS postgis")
+                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                            (str "CREATE EXTENSION IF NOT EXISTS citext")
+                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+
     (migratus/init migratus-opts)
     (migratus/migrate migratus-opts)))
 
