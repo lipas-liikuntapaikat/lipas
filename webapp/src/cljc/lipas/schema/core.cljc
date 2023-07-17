@@ -33,6 +33,11 @@
   [& {:keys [min max]}]
   (st/spec
    {:spec            (s/and number? #(<= min % (dec max)))
+    ;; Generate only doubles to avoid problems with ES index type
+    ;; inference and generated values being randomly int / double.
+    ;; Ints are ingested fine by ES but if the initial mapping expects
+    ;; all inputs to be ints it fails when it sees doubles.
+    :gen             gen/double
     :swagger/type    "number"
     :swagger/minimum min
     :swagger/maximum max}))
@@ -162,7 +167,7 @@
 (s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
-(s/def :lipas/hours-in-day (number-in :min 0 :max (inc 24)))
+(s/def :lipas/hours-in-day (int-in  0 (inc 24)))
 
 (s/def :lipas/locale* #{:fi :se :en})
 (s/def :lipas/locale

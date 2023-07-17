@@ -2,9 +2,53 @@ name: LIPAS CI
 
 on: [push]
 
-jobs:
+env:
+  AUTH_KEY: ${{ vars.AUTH_KEY }}
+  ADMIN_PASSWORD: ${{ vars.ADMIN_PASSWORD }}
+  SMTP_HOST: ${{ vars.SMTP_HOST }}
+  SMTP_USER: ${{ vars.SMTP_USER }}
+  SMTP_FROM: ${{ vars.SMTP_FROM }}
+  SEARCH_HOST: ${{ vars.SEARCH_HOST }}
+  SEARCH_USER: ${{ vars.SEARCH_USER }}
+  SEARCH_PASS: ${{ vars.SEARCH_PASS}}
+  ES_JAVA_OPTS: ${{ vars.ES_JAVA_OPTS }}
+  DB_NAME: ${{ vars.DB_NAME }}
+  DB_HOST: ${{ vars.DB_HOST }}
+  DB_PORT: ${{ vars.DB_PORT }}
+  DB_SUPERUSER: ${{ vars.DB_SUPERUSER }}
+  DB_SUPERUSER_PASSWORD: ${{ vars.DB_SUPERUSER_PASSWORD }}
+  DB_USER: ${{ vars.DB_USER }}
+  DB_PASSWORD: ${{ vars.DB_PASSWORD }}
+  MML_AUTH: ${{ vars.MML_AUTH }}
+  OLD_LIPAS_URL: ${{ vars.OLD_LIPAS_URL }}
+  OLD_LIPAS_USER: ${{ vars.OLD_LIPAS_USER }}
+  OLD_LIPAS_PASS: ${{ vars.OLD_LIPAS_PASS }}
+  ACCESSIBILITY_REGISTER_BASE_URL: ${{ vars.ACCESSIBILITY_REGISTER_BASE_URL }}
+  ACCESSIBILITY_REGISTER_SYSTEM_ID: ${{ vars.ACCESSIBILITY_REGISTER_SYSTEM_ID }}
+  ACCESSIBILITY_REGISTER_SECRET_KEY: ${{ vars.ACCESSIBILITY_REGISTER_SECRET_KEY }}
+  LEGACY_DB_URL: ${{ vars.LEGACY_DB_URL }}
+  LEGACY_DB_USER: ${{ vars.LEGACY_DB_USER }}
+  LEGACY_DB_PASS: ${{ vars.LEGACY_DB_PASS }}
+  GEOSERVER_ADMIN_USER: ${{ vars.GEOSERVER_ADMIN_USER }}
+  GEOSERVER_ADMIN_PASSWORD: ${{ vars.GEOSERVER_ADMIN_PASSWORD }}
+  GEOSERVER_INITIAL_MEMORY: ${{ vars.GEOSERVER_INITIAL_MEMORY }}
+  GEOSERVER_MAX_MEMORY: ${{ vars.GEOSERVER_MAX_MEMORY}}
+  OSRM_CAR_URL: ${{ vars.OSRM_CAR_URL }}
+  OSRM_BICYCLE_URL: ${{ vars.OSRM_BICYCLE_URL }}
+  OSRM_FOOT_URL: ${{ vars.OSRM_FOOT_URL }}
+  MAILCHIMP_CAMPAIGN_FOLDER_ID: ${{ vars.MAILCHIMP_CAMPAIGN_FOLDER_ID }}
+  MAILCHIMP_LIST_ID: ${{ vars.MAILCHIMP_LIST_ID }}
+  MAILCHIMP_NEWSLETTER_INTEREST_ID: ${{ vars.MAILCHIMP_NEWSLETTER_INTEREST_ID }}
+  MAILCHIMP_API_URL: ${{ vars.MAILCHIMP_API_URL }}
+  MAILCHIMP_API_KEY: ${{ vars.MAILCHIMP_API_KEY }}
+  DIGITRANSIT_SUBSCRIPTION_KEY: ${{ vars.DIGITRANSIT_SUBSCRIPTION_KEY }}
+  MML_COVERAGE_URL: ${{ vars.MML_COVERAGE_URL }}
+  MML_API_KEY: ${{ vars.MML_API_KEY }}
+  LEIN_SILENT: true
 
-  clojure:
+  # lol
+jobs:
+  ci:
 
     strategy:
       matrix:
@@ -16,31 +60,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # It is important to install java before installing clojure tools which needs java
-      # exclusions: babashka, clj-kondo and cljstyle
-      - name: Prepare java
+      - name: Install java
         uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
-          java-version: '11'
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@11.0
         with:
-          # Install just one or all simultaneously
-          # The value must indicate a particular version of the tool, or use 'latest'
-          # to always provision the latest version
-          cli: 1.10.1.693              # Clojure CLI based on tools.deps
-          lein: 2.9.1                  # Leiningen
-          #boot: 2.8.3                  # Boot.clj
-          #bb: 0.7.8                    # Babashka
-          clj-kondo: 2022.05.31        # Clj-kondo
-          cljfmt: 0.10.2               # cljfmt
-          #cljstyle: 0.15.0             # cljstyle
-          #cmd-exe-workaround: 'latest' # Replaces `clojure` with `deps.clj` on Windows
-          #zprint: 1.2.3                # zprint
+          # cli: latest
+          lein: latest
 
-      # Optional step:
       - name: Cache clojure dependencies
         uses: actions/cache@v3
         with:
@@ -49,34 +80,55 @@ jobs:
             ~/.gitlibs
             ~/.deps.clj
           # List all files containing dependencies:
-          #key: cljdeps-${{ hashFiles('deps.edn') }}
+          # key: cljdeps-${{ hashFiles('deps.edn') }}
           # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
-          key: cljdeps-${{ hashFiles('project.clj') }}
+          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
           # key: cljdeps-${{ hashFiles('build.boot') }}
           restore-keys: cljdeps-
 
-      # - name: Execute clojure code
-      #   run: clojure -e "(+ 1 1)"
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
 
-      - name: Run tests
-        run: lein test
+      - name: Run backend tests
+        run: docker-compose run --rm backend-tests
 
-      # - name: Get boot version
-      #   run: boot -V
+      - name: Build backend jar
+        run: docker-compose run --rm backend-build
 
-      # - name: Get babashka version
-      #   run: bb --version
+      - name: Build frontend
+        run:  |
+          npm install --quiet
+          npx shadow-cljs release app
+        working-directory: ./webapp
 
-      # - name: Get clj-kondo version
-      #   run: clj-kondo --version
+      # - name: Install npm dependencies
+      #   run: docker-compose run --rm frontend-npm-deps
 
-      # - name: Get cljfmt version
-      #   run: cljfmt --version
+      # - name: Build frontend
+      #   run: docker-compose run --rm frontend-build
 
-      # - name: Get cljstyle version
-      #   # cljstyle is not yet available for windows
-      #   if: ${{ matrix.os != 'windows-latest' }}
-      #   run: cljstyle version
+      # - name: Run backend migrations
+      #   run: docker-compose run --rm backend-migrate
 
-      # - name: Get zprint version
-      #   run: zprint --version
+      # - name: Seed backend data to db
+      #   run: docker-compose run --rm backend-seed
+
+      # - name: Index backend data to ES
+      #   run: docker-compose run --rm backend-index-search
+
+      # - name: Generate self-sigend SSL-certificate
+      #   run: |
+      #     openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+      #       -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com" \
+      #       -keyout certs/server.key -out certs/server.crt
+
+      # - name: Run integration tests
+      #   run: docker-compose run --rm integration-tests
+
+      - name: docker logs
+        if: ${{ failure() }}
+        run: docker-compose logs
