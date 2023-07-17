@@ -1,8 +1,0 @@
-sudo: required
-services: docker
-# Shutdown travis postgres so port 5432 won't conflict
-before_install:
-  - sudo service postgresql stop
-  - while sudo lsof -Pi :5432 -sTCP:LISTEN -t; do sleep 1; done
-script: bash ci.sh
-after_failure: docker-compose logs
