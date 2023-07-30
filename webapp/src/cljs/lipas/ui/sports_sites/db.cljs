@@ -6,6 +6,7 @@
    [lipas.data.prop-types :as prop-types]
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.types :as types]
+   [lipas.ui.sports-sites.activities.db :as activities]
    [lipas.ui.sports-sites.floorball.db :as floorball]
    [lipas.ui.sports-sites.football.db :as football]
    [lipas.ui.utils :as utils]))
@@ -34,4 +35,5 @@
     :selected-year   utils/this-year}
 
    :football  football/default-db
-   :floorball floorball/default-db})
+   :floorball floorball/default-db
+   :activities activities/default-db})
