@@ -361,7 +361,8 @@
      :select-hall              "Valitse halli",
      :clear-selections         "Poista valinnat",
      :select                   "Valitse",
-     :select-types             "Valitse tyypit"},
+     :select-types             "Valitse tyypit"
+     :select-all               "Valitse kaikki"},
     :dimensions
     {:area-m2         "Pinta-ala m²",
      :depth-max-m     "Syvyys max m",
@@ -2014,7 +2015,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :select-hall              "Select hall",
      :clear-selections         "Clear",
      :select                   "Select",
-     :select-types             "Select types"},
+     :select-types             "Select types"
+     :select-all               "Select all"},
     :dimensions
     {:area-m2         "Area m²",
      :depth-max-m     "Depth max m",
