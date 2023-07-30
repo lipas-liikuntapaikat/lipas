@@ -785,3 +785,13 @@
          fcoll  {:type     "FeatureCollection"
                  :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]
      {:dispatch-n [[::new-geom-drawn fcoll]]})))
+
+(re-frame/reg-event-db
+ ::select-sports-site-tab
+ (fn [db [_ tab]]
+   (assoc-in db [:map :selected-sports-site-tab] tab)))
+
+(re-frame/reg-event-db
+ ::select-new-sports-site-tab
+ (fn [db [_ tab]]
+   (assoc-in db [:map :selected-new-sports-site-tab] tab)))
