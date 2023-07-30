@@ -57,15 +57,16 @@
 
 (defn dialog
   [{:keys [tr btn-variant]}]
-  (let [open?           (<== [::subs/dialog-open?])
-        toggle          #(==> [::events/toggle-dialog])
-        selected-fields (<== [::subs/selected-fields])
-        selected-format (<== [::subs/selected-format])
-        downloading?    (<== [::subs/downloading?])
-        results-count   (<== [:lipas.ui.search.subs/search-results-total-count])
-        logged-in?      (<== [:lipas.ui.subs/logged-in?])
-        saved-reports   (<== [:lipas.ui.user.subs/saved-reports])
-        quick-selects   (<== [::subs/quick-selects])]
+  (let [open?            (<== [::subs/dialog-open?])
+        toggle           #(==> [::events/toggle-dialog])
+        selected-fields  (<== [::subs/selected-fields])
+        selected-format  (<== [::subs/selected-format])
+        downloading?     (<== [::subs/downloading?])
+        results-count    (<== [:lipas.ui.search.subs/search-results-total-count])
+        logged-in?       (<== [:lipas.ui.subs/logged-in?])
+        saved-reports    (<== [:lipas.ui.user.subs/saved-reports])
+        quick-selects    (<== [::subs/quick-selects])
+        limits-exceeded? (<== [::subs/limits-exceeded?])]
     [:<>
      ;; Open Dialog button
      (when (< 0 results-count)
@@ -81,7 +82,7 @@
      [save-dialog]
 
      ;; Dialog
-     [mui/dialog {:open open? :full-width true :on-close toggle}
+     [mui/dialog {:open open? :full-width true :on-close toggle :max-width "md"}
       [mui/dialog-title
        [mui/grid
         {:container       true
@@ -147,9 +148,16 @@
       ;; Cancel / download buttons
       [mui/dialog-actions
 
+       (when limits-exceeded?
+         [mui/typography
+          {:variant "caption"
+           :color   "error"}
+          (tr :reports/excel-limit-exceeded)])
+
        ;; Result count
        [mui/typography
-        {:variant "caption"}
+        {:variant "caption"
+         :color   (if limits-exceeded? "error" "initial")}
         (tr :search/results-count results-count)]
 
        [:span {:style {:width "12px"}}]
@@ -169,7 +177,7 @@
 
        ;; Download button
        [mui/button
-        {:disabled (or downloading? (empty? selected-fields))
+        {:disabled (or downloading? (empty? selected-fields) limits-exceeded?)
          :color    "secondary"
          :on-click #(==> [::search-events/create-report-from-current-search selected-format])}
         (tr :actions/download-excel)]]]]))
