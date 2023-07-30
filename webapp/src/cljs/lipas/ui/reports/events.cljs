@@ -60,7 +60,8 @@
    (let [fields       (sort-headers fields)
          content-type (condp = fmt
                         "xlsx"    (:xlsx cutils/content-type)
-                        "geojson" "application/json")]
+                        "geojson" (:json cutils/content-type)
+                        "csv"     (:csv cutils/content-type))]
      {:http-xhrio
       {:method          :post
        :uri             (str (:backend-url db) "/actions/create-sports-sites-report")
