@@ -8,37 +8,6 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn- make-quick-selects [tr]
-  [{:label  (tr :lipas.sports-site/basic-data)
-    :fields ["lipas-id" "name" "marketing-name" "comment"
-             "construction-year" "renovation-years"]}
-   {:label  (tr :lipas.sports-site/ownership)
-    :fields ["admin" "owner"]}
-   {:label  (tr :lipas.sports-site/contact)
-    :fields ["email" "phone-number" "www"]}
-   {:label  (tr :lipas.sports-site/address)
-    :fields ["location.address" "location.postal-code"
-             "location.postal-office"
-             "location.city.city-name"
-             "location.city.neighborhood"]}
-   {:label  (tr :general/measures)
-    :fields ["properties.field-length-m"
-             "properties.field-width-m"
-             "properties.area-m2"]}
-   {:label  (tr :lipas.sports-site/surface-materials)
-    :fields ["properties.surface-material"
-             "properties.surface-material-info"]}
-   {:label  (tr :type/name)
-    :fields ["type.type-name"
-             "search-meta.type.main-category.name.fi"
-             "search-meta.type.sub-category.name.fi"]}
-   {:label  (tr :lipas.location/city)
-    :fields ["location.city.city-name"
-             "search-meta.location.province.name.fi"
-             "search-meta.location.avi-area.name.fi"]}
-   {:label  (tr :general/last-modified)
-    :fields ["event-date"]}])
-
 (defn fields-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [::subs/fields])]
@@ -83,7 +52,8 @@
           :on-click #(==> [::events/save-current-report @name'])}
          (tr :actions/save)]]])))
 
-(defn dialog [{:keys [tr btn-variant]}]
+(defn dialog
+  [{:keys [tr btn-variant]}]
   (let [open?           (<== [::subs/dialog-open?])
         toggle          #(==> [::events/toggle-dialog])
         selected-fields (<== [::subs/selected-fields])
@@ -92,8 +62,7 @@
         results-count   (<== [:lipas.ui.search.subs/search-results-total-count])
         logged-in?      (<== [:lipas.ui.subs/logged-in?])
         saved-reports   (<== [:lipas.ui.user.subs/saved-reports])
-
-        quick-selects (make-quick-selects tr)]
+        quick-selects   (<== [::subs/quick-selects])]
     [:<>
      ;; Open Dialog button
      (when (< 0 results-count)
