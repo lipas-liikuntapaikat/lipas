@@ -571,13 +571,14 @@
      :reset-success
      "Salasana vaihdettu! Kirjaudu sisään uudella salasanalla."},
     :reports
-    {:contacts          "Yhteys​tiedot",
-     :download-as-excel "Luo raportti",
-     :select-fields     "Valitse raportin kentät",
-     :selected-fields   "Valitut kentät",
-     :shortcuts         "Pikavalinnat",
-     :tooltip           "Luo Excel-raportti hakutuloksista"
-     :file-format       "Tiedostotyyppi"},
+    {:contacts             "Yhteys​tiedot",
+     :download-as-excel    "Luo raportti",
+     :select-fields        "Valitse raportin kentät",
+     :selected-fields      "Valitut kentät",
+     :shortcuts            "Pikavalinnat",
+     :tooltip              "Luo Excel-raportti hakutuloksista"
+     :file-format          "Tiedostotyyppi"
+     :excel-limit-exceeded "Liian suuri Excel-tiedosto (> 10 000 hakutulosta). Rajaa hakua tai valitse eri tiedostomuoto."},
     :heat-sources
     {:district-heating      "Kaukolämpö",
      :private-power-station "Oma voimalaitos"},

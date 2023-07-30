@@ -96,3 +96,15 @@
      (if logged-in?
        (conj quick-selects (make-select-all fields tr))
        quick-selects))))
+
+;; Excel generation halts after certain threshold. Not sure why.
+;; CSV and GeoJSON can be streamed
+(re-frame/reg-sub
+ ::limits-exceeded?
+ :<- [::selected-fields]
+ :<- [:lipas.ui.search.subs/search-results-total-count]
+ :<- [::selected-format]
+ (fn [[fields results-count fmt] _]
+   (and (#{"xlsx"} fmt)
+        (> results-count 10000)
+        (> (count fields) 20))))
