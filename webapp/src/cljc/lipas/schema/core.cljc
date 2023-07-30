@@ -1800,7 +1800,7 @@
   (s/keys :req-un [:lipas.sports-site.type/type-code
                    :lipas.api.energy-report.req/year]))
 
-(s/def :lipas.api.sports-sites-report/format #{"xlsx" "geojson"})
+(s/def :lipas.api.sports-sites-report/format #{"xlsx" "geojson" "csv"})
 
 (s/def :lipas.api.sports-site-report/req
   (s/keys :req-un [:lipas.api.sports-site-report.req/search-query

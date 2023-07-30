@@ -3,6 +3,7 @@
    [buddy.hashers :as hashers]
    [cheshire.core :as json]
    [clojure.core.async :as async]
+   [clojure.data.csv :as csv]
    [clojure.java.jdbc :as jdbc]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.accessibility :as accessibility]
@@ -502,6 +503,23 @@
                 (recur (inc feat-num) next-f (rest fs)))))
           (recur (inc page-num))))
       (.write writer "]}"))))
+
+(defn sports-sites-report-csv
+  [{:keys [indices client]} params fields locale out]
+  (let [idx-name (get-in indices [:sports-site :search])
+        in-chan  (search/scroll client idx-name params)
+        locale   (or locale :fi)
+        headers  (mapv #(get-in reports/fields [% locale]) fields)
+        xform    (comp (partial reports/->row fields)
+                       (partial i18n/localize locale)
+                       :_source)]
+    (with-open [writer (OutputStreamWriter. out)]
+      (csv/write-csv writer [headers])
+      (loop []
+        (when-let [page (async/<!! in-chan)]
+          (let [ms (-> page :body :hits :hits)]
+            (csv/write-csv writer (map xform ms)))
+          (recur))))))
 
 (defn finance-report [db {:keys [city-codes]}]
   (let [data (get-cities db)]

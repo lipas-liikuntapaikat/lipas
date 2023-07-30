@@ -8,7 +8,8 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn fields-selector [{:keys [tr value on-change]}]
+(defn fields-selector
+  [{:keys [tr value on-change]}]
   (let [locale (tr)
         items  (<== [::subs/fields])]
     ^{:key value}
@@ -23,13 +24,15 @@
       :items-label (tr :reports/selected-fields)
       :on-change   on-change}]))
 
-(defn format-selector [{:keys [tr value on-change]}]
+(defn format-selector
+  [{:keys [tr value on-change]}]
   (let [items [{:label "Excel" :value "xlsx"}
+               {:label "CSV" :value "csv"}
                {:label "GeoJSON" :value "geojson"}]]
     ^{:key value}
     [lui/select
      {:value     value
-      #_#_:label     (tr :reports/file-format)
+      #_#_:label (tr :reports/file-format)
       :items     items
       :style     {:width "100px"}
       :on-change on-change}]))

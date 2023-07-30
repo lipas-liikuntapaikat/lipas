@@ -146,7 +146,7 @@
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
                  #_#_revs  (or (-> parameters :query :revs)
-                                   "latest")
+                               "latest")
                  locale    (or (-> parameters :query :lang keyword)
                                :none)]
              {:status 200
@@ -381,13 +381,16 @@
                          "xlsx"    {"Content-Type"        (-> utils/content-type :xlsx)
                                     "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
                          "geojson" {"Content-Type"        "application/json"
-                                    "Content-Disposition" "inline; filename=\"lipas.geojson\""})
+                                    "Content-Disposition" "inline; filename=\"lipas.geojson\""}
+                         "csv"     {"Content-Type"        "text/csv"
+                                    "Content-Disposition" "inline; filename=\"lipas.csv\""})
               :body
               (ring-io/piped-input-stream
                (fn [out]
                  (condp = format*
                    "xlsx"    (core/sports-sites-report-excel search query fields locale out)
-                   "geojson" (core/sports-sites-report-geojson search query fields locale out))))}))}}]
+                   "geojson" (core/sports-sites-report-geojson search query fields locale out)
+                   "csv"     (core/sports-sites-report-csv search query fields locale out))))}))}}]
 
       ;; Old simple db version
       ["/actions/create-finance-report"

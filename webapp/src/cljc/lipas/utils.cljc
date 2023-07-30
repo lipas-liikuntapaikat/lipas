@@ -168,7 +168,9 @@
   (string/join "," coll))
 
 (def content-type
-  {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})
+  {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+   :csv  "text/csv"
+   :json "application/json"})
 
 (defn ->kebab-case-keywords [m]
   (csk-extras/transform-keys csk/->kebab-case m))
