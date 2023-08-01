@@ -60,9 +60,7 @@
                  (update-in [:emailer :pass] mask)
                  (update-in [:search :pass] mask)
                  (update-in [:mailchimp :api-key] mask)
-                 (update-in [:app
-                             :accessibility-register
-                             :accessibility-register-secret-key] mask)
+                 (update-in [:app :accessibility-register :secret-key] mask)
                  (update-in [:app :mml-api :api-key] mask)))
      system)))
 
