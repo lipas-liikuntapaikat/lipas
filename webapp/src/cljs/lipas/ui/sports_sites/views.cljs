@@ -1000,7 +1000,7 @@
        [mui/grid {:item true :xs 12}
         [mui/grid
          {:container       true
-          :wrap            "no-rwap"
+          :wrap            "nowrap"
           :spacing         2
           :justify-content "flex-end"
           :align-items     "center"}
