@@ -3,4 +3,5 @@
    [lipas.data.activities :as data]))
 
 (def default-db
-  {:by-type-code data/by-type-code})
+  {:mode         :default
+   :by-type-code data/by-type-code})

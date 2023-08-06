@@ -349,7 +349,7 @@
         (update-in [:features]
                    #(map-indexed (fn [idx f]
                                    (-> f
-                                       (assoc-in [:id] (str lipas-id "-" idx))
+                                       (assoc-in [:id] (or (:id f) (str (random-uuid))))
                                        (assoc-in [:properties :name] name)
                                        (assoc-in [:properties :lipas-id] lipas-id)
                                        (assoc-in [:properties :type-code] type-code)))

@@ -31,10 +31,11 @@
      {:db       new-db
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::discard-edits
- (fn [db [_ lipas-id]]
-   (assoc-in db [:sports-sites lipas-id :editing] nil)))
+ (fn [{:keys [db]} [_ lipas-id]]
+   {:db (assoc-in db [:sports-sites lipas-id :editing] nil)
+    :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/clear]]]}))
 
 ;; Save revision (data). Triggers REST-api call
 (re-frame/reg-event-fx

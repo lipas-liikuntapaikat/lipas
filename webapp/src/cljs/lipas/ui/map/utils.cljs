@@ -219,6 +219,11 @@
     (-> pop-layer .getSource .clear))
   map-ctx)
 
+(defn clear-highlights! [{:keys [layers] :as map-ctx}]
+  (let [^js layer (-> layers :overlays :highlights)]
+    (-> layer .getSource .clear))
+  map-ctx)
+
 (defn show-problems!
   [map-ctx problems]
   (doseq [p (-> problems :data :features)]
@@ -348,10 +353,8 @@
         res       #js[]]
     (.forEachFeature source
                      (fn [f]
-                       (when (-> (.getId f)
-                                 (string/split "-")
-                                 first
-                                 (= (str lipas-id)))
+                       (when (-> (.get f "lipas-id")
+                                 (= lipas-id))
                          (.push res f))
                        ;; Iteration stops if truthy val is returned
                        ;; but we want to find all matching features so

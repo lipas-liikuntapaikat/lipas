@@ -20,11 +20,12 @@
 
 (defn select
   [{:keys [label value items on-change value-fn label-fn helper-text
-           sort-fn sort-cmp deselect? spec required tooltip]
+           sort-fn sort-cmp deselect? spec required tooltip fullWidth]
     :or   {value-fn :value
            label-fn :label
            sort-cmp compare
-           tooltip  ""}
+           tooltip  ""
+           fullWidth true}
     :as   props}]
   (let [on-change #(on-change (-> %
                                   .-target
@@ -44,8 +45,9 @@
         sort-fn   (or sort-fn label-fn)]
     [mui/tooltip {:title tooltip}
      [mui/form-control
-      {:required required
-       :error    (error? spec value required)}
+      {:required  required
+       :fullWidth fullWidth
+       :error     (error? spec value required)}
       (when label [mui/input-label label])
       (into [mui/select props
              (when deselect?
@@ -62,15 +64,19 @@
 
 (defn multi-select
   [{:keys [label value items on-change value-fn label-fn sort-fn
-           sort-cmp tooltip helper-text]
-    :or   {value-fn :value
-           label-fn :label
-           sort-cmp compare
-           tooltip  ""}
+           sort-cmp tooltip helper-text fullWidth required spec]
+    :or   {value-fn  :value
+           label-fn  :label
+           sort-cmp  compare
+           tooltip   ""
+           fullWidth true
+           required  false}
     :as   props}]
   (let [sort-fn (or sort-fn label-fn)]
     [mui/tooltip {:title tooltip}
-     [mui/form-control
+     [mui/form-control {:fullWidth fullWidth
+                        :required  required
+                        :error     (error? spec value required)}
       (when label [mui/input-label label])
       [mui/select
        (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
