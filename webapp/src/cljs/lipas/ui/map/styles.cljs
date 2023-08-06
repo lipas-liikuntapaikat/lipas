@@ -78,6 +78,13 @@
             :fill (Fill. #js{:color "rgba(255,255,0,0.85)"})
             :stroke default-stroke})}))
 
+(def highlight-style
+  (Style.
+   #js{:stroke
+       (Stroke.
+        #js{:width 15 :color "rgba(235,61,52,0.8)"})
+       :fill default-fill}))
+
 (def hover-style
   (Style.
    #js{:stroke hover-stroke

@@ -50,7 +50,7 @@
  (fn [[_ lipas-id] _]
    (re-frame/subscribe [::editing-rev lipas-id]))
  (fn [edit-data _]
-   ((complement empty?) edit-data)))
+   (seq edit-data)))
 
 (re-frame/reg-sub
  ::editing-allowed?
@@ -414,7 +414,11 @@
                                (map #(update % :audience-stand-access
                                              (fn [v]
                                                (get-in audience-stand-access [v locale])))))
-           :locker-rooms  (:locker-rooms latest)}))))))
+           :locker-rooms  (:locker-rooms latest)})
+
+        ;; TODO maybe check activities for type
+        (when true
+          {:activities (:activities latest)}))))))
 
 (defn ->list-entry [{:keys [cities admins owners types locale size-categories]}
                     sports-site]

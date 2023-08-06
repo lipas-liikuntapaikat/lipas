@@ -473,6 +473,7 @@
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
+        hide-actions? (<== [::subs/hide-actions?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -644,6 +645,8 @@
         5 [mui/grid {:item true :xs 12}
            [activities/view
             {:tr           tr
+             :read-only?   (not editing?)
+             :lipas-id     lipas-id
              :type-code    type-code
              :display-data display-data
              :edit-data    edit-data
@@ -653,307 +656,310 @@
      [mui/grid {:item true :xs 12 :style {:height "3em"}}]
 
      ;; Actions
-     [lui/floating-container
-      {:bottom 0 :background-color "transparent"}
-      (into
-       [mui/grid
-        {:container     true
-         :align-items   "center"
-         :align-content "flex-start"
-         :spacing       1
-         :style         {:padding "0.5em 0em 0.5em 0em"}}]
-       (->>
-        [ ;; Undo
-         (when editing?
-           [mui/tooltip {:title (tr :actions/undo)}
-            [:span
-             [mui/fab
-              {:disabled (not undo)
-               :size     "small"
-               :on-click #(==> [::events/undo lipas-id])}
-              [mui/icon "undo"]]]])
+     (when-not hide-actions?
+       [lui/floating-container
+        {:bottom 0 :background-color "transparent"}
+        (into
+         [mui/grid
+          {:container     true
+           :align-items   "center"
+           :align-content "flex-start"
+           :spacing       1
+           :style         {:padding "0.5em 0em 0.5em 0em"}}]
+         (->>
+          [ ;; Undo
+           (when editing?
+             [mui/tooltip {:title (tr :actions/undo)}
+              [:span
+               [mui/fab
+                {:disabled (not undo)
+                 :size     "small"
+                 :on-click #(==> [::events/undo lipas-id])}
+                [mui/icon "undo"]]]])
 
-         ;; Redo
-         (when editing?
-           [mui/tooltip {:title (tr :actions/redo)}
-            [:span
-             [mui/fab
-              {:disabled (not redo)
-               :size     "small"
-               :on-click #(==> [::events/redo lipas-id])}
-              [mui/icon "redo"]]]])
+           ;; Redo
+           (when editing?
+             [mui/tooltip {:title (tr :actions/redo)}
+              [:span
+               [mui/fab
+                {:disabled (not redo)
+                 :size     "small"
+                 :on-click #(==> [::events/redo lipas-id])}
+                [mui/icon "redo"]]]])
 
-         ;; Active editing tool
-         (when (and editing? (#{"LineString" "Polygon"} geom-type))
-           [mui/tooltip
-            {:title
-             (case sub-mode
-               :drawing         "Piirtotyökalu valittu"
-               :drawing-hole    "Reikäpiirtotyökalu valittu"
-               (:editing :undo) (tr :map/delete-vertices-hint)
-               :importing       "Tuontityökalu valittu"
-               :deleting        "Poistotyökalu valittu"
-               :splitting       "Katkaisutyökalu valittu")}
-            [mui/fab
-             {:size     "small"
-              :on-click #() ; noop
-              :color    "inherit"}
-             (let [props {:color "secondary"}]
+           ;; Active editing tool
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [mui/tooltip
+              {:title
                (case sub-mode
-                 :drawing         (case geom-type
-                                    "Point"      [mui/icon props "edit"]
-                                    "LineString" [mui/icon props "timeline"]
-                                    "Polygon"    [mui/icon props "change_history"])
-                 :drawing-hole    [mui/icon props "vignette"]
-                 (:editing :undo) [mui/icon props "edit"]
-                 :importing       [:> FileUpload props]
-                 :deleting        [:> Eraser props]
-                 :splitting       [:> ContentCut props]))]])
+                 :drawing         "Piirtotyökalu valittu"
+                 :drawing-hole    "Reikäpiirtotyökalu valittu"
+                 (:editing :undo) (tr :map/delete-vertices-hint)
+                 :importing       "Tuontityökalu valittu"
+                 :deleting        "Poistotyökalu valittu"
+                 :splitting       "Katkaisutyökalu valittu"
+                 :selecting       "Valintatyökalu valittu")}
+              [mui/fab
+               {:size     "small"
+                :on-click #() ; noop
+                :color    "inherit"}
+               (let [props {:color "secondary"}]
+                 (case sub-mode
+                   :drawing         (case geom-type
+                                      "Point"      [mui/icon props "edit"]
+                                      "LineString" [mui/icon props "timeline"]
+                                      "Polygon"    [mui/icon props "change_history"])
+                   :drawing-hole    [mui/icon props "vignette"]
+                   (:editing :undo) [mui/icon props "edit"]
+                   :importing       [:> FileUpload props]
+                   :deleting        [:> Eraser props]
+                   :splitting       [:> ContentCut props]
+                   :selecting       [mui/icon props "handshake"]))]])
 
-         ;; Tool select button
-         (when (and editing? (#{"LineString" "Polygon"} geom-type))
-           [:<>
-            [mui/tooltip {:title (tr :actions/select-tool)}
-             [mui/fab
-              {:size     "medium"
-               :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-               :color    "secondary"}
-              [mui/icon "more_horiz"]]]
+           ;; Tool select button
+           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+             [:<>
+              [mui/tooltip {:title (tr :actions/select-tool)}
+               [mui/fab
+                {:size     "medium"
+                 :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
+                 :color    "secondary"}
+                [mui/icon "more_horiz"]]]
 
-            [mui/menu
-             {:variant    "menu"
-              :auto-focus false
-              :anchor-el  more-tools-menu-anchor
-              :open       (some? more-tools-menu-anchor)
-              :on-close   #(==> [::events/close-more-tools-menu])}
+              [mui/menu
+               {:variant    "menu"
+                :auto-focus false
+                :anchor-el  more-tools-menu-anchor
+                :open       (some? more-tools-menu-anchor)
+                :on-close   #(==> [::events/close-more-tools-menu])}
 
-             ;; Import geom
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-               [mui/menu-item {:on-click #(do
-                                            (==> [::events/close-more-tools-menu])
-                                            (==> [::events/toggle-import-dialog]))}
-                [mui/list-item-icon
-                 [:> FileUpload]]
-                [mui/list-item-text (tr :map.import/tooltip)]])
+               ;; Import geom
+               (when (and editing? (#{"LineString" "Polygon"} geom-type))
+                 [mui/menu-item {:on-click #(do
+                                              (==> [::events/close-more-tools-menu])
+                                              (==> [::events/toggle-import-dialog]))}
+                  [mui/list-item-icon
+                   [:> FileUpload]]
+                  [mui/list-item-text (tr :map.import/tooltip)]])
 
-             ;; Draw hole
-             (when (and editing? (#{"Polygon"} geom-type))
-               [mui/menu-item
-                {:on-click
-                 #(do
-                    (==> [::events/close-more-tools-menu])
-                    (==> [::events/start-editing lipas-id :drawing-hole geom-type]))}
-                [mui/list-item-icon
-                 [mui/icon
-                  {:color (if (= sub-mode :drawing-hole) "secondary" "inherit")}
-                  "vignette"]]
-                [mui/list-item-text (tr :map/draw-hole)]])
-
-             ;; Add new geom
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-
-               [mui/menu-item
-                {:on-click
-                 #(do
-                    (==> [::events/close-more-tools-menu])
-                    (==> [::events/start-editing lipas-id :drawing geom-type]))}
-                [mui/list-item-icon
-                 (if (= geom-type "LineString")
+               ;; Draw hole
+               (when (and editing? (#{"Polygon"} geom-type))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :drawing-hole geom-type]))}
+                  [mui/list-item-icon
                    [mui/icon
-                    {:color (if (= sub-mode :drawing)
-                              "secondary"
-                              "inherit")} "timeline"]
-                   [mui/icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
-                    "change_history"])]
-                [mui/list-item-text (case geom-type
-                                      "LineString" (tr :map/draw-linestring)
-                                      "Polygon"    (tr :map/draw-polygon))]])
+                    {:color (if (= sub-mode :drawing-hole) "secondary" "inherit")}
+                    "vignette"]]
+                  [mui/list-item-text (tr :map/draw-hole)]])
 
-             ;; Delete geom
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-               [mui/menu-item
-                {:on-click
-                 #(do
-                    (==> [::events/close-more-tools-menu])
-                    (==> [::events/start-editing lipas-id :deleting geom-type]))}
-                [mui/list-item-icon
-                 [:> Eraser
-                  {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
-                [mui/list-item-text (case geom-type
-                                      "LineString" (tr :map/remove-linestring)
-                                      "Polygon"    (tr :map/remove-polygon))]])
+               ;; Add new geom
+               (when (and editing? (#{"LineString" "Polygon"} geom-type))
 
-             ;; Split linestring
-             (when (and editing? (#{"LineString"} geom-type))
-               [mui/menu-item
-                {:on-click
-                 #(do
-                    (==> [::events/close-more-tools-menu])
-                    (==> [::events/start-editing lipas-id :splitting geom-type]))}
-                [mui/list-item-icon
-                 [:> ContentCut
-                  {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
-                [mui/list-item-text (tr :map/split-linestring)]])
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :drawing geom-type]))}
+                  [mui/list-item-icon
+                   (if (= geom-type "LineString")
+                     [mui/icon
+                      {:color (if (= sub-mode :drawing)
+                                "secondary"
+                                "inherit")} "timeline"]
+                     [mui/icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
+                      "change_history"])]
+                  [mui/list-item-text (case geom-type
+                                        "LineString" (tr :map/draw-linestring)
+                                        "Polygon"    (tr :map/draw-polygon))]])
 
-             ;; Edit tool
-             (when (and editing? (#{"LineString" "Polygon"} geom-type))
-               [mui/menu-item
-                {:on-click
-                 #(do
-                    (==> [::events/close-more-tools-menu])
-                    (==> [::events/start-editing lipas-id :editing geom-type]))}
-                [mui/list-item-icon
-                 [mui/icon
-                  {:color (if (= sub-mode :editing) "secondary" "inherit")}
-                  "edit"]]
-                [mui/list-item-text (tr :map.tools/edit-tool)]])]])
+               ;; Delete geom
+               (when (and editing? (#{"LineString" "Polygon"} geom-type))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :deleting geom-type]))}
+                  [mui/list-item-icon
+                   [:> Eraser
+                    {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
+                  [mui/list-item-text (case geom-type
+                                        "LineString" (tr :map/remove-linestring)
+                                        "Polygon"    (tr :map/remove-polygon))]])
 
-         ;; Download GPX
-         (when (and (not editing?) (#{"LineString"} geom-type))
-           [mui/tooltip {:title (tr :map/download-gpx)}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/download-gpx lipas-id])
-              :color    "inherit"}
-             [mui/icon "save_alt"]]])
+               ;; Split linestring
+               (when (and editing? (#{"LineString"} geom-type))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :splitting geom-type]))}
+                  [mui/list-item-icon
+                   [:> ContentCut
+                    {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
+                  [mui/list-item-text (tr :map/split-linestring)]])
 
-         ;; Zoom to site
-         (when-not editing?
-           [mui/tooltip {:title (tr :map/zoom-to-site)}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/zoom-to-site lipas-id width])
-              :color    "inherit"}
-             [mui/icon {:color "inherit"}
-              "place"]]])
+               ;; Edit tool
+               (when (and editing? (#{"LineString" "Polygon"} geom-type))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :editing geom-type]))}
+                  [mui/list-item-icon
+                   [mui/icon
+                    {:color (if (= sub-mode :editing) "secondary" "inherit")}
+                    "edit"]]
+                  [mui/list-item-text (tr :map.tools/edit-tool)]])]])
 
-         ;; Add reminder
-         (when (and logged-in? (not editing?))
-           (let [name (-> display-data :name)
-                 link (-> js/window .-location .-href)]
-             [reminders/add-button
-              {:message (tr :reminders/placeholder name link)}]))
+           ;; Download GPX
+           (when (and (not editing?) (#{"LineString"} geom-type))
+             [mui/tooltip {:title (tr :map/download-gpx)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(==> [::events/download-gpx lipas-id])
+                :color    "inherit"}
+               [mui/icon "save_alt"]]])
 
-         ;; Copy sports site
-         (when (and logged-in? (not editing?))
-           [mui/tooltip {:title (tr :actions/duplicate)}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/duplicate-sports-site lipas-id])}
-             [:> ContentDuplicate]]])
+           ;; Zoom to site
+           (when-not editing?
+             [mui/tooltip {:title (tr :map/zoom-to-site)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(==> [::events/zoom-to-site lipas-id width])
+                :color    "inherit"}
+               [mui/icon {:color "inherit"}
+                "place"]]])
 
-         ;; Resurrect button
-         (when (and dead? logged-in? editing-allowed?)
-           [mui/tooltip {:title (tr :actions/resurrect)}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/resurrect lipas-id])}
-             [mui/icon "360"]]])
+           ;; Add reminder
+           (when (and logged-in? (not editing?))
+             (let [name (-> display-data :name)
+                   link (-> js/window .-location .-href)]
+               [reminders/add-button
+                {:message (tr :reminders/placeholder name link)}]))
 
-         ;; Analysis
-         (when (and logged-in? (not editing?))
-           [mui/tooltip {:title (tr :map.demographics/tooltip)}
-            [mui/fab
-             {:size     "small"
-              :on-click #(==> [::events/show-analysis lipas-id])}
-             [mui/icon "insights"]]])
+           ;; Copy sports site
+           (when (and logged-in? (not editing?))
+             [mui/tooltip {:title (tr :actions/duplicate)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(==> [::events/duplicate-sports-site lipas-id])}
+               [:> ContentDuplicate]]])
 
-         ;; ;; Import geom
-         ;; (when (and editing? (#{"LineString"} geom-type))
-         ;;   [mui/tooltip {:title (tr :map.import/tooltip)}
-         ;;    [mui/fab
-         ;;     {:size     "small"
-         ;;      :on-click #(==> [::events/toggle-import-dialog])
-         ;;      :color    "inherit"}
-         ;;     [:> FileUpload]]])
+           ;; Resurrect button
+           (when (and dead? logged-in? editing-allowed?)
+             [mui/tooltip {:title (tr :actions/resurrect)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(==> [::events/resurrect lipas-id])}
+               [mui/icon "360"]]])
 
-         ;; ;; Draw hole
-         ;; (when (and editing? (#{"Polygon"} geom-type))
-         ;;   [mui/tooltip {:title (tr :map/draw-hole)}
-         ;;    [mui/fab
-         ;;     {:size     "small"
-         ;;      :on-click #(if (= sub-mode :drawing-hole)
-         ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
-         ;;                   (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
-         ;;      :style    (when (= sub-mode :drawing-hole)
-         ;;                  {:border (str "5px solid " mui/secondary)})
-         ;;      :color    "inherit"}
-         ;;     [mui/icon "vignette"]]])
+           ;; Analysis
+           (when (and logged-in? (not editing?))
+             [mui/tooltip {:title (tr :map.demographics/tooltip)}
+              [mui/fab
+               {:size     "small"
+                :on-click #(==> [::events/show-analysis lipas-id])}
+               [mui/icon "insights"]]])
 
-         ;; ;; Add new geom
-         ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-         ;;   [mui/tooltip {:title (case geom-type
-         ;;                          "LineString" (tr :map/draw-linestring)
-         ;;                          "Polygon"    (tr :map/draw-polygon))}
-         ;;    [mui/fab
-         ;;     {:size     "small"
-         ;;      :on-click #(if (= sub-mode :drawing)
-         ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
-         ;;                   (==> [::events/start-editing lipas-id :drawing geom-type]))
-         ;;      :style    (when (= sub-mode :drawing)
-         ;;                  {:border (str "5px solid " mui/secondary)})
-         ;;      :color    "inherit"}
-         ;;     (if (= geom-type "LineString")
-         ;;       [mui/icon "timeline"]
-         ;;       [mui/icon "change_history"])]])
+           ;; ;; Import geom
+           ;; (when (and editing? (#{"LineString"} geom-type))
+           ;;   [mui/tooltip {:title (tr :map.import/tooltip)}
+           ;;    [mui/fab
+           ;;     {:size     "small"
+           ;;      :on-click #(==> [::events/toggle-import-dialog])
+           ;;      :color    "inherit"}
+           ;;     [:> FileUpload]]])
 
-         ;; ;; Delete geom
-         ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-         ;;   [mui/tooltip {:title (case geom-type
-         ;;                          "LineString" (tr :map/remove-linestring)
-         ;;                          "Polygon"    (tr :map/remove-polygon))}
-         ;;    [mui/fab
-         ;;     {:size     "small"
-         ;;      :on-click #(if (= sub-mode :deleting)
-         ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
-         ;;                   (==> [::events/start-editing lipas-id :deleting geom-type]))
-         ;;      :style    (when (= sub-mode :deleting)
-         ;;                  {:border (str "5px solid " mui/secondary)})
-         ;;      :color    "inherit"}
-         ;;     [:> Eraser]]])
+           ;; ;; Draw hole
+           ;; (when (and editing? (#{"Polygon"} geom-type))
+           ;;   [mui/tooltip {:title (tr :map/draw-hole)}
+           ;;    [mui/fab
+           ;;     {:size     "small"
+           ;;      :on-click #(if (= sub-mode :drawing-hole)
+           ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
+           ;;                   (==> [::events/start-editing lipas-id :drawing-hole geom-type]))
+           ;;      :style    (when (= sub-mode :drawing-hole)
+           ;;                  {:border (str "5px solid " mui/secondary)})
+           ;;      :color    "inherit"}
+           ;;     [mui/icon "vignette"]]])
 
-         ;; ;; Split linestring
-         ;; (when (and editing? (#{"LineString"} geom-type))
-         ;;   [mui/tooltip {:title (tr :map/split-linestring)}
-         ;;    [mui/fab
-         ;;     {:size     "small"
-         ;;      :on-click #(if (= sub-mode :splitting)
-         ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
-         ;;                   (==> [::events/start-editing lipas-id :splitting geom-type]))
-         ;;      :style    (when (= sub-mode :splitting)
-         ;;                  {:border (str "5px solid " mui/secondary)})
-         ;;      :color    "inherit"}
-         ;;     [:> ContentCut]]])
+           ;; ;; Add new geom
+           ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
+           ;;   [mui/tooltip {:title (case geom-type
+           ;;                          "LineString" (tr :map/draw-linestring)
+           ;;                          "Polygon"    (tr :map/draw-polygon))}
+           ;;    [mui/fab
+           ;;     {:size     "small"
+           ;;      :on-click #(if (= sub-mode :drawing)
+           ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
+           ;;                   (==> [::events/start-editing lipas-id :drawing geom-type]))
+           ;;      :style    (when (= sub-mode :drawing)
+           ;;                  {:border (str "5px solid " mui/secondary)})
+           ;;      :color    "inherit"}
+           ;;     (if (= geom-type "LineString")
+           ;;       [mui/icon "timeline"]
+           ;;       [mui/icon "change_history"])]])
 
-         ;; Helper text
-         ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-         ;;   [mui/tooltip {:title (tr :map/delete-vertices-hint)}
-         ;;    [mui/typography
-         ;;     {:style
-         ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
-         ;;     "?"]])
-         ]
+           ;; ;; Delete geom
+           ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
+           ;;   [mui/tooltip {:title (case geom-type
+           ;;                          "LineString" (tr :map/remove-linestring)
+           ;;                          "Polygon"    (tr :map/remove-polygon))}
+           ;;    [mui/fab
+           ;;     {:size     "small"
+           ;;      :on-click #(if (= sub-mode :deleting)
+           ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
+           ;;                   (==> [::events/start-editing lipas-id :deleting geom-type]))
+           ;;      :style    (when (= sub-mode :deleting)
+           ;;                  {:border (str "5px solid " mui/secondary)})
+           ;;      :color    "inherit"}
+           ;;     [:> Eraser]]])
 
-        (concat
-         (lui/edit-actions-list
-          {:editing?          editing?
-           :editing-allowed?  editing-allowed?
-           :save-in-progress? save-in-progress?
-           :valid?            edits-valid?
-           :logged-in?        logged-in?
-           :user-can-publish? can-publish?
-           :on-discard        #(==> [::events/discard-edits lipas-id])
-           :discard-tooltip   (tr :actions/cancel)
-           :on-edit-start     #(==> [::events/edit-site lipas-id geom-type])
-           :edit-tooltip      (tr :actions/edit)
-           :on-publish        #(==> [::events/save-edits lipas-id])
-           :publish-tooltip   (tr :actions/save)
-           :invalid-message   (tr :error/invalid-form)
-           :on-delete         #(==> [::events/delete-site])
-           :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)}))
+           ;; ;; Split linestring
+           ;; (when (and editing? (#{"LineString"} geom-type))
+           ;;   [mui/tooltip {:title (tr :map/split-linestring)}
+           ;;    [mui/fab
+           ;;     {:size     "small"
+           ;;      :on-click #(if (= sub-mode :splitting)
+           ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
+           ;;                   (==> [::events/start-editing lipas-id :splitting geom-type]))
+           ;;      :style    (when (= sub-mode :splitting)
+           ;;                  {:border (str "5px solid " mui/secondary)})
+           ;;      :color    "inherit"}
+           ;;     [:> ContentCut]]])
 
-        (remove nil?)
-        (map (fn [tool] [mui/grid {:item true} tool]))))]]))
+           ;; Helper text
+           ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
+           ;;   [mui/tooltip {:title (tr :map/delete-vertices-hint)}
+           ;;    [mui/typography
+           ;;     {:style
+           ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
+           ;;     "?"]])
+           ]
+
+          (concat
+           (lui/edit-actions-list
+            {:editing?          editing?
+             :editing-allowed?  editing-allowed?
+             :save-in-progress? save-in-progress?
+             :valid?            edits-valid?
+             :logged-in?        logged-in?
+             :user-can-publish? can-publish?
+             :on-discard        #(==> [::events/discard-edits lipas-id])
+             :discard-tooltip   (tr :actions/cancel)
+             :on-edit-start     #(==> [::events/edit-site lipas-id geom-type])
+             :edit-tooltip      (tr :actions/edit)
+             :on-publish        #(==> [::events/save-edits lipas-id])
+             :publish-tooltip   (tr :actions/save)
+             :invalid-message   (tr :error/invalid-form)
+             :on-delete         #(==> [::events/delete-site])
+             :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)}))
+
+          (remove nil?)
+          (map (fn [tool] [mui/grid {:item true} tool]))))])]))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
