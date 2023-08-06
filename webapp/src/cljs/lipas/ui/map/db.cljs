@@ -6,7 +6,13 @@
    :zoom                         2
    :mode                         {:name :default}
    :basemap                      :taustakartta
-   :selected-overlays            #{:vectors :edits :markers :analysis :schools :population}
+   :selected-overlays            #{:vectors
+                                   :edits
+                                   :highlights
+                                   :markers
+                                   :analysis
+                                   :schools
+                                   :population}
    :selected-sports-site-tab     0
    :selected-new-sports-site-tab 0
    :import

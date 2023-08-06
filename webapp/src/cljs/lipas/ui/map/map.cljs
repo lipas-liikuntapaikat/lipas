@@ -93,43 +93,51 @@
    :overlays
    {:vectors
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :name       "vectors"
-         :style      styles/feature-style})
+     #js{:source (VectorSource.)
+         :name   "vectors"
+         :style  styles/feature-style})
     :edits
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      #js[styles/edit-style styles/vertices-style]})
+     #js{:source (VectorSource.)
+         :name   "edits"
+         :zIndex 10
+         :style  #js[styles/edit-style styles/vertices-style]})
+    :highlights
+    (VectorLayer.
+     #js{:source (VectorSource.)
+         :name   "highlights"
+         :style  #js[styles/highlight-style]})
     :markers
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/blue-marker-style})
+     #js{:source (VectorSource.)
+         :name   "markers"
+         :style  styles/blue-marker-style})
     :analysis
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/analysis-style
-         :name       "analysis"})
+     #js{:source (VectorSource.)
+         :style  styles/analysis-style
+         :name   "analysis"})
     :population
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/population-style3
-         :name       "population"})
+     #js{:source (VectorSource.)
+         :style  styles/population-style3
+         :name   "population"})
 
     :schools
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/school-style
-         :name       "schools"})
+     #js{:source (VectorSource.)
+         :style  styles/school-style
+         :name   "schools"})
     :diversity-grid
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/diversity-grid-style
-         :name       "diversity-grid"})
+     #js{:source (VectorSource.)
+         :style  styles/diversity-grid-style
+         :name   "diversity-grid"})
     :diversity-area
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/diversity-area-style
-         :name       "diversity-area"})
+     #js{:source (VectorSource.)
+         :style  styles/diversity-area-style
+         :name   "diversity-area"})
     :light-traffic
     (ImageLayer.
      #js{:visible false
@@ -211,6 +219,7 @@
                                 (-> layers :overlays :diversity-grid)
                                 (-> layers :overlays :vectors)
                                 (-> layers :overlays :edits)
+                                (-> layers :overlays :highlights)
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
                                 (-> layers :overlays :retkikartta-snowmobile-tracks)
@@ -284,7 +293,7 @@
              ;;       lipas-id (when f1 (.get f1 "lipas-id"))
              ;;       fs       (map-utils/find-features-by-lipas-id
              ;;                 {:layers layers} lipas-id)]
-             ;;   (doto (.getFeatures hover)
+             ;;   (doto (.getFeatures vector-hover)
              ;;     (.clear)
              ;;     (.extend fs)))
 
@@ -485,13 +494,15 @@
       map-utils/unselect-features!
       map-utils/clear-interactions!
       map-utils/clear-markers!
+      map-utils/clear-highlights!
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
       map-utils/enable-select!
       (cond->
           lipas-id  (map-utils/select-sports-site! lipas-id)
           address   (map-utils/show-address-marker! address)
-          elevation (map-utils/show-elevation-marker! elevation))))
+          elevation (-> (map-utils/show-elevation-marker! elevation)
+                        #_(map-utils/highlight-segment! elevation)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
@@ -502,11 +513,13 @@
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
+        (map-utils/clear-highlights!)
         (cond->
             lipas-id  (map-utils/select-sports-site! lipas-id)
-            fit?    (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
-            address (map-utils/show-address-marker! address)
-            elevation (map-utils/show-elevation-marker! elevation)))))
+            fit?      (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
+            address   (map-utils/show-address-marker! address)
+            elevation (-> (map-utils/show-elevation-marker! elevation)
+                          #_(map-utils/highlight-segment! elevation))))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]

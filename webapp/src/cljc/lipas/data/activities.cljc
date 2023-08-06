@@ -79,16 +79,23 @@
       :props
       (merge
        common-props
-       {:activities
-        {:type        "multi-select"
-         :description {:fi "Reittiin liittyvä aktiviteetti. Esim. Retkeily ja ulkoilu, Vaellus, Maastopyöräily, Melonta, Hiihto, … "}
-         :label       {:fi "Aktiviteetti"}
-         :opts        {"camping"            {:fi "Retkeily"}
-                       "hiking"             {:fi "Vaellus"}
-                       "outdoor-recreation" {:fi "Ulkoilu"}
-                       "mountain-biking"    {:fi "Maastopyöräily"}
-                       "paddling"           {:fi "Melonta"}
-                       "skiing"             {:fi "Hiihto"}}}
+       {:route-name
+        {:field
+         {:type        "text-field"
+          :description {:fi "Tähän joku järkevä ohje"}
+          :label       {:fi "Reitin nimi"}}}
+
+        :activities
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Reittiin liittyvä aktiviteetti. Esim. Retkeily ja ulkoilu, Vaellus, Maastopyöräily, Melonta, Hiihto, … "}
+          :label       {:fi "Aktiviteetti"}
+          :opts        {"camping"            {:fi "Retkeily"}
+                        "hiking"             {:fi "Vaellus"}
+                        "outdoor-recreation" {:fi "Ulkoilu"}
+                        "mountain-biking"    {:fi "Maastopyöräily"}
+                        "paddling"           {:fi "Melonta"}
+                        "skiing"             {:fi "Hiihto"}}}}
 
         :duration-from-s
         {:field

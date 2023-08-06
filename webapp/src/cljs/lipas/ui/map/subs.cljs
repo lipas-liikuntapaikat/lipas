@@ -2,6 +2,7 @@
   (:require
    [goog.array :as garray]
    [goog.object :as gobj]
+   [clojure.string :as str]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
 
@@ -153,10 +154,12 @@
  ::content-padding
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
- :<- [::mode-name]
- (fn [[screen-size drawer-open? mode-name] _]
-   (let [margin       20
-         drawer-width (if (= :analysis mode-name) 700 430)]
+ :<- [::drawer-width]
+ (fn [[screen-size drawer-open? drawer-width] _]
+   (let [drawer-width (condp #(str/ends-with? %2 %1) drawer-width
+                        "%"  0
+                        "px" (js/parseInt drawer-width))
+         margin       20]
      (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
        [margin margin margin (+ margin drawer-width)]))))
@@ -197,6 +200,12 @@
        simplify? (assoc :simplify simplify)))))
 
 (re-frame/reg-sub
+ ::selected-features
+ :<- [::mode]
+ (fn [mode _]
+   (:selected-features mode)))
+
+(re-frame/reg-sub
  ::editing-lipas-id
  :<- [::map]
  (fn [m _]
@@ -219,7 +228,7 @@
  ::new-geom
  :<- [::map]
  (fn [m _]
-   (when (= :adding (m :mode :name))
+   (when (= :adding (-> m :mode :name))
      (-> m :mode :geoms))))
 
 (re-frame/reg-sub
@@ -458,3 +467,10 @@
       :undo            undo
       :redo            redo
       :selected-tab    selected-tab})))
+
+(re-frame/reg-sub
+ ::hide-actions?
+ :<- [::map]
+ (fn [m]
+   (and (-> m :mode :name #{:editing})
+        (-> m :mode :sub-mode #{:selecting}))))

@@ -1037,7 +1037,7 @@
             :value-fn  identity
             :label-fn  (fn [n] (str "Osa " (inc n)))
             :sort-fn   identity
-            :on-change #(reset! selected-segment %)}]]
+            :on-change (fn [i] (reset! selected-segment i))}]]
          [mui/grid {:item true}
           [mui/icon-button
            {:disabled (= 0 @selected-segment)

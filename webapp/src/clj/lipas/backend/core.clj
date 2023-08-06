@@ -744,7 +744,8 @@
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (def search2 (search/create-cli (:search config/default-config)))
+  (def search2 {:client (search/create-cli (:search config/default-config))
+                :indices (-> config/default-config :search :indices)})
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
   (reset! cache {})
@@ -795,6 +796,8 @@
 
   (flat-finance-report db-spec [992 175] )
 
+  (process-elevation-queue! db-spec search2)
+  search2
   (first (get-cities db-spec))
   (time (get-populations db-spec 2017))
   (time (:all-cities @cache))
