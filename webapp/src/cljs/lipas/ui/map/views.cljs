@@ -644,7 +644,7 @@
             [mui/icon "close"]])]]]
 
      ;; Tabs
-      [mui/grid {:item true :xs 12}
+     [mui/grid {:item true :xs 12}
       ;; [mui/tool-bar {:disableGutters true}]
       [mui/tabs
        {:value      selected-tab
@@ -732,17 +732,30 @@
               :sub-headings? true}]]]
 
         ;; Properties tab
-        1 [sports-sites/properties-form
-           {:tr           tr
-            :type-code    (or (-> edit-data :type :type-code) type-code)
-            :read-only?   (not editing?)
-            :on-change    (partial set-field :properties)
-            :display-data (:properties display-data)
-            :edit-data    (:properties edit-data)
-            :geoms        (-> edit-data :location :geometries)
-            :geom-type    geom-type
-            :problems?    problems?
-            :key          (-> edit-data :type :type-code)}]
+        1 [:<>
+           [sports-sites/properties-form
+            {:tr           tr
+             :type-code    (or (-> edit-data :type :type-code) type-code)
+             :read-only?   (not editing?)
+             :on-change    (partial set-field :properties)
+             :display-data (:properties display-data)
+             :edit-data    (:properties edit-data)
+             :geoms        (-> edit-data :location :geometries)
+             :geom-type    geom-type
+             :problems?    problems?
+             :key          (-> edit-data :type :type-code)}]
+
+           [:div {:style {:margin-top "1em" :margin-bottom "1em"}}
+            [mui/typography {:variant "h5"} "Lajit"]]
+
+           [activities/view
+            {:tr           tr
+             :read-only?   (not editing?)
+             :lipas-id     lipas-id
+             :type-code    type-code
+             :display-data display-data
+             :edit-data    edit-data
+             :geom-type    geom-type}]]
 
         ;; Accessibility
         2 [accessibility/view {:lipas-id lipas-id}]

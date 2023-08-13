@@ -41,11 +41,11 @@
 
 (re-frame/reg-sub
  ::routes
- (fn [[_ lipas-id]]
+ (fn [[_ lipas-id _]]
    [(re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
- (fn [[edit-data display-data] _]
-   (let [routes (get-in edit-data [:activities :routes])]
+ (fn [[edit-data display-data] [_ _lipas-id activity-k]]
+   (let [routes (get-in edit-data [:activities activity-k :routes])]
      (for [{:keys [fids] :as route} routes]
        (let [fids (set fids)]
          (assoc route
@@ -55,3 +55,9 @@
                                   (update :features (fn [fs]
                                                       (filterv #(contains? fids (:id %)) fs)))
                                   (map-utils/calculate-length))))))))
+
+(re-frame/reg-sub
+ ::selected-route-id
+ :<- [::activities]
+ (fn [activities _]
+   (:selected-route-id activities)))
