@@ -471,6 +471,8 @@
 (re-frame/reg-sub
  ::hide-actions?
  :<- [::map]
- (fn [m]
+ :<- [:lipas.ui.sports-sites.activities.subs/mode]
+ (fn [[m activity-mode]]
    (and (-> m :mode :name #{:editing})
-        (-> m :mode :sub-mode #{:selecting}))))
+        (#{:add-route :route-details} activity-mode)
+        #_(-> m :mode :sub-mode #{:selecting}))))
