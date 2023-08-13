@@ -84,7 +84,7 @@
         highlights-layer  (-> layers :overlays :highlights)
         highlights-source (.getSource highlights-layer)]
 
-    (println "ENABLE HIGHLIGHTING")
+    #_(println "ENABLE HIGHLIGHTING")
 
     (-> highlights-source .clear)
 
@@ -172,7 +172,7 @@
     (.on draw "drawend"
          (fn [e]
            (let [f     (gobj/get e "feature")
-                 _     (.setId f (str (gensym map-utils/temp-fid-prefix)))
+                 _     (.setId f (str (random-uuid)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
                  fixed (map-utils/fix-features fs)]
@@ -269,7 +269,7 @@
    (set-editing-mode! map-ctx mode false))
   ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
              mode} continue?]
-   (println "SET EDITING MODE " (:sub-mode mode))
+   #_(println "SET EDITING MODE " (:sub-mode mode))
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
@@ -308,7 +308,7 @@
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]
-  (println "UPDATE EDITING MODE " (:sub-mode mode))
+  #_(println "UPDATE EDITING MODE " (:sub-mode mode))
   (let [old-mode (:mode map-ctx)
         map-ctx  (-> map-ctx
                      (enable-highlighting! mode)

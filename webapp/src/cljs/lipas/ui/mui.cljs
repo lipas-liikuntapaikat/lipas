@@ -24,6 +24,7 @@
    ["@material-ui/core/Fab$default" :as Fab]
    ["@material-ui/core/FormControl$default" :as FormControl]
    ["@material-ui/core/FormControlLabel$default" :as FormControlLabel]
+   ["@material-ui/core/FormLabel$default" :as FormLabel]
    ["@material-ui/core/FormGroup$default" :as FormGroup]
    ["@material-ui/core/FormHelperText$default" :as FormHelperText]
    ["@material-ui/core/Grid$default" :as Grid]
@@ -215,6 +216,7 @@
 #_(def fade (r/adapt-react-class Fade))
 (def form-control (r/adapt-react-class FormControl))
 (def form-control-label (r/adapt-react-class FormControlLabel))
+(def form-label (r/adapt-react-class FormLabel))
 (def form-group (r/adapt-react-class FormGroup))
 (def form-helper-text (r/adapt-react-class FormHelperText))
 #_(def form-label (r/adapt-react-class FormLabel))

@@ -17,6 +17,7 @@
    [lipas.backend.jwt :as jwt]
    [lipas.backend.newsletter :as newsletter]
    [lipas.backend.search :as search]
+   [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.owners :as owners]
@@ -181,8 +182,31 @@
 
 ;;; Sports-sites ;;;
 
+(defn- deref-fids
+  [sports-site route]
+  (let [fids  (-> route :fids set)
+        geoms {:type "FeatureCollection"
+               :features (->> (get-in sports-site [:location :geometries :features])
+                              (filterv #(contains? fids (:id %))))}]
+    (assoc route :geometries geoms)))
+
+(defn enrich-activities
+  [sports-site]
+  (if (:activities sports-site)
+    (update sports-site :activities
+            (fn [activities]
+              (reduce-kv (fn [m k v]
+                           (if (get-in m [k :routes])
+                             (update-in m [k :routes] (fn [routes]
+                                                        (mapv #(deref-fids sports-site %) routes)))
+                             m))
+                         activities
+                         activities)))
+    sports-site))
+
 (defn get-sports-site [db lipas-id]
   (-> (db/get-sports-site db lipas-id)
+      (enrich-activities)
       not-empty))
 
 (defn- new? [sports-site]
@@ -236,7 +260,8 @@
   ([db type-code]
    (get-sports-sites-by-type-code db type-code {}))
   ([db type-code {:keys [locale] :as opts}]
-   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
+   (let [data (->> (db/get-sports-sites-by-type-code db type-code opts)
+                   (map enrich-activities))]
      (cond
        (#{:fi :en :se} locale) (map (partial i18n/localize locale) data)
        (#{:all} locale)        (map (partial i18n/localize2 [:fi :se :en]) data)

@@ -8,7 +8,8 @@
 
 (defn table
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
-           action-icon hide-action-btn? on-sort-change in-progress?]
+           action-icon hide-action-btn? on-sort-change in-progress? on-mouse-enter
+           on-mouse-leave]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
@@ -55,10 +56,14 @@
                                   items)
                          items)
                   :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
-              [mui/table-row {:key      id
-                              :on-click (when on-select #(on-select item))
-                              :hover    true
-                              :style    (when on-select {:cursor "pointer"})}
+              [mui/table-row
+               {:key            id
+                :on-click       (when on-select #(on-select item))
+                :hover          true
+                :style          (when on-select {:cursor "pointer"})
+                :on-mouse-enter (when on-mouse-enter #(on-mouse-enter item))
+                :on-mouse-leave (when on-mouse-leave #(on-mouse-leave item))}
+
                (when (and on-select (not hide-action-btn?))
                  [mui/table-cell {:padding "checkbox"}
                   [mui/icon-button {:on-click #(on-select item)}
