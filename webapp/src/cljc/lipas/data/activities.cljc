@@ -1,5 +1,7 @@
 (ns lipas.data.activities
-  (:require [lipas.utils :as utils]))
+  (:require
+   [lipas.utils :as utils]
+   [clojure.walk :as walk]))
 
 (def common-props
   {:description-short
@@ -73,7 +75,7 @@
    :props
    {:routes
     {:field
-     {:type        "linestring-feature-collection"
+     {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
       :label       {:fi "Reittityyppi"}
       :props
@@ -97,17 +99,11 @@
                         "paddling"           {:fi "Melonta"}
                         "skiing"             {:fi "Hiihto"}}}}
 
-        :duration-from-s
+        :duration
         {:field
-         {:type        "time"
-          :description {:fi "Kulkuaika min"}
-          :label       {:fi "AKulkuaika min"}}}
-
-        :duration-to-s
-        {:field
-         {:type        "time"
-          :description {:fi "Kulkuaika max"}
-          :label       {:fi "Kulkuaika max"}}}
+         {:type        "duration"
+          :description {:fi "Reitin ohjeellinen kulkuaika"}
+          :label       {:fi "Kulkuaika"}}}
 
         :travel-direction
         {:field
@@ -145,7 +141,7 @@
        :duration
        {:field
         {:field
-         {:type        "textfield"
+         {:type        "duration"
           :description "Esim. 4-5 h, 4-8 päivää"
           :label       "Ajoaika"}}}}}}}})
 
@@ -169,13 +165,18 @@
     ;; etappeja).
     :routes
     {:field
-     {:type        "linestring-feature-collection"
+     {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
       :label       {:fi "Reittityyppi"}
       :props
       (merge
        common-props
-       {:cycling-types
+       {:route-name
+        {:field
+         {:type        "text-field"
+          :description {:fi "Tähän joku järkevä ohje"}
+          :label       {:fi "Reitin nimi"}}}
+        :activities
         {:field
          {:type        "multi-select"
           :description {:fi "Gravel & pyörävaellus, Maantie, Maastopyöräily"}
@@ -184,17 +185,11 @@
                         "road-cycling"           {:fi "Maantie"}
                         "mountain-biking"        {:fi "Maastopyöräily"}}}}
 
-        :duration-from-s
+        :duration
         {:field
-         {:type        "time"
-          :description {:fi "Ajoaika min"}
-          :label       {:fi "Ajoaika min"}}}
-
-        :duration-to-s
-        {:field
-         {:type        "time"
-          :description {:fi "Ajoaika max"}
-          :label       {:fi "Ajoaika max"}}}
+         {:type        "duration"
+          :description {:fi "Ajoaika"}
+          :label       {:fi "Ajoaika"}}}
 
         :food-and-water
         {:field
@@ -265,7 +260,7 @@
    :type-codes  #{4451 4452}
    :props
    {:routes
-    {:type        "linestring-feature-collection"
+    {:type        "routes"
      :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
      :label       {:fi "Reittityyppi"}
      :props
@@ -307,17 +302,11 @@
          :description {:fi "Esim. matkapuhelimen kuuluvuuden katvealueet"}
          :label       {:fi "Hyvä tietää"}}}
 
-       :duration-from-s
+       :duration
        {:field
-        {:type        "time"
-         :description {:fi "Kulkuaika min"}
-         :label       {:fi "AKulkuaika min"}}}
-
-       :duration-to-s
-       {:field
-        {:type        "time"
-         :description {:fi "Kulkuaika max"}
-         :label       {:fi "Kulkuaika max"}}}})
+        {:type        "duration"
+         :description {:fi "Kulkuaika"}
+         :label       {:fi "AKulkuaika"}}}})
 
      :derived-props
      {:length-m
@@ -397,11 +386,11 @@
      {:field
       {:type        "multi-select"
        :description {:fi "Kalastus rannalta, Kalastus vesiltä/jäältä"}
-       :label       "Kohdetyyppi"
+       :label       {:fi "Kohdetyyppi"}
        :opts        {"shore"        {:fi "Kalastus rannalta"}
                      "on-the-water" {:fi "Kalastus vesiltä / jäältä"}}}}
 
-     :fishing-types
+     :activities
      {:field
       {:type        "multi-select"
        :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
@@ -455,9 +444,28 @@
                                birdwatching
                                fishing]))
 
+(defn hack-missing-translations
+  [m]
+  (walk/postwalk
+   (fn [x]
+     (if (and (map? x) (contains? x :fi))
+       (assoc x :se "Inte translation" :en "Missing translation")
+       x))
+   m))
+
+#_(hack-missing-translations outdoor-recreation-routes)
+
 (def by-type-code
   (->> by-types
        (mapcat (fn [[type-codes v]]
                  (for [type-code type-codes]
-                   [type-code v])))
+                   [type-code (hack-missing-translations v)])))
        (into {})))
+
+;; Suomi, ruotsi, englanti, kaikki saamet
+
+;; Aktiviteetit -> Lajit / lajitiedot ?
+
+;; aktiviteetit lisätietojen alle
+
+;; 21.1. sellainen versio missä työryhmä voi dev-ympäristöön syöttää tietoja

@@ -127,7 +127,6 @@
 (re-frame/reg-event-db
  ::show-sports-site*
  (fn [db [_ lipas-id]]
-   (println "SHOW SPORTS SITE" lipas-id)
    (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))]
      (-> db
          (assoc-in [:map :mode :lipas-id] lipas-id)
@@ -335,8 +334,8 @@
          opts       #js{:layerFilter  (fn [layer] (= "edits" (.get layer "name")))
                         :hitTolerance 5}
          selecting? (= :selecting (-> db :map :mode :sub-mode))]
-     (js/console.log event)
-     (js/console.log (.-pixel event))
+     #_(js/console.log event)
+     #_(js/console.log (.-pixel event))
      (when selecting?
        (.forEachFeatureAtPixel lmap (.-pixel event)
                                (fn [f]
@@ -353,9 +352,11 @@
  ::sports-site-selected
  (fn [{:keys [db]} [_ _ lipas-id]]
    (let [mode (-> db :map :mode :name)]
-     (if (= mode :analysis)
-       {:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]}
-       {:dispatch [::show-sports-site lipas-id]}))))
+     {:fx
+      [(when (= mode :analysis)
+         [:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]])
+       (when (not= mode :analysis)
+         [:dispatch [::show-sports-site lipas-id]])]})))
 
 ;;; Higher order events ;;;
 
@@ -833,6 +834,7 @@
 (re-frame/reg-event-db
  ::highlight-features
  (fn [db [_ fids]]
+   (println "HIGHLIGHT FIDS" fids)
    (assoc-in db [:map :mode :selected-features] fids)))
 
 (re-frame/reg-event-db

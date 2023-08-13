@@ -38,8 +38,6 @@
 (def wkt (WKT. #js{:dataProjection    "EPSG:4326"
                    :featureProjection "EPSG:3067"}))
 
-(def temp-fid-prefix "temp")
-
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
 
@@ -450,7 +448,7 @@
   (let [splitter (->splitter kinks)
         splitted (turf-line-split f splitter)]
     (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
+                    (fn [f] (gobj/set f "id" (str (random-uuid)))))
     splitted))
 
 (defn split-at-coords [ol-feature coords]
