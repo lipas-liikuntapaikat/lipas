@@ -260,79 +260,80 @@
    :type-codes  #{4451 4452}
    :props
    {:routes
-    {:type        "routes"
-     :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
-     :label       {:fi "Reittityyppi"}
-     :props
-     (merge
-      common-props
-      {:activities
-       {:type        "multi-select"
-        :description {:fi "Retkimelonta, Koskimelonta"}
-        :label       {:fi "Aktiviteetti"}
-        :opts        {"trip-padding"        {:fi "Retkimelonta"}
-                      "whitewater-paddling" {:fi "Koskimelonta"}}}
+    {:field
+     {:type        "routes"
+      :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
+      :label       {:fi "Reittityyppi"}
+      :props
+      (merge
+       common-props
+       {:activities
+        {:type        "multi-select"
+         :description {:fi "Retkimelonta, Koskimelonta"}
+         :label       {:fi "Aktiviteetti"}
+         :opts        {"trip-padding"        {:fi "Retkimelonta"}
+                       "whitewater-paddling" {:fi "Koskimelonta"}}}
 
-       :route-type
-       {:type        "multi-select"
-        :description {:fi "Avovesi, Suojaisa, Joki, Koski"}
-        :label       {:fi "Aktiviteetti"}
-        :opts        {"open-water" {:fi "Avovesi"}
-                      "sheltered"  {:fi "Suojaisa"}
-                      "River"      {:fi "Joki"}
-                      "rapids"     {:fi "Koski"}}}
+        :route-type
+        {:type        "multi-select"
+         :description {:fi "Avovesi, Suojaisa, Joki, Koski"}
+         :label       {:fi "Aktiviteetti"}
+         :opts        {"open-water" {:fi "Avovesi"}
+                       "sheltered"  {:fi "Suojaisa"}
+                       "River"      {:fi "Joki"}
+                       "rapids"     {:fi "Koski"}}}
 
-       :difficulty
-       {:type        "multi-select"
-        :description {:fi "Vaativuus"}
-        :label       {:fi "Vaativuus"}
-        :opts        {"easy"   {:fi "Helppo"}
-                      "medium" {:fi "Keskivaikea"}
-                      "hard"   {:fi "Vaativa"}}}
+        :difficulty
+        {:type        "multi-select"
+         :description {:fi "Vaativuus"}
+         :label       {:fi "Vaativuus"}
+         :opts        {"easy"   {:fi "Helppo"}
+                       "medium" {:fi "Keskivaikea"}
+                       "hard"   {:fi "Vaativa"}}}
 
-       :safety
+        :safety
+        {:field
+         {:type        "textarea"
+          :description {:fi "Reitin vaativuuden kuvaus, osaamissuositus, kalustosuositus"}
+          :label       {:fi "Turvallisuus"}}}
+
+        :good-to-know
+        {:field
+         {:type        "textarea"
+          :description {:fi "Esim. matkapuhelimen kuuluvuuden katvealueet"}
+          :label       {:fi "Hyvä tietää"}}}
+
+        :duration
+        {:field
+         {:type        "duration"
+          :description {:fi "Kulkuaika"}
+          :label       {:fi "AKulkuaika"}}}})
+
+      :derived-props
+      {:length-m
        {:field
-        {:type        "textarea"
-         :description {:fi "Reitin vaativuuden kuvaus, osaamissuositus, kalustosuositus"}
-         :label       {:fi "Turvallisuus"}}}
+        {:type        "number"
+         :description "Esim. 347 km"
+         :label       "Pituus"}}
 
-       :good-to-know
+       :ascend-m
        {:field
-        {:type        "textarea"
-         :description {:fi "Esim. matkapuhelimen kuuluvuuden katvealueet"}
-         :label       {:fi "Hyvä tietää"}}}
+        {:type        "number"
+         :description "Esim. 5165 m"
+         :label       "Nousumetrit"}}
+
+       :descend-m
+       {:field
+        {:type        "number"
+         :description "Esim. x m"
+         :label       "Laskumetrit"}}
 
        :duration
        {:field
-        {:type        "duration"
-         :description {:fi "Kulkuaika"}
-         :label       {:fi "AKulkuaika"}}}})
-
-     :derived-props
-     {:length-m
-      {:field
-       {:type        "number"
-        :description "Esim. 347 km"
-        :label       "Pituus"}}
-
-      :ascend-m
-      {:field
-       {:type        "number"
-        :description "Esim. 5165 m"
-        :label       "Nousumetrit"}}
-
-      :descend-m
-      {:field
-       {:type        "number"
-        :description "Esim. x m"
-        :label       "Laskumetrit"}}
-
-      :duration
-      {:field
-       {:field
-        {:type        "textfield"
-         :description "Esim. 4-5 h, 4-8 päivää"
-         :label       "Ajoaika"}}}}}}})
+        {:field
+         {:type        "textfield"
+          :description "Esim. 4-5 h, 4-8 päivää"
+          :label       "Ajoaika"}}}}}}}})
 
 (def birdwatching
   {:label       {:fi "Lintujen tarkkailu"}
@@ -361,13 +362,14 @@
       :label       {:fi "Luonne"}}}
 
     :season
-    {:type        "multi-select"
-     :description {:fi "Kevät, Kesä, Syksy, Talvi"}
-     :label       {:fi "Ajankohta"}
-     :opts        {"spring" {:fi "Kevät"}
-                   "summer" {:fi "Kesä"}
-                   "autumn" {:fi "Syksy"}
-                   "winter" {:fi "Talvi"}}}
+    {:field
+     {:type        "multi-select"
+      :description {:fi "Kevät, Kesä, Syksy, Talvi"}
+      :label       {:fi "Ajankohta"}
+      :opts        {"spring" {:fi "Kevät"}
+                    "summer" {:fi "Kesä"}
+                    "autumn" {:fi "Syksy"}
+                    "winter" {:fi "Talvi"}}}}
     :species
     {:field
      {:type        "textarea"
@@ -469,3 +471,15 @@
 ;; aktiviteetit lisätietojen alle
 
 ;; 21.1. sellainen versio missä työryhmä voi dev-ympäristöön syöttää tietoja
+
+#_(->> [outdoor-recreation-areas
+      outdoor-recreation-facilities
+      outdoor-recreation-routes
+      cycling
+      paddling
+      birdwatching
+      fishing]
+     (map (juxt :value #(-> % :props (->> (map (fn [[k {:keys [field]}]]
+                                                 [k (if (= "routes" (:type field))
+                                                      (map (juxt first (comp :type :field second)) (:props field))
+                                                      (:type field))])))))))
