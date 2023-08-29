@@ -57,7 +57,7 @@
        :stats stats}]]))
 
 (defn stats-tab []
-  [:> (mui/with-width* (r/reactify-component stats-tab*))])
+  [:> ((mui/with-width*) (r/reactify-component stats-tab*))])
 
 (defn toggle-dialog
   ([dialog]
@@ -81,7 +81,7 @@
 
         close #(==> [::events/display-site nil])
 
-        edit-data        (<== [::site-subs/editing-rev lipas-id])
+        edit-data        (utils/make-editable (<== [::site-subs/editing-rev lipas-id]))
         editing?         (<== [::site-subs/editing? lipas-id])
         edits-valid?     (<== [::site-subs/edits-valid? lipas-id])
         editing-allowed? (<== [::site-subs/editing-allowed? lipas-id])
@@ -453,9 +453,10 @@
 
        (if editing?
          [rinks/table
-          {:tr       tr
-           :lipas-id lipas-id
-           :items    (-> edit-data :rinks vals)}]
+          {:tr           tr
+           :add-btn-size "small"
+           :lipas-id     lipas-id
+           :items        (-> edit-data :rinks vals)}]
          [rinks/read-only-table {:tr tr :items (-> display-data :rinks)}])]
 
       ;;; Refrigeration
@@ -731,10 +732,10 @@
 
 (def tabs
   {
-   ;;0 :lipas.ui.routes.ice-stadiums/front-page
-   ;;1 :lipas.ui.routes.ice-stadiums/report-consumption
+   0 :lipas.ui.routes.ice-stadiums/front-page
+   1 :lipas.ui.routes.ice-stadiums/report-consumption
    2 :lipas.ui.routes.ice-stadiums/list-view
-   ;;3 :lipas.ui.routes.ice-stadiums/visualizations
+   3 :lipas.ui.routes.ice-stadiums/visualizations
    4 :lipas.ui.routes.ice-stadiums/energy-info
    5 :lipas.ui.routes.ice-stadiums/reports})
 
@@ -753,12 +754,12 @@
           :value      active-tab}
 
          ;; 0 Stats tab
-         ;; [mui/tab {:label (tr :ice/headline)
-         ;;           :icon  (r/as-element [mui/icon "ac_unit"])}]
+         [mui/tab {:label (tr :ice/headline)
+                    :icon  (r/as-element [mui/icon "ac_unit"])}]
 
          ;; 1 Energy form tab
-         ;; [mui/tab {:label (tr :lipas.energy-consumption/report)
-         ;;           :icon  (r/as-element [mui/icon "edit"])}]
+         [mui/tab {:label (tr :lipas.energy-consumption/report)
+                   :icon  (r/as-element [mui/icon "edit"])}]
 
          ;; 2 Ice stadiums tab
          [mui/tab
@@ -767,14 +768,14 @@
            :icon  (r/as-element [mui/icon "list_alt"])}]
 
          ;; 3 Compare tab
-         ;; [mui/tab {:label (tr :ice/comparison)
-         ;;           :icon  (r/as-element [mui/icon "compare"])}]
+         [mui/tab {:label (tr :ice/comparison)
+                   :icon  (r/as-element [mui/icon "compare"])}]
 
          ;; 4 Energy info tab
-         ;; [mui/tab
-         ;;  {:label (tr :ice-energy/headline)
-         ;;   :value 4
-         ;;   :icon  (r/as-element [mui/icon "info"])}]
+         [mui/tab
+          {:label (tr :ice-energy/headline)
+           :value 4
+           :icon  (r/as-element [mui/icon "info"])}]
 
          ;; 5 Reports tab
          [mui/tab
@@ -784,11 +785,11 @@
 
      [mui/grid {:item true :xs 12}
       (case active-tab
-        ;;0 [stats-tab]
-        ;;1 [energy-form-tab tr]
+        0 [stats-tab]
+        1 [energy-form-tab tr]
         2 [ice-stadiums-tab tr logged-in?]
-        ;;3 [compare-tab]
-        ;;4 [energy-info-tab tr]
+        3 [compare-tab]
+        4 [energy-info-tab tr]
         5 [reports-tab tr]
         [ice-stadiums-tab tr logged-in?])]]))
 
@@ -796,3 +797,8 @@
   (let [tr         (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])]
     [create-panel tr logged-in?]))
+
+(comment
+  (utils/navigate! "jaahallit")
+
+  )

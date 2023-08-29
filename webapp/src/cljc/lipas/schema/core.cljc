@@ -1919,3 +1919,17 @@
 ;; Find fields
 (s/def :lipas.api.find-fields/payload
   (s/keys :req-un [:lipas.api.find-fields/field-types]))
+
+;; create-upload-url
+(s/def :lipas.api.create-upload-url/content-type*
+  #{"png" "jpeg" "webp"})
+
+(s/def :lipas.api.create-upload-url/extension
+  (st/spec
+   {:spec         :lipas.api.create-upload-url/content-type*
+    :type         :string
+    :swagger/type "enum"}))
+
+(s/def :lipas.api.create-upload-url/payload
+  (s/keys :req-un [:lipas.sports-site/lipas-id
+                   :lipas.api.create-upload-url/extension]))
