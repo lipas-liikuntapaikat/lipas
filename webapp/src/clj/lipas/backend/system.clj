@@ -8,7 +8,9 @@
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
    [nrepl.server :as nrepl]
-   [ring.adapter.jetty :as jetty]))
+   [ring.adapter.jetty :as jetty])
+  (:import
+   (software.amazon.awssdk.auth.credentials DefaultCredentialsProvider)))
 
 (defmethod ig/init-key :db [_ db-spec]
   (if (:dev db-spec)
@@ -46,7 +48,13 @@
 (defmethod ig/halt-key! :nrepl [_ server]
   (nrepl/stop-server server))
 
-(defn mask [s]
+(defmethod ig/init-key :aws [_ config]
+  (assoc config :credentials-provider (DefaultCredentialsProvider/create)))
+
+(defmethod ig/halt-key! :aws [_ m]
+  )
+
+(defn mask [_s]
   "[secret]")
 
 (defn start-system!
@@ -61,11 +69,13 @@
                  (update-in [:search :pass] mask)
                  (update-in [:mailchimp :api-key] mask)
                  (update-in [:app :accessibility-register :secret-key] mask)
-                 (update-in [:app :mml-api :api-key] mask)))
+                 (update-in [:app :mml-api :api-key] mask)
+                 (update-in [:aws :access-key-id] mask)
+                 (update-in [:aws :secret-access-key] mask)))
      system)))
 
 (defn stop-system! [system]
   (ig/halt! system))
 
-(defn -main [& args]
+(defn -main [& _args]
   (start-system! config/default-config))
