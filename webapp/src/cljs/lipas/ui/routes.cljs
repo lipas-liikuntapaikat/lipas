@@ -4,7 +4,7 @@
    [lipas.ui.admin.routes :as admin]
    [lipas.ui.forgot-password.routes :as forgot-password]
    [lipas.ui.front-page.routes :as front-page]
-   #_[lipas.ui.ice-stadiums.routes :as ice-stadiums]
+   [lipas.ui.ice-stadiums.routes :as ice-stadiums]
    [lipas.ui.login.routes :as login]
    [lipas.ui.map.routes :as lmap]
    [lipas.ui.register.routes :as register]
@@ -42,7 +42,7 @@
     lmap/routes
     admin/routes
     stats/routes
-    #_ice-stadiums/routes
+    ice-stadiums/routes
     #_swimming-pools/routes]
    {:data {:coercion rss/coercion}}))
 
@@ -96,4 +96,5 @@
 
 (comment
   (require '[reitit.core :as reitit])
+  (navigate! :lipas.ui.routes.ice-stadiums/front-page)
   (reitit/route-names routes))

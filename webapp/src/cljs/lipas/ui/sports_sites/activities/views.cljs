@@ -90,7 +90,7 @@
        :on-change #(set-field :unit %)}]]]])
 
 (defn image-dialog
-  [{:keys [tr locale dialog-state on-save on-close]}]
+  [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
   [lui/dialog
    {:title         "Image"
     :open?         (:open? @dialog-state)
@@ -102,15 +102,27 @@
     :cancel-label  (tr :actions/cancel)}
    [mui/grid {:container true :spacing 2}
     [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:value     (-> @dialog-state :data :url)
-       :fullWidth true
-       :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
-       :label     "Url"}]]
+
+     [:input
+      {:type      "file"
+       :accept    (str/join "," ["image/png" "image/jpeg" "image/jpg" "image/webp"])
+       :on-change #(==> [::events/upload-image
+                         (-> % .-target .-files)
+                         lipas-id
+                         (fn [url]
+                           (swap! dialog-state assoc-in [:data :url] url))])}]
+
+     ;; For debug
+     #_[lui/text-field
+        {:value     (-> @dialog-state :data :url)
+         :fullWidth true
+         :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
+         :label     "Url"}]]
 
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth true
+       :required  true
        :value     (-> @dialog-state :data :description locale)
        :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
        :label     (tr :general/description)
@@ -118,13 +130,13 @@
        :variant   "outlined"}]]
 
     [mui/grid {:item true :xs 12}
-     (when-let [url (:url @dialog-state)]
+     (when-let [url (-> @dialog-state :data :url)]
        [:img
         {:style {:max-width "100%"}
-         :src   (:url @dialog-state)}])]]])
+         :src   url}])]]])
 
 (defn images
-  [{:keys [value on-change locale label tr read-only?]}]
+  [{:keys [value on-change locale label tr read-only? lipas-id]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -139,6 +151,7 @@
        ;; Dialog
        [image-dialog
         {:tr           tr
+         :lipas-id     lipas-id
          :locale       locale
          :dialog-state dialog-state
          :on-save      (fn []
@@ -272,21 +285,22 @@
 (declare make-field)
 
 (defn route-form
-  [{:keys [locale geom-type lipas-id route-props state]}]
-  (into [nice-form {}]
-        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
-          (make-field
-           {:field        field
-            :prop-k       prop-k
-            :edit-data    @state
-            :display-data @state
-            :locale       locale
-            :set-field    (fn [& args]
-                            (let [path (butlast args)
-                                  v (last args)]
-                              (swap! state assoc-in path v)))
-            :geom-type    geom-type
-            :lipas-id     lipas-id}))))
+  [{:keys [locale geom-type lipas-id route-props state read-only?]}]
+  (into
+   [nice-form {:read-only? read-only?}]
+   (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
+     (make-field
+      {:field        field
+       :prop-k       prop-k
+       :edit-data    @state
+       :display-data @state
+       :locale       locale
+       :set-field    (fn [& args]
+                       (let [path (butlast args)
+                             v (last args)]
+                         (swap! state assoc-in path v)))
+       :geom-type    geom-type
+       :lipas-id     lipas-id}))))
 
 (defn routes
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
@@ -350,7 +364,7 @@
 
        (when (and editing? (= :route-details mode))
          [:<>
-          [mui/paper {:style
+          #_[mui/paper {:style
                       {:margin-top       "1em"
                        :margin-bottom    "1.5em"
                        :padding          "0.5em"
@@ -364,6 +378,7 @@
           [route-form
            {:locale      locale
             :lipas-id    lipas-id
+            :read-only?  read-only?
             :geom-type   geom-type
             :route-props route-props
             :state       route-form-state}]
@@ -463,6 +478,7 @@
 
     "images" [images
               {:read-only?  read-only?
+               :lipas-id    lipas-id
                :locale      locale
                :label       (get-in field [:label locale])
                :helper-text (get-in field [:description locale])

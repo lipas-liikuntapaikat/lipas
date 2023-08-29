@@ -16,6 +16,7 @@
    [lipas.backend.gis :as gis]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.newsletter :as newsletter]
+   [lipas.backend.s3 :as s3]
    [lipas.backend.search :as search]
    [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
@@ -711,6 +712,24 @@
                 :ok)}
      (when-let [conflict (-> resp :body :hits :hits first :_source)]
        {:conflict conflict}))))
+
+(defn presign-upload-url
+  [{:keys [s3-bucket s3-bucket-prefix region credentials-provider]}
+   {:keys [lipas-id user extension]}]
+  (let [k (str s3-bucket-prefix
+               "/"
+               lipas-id
+               "/"
+               (utils/gen-uuid)
+               "."
+               extension)]
+    (s3/presign-put {:region               region
+                     :bucket               s3-bucket
+                     :content-type         (str "image/" extension)
+                     :object-key           k
+                     :meta                 {:lipas-id lipas-id
+                                            :user-id  (:id user)}
+                     :credentials-provider credentials-provider})))
 
 (comment
   (require '[lipas.backend.config :as config])
