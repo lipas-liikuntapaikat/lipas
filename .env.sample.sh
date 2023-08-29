@@ -79,3 +79,9 @@ export DIGITRANSIT_SUBSCRIPTION_KEY=***FILL_THIS***
 # MML API
 export MML_COVERAGE_URL="https://avoin-karttakuva.maanmittauslaitos.fi/ortokuvat-ja-korkeusmallit/wcs/v2"
 export MML_API_KEY=***FILL_THIS***
+
+# AWS
+export AWS_ACCESS_KEY_ID=***FILL_THIS***
+export AWS_SECRET_ACCESS_KEY=***FILL_THIS***
+export AWS_REGION=eu-north-1
+export AWS_S3_BUCKET_PREFIX=example

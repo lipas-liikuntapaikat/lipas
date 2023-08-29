@@ -280,7 +280,7 @@
          :label       {:fi "Aktiviteetti"}
          :opts        {"open-water" {:fi "Avovesi"}
                        "sheltered"  {:fi "Suojaisa"}
-                       "River"      {:fi "Joki"}
+                       "river"      {:fi "Joki"}
                        "rapids"     {:fi "Koski"}}}
 
         :difficulty

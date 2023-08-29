@@ -594,7 +594,7 @@
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
-        hide-actions? (<== [::subs/hide-actions?])
+        hide-actions?        (<== [::subs/hide-actions?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -732,30 +732,40 @@
               :sub-headings? true}]]]
 
         ;; Properties tab
-        1 [:<>
-           [sports-sites/properties-form
-            {:tr           tr
-             :type-code    (or (-> edit-data :type :type-code) type-code)
-             :read-only?   (not editing?)
-             :on-change    (partial set-field :properties)
-             :display-data (:properties display-data)
-             :edit-data    (:properties edit-data)
-             :geoms        (-> edit-data :location :geometries)
-             :geom-type    geom-type
-             :problems?    problems?
-             :key          (-> edit-data :type :type-code)}]
+        1 (r/with-let [prop-tab (r/atom "props")]
+            [:<>
+             [mui/tabs
+              {:style          {:margin-bottom "1em" :margin-top "0.5em"}
+               :value          @prop-tab
+               :variant        "fullWidth"
+               :indicatorColor "primary"
+               :on-change      #(reset! prop-tab %2)}
+              [mui/tab {:value "props" :label "Ominaisuudet"}]
+              [mui/tab {:value "activities" :label "Lajit"}]]
 
-           [:div {:style {:margin-top "1em" :margin-bottom "1em"}}
-            [mui/typography {:variant "h5"} "Lajit"]]
+             (when (= "props" @prop-tab)
+               [sports-sites/properties-form
+                {:tr           tr
+                 :type-code    (or (-> edit-data :type :type-code) type-code)
+                 :read-only?   (not editing?)
+                 :on-change    (partial set-field :properties)
+                 :display-data (:properties display-data)
+                 :edit-data    (:properties edit-data)
+                 :geoms        (-> edit-data :location :geometries)
+                 :geom-type    geom-type
+                 :problems?    problems?
+                 :key          (-> edit-data :type :type-code)}])
 
-           [activities/view
-            {:tr           tr
-             :read-only?   (not editing?)
-             :lipas-id     lipas-id
-             :type-code    type-code
-             :display-data display-data
-             :edit-data    edit-data
-             :geom-type    geom-type}]]
+             #_[:div {:style {:margin-top "1em" :margin-bottom "1em"}}]
+             (when (= "activities" @prop-tab)
+               [activities/view
+                {:tr           tr
+                 :read-only?   (not editing?)
+                 :lipas-id     lipas-id
+                 :type-code    type-code
+                 :display-data display-data
+                 :edit-data    edit-data
+                 :geom-type    geom-type}])])
 
         ;; Accessibility
         2 [accessibility/view {:lipas-id lipas-id}]
