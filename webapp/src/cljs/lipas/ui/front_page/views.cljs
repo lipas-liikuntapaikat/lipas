@@ -20,15 +20,13 @@
 
 (def logos
   [{:img "img/partners/okm.png"}
-   #_{:img "img/partners/jaakiekkoliitto.svg" :full-height? true}
    {:img "img/partners/kuntaliitto.png"}
    {:img "img/partners/metsahallitus.png"}
-   #_{:img "img/partners/sport_venue.png"}
    {:img "img/partners/suh.png"}
    {:img "img/partners/syke.png" :full-height? true}
    {:img "img/partners/ukty.png"}
-   #_{:img "img/partners/vtt.svg"}
-   {:img "img/partners/avi.png"}])
+   {:img "img/partners/avi.png"}
+   {:img "img/partners/helsinki.png"}])
 
 (def known-users
   [{:label "OKM" :href "https://minedu.fi/liikunta"}
