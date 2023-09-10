@@ -6,12 +6,14 @@
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    #_[lipas.ui.feedback.views :as feedback]
+   #_[lipas.ui.sports-sites.football.views :as football]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
+   [lipas.ui.loi.views :as loi]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
@@ -20,10 +22,9 @@
    [lipas.ui.reminders.views :as reminders]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
+   [lipas.ui.sports-sites.activities.views :as activities]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
-   [lipas.ui.sports-sites.activities.views :as activities]
-   #_[lipas.ui.sports-sites.football.views :as football]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -280,6 +281,7 @@
         status (-> popup :data :features first :properties :status)
         tr     (-> popup :tr)
         locale (tr)]
+    (println popup)
     [mui/paper
      {:style
       {:padding "0.5em"
@@ -289,6 +291,21 @@
      (when-not (#{"active"} status)
        [mui/typography {:variant "body2" :color "error"}
         (get-in ss/statuses [status locale])])]))
+
+(defmethod popup-body :loi [popup]
+  (let [loi-type     (-> popup :data :features first :properties :loi-type)
+        loi-category (-> popup :data :features first :properties :loi-category)
+        #_#_tr       (-> popup :tr)
+        texts        (<== [:lipas.ui.loi.subs/popup-localized loi-type loi-category])
+        ]
+    [mui/paper
+     {:style
+      {:padding "0.5em"
+       :width   (when (< 100 (count loi-type)) "150px")}}
+     [mui/typography {:variant "body2"}
+      (:loi-type texts)]
+     [mui/typography {:variant "caption"}
+      (:loi-category texts)]]))
 
 (defmethod popup-body :population [popup]
   (let [tr          (<== [:lipas.ui.subs/translator])
@@ -1019,7 +1036,7 @@
           :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
 
-        [mui/typography {:variant "h6" :style {:margin-left "8px"}}
+        [mui/typography {:variant "h6"}
          (if-let [type-name (get-in type [:name locale])]
            (tr :lipas.sports-site/new-site-of-type type-name)
            (tr :lipas.sports-site/new-site {:type type :locale locale}))]]
@@ -1451,6 +1468,21 @@
                                [::events/show-analysis]))}
             [mui/icon "insights"]]]])]]]))
 
+(defn add-view
+  [{:keys [tr width]}]
+  (r/with-let [mode (r/atom "sports-site")]
+    [:<>
+     [mui/tabs
+      {:value     @mode
+       :on-change #(reset! mode %2)
+       :variant   "fullWidth"}
+      [mui/tab {:value "sports-site" :label "Liikuntapaikka"}]
+      [mui/tab {:value "loi" :label "Muu kohde"}]]
+
+     (case @mode
+       "sports-site" [add-sports-site-view {:tr tr :width width}]
+       "loi" [loi/view])]))
+
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
         show-tools?   (<== [::subs/show-default-tools?])
@@ -1459,7 +1491,7 @@
     [:<>
      ;; Search, filters etc.
      (case view
-       :adding   [add-sports-site-view {:tr tr :width width}]
+       :adding   [add-view {:tr tr :width width}]
        :analysis [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :search   [search/search-view

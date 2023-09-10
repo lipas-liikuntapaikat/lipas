@@ -256,6 +256,30 @@
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
+(defn loi-style [f resolution]
+  (let [loi-type (.get f "loi-type")
+        status   (.get f "status")]
+    (Style.
+     #js{:image
+         (Circle.
+          #js{:radius 8
+              :stroke (Stroke.
+                       #js{:color mui/primary})
+              :fill   (Fill.
+                       #js{:color mui/secondary2})})})))
+
+(defn loi-style-hover [f resolution]
+  (let [loi-type (.get f "loi-type")
+        status   (.get f "status")]
+    (Style.
+     #js{:image
+         (Circle.
+          #js{:radius 10
+              :stroke (Stroke.
+                       #js{:color mui/primary})
+              :fill   (Fill.
+                       #js{:color mui/secondary2})})})))
+
 (def population-grid-radius
   "Population grid is 250x250m"
   (/ (* 250 (Math/sqrt 2)) 2))

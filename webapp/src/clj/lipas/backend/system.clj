@@ -14,8 +14,12 @@
 
 (defmethod ig/init-key :db [_ db-spec]
   (if (:dev db-spec)
-    db-spec
-    (db/setup-connection-pool db-spec)))
+    (do
+      (println "Setting up db in dev mode (no pooling)")
+      db-spec)
+    (do
+      (println "Setting up db with connection pool")
+      (db/setup-connection-pool db-spec))))
 
 (defmethod ig/halt-key! :db [_ pool]
   (db/stop-connection-pool pool))
@@ -24,17 +28,28 @@
   (email/->SMTPEmailer config))
 
 (defmethod ig/init-key :search [_ config]
-  {:client  (search/create-cli config)
-   :indices (:indices config)})
+  (let [client  (search/create-cli config)
+        indices (:indices config)]
+
+    ;; Ensure indices exist
+    (doseq [[group m]      indices
+            [_k index-name] m]
+      (println "Ensuring index" index-name "exists")
+      (when-not (search/index-exists? client index-name)
+        (let [mappings (get-in search/mappings [group] {})]
+          (println "Creating index" index-name "with mappings:")
+          (pprint mappings)
+          (search/create-index! client index-name mappings))))
+
+    {:client   client
+     :indices  indices
+     :mappings search/mappings}))
 
 (defmethod ig/init-key :mailchimp [_ config]
   config)
 
 (defmethod ig/init-key :app [_ config]
   (handler/create-app config))
-
-(defmethod ig/init-key :server [_ {:keys [app port]}]
-  (jetty/run-jetty app {:port port :join? false}))
 
 (defmethod ig/init-key :server [_ {:keys [app port]}]
   (jetty/run-jetty app {:port port :join? false}))

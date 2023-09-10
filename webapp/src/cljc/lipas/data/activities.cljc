@@ -145,13 +145,6 @@
           :description "Esim. 4-5 h, 4-8 päivää"
           :label       "Ajoaika"}}}}}}}})
 
-(def outdoor-recreation-facilities
-  {:label       {:fi "Retkeily ja ulkoilurakenteet"}
-   :value       "outdoor-recreation-facilities"
-   :description {:fi ""}
-   :type-codes  #{207 205 206 202 301 302 304 #_204}
-   :props       common-props})
-
 (def cycling
   {:label       {:fi "Pyöräily"}
    :value       "cycling"
@@ -436,6 +429,13 @@
       {:type        "textarea"
        :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
        :label       {:fi "Luvat, säännöt, ohjeet"}}}})})
+
+(def outdoor-recreation-facilities
+  {:label       {:fi "Retkeily ja ulkoilurakenteet"}
+   :value       "outdoor-recreation-facilities"
+   :description {:fi ""}
+   :type-codes  #{207 205 206 202 301 302 304 #_204}
+   :props       common-props})
 
 (def by-types
   (utils/index-by :type-codes [outdoor-recreation-areas

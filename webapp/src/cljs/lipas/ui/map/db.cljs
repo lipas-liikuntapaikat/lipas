@@ -7,6 +7,7 @@
    :mode                         {:name :default}
    :basemap                      :taustakartta
    :selected-overlays            #{:vectors
+                                   :lois
                                    :edits
                                    :highlights
                                    :markers
