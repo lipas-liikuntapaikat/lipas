@@ -5,12 +5,16 @@
 
 (def default-config
   {:db
-   {:dbtype   "postgresql"
-    :dbname   (:db-name env)
-    :host     (:db-host env)
-    :user     (:db-user env)
-    :port     (:db-port env)
-    :password (:db-password env)}
+   (merge
+    {:dbtype   "postgresql"
+     :dbname   (:db-name env)
+     :host     (:db-host env)
+     :user     (:db-user env)
+     :port     (:db-port env)
+     :password (:db-password env)}
+    ;; TODO add more explicit check
+    (when (:lein-version env)
+      {:dev true}))
    :emailer
    {:host (:smtp-host env)
     :user (:smtp-user env)
@@ -31,7 +35,9 @@
      {:schools             "schools"
       :population          "vaestoruutu_1km"
       :population-high-def "vaestoruutu_250m"
-      :diversity           "diversity"}}}
+      :diversity           "diversity"}
+     :lois
+     {:search "lois"}}}
    :mailchimp
    {:api-key                (:mailchimp-api-key env)
     :api-url                (:mailchimp-api-url env)

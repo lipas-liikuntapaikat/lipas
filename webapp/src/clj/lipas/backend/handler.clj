@@ -571,7 +571,29 @@
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
-            :body   (core/presign-upload-url aws (assoc body-params :user identity))})}}]]]
+            :body   (core/presign-upload-url aws (assoc body-params :user identity))})}}]
+
+      ["/actions/save-loi"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body :lipas.loi/document}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/upsert-loi! db search identity body-params)})}}]
+
+      ["/actions/search-lois"
+       {:post
+        {:no-doc     false
+         #_#_:middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/search-lois search body-params)})}}]
+      ]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

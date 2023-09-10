@@ -12,8 +12,8 @@
   [{:keys [bucket region object-key content-type credentials-provider meta]
     :or   {meta {}}}]
   (let [meta      (-> meta
-                 (update-keys name)
-                 (update-vals str))
+                      (update-keys name)
+                      (update-vals str))
         presigner (-> (S3Presigner/builder)
                       (doto
                           (.region (Region/of region))

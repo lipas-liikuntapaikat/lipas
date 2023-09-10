@@ -784,6 +784,33 @@
                                             :user-id  (:id user)}
                      :credentials-provider credentials-provider})))
 
+(defn search-lois
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:lois :search])]
+    (-> (search/search client idx-name params)
+        :body
+        :hits
+        :hits
+        (->> (map :_source)))))
+
+(defn enrich-loi
+  [{:keys [geometries] :as loi}]
+  (assoc-in loi [:search-meta :geometries] (feature-coll->geom-coll geometries)))
+
+(defn index-loi!
+  ([search loi]
+   (index! search loi false))
+  ([{:keys [indices client]} loi sync?]
+   (let [idx-name (get-in indices [:lois :search])
+         loi      (enrich-loi loi)]
+     (search/index! client idx-name :id loi sync?))))
+
+(defn upsert-loi!
+  [db search user loi]
+  (jdbc/with-db-transaction [tx db]
+    (db/upsert-loi! tx user loi)
+    (index-loi! search loi :sync)))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))

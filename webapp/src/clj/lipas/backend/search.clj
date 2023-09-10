@@ -26,6 +26,13 @@
       :search-meta.location.wgs84-end
       {:type "geo_point"}
       :search-meta.location.geometries
+      {:type "geo_shape"}}}}
+   :lois
+   {:settings
+    {:max_result_window 50000}
+    :mappings
+    {:properties
+     {:search-meta.geometries
       {:type "geo_shape"}}}}})
 
 (defn gen-idx-name
@@ -36,6 +43,20 @@
       str
       (str/lower-case)
       (str/replace #"[:|.]" "-")))
+
+(defn index-exists?
+  [client index-name]
+  (let [resp (es/request client {:method :head
+                                 :url    (es-utils/url [index-name])
+                                 :exception-handler
+                                 (fn [e]
+                                   (if (-> e
+                                           (.getCause)
+                                           (.toString)
+                                           (str/ends-with? "[HTTP/1.1 404 Not Found]"))
+                                     {:status 404}
+                                     (throw e)))})]
+    (= 200 (:status resp))))
 
 (defn create-index!
   [client index mappings]

@@ -127,6 +127,7 @@
        :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
        :label     (tr :general/description)
        :multiline true
+       :rows      5
        :variant   "outlined"}]]
 
     [mui/grid {:item true :xs 12}
@@ -221,6 +222,7 @@
        :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
        :label     "Kuvaus"
        :multiline true
+       :rows      5
        :variant   "outlined"}]]]])
 
 (defn videos
@@ -465,6 +467,7 @@
                  :on-change       #(set-field prop-k locale %)
                  :InputLabelProps {:shrink (some? (get-in edit-data [prop-k locale]))}
                  :multiline       true
+                 :rows            5
                  :fullWidth       true
                  :value           (get-in edit-data [prop-k locale])}]
 
