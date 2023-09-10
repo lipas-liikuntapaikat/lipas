@@ -90,6 +90,11 @@
      #js{:source (VectorSource.)
          :name   "vectors"
          :style  styles/feature-style})
+    :lois
+    (VectorImageLayer.
+     #js{:source (VectorSource.)
+         :name   "lois"
+         :style  styles/loi-style})
     :edits
     (VectorLayer.
      #js{:source (VectorSource.)
@@ -212,6 +217,7 @@
                                 (-> layers :overlays :diversity-area)
                                 (-> layers :overlays :diversity-grid)
                                 (-> layers :overlays :vectors)
+                                (-> layers :overlays :lois)
                                 (-> layers :overlays :edits)
                                 (-> layers :overlays :highlights)
                                 (-> layers :overlays :markers)
@@ -228,6 +234,12 @@
                           :style     styles/feature-style-hover
                           :multi     true
                           :condition events-condition/pointerMove})
+
+        loi-hover (SelectInteraction.
+                   #js{:layers    #js[(-> layers :overlays :lois)]
+                       :style     styles/loi-style-hover
+                       :multi     true
+                       :condition events-condition/pointerMove})
 
         marker-hover (SelectInteraction.
                       #js{:layers    #js[(-> layers :overlays :markers)]
@@ -290,6 +302,19 @@
                    (when (not-empty selected)
                      {:anchor-el (.getElement popup-overlay)
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
+    (.on loi-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :loi
+                      :data      (-> selected
+                                     map-utils/->geoJSON-clj)})]))))
 
     (.on marker-hover "select"
          (fn [e]
@@ -399,6 +424,7 @@
      :interactions*
      {:select                select
       :vector-hover          vector-hover
+      :loi-hover             loi-hover
       :marker-hover          marker-hover
       :population-hover      population-hover
       :schools-hover         schools-hover
@@ -485,6 +511,7 @@
       map-utils/clear-highlights!
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
+      map-utils/enable-loi-hover!
       map-utils/enable-select!
       (cond->
           lipas-id  (map-utils/select-sports-site! lipas-id)
@@ -644,10 +671,12 @@
               basemap  (:basemap opts)
               overlays (:overlays opts)
               geoms    (:geoms opts)
+              lois     (:lois opts)
               mode     (-> opts :mode)
 
               map-ctx (-> (init-map! opts)
                           (map-utils/update-geoms! geoms)
+                          (map-utils/update-lois! lois)
                           (map-utils/set-basemap! basemap)
                           (set-mode! mode))]
 
@@ -657,6 +686,7 @@
       (fn [comp]
         (let [opts     (r/props comp)
               geoms    (-> opts :geoms)
+              lois     (-> opts :lois)
               basemap  (-> opts :basemap)
               overlays (-> opts :overlays)
               center   (-> opts :center)
@@ -666,6 +696,7 @@
 
           (cond-> @map-ctx*
             (not= (:geoms @map-ctx*) geoms)       (map-utils/update-geoms! geoms)
+            (not= (:lois @map-ctx*) lois)         (map-utils/update-lois! lois)
             (not= (:basemap @map-ctx*) basemap)   (map-utils/set-basemap! basemap)
             (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
             (not= (:center @map-ctx*) center)     (map-utils/update-center! center)
@@ -679,6 +710,7 @@
 
 (defn map-outer []
   (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
+        lois       (re-frame/subscribe [::subs/loi-geoms])
         basemap    (re-frame/subscribe [::subs/basemap])
         overlays   (re-frame/subscribe [::subs/selected-overlays])
         center     (re-frame/subscribe [::subs/center])
@@ -687,6 +719,7 @@
     (fn []
       [map-inner
        {:geoms    @geoms-fast
+        :lois     @lois
         :basemap  @basemap
         :overlays @overlays
         :center   @center

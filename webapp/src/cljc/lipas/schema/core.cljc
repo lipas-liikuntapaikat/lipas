@@ -9,6 +9,7 @@
    [lipas.data.feedback :as feedback]
    [lipas.data.floorball :as floorball]
    [lipas.data.ice-stadiums :as ice-stadiums]
+   [lipas.data.loi :as loi]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
    [lipas.data.reminders :as reminders]
@@ -1933,3 +1934,24 @@
 (s/def :lipas.api.create-upload-url/payload
   (s/keys :req-un [:lipas.sports-site/lipas-id
                    :lipas.api.create-upload-url/extension]))
+
+;;; Location of Interest (loi) ;;;
+
+(s/def :lipas.loi/id uuid?)
+#_(s/def :lipas.loi/created-at :lipas/timestamp)
+(s/def :lipas.loi/event-date :lipas/timestamp)
+(s/def :lipas.loi/status (into #{} (keys loi/statuses)))
+(s/def :lipas.loi/loi-category (into #{} (keys loi/categories)))
+(s/def :lipas.loi/loi-type (into #{} (->> loi/types vals (map :value))))
+;; NOTE: generator supports only point features atm
+(s/def :lipas.loi/geometries (s/with-gen
+                               ::geojson/feature-collection
+                               lipas-point-feature-gen))
+
+(s/def :lipas.loi/document
+  (s/keys :req-un [:lipas.loi/id
+                   :lipas.loi/event-date
+                   :lipas.loi/status
+                   :lipas.loi/loi-category
+                   :lipas.loi/loi-type
+                   :lipas.loi/geometries]))

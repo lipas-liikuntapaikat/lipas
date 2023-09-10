@@ -9,6 +9,7 @@
    [lipas.ui.feedback.db :as feedback]
    [lipas.ui.front-page.db :as front-page]
    [lipas.ui.ice-stadiums.db :as ice-stadiums]
+   [lipas.ui.loi.db :as loi]
    [lipas.ui.map.db :as map]
    [lipas.ui.reminders.db :as reminders]
    [lipas.ui.reports.db :as reports]
@@ -76,4 +77,7 @@
    :analysis analysis/default-db
 
    ;; Feedback
-   :feedback feedback/default-db})
+   :feedback feedback/default-db
+
+   ;; LOI
+   :loi loi/default-db})
