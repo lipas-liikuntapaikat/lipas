@@ -250,6 +250,21 @@
 
     (assoc map-ctx :geoms geoms)))
 
+(defn update-lois!
+  [{:keys [layers] :as map-ctx} geoms]
+  (let [^js lois (-> layers :overlays :lois)
+        source   (.getSource lois)]
+
+    ;; Remove existing features
+    (.clear source)
+
+    ;; Add new geoms
+    (doseq [g    geoms
+            :let [fs (->ol-features (clj->js g))]]
+      (.addFeatures source fs))
+
+    (assoc map-ctx :lois geoms)))
+
 (defn set-basemap!
   [{:keys [layers] :as map-ctx} basemap]
   (doseq [[k ^js v] (:basemaps layers)
@@ -293,6 +308,10 @@
 (defn enable-vector-hover!
   [map-ctx]
   (enable-hover! map-ctx :vector-hover))
+
+(defn enable-loi-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :loi-hover))
 
 (defn enable-marker-hover!
   [map-ctx]

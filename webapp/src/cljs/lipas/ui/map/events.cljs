@@ -48,7 +48,8 @@
               (assoc-in [:map :width] width)
               (assoc-in [:map :height] height))
       :dispatch-n
-      [(when (and extent width) [:lipas.ui.search.events/submit-search])]})))
+      [(when (and extent width) [:lipas.ui.search.events/submit-search])
+       (when (and extent width) [:lipas.ui.loi.events/search])]})))
 
 ;; Map displaying events ;;
 
@@ -781,6 +782,7 @@
             (update-in [:map :mode] dissoc :sub-mode))
     :dispatch-n [[:lipas.ui.analysis.reachability.events/clear]
                  [::set-overlays [[:vectors true]
+                                  [:lois true]
                                   [:schools false]
                                   [:population false]
                                   [:diversity-grid false]

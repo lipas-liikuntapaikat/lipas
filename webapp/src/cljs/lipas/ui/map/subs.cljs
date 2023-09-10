@@ -151,6 +151,19 @@
             not-empty)))))
 
 (re-frame/reg-sub
+ ::loi-geoms
+ :<- [:lipas.ui.loi.subs/search-results]
+ (fn [results _]
+   (when results
+     (map (fn [{:keys [geometries] :as m}]
+            (update geometries :features
+                    (fn [fs]
+                      (map (fn [f]
+                             (assoc f :properties (dissoc m :geometries :search-meta)))
+                           fs))))
+          results))))
+
+(re-frame/reg-sub
  ::content-padding
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
