@@ -408,7 +408,6 @@
         status (-> popup :data :features first :properties :status)
         tr     (-> popup :tr)
         locale (tr)]
-    (println popup)
     [mui/paper
      {:style
       {:padding "0.5em"
@@ -1570,7 +1569,7 @@
            {:container   true
             :align-items "center"
             :spacing     1
-            :style       {:padding-bottom "0.5em"}}
+            :style       {:padding "0.5em"}}
 
            [address-search-dialog]
 
@@ -1642,23 +1641,24 @@
 
 (defn add-view
   [{:keys [tr width]}]
-  (r/with-let [mode (r/atom "sports-site")]
+  (let [add-mode (<== [::subs/selected-add-mode])]
     [:<>
      [mui/tabs
-      {:value     @mode
-       :on-change #(reset! mode %2)
+      {:value     add-mode
+       :on-change #(==> [::events/select-add-mode %2])
        :variant   "fullWidth"}
       [mui/tab {:value "sports-site" :label "Liikuntapaikka"}]
       [mui/tab {:value "loi" :label "Muu kohde"}]]
 
-     (case @mode
+     (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]
        "loi" [loi/view])]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
         show-tools?   (<== [::subs/show-default-tools?])
-        view          (<== [::subs/view])]
+        view          (<== [::subs/view])
+        loi           (<== [:lipas.ui.loi.subs/selected-loi])]
 
     [:<>
      ;; Search, filters etc.
@@ -1666,6 +1666,7 @@
        :adding   [add-view {:tr tr :width width}]
        :analysis [analysis/view]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :loi      [loi/view {:display-data loi}]
        :search   [search/search-view
                   {:tr              tr
                    :on-result-click (fn [{:keys [lipas-id]}]

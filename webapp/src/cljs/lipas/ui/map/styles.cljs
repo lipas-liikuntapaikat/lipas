@@ -208,6 +208,42 @@
         planned?  #js[style planned-stroke]
         :else     #js[style]))))
 
+(defn loi-style [f resolution]
+  (let [loi-type (.get f "loi-type")
+        status   (.get f "status")]
+    (Style.
+     #js{:image
+         (Circle.
+          #js{:radius 8
+              :stroke (Stroke.
+                       #js{:color mui/primary})
+              :fill   (Fill.
+                       #js{:color mui/secondary2})})})))
+
+(defn loi-style-hover [f resolution]
+  (let [loi-type (.get f "loi-type")
+        status   (.get f "status")]
+    (Style.
+     #js{:image
+         (Circle.
+          #js{:radius 10
+              :stroke (Stroke.
+                       #js{:color mui/primary})
+              :fill   (Fill.
+                       #js{:color mui/secondary2})})})))
+
+(defn loi-style-selected [f resolution]
+  (let [loi-type (.get f "loi-type")
+        status   (.get f "status")]
+    (Style.
+     #js{:image
+         (Circle.
+          #js{:radius 10
+              :stroke (Stroke.
+                       #js{:color mui/gold})
+              :fill   (Fill.
+                       #js{:color mui/secondary2})})})))
+
 (def styleset styles/symbols)
 
 (def symbols
@@ -244,6 +280,7 @@
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
+
 (defn feature-style-hover [f resolution]
   (let [type-code (.get f "type-code")
         style     (get hover-symbols type-code)]
@@ -253,32 +290,13 @@
 (defn feature-style-selected [f resolution]
   (let [type-code (.get f "type-code")
         style     (get selected-symbols type-code)]
-    (shift-likely-overlapping! type-code (first style) resolution f)
-    style))
 
-(defn loi-style [f resolution]
-  (let [loi-type (.get f "loi-type")
-        status   (.get f "status")]
-    (Style.
-     #js{:image
-         (Circle.
-          #js{:radius 8
-              :stroke (Stroke.
-                       #js{:color mui/primary})
-              :fill   (Fill.
-                       #js{:color mui/secondary2})})})))
-
-(defn loi-style-hover [f resolution]
-  (let [loi-type (.get f "loi-type")
-        status   (.get f "status")]
-    (Style.
-     #js{:image
-         (Circle.
-          #js{:radius 10
-              :stroke (Stroke.
-                       #js{:color mui/primary})
-              :fill   (Fill.
-                       #js{:color mui/secondary2})})})))
+    ;; TODO more explicit detection of feature type (loi vs sports-site)
+    (if style
+      (do
+        (shift-likely-overlapping! type-code (first style) resolution f)
+        style)
+      (loi-style-selected f resolution))))
 
 (def population-grid-radius
   "Population grid is 250x250m"
