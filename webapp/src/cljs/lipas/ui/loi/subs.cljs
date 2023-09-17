@@ -1,6 +1,7 @@
 (ns lipas.ui.loi.subs
   (:require
    [clojure.spec.alpha :as s]
+   [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -9,19 +10,66 @@
    (:loi db)))
 
 (re-frame/reg-sub
+ ::statuses
+ :<- [::loi]
+ (fn [loi _]
+   (:statuses loi)))
+
+(re-frame/reg-sub
+ ::delete-statuses
+ :<- [::statuses]
+ (fn [statuses _]
+   (select-keys statuses ["out-of-service-temporarily"
+                          "out-of-service-permanently"
+                          "incorrect-data"])))
+
+(re-frame/reg-sub
+ ::view-mode
+ :<- [::loi]
+ (fn [loi _]
+   (:view-mode loi)))
+
+(re-frame/reg-sub
+ ::selected-loi
+ :<- [::loi]
+ (fn [loi _]
+   (:selected-loi loi)))
+
+(re-frame/reg-sub
+ ::editing-loi
+ :<- [::loi]
+ (fn [loi _]
+   (-> loi
+       :editing
+       (assoc :loi-category "outdoor-recreation-facilities"))))
+
+(re-frame/reg-sub
+ ::edits-valid?
+ :<- [::editing-loi]
+ :<- [::geoms]
+ (fn [[loi geoms] _]
+   (let [data (-> loi
+                  (assoc :geometries geoms)
+                  (update :id (fnil uuid ""))
+                  (assoc :event-date (utils/timestamp)))]
+     (boolean
+      (and geoms
+           (s/valid? :lipas.loi/document data))))))
+
+(re-frame/reg-sub
  ::loi-categories
  :<- [::loi]
  (fn [loi _]
    (:categories loi)))
 
-(re-frame/reg-sub
+#_(re-frame/reg-sub
  ::selected-loi-category
  :<- [::loi]
  (fn [loi _]
    ;; TODO un-hardcode once more is needed
    "outdoor-recreation-facilities"))
 
-(re-frame/reg-sub
+#_(re-frame/reg-sub
  ::selected-loi-type
  :<- [::loi]
  (fn [loi _]
@@ -30,10 +78,8 @@
 (re-frame/reg-sub
  ::props
  :<- [::loi-categories]
- :<- [::selected-loi-category]
- :<- [::selected-loi-type]
- (fn [[categories selected-category selected-type] _]
-   (get-in categories [selected-category :types (keyword selected-type) :props])))
+ (fn [categories [_ loi-category loi-type]]
+   (get-in categories [loi-category :types (keyword loi-type) :props])))
 
 (re-frame/reg-sub
  ::geoms

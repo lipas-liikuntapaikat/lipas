@@ -16,12 +16,18 @@
  :<- [:lipas.ui.sports-sites.subs/adding-new-site?]
  :<- [::selected-sports-site]
  :<- [::mode*]
- (fn [[adding? selected-site mode] _]
-   (let [analysis? (-> mode :name (= :analysis))]
+ :<- [:lipas.ui.loi.subs/selected-loi]
+ :<- [:lipas.ui.loi.subs/view-mode]
+ :<- [::selected-add-mode]
+ (fn [[adding-new-site? selected-site mode selected-loi loi-mode add-mode] _]
+   (let [analysis? (-> mode :name (= :analysis))
+         adding? (or (and (#{"sports-site"} add-mode) adding-new-site?)
+                     (and (#{"loi"} add-mode) (#{:adding} loi-mode)))]
      (cond
        adding?       :adding
        analysis?     :analysis
        selected-site :site
+       selected-loi  :loi
        :else         :search))))
 
 (re-frame/reg-sub
@@ -159,7 +165,9 @@
             (update geometries :features
                     (fn [fs]
                       (map (fn [f]
-                             (assoc f :properties (dissoc m :geometries :search-meta)))
+                             (-> f
+                                 (assoc :properties (dissoc m :geometries :search-meta))
+                                 (assoc :id (:id m))))
                            fs))))
           results))))
 
@@ -464,3 +472,9 @@
    (and (-> m :mode :name #{:editing})
         (#{:add-route :route-details} activity-mode)
         #_(-> m :mode :sub-mode #{:selecting}))))
+
+(re-frame/reg-sub
+ ::selected-add-mode
+ :<- [::map]
+ (fn [m _]
+   (:add-mode m)))
