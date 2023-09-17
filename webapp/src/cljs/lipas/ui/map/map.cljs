@@ -286,7 +286,8 @@
         diversity-area-select (SelectInteraction.
                                #js{:layers #js[(-> layers :overlays :diversity-area)]})
 
-        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)]
+        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)
+                                                   (-> layers :overlays :lois)]
                                        :style  styles/feature-style-selected})
 
         lmap (ol/Map. opts)]
@@ -321,6 +322,7 @@
                  selected (gobj/get e "selected")]
 
              (.setPosition popup-overlay coords)
+             #_(js/console.log (aget selected 0))
              (==> [::events/show-popup
                    (when (not-empty selected)
                      {:anchor-el (.getElement popup-overlay)
@@ -403,9 +405,15 @@
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (gobj/get e "selected")
-                 f1       (aget selected 0)]
+                 f1       (aget selected 0)
+                 lipas-id (when f1 (.get f1 "lipas-id"))
+                 loi-id   (when f1 (and (.get f1 "loi-type") (.get f1 "id")))]
              (.setPosition popup-overlay coords)
-             (==> [::events/sports-site-selected e (when f1 (.get f1 "lipas-id"))]))))
+
+             (cond
+               lipas-id (==> [::events/sports-site-selected e lipas-id])
+               loi-id   (==> [::events/loi-selected e f1])
+               :else    (==> [::events/unselected e])))))
 
     (.on lmap "click"
          (fn [e]

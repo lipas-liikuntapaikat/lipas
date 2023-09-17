@@ -1949,9 +1949,9 @@
                                lipas-point-feature-gen))
 
 (s/def :lipas.loi/document
-  (s/keys :req-un [:lipas.loi/id
-                   :lipas.loi/event-date
+  (s/keys :req-un [:lipas.loi/event-date
                    :lipas.loi/status
                    :lipas.loi/loi-category
                    :lipas.loi/loi-type
-                   :lipas.loi/geometries]))
+                   :lipas.loi/geometries]
+          :opt-un [:lipas.loi/id]))

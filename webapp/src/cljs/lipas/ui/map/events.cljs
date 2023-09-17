@@ -76,6 +76,21 @@
       :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
 (re-frame/reg-event-fx
+ ::zoom-to-loi
+ (fn [{:keys [db]} [_ loi-fcoll width]]
+   (let [geom       (-> loi-fcoll :features first :geometry)
+         wgs-coords (case (:type geom)
+                      "Point"      (-> geom :coordinates)
+                      "LineString" (-> geom :coordinates first)
+                      "Polygon"    (-> geom :coordinates first first))
+         center     (wgs84->epsg3067 wgs-coords)
+         zoom       14]
+     {:db         (-> db
+                      (assoc-in [:map :zoom] zoom)
+                      (assoc-in [:map :center] center))
+      :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
+
+(re-frame/reg-event-fx
  ::zoom-to-users-position
  (fn [_ _]
    {:lipas.ui.effects/request-geolocation!
@@ -359,7 +374,33 @@
        (when (not= mode :analysis)
          [:dispatch [::show-sports-site lipas-id]])]})))
 
+(re-frame/reg-event-fx
+ ::loi-selected
+ (fn [{:keys [db]} [_ event _f1]]
+   (let [fcoll (map-utils/->geoJSON-clj (gobj/get event "selected"))]
+     {:fx
+      [[:dispatch [::show-loi fcoll]]]})))
+
+(re-frame/reg-event-fx
+ ::unselected
+ (fn [{:keys [db]} [_ _]]
+   (let [mode (-> db :map :mode :name)]
+     {:fx
+      [(when (not= mode :analysis)
+         [:dispatch [::show-sports-site nil]])
+       (when (not= mode :analysis)
+         [:dispatch [::show-loi nil]])]})))
+
 ;;; Higher order events ;;;
+
+(re-frame/reg-event-fx
+ ::show-loi
+ (fn [{:keys [db]} [_ loi-fcoll]]
+   (let [width (:screen-size db)]
+     {:fx
+      [[:dispatch [:lipas.ui.loi.events/select-loi loi-fcoll]]
+       (when loi-fcoll [:dispatch [:lipas.ui.map.events/zoom-to-loi loi-fcoll width]])
+       [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]]})))
 
 (re-frame/reg-event-fx
  ::show-sports-site
@@ -402,17 +443,6 @@
        [:lipas.ui.sports-sites.events/save-edits lipas-id on-success on-failure]]})))
 
 (re-frame/reg-event-fx
- ::discard-edits
- (fn [{:keys [db]} [_ lipas-id]]
-   (let [tr (-> db :translator)]
-     {:dispatch
-      [:lipas.ui.events/confirm
-       (tr :confirm/discard-changes?)
-       (fn []
-         (==> [:lipas.ui.sports-sites.events/discard-edits lipas-id])
-         (==> [::stop-editing]))]})))
-
-(re-frame/reg-event-fx
  ::delete-site
  (fn [_]
    {:dispatch-n
@@ -435,7 +465,8 @@
  (fn [{:keys [db]} [_ template]]
    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
     :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
-                 [:lipas.ui.sports-sites.events/start-adding-new-site template]]}))
+                 [:lipas.ui.sports-sites.events/start-adding-new-site template]
+                 [:lipas.ui.loi.events/start-adding-new-loi]]}))
 
 (re-frame/reg-event-fx
  ::discard-new-site
@@ -836,10 +867,14 @@
 (re-frame/reg-event-db
  ::highlight-features
  (fn [db [_ fids]]
-   (println "HIGHLIGHT FIDS" fids)
    (assoc-in db [:map :mode :selected-features] fids)))
 
 (re-frame/reg-event-db
  ::clear-highlight
  (fn [db _]
    (assoc-in db [:map :mode :selected-features] #{})))
+
+(re-frame/reg-event-db
+ ::select-add-mode
+ (fn [db [_ add-mode]]
+   (assoc-in db [:map :add-mode] add-mode)))
