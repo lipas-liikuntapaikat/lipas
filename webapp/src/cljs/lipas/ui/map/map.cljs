@@ -129,8 +129,8 @@
      #js{:visible false
          :source
          (ImageWMSSource.
-          #js{:url         "https://julkinen.vayla.fi/inspirepalvelu/avoin/wms"
-              :params      #js{:LAYERS "TL166"}
+          #js{:url         "/vaylavirasto/vaylatiedot/ows"
+              :params      #js{:LAYERS #_"TL166" "tierekisteri:tl166"}
               :serverType  "geoserver"
               :crossOrigin "anonymous"})})
     :retkikartta-snowmobile-tracks
