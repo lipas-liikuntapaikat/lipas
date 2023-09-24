@@ -156,6 +156,19 @@
                                                           {#_#_:revs revs
                                                            :locale   locale})}))}}]
 
+      ["/lois"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters {}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [locale    (or (-> parameters :query :lang keyword)
+                               :none)
+                 query {:size 10000 :query {:match_all {}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
+
       ["/users"
        {:get
         {:no-doc     true
