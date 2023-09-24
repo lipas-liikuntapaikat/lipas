@@ -1937,12 +1937,26 @@
 
 ;;; Location of Interest (loi) ;;;
 
-(s/def :lipas.loi/id uuid?)
+(s/def :lipas.loi/id (st/spec {:spec (str-in 36 36) :type :uuid}))
 #_(s/def :lipas.loi/created-at :lipas/timestamp)
 (s/def :lipas.loi/event-date :lipas/timestamp)
-(s/def :lipas.loi/status (into #{} (keys loi/statuses)))
-(s/def :lipas.loi/loi-category (into #{} (keys loi/categories)))
-(s/def :lipas.loi/loi-type (into #{} (->> loi/types vals (map :value))))
+
+(s/def :lipas.loi/status
+  (st/spec {:spec         (into #{} (keys loi/statuses))
+            :swagger/type "string"
+            :swagger/enum (keys loi/statuses)}))
+
+(s/def :lipas.loi/loi-category
+  (st/spec {:spec         (into #{} (keys loi/categories))
+            :swagger/type "string"
+            :swagger/enum (keys loi/categories)}))
+
+(let [vs (->> loi/types vals (map :value))]
+  (s/def :lipas.loi/loi-type
+    (st/spec {:spec (into #{} vs)
+              :swagger/type "string"
+              :swagger/enum vs})))
+
 ;; NOTE: generator supports only point features atm
 (s/def :lipas.loi/geometries (s/with-gen
                                ::geojson/feature-collection
