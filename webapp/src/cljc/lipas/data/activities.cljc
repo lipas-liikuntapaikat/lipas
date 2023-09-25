@@ -260,7 +260,13 @@
       :props
       (merge
        common-props
-       {:activities
+       {:route-name
+        {:field
+         {:type        "text-field"
+          :description {:fi "Tähän joku järkevä ohje"}
+          :label       {:fi "Reitin nimi"}}}
+
+        :activities
         {:type        "multi-select"
          :description {:fi "Retkimelonta, Koskimelonta"}
          :label       {:fi "Aktiviteetti"}
@@ -300,7 +306,7 @@
         {:field
          {:type        "duration"
           :description {:fi "Kulkuaika"}
-          :label       {:fi "AKulkuaika"}}}})
+          :label       {:fi "Kulkuaika"}}}})
 
       :derived-props
       {:length-m
