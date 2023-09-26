@@ -69,7 +69,7 @@
 
 (def outdoor-recreation-routes
   {:label       {:fi "Retkeily ja ulkoilureitit"}
-   :value      "outdoor-recreation-routes"
+   :value       "outdoor-recreation-routes"
    :description {:fi ""}
    :type-codes  #{4401 4402 4403 4404 4405}
    :props
@@ -140,10 +140,18 @@
 
        :duration
        {:field
-        {:field
-         {:type        "duration"
-          :description "Esim. 4-5 h, 4-8 päivää"
-          :label       "Ajoaika"}}}}}}}})
+        {:type        "duration"
+         :description "Esim. 4-5 h, 4-8 päivää"
+         :label       "Ajoaika"}}
+
+       :accessibility-classification
+       {:field
+        {:type        "select"
+         :opts        {"accessible"          {:fi "Esteetön"}
+                       "advanced-accessible" {:fi "Vaativa esteetön"}
+                       "inaccessible"        {:fi "Ei"}}
+         :description "Tähän joku kuvaus"
+         :label       {:fi "Esteettömyysluokitus"}}}}}}}})
 
 (def cycling
   {:label       {:fi "Pyöräily"}
@@ -267,28 +275,31 @@
           :label       {:fi "Reitin nimi"}}}
 
         :activities
-        {:type        "multi-select"
-         :description {:fi "Retkimelonta, Koskimelonta"}
-         :label       {:fi "Aktiviteetti"}
-         :opts        {"trip-padding"        {:fi "Retkimelonta"}
-                       "whitewater-paddling" {:fi "Koskimelonta"}}}
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Retkimelonta, Koskimelonta"}
+          :label       {:fi "Aktiviteetti"}
+          :opts        {"trip-padding"        {:fi "Retkimelonta"}
+                        "whitewater-paddling" {:fi "Koskimelonta"}}}}
 
         :route-type
-        {:type        "multi-select"
-         :description {:fi "Avovesi, Suojaisa, Joki, Koski"}
-         :label       {:fi "Aktiviteetti"}
-         :opts        {"open-water" {:fi "Avovesi"}
-                       "sheltered"  {:fi "Suojaisa"}
-                       "river"      {:fi "Joki"}
-                       "rapids"     {:fi "Koski"}}}
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Avovesi, Suojaisa, Joki, Koski"}
+          :label       {:fi "Melontakohteen tyyppi"}
+          :opts        {"open-water" {:fi "Avovesi"}
+                        "sheltered"  {:fi "Suojaisa"}
+                        "river"      {:fi "Joki"}
+                        "rapids"     {:fi "Koski"}}}}
 
         :difficulty
-        {:type        "multi-select"
-         :description {:fi "Vaativuus"}
-         :label       {:fi "Vaativuus"}
-         :opts        {"easy"   {:fi "Helppo"}
-                       "medium" {:fi "Keskivaikea"}
-                       "hard"   {:fi "Vaativa"}}}
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Vaativuus"}
+          :label       {:fi "Vaativuus"}
+          :opts        {"easy"   {:fi "Helppo"}
+                        "medium" {:fi "Keskivaikea"}
+                        "hard"   {:fi "Vaativa"}}}}
 
         :safety
         {:field
