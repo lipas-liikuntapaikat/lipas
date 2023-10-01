@@ -191,6 +191,7 @@
         :label    "Kategoria"
         :value-fn first
         :label-fn (comp locale :label second)
+        :on-change #(==> [::events/edit-loi-field :loi-category %])
         :value    loi-cat}]]
 
      [mui/grid {:item true :xs 12}
@@ -232,6 +233,16 @@
                                :helper-text (get-in field [:description locale])
                                :on-change   #(==> [::events/edit-loi-field k %])
                                :value       (->> (get-in form-data [k]))}]
+
+                    "select" [lui/select
+                              {:disabled    read-only?
+                               :items       (:opts field)
+                               :label       (get-in field [:label locale])
+                               :helper-text (get-in field [:description locale])
+                               :label-fn    (comp locale second)
+                               :value-fn    first
+                               :on-change   #(==> [::events/edit-loi-field k %])
+                               :value       (get-in form-data [k])}]
 
                     ;; Fallback
                     [lui/text-field

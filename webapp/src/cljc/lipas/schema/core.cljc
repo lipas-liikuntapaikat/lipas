@@ -1937,7 +1937,7 @@
 
 ;;; Location of Interest (loi) ;;;
 
-(s/def :lipas.loi/id (st/spec {:spec (str-in 36 36) :type :uuid}))
+(s/def :lipas.loi/id (st/spec {:spec (str-in 36 36)}))
 #_(s/def :lipas.loi/created-at :lipas/timestamp)
 (s/def :lipas.loi/event-date :lipas/timestamp)
 
