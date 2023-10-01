@@ -90,9 +90,9 @@
        :on-change #(set-field :unit %)}]]]])
 
 (defn image-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
+  [{:keys [tr locale dialog-state on-save on-close lipas-id image-props]}]
   [lui/dialog
-   {:title         "Image"
+   {:title         "Lisää valokuva"
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -121,14 +121,27 @@
 
     [mui/grid {:item true :xs 12}
      [lui/text-field
-      {:fullWidth true
-       :required  true
-       :value     (-> @dialog-state :data :description locale)
-       :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
-       :label     (tr :general/description)
-       :multiline true
-       :rows      5
-       :variant   "outlined"}]]
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :description locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
+       :label       (get-in image-props [:description :field :label locale])
+       :helper-text (get-in image-props [:description :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]
+
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :alt-text locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :alt-text locale] %)
+       :label       (get-in image-props [:alt-text :field :label locale])
+       :helper-text (get-in image-props [:alt-text :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]
 
     [mui/grid {:item true :xs 12}
      (when-let [url (-> @dialog-state :data :url)]
@@ -137,7 +150,7 @@
          :src   url}])]]])
 
 (defn images
-  [{:keys [value on-change locale label tr read-only? lipas-id]}]
+  [{:keys [value on-change locale label tr read-only? lipas-id image-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -154,6 +167,7 @@
         {:tr           tr
          :lipas-id     lipas-id
          :locale       locale
+         :image-props  image-props
          :dialog-state dialog-state
          :on-save      (fn []
                          (let [data (:data @dialog-state)]
@@ -485,6 +499,7 @@
                :locale      locale
                :label       (get-in field [:label locale])
                :helper-text (get-in field [:description locale])
+               :image-props (:props field)
                :on-change   #(set-field prop-k %)
                :value       (->> (get-in edit-data [prop-k]))}]
 

@@ -28,7 +28,22 @@
    {:field
     {:type        "images"
      :description {:fi ""}
-     :label       {:fi "Valokuvat"}}}
+     :label       {:fi "Valokuvat"}
+     :props
+     {:url
+      {:field
+       {:type   "textfield"
+        :hidden true}}
+      :description
+      {:field
+       {:type        "textarea"
+        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."}
+        :label       {:fi "Kuvateksti"}}}
+      :alt-text
+      {:field
+       {:type        "textarea"
+        :description {:fi "Ruudunlukijan näkövammaisille kertoma teksti kuvassa esitettävistä asioista. Lue lisää: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
+        :label       {:fi "Alt-teksti"}}}}}}
 
    :rules
    {:field
@@ -291,6 +306,16 @@
                         "sheltered"  {:fi "Suojaisa"}
                         "river"      {:fi "Joki"}
                         "rapids"     {:fi "Koski"}}}}
+
+        :properties
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Seliteteksti?"}
+          :label       {:fi "Ominaisuudet"}
+          :opts        {"includes-portage-sections" {:fi "Sisältää kanto-osuuksia"}
+                        "includes-canals-or-locks"  {:fi "Sisältää sulkuja / kanavia"}
+                        "ideal-for-fishing"         {:fi "Hyvä kalapaikka"}
+                        "scenic-vistas"             {:fi "Hyvät maisemat"}}}}
 
         :difficulty
         {:field
