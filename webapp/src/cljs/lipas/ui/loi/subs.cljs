@@ -39,9 +39,7 @@
  ::editing-loi
  :<- [::loi]
  (fn [loi _]
-   (-> loi
-       :editing
-       (assoc :loi-category "outdoor-recreation-facilities"))))
+   (:editing loi)))
 
 (re-frame/reg-sub
  ::edits-valid?
@@ -50,7 +48,6 @@
  (fn [[loi geoms] _]
    (let [data (-> loi
                   (assoc :geometries geoms)
-                  (update :id (fnil uuid ""))
                   (assoc :event-date (utils/timestamp)))]
      (boolean
       (and geoms
@@ -61,19 +58,6 @@
  :<- [::loi]
  (fn [loi _]
    (:categories loi)))
-
-#_(re-frame/reg-sub
- ::selected-loi-category
- :<- [::loi]
- (fn [loi _]
-   ;; TODO un-hardcode once more is needed
-   "outdoor-recreation-facilities"))
-
-#_(re-frame/reg-sub
- ::selected-loi-type
- :<- [::loi]
- (fn [loi _]
-   (:selected-type loi)))
 
 (re-frame/reg-sub
  ::props
