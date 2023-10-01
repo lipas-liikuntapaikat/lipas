@@ -36,7 +36,29 @@
      :label       {:fi "Esteettömyys"}}}})
 
 (def categories
-  {"outdoor-recreation-facilities"
+  {"water-conditions"
+   {:label {:fi "Vesiolosuhteet"}
+    :types
+    {:hazards
+     {:label {:fi "Vaaranpaikat"}
+      :value "hazards"
+      :props
+      (merge
+       (select-keys common-props [:name])
+       {:hazard-type
+        {:field
+         {:type        "select"
+          :label       {:fi "Tyyppi"}
+          :description {:fi "Vaaranpaikan tyyppi"}
+          :opts        {"rapid"      {:fi "Koski"}
+                        "open-water" {:fi "Avoin selkä"}}}}
+        :description
+        {:field
+         {:type        "textarea"
+          :label       {:fi "Kuvaus"}
+          :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}}}
+
+   "outdoor-recreation-facilities"
    {:label {:fi "Retkeily ja ulkoilurakenteet"}
     :types
     {:information-board
