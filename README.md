@@ -105,3 +105,24 @@ See [certs/README.md](certs/README.md).
 docker-compose run frontend-npm-deps
 docker-compose run frontend-build
 ```
+
+### Apple Silicon considerations
+
+Open Source Routing Machine currently has not an arm64 build. It is much faster than using the x86 image so consider building it yourself:
+
+```
+git clone https://github.com/Project-OSRM/osrm-backend.git
+cd osrm-backend
+docker build -t osrm-local --platform arm64 -f docker/Dockerfile . 
+```
+
+Then you need to replace every usage of osrm/osrm-backend image with osrm-local, for example:
+
+```
+sed -i '.backup' s|osrm/osrm-backend|osrm-local|g docker-compose.yml
+sed -i '.backup' s|osrm/osrm-backend|osrm-local|g osrm/README.md    
+```
+
+Then see [osrm/README.md](osrm/README.md) to build the osrm files. 
+
+See https://github.com/Project-OSRM/osrm-backend/issues/6133 
