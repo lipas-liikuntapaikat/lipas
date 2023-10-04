@@ -2,7 +2,7 @@ version: '2'
 services:
 
   proxy-base:
-    image: nginx
+    image: nginx:stable
     environment:
       DIGITRANSIT_SUBSCRIPTION_KEY:
     ports:
