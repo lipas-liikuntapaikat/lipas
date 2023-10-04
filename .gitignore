@@ -10,6 +10,7 @@
 /.lsp
 /osrm/*
 !/osrm/README.md
+.calva
 
 webapp/.nrepl-port
 webapp/*.log
