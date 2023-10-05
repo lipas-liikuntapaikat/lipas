@@ -329,7 +329,7 @@ services:
       - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
 
   legacy-api-base:
-    image: openjdk:14-alpine
+    image: eclipse-temurin:17
     logging:
       driver: "gelf"
       options:
