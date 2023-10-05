@@ -68,6 +68,7 @@
 
 (def email-regex #"^[a-zA-Z0-9åÅäÄöÖ._%+-]+@[a-zA-Z0-9åÅäÄöÖ.-]+\.[a-zA-Z]{2,63}$")
 (def postal-code-regex #"[0-9]{5}")
+(def two-consecutive-dots-regex #"\.{2,}")
 
 ;; https://stackoverflow.com/questions/3143070/javascript-regex-iso-datetime
 (def timestamp-regex
@@ -164,7 +165,10 @@
     :swagger/type   "string"
     :swagger/format "date"}))
 
-(s/def :lipas/email-type (s/and string? #(re-matches email-regex %)))
+(s/def :lipas/email-type (s/and string?
+                                #(re-matches email-regex %)
+                                #(if (re-find two-consecutive-dots-regex %) nil %)))
+
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
 (s/def :lipas/hours-in-day (int-in  0 (inc 24)))
