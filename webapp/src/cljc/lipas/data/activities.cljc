@@ -410,40 +410,42 @@
    :description {:fi ""}
    :type-codes  #{204}
    :props
-   {:type
-    {:field
-     {:type        "multi-select"
-      :description {:fi "Lintutorni, Muu lintupaikka"}
-      :label       {:fi "Tyyppi"}
-      :opts        {"bird-observation-tower"      {:fi "Lintutorni"}
-                    "other-bird-observation-spot" {:fi "Muu lintupaikka"}}}}
+   (merge
+    common-props
+    {:type
+     {:field
+      {:type        "multi-select"
+       :description {:fi "Lintutorni, Muu lintupaikka"}
+       :label       {:fi "Tyyppi"}
+       :opts        {"bird-observation-tower"      {:fi "Lintutorni"}
+                     "other-bird-observation-spot" {:fi "Muu lintupaikka"}}}}
 
-    :habitat
-    {:field
-     {:type        "textarea"
-      :description {:fi "Suokohde, …"}
-      :label       {:fi "Elinympäristö"}}}
+     :habitat
+     {:field
+      {:type        "textarea"
+       :description {:fi "Suokohde, …"}
+       :label       {:fi "Elinympäristö"}}}
 
-    :character
-    {:field
-     {:type        "textarea"
-      :description {:fi "Muutonseurantakohde, …"}
-      :label       {:fi "Luonne"}}}
+     :character
+     {:field
+      {:type        "textarea"
+       :description {:fi "Muutonseurantakohde, …"}
+       :label       {:fi "Luonne"}}}
 
-    :season
-    {:field
-     {:type        "multi-select"
-      :description {:fi "Kevät, Kesä, Syksy, Talvi"}
-      :label       {:fi "Ajankohta"}
-      :opts        {"spring" {:fi "Kevät"}
-                    "summer" {:fi "Kesä"}
-                    "autumn" {:fi "Syksy"}
-                    "winter" {:fi "Talvi"}}}}
-    :species
-    {:field
-     {:type        "textarea"
-      :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"}
-      :label       {:fi "Lajisto"}}}}})
+     :season
+     {:field
+      {:type        "multi-select"
+       :description {:fi "Kevät, Kesä, Syksy, Talvi"}
+       :label       {:fi "Ajankohta"}
+       :opts        {"spring" {:fi "Kevät"}
+                     "summer" {:fi "Kesä"}
+                     "autumn" {:fi "Syksy"}
+                     "winter" {:fi "Talvi"}}}}
+     :species
+     {:field
+      {:type        "textarea"
+       :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"}
+       :label       {:fi "Lajisto"}}}})})
 
 (def fishing
   {:label       {:fi "Kalastus"}
