@@ -26,6 +26,16 @@
   [mui/form-label {:style {:color "gray"}}
    label])
 
+(defn lang-selector
+  [{:keys [locale]}]
+  [mui/tabs
+   {:value          (name locale)
+    :indicatorColor "primary"
+    :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
+   [mui/tab {:value "fi" :label "Suomi"}]
+   [mui/tab {:value "se" :label "Svenska"}]
+   [mui/tab {:value "en" :label "English"}]])
+
 (def sort-order
   (->>
    [:route-name
@@ -88,6 +98,88 @@
        :value     (:unit value)
        :label     "Yksikkö"
        :on-change #(set-field :unit %)}]]]])
+
+(defn highlight-dialog
+  [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
+  [lui/dialog
+   {:title         "Lisää kohokohta"
+    :open?         (:open? @dialog-state)
+    :on-save       on-save
+    :on-close      #(swap! dialog-state assoc :open? false)
+    :save-enabled? true
+    :save-label    "Ok"
+    :cancel-label  (tr :actions/cancel)}
+
+   [mui/grid {:container true :spacing 2}
+    [mui/grid {:item true :xs 12}
+     [lang-selector {:locale locale}]]
+
+    [mui/grid {:item true :xs 12}
+     [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:fullWidth true
+         :required  true
+         :value     (-> @dialog-state :data locale)
+         :on-change #(swap! dialog-state assoc-in [:data locale] %)
+         :label     "Kohokohta"
+         :variant   "outlined"}]]]]])
+
+(defn textlist
+  [{:keys [locale label set-field value]}]
+  (r/with-let [state (r/atom (->> value
+                                  (map #(assoc % :id (gensym)))
+                                  (utils/index-by :id)))
+               dialog-init-state {:open? false
+                                  :data  nil
+                                  :mode  :edit}
+               dialog-state (r/atom dialog-init-state)]
+    (let [tr (<== [:lipas.ui.subs/translator])]
+
+      ;; Dialog
+      [mui/grid {:container true :spacing 2}
+       [highlight-dialog
+        {:tr           tr
+         :locale       locale
+         :dialog-state dialog-state
+         :on-save      (fn []
+                         (let [data (:data @dialog-state)]
+                      (swap! state assoc (:id data) data))
+                    (set-field (->> @state
+                                    vals
+                                    (mapv #(dissoc % :id))))
+                    (reset! dialog-state dialog-init-state))}]
+
+       ;; Label
+       [mui/grid {:item true :xs 12}
+        [form-label {:label label}]]
+
+       ;; Table
+       [mui/grid {:item true :xs 12}
+        [lui/form-table
+         {:headers          [[locale label]]
+          :hide-header-row? true
+          :read-only?       false
+          :items            (->> @state vals)
+          :on-add           (fn []
+                              (reset! dialog-state {:open? true
+                                                    :mode  :add
+                                                    :data  {:id (gensym)}}))
+          :on-edit          (fn [m]
+                              (reset! dialog-state {:open? true
+                                                    :mode  :edit
+                                                    :data  (get @state (:id m))}))
+          :on-delete        (fn [m]
+                             (swap! state dissoc (:id m))
+                             (set-field (->> @state
+                                             vals
+                                             (mapv #(dissoc % :id)))))
+          :add-tooltip      "Lisää"
+          :edit-tooltip     (tr :actions/edit)
+          :delete-tooltip   (tr :actions/delete)
+          :confirm-tooltip  (tr :confirm/press-again-to-delete)
+          :add-btn-size     "small"
+          :key-fn           :url}]]])))
+
 
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id image-props]}]
@@ -524,6 +616,16 @@
                  :set-field   (partial set-field prop-k)
                  :value       (get-in edit-data [prop-k])}]
 
+    "textlist" [textlist
+                {:read-only?  read-only?
+                 :lipas-id    lipas-id
+                 :locale      locale
+                 :label       (get-in field [:label locale])
+                 :description (get-in field [:description locale])
+                 :route-props (:props field)
+                 :set-field   (partial set-field prop-k)
+                 :value       (get-in edit-data [prop-k])}]
+
     (println (str "Unknown field type: " (:type field)))))
 
 (defn view
@@ -559,13 +661,7 @@
             :on-change #(==> [:lipas.ui.events/set-translator %])}]
 
         ;; Language selector
-        [mui/tabs
-         {:value          (name locale)
-          :indicatorColor "primary"
-          :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
-         [mui/tab {:value "fi" :label "Suomi"}]
-         [mui/tab {:value "se" :label "Svenska"}]
-         [mui/tab {:value "en" :label "English"}]]]
+        [lang-selector {:locale locale}]]
 
        ;; Form
        [mui/grid {:item true :xs 12}

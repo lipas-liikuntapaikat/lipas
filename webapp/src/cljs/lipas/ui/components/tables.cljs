@@ -267,8 +267,9 @@
   [{:keys [headers items key-fn add-tooltip
            edit-tooltip delete-tooltip confirm-tooltip
            read-only? on-add on-edit on-delete add-btn-size
-           max-width empty-label]
-    :or   {add-btn-size "large"}
+           max-width empty-label hide-header-row?]
+    :or   {add-btn-size     "large"
+           hide-header-row? false}
     :as   props}]
   (if read-only?
 
@@ -300,11 +301,12 @@
            [mui/table
 
             ;; Headear row
-            [mui/table-head
-             (into [mui/table-row {:hover true}
-                    [mui/table-cell ""]]
-                   (for [[_ header] headers]
-                     [mui/table-cell header]))]
+            (when-not hide-header-row?
+              [mui/table-head
+              (into [mui/table-row {:hover true}
+                     [mui/table-cell ""]]
+                    (for [[_ header] headers]
+                      [mui/table-cell header]))])
 
             ;; Body
             [mui/table-body
