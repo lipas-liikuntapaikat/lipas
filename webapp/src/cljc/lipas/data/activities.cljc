@@ -223,7 +223,13 @@
         {:field
          {:type        "textarea"
           :description {:fi "Tekstiä"}
-          :label       {:fi "Hyvä tietää"}}}})
+          :label       {:fi "Hyvä tietää"}}}
+
+        :highlights
+        {:field
+         {:type        "textlist"
+          :description {:fi "Tekstiä"}
+          :label       {:fi "Kohokohdat"}}}})
 
       :derived-props
       {:length-m
@@ -525,3 +531,7 @@
                                                  [k (if (= "routes" (:type field))
                                                       (map (juxt first (comp :type :field second)) (:props field))
                                                       (:type field))])))))))
+
+;; - Pyöräilyjutun “kohokohdat lista”
+;; - Yhteystietojen rakenteellinen keruu
+;; - (Yhteystietojen ylläpito)
