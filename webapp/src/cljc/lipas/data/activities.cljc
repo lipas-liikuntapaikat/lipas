@@ -16,7 +16,35 @@
      :description {:fi "Tarkempi tekstimuotoinen kuvaus kohteesta"}
      :label       {:fi "Kohdekuvaus"}}}
 
-
+   :contacts
+   {:field
+    {:type        "contacts"
+     :description {:fi "Tähän joku seliteteksti"}
+     :label       {:fi "Yhteystiedot"}
+     :props
+     {:organization
+      {:field
+       {:type        "text-field"
+        :label       {:fi "Organisaatio"}
+        :description {:fi "Yhteystietoon liittyvän organisaation nimi"}}}
+      :role
+      {:field
+       {:type        "multi-select"
+        :label       {:fi "Rooli"}
+        :description {:fi "Yhteystietoon liittyvän organisaation rooli"}
+        :opts        {"admin"            {:fi "Ylläpitäjä"}
+                      "content-creator"  {:fi "Sisällöntuottaja"}
+                      "customer-service" {:fi "Asiakaspalvelu"}}}}
+      :email
+      {:field
+       {:type        "text-field"
+        :label       {:fi "Sähköposti"}
+        :description {:fi "Yhteystietoon liittyvän organisaation sähköpostiosoite"}}}
+      :phone-number
+      {:field
+       {:type        "text-field"
+        :label       {:fi "Puhelinnumero"}
+        :description {:fi "Yhteystietoon liittyvän organisaation puhelinnumero"}}}}}}
 
    :videos
    {:field
@@ -32,7 +60,7 @@
      :props
      {:url
       {:field
-       {:type   "textfield"
+       {:type   "text-field"
         :hidden true}}
       :description
       {:field
@@ -271,7 +299,7 @@
        :duration
        {:field
         {:field
-         {:type        "textfield"
+         {:type        "text-field"
           :description "Esim. 4-5 h, 4-8 päivää"
           :label       "Ajoaika"}}}}}}}})
 
@@ -372,7 +400,7 @@
        :duration
        {:field
         {:field
-         {:type        "textfield"
+         {:type        "text-field"
           :description "Esim. 4-5 h, 4-8 päivää"
           :label       "Ajoaika"}}}}}}}})
 

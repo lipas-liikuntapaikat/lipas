@@ -10,6 +10,8 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+(declare make-field)
+
 (defn set-field
   [lipas-id & args]
   (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
@@ -58,7 +60,8 @@
     :arrival
     :accessibility
     :rules
-    :parking]
+    :parking
+    :contacts]
    (reverse)
    (map-indexed (fn [idx k] [k idx]))
    (into {})))
@@ -66,6 +69,106 @@
 (defn field-sorter
   [[k _]]
   (get sort-order k -1))
+
+(defn contact-dialog
+  [{:keys [tr locale dialog-state on-save on-close contact-props]}]
+  [lui/dialog
+   {:title         "Lisää yhteystieto"
+    :open?         (:open? @dialog-state)
+    :on-save       on-save
+    :on-close      #(swap! dialog-state assoc :open? false)
+    :save-enabled? true
+    :save-label    "Ok"
+    :cancel-label  (tr :actions/cancel)}
+
+   (into [mui/grid {:container true :spacing 2}
+          [mui/grid {:item true :xs 12}
+           [lang-selector {:locale locale}]]]
+         (for [[prop-k {:keys [field]}] contact-props]
+           [mui/grid {:item true :xs 12}
+            (make-field
+             {:field        field
+              :prop-k       prop-k
+              :edit-data    (:data @dialog-state)
+              :display-data (:data @dialog-state)
+              :locale       locale
+              :set-field    (fn [& args]
+                              (let [path (into [:data] (butlast args))
+                                    v (last args)]
+                                (swap! dialog-state assoc-in path v)))})]))])
+
+(defn contacts
+  [{:keys [read-only? lipas-id locale label description set-field
+           value contact-props]}]
+  (r/with-let [state (r/atom (->> value
+                                  (map #(assoc % :id (gensym)))
+                                  (utils/index-by :id)))
+               dialog-init-state {:open? false
+                                  :data  nil
+                                  :mode  :edit}
+               dialog-state (r/atom dialog-init-state)]
+    (let [tr (<== [:lipas.ui.subs/translator])]
+
+      ;; Dialog
+      [mui/grid {:container true :spacing 2}
+       [contact-dialog
+        {:tr            tr
+         :locale        locale
+         :dialog-state  dialog-state
+         :contact-props contact-props
+         :on-save       (fn []
+                          (let [data (:data @dialog-state)]
+                            (swap! state assoc (:id data) data))
+                          (set-field (->> @state
+                                          vals
+                                          (mapv #(dissoc % :id))))
+                          (reset! dialog-state dialog-init-state))}]
+
+       ;; Label
+       [mui/grid {:item true :xs 12}
+        [form-label {:label label}]]
+
+       ;; Table
+       [mui/grid {:item true :xs 12}
+        [lui/form-table
+         {:headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
+                             [:_role (get-in contact-props [:role :field :label locale])]]
+          :hide-header-row? false
+          :read-only?       false
+          :items            (->> @state
+                                 vals
+                                 (map #(assoc % :_organization (get-in % [:organization locale])))
+                                 (map #(assoc % :_role (->> %
+                                                            :role
+                                                            (map
+                                                             (fn [role]
+                                                               (get-in contact-props [:role :field :opts role locale])))
+                                                            (str/join ", ")))))
+          :on-add           (fn []
+                              (reset! dialog-state {:open? true
+                                                    :mode  :add
+                                                    :data  {:id (gensym)}}))
+          :on-edit          (fn [m]
+                              (reset! dialog-state {:open? true
+                                                    :mode  :edit
+                                                    :data  (get @state (:id m))}))
+          :on-delete        (fn [m]
+                              (swap! state dissoc (:id m))
+                              (set-field (->> @state
+                                              vals
+                                              (mapv #(dissoc % :id)))))
+          :add-tooltip      "Lisää"
+          :edit-tooltip     (tr :actions/edit)
+          :delete-tooltip   (tr :actions/delete)
+          :confirm-tooltip  (tr :confirm/press-again-to-delete)
+          :add-btn-size     "small"
+          :key-fn           :url}]]
+
+       ;; Debug
+       (when config/debug?
+         [mui/grid {:item true :xs 12}
+          [lui/expansion-panel {:label "debug"}
+           [:pre (with-out-str (pprint/pprint contact-props))]]])])))
 
 (defn duration
   [{:keys [tr locale label set-field value]}]
@@ -390,8 +493,6 @@
           :add-btn-size    "small"
           :key-fn          :url}]]])))
 
-(declare make-field)
-
 (defn route-form
   [{:keys [locale geom-type lipas-id route-props state read-only?]}]
   (into
@@ -612,7 +713,6 @@
                  :locale      locale
                  :label       (get-in field [:label locale])
                  :description (get-in field [:description locale])
-                 :route-props (:props field)
                  :set-field   (partial set-field prop-k)
                  :value       (get-in edit-data [prop-k])}]
 
@@ -622,9 +722,18 @@
                  :locale      locale
                  :label       (get-in field [:label locale])
                  :description (get-in field [:description locale])
-                 :route-props (:props field)
                  :set-field   (partial set-field prop-k)
                  :value       (get-in edit-data [prop-k])}]
+
+    "contacts" [contacts
+                {:read-only?    read-only?
+                 :lipas-id      lipas-id
+                 :locale        locale
+                 :label         (get-in field [:label locale])
+                 :description   (get-in field [:description locale])
+                 :set-field     (partial set-field prop-k)
+                 :contact-props (:props field)
+                 :value         (get-in edit-data [prop-k])}]
 
     (println (str "Unknown field type: " (:type field)))))
 
