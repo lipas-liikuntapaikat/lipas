@@ -573,14 +573,12 @@
     (is (= 200 (:status resp2)))))
 
 (deftest search-order-test
-  (let [sites    (for [site-name ["\"Bantis\" beachvolleykenttä 2"
-                                  "Antis"
-                                  "bantis beachvolleykenttä (1)"
-                                  "!antis"]]
-                   (-> (tu/gen-sports-site)
-                       (assoc :name site-name)))
-        _        (doseq [site sites] (core/index! search site true))
-        resp     (app (-> (mock/request :post "/api/actions/search")
+  (doseq [site-name ["\"Bantis\" beachvolleykenttä 2"
+                     "Antis"
+                     "bantis beachvolleykenttä (1)"
+                     "!antis"]]
+    (core/index! search (-> (tu/gen-sports-site) (assoc :name site-name)) :sync))
+  (let [resp     (app (-> (mock/request :post "/api/actions/search")
                           (mock/content-type "application/json")
                           (mock/body (->json {:query
                                               {:bool
