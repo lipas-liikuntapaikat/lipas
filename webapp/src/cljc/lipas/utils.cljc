@@ -11,9 +11,11 @@
 
 
 (defn ->sortable-name [s]
-  (-> s
-      (string/lower-case)
-      (string/replace #"(\"|\(|\))" "")))
+  (if (nil? s)  
+    ""
+    (-> s
+        (string/lower-case)
+        (string/replace #"(\"|\(|\))" ""))))
 
 (defn index-by
   ([idx-fn coll]
