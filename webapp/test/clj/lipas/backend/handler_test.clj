@@ -578,24 +578,29 @@
                      "bantis beachvolleykenttä (1)"
                      "!antis"]]
     (core/index! search (-> (tu/gen-sports-site) (assoc :name site-name)) :sync))
-  (let [resp     (app (-> (mock/request :post "/api/actions/search")
-                          (mock/content-type "application/json")
-                          (mock/body (->json {:query
-                                              {:bool
-                                               {:must
-                                                [{:query_string
-                                                  {:query "*"}}]}}
-                                              :sort
-                                               [{:search-meta.name.keyword 
-                                                 {:order :asc}}]}))))
-        body     (<-json (:body resp))
-        result-sites    (map :_source (-> body :hits :hits))
+  (let [response (-> (mock/request :post "/api/actions/search")
+                     (mock/content-type "application/json")
+                     (mock/body (->json {:query
+                                         {:bool
+                                          {:must
+                                           [{:query_string
+                                             {:query "*"}}]}}
+                                         :sort
+                                         [{:search-meta.name.keyword
+                                           {:order :asc}}]}))
+                     app)
+        actual-sites    (-> response
+                            (:body)
+                            (<-json)
+                            (as-> body (map :_source (-> body :hits :hits)))
+                            (as-> site (map :name site)))
         expected-site-names ["!antis"
                              "Antis"
                              "bantis beachvolleykenttä (1)"
                              "\"Bantis\" beachvolleykenttä 2"]]
-    (is (= (mapv :name result-sites) expected-site-names))))
+    (is (= actual-sites expected-site-names))))
 
 (comment
   (t/run-tests *ns*)
+  (t/run-test search-order-test)
   )
