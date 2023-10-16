@@ -261,7 +261,6 @@
         :save-label     (tr :actions/save)
         :discard-label  (tr :actions/discard)
         :on-select      #(on-result-click %)
-        :sort-fn        (or (:sort-fn sort-opts) :score)
         :sort-asc?      (:asc? sort-opts)
         :allow-editing? :permission?
         :allow-saving?  (fn [item]

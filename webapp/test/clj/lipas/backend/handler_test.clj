@@ -572,6 +572,35 @@
     (is (= 200 (:status resp1)))
     (is (= 200 (:status resp2)))))
 
+(deftest search-order-test
+  (doseq [site-name ["\"Bantis\" beachvolleykenttä 2"
+                     "Antis"
+                     "bantis beachvolleykenttä (1)"
+                     "!antis"]]
+    (core/index! search (-> (tu/gen-sports-site) (assoc :name site-name)) :sync))
+  (let [response (-> (mock/request :post "/api/actions/search")
+                     (mock/content-type "application/json")
+                     (mock/body (->json {:query
+                                         {:bool
+                                          {:must
+                                           [{:query_string
+                                             {:query "*"}}]}}
+                                         :sort
+                                         [{:search-meta.name.keyword
+                                           {:order :asc}}]}))
+                     app)
+        actual-sites    (-> response
+                            (:body)
+                            (<-json)
+                            (as-> body (map :_source (-> body :hits :hits)))
+                            (as-> site (map :name site)))
+        expected-site-names ["!antis"
+                             "Antis"
+                             "bantis beachvolleykenttä (1)"
+                             "\"Bantis\" beachvolleykenttä 2"]]
+    (is (= actual-sites expected-site-names))))
+
 (comment
   (t/run-tests *ns*)
+  (t/run-test search-order-test)
   )

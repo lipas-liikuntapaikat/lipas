@@ -5,6 +5,7 @@
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.java.jdbc :as jdbc]
+   [clojure.string :as str]
    [dk.ative.docjure.spreadsheet :as excel]
    [lipas.backend.accessibility :as accessibility]
    [lipas.backend.analysis.diversity :as diversity]
@@ -302,7 +303,8 @@
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
         field-types   (->> sports-site :fields (map :type) distinct)
-        search-meta   {:admin {:name (-> sports-site :admin admins)}
+        search-meta   {:name (utils/->sortable-name (:name sports-site))
+                       :admin {:name (-> sports-site :admin admins)}
                        :owner {:name (-> sports-site :owner owners)}
                        :location
                        {:wgs84-point  start-coords
