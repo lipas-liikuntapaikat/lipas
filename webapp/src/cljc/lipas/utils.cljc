@@ -9,6 +9,12 @@
    #?(:cljs [goog.string :as gstring])
    #?(:cljs [goog.string.format])))
 
+
+(defn ->sortable-name [s]
+  (-> s
+      (string/lower-case)
+      (string/replace #"(\"|\(|\))" "")))
+
 (defn index-by
   ([idx-fn coll]
    (index-by idx-fn identity coll))
