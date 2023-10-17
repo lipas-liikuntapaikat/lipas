@@ -195,6 +195,7 @@
         popup-overlay (init-overlay)
 
         opts #js {:target   "map"
+                  :keyboardEventTarget js/document
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
