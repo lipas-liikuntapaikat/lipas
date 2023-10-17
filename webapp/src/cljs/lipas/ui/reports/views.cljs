@@ -88,8 +88,12 @@
         {:container       true
          :justify-content "space-between"
          :align-items     "baseline"}
-        [mui/grid {:item true}
-         (tr :reports/select-fields)]
+        [mui/grid 
+         {:container true
+          :justify-content "space-between"}
+         (tr :reports/select-fields)
+         [mui/icon-button {:on-click toggle}
+          [mui/icon "close"]]]
 
         ;; Save template for later use btn
         (when logged-in?
