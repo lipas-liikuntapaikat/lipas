@@ -349,8 +349,23 @@
       {:on-click #(-> geoms map-utils/calculate-length on-change)}
       [:> Calculator]]]]])
 
+(defn area-km2-field
+  [{:keys [tr geoms on-change] :as props}]
+  [mui/grid {:container true :wrap "nowrap"}
+   [mui/grid {:item true :style {:flex-grow 1}}
+    [mui/form-group
+     [lui/text-field (dissoc props :geoms)]]]
+   [mui/grid {:item true}
+    [mui/tooltip {:title (tr :map/calculate-area)}
+     [mui/icon-button
+      {:on-click #(-> geoms map-utils/calculate-area on-change)}
+      [:> Calculator]]]]])
+
 (defn show-calc? [k geom-type]
   (and (= :route-length-km k) (#{"LineString"} geom-type)))
+
+(defn show-area-calc? [k geom-type]
+   (and (= :area-km2 k) (#{"Polygon"} geom-type)))
 
 (defn special-case? [type-code]
   ;; Uimahalli / jäähalli
@@ -521,6 +536,15 @@
                                   :tooltip   tooltip}]
 
             (show-calc? k geom-type) [route-length-km-field
+                                      {:tr        tr
+                                       :value     value
+                                       :type      "number"
+                                       :spec      spec
+                                       :label     label
+                                       :tooltip   tooltip
+                                       :geoms     geoms
+                                       :on-change on-change}]
+            (show-area-calc? k geom-type) [area-km2-field
                                       {:tr        tr
                                        :value     value
                                        :type      "number"

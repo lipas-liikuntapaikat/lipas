@@ -6,9 +6,10 @@
    ["@turf/buffer$default" :as turf-buffer]
    ["@turf/clean-coords$default" :as turf-clean-coords]
    ["@turf/combine$default" :as turf-combine]
-   ["@turf/helpers" :refer [point]]
+   ["@turf/helpers" :refer [point convertArea]]
    ["@turf/kinks$default" :as turf-kinks]
    ["@turf/length$default" :as turf-length]
+   ["@turf/area$default" :as turf-area]
    ["@turf/line-split$default" :as turf-line-split]
    ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
    ["@turf/truncate$default" :as turf-truncate]
@@ -494,6 +495,16 @@
       clj->js
       turf-length
       ->clj
+      (utils/round-safe 2)
+      read-string))
+
+(defn calculate-area
+  [fcoll]
+  (-> fcoll
+      clj->js
+      turf-area
+      ->clj
+      (convertArea "meters" "kilometers") 
       (utils/round-safe 2)
       read-string))
 
