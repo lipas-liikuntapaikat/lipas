@@ -11,6 +11,7 @@
 /osrm/*
 !/osrm/README.md
 .calva
+repl.clj*
 
 webapp/.nrepl-port
 webapp/*.log

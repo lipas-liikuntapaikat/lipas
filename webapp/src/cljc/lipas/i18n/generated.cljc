@@ -826,6 +826,7 @@
      :delete-vertices-hint
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",
+     :calculate-area         "Laske alueen pituus automaattisesti",
      :remove-polygon         "Poista alue",
      :modify-linestring      "Muokkaa reittiä",
      :download-gpx           "Lataa GPX",
