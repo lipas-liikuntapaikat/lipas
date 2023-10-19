@@ -826,7 +826,7 @@
      :delete-vertices-hint
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",
-     :calculate-area         "Laske alueen pituus automaattisesti",
+     :calculate-area         "Laske alueen pinta-ala automaattisesti",
      :remove-polygon         "Poista alue",
      :modify-linestring      "Muokkaa reittiä",
      :download-gpx           "Lataa GPX",
@@ -1593,6 +1593,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :delete-vertices-hint
      "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",
      :calculate-route-length "Räkna ut längden",
+     :calculate-area         "Räkna ytlan"
      :remove-polygon         "Ta bort område",
      :modify-linestring      "Modifera rutten",
      :download-gpx           "Ladda ner GPX",
@@ -2463,6 +2464,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :delete-vertices-hint
      "Vertices can be deleted by pressing alt-key and clicking.",
      :calculate-route-length "Calculate route length",
+     :calculate-area         "Calculate area",
      :remove-polygon         "Remove area",
      :modify-linestring      "Modify route",
      :download-gpx           "Download GPX",
