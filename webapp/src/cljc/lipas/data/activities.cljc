@@ -502,6 +502,15 @@
        :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
        :label       {:fi "Kalastustavat"}}}
 
+     :properties
+     {:field
+      {:type        "multi-select"
+       :description {:fi ""}
+       :label       {:fi "Ominaisuudet"}
+       :opts        {"kalapaikkoja-kaupungeissa" {:fi "Kalapaikkoja kaupungeissa"}
+                     "accessible-fishing-spot"   {:fi "Esteetön kalastuspaikka"}
+                     "premium-fishing-spot"      {:fi "Laatu-apaja"}}}}
+
      :rules
      {:field
       {:type        "textarea"
