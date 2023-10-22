@@ -510,12 +510,14 @@
 
 (defn calculate-length
   [fcoll]
-  (-> fcoll
-      clj->js
-      turf-length
-      ->clj
-      (utils/round-safe 2)
-      read-string))
+  (if (empty? (:features fcoll))
+    0
+    (-> fcoll
+        clj->js
+        turf-length
+        ->clj
+        (utils/round-safe 2)
+        read-string)))
 
 (defn wgs84->epsg3067 [wgs84-coords]
   (let [proj      (proj/get "EPSG:3067")]

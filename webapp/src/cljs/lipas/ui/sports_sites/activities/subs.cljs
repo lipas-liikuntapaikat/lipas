@@ -40,12 +40,53 @@
    fs))
 
 (re-frame/reg-sub
+ ::route-view
+ :<- [::activities]
+ :<- [::routes]
+ (fn [[activities routes] _]
+   (or
+    (:route-view activities)
+    (if (> (count routes) 1)
+      :multi
+      :single))))
+
+(re-frame/reg-sub
  ::routes
  (fn [[_ lipas-id _]]
    [(re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
- (fn [[edit-data display-data] [_ _lipas-id activity-k]]
-   (let [routes (get-in edit-data [:activities activity-k :routes])]
+    #_(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
+ (fn [[edit-data #_display-data] [_ _lipas-id activity-k]]
+
+   ;; Apply logic to allow "easy first entry" of data
+
+   (let [routes (get-in edit-data [:activities activity-k :routes] [])
+         routes (condp = (count routes)
+
+                  ;; No routes (yet).
+                  ;; Generate first empty "route", assume no sub-routes
+                  ;; (all segments belong to this route)
+                  0 [{:id   (str (random-uuid))
+                      :fids (-> edit-data
+                                :location
+                                :geometries
+                                :features
+                                (->> (map :id))
+                                set)}]
+
+                  ;; Single route, assume no sub-routes
+                  ;; (all segments belong to this route)
+                  1 (assoc-in routes [0 :fids] (-> edit-data
+                                                   :location
+                                                   :geometries
+                                                   :features
+                                                   (->> (map :id))
+                                                   set))
+
+                  ;; Multiple routes, don't assume anything about sub-routes,
+                  ;; let the user decide
+                  routes)]
+
+     ;; Calc route/sub-route lengths from segments
      (for [{:keys [fids] :as route} routes]
        (let [fids (set fids)]
          (assoc route
@@ -57,7 +98,15 @@
                                   (map-utils/calculate-length))))))))
 
 (re-frame/reg-sub
+ ::route-count
+ (fn [[_ lipas-id activity-k]]
+   [(re-frame/subscribe [::routes lipas-id activity-k])])
+ (fn [[routes] _]
+   (count routes)))
+
+(re-frame/reg-sub
  ::selected-route-id
  :<- [::activities]
- (fn [activities _]
+ :<- [::routes]
+ (fn [[activities routes] _]
    (:selected-route-id activities)))

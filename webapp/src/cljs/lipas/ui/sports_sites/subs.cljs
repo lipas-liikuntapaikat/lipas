@@ -42,8 +42,14 @@
 (re-frame/reg-sub
  ::editing-rev
  :<- [::sports-sites]
- (fn [sports-sites [_ lipas-id]]
-   (get-in sports-sites [lipas-id :editing])))
+ :<- [:lipas.ui.map.subs/mode*]
+ (fn [[sports-sites map-mode] [_ lipas-id]]
+   ;; Edit-time geoms are found under the map mode
+   (let [geoms     (:geoms map-mode)
+         edit-data (get-in sports-sites [lipas-id :editing])]
+     (if (and edit-data geoms)
+       (assoc-in edit-data [:location :geometries] geoms)
+       edit-data))))
 
 (re-frame/reg-sub
  ::editing?
@@ -320,12 +326,13 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/audience-stand-access])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/car-parking-economics-model])
     (re-frame/subscribe [:lipas.ui.sports-sites.floorball.subs/roof-trussess-operation-model])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/field-types])])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/field-types])
+    (re-frame/subscribe [:lipas.ui.map.subs/mode*])])
  (fn [[site cities admins owners types size-categories materials
        statuses translator pool-types pool-accessibility
        floorball-types floor-elasticity player-entrance
        audience-stand-access car-parking-economics-model
-       roof-trussess-operation-model field-types] _]
+       roof-trussess-operation-model field-types map-mode] _]
    (when site
      (let [locale        (translator)
            latest        (or (utils/latest-edit (:edits site))

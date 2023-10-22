@@ -511,20 +511,46 @@
        :geom-type    geom-type
        :lipas-id     lipas-id}))))
 
-(defn routes
+(defn single-route
+  [{:keys [read-only? route-props lipas-id _display-data _edit-data
+           locale geom-type label description set-field activity-k
+           route]
+    :as   props}]
+  (r/with-let [route-form-state (r/atom route)]
+
+    (add-watch route-form-state :lol
+               (fn [_key _atom _old-state new-state]
+                 (set-field [new-state])))
+
+    (let [tr       (<== [:lipas.ui.subs/translator])
+          editing? (not read-only?)]
+
+      (when editing?
+        [route-form
+         {:locale      locale
+          :lipas-id    lipas-id
+          :read-only?  read-only?
+          :geom-type   geom-type
+          :route-props route-props
+          :state       route-form-state}]))
+
+    (finally
+      (remove-watch route-form-state :lol))))
+
+(defn multiple-routes
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
            locale geom-type label description set-field activity-k]
     :as   props}]
-  (let [tr     (<== [:lipas.ui.subs/translator])
-        mode   (<== [::subs/mode])
-        fids   (<== [::subs/selected-features])
-        routes (<== [::subs/routes lipas-id activity-k])
+  (r/with-let [route-form-state (r/atom {})]
+    (let [tr     (<== [:lipas.ui.subs/translator])
+          mode   (<== [::subs/mode])
+          fids   (<== [::subs/selected-features])
+          routes (<== [::subs/routes lipas-id activity-k])
 
-        selected-route-id (<== [::subs/selected-route-id])
+          selected-route-id (<== [::subs/selected-route-id])
 
-        editing? (not read-only?)]
+          editing? (not read-only?)]
 
-    (r/with-let [route-form-state (r/atom {})]
       [:<>
 
        (when (= :default mode)
@@ -547,6 +573,9 @@
                :on-select (fn [route]
                             (==> [::events/select-route lipas-id (dissoc route :_route-name)])
                             (reset! route-form-state (dissoc route :fids)))}]])
+
+
+
           (when-not read-only?
             [mui/grid {:item true :xs 12}
              [mui/button
@@ -556,7 +585,7 @@
                :on-click (fn []
                            (reset! route-form-state {})
                            (==> [::events/add-route lipas-id activity-k]))}
-              "Lisää reitti"]])])
+              "Lisää osareitti"]])])
 
        (when (and editing? (= :add-route mode))
          [:<>
@@ -573,16 +602,6 @@
 
        (when (and editing? (= :route-details mode))
          [:<>
-          #_[mui/paper {:style
-                      {:margin-top       "1em"
-                       :margin-bottom    "1.5em"
-                       :padding          "0.5em"
-                       :background-color mui/gray3}}
-           [mui/typography {:variant "body2"}
-            label]
-
-           [mui/typography {:variant "caption"}
-            description]]
 
           [route-form
            {:locale      locale
@@ -632,6 +651,26 @@
             [:pre (with-out-str (pprint/pprint props))]]]])
 
        ])))
+
+(defn routes
+  [{:keys [read-only? route-props lipas-id _display-data _edit-data
+           locale geom-type label description set-field activity-k]
+    :as   props}]
+  (let [route-view  (<== [::subs/route-view])
+        routes      (<== [::subs/routes lipas-id activity-k])
+        route-count (<== [::subs/route-count lipas-id activity-k])]
+
+    [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
+     [mui/grid {:item true :xs 12}
+      [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
+                   :value     (= :multi route-view)
+                   :disabled  (> route-count 1)
+                   :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]]
+
+     [mui/grid {:item true :xs 12}
+      (case route-view
+        :single [single-route (assoc props :route (first routes))]
+        :multi  [multiple-routes props])]]))
 
 (defn make-field
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k]}]
