@@ -262,12 +262,7 @@
  (fn [db _]
    (assoc-in db [:map :temp] {})))
 
-(defn ensure-fids
-  [fcoll]
-  (update fcoll :features (fn [fs]
-                            (map (fn [f]
-                                   (assoc f :id (or (:id f) (str (random-uuid)))))
-                                 fs))))
+(def ensure-fids utils/ensure-fids)
 
 (re-frame/reg-event-fx
  ::update-geometries
@@ -467,6 +462,18 @@
     :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
                  [:lipas.ui.sports-sites.events/start-adding-new-site template]
                  [:lipas.ui.loi.events/start-adding-new-loi]]}))
+
+(re-frame/reg-event-fx
+ ::discard-edits
+ (fn [{:keys [db]} [_ lipas-id]]
+   (let [tr (-> db :translator)]
+     {:dispatch
+      [:lipas.ui.events/confirm
+       (tr :confirm/discard-changes?)
+       (fn []
+         (==> [:lipas.ui.sports-sites.events/discard-edits lipas-id])
+         (==> [::stop-editing])
+         (==> [:lipas.ui.search.events/submit-search]))]})))
 
 (re-frame/reg-event-fx
  ::discard-new-site
