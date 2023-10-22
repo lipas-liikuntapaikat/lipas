@@ -533,7 +533,7 @@
   [fcoll]
   (-> fcoll
       clj->js
-      turf-length ;; returns square kilometers
+      turf-length ;; returns kilometers
       (utils/round-safe 2)
       read-string))
 
