@@ -3,10 +3,16 @@
    #_[lipas.data.activities :as data]
    [ajax.core :as ajax]
    [clojure.string :as str]
+   [clojure.set :as set]
    [goog.object :as gobj]
    [goog.string.path :as gpath]
    [lipas.utils :as utils]
    [re-frame.core :as re-frame]))
+
+(re-frame/reg-event-fx
+ ::init-edit-view
+ (fn [{:keys [db]} [_ lipas-id edit-data]]
+   {}))
 
 (re-frame/reg-event-fx
  ::add-route
@@ -21,14 +27,15 @@
  ::finish-route
  (fn [{:keys [db]} _]
    {:db (assoc-in db [:sports-sites :activities :mode] :route-details)
-    :fx [#_[:dispatch [:lipas.ui.map.events/continue-editing]]]}))
+    :fx []}))
 
 (re-frame/reg-event-fx
  ::clear
  (fn [{:keys [db]} _]
    {:db (-> db
             (assoc-in [:sports-sites :activities :mode] :default)
-            (assoc-in [:sports-sites :activities :selected-route-id] nil))}))
+            (assoc-in [:sports-sites :activities :selected-route-id] nil)
+            (assoc-in [:sports-sites :activities :route-view] nil))}))
 
 (re-frame/reg-event-fx
  ::finish-route-details
@@ -55,21 +62,22 @@
 (re-frame/reg-event-fx
  ::cancel-route-details
  (fn [{:keys [db]} _]
-   {:db (assoc-in db [:sports-sites :activities :mode] :default)}))
+   {:db (assoc-in db [:sports-sites :activities :mode] :default)
+    :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]]}))
 
 (re-frame/reg-event-fx
  ::select-route
  (fn [{:keys [db]} [_ lipas-id {:keys [fids id] :as route}]]
-   (println "Select route FIDS:" fids)
    {:db (-> db
             (assoc-in [:sports-sites :activities :mode] :route-details)
             (assoc-in [:sports-sites :activities :selected-route-id] id))
-    :fx [[:dispatch [:lipas.ui.map.events/highlight-features fids]]]}))
+    :fx [[:dispatch [:lipas.ui.map.events/highlight-features (set fids)]]
+         [:dispatch [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]]}))
 
 (re-frame/reg-event-fx
  ::delete-route
- (fn [{:keys [db]} [_ lipas-id route-id]]
-   (let [current-routes       (get-in db [:sports-sites lipas-id :editing :activities :routes] [])
+ (fn [{:keys [db]} [_ lipas-id activity-k route-id]]
+   (let [current-routes       (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
          current-routes-by-id (utils/index-by :id current-routes)
          new-routes           (-> (dissoc current-routes-by-id route-id) vals vec)]
      {:db (-> db
@@ -77,7 +85,7 @@
       :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
            [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities :routes]
                        new-routes]]
-           [:dispatch [:lipas.ui.map.events/highlight-features #{}]]]})))
+           [:dispatch [:lipas.ui.map.events/clear-highlight]]]})))
 
 (defn parse-ext [file]
   (-> file
@@ -139,8 +147,12 @@
 (re-frame/reg-event-fx
  ::upload-image-s3-failure
  (fn [{:keys [db]} [event-k resp]]
-   (println event-k resp)
    (let [tr           (:translator db)
          notification {:message  (tr :notifications/save-failed)
                        :success? false}]
      {:dispatch [:lipas.ui.events/set-active-notification notification]})))
+
+(re-frame/reg-event-fx
+ ::select-route-view
+ (fn [{:keys [db]} [_ v]]
+   {:db (assoc-in db [:sports-sites :activities :route-view] v)}))

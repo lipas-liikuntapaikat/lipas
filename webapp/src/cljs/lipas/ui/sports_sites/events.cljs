@@ -6,15 +6,16 @@
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::edit-site
- (fn [db [_ lipas-id]]
+ (fn [{:keys [db]} [_ lipas-id]]
    (let [site (get-in db [:sports-sites lipas-id])
          rev  (-> (utils/make-revision site (utils/timestamp))
                   (utils/make-editable))]
-     (-> db
-         (assoc-in [:sports-sites lipas-id :editing] rev)
-         (assoc-in [:sports-sites :name-check] {})))))
+     {:db (-> db
+              (assoc-in [:sports-sites lipas-id :editing] rev)
+              (assoc-in [:sports-sites :name-check] {}))
+      :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/init-edit-view lipas-id rev]]]})))
 
 (defmulti calc-derived-fields (comp :type-code :type))
 (defmethod calc-derived-fields :default [sports-site] sports-site)
