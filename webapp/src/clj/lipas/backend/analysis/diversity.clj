@@ -180,8 +180,8 @@
         age-65-     (sum-field :ika_65_)
         anonymized (- total-pop (+ age-0-14 age-15-64 age-65-
                                     ))]
-    {:diversity-idx-mean       (double (utils/mean idxs))
-     :diversity-idx-median     (double (utils/median idxs))
+    {:diversity-idx-mean       (some-> idxs utils/mean double)
+     :diversity-idx-median     (some-> idxs utils/median double)
      :diversity-idx-mode       (utils/mode idxs)
      :population               total-pop
      :anonymized-count         anonymized
