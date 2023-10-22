@@ -125,7 +125,7 @@
           {:type     "Feature"
            :geometry g
            :properties
-           {:id   (gensym)
+           {:id   (str (gensym))
             :name (str "geom-" (inc idx))}}))))
 
 (defn normalize-geom-colls
@@ -154,7 +154,7 @@
            :properties
            (merge
             props
-            {:id (gensym)}
+            {:id (str (gensym))}
             (when-let [s (:nimi props)]
               {:nimi (str s " osa " (inc idx))})
             (when-let [s (:name props)]
