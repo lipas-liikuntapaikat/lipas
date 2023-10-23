@@ -321,7 +321,8 @@
 
 (re-frame/reg-event-fx
  ::map-clicked
- (fn [_]
+ (fn [event]
+   (-> event .-target .getTargetElement .focus)
    {:dispatch [::hide-address]}))
 
 (re-frame/reg-event-fx
