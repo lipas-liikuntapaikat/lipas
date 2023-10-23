@@ -489,21 +489,19 @@
 (defn fix-features [ol-features]
   ol-features)
 
-(defn calculate-length
+(defn calculate-length-km
   [fcoll]
   (-> fcoll
       clj->js
-      turf-length
-      ->clj
+      turf-length ;; returns square kilometers
       (utils/round-safe 2)
       read-string))
 
-(defn calculate-area
+(defn calculate-area-km2
   [fcoll]
   (-> fcoll
       clj->js
-      turf-area
-      ->clj
+      turf-area ;; returns square meters
       (convertArea "meters" "kilometers") 
       (utils/round-safe 2)
       read-string))
