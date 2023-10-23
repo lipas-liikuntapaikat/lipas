@@ -346,7 +346,7 @@
    [mui/grid {:item true}
     [mui/tooltip {:title (tr :map/calculate-route-length)}
      [mui/icon-button
-      {:on-click #(-> geoms map-utils/calculate-length on-change)}
+      {:on-click #(-> geoms map-utils/calculate-length-km on-change)}
       [:> Calculator]]]]])
 
 (defn area-km2-field
@@ -358,7 +358,7 @@
    [mui/grid {:item true}
     [mui/tooltip {:title (tr :map/calculate-area)}
      [mui/icon-button
-      {:on-click #(-> geoms map-utils/calculate-area on-change)}
+      {:on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
       [:> Calculator]]]]])
 
 (defn show-calc? [k geom-type]
