@@ -617,8 +617,9 @@
     (r/create-class
 
      {:reagent-render
-      (fn [] [mui/grid {:id    "map"
-                        :tabIndex -1
+      (fn [] [mui/grid {:id    "map" 
+                        ;; Make Map a focus target for the browser (relates to keyboard pan/zoom) 
+                        :tabIndex -1 
                         :item  true
                         :style {:height "100%" :width "100%"}
                         :xs    12}])
