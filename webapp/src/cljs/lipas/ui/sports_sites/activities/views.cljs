@@ -792,7 +792,7 @@
       [:<>
 
        ;; Header
-       [mui/grid {:item true :xs 12}
+       #_[mui/grid {:item true :xs 12}
         [mui/typography {:variant "h6"}
          (get-in activities [:label locale])]]
 
