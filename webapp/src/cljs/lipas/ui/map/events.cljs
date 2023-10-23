@@ -322,7 +322,8 @@
 (re-frame/reg-event-fx
  ::map-clicked
  (fn [event]
-   (-> event .-target .getTargetElement .focus)
+   ;; Set browser focus to Map element to enable keyboard pan/zoom
+   (-> event .-target .getTargetElement .focus) 
    {:dispatch [::hide-address]}))
 
 (re-frame/reg-event-fx
