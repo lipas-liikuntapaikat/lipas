@@ -65,7 +65,12 @@
                   ;; No routes (yet).
                   ;; Generate first empty "route", assume no sub-routes
                   ;; (all segments belong to this route)
-                  0 [{:id   (str (random-uuid))
+                  0 [{:id (str (random-uuid))
+
+                      :route-name {:fi (:name edit-data)
+                                   :se (get-in edit-data [:name-localized :se])
+                                   :en (:name edit-data)}
+
                       :fids (-> edit-data
                                 :location
                                 :geometries
