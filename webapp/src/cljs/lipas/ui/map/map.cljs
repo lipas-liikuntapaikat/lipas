@@ -195,7 +195,6 @@
         popup-overlay (init-overlay)
 
         opts #js {:target   "map"
-                  :keyboardEventTarget js/document
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
@@ -619,6 +618,7 @@
 
      {:reagent-render
       (fn [] [mui/grid {:id    "map"
+                        :tabIndex -1
                         :item  true
                         :style {:height "100%" :width "100%"}
                         :xs    12}])
