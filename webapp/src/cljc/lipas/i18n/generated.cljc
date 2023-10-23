@@ -52,12 +52,13 @@
      :settings-zones             "Etäisyydet ja matka-ajat"
      :settings-help              "Analyysialue määräytyy suurimman etäisyyskorin mukaan. Myöskään matka-aikoja ei lasketa tämän alueen ulkopuolelta."}
     :sport
-    {:description
-     "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista  liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa.",
-     :headline        "Liikuntapaikat",
+    {#_#_:description
+     "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista liikunta- ja ulkoilupaikoista avoimessa tietokannassa."
+     :description "Tähän lyhyt teksti tai layout menee rikki"
+     :headline        "Liikunta- ja ulkoilupaikat",
      :open-interfaces "Avoimet rajapinnat",
      :up-to-date-information
-     "Ajantasainen tieto Suomen liikuntapaikoista",
+     "Ajantasainen tieto Suomen liikunta- ja ulkoilupaikoista",
      :updating-tools  "Päivitystyökalut tiedontuottajille"
      :analysis-tools  "Liikuntaolosuhteiden analysointityökalut"},
     :confirm
@@ -493,7 +494,7 @@
      :delete-reason     "Poiston syy",
      :event-date        "Muokattu",
      :email-public      "Sähköposti (julkinen)",
-     :add-new           "Lisää liikuntapaikka",
+     :add-new           "Lisää liikunta- tai ulkkoilupaikka",
      :contact           "Yhteystiedot",
      :owner             "Omistaja",
      :marketing-name    "Markkinointinimi"},
@@ -684,14 +685,14 @@
      :all-cities?  "Oikeus kaikkiin kuntiin",
      :all-types?   "Oikeus kaikkiin tyyppeihin",
      :cities       "Kunnat",
-     :sports-sites "Liikuntapaikat",
+     :sports-sites "Liikunta- ja ulkoilupaikat",
      :types        "Tyypit"},
     :help
     {:headline                 "Ohjeet",
      :permissions-help
      "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
      :permissions-help-body
-     "Haluan käyttöoikeudet seuraaviin liikuntapaikkoihin:",
+     "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
      :permissions-help-subject "Haluan lisää käyttöoikeuksia"},
     :ceiling-structures
     {:concrete         "Betoni",
@@ -781,7 +782,7 @@
      :select-issuer        "Valitse myöntäjä",
      :select-unit          "Valitse yksikkö",
      :bullet3              "Avustukset",
-     :bullet4              "Liikuntapaikkojen rakennusvuodet",
+     :bullet4              "Liikunta- ja ulkoilupaikkojen rakennusvuodet",
      :finance-stats        "Talous​tiedot",
      :select-city          "Valitse kunta",
      :area-m2-min          "Liikuntapinta-ala m² min",
@@ -800,7 +801,7 @@
      :region               "Alue",
      :show-comparison      "Näytä vertailu",
      :length-km-avg        "Liikuntareitin pituus km keskiarvo",
-     :sports-sites-count   "Liikuntapaikkojen lkm",
+     :sports-sites-count   "Liikunta- ja ulkoilupaikkojen lkm",
      :length-km-min        "Liikuntareitin pituus km min",
      :country-avg          "(maan keskiarvo)",
      :length-km-count      "Liikuntareitin pituus ilmoitettu lkm",
@@ -829,7 +830,7 @@
      :retkikartta-problems-warning
      "Korjaa kartalle merkityt ongelmat, jos haluat, että kohde siirtyy Retkikartalle.",
      :edit-later-hint        "Voit muokata geometriaa myös myöhemmin",
-     :center-map-to-site     "Kohdista kartta liikuntapaikkaan",
+     :center-map-to-site     "Kohdista kartta kohteeseen",
      :draw-hole              "Lisää reikä",
      :split-linestring       "Katkaise reittiosa",
      :delete-vertices-hint
@@ -847,7 +848,7 @@
      :draw                   "Lisää kartalle",
      :draw-linestring        "Lisää reittiosa",
      :modify                 "Voit raahata pistettä kartalla",
-     :zoom-to-site           "Kohdista kartta liikuntapaikkaan",
+     :zoom-to-site           "Kohdista kartta kohteeseen",
      :kink
      "Muuta reitin kulkua niin, että reittiosa ei risteä itsensä kanssa. Voit tarvittaessa katkaista reitin useampaan osaan.",
      :zoom-closer            "Kartta täytyy zoomata lähemmäs"},
