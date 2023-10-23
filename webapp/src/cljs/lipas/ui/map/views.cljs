@@ -760,7 +760,7 @@
                :indicatorColor "primary"
                :on-change      #(reset! prop-tab %2)}
               [mui/tab {:value "props" :label "Ominaisuudet"}]
-              [mui/tab {:value "activities" :label "Lajit"}]]
+              [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}]]
 
              (when (= "props" @prop-tab)
                [sports-sites/properties-form
