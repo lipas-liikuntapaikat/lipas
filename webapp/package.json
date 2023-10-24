@@ -17,6 +17,7 @@
     "@material-ui/core": "^4.12.4",
     "@material-ui/icons": "4.11.3",
     "@material-ui/lab": "4.0.0-alpha.61",
+    "@turf/area": "^6.5.0",
     "@turf/bbox": "^6.0.1",
     "@turf/buffer": "^6.5.0",
     "@turf/clean-coords": "^6.5.0",
