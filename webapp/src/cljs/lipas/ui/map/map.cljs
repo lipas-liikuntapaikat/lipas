@@ -195,7 +195,6 @@
         popup-overlay (init-overlay)
 
         opts #js {:target   "map"
-                  :keyboardEventTarget js/document
                   :layers   #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
@@ -618,7 +617,9 @@
     (r/create-class
 
      {:reagent-render
-      (fn [] [mui/grid {:id    "map"
+      (fn [] [mui/grid {:id    "map" 
+                        ;; Make Map a focus target for the browser (relates to keyboard pan/zoom) 
+                        :tabIndex -1 
                         :item  true
                         :style {:height "100%" :width "100%"}
                         :xs    12}])
