@@ -83,7 +83,7 @@
      {:db (-> db
               (assoc-in [:sports-sites :activities :mode] :default))
       :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
-           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities :routes]
+           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                        new-routes]]
            [:dispatch [:lipas.ui.map.events/clear-highlight]]]})))
 

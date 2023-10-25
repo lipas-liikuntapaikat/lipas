@@ -550,27 +550,3 @@
                  (for [type-code type-codes]
                    [type-code (hack-missing-translations v)])))
        (into {})))
-
-;; Suomi, ruotsi, englanti, kaikki saamet
-
-;; Aktiviteetit -> Lajit / lajitiedot ?
-
-;; aktiviteetit lisätietojen alle
-
-;; 21.1. sellainen versio missä työryhmä voi dev-ympäristöön syöttää tietoja
-
-#_(->> [outdoor-recreation-areas
-      outdoor-recreation-facilities
-      outdoor-recreation-routes
-      cycling
-      paddling
-      birdwatching
-      fishing]
-     (map (juxt :value #(-> % :props (->> (map (fn [[k {:keys [field]}]]
-                                                 [k (if (= "routes" (:type field))
-                                                      (map (juxt first (comp :type :field second)) (:props field))
-                                                      (:type field))])))))))
-
-;; - Pyöräilyjutun “kohokohdat lista”
-;; - Yhteystietojen rakenteellinen keruu
-;; - (Yhteystietojen ylläpito)
