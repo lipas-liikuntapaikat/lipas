@@ -618,7 +618,8 @@
 
      {:reagent-render
       (fn [] [mui/grid {:id    "map" 
-                        ;; Make Map a focus target for the browser (relates to keyboard pan/zoom) 
+                        ;; Keyboard navigation requires that this element has a tabIndex
+                        ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html  
                         :tabIndex -1 
                         :item  true
                         :style {:height "100%" :width "100%"}
