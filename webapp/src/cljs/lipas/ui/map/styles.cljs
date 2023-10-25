@@ -105,15 +105,25 @@
       (gcolora/rgbaArrayToRgbaStyle rgba))))
 
 (defn ->symbol-style
-  [m & {hover? :hover selected? :selected planned? :planned planning? :planning}]
-  (let [fill-alpha   (case (:shape m)
-                       "polygon" (if hover? 0.3 0.2)
-                       0.85)
-        fill-color   (-> m :fill :color (->rgba fill-alpha))
+  [m & {hover? :hover
+        selected? :selected
+        planned? :planned 
+        planning? :planning 
+        out-of-service-temporarily? :out-of-service-temporarily}]
+  (let [fill-alpha   (if out-of-service-temporarily?
+                       0.3
+                       (case (:shape m)
+                         "polygon" (if hover? 0.3 0.2)
+                         0.85))
+        fill-color   (-> (if out-of-service-temporarily?
+                           "#808080"
+                           (-> m :fill :color)) (->rgba fill-alpha))
         fill         (Fill. #js{:color fill-color})
-        stroke-alpha (case (:shape m)
-                       "polygon" 0.6
-                       0.9)
+        stroke-alpha (if out-of-service-temporarily?
+                       0.3
+                       (case (:shape m)
+                         "polygon" 0.6
+                         0.9))
 
         stroke-width       (-> m :stroke :width)
         stroke-hover-width (* 2 stroke-width)
@@ -169,6 +179,11 @@
                                                             :width    stroke-width
                                                             :lineCap  line-cap
                                                             :lineDash line-dash})
+                                             out-of-service-temporarily?  (Stroke.
+                                                        #js{:color    "grey"
+                                                            :width    stroke-width
+                                                            :lineCap  line-cap
+                                                            :lineDash line-dash})
                                              hover?    hover-stroke
                                              :else     stroke-black)
                                     radius (cond
@@ -218,6 +233,9 @@
 (def planning-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
 
+(def out-of-service-temporarily-symbols
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :out-of-service-temporarily true))) {} styleset))
+
 (defn shift-likely-overlapping!
   [type-code ^js style resolution f]
   (when (#{4402 4440} type-code)
@@ -233,6 +251,7 @@
         style     (condp = status
                     "planning" (get planning-symbols type-code)
                     "planned"  (get planned-symbols type-code)
+                    "out-of-service-temporarily" (get out-of-service-temporarily-symbols type-code)
                     (get symbols type-code))]
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
