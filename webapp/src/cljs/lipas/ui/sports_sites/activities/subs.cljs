@@ -80,7 +80,7 @@
 
                   ;; Single route, assume no sub-routes
                   ;; (all segments belong to this route)
-                  1 (assoc-in routes [0 :fids] (-> edit-data
+                  #_#_1 (assoc-in routes [0 :fids] (-> edit-data
                                                    :location
                                                    :geometries
                                                    :features
