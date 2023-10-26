@@ -218,23 +218,29 @@
 
 (def styleset styles/symbols)
 
+(defn ->symbols
+  ([] 
+   (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
+  ([key]
+   (reduce (fn [m [k v]] (assoc m k (->symbol-style v key true))) {} styleset)))
+
 (def symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
+  (->symbols))
 
 (def hover-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styleset))
+  (->symbols :hover))
 
 (def selected-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :selected true))) {} styleset))
+  (->symbols :selected))
 
 (def planned-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planned true))) {} styleset))
+  (->symbols :planned))
 
 (def planning-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
+  (->symbols :planning))
 
 (def out-of-service-temporarily-symbols
-  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :out-of-service-temporarily true))) {} styleset))
+  (->symbols :out-of-service-temporarily))
 
 (defn shift-likely-overlapping!
   [type-code ^js style resolution f]
