@@ -515,8 +515,9 @@
    {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
     :dispatch [::submit-search]}))
 
-;; If you sort by a new key, start ascending
-(defn resolve-sort-change [db sort] 
+(defn resolve-sort-change 
+  "If sort-fn has changed, reset sort order to ascending"
+  [db sort]
   (if (= (-> db :search :sort :sort-fn) (sort :sort-fn))
     sort
     {:asc? true :sort-fn (sort :sort-fn)}))
