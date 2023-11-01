@@ -515,11 +515,19 @@
    {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
     :dispatch [::submit-search]}))
 
+(defn resolve-sort-change 
+  "If sort-fn has changed, reset sort order to ascending"
+  [db sort]
+  (if (= (-> db :search :sort :sort-fn) (sort :sort-fn))
+    sort
+    {:asc? true :sort-fn (sort :sort-fn)}))
+
 (re-frame/reg-event-fx
  ::change-sort-order
- (fn [{:keys [db]} [_ sort]]
-   {:db       (update-in db [:search :sort] merge sort)
-    :dispatch [::submit-search]}))
+ (fn [{:keys [db]} [_ sort]] 
+   (let [new-sort (resolve-sort-change db sort)]
+     {:db       (update-in db [:search :sort] merge new-sort)
+      :dispatch [::submit-search]})))
 
 ;; This can be combined with other sort options
 (re-frame/reg-event-fx
