@@ -288,7 +288,28 @@
         {:field
          {:type        "textlist"
           :description {:fi "Tekstiä"}
-          :label       {:fi "Kohokohdat"}}}})
+          :label       {:fi "Kohokohdat"}}}
+
+        :unpaved-percentage
+        {:field
+         {:type        "number"
+          :adornment   "%"
+          :description {:fie "Esim. 28%"}
+          :label       {:fi "Päällystämätöntä"}}}
+
+        :trail-percentage
+        {:field
+         {:type        "number"
+          :adornment   "%"
+          :description {:fi "Esim. 0%"}
+          :label       {:fi "Polkua"}}}
+
+        :cyclable-percentage
+        {:field
+         {:type        "number"
+          :adornment   "%"
+          :description {:fi "Esim. 100%"}
+          :label       {:fi "Pyöräiltävissä"}}}})
 
       :derived-props
       {:length-m
@@ -309,30 +330,7 @@
          :description "Esim. x m"
          :label       "Laskumetrit"}}
 
-       :unpaved-percentage
-       {:field
-        {:type        "number"
-         :description "Esim. 28%"
-         :label       "Päällystämätöntä %"}}
-
-       :trail-percentage
-       {:field
-        {:type        "number"
-         :description "Esim. 0%"
-         :label       "Polkua %"}}
-
-       :cyclable-percentage
-       {:field
-        {:type        "number"
-         :description "Esim. 100%"
-         :label       "Pyöräiltävissä %"}}
-
-       :duration
-       {:field
-        {:field
-         {:type        "text-field"
-          :description "Esim. 4-5 h, 4-8 päivää"
-          :label       "Ajoaika"}}}}}}}})
+       }}}}})
 
 (def paddling
   {:label       {:fi "Melonta ja SUP"}
