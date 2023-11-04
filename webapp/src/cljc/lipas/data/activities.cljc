@@ -124,7 +124,38 @@
       :props
       (merge
        common-props
-       {:route-name
+       {:accessibility
+        {:field
+         {:type        "accessibility"
+          :label       {:fi "Saavutettavuus"}
+          :description {:fi "Tähän jotain"}
+          :props
+          {:mobility-impaired
+           {:value "mobility-impaired"
+            :field
+            {:type        "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"}
+             :label       {:fi "Liikuntavammaiset"}}}
+           :hearing-impaired
+           {:value "hearing-impaired"
+            :field
+            {:type        "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"}
+             :label       {:fi "Kuurot ja kuulovammaiset"}}}
+           :visually-impaired
+           {:value "visually-impaired"
+            :field
+            {:type        "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"}
+             :label       {:fi "Näkövammaiset"}}}
+           :developmentally-disabled
+           {:value "developmentally-disabled"
+            :field
+            {:type        "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"}
+             :label       {:fi "Kehitysvammaiset"}}}}}}
+
+        :route-name
         {:field
          {:type        "text-field"
           :description {:fi "Tähän joku järkevä ohje"}
@@ -550,3 +581,8 @@
                  (for [type-code type-codes]
                    [type-code (hack-missing-translations v)])))
        (into {})))
+
+(comment
+
+
+  )
