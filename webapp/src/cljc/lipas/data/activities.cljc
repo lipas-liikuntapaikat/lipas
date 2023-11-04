@@ -294,7 +294,7 @@
         {:field
          {:type        "number"
           :adornment   "%"
-          :description {:fie "Esim. 28%"}
+          :description {:fi "Esim. 28%"}
           :label       {:fi "Päällystämätöntä"}}}
 
         :trail-percentage
