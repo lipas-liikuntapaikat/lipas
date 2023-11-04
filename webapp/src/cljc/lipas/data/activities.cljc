@@ -89,7 +89,7 @@
    {:field
     {:type        "textarea"
      :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
-     :label       {:fi "Saavutettavuus"}}}
+     :label       {:fi "Esteettömyys"}}}
 
    :parking
    {:field
