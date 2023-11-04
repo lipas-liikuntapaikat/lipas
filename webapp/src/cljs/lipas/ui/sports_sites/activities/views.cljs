@@ -731,6 +731,16 @@
                    :on-change   #(set-field prop-k locale %)
                    :value       (get-in edit-data [prop-k locale])}]
 
+    "number" [lui/text-field
+              {:type        "number"
+               :adornment   (:adornment field)
+               :disabled    read-only?
+               :label       (get-in field [:label locale])
+               :helper-text (get-in field [:description locale])
+               :fullWidth   true
+               :on-change   #(set-field prop-k locale %)
+               :value       (get-in edit-data [prop-k locale])}]
+
     "textarea" [lui/text-field
                 {:disabled        read-only?
                  :variant         "outlined"
