@@ -170,6 +170,32 @@
           [lui/expansion-panel {:label "debug"}
            [:pre (with-out-str (pprint/pprint contact-props))]]])])))
 
+(defn accessibility
+  [{:keys [read-only? lipas-id locale label description set-field
+           value accessibility-props]}]
+
+  (into
+   [mui/grid {:container true}
+
+    ;; Label
+    [mui/grid {:item true}
+     [form-label {:label label}]]]
+
+   ;; Expansion panels for each accessibility category
+   (for [[prop-k {:keys [field]}] accessibility-props]
+     [mui/grid {:item true :xs 12}
+      [lui/expansion-panel
+       {:label            (get-in field [:label locale])
+        :default-expanded false}
+       [lui/text-field
+        {:label     (get-in field [:description locale])
+         :multiline true
+         :rows      5
+         :fullWidth true
+         :variant   "outlined"
+         :on-change #(set-field prop-k locale %)
+         :value     (get-in value [prop-k locale])}]]])))
+
 (defn duration
   [{:keys [tr locale label set-field value]}]
   [mui/form-control {:focused true}
@@ -773,6 +799,16 @@
                  :set-field     (partial set-field prop-k)
                  :contact-props (:props field)
                  :value         (get-in edit-data [prop-k])}]
+
+    "accessibility" [accessibility
+                     {:read-only?          read-only?
+                      :lipas-id            lipas-id
+                      :locale              locale
+                      :label               (get-in field [:label locale])
+                      :description         (get-in field [:description locale])
+                      :set-field           (partial set-field prop-k)
+                      :accessibility-props (:props field)
+                      :value               (get-in edit-data [prop-k])}]
 
     (println (str "Unknown field type: " (:type field)))))
 
