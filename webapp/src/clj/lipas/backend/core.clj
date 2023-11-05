@@ -287,7 +287,10 @@
                        "LineString" (-> geom :coordinates first)
                        "Polygon"    (-> geom :coordinates first first))
 
-        center-coords (-> fcoll gis/centroid :coordinates)
+        center-coords (try (-> fcoll gis/centroid :coordinates)
+                           (catch Exception ex
+                             (log/warn ex "Failed to calc centroid for" fcoll)
+                             nil))
 
         geom2      (-> fcoll :features last :geometry)
         end-coords (case (:type geom2)
