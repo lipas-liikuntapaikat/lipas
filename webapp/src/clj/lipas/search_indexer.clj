@@ -69,6 +69,17 @@
             (recur db client idx-name (rest types) users))
        (wait-all futures)))))
 
+(defn index-analytics2!
+  [db client idx-name types users]
+  (let [query-opts {:raw? true :revs "all"}]
+    (doseq [type-code types]
+      (log/info "Starting to re-index type" type-code)
+      (->> (core/get-sports-sites-by-type-code db type-code query-opts)
+           (map (partial enrich-for-analytics users))
+           (search/->bulk idx-name :id)
+           (search/bulk-index! client)
+           deref))))
+
 (defn read-csv->maps* [path]
   (->> path
        slurp
@@ -132,7 +143,7 @@
         (case mode
           "search"    (index-search! db client idx-name types)
           "analytics" (let [users (get-users db)]
-                        (index-analytics! db client idx-name types users))          )
+                        (index-analytics2! db client idx-name types users))          )
 
         (log/info "Indexing data done!")
         (log/info "Swapping alias" alias "to point to index" idx-name)
