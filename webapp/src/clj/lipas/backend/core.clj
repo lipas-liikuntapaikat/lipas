@@ -268,11 +268,15 @@
 
 (defn- simplify
   [fcoll]
-  (let [simplified (gis/simplify fcoll)]
-    (if (gis/contains-coords? simplified)
-      simplified
-      ;; If simplification removes all coords
-      ;; fallback to original geoms
+  (try
+    (let [simplified (gis/simplify fcoll)]
+      (if (gis/contains-coords? simplified)
+        simplified
+        ;; If simplification removes all coords
+        ;; fallback to original geoms
+        fcoll))
+    (catch Exception ex
+      (log/warn ex "Failed to simplify fcoll" fcoll)
       fcoll)))
 
 (defn enrich*
@@ -289,7 +293,8 @@
 
         center-coords (try (-> fcoll gis/centroid :coordinates)
                            (catch Exception ex
-                             (log/warn ex "Failed to calc centroid for" fcoll)
+                             (log/warn ex "Failed to calc centroid for lipas-id"
+                                       (:lipas-id sports-site) "fcoll" fcoll)
                              nil))
 
         geom2      (-> fcoll :features last :geometry)
