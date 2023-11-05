@@ -157,6 +157,8 @@
               idx-name (str "diversity-" (search/gen-idx-name))]
           (index-diversity! (:client search) csv-path idx-name))
         (main system db search mode))
+      (catch Exception ex
+        (log/error ex "Something terrible happened while indexing" mode "!"))
       (finally
         (log/info "Stopping system...")
         (backend/stop-system! system)
