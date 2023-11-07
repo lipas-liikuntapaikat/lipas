@@ -437,8 +437,7 @@
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
 (defn popup []
-  (let [{:keys [data anchor-el]
-         :or   {type :default}
+  (let [{:keys [data anchor-el] 
          :as   popup'} (<== [::subs/popup])
         tr             (<== [:lipas.ui.subs/translator])]
     (when anchor-el
