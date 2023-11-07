@@ -1203,26 +1203,26 @@
                  [mui/grid {:item true}
                   [mui/grid {:item true}
 
-                ;; Undo & Redo
+                   ;; Undo & Redo
                    [mui/grid {:container true}
 
-                 ;; Undo
+                    ;; Undo
                     [mui/grid {:item true}
                      [mui/tooltip {:title "Undo"}
-                   [:span
-                    [mui/icon-button
-                     {:disabled (not undo)
-                      :on-click #(==> [::events/undo "new"])}
-                     [mui/icon "undo"]]]]]
+                      [:span
+                       [mui/icon-button
+                        {:disabled (not undo)
+                         :on-click #(==> [::events/undo "new"])}
+                        [mui/icon "undo"]]]]]
 
-                 ;; Redo
+                    ;; Redo
                     [mui/grid {:item true}
                      [mui/tooltip {:title "Redo"}
-                   [:span
-                    [mui/icon-button
-                     {:disabled (not redo)
-                      :on-click #(==> [::events/redo "new"])}
-                     [mui/icon "redo"]]]]]]]]]]
+                      [:span
+                       [mui/icon-button
+                        {:disabled (not redo)
+                         :on-click #(==> [::events/redo "new"])}
+                        [mui/icon "redo"]]]]]]]]]]
 
                ;; Retkikartta Problems
                (when (and (#{"LineString"} geom-type) problems?)
@@ -1481,8 +1481,8 @@
 
        ;; Feedback btn
        #_[mui/grid {:item true}
-        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-         [feedback/feedback-btn]]]
+          [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+           [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
        [mui/grid {:item true}
