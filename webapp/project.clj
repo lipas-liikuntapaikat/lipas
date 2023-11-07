@@ -8,6 +8,7 @@
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.5.18"]
    [metosin/spec-tools "0.10.5"]
+   [metosin/malli "0.13.0"]
 
    ;;; Frontend ;;;
    [thheller/shadow-cljs "2.22.9"]
