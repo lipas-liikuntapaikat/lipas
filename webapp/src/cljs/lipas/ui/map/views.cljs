@@ -470,7 +470,7 @@
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
-                  geom-type portal save-in-progress? undo redo
+                  geom-type save-in-progress? undo redo
                   more-tools-menu-anchor dead?]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
@@ -1358,8 +1358,7 @@
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        mode-name   (<== [::subs/mode-name])
-        admin?      (<== [:lipas.ui.user.subs/admin?])]
+        mode-name   (<== [::subs/mode-name])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background-color "transparent"}
