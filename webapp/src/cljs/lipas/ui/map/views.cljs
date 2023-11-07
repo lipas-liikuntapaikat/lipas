@@ -528,9 +528,9 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when (or (and (floorball-types type-code)
-                        (= :floorball floorball-visibility))
-                   #_(football-types type-code))
+         (when 
+          (and (floorball-types type-code)
+               (= :floorball floorball-visibility))
            [mui/tab
             {:style {:min-width 0}
              :value 3
