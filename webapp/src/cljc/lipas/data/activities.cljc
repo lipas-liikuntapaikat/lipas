@@ -1,23 +1,56 @@
 (ns lipas.data.activities
   (:require
+   [clojure.walk :as walk]
    [lipas.utils :as utils]
-   [clojure.walk :as walk]))
+   [malli.core :as m]
+   [malli.util :as mu]))
+
+(defn collect-schema
+  [m]
+  (into [:map] (map (juxt first (constantly {:optional true}) (comp :schema second)) m)))
+
+(def localized-string-schema
+  [:map
+   [:fi {:optional true} [:string]]
+   [:se {:optional true} [:string]]
+   [:en {:optional true} [:string]]])
+
+(def number-schema
+  [:or [:int] [:double]])
+
+(def duration-schema
+  [:map
+   [:min {:optional true} number-schema]
+   [:max {:optional true} number-schema]
+   [:unit {:optional true} [:enum "days" "hours" "minutes"]]])
+
+(def contact-roles
+  {"admin"            {:fi "Ylläpitäjä"}
+   "content-creator"  {:fi "Sisällöntuottaja"}
+   "customer-service" {:fi "Asiakaspalvelu"}})
 
 (def common-props
   {:description-short
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Tekstimuotoinen tiivistys kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."}
      :label       {:fi "Yleiskuvaus"}}}
 
    :description-long
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Tarkempi tekstimuotoinen kuvaus kohteesta"}
      :label       {:fi "Kohdekuvaus"}}}
 
    :contacts
-   {:field
+   {:schema [:map
+             [:organization {:optional true} localized-string-schema]
+             [:role {:optional true} (into [:enum] (keys contact-roles))]
+             [:email {:optional true} [:string]]
+             [:phone-number {:optional true} [:string]]]
+    :field
     {:type        "contacts"
      :description {:fi "Tähän joku seliteteksti"}
      :label       {:fi "Yhteystiedot"}
@@ -32,9 +65,7 @@
        {:type        "multi-select"
         :label       {:fi "Rooli"}
         :description {:fi "Yhteystietoon liittyvän organisaation rooli"}
-        :opts        {"admin"            {:fi "Ylläpitäjä"}
-                      "content-creator"  {:fi "Sisällöntuottaja"}
-                      "customer-service" {:fi "Asiakaspalvelu"}}}}
+        :opts        contact-roles}}
       :email
       {:field
        {:type        "text-field"
@@ -47,13 +78,22 @@
         :description {:fi "Yhteystietoon liittyvän organisaation puhelinnumero"}}}}}}
 
    :videos
-   {:field
+   {:schema [:sequential
+             [:map
+              [:url [:string]]
+              [:description {:optional true} localized-string-schema]]]
+    :field
     {:type        "videos"
      :description {:fi "Videot ovat linkkejä esim. kolmannen osapuolen palvelussa olevaan sisältöön"}
      :label       {:fi "Videot"}}}
 
    :images
-   {:field
+   {:schema [:sequential
+             [:map
+              [:url [:string]]
+              [:description {:optional true} localized-string-schema]
+              [:alt-text {:optional true} localized-string-schema]]]
+    :field
     {:type        "images"
      :description {:fi ""}
      :label       {:fi "Valokuvat"}
@@ -74,22 +114,38 @@
         :label       {:fi "Alt-teksti"}}}}}}
 
    :rules
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
      :label       {:fi "Luvat, säännöt, ohjeet"}}}
 
    :arrival
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Autolla ja joukkoliikenteellä saapumiseen liittyvää tietoa"}
      :label       {:fi "Saapuminen"}}}
 
    :accessibility
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
-     :label       {:fi "Esteettömyys"}}}})
+     :label       {:fi "Esteettömyys"}}}
+
+   :highlights
+   {:schema [:sequential localized-string-schema]
+    :field
+    {:type        "textlist"
+     :description {:fi "Tekstiä"}
+     :label       {:fi "Kohokohdat"}}}})
+
+(def common-props-schema
+  (collect-schema common-props))
+
+(comment
+  (m/schema common-props-schema))
 
 (def outdoor-recreation-areas
   {:label      {:fi "Retkeily ja ulkoilualueet"}
@@ -99,10 +155,27 @@
    (merge
     common-props
     {:everymans-rights
-     {:field
+     {:schema [:boolean {:optional true}]
+      :field
       {:type        "checkbox"
        :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"}
        :label       {:fi "Jokamiehenoikeudet"}}}})})
+
+(def outdoor-recreation-areas-schema
+  (collect-schema (:props outdoor-recreation-areas)))
+
+(def outdoor-recreation-routes-activities
+  {"camping"            {:fi "Retkeily"}
+   "hiking"             {:fi "Vaellus"}
+   "outdoor-recreation" {:fi "Ulkoilu"}
+   "mountain-biking"    {:fi "Maastopyöräily"}
+   "paddling"           {:fi "Melonta"}
+   "skiing"             {:fi "Hiihto"}})
+
+(def outdoor-recreation-routes-accessibility-classification
+  {"accessible"          {:fi "Esteetön"}
+   "advanced-accessible" {:fi "Vaativa esteetön"}
+   "inaccessible"        {:fi "Ei"}})
 
 (def outdoor-recreation-routes
   {:label       {:fi "Retkeily ja ulkoilureitit"}
@@ -111,7 +184,25 @@
    :type-codes  #{4401 4402 4403 4404 4405}
    :props
    {:routes
-    {:field
+    {:schema [:sequential
+              (mu/merge
+               (mu/dissoc common-props-schema :accessibility)
+               [:map
+                [:accessibility
+                 [:map
+                  [:mobility-impaired {:optional true} localized-string-schema]
+                  [:hearing-impaired {:optional true} localized-string-schema]
+                  [:visually-impaired {:optional true} localized-string-schema]
+                  [:developmentally-disabled {:optional true} localized-string-schema]]]
+                [:route-name {:optional true} localized-string-schema]
+                [:activities {:optional true}
+                 [:sequential [:enum (keys outdoor-recreation-routes-activities)]]]
+                [:duration {:optional true} duration-schema]
+                [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
+                [:route-marking {:optional true} localized-string-schema]
+                [:accessibility-classification
+                 (into [:enum] (keys outdoor-recreation-routes-accessibility-classification))]])]
+     :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
       :label       {:fi "Reittityyppi"}
@@ -160,12 +251,7 @@
          {:type        "multi-select"
           :description {:fi "Reittiin liittyvä aktiviteetti. Esim. Retkeily ja ulkoilu, Vaellus, Maastopyöräily, Melonta, Hiihto, … "}
           :label       {:fi "Aktiviteetti"}
-          :opts        {"camping"            {:fi "Retkeily"}
-                        "hiking"             {:fi "Vaellus"}
-                        "outdoor-recreation" {:fi "Ulkoilu"}
-                        "mountain-biking"    {:fi "Maastopyöräily"}
-                        "paddling"           {:fi "Melonta"}
-                        "skiing"             {:fi "Hiihto"}}}}
+          :opts        outdoor-recreation-routes-activities}}
 
         :duration
         {:field
@@ -185,41 +271,15 @@
         {:field
          {:type        "text-field"
           :description {:fi "Reittimerkkien symboli ja väri"}
-          :label       {:fi "Reittimerkintä"}}}})
+          :label       {:fi "Reittimerkintä"}}}})}}}})
 
-      :derived-props
-      {:length-m
-       {:field
-        {:type        "number"
-         :description "Esim. 347 km"
-         :label       "Pituus"}}
+(def outdoor-recreation-routes-schema
+  (collect-schema (:props outdoor-recreation-routes)))
 
-       :ascend-m
-       {:field
-        {:type        "number"
-         :description "Esim. 5165 m"
-         :label       "Nousumetrit"}}
-
-       :descend-m
-       {:field
-        {:type        "number"
-         :description "Esim. x m"
-         :label       "Laskumetrit"}}
-
-       :duration
-       {:field
-        {:type        "duration"
-         :description "Esim. 4-5 h, 4-8 päivää"
-         :label       "Ajoaika"}}
-
-       :accessibility-classification
-       {:field
-        {:type        "select"
-         :opts        {"accessible"          {:fi "Esteetön"}
-                       "advanced-accessible" {:fi "Vaativa esteetön"}
-                       "inaccessible"        {:fi "Ei"}}
-         :description "Tähän joku kuvaus"
-         :label       {:fi "Esteettömyysluokitus"}}}}}}}})
+(def cycling-activities
+  {"gravel-and-bikepacking" {:fi "Gravel & pyörävaellus"}
+   "road-cycling"           {:fi "Maantie"}
+   "mountain-biking"        {:fi "Maastopyöräily"}})
 
 (def cycling
   {:label       {:fi "Pyöräily"}
@@ -233,7 +293,21 @@
     ;; liikuntapaikka (alatasona päiväetapit, jotka ovat ehdotusmaisia
     ;; etappeja).
     :routes
-    {:field
+    {:schema [:sequential
+              (mu/merge
+               common-props-schema
+               [:map
+                [:route-name {:optional true} localized-string-schema]
+                [:activities {:optional true}
+                 [:sequential (into [:enum] (keys cycling-activities))]]
+                [:duration {:optional true} duration-schema]
+                [:food-and-water {:optional true} localized-string-schema]
+                [:accommodation {:optional true} localized-string-schema]
+                [:good-to-know {:optional true} localized-string-schema]
+                [:unpaved-percentage {:optional true} number-schema]
+                [:trail-percentage {:optional true} number-schema]
+                [:cyclable-percentage {:optional true} number-schema]])]
+     :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
       :label       {:fi "Reittityyppi"}
@@ -250,9 +324,7 @@
          {:type        "multi-select"
           :description {:fi "Gravel & pyörävaellus, Maantie, Maastopyöräily"}
           :label       {:fi "Alalaji"}
-          :opts        {"gravel-and-bikepacking" {:fi "Gravel & pyörävaellus"}
-                        "road-cycling"           {:fi "Maantie"}
-                        "mountain-biking"        {:fi "Maastopyöräily"}}}}
+          :opts        cycling-activities}}
 
         :duration
         {:field
@@ -278,12 +350,6 @@
           :description {:fi "Tekstiä"}
           :label       {:fi "Hyvä tietää"}}}
 
-        :highlights
-        {:field
-         {:type        "textlist"
-          :description {:fi "Tekstiä"}
-          :label       {:fi "Kohokohdat"}}}
-
         :unpaved-percentage
         {:field
          {:type        "number"
@@ -303,28 +369,31 @@
          {:type        "number"
           :adornment   "%"
           :description {:fi "Esim. 100%"}
-          :label       {:fi "Pyöräiltävissä"}}}})
+          :label       {:fi "Pyöräiltävissä"}}}})}}}})
 
-      :derived-props
-      {:length-m
-       {:field
-        {:type        "number"
-         :description "Esim. 347 km"
-         :label       "Pituus"}}
+(def cycling-schema
+  (collect-schema (:props cycling)))
 
-       :ascend-m
-       {:field
-        {:type        "number"
-         :description "Esim. 5165 m"
-         :label       "Nousumetrit"}}
+(def paddling-activities
+  {"trip-padding"        {:fi "Retkimelonta"}
+   "whitewater-paddling" {:fi "Koskimelonta"}})
 
-       :descend-m
-       {:field
-        {:type        "number"
-         :description "Esim. x m"
-         :label       "Laskumetrit"}}
+(def paddling-route-types
+  {"open-water" {:fi "Avovesi"}
+   "sheltered"  {:fi "Suojaisa"}
+   "river"      {:fi "Joki"}
+   "rapids"     {:fi "Koski"}})
 
-       }}}}})
+(def paddling-properties
+  {"includes-portage-sections" {:fi "Sisältää kanto-osuuksia"}
+   "includes-canals-or-locks"  {:fi "Sisältää sulkuja / kanavia"}
+   "ideal-for-fishing"         {:fi "Hyvä kalapaikka"}
+   "scenic-vistas"             {:fi "Hyvät maisemat"}})
+
+(def paddling-difficulty
+  {"easy"   {:fi "Helppo"}
+   "medium" {:fi "Keskivaikea"}
+   "hard"   {:fi "Vaativa"}})
 
 (def paddling
   {:label       {:fi "Melonta ja SUP"}
@@ -333,7 +402,22 @@
    :type-codes  #{4451 4452}
    :props
    {:routes
-    {:field
+    {:schema [:sequential
+              (mu/merge
+               common-props-schema
+               [:map
+                [:route-name {:optional true} localized-string-schema]
+                [:activities {:optional true}
+                 [:sequential (into [:enum] (keys paddling-activities))]]
+                [:route-type {:optional true}
+                 [:sequential (into [:enum] (keys paddling-route-types))]]
+                [:properties {:optional true}
+                 [:sequential (into [:enum] (keys paddling-properties))]]
+                [:difficulty (into [:enum] (keys paddling-difficulty))]
+                [:safety {:optional true} localized-string-schema]
+                [:good-to-know {:optional true} localized-string-schema]
+                [:duration {:optional true} duration-schema]])]
+     :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
       :label       {:fi "Reittityyppi"}
@@ -351,37 +435,28 @@
          {:type        "multi-select"
           :description {:fi "Retkimelonta, Koskimelonta"}
           :label       {:fi "Aktiviteetti"}
-          :opts        {"trip-padding"        {:fi "Retkimelonta"}
-                        "whitewater-paddling" {:fi "Koskimelonta"}}}}
+          :opts        paddling-activities}}
 
         :route-type
         {:field
          {:type        "multi-select"
           :description {:fi "Avovesi, Suojaisa, Joki, Koski"}
           :label       {:fi "Melontakohteen tyyppi"}
-          :opts        {"open-water" {:fi "Avovesi"}
-                        "sheltered"  {:fi "Suojaisa"}
-                        "river"      {:fi "Joki"}
-                        "rapids"     {:fi "Koski"}}}}
+          :opts        paddling-route-types}}
 
         :properties
         {:field
          {:type        "multi-select"
           :description {:fi "Seliteteksti?"}
           :label       {:fi "Ominaisuudet"}
-          :opts        {"includes-portage-sections" {:fi "Sisältää kanto-osuuksia"}
-                        "includes-canals-or-locks"  {:fi "Sisältää sulkuja / kanavia"}
-                        "ideal-for-fishing"         {:fi "Hyvä kalapaikka"}
-                        "scenic-vistas"             {:fi "Hyvät maisemat"}}}}
+          :opts        paddling-properties}}
 
         :difficulty
         {:field
-         {:type        "multi-select"
+         {:type        "select"
           :description {:fi "Vaativuus"}
           :label       {:fi "Vaativuus"}
-          :opts        {"easy"   {:fi "Helppo"}
-                        "medium" {:fi "Keskivaikea"}
-                        "hard"   {:fi "Vaativa"}}}}
+          :opts        paddling-difficulty}}
 
         :safety
         {:field
@@ -399,33 +474,20 @@
         {:field
          {:type        "duration"
           :description {:fi "Kulkuaika"}
-          :label       {:fi "Kulkuaika"}}}})
+          :label       {:fi "Kulkuaika"}}}})}}}})
 
-      :derived-props
-      {:length-m
-       {:field
-        {:type        "number"
-         :description "Esim. 347 km"
-         :label       "Pituus"}}
+(def paddling-schema
+  (collect-schema (:props paddling)))
 
-       :ascend-m
-       {:field
-        {:type        "number"
-         :description "Esim. 5165 m"
-         :label       "Nousumetrit"}}
+(def birdwatching-types
+  {"bird-observation-tower"      {:fi "Lintutorni"}
+   "other-bird-observation-spot" {:fi "Muu lintupaikka"}})
 
-       :descend-m
-       {:field
-        {:type        "number"
-         :description "Esim. x m"
-         :label       "Laskumetrit"}}
-
-       :duration
-       {:field
-        {:field
-         {:type        "text-field"
-          :description "Esim. 4-5 h, 4-8 päivää"
-          :label       "Ajoaika"}}}}}}}})
+(def birdwatching-seasons
+  {"spring" {:fi "Kevät"}
+   "summer" {:fi "Kesä"}
+   "autumn" {:fi "Syksy"}
+   "winter" {:fi "Talvi"}})
 
 (def birdwatching
   {:label       {:fi "Lintujen tarkkailu"}
@@ -436,39 +498,62 @@
    (merge
     common-props
     {:type
-     {:field
+     {:schema [:sequential (into [:enum] (keys birdwatching-types))]
+      :field
       {:type        "multi-select"
        :description {:fi "Lintutorni, Muu lintupaikka"}
        :label       {:fi "Tyyppi"}
-       :opts        {"bird-observation-tower"      {:fi "Lintutorni"}
-                     "other-bird-observation-spot" {:fi "Muu lintupaikka"}}}}
+       :opts        birdwatching-types}}
 
      :habitat
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Suokohde, …"}
        :label       {:fi "Elinympäristö"}}}
 
      :character
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Muutonseurantakohde, …"}
        :label       {:fi "Luonne"}}}
 
      :season
-     {:field
+     {:schema [:sequential (into [:enum] (keys birdwatching-types))]
+      :field
       {:type        "multi-select"
        :description {:fi "Kevät, Kesä, Syksy, Talvi"}
        :label       {:fi "Ajankohta"}
-       :opts        {"spring" {:fi "Kevät"}
-                     "summer" {:fi "Kesä"}
-                     "autumn" {:fi "Syksy"}
-                     "winter" {:fi "Talvi"}}}}
+       :opts        birdwatching-seasons}}
      :species
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"}
        :label       {:fi "Lajisto"}}}})})
+
+(def birdwatching-schema (collect-schema (:props birdwatching)))
+
+(def fishing-types
+  {"shore"        {:fi "Kalastus rannalta"}
+   "on-the-water" {:fi "Kalastus vesiltä / jäältä"}})
+
+(def fishing-activities
+  {"angling"      {:fi "Onginta"}
+   "ice-fishing"  {:fi "Pilkkiminen"}
+   "fly-fishing"  {:fi "Perhokalastus"}
+   "lure-fishing" {:fi "Viehekalastus"}})
+
+(def fishing-waters
+  {"sea"   {:fi "Meri"}
+   "river" {:fi "Joki"}
+   "lake"  {:fi "Järvi"}})
+
+(def fishing-properties
+  {"kalapaikkoja-kaupungeissa" {:fi "Kalapaikkoja kaupungeissa"}
+   "accessible-fishing-spot"   {:fi "Esteetön kalastuspaikka"}
+   "premium-fishing-spot"      {:fi "Laatu-apaja"}})
 
 (def fishing
   {:label       {:fi "Kalastus"}
@@ -479,66 +564,71 @@
    (merge
     common-props
     {:type
-     {:field
+     {:schema [:sequential (into [:enum] (keys fishing-types))]
+      :field
       {:type        "multi-select"
        :description {:fi "Kalastus rannalta, Kalastus vesiltä/jäältä"}
        :label       {:fi "Kohdetyyppi"}
-       :opts        {"shore"        {:fi "Kalastus rannalta"}
-                     "on-the-water" {:fi "Kalastus vesiltä / jäältä"}}}}
+       :opts        fishing-types}}
 
      :activities
-     {:field
+     {:schema [:sequential (into [:enum] (keys fishing-types))]
+      :field
       {:type        "multi-select"
        :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
        :label       {:fi "Alalaji"}
-       :opts        {"angling"      {:fi "Onginta"}
-                     "ice-fishing"  {:fi "Pilkkiminen"}
-                     "fly-fishing"  {:fi "Perhokalastus"}
-                     "lure-fishing" {:fi "Viehekalastus"}}}}
+       :opts        fishing-activities}}
 
      :waters
-     {:field
+     {:schema [:sequential (into [:enum] (keys fishing-waters))]
+      :field
       {:type        "select"
        :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
        :label       {:fi "Vesistö"}
-       :opts        {"sea"   {:fi "Meri"}
-                     "river" {:fi "Joki"}
-                     "lake"  {:fi "Järvi"}}}}
+       :opts        fishing-waters}}
 
      :species
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "ahven, taimen (meritaimen), turpa, …"}
        :label       {:fi "Kalalajit"}}}
 
 
      :fish-population
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Tekstimuotoinen kuvaus kohteen kalastosta"}
        :label       {:fi "Kalasto"}}}
 
 
      :fishing-methods
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
        :label       {:fi "Kalastustavat"}}}
 
      :properties
-     {:field
+     {:schema [:sequential (into [:enum] (keys fishing-properties))]
+      :field
       {:type        "multi-select"
        :description {:fi ""}
        :label       {:fi "Ominaisuudet"}
-       :opts        {"kalapaikkoja-kaupungeissa" {:fi "Kalapaikkoja kaupungeissa"}
-                     "accessible-fishing-spot"   {:fi "Esteetön kalastuspaikka"}
-                     "premium-fishing-spot"      {:fi "Laatu-apaja"}}}}
+       :opts        fishing-properties}}
 
      :rules
-     {:field
+     {:schema localized-string-schema
+      :field
       {:type        "textarea"
        :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
        :label       {:fi "Luvat, säännöt, ohjeet"}}}})})
+
+(def fishing-schema
+  (mu/merge
+   common-props-schema
+   (collect-schema (:props fishing))))
 
 (def outdoor-recreation-facilities
   {:label       {:fi "Retkeily ja ulkoilurakenteet"}
@@ -546,6 +636,33 @@
    :description {:fi ""}
    :type-codes  #{207 205 206 202 301 302 304 #_204}
    :props       common-props})
+
+(def outdoor-recreation-facilities-schema
+  (collect-schema (:props outdoor-recreation-facilities)))
+
+(def activities-schema
+  [:map
+   [:outdoor-recreation-areas {:optional true} outdoor-recreation-areas-schema]
+   [:outdoor-recreation-facilities {:optional true} outdoor-recreation-facilities-schema]
+   [:outdoor-recreation-routes {:optional true} outdoor-recreation-routes-schema]
+   [:cycling {:optional true} cycling-schema]
+   [:paddling {:optional true} paddling-schema]
+   [:birdwatching {:optional true} birdwatching-schema]
+   [:fishing {:optional true} fishing-schema]])
+
+(comment
+  (m/schema activities-schema)
+  (require '[clojure.pprint :as pprint])
+  (pprint/pprint activities-schema)
+
+  (require '[malli.json-schema :as json-schema])
+  (json-schema/transform activities-schema)
+
+  (require '[cheshire.core :as json])
+
+  (println (-> activities-schema json-schema/transform json/encode))
+
+  )
 
 (def by-types
   (utils/index-by :type-codes [outdoor-recreation-areas
