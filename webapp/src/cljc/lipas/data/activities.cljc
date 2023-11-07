@@ -89,13 +89,7 @@
    {:field
     {:type        "textarea"
      :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
-     :label       {:fi "Esteettömyys"}}}
-
-   :parking
-   {:field
-    {:type        "point-feature"
-     :description {:fi "Karttamerkintä liikuntapaikkakohtainen lisätieto. Mahdollisesti useampi parkkipaikka/liikuntapaikka."}
-     :label       {:fi "Pysäköinti"}}}})
+     :label       {:fi "Esteettömyys"}}}})
 
 (def outdoor-recreation-areas
   {:label      {:fi "Retkeily ja ulkoilualueet"}
