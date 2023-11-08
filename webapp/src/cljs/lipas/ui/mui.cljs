@@ -56,6 +56,7 @@
    ["@material-ui/core/Tab$default" :as Tab]
    ["@material-ui/core/Table$default" :as Table]
    ["@material-ui/core/TableBody$default" :as TableBody]
+   ["@material-ui/core/TableContainer$default" :as TableContainer]
    ["@material-ui/core/TableCell$default" :as TableCell]
    ["@material-ui/core/TableHead$default" :as TableHead]
    ["@material-ui/core/TablePagination$default" :as TablePagination]
@@ -254,6 +255,7 @@
 (def table (r/adapt-react-class Table))
 (def table-body (r/adapt-react-class TableBody))
 (def table-cell (r/adapt-react-class TableCell))
+(def table-container (r/adapt-react-class TableContainer))
 (def table-head (r/adapt-react-class TableHead))
 (def table-pagination (r/adapt-react-class TablePagination))
 (def table-row (r/adapt-react-class TableRow))

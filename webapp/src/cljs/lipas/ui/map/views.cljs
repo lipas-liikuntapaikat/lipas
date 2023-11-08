@@ -5,9 +5,8 @@
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
-   #_[lipas.ui.feedback.views :as feedback]
    [clojure.spec.alpha :as s]
-   [clojure.string :as string]
+   [clojure.string :as string :refer [includes? lower-case join]]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
@@ -22,7 +21,6 @@
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
-   #_[lipas.ui.sports-sites.football.views :as football]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -941,11 +939,50 @@
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
 
+(defn helper-row [type geom description] 
+  [mui/table-row
+   [mui/table-cell type]
+   [mui/table-cell geom]
+   [mui/table-cell description]])
+
+(defn filter-by-term [term table-data]
+  (let [lower-case-term (lower-case term)] 
+    (filter #(or (includes? (lower-case (% :name)) lower-case-term)
+                 (includes? (lower-case (% :geometry-type)) lower-case-term)
+                 (includes? (lower-case (% :description)) lower-case-term)
+                 (includes? (lower-case (join (% :tags))) lower-case-term))
+          table-data)))
+
+(defn type-helper-table []
+  (r/with-let [search-term (r/atom "")
+               table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
+    (let [filtered-table-data (filter-by-term @search-term table-data)
+          sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
+      [mui/grid {:container true}
+       [mui/text-field {:label "Outlined" 
+                        :xs 3 
+                        :on-change #(reset! search-term (-> % .-target .-value))
+                        :placeholder nil}]
+       [mui/table-container
+        [mui/table
+         [mui/table-head
+          [mui/table-row
+           [mui/table-cell "Tyyppi"]
+           [mui/table-cell "Geometria"]
+           [mui/table-cell "Kuvaus"]]]
+         (into
+          [mui/table-body {:component "th" :scope "row"}]
+          (for [row sorted-and-filtered-table-data] 
+            [helper-row [row :name]
+                        [row :geometry-type]
+                        [row :description]]))]]])))
+
 (defn add-sports-site-view
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
-               geom-tab     (r/atom "draw")]
-    (let [locale                                   (tr)
+               geom-tab     (r/atom "draw")
+               geom-help-open? (r/atom true)]
+    (let [locale               (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
@@ -994,12 +1031,29 @@
 
         ;; Step 1 type
         (when (= active-step (dec 1))
-          #_[mui/grid {:item true :xs 12}]
-          [type-selector-single
-           {:value     (when type [(:type-code type)])
-            :tr        tr
-            :types     types
-            :on-change #(==> [::sports-site-events/select-new-site-type %])}])
+          [mui/grid {:container true}
+           [mui/grid {:item true :xs :true}
+            [type-selector-single
+             {:value     (when type [(:type-code type)])
+              :tr        tr
+              :types     types
+              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]
+           [mui/grid {:item true :xs 1}
+            [mui/icon-button
+             {:xs 1
+              :type "button"
+              :on-click #(swap! geom-help-open? not)}
+             [mui/icon "help"]]
+
+            [lui/dialog {:open? @geom-help-open?
+                         :cancel-label (tr :actions/close)
+                         :title "kekkonen666"
+                         :max-width "xl"
+                         :on-close #(swap! geom-help-open? not)}
+             [mui/grid {:container true
+                        :fixed true
+                        :direction "column"} 
+              [type-helper-table]]]]])
 
         ;; Step 2 geom
         (when (= active-step (dec 2))

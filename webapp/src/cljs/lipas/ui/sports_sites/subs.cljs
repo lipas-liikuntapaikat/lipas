@@ -159,7 +159,8 @@
       :geometry-type (:geometry-type m)
       :main-category (get-in types/main-categories [(:main-category m) :name locale])
       :sub-category  (get-in types/sub-categories [(:sub-category m) :name locale])
-      :description   (get-in m [:description locale])})))
+      :description   (get-in m [:description locale])
+      :tags          (get-in m [:tags locale])})))
 
 (re-frame/reg-sub
  ::admins
