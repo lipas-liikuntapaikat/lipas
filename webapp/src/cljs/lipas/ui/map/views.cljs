@@ -423,9 +423,7 @@
              [mui/typography (tr :analysis/mode)]]
             [mui/table-cell
              (when (seq (:diversity-idx-mode data))
-               (string/join "," (:diversity-idx-mode data)))]]
-
-         ]]
+               (string/join "," (:diversity-idx-mode data)))]]]]
 
        ;; No data available
        [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
@@ -834,7 +832,7 @@
               [mui/fab
                {:size     "small"
                 :on-click #(==> [::events/show-analysis lipas-id])}
-               [mui/icon "insights"]]])
+               [mui/icon "insights"]]])]
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -910,7 +908,7 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-           ]
+           
 
           (concat
            (lui/edit-actions-list
