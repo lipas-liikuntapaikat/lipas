@@ -1,8 +1,10 @@
 (ns lipas.data.activities
   (:require
+   [cheshire.core :as json]
    [clojure.walk :as walk]
    [lipas.utils :as utils]
    [malli.core :as m]
+   [malli.json-schema :as json-schema]
    [malli.util :as mu]))
 
 (defn collect-schema
@@ -23,6 +25,24 @@
    [:min {:optional true} number-schema]
    [:max {:optional true} number-schema]
    [:unit {:optional true} [:enum "days" "hours" "minutes"]]])
+
+(def route-fcoll-schema
+  [:map
+   [:type [:enum "FeatureCollection"]]
+   [:features
+    [:sequential
+     [:map
+      [:id {:optional true} [:string]]
+      [:type [:enum "Feature"]]
+      [:properties {:optional true} [:map]]
+      [:geometry
+       [:map
+        [:type [:enum "LineString"]]
+        [:coordinates
+         [:sequential
+          [:or
+           [:tuple :double :double]
+           [:tuple :double :double :double]]]]]]]]]])
 
 (def contact-roles
   {"admin"            {:fi "Ylläpitäjä"}
@@ -188,7 +208,9 @@
               (mu/merge
                (mu/dissoc common-props-schema :accessibility)
                [:map
-                [:accessibility
+                [:id [:string]]
+                [:geometries route-fcoll-schema]
+                [:accessibility {:optional true}
                  [:map
                   [:mobility-impaired {:optional true} localized-string-schema]
                   [:hearing-impaired {:optional true} localized-string-schema]
@@ -297,6 +319,8 @@
               (mu/merge
                common-props-schema
                [:map
+                [:id [:string]]
+                [:geometries route-fcoll-schema]
                 [:route-name {:optional true} localized-string-schema]
                 [:activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
@@ -406,6 +430,8 @@
               (mu/merge
                common-props-schema
                [:map
+                [:id [:string]]
+                [:geometries route-fcoll-schema]
                 [:route-name {:optional true} localized-string-schema]
                 [:activities {:optional true}
                  [:sequential (into [:enum] (keys paddling-activities))]]
@@ -664,6 +690,13 @@
 
   )
 
+(defn gen-json-schema
+  []
+  (-> activities-schema
+      json-schema/transform
+      (json/encode {:pretty true})
+      println))
+
 (def by-types
   (utils/index-by :type-codes [outdoor-recreation-areas
                                outdoor-recreation-facilities
@@ -690,6 +723,9 @@
                  (for [type-code type-codes]
                    [type-code (hack-missing-translations v)])))
        (into {})))
+
+(defn -main [& _args]
+  (gen-json-schema))
 
 (comment
 
