@@ -58,7 +58,7 @@
 (defn- test-suffix [s] (str s "_test"))
 
 (def config (-> config/default-config
-                (select-keys [:db :app :search :mailchimp])
+                (select-keys [:db :app :search :mailchimp :aws])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
                 (update-in [:db :dbname] test-suffix)
                 (assoc-in [:db :dev] true) ;; No connection pool

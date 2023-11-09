@@ -1,6 +1,6 @@
 (ns lipas.data.activities
   (:require
-   [cheshire.core :as json]
+   #?(:clj [cheshire.core :as json])
    [clojure.walk :as walk]
    [lipas.utils :as utils]
    [malli.core :as m]
@@ -694,7 +694,8 @@
   []
   (-> activities-schema
       json-schema/transform
-      (json/encode {:pretty true})
+      #?(:clj(json/encode {:pretty true})
+         :cljs clj->js)
       println))
 
 (def by-types
