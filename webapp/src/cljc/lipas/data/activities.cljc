@@ -1,6 +1,9 @@
 (ns lipas.data.activities
   (:require
    #?(:clj [cheshire.core :as json])
+   #?(:clj [clojure.data.csv :as csv])
+   #?(:clj [clojure.java.io :as io])
+   [clojure.string :as str]
    [clojure.walk :as walk]
    [lipas.utils :as utils]
    [malli.core :as m]
@@ -707,6 +710,50 @@
                                birdwatching
                                fishing]))
 
+(def csv-headers
+  ["Aktiviteetti nimi fi"
+   "Aktiviteetti nimi se"
+   "aktiviteetti nimi en"
+   "Aktiviteetti kuvaus fi"
+   "Aktiviteetti kuvaus se"
+   "Aktiviteetti kuvaus en"
+   "Aktiviteetti tekninen nimi"
+   "LIPAS tyyppikoodit"
+   "Ominaisuus tekninen nimi"
+   "Ominaisuus tyyppi"
+   "Ominaisuus nimi fi"
+   "Ominaisuus nimi se"
+   "Ominaisuus nimi en"
+   "Ominaisuus kuvaus fi"
+   "Ominaisuus kuvaus se"
+   "Ominaisuus kuvaus en"])
+
+#?(:clj
+   (defn gen-csv
+     []
+     (->>
+      (for [a             (vals by-types)
+            :let          [rprops (get-in a [:props :routes :field :props])]
+            [prop-k prop] (merge (:props a) rprops)]
+        [(get-in a [:label :fi])
+         (get-in a [:label :se])
+         (get-in a [:label :en])
+         (get-in a [:description :fi])
+         (get-in a [:description :se])
+         (get-in a [:description :en])
+         (get-in a [:value])
+         (-> a :type-codes (->> (str/join " ")))
+         (name prop-k)
+         (get-in prop [:field :type])
+         (get-in prop [:field :label :fi])
+         (get-in prop [:field :label :se])
+         (get-in prop [:field :label :en])
+         (get-in prop [:field :description :fi])
+         (get-in prop [:field :description :se])
+         (get-in prop [:field :description :en])])
+      (into [csv-headers])
+      (csv/write-csv *out*))))
+
 (defn hack-missing-translations
   [m]
   (walk/postwalk
@@ -725,8 +772,10 @@
                    [type-code (hack-missing-translations v)])))
        (into {})))
 
-(defn -main [& _args]
-  (gen-json-schema))
+(defn -main [& args]
+  (if (= "csv" (first args))
+    (gen-csv)
+    (gen-json-schema)))
 
 (comment
 
