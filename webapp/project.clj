@@ -26,7 +26,7 @@
    [org.postgresql/postgresql  "42.2.2"]
    [nrepl "1.0.0"]
    [hikari-cp "2.7.0"]
-   [cc.qbits/spandex "0.6.4"]
+   [cc.qbits/spandex "0.8.2"]
    [integrant "0.6.3"]
    [migratus "1.0.6"]
    [environ "1.1.0"]
