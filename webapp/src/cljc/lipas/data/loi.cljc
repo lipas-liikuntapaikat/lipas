@@ -1,39 +1,63 @@
 (ns lipas.data.loi
-  (:require [lipas.data.status :as status]))
+  (:require
+   #?(:clj [cheshire.core :as json])
+   [lipas.data.status :as status]
+   [malli.core :as m]
+   [malli.json-schema :as json-schema]
+   [malli.util :as mu]))
 
 (def statuses status/statuses)
 
+(def localized-string-schema
+  [:map
+   [:fi {:optional true} [:string]]
+   [:se {:optional true} [:string]]
+   [:en {:optional true} [:string]]])
+
 (def common-props
   {:name
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textfield"
      :description {:fi "Esim. \"Haltia pihan opastustaulu\""}
      :label       {:fi "Kohteen nimi"}}}
 
    :description
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Rakenteen esittämiseen liittyvää tietoa."}
      :label       {:fi "Yleiskuvaus"}}}
 
    :images
-   {:field
+   {:schema [:sequential
+             [:map
+              [:url [:string]]
+              [:description {:optional true} localized-string-schema]
+              [:alt-text {:optional true} localized-string-schema]]]
+    :field
     {:type        "images"
      :description {:fi ""}
      :label       {:fi "Valokuvat"}}}})
 
 (def accessibility-props
   {:accessible?
-   {:field
+   {:schema [:boolean]
+    :field
     {:type        "checkbox"
      :description {:fi "Tähän joku järkevä ohje"}
      :label       {:fi "Esteetön"}}}
 
    :accessibility
-   {:field
+   {:schema localized-string-schema
+    :field
     {:type        "textarea"
      :description {:fi "Tähän joku järkevä ohje"}
      :label       {:fi "Esteettömyys"}}}})
+
+(def water-conditions-hazards
+  {"rapid"      {:fi "Koski"}
+   "open-water" {:fi "Avoin selkä"}})
 
 (def categories
   {"water-conditions"
@@ -46,14 +70,15 @@
       (merge
        (select-keys common-props [:name])
        {:hazard-type
-        {:field
+        {:schema (into [:enum] (keys water-conditions-hazards))
+         :field
          {:type        "select"
           :label       {:fi "Tyyppi"}
           :description {:fi "Vaaranpaikan tyyppi"}
-          :opts        {"rapid"      {:fi "Koski"}
-                        "open-water" {:fi "Avoin selkä"}}}}
+          :opts        water-conditions-hazards}}
         :description
-        {:field
+        {:schema localized-string-schema
+         :field
          {:type        "textarea"
           :label       {:fi "Kuvaus"}
           :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}}}
@@ -279,6 +304,59 @@
       :props (merge common-props)}
 
      }}})
+
+
+(def point-fcoll-schema
+  [:map
+   [:type [:enum "FeatureCollection"]]
+   [:features
+    [:sequential
+     [:map
+      [:id {:optional true} [:string]]
+      [:type [:enum "Feature"]]
+      [:properties {:optional true} [:map]]
+      [:geometry
+       [:map
+        [:type [:enum "Point"]]
+        [:coordinates
+         [:or
+          [:tuple :double :double]
+          [:tuple :double :double :double]]]]]]]]])
+
+(def schema
+  (into [:or]
+        (for [[cat-k cat-v] categories
+              [_type-k type-v] (:types cat-v)]
+          (into
+           [:map {:title (str cat-k " > " (:value type-v))}
+            [:id [:string]]
+            [:event-date [:string]]
+            [:created-at [:string]]
+            [:geometries point-fcoll-schema]
+            [:status (into [:enum] (keys statuses))]
+            [:loi-category [:enum cat-k]]
+            [:loi-type [:enum (:value type-v)]]]
+           (for [[prop-k prop-v] (:props type-v)]
+             [prop-k {:optional true} (:schema prop-v)])))))
+
+
+(defn gen-json-schema
+  []
+  (-> schema
+      json-schema/transform
+      #?(:clj(json/encode {:pretty true})
+         :cljs clj->js)
+      println))
+
+(comment
+  (gen-json-schema)
+
+  (json-schema/transform [:tuple :double :double])
+  ;; => {:type "array",
+  ;;     :items [{:type "number"} {:type "number"}],
+  ;;     :additionalItems false}
+
+  )
 
 (def types (->> categories
                 vals
