@@ -241,7 +241,8 @@
     {:name          "Liikuntapaikkatyyppi",
      :main-category "Pääryhmä",
      :sub-category  "Alaryhmä",
-     :type-code     "Tyyppikoodi"},
+     :type-code     "Tyyppikoodi"
+     :geometry      "Geometria"},
     :duration
     {:hour        "tuntia",
      :month       "kuukautta",

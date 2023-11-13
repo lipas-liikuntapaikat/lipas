@@ -241,29 +241,78 @@
     [mui/icon {:color "inherit" :font-size "medium"}
      "my_location"]]])
 
-(defn type-selector-single [{:keys [tr value on-change types]}]
-  (r/with-let [selected-type (r/atom value)]
-    (let [locale (tr)]
+(defn helper-select-onclick [type-code geom-help-open?]
+  (reset! geom-help-open? false) 
+  (==> [::sports-site-events/select-new-site-type type-code]))
+
+
+(defn helper-row [type-code type geom description geom-help-open?]
+  [mui/table-row {:on-click #(helper-select-onclick type-code geom-help-open?)}
+   [mui/table-cell type]
+   [mui/table-cell geom]
+   [mui/table-cell description]])
+
+(defn filter-by-term [term table-data]
+  (let [lower-case-term (lower-case term)]
+    (filter #(or (includes? (lower-case (% :name)) lower-case-term)
+                 (includes? (lower-case (% :geometry-type)) lower-case-term)
+                 (includes? (lower-case (% :description)) lower-case-term)
+                 (includes? (lower-case (join (% :tags))) lower-case-term))
+            table-data)))
+
+(defn type-helper-table [tr geom-help-open?]
+  (r/with-let [search-term (r/atom "")
+               table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
+    (let [filtered-table-data (filter-by-term @search-term table-data)
+          sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
+      [mui/grid {:container true}
+       [mui/text-field {:label (tr :search/search)
+                        :xs 3
+                        :on-change #(reset! search-term (-> % .-target .-value))
+                        :placeholder nil}]
+       [mui/table-container
+        [mui/table
+         [mui/table-head
+          [mui/table-row
+           [mui/table-cell (tr :type/name)]
+           [mui/table-cell (tr :type/geometry)]
+           [mui/table-cell (tr :general/description)]]]
+         (into
+          [mui/table-body {:component "th" :scope "row"}]
+          (for [row sorted-and-filtered-table-data]
+            [helper-row
+             [row :type-code]
+             [row :name]
+             [row :geometry-type]
+             [row :description]
+             geom-help-open?]))]]])))
+
+(defn type-selector-single [{:keys [tr on-change types]}] 
+    (let [locale        (tr)
+          new-site-code (-> (<== [:lipas.ui.sports-sites.subs/new-sports-site])
+                            :type
+                            first
+                            :type-code)]
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
         [lui/autocomplete
          {:multi?    false
           ;;:show-all? true
           :items     (vals types)
-          :value     @selected-type
+          :value     new-site-code
           :label     (tr :type/name)
           :value-fn  :type-code
           :label-fn  (comp locale :name)
-          :on-change #(reset! selected-type %)}]
-        (when @selected-type
+          :on-change on-change}]
+        (when new-site-code
           [mui/grid {:item true}
            [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
-            (get-in types [@selected-type :description locale])]
-           [mui/button {:on-click   #(on-change @selected-type)
+            (get-in types [new-site-code :description locale])]
+           [mui/button {:on-click   #(on-change new-site-code)
                         :auto-focus true
                         :variant    "contained"
                         :color      "secondary"}
-            "OK"]])]])))
+            "OK"]])]]))
 
 (defmulti popup-body :type)
 
@@ -939,44 +988,6 @@
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
 
-(defn helper-row [type geom description] 
-  [mui/table-row
-   [mui/table-cell type]
-   [mui/table-cell geom]
-   [mui/table-cell description]])
-
-(defn filter-by-term [term table-data]
-  (let [lower-case-term (lower-case term)] 
-    (filter #(or (includes? (lower-case (% :name)) lower-case-term)
-                 (includes? (lower-case (% :geometry-type)) lower-case-term)
-                 (includes? (lower-case (% :description)) lower-case-term)
-                 (includes? (lower-case (join (% :tags))) lower-case-term))
-          table-data)))
-
-(defn type-helper-table []
-  (r/with-let [search-term (r/atom "")
-               table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
-    (let [filtered-table-data (filter-by-term @search-term table-data)
-          sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
-      [mui/grid {:container true}
-       [mui/text-field {:label "Outlined" 
-                        :xs 3 
-                        :on-change #(reset! search-term (-> % .-target .-value))
-                        :placeholder nil}]
-       [mui/table-container
-        [mui/table
-         [mui/table-head
-          [mui/table-row
-           [mui/table-cell "Tyyppi"]
-           [mui/table-cell "Geometria"]
-           [mui/table-cell "Kuvaus"]]]
-         (into
-          [mui/table-body {:component "th" :scope "row"}]
-          (for [row sorted-and-filtered-table-data] 
-            [helper-row [row :name]
-                        [row :geometry-type]
-                        [row :description]]))]]])))
-
 (defn add-sports-site-view
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
@@ -1053,7 +1064,7 @@
              [mui/grid {:container true
                         :fixed true
                         :direction "column"} 
-              [type-helper-table]]]]])
+              [type-helper-table tr geom-help-open?]]]]])
 
         ;; Step 2 geom
         (when (= active-step (dec 2))
