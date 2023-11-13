@@ -992,7 +992,7 @@
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom "draw")
-               geom-help-open? (r/atom true)]
+               geom-help-open? (r/atom false)]
     (let [locale               (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
