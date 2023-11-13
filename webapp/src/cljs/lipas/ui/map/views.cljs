@@ -1058,7 +1058,7 @@
 
             [lui/dialog {:open? @geom-help-open?
                          :cancel-label (tr :actions/close)
-                         :title "kekkonen666"
+                         ;; :title (tr :type/name)
                          :max-width "xl"
                          :on-close #(swap! geom-help-open? not)}
              [mui/grid {:container true
