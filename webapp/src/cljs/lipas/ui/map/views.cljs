@@ -5,7 +5,6 @@
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
-   #_[lipas.ui.feedback.views :as feedback]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
@@ -22,7 +21,6 @@
    [lipas.ui.search.views :as search]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
-   #_[lipas.ui.sports-sites.football.views :as football]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -243,22 +241,92 @@
     [mui/icon {:color "inherit" :font-size "medium"}
      "my_location"]]])
 
-(defn type-selector-single [{:keys [tr value on-change types]}]
-  (r/with-let [selected-type (r/atom value)]
-    (let [locale (tr)]
+(defn helper-select-onclick [type-code geom-help-open?]
+  (reset! geom-help-open? false) 
+  (==> [::sports-site-events/select-new-site-type type-code]))
+
+
+(defn helper-row [{:keys [type geom description on-select]}]
+  )
+
+(defn filter-by-term [term table-data]
+  (let [lower-case-term (string/lower-case term)]
+    (filter #(or (string/includes? (string/lower-case (% :name)) lower-case-term)
+                 (string/includes? (string/lower-case (% :geometry-type)) lower-case-term)
+                 (string/includes? (string/lower-case (% :description)) lower-case-term)
+                 (string/includes? (string/lower-case (string/join (% :tags))) lower-case-term))
+            table-data)))
+
+(defn type-helper-table [{:keys [tr on-select]}]
+  (r/with-let [search-term (r/atom "")
+               table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
+    (let [filtered-table-data (filter-by-term @search-term table-data)
+          sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
-        [lui/autocomplete
-         {:multi?    false
-          ;;:show-all? true
-          :items     (vals types)
-          :value     @selected-type
-          :label     (tr :type/name)
-          :value-fn  :type-code
-          :label-fn  (comp locale :name)
-          :on-change #(reset! selected-type %)}]
+        [mui/text-field {:label (tr :search/search)
+                        :xs 3
+                        :on-change #(reset! search-term (-> % .-target .-value))
+                        :placeholder nil}]]
+       [mui/grid {:item true :xs 12}
+        [mui/table-container
+        [mui/table
+         [mui/table-head
+          [mui/table-row
+           [mui/table-cell (tr :type/name)]
+           [mui/table-cell (tr :type/geometry)]
+           [mui/table-cell (tr :general/description)]]]
+         (into
+          [mui/table-body {:component "th" :scope "row"}]
+          (for [row sorted-and-filtered-table-data]
+            [mui/table-row {:on-click #(on-select (row :type-code))}
+             [mui/table-cell (row :name)]
+             [mui/table-cell (->>  row :geometry-type (keyword :type) tr)]
+             [mui/table-cell (row :description)]]))]]]])))
+
+(defn type-selector-single [{:keys [tr value on-change types]}]
+  (r/with-let [selected-type (r/atom value)
+               geom-help-open? (r/atom false)]
+    (let [locale        (tr)]
+      [:<>
+       
+       ;; Modal 
+       [lui/dialog {:open? @geom-help-open?
+                    :cancel-label (tr :actions/close)
+                    :title (tr :type/name)
+                    :max-width "xl"
+                    :on-close #(swap! geom-help-open? not)}
+        
+        ;; Apu ankka table
+        [type-helper-table {:tr tr 
+                            :geom-help-open? geom-help-open? 
+                            :on-select (fn [element] 
+                                         (swap! geom-help-open? not)
+                                         (reset! selected-type element))}]] 
+       [mui/grid {:container true}
+
+        ;; Autocomplete
+        [mui/grid {:item true :xs 11}
+         [lui/autocomplete
+          {:multi?    false
+           :items     (vals types)
+           :value     @selected-type
+           :label     (tr :type/name)
+           :value-fn  :type-code
+           :label-fn  (comp locale :name)
+           :on-change #(reset! selected-type %)}]]
+
+        ;; Apu ankka button
+        [mui/grid {:item true :xs 1}
+         [mui/icon-button
+          {:xs 1
+           :type "button"
+           :on-click #(swap! geom-help-open? not)}
+          [mui/icon "help"]]]
+
+        ;; Description + OK button
         (when @selected-type
-          [mui/grid {:item true}
+          [mui/grid {:item true :xs 12}
            [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
            [mui/button {:on-click   #(on-change @selected-type)
@@ -423,9 +491,7 @@
              [mui/typography (tr :analysis/mode)]]
             [mui/table-cell
              (when (seq (:diversity-idx-mode data))
-               (string/join "," (:diversity-idx-mode data)))]]
-
-         ]]
+               (string/join "," (:diversity-idx-mode data)))]]]]
 
        ;; No data available
        [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
@@ -437,8 +503,7 @@
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
 (defn popup []
-  (let [{:keys [data anchor-el]
-         :or   {type :default}
+  (let [{:keys [data anchor-el] 
          :as   popup'} (<== [::subs/popup])
         tr             (<== [:lipas.ui.subs/translator])]
     (when anchor-el
@@ -470,7 +535,7 @@
           {:keys [types cities admins owners editing? edits-valid?
                   problems?  editing-allowed? delete-dialog-open?
                   can-publish? logged-in?  size-categories sub-mode
-                  geom-type portal save-in-progress? undo redo
+                  geom-type save-in-progress? undo redo
                   more-tools-menu-anchor dead?]}
           (<== [::subs/sports-site-view lipas-id type-code])
 
@@ -529,9 +594,9 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when (or (and (floorball-types type-code)
-                        (= :floorball floorball-visibility))
-                   #_(football-types type-code))
+         (when 
+          (and (floorball-types type-code)
+               (= :floorball floorball-visibility))
            [mui/tab
             {:style {:min-width 0}
              :value 3
@@ -835,7 +900,7 @@
               [mui/fab
                {:size     "small"
                 :on-click #(==> [::events/show-analysis lipas-id])}
-               [mui/icon "insights"]]])
+               [mui/icon "insights"]]])]
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -911,7 +976,7 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-           ]
+           
 
           (concat
            (lui/edit-actions-list
@@ -948,7 +1013,7 @@
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom "draw")]
-    (let [locale                                   (tr)
+    (let [locale               (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
@@ -997,12 +1062,13 @@
 
         ;; Step 1 type
         (when (= active-step (dec 1))
-          #_[mui/grid {:item true :xs 12}]
-          [type-selector-single
-           {:value     (when type [(:type-code type)])
-            :tr        tr
-            :types     types
-            :on-change #(==> [::sports-site-events/select-new-site-type %])}])
+          [mui/grid {:container true}
+           [mui/grid {:item true :xs 12}
+            [type-selector-single
+             {:value     (when type [(:type-code type)])
+              :tr        tr
+              :types     types
+              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]])
 
         ;; Step 2 geom
         (when (= active-step (dec 2))
@@ -1203,26 +1269,26 @@
                  [mui/grid {:item true}
                   [mui/grid {:item true}
 
-                ;; Undo & Redo
+                   ;; Undo & Redo
                    [mui/grid {:container true}
 
-                 ;; Undo
+                    ;; Undo
                     [mui/grid {:item true}
                      [mui/tooltip {:title "Undo"}
-                   [:span
-                    [mui/icon-button
-                     {:disabled (not undo)
-                      :on-click #(==> [::events/undo "new"])}
-                     [mui/icon "undo"]]]]]
+                      [:span
+                       [mui/icon-button
+                        {:disabled (not undo)
+                         :on-click #(==> [::events/undo "new"])}
+                        [mui/icon "undo"]]]]]
 
-                 ;; Redo
+                    ;; Redo
                     [mui/grid {:item true}
                      [mui/tooltip {:title "Redo"}
-                   [:span
-                    [mui/icon-button
-                     {:disabled (not redo)
-                      :on-click #(==> [::events/redo "new"])}
-                     [mui/icon "redo"]]]]]]]]]]
+                      [:span
+                       [mui/icon-button
+                        {:disabled (not redo)
+                         :on-click #(==> [::events/redo "new"])}
+                        [mui/icon "redo"]]]]]]]]]]
 
                ;; Retkikartta Problems
                (when (and (#{"LineString"} geom-type) problems?)
@@ -1358,8 +1424,7 @@
 
 (defn default-tools [{:keys [tr logged-in?]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        mode-name   (<== [::subs/mode-name])
-        admin?      (<== [:lipas.ui.user.subs/admin?])]
+        mode-name   (<== [::subs/mode-name])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background-color "transparent"}
@@ -1482,8 +1547,8 @@
 
        ;; Feedback btn
        #_[mui/grid {:item true}
-        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-         [feedback/feedback-btn]]]
+          [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+           [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
        [mui/grid {:item true}

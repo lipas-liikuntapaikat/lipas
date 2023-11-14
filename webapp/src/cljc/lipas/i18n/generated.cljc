@@ -241,7 +241,11 @@
     {:name          "Liikuntapaikkatyyppi",
      :main-category "Pääryhmä",
      :sub-category  "Alaryhmä",
-     :type-code     "Tyyppikoodi"},
+     :type-code     "Tyyppikoodi"
+     :geometry      "Geometria",
+     :Point         "Piste",
+     :LineString    "Reitti",
+     :Polygon       "Alue"},
     :duration
     {:hour        "tuntia",
      :month       "kuukautta",
