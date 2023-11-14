@@ -266,11 +266,13 @@
     (let [filtered-table-data (filter-by-term @search-term table-data)
           sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
       [mui/grid {:container true}
-       [mui/text-field {:label (tr :search/search)
+       [mui/grid {:item true :xs 12}
+        [mui/text-field {:label (tr :search/search)
                         :xs 3
                         :on-change #(reset! search-term (-> % .-target .-value))
-                        :placeholder nil}]
-       [mui/table-container
+                        :placeholder nil}]]
+       [mui/grid {:item true :xs 12}
+        [mui/table-container
         [mui/table
          [mui/table-head
           [mui/table-row
@@ -1058,7 +1060,7 @@
 
             [lui/dialog {:open? @geom-help-open?
                          :cancel-label (tr :actions/close)
-                         ;; :title (tr :type/name)
+                         :title (tr :type/name)
                          :max-width "xl"
                          :on-close #(swap! geom-help-open? not)}
              [mui/grid {:container true
