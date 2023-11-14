@@ -283,11 +283,11 @@
           [mui/table-body {:component "th" :scope "row"}]
           (for [row sorted-and-filtered-table-data]
             [helper-row
-             [row :type-code]
-             [row :name]
-             [row :geometry-type]
-             [row :description]
-             geom-help-open?]))]]])))
+             (row :type-code)
+             (row :name)
+             (->>  row :geometry-type (keyword :type) tr) 
+             (row :description)
+             geom-help-open?]))]]]])))
 
 (defn type-selector-single [{:keys [tr on-change types]}] 
     (let [locale        (tr)
