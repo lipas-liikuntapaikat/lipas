@@ -246,11 +246,8 @@
   (==> [::sports-site-events/select-new-site-type type-code]))
 
 
-(defn helper-row [type-code type geom description geom-help-open?]
-  [mui/table-row {:on-click #(helper-select-onclick type-code geom-help-open?)}
-   [mui/table-cell type]
-   [mui/table-cell geom]
-   [mui/table-cell description]])
+(defn helper-row [{:keys [type geom description on-select]}]
+  )
 
 (defn filter-by-term [term table-data]
   (let [lower-case-term (string/lower-case term)]
@@ -260,7 +257,7 @@
                  (string/includes? (string/lower-case (string/join (% :tags))) lower-case-term))
             table-data)))
 
-(defn type-helper-table [tr geom-help-open?]
+(defn type-helper-table [{:keys [tr on-select]}]
   (r/with-let [search-term (r/atom "")
                table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
     (let [filtered-table-data (filter-by-term @search-term table-data)
@@ -282,39 +279,61 @@
          (into
           [mui/table-body {:component "th" :scope "row"}]
           (for [row sorted-and-filtered-table-data]
-            [helper-row
-             (row :type-code)
-             (row :name)
-             (->>  row :geometry-type (keyword :type) tr) 
-             (row :description)
-             geom-help-open?]))]]]])))
+            [mui/table-row {:on-click #(on-select (row :type-code))}
+             [mui/table-cell (row :name)]
+             [mui/table-cell (->>  row :geometry-type (keyword :type) tr)]
+             [mui/table-cell (row :description)]]))]]]])))
 
-(defn type-selector-single [{:keys [tr on-change types]}] 
-    (let [locale        (tr)
-          new-site-code (-> (<== [:lipas.ui.sports-sites.subs/new-sports-site])
-                            :type
-                            first
-                            :type-code)]
-      [mui/grid {:container true}
-       [mui/grid {:item true :xs 12}
-        [lui/autocomplete
-         {:multi?    false
-          ;;:show-all? true
-          :items     (vals types)
-          :value     new-site-code
-          :label     (tr :type/name)
-          :value-fn  :type-code
-          :label-fn  (comp locale :name)
-          :on-change on-change}]
-        (when new-site-code
-          [mui/grid {:item true}
+(defn type-selector-single [{:keys [tr value on-change types]}]
+  (r/with-let [selected-type (r/atom value)
+               geom-help-open? (r/atom false)]
+    (let [locale        (tr)]
+      [:<>
+       
+       ;; Modal 
+       [lui/dialog {:open? @geom-help-open?
+                    :cancel-label (tr :actions/close)
+                    :title (tr :type/name)
+                    :max-width "xl"
+                    :on-close #(swap! geom-help-open? not)}
+        
+        ;; Apu ankka table
+        [type-helper-table {:tr tr 
+                            :geom-help-open? geom-help-open? 
+                            :on-select (fn [element] 
+                                         (swap! geom-help-open? not)
+                                         (reset! selected-type element))}]] 
+       [mui/grid {:container true}
+
+        ;; Autocomplete
+        [mui/grid {:item true :xs 11}
+         [lui/autocomplete
+          {:multi?    false
+           :items     (vals types)
+           :value     @selected-type
+           :label     (tr :type/name)
+           :value-fn  :type-code
+           :label-fn  (comp locale :name)
+           :on-change #(reset! selected-type %)}]]
+
+        ;; Apu ankka button
+        [mui/grid {:item true :xs 1}
+         [mui/icon-button
+          {:xs 1
+           :type "button"
+           :on-click #(swap! geom-help-open? not)}
+          [mui/icon "help"]]]
+
+        ;; Description + OK button
+        (when @selected-type
+          [mui/grid {:item true :xs 12}
            [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
-            (get-in types [new-site-code :description locale])]
-           [mui/button {:on-click   #(on-change new-site-code)
+            (get-in types [@selected-type :description locale])]
+           [mui/button {:on-click   #(on-change @selected-type)
                         :auto-focus true
                         :variant    "contained"
                         :color      "secondary"}
-            "OK"]])]]))
+            "OK"]])]])))
 
 (defmulti popup-body :type)
 
@@ -993,8 +1012,7 @@
 (defn add-sports-site-view
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
-               geom-tab     (r/atom "draw")
-               geom-help-open? (r/atom false)]
+               geom-tab     (r/atom "draw")]
     (let [locale               (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
@@ -1045,28 +1063,12 @@
         ;; Step 1 type
         (when (= active-step (dec 1))
           [mui/grid {:container true}
-           [mui/grid {:item true :xs :true}
+           [mui/grid {:item true :xs 12}
             [type-selector-single
              {:value     (when type [(:type-code type)])
               :tr        tr
               :types     types
-              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]
-           [mui/grid {:item true :xs 1}
-            [mui/icon-button
-             {:xs 1
-              :type "button"
-              :on-click #(swap! geom-help-open? not)}
-             [mui/icon "help"]]
-
-            [lui/dialog {:open? @geom-help-open?
-                         :cancel-label (tr :actions/close)
-                         :title (tr :type/name)
-                         :max-width "xl"
-                         :on-close #(swap! geom-help-open? not)}
-             [mui/grid {:container true
-                        :fixed true
-                        :direction "column"} 
-              [type-helper-table tr geom-help-open?]]]]])
+              :on-change #(==> [::sports-site-events/select-new-site-type %])}]]])
 
         ;; Step 2 geom
         (when (= active-step (dec 2))
