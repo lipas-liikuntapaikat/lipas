@@ -6,7 +6,7 @@
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    [clojure.spec.alpha :as s]
-   [clojure.string :as string :refer [includes? lower-case join]]
+   [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
@@ -253,11 +253,11 @@
    [mui/table-cell description]])
 
 (defn filter-by-term [term table-data]
-  (let [lower-case-term (lower-case term)]
-    (filter #(or (includes? (lower-case (% :name)) lower-case-term)
-                 (includes? (lower-case (% :geometry-type)) lower-case-term)
-                 (includes? (lower-case (% :description)) lower-case-term)
-                 (includes? (lower-case (join (% :tags))) lower-case-term))
+  (let [lower-case-term (string/lower-case term)]
+    (filter #(or (string/includes? (string/lower-case (% :name)) lower-case-term)
+                 (string/includes? (string/lower-case (% :geometry-type)) lower-case-term)
+                 (string/includes? (string/lower-case (% :description)) lower-case-term)
+                 (string/includes? (string/lower-case (string/join (% :tags))) lower-case-term))
             table-data)))
 
 (defn type-helper-table [tr geom-help-open?]
