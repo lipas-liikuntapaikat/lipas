@@ -1,4 +1,5 @@
 (ns lipas.backend.db.db
+  {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
@@ -299,6 +300,10 @@
   (email/delete-from-out-queue! db-spec params))
 
 ;; Loi's ;;
+
+(defn get-lois [db]
+  (->> (loi/get-latest db)
+       (map loi/unmarshall)))
 
 (defn get-lois-by-type
   [db {:keys [loi-type]}]
