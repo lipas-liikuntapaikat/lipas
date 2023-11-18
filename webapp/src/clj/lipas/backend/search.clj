@@ -64,12 +64,23 @@
 
 (defn bulk-index!
   ([client data]
-   (let [{:keys [input-ch output-ch]}
-         (es/bulk-chan client {:flush-threshold         100
-                               :flush-interval          5000
-                               :max-concurrent-requests 3})]
-     (async/put! input-ch data)
-     (future (loop [] (async/<!! output-ch))))))
+   ;; Return a future to keep consistent with previous impl
+   (future
+     (let [{:keys [input-ch output-ch]}
+           (es/bulk-chan client {:flush-threshold         100
+                                 :flush-interval          5000
+                                 :max-concurrent-requests 3})]
+
+       (async/put! input-ch data)
+       (async/close! input-ch)
+
+       (when-let [[_job resp] (async/<!! output-ch)]
+         (async/close! output-ch)
+         (->> resp
+              :body
+              :items
+              (map (comp :result second first))
+              frequencies))))))
 
 (defn current-idxs
   "Returns a coll containing current index(es) pointing to alias."

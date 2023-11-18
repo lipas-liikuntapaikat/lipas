@@ -21,12 +21,22 @@
 (defn- wait-all [futures]
   (log/info "Waiting for indexing requests to get processed...")
   (doseq [f futures]
-    (deref f)))
+    (log/info (deref f))))
+
+(defn- wait-one
+  [future]
+  (log/info "Waiting for indexing request to get processed...")
+  (doto (deref future)
+    (log/info)))
+
+(defn- print-results
+  [coll]
+  (log/info "Total indexing results:" (apply merge-with + coll)))
 
 (defn index-search!
   ([db client idx-name types]
    (index-search! db client idx-name types []))
-  ([db client idx-name types futures]
+  ([db client idx-name types results]
    (let [type-code (first types)]
      (log/info "Starting to re-index type" type-code)
      (if type-code
@@ -35,9 +45,10 @@
             (map core/enrich)
             (search/->bulk idx-name :lipas-id)
             (search/bulk-index! client)
-            (conj futures)
+            (wait-one)
+            (conj results)
             (recur db client idx-name (rest types)))
-       (wait-all futures)))))
+       (print-results results)))))
 
 (defn enrich-for-analytics
   [users {:keys [id document author_id status created_at]}]
