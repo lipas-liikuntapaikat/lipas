@@ -67,7 +67,7 @@
 (defn index-analytics!
   ([db client idx-name types users]
    (index-analytics! db client idx-name types users []))
-  ([db client idx-name types users futures]
+  ([db client idx-name types users results]
    (let [type-code  (first types)
          query-opts {:raw? true :revs "all"}]
      (log/info "Starting to re-index type" type-code)
@@ -76,9 +76,10 @@
             (map (partial enrich-for-analytics users))
             (search/->bulk idx-name :id)
             (search/bulk-index! client)
-            (conj futures)
+            (wait-one)
+            (conj results)
             (recur db client idx-name (rest types) users))
-       (wait-all futures)))))
+       (print-results results)))))
 
 (defn index-analytics2!
   [db client idx-name types users]
