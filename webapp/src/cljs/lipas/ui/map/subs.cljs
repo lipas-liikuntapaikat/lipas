@@ -162,12 +162,16 @@
  :<- [::mode*]
  :<- [:lipas.ui.analysis.reachability.subs/reachability]
  :<- [:lipas.ui.analysis.diversity.subs/diversity]
- (fn [[content-padding mode reachability diversity] _]
-   (let [analysis? (= (:name mode) :analysis)]
+ :<- [::simplify]
+ (fn [[content-padding mode reachability diversity simplify] _]
+   (let [analysis?  (= (:name mode) :analysis)
+         simplifty? (and (= (:name mode) :editing)
+                         (= (:sub-mode mode) :simplifying))]
      (cond-> mode
-       true      (assoc :content-padding content-padding)
-       analysis? (assoc :analysis {:reachability reachability
-                                   :diversity    diversity})))))
+       true       (assoc :content-padding content-padding)
+       analysis?  (assoc :analysis {:reachability reachability
+                                    :diversity    diversity})
+       simplifty? (assoc :simplify simplify)))))
 
 (re-frame/reg-sub
  ::editing-lipas-id
@@ -258,6 +262,27 @@
  ::replace-existing-geoms?
  (fn [db _]
    (-> db :map :import :replace-existing?)))
+
+;;; Simplify geoms ;;;
+
+(re-frame/reg-sub
+ ::simplify
+ (fn [db _]
+   (-> db :map :simplify)))
+
+(re-frame/reg-sub
+ ::simplify-dialog-open?
+ :<- [::simplify]
+ (fn [simplify _]
+   (:dialog-open? simplify)))
+
+(re-frame/reg-sub
+ ::simplify-tolerance
+ :<- [::simplify]
+ (fn [simplify _]
+   (:tolerance simplify)))
+
+;;; Address search ;;;
 
 (re-frame/reg-sub
  ::address-search-dialog-open?

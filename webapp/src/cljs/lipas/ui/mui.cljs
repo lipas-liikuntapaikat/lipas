@@ -44,6 +44,7 @@
    ["@material-ui/core/Popper$default" :as Popper]
    ["@material-ui/core/Select$default" :as Select]
    ["@material-ui/core/Slide$default" :as Slide]
+   ["@material-ui/core/Slider$default" :as Slider]
    ["@material-ui/core/Snackbar$default" :as Snackbar]
    ["@material-ui/core/SnackbarContent$default" :as SnackbarContent]
    ["@material-ui/core/Step$default" :as Step]
@@ -242,6 +243,7 @@
 #_(def radio-group (r/adapt-react-class RadioGroup))
 (def select (r/adapt-react-class Select))
 (def slide (r/adapt-react-class Slide))
+(def slider (r/adapt-react-class Slider))
 (def snackbar (r/adapt-react-class Snackbar))
 (def snackbar-content (r/adapt-react-class SnackbarContent))
 (def step (r/adapt-react-class Step))
