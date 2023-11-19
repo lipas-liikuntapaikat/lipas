@@ -13,6 +13,7 @@
    ["@turf/line-split$default" :as turf-line-split]
    ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
    ["@turf/truncate$default" :as turf-truncate]
+   ["@turf/simplify$default" :as turf-simplify]
    ["ol/Feature$default" :as Feature]
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
@@ -117,6 +118,16 @@
       ->wkt
       )
   )
+
+(defn simplify-scale [n]
+  (* 0.00001 n))
+
+(defn simplify
+  [fcoll tolerance]
+  (-> fcoll
+      clj->js
+      (turf-simplify #js{:mutate true :tolerance tolerance :highQuality true})
+      (->clj)))
 
 (defn geom-coll->features [geom-coll]
   (->> geom-coll
@@ -502,7 +513,7 @@
   (-> fcoll
       clj->js
       turf-area ;; returns square meters
-      (convertArea "meters" "kilometers") 
+      (convertArea "meters" "kilometers")
       (utils/round-safe 2)
       read-string))
 

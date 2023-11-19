@@ -188,6 +188,24 @@
     (==> [:lipas.ui.map.events/continue-editing])
     (map-utils/fit-to-extent! map-ctx (.getExtent source))))
 
+(defn simplify-edits!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id geoms simplify]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        tolerance (map-utils/simplify-scale (:tolerance simplify))
+        geoms     (map-utils/simplify geoms tolerance)
+        features  (-> geoms clj->js map-utils/->ol-features)]
+
+    ;; Remove existing features
+    (doseq [f (.getFeatures source)]
+      (.removeFeature source f))
+
+    ;; Add geoms from props
+    (.addFeatures source features)
+
+    map-ctx))
+
 ;; Adding new feature collection ;;
 
 (defn set-adding-mode!
@@ -248,8 +266,9 @@
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
-  mode} continue?]
+  ([map-ctx
+    {:keys [lipas-id geoms geom-type sub-mode problems] :as mode}
+    continue?]
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
@@ -279,13 +298,25 @@
        :splitting    (-> map-ctx
                          (enable-splitting! on-modifyend))
        :undo         (undo-edits! map-ctx mode)
-       :importing    (refresh-edits! map-ctx mode)))))
+       :importing    (refresh-edits! map-ctx mode)
+       :simplifying  (simplify-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx {:keys [problems] :as mode}]
   (let [old-mode (:mode map-ctx)
         map-ctx  (-> map-ctx
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
-    (if (= (:sub-mode mode) (:sub-mode old-mode))
-      map-ctx ;; Noop
+    (cond
+      (= :simplifying (:sub-mode mode))
+      (simplify-edits! map-ctx mode)
+
+      (= :simplifying (:sub-mode old-mode))
+      (-> map-ctx
+          (refresh-edits! mode)
+          (set-editing-mode! mode :continue))
+
+      (= (:sub-mode mode) (:sub-mode old-mode))
+      map-ctx
+
+      :else
       (set-editing-mode! map-ctx mode :continue))))

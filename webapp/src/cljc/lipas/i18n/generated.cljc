@@ -321,7 +321,8 @@
      :edit-tool            "Muokkaustyökalu",
      :importing-tooltip    "Tuontityökalu valittu",
      :deleting-tooltip     "Poistotyökalu valittu",
-     :splitting-tooltip    "Katkaisutyökalu valittu"},
+     :splitting-tooltip    "Katkaisutyökalu valittu"
+     :simplify             "Yksinkertaista"},
     :partners           {:headline "Kehittä​misessä mukana"},
     :actions
     {:duplicate                "Kopioi",
@@ -1978,7 +1979,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :edit-tool            "Edit tool",
      :importing-tooltip    "Import tool selected",
      :deleting-tooltip     "Delete tool selected",
-     :splitting-tooltip    "Split tool selected"},
+     :splitting-tooltip    "Split tool selected"
+     :simplify             "Simplify"},
     :partners         {:headline "In association with"},
     :actions
     {:duplicate                "Duplicate",

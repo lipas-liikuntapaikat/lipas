@@ -154,6 +154,65 @@
       [mui/button {:on-click on-import :disabled (empty? selected)}
        (tr :map.import/import-selected)]]]))
 
+(defn simplify-tool
+  [{:keys [lipas-id geoms tr]}]
+  (let [open?     (<== [::subs/simplify-dialog-open?])
+        tolerance (<== [::subs/simplify-tolerance])]
+
+    [mui/slide {:direction "up" :in open?}
+     [lui/floating-container {:bottom 12 :left 550}
+      [mui/paper {:style {:padding "1em"} :elevation 5}
+       [mui/grid {:container true}
+
+        ;; Header
+        [mui/grid {:item true :xs 12}
+         [:h4 "Yksinkertaista geometrioita"]]
+
+        ;; Slider
+        [mui/grid {:item true :xs 12}
+
+         [mui/grid {:container true :spacing 2}
+
+          ;; Less
+          [mui/grid {:item true}
+           [mui/typography "Vähemmän"]
+           #_[mui/icon "remove"]]
+
+          ;; The Slider
+          [mui/grid {:item true :xs true}
+           [mui/slider
+            {:on-change #(==> [::events/set-simplify-tolerance %2])
+             :value     tolerance
+             :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
+             :step      0.5
+             :min       0
+             :max       10}]]
+
+          ;; More
+          [mui/grid {:item true}
+           [mui/typography "Enemmän"]
+           #_[mui/icon "add"]]]]
+
+        ;; Buttons
+        [mui/grid {:item true :xs 12}
+         [mui/grid {:container true :spacing 1}
+
+          ;; OK
+          [mui/grid {:item true}
+           [mui/button
+            {:variant  "contained"
+             :color    "secondary"
+             :on-click #(==> [::events/simplify lipas-id geoms tolerance])}
+            "OK"]]
+
+          ;; Cancel
+          [mui/grid {:item true}
+           [mui/button
+            {:variant  "contained"
+             :color    "default"
+             :on-click #(==> [::events/close-simplify-tool])}
+            (tr :actions/cancel)]]]]]]]]))
+
 (defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
                   :maastokartta (tr :map.basemap/maastokartta)
@@ -242,7 +301,7 @@
      "my_location"]]])
 
 (defn helper-select-onclick [type-code geom-help-open?]
-  (reset! geom-help-open? false) 
+  (reset! geom-help-open? false)
   (==> [::sports-site-events/select-new-site-type type-code]))
 
 
@@ -289,20 +348,20 @@
                geom-help-open? (r/atom false)]
     (let [locale        (tr)]
       [:<>
-       
-       ;; Modal 
+
+       ;; Modal
        [lui/dialog {:open? @geom-help-open?
                     :cancel-label (tr :actions/close)
                     :title (tr :type/name)
                     :max-width "xl"
                     :on-close #(swap! geom-help-open? not)}
-        
+
         ;; Apu ankka table
-        [type-helper-table {:tr tr 
-                            :geom-help-open? geom-help-open? 
-                            :on-select (fn [element] 
+        [type-helper-table {:tr tr
+                            :geom-help-open? geom-help-open?
+                            :on-select (fn [element]
                                          (swap! geom-help-open? not)
-                                         (reset! selected-type element))}]] 
+                                         (reset! selected-type element))}]]
        [mui/grid {:container true}
 
         ;; Autocomplete
@@ -503,7 +562,7 @@
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
 (defn popup []
-  (let [{:keys [data anchor-el] 
+  (let [{:keys [data anchor-el]
          :as   popup'} (<== [::subs/popup])
         tr             (<== [:lipas.ui.subs/translator])]
     (when anchor-el
@@ -550,6 +609,12 @@
           {:geom-type geom-type
            :on-import #(==> [::events/import-selected-geoms])}])
 
+       (when editing?
+         [simplify-tool
+          {:lipas-id lipas-id
+           :geoms    (-> edit-data :location :geometries)
+           :tr       tr}])
+
        [mui/grid {:item true :xs 12}
 
         ;; Headline
@@ -594,7 +659,7 @@
              :value 2
              :label "Esteettömyys"}])
 
-         (when 
+         (when
           (and (floorball-types type-code)
                (= :floorball floorball-visibility))
            [mui/tab
@@ -737,7 +802,8 @@
                  (:editing :undo) (tr :map/delete-vertices-hint)
                  :importing       "Tuontityökalu valittu"
                  :deleting        "Poistotyökalu valittu"
-                 :splitting       "Katkaisutyökalu valittu")}
+                 :splitting       "Katkaisutyökalu valittu"
+                 :simplifying     "Yksinkertaistustyökalu valittu")}
               [mui/fab
                {:size     "small"
                 :on-click #() ; noop
@@ -752,7 +818,8 @@
                    (:editing :undo) [mui/icon props "edit"]
                    :importing       [:> FileUpload props]
                    :deleting        [:> Eraser props]
-                   :splitting       [:> ContentCut props]))]])
+                   :splitting       [:> ContentCut props]
+                   :simplifying     [mui/icon props "auto_fix_high"]))]])
 
            ;; Tool select button
            (when (and editing? (#{"LineString" "Polygon"} geom-type))
@@ -779,6 +846,15 @@
                   [mui/list-item-icon
                    [:> FileUpload]]
                   [mui/list-item-text (tr :map.import/tooltip)]])
+
+               ;; Simplify
+               (when (and editing? (#{"LineString" "Polygon"} geom-type))
+                 [mui/menu-item {:on-click #(do
+                                              (==> [::events/close-more-tools-menu])
+                                              (==> [::events/open-simplify-tool]))}
+                  [mui/list-item-icon
+                   [mui/icon "auto_fix_high"]]
+                  [mui/list-item-text (tr :map.tools/simplify)]])
 
                ;; Draw hole
                (when (and editing? (#{"Polygon"} geom-type))
@@ -976,7 +1052,7 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-           
+
 
           (concat
            (lui/edit-actions-list
