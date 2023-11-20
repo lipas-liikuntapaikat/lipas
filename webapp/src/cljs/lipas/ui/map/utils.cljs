@@ -119,7 +119,16 @@
       )
   )
 
-(defn simplify-scale [n]
+(defn simplify-scale
+  "Scales given (natural) number to a usable simplification tolerance in
+  degrees. The scale was found via experimentation.
+
+  The tolerance is used as the Hausdorff distance parameter for
+  Reimer-Douglas-Peucker simplification algorithm, where the tolerance
+  is the maximum distance between the original and simplified curves.
+
+  0.00001 degrees is between 4-6 meters in Finland's latitude."
+  [n]
   (* 0.00001 n))
 
 (defn simplify
