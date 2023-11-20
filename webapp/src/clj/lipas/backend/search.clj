@@ -49,14 +49,12 @@
   [client index-name]
   (let [resp (es/request client {:method :head
                                  :url    (es-utils/url [index-name])
-                                 :exception-handler
-                                 (fn [e]
-                                   (if (-> e
-                                           (.getCause)
-                                           (.toString)
-                                           (str/ends-with? "[HTTP/1.1 404 Not Found]"))
-                                     {:status 404}
-                                     (throw e)))})]
+                                 :exception-handler (fn [e]
+                                                      (if (= 404 (-> e                                                                                                 (.getResponse)
+                                                                     (.getStatusLine)
+                                                                     (.getStatusCode)))
+                                                        {:status 404}
+                                                        (throw e)))})]
     (= 200 (:status resp))))
 
 (defn create-index!
