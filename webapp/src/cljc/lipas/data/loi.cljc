@@ -328,7 +328,8 @@
         (for [[cat-k cat-v] categories
               [_type-k type-v] (:types cat-v)]
           (into
-           [:map {:title (str cat-k " > " (:value type-v))}
+           [:map {:description (str cat-k " > " (:value type-v))
+                  :title (-> type-v :label :fi)}
             [:id [:string]]
             [:event-date [:string]]
             [:created-at [:string]]
@@ -338,7 +339,6 @@
             [:loi-type [:enum (:value type-v)]]]
            (for [[prop-k prop-v] (:props type-v)]
              [prop-k {:optional true} (:schema prop-v)])))))
-
 
 (defn gen-json-schema
   []
