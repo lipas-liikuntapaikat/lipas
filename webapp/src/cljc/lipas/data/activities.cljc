@@ -225,7 +225,8 @@
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                 [:route-marking {:optional true} localized-string-schema]
                 [:accessibility-classification
-                 (into [:enum] (keys outdoor-recreation-routes-accessibility-classification))]])]
+                 (into [:enum] (keys outdoor-recreation-routes-accessibility-classification))]
+                [:latest-updates {:optional true} localized-string-schema]])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
@@ -295,7 +296,14 @@
         {:field
          {:type        "text-field"
           :description {:fi "Reittimerkkien symboli ja väri"}
-          :label       {:fi "Reittimerkintä"}}}})}}}})
+          :label       {:fi "Reittimerkintä"}}}
+
+        :latest-updates
+        {:schema localized-string-schema
+         :field
+         {:type        "textarea"
+          :description {:fi "Tähän joku seliteteksti"}
+          :label       {:fi "Ajankohtaista"}}}})}}}})
 
 (def outdoor-recreation-routes-schema
   (collect-schema (:props outdoor-recreation-routes)))
