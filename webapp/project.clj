@@ -14,7 +14,7 @@
    [org.clojure/clojurescript "1.11.60"]
    [reagent "1.1.1"]
    [re-frame "1.3.0"]
-   [tongue "0.2.6"]
+   [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.1.6"]
 
    ;;; Backend ;;;
