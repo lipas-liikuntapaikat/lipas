@@ -2,11 +2,11 @@
   (:require
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
-   [clojure.string :as str]
    [clojure.walk :as walk]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
+   [lipas.backend.db.db :as db]
    [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
@@ -33,7 +33,11 @@
   [coll]
   (log/info "Total indexing results:" (apply merge-with + coll)))
 
-(defn index-search!
+(defn index-search-lois! [db client]
+  (->> (db/get-lois db)
+       (mapv #(search/index! client "lois" :id %))))
+
+(defn index-search-sports-sites!
   ([db client idx-name types]
    (index-search! db client idx-name types []))
   ([db client idx-name types results]
@@ -153,7 +157,7 @@
         (log/info "Starting to index data...")
 
         (case mode
-          "search"    (index-search! db client idx-name types)
+          "search"    (index-search-sports-sites! db client idx-name types)
           "analytics" (let [users (get-users db)]
                         (index-analytics2! db client idx-name types users))          )
 
