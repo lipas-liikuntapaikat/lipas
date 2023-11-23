@@ -177,7 +177,7 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-type (-> parameters :path :loi-type)
-                 query {:size 10000 :query {:match {:loi-type loi-type}}}]
+                 query {:size 10000 :query {:term {:loi-type loi-type}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
 
