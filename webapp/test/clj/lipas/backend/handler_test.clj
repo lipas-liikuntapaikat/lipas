@@ -122,7 +122,7 @@
   (let [client   (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
                   (-> search :indices :analysis :diversity) diversity/mappings
-                  (-> search :indices :lois :search) {:mappings {}}}]
+                  (-> search :indices :lois :search) (:lois search/mappings)}]
     
     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
       (try
