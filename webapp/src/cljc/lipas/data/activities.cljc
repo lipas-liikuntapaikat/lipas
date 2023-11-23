@@ -556,7 +556,7 @@
        :label       {:fi "Luonne"}}}
 
      :season
-     {:schema [:sequential (into [:enum] (keys birdwatching-types))]
+     {:schema [:sequential (into [:enum] (keys birdwatching-seasons))]
       :field
       {:type        "multi-select"
        :description {:fi "Kevät, Kesä, Syksy, Talvi"}
