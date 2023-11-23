@@ -175,9 +175,9 @@
          {:path  {:loi-type :lipas.loi/loi-type}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
-         (fn [{:keys [parameters]}] 
+         (fn [{:keys [parameters]}]
            (let [loi-type (-> parameters :path :loi-type)
-                 query {:size 10000 :query {:match {:loi-type loi-type}}}]
+                 query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
 

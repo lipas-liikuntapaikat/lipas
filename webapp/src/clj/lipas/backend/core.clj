@@ -733,7 +733,7 @@
 
 (defn search-lois
   [{:keys [indices client]} params]
-  (let [idx-name (get-in indices [:lois :search])] 
+  (let [idx-name (get-in indices [:lois :search])]
     (-> (search/search client idx-name params)
         :body
         :hits
@@ -745,7 +745,7 @@
   (assoc-in loi [:search-meta :geometries] (feature-coll->geom-coll geometries)))
 
 (defn index-loi!
-  ([search loi] 
+  ([search loi]
    (index-loi! search loi false))
   ([{:keys [indices client]} loi sync?]
    (let [idx-name (get-in indices [:lois :search])
