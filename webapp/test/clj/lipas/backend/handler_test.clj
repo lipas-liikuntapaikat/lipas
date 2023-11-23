@@ -168,14 +168,14 @@
   (let [loi-type "fishing-pier"
         loi-category "outdoor-recreation-facilities"
         loi  (-> (gen-loi!)
-                 (assoc :id "42b8f332-8390-417c-b415-e86e150c6e8c")
+                 (assoc :id "42b8f332-8390-417c-b415-e86e150c6e80")
                  (assoc :loi-type loi-type)
                  (assoc :loi-category loi-category)) 
-        _    (core/index-loi! search loi true) 
-        resp (app (-> (mock/request :get (str "/api/lois/type/" loi-type))
+        _    (core/index-loi! search loi :sync) 
+        resp (app (-> (mock/request :get (str "/api/lois/type/" "fishing-pier"))
                       (mock/content-type "application/json")))
-        response-loi-type (:loi-type (first (<-json (:body resp))))]
-    (is (= loi-type response-loi-type))))
+        response-loi (first (<-json (:body resp)))] 
+    (is (= loi-type (:loi-type response-loi)))))
 
 (deftest search-loi-by-invalid-type
   (let [bad-request-response (app (-> (mock/request :get (str "/api/lois/type/kekkosen-ulkoilu"))
