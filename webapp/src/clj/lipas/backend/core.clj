@@ -799,7 +799,7 @@
 
 (defn index-loi!
   ([search loi]
-   (index! search loi false))
+   (index-loi! search loi false))
   ([{:keys [indices client]} loi sync?]
    (let [idx-name (get-in indices [:lois :search])
          loi      (enrich-loi loi)]

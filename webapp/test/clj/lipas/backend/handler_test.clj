@@ -69,7 +69,8 @@
                 (update-in [:search :indices :analysis :schools] test-suffix)
                 (update-in [:search :indices :analysis :population] test-suffix)
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
-                (update-in [:search :indices :analysis :diversity] test-suffix)))
+                (update-in [:search :indices :analysis :diversity] test-suffix)
+                (update-in [:search :indices :lois :search] test-suffix)))
 
 (defn init-db! []
   (let [migratus-opts {:store         :database
@@ -120,7 +121,9 @@
 (defn prune-es! []
   (let [client   (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                  (-> search :indices :analysis :diversity) diversity/mappings}]
+                  (-> search :indices :analysis :diversity) diversity/mappings
+                  (-> search :indices :lois :search) (:lois search/mappings)}]
+    
     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
       (try
         (search/delete-index! client idx-name)
@@ -152,12 +155,34 @@
          (assoc user :id (:id (core/get-user db (:email user)))))
        user))))
 
+(defn gen-loi! []
+  (assoc (gen/generate (s/gen :lipas.loi/document)) :status "active"))
+
 ;;; Fixtures ;;;
 
 (use-fixtures :once (fn [f] (init-db!) (f)))
 (use-fixtures :each (fn [f] (prune-db!) (prune-es!) (f)))
 
 ;;; The tests ;;;
+(deftest search-loi-by-type
+  (let [loi-type "fishing-pier"
+        loi-category "outdoor-recreation-facilities"
+        loi  (-> (gen-loi!)
+                 (assoc :id "42b8f332-8390-417c-b415-e86e150c6e80")
+                 (assoc :loi-type loi-type)
+                 (assoc :loi-category loi-category)) 
+        _    (core/index-loi! search loi :sync) 
+        resp (app (-> (mock/request :get (str "/api/lois/type/" "fishing-pier"))
+                      (mock/content-type "application/json")))
+        response-loi (first (<-json (:body resp)))] 
+    (is (= loi-type (:loi-type response-loi)))))
+
+(deftest search-loi-by-invalid-type
+  (let [bad-request-response (app (-> (mock/request :get (str "/api/lois/type/kekkosen-ulkoilu"))
+                                      (mock/content-type "application/json")))]
+    ;; can we test that the exception is thrown? 
+    ;; we'd like to clean the output, now it floods it with an error message
+    (is (= 400 (:status bad-request-response)))))
 
 (deftest register-user-test
   (let [user (gen-user)
