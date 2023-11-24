@@ -735,6 +735,8 @@
    "Ominaisuus kuvaus se"
    "Ominaisuus kuvaus en"])
 
+(declare gen-csv)
+
 #?(:clj
    (defn gen-csv
      []
