@@ -156,7 +156,9 @@
        user))))
 
 (defn gen-loi! []
-  (assoc (gen/generate (s/gen :lipas.loi/document)) :status "active"))
+  (-> (gen/generate (s/gen :lipas.loi/document))
+      (assoc :status "active")
+      (assoc :id (java.util.UUID/randomUUID))))
 
 ;;; Fixtures ;;;
 
@@ -183,6 +185,25 @@
     ;; can we test that the exception is thrown? 
     ;; we'd like to clean the output, now it floods it with an error message
     (is (= 400 (:status bad-request-response)))))
+
+(deftest search-loi-by-category
+  (let [loi-category "outdoor-recreation-facilities"
+        loi  (-> (gen-loi!)
+                 (assoc :loi-category loi-category))
+        _    (core/index-loi! search loi :sync)
+        resp (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
+                      (mock/content-type "application/json")))
+        response-loi (first (<-json (:body resp)))]
+    (is (= loi-category (:loi-category response-loi)))))
+
+(deftest search-loi-by-invalid-category
+  (let [loi-category "kekkonen-666-category"
+        loi  (-> (gen-loi!)
+                 (assoc :loi-category loi-category))
+        _    (core/index-loi! search loi :sync)
+        response (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
+                      (mock/content-type "application/json")))]
+    (is (= 400 (:status response)))))
 
 (deftest register-user-test
   (let [user (gen-user)
