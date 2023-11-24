@@ -162,10 +162,22 @@
          :responses {200 {:body (s/coll-of :lipas.loi/document)}}
          :parameters {}
          :handler
+         (fn []
+           (let [query {:size 10000 :query {:match_all {}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
+      
+      ["/lois/type/:loi-type"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:loi-type :lipas.loi/loi-type}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
          (fn [{:keys [parameters]}]
-           (let [locale    (or (-> parameters :query :lang keyword)
-                               :none)
-                 query {:size 10000 :query {:match_all {}}}]
+           (let [loi-type (-> parameters :path :loi-type)
+                 query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
 
