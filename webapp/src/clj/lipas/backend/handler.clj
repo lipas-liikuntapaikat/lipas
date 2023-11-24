@@ -193,7 +193,7 @@
            (let [loi-category (-> parameters :path :loi-category)
                  query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}] 
+              :body   (core/search-lois search query)}))}}]
       
       ["/users"
        {:get

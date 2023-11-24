@@ -1,29 +1,28 @@
 (ns lipas.backend.handler-test
-  (:require
-   [cheshire.core :as j]
-   [clojure.java.jdbc :as jdbc]
-   [clojure.spec.alpha :as s]
-   [clojure.spec.gen.alpha :as gen]
-   [clojure.string :as str]
-   [clojure.test :refer [deftest is use-fixtures] :as t]
-   [cognitect.transit :as transit]
-   [dk.ative.docjure.spreadsheet :as excel]
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.email :as email]
-   [lipas.backend.jwt :as jwt]
-   [lipas.backend.search :as search]
-   [lipas.backend.system :as system]
-   [lipas.schema.core]
-   [lipas.seed :as seed]
-   [lipas.test-utils :as tu]
-   [lipas.utils :as utils]
-   [migratus.core :as migratus]
-   [ring.mock.request :as mock])
-  (:import
-   [java.io ByteArrayOutputStream]
-   java.util.Base64))
+  (:require [cheshire.core :as j]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is use-fixtures] :as t]
+            [cognitect.transit :as transit]
+            [dk.ative.docjure.spreadsheet :as excel]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.email :as email]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.search :as search]
+            [lipas.backend.system :as system]
+            [lipas.data.loi :as loi]
+            [lipas.schema.core]
+            [lipas.seed :as seed]
+            [lipas.test-utils :as tu]
+            [lipas.utils :as utils]
+            [migratus.core :as migratus]
+            [ring.mock.request :as mock])
+  (:import [java.io ByteArrayOutputStream]
+           java.util.Base64))
 
 ;;; Setup ;;;
 
@@ -166,11 +165,13 @@
 (use-fixtures :each (fn [f] (prune-db!) (prune-es!) (f)))
 
 ;;; The tests ;;;
+
+;;; Location of interests ;;;
+
 (deftest search-loi-by-type
   (let [loi-type "fishing-pier"
         loi-category "outdoor-recreation-facilities"
         loi  (-> (gen-loi!)
-                 (assoc :id "42b8f332-8390-417c-b415-e86e150c6e80")
                  (assoc :loi-type loi-type)
                  (assoc :loi-category loi-category)) 
         _    (core/index-loi! search loi :sync) 
