@@ -167,7 +167,7 @@
 
         ;; Header
         [mui/grid {:item true :xs 12}
-         [:h4 "Yksinkertaista geometrioita"]]
+         [:h4 (tr :map.tools.simplify/headline)]]
 
         ;; Slider
         [mui/grid {:item true :xs 12}
@@ -176,8 +176,7 @@
 
           ;; Less
           [mui/grid {:item true}
-           [mui/typography "Vähemmän"]
-           #_[mui/icon "remove"]]
+           [mui/typography (tr :general/less)]]
 
           ;; The Slider
           [mui/grid {:item true :xs true}
@@ -191,8 +190,7 @@
 
           ;; More
           [mui/grid {:item true}
-           [mui/typography "Enemmän"]
-           #_[mui/icon "add"]]]]
+           [mui/typography (tr :general/more)]]]]
 
         ;; Buttons
         [mui/grid {:item true :xs 12}
