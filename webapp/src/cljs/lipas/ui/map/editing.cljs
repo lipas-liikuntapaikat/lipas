@@ -218,16 +218,17 @@
         on-modify (fn [f] (==> [::events/update-new-geom f]))
         old-sm    (-> map-ctx :mode :sub-mode)]
     (case (:sub-mode mode)
-      :drawing   (start-drawing! map-ctx geom-type
+      :drawing     (start-drawing! map-ctx geom-type
                                  (fn [f] (==> [::events/new-geom-drawn f])))
-      :editing   (-> map-ctx
+      :editing     (-> map-ctx
                      (cond->
                          (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                      (start-editing! geoms on-modify))
-      :deleting  (enable-delete! map-ctx on-modify)
-      :splitting (enable-splitting! map-ctx on-modify)
-      :undo      (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
-      :finished  (map-utils/show-feature! map-ctx geoms))))
+      :deleting    (enable-delete! map-ctx on-modify)
+      :splitting   (enable-splitting! map-ctx on-modify)
+      :simplifying (simplify-edits! map-ctx mode)
+      :undo        (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
+      :finished    (map-utils/show-feature! map-ctx geoms))))
 
 (defn update-adding-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -235,9 +236,13 @@
         map-ctx  (-> map-ctx
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
-    (if (= (:sub-mode mode) (:sub-mode old-mode))
-      map-ctx ;; Noop
-      (set-adding-mode! map-ctx mode))))
+
+    (cond-> map-ctx
+      (not= (:sub-mode mode) (:sub-mode old-mode))
+      (set-adding-mode! mode)
+
+      (= :simplifying (:sub-mode mode))
+      (simplify-edits! mode))))
 
 ;; Editing existing feature collection ;;
 
