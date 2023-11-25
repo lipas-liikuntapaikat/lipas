@@ -100,7 +100,7 @@
                                   :geometries
                                   (update :features (fn [fs]
                                                       (filterv #(contains? fids (:id %)) fs)))
-                                  (map-utils/calculate-length))))))))
+                                  (map-utils/calculate-length-km))))))))
 
 (re-frame/reg-sub
  ::route-count
