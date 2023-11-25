@@ -531,11 +531,12 @@
 
 (defn calculate-length-km
   [fcoll]
-  (-> fcoll
-      clj->js
-      turf-length ;; returns kilometers
-      (utils/round-safe 2)
-      read-string))
+  (when (seq (:features fcoll))
+    (-> fcoll
+        clj->js
+        turf-length ;; returns kilometers
+        (utils/round-safe 2)
+        read-string)))
 
 (defn calculate-area-km2
   [fcoll]
