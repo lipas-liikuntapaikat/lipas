@@ -28,6 +28,7 @@
     "@turf/line-intersect": "^6.0.2",
     "@turf/line-split": "^6.5.0",
     "@turf/nearest-point-on-line": "^6.5.0",
+    "@turf/simplify": "^6.5.0",
     "@turf/truncate": "^6.5.0",
     "file-saver": "^2.0.2",
     "highlight.js": "^11.7.0",

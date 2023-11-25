@@ -188,6 +188,24 @@
     (==> [:lipas.ui.map.events/continue-editing])
     (map-utils/fit-to-extent! map-ctx (.getExtent source))))
 
+(defn simplify-edits!
+  [{:keys [layers] :as map-ctx}
+   {:keys [lipas-id geoms simplify]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        tolerance (map-utils/simplify-scale (:tolerance simplify))
+        geoms     (map-utils/simplify geoms tolerance)
+        features  (-> geoms clj->js map-utils/->ol-features)]
+
+    ;; Remove existing features
+    (doseq [f (.getFeatures source)]
+      (.removeFeature source f))
+
+    ;; Add geoms from props
+    (.addFeatures source features)
+
+    map-ctx))
+
 ;; Adding new feature collection ;;
 
 (defn set-adding-mode!
@@ -200,16 +218,17 @@
         on-modify (fn [f] (==> [::events/update-new-geom f]))
         old-sm    (-> map-ctx :mode :sub-mode)]
     (case (:sub-mode mode)
-      :drawing   (start-drawing! map-ctx geom-type
+      :drawing     (start-drawing! map-ctx geom-type
                                  (fn [f] (==> [::events/new-geom-drawn f])))
-      :editing   (-> map-ctx
+      :editing     (-> map-ctx
                      (cond->
                          (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                      (start-editing! geoms on-modify))
-      :deleting  (enable-delete! map-ctx on-modify)
-      :splitting (enable-splitting! map-ctx on-modify)
-      :undo      (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
-      :finished  (map-utils/show-feature! map-ctx geoms))))
+      :deleting    (enable-delete! map-ctx on-modify)
+      :splitting   (enable-splitting! map-ctx on-modify)
+      :simplifying (simplify-edits! map-ctx mode)
+      :undo        (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
+      :finished    (map-utils/show-feature! map-ctx geoms))))
 
 (defn update-adding-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -217,9 +236,13 @@
         map-ctx  (-> map-ctx
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
-    (if (= (:sub-mode mode) (:sub-mode old-mode))
-      map-ctx ;; Noop
-      (set-adding-mode! map-ctx mode))))
+
+    (cond-> map-ctx
+      (not= (:sub-mode mode) (:sub-mode old-mode))
+      (set-adding-mode! mode)
+
+      (= :simplifying (:sub-mode mode))
+      (simplify-edits! mode))))
 
 ;; Editing existing feature collection ;;
 
@@ -248,8 +271,9 @@
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
-  mode} continue?]
+  ([map-ctx
+    {:keys [lipas-id geoms geom-type sub-mode problems] :as mode}
+    continue?]
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
@@ -279,13 +303,25 @@
        :splitting    (-> map-ctx
                          (enable-splitting! on-modifyend))
        :undo         (undo-edits! map-ctx mode)
-       :importing    (refresh-edits! map-ctx mode)))))
+       :importing    (refresh-edits! map-ctx mode)
+       :simplifying  (simplify-edits! map-ctx mode)))))
 
 (defn update-editing-mode! [map-ctx {:keys [problems] :as mode}]
   (let [old-mode (:mode map-ctx)
         map-ctx  (-> map-ctx
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
-    (if (= (:sub-mode mode) (:sub-mode old-mode))
-      map-ctx ;; Noop
+    (cond
+      (= :simplifying (:sub-mode mode))
+      (simplify-edits! map-ctx mode)
+
+      (= :simplifying (:sub-mode old-mode))
+      (-> map-ctx
+          (refresh-edits! mode)
+          (set-editing-mode! mode :continue))
+
+      (= (:sub-mode mode) (:sub-mode old-mode))
+      map-ctx
+
+      :else
       (set-editing-mode! map-ctx mode :continue))))
