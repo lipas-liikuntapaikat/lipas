@@ -556,10 +556,10 @@
 
 (re-frame/reg-event-fx
  ::open-simplify-tool
- (fn [{:keys [db]} [_ lipas-id geoms tolerance]]
-   (println "open simplify tool")
+ (fn [{:keys [db]} _]
    {:db (assoc-in db [:map :mode :sub-mode] :simplifying)
-    :fx [[:dispatch [::toggle-simplify-dialog]]]}))
+    :fx [[:dispatch [::set-simplify-tolerance 0]]
+         [:dispatch [::toggle-simplify-dialog]]]}))
 
 (re-frame/reg-event-fx
  ::close-simplify-tool
