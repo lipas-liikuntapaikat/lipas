@@ -552,6 +552,46 @@
                      (togpx #js{:creator "LIPAS"}))]
      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
 
+;; Geom simplification ;;
+
+(re-frame/reg-event-fx
+ ::open-simplify-tool
+ (fn [{:keys [db]} _]
+   {:db (assoc-in db [:map :mode :sub-mode] :simplifying)
+    :fx [[:dispatch [::set-simplify-tolerance 0]]
+         [:dispatch [::toggle-simplify-dialog]]]}))
+
+(re-frame/reg-event-fx
+ ::close-simplify-tool
+ (fn [{:keys [db]} _]
+   {:fx [[:dispatch [::toggle-simplify-dialog]]
+         [:dispatch [::continue-editing]]]}))
+
+(re-frame/reg-event-db
+ ::toggle-simplify-dialog
+ (fn [db _]
+   (update-in db [:map :simplify :dialog-open?] not)))
+
+(re-frame/reg-event-db
+ ::set-simplify-tolerance
+ (fn [db [_ v]]
+   (assoc-in db [:map :simplify :tolerance] v)))
+
+(re-frame/reg-event-fx
+ ::simplify
+ (fn [_ [_ lipas-id geoms tolerance]]
+   (let [simplified (map-utils/simplify geoms (map-utils/simplify-scale tolerance))]
+     {:fx [[:dispatch [::update-geometries lipas-id simplified]]
+           [:dispatch [::close-simplify-tool]]
+           [:dispatch [::continue-editing]]]})))
+
+(re-frame/reg-event-fx
+ ::simplify-new
+ (fn [_ [_ geoms tolerance]]
+   (let [simplified (map-utils/simplify geoms (map-utils/simplify-scale tolerance))]
+     {:fx [[:dispatch [::new-geom-drawn simplified]]
+           [:dispatch [::toggle-simplify-dialog]]]})))
+
 ;; Address search ;;
 
 (re-frame/reg-event-db

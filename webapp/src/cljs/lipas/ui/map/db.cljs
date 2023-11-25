@@ -12,6 +12,9 @@
     :selected-encoding "ISO-8859-1"
     :selected-items    #{}
     :replace-existing? true}
+   :simplify
+   {:dialog-open? false
+    :tolerance    0}
    :address-search
    {:base-url     "https://api.digitransit.fi/geocoding/v1"
     :dialog-open? false}})

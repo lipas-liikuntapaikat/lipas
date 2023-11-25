@@ -189,7 +189,9 @@
      :general-info   "Yleiset tiedot",
      :comment        "Kommentti",
      :measures       "Mitat",
-     :men            "Miehet"},
+     :men            "Miehet"
+     :more           "Enemmän"
+     :less           "Vähemmän"},
     :dryer-duty-types   {:automatic "Automaattinen", :manual "Manuaali"},
     :swim-energy
     {:description
@@ -321,7 +323,10 @@
      :edit-tool            "Muokkaustyökalu",
      :importing-tooltip    "Tuontityökalu valittu",
      :deleting-tooltip     "Poistotyökalu valittu",
-     :splitting-tooltip    "Katkaisutyökalu valittu"},
+     :splitting-tooltip    "Katkaisutyökalu valittu"
+     :simplify             "Yksinkertaista"},
+    :map.tools.simplify
+    {:headline "Yksinkertaista geometrioita"}
     :partners           {:headline "Kehittä​misessä mukana"},
     :actions
     {:duplicate                "Kopioi",
@@ -1855,7 +1860,9 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :general-info   "General information",
      :comment        "Comment",
      :measures       "Measures",
-     :men            "Men"},
+     :men            "Men"
+     :more           "More"
+     :less           "Less"},
     :dryer-duty-types {:automatic "Automatic", :manual "Manual"},
     :swim-energy
     {:description
@@ -1978,7 +1985,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :edit-tool            "Edit tool",
      :importing-tooltip    "Import tool selected",
      :deleting-tooltip     "Delete tool selected",
-     :splitting-tooltip    "Split tool selected"},
+     :splitting-tooltip    "Split tool selected"
+     :simplify             "Simplify"},
+    :map.tools.simplify
+    {:headline "Simplify geometries"}
     :partners         {:headline "In association with"},
     :actions
     {:duplicate                "Duplicate",
