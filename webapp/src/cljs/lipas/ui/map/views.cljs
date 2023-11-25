@@ -1149,7 +1149,7 @@
              :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)}))
 
           (remove nil?)
-          (map (fn [tool] [mui/grid {:item true} tool]))))])]))
+          (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
