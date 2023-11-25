@@ -155,7 +155,8 @@
        (tr :map.import/import-selected)]]]))
 
 (defn simplify-tool
-  [{:keys [lipas-id geoms tr]}]
+  [{:keys [tr on-change on-close]
+    :or   {on-close #(==> [::events/close-simplify-tool])}}]
   (let [open?     (<== [::subs/simplify-dialog-open?])
         tolerance (<== [::subs/simplify-tolerance])]
 
@@ -202,7 +203,7 @@
            [mui/button
             {:variant  "contained"
              :color    "secondary"
-             :on-click #(==> [::events/simplify lipas-id geoms tolerance])}
+             :on-click #(on-change tolerance)}
             "OK"]]
 
           ;; Cancel
@@ -210,7 +211,7 @@
            [mui/button
             {:variant  "contained"
              :color    "default"
-             :on-click #(==> [::events/close-simplify-tool])}
+             :on-click on-close}
             (tr :actions/cancel)]]]]]]]]))
 
 (defn layer-switcher [{:keys [tr]}]
@@ -611,9 +612,11 @@
 
        (when editing?
          [simplify-tool
-          {:lipas-id lipas-id
-           :geoms    (-> edit-data :location :geometries)
-           :tr       tr}])
+          {:lipas-id  lipas-id
+           :on-change (fn [tolerance]
+                        (let [geoms (-> edit-data :location :geometries)]
+                          (==> [::events/simplify lipas-id geoms tolerance])))
+           :tr        tr}])
 
        [mui/grid {:item true :xs 12}
 
@@ -1089,7 +1092,7 @@
   [{:keys [tr width]}]
   (r/with-let [selected-tab (r/atom 0)
                geom-tab     (r/atom "draw")]
-    (let [locale               (tr)
+    (let [locale                                   (tr)
           {:keys [type data save-enabled? admins owners
                   cities problems? types size-categories zoomed? geom
                   active-step sub-mode undo redo]} (<== [::subs/add-sports-site-view])
@@ -1107,6 +1110,14 @@
          {:geom-type     geom-type
           :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
+
+        [simplify-tool
+         {:lipas-id  0
+          :on-close  (fn []
+                       (==> [::events/new-geom-drawn geom])
+                       (==> [::events/toggle-simplify-dialog]))
+          :on-change (fn [tolerance] (==> [::events/simplify-new geom tolerance]))
+          :tr        tr}]
 
         [mui/typography {:variant "h6" :style {:margin-left "8px"}}
          (if-let [type-name (get-in type [:name locale])]
@@ -1265,7 +1276,7 @@
                   [mui/typography {:variant "body2" :color "error"}
                    (tr :map/zoom-closer)])]
 
-               [mui/grid {:item true}
+               [mui/grid {:item true :xs 12}
                 [mui/typography {:variant "body2"}
                  (case geom-type
                    "LineString" (tr :map/modify-linestring)
@@ -1320,9 +1331,23 @@
                       :variant  "contained"}
                      [:> ContentCut]]]]])
 
-               ;; Delete vertices helper text
+               ;; Simplify
                (when (#{"LineString" "Polygon"} geom-type)
                  [mui/grid {:item true}
+                  [mui/tooltip {:title (tr :map.tools/simplify)}
+                   [:span
+                    [mui/button
+                     {:on-click #(==> [::events/open-simplify-tool])
+                      :disabled (or (-> geom :features empty?)
+                                    (= sub-mode :simplifying))
+                      :style    (when (= sub-mode :simplifying)
+                                  {:outline (str "2px solid " mui/secondary)})
+                      :variant  "contained"}
+                     [mui/icon "auto_fix_high"]]]]])
+
+               ;; Delete vertices helper text
+               (when (#{"LineString" "Polygon"} geom-type)
+                 [mui/grid {:item true :xs 12}
                   [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
                    (tr :map/delete-vertices-hint)]])
 

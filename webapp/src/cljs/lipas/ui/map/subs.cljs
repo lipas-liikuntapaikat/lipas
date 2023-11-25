@@ -165,13 +165,13 @@
  :<- [::simplify]
  (fn [[content-padding mode reachability diversity simplify] _]
    (let [analysis?  (= (:name mode) :analysis)
-         simplifty? (and (= (:name mode) :editing)
+         simplify? (and (#{:adding :editing} (:name mode))
                          (= (:sub-mode mode) :simplifying))]
      (cond-> mode
        true       (assoc :content-padding content-padding)
        analysis?  (assoc :analysis {:reachability reachability
                                     :diversity    diversity})
-       simplifty? (assoc :simplify simplify)))))
+       simplify? (assoc :simplify simplify)))))
 
 (re-frame/reg-sub
  ::editing-lipas-id

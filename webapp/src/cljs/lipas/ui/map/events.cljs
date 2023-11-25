@@ -585,6 +585,13 @@
            [:dispatch [::close-simplify-tool]]
            [:dispatch [::continue-editing]]]})))
 
+(re-frame/reg-event-fx
+ ::simplify-new
+ (fn [_ [_ geoms tolerance]]
+   (let [simplified (map-utils/simplify geoms (map-utils/simplify-scale tolerance))]
+     {:fx [[:dispatch [::new-geom-drawn simplified]]
+           [:dispatch [::toggle-simplify-dialog]]]})))
+
 ;; Address search ;;
 
 (re-frame/reg-event-db
