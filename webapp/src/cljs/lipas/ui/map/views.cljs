@@ -707,7 +707,7 @@
            :value 3
            :label "Olosuhteet"}])
 
-       (when activity-type?
+       #_(when activity-type?
          [mui/tab
           {:style {:min-width 0}
            :value 5
