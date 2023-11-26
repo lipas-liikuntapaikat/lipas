@@ -653,7 +653,7 @@
                           (==> [::events/simplify lipas-id geoms tolerance])))
            :tr        tr}])
 
-       [mui/grid {:item true :xs 12}
+       [mui/grid {:item true}
         ;; Close button
         [mui/grid {:item true}
          (when (not editing?)
