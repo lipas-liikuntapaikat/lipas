@@ -25,7 +25,6 @@
    [lipas.ui.sports-sites.activities.views :as activities]
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
-   [lipas.ui.sports-sites.activities.views :as activities]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
