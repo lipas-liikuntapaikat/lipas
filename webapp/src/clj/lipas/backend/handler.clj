@@ -166,7 +166,7 @@
            (let [query {:size 10000 :query {:match_all {}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
-      
+
       ["/lois/type/:loi-type"
        {:get
         {:no-doc    false
@@ -179,8 +179,22 @@
            (let [loi-type (-> parameters :path :loi-type)
                  query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
+              :body   (core/search-lois search query)}))}}] 
+      
+      ["/lois/category/:loi-category"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:loi-category :lipas.loi/loi-category}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [loi-category (-> parameters :path :loi-category)
+                 query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
+             {:status 200
               :body   (core/search-lois search query)}))}}]
-
+      
       ["/users"
        {:get
         {:no-doc     true
@@ -489,7 +503,7 @@
               :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]
 
       ;;; Analysis ;;;
-
+      
       ;; Search Schools
       ["/actions/search-schools"
        {:post
