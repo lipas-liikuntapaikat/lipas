@@ -206,6 +206,59 @@
                       (mock/content-type "application/json")))]
     (is (= 400 (:status response)))))
 
+(deftest search-loi-by-status
+  (let [geometry {:features [{:geometry {:coordinates [25.974759578704834 67.703125]
+                                         :type "Point"}
+                              :type "Feature"}]
+                  :type "FeatureCollection"}
+        lois-with-every-status [{:event-date "1901-02-13T12:40:08.957Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "mooring-ring"
+                                 :status "planning"}
+                                {:event-date "1994-12-17T07:45:51.186Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "canopy"
+                                 :status "planned"}
+                                {:event-date "1997-07-26T13:43:03.959Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "dog-swimming-area"
+                                 :status "active"}
+                                {:event-date "2015-12-24T16:31:49.045Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "historical-structure"
+                                 :status "out-of-service-temporarily"}
+                                {:event-date "1900-07-01T15:50:31.924Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "hazards"
+                                 :status "out-of-service-permanently"}
+                                {:event-date "1900-07-01T15:50:31.924Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "hazards"
+                                 :status "incorrect-data"}]
+        _         (doseq [loi lois-with-every-status] (core/index-loi! search loi :sync))
+        responses (mapv #(app (-> (mock/request :get (str "/api/lois/status/" %))
+                                  (mock/content-type "application/json")))
+                        (keys loi/statuses))
+        bodies (mapv (comp first <-json :body) responses)]
+    (is (= "planning" (:status (nth bodies 0))))
+    (is (= "planned"  (:status (nth bodies 1))))
+    (is (= "active" (:status (nth bodies 2))))
+    (is (= "out-of-service-temporarily" (:status (nth bodies 3))))
+    (is (= "out-of-service-permanently" (:status (nth bodies 4))))
+    (is (= "incorrect-data" (:status (nth bodies 5))))))
+
 (deftest register-user-test
   (let [user (gen-user)
         resp (app (-> (mock/request :post "/api/actions/register")
