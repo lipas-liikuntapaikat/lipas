@@ -195,6 +195,20 @@
              {:status 200
               :body   (core/search-lois search query)}))}}]
       
+      ["/lois/status/:status"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:status :lipas.loi/status}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [loi-status (-> parameters :path :status)
+                 query {:size 10000 :query {:term {:status.keyword loi-status}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
+
       ["/users"
        {:get
         {:no-doc     true
