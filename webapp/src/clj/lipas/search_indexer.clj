@@ -39,7 +39,7 @@
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
-   (index-search! db client idx-name types []))
+   (index-search-sports-sites! db client idx-name types []))
   ([db client idx-name types results]
    (let [type-code (first types)]
      (log/info "Starting to re-index type" type-code)
