@@ -1991,6 +1991,31 @@
                    :lipas.loi/geometries]
           :opt-un [:lipas.loi/id]))
 
+;; LOI search API
+
+(s/def :lipas.api.search-lois.payload/distance ::real)
+
+(s/def :lipas.api.search-lois.payload/loi-statuses
+  (s/coll-of :lipas.loi/status
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.search-lois.payload/location
+  (s/keys :req-un [:lipas.location.coordinates/lon
+                   :lipas.location.coordinates/lat
+                   :lipas.api.search-lois.payload/distance]))
+
+(s/def :lipas.api.search-lois/payload
+  (s/keys :opt-un [:lipas.api.search-lois.payload/loi-statuses
+                   :lipas.api.search-lois.payload/location]))
+
+(comment
+  (s/valid? :lipas.api.search-lois/payload {:loi-statuses ["active" "planned"]
+                                            :location {:lon 25.48347583491476
+                                                       :lat 62.0546268484493
+                                                       :distance 100}})
+  )
+
 
 (comment
   (require '[spec-tools.parse :as stp])
