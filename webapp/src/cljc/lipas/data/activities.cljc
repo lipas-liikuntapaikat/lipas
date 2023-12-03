@@ -86,7 +86,12 @@
       {:field
        {:type        "multi-select"
         :label       {:fi "Rooli"}
-        :description {:fi "Yhteystietoon liittyvän organisaation rooli"}
+        :description {:fi [:<>
+                           "Asiakaspalvelu: Kohteen asiakaspalvelusta vastaava organisaatio"
+                           [:br]
+                           "Sisällöntuottaja: Kohteesta sähköisessä palvelussa kerrottavista tiedoista vastaava organisaatio"
+                           [:br]
+                           "Ylläpitäjä: Kohteen olosuhteiden ylläpidosta vastaava organisaatio"]}
         :opts        contact-roles}}
       :email
       {:field
@@ -194,10 +199,10 @@
    "paddling"           {:fi "Melonta"}
    "skiing"             {:fi "Hiihto"}})
 
-(def outdoor-recreation-routes-accessibility-classification
+(def accessibility-classification
   {"accessible"          {:fi "Esteetön"}
    "advanced-accessible" {:fi "Vaativa esteetön"}
-   "inaccessible"        {:fi "Ei"}})
+   "inaccessible"        {:fi "Esteellinen"}})
 
 (def outdoor-recreation-routes
   {:label       {:fi "Retkeily ja ulkoilureitit"}
@@ -225,7 +230,7 @@
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                 [:route-marking {:optional true} localized-string-schema]
                 [:accessibility-classification
-                 (into [:enum] (keys outdoor-recreation-routes-accessibility-classification))]
+                 (into [:enum] (keys accessibility-classification))]
                 [:latest-updates {:optional true} localized-string-schema]])]
      :field
      {:type        "routes"
@@ -234,7 +239,13 @@
       :props
       (merge
        common-props
-       {:accessibility
+       {:accessibility-classification
+        {:field
+         {:type        "select"
+          :label       {:fi "Saavutettavuusluokittelu"}
+          :description {:fi "???"}
+          :opts        accessibility-classification}}
+        :accessibility
         {:field
          {:type        "accessibility"
           :label       {:fi "Saavutettavuus"}
@@ -576,20 +587,22 @@
    "on-the-water" {:fi "Kalastus vesiltä / jäältä"}})
 
 (def fishing-activities
-  {"angling"      {:fi "Onginta"}
-   "ice-fishing"  {:fi "Pilkkiminen"}
-   "fly-fishing"  {:fi "Perhokalastus"}
-   "lure-fishing" {:fi "Viehekalastus"}})
+  {"angling"         {:fi "Onginta"}
+   "ice-fishing"     {:fi "Pilkkiminen"}
+   "fly-fishing"     {:fi "Perhokalastus"}
+   "lure-fishing"    {:fi "Viehekalastus"}
+   "herring-jigging" {:fi "Silakan litkaus"}})
 
 (def fishing-waters
   {"sea"   {:fi "Meri"}
    "river" {:fi "Joki"}
    "lake"  {:fi "Järvi"}})
 
-(def fishing-properties
-  {"kalapaikkoja-kaupungeissa" {:fi "Kalapaikkoja kaupungeissa"}
-   "accessible-fishing-spot"   {:fi "Esteetön kalastuspaikka"}
-   "premium-fishing-spot"      {:fi "Laatu-apaja"}})
+(def fishing-permit-opts
+  {"general-fishing-rights"         {:fi "Maksuttomat yleiskalastusoikeudet ovat voimassa (onkiminen, pilkkiminen ja merellä silakan litkaus)"}
+   "fee-for-lure-fishing"           {:fi "Kalastonhoitomaksu viehekalastukseen (maksuvelvollisuus koskee 18–69 -vuotiaita)"}
+   "local-fishing-permit"           {:fi "Paikallinen kalastuslupa"}
+   "special-permit-or-restrictions" {:fi "Kohteella on poikkeuksellisia lupajärjestelyitä tai rajoituksia. Katso kalastusrajoitus.fi"}})
 
 (def fishing
   {:label       {:fi "Kalastus"}
@@ -598,7 +611,7 @@
    :type-codes  #{201}
    :props
    (merge
-    common-props
+    (dissoc common-props :accessibility)
     {:type
      {:schema [:sequential (into [:enum] (keys fishing-types))]
       :field
@@ -612,7 +625,7 @@
       :field
       {:type        "multi-select"
        :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
-       :label       {:fi "Alalaji"}
+       :label       {:fi "Hyvin soveltuvat kalastusmuodot"}
        :opts        fishing-activities}}
 
      :waters
@@ -627,8 +640,8 @@
      {:schema localized-string-schema
       :field
       {:type        "textarea"
-       :description {:fi "ahven, taimen (meritaimen), turpa, …"}
-       :label       {:fi "Kalalajit"}}}
+       :description {:fi "Kohteessa kalastamisen kannalta keskeisimmät kalalajit, esim. ahven, taimen, kirjolohi tms."}
+       :label       {:fi "Keskeiset kalalajit"}}}
 
 
      :fish-population
@@ -643,23 +656,61 @@
      {:schema localized-string-schema
       :field
       {:type        "textarea"
-       :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
-       :label       {:fi "Kalastustavat"}}}
+       :description {:fi "Tietoa mm. kohteessa kalastukseen vaikuttavista erityispiirteistä, toimivista välinevalinnoista yms."}
+       :label       {:fi "Vinkkejä kohteessa kalastamiseen"}}}
 
-     :properties
-     {:schema [:sequential (into [:enum] (keys fishing-properties))]
+     :fishing-permit
+     {:schema [:sequential (into [:enum] (keys fishing-permit-opts))]
       :field
-      {:type        "multi-select"
-       :description {:fi ""}
-       :label       {:fi "Ominaisuudet"}
-       :opts        fishing-properties}}
+      {:type        "checkboxes"
+       :label       {:fi "Kalastuslupatarve"}
+       :description {:fi "Kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."}
+       :opts        fishing-permit-opts}}
 
-     :rules
-     {:schema localized-string-schema
+     :accessibility-classification
+     {:schema (into [:enum] (keys accessibility-classification))
       :field
-      {:type        "textarea"
-       :description {:fi "Tietoa kohteeseen soveltuvista kalastustavoista"}
-       :label       {:fi "Luvat, säännöt, ohjeet"}}}})})
+      {:type        "select"
+       :label       {:fi "Saavutettavuusluokittelu"}
+       :description {:fi "???"}
+       :opts        (dissoc accessibility-classification "advanced-accessible")}}
+
+     :accessibility
+     {:schema [:map
+               [:mobility-impaired {:optional true} localized-string-schema]
+               [:hearing-impaired {:optional true} localized-string-schema]
+               [:visually-impaired {:optional true} localized-string-schema]
+               [:developmentally-disabled {:optional true} localized-string-schema]]
+
+      :field
+      {:type        "accessibility"
+       :label       {:fi "Saavutettavuus"}
+       :description {:fi "Tähän jotain"}
+       :props
+       {:mobility-impaired
+        {:value "mobility-impaired"
+         :field
+         {:type        "textarea"
+          :description {:fi "Aihekohtainen tekstikuvaus"}
+          :label       {:fi "Liikuntavammaiset"}}}
+        :hearing-impaired
+        {:value "hearing-impaired"
+         :field
+         {:type        "textarea"
+          :description {:fi "Aihekohtainen tekstikuvaus"}
+          :label       {:fi "Kuurot ja kuulovammaiset"}}}
+        :visually-impaired
+        {:value "visually-impaired"
+         :field
+         {:type        "textarea"
+          :description {:fi "Aihekohtainen tekstikuvaus"}
+          :label       {:fi "Näkövammaiset"}}}
+        :developmentally-disabled
+        {:value "developmentally-disabled"
+         :field
+         {:type        "textarea"
+          :description {:fi "Aihekohtainen tekstikuvaus"}
+          :label       {:fi "Kehitysvammaiset"}}}}}}})})
 
 (def fishing-schema
   (mu/merge

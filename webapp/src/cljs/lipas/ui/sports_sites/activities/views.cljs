@@ -58,6 +58,7 @@
     :images
     :videos
     :arrival
+    :accessibility-classification
     :accessibility
     :rules
     :parking
@@ -69,6 +70,34 @@
 (defn field-sorter
   [[k _]]
   (get sort-order k -1))
+
+(defn checkboxes
+  [{:keys [read-only? items label helper-text label-fn value-fn
+           on-change value]}]
+  (let [vs (set value)]
+    [mui/grid {:container true :spacing 2}
+
+     ;; Label
+     [mui/grid {:item true :xs 12}
+      [form-label {:label label}]]
+
+     ;; Helper text
+     [mui/grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
+      [mui/form-helper-text helper-text]]
+
+     ;; Chekboxes
+     (into [:<>]
+           (for [item items]
+             [mui/grid {:item true :xs 12}
+              (let [[k _] item]
+                [lui/checkbox
+                 {:label (label-fn item)
+                  :value (contains? vs k)
+                  :disabled read-only?
+                  :on-change (fn [_]
+                               (if (contains? vs k)
+                                 (on-change (disj vs k))
+                                 (on-change (conj vs k))))}])]))]))
 
 (defn contact-dialog
   [{:keys [tr locale dialog-state on-save on-close contact-props]}]
@@ -712,16 +741,18 @@
                :on-change   #(set-field prop-k %)
                :value       (get-in edit-data [prop-k])}]
 
-    "multi-select" [lui/autocomplete
-                    {:disabled    read-only?
-                     :multi?      true
-                     :items       (:opts field)
-                     :label       (get-in field [:label locale])
-                     :helper-text (get-in field [:description locale])
-                     :label-fn    (comp locale second)
-                     :value-fn    first
-                     :on-change   #(set-field prop-k %)
-                     :value       (get-in edit-data [prop-k])}]
+    "multi-select" [:<>
+                    [lui/autocomplete
+                     {:disabled        read-only?
+                      :multi?          true
+                      :items           (:opts field)
+                      :label           (get-in field [:label locale])
+                      #_#_:helper-text (get-in field [:description locale])
+                      :label-fn        (comp locale second)
+                      :value-fn        first
+                      :on-change       #(set-field prop-k %)
+                      :value           (get-in edit-data [prop-k])}]
+                    [mui/form-helper-text (get-in field [:description locale])]]
 
     "text-field" [lui/text-field
                   {:disabled    read-only?
@@ -752,6 +783,16 @@
                  :rows            5
                  :fullWidth       true
                  :value           (get-in edit-data [prop-k locale])}]
+
+    "checkboxes" [checkboxes
+                  {:read-only?  read-only?
+                   :items       (:opts field)
+                   :label       (get-in field [:label locale])
+                   :helper-text (get-in field [:description locale])
+                   :label-fn    (comp locale second)
+                   :value-fn    first
+                   :on-change   #(set-field prop-k %)
+                   :value       (get-in edit-data [prop-k])}]
 
     "videos" [videos
               {:read-only?  read-only?
