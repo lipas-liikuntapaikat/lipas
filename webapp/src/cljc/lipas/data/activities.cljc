@@ -608,7 +608,7 @@
   {:label       {:fi "Kalastus"}
    :value       "fishing"
    :description {:fi ""}
-   :type-codes  #{201}
+   :type-codes  #{201 2011}
    :props
    (merge
     (dissoc common-props :accessibility)
