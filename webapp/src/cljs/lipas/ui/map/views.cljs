@@ -32,6 +32,14 @@
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))
 
+(defonce simplify-tool-component (r/atom nil))
+
+(defn rreset!
+  "Like `reset!` but returns nil"
+  [a newval]
+  (reset! a newval)
+  nil)
+
 (defn helper [{:keys [label tooltip]}]
   [mui/tooltip {:title tooltip}
    [mui/link
@@ -159,63 +167,66 @@
       [mui/button {:on-click on-import :disabled (empty? selected)}
        (tr :map.import/import-selected)]]]))
 
+(defn simplify-tool-container
+  []
+  (let [open?   (<== [::subs/simplify-dialog-open?])]
+    [mui/slide {:direction "up" :in open?}
+     [lui/floating-container {:bottom 12 :left 550}
+      @simplify-tool-component]]))
+
 (defn simplify-tool
   [{:keys [tr on-change on-close]
     :or   {on-close #(==> [::events/close-simplify-tool])}}]
-  (let [open?     (<== [::subs/simplify-dialog-open?])
-        tolerance (<== [::subs/simplify-tolerance])]
+  (let [tolerance (<== [::subs/simplify-tolerance])]
+    [mui/paper {:style {:padding "1em"} :elevation 5}
+     [mui/grid {:container true}
 
-    [mui/slide {:direction "up" :in open?}
-     [lui/floating-container {:bottom 12 :left 550}
-      [mui/paper {:style {:padding "1em"} :elevation 5}
-       [mui/grid {:container true}
+      ;; Header
+      [mui/grid {:item true :xs 12}
+       [:h4 (tr :map.tools.simplify/headline)]]
 
-        ;; Header
-        [mui/grid {:item true :xs 12}
-         [:h4 (tr :map.tools.simplify/headline)]]
+      ;; Slider
+      [mui/grid {:item true :xs 12}
 
-        ;; Slider
-        [mui/grid {:item true :xs 12}
+       [mui/grid {:container true :spacing 2}
 
-         [mui/grid {:container true :spacing 2}
+        ;; Less
+        [mui/grid {:item true}
+         [mui/typography (tr :general/less)]]
 
-          ;; Less
-          [mui/grid {:item true}
-           [mui/typography (tr :general/less)]]
+        ;; The Slider
+        [mui/grid {:item true :xs true}
+         [mui/slider
+          {:on-change #(==> [::events/set-simplify-tolerance %2])
+           :value     tolerance
+           :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
+           :step      0.5
+           :min       0
+           :max       10}]]
 
-          ;; The Slider
-          [mui/grid {:item true :xs true}
-           [mui/slider
-            {:on-change #(==> [::events/set-simplify-tolerance %2])
-             :value     tolerance
-             :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
-             :step      0.5
-             :min       0
-             :max       10}]]
+        ;; More
+        [mui/grid {:item true}
+         [mui/typography (tr :general/more)]]]]
 
-          ;; More
-          [mui/grid {:item true}
-           [mui/typography (tr :general/more)]]]]
+      ;; Buttons
+      [mui/grid {:item true :xs 12}
+       [mui/grid {:container true :spacing 1}
 
-        ;; Buttons
-        [mui/grid {:item true :xs 12}
-         [mui/grid {:container true :spacing 1}
+        ;; OK
+        [mui/grid {:item true}
+         [mui/button
+          {:variant  "contained"
+           :color    "secondary"
+           :on-click #(on-change tolerance)}
+          "OK"]]
 
-          ;; OK
-          [mui/grid {:item true}
-           [mui/button
-            {:variant  "contained"
-             :color    "secondary"
-             :on-click #(on-change tolerance)}
-            "OK"]]
-
-          ;; Cancel
-          [mui/grid {:item true}
-           [mui/button
-            {:variant  "contained"
-             :color    "default"
-             :on-click on-close}
-            (tr :actions/cancel)]]]]]]]]))
+        ;; Cancel
+        [mui/grid {:item true}
+         [mui/button
+          {:variant  "contained"
+           :color    "default"
+           :on-click on-close}
+          (tr :actions/cancel)]]]]]]))
 
 (defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
@@ -645,12 +656,12 @@
          (:name display-data)]]
 
        (when editing?
-         [simplify-tool
-          {:lipas-id  lipas-id
-           :on-change (fn [tolerance]
-                        (let [geoms (-> edit-data :location :geometries)]
-                          (==> [::events/simplify lipas-id geoms tolerance])))
-           :tr        tr}])
+         (rreset! simplify-tool-component
+                  [simplify-tool
+                   {:on-change (fn [tolerance]
+                                 (let [geoms (-> edit-data :location :geometries)]
+                                   (==> [::events/simplify lipas-id geoms tolerance])))
+                   :tr        tr}]))
 
        [mui/grid {:item true}
         ;; Close button
@@ -1184,13 +1195,13 @@
           :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
 
-        [simplify-tool
-         {:lipas-id  0
-          :on-close  (fn []
-                       (==> [::events/new-geom-drawn geom])
-                       (==> [::events/toggle-simplify-dialog]))
-          :on-change (fn [tolerance] (==> [::events/simplify-new geom tolerance]))
-          :tr        tr}]
+        (rreset! simplify-tool-component
+                 [simplify-tool
+                  {:on-close  (fn []
+                                (==> [::events/new-geom-drawn geom])
+                                (==> [::events/toggle-simplify-dialog]))
+                   :on-change (fn [tolerance] (==> [::events/simplify-new geom tolerance]))
+                   :tr        tr}])
 
         [mui/typography {:variant "h6" :style {:margin-left "8px"}}
          (if-let [type-name (get-in type [:name locale])]
@@ -1693,6 +1704,9 @@
         [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+
+      ;; Simplify tool container hack for Safari
+      [simplify-tool-container]
 
       (when-not drawer-open?
         ;; Open Drawer Button
