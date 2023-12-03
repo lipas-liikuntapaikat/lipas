@@ -2562,14 +2562,15 @@
    201
    {:description
     {:fi
-     "Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde.",
+     #_"Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde."
+     "Vapaa-ajankalastukseen sopiva kohde. Kohteessa voi olla palvelurakenteita.",
      :se
      "Område eller en plats i ett naturligt vattendrag som ställts i ordning för fritidsfiske.",
      :en
      "Natural aquatic destination equipped and maintained for recreational fishing."},
     :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
     :name
-    {:fi "Kalastusalue/-paikka",
+    {:fi #_"Kalastusalue/-paikka" "Kalastuskohde",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
     :type-code     201,
@@ -2580,6 +2581,28 @@
     :props
     {:toilet?                            {:priority nil},
      :school-use?                        {:priority 0},
+     :free-use?                          {:priority 0},
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0}}}
+   2011
+   {:description
+    {:fi
+     "Vapaa-ajankalastukseen sopiva alue. Kohteessa voi olla palvelurakenteita.",
+     :se
+     "Område eller en plats i ett naturligt vattendrag som ställts i ordning för fritidsfiske.",
+     :en
+     "Natural aquatic destination equipped and maintained for recreational fishing."},
+    :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
+    :name
+    {:fi "Kalastusalue",
+     :se "Område eller plats för fiske",
+     :en "Fishing area/spot "},
+    :type-code     2011,
+    :main-category 0,
+    :status        "active",
+    :sub-category  2,
+    :geometry-type "Polygon",
+    :props
+    {:school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
    1220

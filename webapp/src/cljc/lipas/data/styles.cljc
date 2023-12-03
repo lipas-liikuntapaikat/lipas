@@ -428,6 +428,10 @@
     :radius 9,
     :fill {:color "#8397de"},
     :stroke {:color "#0055ff"}},
+   2011
+   {:shape "polygon",
+    :fill {:color "#8397de"},
+    :stroke {:color "#000000", :width 1.5}}
    1220
    {:shape "circle",
     :radius 9,
