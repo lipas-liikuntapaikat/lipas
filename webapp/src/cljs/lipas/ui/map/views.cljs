@@ -169,7 +169,7 @@
 
 (defn simplify-tool-container
   []
-  (let [open?   (<== [::subs/simplify-dialog-open?])]
+  (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [mui/slide {:direction "up" :in open?}
      [lui/floating-container {:bottom 12 :left 550}
       @simplify-tool-component]]))
