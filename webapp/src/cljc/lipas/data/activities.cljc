@@ -242,13 +242,13 @@
        {:accessibility-classification
         {:field
          {:type        "select"
-          :label       {:fi "Saavutettavuusluokittelu"}
+          :label       {:fi "Esteettömyysluokittelu"}
           :description {:fi "???"}
           :opts        accessibility-classification}}
         :accessibility
         {:field
          {:type        "accessibility"
-          :label       {:fi "Saavutettavuus"}
+          :label       {:fi "Esteettömyys"}
           :description {:fi "Tähän jotain"}
           :props
           {:mobility-impaired
@@ -684,7 +684,7 @@
      {:schema (into [:enum] (keys accessibility-classification))
       :field
       {:type        "select"
-       :label       {:fi "Saavutettavuusluokittelu"}
+       :label       {:fi "Esteettömyysluokittelu"}
        :description {:fi "???"}
        :opts        (dissoc accessibility-classification "advanced-accessible")}}
 
@@ -697,7 +697,7 @@
 
       :field
       {:type        "accessibility"
-       :label       {:fi "Saavutettavuus"}
+       :label       {:fi "Esteettömyys"}
        :description {:fi "Tähän jotain"}
        :props
        {:mobility-impaired
