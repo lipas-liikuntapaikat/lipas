@@ -604,6 +604,19 @@
    "local-fishing-permit"           {:fi "Paikallinen kalastuslupa"}
    "special-permit-or-restrictions" {:fi "Kohteella on poikkeuksellisia lupajärjestelyitä tai rajoituksia. Katso kalastusrajoitus.fi"}})
 
+(def fishing-species
+  {"perch"        {:fi "Ahven" :se "Abborre" :en "Perch"},
+   "pike"          {:fi "Hauki" :se "Gädda" :en "Pike"},
+   "zander"        {:fi "Kuha" :se "Gös" :en "Zander"},
+   "whitefish"     {:fi "Siika" :se "Sik" :en "Whitefish"},
+   "bream"         {:fi "Made" :se "Sutare" :en "Bream"},
+   "herring"       {:fi "Silakka" :se "Strömming" :en "Herring"},
+   "salmon"        {:fi "Lohi" :se "Lax" :en "Salmon"},
+   "trout"         {:fi "Taimen" :se "Harr" :en "Trout"},
+   "rainbow-trout" {:fi "Kirjolohi" :se "Regnbåge" :en "Rainbow trout"},
+   "arctic-char"   {:fi "Nieriä" :se "Röding" :en "Arctic char"},
+   "cyprinids"     {:fi "Särkikalat" :se "Vitfisk" :en "Cyprinids"}})
+
 (def fishing
   {:label       {:fi "Kalastus"}
    :value       "fishing"
@@ -637,12 +650,12 @@
        :opts        fishing-waters}}
 
      :species
-     {:schema localized-string-schema
+     {:schema [:sequential (into [:enum] (keys fishing-species))]
       :field
-      {:type        "textarea"
+      {:type        "multi-select"
        :description {:fi "Kohteessa kalastamisen kannalta keskeisimmät kalalajit, esim. ahven, taimen, kirjolohi tms."}
-       :label       {:fi "Keskeiset kalalajit"}}}
-
+       :label       {:fi "Keskeiset kalalajit"}
+       :opts fishing-species}}
 
      :fish-population
      {:schema localized-string-schema
