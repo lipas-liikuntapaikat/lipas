@@ -122,7 +122,10 @@
                                     :en "Woodchips"}
    "resin"                         {:fi "Massa"
                                     :se "Kåda"
-                                    :en "Resin"}})
+                                    :en "Resin"}
+   "natural-surface"               {:fi "Luonnonmukainen"
+                                    :se "Naturlig"
+                                    :en "Natural surface"}})
 
 (def building-materials
   (select-keys all ["concrete" "brick""steel" "wood" "solid-rock"]))
@@ -149,7 +152,7 @@
                     "rock-dust" "fiberglass" "soil" "metal" "synthetic" "grass"
                     "wood" "sawdust" "deinked-pulp" "gravel" "textile"
                     "brick-crush" "water" "artificial-turf"
-                    "sand-infilled-artificial-turf" "resin"]))
+                    "sand-infilled-artificial-turf" "resin" "natural-surface"]))
 
 (def field-surface-materials
   (merge (select-keys surface-materials ["resin" "wood" "synthetic"])
