@@ -51,8 +51,8 @@
     :habitat
     :character
     :season
-    :species
     :waters
+    :species
     :fish-population
     :fishing-methods
     :fishing-permit
