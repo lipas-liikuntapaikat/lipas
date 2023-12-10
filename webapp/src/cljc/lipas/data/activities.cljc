@@ -680,6 +680,13 @@
        :description {:fi "Kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."}
        :opts        fishing-permit-opts}}
 
+     :fishing-permit-additional-info
+     {:schema localized-string-schema
+      :field
+      {:type        "textarea"
+       :description {:fi "Tähän joku selite"}
+       :label       {:fi "Kalastuslupatarpeen lisätiedot"}}}
+
      :accessibility-classification
      {:schema (into [:enum] (keys accessibility-classification))
       :field
