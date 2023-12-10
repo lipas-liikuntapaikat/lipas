@@ -323,7 +323,9 @@
 (def cycling-activities
   {"gravel-and-bikepacking" {:fi "Gravel & pyörävaellus"}
    "road-cycling"           {:fi "Maantie"}
-   "mountain-biking"        {:fi "Maastopyöräily"}})
+   "bike-touring"           {:fi "Retkipyöräily"}
+   "mountain-biking"        {:fi "Maastopyöräily"}
+   "winter-cycling"         {:fi "Talvipyöräily"}})
 
 (def cycling
   {:label       {:fi "Pyöräily"}
@@ -370,7 +372,7 @@
          {:type        "multi-select"
           :description {:fi "Gravel & pyörävaellus, Maantie, Maastopyöräily"}
           :label       {:fi "Alalaji"}
-          :opts        cycling-activities}}
+          :opts        (dissoc cycling-activities "road-cycling")}}
 
         :duration
         {:field
