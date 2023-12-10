@@ -202,7 +202,8 @@
 (def accessibility-classification
   {"accessible"          {:fi "Esteetön"}
    "advanced-accessible" {:fi "Vaativa esteetön"}
-   "inaccessible"        {:fi "Esteellinen"}})
+   "inaccessible"        {:fi "Esteellinen"}
+   "unknown"             {:fi "Ei tietoa"}})
 
 (def outdoor-recreation-routes
   {:label       {:fi "Retkeily ja ulkoilureitit"}
@@ -244,7 +245,7 @@
          {:type        "select"
           :label       {:fi "Esteettömyysluokittelu"}
           :description {:fi "???"}
-          :opts        accessibility-classification}}
+          :opts        (dissoc accessibility-classification "unknown")}}
         :accessibility
         {:field
          {:type        "accessibility"
@@ -713,19 +714,19 @@
          {:type        "textarea"
           :description {:fi "Aihekohtainen tekstikuvaus"}
           :label       {:fi "Liikuntavammaiset"}}}
-        :hearing-impaired
+        #_#_:hearing-impaired
         {:value "hearing-impaired"
          :field
          {:type        "textarea"
           :description {:fi "Aihekohtainen tekstikuvaus"}
           :label       {:fi "Kuurot ja kuulovammaiset"}}}
-        :visually-impaired
+        #_#_:visually-impaired
         {:value "visually-impaired"
          :field
          {:type        "textarea"
           :description {:fi "Aihekohtainen tekstikuvaus"}
           :label       {:fi "Näkövammaiset"}}}
-        :developmentally-disabled
+        #_#_:developmentally-disabled
         {:value "developmentally-disabled"
          :field
          {:type        "textarea"
