@@ -1341,7 +1341,17 @@
     :description
     {:fi "",
      :se "",
-     :en ""}}})
+     :en ""}}
+   :rapid-canoeing-centre
+   {:name
+    {:fi "Koskimelontakeskus"
+     :se "Centrum för paddling"
+     :en "Rapid canoeing centre"}
+    :data-type "boolean"
+    :description
+    {:fi "Kilpailujen järjestäminen mahdollista.",
+     :se "Möjligt att arrangera tävlingar.",
+     :en "Competitions possible."}}})
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
@@ -1352,7 +1362,7 @@
   (cset/difference (keys all) (keys used))
   (cset/difference (keys used) (keys all))
 
-  
+
   ;; Unused?
   #{:ski-track? :winter-swimming? :archery?
     :throwing-sports-spots-count :radio-and-tv-capabilities?

@@ -2562,7 +2562,7 @@
    201
    {:description
     {:fi
-     #_"Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde."
+     #_ "Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde."
      "Vapaa-ajankalastukseen sopiva kohde. Kohteessa voi olla palvelurakenteita.",
      :se
      "Område eller en plats i ett naturligt vattendrag som ställts i ordning för fritidsfiske.",
@@ -2570,7 +2570,7 @@
      "Natural aquatic destination equipped and maintained for recreational fishing."},
     :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
     :name
-    {:fi #_"Kalastusalue/-paikka" "Kalastuskohde (piste)",
+    {:fi #_ "Kalastusalue/-paikka" "Kalastuskohde (piste)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
     :type-code     201,
@@ -4022,14 +4022,14 @@
      :route-length-km                    {:priority 1}}},
    5150
    {:description
-    {:fi "Kilpailujen järjestäminen mahdollista.",
-     :se "Möjligt att arrangera tävlingar.",
-     :en "Competitions possible."},
+    {:fi "Melontaan tarkoitettu palvelupaikka, jossa voi olla esim. vuokrauspalveluita. Melontakeskuksesta voi lähteä melontareitti tai sen yhteydessä voi olla melontaratoja.",
+     :se "",
+     :en ""},
     :tags          {:fi ["melonta" "kajakki" "kanootti" "melontakeskus"]},
     :name
-    {:fi "Koskimelontakeskus",
+    {:fi "Melontakeskus",
      :se "Centrum för paddling",
-     :en "Rapid canoeing centre"},
+     :en "Canoeing centre"},
     :type-code     5150,
     :main-category 5000,
     :status        "active",
@@ -4040,6 +4040,26 @@
      :pier?                              {:priority 0},
      :altitude-difference                {:priority 0},
      :school-use?                        {:priority 0},
+     :free-use?                          {:priority 0},
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0}
+     :rapid-canoeing-centre              {:priority 0}}}
+   5155
+   {:description
+    {:fi "",
+     :se "",
+     :en ""},
+    :tags          {:fi ["melonta" "kajakki" "kanootti" "koski"]},
+    :name
+    {:fi "Koskimelontakohde",
+     :se "",
+     :en ""},
+    :type-code     5155,
+    :main-category 5000,
+    :status        "active",
+    :sub-category  5100,
+    :geometry-type "Point",
+    :props
+    {:school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
    1630
