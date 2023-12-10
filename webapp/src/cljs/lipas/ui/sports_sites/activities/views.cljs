@@ -55,6 +55,8 @@
     :waters
     :fish-population
     :fishing-methods
+    :fishing-permit
+    :fishing-permit-additional-info
     :images
     :videos
     :arrival
