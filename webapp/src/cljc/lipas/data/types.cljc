@@ -2570,7 +2570,7 @@
      "Natural aquatic destination equipped and maintained for recreational fishing."},
     :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
     :name
-    {:fi #_"Kalastusalue/-paikka" "Kalastuskohde",
+    {:fi #_"Kalastusalue/-paikka" "Kalastuskohde (piste)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
     :type-code     201,
@@ -2593,7 +2593,7 @@
      "Natural aquatic destination equipped and maintained for recreational fishing."},
     :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
     :name
-    {:fi "Kalastuskohde",
+    {:fi "Kalastuskohde (alue)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
     :type-code     2011,
