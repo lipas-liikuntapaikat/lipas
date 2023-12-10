@@ -63,7 +63,7 @@
   {"water-conditions"
    {:label {:fi "Vesiolosuhteet"}
     :types
-    {:hazards
+    {#_#_:hazards
      {:label {:fi "Vaaranpaikat"}
       :value "hazards"
       :props
@@ -81,7 +81,27 @@
          :field
          {:type        "textarea"
           :label       {:fi "Kuvaus"}
-          :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}}}
+          :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
+
+     :landing-spot
+     {:label {:fi "Rantautumispaikka"}
+      :value "landing-spot"
+      :props common-props}
+
+     :rapid
+     {:label {:fi "Koski"}
+      :value "rapid"
+      :props common-props}
+
+     :open-water
+     {:label {:fi "Avoin selkä"}
+      :value "open-water"
+      :props common-props}
+
+     :boat-lane
+     {:label {:fi "Veneväylä"}
+      :value "boat-lane"
+      :props common-props}}}
 
    "outdoor-recreation-facilities"
    {:label {:fi "Retkeily ja ulkoilurakenteet"}
@@ -126,6 +146,11 @@
      :dry-toilet
      {:label {:fi "Kuivakäymälä"}
       :value "dry-toilet"
+      :props (merge common-props accessibility-props)}
+
+     :wc
+     {:label {:fi "WC"}
+      :value "wc"
       :props (merge common-props accessibility-props)}
 
      :tent-site
