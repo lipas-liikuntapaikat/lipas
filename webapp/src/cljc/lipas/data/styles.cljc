@@ -689,6 +689,12 @@
     :radius 9,
     :fill {:color "#c75887"},
     :stroke {:color "#00557f"}},
+   ;; TODO same as above
+   5155
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#c75887"},
+    :stroke {:color "#00557f"}}
    1630
    {:shape "square",
     :radius 9,
