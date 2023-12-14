@@ -26,7 +26,7 @@
   ([search fcoll distance-km type-codes]
    (get-sports-site-data search fcoll distance-km type-codes default-statuses))
   ([{:keys [indices client]} fcoll distance-km type-codes statuses]
-   (let [idx-name (get-in indices [:sports-sites :search])
+   (let [idx-name (get-in indices [:sports-site :search])
          geom     (-> fcoll :features first)
          query    (-> (build-query geom distance-km)
                    (assoc :_source [:name
