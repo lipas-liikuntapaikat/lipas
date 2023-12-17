@@ -260,7 +260,7 @@
        :on-change #(set-field :unit %)}]]]])
 
 (defn highlight-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
+  [{:keys [tr locale dialog-state on-save on-close lipas-id label description]}]
   [lui/dialog
    {:title         "Lisää kohokohta"
     :open?         (:open? @dialog-state)
@@ -274,18 +274,23 @@
     [mui/grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
 
+    #_[mui/grid {:item true :xs 12}
+     [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
+      [mui/typography description]]]
+
     [mui/grid {:item true :xs 12}
      [mui/grid {:item true :xs 12}
        [lui/text-field
-        {:fullWidth true
-         :required  true
-         :value     (-> @dialog-state :data locale)
-         :on-change #(swap! dialog-state assoc-in [:data locale] %)
-         :label     "Kohokohta"
-         :variant   "outlined"}]]]]])
+        {:fullWidth   true
+         :required    true
+         :helper-text description
+         :value       (-> @dialog-state :data locale)
+         :on-change   #(swap! dialog-state assoc-in [:data locale] %)
+         :label       "Kohokohta"
+         :variant     "outlined"}]]]]])
 
 (defn textlist
-  [{:keys [locale label set-field value]}]
+  [{:keys [locale label description set-field value]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -300,14 +305,16 @@
        [highlight-dialog
         {:tr           tr
          :locale       locale
+         :label        label
+         :description  description
          :dialog-state dialog-state
          :on-save      (fn []
                          (let [data (:data @dialog-state)]
-                      (swap! state assoc (:id data) data))
-                    (set-field (->> @state
-                                    vals
-                                    (mapv #(dissoc % :id))))
-                    (reset! dialog-state dialog-init-state))}]
+                           (swap! state assoc (:id data) data))
+                         (set-field (->> @state
+                                         vals
+                                         (mapv #(dissoc % :id))))
+                         (reset! dialog-state dialog-init-state))}]
 
        ;; Label
        [mui/grid {:item true :xs 12}
@@ -329,10 +336,10 @@
                                                     :mode  :edit
                                                     :data  (get @state (:id m))}))
           :on-delete        (fn [m]
-                             (swap! state dissoc (:id m))
-                             (set-field (->> @state
-                                             vals
-                                             (mapv #(dissoc % :id)))))
+                              (swap! state dissoc (:id m))
+                              (set-field (->> @state
+                                              vals
+                                              (mapv #(dissoc % :id)))))
           :add-tooltip      "Lisää"
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)

@@ -165,7 +165,7 @@
    {:schema [:sequential localized-string-schema]
     :field
     {:type        "textlist"
-     :description {:fi "Tekstiä"}
+     :description {:fi "Syötä yksi kohokohta kerrallaan. Käytä isoa Alkukirjainta."}
      :label       {:fi "Kohokohdat"}}}})
 
 (def common-props-schema
