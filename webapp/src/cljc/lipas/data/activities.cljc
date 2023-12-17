@@ -352,6 +352,7 @@
                 [:food-and-water {:optional true} localized-string-schema]
                 [:accommodation {:optional true} localized-string-schema]
                 [:good-to-know {:optional true} localized-string-schema]
+                [:route-notes {:optional true} localized-string-schema]
                 [:unpaved-percentage {:optional true} number-schema]
                 [:trail-percentage {:optional true} number-schema]
                 [:cyclable-percentage {:optional true} number-schema]])]
@@ -361,7 +362,7 @@
       :label       {:fi "Reittityyppi"}
       :props
       (merge
-       common-props
+       (dissoc common-props :rules)
        {:route-name
         {:field
          {:type        "text-field"
@@ -397,6 +398,12 @@
          {:type        "textarea"
           :description {:fi "Tekstiä"}
           :label       {:fi "Hyvä tietää"}}}
+
+        :route-notes
+        {:field
+         {:type        "textarea"
+          :description {:fi "Tekstiä"}
+          :label       {:fi "Reittimuistiinpanot"}}}
 
         :unpaved-percentage
         {:field
