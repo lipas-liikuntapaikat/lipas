@@ -4042,7 +4042,9 @@
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}
-     :rapid-canoeing-centre              {:priority 0}}}
+     :rapid-canoeing-centre?             {:priority 0}
+     :canoeing-club?                     {:priority 0}
+     :activity-service-company?          {:priority 0}}}
    5155
    {:description
     {:fi "",
