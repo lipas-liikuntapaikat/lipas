@@ -63,11 +63,11 @@
   {"water-conditions"
    {:label {:fi "Vesiolosuhteet"}
     :types
-    {#_#_:hazards
-     {:label {:fi "Vaaranpaikat"}
-      :value "hazards"
-      :props
-      (merge
+    {:hazard
+     {:label {:fi "Vaaranpaikka"}
+      :value "hazard"
+      :props common-props
+      #_(merge
        (select-keys common-props [:name])
        {:hazard-type
         {:schema (into [:enum] (keys water-conditions-hazards))
