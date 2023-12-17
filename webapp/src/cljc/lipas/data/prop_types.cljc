@@ -1342,7 +1342,7 @@
     {:fi "",
      :se "",
      :en ""}}
-   :rapid-canoeing-centre
+   :rapid-canoeing-centre?
    {:name
     {:fi "Koskimelontakeskus"
      :se "Centrum för paddling"
@@ -1351,7 +1351,27 @@
     :description
     {:fi "Kilpailujen järjestäminen mahdollista.",
      :se "Möjligt att arrangera tävlingar.",
-     :en "Competitions possible."}}})
+     :en "Competitions possible."}}
+   :canoeing-club?
+   {:name
+    {:fi "Melontaseura"
+     :se "Canoeing club"
+     :en ""}
+    :data-type "boolean"
+    :description
+    {:fi "Onko kyseessä melontaseuran tila",
+     :se "",
+     :en ""}}
+   :activity-service-company?
+   {:name
+    {:fi "Ohjelmapalveluyritys"
+     :se "Activity service company"
+     :en ""}
+    :data-type "boolean"
+    :description
+    {:fi "Toimiiko kohteessa ohjelmapalveluyritys.",
+     :se "",
+     :en ""}}})
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
