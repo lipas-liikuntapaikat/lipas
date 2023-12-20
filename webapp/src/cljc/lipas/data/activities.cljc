@@ -583,6 +583,7 @@
        :description {:fi "Kevät, Kesä, Syksy, Talvi"}
        :label       {:fi "Ajankohta"}
        :opts        birdwatching-seasons}}
+
      :species
      {:schema localized-string-schema
       :field
@@ -869,5 +870,7 @@
 
 (comment
 
+  (json-schema/transform birdwatching-schema)
+  (json-schema/transform activities-schema)
 
   )
