@@ -79,13 +79,15 @@
                                               elevation)))))
 
         ;; Resolve col and row for the coords relative to the lower
-        ;; left corner of the grid
-        col (long (Math/floor
-                   (/ (- lon (:xllcorner headers))
-                      (:cellsize headers))))
-        row (long (Math/floor
-                   (/ (- lat (:yllcorner headers))
-                      (:cellsize headers))))]
+        ;; left corner of the grid. Cap to max-bounds.
+        col (min (long (Math/floor
+                        (/ (- lon (:xllcorner headers))
+                           (:cellsize headers))))
+                 (dec (:ncols headers)))
+        row (min (long (Math/floor
+                        (/ (- lat (:yllcorner headers))
+                           (:cellsize headers))))
+                 (dec (:nrows headers)))]
 
     ;; Reverse the data (rows) so the lower left corner comes first
     ;; and we can lookup in 'natural' order.
