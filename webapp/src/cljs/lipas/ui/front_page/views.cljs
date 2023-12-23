@@ -34,22 +34,20 @@
    {:label "Paikkatietoikkuna" :href "https://www.paikkatietoikkuna.fi/"}
    {:label "palvelukartta.hel.fi" :href "https://palvelukartta.hel.fi/"}
    {:label "Finterest" :href "https://finterest.fi/"}
-   {:label "Puskaparkit" :href "http://bit.do/puskaparkit"}
    {:label "liiteri" :href "https://liiteri.ymparisto.fi/"}
    {:label "TEAviisari" :href "https://teaviisari.fi"}
    {:label "Uimaan.fi" :href "https://uimaan.fi/"}
-   {:label "Me-säätiö" :href "http://data.mesaatio.fi/harrastaminen/"}
+   {:label "Me-säätiö" :href "https://www.mesaatio.fi/vaikuttavuus/melvio"}
    {:label "kuopio.fi" :href "https://www.kuopio.fi/liikunta-ja-ulkoilukartat"}
    {:label "Tässä.fi" :href "https://tassa.fi/"}
    {:label "Tulikartta.fi" :href "https://www.tulikartta.fi/"}
    {:label "SportVenue" :href "https://www.sportvenue.fi/"}
-   {:label "FCG" :href "http://www.fcg.fi/shvk"}
+   {:label "FCG" :href "https://www.fcg.fi/palvelut/johtaminen/tutkimuspalvelut-tiedolla-johtamisen-tuki/sahkoinen-hyvinvointikertomus/"}
    {:label "Ulkoliikunta.fi" :href "https://ulkoliikunta.fi/"}
-   {:label "Aluehallintovirasto" :href "https://www.avi.fi/web/avi/liikunta"}
+   {:label "Aluehallintovirasto" :href "https://avi.fi/tietoa-meista/tehtavamme/opetus-ja-kulttuuri/liikuntatoimi"}
    {:label "LIKES" :href "https://www.likes.fi/"}
    {:label "Kuntaliitto" :href "https://www.kuntaliitto.fi/"}
-   {:label "EPSHP" :href "https://www.hyvis.fi/web/etela-pohjanmaa/palvelut"}
-   {:label "Paikkatietoalusta" :href "http://www.paikkatietoalusta.fi"}
+   {:label "EPSHP" :href "https://www.hyvaep.fi/palvelut/"}
    {:label "Ladulle.fi" :href "https://ladulle.fi/"}
    {:label "Liikkuva Kuopio" :href "https://liikkuvakuopio.fi/"}
    {:label "Karttaselain" :href "https://www.karttaselain.fi/"}
@@ -58,7 +56,8 @@
    {:label "ulkoilutampereenseutu.fi" :href "https://ulkoilutampereenseutu.fi/"}
    {:label "RetkiSuomi" :href "https://retkisuomi.fi/"}
    {:label "Kuntamaisema" :href "https://kuntamaisema.fi/"}
-   {:label "Sweco" :href "https://www.sweco.fi/"}])
+   {:label "Sweco" :href "https://www.sweco.fi/"}
+   {:label "huts.fi" :href "https://huts.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
