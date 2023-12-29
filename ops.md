@@ -1,5 +1,15 @@
 # Operations manual
 
+## Updating OSM data
+
+OSM data is used by OSRM to calculate distances and travel times by walking, car or bicycle. This is used in analysis tools (diversity, reachability).
+
+The data is updated yearly.
+
+Operation takes ~30 minutes to execute in production.
+
+See [osrm/README.md](osrm/README.md).
+
 ## MML Population Grid Processing / Data Update ##
 
 Population grids are updated once every 1-2 years. This affects analysis tools (reachability, diversity).

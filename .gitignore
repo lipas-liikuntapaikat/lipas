@@ -10,6 +10,7 @@
 /.lsp
 /osrm/*
 !/osrm/README.md
+!/osrm/update-data.sh
 .calva
 repl.clj*
 
