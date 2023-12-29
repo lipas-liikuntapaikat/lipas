@@ -29,8 +29,8 @@
       :city-stats "city_stats"}
      :analysis
      {:schools             "schools"
-      :population          "vaestoruutu_1km_2019_kp"
-      :population-high-def "vaestoruutu_250m_2020_kp"
+      :population          "vaestoruutu_1km"
+      :population-high-def "vaestoruutu_250m"
       :diversity           "diversity"}}}
    :mailchimp
    {:api-key                (:mailchimp-api-key env)
