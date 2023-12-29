@@ -1,7 +1,11 @@
 (ns lipas.backend.analysis.diversity
   (:require
+   [clojure.data.csv :as csv]
+   [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.string :as str]
+   [clojure.walk :as walk]
+   [taoensso.timbre :as log]
    [lipas.backend.analysis.common :as common]
    [lipas.backend.gis :as gis]
    [lipas.backend.osrm :as osrm]
@@ -344,7 +348,7 @@
 
 (defn recalc-grid!
   [{:keys [indices client] :as search} fcoll]
-  (let [idx-name (get-in indices [:analysis :diversity])
+  (let [idx-name       (get-in indices [:analysis :diversity])
         on-error       prn
         buffer-dist-km 2
         buffer-geom    (gis/calc-buffer fcoll (* buffer-dist-km 1000))
@@ -354,8 +358,36 @@
          (map :_source)
          (map #(process-grid-item search buffer-dist-km % on-error))
          (search/->bulk idx-name :grd_id)
-         (search/bulk-index! client)
-         deref)))
+         (search/bulk-index-sync! client))))
+
+(defn seed-new-grid-from-csv!
+  [{:keys [indices client] :as search} csv-path]
+  (let [idx-name   (str "diversity-" (search/gen-idx-name))
+        on-error   #(log/error %)
+        batch-size 100
+        dist-km    2]
+
+    (with-open [rdr (io/reader csv-path)]
+      (log/info "Creating index" idx-name)
+      (search/create-index! client idx-name mappings)
+
+      (log/info "Starting to process" csv-path)
+      (doseq [part (->> (csv/read-csv rdr)
+                        utils/csv-data->maps
+                        (map walk/keywordize-keys)
+                        (partition-all batch-size)
+                        (doall))]
+
+        (let [ms (reduce (fn [res m]
+                           (conj res (process-grid-item search dist-km m on-error)))
+                         []
+                         part)]
+
+          (log/info "Writing batch of" batch-size "to" idx-name)
+          (->> ms
+               (search/->bulk idx-name :grd_id)
+               (search/bulk-index-sync! client))
+          (log/info "Writing batch DONE"))))))
 
 (comment
   (require '[lipas.backend.search])
