@@ -1,13 +1,18 @@
 (ns lipas.maintenance
   (:require
+   [clojure.data.csv :as csv]
    [clojure.edn :as edn]
+   [clojure.java.jdbc :as jdbc]
+   [clojure.set :as set]
    [clojure.spec.alpha :as s]
+   [clojure.string :as str]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
+   [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
-   [lipas.backend.search :as search]
+   [lipas.data.owners :as owners]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [taoensso.timbre :as log])
@@ -91,7 +96,7 @@
          deref)
     (log/info "All done!")))
 
-(defn- ->subsidy-entry [m]
+(defn- ->subsidy-es-entry [m]
   (-> m
       (assoc
        :timestamp (str (:year m) "-01-01")
@@ -114,11 +119,71 @@
     (log/info "Deleted" es-index)
     (log/info "Starting to index subsidies data to" es-index)
     (->> (core/get-subsidies db)
-         (map ->subsidy-entry)
+         (map ->subsidy-es-entry)
          (search/->bulk es-index :id)
          (search/bulk-index! client)
          deref)
     (log/info "All done!")))
+
+(def owner-lookup (utils/index-by (comp :fi second) first owners/all))
+(def city-lookup (utils/index-by (comp :fi :name) :city-code cities/all))
+
+(def subsidy-csv-headers
+    {"Saajataho, luokiteltu (Lipas-luokitus omistaja)" :owner
+     "Liikuntapaikan nimi"                             :target
+     "Avustuksen saaja"                                :receiver-name
+     "Kunta myöntövuonna"                              :city-name
+     "Myöntövuosi"                                     :year
+     "Tyyppikoodi (numero)"                            :type-codes
+     "Avustuksen myöntäjä"                             :issuer
+     "Lipas-ID"                                        :lipas-ids
+     "Myönnetty avustus tuhatta e"                     :amount
+     "Avustuksen selite"                               :description})
+
+(defn ->subsidy-db-entry [m]
+    (-> m
+        (assoc :city-code (-> m :city-name city-lookup))
+        (update :type-codes #(-> % (str/split #";") (->> (mapv utils/->int))))
+        (update :year utils/->int)
+        (update :lipas-ids #(-> % (str/split #";") (->> (mapv utils/->int) (remove nil?))))
+        (update :owner owner-lookup)
+        (update :issuer #(condp = %
+                           "ELY" "AVI"
+                           "OPM" "OKM"
+                           %))
+        (update :amount utils/->number)))
+
+(def valid-keys #{:description :amount :lipas-ids :city-name :receiver-name
+  :type-codes :city-code :year :issuer :target :owner})
+
+(defn add-subsidies-from-csv!
+  [{:keys [db search] :as system} csv-path]
+
+  (log/info "Reading subsidies from csv" csv-path)
+
+  (let [ms (->> csv-path
+                slurp
+                csv/read-csv
+                utils/csv-data->maps
+                (map #(set/rename-keys % subsidy-csv-headers))
+                (map ->subsidy-db-entry))]
+
+    ;; TODO add malli schema or spec for entries
+    (log/info "Validating" (count ms) "subsidy entries")
+    ;; Validate that all columns names were matched
+    ;; Note: :target (sports-site name) is not available in all sheets
+
+    #_(println (set/difference (into #{} (mapcat keys) ms) valid-keys))
+
+    (assert (= valid-keys (into #{} (mapcat keys) ms)))
+
+    (log/info "Writing subsidies to database")
+    (jdbc/with-db-transaction [tx db]
+      (doseq [m ms]
+        (db/add-subsidy! tx m)))
+
+    (log/info "Indexing to Elasticsearch")
+    (index-subsidies! system)))
 
 (def get-city-name (comp :fi :name all-cities))
 
@@ -208,5 +273,7 @@
   (def kair (first aki))
 
   (->city-finance-entries [(update kair :stats select-keys [2021])])
+
+  (add-subsidies-from-csv! system "/usr/src/app/avustukset_2023.csv")
 
   )
