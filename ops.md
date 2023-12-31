@@ -155,3 +155,20 @@ curl -X POST "localhost:9209/_aliases?pretty" -H 'Content-Type: application/json
   }
   '
 ```
+
+### Subsidies
+
+OKM and AVI are the two main sports facility related subsidy issuers in Finland. The data from both sources is combined manually to an Excel-file by the Lipas-team.
+
+The data is updated yearly to Lipas. The updated data contains subsidies considering the current year.
+
+The data is stored to the db and indexed from db to elasticsearch.
+
+- Acquire the Excel file from the team
+- Save Excel as CSV
+  - The CSV should contain only "new data" (no historical data)
+- Upload the csv to prod server
+- Run `lipas.maintenance/add-subsidies-from-csv!` from the REPL
+- Enable current year in the stats -> subsidies UI
+  - `lipas.ui.stats.subsidies.views` (year selector valid range)
+  - `lipas.ui.stats.subsidies.db` (selected year default value)
