@@ -64,6 +64,16 @@
        (user/marshall)
        (user/update-user-password! db-spec)))
 
+(defn update-user-email! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-email! db-spec)))
+
+(defn update-user-username! [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-username! db-spec)))
+
 ;; Sports Site ;;
 
 (defn- invalidate-revs-since-this!

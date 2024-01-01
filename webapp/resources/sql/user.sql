@@ -4,6 +4,7 @@
 -- :doc Selects all users
 SELECT
   id,
+  created_at,
   status,
   email,
   username,
@@ -20,6 +21,7 @@ FROM
 -- :doc Selects the user matching the id
 SELECT
   id,
+  created_at,
   status,
   email,
   username,
@@ -38,6 +40,7 @@ WHERE
 -- :doc Selects the user matching the username
 SELECT
   id,
+  created_at,
   status,
   email,
   username,
@@ -56,6 +59,7 @@ WHERE
 -- :doc Selects the user matching the email
 SELECT
   id,
+  created_at,
   status,
   email,
   username,
@@ -113,6 +117,14 @@ UPDATE account
 SET    password = :password
 WHERE  id = :id ::uuid;
 
+-- :name update-user-email!
+-- :command :execute
+-- :result :affected
+-- :doc Update email for the user with given id
+UPDATE account
+SET    email = :email
+WHERE  id = :id ::uuid;
+
 -- :name update-user-data!
 -- :command :execute
 -- :result :one
@@ -124,7 +136,15 @@ WHERE  id = :id ::uuid;
 -- :name update-user-status!
 -- :command :execute
 -- :result :one
--- :doc Update stauts for the user with given id
+-- :doc Update status for the user with given id
 UPDATE account
 SET    status = :status
+WHERE  id = :id ::uuid;
+
+-- :name update-user-username!
+-- :command :execute
+-- :result :one
+-- :doc Update username for the user with given id
+UPDATE account
+SET    username = :username
 WHERE  id = :id ::uuid;

@@ -128,8 +128,8 @@
                      {:from old-perms :to permissions})))
 
 (defn update-user-status!
-  [db {:keys [id status]}]
-  (let [user       (get-user! db id)
+  [db {:keys [id status] :as user}]
+  (let [user       (db/get-user-by-id db user)
         old-status (-> user :status)
         new-user   (assoc user :status status)]
     (db/update-user-status! db new-user)
@@ -178,6 +178,51 @@
   [db user user-data]
   (db/update-user-data! db (assoc user :user-data user-data))
   user-data)
+
+(defn gdpr-remove-user!
+  "Removes personal data associated with the user and archives the user."
+  [db user]
+  (jdbc/with-db-transaction [tx db]
+    (let [username (str "gdpr_removed_" (java.util.UUID/randomUUID))
+          email    (str username "@lipas.fi")]
+      (db/update-user-username! tx (assoc user :username username))
+      (db/update-user-email! tx (assoc user :email email))
+      (update-user-data! tx user {})
+      (add-user-event! tx user "GDPR removal")
+      (update-user-status! tx (assoc user :status "archived"))))
+  {:status "OK"})
+
+(defn gdpr-remove?
+  "User data is removed if the user has been inactive for > 5 years."
+  [now {:keys [created-at history] :as user}]
+  (let [created-at+5y (-> (.toInstant created-at)
+                          (.atZone (java.time.ZoneId/of "UTC"))
+                          (.plus 5 java.time.temporal.ChronoUnit/YEARS)
+                          (.toInstant))]
+    (and (not (str/ends-with? (:email user) "@lipas.fi"))
+         (.isAfter now created-at+5y)
+         (let [last-event (->> history :events (map :event-date) (sort utils/reverse-cmp) first)]
+           (or (nil? last-event)
+               (let [last-event+5y (-> (java.time.Instant/parse last-event)
+                                       (.atZone (java.time.ZoneId/of "UTC"))
+                                       (.plus 5 java.time.temporal.ChronoUnit/YEARS)
+                                       (.toInstant))]
+                 (.isAfter now last-event+5y)))))))
+
+(defn process-gdpr-removals!
+  [db]
+  (let [now   (java.time.Instant/now)
+        users (->> (get-users db)
+                   (filter (partial gdpr-remove? now)))]
+    (log/info "Found" (count users) "users to GDPR remove.")
+
+    (doseq [user users]
+      (log/info "GDPR removing user" (:id user))
+      (log/info (:created-at user)
+                (->> user :history :events (map :event-date) (sort utils/reverse-cmp) first))
+      #_(gdpr-remove-user! db user))
+
+    (log/info "GDPR removals DONE!")))
 
 ;;; Sports-sites ;;;
 
