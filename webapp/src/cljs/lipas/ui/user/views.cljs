@@ -125,6 +125,24 @@
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
+
+       ;; Saved searches
+       (when saved-searches
+         [mui/grid {:item true :xs 12}
+          [mui/card card-props
+           [mui/card-header {:title (tr :lipas.user/saved-searches)}]
+           [mui/card-content
+            [lui/select
+             {:label     (tr :actions/select)
+              :style     {:width "170px"}
+              :items     saved-searches
+              :label-fn  :name
+              :value-fn  identity
+              :on-change #(==> [::events/select-saved-search %])}]]]])]]
+
+     [mui/grid {:item true :xs 12 :lg 6}
+      [mui/grid {:container true :spacing 1}
+
        ;; Permissions
        [mui/grid {:item true :xs 12}
 
@@ -206,25 +224,8 @@
 
           ]]]
 
-       ;; Saved searches
-       (when saved-searches
-         [mui/grid {:item true :xs 12}
-          [mui/card card-props
-           [mui/card-header {:title (tr :lipas.user/saved-searches)}]
-           [mui/card-content
-            [lui/select
-             {:label     (tr :actions/select)
-              :style     {:width "170px"}
-              :items     saved-searches
-              :label-fn  :name
-              :value-fn  identity
-              :on-change #(==> [::events/select-saved-search %])}]]]])]]
-
-     [mui/grid {:item true :xs 12 :lg 6}
-      [mui/grid {:container true :spacing 1}
-
        ;; Promo card
-       [mui/grid {:item true :xs 12}
+       #_[mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title (tr :user/promo-headline)}]
          [mui/card-content
