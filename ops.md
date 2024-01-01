@@ -172,3 +172,20 @@ The data is stored to the db and indexed from db to elasticsearch.
 - Enable current year in the stats -> subsidies UI
   - `lipas.ui.stats.subsidies.views` (year selector valid range)
   - `lipas.ui.stats.subsidies.db` (selected year default value)
+
+### City finance data
+
+We have traditionally collected and distributed information on the finances of municipalities' sports and youth activities. The data source changed in 2021, and the format also changed slightly. Therefore, the information before and after 2021 is not entirely comparable.
+
+The Lipas team receives data in Excel format from the Association of Finnish Local and Regional Authorities. The data is updated annually. Typically, information for the previous year is obtained only in the following year; for example, data for the year 2022 is usually received by the end of 2023.
+
+The data is stored to the db and indexed from db to elasticsearch.
+
+- Acquire the Excel file from the team
+- Save Excel as CSV
+  - The CSV should contain only "new data" (no historical data)
+- Upload the csv to prod server
+- Run `lipas.maintenance/add-city-finance-stats-from-csv!` from the REPL
+- Enable current year in the stats -> city finance UI
+  - `lipas.ui.stats.finance.views` (year selector valid range)
+  - `lipas.ui.stats.finance.db` (selected year default value)
