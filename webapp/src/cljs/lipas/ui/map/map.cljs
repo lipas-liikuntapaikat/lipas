@@ -4,6 +4,12 @@
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
    ["ol/interaction/Select$default" :as SelectInteraction]
+   ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
+   ["ol/interaction/DragPan$default" :as DragPan]
+   ["ol/interaction/PinchZoom$default" :as PinchZoom]
+   ["ol/interaction/KeyboardPan$default" :as KeyboardPan]
+   ["ol/interaction/KeyboardZoom$default" :as KeyboardZoom]
+   ["ol/interaction/MouseWheelZoom$default" :as MouseWheelZoom]
    ["ol/layer/Image$default" :as ImageLayer]
    ["ol/layer/Tile$default" :as TileLayer]
    ["ol/layer/Vector$default" :as VectorLayer]
@@ -207,8 +213,8 @@
         view          (init-view center zoom)
         popup-overlay (init-overlay)
 
-        opts #js {:target   "map"
-                  :layers   #js[(-> layers :basemaps :taustakartta)
+        opts #js {:target       "map"
+                  :layers       #js[(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
                                 (-> layers :overlays :analysis)
@@ -226,8 +232,14 @@
                                 (-> layers :overlays :mml-kiinteisto)
                                 (-> layers :overlays :mml-kiinteistotunnukset)
                                 (-> layers :overlays :mml-kuntarajat)]
-                  :overlays #js[popup-overlay]
-                  :view     view}
+                  :interactions #js[(MouseWheelZoom.)
+                                    (KeyboardZoom.)
+                                    (KeyboardPan.)
+                                    (PinchZoom.)
+                                    (DragPan.)
+                                    (DoubleClickZoom.)]
+                  :overlays     #js[popup-overlay]
+                  :view         view}
 
         vector-hover (SelectInteraction.
                       #js{:layers    #js[(-> layers :overlays :vectors)]
@@ -665,13 +677,13 @@
     (r/create-class
 
      {:reagent-render
-      (fn [] [mui/grid {:id    "map"
+      (fn [] [mui/grid {:id       "map"
                         ;; Keyboard navigation requires that this element has a tabIndex
                         ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
                         :tabIndex -1
-                        :item  true
-                        :style {:height "100%" :width "100%"}
-                        :xs    12}])
+                        :item     true
+                        :style    {:height "100%" :width "100%"}
+                        :xs       12}])
 
       :component-did-mount
       (fn [comp]

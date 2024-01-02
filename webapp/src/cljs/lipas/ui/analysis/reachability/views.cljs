@@ -183,7 +183,7 @@
         "CC BY 4.0"]
        "."]
       [mui/typography {:variant "caption"}
-       "© Tilastokeskus väestörakenne 2020"]]]))
+       "© Tilastokeskus väestörakenne 2022"]]]))
 
 (defn schools-tab [{:keys [tr]}]
   (let [schools-list       (<== [::subs/schools-list])

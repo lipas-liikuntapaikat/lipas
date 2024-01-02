@@ -426,10 +426,10 @@
      :helper-text
      "Valitse liikuntapaikka kartalta tai lisää uusi analysoitava kohde ",
      :copyright1
-     "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2019",
+     "Väestötiedoissa käytetään Tilastokeskuksen vuoden 2022",
      :copyright2 "1x1 km ruutuaineistoa",
      :copyright3 "lisenssillä"
-     :copyright4 ", sekä vuoden 2020 250x250m ruutuaineistoa suljetulla lisenssillä."},
+     :copyright4 ", sekä vuoden 2022 250x250m ruutuaineistoa suljetulla lisenssillä."},
     :lipas.swimming-pool.slides
     {:add-slide  "Lisää liukumäki",
      :edit-slide "Muokkaa liukumäkeä",

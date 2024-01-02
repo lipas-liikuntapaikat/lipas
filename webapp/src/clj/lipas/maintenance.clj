@@ -1,13 +1,20 @@
 (ns lipas.maintenance
   (:require
+   [cheshire.core :as json]
+   [clojure.data.csv :as csv]
    [clojure.edn :as edn]
+   [clojure.java.jdbc :as jdbc]
+   [clojure.set :as set]
    [clojure.spec.alpha :as s]
+   [clojure.string :as str]
+   [clojure.walk :as walk]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
+   [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
-   [lipas.backend.search :as search]
+   [lipas.data.owners :as owners]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [taoensso.timbre :as log])
@@ -77,21 +84,7 @@
    []
    data))
 
-;; `year`-`city` is used as primary key
-(defn index-city-finance-data!
-  "Re-indexes documents from db table 'city' into ES."
-  [{:keys [db search]}]
-  (let [{:keys [indices client]} search
-        es-index                 (get-in indices [:report :city-stats])]
-    (log/info "Starting to index city finance data to" es-index)
-    (->> (core/get-cities db :no-cache)
-         ->city-finance-entries
-         (search/->bulk es-index :id)
-         (search/bulk-index! client)
-         deref)
-    (log/info "All done!")))
-
-(defn- ->subsidy-entry [m]
+(defn- ->subsidy-es-entry [m]
   (-> m
       (assoc
        :timestamp (str (:year m) "-01-01")
@@ -114,11 +107,185 @@
     (log/info "Deleted" es-index)
     (log/info "Starting to index subsidies data to" es-index)
     (->> (core/get-subsidies db)
-         (map ->subsidy-entry)
+         (map ->subsidy-es-entry)
          (search/->bulk es-index :id)
          (search/bulk-index! client)
          deref)
     (log/info "All done!")))
+
+(def owner-lookup (utils/index-by (comp :fi second) first owners/all))
+(def city-lookup (utils/index-by (comp :fi :name) :city-code cities/all))
+
+(def subsidy-csv-headers
+    {"Saajataho, luokiteltu (Lipas-luokitus omistaja)" :owner
+     "Liikuntapaikan nimi"                             :target
+     "Avustuksen saaja"                                :receiver-name
+     "Kunta myöntövuonna"                              :city-name
+     "Myöntövuosi"                                     :year
+     "Tyyppikoodi (numero)"                            :type-codes
+     "Avustuksen myöntäjä"                             :issuer
+     "Lipas-ID"                                        :lipas-ids
+     "Myönnetty avustus tuhatta e"                     :amount
+     "Avustuksen selite"                               :description})
+
+(defn ->subsidy-db-entry [m]
+    (-> m
+        (assoc :city-code (-> m :city-name city-lookup))
+        (update :type-codes #(-> % (str/split #";") (->> (mapv utils/->int))))
+        (update :year utils/->int)
+        (update :lipas-ids #(-> % (str/split #";") (->> (mapv utils/->int) (remove nil?))))
+        (update :owner owner-lookup)
+        (update :issuer #(condp = %
+                           "ELY" "AVI"
+                           "OPM" "OKM"
+                           %))
+        (update :amount utils/->number)))
+
+(def valid-subsidy-keys #{:description :amount :lipas-ids :city-name :receiver-name
+  :type-codes :city-code :year :issuer :target :owner})
+
+(defn add-subsidies-from-csv!
+  [{:keys [db search] :as system} csv-path]
+
+  (log/info "Reading subsidies from csv" csv-path)
+
+  (let [ms (->> csv-path
+                slurp
+                csv/read-csv
+                utils/csv-data->maps
+                (map #(set/rename-keys % subsidy-csv-headers))
+                (map ->subsidy-db-entry))]
+
+    ;; TODO add malli schema or spec for entries
+    (log/info "Validating" (count ms) "subsidy entries")
+    ;; Validate that all columns names were matched
+    ;; Note: :target (sports-site name) is not available in all sheets
+
+    #_(println (set/difference (into #{} (mapcat keys) ms) valid-keys))
+
+    (assert (= valid-subsidy-keys (into #{} (mapcat keys) ms)))
+
+    (log/info "Writing subsidies to database")
+    (jdbc/with-db-transaction [tx db]
+      (doseq [m ms]
+        (db/add-subsidy! tx m)))
+
+    (log/info "Indexing to Elasticsearch")
+    (index-subsidies! system)))
+
+;; `year`-`city` is used as primary key
+(defn index-city-finance-data!
+  "Re-indexes documents from db table 'city' into ES."
+  [{:keys [db search]}]
+  (let [{:keys [indices client]} search
+        es-index                 (get-in indices [:report :city-stats])]
+    (log/info "Starting to index city finance data to" es-index)
+    (->> (core/get-cities db :no-cache)
+         ->city-finance-entries
+         (search/->bulk es-index :id)
+         (search/bulk-index! client)
+         deref)
+    (log/info "All done!")))
+
+(defn ->number-div-by-1000 [x]
+  (when-let [n (utils/->number x)]
+    (/ n 1000)))
+
+(defn ->city-stats-map
+  [csv-data year]
+  (reduce
+     (fn [res m]
+       (let [city-code (-> m :kunta_nimi city-lookup)]
+         (-> res
+             (assoc-in [city-code year :population] (or (-> m :asukasluku utils/->number) 0))
+             (assoc-in [city-code year :services "youth-services"]
+                       {:investments          (-> m :nuor_investoinnit ->number-div-by-1000)
+                        :net-costs            (-> m :nuor_nettokustannukset ->number-div-by-1000)
+                        :subsidies            (-> m :nuor_avustukset ->number-div-by-1000)
+                        :operating-expenses   (-> m :nuor_kayttokustannukset ->number-div-by-1000)
+                        :operating-incomes    (-> m :nuor_kayttotuotot ->number-div-by-1000)
+                        ;; New names since 2021 Numbers are not
+                        ;; probably comparatible with earlier ones and
+                        ;; thus new keys
+                        :operational-expenses (-> m :nuor_toimintakulut ->number-div-by-1000)
+                        :operational-income   (-> m :nuor_toimintatuotot ->number-div-by-1000)
+                        :surplus              (-> m :nuor_tilikauden_ylijaama ->number-div-by-1000)
+                        :deficit              (-> m :nuor_tilikauden_alijaama ->number-div-by-1000)})
+             (assoc-in [city-code year :services "sports-services"]
+                       {:investments          (-> m :liik_investoinnit ->number-div-by-1000)
+                        :net-costs            (-> m :liik_nettokustannukset ->number-div-by-1000)
+                        :subsidies            (-> m :liik_avustukset ->number-div-by-1000)
+                        :operating-expenses   (-> m :liik_kayttokustannukset ->number-div-by-1000)
+                        :operating-incomes    (-> m :liik_kayttotuotot ->number-div-by-1000)
+                        ;; New names since 2021 Numbers are not
+                        ;; probably comparatible with earlier ones and
+                        ;; thus new keys
+                        :operational-expenses (-> m :liik_toimintakulut ->number-div-by-1000)
+                        :operational-income   (-> m :liik_toimintatuotot ->number-div-by-1000)
+                        :surplus              (-> m :liik_tilikauden_ylijaama ->number-div-by-1000)
+                        :deficit              (-> m :liik_tilikauden_alijaama ->number-div-by-1000)}))))
+     {}
+     csv-data))
+
+(def city-finance-csv-headers
+    ["kunta_nimi"
+     "asukasluku"
+     "liik_investoinnit"
+     #_"liik_kayttokustannukset" ; Until 2021
+     #_"liik_kayttotuotot"       ; Until 2021
+     #_"liik_nettokustannukset"  ; Until 2021
+     "liik_avustukset"
+     "liik_toimintakulut"        ; Since 2022
+     "liik_toimintatuotot"       ; Since 2022
+     "liik_tilikauden_ylijaama"  ; Since 2022
+     "liik_tilikauden_alijaama"  ; Since 2022
+     "nuor_investoinnit"
+     #_"nuor_kayttokustannukset" ; Until 2021
+     #_"nuor_kayttotuotot"       ; Until 2021
+     #_"nuor_nettokustannukset"  ; Until 2021
+     "nuor_avustukset"
+     "nuor_toimintakulut"        ; Since 2022
+     "nuor_toimintatuotot"       ; Since 2022
+     "nuor_tilikauden_ylijaama"  ; Since 2022
+     "nuor_tilikauden_alijaama"  ; Since 2022
+     ])
+
+(defn ->city-finance-sql-update
+  [city-code year m]
+    (let [entry (json/encode m)]
+      (format
+       (str
+        "UPDATE city "
+        "SET stats = jsonb_set(stats, '{%s}', '%s') "
+        "WHERE city_code = %s;")
+       year entry city-code)))
+
+(defn add-city-stats-from-csv!
+  [{:keys [db _search] :as system} csv-path year]
+  (log/info "Reading city finance entries for year" year "from" csv-path)
+  (let [csv-data  (->> csv-path
+                       slurp
+                       csv/read-csv
+                       utils/csv-data->maps
+                       (map walk/keywordize-keys))
+        stats-map (->city-stats-map csv-data year)]
+
+    ;; Validate that all columns names were matched
+    ;; TODO add malli schema or spec for entries
+    (log/info "Validating" (count csv-data) "city finance entries")
+    (assert (= (into #{} (map keyword) city-finance-csv-headers)
+               (into #{} (mapcat keys) csv-data)))
+
+
+    (log/info "Storing city finance entries into the db")
+    (jdbc/with-db-transaction [tx db]
+      (doseq [[city-code m] stats-map
+              [year stats]  m]
+        (let [sql (->city-finance-sql-update city-code year stats)]
+          (jdbc/execute! tx [sql]))))
+
+    (log/info "Re-indexing city finance data to elasticsearch")
+    (index-city-finance-data! system)))
 
 (def get-city-name (comp :fi :name all-cities))
 
@@ -209,4 +376,21 @@
 
   (->city-finance-entries [(update kair :stats select-keys [2021])])
 
+  (add-subsidies-from-csv! system "/usr/src/app/avustukset_2023.csv")
+
+
   )
+
+(comment
+  (def csv-path "/Users/tipo/lipas/taloustiedot/taloustiedot_2022.csv")
+  (add-city-stats-from-csv! system csv-path 2022)
+  (->> csv-path
+       slurp
+       csv/read-csv
+       utils/csv-data->maps
+       (mapcat keys)
+       (into #{})
+       #_(map walk/keywordize-keys)
+       #_(map :kunta_nimi)
+       #_(map city-lookup)
+       (set/difference (set city-finance-csv-headers))))
