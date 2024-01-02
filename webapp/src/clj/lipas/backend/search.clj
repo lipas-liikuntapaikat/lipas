@@ -102,6 +102,24 @@
               (map (comp :result second first))
               frequencies))))))
 
+(defn bulk-index-sync!
+  ([client data]
+   (let [{:keys [input-ch output-ch]}
+         (es/bulk-chan client {:flush-threshold         100
+                               :flush-interval          5000
+                               :max-concurrent-requests 3})]
+
+     (async/put! input-ch data)
+     (async/close! input-ch)
+
+     (when-let [[_job resp] (async/<!! output-ch)]
+       (async/close! output-ch)
+       (->> resp
+            :body
+            :items
+            (map (comp :result second first))
+            frequencies)))))
+
 (defn current-idxs
   "Returns a coll containing current index(es) pointing to alias."
   [client {:keys [alias]}]
@@ -121,14 +139,22 @@
                         :body   {:actions actions}})
     old-idxs))
 
+(defn create-alias!
+  [client {:keys [alias idx-name]}]
+  (es/request client {:method :post
+                      :url    (es-utils/url [:_aliases])
+                      :body   {:actions [{:add {:index idx-name :alias alias}}]}}))
+
 (defn search
   [client idx-name params]
+  (assert idx-name)
   (es/request client {:method :get
                       :url    (es-utils/url [idx-name :_search])
                       :body   params}))
 
 (defn scroll
   [client idx-name params]
+  (assert idx-name)
   (es/scroll-chan client {:method :get
                           :url    (es-utils/url [idx-name :_search])
                           :body   params}))

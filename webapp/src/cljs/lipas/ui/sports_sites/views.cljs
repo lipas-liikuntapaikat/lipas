@@ -61,12 +61,13 @@
        [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Last modified
-     {:label      (tr :general/last-modified)
-      :value      (-> display-data :event-date)
-      :form-field [lui/text-field
-                   {:value     (-> display-data :event-date)
-                    :on-change #()
-                    :disabled  true}]}
+     (when-let [event-date (:event-date display-data)]
+       {:label      (tr :general/last-modified)
+        :value      event-date
+        :form-field [lui/text-field
+                     {:value     event-date
+                      :on-change #()
+                      :disabled  true}]})
 
      ;; Status
      (when (allow-editing-status? tr display-data)

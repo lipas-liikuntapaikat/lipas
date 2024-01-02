@@ -32,7 +32,7 @@
           (swap! tasks assoc :reminders task)))
 
       (when (some #{:analysis} task-ks)
-        (let [task (tt/every! 30 (fn [] (core/process-analysis-queue! db search)))]
+        (let [task (tt/every! 120 (fn [] (core/process-analysis-queue! db search)))]
           (swap! tasks assoc :analysis task)))
 
       (when (some #{:elevation} task-ks)
