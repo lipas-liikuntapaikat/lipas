@@ -637,7 +637,7 @@
    :props
    (merge
     (dissoc common-props :accessibility)
-    {:type
+    {:fishing-type
      {:schema [:sequential (into [:enum] (keys fishing-types))]
       :field
       {:type        "multi-select"
@@ -654,10 +654,10 @@
        :opts        fishing-activities}}
 
      :fishing-waters
-     {:schema [:sequential (into [:enum] (keys fishing-waters))]
+     {:schema (into [:enum] (keys fishing-waters))
       :field
       {:type        "select"
-       :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
+       :description {:fi ""}
        :label       {:fi "Vesistö"}
        :opts        fishing-waters}}
 
@@ -667,7 +667,7 @@
       {:type        "multi-select"
        :description {:fi "Kohteessa kalastamisen kannalta keskeisimmät kalalajit, esim. ahven, taimen, kirjolohi tms."}
        :label       {:fi "Keskeiset kalalajit"}
-       :opts fishing-species}}
+       :opts        fishing-species}}
 
      :fish-population
      {:schema localized-string-schema
