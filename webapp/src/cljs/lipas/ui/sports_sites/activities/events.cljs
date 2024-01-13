@@ -94,6 +94,38 @@
       str/lower-case))
 
 (re-frame/reg-event-fx
+ ::upload-utp-image
+ (fn [{:keys [db]} [_ files lipas-id cb]]
+   (let [file      (aget files 0)
+         form-data (doto (js/FormData.)
+                     (.append "filename" (gobj/get file "name" ""))
+                     (.append "lipas-id" lipas-id)
+                     (.append "file" file))
+         token     (-> db :user :login :token)]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/upload-utp-image")
+       :headers         {:Authorization (str "Token " token)}
+       :body            form-data
+       :response-format (ajax/transit-response-format)
+       :on-success      [::upload-utp-image-success cb]
+       :on-failure      [::upload-utp-image-failure]}})))
+
+(re-frame/reg-event-fx
+ ::upload-utp-image-success
+ (fn [{:keys [_db]} [_ cb resp]]
+   (cb resp)
+   {}))
+
+(re-frame/reg-event-fx
+ ::upload-utp-image-failure
+ (fn [{:keys [db]} [event-k resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/save-failed)
+                       :success? false}]
+     {:dispatch [:lipas.ui.events/set-active-notification notification]})))
+
+(re-frame/reg-event-fx
  ::upload-image
  (fn [{:keys [db]} [_ files lipas-id cb]]
    (let [file  (aget files 0)

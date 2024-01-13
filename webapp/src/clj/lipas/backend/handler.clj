@@ -12,6 +12,7 @@
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
+   [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
@@ -158,8 +159,8 @@
 
       ["/lois"
        {:get
-        {:no-doc    false
-         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+        {:no-doc     false
+         :responses  {200 {:body (s/coll-of :lipas.loi/document)}}
          :parameters {}
          :handler
          (fn []
@@ -177,10 +178,10 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-type (-> parameters :path :loi-type)
-                 query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
+                 query    {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}] 
-      
+              :body   (core/search-lois search query)}))}}]
+
       ["/lois/category/:loi-category"
        {:get
         {:no-doc    false
@@ -191,10 +192,10 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-category (-> parameters :path :loi-category)
-                 query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
+                 query        {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
-      
+
       ["/lois/status/:status"
        {:get
         {:no-doc    false
@@ -205,7 +206,7 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-status (-> parameters :path :status)
-                 query {:size 10000 :query {:term {:status.keyword loi-status}}}]
+                 query      {:size 10000 :query {:term {:status.keyword loi-status}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
 
@@ -517,7 +518,7 @@
               :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]
 
       ;;; Analysis ;;;
-      
+
       ;; Search Schools
       ["/actions/search-schools"
        {:post
@@ -626,6 +627,20 @@
            {:status 200
             :body   (core/presign-upload-url aws (assoc body-params :user identity))})}}]
 
+      ["/actions/upload-utp-image"
+       {:post
+        {:no-doc     false
+         :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
+         :parameters {:multipart {:file multipart/temp-file-part}}
+         :handler
+         (fn [{:keys [parameters multipart-params identity]}]
+           (let [params {:lipas-id (get multipart-params "lipas-id")
+                         :filename (-> parameters :multipart :file :filename)
+                         :data     (-> parameters :multipart :file :tempfile)
+                         :user     identity}]
+             {:status 200
+              :body   (core/upload-utp-image! params)}))}}]
+
       ["/actions/save-loi"
        {:post
         {:no-doc     false
@@ -639,9 +654,9 @@
 
       ["/actions/search-lois"
        {:post
-        {:no-doc     false
+        {:no-doc         false
          #_#_:middleware [mw/token-auth mw/auth]
-         :parameters {:body map?}
+         :parameters     {:body map?}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200

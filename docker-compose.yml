@@ -115,6 +115,9 @@ services:
       MAILCHIMP_API_KEY:
       MML_COVERAGE_URL:
       MML_API_KEY:
+      UTP_CMS_API_URL:
+      UTP_CMS_API_USER:
+      UTP_CMS_API_PASS:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_REGION:
