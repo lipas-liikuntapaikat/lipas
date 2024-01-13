@@ -85,3 +85,8 @@ export AWS_ACCESS_KEY_ID=***FILL_THIS***
 export AWS_SECRET_ACCESS_KEY=***FILL_THIS***
 export AWS_REGION=eu-north-1
 export AWS_S3_BUCKET_PREFIX=example
+
+# UTP
+export UTP_CMS_API_URL="https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
+export UTP_CMS_API_USER="lipas-developer"
+export UTP_CMS_API_PASS=***FILL_THIS***

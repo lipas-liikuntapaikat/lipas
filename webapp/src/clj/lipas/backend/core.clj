@@ -24,6 +24,7 @@
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
+   [lipas.integration.utp.cms :as utp-cms]
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
    [lipas.utils :as utils]
@@ -810,6 +811,10 @@
   (jdbc/with-db-transaction [tx db]
     (db/upsert-loi! tx user loi)
     (index-loi! search loi :sync)))
+
+(defn upload-utp-image!
+  [{:keys [_filename _data _user] :as params}]
+  (utp-cms/upload-image! params))
 
 (comment
   (require '[lipas.backend.config :as config])

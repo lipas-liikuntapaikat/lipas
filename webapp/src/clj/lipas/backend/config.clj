@@ -56,6 +56,10 @@
     :search    (ig/ref :search)
     :mailchimp (ig/ref :mailchimp)
     :aws       (ig/ref :aws)
+    :utp
+    {:cms-api-url  (:utp-cms-api-url env)
+     :cms-api-user (:utp-cms-api-user env)
+     :cms-api-pass (:utp-cms-api-pass env)}
     :accessibility-register
     {:base-url   (:accessibility-register-base-url env)
      :system-id  (:accessibility-register-system-id env)

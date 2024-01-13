@@ -365,11 +365,15 @@
      [:input
       {:type      "file"
        :accept    (str/join "," ["image/png" "image/jpeg" "image/jpg" "image/webp"])
-       :on-change #(==> [::events/upload-image
+       :on-change #(==> [::events/upload-utp-image
                          (-> % .-target .-files)
                          lipas-id
-                         (fn [url]
-                           (swap! dialog-state assoc-in [:data :url] url))])}]
+                         (fn [{:keys [public-urls] :as cms-meta}]
+                           (let [url (:original public-urls)]
+                             (swap! dialog-state (fn [state]
+                                                   (-> state
+                                                       (assoc-in [:data :url] url)
+                                                       (assoc-in [:data :cms] cms-meta))))))])}]
 
      ;; For debug
      #_[lui/text-field
