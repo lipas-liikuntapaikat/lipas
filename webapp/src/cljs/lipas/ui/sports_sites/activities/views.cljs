@@ -351,7 +351,9 @@
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id image-props]}]
   [lui/dialog
-   {:title         "Lisää valokuva"
+   {:title         (if (-> @dialog-state :data :url)
+                     "Valokuva"
+                     "Lisää valokuva")
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -377,10 +379,16 @@
 
      ;; For debug
      #_[lui/text-field
-        {:value     (-> @dialog-state :data :url)
-         :fullWidth true
-         :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
-         :label     "Url"}]]
+       {:value     (-> @dialog-state :data :url)
+        :fullWidth true
+        :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
+        :label     "Url"}]]
+
+    [mui/grid {:item true :xs 12}
+     (when-let [url (-> @dialog-state :data :url)]
+       [:img
+        {:style {:max-width "100%"}
+         :src   url}])]
 
     [mui/grid {:item true :xs 12}
      [lui/text-field
@@ -406,11 +414,7 @@
        :rows        5
        :variant     "outlined"}]]
 
-    [mui/grid {:item true :xs 12}
-     (when-let [url (-> @dialog-state :data :url)]
-       [:img
-        {:style {:max-width "100%"}
-         :src   url}])]]])
+    ]])
 
 (defn images
   [{:keys [value on-change locale label tr read-only? lipas-id image-props]}]
@@ -420,7 +424,8 @@
                dialog-init-state {:open? false
                                   :data  nil
                                   :mode  :edit}
-               dialog-state (r/atom dialog-init-state)]
+               dialog-state (r/atom dialog-init-state)
+               popper-state (r/atom {:open? false})]
 
     (let [tr (<== [:lipas.ui.subs/translator])]
       [mui/grid {:container true :spacing 2}
@@ -440,6 +445,17 @@
                                          (mapv #(dissoc % :id))))
                          (reset! dialog-state dialog-init-state))}]
 
+       ;; Image Preview Popper
+       [mui/popper
+        {:open           (:open? @popper-state)
+         :placement      "right"
+         :anchor-el      (:anchor-el @popper-state)
+         :disabblePortal false
+         :modifiers      {:offset {:enabled true :offset "0px,10px"}}}
+        [:img
+         {:style {:max-width "400px"}
+          :src   (:url @popper-state)}]]
+
        ;; Label
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
@@ -447,31 +463,38 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers         [[:url "Linkki"]
-                            [:_description "Kuvaus"]]
-          :read-only?      false
-          :items           (->> @state
-                                vals
-                                (map #(assoc % :_description (get-in % [:description locale]))))
-          :on-add          (fn []
-                             (reset! dialog-state {:open? true
-                                                   :mode  :add
-                                                   :data  {:id (gensym)}}))
-          :on-edit         (fn [m]
-                             (reset! dialog-state {:open? true
-                                                   :mode  :edit
-                                                   :data  (get @state (:id m))}))
-          :on-delete       (fn [m]
-                             (swap! state dissoc (:id m))
-                             (on-change (->> @state
-                                             vals
-                                             (mapv #(dissoc % :id)))))
-          :add-tooltip     "Lisää"
-          :edit-tooltip    (tr :actions/edit)
-          :delete-tooltip  (tr :actions/delete)
-          :confirm-tooltip (tr :confirm/press-again-to-delete)
-          :add-btn-size    "small"
-          :key-fn          :url}]]])))
+         {:headers    [[:url "Linkki"]
+                       [:_description "Kuvaus"]]
+          :read-only? false
+          :items      (->> @state
+                           vals
+                           (map #(assoc % :_description (get-in % [:description locale]))))
+          :on-add     (fn []
+                        (reset! dialog-state {:open? true
+                                              :mode  :add
+                                              :data  {:id (gensym)}}))
+          :on-edit    (fn [m]
+                        (reset! dialog-state {:open? true
+                                              :mode  :edit
+                                              :data  (get @state (:id m))}))
+          :on-delete  (fn [m]
+                        (swap! state dissoc (:id m))
+                        (on-change (->> @state
+                                        vals
+                                        (mapv #(dissoc % :id)))))
+
+          :on-custom-hover-in  (fn [evt item]
+                                 (reset! popper-state {:open?     true
+                                                       :anchor-el (.-currentTarget evt)
+                                                       :url       (:url item)}))
+          :on-custom-hover-out (fn [_evt _item]
+                                 (swap! popper-state assoc :open? false))
+          :add-tooltip         "Lisää"
+          :edit-tooltip        (tr :actions/edit)
+          :delete-tooltip      (tr :actions/delete)
+          :confirm-tooltip     (tr :confirm/press-again-to-delete)
+          :add-btn-size        "small"
+          :key-fn              :url}]]])))
 
 (defn video-dialog
   [{:keys [tr locale dialog-state on-save on-close]}]

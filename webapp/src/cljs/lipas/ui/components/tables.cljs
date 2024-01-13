@@ -267,7 +267,7 @@
   [{:keys [headers items key-fn add-tooltip
            edit-tooltip delete-tooltip confirm-tooltip
            read-only? on-add on-edit on-delete add-btn-size
-           max-width empty-label hide-header-row?]
+           max-width empty-label hide-header-row? on-custom-hover-in on-custom-hover-out]
     :or   {add-btn-size     "large"
            hide-header-row? false}
     :as   props}]
@@ -303,7 +303,7 @@
             ;; Headear row
             (when-not hide-header-row?
               [mui/table-head
-              (into [mui/table-row {:hover true}
+               (into [mui/table-row {:hover true}
                      [mui/table-cell ""]]
                     (for [[_ header] headers]
                       [mui/table-cell header]))])
@@ -315,7 +315,11 @@
              (doall
               (for [item items
                     :let [id (or (key-fn item) (:id item) (:lipas-id item))]]
-                [mui/table-row {:key id :hover true}
+                [mui/table-row
+                 {:key id
+                  :hover true
+                  :on-mouse-enter (when on-custom-hover-in #(on-custom-hover-in % item))
+                  :on-mouse-leave (when on-custom-hover-out #(on-custom-hover-out % item))}
                  [mui/table-cell {:padding "checkbox"}
                   [mui/checkbox
                    {:checked   (= item @selected-item)
