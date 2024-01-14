@@ -81,11 +81,11 @@
                   ;; Single route, assume no sub-routes
                   ;; (all segments belong to this route)
                   #_#_1 (assoc-in routes [0 :fids] (-> edit-data
-                                                   :location
-                                                   :geometries
-                                                   :features
-                                                   (->> (map :id))
-                                                   set))
+                                                       :location
+                                                       :geometries
+                                                       :features
+                                                       (->> (map :id))
+                                                       set))
 
                   ;; Multiple routes, don't assume anything about sub-routes,
                   ;; let the user decide
@@ -93,14 +93,15 @@
 
      ;; Calc route/sub-route lengths from segments
      (for [{:keys [fids] :as route} routes]
-       (let [fids (set fids)]
-         (assoc route
-                :route-length (-> edit-data
-                                  :location
-                                  :geometries
-                                  (update :features (fn [fs]
-                                                      (filterv #(contains? fids (:id %)) fs)))
-                                  (map-utils/calculate-length-km))))))))
+       (let [fids  (set fids)
+             fcoll (-> edit-data
+                       :location
+                       :geometries
+                       (update :features (fn [fs]
+                                           (filterv #(contains? fids (:id %)) fs))))]
+         (-> route
+             (assoc :route-length (map-utils/calculate-length-km fcoll))
+             (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
 (re-frame/reg-sub
  ::route-count

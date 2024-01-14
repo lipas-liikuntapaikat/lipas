@@ -547,6 +547,21 @@
       (utils/round-safe 2)
       read-string))
 
+(defn calculate-elevation-stats
+  [fcoll]
+  (->> fcoll
+       :features
+       (map (comp :coordinates :geometry))
+       (mapcat (fn [coll] (map (fn [coords] (get coords 2)) coll)))
+       (partition 2 1)
+       (reduce (fn [res [prev curr]]
+                 (let [d (- curr prev)]
+                   (cond
+                     (zero? d) res
+                     (pos? d)  (update res :ascend-m + d)
+                     (neg? d)  (update res :descend-m + (Math/abs d)))))
+               {:ascend-m 0 :descend-m 0})))
+
 (defn wgs84->epsg3067 [wgs84-coords]
   (let [proj      (proj/get "EPSG:3067")]
     (proj/fromLonLat wgs84-coords proj)))
