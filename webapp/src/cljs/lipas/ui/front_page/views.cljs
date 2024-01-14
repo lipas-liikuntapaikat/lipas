@@ -14,7 +14,7 @@
    :lipas-api "http://lipas.cc.jyu.fi/api/index.html"
    :geoserver "http://lipas.cc.jyu.fi/geoserver"
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
-   :open-data "https://bit.ly/2v6wE9t"
+   :open-data "https://www.jyu.fi/fi/avoimet-rajapinnat-ja-ladattavat-lipas-aineistot"
    :youtube   "https://www.youtube.com/channel/UC-QFmRIY1qYPXX79m23JC4g"
    :cc4.0     "https://creativecommons.org/licenses/by/4.0/"})
 
