@@ -451,7 +451,7 @@
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
          :disabblePortal false
-         :modifiers      {:offset {:enabled true :offset "0px,10px"}}}
+         :modifiers      {:offset {:enabled true :offset "0px,20px"}}}
         [:img
          {:style {:max-width "400px"}
           :src   (:url @popper-state)}]]
@@ -463,12 +463,13 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers    [[:url "Linkki"]
-                       [:_description "Kuvaus"]]
+         {:headers    [[:_filename (tr :general/name)]
+                       [:_description (tr :general/description)]]
           :read-only? false
           :items      (->> @state
                            vals
-                           (map #(assoc % :_description (get-in % [:description locale]))))
+                           (map #(assoc % :_description (get-in % [:description locale])))
+                           (map #(assoc % :_filename (get-in % [:cms :filename]))))
           :on-add     (fn []
                         (reset! dialog-state {:open? true
                                               :mode  :add
@@ -484,12 +485,14 @@
                                         (mapv #(dissoc % :id)))))
 
           :on-custom-hover-in  (fn [evt item]
-                                 (reset! popper-state {:open?     true
-                                                       :anchor-el (.-currentTarget evt)
-                                                       :url       (:url item)}))
+                                 (let [img-url (get-in item [:cms :public-urls :medium]
+                                                       (:url item))]
+                                   (reset! popper-state {:open?     true
+                                                         :anchor-el (.-currentTarget evt)
+                                                         :url       img-url})))
           :on-custom-hover-out (fn [_evt _item]
                                  (swap! popper-state assoc :open? false))
-          :add-tooltip         "Lisää"
+          :add-tooltip         (tr :actions/add)
           :edit-tooltip        (tr :actions/edit)
           :delete-tooltip      (tr :actions/delete)
           :confirm-tooltip     (tr :confirm/press-again-to-delete)
