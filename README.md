@@ -10,7 +10,7 @@
 
 LIPAS is a nationwide, public GIS service of Finnish sport
 facilities. More information
-[here](https://www.jyu.fi/sport/en/cooperation/lipas).
+[here](https://www.jyu.fi/fi/lipas-liikunnan-paikkatietojarjestelma).
 
 ## Tech stack
 
