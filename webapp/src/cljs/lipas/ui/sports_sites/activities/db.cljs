@@ -4,4 +4,5 @@
 
 (def default-db
   {:mode         :default
+   :data         data/activities
    :by-type-code data/by-type-code})
