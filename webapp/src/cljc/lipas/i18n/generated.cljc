@@ -54,7 +54,7 @@
     :sport
     {#_#_:description
      "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista liikunta- ja ulkoilupaikoista avoimessa tietokannassa."
-     :description "Tähän lyhyt teksti tai layout menee rikki"
+     :description     "Tähän lyhyt teksti tai layout menee rikki"
      :headline        "Liikunta- ja ulkoilupaikat",
      :open-interfaces "Avoimet rajapinnat",
      :up-to-date-information
@@ -686,7 +686,8 @@
      :all-types?   "Oikeus kaikkiin tyyppeihin",
      :cities       "Kunnat",
      :sports-sites "Liikunta- ja ulkoilupaikat",
-     :types        "Tyypit"},
+     :types        "Tyypit"
+     :activities   "Aktiviteetit"},
     :help
     {:headline                 "Ohjeet",
      :permissions-help

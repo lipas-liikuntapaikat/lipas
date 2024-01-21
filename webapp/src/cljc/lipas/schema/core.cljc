@@ -4,6 +4,7 @@
    [clojure.spec.gen.alpha :as gen]
    [clojure.string :as string]
    [hiposfer.geojson.specs :as geojson]
+   [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.feedback :as feedback]
@@ -261,6 +262,15 @@
 (s/def :lipas.user.permissions/all-cities? boolean?)
 (s/def :lipas.user.permissions/all-types? boolean?)
 
+(s/def :lipas.sports-site.activity/value
+  (into #{} (->> activities/by-types vals (map :value))))
+
+(s/def :lipas.user.permissions/activities
+  (s/coll-of :lipas.sports-site.activity/value
+             :min-count 0
+             :distinct true
+             :into []))
+
 (s/def :lipas.user/permissions
   (s/keys :opt-un [:lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
@@ -268,7 +278,8 @@
                    :lipas.user.permissions/all-cities?
                    :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
-                   :lipas.user.permissions/types]))
+                   :lipas.user.permissions/types
+                   :lipas.user.permissions/activities]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 

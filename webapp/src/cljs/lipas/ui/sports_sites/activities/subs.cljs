@@ -9,6 +9,12 @@
    (->> db :sports-sites :activities)))
 
 (re-frame/reg-sub
+ ::data
+ :<- [::activities]
+ (fn [activities _]
+   (:data activities)))
+
+(re-frame/reg-sub
  ::mode
  :<- [::activities]
  (fn [activities _]

@@ -864,6 +864,8 @@
                    [type-code (hack-missing-translations v)])))
        (into {})))
 
+(def activities (->> by-types vals (utils/index-by :value)))
+
 (defn -main [& args]
   (if (= "csv" (first args))
     (gen-csv)
