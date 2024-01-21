@@ -40,6 +40,17 @@
    (some? activities)))
 
 (re-frame/reg-sub
+ ::show-activities?
+ (fn [[_ type-code]]
+   [(re-frame/subscribe [::activities-for-type type-code])
+    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-activities])
+    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
+ (fn [[activity activities-perms admin?] _]
+   (or admin?
+       (and (some? activity)
+            (some #{(:value activity)} (keys activities-perms))))))
+
+(re-frame/reg-sub
  ::selected-features
  :<- [:lipas.ui.map.subs/selected-features]
  (fn [fs _]

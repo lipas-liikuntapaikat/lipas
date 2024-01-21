@@ -400,10 +400,11 @@
     (re-frame/subscribe [::redo lipas-id])
     (re-frame/subscribe [::more-tools-menu-anchor])
     (re-frame/subscribe [::selected-sports-site-tab])])
- (fn [[cities types geom-type admins owners editing? edits-valid?
-       editing-allowed? save-in-progress? delete-dialog-open? type
-       types-props dead? can-publish? logged-in? size-categories mode
-       undo redo more-tools-menu-anchor selected-tab] _]
+ (fn [[cities types geom-type admins owners editing?
+       edits-valid?  editing-allowed? save-in-progress?
+       delete-dialog-open? type types-props dead? can-publish?
+       logged-in? size-categories mode undo redo
+       more-tools-menu-anchor selected-tab] _]
 
    {:types                  (filter
                              (comp #{geom-type} :geometry-type second) types)
