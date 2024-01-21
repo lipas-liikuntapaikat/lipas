@@ -623,13 +623,15 @@
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
+        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
         hide-actions?        (<== [::subs/hide-actions?])
+        admin?               (<== [:lipas.ui.user.subs/admin?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
                 can-publish? logged-in?  size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
-                more-tools-menu-anchor dead? selected-tab]}
+                more-tools-menu-anchor dead? selected-tab can-edit-activities?]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
         set-field (partial set-field lipas-id)]
@@ -661,7 +663,7 @@
                    {:on-change (fn [tolerance]
                                  (let [geoms (-> edit-data :location :geometries)]
                                    (==> [::events/simplify lipas-id geoms tolerance])))
-                   :tr        tr}]))
+                    :tr        tr}]))
 
        [mui/grid {:item true}
         ;; Close button
@@ -673,21 +675,27 @@
             [mui/icon "close"]])]]]
 
      ;; Tabs
-     [mui/grid {:item true :xs 12}
+      [mui/grid {:item true :xs 12}
       ;; [mui/tool-bar {:disableGutters true}]
       [mui/tabs
-       {:value      selected-tab
-        :on-change  #(==> [::events/select-sports-site-tab %2])
-        ;; :variant    "scrollable"
-        :variant    "fullWidth"
-        :style      {:margin-bottom "1em"}
-        :text-color "secondary"}
+       {:value       selected-tab
+        :on-change   #(==> [::events/select-sports-site-tab %2])
+        :variant     (if admin? "scrollable" "fullWidth")
+        #_#_:variant "scrollable"
+        #_#_:variant     "standard"
+        :style       {:margin-bottom "1em"}
+        :text-color  "secondary"}
        [mui/tab
         {:style {:min-width 0}
+         :value 0
          :label (tr :lipas.sports-site/basic-data)}]
-       [mui/tab
-        {:style {:min-width 0}
-         :label (tr :lipas.sports-site/properties)}]
+
+       ;; Activities and properties are mutually exclusive
+       (when (or admin? (not show-activities?))
+         [mui/tab
+          {:style {:min-width 0}
+           :value 1
+           :label (tr :lipas.sports-site/properties)}])
 
        ;; Disabled in prod until this can be released
        (when (and (not (utils/prod?)) accessibility-type?)
@@ -704,12 +712,6 @@
            :value 3
            :label "Olosuhteet"}])
 
-       (when (#{"LineString"} geom-type)
-         [mui/tab
-          {:style {:min-width 0}
-           :value 4
-           :label "Korkeusprofiili"}])
-
        (when (and (floorball-types type-code)
                   (= :floorball floorball-visibility))
          [mui/tab
@@ -717,11 +719,17 @@
            :value 3
            :label "Olosuhteet"}])
 
-       #_(when activity-type?
+       (when show-activities?
          [mui/tab
           {:style {:min-width 0}
            :value 5
-           :label "Aktiviteetit"}])]
+           :label "Ulkoilutietopalvelu"}])
+
+       (when (#{"LineString"} geom-type)
+         [mui/tab
+          {:style {:min-width 0}
+           :value 4
+           :label "Korkeusprofiili"}])]
 
       (when delete-dialog-open?
         [sports-sites/delete-dialog
@@ -761,40 +769,44 @@
               :sub-headings? true}]]]
 
         ;; Properties tab
-        1 (r/with-let [prop-tab (r/atom "props")]
+        1 (r/with-let [prop-tab (r/atom (if (and activity-type? can-edit-activities?)
+                                          "activities"
+                                          "props"))]
             [:<>
-             [mui/tabs
-              {:style          {:margin-bottom "1em" :margin-top "0.5em"}
-               :value          @prop-tab
-               :variant        "fullWidth"
-               :indicatorColor "primary"
-               :on-change      #(reset! prop-tab %2)}
-              [mui/tab {:value "props" :label "Ominaisuudet"}]
-              [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}]]
+             #_[mui/tabs
+                {:style          {:margin-bottom "1em" :margin-top "0.5em"}
+                 :value          @prop-tab
+                 :variant        "standard"
+                 :indicatorColor "primary"
+                 :on-change      #(reset! prop-tab %2)}
+                (when-not (and activity-type? can-edit-activities?)
+                  [mui/tab {:value "props" :label "Ominaisuudet"}])
+                (when (and activity-type? can-edit-activities?)
+                  [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}])]
 
-             (when (= "props" @prop-tab)
-               [sports-sites/properties-form
-                {:tr           tr
-                 :type-code    (or (-> edit-data :type :type-code) type-code)
-                 :read-only?   (not editing?)
-                 :on-change    (partial set-field :properties)
-                 :display-data (:properties display-data)
-                 :edit-data    (:properties edit-data)
-                 :geoms        (-> edit-data :location :geometries)
-                 :geom-type    geom-type
-                 :problems?    problems?
-                 :key          (-> edit-data :type :type-code)}])
+             #_(when (= "props" @prop-tab))
+             [sports-sites/properties-form
+              {:tr           tr
+               :type-code    (or (-> edit-data :type :type-code) type-code)
+               :read-only?   (not editing?)
+               :on-change    (partial set-field :properties)
+               :display-data (:properties display-data)
+               :edit-data    (:properties edit-data)
+               :geoms        (-> edit-data :location :geometries)
+               :geom-type    geom-type
+               :problems?    problems?
+               :key          (-> edit-data :type :type-code)}]
 
              #_[:div {:style {:margin-top "1em" :margin-bottom "1em"}}]
-             (when (= "activities" @prop-tab)
-               [activities/view
-                {:tr           tr
-                 :read-only?   (not editing?)
-                 :lipas-id     lipas-id
-                 :type-code    type-code
-                 :display-data display-data
-                 :edit-data    edit-data
-                 :geom-type    geom-type}])])
+             #_(when (= "activities" @prop-tab)
+                 [activities/view
+                  {:tr           tr
+                   :read-only?   (not editing?)
+                   :lipas-id     lipas-id
+                   :type-code    type-code
+                   :display-data display-data
+                   :edit-data    edit-data
+                   :geom-type    geom-type}])])
 
         ;; Accessibility
         2 [accessibility/view {:lipas-id lipas-id}]
