@@ -33,9 +33,9 @@
     {:max_result_window 50000}
     :mappings
     {:properties
-     {:search-meta.location.wgs84-point 
+     {:search-meta.location.wgs84-point
       {:type "geo_point"}
-      :search-meta.location.geometries 
+      :search-meta.location.geometries
       {:type "geo_shape"}}}}})
 
 (defn gen-idx-name
