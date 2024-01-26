@@ -50,7 +50,9 @@ env:
   AWS_S3_BUCKET: lol
   AWS_S3_BUCKET_PREFIX: lol
   LEIN_SILENT: true
-
+  UTP_CMS_API_URL: "https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
+  UTP_CMS_API_USER: lipas-developer
+  UTP_CMS_API_PASS: password
 jobs:
   utp-schema-gen:
     if: github.ref == 'refs/heads/ulkoilutietopalvelu'
