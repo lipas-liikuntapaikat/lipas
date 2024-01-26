@@ -116,10 +116,10 @@
  (fn [{:keys [db]} _]
    {:http-xhrio
     {:method          :post
-     :params          {:size  1000
-                       :query
-                       {:terms
-                        {:status ["active" "out-of-service-temporarily"]}}}
+
+     :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])
+                                  :lon (get-in db [:map :center-wgs84 :lon])
+                                  :distance (get-in db [:map :width])}}
      :uri             (str (:backend-url db) "/actions/search-lois")
      #_#_:headers     {:Authorization (str "Token " token)}
      :format          (ajax/json-request-format)

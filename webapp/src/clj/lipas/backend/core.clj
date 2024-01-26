@@ -785,7 +785,7 @@
                      :credentials-provider credentials-provider})))
 
 (defn ->lois-es-query
-  [{:keys [location]}] 
+  [{:keys [location]}]
   (let [lat (:lat location)
         lon (:lon location)
         distance (:distance location)]
@@ -801,16 +801,16 @@
 (defn search-lois
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:lois :search])
-        es-query (->lois-es-query params)] 
-    (-> (search/search client idx-name #_{:query {:match_all {}}} es-query)
+        es-query (->lois-es-query params)]
+    (-> (search/search client idx-name es-query)
         :body
         :hits
         :hits
         (->> (map :_source)))))
 
 (defn enrich-loi
-  [{:keys [geometries] :as loi}] 
-  (let [geom-coll (feature-coll->geom-coll geometries)] 
+  [{:keys [geometries] :as loi}]
+  (let [geom-coll (feature-coll->geom-coll geometries)]
     (-> loi
         (assoc-in [:search-meta :location :geometries] geom-coll)
         (assoc-in [:search-meta :location :wgs84-point] (-> (gis/->flat-coords geometries)

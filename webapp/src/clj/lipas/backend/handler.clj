@@ -179,8 +179,8 @@
            (let [loi-type (-> parameters :path :loi-type)
                  query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}] 
-      
+              :body   (core/search-lois search query)}))}}]
+
       ["/lois/category/:loi-category"
        {:get
         {:no-doc    false
@@ -194,7 +194,7 @@
                  query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
              {:status 200
               :body   (core/search-lois search query)}))}}]
-      
+
       ["/lois/status/:status"
        {:get
         {:no-doc    false
@@ -517,7 +517,7 @@
               :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]
 
       ;;; Analysis ;;;
-      
+
       ;; Search Schools
       ["/actions/search-schools"
        {:post
@@ -644,6 +644,7 @@
          :parameters {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
+           (println body-params)
            {:status 200
             :body   (core/search-lois search body-params)})}}]
       ]]
