@@ -669,6 +669,7 @@
          :parameters {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
+           (println body-params)
            {:status 200
             :body   (core/search-lois search body-params)})}}]]]
 
