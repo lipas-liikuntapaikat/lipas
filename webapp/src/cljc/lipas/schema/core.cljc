@@ -1992,7 +1992,6 @@
           :opt-un [:lipas.loi/id]))
 
 ;; LOI search API
-
 (s/def :lipas.api.search-lois.payload/distance ::real)
 
 (s/def :lipas.api.search-lois.payload/loi-statuses
