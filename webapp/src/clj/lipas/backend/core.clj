@@ -790,19 +790,24 @@
   (let [lat (:lat location)
         lon (:lon location)
         distance (:distance location)]
-    {:size 250
-     :query {:function_score
-             {:functions
-              [{:exp
-                {:search-meta.location.wgs84-point
-                 {:origin {:lat lat :lon lon}
-                  :offset distance
-                  :scale distance}}}]}}}))
+    ;; use params
+    (if (and lat lon distance)
+      (do (println "if: " (and lat lon distance))
+          {:size 250
+           :query {:function_score
+                   {:functions
+                    [{:exp
+                      {:search-meta.location.wgs84-point
+                       {:origin {:lat lat :lon lon}
+                        :offset distance
+                        :scale distance}}}]}}})
+      ;; default
+      {:size 250 :query {:match_all {}}})
+    ))
 
 (defn search-lois
-  [{:keys [indices client]} params]
-  (let [idx-name (get-in indices [:lois :search])
-        es-query (->lois-es-query params)]
+  [{:keys [indices client]} es-query]
+  (let [idx-name (get-in indices [:lois :search])]
     (-> (search/search client idx-name es-query)
         :body
         :hits
@@ -824,6 +829,16 @@
         (assoc-in [:search-meta :location :geometries] geom-coll)
         (assoc-in [:search-meta :location :wgs84-point] (-> (gis/->flat-coords geometries)
                                                             first)))))
+
+(defn search-lois-with-params
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:lois :search])
+        es-query (->lois-es-query params)]
+    (-> (search/search client idx-name es-query)
+        :body
+        :hits
+        :hits
+        (->> (map :_source)))))
 
 (defn index-loi!
   ([search loi]
