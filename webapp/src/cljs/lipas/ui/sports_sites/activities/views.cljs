@@ -45,6 +45,10 @@
     :activities
     :description-short
     :description-long
+    :independent-entity
+    :highlights
+    :arrival
+    :rules
     :duration
     :travel-direction
     :route-marking
@@ -59,10 +63,8 @@
     :fishing-permit-additional-info
     :images
     :videos
-    :arrival
     :accessibility-classification
     :accessibility
-    :rules
     :parking
     :contacts]
    (reverse)
@@ -72,6 +74,28 @@
 (defn field-sorter
   [[k _]]
   (get sort-order k -1))
+
+(defn checkbox
+  [{:keys [read-only? label helper-text on-change value
+           component]
+    :or   {component lui/checkbox}}]
+  [mui/grid {:container true :spacing 2}
+
+   ;; Label
+   [mui/grid {:item true :xs 12}
+    [form-label {:label label}]]
+
+   ;; Helper text
+   [mui/grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
+    [mui/form-helper-text helper-text]]
+
+   ;; Chekbox
+   [mui/grid {:item true :xs 12}
+    [component
+     {:label     label
+      :value     value
+      :disabled  read-only?
+      :on-change on-change}]]])
 
 (defn checkboxes
   [{:keys [read-only? items label helper-text label-fn value-fn
@@ -592,18 +616,20 @@
   (into
    [nice-form {:read-only? read-only?}]
    (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
-     (make-field
-      {:field        field
-       :prop-k       prop-k
-       :edit-data    @state
-       :display-data @state
-       :locale       locale
-       :set-field    (fn [& args]
-                       (let [path (butlast args)
-                             v (last args)]
-                         (swap! state assoc-in path v)))
-       :geom-type    geom-type
-       :lipas-id     lipas-id}))))
+     (when-not (and (not (:independent-entity @state))
+                    (contains? #{:arrival :rules :highlights} prop-k))
+         (make-field
+          {:field        field
+           :prop-k       prop-k
+           :edit-data    @state
+           :display-data @state
+           :locale       locale
+           :set-field    (fn [& args]
+                           (let [path (butlast args)
+                                 v (last args)]
+                             (swap! state assoc-in path v)))
+           :geom-type    geom-type
+           :lipas-id     lipas-id})))))
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
@@ -832,6 +858,14 @@
                    :value-fn    first
                    :on-change   #(set-field prop-k %)
                    :value       (get-in edit-data [prop-k])}]
+
+    "checkbox" [checkbox
+                {:read-only?  read-only?
+                 :component   lui/switch
+                 :label       (get-in field [:label locale])
+                 :helper-text (get-in field [:description locale])
+                 :on-change   #(set-field prop-k %)
+                 :value       (get-in edit-data [prop-k])}]
 
     "videos" [videos
               {:read-only?  read-only?
