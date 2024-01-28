@@ -17,7 +17,9 @@
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
   [lui/dialog
-   {:title         "Image"
+   {:title         (if (-> @dialog-state :data :url)
+                     "Valokuva"
+                     "Lisää valokuva")
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -37,6 +39,12 @@
                          (fn [url]
                            (swap! dialog-state assoc-in [:data :url] url))])}]
 
+     [mui/grid {:item true :xs 12}
+      (when-let [url (-> @dialog-state :data :url)]
+        [:img
+         {:style {:max-width "100%"}
+          :src   url}])]
+
      ;; For debug
      #_[lui/text-field
         {:value     (-> @dialog-state :data :url)
@@ -53,13 +61,7 @@
        :label     (tr :general/description)
        :multiline true
        :rows      5
-       :variant   "outlined"}]]
-
-    [mui/grid {:item true :xs 12}
-     (when-let [url (-> @dialog-state :data :url)]
-       [:img
-        {:style {:max-width "100%"}
-         :src   url}])]]])
+       :variant   "outlined"}]]]])
 
 (defn images
   [{:keys [value on-change locale label tr read-only? lipas-id]}]
@@ -125,7 +127,7 @@
   [{:keys [tr locale read-only? view-mode]}]
   (let [loi-cats     (<== [::subs/loi-categories])
         zoomed?      (<== [:lipas.ui.map.subs/zoomed-for-drawing?])
-        geom-type    "Point"
+        geom-type    (<== [::subs/geom-type])
         geoms        (<== [::subs/geoms])
         statuses     (<== [::subs/statuses])
         display-data (<== [::subs/selected-loi])
@@ -138,17 +140,19 @@
 
     [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
+     ;; Header
      [mui/grid {:item true :xs 12}
       [mui/grid
        {:container   true
         :style       {:flex-wrap "nowrap"}
         :align-items :center}
 
+       ;; Headline
        [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
         [mui/typography {:variant "h6"}
          (condp = view-mode
            :editing "Muokkaa kohdetta"
-           :adding "Lisää muu kohde"
+           :adding  "Lisää muu kohde"
            (get-in form-data [:name locale] "Ei nimeä"))]]
 
        ;; Close button
@@ -159,21 +163,7 @@
             :on-click #(==> [:lipas.ui.map.events/unselected])}
            [mui/icon "close"]])]]]
 
-     (when (and editing? (not zoomed?))
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2" :color :error}
-         (tr :map/zoom-closer)]])
-
-     (when (and editing? (not geoms))
-       [mui/grid {:item true}
-        [mui/button
-         {:disabled (not zoomed?)
-          :color    "secondary"
-          :variant  "contained"
-          :on-click #(==> [:lipas.ui.map.events/start-adding-geom geom-type])}
-         [mui/icon "add_location"]
-         (tr :map/add-to-map)]])
-
+     ;; Status
      [mui/grid {:item true :xs 12}
       [lui/select
        {:items     statuses
@@ -184,16 +174,18 @@
         :label-fn  (comp locale second)
         :value     (:status form-data)}]]
 
+     ;; Loi category
      [mui/grid {:item true :xs 12}
       [lui/select
-       {:items    loi-cats
-        :disabled read-only?
-        :label    "Kategoria"
-        :value-fn first
-        :label-fn (comp locale :label second)
+       {:items     loi-cats
+        :disabled  read-only?
+        :label     "Kategoria"
+        :value-fn  first
+        :label-fn  (comp locale :label second)
         :on-change #(==> [::events/edit-loi-field :loi-category %])
-        :value    loi-cat}]]
+        :value     loi-cat}]]
 
+     ;; Loi type
      [mui/grid {:item true :xs 12}
       [lui/autocomplete
        {:items     (vals (get-in loi-cats [loi-cat :types]))
@@ -204,6 +196,31 @@
         :on-change #(==> [::events/edit-loi-field :loi-type %])
         :value     loi-type}]]
 
+     ;; Zoom helper text
+     (when (and editing? (not zoomed?))
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2" :color :error}
+         (tr :map/zoom-closer)]])
+
+     ;; Loi type & category helper text
+     (when (and editing? (or (not loi-cat) (not loi-type)))
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "body2" :color :error}
+         "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"]])
+
+     ;; Add to map button
+     (when (and editing? (not geoms))
+       (let [disabled? (or (not loi-cat) (not loi-type) (not zoomed?))]
+         [mui/grid {:item true}
+          [mui/button
+           {:disabled disabled?
+            :color    "secondary"
+            :variant  "contained"
+            :on-click #(==> [:lipas.ui.map.events/start-adding-geom geom-type])}
+           [mui/icon "add_location"]
+           (tr :map/add-to-map)]]))
+
+     ;; Props
      (when loi-type
        (into [:<>]
              (for [[k {:keys [field] :as v}] loi-props]
