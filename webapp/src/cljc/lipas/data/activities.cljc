@@ -140,6 +140,13 @@
         :description {:fi "Ruudunlukijan näkövammaisille kertoma teksti kuvassa esitettävistä asioista. Lue lisää: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
         :label       {:fi "Alt-teksti"}}}}}}
 
+   :additional-info-link
+   {:schema [:string]
+    :field
+    {:type        "text-field"
+     :description {:fi "Linkki verkossa sijaitsevaan mahdolliseen laajempaan esittelyyn"}
+     :label       {:fi "Lisätietoa kohteesta saatavilla"}}}
+
    :rules
    {:schema localized-string-schema
     :field
