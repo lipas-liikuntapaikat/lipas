@@ -71,6 +71,7 @@
              [:organization {:optional true} localized-string-schema]
              [:role {:optional true} (into [:enum] (keys contact-roles))]
              [:email {:optional true} [:string]]
+             [:www {:optional true} [:string]]
              [:phone-number {:optional true} [:string]]]
     :field
     {:type        "contacts"
@@ -98,6 +99,13 @@
        {:type        "text-field"
         :label       {:fi "Sähköposti"}
         :description {:fi "Yhteystietoon liittyvän organisaation sähköpostiosoite"}}}
+
+      :www
+      {:field
+       {:type        "text-field"
+        :label       {:fi "Web-osoite"}
+        :description {:fi "Kohteen ylläpitäjän / muussa roolissa toimivan organisaation verkkosivu"}}}
+
       :phone-number
       {:field
        {:type        "text-field"
