@@ -328,8 +328,21 @@
       :value "bridge"
       :props (merge common-props)}
 
-     }}})
+     }}
 
+   "natural-attractions-and-geo-objects"
+   {:label {:fi "Luonnonnähtävyydet / geokohteet"}
+    :types
+
+    {:geo-object
+     {:label {:fi "Geokohde" :en "Geographic-object" :se ""}
+      :value "geo-object"
+      :props (merge common-props)}
+
+     :natural-attraction
+     {:label {:fi "Luonnonnähtävyys" :en "Natural attraction" :se ""}
+      :value "natural-attraction"
+      :props (merge common-props)}}}})
 
 (def point-fcoll-schema
   [:map
