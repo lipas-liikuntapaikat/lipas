@@ -5,6 +5,8 @@
    [lipas.ui.components.buttons :as buttons]
    [lipas.ui.loi.events :as events]
    [lipas.ui.loi.subs :as subs]
+   [lipas.ui.map.events :as map-events]
+   [lipas.ui.map.import :as import]
    [lipas.ui.mui :as mui]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
@@ -140,6 +142,15 @@
 
     [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
+     ;; Import
+     [import/import-geoms-view
+      {:geom-type geom-type
+       :on-import (fn []
+                    (condp = view-mode
+                      :editing (==> [::map-events/import-selected-geoms])
+                      :adding  (==> [::map-events/import-selected-geoms-to-new])))
+       :show-replace? (= :editing view-mode)}]
+
      ;; Header
      [mui/grid {:item true :xs 12}
       [mui/grid
@@ -219,6 +230,14 @@
             :on-click #(==> [:lipas.ui.map.events/start-adding-geom geom-type])}
            [mui/icon "add_location"]
            (tr :map/add-to-map)]]))
+
+     (when (and editing? (not geoms) (#{"Polygon"} geom-type))
+       [mui/grid {:item true}
+        [mui/button
+         {:color    "secondary"
+          :variant  "contained"
+          :on-click #(==> [::map-events/toggle-import-dialog])}
+         (tr :map.import/tooltip)]])
 
      ;; Props
      (when loi-type

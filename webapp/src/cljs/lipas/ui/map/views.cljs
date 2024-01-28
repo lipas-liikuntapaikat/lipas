@@ -15,6 +15,7 @@
    [lipas.ui.components :as lui]
    [lipas.ui.loi.views :as loi]
    [lipas.ui.map.events :as events]
+   [lipas.ui.map.import :as import]
    [lipas.ui.map.map :as ol-map]
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
@@ -29,9 +30,6 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
-(def import-formats-str (string/join " " import-formats))
-
 (defonce simplify-tool-component (r/atom nil))
 
 (defn rreset!
@@ -39,13 +37,6 @@
   [a newval]
   (reset! a newval)
   nil)
-
-(defn helper [{:keys [label tooltip]}]
-  [mui/tooltip {:title tooltip}
-   [mui/link
-    {:style     {:font-family "Lato" :font-size "0.9em" :margin "0.5em"}
-     :underline "always"}
-    label]])
 
 (defn address-search-dialog []
   (let [tr      (<== [:lipas.ui.subs/translator])
@@ -77,95 +68,6 @@
             :on-click #(==> [::events/show-address m])}
            [mui/list-item-text
             (:label m)]]))]]]))
-
-(defn import-geoms-view
-  [{:keys [on-import show-replace? geom-type]
-    :or   {show-replace? true}}]
-  (let [tr       (<== [:lipas.ui.subs/translator])
-        open?    (<== [::subs/import-dialog-open?])
-        encoding (<== [::subs/selected-import-file-encoding])
-        data     (<== [::subs/import-candidates])
-        batch-id (<== [::subs/import-batch-id])
-        headers  (<== [::subs/import-candidates-headers])
-        selected (<== [::subs/selected-import-items])
-        replace? (<== [::subs/replace-existing-geoms?])
-
-        on-close #(==> [::events/toggle-import-dialog])]
-
-    [mui/dialog
-     {:open       open?
-      :full-width true
-      :max-width  "xl"
-      :on-close   on-close}
-
-     [mui/dialog-title (tr :map.import/headline)]
-
-     [mui/dialog-content
-
-      [mui/grid {:container true :spacing 2}
-
-       ;; File selector, helpers and encoding selector
-       [mui/grid {:item true :xs 12}
-        [mui/grid
-         {:container       true
-          :spacing         4
-          :align-items     "flex-end"
-          :justify-content "space-between"}
-
-         ;; File selector
-         [mui/grid {:item true}
-          [:input
-           {:type      "file"
-            :accept    (string/join "," import-formats)
-            :on-change #(==> [::events/load-geoms-from-file
-                              (-> % .-target .-files)
-                              geom-type])}]]
-
-         ;; Helper texts
-         [mui/grid {:item true}
-          [mui/typography {:display "inline"} (str (tr :help/headline) ":")]
-          [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
-          [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
-          [helper {:label "GPX" :tooltip (tr :map.import/gpx)}]
-          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]
-
-         ;; File encoding selector
-         [mui/grid {:item true}
-          [lui/select
-           {:items     ["utf-8" "ISO-8859-1"]
-            :label     (tr :map.import/select-encoding)
-            :style     {:min-width "120px"}
-            :value     encoding
-            :value-fn  identity
-            :label-fn  identity
-            :on-change #(==> [::events/select-import-file-encoding %])}]]]]
-
-       [mui/grid {:item true :xs 12}
-        (when (not-empty data)
-          ^{:key batch-id}
-          [lui/table-v2
-           {:items         (->> data vals (map :properties))
-            :key-fn        :id
-            :multi-select? true
-            :on-select     #(==> [::events/select-import-items %])
-            :headers       headers}])]]]
-
-     [mui/dialog-actions
-
-      ;; Replace existing feature checkbox
-      (when show-replace?
-        [lui/checkbox
-         {:label     (tr :map.import/replace-existing?)
-          :value     replace?
-          :on-change #(==> [::events/toggle-replace-existing-selection])}])
-
-      ;; Cancel button
-      [mui/button {:on-click on-close}
-       (tr :actions/cancel)]
-
-      ;; Import button
-      [mui/button {:on-click on-import :disabled (empty? selected)}
-       (tr :map.import/import-selected)]]]))
 
 (defn simplify-tool-container
   []
@@ -641,7 +543,7 @@
       :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
 
      (when editing?
-       [import-geoms-view
+       [import/import-geoms-view
         {:geom-type geom-type
          :on-import #(==> [::events/import-selected-geoms])}])
 
@@ -1202,7 +1104,7 @@
 
        [mui/grid {:item true :xs 12}
 
-        [import-geoms-view
+        [import/import-geoms-view
          {:geom-type     geom-type
           :on-import     #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
@@ -1354,7 +1256,7 @@
                     ;; Supported formats helper text
                     [mui/grid {:item true :xs 12}
                      [mui/typography {:variant "body2"}
-                      (tr :map.import/supported-formats import-formats-str)]]
+                      (tr :map.import/supported-formats import/import-formats-str)]]
 
                     ;; Open import dialog button
                     [mui/grid {:item true}
