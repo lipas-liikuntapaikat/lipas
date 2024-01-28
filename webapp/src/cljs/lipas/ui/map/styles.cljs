@@ -211,26 +211,32 @@
 (defn loi-style [f resolution]
   (let [loi-type (.get f "loi-type")
         status   (.get f "status")]
-    (Style.
-     #js{:image
-         (Circle.
-          #js{:radius 8
-              :stroke (Stroke.
-                       #js{:color mui/primary})
-              :fill   (Fill.
-                       #js{:color mui/secondary2})})})))
+    #js[(Style.
+         #js{:image
+             (Circle.
+              #js{:radius 8
+                  :stroke (Stroke.
+                           #js{:color mui/primary})
+                  :fill   (Fill.
+                           #js{:color mui/secondary2})})})
+        (Style.
+         #js{:stroke (Stroke. #js{:color mui/primary})
+             :fill   (Fill. #js{:color (->rgba mui/secondary 0.5)})})]))
 
 (defn loi-style-hover [f resolution]
   (let [loi-type (.get f "loi-type")
         status   (.get f "status")]
-    (Style.
-     #js{:image
-         (Circle.
-          #js{:radius 10
-              :stroke (Stroke.
-                       #js{:color mui/primary})
-              :fill   (Fill.
-                       #js{:color mui/secondary2})})})))
+    #js[(Style.
+         #js{:image
+             (Circle.
+              #js{:radius 10
+                  :stroke (Stroke.
+                           #js{:color mui/primary})
+                  :fill   (Fill.
+                           #js{:color mui/secondary2})})})
+        (Style.
+         #js{:stroke (Stroke. #js{:color mui/primary})
+             :fill   (Fill. #js{:color (->rgba mui/secondary 0.7)})})]))
 
 (defn loi-style-selected [f resolution]
   (let [loi-type (.get f "loi-type")
