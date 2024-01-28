@@ -254,7 +254,8 @@
                 [:route-marking {:optional true} localized-string-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
-                [:latest-updates {:optional true} localized-string-schema]])]
+                [:latest-updates {:optional true} localized-string-schema]
+                [:independent-entity {:optional true} [:boolean]]])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
@@ -337,7 +338,14 @@
          :field
          {:type        "textarea"
           :description {:fi "Tähän joku seliteteksti"}
-          :label       {:fi "Ajankohtaista"}}}})}}}})
+          :label       {:fi "Ajankohtaista"}}}
+
+        :independent-entity
+        {:schema [:boolean {:optional true}]
+         :field
+         {:type        "checkbox"
+          :description {:fi "Onko reitti itsenäinen kohde, joka ei ole osa mitään aluetta tai laajempaa kokonaisuutta (esim. ulkoilualue tai kansallispuisto)"}
+          :label       {:fi "Itsenäinen kohde"}}}})}}}})
 
 (def outdoor-recreation-routes-schema
   (collect-schema (:props outdoor-recreation-routes)))
