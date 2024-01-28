@@ -72,6 +72,15 @@
    geoms))
 
 (re-frame/reg-sub
+ ::geom-type
+ :<- [::loi-categories]
+ :<- [::editing-loi]
+ (fn [[cats edit-data] _]
+   (let [category (:loi-category edit-data)
+         type     (:loi-type edit-data)]
+     (get-in cats [category :types (keyword type) :geom-type] "Point"))))
+
+(re-frame/reg-sub
  ::search-results
  :<- [::loi]
  (fn [loi _]

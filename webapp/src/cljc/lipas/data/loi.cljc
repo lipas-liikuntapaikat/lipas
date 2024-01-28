@@ -67,21 +67,21 @@
      {:label {:fi "Vaaranpaikka"}
       :value "hazard"
       :props common-props
-      #_(merge
-       (select-keys common-props [:name])
-       {:hazard-type
-        {:schema (into [:enum] (keys water-conditions-hazards))
-         :field
-         {:type        "select"
-          :label       {:fi "Tyyppi"}
-          :description {:fi "Vaaranpaikan tyyppi"}
-          :opts        water-conditions-hazards}}
-        :description
-        {:schema localized-string-schema
-         :field
-         {:type        "textarea"
-          :label       {:fi "Kuvaus"}
-          :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
+      #_     (merge
+         (select-keys common-props [:name])
+         {:hazard-type
+          {:schema (into [:enum] (keys water-conditions-hazards))
+           :field
+           {:type        "select"
+            :label       {:fi "Tyyppi"}
+            :description {:fi "Vaaranpaikan tyyppi"}
+            :opts        water-conditions-hazards}}
+          :description
+          {:schema localized-string-schema
+           :field
+           {:type        "textarea"
+            :label       {:fi "Kuvaus"}
+            :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
 
      :landing-spot
      {:label {:fi "Rantautumispaikka"}
@@ -335,14 +335,32 @@
     :types
 
     {:geo-object
-     {:label {:fi "Geokohde" :en "Geographic-object" :se ""}
+     {:label {:fi "Geokohde" :en "Geographic object" :se ""}
       :value "geo-object"
       :props (merge common-props)}
 
      :natural-attraction
-     {:label {:fi "Luonnonnähtävyys" :en "Natural attraction" :se ""}
+     {:label {:fi "Luonnonnähtävyys" :en "Natural attraction" :se "Natursevärdhet"}
       :value "natural-attraction"
-      :props (merge common-props)}}}})
+      :props (merge common-props)}}}
+
+   "protected-areas"
+   {:label {:fi "Käyttörajoitusalueet"}
+    :types
+
+    {:nature-reserve
+     {:label     {:fi "Luonnonsuojelualue" :en "Nature reserve" :se "Naturreservat"}
+      :value     "nature-reserve"
+      :geom-type "Polygon"
+      :props     (merge common-props)}
+
+     :other-area-with-movement-restrictions
+     {:label     {:fi "Muu alue, jolla on liikkumisrajoituksia"
+                  :en "Other area with movement restrictions"
+                  :se "Annat område med rörelserestriktioner"}
+      :value     "other-area-with-movement-restrictions"
+      :geom-type "Polygon"
+      :props     (merge common-props)}}}})
 
 (def point-fcoll-schema
   [:map
