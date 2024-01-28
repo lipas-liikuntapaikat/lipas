@@ -170,7 +170,9 @@
         :on-change #(on-change :comment %)}]}
 
      (when sub-headings?
-       [lui/sub-heading {:label (tr :lipas.sports-site/contact)}])
+       [:<>
+        [lui/sub-heading {:label (tr :lipas.sports-site/contact)}]
+        [mui/typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)]])
 
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
@@ -213,25 +215,27 @@
      {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
       :form-field [lui/select
-                   {:value     (-> edit-data :owner)
-                    :required  true
-                    :spec      :lipas.sports-site/owner
-                    :items     owners
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :owner %)}]}
+                   {:value       (-> edit-data :owner)
+                    :required    true
+                    :helper-text (tr :lipas.sports-site/owner-helper-text)
+                    :spec        :lipas.sports-site/owner
+                    :items       owners
+                    :value-fn    first
+                    :label-fn    (comp locale second)
+                    :on-change   #(on-change :owner %)}]}
 
      ;; Admin
      {:label      (tr :lipas.sports-site/admin)
       :value      (-> display-data :admin)
       :form-field [lui/select
-                   {:value     (-> edit-data :admin)
-                    :required  true
-                    :spec      :lipas.sports-site/admin
-                    :items     admins
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :admin %)}]}]))
+                   {:value       (-> edit-data :admin)
+                    :required    true
+                    :helper-text (tr :lipas.sports-site/admin-helper-text)
+                    :spec        :lipas.sports-site/admin
+                    :items       admins
+                    :value-fn    first
+                    :label-fn    (comp locale second)
+                    :on-change   #(on-change :admin %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
                              read-only? sub-headings?]}]
