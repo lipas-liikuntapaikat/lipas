@@ -187,7 +187,13 @@
       :field
       {:type        "checkbox"
        :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"}
-       :label       {:fi "Jokamiehenoikeudet"}}}})})
+       :label       {:fi "Jokamiehenoikeudet"}}}
+     :geo-park
+     {:schema [:boolean {:optional true}]
+      :field
+      {:type        "checkbox"
+       :description {:fi "Onko kohde geopark? Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."}
+       :label       {:fi "Geopark"}}}})})
 
 (def outdoor-recreation-areas-schema
   (collect-schema (:props outdoor-recreation-areas)))
