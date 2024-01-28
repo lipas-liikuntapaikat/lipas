@@ -236,7 +236,7 @@
    {:routes
     {:schema [:sequential
               (mu/merge
-               (mu/dissoc common-props-schema :accessibility)
+               (mu/dissoc common-props-schema :accessibility :latest-updates)
                [:map
                 [:id [:string]]
                 [:geometries route-fcoll-schema]
@@ -254,7 +254,6 @@
                 [:route-marking {:optional true} localized-string-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
-                [:latest-updates {:optional true} localized-string-schema]
                 [:independent-entity {:optional true} [:boolean]]])]
      :field
      {:type        "routes"
