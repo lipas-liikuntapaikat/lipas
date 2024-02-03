@@ -132,7 +132,7 @@
 (re-frame/reg-event-fx
  ::search-success
  (fn [{:keys [db]} [_  data]]
-   {:db (assoc-in db [:loi :search-results] data)}))
+   {:db (assoc-in db [:loi :search-results] (map :_source data))}))
 
 (re-frame/reg-event-fx
  ::search-failure

@@ -786,24 +786,30 @@
                      :credentials-provider credentials-provider})))
 
 (defn ->lois-es-query
-  [{:keys [location]}]
+  [{:keys [location statuses]}]
   (let [lat (:lat location)
         lon (:lon location)
         distance (:distance location)]
     ;; use params
+    ;; todo: add loi-category, loi-type status
     (if (and lat lon distance)
-      (do (println "if: " (and lat lon distance))
-          {:size 250
-           :query {:function_score
-                   {:functions
-                    [{:exp
-                      {:search-meta.location.wgs84-point
-                       {:origin {:lat lat :lon lon}
-                        :offset distance
-                        :scale distance}}}]}}})
+      {:size 250
+       :query {:function_score
+               {:query {:bool
+                {:filter
+                 [{:terms
+                   {:status statuses}}]}}
+                :functions
+                [{:exp
+                  {:search-meta.location.wgs84-point
+                   {:origin (str lat "," lon)
+                    :offset (str (/ distance 2) "m")
+                    :scale (str (/ distance 2) "m")}}}]
+                }}}
       ;; default
-      {:size 250 :query {:match_all {}}})
-    ))
+      {:size 250 :query {:match_all {}}})))
+
+
 
 (defn search-lois
   [{:keys [indices client]} es-query]
@@ -837,8 +843,7 @@
     (-> (search/search client idx-name es-query)
         :body
         :hits
-        :hits
-        (->> (map :_source)))))
+        :hits)))
 
 (defn index-loi!
   ([search loi]
