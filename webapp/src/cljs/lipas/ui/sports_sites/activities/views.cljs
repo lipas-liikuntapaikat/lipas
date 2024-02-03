@@ -49,6 +49,7 @@
     :highlights
     :arrival
     :rules
+    :permits-rules-guidelines
     :duration
     :travel-direction
     :route-marking
@@ -99,13 +100,15 @@
 
 (defn checkboxes
   [{:keys [read-only? items label helper-text label-fn value-fn
-           on-change value]}]
+           on-change value sort-fn caption-fn]
+    :or   {value-fn identity}}]
   (let [vs (set value)]
     [mui/grid {:container true :spacing 2}
 
      ;; Label
-     [mui/grid {:item true :xs 12}
-      [form-label {:label label}]]
+     (when label
+       [mui/grid {:item true :xs 12}
+        [form-label {:label label}]])
 
      ;; Helper text
      [mui/grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
@@ -113,17 +116,22 @@
 
      ;; Chekboxes
      (into [:<>]
-           (for [item items]
-             [mui/grid {:item true :xs 12}
-              (let [[k _] item]
-                [lui/checkbox
-                 {:label (label-fn item)
-                  :value (contains? vs k)
-                  :disabled read-only?
-                  :on-change (fn [_]
-                               (if (contains? vs k)
-                                 (on-change (disj vs k))
-                                 (on-change (conj vs k))))}])]))]))
+           (for [item (if sort-fn (sort-by sort-fn items) items)]
+             (let [[k _] item]
+               [:<>
+                [mui/grid {:item true :xs 12}
+                 [lui/checkbox
+                  {:label     (label-fn item)
+                   :value     (contains? vs k)
+                   :disabled  read-only?
+                   :on-change (fn [_]
+                                (if (contains? vs k)
+                                  (on-change (disj vs k))
+                                  (on-change (conj vs k))))}]]
+                (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
+                  [mui/grid {:item true :xs 12 :style {:margin-top   "-1.5em"
+                                                       :padding-left "2.8em"}}
+                   [mui/typography {:variant "caption"} caption]])])))]))
 
 (defn contact-dialog
   [{:keys [tr locale dialog-state on-save on-close contact-props]}]
@@ -283,7 +291,7 @@
        :label     "Yksikkö"
        :on-change #(set-field :unit %)}]]]])
 
-(defn highlight-dialog
+(defn textlist-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id label description]}]
   [lui/dialog
    {:title         "Lisää kohokohta"
@@ -326,7 +334,7 @@
 
       ;; Dialog
       [mui/grid {:container true :spacing 2}
-       [highlight-dialog
+       [textlist-dialog
         {:tr           tr
          :locale       locale
          :label        label
@@ -371,6 +379,129 @@
           :add-btn-size     "small"
           :key-fn           :url}]]])))
 
+
+(defn rules-dialog
+  [{:keys [tr locale dialog-state on-save on-close lipas-id label
+           description common-rules]}]
+  [lui/dialog
+   {:title         (str (tr :actions/add) " " label)
+    :open?         (:open? @dialog-state)
+    :on-save       on-save
+    :on-close      #(swap! dialog-state assoc :open? false)
+    :save-enabled? true
+    :save-label    "Ok"
+    :cancel-label  (tr :actions/cancel)}
+
+   [mui/grid {:container true :spacing 2}
+    [mui/grid {:item true :xs 12}
+     [lang-selector {:locale locale}]]
+
+    [mui/grid {:item true :xs 12}
+     [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
+      [mui/typography description]]]
+
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       #_#_:helper-text description
+       :value       (-> @dialog-state :data :label locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :label locale] %)
+       :label       (tr :general/headline)
+       :variant     "outlined"}]]
+
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       #_#_:helper-text description
+       :value       (-> @dialog-state :data :description locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
+       :label       (tr :general/description)
+       :variant     "outlined"}]]]])
+
+(defn rules
+  [{:keys [locale label description set-field value common-rules]}]
+  (r/with-let [state (r/atom {:common-rules    (:common-rules value)
+                              :custom-rules-vs (->> value :custom-rules (map :value))
+                              :custom-rules    (or (when-let [coll (:custom-rules value)]
+                                                     (utils/index-by :value coll))
+                                                   {})})
+               dialog-init-state {:open? false
+                                  :data  nil
+                                  :mode  :edit}
+               dialog-state (r/atom dialog-init-state)]
+    (let [tr (<== [:lipas.ui.subs/translator])]
+
+      ;; Dialog
+      [mui/grid {:container true :spacing 2}
+       [rules-dialog
+        {:tr           tr
+         :locale       locale
+         :label        label
+         :description  description
+         :dialog-state dialog-state
+         :on-save      (fn []
+                         (let [data (:data @dialog-state)]
+                           (swap! state assoc-in [:custom-rules (:value data)] data))
+                         (reset! dialog-state dialog-init-state))}]
+
+       ;; ;; Label
+       ;; [mui/grid {:item true :xs 12}
+       ;;  [form-label {:label label}]]
+
+       ;; Common rules checkboxes
+       [mui/grid {:item true :xs 12}
+        [checkboxes
+         {:label       label
+          :value       (:common-rules @state)
+          :helper-text description
+          :sort-fn     (comp locale :label second )
+          :items       common-rules
+          :label-fn    (comp locale :label second)
+          :caption-fn  (comp locale :description second)
+          :value-fn    (comp :value second)
+          :on-change   (fn [vs]
+                         (swap! state assoc :common-rules vs)
+                         (set-field :common-rules vs))}]]
+
+       ;; Custom rules
+       [mui/grid {:item true :xs 12}
+        [checkboxes
+         {:label nil
+          :value           (:custom-rules-vs @state)
+          #_#_:helper-text description
+          :sort-fn         (comp locale :label second)
+          :items           (:custom-rules @state)
+          :label-fn        (comp locale :label second)
+          :caption-fn      (comp locale :description second)
+          :value-fn        (comp :value second)
+          :on-change       (fn [vs]
+                             (println vs)
+                             (swap! state assoc :custom-rules-vs vs)
+                             (set-field :custom-rules (-> @state
+                                                          :custom-rules
+                                                          (select-keys vs)
+                                                          vals)))}]]
+
+       ;; Add custom rule btn
+       [mui/grid
+        {:item       true
+         :xs         12
+         :style      {:text-align "right"}
+         :class-name :no-print}
+        [mui/tooltip {:title (tr :actions/add) :placement "left"}
+         [mui/fab
+          {:style    {:margin-top "1em"}
+           :on-click (fn []
+                       (reset! dialog-state {:open? true
+                                             :mode  :add
+                                             :data  {:value (str (random-uuid))}}))
+           :size     "small"
+           :color    "secondary"}
+          [mui/icon "add"]]]]
+
+       ])))
 
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id image-props]}]
@@ -616,8 +747,10 @@
   (into
    [nice-form {:read-only? read-only?}]
    (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
-     (when-not (and (not (:independent-entity @state))
-                    (contains? #{:arrival :rules :highlights} prop-k))
+     (when-not (and
+                (contains? route-props :independent-entity)
+                (not (:independent-entity @state))
+                (contains? #{:arrival :permits-rules-guidelines :highlights} prop-k))
          (make-field
           {:field        field
            :prop-k       prop-k
@@ -913,6 +1046,16 @@
                  :description (get-in field [:description locale])
                  :set-field   (partial set-field prop-k)
                  :value       (get-in edit-data [prop-k])}]
+
+    "rules" [rules
+             {:read-only?   read-only?
+              :lipas-id     lipas-id
+              :locale       locale
+              :common-rules (:opts field)
+              :label        (get-in field [:label locale])
+              :description  (get-in field [:description locale])
+              :set-field    (partial set-field prop-k)
+              :value        (get-in edit-data [prop-k])}]
 
     "contacts" [contacts
                 {:read-only?    read-only?

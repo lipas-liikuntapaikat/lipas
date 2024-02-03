@@ -173,7 +173,8 @@
      :mobile-lift     "Siirrettävä allasnostin",
      :slope           "Luiska"},
     :general
-    {:description    "Kuvaus",
+    {:headline       "Otsikko"
+     :description    "Kuvaus",
      :hall           "Halli",
      :women          "Naiset",
      :age-anonymized "Ikä anonymisoitu"
@@ -1055,7 +1056,8 @@
      :city-education          "Kommun / utbildingsväsende"},
     :accessibility       {:lift "Lyft i bassängen", :slope "Ramp"},
     :general
-    {:description   "Beskrivning",
+    {:headline      "Rubrik"
+     :description   "Beskrivning",
      :hall          "Hall",
      :women         "Kvinnor",
      :total-short   "Totalt",
@@ -1848,7 +1850,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :mobile-lift     "Mobile pool lift",
      :slope           "Slope"},
     :general
-    {:description    "Description",
+    {:headline       "Headline"
+     :description    "Description",
      :hall           "Hall",
      :women          "Women",
      :age-anonymized "Age anonymized"
