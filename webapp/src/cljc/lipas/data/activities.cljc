@@ -51,6 +51,133 @@
    "content-creator"  {:fi "Sisällöntuottaja"}
    "customer-service" {:fi "Asiakaspalvelu"}})
 
+(def common-rules
+  {"everymans-rights-valid"
+   {:label
+    {:fi "Jokaisenoikeudet ovat voimassa tällä alueella",
+     :en "Everyman's rights are valid in this area",
+     :sv "Allemansrätten gäller i detta område"},
+    :description {:fi "", :en "", :sv ""},
+    :value       "everymans-rights-valid"},
+
+   "bring-garbage-bag-bins-available"
+   {:label
+    {:fi "Muista tuoda roskapussi",
+     :en "Remember to bring a garbage bag",
+     :sv "Kom ihåg att ta med en soppsäck"},
+    :description
+    {:fi
+     "Pysäköintialueella on jäteastiat. Tuo roskapussi ja vie roskat jäteastiaan.",
+     :en
+     "There are waste bins in the parking area. Bring a garbage bag and dispose of the garbage in the waste bin.",
+     :sv
+     "Det finns soptunnor på parkeringsområdet. Ta med en soppåse och lägg i soporna i soptunnan."},
+    :value "bring-garbage-bag-bins-available"},
+
+   "overnight-stay-guest-harbour-allowed"
+   {:label
+    {:fi "Yöpyminen retkisatamassa on sallittu",
+     :en "Overnight stay in the guest harbour is allowed",
+     :sv "Övernattning i gästhamnen är tillåten"},
+    :description
+    {:fi "Retkisatamassa saa pitää venettä enintään 2 vuorokautta.",
+     :en "In the guest harbour, you can keep a boat for up to 2 days.",
+     :sv "Du får behålla en båt i gästhamnen i högst 2 dagar."},
+    :value "overnight-stay-guest-harbour-allowed"},
+
+   "bring-garbage-bag-no-bins"
+   {:label
+    {:fi "Muista tuoda roskapussi",
+     :en "Remember to bring a garbage bag",
+     :sv "Kom ihåg att ta med en soppsäck"},
+    :description
+    {:fi
+     "Alueella ei ole jäteastioita. Tuo roskapussi ja vie roskat mennessäsi.",
+     :en
+     "There are no waste bins in the area. Bring a garbage bag and take the garbage with you when you leave.",
+     :sv
+     "Det finns inga soptunnor i området. Ta med en soppåse och ta soporna med dig när du går."},
+    :value "bring-garbage-bag-no-bins"},
+
+   "fire-only-at-marked-fireplaces"
+   {:label
+    {:fi
+     "Tulenteko on sallittu ainoastaan merkityillä tulentekopaikoilla",
+     :en "Making fire is only allowed at marked fireplaces",
+     :sv
+     "Det är endast tillåtet att göra upp eld på märkta eldställen"},
+    :description
+    {:fi
+     "Maastopalovaroituksen aikaan tulenteko on kokonaan kielletty. Tulentekopaikalla saa käyttää vain alueella tarjolla olevia tai itse tuotuja polttopuita.",
+     :en
+     "During a wildfire warning, making fire is completely forbidden. At the fireplace, only use firewood that is available in the area or brought by yourself.",
+     :sv
+     "Under en skogsbrandsvarning är eldstad helt förbjudet. Vid eldstaden får du endast använda ved som finns i området eller som du har med dig själv."},
+    :value "fire-only-at-marked-fireplaces"},
+
+   "temporary-camping-allowed"
+   {:label
+    {:fi "Tilapäinen leiriytyminen alueella on sallittu",
+     :en "Temporary camping in the area is allowed",
+     :sv "Tillfällig camping i området är tillåten"},
+    :description {:fi "", :en "", :sv ""},
+    :value       "temporary-camping-allowed"},
+
+   "overnight-stay-not-allowed"
+   {:label
+    {:fi "Yöpyminen alueella on kielletty",
+     :en "Overnight stay in the area is not allowed",
+     :sv "Övernattning i området är förbjuden"},
+    :description {:fi "", :en "", :sv ""},
+    :value       "overnight-stay-not-allowed"},
+
+   "only-fire-in-designated-places"
+   {:label
+    {:fi "Tee tulet vain sallituilla paikoilla",
+     :en "Only make fire in designated places",
+     :sv "Gör endast upp eld på angivna platser"},
+    :description
+    {:fi
+     "Tarkista aina ennen tulentekoa voimassa oleva maastopalovaroitus. Tulentekopaikalla saa käyttää vain alueella tarjolla olevia tai itse tuotuja polttopuita.",
+     :en
+     "Always check the current forest fire warning before making a fire. At the campfire site, only use firewood that is available in the area or brought by yourself.",
+     :sv
+     "Kontrollera alltid den aktuella skogsbrandsvarningen innan du eldar. Du får bara använda eldved som finns i området eller som du själv har med dig vid eldstaden."},
+    :value "only-fire-in-designated-places"},
+
+   "camping-forbidden"
+   {:label
+    {:fi "Leiriytyminen alueella on kielletty",
+     :en "Camping in the area is forbidden",
+     :sv "Camping i området är förbjuden"},
+    :description {:fi "", :en "", :sv ""},
+    :value       "camping-forbidden"}
+
+   "bring-own-firewood"
+   {:label       {:fi "Tuo omat polttopuut" :en "Bring your own firewood" :sv "Ta med egen ved"}
+    :description {:fi "Alueella ei ole polttopuuhuoltoa." :en "There is no firewood service in the area." :sv "Det finns ingen vedservice i området."}
+    :value       "bring-own-firewood"}
+
+   "keep-pets-leashed-poop-ok"
+   {:label       {:fi "Pidä lemmikit aina kytkettynä" :en "Always keep your pets leashed" :sv "Håll alltid dina husdjur kopplade"}
+    :description {:fi "Koirat saavat tehdä jätöksensä luontoon, hieman poluista sivummalla." :en "Dogs can defecate in nature, a bit off the trails." :sv "Hundar kan defekera i naturen, lite av vägen."}
+    :value       "keep-pets-leashed-poop-ok"}
+
+   "keep-pets-leashed-poop-not-ok"
+   {:label       {:fi "Pidä lemmikit aina kytkettynä" :en "Always keep your pets leashed" :sv "Håll alltid dina husdjur kopplade"}
+    :description {:fi "Muista myös koirankakkapussi ja korjaa jätökset pois." :en "Also remember the dog poop bag and remove the stools." :sv "Kom också ihåg hundens avföringspåse och ta bort avföringen."}
+    :value       "keep-pets-leashed-poop-not-ok"}})
+
+(def permits-rules-guidelines-schema
+  [:map
+   [:common-rules [:sequential (into [:enum] (keys common-rules))]]
+   [:custom-rules {:optional true}
+    [:sequential
+     [:map
+      [:label {:optional true} localized-string-schema]
+      [:description {:optional true} localized-string-schema]
+      [:value {:optional true} [:string {:min 2}]]]]]])
+
 (def common-props
   {:description-short
    {:schema localized-string-schema
@@ -155,12 +282,20 @@
      :description {:fi "Linkki verkossa sijaitsevaan mahdolliseen laajempaan esittelyyn"}
      :label       {:fi "Lisätietoa kohteesta saatavilla"}}}
 
-   :rules
+   #_#_:rules
    {:schema localized-string-schema
     :field
     {:type        "textarea"
      :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
      :label       {:fi "Luvat, säännöt, ohjeet"}}}
+
+   :permits-rules-guidelines
+   {:schema permits-rules-guidelines-schema
+    :field
+    {:type        "rules"
+     :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
+     :label       {:fi "Luvat, säännöt, ohjeet"}
+     :opts        common-rules}}
 
    :arrival
    {:schema localized-string-schema
