@@ -798,7 +798,7 @@
                {:query {:bool
                 {:filter
                  [{:terms
-                   {:status statuses}}]}}
+                   {:status.keyword statuses}}]}}
                 :functions
                 [{:exp
                   {:search-meta.location.wgs84-point
