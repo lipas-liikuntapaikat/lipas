@@ -168,7 +168,7 @@
     :description {:fi "Muista myös koirankakkapussi ja korjaa jätökset pois." :en "Also remember the dog poop bag and remove the stools." :sv "Kom också ihåg hundens avföringspåse och ta bort avföringen."}
     :value       "keep-pets-leashed-poop-not-ok"}})
 
-(def permits-rules-guidelines-schema
+(def rules-structured-schema
   [:map
    [:common-rules [:sequential (into [:enum] (keys common-rules))]]
    [:custom-rules {:optional true}
@@ -282,20 +282,12 @@
      :description {:fi "Linkki verkossa sijaitsevaan mahdolliseen laajempaan esittelyyn"}
      :label       {:fi "Lisätietoa kohteesta saatavilla"}}}
 
-   #_#_:rules
+   :rules
    {:schema localized-string-schema
     :field
     {:type        "textarea"
      :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
      :label       {:fi "Luvat, säännöt, ohjeet"}}}
-
-   :permits-rules-guidelines
-   {:schema permits-rules-guidelines-schema
-    :field
-    {:type        "rules"
-     :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
-     :label       {:fi "Luvat, säännöt, ohjeet"}
-     :opts        common-rules}}
 
    :arrival
    {:schema localized-string-schema
@@ -371,7 +363,10 @@
    {:routes
     {:schema [:sequential
               (mu/merge
-               (mu/dissoc common-props-schema :accessibility :latest-updates)
+               (-> common-props-schema
+                   (mu/dissoc :accessibility)
+                   (mu/dissoc :latest-updates)
+                   (mu/dissoc :rules))
                [:map
                 [:id [:string]]
                 [:geometries route-fcoll-schema]
@@ -387,6 +382,7 @@
                 [:duration {:optional true} duration-schema]
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                 [:route-marking {:optional true} localized-string-schema]
+                [:rules-structured {:optional true} rules-structured-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
                 [:independent-entity {:optional true} [:boolean]]])]
@@ -403,6 +399,14 @@
           :label       {:fi "Esteettömyysluokittelu"}
           :description {:fi "???"}
           :opts        (dissoc accessibility-classification "unknown")}}
+
+        :rules-structured
+        {:field
+         {:type        "rules"
+          :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
+          :label       {:fi "Luvat, säännöt, ohjeet"}
+          :opts        common-rules}}
+
         :accessibility-categorized
         {:field
          {:type        "accessibility"
