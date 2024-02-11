@@ -1565,18 +1565,20 @@
 
 (defn add-view
   [{:keys [tr width]}]
-  (let [add-mode (<== [::subs/selected-add-mode])]
+  (let [add-mode  (<== [::subs/selected-add-mode])
+        utp-user? (<== [:lipas.ui.user.subs/utp-user?])]
     [:<>
-     [mui/tabs
-      {:value     add-mode
-       :on-change #(==> [::events/select-add-mode %2])
-       :variant   "fullWidth"}
-      [mui/tab {:value "sports-site" :label "Liikuntapaikka"}]
-      [mui/tab {:value "loi" :label "Muu kohde"}]]
+     (when utp-user?
+       [mui/tabs
+        {:value     add-mode
+         :on-change #(==> [::events/select-add-mode %2])
+         :variant   "fullWidth"}
+        [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
+        [mui/tab {:value "loi" :label "Muu kohde"}]])
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]
-       "loi" [loi/view])]))
+       "loi"         [loi/view])]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
