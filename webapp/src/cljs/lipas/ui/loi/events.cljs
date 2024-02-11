@@ -1,6 +1,7 @@
 (ns lipas.ui.loi.events
   (:require
    [ajax.core :as ajax]
+   [lipas.permissions :as permissions]
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]))
 
@@ -114,18 +115,22 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   {:http-xhrio
-    {:method          :post
-     :params          {:size  1000
-                       :query
-                       {:terms
-                        {:status ["active" "out-of-service-temporarily"]}}}
-     :uri             (str (:backend-url db) "/actions/search-lois")
-     #_#_:headers     {:Authorization (str "Token " token)}
-     :format          (ajax/json-request-format)
-     :response-format (ajax/json-response-format {:keywords? true})
-     :on-success      [::search-success]
-     :on-failure      [::search-failure]}}))
+   ;; For now, let's show lois only if the user has permissions to
+   ;; activities.
+   (if (-> db :user :login :permissions permissions/activities?)
+     {:http-xhrio
+      {:method          :post
+       :params          {:size  1000
+                         :query
+                         {:terms
+                          {:status ["active" "out-of-service-temporarily"]}}}
+       :uri             (str (:backend-url db) "/actions/search-lois")
+       #_#_:headers     {:Authorization (str "Token " token)}
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::search-success]
+       :on-failure      [::search-failure]}}
+     {})))
 
 (re-frame/reg-event-fx
  ::search-success
