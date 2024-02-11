@@ -60,3 +60,8 @@
       ;; Implicitly
       (and (access-to-city? permissions sports-site)
            (access-to-type? permissions sports-site))))))
+
+(defn activities?
+  [permissions]
+  (or (:admin? permissions)
+      (some? (seq (:activities permissions)))))
