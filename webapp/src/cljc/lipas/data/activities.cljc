@@ -392,7 +392,7 @@
       :label       {:fi "Reittityyppi"}
       :props
       (merge
-       common-props
+       (dissoc common-props :rules)
        {:accessibility-classification
         {:field
          {:type        "select"
