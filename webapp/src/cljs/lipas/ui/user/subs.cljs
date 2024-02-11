@@ -29,6 +29,12 @@
    (-> db :user :login :permissions)))
 
 (re-frame/reg-sub
+ ::utp-user?
+ :<- [::permissions]
+ (fn [permissions _]
+   (permissions/activities? permissions)))
+
+(re-frame/reg-sub
  ::permission-to-cities
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
