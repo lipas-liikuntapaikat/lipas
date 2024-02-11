@@ -178,7 +178,12 @@
           :label     (tr :lipas.user.permissions/activities)
           :value     (-> user :permissions :activities)
           :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :activities] %])}]]]
+          :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
+
+        [mui/button
+         {:on-click #(==> [::events/grant-access-to-activity-types
+                           (-> user :permissions :activities)])}
+         "Anna oikeus aktiviteettien tyyppeihin"]]]
 
       ;;; History
       [lui/form-card {:title (tr :lipas.user/history)}
