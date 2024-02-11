@@ -118,6 +118,7 @@
   [m]
   (let [m1 (-> m
                (update :properties select-keys (-> 3110 types/all :props keys))
+               (update :properties dissoc :area-m2)
                old/add-swimming-pool-props)]
     (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
@@ -125,6 +126,7 @@
   [m]
   (let [m1 (-> m
                (update :properties select-keys (-> 3130 types/all :props keys))
+               (update :properties dissoc :area-m2)
                old/add-swimming-pool-props)]
     (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
