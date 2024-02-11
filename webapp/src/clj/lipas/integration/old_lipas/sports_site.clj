@@ -298,9 +298,10 @@
         (apply merge)
         (merge
          {:ice-rinks-count       (-> m :rinks count)
-          :area-m2               (-> m :building :total-surface-area-m2)
-          :stand-capacity-person (-> m :building :seating-capacity)
-          :surface-material      (-> m :building :envelope :base-floor-structure)})
+          ;; These come from 'normal properties' again
+          #_#_:area-m2               (-> m :building :total-surface-area-m2)
+          #_#_:stand-capacity-person (-> m :building :seating-capacity)
+          #_#_:surface-material      (-> m :building :envelope :base-floor-structure)})
         (update m :properties merge)))
 
 (defn add-swimming-pool-props
@@ -323,16 +324,18 @@
               (keyword (str "pool-" n "-min-depth-m"))   (:min-depth-m pool)})))
         (apply merge)
         (merge
-         {:swimming-pool-count        (-> m :pools count)
-          :pool-water-area-m2         (-> m :building :total-water-area-m2)
-          ;;:area-m2                    (-> m :building :total-surface-area-m2)
-          :stand-capacity-person      (-> m :building :seating-capacity)
-          :kiosk?                     (-> m :facilities :kiosk?)
-          :1m-platforms-count         (-> m :facilities :platforms-1m-count)
-          :3m-platforms-count         (-> m :facilities :platforms-3m-count)
-          :5m-platforms-count         (-> m :facilities :platforms-5m-count)
-          :7m5-platforms-count        (-> m :facilities :platforms-7.5m-count)
-          :10m-platforms-count        (-> m :facilities :platforms-10m-count)
+         {
+          ;; These come from 'normal properties' again
+          #_#_:swimming-pool-count        (-> m :pools count)
+          #_#_:pool-water-area-m2         (-> m :building :total-water-area-m2)
+          #_#_:area-m2                    (-> m :building :total-surface-area-m2)
+          #_#_:stand-capacity-person      (-> m :building :seating-capacity)
+          #_#_:kiosk?                     (-> m :facilities :kiosk?)
+          #_#_:1m-platforms-count         (-> m :facilities :platforms-1m-count)
+          #_#_:3m-platforms-count         (-> m :facilities :platforms-3m-count)
+          #_#_:5m-platforms-count         (-> m :facilities :platforms-5m-count)
+          #_#_:7m5-platforms-count        (-> m :facilities :platforms-7.5m-count)
+          #_#_:10m-platforms-count        (-> m :facilities :platforms-10m-count)
           :water-slides-count         (-> m :slides count)
           :waterslides-total-length-m (->> (:slides m)
                                            (map :length-m)
