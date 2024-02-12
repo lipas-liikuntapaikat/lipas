@@ -786,19 +786,20 @@
                      :credentials-provider credentials-provider})))
 
 (defn ->lois-es-query
-  [{:keys [location statuses]}]
+  [{:keys [location loi-statuses]}]
   (let [lat (:lat location)
         lon (:lon location)
         distance (:distance location)]
     ;; use params
     ;; todo: add loi-category, loi-type status
+    (println loi-statuses)
     (if (and lat lon distance)
       {:size 250
        :query {:function_score
                {:query {:bool
-                {:filter
-                 [{:terms
-                   {:status.keyword statuses}}]}}
+                        {:filter
+                         [{:terms
+                           {:status loi-statuses}}]}}
                 :functions
                 [{:exp
                   {:search-meta.location.wgs84-point
