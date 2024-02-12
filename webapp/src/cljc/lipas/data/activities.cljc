@@ -813,7 +813,7 @@
        :opts        fishing-types}}
 
      :fishing-activities
-     {:schema [:sequential (into [:enum] (keys fishing-types))]
+     {:schema [:sequential (into [:enum] (keys fishing-activities))]
       :field
       {:type        "multi-select"
        :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
