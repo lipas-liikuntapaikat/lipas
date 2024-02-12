@@ -471,7 +471,7 @@
           :description {:fi "Reittimerkkien symboli ja väri"}
           :label       {:fi "Reittimerkintä"}}}
 
-        :latest-updates
+        #_#_:latest-updates
         {:schema localized-string-schema
          :field
          {:type        "textarea"
