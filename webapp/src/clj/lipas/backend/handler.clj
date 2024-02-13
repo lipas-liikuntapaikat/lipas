@@ -219,7 +219,7 @@
            (let [loi-status (-> parameters :path :status)
                  query      {:size 10000 :query {:term {:status.keyword loi-status}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]]
+              :body   (core/search-lois search query)}))}}]
 
       ["/users"
        {:get
@@ -671,7 +671,7 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois search body-params)})}}]]
+            :body   (core/search-lois search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
