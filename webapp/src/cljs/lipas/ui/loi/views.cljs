@@ -11,6 +11,16 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+(defn lang-selector
+  [{:keys [locale]}]
+  [mui/tabs
+   {:value          (name locale)
+    :indicatorColor "primary"
+    :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
+   [mui/tab {:value "fi" :label "Suomi"}]
+   [mui/tab {:value "se" :label "Svenska"}]
+   [mui/tab {:value "en" :label "English"}]])
+
 (defn form-label
   [{:keys [label]}]
   [mui/form-label {:style {:color "gray"}}
@@ -30,16 +40,24 @@
     :save-label    "Ok"
     :cancel-label  (tr :actions/cancel)}
    [mui/grid {:container true :spacing 2}
+
+    [mui/grid {:item true :xs 12}
+     [lang-selector {:locale locale}]]
+
     [mui/grid {:item true :xs 12}
 
      [:input
       {:type      "file"
        :accept    (str/join "," ["image/png" "image/jpeg" "image/jpg" "image/webp"])
-       :on-change #(==> [:lipas.ui.sports-sites.activities.events/upload-image
+       :on-change #(==> [:lipas.ui.sports-sites.activities.events/upload-utp-image
                          (-> % .-target .-files)
                          lipas-id
-                         (fn [url]
-                           (swap! dialog-state assoc-in [:data :url] url))])}]
+                         (fn [{:keys [public-urls] :as cms-meta}]
+                           (let [url (:original public-urls)]
+                             (swap! dialog-state (fn [state]
+                                                   (-> state
+                                                       (assoc-in [:data :url] url)
+                                                       (assoc-in [:data :cms] cms-meta))))))])}]
 
      [mui/grid {:item true :xs 12}
       (when-let [url (-> @dialog-state :data :url)]
@@ -73,7 +91,8 @@
                dialog-init-state {:open? false
                                   :data  nil
                                   :mode  :edit}
-               dialog-state (r/atom dialog-init-state)]
+               dialog-state (r/atom dialog-init-state)
+               popper-state (r/atom {:open? false})]
 
     (let [tr (<== [:lipas.ui.subs/translator])]
       [mui/grid {:container true :spacing 2}
@@ -92,6 +111,17 @@
                                          (mapv #(dissoc % :id))))
                          (reset! dialog-state dialog-init-state))}]
 
+       ;; Image Preview Popper
+       [mui/popper
+        {:open           (:open? @popper-state)
+         :placement      "right"
+         :anchor-el      (:anchor-el @popper-state)
+         :disabblePortal false
+         :modifiers      {:offset {:enabled true :offset "0px,20px"}}}
+        [:img
+         {:style {:max-width "400px"}
+          :src   (:url @popper-state)}]]
+
        ;; Label
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
@@ -99,12 +129,13 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers         [[:url "Linkki"]
-                            [:_description "Kuvaus"]]
+         {:headers         [[:_filename (tr :general/name)]
+                            [:_description (tr :general/description)]]
           :read-only?      read-only?
           :items           (->> @state
                                 vals
-                                (map #(assoc % :_description (get-in % [:description locale]))))
+                                (map #(assoc % :_description (get-in % [:description locale])))
+                                (map #(assoc % :_filename (get-in % [:cms :filename]))))
           :on-add          (fn []
                              (reset! dialog-state {:open? true
                                                    :mode  :add
@@ -118,6 +149,17 @@
                              (on-change (->> @state
                                              vals
                                              (mapv #(dissoc % :id)))))
+
+          :on-custom-hover-in (fn [evt item]
+                                 (let [img-url (get-in item [:cms :public-urls :medium]
+                                                       (:url item))]
+                                   (reset! popper-state {:open?     true
+                                                         :anchor-el (.-currentTarget evt)
+                                                         :url       img-url})))
+
+          :on-custom-hover-out (fn [_evt _item]
+                                 (swap! popper-state assoc :open? false))
+
           :add-tooltip     "Lisää"
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)

@@ -520,6 +520,10 @@
     :save-label    "Ok"
     :cancel-label  (tr :actions/cancel)}
    [mui/grid {:container true :spacing 2}
+
+    [mui/grid {:item true :xs 12}
+     [lang-selector {:locale locale}]]
+
     [mui/grid {:item true :xs 12}
 
      [:input
