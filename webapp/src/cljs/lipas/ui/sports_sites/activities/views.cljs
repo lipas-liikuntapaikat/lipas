@@ -443,7 +443,10 @@
          :dialog-state dialog-state
          :on-save      (fn []
                          (let [data (:data @dialog-state)]
-                           (swap! state assoc-in [:custom-rules (:value data)] data))
+                           (swap! state (fn [state]
+                                          (-> state
+                                              (assoc-in [:custom-rules (:value data)] data)
+                                              (update :custom-rules-vs conj (:value data))))))
                          (reset! dialog-state dialog-init-state))}]
 
        ;; ;; Label
