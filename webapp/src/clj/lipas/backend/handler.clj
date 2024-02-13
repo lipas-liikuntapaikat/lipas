@@ -166,7 +166,18 @@
          (fn []
            (let [query {:size 10000 :query {:match_all {}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body   (core/search-lois search query)}))}}
+
+      ["/:loi-id"
+      {:get
+       {:no-doc     false
+        :responses  {200 {:body :lipas.loi/document}}
+        :parameters {:path {:loi-id :lipas.loi/id}}
+        :handler
+        (fn [{:keys [parameters]}]
+          (println parameters)
+           {:status 200
+            :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]]
 
       ["/lois/type/:loi-type"
        {:get
@@ -208,7 +219,7 @@
            (let [loi-status (-> parameters :path :status)
                  query      {:size 10000 :query {:term {:status.keyword loi-status}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body   (core/search-lois search query)}))}}]]
 
       ["/users"
        {:get
@@ -660,8 +671,7 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois search body-params)})}}]
-      ]]
+            :body   (core/search-lois search body-params)})}}]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

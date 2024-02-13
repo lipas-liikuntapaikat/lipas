@@ -320,11 +320,12 @@
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
+;; -90-90
 (s/def :lipas.location.coordinates/lat (double-in :min 59.846373196
                                                   :max 70.1641930203
                                                   :NaN? false
                                                   :infinite? false))
-
+;; -180-180
 (s/def :lipas.location.coordinates/lon (double-in :min 20.6455928891
                                                   :max 31.5160921567
                                                   :NaN? false
@@ -1955,7 +1956,9 @@
 
 ;;; Location of Interest (loi) ;;;
 
-(s/def :lipas.loi/id (st/spec {:spec (str-in 36 36)}))
+(s/def :lipas.loi/id
+  (st/spec {:spec (str-in 36 36)
+            :swagger/type "string"}))
 #_(s/def :lipas.loi/created-at :lipas/timestamp)
 (s/def :lipas.loi/event-date :lipas/timestamp)
 

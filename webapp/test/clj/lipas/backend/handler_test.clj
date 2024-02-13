@@ -157,7 +157,7 @@
 (defn gen-loi! []
   (-> (gen/generate (s/gen :lipas.loi/document))
       (assoc :status "active")
-      (assoc :id (java.util.UUID/randomUUID))))
+      (assoc :id (str (java.util.UUID/randomUUID)))))
 
 ;;; Fixtures ;;;
 
@@ -199,7 +199,13 @@
         response-loi (first (<-json (:body resp)))]
     (is (= loi-category (:loi-category response-loi)))))
 
-
+(deftest get-loi-by-id
+  (let [{:keys [id] :as loi} (gen-loi!)
+        _    (core/index-loi! search loi :sync)
+        resp (app (-> (mock/request :get (str "/api/lois/" id))
+                      (mock/content-type "application/json")))
+        response-loi (<-json (:body resp))]
+    (is (= (dissoc loi :features) response-loi))))
 
 (deftest search-loi-by-invalid-category
   (let [loi-category "kekkonen-666-category"
@@ -263,9 +269,7 @@
     (is (= "out-of-service-permanently" (:status (nth bodies 4))))
     (is (= "incorrect-data" (:status (nth bodies 5))))))
 
-(comment
-  (t/run-test search-loi-by-status)
-  )
+
 
 (deftest register-user-test
   (let [user (gen-user)
@@ -711,4 +715,6 @@
 (comment
   (t/run-tests *ns*)
   (t/run-test search-order-test)
+  (t/run-test search-loi-by-status)
+  (t/run-test get-loi-by-id)
   )
