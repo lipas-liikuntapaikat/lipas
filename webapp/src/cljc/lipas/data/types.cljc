@@ -915,7 +915,8 @@
      :toilet?                            {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
-     :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
+     :may-be-shown-in-harrastuspassi-fi? {:priority 0}
+     :use-structure-during-fire-warning? {:priority 0}}},
    4830
    {:description
     {:fi "Ulkona tai sisällä. Varustus ja lajit ominaisuustietoihin.",
