@@ -49,6 +49,7 @@
     :highlights
     :arrival
     :rules
+    :rules-structured
     :permits-rules-guidelines
     :duration
     :travel-direction
@@ -446,7 +447,12 @@
                            (swap! state (fn [state]
                                           (-> state
                                               (assoc-in [:custom-rules (:value data)] data)
-                                              (update :custom-rules-vs conj (:value data))))))
+                                              (update :custom-rules-vs conj (:value data)))))
+
+                           (set-field :custom-rules (-> @state
+                                                        :custom-rules
+                                                        (select-keys (:custom-rules-vs @state))
+                                                        vals)))
                          (reset! dialog-state dialog-init-state))}]
 
        ;; ;; Label
@@ -480,7 +486,6 @@
           :caption-fn      (comp locale :description second)
           :value-fn        (comp :value second)
           :on-change       (fn [vs]
-                             (println vs)
                              (swap! state assoc :custom-rules-vs vs)
                              (set-field :custom-rules (-> @state
                                                           :custom-rules
@@ -749,6 +754,9 @@
           :add-btn-size    "small"
           :key-fn          :url}]]])))
 
+(def independent-entity-ks
+  #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
+
 (defn route-form
   [{:keys [locale geom-type lipas-id route-props state read-only?]}]
   (into
@@ -757,7 +765,7 @@
      (when-not (and
                 (contains? route-props :independent-entity)
                 (not (:independent-entity @state))
-                (contains? #{:arrival :permits-rules-guidelines :highlights} prop-k))
+                (contains? independent-entity-ks prop-k))
          (make-field
           {:field        field
            :prop-k       prop-k
