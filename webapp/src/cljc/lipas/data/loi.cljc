@@ -68,20 +68,20 @@
       :value "hazard"
       :props common-props
       #_     (merge
-         (select-keys common-props [:name])
-         {:hazard-type
-          {:schema (into [:enum] (keys water-conditions-hazards))
-           :field
-           {:type        "select"
-            :label       {:fi "Tyyppi"}
-            :description {:fi "Vaaranpaikan tyyppi"}
-            :opts        water-conditions-hazards}}
-          :description
-          {:schema localized-string-schema
-           :field
-           {:type        "textarea"
-            :label       {:fi "Kuvaus"}
-            :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
+              (select-keys common-props [:name])
+              {:hazard-type
+               {:schema (into [:enum] (keys water-conditions-hazards))
+                :field
+                {:type        "select"
+                 :label       {:fi "Tyyppi"}
+                 :description {:fi "Vaaranpaikan tyyppi"}
+                 :opts        water-conditions-hazards}}
+               :description
+               {:schema localized-string-schema
+                :field
+                {:type        "textarea"
+                 :label       {:fi "Kuvaus"}
+                 :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
 
      :landing-spot
      {:label {:fi "Rantautumispaikka"}
@@ -131,7 +131,18 @@
      :fire-pit
      {:label {:fi "Tulentekopaikka"}
       :value "fire-pit"
-      :props (merge common-props accessibility-props)}
+      :props
+      (merge
+       common-props
+       accessibility-props
+       {:use-structure-during-fire-warning
+        {:schema [:boolean]
+         :field
+         {:type        "checkbox"
+          :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
+                        :en "Can the structure be used during a forest fire warning?"
+                        :se "Får strukturen användas under en skogsbrandsvarning?"}
+          :description {:fi "" :se "" :en ""}}}})}
 
      :rest-area
      {:label {:fi "Taukopaikka"}
@@ -211,7 +222,17 @@
      :reservation-campsite
      {:label {:fi "Varaustulipaikka" :en "Reservation campsite" :se "Bokningscampingplats"}
       :value "reservation-campsite"
-      :props (merge common-props)}
+      :props
+      (merge
+       common-props
+       {:use-structure-during-fire-warning
+        {:schema [:boolean]
+         :field
+         {:type        "checkbox"
+          :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
+                        :en "Can the structure be used during a forest fire warning?"
+                        :se "Får strukturen användas under en skogsbrandsvarning?"}
+          :description {:fi "" :se "" :en ""}}}})}
 
      :dog-swimming-area
      {:label {:fi "Koirien uintipaikka" :en "Dog swimming area" :se "Hundsimningsområde"}
