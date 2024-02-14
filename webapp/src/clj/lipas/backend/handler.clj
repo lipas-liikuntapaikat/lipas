@@ -175,7 +175,6 @@
         :parameters {:path {:loi-id :lipas.loi/id}}
         :handler
         (fn [{:keys [parameters]}]
-          (println parameters)
            {:status 200
             :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]]
 
