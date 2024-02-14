@@ -152,6 +152,13 @@
                       :url    (es-utils/url [idx-name :_search])
                       :body   params}))
 
+(defn fetch-document
+  [client idx-name doc-id]
+  (assert idx-name)
+  (assert doc-id)
+  (es/request client {:method :get
+                      :url    (es-utils/url [idx-name :_doc doc-id])}))
+
 (defn scroll
   [client idx-name params]
   (assert idx-name)

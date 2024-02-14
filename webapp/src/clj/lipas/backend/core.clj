@@ -794,6 +794,14 @@
         :hits
         (->> (map :_source)))))
 
+(defn get-loi
+  [{:keys [indices client]} loi-id]
+  (let [idx-name (get-in indices [:lois :search])]
+    (-> (search/fetch-document client idx-name loi-id)
+        :body
+        :_source
+        (dissoc :search-meta))))
+
 (defn enrich-loi
   [{:keys [geometries] :as loi}]
   (assoc-in loi [:search-meta :geometries] (feature-coll->geom-coll geometries)))
