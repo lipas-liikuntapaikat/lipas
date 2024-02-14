@@ -324,7 +324,7 @@
    :props
    (merge
     (dissoc common-props :rules)
-    {:everymans-rights
+    {#_#_:everymans-rights
      {:schema [:boolean {:optional true}]
       :field
       {:type        "checkbox"
