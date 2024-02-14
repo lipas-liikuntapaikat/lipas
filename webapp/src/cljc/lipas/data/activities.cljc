@@ -323,7 +323,7 @@
    :type-codes #{102 103 104 106 107 108 109 110 111 112}
    :props
    (merge
-    common-props
+    (dissoc common-props :rules)
     {:everymans-rights
      {:schema [:boolean {:optional true}]
       :field
@@ -335,7 +335,14 @@
       :field
       {:type        "checkbox"
        :description {:fi "Onko kohde geopark? Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."}
-       :label       {:fi "Geopark"}}}})})
+       :label       {:fi "Geopark"}}}
+     :rules-structured
+     {:schema rules-structured-schema
+      :field
+      {:type        "rules"
+       :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
+       :label       {:fi "Luvat, säännöt, ohjeet"}
+       :opts        common-rules}}})})
 
 (def outdoor-recreation-areas-schema
   (collect-schema (:props outdoor-recreation-areas)))
