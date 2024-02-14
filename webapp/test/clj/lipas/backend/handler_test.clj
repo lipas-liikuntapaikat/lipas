@@ -205,7 +205,7 @@
         resp (app (-> (mock/request :get (str "/api/lois/" id))
                       (mock/content-type "application/json")))
         response-loi (<-json (:body resp))]
-    (is (= (dissoc loi :features) response-loi))))
+    (is (= loi response-loi))))
 
 (deftest search-loi-by-invalid-category
   (let [loi-category "kekkonen-666-category"
