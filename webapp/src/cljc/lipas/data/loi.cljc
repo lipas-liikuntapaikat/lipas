@@ -55,6 +55,16 @@
      :description {:fi "Tähän joku järkevä ohje"}
      :label       {:fi "Esteettömyys"}}}})
 
+(def fire-props
+  {:use-structure-during-fire-warning
+   {:schema [:boolean]
+    :field
+    {:type        "checkbox"
+     :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
+                   :en "Can the structure be used during a forest fire warning?"
+                   :se "Får strukturen användas under en skogsbrandsvarning?"}
+     :description {:fi "" :se "" :en ""}}}})
+
 (def water-conditions-hazards
   {"rapid"      {:fi "Koski"}
    "open-water" {:fi "Avoin selkä"}})
@@ -126,23 +136,14 @@
      :cooking-shelter
      {:label {:fi "Keittokatos"}
       :value "cooking-shelter"
-      :props (merge common-props accessibility-props)}
+      :props
+      (merge common-props accessibility-props fire-props)}
 
      :fire-pit
      {:label {:fi "Tulentekopaikka"}
       :value "fire-pit"
       :props
-      (merge
-       common-props
-       accessibility-props
-       {:use-structure-during-fire-warning
-        {:schema [:boolean]
-         :field
-         {:type        "checkbox"
-          :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
-                        :en "Can the structure be used during a forest fire warning?"
-                        :se "Får strukturen användas under en skogsbrandsvarning?"}
-          :description {:fi "" :se "" :en ""}}}})}
+      (merge common-props accessibility-props fire-props)}
 
      :rest-area
      {:label {:fi "Taukopaikka"}
@@ -200,7 +201,7 @@
       :props (merge common-props)}
 
      :rowboat-rental
-     {:label {:fi "Soutuvenevuokraus" :en "Rowboat rental" :se "Roddhyra uthyrning"}
+     {:label {:fi "Soutuvenevuokraus" :en "Rowboat rental" :se "Roddbåtuthyrning"}
       :value "rowboat-rental"
       :props (merge common-props)}
 
@@ -223,16 +224,7 @@
      {:label {:fi "Varaustulipaikka" :en "Reservation campsite" :se "Bokningscampingplats"}
       :value "reservation-campsite"
       :props
-      (merge
-       common-props
-       {:use-structure-during-fire-warning
-        {:schema [:boolean]
-         :field
-         {:type        "checkbox"
-          :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
-                        :en "Can the structure be used during a forest fire warning?"
-                        :se "Får strukturen användas under en skogsbrandsvarning?"}
-          :description {:fi "" :se "" :en ""}}}})}
+      (merge common-props fire-props)}
 
      :dog-swimming-area
      {:label {:fi "Koirien uintipaikka" :en "Dog swimming area" :se "Hundsimningsområde"}
