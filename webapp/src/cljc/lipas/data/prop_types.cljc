@@ -1371,15 +1371,7 @@
     :description
     {:fi "Toimiiko kohteessa ohjelmapalveluyritys.",
      :se "",
-     :en ""}}
-   :use-structure-during-fire-warning?
-   {:name        {:fi "Käyttö metsäpalovaroituksen aikana"
-                  :en "Using Structure During Forest Fire Warning"
-                  :se "Användning Av Struktur Under Skogsbrandsvarning"}
-    :description {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
-                  :en "Can the structure be used during a forest fire warning?"
-                  :se "Får strukturen användas under en skogsbrandsvarning?"}
-    :data-type "boolean"}})
+     :en ""}}})
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
