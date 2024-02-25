@@ -225,19 +225,17 @@
           ]]]
 
        ;; Promo card
-       #_[mui/grid {:item true :xs 12}
+       [mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title (tr :user/promo-headline)}]
          [mui/card-content
-          [mui/typography {:variant "h5" :style {:margin-top "-0.5em"}}
-           (tr :user/promo1-topic)]
           [mui/button
            {:variant "contained"
             :color   "secondary"
             :style {:margin-top "1em"}
-            :href    (str "/pdf/tiedote_" (name (tr)) ".pdf")
+            :href    (str "/pdf/lipas-vuosikatsaus-2023.pdf")
             :target  "_blank"}
-           (tr :user/promo1-text)]
+           "LIPAS vuosikatsaus 2023 (.pdf)"]
 
           #_[:ul {:dense true}
            [:li "Liikuntapaikat, kaikki yhteensä"]
