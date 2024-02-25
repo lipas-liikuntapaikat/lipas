@@ -57,7 +57,8 @@
    {:label "RetkiSuomi" :href "https://retkisuomi.fi/"}
    {:label "Kuntamaisema" :href "https://kuntamaisema.fi/"}
    {:label "Sweco" :href "https://www.sweco.fi/"}
-   {:label "huts.fi" :href "https://huts.fi/"}])
+   {:label "huts.fi" :href "https://huts.fi/"}
+   {:label "Retkellä.fi" :href "https://retkellä.fi"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
