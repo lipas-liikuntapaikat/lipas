@@ -42,7 +42,11 @@
   (->>
    [:route-name
     :type
+    :paddling-route-type
+    :birdwatching-type
     :activities
+    :paddling-activities
+    :cycling-activities
     :description-short
     :description-long
     :independent-entity
@@ -51,16 +55,28 @@
     :rules
     :rules-structured
     :permits-rules-guidelines
+    :good-to-know
+    :food-and-water
+    :accommodation
     :duration
+    :route-notes
     :travel-direction
     :route-marking
+    :safety
     :habitat
-    :character
-    :season
-    :waters
-    :species
+    :birdwatching-habitat
+    :birdwatching-character
+    :birdwatching-season
+    :birdwatching-species
+    :unpaved-percentage
+    :trail-percentage
+    :cyclable-percentage
+    :paddling-properties
+    :paddling-difficulty
     :fish-population
     :fishing-methods
+    :fishing-species
+    :fishing-waters
     :fishing-permit
     :fishing-permit-additional-info
     :images
