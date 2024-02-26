@@ -34,7 +34,8 @@
   (let [url     (str api-url "/media/image/field_media_image")
         headers (merge default-headers
                        {:Content-Type        "application/octet-stream"
-                        :Content-Disposition (format "file; filename=\"%s\"" filename)})]
+                        :Content-Disposition (format "file; filename=\"%s\""
+                                                     (url/url-encode filename))})]
     (-> (client/post url {:basic-auth basic-auth-creds :headers headers :body data})
         :body
         (json/decode keyword))))
