@@ -120,7 +120,8 @@
       {:method          :post
        :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])
                                     :lon (get-in db [:map :center-wgs84 :lon])
-                                    :distance (get-in db [:map :width])}
+                                    :distance (/ (max (-> db :map :width)
+                                                      (-> db :map :height)) 2)}
                          :loi-statuses (get-in db [:search :filters :statuses])}
        :uri             (str (:backend-url db) "/actions/search-lois")
        #_#_:headers     {:Authorization (str "Token " token)}

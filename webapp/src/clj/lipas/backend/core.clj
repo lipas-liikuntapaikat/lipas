@@ -790,9 +790,7 @@
   (let [lat (:lat location)
         lon (:lon location)
         distance (:distance location)]
-    ;; use params
     ;; todo: add loi-category, loi-type status
-    (println loi-statuses)
     (if (and lat lon distance)
       {:size 250
        :query {:function_score
@@ -804,8 +802,8 @@
                 [{:exp
                   {:search-meta.location.wgs84-point
                    {:origin (str lat "," lon)
-                    :offset (str (/ distance 2) "m")
-                    :scale (str (/ distance 2) "m")}}}]
+                    :offset (str distance "m")
+                    :scale (str distance "m")}}}]
                 }}}
       ;; default
       {:size 250 :query {:match_all {}}})))
