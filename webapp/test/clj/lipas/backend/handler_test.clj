@@ -269,32 +269,34 @@
     (is (= "out-of-service-permanently" (:status (nth bodies 4))))
     (is (= "incorrect-data" (:status (nth bodies 5))))))
 
+
 (deftest search-lois-by-location
   (let [loi-a {:event-date "1901-02-13T12:40:08.957Z"
                :geometries {:features
                             [{:geometry
-                              {:coordinates [25 66]
+                              {:coordinates [25 80.0002]
                                :type "Point"}
                               :type "Feature"}]
                             :type "FeatureCollection"}
                :id "fff0ec1a-d12c-4145-bb56-729396ad90ff"
                :loi-category "outdoor-recreation-facilities"
                :loi-type "mooring-ring"
-               :status "planning"}
+               :status "active"}
         loi-b {:event-date "1901-02-13T12:40:08.957Z"
                :geometries {:features
                             [{:geometry
-                              {:coordinates [25 67]
+                              {:coordinates [25 80]
                                :type "Point"}
                               :type "Feature"}]
                             :type "FeatureCollection"}
                :id "a4c29b32-73bd-465f-ace1-06d50a1838ce"
                :loi-category "outdoor-recreation-facilities"
                :loi-type "mooring-ring"
-               :status "planning"}
+               :status "active"}
         body-params {:location {:lon 25.0
                                 :lat 68.0
-                                :distance 1000}}]
+                                :distance 100}
+                     :loi-statuses ["active"]}]
     (core/index-loi! search loi-a :sync)
     (core/index-loi! search loi-b :sync)
     (let [response (<-json (:body
@@ -307,6 +309,7 @@
 
 (comment
   (t/run-test search-loi-by-status)
+  (t/run-test search-lois-by-location)
   )
 
 (deftest register-user-test

@@ -785,30 +785,29 @@
                                             :user-id  (:id user)}
                      :credentials-provider credentials-provider})))
 
+
 (defn ->lois-es-query
-  [{:keys [location loi-statuses]}]
-  (let [lat (:lat location)
-        lon (:lon location)
-        distance (:distance location)]
-    ;; todo: add loi-category, loi-type status
+  [{:keys [location]}]
+  (let [lon (:lon location)
+        lat (:lat location)
+        distance (:distance location)
+        origin (str lat "," lon)
+        decay-factor 2
+        offset (str (/ distance decay-factor) "m")
+        scale (str (* distance decay-factor) "m")
+        size 250
+        excludes ["search-meta"]
+        params {:size size
+                :_source {:excludes excludes}
+                :query {:function_score {:exp
+                                         {:search-meta.location.wgs84-point
+                                          {:origin origin
+                                           :offset offset
+                                           :scale scale}}}}}
+        default-query {:size size :query {:match_all {}}}]
     (if (and lat lon distance)
-      {:size 250
-       :query {:function_score
-               {:query {:bool
-                        {:filter
-                         [{:terms
-                           {:status loi-statuses}}]}}
-                :functions
-                [{:exp
-                  {:search-meta.location.wgs84-point
-                   {:origin (str lat "," lon)
-                    :offset (str distance "m")
-                    :scale (str distance "m")}}}]
-                }}}
-      ;; default
-      {:size 250 :query {:match_all {}}})))
-
-
+      params
+      default-query)))
 
 (defn search-lois
   [{:keys [indices client]} es-query]
