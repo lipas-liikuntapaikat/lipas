@@ -320,23 +320,19 @@
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
-;; -90-90
 (s/def :lipas.location.coordinates/lat (double-in :min -90
                                                   :max 90
                                                   :NaN? false
                                                   :infinite? false))
-;; -180-180
 (s/def :lipas.location.coordinates/lon (double-in :min -180
                                                   :max 180
                                                   :NaN? false
                                                   :infinite? false))
 
-;; -90-90
 (s/def :lipas.location.coordinates/finland-lat (double-in :min 59.846373196
                                                           :max 70.1641930203
                                                           :NaN? false
                                                           :infinite? false))
-;; -180-180
 (s/def :lipas.location.coordinates/finland-lon (double-in :min 20.6455928891
                                                           :max 31.5160921567
                                                           :NaN? false
