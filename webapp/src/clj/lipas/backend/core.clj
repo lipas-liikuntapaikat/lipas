@@ -788,25 +788,34 @@
 
 (defn ->lois-es-query
   [{:keys [location]}]
-  (let [lon (:lon location)
-        lat (:lat location)
-        distance (:distance location)
-        origin (str lat "," lon)
-        decay-factor 2
-        offset (str (/ distance decay-factor) "m")
-        scale (str (* distance decay-factor) "m")
-        size 250
-        excludes ["search-meta"]
-        params {:size size
-                :_source {:excludes excludes}
-                :query {:function_score {:exp
-                                         {:search-meta.location.wgs84-point
-                                          {:origin origin
-                                           :offset offset
-                                           :scale scale}}}}}
+  (let [lon           (:lon location)
+        lat           (:lat location)
+        distance      (:distance location)
+        origin        (str lat "," lon)
+        decay-factor  2
+        offset        (str (/ distance decay-factor) "m")
+        scale         (str (* distance decay-factor) "m")
+        size          250
+        from          0
+        excludes      ["search-meta"]
+        query         {:size    size
+                       :from    from
+                       :sort    ["_score"]
+                       :_source {:excludes excludes}
+                       :query   {:function_score
+                                 {:score_mode "max"
+                                  :boost_mode "max"
+                                  :functions  [{:exp
+                                                {:search-meta.location.wgs84-point
+                                                 {:origin origin
+                                                  :offset offset
+                                                  :scale  scale}}}]
+                                  :query      {:bool
+                                               {:filter
+                                                [{:terms {:status.keyword ["active"]}}]}}}}}
         default-query {:size size :query {:match_all {}}}]
     (if (and lat lon distance)
-      params
+      query
       default-query)))
 
 (defn search-lois
@@ -838,6 +847,7 @@
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:lois :search])
         es-query (->lois-es-query params)]
+    (prn es-query)
     (-> (search/search client idx-name es-query)
         :body
         :hits
