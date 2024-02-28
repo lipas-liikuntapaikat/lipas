@@ -33,10 +33,11 @@
   [coll]
   (log/info "Total indexing results:" (apply merge-with + coll)))
 
-(defn index-search-lois! [db client sync?]
-  (log/info "Starting to index location of interests..") 
-  (time (doseq [loi (db/get-lois db)] 
-    (log/info (core/index-loi! client loi sync?)))))
+(defn index-search-lois! [db search sync?]
+  (log/info "Starting to index location of interests..")
+  (doseq [loi (db/get-lois db)]
+    (core/index-loi! search loi sync?)    )
+  (log/info "Location of interests indexing done!"))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
