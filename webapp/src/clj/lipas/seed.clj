@@ -49,8 +49,7 @@
 
 ;; Admin is a person who can login and act as a 'human'
 (def admin
-  {:id "76a564ab-517e-4158-a16a-62b1e5542364"
-   :email    "admin@lipas.fi"
+  {:email    "admin@lipas.fi"
    :status   "active"
    :username "admin"
    :password (:admin-password env)
