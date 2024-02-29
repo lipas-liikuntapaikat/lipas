@@ -847,7 +847,6 @@
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:lois :search])
         es-query (->lois-es-query params)]
-    (prn es-query)
     (-> (search/search client idx-name es-query)
         :body
         :hits
