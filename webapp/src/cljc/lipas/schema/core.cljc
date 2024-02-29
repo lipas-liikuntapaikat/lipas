@@ -147,8 +147,8 @@
         :geometry
         {:type "Point"
          :coordinates [lon lat]}}]})
-   (s/gen (s/tuple :lipas.location.coordinates/lon
-                   :lipas.location.coordinates/lat))))
+   (s/gen (s/tuple :lipas.location.coordinates/finland-lon
+                   :lipas.location.coordinates/finland-lat))))
 
 ;; Specs ;;
 
