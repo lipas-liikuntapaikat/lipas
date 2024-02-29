@@ -670,8 +670,7 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois-with-params search body-params)})}}]
-      ]]
+            :body   (core/search-lois-with-params search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

@@ -274,7 +274,7 @@
   (let [loi-a {:event-date "1901-02-13T12:40:08.957Z"
                :geometries {:features
                             [{:geometry
-                              {:coordinates [25 80.0002]
+                              {:coordinates [25 65]
                                :type "Point"}
                               :type "Feature"}]
                             :type "FeatureCollection"}
@@ -285,7 +285,7 @@
         loi-b {:event-date "1901-02-13T12:40:08.957Z"
                :geometries {:features
                             [{:geometry
-                              {:coordinates [25 80]
+                              {:coordinates [25 70]
                                :type "Point"}
                               :type "Feature"}]
                             :type "FeatureCollection"}
@@ -295,7 +295,7 @@
                :status "active"}
         body-params {:location {:lon 25.0
                                 :lat 68.0
-                                :distance 100}
+                                :distance 1000}
                      :loi-statuses ["active"]}]
     (core/index-loi! search loi-a :sync)
     (core/index-loi! search loi-b :sync)
