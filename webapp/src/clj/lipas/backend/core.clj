@@ -787,7 +787,7 @@
 
 
 (defn ->lois-es-query
-  [{:keys [location]}]
+  [{:keys [location loi-statuses]}]
   (let [lon           (:lon location)
         lat           (:lat location)
         distance      (:distance location)
@@ -812,7 +812,7 @@
                                                   :scale  scale}}}]
                                   :query      {:bool
                                                {:filter
-                                                [{:terms {:status.keyword ["active"]}}]}}}}}
+                                                [{:terms {:status.keyword loi-statuses}}]}}}}}
         default-query {:size size :query {:match_all {}}}]
     (if (and lat lon distance)
       query
