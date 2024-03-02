@@ -399,7 +399,7 @@
       :label       {:fi "Reittityyppi"}
       :props
       (merge
-       (dissoc common-props :rules)
+       (dissoc common-props :rules :accessibility)
        {:accessibility-classification
         {:field
          {:type        "select"
@@ -477,6 +477,13 @@
          {:type        "text-field"
           :description {:fi "Reittimerkkien symboli ja väri"}
           :label       {:fi "Reittimerkintä"}}}
+
+        :route-length-km
+        {:field
+         {:type           "lipas-property"
+          :lipas-property :route-length-km
+          :description    {:fi "Reitin kulkupituus kilometreinä"}
+          :label          {:fi "Kulkupituus kilometreinä"}}}
 
         #_#_:latest-updates
         {:schema localized-string-schema
@@ -878,7 +885,7 @@
       :field
       {:type        "select"
        :label       {:fi "Esteettömyysluokittelu"}
-       :description {:fi "???"}
+       :description {:fi ""}
        :opts        (dissoc accessibility-classification "advanced-accessible")}}
 
      :accessibility-categorized

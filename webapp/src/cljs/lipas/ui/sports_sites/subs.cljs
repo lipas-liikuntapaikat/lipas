@@ -261,6 +261,12 @@
              props))))
 
 (re-frame/reg-sub
+ ::prop-type
+ :<- [::prop-types]
+ (fn [prop-types [_ prop-k]]
+   (get prop-types prop-k)))
+
+(re-frame/reg-sub
  ::geom-type
  (fn [[_ lipas-id]]
    (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id]))
