@@ -133,3 +133,26 @@
  :<- [::routes]
  (fn [[activities routes] _]
    (:selected-route-id activities)))
+
+(re-frame/reg-sub
+ ::lipas-prop-value
+ :<- [:lipas.ui.map.subs/selected-sports-site]
+ (fn [site-data  [_ prop-k read-only?]]
+   (if read-only?
+     (get-in site-data [:display-data :properties prop-k])
+     (get-in site-data [:edit-data :properties prop-k]))))
+
+(re-frame/reg-sub
+ ::geoms
+ :<- [:lipas.ui.map.subs/selected-sports-site]
+ (fn [site-data [_ read-only?]]
+   (if read-only?
+     (get-in site-data [:display-data :location :geometries])
+     (get-in site-data [:edit-data :location :geometries]))))
+
+(re-frame/reg-sub
+ ::geom-type
+ (fn [[_ read-only?]]
+   [(re-frame/subscribe [::geoms read-only?])])
+ (fn [[geoms] _]
+   (-> geoms :features first :geometry :type)))

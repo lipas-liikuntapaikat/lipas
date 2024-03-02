@@ -7,6 +7,7 @@
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.activities.events :as events]
    [lipas.ui.sports-sites.activities.subs :as subs]
+   [lipas.ui.sports-sites.views :as sports-site-views]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
@@ -59,6 +60,7 @@
     :food-and-water
     :accommodation
     :duration
+    :route-length-km
     :route-notes
     :travel-direction
     :route-marking
@@ -956,6 +958,25 @@
         :single [single-route (assoc props :route (first routes))]
         :multi  [multiple-routes props])]]))
 
+(defn lipas-property
+  [{:keys [read-only? lipas-id lipas-prop-k label description]}]
+  (let [tr        (<== [:lipas.ui.subs/translator])
+        geoms     (<== [::subs/geoms read-only?])
+        geom-type (<== [::subs/geom-type read-only?])
+        value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
+        set-field (partial set-field lipas-id :properties lipas-prop-k)]
+    (sports-site-views/make-prop-field
+     {:tr          tr
+      :prop-k      lipas-prop-k
+      :read-only?  read-only?
+      :label       label
+      :description description
+      :value       value
+      :set-field   set-field
+      :problems?   nil
+      :geom-type   geom-type
+      :geoms       geoms})))
+
 (defn make-field
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k]}]
   (condp = (:type field)
@@ -1107,6 +1128,13 @@
                       :set-field           (partial set-field prop-k)
                       :accessibility-props (:props field)
                       :value               (get-in edit-data [prop-k])}]
+
+    "lipas-property" [lipas-property
+                      {:read-only?   read-only?
+                       :lipas-id     lipas-id
+                       :lipas-prop-k (:lipas-property field)
+                       :label        (get-in field [:label locale])
+                       :description  (get-in field [:description locale])}]
 
     (println (str "Unknown field type: " (:type field)))))
 
