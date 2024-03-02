@@ -33,7 +33,7 @@
                                   read-string))
         props     (-> props
                       (dissoc :value-fn :label-fn :label :sort-fn :sort-cmp
-                              :deselect?)
+                              :deselect? :helper-text)
                       ;; Following fixes Chrome scroll issue
                       ;; https://github.com/mui-org/material-ui/pull/12003
                       (assoc :MenuProps
