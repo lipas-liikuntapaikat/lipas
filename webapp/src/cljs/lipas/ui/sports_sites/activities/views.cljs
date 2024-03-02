@@ -39,61 +39,6 @@
    [mui/tab {:value "se" :label "Svenska"}]
    [mui/tab {:value "en" :label "English"}]])
 
-(def sort-order
-  (->>
-   [:route-name
-    :type
-    :paddling-route-type
-    :birdwatching-type
-    :activities
-    :paddling-activities
-    :cycling-activities
-    :description-short
-    :description-long
-    :independent-entity
-    :highlights
-    :arrival
-    :rules
-    :rules-structured
-    :permits-rules-guidelines
-    :good-to-know
-    :food-and-water
-    :accommodation
-    :duration
-    :route-length-km
-    :route-notes
-    :travel-direction
-    :route-marking
-    :safety
-    :habitat
-    :birdwatching-habitat
-    :birdwatching-character
-    :birdwatching-season
-    :birdwatching-species
-    :unpaved-percentage
-    :trail-percentage
-    :cyclable-percentage
-    :paddling-properties
-    :paddling-difficulty
-    :fish-population
-    :fishing-methods
-    :fishing-species
-    :fishing-waters
-    :fishing-permit
-    :fishing-permit-additional-info
-    :images
-    :videos
-    :accessibility-classification
-    :accessibility
-    :parking
-    :contacts]
-   (reverse)
-   (map-indexed (fn [idx k] [k idx]))
-   (into {})))
-
-(defn field-sorter
-  [[k _]]
-  (get sort-order k -1))
 
 (defn checkbox
   [{:keys [read-only? label helper-text on-change value
@@ -776,7 +721,7 @@
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
 (defn route-form
-  [{:keys [locale geom-type lipas-id route-props state read-only?]}]
+  [{:keys [locale geom-type lipas-id route-props state read-only? field-sorter]}]
   (into
    [nice-form {:read-only? read-only?}]
    (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
@@ -784,18 +729,18 @@
                 (contains? route-props :independent-entity)
                 (not (:independent-entity @state))
                 (contains? independent-entity-ks prop-k))
-         (make-field
-          {:field        field
-           :prop-k       prop-k
-           :edit-data    @state
-           :display-data @state
-           :locale       locale
-           :set-field    (fn [& args]
-                           (let [path (butlast args)
-                                 v (last args)]
-                             (swap! state assoc-in path v)))
-           :geom-type    geom-type
-           :lipas-id     lipas-id})))))
+       (make-field
+        {:field        field
+         :prop-k       prop-k
+         :edit-data    @state
+         :display-data @state
+         :locale       locale
+         :set-field    (fn [& args]
+                         (let [path (butlast args)
+                               v (last args)]
+                           (swap! state assoc-in path v)))
+         :geom-type    geom-type
+         :lipas-id     lipas-id})))))
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
@@ -808,17 +753,20 @@
                (fn [_key _atom _old-state new-state]
                  (set-field [new-state])))
 
-    (let [tr       (<== [:lipas.ui.subs/translator])
-          editing? (not read-only?)]
+    (let [tr           (<== [:lipas.ui.subs/translator])
+          field-sorter (<== [::subs/field-sorter activity-k])
+          editing?     (not read-only?)]
 
       (when editing?
         [route-form
-         {:locale      locale
-          :lipas-id    lipas-id
-          :read-only?  read-only?
-          :geom-type   geom-type
-          :route-props route-props
-          :state       route-form-state}]))
+         {:locale       locale
+          :tr           tr
+          :field-sorter field-sorter
+          :lipas-id     lipas-id
+          :read-only?   read-only?
+          :geom-type    geom-type
+          :route-props  route-props
+          :state        route-form-state}]))
 
     (finally
       (remove-watch route-form-state :lol))))
@@ -834,6 +782,8 @@
           routes (<== [::subs/routes lipas-id activity-k])
 
           selected-route-id (<== [::subs/selected-route-id])
+
+          field-sorter (<== [::subs/field-sorter activity-k])
 
           editing? (not read-only?)]
 
@@ -890,12 +840,14 @@
          [:<>
 
           [route-form
-           {:locale      locale
-            :lipas-id    lipas-id
-            :read-only?  read-only?
-            :geom-type   geom-type
-            :route-props route-props
-            :state       route-form-state}]
+           {:locale       locale
+            :tr           tr
+            :field-sorter field-sorter
+            :lipas-id     lipas-id
+            :read-only?   read-only?
+            :geom-type    geom-type
+            :route-props  route-props
+            :state        route-form-state}]
 
           ;; Buttons
           [mui/grid {:container true :spacing 1}
@@ -1141,12 +1093,13 @@
 (defn view
   [{:keys [type-code display-data edit-data geom-type tr read-only?
            lipas-id]}]
-  (let [activities (<== [::subs/activities-for-type type-code])
-        activity-k (-> activities :value keyword)
-        locale     (tr)
-        set-field  (partial set-field lipas-id :activities activity-k)
-        editing?   (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
-        read-only? (not editing?)]
+  (let [activities   (<== [::subs/activities-for-type type-code])
+        activity-k   (-> activities :value keyword)
+        field-sorter (<== [::subs/field-sorter activity-k])
+        locale       (tr)
+        set-field    (partial set-field lipas-id :activities activity-k)
+        editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
+        read-only?   (not editing?)]
 
     (if read-only?
       [mui/typography "Vasta editointinäkymä on olemassa lajeille. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
@@ -1155,7 +1108,7 @@
 
        ;; Header
        #_[mui/grid {:item true :xs 12}
-        [mui/typography {:variant "h6"}
+          [mui/typography {:variant "h6"}
          (get-in activities [:label locale])]]
 
        ;; Locale selector
