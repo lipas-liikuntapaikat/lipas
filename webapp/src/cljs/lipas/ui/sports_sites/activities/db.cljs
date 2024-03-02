@@ -48,7 +48,12 @@
    :accessibility-classification
    :accessibility
    :parking
-   :contacts])
+   :contacts
+   :role
+   :organization
+   :email
+   :www
+   :phone-number])
 
 (defn make-field-sorter
   [ks]

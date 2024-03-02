@@ -45,14 +45,14 @@
    {:schema [:boolean]
     :field
     {:type        "checkbox"
-     :description {:fi "Tähän joku järkevä ohje"}
+     :description {:fi "Onko kohde esteetön"}
      :label       {:fi "Esteetön"}}}
 
    :accessibility
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Tähän joku järkevä ohje"}
+     :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
      :label       {:fi "Esteettömyys"}}}})
 
 (def fire-props
@@ -60,10 +60,12 @@
    {:schema [:boolean]
     :field
     {:type        "checkbox"
-     :label       {:fi "Saako rakennetta käyttää maastopalovaroituksen aikana?"
-                   :en "Can the structure be used during a forest fire warning?"
-                   :se "Får strukturen användas under en skogsbrandsvarning?"}
-     :description {:fi "" :se "" :en ""}}}})
+     :label       {:fi "Rakenteen käyttö maastopalovaroituksen aikana"
+                   :en ""
+                   :se ""}
+     :description {:fi "Valitse kenttä, jos rakennetta on sallittua käyttää tulentekoon maastopalovaroituksen aikana"
+                   :se ""
+                   :en ""}}}})
 
 (def water-conditions-hazards
   {"rapid"      {:fi "Koski"}
