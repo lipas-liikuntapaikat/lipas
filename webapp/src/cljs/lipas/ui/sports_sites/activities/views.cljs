@@ -225,11 +225,14 @@
          :value     (get-in value [prop-k locale])}]]])))
 
 (defn duration
-  [{:keys [tr locale label set-field value]}]
+  [{:keys [tr locale label description set-field value]}]
   [mui/form-control {:focused true}
    [form-label {:label label}]
 
    [mui/grid {:container true :spacing 2}
+
+    [mui/grid {:item true :xs 12}
+     [mui/typography {:variant "caption"} description]]
 
     [mui/grid {:item true :xs 3}
      [lui/text-field
@@ -476,7 +479,7 @@
        ])))
 
 (defn image-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id image-props]}]
+  [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
   [lui/dialog
    {:title         (if (-> @dialog-state :data :url)
                      "Valokuva"
@@ -492,6 +495,9 @@
 
     [mui/grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
+
+    [mui/grid {:item true :xs 12}
+     [mui/typography {:variant "caption"} helper-text]]
 
     [mui/grid {:item true :xs 12}
 
@@ -548,7 +554,7 @@
     ]])
 
 (defn images
-  [{:keys [value on-change locale label tr read-only? lipas-id image-props]}]
+  [{:keys [value on-change locale label helper-text tr read-only? lipas-id image-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -565,6 +571,7 @@
        [image-dialog
         {:tr           tr
          :lipas-id     lipas-id
+         :helper-text  helper-text
          :locale       locale
          :image-props  image-props
          :dialog-state dialog-state
@@ -631,9 +638,11 @@
           :key-fn              :url}]]])))
 
 (defn video-dialog
-  [{:keys [tr locale dialog-state on-save on-close]}]
+  [{:keys [tr label helper-text locale dialog-state on-save on-close]}]
   [lui/dialog
-   {:title         "Video"
+   {:title         (if (-> @dialog-state :data :url)
+                     "Video"
+                     "Lisää video")
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -642,6 +651,12 @@
     :save-label    "Ok"
     :cancel-label  (tr :actions/cancel)}
    [mui/grid {:container true :spacing 2}
+
+    [lang-selector {:locale locale}]
+
+    [mui/grid {:item true :xs 12}
+     [mui/typography {:variant "caption"} helper-text]]
+
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:value     (-> @dialog-state :data :url)
@@ -660,7 +675,7 @@
        :variant   "outlined"}]]]])
 
 (defn videos
-  [{:keys [value on-change locale label tr read-only?]}]
+  [{:keys [value on-change locale label helper-text tr read-only?]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -675,6 +690,8 @@
        ;; Dialog
        [video-dialog
         {:tr           tr
+         :label        label
+         :helper-text  helper-text
          :locale       locale
          :dialog-state dialog-state
          :on-save      (fn []

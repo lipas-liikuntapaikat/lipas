@@ -190,7 +190,7 @@
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Tarkempi tekstimuotoinen kuvaus kohteesta"}
+     :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista"}
      :label       {:fi "Kohdekuvaus"}}}
 
    :contacts
@@ -321,11 +321,21 @@
   {:label      {:fi "Retkeily ja ulkoilualueet"}
    :value      "outdoor-recreation-areas"
    :type-codes #{102 103 104 106 107 #_#_#_#_108 109 110 111 112}
+   :sort-order [:description-short
+                :description-long
+                :highlights
+                :rules-structured
+                :arrival
+                :accessibility
+                :geo-park
+                :contacts
+                :additional-info-link
+                :images
+                :videos]
    :props
    (merge
     (-> common-props
-        (dissoc :rules)
-        (assoc-in [:description-long ]))
+        (dissoc :rules))
     {#_#_:everymans-rights
      {:schema [:boolean {:optional true}]
       :field
@@ -494,7 +504,7 @@
          {:type        "select"
           :opts        {"clockwise"         {:fi "Myötäpäivään"}
                         "counter-clockwise" {:fi "Vastapäivään"}}
-          :description "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
+          :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."}
           :label       {:fi "Kulkusuunta"}}}
 
         :route-marking
@@ -967,6 +977,14 @@
    :value       "outdoor-recreation-facilities"
    :description {:fi ""}
    :type-codes  #{207 205 206 202 301 302 304 #_204}
+   :sort-order [:description-short
+                :rules
+                :arrival
+                :accessibility
+                :contacts
+                :additional-info-link
+                :images
+                :videos]
    :props       (dissoc common-props :description-long :highlights)})
 
 (def outdoor-recreation-facilities-schema

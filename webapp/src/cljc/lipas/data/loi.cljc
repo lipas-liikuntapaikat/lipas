@@ -37,8 +37,23 @@
               [:alt-text {:optional true} localized-string-schema]]]
     :field
     {:type        "images"
-     :description {:fi ""}
-     :label       {:fi "Valokuvat"}}}})
+     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."}
+     :label       {:fi "Valokuvat"}
+     :props
+     {:url
+      {:field
+       {:type   "text-field"
+        :hidden true}}
+      :description
+      {:field
+       {:type        "textarea"
+        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."}
+        :label       {:fi "Kuvateksti"}}}
+      :alt-text
+      {:field
+       {:type        "textarea"
+        :description {:fi "Ruudunlukijan näkövammaisille kertoma teksti kuvassa esitettävistä asioista. Lue lisää: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
+        :label       {:fi "Alt-teksti"}}}}}}})
 
 (def accessibility-props
   {:accessible?
