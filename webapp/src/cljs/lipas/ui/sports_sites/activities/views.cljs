@@ -99,30 +99,31 @@
 
 (defn contact-dialog
   [{:keys [tr locale dialog-state on-save on-close contact-props]}]
-  [lui/dialog
-   {:title         "Lisää yhteystieto"
-    :open?         (:open? @dialog-state)
-    :on-save       on-save
-    :on-close      #(swap! dialog-state assoc :open? false)
-    :save-enabled? true
-    :save-label    "Ok"
-    :cancel-label  (tr :actions/cancel)}
+  (let [field-sorter (<== [::subs/field-sorter :default])]
+    [lui/dialog
+     {:title         "Lisää yhteystieto"
+      :open?         (:open? @dialog-state)
+      :on-save       on-save
+      :on-close      #(swap! dialog-state assoc :open? false)
+      :save-enabled? true
+      :save-label    "Ok"
+      :cancel-label  (tr :actions/cancel)}
 
-   (into [mui/grid {:container true :spacing 2}
-          [mui/grid {:item true :xs 12}
-           [lang-selector {:locale locale}]]]
-         (for [[prop-k {:keys [field]}] contact-props]
-           [mui/grid {:item true :xs 12}
-            (make-field
-             {:field        field
-              :prop-k       prop-k
-              :edit-data    (:data @dialog-state)
-              :display-data (:data @dialog-state)
-              :locale       locale
-              :set-field    (fn [& args]
-                              (let [path (into [:data] (butlast args))
-                                    v (last args)]
-                                (swap! dialog-state assoc-in path v)))})]))])
+     (into [mui/grid {:container true :spacing 2}
+            [mui/grid {:item true :xs 12}
+             [lang-selector {:locale locale}]]]
+           (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+             [mui/grid {:item true :xs 12}
+              (make-field
+               {:field        field
+                :prop-k       prop-k
+                :edit-data    (:data @dialog-state)
+                :display-data (:data @dialog-state)
+                :locale       locale
+                :set-field    (fn [& args]
+                                (let [path (into [:data] (butlast args))
+                                      v (last args)]
+                                  (swap! dialog-state assoc-in path v)))})]))]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field

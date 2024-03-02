@@ -202,14 +202,14 @@
              [:phone-number {:optional true} [:string]]]
     :field
     {:type        "contacts"
-     :description {:fi "Tähän joku seliteteksti"}
+     :description {:fi "Syötä kohteesta vastaavien tahojen yhteystiedot"}
      :label       {:fi "Yhteystiedot"}
      :props
      {:organization
       {:field
        {:type        "text-field"
         :label       {:fi "Organisaatio"}
-        :description {:fi "Yhteystietoon liittyvän organisaation nimi"}}}
+        :description {:fi "Organisaation nimi"}}}
       :role
       {:field
        {:type        "multi-select"
@@ -217,27 +217,27 @@
         :description {:fi [:<>
                            "Asiakaspalvelu: Kohteen asiakaspalvelusta vastaava organisaatio"
                            [:br]
-                           "Sisällöntuottaja: Kohteesta sähköisessä palvelussa kerrottavista tiedoista vastaava organisaatio"
+                           "Sisällöntuottaja: Kohdetta kuvailevista LIPAS-tietosisällöistä vastaava organisaatio"
                            [:br]
-                           "Ylläpitäjä: Kohteen olosuhteiden ylläpidosta vastaava organisaatio"]}
+                           "Ylläpitäjä: Kohteen rakenteiden ja olosuhteiden ylläpidosta vastaava organisaatio"]}
         :opts        contact-roles}}
       :email
       {:field
        {:type        "text-field"
         :label       {:fi "Sähköposti"}
-        :description {:fi "Yhteystietoon liittyvän organisaation sähköpostiosoite"}}}
+        :description {:fi "Organisaation sähköpostiosoite (syötä vain yksi sähköpostiosoite)"}}}
 
       :www
       {:field
        {:type        "text-field"
         :label       {:fi "Web-osoite"}
-        :description {:fi "Kohteen ylläpitäjän / muussa roolissa toimivan organisaation verkkosivu"}}}
+        :description {:fi "Organisaation verkkosivu (syötä vain yksi verkko-osoite)"}}}
 
       :phone-number
       {:field
        {:type        "text-field"
         :label       {:fi "Puhelinnumero"}
-        :description {:fi "Yhteystietoon liittyvän organisaation puhelinnumero"}}}}}}
+        :description {:fi "Organisaation puhelinnumero"}}}}}}
 
    :videos
    {:schema [:sequential
@@ -246,7 +246,7 @@
               [:description {:optional true} localized-string-schema]]]
     :field
     {:type        "videos"
-     :description {:fi "Videot ovat linkkejä esim. kolmannen osapuolen palvelussa olevaan sisältöön"}
+     :description {:fi "Lisää URL-linkki web-palvelussa olevaan kohteen maisemia, luontoa tai harrastamisen olosuhteita esittelevään videoon. Varmista, että sinulla on oikeus lisätä video."}
      :label       {:fi "Videot"}}}
 
    :images
@@ -257,7 +257,7 @@
               [:alt-text {:optional true} localized-string-schema]]]
     :field
     {:type        "images"
-     :description {:fi ""}
+     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."}
      :label       {:fi "Valokuvat"}
      :props
      {:url
@@ -279,21 +279,21 @@
    {:schema [:string]
     :field
     {:type        "text-field"
-     :description {:fi "Linkki verkossa sijaitsevaan mahdolliseen laajempaan esittelyyn"}
+     :description {:fi "Linkki ulkoisella sivustolla sijaitsevaan laajempaan kohde-esittelyyn"}
      :label       {:fi "Lisätietoa kohteesta saatavilla"}}}
 
    :rules
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
+     :description {:fi "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista."}
      :label       {:fi "Luvat, säännöt, ohjeet"}}}
 
    :arrival
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Autolla ja joukkoliikenteellä saapumiseen liittyvää tietoa"}
+     :description {:fi "Eri kulkumuodoilla kohteeseen pääsyyn liittyvää tietoa. Esim. pysäköintialueet ja joukkoliikenneyhteydet."}
      :label       {:fi "Saapuminen"}}}
 
    :accessibility
@@ -307,7 +307,7 @@
    {:schema [:sequential localized-string-schema]
     :field
     {:type        "textlist"
-     :description {:fi "Syötä yksi kohokohta kerrallaan. Käytä isoa Alkukirjainta."}
+     :description {:fi "Syötä 2-6 konkreettista kohteen erityispiirrettä, jotka täydentävät yleiskuvausta. Syötä yksi kohokohta kerrallaan. Käytä isoa Alkukirjainta."}
      :label       {:fi "Kohokohdat"}}}})
 
 (def common-props-schema
@@ -323,7 +323,9 @@
    :type-codes #{102 103 104 106 107 #_#_#_#_108 109 110 111 112}
    :props
    (merge
-    (dissoc common-props :rules)
+    (-> common-props
+        (dissoc :rules)
+        (assoc-in [:description-long ]))
     {#_#_:everymans-rights
      {:schema [:boolean {:optional true}]
       :field
@@ -334,13 +336,13 @@
      {:schema [:boolean {:optional true}]
       :field
       {:type        "checkbox"
-       :description {:fi "Onko kohde geopark? Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."}
+       :description {:fi "Jos kohde on geopark, niin aktivoi liukukytkin (aktivoitu kytkin muuttuu punaiseksi). HUOM! Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."}
        :label       {:fi "Geopark"}}}
      :rules-structured
      {:schema rules-structured-schema
       :field
       {:type        "rules"
-       :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."}
+       :description {:fi "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa ja esim. varoitetaan poistumasta polulta herkällä kohteella. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista."}
        :label       {:fi "Luvat, säännöt, ohjeet"}
        :opts        common-rules}}})})
 
@@ -414,15 +416,20 @@
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
-      :label       {:fi "Reittityyppi"}
+      :label       {:fi "Reittiosan tyyppi"}
       :props
       (merge
-       (dissoc common-props :rules :accessibility)
+       (-> common-props
+           (dissoc :rules :accessibility)
+           (assoc-in [:description-long :field :description :fi]
+                     "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
+           (assoc-in [:description-short :field :description :fi]
+                     "3-7 virkkeen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
        {:accessibility-classification
         {:field
          {:type        "select"
           :label       {:fi "Esteettömyysluokittelu"}
-          :description {:fi "???"}
+          :description {:fi "Valitse onko reitti esteellinen, esteetön vai vaativa esteetön (vaativalla esteettömällä reitillä saatetaan tarvita avustaja ja/tai apuväline, kuten maastopyörätuoli)"}
           :opts        (dissoc accessibility-classification "unknown")}}
 
         :rules-structured
@@ -435,8 +442,8 @@
         :accessibility-categorized
         {:field
          {:type        "accessibility"
-          :label       {:fi "Esteettömyys"}
-          :description {:fi "Tähän jotain"}
+          :label       {:fi "Esteettömyys vammaryhmittäin"}
+          :description {:fi "Syötä esteettömyyskuvailu vammaryhmille"}
           :props
           {:mobility-impaired
            {:value "mobility-impaired"
@@ -466,20 +473,20 @@
         :route-name
         {:field
          {:type        "text-field"
-          :description {:fi "Tähän joku järkevä ohje"}
+          :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."}
           :label       {:fi "Reitin nimi"}}}
 
         :outdoor-recreation-activities
         {:field
          {:type        "multi-select"
-          :description {:fi "Reittiin liittyvä aktiviteetti. Esim. Retkeily ja ulkoilu, Vaellus, Maastopyöräily, Melonta, Hiihto, … "}
-          :label       {:fi "Aktiviteetti"}
+          :description {:fi "Valitse reitille soveltuvat kulkutavat"}
+          :label       {:fi "Kulkutavat"}
           :opts        outdoor-recreation-routes-activities}}
 
         :duration
         {:field
          {:type        "duration"
-          :description {:fi "Reitin ohjeellinen kulkuaika"}
+          :description {:fi "Reitin arvioitu kulkuaika"}
           :label       {:fi "Kulkuaika"}}}
 
         :travel-direction
@@ -487,13 +494,13 @@
          {:type        "select"
           :opts        {"clockwise"         {:fi "Myötäpäivään"}
                         "counter-clockwise" {:fi "Vastapäivään"}}
-          :description "Suositeltu reitin kulkusuunta; Vastapäivään/Myötäpäivään"
+          :description "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
           :label       {:fi "Kulkusuunta"}}}
 
         :route-marking
         {:field
          {:type        "text-field"
-          :description {:fi "Reittimerkkien symboli ja väri"}
+          :description {:fi "Kuvaile tapa, jolla reitti on merkitty maastoon. Esim. syötä reittimerkkien symboli ja väri."}
           :label       {:fi "Reittimerkintä"}}}
 
         :route-length-km
@@ -502,6 +509,13 @@
           :lipas-property :route-length-km
           :label          {:fi "Reitin pituus (km)"}
           :description    {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"}}}
+
+        :surface-material
+        {:field
+         {:type           "lipas-property"
+          :lipas-property :surface-material
+          :label          {:fi "Pintamateriaali"}
+          :description    {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"}}}
 
         #_#_:latest-updates
         {:schema localized-string-schema
@@ -514,7 +528,7 @@
         {:schema [:boolean {:optional true}]
          :field
          {:type        "checkbox"
-          :description {:fi "Onko reitti itsenäinen kohde, joka ei ole osa mitään aluetta tai laajempaa kokonaisuutta (esim. ulkoilualue tai kansallispuisto)"}
+          :description {:fi "Aktivoi liukukytkin, jos reitti ei kuulu mihinkään alueeseen tai laajempaan kokonaisuuteen (esim. ulkoilualueeseen tai kansallispuistoon).  Aktivoitu kytkin muuttuu punaiseksi."}
           :label       {:fi "Itsenäinen kohde"}}}})}}}})
 
 (def outdoor-recreation-routes-schema
@@ -953,7 +967,7 @@
    :value       "outdoor-recreation-facilities"
    :description {:fi ""}
    :type-codes  #{207 205 206 202 301 302 304 #_204}
-   :props       common-props})
+   :props       (dissoc common-props :description-long :highlights)})
 
 (def outdoor-recreation-facilities-schema
   (collect-schema (:props outdoor-recreation-facilities)))
