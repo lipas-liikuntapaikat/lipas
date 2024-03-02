@@ -320,7 +320,7 @@
 (def outdoor-recreation-areas
   {:label      {:fi "Retkeily ja ulkoilualueet"}
    :value      "outdoor-recreation-areas"
-   :type-codes #{102 103 104 106 107 108 109 110 111 112}
+   :type-codes #{102 103 104 106 107 #_#_#_#_108 109 110 111 112}
    :props
    (merge
     (dissoc common-props :rules)
