@@ -156,3 +156,10 @@
    [(re-frame/subscribe [::geoms read-only?])])
  (fn [[geoms] _]
    (-> geoms :features first :geometry :type)))
+
+(re-frame/reg-sub
+ ::field-sorter
+ :<- [::activities]
+ (fn [activities [_ activity-k]]
+   (or (get-in activities [:field-sorters activity-k])
+       (get-in activities [:field-sorters :default]))))

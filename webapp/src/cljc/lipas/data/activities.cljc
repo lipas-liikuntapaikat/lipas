@@ -183,7 +183,7 @@
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Tekstimuotoinen tiivistys kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."}
+     :description {:fi "3-7 virkkeen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."}
      :label       {:fi "Yleiskuvaus"}}}
 
    :description-long
@@ -366,6 +366,24 @@
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
    :type-codes  #{4401 4402 4403 4404 4405}
+   :sort-order  [:description-short
+                :description-long
+                :independent-entity
+                :highlights
+                :rules-structured
+                :arrival
+                :duration
+                :travel-direction
+                :route-marking
+                :route-marking
+                :outdoor-recreation-activities
+                :accessibility-classification
+                :accessibility
+                :accessibility-categorized
+                :contacts
+                :additional-info-link
+                :images
+                :videos]
    :props
    {:routes
     {:schema [:sequential
@@ -482,8 +500,8 @@
         {:field
          {:type           "lipas-property"
           :lipas-property :route-length-km
-          :description    {:fi "Reitin kulkupituus kilometreinä"}
-          :label          {:fi "Kulkupituus kilometreinä"}}}
+          :label          {:fi "Reitin pituus (km)"}
+          :description    {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"}}}
 
         #_#_:latest-updates
         {:schema localized-string-schema
