@@ -33,11 +33,19 @@
   [coll]
   (log/info "Total indexing results:" (apply merge-with + coll)))
 
-(defn index-search-lois! [db search sync?]
-  (log/info "Starting to index location of interests..")
-  (doseq [loi (db/get-lois db)]
-    (core/index-loi! search loi sync?)    )
-  (log/info "Location of interests indexing done!"))
+(defn index-search-lois!
+  [db {:keys [client indices]}]
+  (log/info "Starting to index LOIs..")
+  (let [lois     (db/get-lois db)
+        idx-name (get-in indices [:lois :search])]
+    (doseq [batch (partition-all 500 lois)]
+      (log/info "Indexing batch of" (count batch))
+      (->> batch
+           (map core/enrich-loi)
+           (search/->bulk idx-name :id)
+           (search/bulk-index! client)
+           (wait-one))))
+  (log/info "LOI indexing done!"))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
