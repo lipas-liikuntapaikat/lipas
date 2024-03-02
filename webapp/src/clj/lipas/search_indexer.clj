@@ -33,9 +33,11 @@
   [coll]
   (log/info "Total indexing results:" (apply merge-with + coll)))
 
-(defn index-search-lois! [db client]
-  (->> (db/get-lois db)
-       (mapv #(search/index! client "lois" :id %))))
+(defn index-search-lois! [db search sync?]
+  (log/info "Starting to index location of interests..")
+  (doseq [loi (db/get-lois db)]
+    (core/index-loi! search loi sync?)    )
+  (log/info "Location of interests indexing done!"))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]

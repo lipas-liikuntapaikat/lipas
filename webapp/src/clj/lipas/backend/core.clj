@@ -785,10 +785,43 @@
                                             :user-id  (:id user)}
                      :credentials-provider credentials-provider})))
 
+
+(defn ->lois-es-query
+  [{:keys [location loi-statuses]}]
+  (let [lon           (:lon location)
+        lat           (:lat location)
+        distance      (:distance location)
+        origin        (str lat "," lon)
+        decay-factor  2
+        offset        (str (/ distance decay-factor) "m")
+        scale         (str (* distance decay-factor) "m")
+        size          250
+        from          0
+        excludes      ["search-meta"]
+        query         {:size    size
+                       :from    from
+                       :sort    ["_score"]
+                       :_source {:excludes excludes}
+                       :query   {:function_score
+                                 {:score_mode "max"
+                                  :boost_mode "max"
+                                  :functions  [{:exp
+                                                {:search-meta.location.wgs84-point
+                                                 {:origin origin
+                                                  :offset offset
+                                                  :scale  scale}}}]
+                                  :query      {:bool
+                                               {:filter
+                                                [{:terms {:status.keyword loi-statuses}}]}}}}}
+        default-query {:size size :query {:match_all {}}}]
+    (if (and lat lon distance)
+      query
+      default-query)))
+
 (defn search-lois
-  [{:keys [indices client]} params]
+  [{:keys [indices client]} es-query]
   (let [idx-name (get-in indices [:lois :search])]
-    (-> (search/search client idx-name params)
+    (-> (search/search client idx-name es-query)
         :body
         :hits
         :hits
@@ -804,7 +837,20 @@
 
 (defn enrich-loi
   [{:keys [geometries] :as loi}]
-  (assoc-in loi [:search-meta :geometries] (feature-coll->geom-coll geometries)))
+  (let [geom-coll (feature-coll->geom-coll geometries)]
+    (-> loi
+        (assoc-in [:search-meta :location :geometries] geom-coll)
+        (assoc-in [:search-meta :location :wgs84-point] (-> (gis/->flat-coords geometries)
+                                                            first)))))
+
+(defn search-lois-with-params
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:lois :search])
+        es-query (->lois-es-query params)]
+    (-> (search/search client idx-name es-query)
+        :body
+        :hits
+        :hits)))
 
 (defn index-loi!
   ([search loi]

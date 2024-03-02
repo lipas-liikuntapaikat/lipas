@@ -184,6 +184,24 @@
     (gen/generate (s/gen :lipas/sports-site))
     (catch Throwable _t (gen-sports-site))))
 
+(defn gen-loi []
+  (try
+    (->
+     (gen/generate (s/gen :lipas.loi/document))
+     (assoc :id (java.util.UUID/randomUUID)))
+    (catch Throwable _ (gen-loi))))
+
+(defn seed-lois! [db search user spec n]
+  (log/info "Seeding " n "generated " spec)
+  (doseq [x (range n)]
+
+    (let [loi (gen-loi)]
+      (core/upsert-loi! db search user loi)
+      (log/info loi))
+    (log/info "Generated " x " of " n))
+  (log/info "Seeding done!"))
+
+
 (defn seed-sports-sites! [db user spec n]
   (log/info "Seeding" n "generated" spec)
   (doseq [_ (range n)]
@@ -199,11 +217,13 @@
 (defn -main [& args]
   (let [config (select-keys config/default-config [:db])
         system (backend/start-system! config)
-        db     (:db system)]
+        db     (:db system)
+        search (:search system)]
     (try
       (seed-default-users! db)
       (seed-demo-users! db)
       (seed-city-data! db)
       (let [user (core/get-user db (:email admin))]
-        (seed-sports-sites! db user :lipas/sports-site 10))
+        (seed-sports-sites! db user :lipas/sports-site 10)
+        (seed-lois! db search user :lipas.loi/document 10))
       (finally (backend/stop-system! system)))))
