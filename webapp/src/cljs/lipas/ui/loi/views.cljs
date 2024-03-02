@@ -27,7 +27,7 @@
    label])
 
 (defn image-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id]}]
+  [{:keys [tr locale dialog-state on-save on-close lipas-id helper-text image-props]}]
   [lui/dialog
    {:title         (if (-> @dialog-state :data :url)
                      "Valokuva"
@@ -43,6 +43,9 @@
 
     [mui/grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
+
+    [mui/grid {:item true :xs 12}
+     [mui/typography {:variant "caption"} helper-text]]
 
     [mui/grid {:item true :xs 12}
 
@@ -74,17 +77,30 @@
 
     [mui/grid {:item true :xs 12}
      [lui/text-field
-      {:fullWidth true
-       :required  true
-       :value     (-> @dialog-state :data :description locale)
-       :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
-       :label     (tr :general/description)
-       :multiline true
-       :rows      5
-       :variant   "outlined"}]]]])
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :description locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
+       :label       (get-in image-props [:description :field :label locale])
+       :helper-text (get-in image-props [:description :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]
+
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :alt-text locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :alt-text locale] %)
+       :label       (get-in image-props [:alt-text :field :label locale])
+       :helper-text (get-in image-props [:alt-text :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]]])
 
 (defn images
-  [{:keys [value on-change locale label tr read-only? lipas-id]}]
+  [{:keys [value on-change locale label tr read-only? lipas-id helper-text image-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -101,6 +117,8 @@
        [image-dialog
         {:tr           tr
          :lipas-id     lipas-id
+         :helper-text  helper-text
+         :image-props  image-props
          :locale       locale
          :dialog-state dialog-state
          :on-save      (fn []
@@ -129,33 +147,33 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers         [[:_filename (tr :general/name)]
-                            [:_description (tr :general/description)]]
-          :read-only?      read-only?
-          :items           (->> @state
-                                vals
-                                (map #(assoc % :_description (get-in % [:description locale])))
-                                (map #(assoc % :_filename (get-in % [:cms :filename]))))
-          :on-add          (fn []
-                             (reset! dialog-state {:open? true
-                                                   :mode  :add
-                                                   :data  {:id (gensym)}}))
-          :on-edit         (fn [m]
-                             (reset! dialog-state {:open? true
-                                                   :mode  :edit
-                                                   :data  (get @state (:id m))}))
-          :on-delete       (fn [m]
-                             (swap! state dissoc (:id m))
-                             (on-change (->> @state
-                                             vals
-                                             (mapv #(dissoc % :id)))))
+         {:headers    [[:_filename (tr :general/name)]
+                       [:_description (tr :general/description)]]
+          :read-only? read-only?
+          :items      (->> @state
+                           vals
+                           (map #(assoc % :_description (get-in % [:description locale])))
+                           (map #(assoc % :_filename (get-in % [:cms :filename]))))
+          :on-add     (fn []
+                        (reset! dialog-state {:open? true
+                                              :mode  :add
+                                              :data  {:id (gensym)}}))
+          :on-edit    (fn [m]
+                        (reset! dialog-state {:open? true
+                                              :mode  :edit
+                                              :data  (get @state (:id m))}))
+          :on-delete  (fn [m]
+                        (swap! state dissoc (:id m))
+                        (on-change (->> @state
+                                        vals
+                                        (mapv #(dissoc % :id)))))
 
           :on-custom-hover-in (fn [evt item]
-                                 (let [img-url (get-in item [:cms :public-urls :medium]
-                                                       (:url item))]
-                                   (reset! popper-state {:open?     true
-                                                         :anchor-el (.-currentTarget evt)
-                                                         :url       img-url})))
+                                (let [img-url (get-in item [:cms :public-urls :medium]
+                                                      (:url item))]
+                                  (reset! popper-state {:open?     true
+                                                        :anchor-el (.-currentTarget evt)
+                                                        :url       img-url})))
 
           :on-custom-hover-out (fn [_evt _item]
                                  (swap! popper-state assoc :open? false))
@@ -186,11 +204,11 @@
 
      ;; Import
      [import/import-geoms-view
-      {:geom-type geom-type
-       :on-import (fn []
-                    (condp = view-mode
-                      :editing (==> [::map-events/import-selected-geoms])
-                      :adding  (==> [::map-events/import-selected-geoms-to-new])))
+      {:geom-type     geom-type
+       :on-import     (fn []
+                        (condp = view-mode
+                          :editing (==> [::map-events/import-selected-geoms])
+                          :adding  (==> [::map-events/import-selected-geoms-to-new])))
        :show-replace? (= :editing view-mode)}]
 
      ;; Header
@@ -290,23 +308,26 @@
                   (condp = field-type
                     "checkbox" [lui/checkbox
                                 {:disabled  read-only?
+                                 :tooltip   (get-in field [:description locale])
                                  :value     (get form-data k)
                                  :label     (get-in v [:field :label locale])
                                  :on-change #(==> [::events/edit-loi-field k %])}]
 
                     "textarea" [lui/text-field
-                                {:fullWidth true
-                                 :multiline true
-                                 :disabled  read-only?
-                                 :rows      5
-                                 :value     (get-in form-data [k locale])
-                                 :on-change #(==> [::events/edit-loi-field k locale %])
-                                 :label     (get-in v [:field :label locale])}]
+                                {:fullWidth   true
+                                 :multiline   true
+                                 :disabled    read-only?
+                                 :helper-text (get-in field [:description locale])
+                                 :rows        5
+                                 :value       (get-in form-data [k locale])
+                                 :on-change   #(==> [::events/edit-loi-field k locale %])
+                                 :label       (get-in v [:field :label locale])}]
 
                     "images" [images
                               {:read-only?  read-only?
                                :lipas-id    0 ;; TODO think
                                :locale      locale
+                               :image-props (:props field)
                                :label       (get-in field [:label locale])
                                :helper-text (get-in field [:description locale])
                                :on-change   #(==> [::events/edit-loi-field k %])
@@ -324,11 +345,12 @@
 
                     ;; Fallback
                     [lui/text-field
-                     {:fullWidth true
-                      :disabled  read-only?
-                      :value     (get-in form-data [k locale])
-                      :on-change #(==> [::events/edit-loi-field k locale %])
-                      :label     (get-in v [:field :label locale])}])]))))
+                     {:fullWidth   true
+                      :disabled    read-only?
+                      :value       (get-in form-data [k locale])
+                      :helper-text (get-in field [:description locale])
+                      :on-change   #(==> [::events/edit-loi-field k locale %])
+                      :label       (get-in v [:field :label locale])}])]))))
 
      ;; Landing bay for floating controls
      [mui/grid {:item true :xs 12 :style {:height "4em"}}]]))
