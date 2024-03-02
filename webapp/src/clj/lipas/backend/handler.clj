@@ -666,11 +666,11 @@
        {:post
         {:no-doc         false
          #_#_:middleware [mw/token-auth mw/auth]
-         :parameters     {:body map?}
+         :parameters {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois search body-params)})}}]]]
+            :body   (core/search-lois-with-params search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

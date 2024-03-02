@@ -115,15 +115,14 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   ;; For now, let's show lois only if the user has permissions to
-   ;; activities.
    (if (-> db :user :login :permissions permissions/activities?)
      {:http-xhrio
       {:method          :post
-       :params          {:size  1000
-                         :query
-                         {:terms
-                          {:status ["active" "out-of-service-temporarily"]}}}
+       :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])
+                                    :lon (get-in db [:map :center-wgs84 :lon])
+                                    :distance (max (-> db :map :width)
+                                                   (-> db :map :height))}
+                         :loi-statuses (get-in db [:search :filters :statuses])}
        :uri             (str (:backend-url db) "/actions/search-lois")
        #_#_:headers     {:Authorization (str "Token " token)}
        :format          (ajax/json-request-format)
@@ -135,7 +134,7 @@
 (re-frame/reg-event-fx
  ::search-success
  (fn [{:keys [db]} [_  data]]
-   {:db (assoc-in db [:loi :search-results] data)}))
+   {:db (assoc-in db [:loi :search-results] (map :_source data))}))
 
 (re-frame/reg-event-fx
  ::search-failure

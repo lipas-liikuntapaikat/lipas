@@ -147,8 +147,8 @@
         :geometry
         {:type "Point"
          :coordinates [lon lat]}}]})
-   (s/gen (s/tuple :lipas.location.coordinates/lon
-                   :lipas.location.coordinates/lat))))
+   (s/gen (s/tuple :lipas.location.coordinates/finland-lon
+                   :lipas.location.coordinates/finland-lat))))
 
 ;; Specs ;;
 
@@ -320,16 +320,23 @@
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
-;; -90-90
-(s/def :lipas.location.coordinates/lat (double-in :min 59.846373196
-                                                  :max 70.1641930203
+(s/def :lipas.location.coordinates/lat (double-in :min -90
+                                                  :max 90
                                                   :NaN? false
                                                   :infinite? false))
-;; -180-180
-(s/def :lipas.location.coordinates/lon (double-in :min 20.6455928891
-                                                  :max 31.5160921567
+(s/def :lipas.location.coordinates/lon (double-in :min -180
+                                                  :max 180
                                                   :NaN? false
                                                   :infinite? false))
+
+(s/def :lipas.location.coordinates/finland-lat (double-in :min 59.846373196
+                                                          :max 70.1641930203
+                                                          :NaN? false
+                                                          :infinite? false))
+(s/def :lipas.location.coordinates/finland-lon (double-in :min 20.6455928891
+                                                          :max 31.5160921567
+                                                          :NaN? false
+                                                          :infinite? false))
 
 ;; Northing
 (s/def :lipas.location.coordinates/lat-euref (int-in -548576 1548576))
@@ -1990,6 +1997,30 @@
                    :lipas.loi/loi-type
                    :lipas.loi/geometries]
           :opt-un [:lipas.loi/id]))
+
+;; LOI search API
+(s/def :lipas.api.search-lois.payload/distance ::real)
+
+(s/def :lipas.api.search-lois.payload/loi-statuses
+  (s/coll-of :lipas.loi/status
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.search-lois.payload/location
+  (s/keys :req-un [:lipas.location.coordinates/lon
+                   :lipas.location.coordinates/lat
+                   :lipas.api.search-lois.payload/distance]))
+
+(s/def :lipas.api.search-lois/payload
+  (s/keys :opt-un [:lipas.api.search-lois.payload/loi-statuses
+                   :lipas.api.search-lois.payload/location]))
+
+(comment
+  (s/valid? :lipas.api.search-lois/payload {:loi-statuses ["active" "planned"]
+                                            :location {:lon 25.48347583491476
+                                                       :lat 62.0546268484493
+                                                       :distance 100}})
+  )
 
 
 (comment
