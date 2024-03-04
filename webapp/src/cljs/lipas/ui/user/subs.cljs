@@ -29,6 +29,12 @@
    (-> db :user :login :permissions)))
 
 (re-frame/reg-sub
+ ::utp-user?
+ :<- [::permissions]
+ (fn [permissions _]
+   (permissions/activities? permissions)))
+
+(re-frame/reg-sub
  ::permission-to-cities
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -45,6 +51,15 @@
    (if (or admin? all-types?)
      all-types
      (select-keys all-types types))))
+
+(re-frame/reg-sub
+ ::permission-to-activities
+ :<- [::permissions]
+ :<- [:lipas.ui.sports-sites.activities.subs/data]
+ (fn [[{:keys [admin? activities]} all-activities] _]
+   (if admin?
+     all-activities
+     (select-keys all-activities activities))))
 
 (re-frame/reg-sub
  ::permission-to-publish?

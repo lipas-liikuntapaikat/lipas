@@ -6,15 +6,16 @@
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::edit-site
- (fn [db [_ lipas-id]]
+ (fn [{:keys [db]} [_ lipas-id]]
    (let [site (get-in db [:sports-sites lipas-id])
          rev  (-> (utils/make-revision site (utils/timestamp))
                   (utils/make-editable))]
-     (-> db
-         (assoc-in [:sports-sites lipas-id :editing] rev)
-         (assoc-in [:sports-sites :name-check] {})))))
+     {:db (-> db
+              (assoc-in [:sports-sites lipas-id :editing] rev)
+              (assoc-in [:sports-sites :name-check] {}))
+      :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/init-edit-view lipas-id rev]]]})))
 
 (defmulti calc-derived-fields (comp :type-code :type))
 (defmethod calc-derived-fields :default [sports-site] sports-site)
@@ -31,10 +32,11 @@
      {:db       new-db
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
  ::discard-edits
- (fn [db [_ lipas-id]]
-   (assoc-in db [:sports-sites lipas-id :editing] nil)))
+ (fn [{:keys [db]} [_ lipas-id]]
+   {:db (assoc-in db [:sports-sites lipas-id :editing] nil)
+    :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/clear]]]}))
 
 ;; Save revision (data). Triggers REST-api call
 (re-frame/reg-event-fx
@@ -138,15 +140,12 @@
 (re-frame/reg-event-fx
  ::get
  (fn [{:keys [db]} [_ lipas-id on-success]]
-   (let [latest (get-in db [:sports-sites lipas-id :latest])]
-     (if latest
-       {:dispatch-n (or on-success [])} ;; No need for get if we already have the data
-       {:http-xhrio
-        {:method          :get
-         :uri             (str (:backend-url db) "/sports-sites/" lipas-id)
-         :response-format (ajax/json-response-format {:keywords? true})
-         :on-success      [::get-success-single on-success]
-         :on-failure      [::get-failure]}}))))
+   {:http-xhrio
+    {:method          :get
+     :uri             (str (:backend-url db) "/sports-sites/" lipas-id)
+     :response-format (ajax/json-response-format {:keywords? true})
+     :on-success      [::get-success-single on-success]
+     :on-failure      [::get-failure]}}))
 
 (re-frame/reg-event-fx
  ::get-history

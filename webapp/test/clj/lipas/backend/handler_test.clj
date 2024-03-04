@@ -1,29 +1,28 @@
 (ns lipas.backend.handler-test
-  (:require
-   [cheshire.core :as j]
-   [clojure.java.jdbc :as jdbc]
-   [clojure.spec.alpha :as s]
-   [clojure.spec.gen.alpha :as gen]
-   [clojure.string :as str]
-   [clojure.test :refer [deftest is use-fixtures] :as t]
-   [cognitect.transit :as transit]
-   [dk.ative.docjure.spreadsheet :as excel]
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.email :as email]
-   [lipas.backend.jwt :as jwt]
-   [lipas.backend.search :as search]
-   [lipas.backend.system :as system]
-   [lipas.schema.core]
-   [lipas.seed :as seed]
-   [lipas.test-utils :as tu]
-   [lipas.utils :as utils]
-   [migratus.core :as migratus]
-   [ring.mock.request :as mock])
-  (:import
-   [java.io ByteArrayOutputStream]
-   java.util.Base64))
+  (:require [cheshire.core :as j]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is use-fixtures] :as t]
+            [cognitect.transit :as transit]
+            [dk.ative.docjure.spreadsheet :as excel]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.email :as email]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.search :as search]
+            [lipas.backend.system :as system]
+            [lipas.data.loi :as loi]
+            [lipas.schema.core]
+            [lipas.seed :as seed]
+            [lipas.test-utils :as tu]
+            [lipas.utils :as utils]
+            [migratus.core :as migratus]
+            [ring.mock.request :as mock])
+  (:import [java.io ByteArrayOutputStream]
+           java.util.Base64))
 
 ;;; Setup ;;;
 
@@ -58,7 +57,7 @@
 (defn- test-suffix [s] (str s "_test"))
 
 (def config (-> config/default-config
-                (select-keys [:db :app :search :mailchimp])
+                (select-keys [:db :app :search :mailchimp :aws])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
                 (update-in [:db :dbname] test-suffix)
                 (assoc-in [:db :dev] true) ;; No connection pool
@@ -69,7 +68,8 @@
                 (update-in [:search :indices :analysis :schools] test-suffix)
                 (update-in [:search :indices :analysis :population] test-suffix)
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
-                (update-in [:search :indices :analysis :diversity] test-suffix)))
+                (update-in [:search :indices :analysis :diversity] test-suffix)
+                (update-in [:search :indices :lois :search] test-suffix)))
 
 (defn init-db! []
   (let [migratus-opts {:store         :database
@@ -120,7 +120,9 @@
 (defn prune-es! []
   (let [client   (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                  (-> search :indices :analysis :diversity) diversity/mappings}]
+                  (-> search :indices :analysis :diversity) diversity/mappings
+                  (-> search :indices :lois :search) (:lois search/mappings)}]
+
     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
       (try
         (search/delete-index! client idx-name)
@@ -152,12 +154,163 @@
          (assoc user :id (:id (core/get-user db (:email user)))))
        user))))
 
+(defn gen-loi! []
+  (-> (gen/generate (s/gen :lipas.loi/document))
+      (assoc :status "active")
+      (assoc :id (str (java.util.UUID/randomUUID)))))
+
 ;;; Fixtures ;;;
 
 (use-fixtures :once (fn [f] (init-db!) (f)))
 (use-fixtures :each (fn [f] (prune-db!) (prune-es!) (f)))
 
 ;;; The tests ;;;
+
+;;; Location of interests ;;;
+
+(deftest search-loi-by-type
+  (let [loi-type "fishing-pier"
+        loi-category "outdoor-recreation-facilities"
+        loi  (-> (gen-loi!)
+                 (assoc :loi-type loi-type)
+                 (assoc :loi-category loi-category))
+        _    (core/index-loi! search loi :sync)
+        resp (app (-> (mock/request :get (str "/api/lois/type/" "fishing-pier"))
+                      (mock/content-type "application/json")))
+        response-loi (first (<-json (:body resp)))]
+    (is (= loi-type (:loi-type response-loi)))))
+
+
+
+(deftest search-loi-by-invalid-type
+  (let [bad-request-response (app (-> (mock/request :get (str "/api/lois/type/kekkosen-ulkoilu"))
+                                      (mock/content-type "application/json")))]
+    ;; can we test that the exception is thrown?
+    ;; we'd like to clean the output, now it floods it with an error message
+    (is (= 400 (:status bad-request-response)))))
+
+(deftest search-loi-by-category
+  (let [loi-category "outdoor-recreation-facilities"
+        loi  (-> (gen-loi!)
+                 (assoc :loi-category loi-category))
+        _    (core/index-loi! search loi :sync)
+        resp (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
+                      (mock/content-type "application/json")))
+        response-loi (first (<-json (:body resp)))]
+    (is (= loi-category (:loi-category response-loi)))))
+
+(deftest get-loi-by-id
+  (let [{:keys [id] :as loi} (gen-loi!)
+        _    (core/index-loi! search loi :sync)
+        resp (app (-> (mock/request :get (str "/api/lois/" id))
+                      (mock/content-type "application/json")))
+        response-loi (<-json (:body resp))]
+    (is (= loi response-loi))))
+
+(deftest search-loi-by-invalid-category
+  (let [loi-category "kekkonen-666-category"
+        loi  (-> (gen-loi!)
+                 (assoc :loi-category loi-category))
+        _    (core/index-loi! search loi :sync)
+        response (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
+                      (mock/content-type "application/json")))]
+    (is (= 400 (:status response)))))
+
+(deftest search-loi-by-status
+  (let [geometry {:features [{:geometry {:coordinates [25.974759578704834 67.703125]
+                                         :type "Point"}
+                              :type "Feature"}]
+                  :type "FeatureCollection"}
+        lois-with-every-status [{:event-date "1901-02-13T12:40:08.957Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "mooring-ring"
+                                 :status "planning"}
+                                {:event-date "1994-12-17T07:45:51.186Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "canopy"
+                                 :status "planned"}
+                                {:event-date "1997-07-26T13:43:03.959Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "dog-swimming-area"
+                                 :status "active"}
+                                {:event-date "2015-12-24T16:31:49.045Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "historical-structure"
+                                 :status "out-of-service-temporarily"}
+                                {:event-date "1900-07-01T15:50:31.924Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "canopy"
+                                 :status "out-of-service-permanently"}
+                                {:event-date "1900-07-01T15:50:31.924Z"
+                                 :geometries geometry
+                                 :id (java.util.UUID/randomUUID)
+                                 :loi-category "outdoor-recreation-facilities"
+                                 :loi-type "parking-spot"
+                                 :status "incorrect-data"}]
+        _         (doseq [loi lois-with-every-status] (core/index-loi! search loi :sync))
+        responses (mapv #(app (-> (mock/request :get (str "/api/lois/status/" %))
+                                  (mock/content-type "application/json")))
+                        (keys loi/statuses))
+        bodies (mapv (comp first <-json :body) responses)]
+    (is (= "planning" (:status (nth bodies 0))))
+    (is (= "planned"  (:status (nth bodies 1))))
+    (is (= "active" (:status (nth bodies 2))))
+    (is (= "out-of-service-temporarily" (:status (nth bodies 3))))
+    (is (= "out-of-service-permanently" (:status (nth bodies 4))))
+    (is (= "incorrect-data" (:status (nth bodies 5))))))
+
+
+(deftest search-lois-by-location
+  (let [loi-a {:event-date "1901-02-13T12:40:08.957Z"
+               :geometries {:features
+                            [{:geometry
+                              {:coordinates [25 65]
+                               :type "Point"}
+                              :type "Feature"}]
+                            :type "FeatureCollection"}
+               :id "fff0ec1a-d12c-4145-bb56-729396ad90ff"
+               :loi-category "outdoor-recreation-facilities"
+               :loi-type "mooring-ring"
+               :status "active"}
+        loi-b {:event-date "1901-02-13T12:40:08.957Z"
+               :geometries {:features
+                            [{:geometry
+                              {:coordinates [25 70]
+                               :type "Point"}
+                              :type "Feature"}]
+                            :type "FeatureCollection"}
+               :id "a4c29b32-73bd-465f-ace1-06d50a1838ce"
+               :loi-category "outdoor-recreation-facilities"
+               :loi-type "mooring-ring"
+               :status "active"}
+        body-params {:location {:lon 25.0
+                                :lat 68.0
+                                :distance 1000}
+                     :loi-statuses ["active"]}]
+    (core/index-loi! search loi-a :sync)
+    (core/index-loi! search loi-b :sync)
+    (let [response (<-json (:body
+                            (app (-> (mock/request :post (str "/api/actions/search-lois"))
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json body-params))))))
+          sorted-lois (sort-by :_score > response)]
+      (is (> (:_score (first sorted-lois))
+             (:_score (second sorted-lois)))))))
+
+(comment
+  (t/run-test search-loi-by-status)
+  (t/run-test search-lois-by-location)
+  )
 
 (deftest register-user-test
   (let [user (gen-user)
@@ -603,4 +756,6 @@
 (comment
   (t/run-tests *ns*)
   (t/run-test search-order-test)
+  (t/run-test search-loi-by-status)
+  (t/run-test get-loi-by-id)
   )

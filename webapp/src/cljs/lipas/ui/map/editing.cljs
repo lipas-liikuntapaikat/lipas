@@ -76,6 +76,25 @@
         map-utils/enable-edits-hover!
         (assoc-in [:interactions :split] split))))
 
+(defn enable-highlighting!
+  [{:keys [lmap layers] :as map-ctx}
+   {:keys [selected-features] :as mode}]
+  (let [edits-layer       (-> layers :overlays :edits)
+        edits-source      (.getSource edits-layer)
+        highlights-layer  (-> layers :overlays :highlights)
+        highlights-source (.getSource highlights-layer)]
+
+    #_(println "ENABLE HIGHLIGHTING")
+
+    (-> highlights-source .clear)
+
+    (doseq [fid selected-features]
+      (when-let [f (.getFeatureById edits-source fid)]
+        (.addFeature highlights-source (.clone f))))
+
+    (-> map-ctx
+        #_(map-utils/enable-edits-hover!))))
+
 (defn start-drawing-hole!
   [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
   (let [^js layer (-> layers :overlays :edits)
@@ -153,7 +172,7 @@
     (.on draw "drawend"
          (fn [e]
            (let [f     (gobj/get e "feature")
-                 _     (.setId f (str (gensym map-utils/temp-fid-prefix)))
+                 _     (.setId f (str (random-uuid)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
                  fixed (map-utils/fix-features fs)]
@@ -271,13 +290,14 @@
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
-  ([map-ctx
-    {:keys [lipas-id geoms geom-type sub-mode problems] :as mode}
-    continue?]
+  ([map-ctx {:keys [lipas-id geoms geom-type sub-mode problems] :as
+             mode} continue?]
+   #_(println "SET EDITING MODE " (:sub-mode mode))
    (let [map-ctx      (-> map-ctx
                           map-utils/clear-interactions!
                           map-utils/clear-problems!
                           map-utils/clear-population!
+                          map-utils/clear-highlights!
                           map-utils/enable-marker-hover!)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
@@ -293,10 +313,12 @@
        :editing      (if continue?
                        (-> map-ctx
                            (continue-editing! on-modifyend)
-                           (map-utils/show-problems! problems))
+                           (map-utils/show-problems! problems)
+                           (enable-highlighting! mode))
                        (-> map-ctx
                            (start-editing-site! lipas-id geoms on-modifyend)
-                           (map-utils/show-problems! problems)))
+                           (map-utils/show-problems! problems)
+                           (enable-highlighting! mode)))
        :deleting     (-> map-ctx
                          ;;(continue-editing! on-modifyend)
                          (enable-delete! on-modifyend))
@@ -304,16 +326,24 @@
                          (enable-splitting! on-modifyend))
        :undo         (undo-edits! map-ctx mode)
        :importing    (refresh-edits! map-ctx mode)
-       :simplifying  (simplify-edits! map-ctx mode)))))
+       :simplifying  (simplify-edits! map-ctx mode)
+       :selecting    (-> map-ctx
+                         (enable-highlighting! mode))))))
 
-(defn update-editing-mode! [map-ctx {:keys [problems] :as mode}]
+(defn update-editing-mode!
+  [map-ctx {:keys [problems] :as mode}]
+  #_(println "UPDATE EDITING MODE " (:sub-mode mode))
   (let [old-mode (:mode map-ctx)
         map-ctx  (-> map-ctx
+                     (enable-highlighting! mode)
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
     (cond
       (= :simplifying (:sub-mode mode))
       (simplify-edits! map-ctx mode)
+
+      (= :selecting (:sub-mode mode))
+      (enable-highlighting! map-ctx mode)
 
       (= :simplifying (:sub-mode old-mode))
       (-> map-ctx

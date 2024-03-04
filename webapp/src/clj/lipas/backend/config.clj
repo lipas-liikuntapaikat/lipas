@@ -5,12 +5,16 @@
 
 (def default-config
   {:db
-   {:dbtype   "postgresql"
-    :dbname   (:db-name env)
-    :host     (:db-host env)
-    :user     (:db-user env)
-    :port     (:db-port env)
-    :password (:db-password env)}
+   (merge
+    {:dbtype   "postgresql"
+     :dbname   (:db-name env)
+     :host     (:db-host env)
+     :user     (:db-user env)
+     :port     (:db-port env)
+     :password (:db-password env)}
+    ;; TODO add more explicit check
+    (when (:lein-version env)
+      {:dev true}))
    :emailer
    {:host (:smtp-host env)
     :user (:smtp-user env)
@@ -21,7 +25,9 @@
     :user  (:search-user env)
     :pass  (:search-pass env)
     :indices
-    {:sports-site
+    {:lois
+     {:search "lois"}
+     :sports-site
      {:search    "sports_sites_current"
       :analytics "analytics"}
      :report
@@ -38,11 +44,22 @@
     :list-id                (:mailchimp-list-id env)
     :newsletter-interest-id (:mailchimp-newsletter-interest-id env)
     :campaign-folder-id     (:mailchimp-campaign-folder-id env)}
+   :aws
+   {:access-key-id     (:aws-access-key-id env)
+    :secret-access-key (:aws-secret-access-key env)
+    :region            (:aws-region env)
+    :s3-bucket         (:aws-s3-bucket env)
+    :s3-bucket-prefix  (:aws-s3-bucket-prefix env)}
    :app
    {:db        (ig/ref :db)
     :emailer   (ig/ref :emailer)
     :search    (ig/ref :search)
     :mailchimp (ig/ref :mailchimp)
+    :aws       (ig/ref :aws)
+    :utp
+    {:cms-api-url  (:utp-cms-api-url env)
+     :cms-api-user (:utp-cms-api-user env)
+     :cms-api-pass (:utp-cms-api-pass env)}
     :accessibility-register
     {:base-url   (:accessibility-register-base-url env)
      :system-id  (:accessibility-register-system-id env)

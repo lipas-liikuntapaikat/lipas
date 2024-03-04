@@ -56,6 +56,19 @@
  (fn [db [_ path value]]
    (assoc-in db (into [:admin :editing-user] path) value)))
 
+(re-frame/reg-event-db
+ ::grant-access-to-activity-types
+ (fn [db _]
+   (let [activities (-> db :admin :editing-user :permissions :activities)
+         types (-> db
+                   :sports-sites
+                   :activities
+                   :data
+                   (select-keys activities)
+                   vals
+                   (->> (mapcat :type-codes)))]
+     (assoc-in db [:admin :editing-user :permissions :types] types))))
+
 (re-frame/reg-event-fx
  ::save-user-success
  (fn [{:keys [db]} [_ user _]]

@@ -2,20 +2,32 @@
   (:require
    [goog.array :as garray]
    [goog.object :as gobj]
+   [clojure.string :as str]
    [re-frame.core :as re-frame]
    [reagent.ratom :as ratom]))
+
+(re-frame/reg-sub
+ ::map
+ (fn [db]
+   (:map db)))
 
 (re-frame/reg-sub
  ::view
  :<- [:lipas.ui.sports-sites.subs/adding-new-site?]
  :<- [::selected-sports-site]
  :<- [::mode*]
- (fn [[adding? selected-site mode] _]
-   (let [analysis? (-> mode :name (= :analysis))]
+ :<- [:lipas.ui.loi.subs/selected-loi]
+ :<- [:lipas.ui.loi.subs/view-mode]
+ :<- [::selected-add-mode]
+ (fn [[adding-new-site? selected-site mode selected-loi loi-mode add-mode] _]
+   (let [analysis? (-> mode :name (= :analysis))
+         adding? (or (and (#{"sports-site"} add-mode) adding-new-site?)
+                     (and (#{"loi"} add-mode) (#{:adding} loi-mode)))]
      (cond
        adding?       :adding
        analysis?     :analysis
        selected-site :site
+       selected-loi  :loi
        :else         :search))))
 
 (re-frame/reg-sub
@@ -27,13 +39,15 @@
 
 (re-frame/reg-sub
  ::basemap
- (fn [db _]
-   (-> db :map :basemap)))
+ :<- [::map]
+ (fn [m _]
+   (:basemap m)))
 
 (re-frame/reg-sub
  ::selected-overlays
- (fn [db _]
-   (-> db :map :selected-overlays)))
+ :<- [::map]
+ (fn [m _]
+   (:selected-overlays m)))
 
 (re-frame/reg-sub
  ::overlay-visible?
@@ -43,18 +57,21 @@
 
 (re-frame/reg-sub
  ::center
- (fn [db _]
-   (-> db :map :center)))
+ :<- [::map]
+ (fn [m _]
+   (:center m)))
 
 (re-frame/reg-sub
  ::zoom
- (fn [db _]
-   (-> db :map :zoom)))
+ :<- [::map]
+ (fn [m _]
+   (:zoom m)))
 
 (re-frame/reg-sub
  ::popup
- (fn [db _]
-   (-> db :map :popup)))
+ :<- [::map]
+ (fn [m _]
+   (:popup m)))
 
 (re-frame/reg-sub
  ::drawer-width
@@ -71,6 +88,18 @@
      (and (not (#{"xs" "sm"} media-width))
           (= :analysis mode-name)) "700px"
      :else                         "530px")))
+
+(re-frame/reg-sub
+ ::selected-sports-site-tab
+ :<- [::map]
+ (fn [m _]
+   (:selected-sports-site-tab m)))
+
+(re-frame/reg-sub
+ ::selected-new-sports-site-tab
+ :<- [::map]
+ (fn [m _]
+   (:selected-new-sports-site-tab m)))
 
 (re-frame/reg-sub-raw
  ::selected-sports-site
@@ -128,21 +157,39 @@
             not-empty)))))
 
 (re-frame/reg-sub
+ ::loi-geoms
+ :<- [:lipas.ui.loi.subs/search-results]
+ (fn [results _]
+   (when results
+     (map (fn [{:keys [geometries] :as m}]
+            (update geometries :features
+                    (fn [fs]
+                      (map (fn [f]
+                             (-> f
+                                 (assoc :properties (dissoc m :geometries :search-meta))
+                                 (assoc :id (:id m))))
+                           fs))))
+          results))))
+
+(re-frame/reg-sub
  ::content-padding
  :<- [:lipas.ui.subs/screen-size]
  :<- [::drawer-open?]
- :<- [::mode-name]
- (fn [[screen-size drawer-open? mode-name] _]
-   (let [margin       20
-         drawer-width (if (= :analysis mode-name) 700 430)]
+ :<- [::drawer-width]
+ (fn [[screen-size drawer-open? drawer-width] _]
+   (let [drawer-width (condp #(str/ends-with? %2 %1) drawer-width
+                        "%"  0
+                        "px" (js/parseInt drawer-width))
+         margin       20]
      (if (and (#{"xs sm"} screen-size) (not drawer-open?))
        [margin margin margin margin]
        [margin margin margin (+ margin drawer-width)]))))
 
 (re-frame/reg-sub
  ::mode*
- (fn [db _]
-   (-> db :map :mode)))
+ :<- [::map]
+ (fn [m _]
+   (:mode m)))
 
 (re-frame/reg-sub
  ::mode-name
@@ -174,10 +221,17 @@
        simplify? (assoc :simplify simplify)))))
 
 (re-frame/reg-sub
+ ::selected-features
+ :<- [::mode]
+ (fn [mode _]
+   (:selected-features mode)))
+
+(re-frame/reg-sub
  ::editing-lipas-id
- (fn [db _]
-   (when (#{:editing :drawing} (-> db :map :mode :name))
-     (-> db :map :mode :lipas-id))))
+ :<- [::map]
+ (fn [m _]
+   (when (#{:editing :drawing} (m :mode :name))
+     (-> m :mode :lipas-id))))
 
 (re-frame/reg-sub
  ::zoomed-for-drawing?
@@ -187,43 +241,50 @@
 
 (re-frame/reg-sub
  ::drawing-geom-type
- (fn [db _]
-   (-> db :map :drawing :geom-type)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :drawing :geom-type)))
 
 (re-frame/reg-sub
  ::new-geom
- (fn [db _]
-   (when (= :adding (-> db :map :mode :name))
-     (-> db :map :mode :geoms))))
+ :<- [::map]
+ (fn [m _]
+   (when (= :adding (-> m :mode :name))
+     (-> m :mode :geoms))))
 
 (re-frame/reg-sub
  ::undo
- (fn [db [_ lipas-id]]
-   (let [undo-stack (get-in db [:map :temp lipas-id :undo-stack])]
+ :<- [::map]
+ (fn [m [_ lipas-id]]
+   (let [undo-stack (get-in m [:temp lipas-id :undo-stack])]
      (seq undo-stack))))
 
 (re-frame/reg-sub
  ::redo
- (fn [db [_ lipas-id]]
-   (let [redo-stack (get-in db [:map :temp lipas-id :redo-stack])]
+ :<- [::map]
+ (fn [m [_ lipas-id]]
+   (let [redo-stack (get-in m [:temp lipas-id :redo-stack])]
      (seq redo-stack))))
 
 (re-frame/reg-sub
  ::drawer-open?
- (fn [db _]
-   (-> db :map :drawer-open? boolean)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :drawer-open? boolean)))
 
 ;; Import geoms ;;
 
 (re-frame/reg-sub
  ::import-dialog-open?
- (fn [db _]
-   (-> db :map :import :dialog-open?)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :import :dialog-open?)))
 
 (re-frame/reg-sub
  ::selected-import-file-encoding
- (fn [db _]
-   (-> db :map :import :selected-encoding)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :import :selected-encoding)))
 
 (re-frame/reg-sub
  ::import-data
@@ -250,8 +311,9 @@
 
 (re-frame/reg-sub
  ::import-batch-id
- (fn [db _]
-   (-> db :map :import :batch-id)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :import :batch-id)))
 
 (re-frame/reg-sub
  ::selected-import-items
@@ -260,8 +322,9 @@
 
 (re-frame/reg-sub
  ::replace-existing-geoms?
- (fn [db _]
-   (-> db :map :import :replace-existing?)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :import :replace-existing?)))
 
 ;;; Simplify geoms ;;;
 
@@ -286,13 +349,15 @@
 
 (re-frame/reg-sub
  ::address-search-dialog-open?
- (fn [db _]
-   (-> db :map :address-search :dialog-open?)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :address-search :dialog-open?)))
 
 (re-frame/reg-sub
  ::address-search-keyword
- (fn [db _]
-   (-> db :map :address-search :keyword)))
+ :<- [::map]
+ (fn [m _]
+   (-> m :address-search :keyword)))
 
 (defn ->result [f]
   {:geometry (-> f :geometry)
@@ -300,14 +365,16 @@
 
 (re-frame/reg-sub
  ::address-search-results
- (fn [db _]
-   (-> db :map :address-search :results :features
+ :<- [::map]
+ (fn [m _]
+   (-> m :address-search :results :features
        (->> (map ->result)))))
 
 (re-frame/reg-sub
  ::more-tools-menu-anchor
- (fn [db]
-   (-> db :map :more-tools-menu :anchor)))
+ :<- [::map]
+ (fn [m]
+   (-> m :more-tools-menu :anchor)))
 
 (re-frame/reg-sub
  ::sports-site-view
@@ -331,11 +398,13 @@
     (re-frame/subscribe [::mode])
     (re-frame/subscribe [::undo lipas-id])
     (re-frame/subscribe [::redo lipas-id])
-    (re-frame/subscribe [::more-tools-menu-anchor])])
- (fn [[cities types geom-type admins owners editing? edits-valid?
-       editing-allowed? save-in-progress? delete-dialog-open? type
-       types-props dead? can-publish? logged-in? size-categories mode
-       undo redo more-tools-menu-anchor] _]
+    (re-frame/subscribe [::more-tools-menu-anchor])
+    (re-frame/subscribe [::selected-sports-site-tab])])
+ (fn [[cities types geom-type admins owners editing?
+       edits-valid?  editing-allowed? save-in-progress?
+       delete-dialog-open? type types-props dead? can-publish?
+       logged-in? size-categories mode undo redo
+       more-tools-menu-anchor selected-tab] _]
 
    {:types                  (filter
                              (comp #{geom-type} :geometry-type second) types)
@@ -363,7 +432,8 @@
     :dead?                  dead?
     :undo                   undo
     :redo                   redo
-    :more-tools-menu-anchor more-tools-menu-anchor}))
+    :more-tools-menu-anchor more-tools-menu-anchor
+    :selected-tab           selected-tab}))
 
 (re-frame/reg-sub
  ::add-sports-site-view
@@ -382,9 +452,11 @@
     (re-frame/subscribe [::new-geom])
     (re-frame/subscribe [::mode])
     (re-frame/subscribe [::undo "new"])
-    (re-frame/subscribe [::redo "new"])])
+    (re-frame/subscribe [::redo "new"])
+    (re-frame/subscribe [::selected-new-sports-site-tab])])
  (fn [[type data valid? save-in-progress? admins owners cities types
-       prop-types size-categories zoomed? geom mode undo redo] _]
+       prop-types size-categories zoomed? geom mode undo redo
+       selected-tab] _]
    (let [geom-type (-> geom :features first :geometry :type)
          sub-mode  (mode :sub-mode)]
      {:type            type
@@ -415,9 +487,20 @@
                          (some? type)           1
                          :else                  0)
       :undo            undo
-      :redo            redo})))
+      :redo            redo
+      :selected-tab    selected-tab})))
 
 (re-frame/reg-sub
- ::sub-mode
- (fn [db _]
-   (-> db :map :mode :sub-mode)))
+ ::hide-actions?
+ :<- [::map]
+ :<- [:lipas.ui.sports-sites.activities.subs/mode]
+ (fn [[m activity-mode]]
+   (and (-> m :mode :name #{:editing})
+        (#{:add-route :route-details} activity-mode)
+        #_(-> m :mode :sub-mode #{:selecting}))))
+
+(re-frame/reg-sub
+ ::selected-add-mode
+ :<- [::map]
+ (fn [m _]
+   (:add-mode m)))

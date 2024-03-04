@@ -4,11 +4,13 @@
    [clojure.spec.gen.alpha :as gen]
    [clojure.string :as string]
    [hiposfer.geojson.specs :as geojson]
+   [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.feedback :as feedback]
    [lipas.data.floorball :as floorball]
    [lipas.data.ice-stadiums :as ice-stadiums]
+   [lipas.data.loi :as loi]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
    [lipas.data.reminders :as reminders]
@@ -17,7 +19,8 @@
    [lipas.data.types :as sports-site-types]
    [lipas.reports :as reports]
    [lipas.utils :as utils]
-   [spec-tools.core :as st]))
+   [spec-tools.core :as st]
+   [spec-tools.parse :as stp]))
 
 ;;; Utils ;;;
 
@@ -144,8 +147,8 @@
         :geometry
         {:type "Point"
          :coordinates [lon lat]}}]})
-   (s/gen (s/tuple :lipas.location.coordinates/lon
-                   :lipas.location.coordinates/lat))))
+   (s/gen (s/tuple :lipas.location.coordinates/finland-lon
+                   :lipas.location.coordinates/finland-lat))))
 
 ;; Specs ;;
 
@@ -259,6 +262,15 @@
 (s/def :lipas.user.permissions/all-cities? boolean?)
 (s/def :lipas.user.permissions/all-types? boolean?)
 
+(s/def :lipas.sports-site.activity/value
+  (into #{} (->> activities/by-types vals (map :value))))
+
+(s/def :lipas.user.permissions/activities
+  (s/coll-of :lipas.sports-site.activity/value
+             :min-count 0
+             :distinct true
+             :into []))
+
 (s/def :lipas.user/permissions
   (s/keys :opt-un [:lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
@@ -266,7 +278,8 @@
                    :lipas.user.permissions/all-cities?
                    :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
-                   :lipas.user.permissions/types]))
+                   :lipas.user.permissions/types
+                   :lipas.user.permissions/activities]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
@@ -307,15 +320,23 @@
   (s/keys :req-un [:lipas.location.city/city-code]
           :opt-un [:lipas.location.city/neighborhood]))
 
-(s/def :lipas.location.coordinates/lat (double-in :min 59.846373196
-                                                  :max 70.1641930203
+(s/def :lipas.location.coordinates/lat (double-in :min -90
+                                                  :max 90
+                                                  :NaN? false
+                                                  :infinite? false))
+(s/def :lipas.location.coordinates/lon (double-in :min -180
+                                                  :max 180
                                                   :NaN? false
                                                   :infinite? false))
 
-(s/def :lipas.location.coordinates/lon (double-in :min 20.6455928891
-                                                  :max 31.5160921567
-                                                  :NaN? false
-                                                  :infinite? false))
+(s/def :lipas.location.coordinates/finland-lat (double-in :min 59.846373196
+                                                          :max 70.1641930203
+                                                          :NaN? false
+                                                          :infinite? false))
+(s/def :lipas.location.coordinates/finland-lon (double-in :min 20.6455928891
+                                                          :max 31.5160921567
+                                                          :NaN? false
+                                                          :infinite? false))
 
 ;; Northing
 (s/def :lipas.location.coordinates/lat-euref (int-in -548576 1548576))
@@ -594,6 +615,9 @@
 (s/def :lipas.sports-site.properties/free-use? boolean?)
 (s/def :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi? boolean?)
 (s/def :lipas.sports-site.properties/padel-courts-count ::real)
+(s/def :lipas.sports-site.properties/rapid-canoeing-centre? boolean?)
+(s/def :lipas.sports-site.properties/canoeing-club?? boolean?)
+(s/def :lipas.sports-site.properties/activity-service-company? boolean?)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -748,7 +772,10 @@
                    :lipas.sports-site.properties/range?
                    :lipas.sports-site.properties/track-length-m
                    :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi?
-                   :lipas.sports-site.properties/padel-courts-count]))
+                   :lipas.sports-site.properties/padel-courts-count
+                   :lipas.sports-site.properties/activity-service-company?
+                   :lipas.sports-site.properties/canoeing-club??
+                   :lipas.sports-site.properties/rapid-canoeing-centre?]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)
@@ -1919,3 +1946,96 @@
 ;; Find fields
 (s/def :lipas.api.find-fields/payload
   (s/keys :req-un [:lipas.api.find-fields/field-types]))
+
+;; create-upload-url
+(s/def :lipas.api.create-upload-url/content-type*
+  #{"png" "jpeg" "webp"})
+
+(s/def :lipas.api.create-upload-url/extension
+  (st/spec
+   {:spec         :lipas.api.create-upload-url/content-type*
+    :type         :string
+    :swagger/type "enum"}))
+
+(s/def :lipas.api.create-upload-url/payload
+  (s/keys :req-un [:lipas.sports-site/lipas-id
+                   :lipas.api.create-upload-url/extension]))
+
+;;; Location of Interest (loi) ;;;
+
+(defn uuid-gen []
+  (gen/fmap
+   (fn [uuid]
+     (str uuid))
+   (gen/uuid)))
+
+(s/def :lipas.loi/id
+  (st/spec {:spec (str-in 36 36)
+            :gen uuid-gen
+            :swagger/type "string"}))
+
+#_(s/def :lipas.loi/created-at :lipas/timestamp)
+(s/def :lipas.loi/event-date :lipas/timestamp)
+
+(s/def :lipas.loi/status
+  (st/spec {:spec         (into #{} (keys loi/statuses))
+            :swagger/type "string"
+            :swagger/enum (keys loi/statuses)}))
+
+(s/def :lipas.loi/loi-category
+  (st/spec {:spec         (into #{} (keys loi/categories))
+            :swagger/type "string"
+            :swagger/enum (keys loi/categories)}))
+
+(let [vs (->> loi/types vals (map :value))]
+  (s/def :lipas.loi/loi-type
+    (st/spec {:spec (into #{} vs)
+              :swagger/type "string"
+              :swagger/enum vs})))
+
+;; NOTE: generator supports only point features atm
+(s/def :lipas.loi/geometries (s/with-gen
+                               ::geojson/feature-collection
+                               lipas-point-feature-gen))
+
+(s/def :lipas.loi/document
+  (s/keys :req-un [:lipas.loi/event-date
+                   :lipas.loi/status
+                   :lipas.loi/loi-category
+                   :lipas.loi/loi-type
+                   :lipas.loi/geometries]
+          :opt-un [:lipas.loi/id]))
+
+;; LOI search API
+(s/def :lipas.api.search-lois.payload/distance ::real)
+
+(s/def :lipas.api.search-lois.payload/loi-statuses
+  (s/coll-of :lipas.loi/status
+             :distinct true
+             :into []))
+
+(s/def :lipas.api.search-lois.payload/location
+  (s/keys :req-un [:lipas.location.coordinates/lon
+                   :lipas.location.coordinates/lat
+                   :lipas.api.search-lois.payload/distance]))
+
+(s/def :lipas.api.search-lois/payload
+  (s/keys :opt-un [:lipas.api.search-lois.payload/loi-statuses
+                   :lipas.api.search-lois.payload/location]))
+
+(comment
+  (s/valid? :lipas.api.search-lois/payload {:loi-statuses ["active" "planned"]
+                                            :location {:lon 25.48347583491476
+                                                       :lat 62.0546268484493
+                                                       :distance 100}})
+  )
+
+
+(comment
+  (require '[spec-tools.parse :as stp])
+  (stp/parse-spec :lipas.loi/document)
+  (stp/parse-spec :lipas/timestamp)
+  (stp/parse-spec :lipas.sports-site/lipas-id)
+
+
+  )

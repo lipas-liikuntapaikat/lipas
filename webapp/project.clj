@@ -8,6 +8,7 @@
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.5.18"]
    [metosin/spec-tools "0.10.5"]
+   [metosin/malli "0.13.0"]
 
    ;;; Frontend ;;;
    [thheller/shadow-cljs "2.22.9"]
@@ -37,6 +38,10 @@
    [etaoin "0.2.8-SNAPSHOT"]
    [clj-http "3.9.1"]
    [factual/geo "3.0.1"]
+   #_[com.amazonaws/aws-java-sdk-core "1.12.538"]
+   [software.amazon.awssdk/regions "2.20.135"]
+   [software.amazon.awssdk/auth "2.20.135"]
+   [software.amazon.awssdk/s3 "2.20.135"]
    [org.apache.commons/commons-math3 "3.6.1"]
    [org.apache.commons/commons-lang3 "3.12.0"]
    [org.apache.commons/commons-math "2.2"]

@@ -218,6 +218,13 @@
 (defn remove-ids [m]
   (not-empty (map #(dissoc % :id) m)))
 
+(defn ensure-fids
+  [fcoll]
+  (update fcoll :features (fn [fs]
+                            (map (fn [f]
+                                   (assoc f :id (or (:id f) (str (random-uuid)))))
+                                 fs))))
+
 (defn make-saveable [sports-site]
   (-> sports-site
 
@@ -242,6 +249,9 @@
 
 (defn make-editable [sports-site]
   (-> sports-site
+
+      ;; Geoms
+      (update-in [:location :geometries] ensure-fids)
 
       ;; Swimming pools
       (update-in [:pools]  ->indexed-map)
@@ -349,7 +359,7 @@
         (update-in [:features]
                    #(map-indexed (fn [idx f]
                                    (-> f
-                                       (assoc-in [:id] (str lipas-id "-" idx))
+                                       (assoc-in [:id] (or (:id f) (str (random-uuid))))
                                        (assoc-in [:properties :name] name)
                                        (assoc-in [:properties :lipas-id] lipas-id)
                                        (assoc-in [:properties :type-code] type-code)))

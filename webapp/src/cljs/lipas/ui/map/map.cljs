@@ -93,43 +93,56 @@
    :overlays
    {:vectors
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :name       "vectors"
-         :style      styles/feature-style})
+     #js{:source (VectorSource.)
+         :name   "vectors"
+         :style  styles/feature-style})
+    :lois
+    (VectorImageLayer.
+     #js{:source (VectorSource.)
+         :name   "lois"
+         :style  styles/loi-style})
     :edits
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      #js[styles/edit-style styles/vertices-style]})
+     #js{:source (VectorSource.)
+         :name   "edits"
+         :zIndex 10
+         :style  #js[styles/edit-style styles/vertices-style]})
+    :highlights
+    (VectorLayer.
+     #js{:source (VectorSource.)
+         :name   "highlights"
+         :style  #js[styles/highlight-style]})
     :markers
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/blue-marker-style})
+     #js{:source (VectorSource.)
+         :name   "markers"
+         :style  styles/blue-marker-style})
     :analysis
     (VectorLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/analysis-style
-         :name       "analysis"})
+     #js{:source (VectorSource.)
+         :style  styles/analysis-style
+         :name   "analysis"})
     :population
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/population-style3
-         :name       "population"})
+     #js{:source (VectorSource.)
+         :style  styles/population-style3
+         :name   "population"})
 
     :schools
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/school-style
-         :name       "schools"})
+     #js{:source (VectorSource.)
+         :style  styles/school-style
+         :name   "schools"})
     :diversity-grid
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/diversity-grid-style
-         :name       "diversity-grid"})
+     #js{:source (VectorSource.)
+         :style  styles/diversity-grid-style
+         :name   "diversity-grid"})
     :diversity-area
     (VectorImageLayer.
-     #js{:source     (VectorSource.)
-         :style      styles/diversity-area-style
-         :name       "diversity-area"})
+     #js{:source (VectorSource.)
+         :style  styles/diversity-area-style
+         :name   "diversity-area"})
     :light-traffic
     (ImageLayer.
      #js{:visible false
@@ -210,7 +223,9 @@
                                 (-> layers :overlays :diversity-area)
                                 (-> layers :overlays :diversity-grid)
                                 (-> layers :overlays :vectors)
+                                (-> layers :overlays :lois)
                                 (-> layers :overlays :edits)
+                                (-> layers :overlays :highlights)
                                 (-> layers :overlays :markers)
                                 (-> layers :overlays :light-traffic)
                                 (-> layers :overlays :retkikartta-snowmobile-tracks)
@@ -231,6 +246,12 @@
                           :style     styles/feature-style-hover
                           :multi     true
                           :condition events-condition/pointerMove})
+
+        loi-hover (SelectInteraction.
+                   #js{:layers    #js[(-> layers :overlays :lois)]
+                       :style     styles/loi-style-hover
+                       :multi     true
+                       :condition events-condition/pointerMove})
 
         marker-hover (SelectInteraction.
                       #js{:layers    #js[(-> layers :overlays :markers)]
@@ -265,7 +286,8 @@
         diversity-area-select (SelectInteraction.
                                #js{:layers #js[(-> layers :overlays :diversity-area)]})
 
-        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)]
+        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)
+                                                   (-> layers :overlays :lois)]
                                        :style  styles/feature-style-selected})
 
         lmap (ol/Map. opts)]
@@ -284,7 +306,7 @@
              ;;       lipas-id (when f1 (.get f1 "lipas-id"))
              ;;       fs       (map-utils/find-features-by-lipas-id
              ;;                 {:layers layers} lipas-id)]
-             ;;   (doto (.getFeatures hover)
+             ;;   (doto (.getFeatures vector-hover)
              ;;     (.clear)
              ;;     (.extend fs)))
 
@@ -293,6 +315,20 @@
                    (when (not-empty selected)
                      {:anchor-el (.getElement popup-overlay)
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
+
+    (.on loi-hover "select"
+         (fn [e]
+           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+                 selected (gobj/get e "selected")]
+
+             (.setPosition popup-overlay coords)
+             #_(js/console.log (aget selected 0))
+             (==> [::events/show-popup
+                   (when (not-empty selected)
+                     {:anchor-el (.getElement popup-overlay)
+                      :type      :loi
+                      :data      (-> selected
+                                     map-utils/->geoJSON-clj)})]))))
 
     (.on marker-hover "select"
          (fn [e]
@@ -369,9 +405,15 @@
          (fn [e]
            (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
                  selected (gobj/get e "selected")
-                 f1       (aget selected 0)]
+                 f1       (aget selected 0)
+                 lipas-id (when f1 (.get f1 "lipas-id"))
+                 loi-id   (when f1 (and (.get f1 "loi-type") (.get f1 "id")))]
              (.setPosition popup-overlay coords)
-             (==> [::events/sports-site-selected e (when f1 (.get f1 "lipas-id"))]))))
+
+             (cond
+               lipas-id (==> [::events/sports-site-selected e lipas-id])
+               loi-id   (==> [::events/loi-selected e f1])
+               :else    (==> [::events/unselected e])))))
 
     (.on lmap "click"
          (fn [e]
@@ -402,6 +444,7 @@
      :interactions*
      {:select                select
       :vector-hover          vector-hover
+      :loi-hover             loi-hover
       :marker-hover          marker-hover
       :population-hover      population-hover
       :schools-hover         schools-hover
@@ -485,13 +528,16 @@
       map-utils/unselect-features!
       map-utils/clear-interactions!
       map-utils/clear-markers!
+      map-utils/clear-highlights!
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
+      map-utils/enable-loi-hover!
       map-utils/enable-select!
       (cond->
           lipas-id  (map-utils/select-sports-site! lipas-id)
           address   (map-utils/show-address-marker! address)
-          elevation (map-utils/show-elevation-marker! elevation))))
+          elevation (-> (map-utils/show-elevation-marker! elevation)
+                        #_(map-utils/highlight-segment! elevation)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
@@ -502,11 +548,13 @@
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
+        (map-utils/clear-highlights!)
         (cond->
             lipas-id  (map-utils/select-sports-site! lipas-id)
-            fit?    (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
-            address (map-utils/show-address-marker! address)
-            elevation (map-utils/show-elevation-marker! elevation)))))
+            fit?      (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
+            address   (map-utils/show-address-marker! address)
+            elevation (-> (map-utils/show-elevation-marker! elevation)
+                          #_(map-utils/highlight-segment! elevation))))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]
@@ -643,10 +691,12 @@
               basemap  (:basemap opts)
               overlays (:overlays opts)
               geoms    (:geoms opts)
+              lois     (:lois opts)
               mode     (-> opts :mode)
 
               map-ctx (-> (init-map! opts)
                           (map-utils/update-geoms! geoms)
+                          (map-utils/update-lois! lois)
                           (map-utils/set-basemap! basemap)
                           (set-mode! mode))]
 
@@ -656,6 +706,7 @@
       (fn [comp]
         (let [opts     (r/props comp)
               geoms    (-> opts :geoms)
+              lois     (-> opts :lois)
               basemap  (-> opts :basemap)
               overlays (-> opts :overlays)
               center   (-> opts :center)
@@ -665,6 +716,7 @@
 
           (cond-> @map-ctx*
             (not= (:geoms @map-ctx*) geoms)       (map-utils/update-geoms! geoms)
+            (not= (:lois @map-ctx*) lois)         (map-utils/update-lois! lois)
             (not= (:basemap @map-ctx*) basemap)   (map-utils/set-basemap! basemap)
             (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
             (not= (:center @map-ctx*) center)     (map-utils/update-center! center)
@@ -678,6 +730,7 @@
 
 (defn map-outer []
   (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
+        lois       (re-frame/subscribe [::subs/loi-geoms])
         basemap    (re-frame/subscribe [::subs/basemap])
         overlays   (re-frame/subscribe [::subs/selected-overlays])
         center     (re-frame/subscribe [::subs/center])
@@ -686,6 +739,7 @@
     (fn []
       [map-inner
        {:geoms    @geoms-fast
+        :lois     @lois
         :basemap  @basemap
         :overlays @overlays
         :center   @center

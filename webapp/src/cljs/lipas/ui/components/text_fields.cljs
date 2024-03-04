@@ -57,6 +57,7 @@
         props      (-> (dissoc props :read-only? :defer-ms :spec)
                        (as-> $ (if (= "number" type) (dissoc $ :type) $))
                        (assoc :error (error? spec value required))
+                       (assoc :InputLabelProps {:shrink (some? value)})
                        (assoc :Input-props
                               (merge Input-props
                                      {:input-component input}
