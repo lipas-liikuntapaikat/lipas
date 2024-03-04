@@ -793,7 +793,7 @@
         distance      (:distance location)
         origin        (str lat "," lon)
         decay-factor  2
-        offset        (str (/ distance decay-factor) "m")
+        offset        (str (* distance (* decay-factor 0.5)) "m")
         scale         (str (* distance decay-factor) "m")
         size          250
         from          0
