@@ -36,8 +36,9 @@
     :indicatorColor "primary"
     :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
    [mui/tab {:value "fi" :label "Suomi"}]
-   [mui/tab {:value "se" :label "Svenska"}]
-   [mui/tab {:value "en" :label "English"}]])
+   ;; :se and :en disabled in prod until we get translations
+   [mui/tab {:value "se" :label "Svenska" :disabled (utils/prod?)}]
+   [mui/tab {:value "en" :label "English":disabled (utils/prod?)}]])
 
 
 (defn checkbox
@@ -98,7 +99,7 @@
                    [mui/typography {:variant "caption"} caption]])])))]))
 
 (defn contact-dialog
-  [{:keys [tr locale dialog-state on-save on-close contact-props]}]
+  [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
   (let [field-sorter (<== [::subs/field-sorter :default])]
     [lui/dialog
      {:title         "Lisää yhteystieto"
@@ -142,6 +143,7 @@
        [contact-dialog
         {:tr            tr
          :locale        locale
+         :description   description
          :dialog-state  dialog-state
          :contact-props contact-props
          :on-save       (fn []
@@ -155,6 +157,10 @@
        ;; Label
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
+
+       ;; Description
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "caption"} description]]
 
        ;; Table
        [mui/grid {:item true :xs 12}
@@ -206,8 +212,12 @@
    [mui/grid {:container true}
 
     ;; Label
-    [mui/grid {:item true}
-     [form-label {:label label}]]]
+    [mui/grid {:item true :xs 12}
+     [form-label {:label label}]]
+
+    ;; Description
+    [mui/grid {:item true :xs 12}
+     [mui/typography {:variant "caption"} description]]]
 
    ;; Expansion panels for each accessibility category
    (for [[prop-k {:keys [field]}] accessibility-props]
@@ -319,6 +329,10 @@
        ;; Label
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
+
+       ;; Description
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "caption"}] description]
 
        ;; Table
        [mui/grid {:item true :xs 12}
@@ -496,6 +510,7 @@
     [mui/grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
 
+    ;; Description
     [mui/grid {:item true :xs 12}
      [mui/typography {:variant "caption"} helper-text]]
 
@@ -598,6 +613,10 @@
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
 
+       ;; Description
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "caption"} helper-text]]
+
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
@@ -652,7 +671,8 @@
     :cancel-label  (tr :actions/cancel)}
    [mui/grid {:container true :spacing 2}
 
-    [lang-selector {:locale locale}]
+    [mui/grid {:item true :xs 12}
+     [lang-selector {:locale locale}]]
 
     [mui/grid {:item true :xs 12}
      [mui/typography {:variant "caption"} helper-text]]
@@ -705,6 +725,10 @@
        ;; Label
        [mui/grid {:item true :xs 12}
         [form-label {:label label}]]
+
+       ;; Description
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "caption"} helper-text]]
 
        ;; Table
        [mui/grid {:item true :xs 12}
@@ -935,17 +959,20 @@
         geom-type (<== [::subs/geom-type read-only?])
         value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
         set-field (partial set-field lipas-id :properties lipas-prop-k)]
-    (sports-site-views/make-prop-field
-     {:tr          tr
-      :prop-k      lipas-prop-k
-      :read-only?  read-only?
-      :label       label
-      :description description
-      :value       value
-      :set-field   set-field
-      :problems?   nil
-      :geom-type   geom-type
-      :geoms       geoms})))
+    [:<>
+     (sports-site-views/make-prop-field
+      {:tr          tr
+       :prop-k      lipas-prop-k
+       :read-only?  read-only?
+       :label       label
+       :description description
+       :value       value
+       :set-field   set-field
+       :problems?   nil
+       :geom-type   geom-type
+       :geoms       geoms})
+     (when description
+       [mui/form-helper-text description])]))
 
 (defn make-field
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k]}]

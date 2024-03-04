@@ -347,7 +347,7 @@
   [mui/grid {:container true :wrap "nowrap"}
    [mui/grid {:item true :style {:flex-grow 1}}
     [mui/form-group
-     [lui/text-field (dissoc props :geoms)]]]
+     [lui/text-field (dissoc props :geoms :tr)]]]
    [mui/grid {:item true}
     [mui/tooltip {:title (tr :map/calculate-route-length)}
      [mui/icon-button

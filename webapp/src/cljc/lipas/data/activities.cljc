@@ -378,24 +378,27 @@
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
    :type-codes  #{4401 4402 4403 4404 4405}
-   :sort-order  [:description-short
-                :description-long
-                :independent-entity
-                :highlights
-                :rules-structured
-                :arrival
-                :duration
-                :travel-direction
-                :route-marking
-                :route-marking
-                :outdoor-recreation-activities
-                :accessibility-classification
-                :accessibility
-                :accessibility-categorized
-                :contacts
-                :additional-info-link
-                :images
-                :videos]
+   :sort-order  [:route-name
+                 :description-short
+                 :description-long
+                 :independent-entity
+                 :highlights
+                 :rules-structured
+                 :arrival
+                 :route-length-km
+                 :duration
+                 :travel-direction
+                 :route-marking
+                 :route-marking
+                 :surface-material
+                 :outdoor-recreation-activities
+                 :accessibility-classification
+                 :accessibility
+                 :accessibility-categorized
+                 :contacts
+                 :additional-info-link
+                 :images
+                 :videos]
    :props
    {:routes
     {:schema [:sequential
@@ -434,7 +437,7 @@
            (assoc-in [:description-long :field :description :fi]
                      "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
            (assoc-in [:description-short :field :description :fi]
-                     "3-7 virkkeen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
+                     "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
        {:accessibility-classification
         {:field
          {:type        "select"
