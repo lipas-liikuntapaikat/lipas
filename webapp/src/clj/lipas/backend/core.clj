@@ -795,7 +795,7 @@
         decay-factor  2
         offset        (str (/ distance decay-factor) "m")
         scale         (str (* distance decay-factor) "m")
-        size          250
+        size          100
         from          0
         excludes      ["search-meta"]
         query         {:size    size
