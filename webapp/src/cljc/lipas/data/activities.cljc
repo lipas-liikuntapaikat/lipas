@@ -1035,10 +1035,10 @@
   (utils/index-by :type-codes [outdoor-recreation-areas
                                outdoor-recreation-facilities
                                outdoor-recreation-routes
-                               cycling
-                               paddling
-                               birdwatching
-                               fishing]))
+                               #_cycling
+                               #_paddling
+                               #_birdwatching
+                               #_fishing]))
 
 (def csv-headers
   ["Aktiviteetti nimi fi"
