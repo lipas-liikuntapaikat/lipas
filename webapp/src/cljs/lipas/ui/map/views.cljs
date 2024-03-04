@@ -606,14 +606,6 @@
            :value 2
            :label "Esteettömyys"}])
 
-       (when (or (and (floorball-types type-code)
-                      (= :floorball floorball-visibility))
-                 #_(football-types type-code))
-         [mui/tab
-          {:style {:min-width 0}
-           :value 3
-           :label "Olosuhteet"}])
-
        (when (and (floorball-types type-code)
                   (= :floorball floorball-visibility))
          [mui/tab
