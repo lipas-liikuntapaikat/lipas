@@ -183,7 +183,7 @@
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "3-7 virkkeen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."}
+     :description {:fi "1-3 lauseen esittely kohteesta ja sen erityispiirteistä."}
      :label       {:fi "Yleiskuvaus"}}}
 
    :description-long
@@ -300,7 +300,7 @@
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
+     :description {:fi "Yleistä tietoa kohteen esteettömyydestä tai kuljettavuudesta"}
      :label       {:fi "Esteettömyys"}}}
 
    :highlights
@@ -985,7 +985,13 @@
                 :additional-info-link
                 :images
                 :videos]
-   :props       (dissoc common-props :description-long :highlights)})
+   :props       (-> common-props
+                    (dissoc :description-long :highlights)
+                    (assoc-in [:rules :field :description :fi] "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista. HUOM! Täytä kenttä vain, jos rakenteen käyttöön liittyy jotakin erityistä huomautettavaa.")
+                    (assoc-in [:arrival :field :description :fi] "Eri kulkumuodoilla kohteeseen pääsyyn liittyvää tietoa. Esim. pysäköintialueet ja joukkoliikenneyhteydet. HUOM! Täytä kenttä vain, jos kohteelle saapumiseen liittyy jotakin erityistä huomautettavaa.")
+                    (assoc-in [:accessibility :field :description :fi] "Yleistä tietoa kohteen esteettömyydestä  tai kuljettavuudesta")
+                    )})
+
 
 (def outdoor-recreation-facilities-schema
   (collect-schema (:props outdoor-recreation-facilities)))
