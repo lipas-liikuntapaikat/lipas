@@ -1963,9 +1963,17 @@
 
 ;;; Location of Interest (loi) ;;;
 
+(defn uuid-gen []
+  (gen/fmap
+   (fn [uuid]
+     (str uuid))
+   (gen/uuid)))
+
 (s/def :lipas.loi/id
   (st/spec {:spec (str-in 36 36)
+            :gen uuid-gen
             :swagger/type "string"}))
+
 #_(s/def :lipas.loi/created-at :lipas/timestamp)
 (s/def :lipas.loi/event-date :lipas/timestamp)
 
