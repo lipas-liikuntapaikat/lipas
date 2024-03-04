@@ -16,7 +16,8 @@
 (def mappings
   {:sports-sites
    {:settings
-    {:max_result_window 50000}
+    {:max_result_window 50000
+     :index {:mapping {:total_fields {:limit 2000}}}}
     :mappings
     {:properties
      {:search-meta.location.wgs84-point
@@ -24,6 +25,15 @@
       :search-meta.location.wgs84-center
       {:type "geo_point"}
       :search-meta.location.wgs84-end
+      {:type "geo_point"}
+      :search-meta.location.geometries
+      {:type "geo_shape"}}}}
+   :lois
+   {:settings
+    {:max_result_window 50000}
+    :mappings
+    {:properties
+     {:search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.geometries
       {:type "geo_shape"}}}}})
@@ -36,6 +46,18 @@
       str
       (str/lower-case)
       (str/replace #"[:|.]" "-")))
+
+(defn index-exists?
+  [client index-name]
+  (let [resp (es/request client {:method :head
+                                 :url    (es-utils/url [index-name])
+                                 :exception-handler (fn [e]
+                                                      (if (= 404 (-> e                                                                                                 (.getResponse)
+                                                                     (.getStatusLine)
+                                                                     (.getStatusCode)))
+                                                        {:status 404}
+                                                        (throw e)))})]
+    (= 200 (:status resp))))
 
 (defn create-index!
   [client index mappings]
@@ -131,6 +153,13 @@
   (es/request client {:method :get
                       :url    (es-utils/url [idx-name :_search])
                       :body   params}))
+
+(defn fetch-document
+  [client idx-name doc-id]
+  (assert idx-name)
+  (assert doc-id)
+  (es/request client {:method :get
+                      :url    (es-utils/url [idx-name :_doc doc-id])}))
 
 (defn scroll
   [client idx-name params]

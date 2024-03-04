@@ -16,12 +16,15 @@
    [lipas.backend.gis :as gis]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.newsletter :as newsletter]
+   [lipas.backend.s3 :as s3]
    [lipas.backend.search :as search]
+   [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
+   [lipas.integration.utp.cms :as utp-cms]
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
    [lipas.utils :as utils]
@@ -226,8 +229,31 @@
 
 ;;; Sports-sites ;;;
 
+(defn- deref-fids
+  [sports-site route]
+  (let [fids  (-> route :fids set)
+        geoms {:type "FeatureCollection"
+               :features (->> (get-in sports-site [:location :geometries :features])
+                              (filterv #(contains? fids (:id %))))}]
+    (assoc route :geometries geoms)))
+
+(defn enrich-activities
+  [sports-site]
+  (if (:activities sports-site)
+    (update sports-site :activities
+            (fn [activities]
+              (reduce-kv (fn [m k v]
+                           (if (get-in m [k :routes])
+                             (update-in m [k :routes] (fn [routes]
+                                                        (mapv #(deref-fids sports-site %) routes)))
+                             m))
+                         activities
+                         activities)))
+    sports-site))
+
 (defn get-sports-site [db lipas-id]
   (-> (db/get-sports-site db lipas-id)
+      (enrich-activities)
       not-empty))
 
 (defn- new? [sports-site]
@@ -281,7 +307,8 @@
   ([db type-code]
    (get-sports-sites-by-type-code db type-code {}))
   ([db type-code {:keys [locale] :as opts}]
-   (let [data (db/get-sports-sites-by-type-code db type-code opts)]
+   (let [data (->> (db/get-sports-sites-by-type-code db type-code opts)
+                   (map enrich-activities))]
      (cond
        (#{:fi :en :se} locale) (map (partial i18n/localize locale) data)
        (#{:all} locale)        (map (partial i18n/localize2 [:fi :se :en]) data)
@@ -740,11 +767,115 @@
      (when-let [conflict (-> resp :body :hits :hits first :_source)]
        {:conflict conflict}))))
 
+(defn presign-upload-url
+  [{:keys [s3-bucket s3-bucket-prefix region credentials-provider]}
+   {:keys [lipas-id user extension]}]
+  (let [k (str s3-bucket-prefix
+               "/"
+               lipas-id
+               "/"
+               (utils/gen-uuid)
+               "."
+               extension)]
+    (s3/presign-put {:region               region
+                     :bucket               s3-bucket
+                     :content-type         (str "image/" extension)
+                     :object-key           k
+                     :meta                 {:lipas-id lipas-id
+                                            :user-id  (:id user)}
+                     :credentials-provider credentials-provider})))
+
+
+(defn ->lois-es-query
+  [{:keys [location loi-statuses]}]
+  (let [lon           (:lon location)
+        lat           (:lat location)
+        distance      (:distance location)
+        origin        (str lat "," lon)
+        decay-factor  2
+        offset        (str (* distance (* decay-factor 0.5)) "m")
+        scale         (str (* distance decay-factor) "m")
+        size          100
+        from          0
+        excludes      ["search-meta"]
+        query         {:size    size
+                       :from    from
+                       :sort    ["_score"]
+                       :_source {:excludes excludes}
+                       :query   {:function_score
+                                 {:score_mode "max"
+                                  :boost_mode "max"
+                                  :functions  [{:exp
+                                                {:search-meta.location.wgs84-point
+                                                 {:origin origin
+                                                  :offset offset
+                                                  :scale  scale}}}]
+                                  :query      {:bool
+                                               {:filter
+                                                [{:terms {:status.keyword loi-statuses}}]}}}}}
+        default-query {:size size :query {:match_all {}}}]
+    (if (and lat lon distance)
+      query
+      default-query)))
+
+(defn search-lois
+  [{:keys [indices client]} es-query]
+  (let [idx-name (get-in indices [:lois :search])]
+    (-> (search/search client idx-name es-query)
+        :body
+        :hits
+        :hits
+        (->> (map :_source)))))
+
+(defn get-loi
+  [{:keys [indices client]} loi-id]
+  (let [idx-name (get-in indices [:lois :search])]
+    (-> (search/fetch-document client idx-name loi-id)
+        :body
+        :_source
+        (dissoc :search-meta))))
+
+(defn enrich-loi
+  [{:keys [geometries] :as loi}]
+  (let [geom-coll (feature-coll->geom-coll geometries)]
+    (-> loi
+        (assoc-in [:search-meta :location :geometries] geom-coll)
+        (assoc-in [:search-meta :location :wgs84-point] (-> (gis/->flat-coords geometries)
+                                                            first)))))
+
+(defn search-lois-with-params
+  [{:keys [indices client]} params]
+  (let [idx-name (get-in indices [:lois :search])
+        es-query (->lois-es-query params)]
+    (-> (search/search client idx-name es-query)
+        :body
+        :hits
+        :hits)))
+
+(defn index-loi!
+  ([search loi]
+   (index-loi! search loi false))
+  ([{:keys [indices client]} loi sync?]
+   (let [idx-name (get-in indices [:lois :search])
+         loi      (enrich-loi loi)]
+     (search/index! client idx-name :id loi sync?))))
+
+(defn upsert-loi!
+  [db search user loi]
+  (jdbc/with-db-transaction [tx db]
+    (db/upsert-loi! tx user loi)
+    (index-loi! search loi :sync)))
+
+(defn upload-utp-image!
+  [{:keys [_filename _data _user] :as params}]
+  (utp-cms/upload-image! params))
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))
-  (def search2 (search/create-cli (:search config/default-config)))
+  (def search2 {:client (search/create-cli (:search config/default-config))
+                :indices (-> config/default-config :search :indices)})
   (def fields ["lipas-id" "name" "admin" "owner" "properties.surface-material"
                "location.city.city-code"])
   (reset! cache {})
@@ -795,6 +926,8 @@
 
   (flat-finance-report db-spec [992 175] )
 
+  (process-elevation-queue! db-spec search2)
+  search2
   (first (get-cities db-spec))
   (time (get-populations db-spec 2017))
   (time (:all-cities @cache))

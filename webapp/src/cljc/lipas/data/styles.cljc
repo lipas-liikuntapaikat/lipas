@@ -428,6 +428,10 @@
     :radius 9,
     :fill {:color "#8397de"},
     :stroke {:color "#0055ff"}},
+   2011
+   {:shape "polygon",
+    :fill {:color "#8397de"},
+    :stroke {:color "#000000", :width 1.5}}
    1220
    {:shape "circle",
     :radius 9,
@@ -685,6 +689,12 @@
     :radius 9,
     :fill {:color "#c75887"},
     :stroke {:color "#00557f"}},
+   ;; TODO same as above
+   5155
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#c75887"},
+    :stroke {:color "#00557f"}}
    1630
    {:shape "square",
     :radius 9,

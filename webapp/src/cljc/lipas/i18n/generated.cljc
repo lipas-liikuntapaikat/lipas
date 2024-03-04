@@ -52,12 +52,13 @@
      :settings-zones             "Etäisyydet ja matka-ajat"
      :settings-help              "Analyysialue määräytyy suurimman etäisyyskorin mukaan. Myöskään matka-aikoja ei lasketa tämän alueen ulkopuolelta."}
     :sport
-    {:description
-     "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista  liikuntapaikoista ja virkistyskohteista avoimessa tietokannassa.",
-     :headline        "Liikuntapaikat",
+    {#_#_:description
+     "LIPAS tarjoaa ajantasaisen tiedon Suomen julkisista liikunta- ja ulkoilupaikoista avoimessa tietokannassa."
+     :description     "Tähän lyhyt teksti tai layout menee rikki"
+     :headline        "Liikunta- ja ulkoilupaikat",
      :open-interfaces "Avoimet rajapinnat",
      :up-to-date-information
-     "Ajantasainen tieto Suomen liikuntapaikoista",
+     "Ajantasainen tieto Suomen liikunta- ja ulkoilupaikoista",
      :updating-tools  "Päivitystyökalut tiedontuottajille"
      :analysis-tools  "Liikuntaolosuhteiden analysointityökalut"},
     :confirm
@@ -172,7 +173,8 @@
      :mobile-lift     "Siirrettävä allasnostin",
      :slope           "Luiska"},
     :general
-    {:description    "Kuvaus",
+    {:headline       "Otsikko"
+     :description    "Kuvaus",
      :hall           "Halli",
      :women          "Naiset",
      :age-anonymized "Ikä anonymisoitu"
@@ -466,37 +468,40 @@
      :edit-rink     "Muokkaa kenttää",
      :headline      "Kentät"},
     :lipas.sports-site
-    {:properties        "Lisätiedot",
-     :delete-tooltip    "Poista liikuntapaikka...",
-     :headline          "Liikuntapaikka",
-     :new-site-of-type  "Uusi {1}",
-     :address           "Osoite",
-     :new-site          "Uusi liikuntapaikka",
-     :phone-number      "Puhelinnumero",
-     :admin             "Ylläpitäjä",
-     :surface-materials "Pintamateriaalit",
-     :www               "Web-sivu",
-     :name              "Nimi suomeksi",
-     :reservations-link "Tilavaraukset",
-     :construction-year "Rakennus​vuosi",
-     :type              "Tyyppi",
-     :delete            "Poista {1}",
-     :renovation-years  "Perus​korjaus​vuodet",
-     :name-localized-se "Nimi ruotsiksi",
-     :status            "Liikuntapaikan tila",
-     :id                "LIPAS-ID",
-     :details-in-portal "Näytä kaikki lisätiedot",
-     :comment           "Lisätieto",
-     :ownership         "Omistus",
-     :name-short        "Nimi",
-     :basic-data        "Perustiedot",
-     :delete-reason     "Poiston syy",
-     :event-date        "Muokattu",
-     :email-public      "Sähköposti (julkinen)",
-     :add-new           "Lisää liikuntapaikka",
-     :contact           "Yhteystiedot",
-     :owner             "Omistaja",
-     :marketing-name    "Markkinointinimi"},
+    {:properties          "Lisätiedot",
+     :delete-tooltip      "Poista liikuntapaikka...",
+     :headline            "Liikuntapaikka",
+     :new-site-of-type    "Uusi {1}",
+     :address             "Osoite",
+     :new-site            "Uusi liikuntapaikka",
+     :phone-number        "Puhelinnumero",
+     :admin               "Ylläpitäjä",
+     :admin-helper-text   "Kohteen ylläpidon toteuttava taho"
+     :surface-materials   "Pintamateriaalit",
+     :www                 "Web-sivu",
+     :name                "Nimi suomeksi",
+     :reservations-link   "Tilavaraukset",
+     :construction-year   "Rakennus​vuosi",
+     :type                "Tyyppi",
+     :delete              "Poista {1}",
+     :renovation-years    "Perus​korjaus​vuodet",
+     :name-localized-se   "Nimi ruotsiksi",
+     :status              "Liikuntapaikan tila",
+     :id                  "LIPAS-ID",
+     :details-in-portal   "Näytä kaikki lisätiedot",
+     :comment             "Lisätieto",
+     :ownership           "Omistus",
+     :name-short          "Nimi",
+     :basic-data          "Perustiedot",
+     :delete-reason       "Poiston syy",
+     :event-date          "Muokattu",
+     :email-public        "Sähköposti (julkinen)",
+     :add-new             "Lisää liikunta- tai ulkkoilupaikka",
+     :contact             "Yhteystiedot",
+     :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
+     :owner               "Omistaja",
+     :owner-helper-text   "Kohteessa olevien rakenteiden tai palveluiden omistaja"
+     :marketing-name      "Markkinointinimi"},
     :status
     {:active                     "Toiminnassa",
      :planned                    "Suunniteltu"
@@ -684,14 +689,15 @@
      :all-cities?  "Oikeus kaikkiin kuntiin",
      :all-types?   "Oikeus kaikkiin tyyppeihin",
      :cities       "Kunnat",
-     :sports-sites "Liikuntapaikat",
-     :types        "Tyypit"},
+     :sports-sites "Liikunta- ja ulkoilupaikat",
+     :types        "Tyypit"
+     :activities   "Aktiviteetit"},
     :help
     {:headline                 "Ohjeet",
      :permissions-help
      "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
      :permissions-help-body
-     "Haluan käyttöoikeudet seuraaviin liikuntapaikkoihin:",
+     "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
      :permissions-help-subject "Haluan lisää käyttöoikeuksia"},
     :ceiling-structures
     {:concrete         "Betoni",
@@ -781,7 +787,7 @@
      :select-issuer        "Valitse myöntäjä",
      :select-unit          "Valitse yksikkö",
      :bullet3              "Avustukset",
-     :bullet4              "Liikuntapaikkojen rakennusvuodet",
+     :bullet4              "Liikunta- ja ulkoilupaikkojen rakennusvuodet",
      :finance-stats        "Talous​tiedot",
      :select-city          "Valitse kunta",
      :area-m2-min          "Liikuntapinta-ala m² min",
@@ -800,7 +806,7 @@
      :region               "Alue",
      :show-comparison      "Näytä vertailu",
      :length-km-avg        "Liikuntareitin pituus km keskiarvo",
-     :sports-sites-count   "Liikuntapaikkojen lkm",
+     :sports-sites-count   "Liikunta- ja ulkoilupaikkojen lkm",
      :length-km-min        "Liikuntareitin pituus km min",
      :country-avg          "(maan keskiarvo)",
      :length-km-count      "Liikuntareitin pituus ilmoitettu lkm",
@@ -829,7 +835,7 @@
      :retkikartta-problems-warning
      "Korjaa kartalle merkityt ongelmat, jos haluat, että kohde siirtyy Retkikartalle.",
      :edit-later-hint        "Voit muokata geometriaa myös myöhemmin",
-     :center-map-to-site     "Kohdista kartta liikuntapaikkaan",
+     :center-map-to-site     "Kohdista kartta kohteeseen",
      :draw-hole              "Lisää reikä",
      :split-linestring       "Katkaise reittiosa",
      :delete-vertices-hint
@@ -847,7 +853,7 @@
      :draw                   "Lisää kartalle",
      :draw-linestring        "Lisää reittiosa",
      :modify                 "Voit raahata pistettä kartalla",
-     :zoom-to-site           "Kohdista kartta liikuntapaikkaan",
+     :zoom-to-site           "Kohdista kartta kohteeseen",
      :kink
      "Muuta reitin kulkua niin, että reittiosa ei risteä itsensä kanssa. Voit tarvittaessa katkaista reitin useampaan osaan.",
      :zoom-closer            "Kartta täytyy zoomata lähemmäs"},
@@ -1050,7 +1056,8 @@
      :city-education          "Kommun / utbildingsväsende"},
     :accessibility       {:lift "Lyft i bassängen", :slope "Ramp"},
     :general
-    {:description   "Beskrivning",
+    {:headline      "Rubrik"
+     :description   "Beskrivning",
      :hall          "Hall",
      :women         "Kvinnor",
      :total-short   "Totalt",
@@ -1843,7 +1850,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :mobile-lift     "Mobile pool lift",
      :slope           "Slope"},
     :general
-    {:description    "Description",
+    {:headline       "Headline"
+     :description    "Description",
      :hall           "Hall",
      :women          "Women",
      :age-anonymized "Age anonymized"

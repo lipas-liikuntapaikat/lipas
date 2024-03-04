@@ -12,6 +12,7 @@
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.middleware.exception :as exception]
+   [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
@@ -48,7 +49,8 @@
        (handler e request))}
     )))
 
-(defn create-app [{:keys [db emailer search mailchimp]}]
+(defn create-app
+  [{:keys [db emailer search mailchimp aws]}]
   (ring/ring-handler
    (ring/router
 
@@ -154,6 +156,69 @@
                                                           type-code
                                                           {#_#_:revs revs
                                                            :locale   locale})}))}}]
+
+      ["/lois"
+       {:get
+        {:no-doc     false
+         :responses  {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters {}
+         :handler
+         (fn []
+           (let [query {:size 10000 :query {:match_all {}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}
+
+      ["/:loi-id"
+      {:get
+       {:no-doc     false
+        :responses  {200 {:body :lipas.loi/document}}
+        :parameters {:path {:loi-id :lipas.loi/id}}
+        :handler
+        (fn [{:keys [parameters]}]
+           {:status 200
+            :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]]
+
+      ["/lois/type/:loi-type"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:loi-type :lipas.loi/loi-type}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [loi-type (-> parameters :path :loi-type)
+                 query    {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
+
+      ["/lois/category/:loi-category"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:loi-category :lipas.loi/loi-category}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [loi-category (-> parameters :path :loi-category)
+                 query        {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
+
+      ["/lois/status/:status"
+       {:get
+        {:no-doc    false
+         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :parameters
+         {:path  {:status :lipas.loi/status}
+          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [loi-status (-> parameters :path :status)
+                 query      {:size 10000 :query {:term {:status.keyword loi-status}}}]
+             {:status 200
+              :body   (core/search-lois search query)}))}}]
 
       ["/users"
        {:get
@@ -559,7 +624,53 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/check-sports-site-name search body-params)})}}]]]
+            :body   (core/check-sports-site-name search body-params)})}}]
+
+      ["/actions/create-upload-url"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body :lipas.api.create-upload-url/payload}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/presign-upload-url aws (assoc body-params :user identity))})}}]
+
+      ["/actions/upload-utp-image"
+       {:post
+        {:no-doc     false
+         :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
+         :parameters {:multipart {:file multipart/temp-file-part}}
+         :handler
+         (fn [{:keys [parameters multipart-params identity]}]
+           (let [params {:lipas-id (get multipart-params "lipas-id")
+                         :filename (-> parameters :multipart :file :filename)
+                         :data     (-> parameters :multipart :file :tempfile)
+                         :user     identity}]
+             {:status 200
+              :body   (core/upload-utp-image! params)}))}}]
+
+      ["/actions/save-loi"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters
+         {:body :lipas.loi/document}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/upsert-loi! db search identity body-params)})}}]
+
+      ["/actions/search-lois"
+       {:post
+        {:no-doc         false
+         #_#_:middleware [mw/token-auth mw/auth]
+         :parameters {:body :lipas.api.search-lois/payload}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/search-lois-with-params search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

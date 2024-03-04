@@ -44,10 +44,83 @@ env:
   DIGITRANSIT_SUBSCRIPTION_KEY: ${{ vars.DIGITRANSIT_SUBSCRIPTION_KEY }}
   MML_COVERAGE_URL: ${{ vars.MML_COVERAGE_URL }}
   MML_API_KEY: ${{ vars.MML_API_KEY }}
+  AWS_ACCESS_KEY_ID: lol
+  AWS_SECRET_ACCESS_KEY: lol
+  AWS_REGION: 'eu-north-1'
+  AWS_S3_BUCKET: lol
+  AWS_S3_BUCKET_PREFIX: lol
   LEIN_SILENT: true
-
-  # lol
+  UTP_CMS_API_URL: "https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
+  UTP_CMS_API_USER: lipas-developer
+  UTP_CMS_API_PASS: password
 jobs:
+  utp-schema-gen:
+    if: github.ref == 'refs/heads/ulkoilutietopalvelu'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@11.0
+        with:
+          lein: latest
+
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          # List all files containing dependencies:
+          # key: cljdeps-${{ hashFiles('deps.edn') }}
+          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
+          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
+          # key: cljdeps-${{ hashFiles('build.boot') }}
+          restore-keys: cljdeps-
+
+      - name: Check if there are changes
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            webapp/src/cljc/lipas/data/activities.cljc
+
+      - name: Generate JSON schema
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: lein run -m lipas.data.activities > utp-schema.json
+        working-directory: ./webapp
+
+      - name: Generate CSV
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: lein run -m lipas.data.activities csv > utp-schema.csv
+        working-directory: ./webapp
+
+      - name: Deploy JSON schema to Gist
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: exuanbo/actions-deploy-gist@v1.1.4
+        with:
+          token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
+          gist_id: ace43a7f66f7b14c526baab0f29c91d9
+          file_path: webapp/utp-schema.json
+          file_type: text
+
+      - name: Deploy CSV to Gist
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: exuanbo/actions-deploy-gist@v1.1.4
+        with:
+          token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
+          gist_id: 557991b8d68186e5ec4e88388a1c1741
+          file_path: webapp/utp-schema.csv
+          file_type: text
+
   ci:
 
     strategy:

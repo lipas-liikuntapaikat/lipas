@@ -24,13 +24,15 @@
                    {:checked-icon (r/as-element checked-icon)}))])}]])
 
 (defn switch
-  [{:keys [label value on-change]}]
+  [{:keys [label value on-change] :as props}]
   [mui/form-group
    [mui/form-control-label
     {:label label
      :control
      (r/as-element
       [mui/switch
-       {:value value
-        :checked value
-        :on-change #(on-change (-> % .-target .-checked))}])}]])
+       (merge
+        {:value     value
+         :checked   value
+         :on-change #(on-change (-> % .-target .-checked))}
+        (dissoc props :on-change))])}]])

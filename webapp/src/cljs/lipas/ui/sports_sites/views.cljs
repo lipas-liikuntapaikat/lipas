@@ -170,7 +170,9 @@
         :on-change #(on-change :comment %)}]}
 
      (when sub-headings?
-       [lui/sub-heading {:label (tr :lipas.sports-site/contact)}])
+       [:<>
+        [lui/sub-heading {:label (tr :lipas.sports-site/contact)}]
+        [mui/typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)]])
 
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
@@ -213,25 +215,27 @@
      {:label      (tr :lipas.sports-site/owner)
       :value      (-> display-data :owner)
       :form-field [lui/select
-                   {:value     (-> edit-data :owner)
-                    :required  true
-                    :spec      :lipas.sports-site/owner
-                    :items     owners
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :owner %)}]}
+                   {:value       (-> edit-data :owner)
+                    :required    true
+                    :helper-text (tr :lipas.sports-site/owner-helper-text)
+                    :spec        :lipas.sports-site/owner
+                    :items       owners
+                    :value-fn    first
+                    :label-fn    (comp locale second)
+                    :on-change   #(on-change :owner %)}]}
 
      ;; Admin
      {:label      (tr :lipas.sports-site/admin)
       :value      (-> display-data :admin)
       :form-field [lui/select
-                   {:value     (-> edit-data :admin)
-                    :required  true
-                    :spec      :lipas.sports-site/admin
-                    :items     admins
-                    :value-fn  first
-                    :label-fn  (comp locale second)
-                    :on-change #(on-change :admin %)}]}]))
+                   {:value       (-> edit-data :admin)
+                    :required    true
+                    :helper-text (tr :lipas.sports-site/admin-helper-text)
+                    :spec        :lipas.sports-site/admin
+                    :items       admins
+                    :value-fn    first
+                    :label-fn    (comp locale second)
+                    :on-change   #(on-change :admin %)}]}]))
 
 (defn location-form [{:keys [tr edit-data display-data cities on-change
                              read-only? sub-headings?]}]
@@ -343,7 +347,7 @@
   [mui/grid {:container true :wrap "nowrap"}
    [mui/grid {:item true :style {:flex-grow 1}}
     [mui/form-group
-     [lui/text-field (dissoc props :geoms)]]]
+     [lui/text-field (dissoc props :geoms :tr)]]]
    [mui/grid {:item true}
     [mui/tooltip {:title (tr :map/calculate-route-length)}
      [mui/icon-button
@@ -449,6 +453,72 @@
          :max-width    max-width
          :items        (-> data :edit-data :rinks)
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
+
+(defn make-prop-field
+  [{:keys [tr prop-k read-only? label description value set-field
+           problems? geom-type geoms]}]
+  (let [locale    (tr)
+        prop-type (<== [::subs/prop-type prop-k])
+        spec      (keyword :lipas.sports-site.properties prop-k)
+        disabled? read-only?
+        label     (or label (get-in prop-type [:name locale]))
+        tooltip   (or description (get-in prop-type [:description locale]))
+        data-type (get prop-type :data-type)
+        on-change set-field
+        k         prop-k]
+    (cond
+      (material-field? k) [surface-material-selector
+                           {:tr        tr
+                            :multi?    (= :surface-material k)
+                            :disabled  disabled?
+                            :tooltip   tooltip
+                            :spec      spec
+                            :label     label
+                            :value     value
+                            :on-change on-change}]
+      (retkikartta? k)    [retkikartta-field
+                           {:tr        tr
+                            :value     value
+                            :on-change on-change
+                            :tooltip   tooltip
+                            :problems? problems?}]
+      (harrastuspassi? k) [harrastuspassi-field
+                           {:tr        tr
+                            :value     value
+                            :on-change on-change
+                            :tooltip   tooltip}]
+
+      (show-calc? k geom-type)      [route-length-km-field
+                                     {:tr        tr
+                                      :value     value
+                                      :type      "number"
+                                      :spec      spec
+                                      :label     label
+                                      :tooltip   tooltip
+                                      :geoms     geoms
+                                      :on-change on-change}]
+      (show-area-calc? k geom-type) [area-km2-field
+                                     {:tr        tr
+                                      :value     value
+                                      :type      "number"
+                                      :spec      spec
+                                      :label     label
+                                      :tooltip   tooltip
+                                      :geoms     geoms
+                                      :on-change on-change}]
+      (= "boolean" data-type)       [lui/checkbox
+                                     {:value     value
+                                      :tooltip   tooltip
+                                      :disabled  disabled?
+                                      :on-change on-change}]
+      :else                         [lui/text-field
+                                     {:value     value
+                                      :disabled  disabled?
+                                      :tooltip   tooltip
+                                      :spec      spec
+                                      :type      (when (#{"numeric" "integer"} data-type)
+                                                   "number")
+                                      :on-change on-change}])))
 
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
@@ -1025,7 +1095,7 @@
        [mui/grid {:item true :xs 12}
         [mui/grid
          {:container       true
-          :wrap            "no-rwap"
+          :wrap            "nowrap"
           :spacing         2
           :justify-content "flex-end"
           :align-items     "center"}
@@ -1037,7 +1107,7 @@
             :value-fn  identity
             :label-fn  (fn [n] (str "Osa " (inc n)))
             :sort-fn   identity
-            :on-change #(reset! selected-segment %)}]]
+            :on-change (fn [i] (reset! selected-segment i))}]]
          [mui/grid {:item true}
           [mui/icon-button
            {:disabled (= 0 @selected-segment)

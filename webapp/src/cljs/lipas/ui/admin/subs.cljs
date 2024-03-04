@@ -25,7 +25,8 @@
        (map (comp :fi :name))
        (string/join ",")))
 
-(defn ->users-list-entry [cities types user]
+(defn ->users-list-entry
+  [cities types activities user]
   {:id           (-> user :id)
    :email        (-> user :email)
    :firstname    (-> user :user-data :firstname)
@@ -33,7 +34,9 @@
    :admin?       (-> user :permissions :admin?)
    :sports-sites (-> user :permissions :sports-sites)
    :cities       (-> user :permissions :cities (->names-list cities))
-   :types        (-> user :permissions :types (->names-list types))})
+   :types        (-> user :permissions :types (->names-list types))
+   :activities   (->> user :permissions :activities
+                      (map (fn [s] (get-in activities [s :label :fi]))))})
 
 (re-frame/reg-sub
  ::users-list
@@ -42,12 +45,13 @@
  :<- [::users-filter]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/all-types]
- (fn [[users status filter-text cities types] _]
+ :<- [:lipas.ui.sports-sites.activities.subs/data]
+ (fn [[users status filter-text cities types activities] _]
    (let [users (->> users
                     vals
                     (filter (comp #{status} :status))
-                    (map (partial ->users-list-entry cities types)))]
-     (if (not-empty filter-text)
+                    (map (partial ->users-list-entry cities types activities)))]
+     (if (seq filter-text)
        (filter
         #(-> %
              str
@@ -120,6 +124,14 @@
  (fn [sites _]
    (->> sites
         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
+        (sort-by :label))))
+
+(re-frame/reg-sub
+ ::activities-list
+ :<- [:lipas.ui.sports-sites.activities.subs/data]
+ (fn [activities [_ locale]]
+   (->> activities
+        (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
         (sort-by :label))))
 
 (re-frame/reg-sub

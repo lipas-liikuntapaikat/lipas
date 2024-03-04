@@ -1,4 +1,5 @@
 (ns lipas.backend.db.db
+  {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
@@ -7,6 +8,7 @@
    [lipas.backend.db.elevation :as elevation]
    [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
+   [lipas.backend.db.loi :as loi]
    [lipas.backend.db.reminder :as reminder]
    [lipas.backend.db.sports-site :as sports-site]
    [lipas.backend.db.subsidy :as subsidy]
@@ -306,6 +308,24 @@
 
 (defn delete-email-from-out-queue! [db-spec params]
   (email/delete-from-out-queue! db-spec params))
+
+;; Loi's ;;
+
+(defn get-lois [db]
+  (->> (loi/get-latest db)
+       (map loi/unmarshall)))
+
+(defn get-lois-by-type
+  [db {:keys [loi-type]}]
+  (->> (loi/get-latest-by-loi-type db {:loi-type loi-type})
+       (map loi/unmarshall)))
+
+(defn upsert-loi!
+  [db user loi]
+  (-> loi
+      (assoc :author-id (:id user))
+      (loi/marshall user)
+      (->> (loi/insert-loi-rev! db))))
 
 ;; DB connection pooling ;;
 

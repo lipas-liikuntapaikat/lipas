@@ -273,7 +273,7 @@
            {:title     (tr :sport/headline)
             :link      "/liikuntapaikat"
             :link-text (tr :actions/browse-to-map)}
-           [mui/typography {:variant "body1" :style {:height "4em"}}
+           [mui/typography {:variant "body1" :style {:height "1.65em"}}
             (tr :sport/description)]
            [:ul
             [lui/li (tr :sport/up-to-date-information)]

@@ -34,13 +34,14 @@
         (tr :actions/cancel)]]]]))
 
 (defn user-dialog [tr]
-  (let [locale    (tr)
-        cities    (<== [::subs/cities-list locale])
-        types     (<== [::subs/types-list locale])
-        sites     (<== [::subs/sites-list])
-        user      (<== [::subs/editing-user])
-        history   (<== [::subs/user-history])
-        existing? (some? (:id user))]
+  (let [locale     (tr)
+        cities     (<== [::subs/cities-list locale])
+        types      (<== [::subs/types-list locale])
+        sites      (<== [::subs/sites-list])
+        activities (<== [::subs/activities-list locale])
+        user       (<== [::subs/editing-user])
+        history    (<== [::subs/user-history])
+        existing?  (some? (:id user))]
 
     [lui/full-screen-dialog
      {:open?       (boolean (seq user))
@@ -169,7 +170,20 @@
           :label     (tr :lipas.user.permissions/cities)
           :value     (-> user :permissions :cities)
           :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]]]
+          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]
+
+        ;; Permission to activities
+        [lui/autocomplete
+         {:items     activities
+          :label     (tr :lipas.user.permissions/activities)
+          :value     (-> user :permissions :activities)
+          :multi?    true
+          :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
+
+        [mui/button
+         {:on-click #(==> [::events/grant-access-to-activity-types
+                           (-> user :permissions :activities)])}
+         "Anna oikeus aktiviteettien tyyppeihin"]]]
 
       ;;; History
       [lui/form-card {:title (tr :lipas.user/history)}
@@ -352,7 +366,8 @@
              [:lastname (tr :lipas.user/lastname)]
              [:sports-sites (tr :lipas.user.permissions/sports-sites)]
              [:cities (tr :lipas.user.permissions/cities)]
-             [:types (tr :lipas.user.permissions/types)]]
+             [:types (tr :lipas.user.permissions/types)]
+             [:activities (tr :lipas.user.permissions/activities)]]
             :sort-fn   :email
             :items     users
             :on-select #(==> [::events/set-user-to-edit %])}]]])

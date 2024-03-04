@@ -38,8 +38,6 @@
 (def wkt (WKT. #js{:dataProjection    "EPSG:4326"
                    :featureProjection "EPSG:3067"}))
 
-(def temp-fid-prefix "temp")
-
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
 
@@ -219,6 +217,11 @@
     (-> pop-layer .getSource .clear))
   map-ctx)
 
+(defn clear-highlights! [{:keys [layers] :as map-ctx}]
+  (let [^js layer (-> layers :overlays :highlights)]
+    (-> layer .getSource .clear))
+  map-ctx)
+
 (defn show-problems!
   [map-ctx problems]
   (doseq [p (-> problems :data :features)]
@@ -246,6 +249,21 @@
       (.addFeatures source fs))
 
     (assoc map-ctx :geoms geoms)))
+
+(defn update-lois!
+  [{:keys [layers] :as map-ctx} geoms]
+  (let [^js lois (-> layers :overlays :lois)
+        source   (.getSource lois)]
+
+    ;; Remove existing features
+    (.clear source)
+
+    ;; Add new geoms
+    (doseq [g    geoms
+            :let [fs (->ol-features (clj->js g))]]
+      (.addFeatures source fs))
+
+    (assoc map-ctx :lois geoms)))
 
 (defn set-basemap!
   [{:keys [layers] :as map-ctx} basemap]
@@ -290,6 +308,10 @@
 (defn enable-vector-hover!
   [map-ctx]
   (enable-hover! map-ctx :vector-hover))
+
+(defn enable-loi-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :loi-hover))
 
 (defn enable-marker-hover!
   [map-ctx]
@@ -348,10 +370,8 @@
         res       #js[]]
     (.forEachFeature source
                      (fn [f]
-                       (when (-> (.getId f)
-                                 (string/split "-")
-                                 first
-                                 (= (str lipas-id)))
+                       (when (-> (.get f "lipas-id")
+                                 (= lipas-id))
                          (.push res f))
                        ;; Iteration stops if truthy val is returned
                        ;; but we want to find all matching features so
@@ -447,7 +467,7 @@
   (let [splitter (->splitter kinks)
         splitted (turf-line-split f splitter)]
     (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (gensym temp-fid-prefix)))))
+                    (fn [f] (gobj/set f "id" (str (random-uuid)))))
     splitted))
 
 (defn split-at-coords [ol-feature coords]
@@ -511,11 +531,12 @@
 
 (defn calculate-length-km
   [fcoll]
-  (-> fcoll
-      clj->js
-      turf-length ;; returns square kilometers
-      (utils/round-safe 2)
-      read-string))
+  (when (seq (:features fcoll))
+    (-> fcoll
+        clj->js
+        turf-length ;; returns kilometers
+        (utils/round-safe 2)
+        read-string)))
 
 (defn calculate-area-km2
   [fcoll]
@@ -525,6 +546,21 @@
       (convertArea "meters" "kilometers")
       (utils/round-safe 2)
       read-string))
+
+(defn calculate-elevation-stats
+  [fcoll]
+  (->> fcoll
+       :features
+       (map (comp :coordinates :geometry))
+       (mapcat (fn [coll] (map (fn [coords] (get coords 2)) coll)))
+       (partition 2 1)
+       (reduce (fn [res [prev curr]]
+                 (let [d (- curr prev)]
+                   (cond
+                     (zero? d) res
+                     (pos? d)  (update res :ascend-m + d)
+                     (neg? d)  (update res :descend-m + (Math/abs d)))))
+               {:ascend-m 0 :descend-m 0})))
 
 (defn wgs84->epsg3067 [wgs84-coords]
   (let [proj      (proj/get "EPSG:3067")]
