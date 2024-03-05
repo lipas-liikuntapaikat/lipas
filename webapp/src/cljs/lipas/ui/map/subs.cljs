@@ -230,7 +230,7 @@
  ::editing-lipas-id
  :<- [::map]
  (fn [m _]
-   (when (#{:editing :drawing} (m :mode :name))
+   (when (#{:editing :drawing} (-> m :mode :name))
      (-> m :mode :lipas-id))))
 
 (re-frame/reg-sub
