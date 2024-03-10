@@ -496,7 +496,7 @@
      :delete-reason       "Poiston syy",
      :event-date          "Muokattu",
      :email-public        "Sähköposti (julkinen)",
-     :add-new             "Lisää liikunta- tai ulkkoilupaikka",
+     :add-new             "Lisää liikunta- tai ulkoilupaikka",
      :contact             "Yhteystiedot",
      :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
      :owner               "Omistaja",
