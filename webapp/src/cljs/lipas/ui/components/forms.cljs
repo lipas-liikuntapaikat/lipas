@@ -43,6 +43,7 @@
         link? (= :link (:type d))
         props (-> field second)]
     (cond
+      (nil? (first d))  nil
       (= (first d) :<>) (into
                          [:<>]
                          (map (partial ->field read-only?) (rest d)))
