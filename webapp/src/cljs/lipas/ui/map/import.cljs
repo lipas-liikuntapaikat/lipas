@@ -84,7 +84,7 @@
         (when (not-empty data)
           ^{:key batch-id}
           [lui/table-v2
-           {:items         (->> data vals (map :properties))
+           {:items         (-> data vals (->> (map :properties) (map #(update-vals % str))))
             :key-fn        :id
             :multi-select? true
             :on-select     #(==> [::events/select-import-items %])
