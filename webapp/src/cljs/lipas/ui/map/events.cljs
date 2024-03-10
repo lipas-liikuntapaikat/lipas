@@ -56,7 +56,7 @@
 (re-frame/reg-event-db
  ::fit-to-current-vectors
  (fn [db _]
-   (assoc-in db [:map :mode :fit-nonce] (gensym))))
+   (assoc-in db [:map :mode :fit-nonce] (str (gensym)))))
 
 (re-frame/reg-event-fx
  ::zoom-to-site
@@ -526,14 +526,14 @@
                     (filter (comp #{geom-type} :type :geometry))
                     (reduce
                      (fn [res f]
-                       (let [id (gensym)]
+                       (let [id (str (gensym))]
                          (assoc res id (assoc-in f [:properties :id] id))))
                      {})
                     (merge (map-utils/normalize-geom-colls fcoll geom-type)
                            (map-utils/normalize-multi-geoms fcoll geom-type)))]
      (-> db
          (assoc-in [:map :import :data] fs)
-         (assoc-in [:map :import :batch-id] (gensym))))))
+         (assoc-in [:map :import :batch-id] (str (gensym)))))))
 
 (re-frame/reg-event-fx
  ::load-geoms-from-file
