@@ -172,7 +172,8 @@
      (when sub-headings?
        [:<>
         [lui/sub-heading {:label (tr :lipas.sports-site/contact)}]
-        [mui/typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)]])
+        (when-not read-only?
+          [mui/typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)])])
 
      ;; Email
      {:label      (tr :lipas.sports-site/email-public)
