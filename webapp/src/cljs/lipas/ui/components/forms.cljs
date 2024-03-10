@@ -28,7 +28,9 @@
                     (str "http://" value))
          :variant "body1"
          :noWrap  true
-         :style   {:padding "6px 0 7px"}}
+         :style   {:line-height    "1.1876em"
+                   :padding-top    "1.1876em"
+                   :padding-bottom "6px"}}
         (if (> (count value) 50)
           (str (subs value 0 50) " ...")
           value)]
