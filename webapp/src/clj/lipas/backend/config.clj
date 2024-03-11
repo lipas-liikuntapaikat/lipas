@@ -1,29 +1,36 @@
 (ns lipas.backend.config
-  (:require
-   [environ.core :refer [env]]
-   [integrant.core :as ig]))
+  (:require [environ.core :as e]
+            [integrant.core :as ig]))
+
+
+(defn env!
+  "Cleanly throws an exception of missing environment variables"
+  [kw]
+  (if (contains? e/env kw)
+    (kw e/env)
+    (throw (Exception. (str "Environment variable not set: " kw)))))
 
 (def default-config
   {:db
    (merge
     {:dbtype   "postgresql"
-     :dbname   (:db-name env)
-     :host     (:db-host env)
-     :user     (:db-user env)
-     :port     (:db-port env)
-     :password (:db-password env)}
+     :dbname   (env! :db-name)
+     :host     (env! :db-host)
+     :user     (env! :db-user)
+     :port     (env! :db-port)
+     :password (env! :db-password)}
     ;; TODO add more explicit check
-    (when (:lein-version env)
+    (when (env! :lein-version)
       {:dev true}))
    :emailer
-   {:host (:smtp-host env)
-    :user (:smtp-user env)
-    :pass (:smtp-pass env)
-    :from (:smtp-from env)}
+   {:host (env! :smtp-host)
+    :user (env! :smtp-user)
+    :pass (env! :smtp-pass)
+    :from (env! :smtp-from)}
    :search
-   {:hosts [(:search-host env)] ; Notice vector!
-    :user  (:search-user env)
-    :pass  (:search-pass env)
+   {:hosts [(env! :search-host)] ; Notice vector!
+    :user  (env! :search-user)
+    :pass  (env! :search-pass)
     :indices
     {:lois
      {:search "lois"}
@@ -39,17 +46,17 @@
       :population-high-def "vaestoruutu_250m"
       :diversity           "diversity"}}}
    :mailchimp
-   {:api-key                (:mailchimp-api-key env)
-    :api-url                (:mailchimp-api-url env)
-    :list-id                (:mailchimp-list-id env)
-    :newsletter-interest-id (:mailchimp-newsletter-interest-id env)
-    :campaign-folder-id     (:mailchimp-campaign-folder-id env)}
+   {:api-key                (env! :mailchimp-api-key)
+    :api-url                (env! :mailchimp-api-url)
+    :list-id                (env! :mailchimp-list-id)
+    :newsletter-interest-id (env! :mailchimp-newsletter-interest-id)
+    :campaign-folder-id     (env! :mailchimp-campaign-folder-id)}
    :aws
-   {:access-key-id     (:aws-access-key-id env)
-    :secret-access-key (:aws-secret-access-key env)
-    :region            (:aws-region env)
-    :s3-bucket         (:aws-s3-bucket env)
-    :s3-bucket-prefix  (:aws-s3-bucket-prefix env)}
+   {:access-key-id     (env! :aws-access-key-id)
+    :secret-access-key (env! :aws-secret-access-key)
+    :region            (env! :aws-region)
+    :s3-bucket         (env! :aws-s3-bucket)
+    :s3-bucket-prefix  (env! :aws-s3-bucket-prefix)}
    :app
    {:db        (ig/ref :db)
     :emailer   (ig/ref :emailer)
@@ -57,16 +64,16 @@
     :mailchimp (ig/ref :mailchimp)
     :aws       (ig/ref :aws)
     :utp
-    {:cms-api-url  (:utp-cms-api-url env)
-     :cms-api-user (:utp-cms-api-user env)
-     :cms-api-pass (:utp-cms-api-pass env)}
+    {:cms-api-url  (env! :utp-cms-api-url)
+     :cms-api-user (env! :utp-cms-api-user)
+     :cms-api-pass (env! :utp-cms-api-pass)}
     :accessibility-register
-    {:base-url   (:accessibility-register-base-url env)
-     :system-id  (:accessibility-register-system-id env)
-     :secret-key (:accessibility-register-secret-key env)}
+    {:base-url   (env! :accessibility-register-base-url)
+     :system-id  (env! :accessibility-register-system-id)
+     :secret-key (env! :accessibility-register-secret-key)}
     :mml-api
-    {:api-key      (:mml-api-key env)
-     :coverage-url (:mml-coverage-url env)}}
+    {:api-key      (env! :mml-api-key)
+     :coverage-url (env! :mml-coverage-url)}}
    :server
    {:app  (ig/ref :app)
     :port 8091}
