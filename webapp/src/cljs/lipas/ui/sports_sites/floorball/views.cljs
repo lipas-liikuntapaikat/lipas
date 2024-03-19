@@ -620,6 +620,16 @@
           :value     (-> edit-data :teams-using)
           :on-change #(on-change :teams-using %)}]})
 
+     ;; Vapaamuotoinen kuvailu/tarkennus
+     {:label "Vapaamuotoinen kuvailu tai tarkennus"
+      :value (-> display-data :general-information)
+      :form-field
+      [lui/text-field
+       {:type      "text"
+        :spec      :lipas.sports-site.circumstances/general-information
+        :value     (-> edit-data :general-information)
+        :on-change #(on-change :general-information %)}]}
+
      ;; Varastotila- ja kapasiteetti
      (when (= :floorball visibility)
        {:label "Varastotila- ja kapasiteetti"

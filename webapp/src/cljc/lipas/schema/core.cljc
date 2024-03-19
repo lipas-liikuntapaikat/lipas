@@ -1030,8 +1030,7 @@
                      :lipas.sports-site.fields.floorball/standing-area-capacity-person
                      :lipas.sports-site.fields.floorball/accessible-seating-capacity-person
                      :lipas.sports-site.fields.floorball/audience-stand-access
-                     :lipas.sports-site.fields.floorball/field-accessible-without-strairs?
-                     ])))
+                     :lipas.sports-site.fields.floorball/field-accessible-without-strairs?])))
 
 (s/def :lipas.sports-site.circumstances.floorball/available-goals-count
   (s/int-in 0 200))
@@ -1048,6 +1047,9 @@
 (s/def :lipas.sports-site.circumstances.floorball/corner-pieces-count
   (s/int-in 0 100))
 
+(s/def :lipas.sports-site.circumstances/general-information
+  (str-in 2 1000))
+
 (s/def :lipas.sports-site.circumstances/teams-using
   (str-in 0 1024))
 
@@ -1062,6 +1064,7 @@
 
 (s/def :lipas.sports-site.circumstances/open-floor-space-area-m2
   (number-in :min 0 :max (inc 10000)))
+
 
 (s/def :lipas.sports-site.locker-room/surface-area-m2
   (number-in :min 0 :max (inc 2000)))
@@ -1269,7 +1272,8 @@
                    :lipas.sports-site.circumstances/electrical-plan-available?
                    :lipas.sports-site.circumstances/three-phase-electric-power?
                    :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
-                   :lipas.sports-site.circumstances/audit-date]))
+                   :lipas.sports-site.circumstances/audit-date
+                   :lipas.sports-site.circumstances/general-information]))
 
 (s/def :lipas.sports-site/circumstances
   (s/or :circumstances/floorball :lipas.sports-site.circumstances/floorball))
