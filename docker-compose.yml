@@ -77,6 +77,7 @@ services:
     ports:
       - '8080:8080'
 
+
   backend-base:
     image: clojure:lein
     working_dir: /usr/src/app
@@ -409,6 +410,9 @@ services:
       - "./osrm/car:/data:z"
     ports:
       - "5001:5000"
+    deploy:
+      restart_policy:
+        max_attempts: 10
 
   osrm-bicycle:
     image: osrm/osrm-backend
@@ -418,6 +422,9 @@ services:
       - "./osrm/bicycle:/data:z"
     ports:
       - "5002:5000"
+    deploy:
+      restart_policy:
+        max_attempts: 10
 
   osrm-foot:
     image: osrm/osrm-backend
@@ -427,6 +434,9 @@ services:
       - "./osrm/foot:/data:z"
     ports:
       - "5003:5000"
+    deploy:
+      restart_policy:
+        max_attempts: 10
 
 volumes:
   pgdata: {}
