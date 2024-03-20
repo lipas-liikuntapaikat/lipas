@@ -8,6 +8,7 @@ env:
   SMTP_HOST: ${{ vars.SMTP_HOST }}
   SMTP_USER: ${{ vars.SMTP_USER }}
   SMTP_FROM: ${{ vars.SMTP_FROM }}
+  SMTP_PASS: ${{ vars.SMTP_PASS }}
   SEARCH_HOST: ${{ vars.SEARCH_HOST }}
   SEARCH_USER: ${{ vars.SEARCH_USER }}
   SEARCH_PASS: ${{ vars.SEARCH_PASS}}
