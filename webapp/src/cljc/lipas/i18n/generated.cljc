@@ -929,6 +929,7 @@
      "Sinulla on käyttöoikeus seuraaviin  yksittäisiin liikuntapaikkoihin:",
      :permissions-help
      "Kerro, mitä tietoja haluat päivittää Lipaksessa",
+     :permission-to-activities  "Sinulla on käyttöoikeus seuraaviin aktiviteetteihin"
      :report-energy-consumption "Ilmoita energiankulutus",
      :firstname                 "Etunimi",
      :save-search               "Tallenna haku",
