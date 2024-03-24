@@ -67,23 +67,12 @@
      :sv "Kom ihåg att ta med en soppsäck"},
     :description
     {:fi
-     "Pysäköintialueella on jäteastiat. Tuo roskapussi ja vie roskat jäteastiaan.",
+     "Pysäköintialueella on jäteastia. Tuo roskapussi ja vie roskat jäteastiaan.",
      :en
      "There are waste bins in the parking area. Bring a garbage bag and dispose of the garbage in the waste bin.",
      :sv
      "Det finns soptunnor på parkeringsområdet. Ta med en soppåse och lägg i soporna i soptunnan."},
     :value "bring-garbage-bag-bins-available"},
-
-   "overnight-stay-guest-harbour-allowed"
-   {:label
-    {:fi "Yöpyminen retkisatamassa on sallittu",
-     :en "Overnight stay in the guest harbour is allowed",
-     :sv "Övernattning i gästhamnen är tillåten"},
-    :description
-    {:fi "Retkisatamassa saa pitää venettä enintään 2 vuorokautta.",
-     :en "In the guest harbour, you can keep a boat for up to 2 days.",
-     :sv "Du får behålla en båt i gästhamnen i högst 2 dagar."},
-    :value "overnight-stay-guest-harbour-allowed"},
 
    "bring-garbage-bag-no-bins"
    {:label
@@ -98,6 +87,17 @@
      :sv
      "Det finns inga soptunnor i området. Ta med en soppåse och ta soporna med dig när du går."},
     :value "bring-garbage-bag-no-bins"},
+
+   "overnight-stay-guest-harbour-allowed"
+   {:label
+    {:fi "Yöpyminen retkisatamassa on sallittu",
+     :en "Overnight stay in the guest harbour is allowed",
+     :sv "Övernattning i gästhamnen är tillåten"},
+    :description
+    {:fi "Retkisatamassa saa pitää venettä ja yöpyä enintään 2 vuorokautta.",
+     :en "You are allowed to keep a boat and stay for a maximum of 2 days.",
+     :sv "Du får behålla en båt och övernatta i gästhamnen i högst 2 dagar."},
+    :value "overnight-stay-guest-harbour-allowed"},
 
    "fire-only-at-marked-fireplaces"
    {:label
@@ -120,8 +120,11 @@
     {:fi "Tilapäinen leiriytyminen alueella on sallittu",
      :en "Temporary camping in the area is allowed",
      :sv "Tillfällig camping i området är tillåten"},
-    :description {:fi "", :en "", :sv ""},
-    :value       "temporary-camping-allowed"},
+    :description
+    {:fi "Tilapäinen leiriytyminen jokaisenoikeuksilla on sallittua lukuunottamatta pysäköintipaikkoja. Matkailuautoissa saa yöpyä pysäköintialueella.",
+     :en "Temporary camping under everyman's rights is allowed, excluding parking areas. It is permitted to stay overnight in a motorhome in the parking area.",
+     :sv "Tillfälligt camping med allemansrätt är tillåtet, med undantag av parkeringsplatser. Det är tillåtet att övernatta i en husbil på parkeringsplatsen."},
+    :value "temporary-camping-allowed"},
 
    "overnight-stay-not-allowed"
    {:label
@@ -137,13 +140,22 @@
      :en "Only make fire in designated places",
      :sv "Gör endast upp eld på angivna platser"},
     :description
-    {:fi
-     "Tarkista aina ennen tulentekoa voimassa oleva maastopalovaroitus. Tulentekopaikalla saa käyttää vain alueella tarjolla olevia tai itse tuotuja polttopuita.",
-     :en
-     "Always check the current forest fire warning before making a fire. At the campfire site, only use firewood that is available in the area or brought by yourself.",
-     :sv
-     "Kontrollera alltid den aktuella skogsbrandsvarningen innan du eldar. Du får bara använda eldved som finns i området eller som du själv har med dig vid eldstaden."},
+    {:fi "Maastopalovaroituksen aikaan tulenteko on kielletty."
+     :en "During a wildfire warning, making a fire is prohibited."
+     :sv "Under en skogsbrandsvarning är det förbjudet att göra upp eld."
+     },
     :value "only-fire-in-designated-places"},
+
+   "only-fire-in-designated-places-during-wildfire-warning"
+   {:label
+    {:fi "Tee tulet vain sallituilla paikoilla"
+     :en "Only make fire in designated places",
+     :sv "Gör endast upp eld på angivna platser"}
+    :description
+    {:fi "Tarkista aina voimassa oleva maastopalovaroitus ennen tulentekoa. Maastopalovaroituksen aikana tulen saa tehdä vain hormillisissa keittokatoksissa."
+     :en "Always check the current wildfire warning before making a fire. During a wildfire warning, fires can only be made in cooking shelters with chimneys."
+     :sv "Kontrollera alltid den gällande skogsbrandsvarningen innan du gör upp eld. Under en skogsbrandsvarning får eld endast göras i matlagningskåpor med skorsten."}
+    :value "only-fire-in-designated-places-during-wildfire-warning"}
 
    "camping-forbidden"
    {:label
@@ -153,15 +165,37 @@
     :description {:fi "", :en "", :sv ""},
     :value       "camping-forbidden"}
 
+   "use-delivered-firewood-or-bring-own"
+   {:label
+    {:fi "Tulentekopaikalla saa käyttää ainoastaan paikalle toimitettuja tai itse tuotuja polttopuita."
+     :en "Only firewood provided on site or brought by yourself can be used."
+     :sv "På eldstaden får endast ved som tillhandahålls på plats eller som du själv tar med dig användas."}
+    :description
+    {:fi "Muista puiden kohtuukäyttö."
+     :en "Remember the moderate use of firewood."
+     :sv "Kom ihåg det måttliga användandet av ved."}
+    :value "use-delivered-firewood-or-bring-own"}
+
    "bring-own-firewood"
    {:label       {:fi "Tuo omat polttopuut" :en "Bring your own firewood" :sv "Ta med egen ved"}
     :description {:fi "Alueella ei ole polttopuuhuoltoa." :en "There is no firewood service in the area." :sv "Det finns ingen vedservice i området."}
     :value       "bring-own-firewood"}
 
+   "disposable-grills-forbidden"
+   {:label
+    {:fi "Risukeittimien ja kertakäyttögrillien käyttö on kielletty."
+     :en "The use of twig stoves and disposable grills is prohibited."
+     :sv "Användning av kvistkockare och engångsgrillar är förbjuden."}
+    :description {:fi "" :en "" :sv ""}
+    :value       "disposable-grills-forbidden"}
+
    "keep-pets-leashed-poop-ok"
-   {:label       {:fi "Pidä lemmikit aina kytkettynä" :en "Always keep your pets leashed" :sv "Håll alltid dina husdjur kopplade"}
-    :description {:fi "Koirat saavat tehdä jätöksensä luontoon, hieman poluista sivummalla." :en "Dogs can defecate in nature, a bit off the trails." :sv "Hundar kan defekera i naturen, lite av vägen."}
-    :value       "keep-pets-leashed-poop-ok"}
+   {:label {:fi "Pidä lemmikit aina kytkettynä" :en "Always keep your pets leashed" :sv "Håll alltid dina husdjur kopplade"}
+    :description
+    {:fi "Koirien jätökset tulee siivota poluista sivummalle."
+     :en "Dog waste should be cleaned up and moved off the trails."
+     :sv "Hundavfall ska städas upp och flyttas bort från stigarna."}
+    :value "keep-pets-leashed-poop-ok"}
 
    "keep-pets-leashed-poop-not-ok"
    {:label       {:fi "Pidä lemmikit aina kytkettynä" :en "Always keep your pets leashed" :sv "Håll alltid dina husdjur kopplade"}
