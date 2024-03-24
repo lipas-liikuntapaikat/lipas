@@ -287,6 +287,17 @@
     (==> [::events/undo-done lipas-id undo-geoms])
     map-ctx))
 
+(defn set-view-only-edit-mode!
+  [{:keys [layers] :as map-ctx} {:keys [geoms]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)]
+
+    (.addFeatures source features)
+
+    map-ctx))
+
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
@@ -308,6 +319,7 @@
                         )]
 
      (case sub-mode
+       :view-only    (set-view-only-edit-mode! map-ctx mode)
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
        :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons
        :editing      (if continue?

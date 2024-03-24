@@ -519,15 +519,16 @@
         lipas-id     (:lipas-id display-data)
         edit-data    (:edit-data site-data)
 
-        type-code            (-> display-data :type :type-code)
-        floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
-        #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
-        accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
-        activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
-        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
-        hide-actions?        (<== [::subs/hide-actions?])
-        admin?               (<== [:lipas.ui.user.subs/admin?])
+        type-code             (-> display-data :type :type-code)
+        floorball-types       (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+        floorball-visibility  (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+        #_#_football-types    (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+        accessibility-type?   (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
+        activity-type?        (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
+        show-activities?      (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
+        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? type-code])
+        hide-actions?         (<== [::subs/hide-actions?])
+        admin?                (<== [:lipas.ui.user.subs/admin?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -584,7 +585,7 @@
         :on-change   #(==> [::events/select-sports-site-tab %2])
         :variant     (if admin? "scrollable" "fullWidth")
         #_#_:variant "scrollable"
-        #_#_:variant     "standard"
+        #_#_:variant "standard"
         :style       {:margin-bottom "1em"}
         :text-color  "secondary"}
        [mui/tab
@@ -643,7 +644,7 @@
              {:tr              tr
               :display-data    display-data
               :edit-data       edit-data
-              :read-only?      (not editing?)
+              :read-only?      (or (not editing?) edit-activities-only?)
               :types           (vals types)
               :size-categories size-categories
               :admins          admins
@@ -655,7 +656,7 @@
             ^{:key (str "location-" lipas-id)}
             [sports-sites/location-form
              {:tr            tr
-              :read-only?    (not editing?)
+              :read-only?    (or (not editing?) edit-activities-only?)
               :cities        (vals cities)
               :edit-data     (:location edit-data)
               :display-data  (:location display-data)
@@ -682,7 +683,7 @@
              [sports-sites/properties-form
               {:tr           tr
                :type-code    (or (-> edit-data :type :type-code) type-code)
-               :read-only?   (not editing?)
+               :read-only?   (or (not editing?) edit-activities-only?)
                :on-change    (partial set-field :properties)
                :display-data (:properties display-data)
                :edit-data    (:properties edit-data)
@@ -783,7 +784,9 @@
                 [mui/icon "redo"]]]])
 
            ;; Active editing tool
-           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+           (when (and editing?
+                      (#{"LineString" "Polygon"} geom-type)
+                      (not= :view-only sub-mode))
              [mui/tooltip
               {:title
                (case sub-mode
@@ -814,7 +817,9 @@
                    :selecting       [mui/icon props "handshake"]))]])
 
            ;; Tool select button
-           (when (and editing? (#{"LineString" "Polygon"} geom-type))
+           (when (and editing?
+                      (#{"LineString" "Polygon"} geom-type)
+                      (not= :view-only sub-mode))
              [:<>
               [mui/tooltip {:title (tr :actions/select-tool)}
                [mui/fab
@@ -1048,21 +1053,22 @@
 
           (concat
            (lui/edit-actions-list
-            {:editing?          editing?
-             :editing-allowed?  editing-allowed?
-             :save-in-progress? save-in-progress?
-             :valid?            edits-valid?
-             :logged-in?        logged-in?
-             :user-can-publish? can-publish?
-             :on-discard        #(==> [::events/discard-edits lipas-id])
-             :discard-tooltip   (tr :actions/cancel)
-             :on-edit-start     #(==> [::events/edit-site lipas-id geom-type])
-             :edit-tooltip      (tr :actions/edit)
-             :on-publish        #(==> [::events/save-edits lipas-id])
-             :publish-tooltip   (tr :actions/save)
-             :invalid-message   (tr :error/invalid-form)
-             :on-delete         #(==> [::events/delete-site])
-             :delete-tooltip    (tr :lipas.sports-site/delete-tooltip)}))
+            {:editing?              editing?
+             :editing-allowed?      editing-allowed?
+             :edit-activities-only? edit-activities-only?
+             :save-in-progress?     save-in-progress?
+             :valid?                edits-valid?
+             :logged-in?            logged-in?
+             :user-can-publish?     can-publish?
+             :on-discard            #(==> [::events/discard-edits lipas-id])
+             :discard-tooltip       (tr :actions/cancel)
+             :on-edit-start         #(==> [::events/edit-site lipas-id geom-type edit-activities-only?])
+             :edit-tooltip          (tr :actions/edit)
+             :on-publish            #(==> [::events/save-edits lipas-id])
+             :publish-tooltip       (tr :actions/save)
+             :invalid-message       (tr :error/invalid-form)
+             :on-delete             #(==> [::events/delete-site])
+             :delete-tooltip        (tr :lipas.sports-site/delete-tooltip)}))
 
           (remove nil?)
           (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
@@ -1513,9 +1519,11 @@
                :on-click #(==> [::events/toggle-address-search-dialog])}
               [:> MapSearchOutline]]]]]]]]])))
 
-(defn default-tools [{:keys [tr logged-in?]}]
-  (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
-        mode-name   (<== [::subs/mode-name])]
+(defn default-tools
+  [{:keys [tr logged-in?]}]
+  (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
+        mode-name           (<== [::subs/mode-name])
+        permission-to-types (<== [:lipas.ui.user.subs/permission-to-types])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background-color "transparent"}
@@ -1526,7 +1534,7 @@
         :style       {:padding-bottom "0.5em"}}
 
        ;; Create sports site btn
-       (when logged-in?
+       (when (and logged-in? (seq permission-to-types))
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
 

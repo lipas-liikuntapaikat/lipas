@@ -51,6 +51,15 @@
             (some #{(:value activity)} (keys activities-perms))))))
 
 (re-frame/reg-sub
+ ::edit-activities-only?
+ (fn [[_ type-code]]
+   [(re-frame/subscribe [::show-activities? type-code])
+    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
+ (fn [[show-activities? admin?] _]
+   (and (not admin?)
+        show-activities?)))
+
+(re-frame/reg-sub
  ::selected-features
  :<- [:lipas.ui.map.subs/selected-features]
  (fn [fs _]

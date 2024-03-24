@@ -1,6 +1,7 @@
 (ns lipas.permissions
   (:require
    [clojure.spec.alpha :as s]
+   [lipas.data.activities :as activities]
    [lipas.schema.core]))
 
 (def default-permissions {:draft? true})
@@ -25,6 +26,11 @@
     (or all-types?
         (some #{type-code} types))))
 
+(defn- access-to-activity? [{:keys [activities]} sports-site]
+  (let [type-code  (-> sports-site :type :type-code)
+        activity-k (get-in activities/by-type-code [type-code :value])]
+    (some #{activity-k} activities)))
+
 (defn publish?
   "Returns `true` if permisssions allow user to publish changes to `sports-site`.
 
@@ -39,6 +45,9 @@
   :types        can edit if site is of type in these types
   :all-cities?  can edit sites in any city
   :all-types?   can edit sites of any type
+
+  Implicit via activities:
+  :activities   can edit if type-code relates to one of these activities
 
   Permissions can be any combination of these keys. Explicit
   permissions overrule implicit ones by short circuiting."
@@ -59,7 +68,10 @@
 
       ;; Implicitly
       (and (access-to-city? permissions sports-site)
-           (access-to-type? permissions sports-site))))))
+           (access-to-type? permissions sports-site))
+
+      ;; Imolicitly via activities
+      (access-to-activity? permissions sports-site)))))
 
 (defn activities?
   [permissions]
