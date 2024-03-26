@@ -1147,7 +1147,7 @@
         read-only?   (not editing?)]
 
     (if read-only?
-      [mui/typography "Vasta editointinäkymä on olemassa lajeille. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
+      [mui/typography "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
 
       [:<>
 
