@@ -526,7 +526,6 @@
         accessibility-type?   (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?        (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
         show-activities?      (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
-        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? type-code])
         hide-actions?         (<== [::subs/hide-actions?])
         admin?                (<== [:lipas.ui.user.subs/admin?])
 
@@ -534,8 +533,10 @@
                 problems?  editing-allowed? delete-dialog-open?
                 can-publish? logged-in?  size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
-                more-tools-menu-anchor dead? selected-tab can-edit-activities?]}
+                more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
+
+        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? type-code can-publish?])
 
         set-field (partial set-field lipas-id)]
 
@@ -583,7 +584,11 @@
       [mui/tabs
        {:value       selected-tab
         :on-change   #(==> [::events/select-sports-site-tab %2])
-        :variant     (if admin? "scrollable" "fullWidth")
+        :variant     (if (or admin?
+                             (and show-activities?
+                                  (not edit-activities-only?)))
+                       "scrollable"
+                       "fullWidth")
         #_#_:variant "scrollable"
         #_#_:variant "standard"
         :style       {:margin-bottom "1em"}
@@ -594,7 +599,7 @@
          :label (tr :lipas.sports-site/basic-data)}]
 
        ;; Activities and properties are mutually exclusive
-       (when (or admin? (not show-activities?))
+       (when (or admin? (not edit-activities-only?))
          [mui/tab
           {:style {:min-width 0}
            :value 1
@@ -664,7 +669,7 @@
               :sub-headings? true}]]]
 
         ;; Properties tab
-        1 (r/with-let [prop-tab (r/atom (if (and activity-type? can-edit-activities?)
+        1 (r/with-let [prop-tab (r/atom (if (and activity-type? edit-activities-only?)
                                           "activities"
                                           "props"))]
             [:<>
