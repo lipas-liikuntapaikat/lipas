@@ -1528,7 +1528,7 @@
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
         mode-name           (<== [::subs/mode-name])
-        permission-to-types (<== [:lipas.ui.user.subs/permission-to-types])]
+        show-create-button? (<== [::subs/show-create-button?])]
     [:<>
      [address-search-dialog]
      [lui/floating-container {:bottom 0 :background-color "transparent"}
@@ -1539,7 +1539,7 @@
         :style       {:padding-bottom "0.5em"}}
 
        ;; Create sports site btn
-       (when (and logged-in? (seq permission-to-types))
+       (when show-create-button?
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
 
@@ -1570,10 +1570,11 @@
 
 (defn add-view
   [{:keys [tr width]}]
-  (let [add-mode  (<== [::subs/selected-add-mode])
-        utp-user? (<== [:lipas.ui.user.subs/utp-user?])]
+  (let [add-mode              (<== [::subs/selected-add-mode])
+        can-add-sports-sites? (<== [:lipas.ui.user.subs/can-add-sports-sites?])
+        can-add-lois?         (<== [:lipas.ui.user.subs/can-add-lois?])]
     [:<>
-     (when utp-user?
+     (when (and can-add-sports-sites? can-add-lois?)
        [mui/tabs
         {:value     add-mode
          :on-change #(==> [::events/select-add-mode %2])
