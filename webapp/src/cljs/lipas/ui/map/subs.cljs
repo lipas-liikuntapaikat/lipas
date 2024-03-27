@@ -491,6 +491,17 @@
       :selected-tab    selected-tab})))
 
 (re-frame/reg-sub
+ ::show-create-button?
+ :<- [::map]
+ :<- [:lipas.ui.user.subs/logged-in?]
+ :<- [:lipas.ui.user.subs/can-add-sports-sites?]
+ :<- [:lipas.ui.user.subs/can-add-lois?]
+ (fn [[m logged-in? can-add-sports-sites? can-add-lois? ] _]
+   (and logged-in?
+        (-> m :mode :name #{:default})
+        (or can-add-sports-sites? can-add-lois?))))
+
+(re-frame/reg-sub
  ::hide-actions?
  :<- [::map]
  :<- [:lipas.ui.sports-sites.activities.subs/mode]
@@ -502,5 +513,8 @@
 (re-frame/reg-sub
  ::selected-add-mode
  :<- [::map]
- (fn [m _]
-   (:add-mode m)))
+ :<- [:lipas.ui.user.subs/can-add-lois-only?]
+ (fn [[m can-add-lois-only?] _]
+   (if can-add-lois-only?
+     "loi"
+     (:add-mode m))))
