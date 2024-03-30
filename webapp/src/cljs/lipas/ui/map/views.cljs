@@ -519,15 +519,15 @@
         lipas-id     (:lipas-id display-data)
         edit-data    (:edit-data site-data)
 
-        type-code             (-> display-data :type :type-code)
-        floorball-types       (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-visibility  (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
-        #_#_football-types    (<== [:lipas.ui.sports-sites.football.subs/type-codes])
-        accessibility-type?   (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
-        activity-type?        (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
-        show-activities?      (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
-        hide-actions?         (<== [::subs/hide-actions?])
-        admin?                (<== [:lipas.ui.user.subs/admin?])
+        type-code            (-> display-data :type :type-code)
+        floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+        #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+        accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
+        activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
+        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
+        hide-actions?        (<== [::subs/hide-actions?])
+        admin?               (<== [:lipas.ui.user.subs/admin?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -660,13 +660,14 @@
 
             ^{:key (str "location-" lipas-id)}
             [sports-sites/location-form
-             {:tr            tr
-              :read-only?    (or (not editing?) edit-activities-only?)
-              :cities        (vals cities)
-              :edit-data     (:location edit-data)
-              :display-data  (:location display-data)
-              :on-change     (partial set-field :location)
-              :sub-headings? true}]]]
+             {:tr                tr
+              :read-only?        (or (not editing?) edit-activities-only?)
+              :cities            (vals cities)
+              :edit-data         (:location edit-data)
+              :display-data      (:location display-data)
+              :on-change         (partial set-field :location)
+              :sub-headings?     true
+              :address-required? (not (#{201 2011} type-code))}]]]
 
         ;; Properties tab
         1 (r/with-let [prop-tab (r/atom (if (and activity-type? edit-activities-only?)
@@ -1094,9 +1095,9 @@
     (let [locale (tr)
 
           {:keys [type data save-enabled? admins owners cities
-          problems? types size-categories zoomed? geom active-step
-          sub-mode undo redo
-          selected-tab]} (<== [::subs/add-sports-site-view])
+                  problems? types size-categories zoomed? geom active-step
+                  sub-mode undo redo
+                  selected-tab]} (<== [::subs/add-sports-site-view])
 
           floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
           floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
@@ -1442,12 +1443,13 @@
                     :lipas-id        0}]
 
                   [sports-sites/location-form
-                   {:tr            tr
-                    :read-only?    false
-                    :cities        (vals cities)
-                    :edit-data     (:location data)
-                    :on-change     (partial set-field :location)
-                    :sub-headings? true}]]]
+                   {:tr                tr
+                    :read-only?        false
+                    :cities            (vals cities)
+                    :edit-data         (:location data)
+                    :on-change         (partial set-field :location)
+                    :sub-headings?     true
+                    :address-required? (not (#{201 2011} (:type-code type)))}]]]
 
               ;; Properties tab
               1 [sports-sites/properties-form
