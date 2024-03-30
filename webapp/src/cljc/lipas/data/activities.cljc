@@ -965,6 +965,25 @@
    :value       "fishing"
    :description {:fi ""}
    :type-codes  #{201 2011}
+   :sort-order [:description-short
+                :description-long
+                :highlights
+                :fishing-type
+                :fishing-waters
+                :fishing-species
+                :fish-population
+                :fishing-activities
+                :fishing-methods
+                :fishing-permit
+                :fishing-permit-additional-info
+                :rules
+                :arrival
+                :accessibility-classification
+                :accessibility-categorized
+                :contacts
+                :additional-info-link
+                :images
+                :videos]
    :props
    (merge
     (dissoc common-props :accessibility)
@@ -972,7 +991,7 @@
      {:schema [:sequential (into [:enum] (keys fishing-types))]
       :field
       {:type        "multi-select"
-       :description {:fi "Kalastus rannalta, Kalastus vesiltä/jäältä"}
+       :description {:fi "Valitse, mistä kohteessa voi kalastaa"}
        :label       {:fi "Kohdetyyppi"}
        :opts        fishing-types}}
 
@@ -980,7 +999,7 @@
      {:schema [:sequential (into [:enum] (keys fishing-activities))]
       :field
       {:type        "multi-select"
-       :description {:fi "Onginta, Pilkkiminen, Perhokalastus, Viehekalastus"}
+       :description {:fi "Valitse soveltuvat kalastusmuodot"}
        :label       {:fi "Hyvin soveltuvat kalastusmuodot"}
        :opts        fishing-activities}}
 
@@ -988,7 +1007,7 @@
      {:schema (into [:enum] (keys fishing-waters))
       :field
       {:type        "select"
-       :description {:fi ""}
+       :description {:fi "Valitse vesistön tyyppi"}
        :label       {:fi "Vesistö"}
        :opts        fishing-waters}}
 
@@ -1004,7 +1023,7 @@
      {:schema localized-string-schema
       :field
       {:type        "textarea"
-       :description {:fi "Tekstimuotoinen kuvaus kohteen kalastosta"}
+       :description {:fi "Kirjoita tähän kuvaus kohteen vesistössä esiintyvästä kalastosta."}
        :label       {:fi "Kalasto"}}}
 
 
@@ -1020,14 +1039,14 @@
       :field
       {:type        "checkboxes"
        :label       {:fi "Kalastuslupatarve"}
-       :description {:fi "Kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."}
+       :description {:fi "Valitse kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."}
        :opts        fishing-permit-opts}}
 
      :fishing-permit-additional-info
      {:schema localized-string-schema
       :field
       {:type        "textarea"
-       :description {:fi "Tähän joku selite"}
+       :description {:fi "Syötä tähän tarvittaessa lisätietoa kalastuslupia koskevista muista asioista"}
        :label       {:fi "Kalastuslupatarpeen lisätiedot"}}}
 
      :accessibility-classification
@@ -1035,7 +1054,7 @@
       :field
       {:type        "select"
        :label       {:fi "Esteettömyysluokittelu"}
-       :description {:fi ""}
+       :description {:fi "Valitse onko kohde esteellinen tai esteetön."}
        :opts        (dissoc accessibility-classification "advanced-accessible")}}
 
      :accessibility-categorized
@@ -1048,7 +1067,7 @@
       :field
       {:type        "accessibility"
        :label       {:fi "Esteettömyys"}
-       :description {:fi "Tähän jotain"}
+       :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
        :props
        {:mobility-impaired
         {:value "mobility-impaired"
