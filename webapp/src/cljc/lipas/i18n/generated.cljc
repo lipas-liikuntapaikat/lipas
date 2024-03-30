@@ -678,6 +678,7 @@
      "Pihlajalinna Areena on energiatehokas jäähalli"},
     :lipas.location
     {:address       "Katuosoite",
+     :no-address    "Kohteelle ei voi määrittää katuosoitetta"
      :city          "Kunta",
      :city-code     "Kuntanumero",
      :headline      "Sijainti",
