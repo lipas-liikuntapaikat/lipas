@@ -344,9 +344,15 @@
      :description {:fi "Syötä 2-6 konkreettista kohteen erityispiirrettä, jotka täydentävät yleiskuvausta. Syötä yksi kohokohta kerrallaan. Käytä isoa Alkukirjainta."}
      :label       {:fi "Kohokohdat"}}}})
 
+(def common-route-props
+  (-> common-props
+      (assoc-in [:description-long :field :description :fi]
+                "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
+      (assoc-in [:description-short :field :description :fi]
+                "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa.")))
+
 (def common-props-schema
   (collect-schema common-props))
-
 
 (comment
   (m/schema common-props-schema))
@@ -466,12 +472,7 @@
       :label       {:fi "Reittiosan tyyppi"}
       :props
       (merge
-       (-> common-props
-           (dissoc :rules :accessibility)
-           (assoc-in [:description-long :field :description :fi]
-                     "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
-           (assoc-in [:description-short :field :description :fi]
-                     "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
+       (dissoc common-route-props :rules :accessibility)
        {:accessibility-classification
         {:field
          {:type        "select"
@@ -588,11 +589,38 @@
    "mountain-biking"        {:fi "Maastopyöräily"}
    "winter-cycling"         {:fi "Talvipyöräily"}})
 
+(def cycling-difficulty
+  {"1-easy"                   {:fi "1 - Helppo"}
+   "2-somewhat-challenging"   {:fi "2 - Osittain vaativa"}
+   "3-moderately-challenging" {:fi "3 - Keskivaativa"}
+   "4-challenging"            {:fi "4 - Vaativa"}
+   "5-extremely-challenging"  {:fi "5 - Erittäin vaativa"}})
+
 (def cycling
   {:label       {:fi "Pyöräily"}
    :value       "cycling"
    :description {:fi ""}
    :type-codes  #{4411 4412}
+   :sort-order [:route-name
+                :description-short
+                :description-long
+                :route-notes
+                :highlights
+                :cycling-activities
+                :duration
+                :cycling-difficulty
+                :unpaved-percentage
+                :trail-percentage
+                :cyclable-percentage
+                :arrival
+                :accommodation
+                :food-and-water
+                :good-to-know
+                :accessibility
+                :contacts
+                :additional-info-link
+                :images
+                :videos]
    :props
    {
     ;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
@@ -609,6 +637,8 @@
                 [:route-name {:optional true} localized-string-schema]
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
+                [:cycling-difficulty {:optional true}
+                 [:sequential (into [:enum] (keys cycling-difficulty))]]
                 [:duration {:optional true} duration-schema]
                 [:food-and-water {:optional true} localized-string-schema]
                 [:accommodation {:optional true} localized-string-schema]
@@ -623,68 +653,81 @@
       :label       {:fi "Reittityyppi"}
       :props
       (merge
-       (dissoc common-props :rules)
+       (dissoc common-route-props :rules)
        {:route-name
         {:field
          {:type        "text-field"
-          :description {:fi "Tähän joku järkevä ohje"}
+          :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."}
           :label       {:fi "Reitin nimi"}}}
         :cycling-activities
         {:field
          {:type        "multi-select"
-          :description {:fi "Gravel & pyörävaellus, Maantie, Maastopyöräily"}
+          :description {:fi "Valitse reitille soveltuvat pyöräilylajit"}
           :label       {:fi "Alalaji"}
           :opts        (dissoc cycling-activities "road-cycling")}}
+
+        :cycling-difficulty
+        {:field
+         {:type        "multi-select"
+          :description {:fi "Haastavuus"}
+          :label       {:fi "Reitin arvioitu haastavuus"}
+          :opts        cycling-difficulty}}
 
         :duration
         {:field
          {:type        "duration"
-          :description {:fi "Ajoaika"}
-          :label       {:fi "Ajoaika"}}}
+          :description {:fi "Kulkuaika"}
+          :label       {:fi "Reitin arvioitu kulkuaika"}}}
 
         :food-and-water
         {:field
          {:type        "textarea"
-          :description {:fi "Tekstiä"}
-          :label       {:fi "Ruoka & vesi"}}}
+          :description {:fi "Tietoa reitin varrella olevista ruokailu- ja juomapaikoista ja/tai ohjeet omasta ruoka- ja juomahuollosta."}
+          :label       {:fi "Ruoka & juoma"}}}
 
         :accommodation
         {:field
          {:type        "textarea"
-          :description {:fi "Tekstiä"}
+          :description {:fi "Tietoa reitin varrella olevista majoitusmahdollisuuksista ja -palveluista."}
           :label       {:fi "Majoitus"}}}
 
         :good-to-know
         {:field
          {:type        "textarea"
-          :description {:fi "Tekstiä"}
+          :description {:fi "Tietoa reittiin tai reitillä liikkumiseen liittyvistä säännöistä ja ohjeista."}
           :label       {:fi "Hyvä tietää"}}}
 
         :route-notes
         {:field
          {:type        "textarea"
-          :description {:fi "Tekstiä"}
+          :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erottele eri vaiheet omiksi kappaleikseen."}
           :label       {:fi "Reittimuistiinpanot"}}}
 
         :unpaved-percentage
         {:field
          {:type        "number"
           :adornment   "%"
-          :description {:fi "Esim. 28%"}
+          :min         0
+          :max         100
+          :description {:fi "Kuinka suuri osuus reitistä on päällystämätöntä?"}
           :label       {:fi "Päällystämätöntä"}}}
 
         :trail-percentage
         {:field
          {:type        "number"
           :adornment   "%"
-          :description {:fi "Esim. 0%"}
+          :min         0
+          :max         100
+          :description {:fi "Kuinka suuri osuus reitistä on polkua?"}
           :label       {:fi "Polkua"}}}
 
         :cyclable-percentage
         {:field
          {:type        "number"
           :adornment   "%"
-          :description {:fi "Esim. 100%"}
+          :min         0
+          :max         100
+          :description {:fi "Kuinka suuri osuus reitistä on pyöräiltävissä?"}
           :label       {:fi "Pyöräiltävissä"}}}})}}}})
 
 (def cycling-schema
@@ -761,12 +804,7 @@
       :label       {:fi "Reittityyppi"}
       :props
       (merge
-       (-> common-props
-           (dissoc :rules :accessibility)
-           (assoc-in [:description-long :field :description :fi]
-                     "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
-           (assoc-in [:description-short :field :description :fi]
-                     "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
+       common-route-props
        {:route-name
         {:field
          {:type        "text-field"
