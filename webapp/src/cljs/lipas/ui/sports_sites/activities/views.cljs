@@ -9,7 +9,8 @@
    [lipas.ui.sports-sites.activities.subs :as subs]
    [lipas.ui.sports-sites.views :as sports-site-views]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [clojure.spec.alpha :as s]))
 
 (declare make-field)
 
@@ -1019,8 +1020,22 @@
                :label       (get-in field [:label locale])
                :helper-text (get-in field [:description locale])
                :fullWidth   true
-               :on-change   #(set-field prop-k locale %)
-               :value       (get-in edit-data [prop-k locale])}]
+               :on-change   #(set-field prop-k %)
+               :value       (get-in edit-data [prop-k])}]
+
+    "percentage" [lui/text-field
+                  (merge
+                   {:type        "number"
+                    :adornment   "%"
+                    :disabled    read-only?
+                    :label       (get-in field [:label locale])
+                    :helper-text (get-in field [:description locale])
+                    :fullWidth   true
+                    :spec        [:or
+                                  [:int {:min 0 :max 100}]
+                                  [:double {:min 0.0 :max 100.0}]]
+                    :on-change   #(set-field prop-k %)
+                    :value       (get-in edit-data [prop-k])})]
 
     "textarea" [lui/text-field
                 {:disabled        read-only?

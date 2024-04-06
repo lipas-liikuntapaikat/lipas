@@ -5,11 +5,14 @@
    [clojure.string :as string]
    [goog.functions :as gfun]
    [lipas.ui.mui :as mui]
+   [malli.core :as m]
    [reagent.core :as r]))
 
 (defn error? [spec value required]
   (if (and spec (or value required))
-    ((complement s/valid?) spec value)
+    (if (vector? spec)
+      ((complement m/validate) spec value)
+      ((complement s/valid?) spec value))
     false))
 
 (defn ->adornment [s]
