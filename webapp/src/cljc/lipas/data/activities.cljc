@@ -22,6 +22,10 @@
 (def number-schema
   [:or [:int] [:double]])
 
+(def percentage-schema
+  (let [props {:min 0 :max 100}]
+    [:or [:int props] [:double props]]))
+
 (def duration-schema
   [:map
    [:min {:optional true} number-schema]
@@ -349,7 +353,7 @@
       (assoc-in [:description-long :field :description :fi]
                 "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
       (assoc-in [:description-short :field :description :fi]
-                "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa.")))
+                "1-3 lauseen esittely reitistä ja sen erityispiirteistä.")))
 
 (def common-props-schema
   (collect-schema common-props))
@@ -472,7 +476,10 @@
       :label       {:fi "Reittiosan tyyppi"}
       :props
       (merge
-       (dissoc common-route-props :rules :accessibility)
+       (-> common-route-props
+           (dissoc :rules :accessibility)
+           (assoc-in [:description-short :field :description :fi]
+                     "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
        {:accessibility-classification
         {:field
          {:type        "select"
@@ -638,15 +645,15 @@
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
                 [:cycling-difficulty {:optional true}
-                 [:sequential (into [:enum] (keys cycling-difficulty))]]
+                 (into [:enum] (keys cycling-difficulty))]
                 [:duration {:optional true} duration-schema]
                 [:food-and-water {:optional true} localized-string-schema]
                 [:accommodation {:optional true} localized-string-schema]
                 [:good-to-know {:optional true} localized-string-schema]
                 [:route-notes {:optional true} localized-string-schema]
-                [:unpaved-percentage {:optional true} number-schema]
-                [:trail-percentage {:optional true} number-schema]
-                [:cyclable-percentage {:optional true} number-schema]])]
+                [:unpaved-percentage {:optional true} percentage-schema]
+                [:trail-percentage {:optional true} percentage-schema]
+                [:cyclable-percentage {:optional true} percentage-schema]])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
@@ -668,7 +675,7 @@
 
         :cycling-difficulty
         {:field
-         {:type        "multi-select"
+         {:type        "select"
           :description {:fi "Haastavuus"}
           :label       {:fi "Reitin arvioitu haastavuus"}
           :opts        cycling-difficulty}}
@@ -705,28 +712,19 @@
 
         :unpaved-percentage
         {:field
-         {:type        "number"
-          :adornment   "%"
-          :min         0
-          :max         100
+         {:type        "percentage"
           :description {:fi "Kuinka suuri osuus reitistä on päällystämätöntä?"}
           :label       {:fi "Päällystämätöntä"}}}
 
         :trail-percentage
         {:field
-         {:type        "number"
-          :adornment   "%"
-          :min         0
-          :max         100
+         {:type        "percentage"
           :description {:fi "Kuinka suuri osuus reitistä on polkua?"}
           :label       {:fi "Polkua"}}}
 
         :cyclable-percentage
         {:field
-         {:type        "number"
-          :adornment   "%"
-          :min         0
-          :max         100
+         {:type        "percentage"
           :description {:fi "Kuinka suuri osuus reitistä on pyöräiltävissä?"}
           :label       {:fi "Pyöräiltävissä"}}}})}}}})
 
@@ -980,13 +978,13 @@
                 :arrival
                 :accessibility-classification
                 :accessibility-categorized
+                :accessibility
                 :contacts
                 :additional-info-link
                 :images
                 :videos]
    :props
-   (merge
-    (dissoc common-props :accessibility)
+   (merge common-props
     {:fishing-type
      {:schema [:sequential (into [:enum] (keys fishing-types))]
       :field
