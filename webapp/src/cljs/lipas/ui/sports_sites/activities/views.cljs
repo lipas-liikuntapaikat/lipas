@@ -941,7 +941,10 @@
         route-count (<== [::subs/route-count lipas-id activity-k])]
 
     [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
-     [mui/grid {:item true :xs 12}
+
+     ;; Hidden until UTP can support multi-tiered routes
+
+     #_[mui/grid {:item true :xs 12}
       [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
                    :value     (= :multi route-view)
                    :disabled  (> route-count 1)
