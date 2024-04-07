@@ -141,6 +141,64 @@
        [mui/button {:variant :text :color "secondary" :href link}
         (str "> " link-text)]])]])
 
+(defn grid-card-2
+  [{:keys [title style link link-text xs md lg xl]
+    :or   {xs 12 md 6 lg 6 xl 6}} & children]
+  [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
+   [mui/paper {:square true
+               :style
+               (merge
+                {:background-color "rgb(250, 250, 250)"
+                 :font-size        "1.25em"
+                 :height           "360px"
+                 :opacity          0.95
+                 :margin           "8px"
+                 :padding          "16px 10px 0 16px"}
+                style)}
+
+    [mui/grid
+     {:container       true
+      :spacing         2
+      :justify-content "space-between"
+      :style           {:height "100%"}}
+
+     ;; Header
+     [mui/grid {:item true :xs 12}
+      [mui/grid {:container true :justify-content "space-between"}
+       [mui/grid {:item true :xs 11}
+        [mui/typography
+         (merge {:variant "h4"
+                 :color   "secondary"
+                 :style   {:font-weight     600
+                           :font-size       "2rem"
+                           :text-decoration "none"}}
+                (when link
+                  {:component "a"
+                   :href      link}))
+         title]]
+       [mui/grid {:item true :xs 1}
+        [mui/icon-button {:href link :color "secondary"}
+         [mui/icon "arrow_forward_ios"]]]]]
+
+     ;; Content
+     (into [mui/grid {:item true :xs 12}] children)
+
+     ;; Actions
+     (when link-text
+       [mui/grid {:item true :xs 12}
+        [mui/grid
+         {:container       true
+          :direction       "row"
+          :style {:height "100%"}
+          :align-content   "flex-end"}
+         [mui/grid {:item true :xs 12}
+          [mui/button
+           {:variant "text"
+            :style {:margin-bottom "-8px"}
+            :color "secondary"
+            :href link}
+           (str "> " link-text)]]]])]]])
+
 (defn fb-plugin []
   (r/create-class
    {:component-did-mount
@@ -269,7 +327,7 @@
         ;; Sports sites
         [mui/grid {:item true :xs 12 :md 12 :lg 8}
          [mui/grid {:container true}
-          [grid-card
+          [grid-card-2
            {:title     (tr :sport/headline)
             :link      "/liikuntapaikat"
             :link-text (tr :actions/browse-to-map)}
@@ -306,7 +364,7 @@
           ;;   [lui/li (tr :swim/updating-basic-data)]]]
 
           ;; Reports
-          [grid-card
+          [grid-card-2
            {:title     (tr :stats/headline)
             :link      "/tilastot"
             :link-text (tr :stats/browse-to)}
@@ -319,7 +377,7 @@
             [lui/li (tr :stats/bullet3)]]]
 
           ;; Open Data
-          [grid-card {:title (tr :open-data/headline)}
+          [grid-card-2 {:title (tr :open-data/headline)}
            [mui/list
 
             ;; info
@@ -358,7 +416,7 @@
              [mui/list-item-text {:primary "CC 4.0"}]]]]
 
           ;; Help
-          [grid-card { :title (tr :help/headline)}
+          [grid-card-2 { :title (tr :help/headline)}
 
            [mui/list
 
