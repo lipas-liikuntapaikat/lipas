@@ -2596,7 +2596,7 @@
     {:fi "Kalastuskohde (alue)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
-    :type-code     110
+    :type-code     113
     :main-category 0,
     :status        "active",
     :sub-category  1,
