@@ -732,7 +732,8 @@
          {:variant    "scrollable"
           :text-color "secondary"
           :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
-          :value      active-tab}
+          :value      active-tab
+          :indicator-color "secondary"}
 
          ;; 0 Stats
          ;; [mui/tab {:label (tr :swim/headline)

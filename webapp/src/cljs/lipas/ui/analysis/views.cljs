@@ -26,7 +26,8 @@
          :on-change      #(==> [::events/select-tool %2])
          :variant        "fullWidth"
          :centered       true
-         :indicatorColor "primary"}
+         :text-color     "inherit"
+         :indicator-color "primary"}
         [mui/tab {:value "reachability" :label "Saavutettavuus"}]
         [mui/tab {:value "diversity" :label "Monipuolisuus"}]]]
       [mui/grid {:item true}

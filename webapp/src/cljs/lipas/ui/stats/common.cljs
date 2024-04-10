@@ -7,7 +7,11 @@
 (def select-style {:min-width "170px"})
 
 (defn view-tabs [{:keys [value on-change]}]
-  [mui/tabs {:value value :on-change on-change}
+  [mui/tabs
+   {:value value
+    :on-change on-change
+    :indicator-color "secondary"
+    :text-color "inherit"}
    [mui/tab {:value "chart" :icon (r/as-element [mui/icon "bar_chart"])}]
    [mui/tab {:value "table" :icon (r/as-element [mui/icon "table_chart"])}]])
 
