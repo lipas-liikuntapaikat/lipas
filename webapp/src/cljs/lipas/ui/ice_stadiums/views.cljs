@@ -13,10 +13,12 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn stats-tab* [{:keys [width]}]
+(defn stats-tab* []
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
-        stats (<== [::subs/stats year])]
+        stats (<== [::subs/stats year])
+
+        width (mui/use-width)]
 
     [mui/grid {:container true :style {:background-color "#fff"}}
 
@@ -57,7 +59,7 @@
        :stats stats}]]))
 
 (defn stats-tab []
-  [:> ((mui/with-width*) (r/reactify-component stats-tab*))])
+  [:f> stats-tab*])
 
 (defn toggle-dialog
   ([dialog]

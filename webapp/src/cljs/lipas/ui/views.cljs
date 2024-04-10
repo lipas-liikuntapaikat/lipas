@@ -9,15 +9,19 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn main-panel [{:keys [width]}]
+(defn main-panel []
   (let [logged-in?   (<== [::subs/logged-in?])
         notification (<== [::subs/active-notification])
         confirmation (<== [::subs/active-confirmation])
         disclaimer   (<== [::subs/active-disclaimer])
         show-nav?    (<== [::subs/show-nav?])
         view         (<== [::subs/current-view])
-        tr           (<== [::subs/translator])]
+        tr           (<== [::subs/translator])
 
+        width (mui/use-width)]
+
+    ;; FIXME: Would be better to just use responsive sx styles everywhere
+    ;; app logic (re-frame event handlers) shouldn't care about screen size?
     (==> [::events/set-screen-size width])
 
     [mui/css-baseline

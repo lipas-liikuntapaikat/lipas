@@ -1595,10 +1595,11 @@
        [:div {:style {:padding "0.5em"}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
-(defn map-view [{:keys [width]}]
+(defn map-view []
   (let [tr           (<== [:lipas.ui.subs/translator])
         logged-in?   (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
+        width (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
@@ -1690,4 +1691,4 @@
      [ol-map/map-outer]]))
 
 (defn main []
-  [:> ((mui/with-width*) (r/reactify-component map-view))])
+  [:f> map-view])
