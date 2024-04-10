@@ -239,6 +239,7 @@
      {:position   "static"
       :color      "primary"
       :style      {:border-box "1px solid black"}
+      :enableColorOnDark true
       :class-name :no-print}
 
      [mui/tool-bar {:disable-gutters true}
