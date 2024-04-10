@@ -244,7 +244,7 @@
         :on-change #(on-change :lighting-average-lux %)}]}
 
      ;; Turva-alue pääty 1
-     {:label "Turva-alue, pääty 1"
+     {:label "Turva-alue, pääty 1 (m)"
       :value (-> display-data :safety-area-end-1-m)
       :form-field
       [lui/text-field
@@ -255,7 +255,7 @@
         :on-change #(on-change :safety-area-end-1-m %)}]}
 
      ;; Turva-alue pääty 2
-     {:label "Turva-alue, pääty 2"
+     {:label "Turva-alue, pääty 2 (m)"
       :value (-> display-data :safety-area-end-2-m)
       :form-field
       [lui/text-field
@@ -266,7 +266,7 @@
         :on-change #(on-change :safety-area-end-2-m %)}]}
 
      ;; Turva-alue sivu 1
-     {:label "Turva-alue, sivu 1"
+     {:label "Turva-alue, sivu 1 (m)"
       :value (-> display-data :safety-area-side-1-m)
       :form-field
       [lui/text-field
@@ -277,7 +277,7 @@
         :on-change #(on-change :safety-area-side-1-m %)}]}
 
      ;; Turva-alue sivu 2
-     {:label "Turva-alue, sivu 2"
+     {:label "Turva-alue, sivu 2 (m)"
       :value (-> display-data :safety-area-side-2-m)
       :form-field
       [lui/text-field
