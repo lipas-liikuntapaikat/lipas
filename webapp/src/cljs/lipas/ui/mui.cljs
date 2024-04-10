@@ -72,7 +72,7 @@
    ["@mui/material/Typography$default" :as Typography]
    ["@mui/material/styles" :refer [createTheme ThemeProvider useTheme]]
    ; ["@mui/material/withWidth$default" :as withWidth]
-   ["@mui/lab/Autocomplete$default" :as Autocomplete]
+   ["@mui/material/Autocomplete$default" :as Autocomplete]
    #_["@mui/material/CardMedia$default" :as CardMedia]
    #_["@mui/material/AccordionActions$default" :as AccordionActions]
    #_["@mui/material/Fade$default" :as Fade]

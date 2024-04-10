@@ -193,7 +193,7 @@
       :multi?           true
       :value-fn         :region-id
       :label-fn         (comp locale :name)
-      :render-option-fn (fn [option]
+      :render-option-fn (fn [_props option _]
                           (let [v (-> option read-string regions-by-v :name locale)]
                             (r/as-element
                              [mui/typography
@@ -238,7 +238,7 @@
       :multi?           true
       :value-fn         :cat-id
       :label-fn         (fn [item] (str (:type-code item) " " (-> item :name locale)))
-      :render-option-fn (fn [option]
+      :render-option-fn (fn [_props option _]
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
