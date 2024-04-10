@@ -29,6 +29,7 @@
    ["@mui/material/FormGroup$default" :as FormGroup]
    ["@mui/material/FormHelperText$default" :as FormHelperText]
    ["@mui/material/Grid$default" :as Grid]
+   ["@mui/material/Unstable_Grid2$default" :as Grid2]
    ["@mui/material/Icon$default" :as Icon]
    ["@mui/material/IconButton$default" :as IconButton]
    ["@mui/material/InputAdornment$default" :as InputAdornment]
@@ -225,7 +226,10 @@
 (def form-group (r/adapt-react-class FormGroup))
 (def form-helper-text (r/adapt-react-class FormHelperText))
 #_(def form-label (r/adapt-react-class FormLabel))
+;; In v5 regular Grid item only has top and left padding,
+;; the new v2 Grid has padding all around.
 (def grid (r/adapt-react-class Grid))
+(def grid2 (r/adapt-react-class Grid2))
 #_(def grow (r/adapt-react-class Grow))
 (def icon (r/adapt-react-class Icon))
 (def icon-button (r/adapt-react-class IconButton))
