@@ -14,24 +14,24 @@ openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
 ### Backend ###
 
 printf "\n *** Running backend migrations *** \n\n"
-docker-compose run backend-migrate
+docker compose run backend-migrate
 
 printf "\n *** Packaging backend *** \n\n"
-docker-compose run backend-build
+docker compose run backend-build
 
 printf "\n *** Creating htpasswd file for Kibana *** \n\n"
-docker-compose build htpasswd
-docker-compose run htpasswd admin $ADMIN_PASSWORD > nginx/htpasswd
+docker compose build htpasswd
+docker compose run htpasswd admin $ADMIN_PASSWORD > nginx/htpasswd
 
 ### Frontend ###
 
 printf "\n *** Fetching npm dependencies *** \n\n"
-docker-compose run frontend-npm-deps
+docker compose run frontend-npm-deps
 
 ### Start services ###
 
 printf "\n *** Starting backend services *** \n\n"
-docker-compose up -d proxy-dev
+docker compose up -d proxy-dev
 
 printf "\n *** Starting shadow-cljs *** \n\n"
 npx shadow-cljs watch app
