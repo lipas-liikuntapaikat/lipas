@@ -450,7 +450,8 @@
          (when (and logged-in? (#{:editing :adding} view-mode))
            [mui/grid {:item true}
             [buttons/discard-button
-             {:color    "default"
+             {;; FIXME:
+              :color    "default"
               :disabled false
               :on-click #(==> [::events/discard-edits])
               :tooltip  (tr :actions/discard)}]])
@@ -458,7 +459,8 @@
          (when (and logged-in? (#{:display} view-mode))
            [mui/grid {:item true}
             [buttons/delete-button
-             {:color    "default"
+             {;; FIXME:
+              :color    "default"
               :disabled false
               :on-click #(reset! delete-dialog-open? true)
               :tooltip  (tr :actions/delete)}]])]]])))

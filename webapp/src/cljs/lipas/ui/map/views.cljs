@@ -99,6 +99,7 @@
         ;; The Slider
         [mui/grid {:item true :xs true}
          [mui/slider
+          ;; TODO: :size "small" is closer to v4?
           {:on-change #(==> [::events/set-simplify-tolerance %2])
            :value     tolerance
            :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
@@ -126,6 +127,7 @@
         [mui/grid {:item true}
          [mui/button
           {:variant  "contained"
+           ;; FIXME:
            :color    "default"
            :on-click on-close}
           (tr :actions/cancel)]]]]]]))

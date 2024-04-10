@@ -103,6 +103,7 @@
         [mui/icon-button
          {:on-click #(==> [::events/select-travel-profile :direct])
           :disabled (= metric :travel-time)
+          ;; FIXME:
           :color    (if (= profile :direct) "secondary" "default")}
          [:> MapMarkerDistance]]]]]
 
@@ -112,6 +113,7 @@
        {:title (tr :analysis/by-car)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :car])
+         ;; FIXME:
          :color    (if (= profile :car) "secondary" "default")}
         [mui/icon "directions_car"]]]]
 
@@ -121,6 +123,7 @@
        {:title (tr :analysis/by-bicycle)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :bicycle])
+         ;; FIXME:
          :color    (if (= profile :bicycle) "secondary" "default")}
         [mui/icon "directions_bike"]]]]
 
@@ -130,6 +133,7 @@
        {:title (tr :analysis/by-foot)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :foot])
+         ;; FIXME:
          :color    (if (= profile :foot) "secondary" "default")}
         [mui/icon "directions_walk"]]]]
 
