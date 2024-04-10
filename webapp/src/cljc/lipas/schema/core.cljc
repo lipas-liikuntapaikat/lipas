@@ -1065,7 +1065,6 @@
 (s/def :lipas.sports-site.circumstances/open-floor-space-area-m2
   (number-in :min 0 :max (inc 10000)))
 
-
 (s/def :lipas.sports-site.locker-room/surface-area-m2
   (number-in :min 0 :max (inc 2000)))
 

@@ -600,6 +600,77 @@
         :on-edit         #(==> [::events/toggle-dialog :locker-room (get edit-data (:id %))])
         :on-delete       #(==> [::events/remove-locker-room lipas-id %])}])))
 
+(def audits-table-headers
+  [[:audit-date {:fi "Päivämäärä"}]
+   [:audit-performed-by {:fi "Suorittaja"}]])
+
+(defn audits-table
+  [{:keys [tr display-data edit-data read-only? lipas-id]}]
+  (let [locale  (tr)
+        headers (map (juxt first (comp locale second)) audits-table-headers)]
+    (if read-only?
+      (if (seq display-data)
+        [lui/table
+         {:headers headers
+          :items   (vals display-data)}]
+        [mui/typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
+      [lui/form-table
+       {:read-only?      read-only?
+        :headers         headers
+        :items           (vals edit-data)
+        :key-fn          :id
+        :add-tooltip     "Lisää"
+        :add-btn-size    "small"
+        :edit-tooltip    (tr :actions/edit)
+        :delete-tooltip  (tr :actions/delete)
+        :confirm-tooltip (tr :confirm/press-again-to-delete)
+        :on-add          #(==> [::events/toggle-dialog :audits {}])
+        :on-edit         #(==> [::events/toggle-dialog :audits (get edit-data (:id %))])
+        :on-delete       #(==> [::events/remove-locker-room lipas-id %])}])))
+
+(defn audit-form
+  [{:keys [_ read-only? on-change display-data edit-data]}]
+  [lui/form {:read-only? read-only?}
+   {:label "Katselmus tehty"
+    :value (-> display-data :audit-date)
+    :form-field
+    [lui/date-picker
+     {:value     (-> edit-data :audit-date)
+      :on-change #(on-change :audit-date %)}]}
+   {:label "Katselmuksen teki (sportti-id)"
+    :value (-> display-data :audit-performed-by)
+    :form-field
+    [lui/text-field
+     {:type          "text"
+      :value         (-> edit-data :audit-performed-by)
+      :on-change     #(on-change :audit-performed-by %)}]}])
+
+(defn audits-dialog
+  [{:keys [tr lipas-id]}]
+  (let [open?  (<== [::subs/dialog-open? :audits])
+        data   (<== [::subs/dialog-data :audits])
+        reset  #(==> [::events/reset-dialog :audits])
+        close  #(==> [::events/toggle-dialog :audits])
+        valid? (constantly true)]
+    [lui/dialog
+     {:open?         open?
+      :title         (if (:id data)
+                       "Muokkaa"
+                       "Lisää")
+      :save-label    (tr :actions/save)
+      :cancel-label  (tr :actions/cancel)
+      :on-close      #(==> [::events/toggle-dialog :audits])
+      :save-enabled? valid?
+      :on-save       (comp reset
+                           close
+                           #(==> [::events/save-dialog :audits lipas-id data]))}
+     [audit-form
+      {:tr           tr
+       :edit-data    data
+       :display-data data
+       :on-change    (fn [field value]
+                       (==> [::events/set-dialog-field :audits field value]))}]]))
+
 (defn circumstances-form
   [{:keys [tr read-only? visibility on-change display-data edit-data]}]
   (let [locale                        (tr)
@@ -1188,6 +1259,14 @@
          :display-data (-> display-data :circumstances)
          :edit-data    (-> edit-data :circumstances)}])
 
+     [lui/sub-heading {:label "Katselmointi"}]
+     [audits-dialog {:tr tr :lipas-id lipas-id}]
+     [audits-table {:tr           tr
+                    :lipas-id     lipas-id
+                    :read-only?   read-only?
+                    :display-data (-> display-data :audits)
+                    :edit-data    (-> edit-data :audits)}]
+     
      [lui/sub-heading {:label "Yleiset"}]
 
      [circumstances-form
