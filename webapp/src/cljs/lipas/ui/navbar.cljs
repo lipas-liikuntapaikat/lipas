@@ -238,7 +238,8 @@
     [mui/app-bar
      {:position   "static"
       :color      "primary"
-      :style      {:border-box "1px solid black"}
+      :sx         {:border-box "1px solid black"
+                   :backgroundColor "primary.main"}
       :enableColorOnDark true
       :class-name :no-print}
 

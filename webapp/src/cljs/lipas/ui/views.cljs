@@ -24,59 +24,59 @@
     ;; app logic (re-frame event handlers) shouldn't care about screen size?
     (==> [::events/set-screen-size width])
 
-    [mui/css-baseline
 
-     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+    [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
+     [mui/css-baseline]
 
-      [mui/grid
-       {:container true
-        :style     (merge {:flex-direction "column" :background-color mui/gray3}
-                          (when-not show-nav? {:height "100%"}))}
+     [mui/grid
+      {:container true
+       :style     (merge {:flex-direction "column" :background-color mui/gray3}
+                         (when-not show-nav? {:height "100%"}))}
 
-       ;; Drawer
-       [nav/drawer {:tr tr :logged-in? logged-in?}]
+      ;; Drawer
+      [nav/drawer {:tr tr :logged-in? logged-in?}]
 
-       ;; Account menu
-       [nav/account-menu {:tr tr :logged-in? logged-in?}]
+      ;; Account menu
+      [nav/account-menu {:tr tr :logged-in? logged-in?}]
 
-       ;; Navbar
-       (when show-nav?
-         [mui/grid {:item true :xs 12 :style {:flex "0 1 auto"}}
+      ;; Navbar
+      (when show-nav?
+        [mui/grid {:item true :xs 12 :style {:flex "0 1 auto"}}
 
-          [nav/nav {:tr tr :logged-in? logged-in?}]
+         [nav/nav {:tr tr :logged-in? logged-in?}]
 
-          ;; Dev-env disclaimer
-          (when disclaimer
-            [mui/grid {:item true :xs 12 :md 12 :lg 12}
-             [mui/card {:square true
-                        :style  {:background-color mui/secondary
-                                 :border-bottom    "2px solid white"}}
-              [mui/card-header
-               {:style  {:padding-bottom 0}
-                :title  (tr :disclaimer/headline)
-                :action (r/as-element
+         ;; Dev-env disclaimer
+         (when disclaimer
+           [mui/grid {:item true :xs 12 :md 12 :lg 12}
+            [mui/card {:square true
+                       :style  {:background-color mui/secondary
+                                :border-bottom    "2px solid white"}}
+             [mui/card-header
+              {:style  {:padding-bottom 0}
+               :title  (tr :disclaimer/headline)
+               :action (r/as-element
                          [mui/icon-button
                           {:on-click #(==> [::events/set-active-disclaimer nil])}
                           [mui/icon "close"]])}]
-              [mui/card-content
-               [mui/typography {:variant "body2"}
-                disclaimer]]]])])
+             [mui/card-content
+              [mui/typography {:variant "body2"}
+               disclaimer]]]])])
 
-       [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
-        ;; Main panel
-        (when view
-          [view])
+       ;; Main panel
+       (when view
+         [view])
 
-        ;; Reminders dialog
-        [reminders/dialog]
+       ;; Reminders dialog
+       [reminders/dialog]
 
-        ;; Global UI-blocking confirmation dialog
-        (when confirmation
-          [lui/confirmation-dialog confirmation])
+       ;; Global UI-blocking confirmation dialog
+       (when confirmation
+         [lui/confirmation-dialog confirmation])
 
-        ;; Global ephmeral notifications
-        (when notification
-          [lui/notification
-           {:notification notification
-            :on-close     #(==> [::events/set-active-notification nil])}])]]]]))
+       ;; Global ephmeral notifications
+       (when notification
+         [lui/notification
+          {:notification notification
+           :on-close     #(==> [::events/set-active-notification nil])}])]]]))
