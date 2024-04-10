@@ -44,13 +44,15 @@
        (when (seq selected-types)
          [mui/grid {:item true :xs 2}
           [mui/tooltip {:title (tr :search/clear-filters)}
+           ;; FIXME: :size "large"
            [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
             [mui/icon {:color "secondary"} "filter_alt"]]]])]]
 
      ;; Tabs
      [mui/grid {:item true :xs 12}
       [mui/tabs {:value          sports-sites-view
-                 :indicatorColor "primary"
+                 :indicator-color "primary"
+                 :text-color     "inherit"
                  :variant        "fullWidth"
 
                  :on-change #(==> [::events/select-sports-sites-view %2])}
@@ -195,7 +197,8 @@
 
      [mui/grid {:item true :xs 12}
       [mui/tabs {:value          schools-view
-                 :indicatorColor "primary"
+                 :indicator-color "primary"
+                 :text-color     "inherit"
                  :variant        "fullWidth"
 
                  :on-change #(==> [::events/select-schools-view %2])}
@@ -432,6 +435,7 @@
         [mui/tabs {:value      selected-tab
                    :on-change  #(==> [::events/select-analysis-tab %2])
                    :style      {:margin-bottom "1em"}
+                   :indicator-color "secondary"
                    :text-color "secondary"}
          [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
          [mui/tab {:label (tr :analysis/population) :value :population}]

@@ -231,7 +231,9 @@
 
         [mui/tabs
          {:value     (int @monthly-energy?)
-          :on-change #(swap! monthly-energy? not)}
+          :on-change #(swap! monthly-energy? not)
+          :indicator-color "secondary"
+          :text-color "inherit"}
          [mui/tab {:label (tr :lipas.energy-consumption/yearly)}]
          [mui/tab {:label (tr :lipas.energy-consumption/monthly)}]]
 

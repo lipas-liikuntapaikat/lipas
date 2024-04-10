@@ -23,7 +23,9 @@
        [mui/tabs
         {:value     tab
          :variant   "fullWidth"
-         :on-change #(==> [::events/navigate %2])}
+         :on-change #(==> [::events/navigate %2])
+         :indicator-color "secondary"
+         :text-color "inherit"}
         [mui/tab {:value "sport" :label (tr :stats/sports-stats)}]
         [mui/tab {:value "age-structure" :label (tr :stats/age-structure-stats)}]
         [mui/tab {:value "city" :label (tr :stats/city-stats)}]

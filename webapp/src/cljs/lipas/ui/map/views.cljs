@@ -586,6 +586,7 @@
         #_#_:variant "scrollable"
         #_#_:variant     "standard"
         :style       {:margin-bottom "1em"}
+        :indicator-color "secondary"
         :text-color  "secondary"}
        [mui/tab
         {:style {:min-width 0}
@@ -710,7 +711,11 @@
             ;; Floorball specific
             floorball-types
             [:<>
-             [mui/tabs {:value "floorball" :variant "standard"}
+             [mui/tabs
+              {:value "floorball"
+               :variant "standard"
+               :indicator-color "secondary"
+               :text-color "inherit"}
               [mui/tab {:value "floorball" :label "Salibandy"}]]
              [floorball/form
               {:tr           tr
@@ -1162,6 +1167,7 @@
                 [mui/tabs {:value      @geom-tab
                            :on-change  #(reset! geom-tab %2)
                            :variant    "fullWidth"
+                           :indicator-color "secondary"
                            :text-color "secondary"}
                  [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
                  (when (#{"LineString" "Polygon"} geom-type)
@@ -1405,6 +1411,8 @@
              {:value     selected-tab
               :on-change #(==> [::events/select-new-sports-site-tab %2])
               :variant   "fullWidth"
+              :indicator-color "secondary"
+              :text-color "inherit"
               :style     {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
              [mui/tab {:label (tr :lipas.sports-site/properties)}]
@@ -1454,7 +1462,11 @@
                   ;; Floorball specific
                   floorball-types
                   [:<>
-                   [mui/tabs {:value "floorball" :variant "standard"}
+                   [mui/tabs
+                    {:value "floorball"
+                     :variant "standard"
+                     :indicator-color "secondary"
+                     :text-color "inherit"}
                     [mui/tab {:value "floorball" :label "Salibandy"}]]
                    [floorball/form
                     {:tr           tr
@@ -1564,7 +1576,9 @@
        [mui/tabs
         {:value     add-mode
          :on-change #(==> [::events/select-add-mode %2])
-         :variant   "fullWidth"}
+         :variant   "fullWidth"
+         :indicator-color "secondary"
+         :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
         [mui/tab {:value "loi" :label "Muu kohde"}]])
 

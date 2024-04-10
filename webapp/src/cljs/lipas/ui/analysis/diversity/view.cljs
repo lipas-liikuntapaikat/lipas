@@ -552,7 +552,9 @@
         [mui/tabs
          {:size      "small"
           :value     selected-chart-tab
-          :on-change #(==> [::events/select-analysis-chart-tab %2])}
+          :on-change #(==> [::events/select-analysis-chart-tab %2])
+          :indicator-color "secondary"
+          :text-color "inherit"}
          [mui/tab {:label "Alueittain" :value "area"}]
          [mui/tab {:label "Ruuduittain" :value "grid"}]]]
        [mui/grid {:item true :xs 12}
@@ -581,6 +583,7 @@
                  :on-change  #(==> [::events/select-analysis-tab %2])
                  :variant    "fullWidth"
                  :centered   true
+                 :indicator-color "secondary"
                  :text-color "secondary"}
        [mui/tab {:label "Analyysialueet" :value "analysis-area"}]
        [mui/tab {:label (tr :analysis/results) :value "results"}]

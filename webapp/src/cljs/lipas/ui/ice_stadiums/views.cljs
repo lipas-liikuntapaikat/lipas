@@ -751,6 +751,7 @@
        [mui/card-content
         [mui/tabs
          {:variant    "scrollable"
+          :indicator-color "secondary"
           :text-color "secondary"
           :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
           :value      active-tab}

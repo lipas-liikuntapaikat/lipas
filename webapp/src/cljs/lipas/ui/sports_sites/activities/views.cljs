@@ -33,7 +33,8 @@
   [{:keys [locale]}]
   [mui/tabs
    {:value          (name locale)
-    :indicatorColor "primary"
+    :indicator-color "primary"
+    :text-color     "inherit"
     :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
    [mui/tab {:value "fi" :label "Suomi"}]
    ;; :se and :en disabled in prod until we get translations
