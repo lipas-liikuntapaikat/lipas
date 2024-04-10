@@ -77,6 +77,8 @@
                                            (on-change (->> e .-target .-value (coerce type))))))]
 
     [mui/tooltip {:title tooltip}
-     (into [mui/text-field props] children)]))
+     (into [mui/text-field (merge {:variant "standard"}
+                                  props)]
+           children)]))
 
 (def text-field text-field-controlled)

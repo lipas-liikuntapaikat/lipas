@@ -322,7 +322,8 @@
                   :on-mouse-leave (when on-custom-hover-out #(on-custom-hover-out % item))}
                  [mui/table-cell {:padding "checkbox"}
                   [mui/checkbox
-                   {:checked   (= item @selected-item)
+                   {:color     "secondary"
+                    :checked   (= item @selected-item)
                     :on-change (fn [_ checked?]
                                  (let [v (when checked? item)]
                                    (reset! selected-item v)))}]]

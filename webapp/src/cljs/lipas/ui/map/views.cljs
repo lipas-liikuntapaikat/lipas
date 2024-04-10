@@ -197,6 +197,7 @@
              {:checked   (boolean v)
               :size      "medium"
               :value     (str v)
+              :color     "secondary"
               :on-change #()}]]
            [mui/list-item-text
             {:primaryTypographyProps   {:style {:font-size "0.9em" :margin-right "2em"}}
@@ -243,9 +244,10 @@
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
         [mui/text-field {:label (tr :search/search)
-                        :xs 3
-                        :on-change #(reset! search-term (-> % .-target .-value))
-                        :placeholder nil}]]
+                         :xs 3
+                         :on-change #(reset! search-term (-> % .-target .-value))
+                         :placeholder nil
+                         :variant "standard"}]]
        [mui/grid {:item true :xs 12}
         [mui/table-container
         [mui/table
@@ -1124,8 +1126,7 @@
         [mui/stepper
          {:active-step      active-step
           :alternativeLabel true
-          :style            {:padding-left 0 :padding-right 0
-                             :margin-left  "-18px"}
+          :style            {:margin-left  "-18px"}
           :orientation      "horizontal"}
 
          ;; Step 1 - Select type
