@@ -171,7 +171,8 @@
                                              ;; Use light mode background color for <body>
                                              :backgroundColor "#fafafa"}}}
     :MuiAppBar {:styleOverrides {:root {;; Disable gradient
-                                        :backgroundImage "none"}}}}})
+                                        :backgroundImage "none"}}}
+    :MuiLink {:defaultProps {:underline "hover"}}}})
 
 
 (def jyu-styles-light
