@@ -1814,6 +1814,9 @@
 (s/def :lipas.api.get-sports-sites-by-type-code/query-params
   (s/keys :opt-un [:lipas.api.get-sports-sites-by-type-code/lang]))
 
+(s/def :lipas.api.get-sports-site/query-params
+  :lipas.api.get-sports-sites-by-type-code/query-params)
+
 (s/def :lipas.report/field (into #{} (keys reports/fields)))
 
 (s/def :lipas.api.sports-site-report.req/search-query map?)
