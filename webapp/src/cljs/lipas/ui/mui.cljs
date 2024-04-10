@@ -166,6 +166,8 @@
                                      :shrink {:color "inherit"}}}
     ;; MUI v4 used body2 font-size for <body>
     :MuiCssBaseline {:styleOverrides {:body {:fontSize "0.875rem"
+                                             :lineHeight 1.43
+                                             :letterSpacing "0.01071rem"
                                              ;; Use light mode background color for <body>
                                              :backgroundColor "#fafafa"}}}
     :MuiAppBar {:styleOverrides {:root {;; Disable gradient
