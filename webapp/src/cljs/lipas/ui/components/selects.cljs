@@ -47,7 +47,8 @@
      [mui/form-control
       {:required  required
        :fullWidth fullWidth
-       :error     (error? spec value required)}
+       :error     (error? spec value required)
+       :variant   "standard"}
       (when label [mui/input-label label])
       (into [mui/select props
              (when deselect?
@@ -76,7 +77,8 @@
     [mui/tooltip {:title tooltip}
      [mui/form-control {:fullWidth fullWidth
                         :required  required
-                        :error     (error? spec value required)}
+                        :error     (error? spec value required)
+                        :variant   "standard"}
       (when label [mui/input-label label])
       [mui/select
        (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
