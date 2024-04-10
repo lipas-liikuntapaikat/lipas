@@ -193,6 +193,7 @@
       :layer-name "MML-Kuntarajat"})}})
 
 (defn init-view [center zoom]
+  ;; TODO: Left side padding
   (ol/View. #js{:center              #js[(:lon center) (:lat center)]
                 :extent              proj/epsg3067-extent
                 :showFullExtent      true
