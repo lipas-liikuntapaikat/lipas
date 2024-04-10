@@ -172,7 +172,8 @@
                                              :backgroundColor "#fafafa"}}}
     :MuiAppBar {:styleOverrides {:root {;; Disable gradient
                                         :backgroundImage "none"}}}
-    :MuiLink {:defaultProps {:underline "hover"}}}})
+    :MuiLink {:defaultProps {:underline "hover"}}
+    :MuiIconButton {:defaultProps {:size "large"}}}})
 
 
 (def jyu-styles-light
