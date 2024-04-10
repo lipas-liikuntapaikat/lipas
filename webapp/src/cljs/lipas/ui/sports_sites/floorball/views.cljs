@@ -508,7 +508,16 @@
      {:type      "text"
       :spec      :lipas.sports-site.circumstances/locker-room-quality-comment
       :value     (-> edit-data :locker-room-quality-comment)
-      :on-change #(on-change :locker-room-quality-comment %)}]}])
+      :on-change #(on-change :locker-room-quality-comment %)}]}
+
+   {:label "Pukuhuoneiden määrä"
+    :value (-> display-data :locker-rooms-count)
+    :form-field
+    [lui/text-field
+     {:type      "number"
+      :spec      :lipas.sports-site.circumstances/locker-rooms-count
+      :value     (-> edit-data :locker-rooms-count)
+      :on-change #(on-change :locker-rooms-count %)}]}])
 
 (defn locker-room-form
   [{:keys [tr read-only? on-change display-data edit-data]}]
@@ -1266,7 +1275,7 @@
                     :read-only?   read-only?
                     :display-data (-> display-data :audits)
                     :edit-data    (-> edit-data :audits)}]
-     
+
      [lui/sub-heading {:label "Yleiset"}]
 
      [circumstances-form

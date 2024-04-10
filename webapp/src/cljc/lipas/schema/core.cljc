@@ -1050,6 +1050,9 @@
 (s/def :lipas.sports-site.circumstances/general-information
   (str-in 2 1000))
 
+(s/def :lipas.sports-site.circumstances/locker-rooms-count
+  (s/int-in 0 1000))
+
 (s/def :lipas.sports-site.circumstances/teams-using
   (str-in 0 1024))
 
@@ -1272,7 +1275,8 @@
                    :lipas.sports-site.circumstances/three-phase-electric-power?
                    :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
                    :lipas.sports-site.circumstances/audit-date
-                   :lipas.sports-site.circumstances/general-information]))
+                   :lipas.sports-site.circumstances/general-information
+                   :lipas.sports-site.circumstances/locker-rooms-count]))
 
 (s/def :lipas.sports-site/circumstances
   (s/or :circumstances/floorball :lipas.sports-site.circumstances/floorball))
