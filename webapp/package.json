@@ -17,7 +17,6 @@
     "@emotion/styled": "^11.11.5",
     "@mapbox/togeojson": "^0.16.0",
     "@mui/icons-material": "^5.15.15",
-    "@mui/lab": "^5.0.0-alpha.170",
     "@mui/material": "^5.15.15",
     "@mui/styles": "^5.15.15",
     "@turf/area": "^6.5.0",
