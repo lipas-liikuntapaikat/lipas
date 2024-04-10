@@ -29,7 +29,6 @@
    ["@mui/material/FormGroup$default" :as FormGroup]
    ["@mui/material/FormHelperText$default" :as FormHelperText]
    ["@mui/material/Grid$default" :as Grid]
-   ["@mui/material/Hidden$default" :as Hidden]
    ["@mui/material/Icon$default" :as Icon]
    ["@mui/material/IconButton$default" :as IconButton]
    ["@mui/material/InputAdornment$default" :as InputAdornment]
@@ -224,7 +223,6 @@
 #_(def form-label (r/adapt-react-class FormLabel))
 (def grid (r/adapt-react-class Grid))
 #_(def grow (r/adapt-react-class Grow))
-(def hidden (r/adapt-react-class Hidden))
 (def icon (r/adapt-react-class Icon))
 (def icon-button (r/adapt-react-class IconButton))
 (def input-adornment (r/adapt-react-class InputAdornment))
