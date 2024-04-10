@@ -164,7 +164,13 @@
                                    :active    {:fill secondary}
                                    :completed {:fill primary}}}
     :MuiInputLabel {:styleOverrides {:root   {:color "gray"}
-                                     :shrink {:color "inherit"}}}}})
+                                     :shrink {:color "inherit"}}}
+    ;; MUI v4 used body2 font-size for <body>
+    :MuiCssBaseline {:styleOverrides {:body {:fontSize "0.875rem"
+                                             ;; Use light mode background color for <body>
+                                             :backgroundColor "#fafafa"}}}
+    :MuiAppBar {:styleOverrides {:root {;; Disable gradient
+                                        :backgroundImage "none"}}}}})
 
 
 (def jyu-styles-light
