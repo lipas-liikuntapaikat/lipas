@@ -1668,7 +1668,7 @@
        :right            "3.5em"
        :background-color "transparent"}
 
-      [mui/grid
+      [mui/grid2
        {:container   true
         :align-items "center"
         :spacing     1
@@ -1677,22 +1677,22 @@
         :wrap        "nowrap"}
 
        ;; Feedback btn
-       #_[mui/grid {:item true}
+       #_[mui/grid2 {:item true}
           [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
            [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
-       [mui/grid {:item true}
+       [mui/grid2 {:item true}
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [user-location-btn {:tr tr}]]]
 
        ;; Overlay selector
-       [mui/grid {:item true}
+       [mui/grid2 {:item true}
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [overlay-selector {:tr tr}]]]
 
        ;; Base Layer switcher
-       [mui/grid {:item true}
+       [mui/grid2 {:item true}
         [mui/paper
          {:elevation 1
           :style
