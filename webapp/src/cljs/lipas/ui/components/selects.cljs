@@ -146,6 +146,7 @@
     props
     {:type      type
      :value     (or value "")
+     :variant   "standard"
      :Input-label-props
      {:error  (and required (empty? value))
       :shrink true} ; This makes the label show actually
