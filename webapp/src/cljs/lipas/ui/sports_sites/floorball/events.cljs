@@ -94,3 +94,11 @@
                 [:sports-sites lipas-id :editing :fields]
                 [:new-sports-site :data :locker-rooms])]
      (update-in db path dissoc id))))
+
+(re-frame/reg-event-db
+ ::remove-audit
+ (fn [db [_ lipas-id {:keys [id]}]]
+   (let [path (if lipas-id
+                [:sports-sites lipas-id :editing :audits]
+                [:new-sports-site :data :audits])]
+     (update-in db path dissoc id))))

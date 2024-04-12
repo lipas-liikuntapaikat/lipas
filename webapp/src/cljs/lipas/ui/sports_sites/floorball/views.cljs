@@ -621,7 +621,7 @@
       (if (seq display-data)
         [lui/table
          {:headers headers
-          :items   (vals display-data)}]
+          :items   display-data}]
         [mui/typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
       [lui/form-table
        {:read-only?      read-only?
@@ -635,7 +635,7 @@
         :confirm-tooltip (tr :confirm/press-again-to-delete)
         :on-add          #(==> [::events/toggle-dialog :audits {}])
         :on-edit         #(==> [::events/toggle-dialog :audits (get edit-data (:id %))])
-        :on-delete       #(==> [::events/remove-locker-room lipas-id %])}])))
+        :on-delete       #(==> [::events/remove-audit lipas-id %])}])))
 
 (defn audit-form
   [{:keys [_ read-only? on-change display-data edit-data]}]
