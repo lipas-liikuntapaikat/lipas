@@ -91,7 +91,7 @@
  ::remove-locker-room
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id
-                [:sports-sites lipas-id :editing :fields]
+                [:sports-sites lipas-id :editing :locker-rooms]
                 [:new-sports-site :data :locker-rooms])]
      (update-in db path dissoc id))))
 
