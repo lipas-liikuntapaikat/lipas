@@ -3,6 +3,7 @@
    [clojure.string :as str]
    [lipas.data.materials :as materials]
    [lipas.ui.sports-sites.events :as sports-sites.events]
+   [lipas.ui.sports-sites.floorball.db :as floorball]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -55,12 +56,16 @@
 (re-frame/reg-event-db
  ::reset-dialog
  (fn [db [_ dialog]]
-   (assoc-in db [:sports-sites :floorball :dialogs dialog] {})))
+   (assoc-in db
+             [:sports-sites :floorball :dialogs dialog]
+             (-> floorball/default-db
+                 :dialogs dialog))))
 
 (re-frame/reg-event-db
  ::toggle-dialog
  (fn [db [_ dialog data]]
-   (let [data (or data (-> db :sports-sites :floorball :dialogs dialog :data))]
+   (let [data (or data (-> db :sports-sites :floorball :dialogs dialog :data)
+                  (-> floorball/default-db :dialogs dialog :data))]
      (-> db
          (update-in [:sports-sites :floorball :dialogs dialog :open?] not)
          (assoc-in [:sports-sites :floorball :dialogs dialog :data] data)))))

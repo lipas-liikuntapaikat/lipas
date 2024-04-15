@@ -2,6 +2,8 @@
   (:require
    [lipas.data.materials :as materials]))
 
+(def audit-type "floorball-circumstances-audit")
+
 (def floor-elasticity
   {"point" {:fi "Piste"
             :se "Punkt"

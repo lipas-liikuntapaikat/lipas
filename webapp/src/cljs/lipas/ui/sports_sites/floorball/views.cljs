@@ -633,7 +633,7 @@
         :edit-tooltip    (tr :actions/edit)
         :delete-tooltip  (tr :actions/delete)
         :confirm-tooltip (tr :confirm/press-again-to-delete)
-        :on-add          #(==> [::events/toggle-dialog :audits {}])
+        :on-add          #(==> [::events/toggle-dialog :audits])
         :on-edit         #(==> [::events/toggle-dialog :audits (get edit-data (:id %))])
         :on-delete       #(==> [::events/remove-audit lipas-id %])}])))
 

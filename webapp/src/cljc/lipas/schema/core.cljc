@@ -429,6 +429,23 @@
   (s/coll-of :lipas.sports-site/renovation-year
              :distinct true :into []))
 
+(s/def :lipas.sports-site/audit-date
+  :lipas/date)
+
+(s/def :lipas.sports-site/audit-performed-by
+  (str-in 2 100))
+
+(s/def :lipas.sports-site/audit-type
+  (str-in 2 100))
+
+(s/def :lipas.sports-site/audit
+  (s/keys :req-un [:lipas.sports-site/audit-date
+                   :lipas.sports-site/audit-performed-by
+                   :lipas.sports-site/audit-type]))
+
+(s/def :lipas.sports-site/audits
+  (s/coll-of :lipas.sports-site/audit))
+
 ;;;; Additional properties ;;;;
 
 (s/def :lipas.sports-site.properties/surface-material*
@@ -1276,7 +1293,8 @@
                    :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
                    :lipas.sports-site.circumstances/audit-date
                    :lipas.sports-site.circumstances/general-information
-                   :lipas.sports-site.circumstances/locker-rooms-count]))
+                   :lipas.sports-site.circumstances/locker-rooms-count
+                   :lipas.sports-site/audits]))
 
 (s/def :lipas.sports-site/circumstances
   (s/or :circumstances/floorball :lipas.sports-site.circumstances/floorball))

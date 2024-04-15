@@ -14,4 +14,4 @@
    :dialogs
    {:field       {:open? false :data {}}
     :locker-room {:open? false :data {}}
-    :audits      {:open? false :data {}}}})
+    :audits      {:open? false :data {:audit-type floorball/audit-type}}}})
