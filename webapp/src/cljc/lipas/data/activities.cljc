@@ -962,7 +962,7 @@
   {:label       {:fi "Kalastus"}
    :value       "fishing"
    :description {:fi ""}
-   :type-codes  #{201 2011}
+   :type-codes  #{201 113}
    :sort-order [:description-short
                 :description-long
                 :highlights
