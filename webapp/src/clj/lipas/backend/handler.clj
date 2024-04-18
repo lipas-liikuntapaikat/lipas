@@ -118,14 +118,18 @@
       ["/sports-sites/:lipas-id"
        {:get
         {:no-doc     false
-         :parameters {:path {:lipas-id int?}}
+         :parameters {:path  {:lipas-id int?}
+                      :query :lipas.api.get-sports-site/query-params}
          :responses  {200 {:body :lipas/sports-site}
                       404 {:body map?}}
          :handler
-         (fn [{{{:keys [lipas-id]} :path} :parameters}]
-           (if-let [res (core/get-sports-site db lipas-id)]
-             {:status 200 :body res}
-             {:status 404 :body {:message "Not found"}}))}}]
+         (fn [req]
+           (let [lipas-id (-> req :parameters :path :lipas-id)
+                 locale   (or (-> req :parameters :query :lang keyword)
+                               :none)]
+             (if-let [res (core/get-sports-site db lipas-id locale)]
+               {:status 200 :body res}
+               {:status 404 :body {:message "Not found"}})))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
@@ -169,12 +173,12 @@
               :body   (core/search-lois search query)}))}}
 
       ["/:loi-id"
-      {:get
-       {:no-doc     false
-        :responses  {200 {:body :lipas.loi/document}}
-        :parameters {:path {:loi-id :lipas.loi/id}}
-        :handler
-        (fn [{:keys [parameters]}]
+       {:get
+        {:no-doc     false
+         :responses  {200 {:body :lipas.loi/document}}
+         :parameters {:path {:loi-id :lipas.loi/id}}
+         :handler
+         (fn [{:keys [parameters]}]
            {:status 200
             :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]]
 
@@ -666,7 +670,7 @@
        {:post
         {:no-doc         false
          #_#_:middleware [mw/token-auth mw/auth]
-         :parameters {:body :lipas.api.search-lois/payload}
+         :parameters     {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200

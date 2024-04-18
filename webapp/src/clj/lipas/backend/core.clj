@@ -251,10 +251,15 @@
                          activities)))
     sports-site))
 
-(defn get-sports-site [db lipas-id]
-  (-> (db/get-sports-site db lipas-id)
-      (enrich-activities)
-      not-empty))
+(defn get-sports-site
+  ([db lipas-id] (get-sports-site db lipas-id :none))
+  ([db lipas-id locale]
+   (let [m (-> (db/get-sports-site db lipas-id)
+               (enrich-activities))]
+     (cond
+       (#{:fi :en :se} locale) (i18n/localize locale m)
+       (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
+       :else                   m))))
 
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))

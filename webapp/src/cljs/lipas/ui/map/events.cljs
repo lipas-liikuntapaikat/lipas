@@ -170,9 +170,10 @@
 
 (re-frame/reg-event-fx
  ::continue-editing
- (fn [{:keys [db]} _]
-   (let [geoms (-> db :map :mode :geoms)]
-     {:db (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})
+ (fn [{:keys [db]} [_ view-only?]]
+   (let [geoms    (-> db :map :mode :geoms)
+         sub-mode (if view-only? :view-only :editing)]
+     {:db (update-in db [:map :mode] merge {:name :editing :sub-mode sub-mode})
       :dispatch-n
       [[::show-problems (map-utils/find-problems geoms)]]})))
 
@@ -409,12 +410,13 @@
 
 (re-frame/reg-event-fx
  ::edit-site
- (fn [_ [_ lipas-id geom-type]]
-   {:dispatch-n
-    [[:lipas.ui.sports-sites.events/edit-site lipas-id]
-     ;;[::zoom-to-site lipas-id]
-     [::clear-undo-redo]
-     [::start-editing lipas-id :editing geom-type]]}))
+ (fn [_ [_ lipas-id geom-type edit-activities-only?]]
+   (let [sub-mode (if edit-activities-only? :view-only :editing)]
+     {:dispatch-n
+      [[:lipas.ui.sports-sites.events/edit-site lipas-id]
+       ;;[::zoom-to-site lipas-id]
+       [::clear-undo-redo]
+       [::start-editing lipas-id sub-mode geom-type]]})))
 
 (defn- on-success-default [{:keys [lipas-id]}]
   [[::stop-editing]

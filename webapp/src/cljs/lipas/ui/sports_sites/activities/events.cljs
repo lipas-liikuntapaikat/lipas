@@ -55,7 +55,7 @@
      {:db (-> db
               (assoc-in [:sports-sites :activities :mode] :default)
               (assoc-in [:sports-sites :activities :selected-route-id] nil))
-      :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
+      :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
            [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                        new-routes]]]})))
 
