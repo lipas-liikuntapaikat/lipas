@@ -1158,8 +1158,8 @@
                                outdoor-recreation-facilities
                                outdoor-recreation-routes
                                cycling
-                               paddling
-                               birdwatching
+                               #_paddling
+                               #_birdwatching
                                fishing]))
 
 (def csv-headers
