@@ -126,3 +126,14 @@ sed -i '.backup' s|osrm/osrm-backend|osrm-local|g osrm/README.md
 Then see [osrm/README.md](osrm/README.md) to build the osrm files. 
 
 See https://github.com/Project-OSRM/osrm-backend/issues/6133 
+
+### Backups
+
+```
+# Dump
+docker exec -i lipas-postgres-1 pg_dump -U lipas -Fc > lipas.backup
+# Restore
+docker exec -i lipas-postgres-1 pg_restore -Fc < lipas.backup
+# Rebuild ES index
+docker compose run --rm backend-index-search
+```
