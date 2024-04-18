@@ -792,35 +792,37 @@
            ;; Active editing tool
            (when (and editing?
                       (#{"LineString" "Polygon"} geom-type)
-                      (not= :view-only sub-mode))
+                      (not (#{:view-only} sub-mode)))
              [mui/tooltip
               {:title
                (case sub-mode
-                 :drawing         "Piirtotyökalu valittu"
-                 :drawing-hole    "Reikäpiirtotyökalu valittu"
-                 (:editing :undo) (tr :map/delete-vertices-hint)
-                 :importing       "Tuontityökalu valittu"
-                 :deleting        "Poistotyökalu valittu"
-                 :splitting       "Katkaisutyökalu valittu"
-                 :simplifying     "Yskinkertaistystyökalu valittu"
-                 :selecting       "Valintatyökalu valittu")}
+                 :drawing          "Piirtotyökalu valittu"
+                 :drawing-hole     "Reikäpiirtotyökalu valittu"
+                 (:editing :undo)  (tr :map/delete-vertices-hint)
+                 :importing        "Tuontityökalu valittu"
+                 :deleting         "Poistotyökalu valittu"
+                 :splitting        "Katkaisutyökalu valittu"
+                 :simplifying      "Yskinkertaistystyökalu valittu"
+                 :selecting        "Valintatyökalu valittu"
+                 :travel-direction "Kulkusuuntatyökalu valittu")}
               [mui/fab
                {:size     "small"
                 :on-click #() ; noop
                 :color    "inherit"}
                (let [props {:color "secondary"}]
                  (case sub-mode
-                   :drawing         (case geom-type
-                                      "Point"      [mui/icon props "edit"]
-                                      "LineString" [mui/icon props "timeline"]
-                                      "Polygon"    [mui/icon props "change_history"])
-                   :drawing-hole    [mui/icon props "vignette"]
-                   (:editing :undo) [mui/icon props "edit"]
-                   :importing       [:> FileUpload props]
-                   :deleting        [:> Eraser props]
-                   :splitting       [:> ContentCut props]
-                   :simplifying     [mui/icon props "auto_fix_high"]
-                   :selecting       [mui/icon props "handshake"]))]])
+                   :drawing          (case geom-type
+                                       "Point"      [mui/icon props "edit"]
+                                       "LineString" [mui/icon props "timeline"]
+                                       "Polygon"    [mui/icon props "change_history"])
+                   :drawing-hole     [mui/icon props "vignette"]
+                   (:editing :undo)  [mui/icon props "edit"]
+                   :importing        [:> FileUpload props]
+                   :deleting         [:> Eraser props]
+                   :splitting        [:> ContentCut props]
+                   :simplifying      [mui/icon props "auto_fix_high"]
+                   :selecting        [mui/icon props "handshake"]
+                   :travel-direction [mui/icon props "turn_slight_right"]))]])
 
            ;; Tool select button
            (when (and editing?
@@ -917,6 +919,19 @@
                    [:> ContentCut
                     {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
                   [mui/list-item-text (tr :map/split-linestring)]])
+
+               ;; Travel direction
+               (when (and editing? (#{"LineString"} geom-type))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :travel-direction geom-type]))}
+                  [mui/list-item-icon
+                   [mui/icon
+                    {:color (if (= sub-mode :travel-direction) "secondary" "inherit")}
+                    "turn_slight_right"]]
+                  [mui/list-item-text (tr :map/travel-direction)]])
 
                ;; Edit tool
                (when (and editing? (#{"LineString" "Polygon"} geom-type))

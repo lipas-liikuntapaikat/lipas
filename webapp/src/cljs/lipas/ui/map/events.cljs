@@ -887,3 +887,22 @@
  ::select-add-mode
  (fn [db [_ add-mode]]
    (assoc-in db [:map :add-mode] add-mode)))
+
+(re-frame/reg-event-fx
+ ::toggle-travel-direction
+ (fn [{:keys [db]} [_ lipas-id fid]]
+   (let [geoms (-> db
+                   (get-in [:map :mode :geoms])
+                   (update :features
+                           (fn [fs]
+                             (map (fn [{:keys [id properties] :as f}]
+                                    (if (= id fid)
+                                      (let [curr-direction (get properties :travel-direction)
+                                            new-direction  (case curr-direction
+                                                             nil            "start-to-end"
+                                                             "start-to-end" "end-to-start"
+                                                             "end-to-start" nil)]
+                                        (assoc-in f [:properties :travel-direction] new-direction))
+                                      f))
+                                  fs))))]
+     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))

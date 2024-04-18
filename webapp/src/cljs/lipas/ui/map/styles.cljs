@@ -1,6 +1,7 @@
 (ns lipas.ui.map.styles
   (:require
    ["ol/geom/MultiPoint$default" :as MultiPoint]
+   ["ol/geom/Point$default" :as Point]
    ["ol/style/Fill$default" :as Fill]
    ["ol/style/Icon$default" :as Icon]
    ["ol/style/Stroke$default" :as Stroke]
@@ -267,6 +268,10 @@
 (def planning-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
 
+(defn edit-style-fn
+  [_feature]
+  #js[edit-style vertices-style])
+
 (defn shift-likely-overlapping!
   [type-code ^js style resolution f]
   (when (#{4402 4440} type-code)
@@ -286,7 +291,6 @@
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
 
-
 (defn feature-style-hover [f resolution]
   (let [type-code (.get f "type-code")
         style     (get hover-symbols type-code)]
@@ -303,6 +307,83 @@
         (shift-likely-overlapping! type-code (first style) resolution f)
         style)
       (loi-style-selected f resolution))))
+
+(def arrow-icon
+  (str "data:image/svg+xml;charset=utf-8,"
+       (-> {:color "#000000"}
+           (svg/->arrow-str)
+           js/encodeURIComponent)))
+
+(def arrow-hover-icon
+  (str "data:image/svg+xml;charset=utf-8,"
+       (-> {:color mui/secondary}
+           (svg/->arrow-str)
+           js/encodeURIComponent)))
+
+#_(defn ->arrow-head
+  [rot]
+  (RegularShape.
+   #js{:points 3 :radius 15 :fill (Fill. #js{:color "black"}) :rotation rot}))
+
+(defn line-direction-style-fn
+  [feature]
+  (let [styles           #js[edit-style]
+        geometry         (.getGeometry feature)
+        travel-direction (.get feature "travel-direction")]
+
+    (when (and geometry travel-direction)
+      (.forEachSegment geometry
+                       (fn [start end]
+                         (let [dx  (- (first end) (first start))
+                               dy  (- (second end) (second start))
+                               rot (Math/atan2 dy dx)
+                               rot (case travel-direction
+                                     "start-to-end" (- rot)
+                                     "end-to-start" (+ (- rot) Math/PI))]
+                           (.push styles
+                                  (Style.
+                                   #js{:geometry  (Point. (case travel-direction
+                                                            "start-to-end" end
+                                                            "end-to-start" start))
+                                       #_#_:image (->arrow-head rot)
+                                       :image     (Icon.
+                                                   #js {:src      arrow-icon
+                                                        :anchor   #js[0.75 0.5]
+                                                        :rotation rot})})))
+                         ;; Iteration stops on truthy vals but we want
+                         ;; to keep going
+                         false)))
+    styles))
+
+(defn line-direction-hover-style-fn
+  [feature]
+  (let [styles           #js[hover-style]
+        geometry         (.getGeometry feature)
+        travel-direction (.get feature "travel-direction")]
+
+    (when (and geometry travel-direction)
+      (.forEachSegment geometry
+                       (fn [start end]
+                         (let [dx  (- (first end) (first start))
+                               dy  (- (second end) (second start))
+                               rot (Math/atan2 dy dx)
+                               rot (case travel-direction
+                                     "start-to-end" (- rot)
+                                     "end-to-start" (+ (- rot) Math/PI))]
+                           (.push styles
+                                  (Style.
+                                   #js{:geometry  (Point. (case travel-direction
+                                                            "start-to-end" end
+                                                            "end-to-start" start))
+                                       #_#_:image (->arrow-head rot)
+                                       :image     (Icon.
+                                                   #js {:src      arrow-hover-icon
+                                                        :anchor   #js[0.75 0.5]
+                                                        :rotation rot})})))
+                         ;; Iteration stops on truthy vals but we want
+                         ;; to keep going
+                         false)))
+    styles))
 
 (def population-grid-radius
   "Population grid is 250x250m"
