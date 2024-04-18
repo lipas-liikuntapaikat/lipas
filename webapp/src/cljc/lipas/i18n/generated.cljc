@@ -486,6 +486,7 @@
      :delete              "Poista {1}",
      :renovation-years    "Perus​korjaus​vuodet",
      :name-localized-se   "Nimi ruotsiksi",
+     :name-localized-en   "Nimi englanniksi"
      :status              "Liikuntapaikan tila",
      :id                  "LIPAS-ID",
      :details-in-portal   "Näytä kaikki lisätiedot",
@@ -678,6 +679,7 @@
      "Pihlajalinna Areena on energiatehokas jäähalli"},
     :lipas.location
     {:address       "Katuosoite",
+     :no-address    "Kohteelle ei voi määrittää katuosoitetta"
      :city          "Kunta",
      :city-code     "Kuntanumero",
      :headline      "Sijainti",
@@ -929,6 +931,7 @@
      "Sinulla on käyttöoikeus seuraaviin  yksittäisiin liikuntapaikkoihin:",
      :permissions-help
      "Kerro, mitä tietoja haluat päivittää Lipaksessa",
+     :permission-to-activities  "Sinulla on käyttöoikeus seuraaviin aktiviteetteihin"
      :report-energy-consumption "Ilmoita energiankulutus",
      :firstname                 "Etunimi",
      :save-search               "Tallenna haku",
@@ -1288,6 +1291,7 @@
      :delete            "Ta bort {1}",
      :renovation-years  "Renoveringsår",
      :name-localized-se "Namn på svenska",
+     :name-localized-en "Namn på engelska"
      :status            "Status",
      :id                "LIPAS-ID",
      :details-in-portal "Visa alla ytterligare information",
@@ -2144,6 +2148,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :delete            "Delete {1}",
      :renovation-years  "Renovation years",
      :name-localized-se "Swedish name",
+     :name-localized-en "English name"
      :status            "Status",
      :id                "LIPAS-ID",
      :details-in-portal "Click here to see details",

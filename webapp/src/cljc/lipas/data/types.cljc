@@ -2583,7 +2583,7 @@
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}}
-   2011
+   113
    {:description
     {:fi
      "Vapaa-ajankalastukseen sopiva alue. Kohteessa voi olla palvelurakenteita.",
@@ -2596,10 +2596,10 @@
     {:fi "Kalastuskohde (alue)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
-    :type-code     2011,
+    :type-code     113
     :main-category 0,
     :status        "active",
-    :sub-category  2,
+    :sub-category  1,
     :geometry-type "Polygon",
     :props
     {:school-use?                        {:priority 0},

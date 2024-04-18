@@ -26,7 +26,7 @@
    [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
-(def extra-locales [:se])
+(def extra-locales [:se :en])
 
 (defn- allow-editing-status?
   "Status field is displayed only if latest saved status is
@@ -238,60 +238,77 @@
                     :label-fn    (comp locale second)
                     :on-change   #(on-change :admin %)}]}]))
 
-(defn location-form [{:keys [tr edit-data display-data cities on-change
-                             read-only? sub-headings?]}]
-  (let [locale (tr)]
-    [lui/form
-     {:read-only? read-only?}
+(defn location-form
+  [{:keys [tr edit-data display-data cities on-change
+           read-only? sub-headings? address-required?]
+    :or   {address-required? true}}]
+  (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
+    (let [locale (tr)]
 
-     (when sub-headings?
-       [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
+      [lui/form
+       {:read-only? read-only?}
 
-     ;; Address
-     {:label      (tr :lipas.location/address)
-      :value      (-> display-data :address)
-      :form-field [lui/text-field
-                   {:value     (-> edit-data :address)
-                    :spec      :lipas.location/address
-                    :required  true
-                    :on-change #(on-change :address %)}]}
+       (when sub-headings?
+         [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
 
-     ;; Postal code
-     {:label      (tr :lipas.location/postal-code)
-      :value      (-> display-data :postal-code)
-      :form-field [lui/text-field
-                   {:value     (-> edit-data :postal-code)
-                    :required  true
-                    :spec      :lipas.location/postal-code
-                    :on-change #(on-change :postal-code %)}]}
+       ;; No address switch
+       (when-not address-required?
+         {:label      (tr :lipas.location/no-address)
+          :value      @no-address?
+          :form-field [lui/switch
+                       {:value     @no-address?
+                        :on-change (fn [checked?]
+                                     (reset! no-address? checked?)
+                                     (if checked?
+                                       (on-change :address "-")
+                                       (on-change :address nil)))}]})
 
-     ;; Postal office
-     {:label      (tr :lipas.location/postal-office)
-      :value      (-> display-data :postal-office)
-      :form-field [lui/text-field
-                   {:value     (-> edit-data :postal-office)
-                    :spec      :lipas.location/postal-office
-                    :on-change #(on-change :postal-office %)}]}
+       ;; Address
+       {:label      (tr :lipas.location/address)
+        :value      (-> display-data :address)
+        :form-field [lui/text-field
+                     {:value     (-> edit-data :address)
+                      :spec      :lipas.location/address
+                      :disabled  @no-address?
+                      :required  (not @no-address?)
+                      :on-change #(on-change :address %)}]}
 
-     ;; City
-     {:label      (tr :lipas.location/city)
-      :value      (-> display-data :city :name)
-      :form-field [autocompletes/autocomplete
-                   {:value     (-> edit-data :city :city-code)
-                    :required  true
-                    :spec      :lipas.location.city/city-code
-                    :items     cities
-                    :label-fn  (comp locale :name)
-                    :value-fn  :city-code
-                    :on-change #(on-change :city :city-code %)}]}
+       ;; Postal code
+       {:label      (tr :lipas.location/postal-code)
+        :value      (-> display-data :postal-code)
+        :form-field [lui/text-field
+                     {:value     (-> edit-data :postal-code)
+                      :required  true
+                      :spec      :lipas.location/postal-code
+                      :on-change #(on-change :postal-code %)}]}
 
-     ;; Neighborhood
-     {:label      (tr :lipas.location/neighborhood)
-      :value      (-> display-data :city :neighborhood)
-      :form-field [lui/text-field
-                   {:value     (-> edit-data :city :neighborhood)
-                    :spec      :lipas.location.city/neighborhood
-                    :on-change #(on-change :city :neighborhood %)}]}]))
+       ;; Postal office
+       {:label      (tr :lipas.location/postal-office)
+        :value      (-> display-data :postal-office)
+        :form-field [lui/text-field
+                     {:value     (-> edit-data :postal-office)
+                      :spec      :lipas.location/postal-office
+                      :on-change #(on-change :postal-office %)}]}
+
+       ;; City
+       {:label      (tr :lipas.location/city)
+        :value      (-> display-data :city :name)
+        :form-field [autocompletes/autocomplete
+                     {:value     (-> edit-data :city :city-code)
+                      :required  true
+                      :spec      :lipas.location.city/city-code
+                      :items     cities
+                      :label-fn  (comp locale :name)
+                      :value-fn  :city-code
+                      :on-change #(on-change :city :city-code %)}]}
+
+       ;; Neighborhood
+       {:label      (tr :lipas.location/neighborhood)
+        :value      (-> display-data :city :neighborhood)
+        :form-field [lui/text-field
+                     {:value     (-> edit-data :city :neighborhood)
+                      :spec      :lipas.location.city/neighborhood
+                      :on-change #(on-change :city :neighborhood %)}]}])))
 
 (defn surface-material-selector
   [{:keys [tr value on-change label multi? spec tooltip disabled]}]

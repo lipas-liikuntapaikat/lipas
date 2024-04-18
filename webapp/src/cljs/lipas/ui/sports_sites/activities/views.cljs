@@ -9,7 +9,8 @@
    [lipas.ui.sports-sites.activities.subs :as subs]
    [lipas.ui.sports-sites.views :as sports-site-views]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [clojure.spec.alpha :as s]))
 
 (declare make-field)
 
@@ -941,7 +942,10 @@
         route-count (<== [::subs/route-count lipas-id activity-k])]
 
     [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
-     [mui/grid {:item true :xs 12}
+
+     ;; Hidden until UTP can support multi-tiered routes
+
+     #_[mui/grid {:item true :xs 12}
       [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
                    :value     (= :multi route-view)
                    :disabled  (> route-count 1)
@@ -1016,8 +1020,22 @@
                :label       (get-in field [:label locale])
                :helper-text (get-in field [:description locale])
                :fullWidth   true
-               :on-change   #(set-field prop-k locale %)
-               :value       (get-in edit-data [prop-k locale])}]
+               :on-change   #(set-field prop-k %)
+               :value       (get-in edit-data [prop-k])}]
+
+    "percentage" [lui/text-field
+                  (merge
+                   {:type        "number"
+                    :adornment   "%"
+                    :disabled    read-only?
+                    :label       (get-in field [:label locale])
+                    :helper-text (get-in field [:description locale])
+                    :fullWidth   true
+                    :spec        [:or
+                                  [:int {:min 0 :max 100}]
+                                  [:double {:min 0.0 :max 100.0}]]
+                    :on-change   #(set-field prop-k %)
+                    :value       (get-in edit-data [prop-k])})]
 
     "textarea" [lui/text-field
                 {:disabled        read-only?
@@ -1147,7 +1165,7 @@
         read-only?   (not editing?)]
 
     (if read-only?
-      [mui/typography "Vasta editointinäkymä on olemassa lajeille. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
+      [mui/typography "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
 
       [:<>
 

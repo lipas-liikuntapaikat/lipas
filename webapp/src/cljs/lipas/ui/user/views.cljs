@@ -83,14 +83,15 @@
 3130, 3210 4401, 4402, 4403, 4404, 4405})
 
 (defn user-panel [tr user]
-  (let [admin? (<== [::subs/admin?])
-        cities (<== [::subs/permission-to-cities])
-        types  (<== [::subs/permission-to-types])
+  (let [admin?     (<== [::subs/admin?])
+        cities     (<== [::subs/permission-to-cities])
+        types      (<== [::subs/permission-to-types])
+        activities (<== [::subs/permission-to-activities])
 
         sites (<== [::subs/sports-sites (tr)])
 
-        all-types?  (or admin? (-> user :permissions :all-types?))
-        all-cities? (or admin? (-> user :permissions :all-cities?))
+        all-types?      (or admin? (-> user :permissions :all-types?))
+        all-cities?     (or admin? (-> user :permissions :all-cities?))
 
         locale     (tr)
         card-props {:square true}
@@ -190,7 +191,7 @@
                  [mui/list-item-text t]]))])
 
           (when (and (not all-cities?) (not all-types?) (empty? sites)
-                     (empty? cities) (empty? types))
+                     (empty? cities) (empty? types) (empty? activities))
             [mui/grid {:container true}
              [lui/icon-text
               {:icon "lock"
@@ -206,7 +207,18 @@
                            [:type (tr :lipas.sports-site/type)]
                            [:city (tr :lipas.location/city)]]
                :items     sites
-               :on-select #(==> [::events/select-sports-site %])}]])]
+               :on-select #(==> [::events/select-sports-site %])}]])
+
+          (when (and (not admin?) (not-empty activities))
+            [:<>
+             [lui/icon-text
+              {:icon "lock_open"
+               :text (tr :lipas.user/permission-to-activities)}]
+             (into
+              [mui/list {:dense true}]
+              (for [s (->> activities vals (map (comp locale :label)))]
+                [mui/list-item
+                 [mui/list-item-text s]]))])]
 
          [mui/card-actions
           [mui/button {:href  "/liikuntapaikat"
@@ -232,7 +244,7 @@
           [mui/button
            {:variant "contained"
             :color   "secondary"
-            :style {:margin-top "1em"}
+            :style   {:margin-top "1em"}
             :href    (str "/pdf/lipas-vuosikatsaus-2023.pdf")
             :target  "_blank"}
            "LIPAS vuosikatsaus 2023 (.pdf)"]
