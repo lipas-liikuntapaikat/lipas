@@ -26,7 +26,7 @@
    [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
-(def extra-locales [:se])
+(def extra-locales [:se :en])
 
 (defn- allow-editing-status?
   "Status field is displayed only if latest saved status is
