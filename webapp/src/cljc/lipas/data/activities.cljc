@@ -1158,7 +1158,7 @@
                                outdoor-recreation-facilities
                                outdoor-recreation-routes
                                cycling
-                               #_paddling
+                               paddling
                                #_birdwatching
                                fishing]))
 

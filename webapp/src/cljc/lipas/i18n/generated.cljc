@@ -840,6 +840,7 @@
      :center-map-to-site     "Kohdista kartta kohteeseen",
      :draw-hole              "Lisää reikä",
      :split-linestring       "Katkaise reittiosa",
+     :travel-direction       "Määritä kulkusuunta"
      :delete-vertices-hint
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",
