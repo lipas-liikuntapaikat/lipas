@@ -22,7 +22,8 @@
       (db/setup-connection-pool db-spec))))
 
 (defmethod ig/halt-key! :db [_ pool]
-  (db/stop-connection-pool pool))
+  (when-not (and (map? pool) (:dev pool))
+    (db/stop-connection-pool pool)))
 
 (defmethod ig/init-key :emailer [_ config]
   (email/->SMTPEmailer config))

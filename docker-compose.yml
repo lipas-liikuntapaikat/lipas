@@ -39,7 +39,7 @@ services:
       service: proxy-base
     links:
       - mapproxy
-      - backend
+      #- backend
       - logstash
       - kibana
       - legacy-api
