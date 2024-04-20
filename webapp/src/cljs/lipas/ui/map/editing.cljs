@@ -328,7 +328,6 @@
     (.addFeatures source features)
 
     (-> map-ctx
-        #_(map-utils/enable-edits-hover!)
         (assoc-in [:interactions :travel-direction-select] select)
         (assoc-in [:interactions :travel-direction-hover] hover))))
 
