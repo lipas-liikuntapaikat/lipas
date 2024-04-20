@@ -55,9 +55,9 @@
  (fn [[_ type-code]]
    [(re-frame/subscribe [::show-activities? type-code])
     (re-frame/subscribe [:lipas.ui.user.subs/permissions])])
- (fn [[show-activities? {:keys [admin? types all-types?]}] [_ type-code can-publish?]]
-   (and (not admin?)
-        (not can-publish?)
+ (fn [[show-activities? {:keys [admin? types all-types?] :as lol}] [_ type-code can-publish?]]
+   (and (not (true? admin?))
+        #_(not can-publish?)
         show-activities?)))
 
 (re-frame/reg-sub

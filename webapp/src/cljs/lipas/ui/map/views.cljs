@@ -578,7 +578,7 @@
              :on-click #(==> [::events/show-sports-site nil])}
             [mui/icon "close"]])]]]
 
-     ;; Tabs
+      ;; Tabs
       [mui/grid {:item true :xs 12}
       ;; [mui/tool-bar {:disableGutters true}]
       [mui/tabs
@@ -792,7 +792,7 @@
            ;; Active editing tool
            (when (and editing?
                       (#{"LineString" "Polygon"} geom-type)
-                      (not (#{:view-only} sub-mode)))
+                      (not edit-activities-only?))
              [mui/tooltip
               {:title
                (case sub-mode
@@ -824,10 +824,25 @@
                    :selecting        [mui/icon props "handshake"]
                    :travel-direction [mui/icon props "turn_slight_right"]))]])
 
+           (when (and editing?
+                      (#{"LineString"} geom-type)
+                      edit-activities-only?)
+             [mui/tooltip {:title (tr :map/travel-direction)}
+              [mui/fab
+               {:size     "small"
+                :color    (if (#{:travel-direction} sub-mode)
+                         "secondary"
+                         "default")
+                :on-click (fn [_]
+                            (if (#{:travel-direction} sub-mode)
+                              (==> [::events/start-editing lipas-id :view-only geom-type])
+                              (==> [::events/start-editing lipas-id :travel-direction geom-type])))}
+               [mui/icon "turn_slight_right"]]])
+
            ;; Tool select button
            (when (and editing?
                       (#{"LineString" "Polygon"} geom-type)
-                      (not= :view-only sub-mode))
+                      (not edit-activities-only?))
              [:<>
               [mui/tooltip {:title (tr :actions/select-tool)}
                [mui/fab
