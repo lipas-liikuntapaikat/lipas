@@ -920,8 +920,8 @@
                     {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
                   [mui/list-item-text (tr :map/split-linestring)]])
 
-               ;; Travel direction
-               (when (and editing? (#{"LineString"} geom-type))
+               ;; Travel direction (limited to paddling for now)
+               (when (and editing? (#{"LineString"} geom-type) (#{4451 4452} type-code))
                  [mui/menu-item
                   {:on-click
                    #(do
