@@ -268,10 +268,6 @@
 (def planning-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
 
-(defn edit-style-fn
-  [_feature]
-  #js[edit-style vertices-style])
-
 (defn shift-likely-overlapping!
   [type-code ^js style resolution f]
   (when (#{4402 4440} type-code)
@@ -320,11 +316,6 @@
            (svg/->arrow-str)
            js/encodeURIComponent)))
 
-#_(defn ->arrow-head
-  [rot]
-  (RegularShape.
-   #js{:points 3 :radius 15 :fill (Fill. #js{:color "black"}) :rotation rot}))
-
 (defn line-direction-style-fn
   [feature]
   (let [styles           #js[edit-style]
@@ -345,7 +336,6 @@
                                    #js{:geometry  (Point. (case travel-direction
                                                             "start-to-end" end
                                                             "end-to-start" start))
-                                       #_#_:image (->arrow-head rot)
                                        :image     (Icon.
                                                    #js {:src      arrow-icon
                                                         :anchor   #js[0.75 0.5]
@@ -375,7 +365,6 @@
                                    #js{:geometry  (Point. (case travel-direction
                                                             "start-to-end" end
                                                             "end-to-start" start))
-                                       #_#_:image (->arrow-head rot)
                                        :image     (Icon.
                                                    #js {:src      arrow-hover-icon
                                                         :anchor   #js[0.75 0.5]

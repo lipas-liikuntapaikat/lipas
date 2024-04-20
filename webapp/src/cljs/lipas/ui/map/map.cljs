@@ -106,7 +106,7 @@
      #js{:source (VectorSource.)
          :name   "edits"
          :zIndex 10
-         :style  styles/edit-style-fn})
+         :style  #js[styles/edit-style styles/vertices-style]})
     :highlights
     (VectorLayer.
      #js{:source (VectorSource.)
