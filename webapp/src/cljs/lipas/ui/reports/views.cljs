@@ -88,27 +88,18 @@
         {:container       true
          :justify-content "space-between"
          :align-items     "baseline"}
-        [mui/grid 
-         {:container true
-          :justify-content "space-between"}
-         (tr :reports/select-fields)
+        [mui/grid {:item true}
+         (tr :reports/select-fields)]
+        [mui/grid {:item true}
          [mui/icon-button {:on-click toggle}
-          [mui/icon "close"]]]
-
-        ;; Save template for later use btn
-        (when logged-in?
-          [mui/tooltip {:title (tr :lipas.user/save-report)}
-           [mui/grid {:item true}
-            [mui/icon-button
-             {:on-click #(==> [::events/toggle-save-dialog])}
-             [mui/icon "save"]]]])]]
+          [mui/icon "close"]]]]]
 
       [mui/dialog-content
-       [mui/grid {:container true :spacing 1}
+       [mui/grid {:container true :spacing 1 :align-items "center"}
 
         ;; Saved reports
         (when saved-reports
-          [mui/grid {:item true :xs 12}
+          [mui/grid {:item true}
            [lui/select
             {:label     (tr :lipas.user/saved-reports)
              :style     {:width "210px"}
@@ -116,6 +107,15 @@
              :label-fn  :name
              :value-fn  :fields
              :on-change #(==> [::events/open-saved-report %])}]])
+
+        ;; Save template for later use btn
+        (when logged-in?
+          [mui/tooltip {:title (tr :lipas.user/save-report)}
+           [mui/grid {:item true}
+            [mui/icon-button
+             {:style {:margin-bottom "-0.5em"}
+              :on-click #(==> [::events/toggle-save-dialog])}
+             [mui/icon "save"]]]])
 
         ;; Quick selects
         [mui/grid {:item true :xs 12}
@@ -151,37 +151,43 @@
 
       ;; Cancel / download buttons
       [mui/dialog-actions
+       [mui/grid {:container true :spacing 2 :align-items "center" :justify-content "flex-end"}
+        [mui/grid {:item true}
+         (when limits-exceeded?
+           [mui/typography
+            {:variant "caption"
+             :color   "error"}
+            (tr :reports/excel-limit-exceeded)])]
 
-       (when limits-exceeded?
+        ;; Result count
+        [mui/grid {:item true}
          [mui/typography
           {:variant "caption"
-           :color   "error"}
-          (tr :reports/excel-limit-exceeded)])
+           :color   (if limits-exceeded? "error" "initial")}
+          (tr :search/results-count results-count)]]
 
-       ;; Result count
-       [mui/typography
-        {:variant "caption"
-         :color   (if limits-exceeded? "error" "initial")}
-        (tr :search/results-count results-count)]
+        [:span {:style {:width "12px"}}]
 
-       [:span {:style {:width "12px"}}]
+        ;; Format selector
+        [mui/grid {:item true}
+         [format-selector
+          {:tr        tr
+           :value     selected-format
+           :on-change #(==> [::events/set-selected-format %])}]]
 
-       ;; Format selector
-       [format-selector
-        {:tr        tr
-         :value     selected-format
-         :on-change #(==> [::events/set-selected-format %])}]
+        [mui/grid {:item true}
+         (when downloading?
+           [mui/circular-progress])]
 
-       (when downloading?
-         [mui/circular-progress])
+        ;; Cancel button
+        [mui/grid {:item true}
+         [mui/button {:on-click toggle :disabled downloading?}
+          (tr :actions/cancel)]]
 
-       ;; Cancel button
-       [mui/button {:on-click toggle :disabled downloading?}
-        (tr :actions/cancel)]
-
-       ;; Download button
-       [mui/button
-        {:disabled (or downloading? (empty? selected-fields) limits-exceeded?)
-         :color    "secondary"
-         :on-click #(==> [::search-events/create-report-from-current-search selected-format])}
-        (tr :actions/download-excel)]]]]))
+        ;; Download button
+        [mui/grid {:item true}
+         [mui/button
+          {:disabled (or downloading? (empty? selected-fields) limits-exceeded?)
+           :color    "secondary"
+           :on-click #(==> [::search-events/create-report-from-current-search selected-format])}
+          (tr :actions/download-excel)]]]]]]))
