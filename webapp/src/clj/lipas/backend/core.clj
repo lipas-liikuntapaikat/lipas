@@ -388,9 +388,15 @@
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
         field-types   (->> sports-site :fields (map :type) distinct)
-        search-meta   {:name (utils/->sortable-name (:name sports-site))
-                       :admin {:name (-> sports-site :admin admins)}
-                       :owner {:name (-> sports-site :owner owners)}
+        latest-audit  (some-> sports-site
+                              :audits
+                              (->> (sort-by :audit-date utils/reverse-cmp))
+                              first
+                              :audit-date)
+        search-meta   {:name   (utils/->sortable-name (:name sports-site))
+                       :admin  {:name (-> sports-site :admin admins)}
+                       :owner  {:name (-> sports-site :owner owners)}
+                       :audits {:latest-audit-date latest-audit}
                        :location
                        {:wgs84-point  start-coords
                         :wgs84-center center-coords
