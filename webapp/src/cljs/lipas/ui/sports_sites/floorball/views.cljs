@@ -1207,8 +1207,10 @@
          {:value     (-> edit-data :led-screens-or-surfaces-for-ads?)
           :on-change #(on-change :led-screens-or-surfaces-for-ads? %)}]})
 
+     ;; Replaced with `:audits` key on top-level
+
      ;; Katselmus tehty
-     (when (= :floorball visibility)
+     #_(when (= :floorball visibility)
        {:label "Katselmus tehty"
         :value (-> display-data :audit-date)
         :form-field
@@ -1268,14 +1270,6 @@
          :display-data (-> display-data :circumstances)
          :edit-data    (-> edit-data :circumstances)}])
 
-     [lui/sub-heading {:label "Katselmointi"}]
-     [audits-dialog {:tr tr :lipas-id lipas-id}]
-     [audits-table {:tr           tr
-                    :lipas-id     lipas-id
-                    :read-only?   read-only?
-                    :display-data (-> display-data :audits)
-                    :edit-data    (-> edit-data :audits)}]
-
      [lui/sub-heading {:label "Yleiset"}]
 
      [circumstances-form
@@ -1287,4 +1281,20 @@
        :on-change    (partial on-change :circumstances)
        :display-data (:circumstances display-data)
        :edit-data    (:circumstances edit-data)
-       :key          type-code}]]))
+       :key          type-code}]
+
+     (when (= :floorball visibility)
+       [lui/sub-heading {:label "Katselmoinnit"}])
+
+     (when (= :floorball visibility)
+       [audits-dialog {:tr tr :lipas-id lipas-id}])
+
+     (when (= :floorball visibility)
+       [audits-table {:tr           tr
+                      :lipas-id     lipas-id
+                      :read-only?   read-only?
+                      :display-data (-> display-data :audits)
+                      :edit-data    (-> edit-data :audits)}])
+
+     ;; "Landing bay" for floating controls
+     [:div {:style {:height "2em"}}]]))
