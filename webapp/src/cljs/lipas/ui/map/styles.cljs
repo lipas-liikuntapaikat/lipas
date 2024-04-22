@@ -319,7 +319,7 @@
 (defn line-direction-style-fn
   [feature]
   (let [styles           #js[edit-style]
-        geometry         (.getGeometry feature)
+        ^js geometry     (.getGeometry feature)
         travel-direction (.get feature "travel-direction")]
 
     (when (and geometry travel-direction)
