@@ -167,3 +167,28 @@
                   :sheet
                   {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
+
+(re-frame/reg-event-fx
+ ::gdpr-remove-user
+ (fn [{:keys [db]} [_ user]]
+   (let [token (-> db :user :login :token)]
+     {:http-xhrio
+      {:method          :post
+       :uri             (str (:backend-url db) "/actions/gdpr-remove-user")
+       :headers         {:Authorization (str "Token " token)}
+       :params          user
+       :format          (ajax/json-request-format)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::gdpr-remove-user-success]
+       :on-failure      [::failure]}})))
+
+(re-frame/reg-event-fx
+ ::gdpr-remove-user-success
+ (fn [{:keys [db]} [_ user]]
+   (let [tr (:translator db)]
+     {:db (assoc-in db [:admin :users (:id user)] user)
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/save-success)
+                        :success? true}]]
+           [:dispatch [::set-user-to-edit user]]
+           [:dispatch [::get-users]]]})))
