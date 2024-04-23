@@ -90,7 +90,7 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
  (fn [[permissions sports-site] _]
    (when (and permissions sports-site)
-     (permissions/publish? permissions sports-site))))
+     (permissions/modify-sports-site? permissions sports-site))))
 
 (re-frame/reg-sub
  ::permission-to-publish-site?

@@ -77,3 +77,42 @@
   [permissions]
   (or (:admin? permissions)
       (some? (seq (:activities permissions)))))
+
+(defn modify-sports-site?
+  "Returns `true` if permisssions allow user to publish changes to `sports-site`.
+
+  User can have either explicit or implicit permissions:
+
+  Explicit:
+  :admin?       can edit any site
+  :sports-sites individual sites user can edit
+
+  Implicit: (access is required to *both* city and type)
+  :cities       can edit if site is located in these cities
+  :types        can edit if site is of type in these types
+  :all-cities?  can edit sites in any city
+  :all-types?   can edit sites of any type
+
+  Implicit via activities:
+  :activities   can edit if type-code relates to one of these activities
+
+  Permissions can be any combination of these keys. Explicit
+  permissions overrule implicit ones by short circuiting."
+  [permissions sports-site]
+
+  {:pre [(s/valid? :lipas.user/permissions permissions)
+         (or (s/valid? :lipas/sports-site-like sports-site)
+             (s/explain :lipas/sports-site-like sports-site))]}
+
+  (let [{:keys [admin?]} permissions]
+
+    (boolean
+     (or
+
+      ;; Explicitly
+      admin?
+      (access-to-sports-site? permissions sports-site)
+
+      ;; Implicitly
+      (and (access-to-city? permissions sports-site)
+           (access-to-type? permissions sports-site))))))
