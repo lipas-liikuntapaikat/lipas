@@ -126,7 +126,7 @@
          (fn [req]
            (let [lipas-id (-> req :parameters :path :lipas-id)
                  locale   (or (-> req :parameters :query :lang keyword)
-                               :none)]
+                              :none)]
              (if-let [res (core/get-sports-site db lipas-id locale)]
                {:status 200 :body res}
                {:status 404 :body {:message "Not found"}})))}}]
@@ -232,6 +232,19 @@
          (fn [_]
            {:status 200
             :body   (core/get-users db)})}}]
+
+      ["/actions/gdpr-remove-user"
+       {:post
+        {:no-doc     true
+         :middleware [mw/token-auth mw/auth mw/admin]
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
+                                                              (:username body-params)
+                                                              (:email body-params)))]
+             (core/gdpr-remove-user! db user)
+             {:status 200
+              :body   (core/get-user db (str id))}))}}]
 
       ["/actions/search"
        {:post
