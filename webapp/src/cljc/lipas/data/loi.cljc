@@ -128,6 +128,11 @@
      :boat-lane
      {:label {:fi "Veneväylä"}
       :value "boat-lane"
+      :props common-props}
+
+     :whitewater-canoeing
+     {:label {:fi "Koskimelontakohde"}
+      :value "whitewater-canoeing"
       :props common-props}}}
 
    "outdoor-recreation-facilities"
