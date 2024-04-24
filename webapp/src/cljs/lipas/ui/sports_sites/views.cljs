@@ -526,11 +526,13 @@
                                       :on-change on-change}]
       (= "boolean" data-type)       [lui/checkbox
                                      {:value     value
+                                      :label     label
                                       :tooltip   tooltip
                                       :disabled  disabled?
                                       :on-change on-change}]
       :else                         [lui/text-field
                                      {:value     value
+                                      :label     label
                                       :disabled  disabled?
                                       :tooltip   tooltip
                                       :spec      spec
