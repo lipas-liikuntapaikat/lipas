@@ -598,7 +598,7 @@
          :value 0
          :label (tr :lipas.sports-site/basic-data)}]
 
-       (when (or admin? can-publish?)
+       (when-not edit-activities-only?
          [mui/tab
           {:style {:min-width 0}
            :value 1
