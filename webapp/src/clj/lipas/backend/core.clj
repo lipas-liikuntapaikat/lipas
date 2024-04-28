@@ -243,7 +243,8 @@
     (update sports-site :activities
             (fn [activities]
               (reduce-kv (fn [m k v]
-                           (if (get-in m [k :routes])
+                           (if (and (get-in m [k :routes])
+                                    (get-in sports-site [:activities k :routes]))
                              (update-in m [k :routes] (fn [routes]
                                                         (mapv #(deref-fids sports-site %) routes)))
                              m))

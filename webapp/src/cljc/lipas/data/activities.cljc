@@ -753,115 +753,174 @@
    "hard"   {:fi "Vaativa"}})
 
 (def paddling
+  "Paddling is a bastard child and it contains
+
+  - routes (4451 4452)
+  - points (5150)
+
+  ... and different content needs to be collected for paddling
+  centers. This is resolved by mapping relevant props to each type
+  in :type->props"
   {:label       {:fi "Melonta ja SUP"}
    :value       "paddling"
    :description {:fi ""}
-   :type-codes  #{4451 4452}
-   :sort-order [:route-name
-                :description-short
-                :description-long
-                :highlights
-                :paddling-route-type
-                :paddling-activities
-                :duration
-                :travel-direction
-                :paddling-difficulty
-                :paddling-properties
-                :arrival
-                :good-to-know
-                :rules
-                :safety
-                :accessibility
-                :contacts
-                :additional-info-link
-                :images
-                :videos]
+   :type-codes  #{4451 4452 5150}
+   :type->props {4451 #{:routes}
+                 4452 #{:routes}
+                 5150 (into #{:equipment-rental?
+                              :rapid-canoeing-centre?
+                              :canoeing-club?
+                              :activity-service-company?} (keys common-props))}
+   :sort-order  [:route-name
+                 :description-short
+                 :description-long
+                 :highlights
+                 :paddling-route-type
+                 :paddling-activities
+                 :duration
+                 :travel-direction
+                 :paddling-difficulty
+                 :paddling-properties
+                 :equipment-rental?
+                 :rapid-canoeing-centre?
+                 :canoeing-club?
+                 :activity-service-company?
+                 :arrival
+                 :good-to-know
+                 :rules
+                 :safety
+                 :accessibility
+                 :contacts
+                 :additional-info-link
+                 :images
+                 :videos]
    :props
-   {:routes
-    {:schema [:sequential
-              (mu/merge
-               common-props-schema
-               [:map
-                [:id [:string]]
-                [:geometries route-fcoll-schema]
-                [:route-name {:optional true} localized-string-schema]
-                [:paddling-activities {:optional true}
-                 [:sequential (into [:enum] (keys paddling-activities))]]
-                [:paddling-route-type {:optional true}
-                 [:sequential (into [:enum] (keys paddling-route-types))]]
-                [:paddling-properties {:optional true}
-                 [:sequential (into [:enum] (keys paddling-properties))]]
-                [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
-                [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
-                [:safety {:optional true} localized-string-schema]
-                [:good-to-know {:optional true} localized-string-schema]
-                [:duration {:optional true} duration-schema]])]
-     :field
-     {:type        "routes"
-      :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
-      :label       {:fi "Reittityyppi"}
-      :props
-      (merge
-       common-route-props
-       {:route-name
-        {:field
-         {:type        "text-field"
-          :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."}
-          :label       {:fi "Reitin nimi"}}}
+   (merge common-props
+          {:equipment-rental?
+           {:field
+            {:type           "lipas-property"
+             :lipas-property :equipment-rental?
+             :label          {:fi "Välinevuokraus"
+                              :se ""
+                              :en ""}
+             :description    {:fi "Välinevuokraus mahdollista."
+                              :se ""
+                              :en ""}}}
 
-        :paddling-activities
-        {:field
-         {:type        "multi-select"
-          :description {:fi "Valitse soveltuvat melontatavat"}
-          :label       {:fi "Aktiviteetti"}
-          :opts        paddling-activities}}
+           :rapid-canoeing-centre?
+           {:field
+            {:type           "lipas-property"
+             :lipas-property :rapid-canoeing-centre?
+             :label          {:fi "Koskimelontakeskus"
+                              :se "Centrum för paddling"
+                              :en "Rapid canoeing centre"}
+             :description    {:fi "Kilpailujen järjestäminen mahdollista."
+                              :se "Möjligt att arrangera tävlingar."
+                              :en "Competitions possible."}}}
 
-        :paddling-route-type
-        {:field
-         {:type        "multi-select"
-          :description {:fi "Valitse, minkä tyyppinen melontakohde (-reitti) on kyseessä."}
-          :label       {:fi "Melontakohteen tyyppi"}
-          :opts        paddling-route-types}}
+           :canoeing-club?
+           {:field
+            {:type           "lipas-property"
+             :lipas-property :canoeing-club?
+             :label          {:fi "Melontaseura"
+                              :se ""
+                              :en "Canoeing club"}
+             :description    {:fi "Onko kyseessä melontaseuran tila."
+                              :se ""
+                              :en ""}}}
 
-        :paddling-properties
-        {:field
-         {:type        "multi-select"
-          :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia."}
-          :label       {:fi "Ominaisuudet"}
-          :opts        paddling-properties}}
+           :activity-service-company?
+           {:field
+            {:type           "lipas-property"
+             :lipas-property :activity-service-company?
+             :label          {:fi "Ohjelmapalveluyritys"}
+             :description    {:fi "Toimiiko kohteessa ohjelmapalveluyritys."}}}
 
-        :paddling-difficulty
-        {:field
-         {:type        "select"
-          :description {:fi "Haastavuus"}
-          :label       {:fi "Reitin arvioitu haastavuus."}
-          :opts        paddling-difficulty}}
+           :routes
+           {:schema [:sequential
+                     (mu/merge
+                      common-props-schema
+                      [:map
+                       [:id [:string]]
+                       [:geometries route-fcoll-schema]
+                       [:route-name {:optional true} localized-string-schema]
+                       [:paddling-activities {:optional true}
+                        [:sequential (into [:enum] (keys paddling-activities))]]
+                       [:paddling-route-type {:optional true}
+                        [:sequential (into [:enum] (keys paddling-route-types))]]
+                       [:paddling-properties {:optional true}
+                        [:sequential (into [:enum] (keys paddling-properties))]]
+                       [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
+                       [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
+                       [:safety {:optional true} localized-string-schema]
+                       [:good-to-know {:optional true} localized-string-schema]
+                       [:duration {:optional true} duration-schema]])]
+            :field
+            {:type        "routes"
+             :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"}
+             :label       {:fi "Reittityyppi"}
+             :props
+             (merge
+              common-route-props
+              {:route-name
+               {:field
+                {:type        "text-field"
+                 :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."}
+                 :label       {:fi "Reitin nimi"}}}
 
-        :safety
-        {:field
-         {:type        "textarea"
-          :description {:fi "Lisää reitin turvallisuuteen liittyvää tietoa esim. kuvaile vaativuutta, suositeltavaa osaamistasoa tai kalustoa."}
-          :label       {:fi "Turvallisuus"}}}
+               :paddling-activities
+               {:field
+                {:type        "multi-select"
+                 :description {:fi "Valitse soveltuvat melontatavat"}
+                 :label       {:fi "Aktiviteetti"}
+                 :opts        paddling-activities}}
 
-        :good-to-know
-        {:field
-         {:type        "textarea"
-          :description {:fi "Syötä tähän asioita, joista vesilläliikkujan on hyvä tietää (esim. matkapuhelimen kuuluvuuden katvealueet)."}
-          :label       {:fi "Hyvä tietää"}}}
+               :paddling-route-type
+               {:field
+                {:type        "multi-select"
+                 :description {:fi "Valitse, minkä tyyppinen melontakohde (-reitti) on kyseessä."}
+                 :label       {:fi "Melontakohteen tyyppi"}
+                 :opts        paddling-route-types}}
 
-        :duration
-        {:field
-         {:type        "duration"
-          :description {:fi "Reitin arvioitu kulkuaika"}
-          :label       {:fi "Kulkuaika"}}}
+               :paddling-properties
+               {:field
+                {:type        "multi-select"
+                 :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia."}
+                 :label       {:fi "Ominaisuudet"}
+                 :opts        paddling-properties}}
 
-        :travel-direction
-        {:field
-         {:type        "select"
-          :opts        {"clockwise"         {:fi "Myötäpäivään"}
-                        "counter-clockwise" {:fi "Vastapäivään"}}
-          :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."}
-          :label       {:fi "Kulkusuunta"}}}})}}}})
+               :paddling-difficulty
+               {:field
+                {:type        "select"
+                 :description {:fi "Haastavuus"}
+                 :label       {:fi "Reitin arvioitu haastavuus."}
+                 :opts        paddling-difficulty}}
+
+               :safety
+               {:field
+                {:type        "textarea"
+                 :description {:fi "Lisää reitin turvallisuuteen liittyvää tietoa esim. kuvaile vaativuutta, suositeltavaa osaamistasoa tai kalustoa."}
+                 :label       {:fi "Turvallisuus"}}}
+
+               :good-to-know
+               {:field
+                {:type        "textarea"
+                 :description {:fi "Syötä tähän asioita, joista vesilläliikkujan on hyvä tietää (esim. matkapuhelimen kuuluvuuden katvealueet)."}
+                 :label       {:fi "Hyvä tietää"}}}
+
+               :duration
+               {:field
+                {:type        "duration"
+                 :description {:fi "Reitin arvioitu kulkuaika"}
+                 :label       {:fi "Kulkuaika"}}}
+
+               :travel-direction
+               {:field
+                {:type        "select"
+                 :opts        {"clockwise"         {:fi "Myötäpäivään"}
+                               "counter-clockwise" {:fi "Vastapäivään"}}
+                 :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."}
+                 :label       {:fi "Kulkusuunta"}}}})}}})})
 
 (def paddling-schema
   (collect-schema (:props paddling)))

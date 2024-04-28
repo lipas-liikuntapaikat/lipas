@@ -1162,7 +1162,10 @@
         locale       (tr)
         set-field    (partial set-field lipas-id :activities activity-k)
         editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
-        read-only?   (not editing?)]
+        read-only?   (not editing?)
+        props        (or (some-> (get-in activities [:type->props type-code])
+                                 (->> (select-keys (:props activities))))
+                         (get activities :props))]
 
     (if read-only?
       [mui/typography "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
@@ -1192,8 +1195,7 @@
        ;; Form
        [mui/grid {:item true :xs 12}
         [into [nice-form {}]
-         (for [[prop-k {:keys [field]}] (-> activities :props
-                                            (->> (sort-by field-sorter utils/reverse-cmp)))]
+         (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
            [make-field
             {:field        field
              :prop-k       prop-k
