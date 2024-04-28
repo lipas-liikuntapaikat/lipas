@@ -1355,8 +1355,8 @@
    :canoeing-club?
    {:name
     {:fi "Melontaseura"
-     :se "Canoeing club"
-     :en ""}
+     :se ""
+     :en "Canoeing club"}
     :data-type "boolean"
     :description
     {:fi "Onko kyseessä melontaseuran tila",
@@ -1371,7 +1371,8 @@
     :description
     {:fi "Toimiiko kohteessa ohjelmapalveluyritys.",
      :se "",
-     :en ""}}})
+     :en ""}}
+   })
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
