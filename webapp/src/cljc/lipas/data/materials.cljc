@@ -155,7 +155,8 @@
                     "rock-dust" "fiberglass" "soil" "metal" "synthetic" "grass"
                     "wood" "sawdust" "deinked-pulp" "gravel" "textile"
                     "brick-crush" "water" "artificial-turf"
-                    "sand-infilled-artificial-turf" "resin" "natural-surface"]))
+                    "sand-infilled-artificial-turf" "resin" "natural-surface"
+                    "carpet"]))
 
 (def field-surface-materials
   (select-keys surface-materials ["resin" "wood" "synthetic" "carpet"]))
