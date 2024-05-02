@@ -245,6 +245,10 @@
       (update-in [:locker-rooms] (comp not-empty remove-ids vals))
       (update-in [:locker-rooms] (fn [rooms] (remove empty? rooms)))
 
+      ;; Circumstances -> audits
+      (update-in [:audits] (comp not-empty remove-ids vals))
+      (update-in [:audits] (fn [rooms] (remove empty? rooms)))
+
       clean))
 
 (defn make-editable [sports-site]
@@ -265,7 +269,10 @@
       (update-in [:fields] ->indexed-map)
 
       ;; Locker rooms
-      (update-in [:locker-rooms] ->indexed-map)))
+      (update-in [:locker-rooms] ->indexed-map)
+
+      ;; Audits
+      (update-in [:audits] ->indexed-map)))
 
 (defn valid? [sports-site] ;; TODO maybe multimethod?
   (let [spec (case (-> sports-site :type :type-code)

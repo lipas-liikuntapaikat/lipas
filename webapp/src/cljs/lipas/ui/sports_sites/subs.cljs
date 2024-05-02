@@ -428,7 +428,8 @@
                                (map #(update % :audience-stand-access
                                              (fn [v]
                                                (get-in audience-stand-access [v locale])))))
-           :locker-rooms  (:locker-rooms latest)})
+           :locker-rooms  (:locker-rooms latest)
+           :audits (:audits latest)})
 
         ;; TODO maybe check activities for type
         (when true
