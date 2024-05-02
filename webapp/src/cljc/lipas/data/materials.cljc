@@ -15,6 +15,9 @@
    "sand"                          {:fi "Hiekka"
                                     :se "Sand"
                                     :en "Sand"}
+   "carpet"                        {:fi "Matto"
+                                    :se "Matta"
+                                    :en "Carpet"}
    "concrete"                      {:fi "Betoni"
                                     :se "Betong"
                                     :en "Concrete"}
@@ -152,10 +155,8 @@
                     "rock-dust" "fiberglass" "soil" "metal" "synthetic" "grass"
                     "wood" "sawdust" "deinked-pulp" "gravel" "textile"
                     "brick-crush" "water" "artificial-turf"
-                    "sand-infilled-artificial-turf" "resin" "natural-surface"]))
+                    "sand-infilled-artificial-turf" "resin" "natural-surface"
+                    "carpet"]))
 
 (def field-surface-materials
-  (merge (select-keys surface-materials ["resin" "wood" "synthetic"])
-         {"carpet" {:fi "Matto"
-                    :se "Matta"
-                    :en "Carpet"}}))
+  (select-keys surface-materials ["resin" "wood" "synthetic" "carpet"]))
