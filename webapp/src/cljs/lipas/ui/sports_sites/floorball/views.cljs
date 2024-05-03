@@ -708,7 +708,9 @@
        {:type      "text"
         :spec      :lipas.sports-site.circumstances/general-information
         :value     (-> edit-data :general-information)
-        :on-change #(on-change :general-information %)}]}
+        :on-change #(on-change :general-information %)
+        :multiline true
+        :rows  5}]}
 
      ;; Varastotila- ja kapasiteetti
      (when (= :floorball visibility)
