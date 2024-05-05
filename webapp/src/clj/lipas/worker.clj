@@ -5,13 +5,14 @@
    [lipas.backend.core :as core]
    [lipas.backend.system :as backend]
    [lipas.reminders :as reminders]
+   [lipas.integration.utp.webhook :as utp-webhook]
    [taoensso.timbre :as log]
    [tea-time.core :as tt]))
 
 (defonce tasks (atom {}))
 
 (def all-tasks
-  [:reminders :analysis :elevation])
+  [:reminders :analysis :elevation :utp-webhook])
 
 (defn -main
   "Runs all tasks if no task names are given in args. Else runs tasks
@@ -38,6 +39,11 @@
       (when (some #{:elevation} task-ks)
         (let [task (tt/every! 15 5 (fn [] (core/process-elevation-queue! db search)))]
           (swap! tasks assoc :elevation task)))
+
+      (when (some #{:utp-webhook} task-ks)
+        (let [config (get-in config/default-config [:app :utp])
+              task   (tt/every! 30 (fn [] (utp-webhook/process! db config)))]
+          (swap! tasks assoc :utp-webhook task)))
 
       ;; Keep running forever
       (while true (Thread/sleep 100)))))
