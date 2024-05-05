@@ -64,9 +64,14 @@
     :mailchimp (ig/ref :mailchimp)
     :aws       (ig/ref :aws)
     :utp
-    {:cms-api-url  (env! :utp-cms-api-url)
-     :cms-api-user (env! :utp-cms-api-user)
-     :cms-api-pass (env! :utp-cms-api-pass)}
+    {:cms-api-url                 (env! :utp-cms-api-url)
+     :cms-api-user                (env! :utp-cms-api-user)
+     :cms-api-pass                (env! :utp-cms-api-pass)
+     :webhook-token-url           (env! :utp-webhook-token-url)
+     :webhook-token-client-id     (env! :utp-webhook-token-client-id)
+     :webhook-token-client-secret (env! :utp-webhook-token-client-secret)
+     :webhook-url                 (env! :utp-webhook-url)
+     :webhook-subscription-key    (env! :utp-webhook-subscription-key)}
     :accessibility-register
     {:base-url   (env! :accessibility-register-base-url)
      :system-id  (env! :accessibility-register-system-id)
