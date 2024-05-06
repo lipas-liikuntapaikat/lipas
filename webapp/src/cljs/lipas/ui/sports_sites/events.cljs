@@ -300,3 +300,34 @@
  ::clear-name-check
  (fn [db [_ resp]]
    (assoc-in db [:sports-sites :name-check] {})))
+
+(re-frame/reg-event-fx
+ ::reverse-geocoding-search
+ (fn [_ [_ {:keys [lat lon]}]]
+   (when (and lat lon)
+     {:http-xhrio
+      {:method          :get
+       :uri             (str "https://"
+                             (utils/domain)
+                             "/digitransit"
+                             "/geocoding/v1"
+                             "/reverse?"
+                             "point.lat=" lat
+                             "&point.lon=" lon
+                             "&sources=openaddresses"
+                             "&size=" 10)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      [::reverse-geocoding-search-success]
+       :on-failure      [::reverse-geocoding-search-failure]}})))
+
+(re-frame/reg-event-db
+ ::reverse-geocoding-search-success
+ (fn [db [_ resp]]
+   #_(assoc-in db [:sports-sites :name-check :response] resp)
+   (println "success: " resp)))
+
+(re-frame/reg-event-db
+ ::reverse-geocoding-search-failure
+ (fn [db [_ resp]]
+   #_(assoc-in db [:sports-sites :name-check :error] resp)
+   (println "success: " resp)))

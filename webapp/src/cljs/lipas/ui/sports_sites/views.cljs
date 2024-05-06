@@ -46,10 +46,12 @@
 
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins
-           owners on-change read-only? sub-headings?  lipas-id]}]
+           owners on-change read-only? sub-headings? lipas-id]}]
 
   (let [locale         (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
+
+
 
     [lui/form {:read-only? read-only?}
 
@@ -243,13 +245,35 @@
            read-only? sub-headings? address-required?]
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
-    (let [locale (tr)]
+    (let [locale (tr)
+          selected-site-geom (-> (<== [:lipas.ui.sports-sites.subs/latest-sports-site-revs])
+                                 vals
+                                 first
+                                 :location
+                                 :geometries
+                                 :features
+                                 first
+                                 :geometry)
+          selected-site-first-point (case (:type selected-site-geom)
+                                          "Point"      (-> selected-site-geom :coordinates)
+                                          "LineString" (-> selected-site-geom :coordinates first)
+                                          "Polygon"    (-> selected-site-geom :coordinates first first))]
+      (println "selected-site-first-point: " {:lon (first selected-site-first-point)
+                                              :lat (last selected-site-first-point)})
 
       [lui/form
        {:read-only? read-only?}
 
        (when sub-headings?
-         [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
+         [mui/grid
+          {:item            true
+           :container       true
+           :justify-content "space-between"}
+          [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
+          [lui/locator-button {:tooltip "Etsi osoite"
+                               :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
+                                                {:lon (first selected-site-first-point)
+                                                 :lat (last selected-site-first-point)}])}]])
 
        ;; No address switch
        (when-not address-required?
@@ -390,7 +414,7 @@
 (defn show-area-calc? [k geom-type]
    (and (= :area-km2 k) (#{"Polygon"} geom-type)))
 
-(defn special-case? [type-code]
+#_(defn special-case? [type-code]
   ;; Uimahalli / jäähalli
   (#{3110 3130 2510 2520} type-code))
 
