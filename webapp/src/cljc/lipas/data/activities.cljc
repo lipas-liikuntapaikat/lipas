@@ -795,7 +795,7 @@
                  :images
                  :videos]
    :props
-   (merge common-props
+   (merge #_common-props {}
           {:equipment-rental?
            {:field
             {:type           "lipas-property"
