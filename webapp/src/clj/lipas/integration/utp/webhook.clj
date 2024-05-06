@@ -59,9 +59,11 @@
         params {:headers
                 {:Authorization             (str "Bearer " (:access-token token))
                  :Ocp-Apim-Subscription-Key (:webhook-subscription-key config)}
-                :content-type :json
-                :accept       :json
-                :body         (json/encode {:source "lipas" :objects payload})}]
+                :connection-timeout 10000
+                :socket-timeout     10000
+                :content-type       :json
+                :accept             :json
+                :body               (json/encode {:source "lipas" :objects payload})}]
     (client/post (:webhook-url config) params)))
 
 (defn process!
