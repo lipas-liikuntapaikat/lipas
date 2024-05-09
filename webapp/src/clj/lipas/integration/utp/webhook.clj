@@ -8,6 +8,7 @@
 
 (def current-token (atom nil))
 
+;; https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
 (defn get-token
   [config]
   (let [params {:client-id     (:webhook-token-client-id config)
