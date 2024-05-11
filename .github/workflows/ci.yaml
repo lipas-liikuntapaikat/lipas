@@ -56,7 +56,7 @@ env:
   UTP_CMS_API_PASS: password
 jobs:
   utp-schema-gen:
-    if: github.ref == 'refs/heads/ulkoilutietopalvelu'
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
