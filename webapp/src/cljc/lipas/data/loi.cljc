@@ -454,7 +454,5 @@
                 (mapcat :types)
                 (into {})))
 
-
-
-;; Esteettömyys: boolean + infoteksti
-;; Reiteissä: esteetön, vaativa esteetön
+(defn -main [& _args]
+  (gen-json-schema))
