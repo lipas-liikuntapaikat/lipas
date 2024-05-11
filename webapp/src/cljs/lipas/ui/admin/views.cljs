@@ -34,14 +34,15 @@
         (tr :actions/cancel)]]]]))
 
 (defn user-dialog [tr]
-  (let [locale     (tr)
-        cities     (<== [::subs/cities-list locale])
-        types      (<== [::subs/types-list locale])
-        sites      (<== [::subs/sites-list])
-        activities (<== [::subs/activities-list locale])
-        user       (<== [::subs/editing-user])
-        history    (<== [::subs/user-history])
-        existing?  (some? (:id user))]
+  (let [locale                   (tr)
+        cities                   (<== [::subs/cities-list locale])
+        types                    (<== [::subs/types-list locale])
+        sites                    (<== [::subs/sites-list])
+        activities               (<== [::subs/activities-list locale])
+        user                     (<== [::subs/editing-user])
+        history                  (<== [::subs/user-history])
+        existing?                (some? (:id user))
+        selected-permissions-tab (<== [::subs/selected-permissions-tab])]
 
     [lui/full-screen-dialog
      {:open?       (boolean (seq user))
@@ -131,70 +132,113 @@
 
       ;;; Permissions
       [lui/form-card {:title (tr :lipas.user/permissions)}
-       [mui/form-group
 
-        [mui/card {:style {:background-color mui/gray3
-                           :margin-bottom    "1em"}}
-         [mui/card-header {:subheader (tr :lipas.user/requested-permissions)}]
-         [mui/card-content
-          [mui/typography
-           [:i (or (-> user :user-data :permissions-request)
-                   "-")]]]]
+       [mui/tabs
+        {:style {:margin-bottom "1em"}
+         :value     selected-permissions-tab
+         :on-change #(==> [::events/select-permissions-tab %2])}
+        [mui/tab {:value "sports-sites" :label "Liikuntapaikat"}]
+        [mui/tab {:value "activities" :label "Aktiviteetit (UTP)"}]]
 
-        ;; Admin?
-        [lui/checkbox
-         {:label     (tr :lipas.user.permissions/admin?)
-          :value     (-> user :permissions :admin?)
-          :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
+       [mui/card {:style {:background-color mui/gray3
+                          :margin-bottom    "1em"}}
+        [mui/card-header {:subheader (tr :lipas.user/requested-permissions)}]
+        [mui/card-content
+         [mui/typography
+          [:i (or (-> user :user-data :permissions-request)
+                  "-")]]]]
 
-        ;; Permission to all types?
-        [lui/checkbox
-         {:label     (tr :lipas.user.permissions/all-types?)
-          :value     (-> user :permissions :all-types?)
-          :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
+       ;; Sports site permissions
+       (when (= selected-permissions-tab "sports-sites")
+         [mui/form-group
 
-        ;; Permission to all cities?
-        [lui/checkbox
-         {:label     (tr :lipas.user.permissions/all-cities?)
-          :value     (-> user :permissions :all-cities?)
-          :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
+          ;; Admin?
+          [lui/checkbox
+           {:label     (tr :lipas.user.permissions/admin?)
+            :value     (-> user :permissions :admin?)
+            :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
 
-        ;; Permission to individual spoorts-sites
-        [lui/autocomplete
-         {:items     sites
-          :label     (tr :lipas.user.permissions/sports-sites)
-          :value     (-> user :permissions :sports-sites)
-          :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
+          ;; Permission to all types?
+          [lui/checkbox
+           {:label     (tr :lipas.user.permissions/all-types?)
+            :value     (-> user :permissions :all-types?)
+            :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
 
-        ;; Permission to individual types
-        [lui/autocomplete
-         {:items     types
-          :label     (tr :lipas.user.permissions/types)
-          :value     (-> user :permissions :types)
-          :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :types] %])}]
+          ;; Permission to all cities?
+          [lui/checkbox
+           {:label     (tr :lipas.user.permissions/all-cities?)
+            :value     (-> user :permissions :all-cities?)
+            :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
 
-        ;; Permission to individual cities
-        [lui/autocomplete
-         {:items     cities
-          :label     (tr :lipas.user.permissions/cities)
-          :value     (-> user :permissions :cities)
-          :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :cities] %])}]
+          ;; Permission to individual spoorts-sites
+          [lui/autocomplete
+           {:items     sites
+            :label     (tr :lipas.user.permissions/sports-sites)
+            :value     (-> user :permissions :sports-sites)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
 
-        ;; Permission to activities
-        [lui/autocomplete
-         {:items     activities
-          :label     (tr :lipas.user.permissions/activities)
-          :value     (-> user :permissions :activities)
-          :multi?    true
-          :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
+          ;; Permission to individual types
+          [lui/autocomplete
+           {:items     types
+            :label     (tr :lipas.user.permissions/types)
+            :value     (-> user :permissions :types)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :types] %])}]
 
-        [mui/button
-         {:on-click #(==> [::events/grant-access-to-activity-types
-                           (-> user :permissions :activities)])}
-         "Anna oikeus aktiviteettien tyyppeihin"]]]
+          ;; Permission to individual cities
+          [lui/autocomplete
+           {:items     cities
+            :label     (tr :lipas.user.permissions/cities)
+            :value     (-> user :permissions :cities)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :cities] %])}]])
+
+       ;; Activities permissions
+       (when (= selected-permissions-tab "activities")
+         [mui/form-group
+
+          ;; Permission to activities
+          [lui/autocomplete
+           {:items     activities
+            :label     (tr :lipas.user.permissions/activities)
+            :value     (-> user :permissions :activities)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
+
+
+          ;; Permission to all types?
+          [lui/checkbox
+           {:label     (tr :lipas.user.permissions/all-types?)
+            :value     (-> user :permissions :activities-for-all-types?)
+            :on-change #(==> [::events/edit-user [:permissions :activities-for-all-types?] %])}]
+
+          ;; Permission to all cities?
+          [lui/checkbox
+           {:label     (tr :lipas.user.permissions/all-cities?)
+            :value     (-> user :permissions :activities-for-all-cities?)
+            :on-change #(==> [::events/edit-user [:permissions :activities-for-all-cities?] %])}]
+
+          ;; Permission to individual types
+          [lui/autocomplete
+           {:items     types
+            :label     (tr :lipas.user.permissions/types)
+            :value     (-> user :permissions :activities-for-types)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :activities-for-types] %])}]
+
+          ;; Permission to individual cities
+          [lui/autocomplete
+           {:items     cities
+            :label     (tr :lipas.user.permissions/cities)
+            :value     (-> user :permissions :activities-for-cities)
+            :multi?    true
+            :on-change #(==> [::events/edit-user [:permissions :activities-for-cities] %])}]
+
+          [mui/button
+           {:on-click #(==> [::events/grant-access-to-activity-types
+                             (-> user :permissions :activities)])}
+           "Anna oikeus aktiviteettien tyyppeihin"]])]
 
       ;;; History
       [lui/form-card {:title (tr :lipas.user/history)}

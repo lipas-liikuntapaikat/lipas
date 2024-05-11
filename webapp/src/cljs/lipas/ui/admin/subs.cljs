@@ -5,19 +5,27 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
- ::users
+ ::admin
  (fn [db _]
-   (-> db :admin :users)))
+   (-> db :admin)))
+
+(re-frame/reg-sub
+ ::users
+ :<- [::admin]
+ (fn [admin _]
+   (:users admin)))
 
 (re-frame/reg-sub
  ::users-status
- (fn [db _]
-   (-> db :admin :users-status)))
+  :<- [::admin]
+ (fn [admin _]
+   (:users-status admin)))
 
 (re-frame/reg-sub
  ::users-filter
- (fn [db _]
-   (-> db :admin :users-filter)))
+ :<- [::admin]
+ (fn [admin _]
+   (:users-filter admin)))
 
 (defn- ->names-list [ks coll]
   (->> (select-keys coll ks)
@@ -77,8 +85,9 @@
 
 (re-frame/reg-sub
  ::selected-user
- (fn [db _]
-   (get-in db [:admin :users (-> db :admin :selected-user)])))
+ :<- [::admin]
+ (fn [admin _]
+   (get-in admin [:users (-> admin :selected-user)])))
 
 (re-frame/reg-sub
  ::editing-user
@@ -136,8 +145,9 @@
 
 (re-frame/reg-sub
  ::magic-link-dialog-open?
- (fn [db _]
-   (-> db :admin :magic-link-dialog-open?)))
+ :<- [::admin]
+ (fn [admin _]
+   (:magic-link-dialog-open? admin)))
 
 (re-frame/reg-sub
  ::magic-link-variants
@@ -146,15 +156,24 @@
 
 (re-frame/reg-sub
  ::selected-magic-link-variant
- (fn [db _]
-   (-> db :admin :selected-magic-link-variant)))
+ :<- [::admin]
+ (fn [admin _]
+   (:selected-magic-link-variant admin)))
 
 (re-frame/reg-sub
  ::selected-colors
- (fn [db _]
-   (-> db :admin :color-picker)))
+ :<- [::admin]
+ (fn [admin _]
+   (:color-picker admin)))
 
 (re-frame/reg-sub
  ::selected-tab
- (fn [db _]
-   (-> db :admin :selected-tab)))
+ :<- [::admin]
+ (fn [admin _]
+   (:selected-tab admin)))
+
+(re-frame/reg-sub
+ ::selected-permissions-tab
+  :<- [::admin]
+ (fn [admin _]
+   (:selected-permissions-tab admin)))

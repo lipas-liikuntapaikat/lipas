@@ -67,7 +67,7 @@
                    (select-keys activities)
                    vals
                    (->> (mapcat :type-codes)))]
-     (assoc-in db [:admin :editing-user :permissions :types] types))))
+     (assoc-in db [:admin :editing-user :permissions :activities-for-types] types))))
 
 (re-frame/reg-event-fx
  ::save-user-success
@@ -192,3 +192,8 @@
                         :success? true}]]
            [:dispatch [::set-user-to-edit user]]
            [:dispatch [::get-users]]]})))
+
+(re-frame/reg-event-db
+ ::select-permissions-tab
+ (fn [db [_ v]]
+   (assoc-in db [:admin :selected-permissions-tab] v)))

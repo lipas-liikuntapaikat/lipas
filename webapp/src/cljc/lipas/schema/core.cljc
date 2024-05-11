@@ -271,6 +271,18 @@
              :distinct true
              :into []))
 
+(s/def :lipas.user.permissions.activities/activities-for-all-types?
+  boolean?)
+
+(s/def :lipas.user.permissions.activities/activities-for-all-cities?
+  boolean?)
+
+(s/def :lipas.user.permissions.activities/activities-for-types
+  :lipas.user.permissions/types)
+
+(s/def :lipas.user.permissions.activities/activities-for-cities
+  :lipas.user.permissions/cities)
+
 (s/def :lipas.user/permissions
   (s/keys :opt-un [:lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
@@ -279,7 +291,11 @@
                    :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types
-                   :lipas.user.permissions/activities]))
+                   :lipas.user.permissions/activities
+                   :lipas.user.permissions.activities/activities-for-types
+                   :lipas.user.permissions.activities/activities-for-cities
+                   :lipas.user.permissions.activities/activities-for-all-types?
+                   :lipas.user.permissions.activities/activities-for-all-cities?]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
