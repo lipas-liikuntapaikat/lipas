@@ -4,6 +4,7 @@
    #?(:clj [clojure.data.csv :as csv])
    [clojure.string :as str]
    [clojure.walk :as walk]
+   [lipas.data.materials :as materials]
    [lipas.utils :as utils]
    [malli.core :as m]
    [malli.json-schema :as json-schema]
@@ -31,6 +32,9 @@
    [:min {:optional true} number-schema]
    [:max {:optional true} number-schema]
    [:unit {:optional true} [:enum "days" "hours" "minutes"]]])
+
+(def surface-material-schema
+  [:sequential (into [:enum] (keys materials/surface-materials))])
 
 (def route-fcoll-schema
   [:map
@@ -467,6 +471,8 @@
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                 [:route-marking {:optional true} localized-string-schema]
                 [:rules-structured {:optional true} rules-structured-schema]
+                [:route-length-km {:optional true} number-schema]
+                [:surface-material {:optional true} surface-material-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
                 [:independent-entity {:optional true} [:boolean]]])]
@@ -653,6 +659,8 @@
                 [:accommodation {:optional true} localized-string-schema]
                 [:good-to-know {:optional true} localized-string-schema]
                 [:route-notes {:optional true} localized-string-schema]
+                [:route-length-km {:optional true} number-schema]
+                [:surface-material {:optional true} surface-material-schema]
                 [:unpaved-percentage {:optional true} percentage-schema]
                 [:trail-percentage {:optional true} percentage-schema]
                 [:cyclable-percentage {:optional true} percentage-schema]])]
@@ -813,7 +821,8 @@
    :props
    (merge #_common-props {}
           {:equipment-rental?
-           {:field
+           {:schema [:boolean]
+            :field
             {:type           "lipas-property"
              :lipas-property :equipment-rental?
              :label          {:fi "Välinevuokraus"
@@ -824,7 +833,8 @@
                               :en ""}}}
 
            :rapid-canoeing-centre?
-           {:field
+           {:schema [:boolean]
+            :field
             {:type           "lipas-property"
              :lipas-property :rapid-canoeing-centre?
              :label          {:fi "Koskimelontakeskus"
@@ -835,7 +845,8 @@
                               :en "Competitions possible."}}}
 
            :canoeing-club?
-           {:field
+           {:schema [:boolean]
+            :field
             {:type           "lipas-property"
              :lipas-property :canoeing-club?
              :label          {:fi "Melontaseura"
@@ -846,7 +857,8 @@
                               :en ""}}}
 
            :activity-service-company?
-           {:field
+           {:schema [:boolean]
+            :field
             {:type           "lipas-property"
              :lipas-property :activity-service-company?
              :label          {:fi "Ohjelmapalveluyritys"}
