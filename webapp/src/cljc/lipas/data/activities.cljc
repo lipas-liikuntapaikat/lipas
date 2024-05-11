@@ -608,14 +608,16 @@
    :value       "cycling"
    :description {:fi ""}
    :type-codes  #{4411 4412}
-   :sort-order [:route-name
+   :sort-order  [:route-name
                 :description-short
                 :description-long
                 :route-notes
                 :highlights
                 :cycling-activities
+                :route-length-km
                 :duration
                 :cycling-difficulty
+                :surface-material
                 :unpaved-percentage
                 :trail-percentage
                 :cyclable-percentage
@@ -726,7 +728,21 @@
         {:field
          {:type        "percentage"
           :description {:fi "Kuinka suuri osuus reitistä on pyöräiltävissä?"}
-          :label       {:fi "Pyöräiltävissä"}}}})}}}})
+          :label       {:fi "Pyöräiltävissä"}}}
+
+        :route-length-km
+        {:field
+         {:type           "lipas-property"
+          :lipas-property :route-length-km
+          :label          {:fi "Reitin pituus (km)"}
+          :description    {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"}}}
+
+        :surface-material
+        {:field
+         {:type           "lipas-property"
+          :lipas-property :surface-material
+          :label          {:fi "Pintamateriaali"}
+          :description    {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"}}}})}}}})
 
 (def cycling-schema
   (collect-schema (:props cycling)))
