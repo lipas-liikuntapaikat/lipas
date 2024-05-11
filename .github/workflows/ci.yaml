@@ -166,6 +166,11 @@ jobs:
         run: lein run -m lipas.data.loi > loi-schema.json
         working-directory: ./webapp
 
+      - name: Generate CSV
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: lein run -m lipas.data.loi csv > loi-schema.csv
+        working-directory: ./webapp
+
       - name: Deploy JSON schema to Gist
         if: steps.changed-files.outputs.any_changed == 'true'
         uses: exuanbo/actions-deploy-gist@v1.1.4
@@ -173,6 +178,15 @@ jobs:
           token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
           gist_id: d531983de8b935dcff838b1d5403a5f1
           file_path: webapp/loi-schema.json
+          file_type: text
+
+      - name: Deploy CSV to Gist
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: exuanbo/actions-deploy-gist@v1.1.4
+        with:
+          token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
+          gist_id: 1cf16b04329482559ea72815f894833a
+          file_path: webapp/loi-schema.csv
           file_type: text
 
   ci:
