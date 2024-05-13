@@ -246,24 +246,36 @@
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
     (let [locale (tr)
-          selected-site-geom (-> (<== [:lipas.ui.sports-sites.subs/latest-sports-site-revs])
-                                 vals
-                                 first
-                                 :location
-                                 :geometries
-                                 :features
-                                 first
-                                 :geometry)
-          selected-site-first-point (case (:type selected-site-geom)
-                                          "Point"      (-> selected-site-geom :coordinates)
-                                          "LineString" (-> selected-site-geom :coordinates first)
-                                          "Polygon"    (-> selected-site-geom :coordinates first first))]
-      (println "selected-site-first-point: " {:lon (first selected-site-first-point)
-                                              :lat (last selected-site-first-point)})
+          mode (-> (<== [:lipas.ui.map.subs/mode*]))
+          selected-sports-site-geoms (-> (<== [:lipas.ui.sports-sites.subs/sports-site (-> mode :lipas-id)])
+                                         :history
+                                         first
+                                         second
+                                         :location
+                                         :geometries)
+          new-sports-site-geoms (-> mode
+                                    :geoms)
+          geoms (-> (or new-sports-site-geoms selected-sports-site-geoms)
+                    :features
+                    first
+                    :geometry)
+          selected-site-first-point (case (:type geoms)
+                                              "Point"      (-> geoms :coordinates)
+                                              "LineString" (-> geoms :coordinates first)
+                                              "Polygon"    (-> geoms :coordinates first first))]
+
+      (comment
+        (println "mode*: " mode)
+        (println "selected-sports-site: " selected-sports-site-geoms)
+        (println "new-sports-site:  " new-sports-site-geoms)
+        (println "geoms: " geoms)
+        (println "selected-site-first-point: "
+                 {:lon (first selected-site-first-point)
+                  :lat (last selected-site-first-point)})
+        )
 
       [lui/form
        {:read-only? read-only?}
-
        (when sub-headings?
          [mui/grid
           {:item            true

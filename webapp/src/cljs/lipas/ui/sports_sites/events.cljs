@@ -304,6 +304,7 @@
 (re-frame/reg-event-fx
  ::reverse-geocoding-search
  (fn [_ [_ {:keys [lat lon]}]]
+   (println "::reverse-geocoding-search" lat lon)
    (when (and lat lon)
      {:http-xhrio
       {:method          :get
@@ -314,7 +315,8 @@
                              "/reverse?"
                              "point.lat=" lat
                              "&point.lon=" lon
-                             "&sources=openaddresses"
+                             "&sources=osm,oa"
+                             "&layers=address"
                              "&size=" 10)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::reverse-geocoding-search-success]
@@ -323,11 +325,13 @@
 (re-frame/reg-event-db
  ::reverse-geocoding-search-success
  (fn [db [_ resp]]
-   #_(assoc-in db [:sports-sites :name-check :response] resp)
-   (println "success: " resp)))
+   (assoc-in db [:sports-sites :reverse-geocoding :response]
+             (->> resp
+                  :features
+                  (map :properties)
+                  (map #(select-keys % [:name :localadmin :postalcode :locality :label]))))))
 
 (re-frame/reg-event-db
  ::reverse-geocoding-search-failure
  (fn [db [_ resp]]
-   #_(assoc-in db [:sports-sites :name-check :error] resp)
-   (println "success: " resp)))
+   (assoc-in db [:sports-sites :reverse-geocoding :error] resp)))
