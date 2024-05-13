@@ -246,8 +246,10 @@
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
     (let [locale (tr)
+          cities (<== [:lipas.ui.sports-sites.subs/cities-list])
           mode (-> (<== [:lipas.ui.map.subs/mode*]))
-          selected-sports-site-geoms (-> (<== [:lipas.ui.sports-sites.subs/sports-site (-> mode :lipas-id)])
+          lipas-id (-> mode :lipas-id)
+          selected-sports-site-geoms (-> (<== [:lipas.ui.sports-sites.subs/sports-site lipas-id])
                                          :history
                                          first
                                          second
@@ -260,9 +262,9 @@
                     first
                     :geometry)
           selected-site-first-point (case (:type geoms)
-                                              "Point"      (-> geoms :coordinates)
-                                              "LineString" (-> geoms :coordinates first)
-                                              "Polygon"    (-> geoms :coordinates first first))]
+                                      "Point"      (-> geoms :coordinates)
+                                      "LineString" (-> geoms :coordinates first)
+                                      "Polygon"    (-> geoms :coordinates first first))]
 
       (comment
         (println "mode*: " mode)
@@ -285,7 +287,9 @@
           [lui/locator-button {:tooltip "Etsi osoite"
                                :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
                                                 {:lon (first selected-site-first-point)
-                                                 :lat (last selected-site-first-point)}])}]])
+                                                 :lat (last selected-site-first-point)
+                                                 :lipas-id lipas-id
+                                                 :cities cities}])}]])
 
        ;; No address switch
        (when-not address-required?

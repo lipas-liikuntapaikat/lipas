@@ -1,10 +1,10 @@
 (ns lipas.ui.sports-sites.events
-  (:require
-   [ajax.core :as ajax]
-   [lipas.ui.interceptors :as interceptors]
-   [lipas.ui.utils :as utils]
-   [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [lipas.ui.interceptors :as interceptors]
+            [lipas.ui.utils :as utils :refer [==>]]
+            [lipas.utils :as cutils]
+            [re-frame.core :as re-frame]
+            [taoensso.timbre :as log]))
 
 (re-frame/reg-event-fx
  ::edit-site
@@ -303,8 +303,7 @@
 
 (re-frame/reg-event-fx
  ::reverse-geocoding-search
- (fn [_ [_ {:keys [lat lon]}]]
-   (println "::reverse-geocoding-search" lat lon)
+ (fn [_ [_ {:keys [lat lon lipas-id cities]}]]
    (when (and lat lon)
      {:http-xhrio
       {:method          :get
@@ -319,19 +318,27 @@
                              "&layers=address"
                              "&size=" 10)
        :response-format (ajax/json-response-format {:keywords? true})
-       :on-success      [::reverse-geocoding-search-success]
+       :on-success      [::reverse-geocoding-search-success lipas-id cities]
        :on-failure      [::reverse-geocoding-search-failure]}})))
 
 (re-frame/reg-event-db
  ::reverse-geocoding-search-success
- (fn [db [_ resp]]
-   (assoc-in db [:sports-sites :reverse-geocoding :response]
-             (->> resp
-                  :features
-                  (map :properties)
-                  (map #(select-keys % [:name :localadmin :postalcode :locality :label]))))))
+ (fn [db [_ lipas-id cities http-resp]]
+   (let [results (->> http-resp
+                      :features
+                      (map :properties)
+                      (map #(select-keys % [:name :localadmin :postalcode :locality :label])))
+         first-result (first results)
+         city-match (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))]
+     ;; TODO: show results to the user
+     (==> [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :address] (:name first-result)])
+     (==> [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-code] (:postalcode first-result)])
+     (==> [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-office] (:localadmin first-result)])
+     (==> [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :city :city-code] (:city-code city-match)])
+     (assoc-in db [:sports-sites :reverse-geocoding :response] results))))
 
 (re-frame/reg-event-db
  ::reverse-geocoding-search-failure
  (fn [db [_ resp]]
+   (log/error resp)
    (assoc-in db [:sports-sites :reverse-geocoding :error] resp)))
