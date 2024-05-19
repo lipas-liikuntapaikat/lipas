@@ -48,7 +48,7 @@
    "fiberglass"                    {:fi "Lasikuitu"
                                     :se "Glasfiber"
                                     :en "Fiberglass"}
-   "soil"                          {:fi "Maa"
+   "soil"                          {:fi "Maa / luonnonmukainen"
                                     :se "Jordet"
                                     :en "Soil"}
    "wood"                          {:fi "Puu"
