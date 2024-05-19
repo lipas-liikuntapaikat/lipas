@@ -54,6 +54,7 @@ env:
   UTP_CMS_API_URL: "https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
   UTP_CMS_API_USER: lipas-developer
   UTP_CMS_API_PASS: password
+  UTP_WEBHOOK_SOURCE_ENV: ${{ vars.UTP_WEBHOOK_SOURCE_ENV }}
   UTP_WEBHOOK_URL: ${{ vars.UTP_WEBHOOK_URL }}
   UTP_WEBHOOK_SUBSCRIPTION_KEY: ${{ vars.UTP_WEBHOOK_SUBSCRIPTION_KEY }}
   UTP_WEBHOOK_TOKEN_CLIENT_ID: ${{ vars.UTP_WEBHOOK_TOKEN_CLIENT_ID }}

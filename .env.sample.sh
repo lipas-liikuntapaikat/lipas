@@ -90,6 +90,7 @@ export AWS_S3_BUCKET_PREFIX=example
 export UTP_CMS_API_URL="https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
 export UTP_CMS_API_USER="lipas-developer"
 export UTP_CMS_API_PASS=***FILL_THIS***
+export UTP_WEBHOOK_SOURCE_ENV="dev"
 export UTP_WEBHOOK_URL="https://api-dev.metsa.fi/luontoon-webhook/update/"
 export UTP_WEBHOOK_SUBSCRIPTION_KEY=***FILL_THIS***
 export UTP_WEBHOOK_TOKEN_CLIENT_ID="36e1fff5-f466-4e42-a10d-1467d8a68109"

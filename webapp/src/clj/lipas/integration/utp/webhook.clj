@@ -64,7 +64,9 @@
                 :socket-timeout     10000
                 :content-type       :json
                 :accept             :json
-                :body               (json/encode {:source "lipas" :objects payload})}]
+                :body               (json/encode {:source    "lipas"
+                                                  :sourceEnv (:webhook-source-env config)
+                                                  :objects   payload})}]
     (client/post (:webhook-url config) params)))
 
 (defn process!

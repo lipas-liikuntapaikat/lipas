@@ -67,6 +67,7 @@
     {:cms-api-url                 (env! :utp-cms-api-url)
      :cms-api-user                (env! :utp-cms-api-user)
      :cms-api-pass                (env! :utp-cms-api-pass)
+     :webhook-source-env          (env! :utp-webhook-source-env)
      :webhook-token-url           (env! :utp-webhook-token-url)
      :webhook-token-client-id     (env! :utp-webhook-token-client-id)
      :webhook-token-client-secret (env! :utp-webhook-token-client-secret)
