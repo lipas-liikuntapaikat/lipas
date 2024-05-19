@@ -158,5 +158,8 @@
                     "sand-infilled-artificial-turf" "resin" "natural-surface"
                     "carpet"]))
 
+(def sports-site-surface-materials
+  (dissoc surface-materials "carpet" "natural-surface" "resin"))
+
 (def field-surface-materials
   (select-keys surface-materials ["resin" "wood" "synthetic" "carpet"]))

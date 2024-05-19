@@ -27,7 +27,7 @@
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
-   :surface-materials     materials/surface-materials
+   :surface-materials     materials/sports-site-surface-materials
 
    :delete-dialog
    {:open?           false
