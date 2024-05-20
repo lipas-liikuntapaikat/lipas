@@ -249,12 +249,7 @@
           cities (<== [:lipas.ui.sports-sites.subs/cities-list])
           mode (-> (<== [:lipas.ui.map.subs/mode*]))
           lipas-id (-> mode :lipas-id)
-          selected-sports-site-geoms (-> (<== [:lipas.ui.sports-sites.subs/sports-site lipas-id])
-                                         :history
-                                         first
-                                         second
-                                         :location
-                                         :geometries)
+          selected-sports-site-geoms (<== [:lipas.ui.sports-sites.subs/latest-sports-site-geoms lipas-id])
           new-sports-site-geoms (-> mode
                                     :geoms)
           geoms (-> (or new-sports-site-geoms selected-sports-site-geoms)
