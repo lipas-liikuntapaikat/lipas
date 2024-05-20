@@ -266,16 +266,6 @@
                                       "LineString" (-> geoms :coordinates first)
                                       "Polygon"    (-> geoms :coordinates first first))]
 
-      (comment
-        (println "mode*: " mode)
-        (println "selected-sports-site: " selected-sports-site-geoms)
-        (println "new-sports-site:  " new-sports-site-geoms)
-        (println "geoms: " geoms)
-        (println "selected-site-first-point: "
-                 {:lon (first selected-site-first-point)
-                  :lat (last selected-site-first-point)})
-        )
-
       [lui/form
        {:read-only? read-only?}
        (when sub-headings?
