@@ -319,7 +319,7 @@
                              "&size=" 10)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      [::reverse-geocoding-search-success lipas-id cities]
-       :on-failure      [::reverse-geocoding-search-failure]}})))
+       :on-failure      [:lipas.ui.admin.events/failure]}})))
 
 (re-frame/reg-event-fx
  ::reverse-geocoding-search-success
@@ -340,9 +340,3 @@
              [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-code] (:postalcode first-result)]]
              [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-office] (:localadmin first-result)]]
              [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :city :city-code] (:city-code city-match)]]])})))
-
-(re-frame/reg-event-db
- ::reverse-geocoding-search-failure
- (fn [db [_ resp]]
-   (log/error resp)
-   (assoc-in db [:sports-sites :reverse-geocoding :error] resp)))
