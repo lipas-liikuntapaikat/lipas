@@ -235,12 +235,27 @@
         [mui/dialog-title
          (tr :newsletter/subscribe)]
         [mui/dialog-content
-         [lui/text-field
-          {:value      @email
-           :full-width true
-           :label      (tr :lipas.user/email)
-           :spec       :lipas/email
-           :on-change  #(reset! email %)}]]
+
+         [mui/grid {:container true :spacing 2}
+          ;; Email
+          [mui/grid {:item true :xs 12}
+           [lui/text-field
+            {:value      @email
+             :full-width true
+             :label      (tr :lipas.user/email)
+             :spec       :lipas/email
+             :on-change  #(reset! email %)}]]
+
+          ;; Privacy policy
+          [mui/grid {:item true :xs 12}
+           [mui/link
+            {:color   "primary"
+             :style   {:margin-top "1em"}
+             :href    "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
+             :target  "_blank"}
+            (tr :help/privacy-policy)]]]]
+
+
         [mui/dialog-actions
          [mui/button {:on-click #(reset! open? false)}
           (tr :actions/cancel)]
@@ -255,14 +270,14 @@
 
        ;; Signup btn
        [mui/button
-        {:style    {:margin-top "1em"}
-         :color    "secondary"
+        {:color    "secondary"
          :on-click #(reset! open? true)}
         [mui/icon {:style {:margin-right "0.25em"}} "arrow_forward_ios"]
         (tr :newsletter/subscribe)]])))
 
 (defn newsletter []
-  (let [newsletter-data         (<== [::subs/newsletter-data])
+  (let [tr                      (<== [:lipas.ui.subs/translator])
+        newsletter-data         (<== [::subs/newsletter-data])
         newsletter-error        (<== [::subs/newsletter-error])
         newsletter-in-progress? (<== [::subs/newsletter-in-progress?])]
     [mui/grid {:container true :spacing 2}
@@ -283,10 +298,22 @@
             [mui/list-item-icon
              [mui/icon "mail_outline"]]
             [mui/list-item-text
-             {:primary (str (:send-time m) " | " (:title m))
-              :secondary (:preview-text m)}]])))
+             {:primary   (str (:send-time m) " | " (:title m))
+              :secondary (:preview-text m)}]])))]
 
-      [newsletter-signup]]]))
+     [mui/grid {:item true :xs 12}
+      [mui/grid {:container true :justify "space-between" :align-items "center"}
+
+       [mui/grid {:item true}
+        [newsletter-signup]]
+
+       [mui/grid {:item true}
+        [mui/link
+         {:color  "primary"
+          :style {:margin-right "1em"}
+          :href   "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
+          :target "_blank"}
+         (tr :help/privacy-policy)]]]]]))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
