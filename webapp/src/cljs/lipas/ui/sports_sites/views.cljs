@@ -421,7 +421,7 @@
 (defn show-area-calc? [k geom-type]
    (and (= :area-km2 k) (#{"Polygon"} geom-type)))
 
-#_(defn special-case? [type-code]
+(defn special-case? [type-code]
   ;; Uimahalli / jäähalli
   (#{3110 3130 2510 2520} type-code))
 
