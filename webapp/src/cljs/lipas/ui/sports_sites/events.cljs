@@ -330,12 +330,16 @@
                       (map #(select-keys % [:name :localadmin :postalcode :locality :label])))
          first-result (first results)
          city-match (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))]
-     ;; TODO: show results to the user
      {:db (assoc-in db [:sports-sites :reverse-geocoding :response] results)
-      :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :address] (:name first-result)]]
-           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-code] (:postalcode first-result)]]
-           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-office] (:localadmin first-result)]]
-           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :city :city-code] (:city-code city-match)]]]})))
+      :fx (if lipas-id ;; editing existing sports site
+            [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :address] (:name first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-code] (:postalcode first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-office] (:localadmin first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :city :city-code] (:city-code city-match)]]]
+            [[:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :address] (:name first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-code] (:postalcode first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-office] (:localadmin first-result)]]
+             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :city :city-code] (:city-code city-match)]]])})))
 
 (re-frame/reg-event-db
  ::reverse-geocoding-search-failure
