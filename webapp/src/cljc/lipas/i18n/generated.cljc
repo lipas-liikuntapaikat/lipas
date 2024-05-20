@@ -700,7 +700,8 @@
      "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
      :permissions-help-body
      "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
-     :permissions-help-subject "Haluan lisää käyttöoikeuksia"},
+     :permissions-help-subject "Haluan lisää käyttöoikeuksia"
+     :privacy-policy "Tietosuojailmoitus"},
     :ceiling-structures
     {:concrete         "Betoni",
      :double-t-beam    "TT-laatta",
@@ -1476,7 +1477,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "Om du behöver ytterligare användarrättigheter, kontakt ",
      :permissions-help-body
      "Jag behöver användarrättigheter till följande platser:",
-     :permissions-help-subject "Jag behöver mera användarrättigheter"},
+     :permissions-help-subject "Jag behöver mera användarrättigheter"
+     :privacy-policy "Privacy policy"},
     :ceiling-structures
     {:concrete         "Betong",
      :double-t-beam    "TT-bricka",
