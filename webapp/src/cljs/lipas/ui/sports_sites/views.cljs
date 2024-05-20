@@ -46,10 +46,12 @@
 
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins
-           owners on-change read-only? sub-headings?  lipas-id]}]
+           owners on-change read-only? sub-headings? lipas-id]}]
 
   (let [locale         (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
+
+
 
     [lui/form {:read-only? read-only?}
 
@@ -243,13 +245,37 @@
            read-only? sub-headings? address-required?]
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
-    (let [locale (tr)]
+    (let [locale (tr)
+          cities (<== [:lipas.ui.sports-sites.subs/cities-list])
+          mode (-> (<== [:lipas.ui.map.subs/mode*]))
+          lipas-id (-> mode :lipas-id)
+          selected-sports-site-geoms (<== [:lipas.ui.sports-sites.subs/latest-sports-site-geoms lipas-id])
+          new-sports-site-geoms (-> mode
+                                    :geoms)
+          geoms (-> (or new-sports-site-geoms selected-sports-site-geoms)
+                    :features
+                    first
+                    :geometry)
+          selected-site-first-point (case (:type geoms)
+                                      "Point"      (-> geoms :coordinates)
+                                      "LineString" (-> geoms :coordinates first)
+                                      "Polygon"    (-> geoms :coordinates first first))]
 
       [lui/form
        {:read-only? read-only?}
-
        (when sub-headings?
-         [lui/sub-heading {:label (tr :lipas.sports-site/address)}])
+         [mui/grid
+          {:item            true
+           :container       true
+           :justify-content "space-between"}
+          [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
+          (when-not read-only?
+            [lui/locator-button {:tooltip "Etsi osoite"
+                                 :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
+                                                  {:lon (first selected-site-first-point)
+                                                   :lat (last selected-site-first-point)
+                                                   :lipas-id lipas-id
+                                                   :cities cities}])}])])
 
        ;; No address switch
        (when-not address-required?

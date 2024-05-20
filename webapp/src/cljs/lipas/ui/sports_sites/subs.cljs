@@ -20,6 +20,17 @@
    (get sports-sites lipas-id)))
 
 (re-frame/reg-sub
+ ::latest-sports-site-geoms
+ :<- [::sports-sites]
+ (fn [sports-sites [_ lipas-id]]
+   (-> (get sports-sites lipas-id)
+       :history
+       first
+       second
+       :location
+       :geometries)))
+
+(re-frame/reg-sub
  ::latest-sports-site-revs
  :<- [::sports-sites]
  (fn [sites _]
