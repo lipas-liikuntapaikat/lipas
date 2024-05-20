@@ -284,12 +284,13 @@
            :container       true
            :justify-content "space-between"}
           [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
-          [lui/locator-button {:tooltip "Etsi osoite"
-                               :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
-                                                {:lon (first selected-site-first-point)
-                                                 :lat (last selected-site-first-point)
-                                                 :lipas-id lipas-id
-                                                 :cities cities}])}]])
+          (when-not read-only?
+            [lui/locator-button {:tooltip "Etsi osoite"
+                                 :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
+                                                  {:lon (first selected-site-first-point)
+                                                   :lat (last selected-site-first-point)
+                                                   :lipas-id lipas-id
+                                                   :cities cities}])}])])
 
        ;; No address switch
        (when-not address-required?
