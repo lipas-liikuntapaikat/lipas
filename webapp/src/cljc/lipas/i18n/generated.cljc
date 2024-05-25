@@ -515,6 +515,7 @@
      :thank-you-for-registering
      "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."},
     :map.address-search {:title "Etsi osoite", :tooltip "Etsi osoite"},
+    :map.resolve-address {:tooltip "Selvitä osoite automaattisesti"}
     :ice-comparison     {:headline "Hallien vertailu"},
     :lipas.visitors
     {:headline             "Kävijämäärät",

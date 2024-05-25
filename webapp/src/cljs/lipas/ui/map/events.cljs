@@ -906,3 +906,55 @@
                                       f))
                                   fs))))]
      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+;; Reverse geocoding
+
+(re-frame/reg-event-fx
+ ::resolve-address
+ (fn [_ [_ {:keys [lat lon on-success]}]]
+   (when (and lat lon)
+     {:http-xhrio
+      {:method          :get
+       :uri             (str "https://"
+                             (utils/domain)
+                             "/digitransit"
+                             "/geocoding/v1"
+                             "/reverse?"
+                             "point.lat=" lat
+                             "&point.lon=" lon
+                             "&sources=osm,oa"
+                             "&layers=address"
+                             "&size=" 10)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      on-success
+       :on-failure      [::reverse-geocoding-search-failure]}})))
+
+(re-frame/reg-event-fx
+ ::reverse-geocoding-search-failure
+ (fn [{:keys [db]} [_  _http-resp]]
+   (let [tr (:translator db)]
+     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]]]})))
+
+(re-frame/reg-event-fx
+ ::populate-address-with-reverse-geocoding-results
+ (fn [{:keys [db]} [_ lipas-id cities reverse-geocoding-results]]
+   (let [results      (->> reverse-geocoding-results
+                           :features
+                           (map :properties)
+                           (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))
+         first-result (first results)
+         city-match   (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))
+         path->val    {[:location :address]         (:name first-result)
+                       [:location :postal-code]     (:postalcode first-result)
+                       [:location :postal-office]   (:locality first-result)
+                       [:location :city :city-code] (:city-code city-match)}]
+     {:db (assoc-in db [:map :reverse-geocoding :response] results)
+      :fx (if lipas-id
+
+            ;; editing existing sports site
+            [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id path->val]]]
+
+            ;; editing new sports site
+            [[:dispatch [:lipas.ui.sports-sites.events/edit-new-site-fields path->val]]])})))
