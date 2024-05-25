@@ -302,7 +302,7 @@
               :secondary (:preview-text m)}]])))]
 
      [mui/grid {:item true :xs 12}
-      [mui/grid {:container true :justify "space-between" :align-items "center"}
+      [mui/grid {:container true :justify-content "space-between" :align-items "center"}
 
        [mui/grid {:item true}
         [newsletter-signup]]
