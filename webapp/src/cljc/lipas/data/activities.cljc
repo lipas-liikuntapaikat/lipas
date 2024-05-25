@@ -801,6 +801,7 @@
                  :highlights
                  :paddling-route-type
                  :paddling-activities
+                 :route-length-km
                  :duration
                  :travel-direction
                  :paddling-difficulty
@@ -941,6 +942,13 @@
                 {:type        "duration"
                  :description {:fi "Reitin arvioitu kulkuaika"}
                  :label       {:fi "Kulkuaika"}}}
+
+               :route-length-km
+               {:field
+                {:type           "lipas-property"
+                 :lipas-property :route-length-km
+                 :label          {:fi "Reitin pituus (km)"}
+                 :description    {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"}}}
 
                :travel-direction
                {:field
