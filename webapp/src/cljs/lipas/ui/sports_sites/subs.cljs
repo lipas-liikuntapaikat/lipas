@@ -20,17 +20,6 @@
    (get sports-sites lipas-id)))
 
 (re-frame/reg-sub
- ::latest-sports-site-geoms
- :<- [::sports-sites]
- (fn [sports-sites [_ lipas-id]]
-   (-> (get sports-sites lipas-id)
-       :history
-       first
-       second
-       :location
-       :geometries)))
-
-(re-frame/reg-sub
  ::latest-sports-site-revs
  :<- [::sports-sites]
  (fn [sites _]
@@ -61,6 +50,18 @@
      (if (and edit-data geoms)
        (assoc-in edit-data [:location :geometries] geoms)
        edit-data))))
+
+(re-frame/reg-sub
+ ::editing-first-point
+ (fn [[_ lipas-id] _]
+   (re-frame/subscribe [::editing-rev lipas-id]))
+ (fn [sports-site [_ _lipas-id]]
+   (let [first-geom (-> sports-site :location :geometries :features first :geometry)]
+     (case (:type first-geom)
+       "Point"      (-> first-geom :coordinates)
+       "LineString" (-> first-geom :coordinates first)
+       "Polygon"    (-> first-geom :coordinates first first)
+       nil))))
 
 (re-frame/reg-sub
  ::editing?

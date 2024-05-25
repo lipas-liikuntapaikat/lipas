@@ -245,21 +245,10 @@
            read-only? sub-headings? address-required?]
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
-    (let [locale (tr)
-          cities (<== [:lipas.ui.sports-sites.subs/cities-list])
-          mode (-> (<== [:lipas.ui.map.subs/mode*]))
-          lipas-id (-> mode :lipas-id)
-          selected-sports-site-geoms (<== [:lipas.ui.sports-sites.subs/latest-sports-site-geoms lipas-id])
-          new-sports-site-geoms (-> mode
-                                    :geoms)
-          geoms (-> (or new-sports-site-geoms selected-sports-site-geoms)
-                    :features
-                    first
-                    :geometry)
-          selected-site-first-point (case (:type geoms)
-                                      "Point"      (-> geoms :coordinates)
-                                      "LineString" (-> geoms :coordinates first)
-                                      "Polygon"    (-> geoms :coordinates first first))]
+    (let [locale      (tr)
+          editing?    (not read-only?)
+          lipas-id    (when editing? (<== [:lipas.ui.map.subs/editing-lipas-id]))
+          first-point (when editing? (<== [::subs/editing-first-point lipas-id]))]
 
       [lui/form
        {:read-only? read-only?}
@@ -267,15 +256,18 @@
          [mui/grid
           {:item            true
            :container       true
+           :align-items     "center"
            :justify-content "space-between"}
           [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
-          (when-not read-only?
-            [lui/locator-button {:tooltip "Etsi osoite"
-                                 :on-click #(==> [:lipas.ui.sports-sites.events/reverse-geocoding-search
-                                                  {:lon (first selected-site-first-point)
-                                                   :lat (last selected-site-first-point)
-                                                   :lipas-id lipas-id
-                                                   :cities cities}])}])])
+
+          ;; Address locator
+          (when editing?
+            [lui/locator-button
+             {:tooltip  (tr :map.resolve-address/tooltip)
+              :on-click #(==> [:lipas.ui.map.events/resolve-address
+                               {:lon        (first first-point)
+                                :lat        (second first-point)
+                                :on-success [:lipas.ui.map.events/populate-address-with-reverse-geocoding-results lipas-id cities]}])}])])
 
        ;; No address switch
        (when-not address-required?
@@ -652,37 +644,37 @@
                                   :on-change on-change
                                   :tooltip   tooltip}]
 
-            (show-calc? k geom-type) [route-length-km-field
-                                      {:tr        tr
-                                       :value     value
-                                       :type      "number"
-                                       :spec      spec
-                                       :label     label
-                                       :tooltip   tooltip
-                                       :geoms     geoms
-                                       :on-change on-change}]
+            (show-calc? k geom-type)      [route-length-km-field
+                                           {:tr        tr
+                                            :value     value
+                                            :type      "number"
+                                            :spec      spec
+                                            :label     label
+                                            :tooltip   tooltip
+                                            :geoms     geoms
+                                            :on-change on-change}]
             (show-area-calc? k geom-type) [area-km2-field
-                                      {:tr        tr
-                                       :value     value
-                                       :type      "number"
-                                       :spec      spec
-                                       :label     label
-                                       :tooltip   tooltip
-                                       :geoms     geoms
-                                       :on-change on-change}]
-            (= "boolean" data-type)  [lui/checkbox
-                                      {:value     value
-                                       :tooltip   tooltip
-                                       :disabled  disabled?
-                                       :on-change on-change}]
-            :else                    [lui/text-field
-                                      {:value     value
-                                       :disabled  disabled?
-                                       :tooltip   tooltip
-                                       :spec      spec
-                                       :type      (when (#{"numeric" "integer"} data-type)
-                                                    "number")
-                                       :on-change on-change}])})
+                                           {:tr        tr
+                                            :value     value
+                                            :type      "number"
+                                            :spec      spec
+                                            :label     label
+                                            :tooltip   tooltip
+                                            :geoms     geoms
+                                            :on-change on-change}]
+            (= "boolean" data-type)       [lui/checkbox
+                                           {:value     value
+                                            :tooltip   tooltip
+                                            :disabled  disabled?
+                                            :on-change on-change}]
+            :else                         [lui/text-field
+                                           {:value     value
+                                            :disabled  disabled?
+                                            :tooltip   tooltip
+                                            :spec      spec
+                                            :type      (when (#{"numeric" "integer"} data-type)
+                                                         "number")
+                                            :on-change on-change}])})
 
        (concat
         ;; Ice stadium special props

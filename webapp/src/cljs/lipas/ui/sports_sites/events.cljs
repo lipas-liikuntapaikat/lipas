@@ -33,6 +33,15 @@
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
 (re-frame/reg-event-fx
+ ::edit-fields
+ (fn [{:keys [db]} [_ lipas-id path->value]]
+   (let [new-db (-> path->value
+                    (update-keys (fn [path] (into [:sports-sites lipas-id :editing] path)))
+                    (->> (reduce-kv utils/set-field db)))]
+     {:db       new-db
+      :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
+
+(re-frame/reg-event-fx
  ::discard-edits
  (fn [{:keys [db]} [_ lipas-id]]
    {:db (assoc-in db [:sports-sites lipas-id :editing] nil)
@@ -222,6 +231,15 @@
      {:db new-db
       :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
+(re-frame/reg-event-fx
+ ::edit-new-site-fields
+ (fn [{:keys [db]} [_ path->value]]
+   (let [new-db (-> path->value
+                    (update-keys (fn [path] (into [:new-sports-sites :data] path)))
+                    (->> (reduce-kv utils/set-field db)))]
+     {:db new-db
+      :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
+
 (re-frame/reg-event-db
  ::toggle-delete-dialog
  (fn [db _]
@@ -300,43 +318,3 @@
  ::clear-name-check
  (fn [db [_ resp]]
    (assoc-in db [:sports-sites :name-check] {})))
-
-(re-frame/reg-event-fx
- ::reverse-geocoding-search
- (fn [_ [_ {:keys [lat lon lipas-id cities]}]]
-   (when (and lat lon)
-     {:http-xhrio
-      {:method          :get
-       :uri             (str "https://"
-                             (utils/domain)
-                             "/digitransit"
-                             "/geocoding/v1"
-                             "/reverse?"
-                             "point.lat=" lat
-                             "&point.lon=" lon
-                             "&sources=osm,oa"
-                             "&layers=address"
-                             "&size=" 10)
-       :response-format (ajax/json-response-format {:keywords? true})
-       :on-success      [::reverse-geocoding-search-success lipas-id cities]
-       :on-failure      [:lipas.ui.admin.events/failure]}})))
-
-(re-frame/reg-event-fx
- ::reverse-geocoding-search-success
- (fn [{:keys [db]} [_ lipas-id cities http-resp]]
-   (let [results (->> http-resp
-                      :features
-                      (map :properties)
-                      (map #(select-keys % [:name :localadmin :postalcode :locality :label])))
-         first-result (first results)
-         city-match (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))]
-     {:db (assoc-in db [:sports-sites :reverse-geocoding :response] results)
-      :fx (if lipas-id ;; editing existing sports site
-            [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :address] (:name first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-code] (:postalcode first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :postal-office] (:localadmin first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:location :city :city-code] (:city-code city-match)]]]
-            [[:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :address] (:name first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-code] (:postalcode first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :postal-office] (:localadmin first-result)]]
-             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-field [:location :city :city-code] (:city-code city-match)]]])})))
