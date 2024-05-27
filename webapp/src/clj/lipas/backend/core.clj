@@ -470,14 +470,21 @@
         :hits
         (->> (map :_source)))))
 
-(defn add-to-integration-out-queue! [db sports-site]
+(defn add-to-integration-out-queue!
+  [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
-(defn add-to-analysis-queue! [db sports-site]
+(defn add-to-analysis-queue!
+  [db sports-site]
   (db/add-to-analysis-queue! db (:lipas-id sports-site)))
 
-(defn add-to-elevation-queue! [db sports-site]
+(defn add-to-elevation-queue!
+  [db sports-site]
   (db/add-to-elevation-queue! db (:lipas-id sports-site)))
+
+(defn add-to-webhook-queue!
+  [db {:keys [_lipas-ids _loi-ids] :as m}]
+  (db/add-to-webhook-queue! db m))
 
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
@@ -504,7 +511,9 @@
            (add-to-integration-out-queue! tx resp))
 
          ;; Analysis doesn't require elevation information
-         (add-to-analysis-queue! tx resp))
+         (add-to-analysis-queue! tx resp)
+
+         (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
 
        resp))))
 
@@ -876,6 +885,7 @@
   [db search user loi]
   (jdbc/with-db-transaction [tx db]
     (db/upsert-loi! tx user loi)
+    (add-to-webhook-queue! tx {:loi-ids [(:id loi)]})
     (index-loi! search loi :sync)))
 
 (defn upload-utp-image!
