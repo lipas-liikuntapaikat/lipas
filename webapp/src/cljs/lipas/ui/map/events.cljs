@@ -931,11 +931,21 @@
 
 (re-frame/reg-event-fx
  ::reverse-geocoding-search-failure
- (fn [{:keys [db]} [_  _http-resp]]
+ (fn [{:keys [db]} [_  resp]]
    (let [tr (:translator db)]
-     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+     {:db (assoc-in db [:map :address-locator :error] resp)
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification
                        {:message  (tr :notifications/get-failed)
                         :success? false}]]]})))
+
+(re-frame/reg-event-fx
+ ::on-reverse-geocoding-success
+ (fn [{:keys [db]} [_ resp]]
+   (let [addresses (->> resp
+                        :features
+                        (map :properties)
+                        (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))]
+     {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] addresses)})))
 
 (re-frame/reg-event-fx
  ::populate-address-with-reverse-geocoding-results
@@ -950,7 +960,7 @@
                        [:location :postal-code]     (:postalcode first-result)
                        [:location :postal-office]   (:locality first-result)
                        [:location :city :city-code] (:city-code city-match)}]
-     {:db (assoc-in db [:map :reverse-geocoding :response] results)
+     {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] results)
       :fx (if lipas-id
 
             ;; editing existing sports site
@@ -958,3 +968,19 @@
 
             ;; editing new sports site
             [[:dispatch [:lipas.ui.sports-sites.events/edit-new-site-fields path->val]]])})))
+
+
+(re-frame/reg-event-db
+ ::select-address-locator-address
+ (fn [db [_ m]]
+   (assoc-in db [:map :address-locator :selected-address] m)))
+
+(re-frame/reg-event-db
+ ::open-address-locator-dialog
+ (fn [db _]
+   (assoc-in db [:map :address-locator :dialog-open?] true)))
+
+(re-frame/reg-event-db
+ ::close-address-locator-dialog
+ (fn [db _]
+   (assoc-in db [:map :address-locator :dialog-open?] false)))

@@ -512,6 +512,42 @@
   [lipas-id & args]
   (==> [::sports-site-events/edit-field lipas-id (butlast args) (last args)]))
 
+(defn address-locator
+  [{:keys [tr lipas-id cities]}]
+  (let [first-point      (<== [:lipas.ui.sports-sites.subs/editing-first-point lipas-id])
+        dialog-open?     (<== [::subs/address-locator-dialog-open?])
+        selected-address (<== [::subs/address-locator-selected-address])
+        addresses        (<== [::subs/address-locator-addresses])]
+    [:<>
+
+     ;; Dialog
+     [lui/dialog
+      {:open?         dialog-open?
+       :title         "Valitse osoite"
+       :save-label    "Ok"
+       :save-enabled? (some? selected-address)
+       :on-close      #(==> [::events/close-address-locator-dialog])
+       :cancel-label  (tr :actions/cancel)
+       :on-save       (fn []
+                        (==> [::events/close-address-locator-dialog])
+                        (==> [::events/populate-address-with-reverse-geocoding-results lipas-id (vals cities) {:features [{:properties selected-address}]}]))}
+      [lui/autocomplete
+       {:label     "Osoitteet"
+        :items     addresses
+        :value     selected-address
+        :label-fn  :label
+        :value-fn  identity
+        :on-change #(==> [::events/select-address-locator-address %])}]]
+
+     ;; Button
+     [lui/locator-button
+      {:on-click (fn []
+                   (==> [::events/open-address-locator-dialog])
+                   (==> [::events/resolve-address
+                         {:lon        (first first-point)
+                          :lat        (second first-point)
+                          :on-success [:lipas.ui.map.events/on-reverse-geocoding-success]}]))}]]))
+
 ;; Works as both display and edit views
 (defn sports-site-view
   [{:keys [tr site-data width]}]
@@ -656,6 +692,9 @@
                :on-change       set-field
                :lipas-id        lipas-id
                :sub-headings?   true}]
+
+             #_(when editing?
+               [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
 
              ^{:key (str "location-" lipas-id)}
              [sports-sites/location-form

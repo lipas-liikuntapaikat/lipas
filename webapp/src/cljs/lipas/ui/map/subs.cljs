@@ -520,3 +520,35 @@
    (if can-add-lois-only?
      "loi"
      (:add-mode m))))
+
+;; Address locator (reverse geocoding)
+
+(re-frame/reg-sub
+ ::address-locator
+ :<- [::map]
+ (fn [m]
+   (:address-locator m)))
+
+(re-frame/reg-sub
+ ::address-locator-dialog-open?
+ :<- [::address-locator]
+ (fn [m]
+   (:dialog-open? m)))
+
+(re-frame/reg-sub
+ ::address-locator-addresses
+ :<- [::address-locator]
+ (fn [m]
+   (:reverse-geocoding-results m)))
+
+(re-frame/reg-sub
+ ::address-locator-selected-address
+ :<- [::address-locator]
+ (fn [m]
+   (:selected-address m)))
+
+(re-frame/reg-sub
+ ::address-locator-error
+ :<- [::address-locator]
+ (fn [m]
+   (:error m)))

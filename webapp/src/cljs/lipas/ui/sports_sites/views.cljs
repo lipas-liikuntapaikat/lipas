@@ -261,7 +261,7 @@
           [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
 
           ;; Address locator
-          (when editing?
+          (when (and (not (utils/prod?)) editing?)
             [lui/locator-button
              {:tooltip  (tr :map.resolve-address/tooltip)
               :on-click #(==> [:lipas.ui.map.events/resolve-address
