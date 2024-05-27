@@ -14,6 +14,7 @@
    [lipas.backend.db.subsidy :as subsidy]
    [lipas.backend.db.user :as user]
    [lipas.backend.db.utils :as db-utils]
+   [lipas.backend.db.webhook :as webhook]
    [lipas.utils :as utils]))
 
 ;; User ;;
@@ -320,12 +321,36 @@
   (->> (loi/get-latest-by-loi-type db {:loi-type loi-type})
        (map loi/unmarshall)))
 
+(defn get-lois-by-ids
+  [db ids]
+  (->> (loi/get-latest-by-ids db {:ids (map utils/->uuid ids)})
+       (map loi/unmarshall)))
+
 (defn upsert-loi!
   [db user loi]
   (-> loi
       (assoc :author-id (:id user))
       (loi/marshall user)
       (->> (loi/insert-loi-rev! db))))
+
+;; Webhook ;;
+
+(defn add-to-webhook-queue!
+  [db-spec batch-data]
+  (->> {:batch-data batch-data}
+       webhook/marshall
+       (webhook/add-to-queue! db-spec)))
+
+(defn update-webhook-batch-status!
+  [db-spec id status]
+  (->> {:id id :status status}
+       webhook/marshall
+       (webhook/update-status! db-spec)))
+
+(defn get-webhook-queue
+  [db-spec]
+  (->> (webhook/get-queue db-spec)
+       (map webhook/unmarshall)))
 
 ;; DB connection pooling ;;
 
