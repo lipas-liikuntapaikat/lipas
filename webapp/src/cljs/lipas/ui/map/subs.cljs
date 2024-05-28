@@ -167,9 +167,9 @@
             (update geometries :features
                     (fn [fs]
                       (map (fn [f]
-                             (-> f
-                                 (assoc :properties (dissoc m :geometries :search-meta))
-                                 (assoc :id (:id m))))
+                             (assoc f :properties (-> m
+                                                      (dissoc :geometries :search-meta :id)
+                                                      (assoc :loi-id (:id m)))))
                            fs))))
           results))))
 
