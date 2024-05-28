@@ -77,8 +77,8 @@
 
 (re-frame/reg-event-fx
  ::zoom-to-loi
- (fn [{:keys [db]} [_ loi-fcoll width]]
-   (let [geom       (-> loi-fcoll :features first :geometry)
+ (fn [{:keys [db]} [_ loi width]]
+   (let [geom       (-> loi :geometries :features first :geometry)
          wgs-coords (case (:type geom)
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
@@ -372,10 +372,10 @@
 
 (re-frame/reg-event-fx
  ::loi-selected
- (fn [{:keys [db]} [_ event _f1]]
-   (let [fcoll (map-utils/->geoJSON-clj (gobj/get event "selected"))]
+ (fn [{:keys [db]} [_ event loi-id]]
+   (let [on-success [::show-loi loi-id]]
      {:fx
-      [[:dispatch [::show-loi fcoll]]]})))
+      [[:dispatch [:lipas.ui.loi.events/get loi-id on-success]]]})))
 
 (re-frame/reg-event-fx
  ::unselected
@@ -391,11 +391,12 @@
 
 (re-frame/reg-event-fx
  ::show-loi
- (fn [{:keys [db]} [_ loi-fcoll]]
-   (let [width (:screen-size db)]
+ (fn [{:keys [db]} [_ loi-id]]
+   (let [width (:screen-size db)
+         loi   (get-in db [:lois loi-id])]
      {:fx
-      [[:dispatch [:lipas.ui.loi.events/select-loi loi-fcoll]]
-       (when loi-fcoll [:dispatch [:lipas.ui.map.events/zoom-to-loi loi-fcoll width]])
+      [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
+       (when loi [:dispatch [:lipas.ui.map.events/zoom-to-loi loi width]])
        [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]]})))
 
 (re-frame/reg-event-fx

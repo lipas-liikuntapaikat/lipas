@@ -5,18 +5,10 @@
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]))
 
-(defn fcoll->loi
-  [fcoll]
-  (when-let [f1 (-> fcoll :features first)]
-    (-> f1
-        :properties
-        (assoc :geometries fcoll)
-        (assoc :id (:id f1)))))
-
 (re-frame/reg-event-db
  ::select-loi
- (fn [db [_ loi-fcoll]]
-   (let [loi (fcoll->loi loi-fcoll)]
+ (fn [db [_ loi-id]]
+   (let [loi (get-in db [:lois loi-id])]
      (-> db
          (assoc-in [:loi :selected-loi] loi)
          (assoc-in [:loi :editing] loi)
@@ -95,10 +87,11 @@
  ::save-success
  (fn [{:keys [db]} [_  loi _resp]]
    (let [tr (:translator db)]
-     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+     {:db (assoc-in db [:lois (:id loi)] loi)
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification
                        {:message  (tr :notifications/save-success)
                         :success? true}]]
-           [:dispatch [::select-loi loi]]
+           [:dispatch [::select-loi (:id loi)]]
            [:dispatch [::stop-editing]]
            [:dispatch [:lipas.ui.map.events/discard-drawing]]
            [:dispatch [::search]]]})))
@@ -144,3 +137,28 @@
                        {:message  (tr :notifications/get-failed)
                         :success? false}]]]
       :tracker/event! ["error" "search-loi-failure"]})))
+
+(re-frame/reg-event-fx
+ ::get
+ (fn [{:keys [db]} [_ loi-id on-success]]
+   {:http-xhrio
+    {:method          :get
+     :uri             (str (:backend-url db) "/lois/" loi-id)
+     :response-format (ajax/transit-response-format)
+     :on-success      [::get-success on-success]
+     :on-failure      [::get-failure]}}))
+
+(re-frame/reg-event-fx
+ ::get-success
+ (fn [{:keys [db]} [_ on-success loi]]
+   {:db (assoc-in db [:lois (:id loi)] loi)
+    :fx [(when on-success [:dispatch on-success])]}))
+
+(re-frame/reg-event-fx
+ ::get-failure
+ (fn [{:keys [db]} [_ error]]
+   (let [tr (:translator db)]
+     {:db       (assoc-in db [:errors :lois (utils/timestamp)] error)
+      :dispatch [:lipas.ui.events/set-active-notification
+                 {:message  (tr :notifications/get-failed)
+                  :success? false}]})))
