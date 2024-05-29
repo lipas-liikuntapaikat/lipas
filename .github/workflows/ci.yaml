@@ -1,6 +1,9 @@
 name: LIPAS CI
 
-on: [push]
+on:
+  push:
+    branches:
+    - '!deployment-scripts'
 
 env:
   AUTH_KEY: ${{ vars.AUTH_KEY }}

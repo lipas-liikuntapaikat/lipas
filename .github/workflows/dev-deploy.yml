@@ -7,10 +7,82 @@ on:
         - deployment-scripts
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@11.0
+        with:
+          # cli: latest
+          lein: latest
+
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          # List all files containing dependencies:
+          # key: cljdeps-${{ hashFiles('deps.edn') }}
+          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
+          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
+          # key: cljdeps-${{ hashFiles('build.boot') }}
+          restore-keys: cljdeps-
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: webapp/package-lock.json
+
+      - name: Build backend
+        run: lein uberjar
+        working-directory: ./webapp
+
+      - name: Upload backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend.jar
+          path: /tmp/uberjar/lipas-0.1.0-SNAPSHOT.jar
+          if-no-files-found: error
+
+      - name: Build frontend
+        run:  |
+          npm install --quiet
+          npx shadow-cljs release app
+        working-directory: ./webapp
+
+
+      - name: Upload frontend
+        uses: actions/upload-artifact@v4
+        with:
+          name: app.js
+          path: webapp/resources/public/js/app.js
+          if-no-files-found: error
+
   deployment:
     runs-on: self-hosted
     environment: dev
+    needs: build
     steps:
       - run: pwd
       - run: whoami
-      - run: ls -larth
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend.jar
+      - uses: actions/download-artifact@v4
+        with:
+          name: app.js
+      - name: Display structure of downloaded files
+        run: ls -larth
