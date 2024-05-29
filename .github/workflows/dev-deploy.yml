@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app.js
-          path: ./webapp/resources/public/js/app.js
+          path: ./webapp/resources/public/js/compiled/app.js
           if-no-files-found: error
 
   deployment:
