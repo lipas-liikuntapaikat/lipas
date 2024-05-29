@@ -1,0 +1,12 @@
+name: Deployment
+
+on: workflow_dispatch
+
+jobs:
+  deployment:
+    runs-on: self-hosted
+    environment: dev
+    steps:
+      - run: pwd
+      - run: whoami
+      - run: ls -larth
