@@ -1,6 +1,10 @@
-name: Deployment
+name: dev deployment
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches:
+        - deployment-scripts
 
 jobs:
   deployment:
