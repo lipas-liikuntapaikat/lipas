@@ -33,20 +33,20 @@
        {:label            (tr :analysis/filter-types)
         :default-expanded false}
 
-       ;; Types selector
-       [mui/grid {:item true :xs 10}
-        [lui/type-category-selector
-         {:value     selected-types
-          :on-change #(==> [::events/set-type-codes-filter %])
-          :label     (tr :actions/select-types)}]]
+       [mui/grid {:container true}
+        ;; Types selector
+        [mui/grid {:item true :xs 10}
+         [lui/type-category-selector
+          {:value     selected-types
+           :on-change #(==> [::events/set-type-codes-filter %])
+           :label     (tr :actions/select-types)}]]
 
-       ;; Clear filter button
-       (when (seq selected-types)
-         [mui/grid {:item true :xs 2}
-          [mui/tooltip {:title (tr :search/clear-filters)}
-           ;; FIXME: :size "large"
-           [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
-            [mui/icon {:color "secondary"} "filter_alt"]]]])]]
+        ;; Clear filter button
+        (when (seq selected-types)
+          [mui/grid {:item true :xs 2}
+           [mui/tooltip {:title (tr :search/clear-filters)}
+            [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
+             [mui/icon {:color "secondary"} "filter_alt"]]]])]]]
 
      ;; Tabs
      [mui/grid {:item true :xs 12}
@@ -103,7 +103,6 @@
         [mui/icon-button
          {:on-click #(==> [::events/select-travel-profile :direct])
           :disabled (= metric :travel-time)
-          ;; FIXME:
           :color    (if (= profile :direct) "secondary" "default")}
          [:> MapMarkerDistance]]]]]
 
@@ -113,7 +112,6 @@
        {:title (tr :analysis/by-car)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :car])
-         ;; FIXME:
          :color    (if (= profile :car) "secondary" "default")}
         [mui/icon "directions_car"]]]]
 
@@ -123,7 +121,6 @@
        {:title (tr :analysis/by-bicycle)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :bicycle])
-         ;; FIXME:
          :color    (if (= profile :bicycle) "secondary" "default")}
         [mui/icon "directions_bike"]]]]
 
@@ -133,7 +130,6 @@
        {:title (tr :analysis/by-foot)}
        [mui/icon-button
         {:on-click #(==> [::events/select-travel-profile :foot])
-         ;; FIXME:
          :color    (if (= profile :foot) "secondary" "default")}
         [mui/icon "directions_walk"]]]]
 
