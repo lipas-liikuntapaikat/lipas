@@ -1,5 +1,6 @@
 (ns lipas.ui.components.selects
   (:require
+   ["@mui/material/Typography$default" :as Typography]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
@@ -196,10 +197,11 @@
       :multi?           true
       :value-fn         :region-id
       :label-fn         (comp locale :name)
-      :render-option-fn (fn [_props option _]
+      :render-option-fn (fn [props option _]
                           (let [v (-> option read-string regions-by-v :name locale)]
                             (r/as-element
-                             [mui/typography
+                             [:r> Typography
+                              props
                               (cond
                                 (string/includes? option "province-") (strong1 v)
                                 (string/includes? option "avi-")      (strong2 v)
@@ -241,11 +243,15 @@
       :multi?           true
       :value-fn         :cat-id
       :label-fn         (fn [item] (str (:type-code item) " " (-> item :name locale)))
-      :render-option-fn (fn [_props option _]
+      :render-option-fn (fn [props option _]
+                          ;; NOTE: The read-string here is a bad design,
+                          ;; currently the value is coerced from Clj to EDN string, which is
+                          ;; unnecessary.
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
-                             [mui/typography
+                             [:r> Typography
+                              props
                               (cond
                                 (string/includes? option "sub-cat")  (strong1 v)
                                 (string/includes? option "main-cat") (strong2 v)
