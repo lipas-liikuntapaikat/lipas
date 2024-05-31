@@ -125,7 +125,10 @@
        (let [on-click (fn [evt]
                         (when-let [m (charts/->payload evt)]
                           (==> [::events/select-filters m grouping])))]
-         [mui/grid {:item true :xs 12}
+         [mui/grid {:item true
+                    :xs 12
+                    ;; Needed to make the flex item shrink when the content (chart) was larger
+                    :sx {:width 0}}
           [charts/sports-stats-chart
            {:data     data
             :labels   labels

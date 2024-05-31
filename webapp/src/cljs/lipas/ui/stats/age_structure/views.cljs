@@ -118,5 +118,7 @@
 
      ;; Chart
      (when (= view "chart")
-       [mui/grid {:item true :xs 12}
+       [mui/grid {:item true
+                  :xs 12
+                  :sx {:width 0}}
         [charts/age-structure-chart {:data data :labels labels}]])]))
