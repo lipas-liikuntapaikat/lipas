@@ -47,10 +47,10 @@
                                    (set! (.-error (.-InputLabelProps params)) true))
                                  (r/create-element TextField params))
          :getOptionLabel (fn [opt]
-                                 (-> opt items-by-vals label-fn str))
+                           (-> opt items-by-vals label-fn str))
          :options        (->> items
-                                    (sort-by sort-fn sort-cmp)
-                                    (map (comp pr-str value-fn)))}
+                              (sort-by sort-fn sort-cmp)
+                              (map (comp pr-str value-fn)))}
         (when render-option-fn
           {:renderOption render-option-fn}))])))
 
