@@ -687,7 +687,18 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois-with-params search body-params)})}}]]]
+            :body   (core/search-lois-with-params search body-params)})}}]
+
+      ;; PTV
+      ["/actions/get-ptv-integration-candidates"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/get-ptv-integration-candidates search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

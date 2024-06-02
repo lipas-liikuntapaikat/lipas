@@ -4,9 +4,10 @@
 
 (def dicts
   {:fi
-   {:utp
-    {:headline             "Ulkoilutietopalvelu"
-     :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
+   {:ptv
+    {:tooltip "Vie Palvelutietovarantoon"}
+    :utp
+    {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
      :add-contact          "Lisää yhteystieto"
      :unit                 "yksikkö"
      :highlight            "Kohokohta"
