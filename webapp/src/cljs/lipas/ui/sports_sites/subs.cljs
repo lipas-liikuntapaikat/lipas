@@ -54,9 +54,11 @@
 (re-frame/reg-sub
  ::editing-first-point
  (fn [[_ lipas-id] _]
-   (re-frame/subscribe [::editing-rev lipas-id]))
- (fn [sports-site [_ _lipas-id]]
-   (let [first-geom (-> sports-site :location :geometries :features first :geometry)]
+   [(re-frame/subscribe [::editing-rev lipas-id])
+    (re-frame/subscribe [::new-site-data])])
+ (fn [[edit-data new-site-edit-data] [_ _lipas-id]]
+   (let [sports-site (or edit-data new-site-edit-data)
+         first-geom  (-> sports-site :location :geometries :features first :geometry)]
      (case (:type first-geom)
        "Point"      (-> first-geom :coordinates)
        "LineString" (-> first-geom :coordinates first)

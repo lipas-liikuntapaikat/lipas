@@ -235,9 +235,9 @@
  ::edit-new-site-fields
  (fn [{:keys [db]} [_ path->value]]
    (let [new-db (-> path->value
-                    (update-keys (fn [path] (into [:new-sports-sites :data] path)))
+                    (update-keys (fn [path] (into [:new-sports-site :data] path)))
                     (->> (reduce-kv utils/set-field db)))]
-     {:db new-db
+     {:db       new-db
       :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
 (re-frame/reg-event-db

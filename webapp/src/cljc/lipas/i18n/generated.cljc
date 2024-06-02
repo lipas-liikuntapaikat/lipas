@@ -515,7 +515,12 @@
      :thank-you-for-registering
      "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."},
     :map.address-search {:title "Etsi osoite", :tooltip "Etsi osoite"},
-    :map.resolve-address {:tooltip "Selvitä osoite automaattisesti"}
+    :map.resolve-address
+    {:tooltip        "Selvitä osoite automaattisesti"
+     :choose-address "Valitse osoite"
+     :helper-text1    "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella."
+     :helper-text2    "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK napin painamisen jälkeen."
+     :addresses      "Lähimmät osoitteet"}
     :ice-comparison     {:headline "Hallien vertailu"},
     :lipas.visitors
     {:headline             "Kävijämäärät",
@@ -702,7 +707,7 @@
      :permissions-help-body
      "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
      :permissions-help-subject "Haluan lisää käyttöoikeuksia"
-     :privacy-policy "Tietosuojailmoitus"},
+     :privacy-policy           "Tietosuojailmoitus"},
     :ceiling-structures
     {:concrete         "Betoni",
      :double-t-beam    "TT-laatta",
@@ -1479,7 +1484,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :permissions-help-body
      "Jag behöver användarrättigheter till följande platser:",
      :permissions-help-subject "Jag behöver mera användarrättigheter"
-     :privacy-policy "Privacy policy"},
+     :privacy-policy           "Privacy policy"},
     :ceiling-structures
     {:concrete         "Betong",
      :double-t-beam    "TT-bricka",
