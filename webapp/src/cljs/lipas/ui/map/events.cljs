@@ -923,9 +923,9 @@
                              "/reverse?"
                              "point.lat=" lat
                              "&point.lon=" lon
-                             "&sources=osm,oa"
-                             "&layers=address"
-                             "&size=" 10)
+                             "&sources=nlsfi,oa,osm"
+                             "&layers=street"
+                             "&size=" 25)
        :response-format (ajax/json-response-format {:keywords? true})
        :on-success      on-success
        :on-failure      [::reverse-geocoding-search-failure]}})))
@@ -962,13 +962,12 @@
                        [:location :postal-office]   (:locality first-result)
                        [:location :city :city-code] (:city-code city-match)}]
      {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] results)
-      :fx (if lipas-id
-
-            ;; editing existing sports site
-            [[:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id path->val]]]
-
-            ;; editing new sports site
-            [[:dispatch [:lipas.ui.sports-sites.events/edit-new-site-fields path->val]]])})))
+      :fx [[:dispatch [:lipas.ui.map.events/select-address-locator-address first-result]]
+           (if lipas-id
+             ;; existing sports site
+             [:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id path->val]]
+             ;; new sports site
+             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-fields path->val]])]})))
 
 
 (re-frame/reg-event-db

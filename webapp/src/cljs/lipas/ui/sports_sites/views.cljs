@@ -241,8 +241,8 @@
                     :on-change   #(on-change :admin %)}]}]))
 
 (defn location-form
-  [{:keys [tr edit-data display-data cities on-change
-           read-only? sub-headings? address-required?]
+  [{:keys [tr edit-data display-data cities on-change read-only?
+           sub-headings? address-required? address-locator-component]
     :or   {address-required? true}}]
   (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
     (let [locale      (tr)
@@ -261,13 +261,8 @@
           [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
 
           ;; Address locator
-          (when (and (not (utils/prod?)) editing?)
-            [lui/locator-button
-             {:tooltip  (tr :map.resolve-address/tooltip)
-              :on-click #(==> [:lipas.ui.map.events/resolve-address
-                               {:lon        (first first-point)
-                                :lat        (second first-point)
-                                :on-success [:lipas.ui.map.events/populate-address-with-reverse-geocoding-results lipas-id cities]}])}])])
+          (when address-locator-component
+            address-locator-component)])
 
        ;; No address switch
        (when-not address-required?

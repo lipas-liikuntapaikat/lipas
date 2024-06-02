@@ -518,12 +518,13 @@
         dialog-open?     (<== [::subs/address-locator-dialog-open?])
         selected-address (<== [::subs/address-locator-selected-address])
         addresses        (<== [::subs/address-locator-addresses])]
+
     [:<>
 
      ;; Dialog
      [lui/dialog
       {:open?         dialog-open?
-       :title         "Valitse osoite"
+       :title         (tr :map.resolve-address/choose-address)
        :save-label    "Ok"
        :save-enabled? (some? selected-address)
        :on-close      #(==> [::events/close-address-locator-dialog])
@@ -531,17 +532,33 @@
        :on-save       (fn []
                         (==> [::events/close-address-locator-dialog])
                         (==> [::events/populate-address-with-reverse-geocoding-results lipas-id (vals cities) {:features [{:properties selected-address}]}]))}
-      [lui/autocomplete
-       {:label     "Osoitteet"
-        :items     addresses
-        :value     selected-address
-        :label-fn  :label
-        :value-fn  identity
-        :on-change #(==> [::events/select-address-locator-address %])}]]
+
+      [mui/grid {:container true :spacing 2}
+
+       ;; Helper text 1
+       [mui/grid {:item true :xs 12}
+        [mui/typography (tr :map.resolve-address/helper-text1)]]
+
+       ;; Helper text 2
+       [mui/grid {:item true :xs 12}
+        [mui/typography (tr :map.resolve-address/helper-text2)]]
+
+       ;; Address selector
+       [mui/grid {:item true :xs 12}
+        [lui/autocomplete
+         {:label        (tr :map.resolve-address/addresses)
+          :items        addresses
+          :value        selected-address
+          :label-fn     :label
+          #_#_:label-fn #(str (:label %) " " (:confidence %) " " (:distance %))
+          :value-fn     identity
+          :sort-fn      (juxt (comp - :confidence) :distance)
+          :on-change    #(==> [::events/select-address-locator-address %])}]]]]
 
      ;; Button
      [lui/locator-button
-      {:on-click (fn []
+      {:tooltip  (tr :map.resolve-address/tooltip)
+       :on-click (fn []
                    (==> [::events/open-address-locator-dialog])
                    (==> [::events/resolve-address
                          {:lon        (first first-point)
@@ -693,19 +710,18 @@
                :lipas-id        lipas-id
                :sub-headings?   true}]
 
-             #_(when editing?
-               [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
-
              ^{:key (str "location-" lipas-id)}
              [sports-sites/location-form
-              {:tr                tr
-               :read-only?        (or (not editing?) (not can-publish?) edit-activities-only?)
-               :cities            (vals cities)
-               :edit-data         (:location edit-data)
-               :display-data      (:location display-data)
-               :on-change         (partial set-field :location)
-               :sub-headings?     true
-               :address-required? (not (#{201 2011} type-code))}]]]
+              {:tr                        tr
+               :read-only?                (or (not editing?) (not can-publish?) edit-activities-only?)
+               :cities                    (vals cities)
+               :edit-data                 (:location edit-data)
+               :display-data              (:location display-data)
+               :on-change                 (partial set-field :location)
+               :sub-headings?             true
+               :address-locator-component (when editing?
+                                            [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
+               :address-required?         (not (#{201 2011} type-code))}]]]
 
          ;; Properties tab
          1 (r/with-let [prop-tab (r/atom (if (and activity-type? edit-activities-only?)
@@ -1514,13 +1530,14 @@
                     :lipas-id        0}]
 
                   [sports-sites/location-form
-                   {:tr                tr
-                    :read-only?        false
-                    :cities            (vals cities)
-                    :edit-data         (:location data)
-                    :on-change         (partial set-field :location)
-                    :sub-headings?     true
-                    :address-required? (not (#{201 2011} (:type-code type)))}]]]
+                   {:tr                        tr
+                    :read-only?                false
+                    :cities                    (vals cities)
+                    :edit-data                 (:location data)
+                    :on-change                 (partial set-field :location)
+                    :sub-headings?             true
+                    :address-locator-component [address-locator {:tr tr :cities cities}]
+                    :address-required?         (not (#{201 2011} (:type-code type)))}]]]
 
               ;; Properties tab
               1 [sports-sites/properties-form
