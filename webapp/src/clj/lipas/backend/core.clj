@@ -24,6 +24,7 @@
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.i18n.core :as i18n]
+   [lipas.integration.ptv.core :as ptv]
    [lipas.integration.utp.cms :as utp-cms]
    [lipas.permissions :as permissions]
    [lipas.reports :as reports]
@@ -895,6 +896,11 @@
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]
   (utp-cms/upload-image! params))
+
+;; PTV
+(defn get-ptv-integration-candidates
+  [search criteria]
+  (ptv/get-eligible-sites search criteria))
 
 (comment
   (require '[lipas.backend.config :as config])
