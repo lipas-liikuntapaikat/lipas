@@ -17,7 +17,8 @@
    [lipas.ui.sports-sites.db :as sports-sites]
    [lipas.ui.stats.db :as stats]
    [lipas.ui.swimming-pools.db :as swimming-pools]
-   [lipas.ui.user.db :as user]))
+   [lipas.ui.user.db :as user]
+   [lipas.ui.ptv.db :as ptv]))
 
 (def default-db
   {;; General
@@ -80,4 +81,7 @@
    :feedback feedback/default-db
 
    ;; LOI
-   :loi loi/default-db})
+   :loi loi/default-db
+
+   ;; PTV
+   :ptv ptv/default-db})

@@ -4,7 +4,9 @@
 
 (def dicts
   {:fi
-   {:newsletter
+   {:ptv
+    {:tooltip "Vie Palvelutietovarantoon"}
+    :newsletter
     {:subscribe-short      "Tilaa"
      :subscribe            "Tilaa uutiskirje"
      :subscription-failed  "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."

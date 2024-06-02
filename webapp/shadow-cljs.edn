@@ -19,4 +19,5 @@
    :devtools
    {:after-load lipas.ui.core/mount-root
     :preloads   [devtools.preload
-                 day8.re-frame-10x.preload]}}}}
+                 ;; Does not seem to work with React 18
+                 #_day8.re-frame-10x.preload]}}}}

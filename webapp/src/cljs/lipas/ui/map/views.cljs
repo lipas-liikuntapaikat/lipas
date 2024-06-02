@@ -21,6 +21,7 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.ptv.views :as ptv]
    [lipas.ui.reminders.views :as reminders]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
@@ -1640,9 +1641,17 @@
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
         mode-name           (<== [::subs/mode-name])
-        show-create-button? (<== [::subs/show-create-button?])]
+        show-create-button? (<== [::subs/show-create-button?])
+        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
     [:<>
+     ;; PTV dialog
+     (when logged-in?
+       [ptv/dialog {:tr tr}])
+
+     ;; Address search dialog
      [address-search-dialog]
+
+     ;; Floating container
      [lui/floating-container {:bottom 0 :background-color "transparent"}
       [mui/grid
        {:container   true
@@ -1678,7 +1687,18 @@
              :on-click #(==> (if (= mode-name :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
-            [mui/icon "insights"]]]])]]]))
+            [mui/icon "insights"]]]])
+
+       ;; PTV button
+       (when logged-in?
+         [mui/tooltip {:title (tr :ptv/tooltip)}
+          [mui/grid {:item true}
+           [mui/fab
+            {:size     "small"
+             :on-click #(==> (if ptv-dialog-open?
+                               [:lipas.ui.ptv.events/close-dialog]
+                               [:lipas.ui.ptv.events/open-dialog]))}
+            [mui/icon "ios_share"]]]])]]]))
 
 (defn add-view
   [{:keys [tr width]}]

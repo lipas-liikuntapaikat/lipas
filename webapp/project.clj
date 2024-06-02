@@ -92,7 +92,7 @@
     :dependencies
     [;;; Frontend ;;;
      [binaryage/devtools "1.0.7"]
-     [day8.re-frame/re-frame-10x "1.9.0"]
+     [day8.re-frame/re-frame-10x "1.9.9"]
      [cider/piggieback "0.5.3"]
 
      ;;; Backend ;;;
