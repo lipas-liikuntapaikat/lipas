@@ -54,9 +54,15 @@ env:
   UTP_CMS_API_URL: "https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
   UTP_CMS_API_USER: lipas-developer
   UTP_CMS_API_PASS: password
+  UTP_WEBHOOK_SOURCE_ENV: ${{ vars.UTP_WEBHOOK_SOURCE_ENV }}
+  UTP_WEBHOOK_URL: ${{ vars.UTP_WEBHOOK_URL }}
+  UTP_WEBHOOK_SUBSCRIPTION_KEY: ${{ vars.UTP_WEBHOOK_SUBSCRIPTION_KEY }}
+  UTP_WEBHOOK_TOKEN_CLIENT_ID: ${{ vars.UTP_WEBHOOK_TOKEN_CLIENT_ID }}
+  UTP_WEBHOOK_TOKEN_CLIENT_SECRET: ${{ vars.UTP_WEBHOOK_TOKEN_CLIENT_SECRET }}
+  UTP_WEBHOOK_TOKEN_URL: ${{ vars.UTP_WEBHOOK_TOKEN_URL }}
 jobs:
   utp-schema-gen:
-    if: github.ref == 'refs/heads/ulkoilutietopalvelu'
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -120,6 +126,73 @@ jobs:
           token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
           gist_id: 557991b8d68186e5ec4e88388a1c1741
           file_path: webapp/utp-schema.csv
+          file_type: text
+
+  loi-schema-gen:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@11.0
+        with:
+          lein: latest
+
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          # List all files containing dependencies:
+          # key: cljdeps-${{ hashFiles('deps.edn') }}
+          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
+          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
+          # key: cljdeps-${{ hashFiles('build.boot') }}
+          restore-keys: cljdeps-
+
+      - name: Check if there are changes
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            webapp/src/cljc/lipas/data/loi.cljc
+
+      - name: Generate JSON schema
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: lein run -m lipas.data.loi > loi-schema.json
+        working-directory: ./webapp
+
+      - name: Generate CSV
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: lein run -m lipas.data.loi csv > loi-schema.csv
+        working-directory: ./webapp
+
+      - name: Deploy JSON schema to Gist
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: exuanbo/actions-deploy-gist@v1.1.4
+        with:
+          token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
+          gist_id: d531983de8b935dcff838b1d5403a5f1
+          file_path: webapp/loi-schema.json
+          file_type: text
+
+      - name: Deploy CSV to Gist
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: exuanbo/actions-deploy-gist@v1.1.4
+        with:
+          token: ${{ secrets.UTP_SCHEMA_GIST_TOKEN }}
+          gist_id: 1cf16b04329482559ea72815f894833a
+          file_path: webapp/loi-schema.csv
           file_type: text
 
   ci:

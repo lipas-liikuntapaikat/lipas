@@ -57,8 +57,10 @@
 (defn form [{:keys [read-only?]} & data]
   (into
    [mui/grid {:container true :spacing 2}]
-   (for [d     data
-         :when (some? d)]
+   (for [elem  data
+         :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
+         m     ms
+         :when (some? m)]
      [mui/grid {:item true :xs 12}
       [mui/form-control {:full-width true}
-       (->field read-only? d)]])))
+       (->field read-only? m)]])))

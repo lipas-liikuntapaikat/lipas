@@ -408,12 +408,12 @@
                  selected (gobj/get e "selected")
                  f1       (aget selected 0)
                  lipas-id (when f1 (.get f1 "lipas-id"))
-                 loi-id   (when f1 (and (.get f1 "loi-type") (.get f1 "id")))]
+                 loi-id   (when f1 (and (.get f1 "loi-type") (.get f1 "loi-id")))]
              (.setPosition popup-overlay coords)
 
              (cond
                lipas-id (==> [::events/sports-site-selected e lipas-id])
-               loi-id   (==> [::events/loi-selected e f1])
+               loi-id   (==> [::events/loi-selected e loi-id])
                :else    (==> [::events/unselected e])))))
 
     (.on lmap "click"

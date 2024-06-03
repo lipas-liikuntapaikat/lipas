@@ -84,6 +84,13 @@
        :on-click #(==> [::events/submit-registration-form form-data])}
       (tr :register/headline)]
 
+     ;; Privacy policy
+     [mui/link
+      {:style  {:margin-top "0.5em"}
+       :href   "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
+       :target "_blank"}
+      (tr :help/privacy-policy)]
+
      ;; Error messages
      (when error
        [mui/typography {:color "error"}

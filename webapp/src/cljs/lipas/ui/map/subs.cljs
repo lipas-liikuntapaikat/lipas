@@ -122,23 +122,24 @@
        (->> data
             (keep
              (fn [obj]
-               (let [obj       (gobj/get obj "_source")
-                     geoms     (or
-                                ;; Full geoms
-                                (gobj/getValueByKeys obj
-                                                     "location"
-                                                     "geometries"
-                                                     "features")
-                                ;; Simplified geoms
-                                (gobj/getValueByKeys obj
-                                                     "search-meta"
-                                                     "location"
-                                                     "simple-geoms"
-                                                     "features"))
-                     type-code (gobj/getValueByKeys obj "type" "type-code")
-                     lipas-id  (gobj/get obj "lipas-id")
-                     name      (gobj/get obj "name")
-                     status    (gobj/get obj "status")]
+               (let [obj              (gobj/get obj "_source")
+                     geoms            (or
+                                       ;; Full geoms
+                                       (gobj/getValueByKeys obj
+                                                            "location"
+                                                            "geometries"
+                                                            "features")
+                                       ;; Simplified geoms
+                                       (gobj/getValueByKeys obj
+                                                            "search-meta"
+                                                            "location"
+                                                            "simple-geoms"
+                                                            "features"))
+                     type-code        (gobj/getValueByKeys obj "type" "type-code")
+                     lipas-id         (gobj/get obj "lipas-id")
+                     name             (gobj/get obj "name")
+                     status           (gobj/get obj "status")
+                     travel-direction (gobj/get obj "travel-direction")]
 
                  ;; To avoid displaying duplicates when editing
                  (when-not (= lipas-id' lipas-id)
@@ -149,10 +150,11 @@
                                     (gobj/set geom "id" (str lipas-id "-" idx))
                                     (gobj/set geom
                                               "properties"
-                                              #js{:lipas-id  lipas-id
-                                                  :name      name
-                                                  :type-code type-code
-                                                  :status    status})
+                                              #js{:lipas-id         lipas-id
+                                                  :name             name
+                                                  :type-code        type-code
+                                                  :status           status
+                                                  :travel-direction travel-direction})
                                     geom))}))))
             not-empty)))))
 
@@ -165,9 +167,9 @@
             (update geometries :features
                     (fn [fs]
                       (map (fn [f]
-                             (-> f
-                                 (assoc :properties (dissoc m :geometries :search-meta))
-                                 (assoc :id (:id m))))
+                             (assoc f :properties (-> m
+                                                      (dissoc :geometries :search-meta :id)
+                                                      (assoc :loi-id (:id m)))))
                            fs))))
           results))))
 
@@ -491,6 +493,17 @@
       :selected-tab    selected-tab})))
 
 (re-frame/reg-sub
+ ::show-create-button?
+ :<- [::map]
+ :<- [:lipas.ui.user.subs/logged-in?]
+ :<- [:lipas.ui.user.subs/can-add-sports-sites?]
+ :<- [:lipas.ui.user.subs/can-add-lois?]
+ (fn [[m logged-in? can-add-sports-sites? can-add-lois? ] _]
+   (and logged-in?
+        (-> m :mode :name #{:default})
+        (or can-add-sports-sites? can-add-lois?))))
+
+(re-frame/reg-sub
  ::hide-actions?
  :<- [::map]
  :<- [:lipas.ui.sports-sites.activities.subs/mode]
@@ -502,5 +515,40 @@
 (re-frame/reg-sub
  ::selected-add-mode
  :<- [::map]
- (fn [m _]
-   (:add-mode m)))
+ :<- [:lipas.ui.user.subs/can-add-lois-only?]
+ (fn [[m can-add-lois-only?] _]
+   (if can-add-lois-only?
+     "loi"
+     (:add-mode m))))
+
+;; Address locator (reverse geocoding)
+
+(re-frame/reg-sub
+ ::address-locator
+ :<- [::map]
+ (fn [m]
+   (:address-locator m)))
+
+(re-frame/reg-sub
+ ::address-locator-dialog-open?
+ :<- [::address-locator]
+ (fn [m]
+   (:dialog-open? m)))
+
+(re-frame/reg-sub
+ ::address-locator-addresses
+ :<- [::address-locator]
+ (fn [m]
+   (:reverse-geocoding-results m)))
+
+(re-frame/reg-sub
+ ::address-locator-selected-address
+ :<- [::address-locator]
+ (fn [m]
+   (:selected-address m)))
+
+(re-frame/reg-sub
+ ::address-locator-error
+ :<- [::address-locator]
+ (fn [m]
+   (:error m)))

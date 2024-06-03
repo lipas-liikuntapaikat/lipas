@@ -9,7 +9,8 @@
    [reitit.frontend.easy :as rfe]))
 
 (def links
-  {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"})
+  {:help           "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
+   :privacy-policy "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"})
 
 (defn logout! []
   (==> [:lipas.ui.login.events/logout]))
@@ -29,8 +30,8 @@
      [mui/icon "account_circle"])])
 
 (defn account-menu [{:keys [tr logged-in?]}]
-  (let [anchor     (<== [::subs/account-menu-anchor])
-        close      #(==> [:lipas.ui.events/show-account-menu nil])]
+  (let [anchor (<== [::subs/account-menu-anchor])
+        close  #(==> [:lipas.ui.events/show-account-menu nil])]
 
     [mui/menu {:anchor-el anchor
                :open      (some? anchor)
@@ -67,6 +68,13 @@
       [mui/list-item-icon
        [mui/icon "help"]]
       [mui/list-item-text {:primary (tr :help/headline)}]]
+
+     ;; Privacy policy
+     [mui/menu-item {:id       "account-menu-item-privacy-policy"
+                     :on-click (comp close #(navigate! (:privacy-policy links)))}
+      [mui/list-item-icon
+       [mui/icon "privacy_tip"]]
+      [mui/list-item-text {:primary (tr :help/privacy-policy)}]]
 
      ;; Logout
      (when logged-in?

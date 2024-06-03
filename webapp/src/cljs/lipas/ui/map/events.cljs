@@ -77,8 +77,8 @@
 
 (re-frame/reg-event-fx
  ::zoom-to-loi
- (fn [{:keys [db]} [_ loi-fcoll width]]
-   (let [geom       (-> loi-fcoll :features first :geometry)
+ (fn [{:keys [db]} [_ loi width]]
+   (let [geom       (-> loi :geometries :features first :geometry)
          wgs-coords (case (:type geom)
                       "Point"      (-> geom :coordinates)
                       "LineString" (-> geom :coordinates first)
@@ -170,9 +170,10 @@
 
 (re-frame/reg-event-fx
  ::continue-editing
- (fn [{:keys [db]} _]
-   (let [geoms (-> db :map :mode :geoms)]
-     {:db (update-in db [:map :mode] merge {:name :editing :sub-mode :editing})
+ (fn [{:keys [db]} [_ view-only?]]
+   (let [geoms    (-> db :map :mode :geoms)
+         sub-mode (if view-only? :view-only :editing)]
+     {:db (update-in db [:map :mode] merge {:name :editing :sub-mode sub-mode})
       :dispatch-n
       [[::show-problems (map-utils/find-problems geoms)]]})))
 
@@ -371,10 +372,10 @@
 
 (re-frame/reg-event-fx
  ::loi-selected
- (fn [{:keys [db]} [_ event _f1]]
-   (let [fcoll (map-utils/->geoJSON-clj (gobj/get event "selected"))]
+ (fn [{:keys [db]} [_ event loi-id]]
+   (let [on-success [::show-loi loi-id]]
      {:fx
-      [[:dispatch [::show-loi fcoll]]]})))
+      [[:dispatch [:lipas.ui.loi.events/get loi-id on-success]]]})))
 
 (re-frame/reg-event-fx
  ::unselected
@@ -390,11 +391,12 @@
 
 (re-frame/reg-event-fx
  ::show-loi
- (fn [{:keys [db]} [_ loi-fcoll]]
-   (let [width (:screen-size db)]
+ (fn [{:keys [db]} [_ loi-id]]
+   (let [width (:screen-size db)
+         loi   (get-in db [:lois loi-id])]
      {:fx
-      [[:dispatch [:lipas.ui.loi.events/select-loi loi-fcoll]]
-       (when loi-fcoll [:dispatch [:lipas.ui.map.events/zoom-to-loi loi-fcoll width]])
+      [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
+       (when loi [:dispatch [:lipas.ui.map.events/zoom-to-loi loi width]])
        [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]]})))
 
 (re-frame/reg-event-fx
@@ -409,12 +411,13 @@
 
 (re-frame/reg-event-fx
  ::edit-site
- (fn [_ [_ lipas-id geom-type]]
-   {:dispatch-n
-    [[:lipas.ui.sports-sites.events/edit-site lipas-id]
-     ;;[::zoom-to-site lipas-id]
-     [::clear-undo-redo]
-     [::start-editing lipas-id :editing geom-type]]}))
+ (fn [_ [_ lipas-id geom-type edit-activities-only?]]
+   (let [sub-mode (if edit-activities-only? :view-only :editing)]
+     {:dispatch-n
+      [[:lipas.ui.sports-sites.events/edit-site lipas-id]
+       ;;[::zoom-to-site lipas-id]
+       [::clear-undo-redo]
+       [::start-editing lipas-id sub-mode geom-type]]})))
 
 (defn- on-success-default [{:keys [lipas-id]}]
   [[::stop-editing]
@@ -885,3 +888,99 @@
  ::select-add-mode
  (fn [db [_ add-mode]]
    (assoc-in db [:map :add-mode] add-mode)))
+
+(re-frame/reg-event-fx
+ ::toggle-travel-direction
+ (fn [{:keys [db]} [_ lipas-id fid]]
+   (let [geoms (-> db
+                   (get-in [:map :mode :geoms])
+                   (update :features
+                           (fn [fs]
+                             (map (fn [{:keys [id properties] :as f}]
+                                    (if (= id fid)
+                                      (let [curr-direction (get properties :travel-direction)
+                                            new-direction  (case curr-direction
+                                                             nil            "start-to-end"
+                                                             "start-to-end" "end-to-start"
+                                                             "end-to-start" nil)]
+                                        (assoc-in f [:properties :travel-direction] new-direction))
+                                      f))
+                                  fs))))]
+     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+;; Reverse geocoding
+
+(re-frame/reg-event-fx
+ ::resolve-address
+ (fn [_ [_ {:keys [lat lon on-success]}]]
+   (when (and lat lon)
+     {:http-xhrio
+      {:method          :get
+       :uri             (str "https://"
+                             (utils/domain)
+                             "/digitransit"
+                             "/geocoding/v1"
+                             "/reverse?"
+                             "point.lat=" lat
+                             "&point.lon=" lon
+                             "&sources=nlsfi,oa,osm"
+                             "&layers=street"
+                             "&size=" 25)
+       :response-format (ajax/json-response-format {:keywords? true})
+       :on-success      on-success
+       :on-failure      [::reverse-geocoding-search-failure]}})))
+
+(re-frame/reg-event-fx
+ ::reverse-geocoding-search-failure
+ (fn [{:keys [db]} [_  resp]]
+   (let [tr (:translator db)]
+     {:db (assoc-in db [:map :address-locator :error] resp)
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                       {:message  (tr :notifications/get-failed)
+                        :success? false}]]]})))
+
+(re-frame/reg-event-fx
+ ::on-reverse-geocoding-success
+ (fn [{:keys [db]} [_ resp]]
+   (let [addresses (->> resp
+                        :features
+                        (map :properties)
+                        (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))]
+     {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] addresses)})))
+
+(re-frame/reg-event-fx
+ ::populate-address-with-reverse-geocoding-results
+ (fn [{:keys [db]} [_ lipas-id cities reverse-geocoding-results]]
+   (let [results      (->> reverse-geocoding-results
+                           :features
+                           (map :properties)
+                           (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))
+         first-result (first results)
+         city-match   (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))
+         path->val    {[:location :address]         (:name first-result)
+                       [:location :postal-code]     (:postalcode first-result)
+                       [:location :postal-office]   (:locality first-result)
+                       [:location :city :city-code] (:city-code city-match)}]
+     {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] results)
+      :fx [[:dispatch [:lipas.ui.map.events/select-address-locator-address first-result]]
+           (if lipas-id
+             ;; existing sports site
+             [:dispatch [:lipas.ui.sports-sites.events/edit-fields lipas-id path->val]]
+             ;; new sports site
+             [:dispatch [:lipas.ui.sports-sites.events/edit-new-site-fields path->val]])]})))
+
+
+(re-frame/reg-event-db
+ ::select-address-locator-address
+ (fn [db [_ m]]
+   (assoc-in db [:map :address-locator :selected-address] m)))
+
+(re-frame/reg-event-db
+ ::open-address-locator-dialog
+ (fn [db _]
+   (assoc-in db [:map :address-locator :dialog-open?] true)))
+
+(re-frame/reg-event-db
+ ::close-address-locator-dialog
+ (fn [db _]
+   (assoc-in db [:map :address-locator :dialog-open?] false)))

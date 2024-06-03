@@ -439,8 +439,9 @@
     (.addFeatures source fs)
     map-ctx))
 
-(defn clear-interactions! [{:keys [^js lmap interactions interactions*]
-                            :as   map-ctx}]
+(defn clear-interactions!
+  [{:keys [^js lmap interactions interactions*]
+    :as   map-ctx}]
   ;; Special treatment for 'singleton' interactions*. OpenLayers
   ;; doesn't treat 'copies' identical to original ones. Therefore we
   ;; need to pass the original ones explicitly.

@@ -53,6 +53,15 @@
      (select-keys all-types types))))
 
 (re-frame/reg-sub
+ ::can-add-sports-sites?
+ :<- [::permissions]
+ (fn [{:keys [admin? types all-types? cities all-cities?]} _]
+   (or admin?
+       (and
+        (or all-cities? (seq cities))
+        (or all-types? (seq types))))))
+
+(re-frame/reg-sub
  ::permission-to-activities
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.activities.subs/data]
@@ -62,13 +71,26 @@
      (select-keys all-activities activities))))
 
 (re-frame/reg-sub
+ ::can-add-lois?
+ :<- [::permissions]
+ (fn [permissions _]
+   (permissions/activities? permissions)))
+
+(re-frame/reg-sub
+ ::can-add-lois-only?
+ :<- [::can-add-sports-sites?]
+ :<- [::can-add-lois?]
+ (fn [[can-add-sports-sites? can-add-lois?] _]
+   (and can-add-lois? (not can-add-sports-sites?))))
+
+(re-frame/reg-sub
  ::permission-to-publish?
  (fn [[_ lipas-id]]
    [(re-frame/subscribe [::permissions])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
  (fn [[permissions sports-site] _]
    (when (and permissions sports-site)
-     (permissions/publish? permissions sports-site))))
+     (permissions/modify-sports-site? permissions sports-site))))
 
 (re-frame/reg-sub
  ::permission-to-publish-site?

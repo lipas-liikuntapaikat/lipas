@@ -147,6 +147,64 @@
        [mui/button {:variant :text :color "secondary" :href link}
         (str "> " link-text)]])]])
 
+(defn grid-card-2
+  [{:keys [title style link link-text xs md lg xl]
+    :or   {xs 12 md 6 lg 6 xl 6}} & children]
+  [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
+   [mui/paper {:square true
+               :style
+               (merge
+                {:background-color "rgb(250, 250, 250)"
+                 :font-size        "1.25em"
+                 :height           "360px"
+                 :opacity          0.95
+                 :margin           "8px"
+                 :padding          "16px 10px 0 16px"}
+                style)}
+
+    [mui/grid
+     {:container       true
+      :spacing         2
+      :justify-content "space-between"
+      :style           {:height "100%"}}
+
+     ;; Header
+     [mui/grid {:item true :xs 12}
+      [mui/grid {:container true :justify-content "space-between"}
+       [mui/grid {:item true :xs 11}
+        [mui/typography
+         (merge {:variant "h4"
+                 :color   "secondary"
+                 :style   {:font-weight     600
+                           :font-size       "2rem"
+                           :text-decoration "none"}}
+                (when link
+                  {:component "a"
+                   :href      link}))
+         title]]
+       [mui/grid {:item true :xs 1}
+        [mui/icon-button {:href link :color "secondary"}
+         [mui/icon "arrow_forward_ios"]]]]]
+
+     ;; Content
+     (into [mui/grid {:item true :xs 12}] children)
+
+     ;; Actions
+     (when link-text
+       [mui/grid {:item true :xs 12}
+        [mui/grid
+         {:container       true
+          :direction       "row"
+          :style {:height "100%"}
+          :align-content   "flex-end"}
+         [mui/grid {:item true :xs 12}
+          [mui/button
+           {:variant "text"
+            :style {:margin-bottom "-8px"}
+            :color "secondary"
+            :href link}
+           (str "> " link-text)]]]])]]])
+
 (defn fb-plugin []
   (r/create-class
    {:component-did-mount
@@ -183,12 +241,27 @@
         [mui/dialog-title
          (tr :newsletter/subscribe)]
         [mui/dialog-content
-         [lui/text-field
-          {:value      @email
-           :full-width true
-           :label      (tr :lipas.user/email)
-           :spec       :lipas/email
-           :on-change  #(reset! email %)}]]
+
+         [mui/grid {:container true :spacing 2}
+          ;; Email
+          [mui/grid {:item true :xs 12}
+           [lui/text-field
+            {:value      @email
+             :full-width true
+             :label      (tr :lipas.user/email)
+             :spec       :lipas/email
+             :on-change  #(reset! email %)}]]
+
+          ;; Privacy policy
+          [mui/grid {:item true :xs 12}
+           [mui/link
+            {:color   "primary"
+             :style   {:margin-top "1em"}
+             :href    "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
+             :target  "_blank"}
+            (tr :help/privacy-policy)]]]]
+
+
         [mui/dialog-actions
          [mui/button {:on-click #(reset! open? false)}
           (tr :actions/cancel)]
@@ -203,14 +276,14 @@
 
        ;; Signup btn
        [mui/button
-        {:style    {:margin-top "1em"}
-         :color    "secondary"
+        {:color    "secondary"
          :on-click #(reset! open? true)}
         [mui/icon {:style {:margin-right "0.25em"}} "arrow_forward_ios"]
         (tr :newsletter/subscribe)]])))
 
 (defn newsletter []
-  (let [newsletter-data         (<== [::subs/newsletter-data])
+  (let [tr                      (<== [:lipas.ui.subs/translator])
+        newsletter-data         (<== [::subs/newsletter-data])
         newsletter-error        (<== [::subs/newsletter-error])
         newsletter-in-progress? (<== [::subs/newsletter-in-progress?])]
     [mui/grid {:container true :spacing 2}
@@ -231,10 +304,22 @@
             [mui/list-item-icon
              [mui/icon "mail_outline"]]
             [mui/list-item-text
-             {:primary (str (:send-time m) " | " (:title m))
-              :secondary (:preview-text m)}]])))
+             {:primary   (str (:send-time m) " | " (:title m))
+              :secondary (:preview-text m)}]])))]
 
-      [newsletter-signup]]]))
+     [mui/grid {:item true :xs 12}
+      [mui/grid {:container true :justify-content "space-between" :align-items "center"}
+
+       [mui/grid {:item true}
+        [newsletter-signup]]
+
+       [mui/grid {:item true}
+        [mui/link
+         {:color  "primary"
+          :style {:margin-right "1em"}
+          :href   "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
+          :target "_blank"}
+         (tr :help/privacy-policy)]]]]]))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
@@ -275,7 +360,7 @@
         ;; Sports sites
         [mui/grid {:item true :xs 12 :md 12 :lg 8}
          [mui/grid {:container true}
-          [grid-card
+          [grid-card-2
            {:title     (tr :sport/headline)
             :link      "/liikuntapaikat"
             :link-text (tr :actions/browse-to-map)}
@@ -312,7 +397,7 @@
           ;;   [lui/li (tr :swim/updating-basic-data)]]]
 
           ;; Reports
-          [grid-card
+          [grid-card-2
            {:title     (tr :stats/headline)
             :link      "/tilastot"
             :link-text (tr :stats/browse-to)}
@@ -325,7 +410,7 @@
             [lui/li (tr :stats/bullet3)]]]
 
           ;; Open Data
-          [grid-card {:title (tr :open-data/headline)}
+          [grid-card-2 {:title (tr :open-data/headline)}
            [mui/list
 
             ;; info
@@ -364,7 +449,7 @@
              [mui/list-item-text {:primary "CC 4.0"}]]]]
 
           ;; Help
-          [grid-card { :title (tr :help/headline)}
+          [grid-card-2 { :title (tr :help/headline)}
 
            [mui/list
 

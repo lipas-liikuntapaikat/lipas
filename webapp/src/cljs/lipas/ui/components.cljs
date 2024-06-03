@@ -20,6 +20,7 @@
 (def register-button buttons/register-button)
 (def save-button buttons/save-button)
 (def discard-button buttons/discard-button)
+(def locator-button buttons/locator-button)
 (def text-field text-fields/text-field-controlled)
 (def select selects/select)
 (def multi-select selects/multi-select)

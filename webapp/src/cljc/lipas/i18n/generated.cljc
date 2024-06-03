@@ -486,6 +486,7 @@
      :delete              "Poista {1}",
      :renovation-years    "Perus​korjaus​vuodet",
      :name-localized-se   "Nimi ruotsiksi",
+     :name-localized-en   "Nimi englanniksi"
      :status              "Liikuntapaikan tila",
      :id                  "LIPAS-ID",
      :details-in-portal   "Näytä kaikki lisätiedot",
@@ -514,6 +515,12 @@
      :thank-you-for-registering
      "Kiitos rekisteröitymisestä! Saat  sähköpostiisi viestin kun sinulle on myönnetty käyttöoikeudet."},
     :map.address-search {:title "Etsi osoite", :tooltip "Etsi osoite"},
+    :map.resolve-address
+    {:tooltip        "Selvitä osoite automaattisesti"
+     :choose-address "Valitse osoite"
+     :helper-text1    "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella."
+     :helper-text2    "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK napin painamisen jälkeen."
+     :addresses      "Lähimmät osoitteet"}
     :ice-comparison     {:headline "Hallien vertailu"},
     :lipas.visitors
     {:headline             "Kävijämäärät",
@@ -678,6 +685,7 @@
      "Pihlajalinna Areena on energiatehokas jäähalli"},
     :lipas.location
     {:address       "Katuosoite",
+     :no-address    "Kohteelle ei voi määrittää katuosoitetta"
      :city          "Kunta",
      :city-code     "Kuntanumero",
      :headline      "Sijainti",
@@ -698,7 +706,8 @@
      "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
      :permissions-help-body
      "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
-     :permissions-help-subject "Haluan lisää käyttöoikeuksia"},
+     :permissions-help-subject "Haluan lisää käyttöoikeuksia"
+     :privacy-policy           "Tietosuojailmoitus"},
     :ceiling-structures
     {:concrete         "Betoni",
      :double-t-beam    "TT-laatta",
@@ -838,6 +847,7 @@
      :center-map-to-site     "Kohdista kartta kohteeseen",
      :draw-hole              "Lisää reikä",
      :split-linestring       "Katkaise reittiosa",
+     :travel-direction       "Määritä kulkusuunta"
      :delete-vertices-hint
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",
@@ -929,6 +939,7 @@
      "Sinulla on käyttöoikeus seuraaviin  yksittäisiin liikuntapaikkoihin:",
      :permissions-help
      "Kerro, mitä tietoja haluat päivittää Lipaksessa",
+     :permission-to-activities  "Sinulla on käyttöoikeus seuraaviin aktiviteetteihin"
      :report-energy-consumption "Ilmoita energiankulutus",
      :firstname                 "Etunimi",
      :save-search               "Tallenna haku",
@@ -1288,6 +1299,7 @@
      :delete            "Ta bort {1}",
      :renovation-years  "Renoveringsår",
      :name-localized-se "Namn på svenska",
+     :name-localized-en "Namn på engelska"
      :status            "Status",
      :id                "LIPAS-ID",
      :details-in-portal "Visa alla ytterligare information",
@@ -1471,7 +1483,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "Om du behöver ytterligare användarrättigheter, kontakt ",
      :permissions-help-body
      "Jag behöver användarrättigheter till följande platser:",
-     :permissions-help-subject "Jag behöver mera användarrättigheter"},
+     :permissions-help-subject "Jag behöver mera användarrättigheter"
+     :privacy-policy           "Privacy policy"},
     :ceiling-structures
     {:concrete         "Betong",
      :double-t-beam    "TT-bricka",
@@ -2144,6 +2157,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :delete            "Delete {1}",
      :renovation-years  "Renovation years",
      :name-localized-se "Swedish name",
+     :name-localized-en "English name"
      :status            "Status",
      :id                "LIPAS-ID",
      :details-in-portal "Click here to see details",

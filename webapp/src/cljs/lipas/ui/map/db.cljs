@@ -29,4 +29,6 @@
    {:base-url     "https://api.digitransit.fi/geocoding/v1"
     :dialog-open? false}
 
-   :add-mode "sports-site"})
+   :add-mode "sports-site"
+
+   :address-locator-dialog {:open? false}})

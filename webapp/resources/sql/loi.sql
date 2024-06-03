@@ -41,3 +41,11 @@ WHERE status = :status
 -- :doc Returns latest revisions of all lois
 SELECT *
 FROM loi_current
+
+-- :name get-latest-by-ids
+-- :command :query
+-- :result :many
+-- :doc Lists latest revisions of lois by ids
+SELECT *
+FROM loi_current
+WHERE id IN (:v*:ids)

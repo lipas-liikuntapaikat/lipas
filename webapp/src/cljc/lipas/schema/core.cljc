@@ -429,6 +429,23 @@
   (s/coll-of :lipas.sports-site/renovation-year
              :distinct true :into []))
 
+(s/def :lipas.sports-site/audit-date
+  :lipas/date)
+
+(s/def :lipas.sports-site/audit-performed-by
+  (str-in 2 100))
+
+(s/def :lipas.sports-site/audit-type
+  (str-in 2 100))
+
+(s/def :lipas.sports-site/audit
+  (s/keys :req-un [:lipas.sports-site/audit-date
+                   :lipas.sports-site/audit-performed-by
+                   :lipas.sports-site/audit-type]))
+
+(s/def :lipas.sports-site/audits
+  (s/coll-of :lipas.sports-site/audit))
+
 ;;;; Additional properties ;;;;
 
 (s/def :lipas.sports-site.properties/surface-material*
@@ -1030,8 +1047,7 @@
                      :lipas.sports-site.fields.floorball/standing-area-capacity-person
                      :lipas.sports-site.fields.floorball/accessible-seating-capacity-person
                      :lipas.sports-site.fields.floorball/audience-stand-access
-                     :lipas.sports-site.fields.floorball/field-accessible-without-strairs?
-                     ])))
+                     :lipas.sports-site.fields.floorball/field-accessible-without-strairs?])))
 
 (s/def :lipas.sports-site.circumstances.floorball/available-goals-count
   (s/int-in 0 200))
@@ -1047,6 +1063,12 @@
 
 (s/def :lipas.sports-site.circumstances.floorball/corner-pieces-count
   (s/int-in 0 100))
+
+(s/def :lipas.sports-site.circumstances/general-information
+  (str-in 2 1000))
+
+(s/def :lipas.sports-site.circumstances/locker-rooms-count
+  (s/int-in 0 1000))
 
 (s/def :lipas.sports-site.circumstances/teams-using
   (str-in 0 1024))
@@ -1269,7 +1291,10 @@
                    :lipas.sports-site.circumstances/electrical-plan-available?
                    :lipas.sports-site.circumstances/three-phase-electric-power?
                    :lipas.sports-site.circumstances/led-screens-or-surfaces-for-ads?
-                   :lipas.sports-site.circumstances/audit-date]))
+                   :lipas.sports-site.circumstances/audit-date
+                   :lipas.sports-site.circumstances/general-information
+                   :lipas.sports-site.circumstances/locker-rooms-count
+                   :lipas.sports-site/audits]))
 
 (s/def :lipas.sports-site/circumstances
   (s/or :circumstances/floorball :lipas.sports-site.circumstances/floorball))
@@ -1813,6 +1838,9 @@
 (s/def :lipas.api.get-sports-sites-by-type-code/lang #{"fi" "en" "se" "all"})
 (s/def :lipas.api.get-sports-sites-by-type-code/query-params
   (s/keys :opt-un [:lipas.api.get-sports-sites-by-type-code/lang]))
+
+(s/def :lipas.api.get-sports-site/query-params
+  :lipas.api.get-sports-sites-by-type-code/query-params)
 
 (s/def :lipas.report/field (into #{} (keys reports/fields)))
 
