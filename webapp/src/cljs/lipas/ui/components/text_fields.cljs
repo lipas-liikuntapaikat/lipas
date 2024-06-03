@@ -1,5 +1,6 @@
 (ns lipas.ui.components.text-fields
   (:require
+   ["react" :as react]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
@@ -31,11 +32,10 @@
     (not-empty s)))
 
 (defn- patch-input [component]
-  (r/reactify-component
-   (fn [props]
-     [component (-> props
-                 (assoc :ref (:inputRef props))
-                 (dissoc :inputRef))])))
+  (react/forwardRef (fn [props ref]
+                      (r/as-element [component
+                                     (-> (js->clj props :keywordize-keys true)
+                                         (assoc :ref ref))]))))
 
 (def patched-input (patch-input :input))
 (def patched-textarea (patch-input :textarea))
