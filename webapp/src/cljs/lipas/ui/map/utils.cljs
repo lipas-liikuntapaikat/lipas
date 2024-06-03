@@ -419,7 +419,8 @@
 (defn update-center!
   [{:keys [^js view] :as map-ctx}
    {:keys [lon lat] :as center}]
-  ;; TODO: By telling OL if the left side panel is open,
+  ;; TODO: Juho later
+  ;; By telling OL if the left side panel is open,
   ;; it can correctly take this into account when focusing on coordinates.
   ;; (set! (.-padding view) #js [0 0 0 530])
   (.setCenter view #js[lon lat])

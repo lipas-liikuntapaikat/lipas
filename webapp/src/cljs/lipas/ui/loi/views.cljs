@@ -451,7 +451,7 @@
          (when (and logged-in? (#{:editing :adding} view-mode))
            [mui/grid {:item true}
             [buttons/discard-button
-             {;; FIXME:
+             {;; FIXME: MUI-v5
               :color    "default"
               :disabled false
               :on-click #(==> [::events/discard-edits])
@@ -460,7 +460,7 @@
          (when (and logged-in? (#{:display} view-mode))
            [mui/grid {:item true}
             [buttons/delete-button
-             {;; FIXME:
+             {;; FIXME: MUI-v5
               :color    "default"
               :disabled false
               :on-click #(reset! delete-dialog-open? true)

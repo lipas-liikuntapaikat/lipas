@@ -74,7 +74,7 @@
         (if (= btn-variant :fab)
           [mui/fab
            {:variant "circular"
-            ;; FIXME:
+            ;; FIXME: MUI-v5
             :color "default"
             :on-click toggle
             :size "small"}
