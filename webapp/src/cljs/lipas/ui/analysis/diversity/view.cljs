@@ -143,7 +143,6 @@
                 [mui/grid {:item true :xs 2}
                  [mui/tooltip {:title "Poista kategoria"}
                   [mui/icon-button
-                   ;; FIXME: :size "large"
                    {:on-click #(==> [::events/delete-category idx])}
                    [mui/icon "delete"]]]]]]]))]))
 
