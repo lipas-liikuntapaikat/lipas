@@ -106,8 +106,8 @@
         ;; The Slider
         [mui/grid {:item true :xs true}
          [mui/slider
-          ;; TODO: :size "small" is closer to v4?
-          {:on-change #(==> [::events/set-simplify-tolerance %2])
+          {:size "small"
+           :on-change #(==> [::events/set-simplify-tolerance %2])
            :value     tolerance
            :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
            :step      0.5
