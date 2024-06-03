@@ -145,6 +145,8 @@
      ;; Construction year
      {:label      (tr :lipas.sports-site/construction-year)
       :value      (-> display-data :construction-year)
+      ;; NOTE: This causes some MUI warnings if the value
+      ;; is nil, because that doesn't exists as an option.
       :form-field [lui/year-selector2
                    {:value     (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)

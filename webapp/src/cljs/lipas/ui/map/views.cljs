@@ -7,6 +7,7 @@
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    #_[lipas.ui.feedback.views :as feedback]
    #_[lipas.ui.sports-sites.football.views :as football]
+   ["react" :as react]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
@@ -30,6 +31,10 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+;; FIXME: This pattern makes development inconvenient as
+;; the component might crash and shadow-cljs reloads don't update it.
+;; The pattern is used to change the tool properties
+;; between editing existing sites and adding new site.
 (defonce simplify-tool-component (r/atom nil))
 
 (defn rreset!
@@ -73,8 +78,10 @@
   []
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [mui/slide {:direction "up" :in open?}
-     [lui/floating-container {:bottom 12 :left 550}
-      @simplify-tool-component]]))
+     [:r> (react/forwardRef
+            (fn [_props ref]
+              (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
+                             @simplify-tool-component])))]]))
 
 (defn simplify-tool
   [{:keys [tr on-change on-close]
@@ -126,9 +133,7 @@
         ;; Cancel
         [mui/grid {:item true}
          [mui/button
-          {:variant  "contained"
-           ;; FIXME:
-           :color    "default"
+          {:variant  "outlined"
            :on-click on-close}
           (tr :actions/cancel)]]]]]]))
 
