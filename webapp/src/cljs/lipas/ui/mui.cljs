@@ -155,7 +155,6 @@
     :primary   {:main primary}
     :secondary {:main secondary}
     :text      {:disabled "rgba(255,255,255,0.88)"}}
-   ;; FIXME:
    :components
    {:MuiCardHeader {:styleOverrides {:title {:fontSize "2rem"}
                                      :action {:mt 0}}}

@@ -31,7 +31,7 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-;; FIXME: This pattern makes development inconvenient as
+;; TODO: Juho later This pattern makes development inconvenient as
 ;; the component might crash and shadow-cljs reloads don't update it.
 ;; The pattern is used to change the tool properties
 ;; between editing existing sites and adding new site.

@@ -475,7 +475,7 @@
           [mui/list-item {:style {:break-inside :avoid}}
            [mui/list-item-icon {:style {:margin-right 0 :color mui/gold}}
             [mui/icon "star"]]
-           ;; FIXME:
+           ;; FIXME: MUI-v5
            [mui/list-item-text {:variant "body2" :color "default"}
             (:name m)]]))]]]]])
 
