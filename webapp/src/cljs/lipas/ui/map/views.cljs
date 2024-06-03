@@ -509,7 +509,8 @@
         :placement "top-end"
         :anchor-el anchor-el
         :container anchor-el
-        :modifiers {:offset {:enabled true :offset "0px,10px"}}}
+        :modifiers [{:name "offset"
+                     :options {:offset [0 10]}}]}
        [popup-body (assoc popup' :tr tr)]])))
 
 (defn set-field
