@@ -1,10 +1,10 @@
 (ns lipas.ui.sports-sites.events
-  (:require
-   [ajax.core :as ajax]
-   [lipas.ui.interceptors :as interceptors]
-   [lipas.ui.utils :as utils]
-   [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [lipas.ui.interceptors :as interceptors]
+            [lipas.ui.utils :as utils :refer [==>]]
+            [lipas.utils :as cutils]
+            [re-frame.core :as re-frame]
+            [taoensso.timbre :as log]))
 
 (re-frame/reg-event-fx
  ::edit-site
@@ -29,6 +29,15 @@
  ::edit-field
  (fn [{:keys [db]} [_ lipas-id path value]]
    (let [new-db (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)]
+     {:db       new-db
+      :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
+
+(re-frame/reg-event-fx
+ ::edit-fields
+ (fn [{:keys [db]} [_ lipas-id path->value]]
+   (let [new-db (-> path->value
+                    (update-keys (fn [path] (into [:sports-sites lipas-id :editing] path)))
+                    (->> (reduce-kv utils/set-field db)))]
      {:db       new-db
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
@@ -220,6 +229,15 @@
  (fn [{:keys [db]} [_ path value]]
    (let [new-db (utils/set-field db (into [:new-sports-site :data] path) value)]
      {:db new-db
+      :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
+
+(re-frame/reg-event-fx
+ ::edit-new-site-fields
+ (fn [{:keys [db]} [_ path->value]]
+   (let [new-db (-> path->value
+                    (update-keys (fn [path] (into [:new-sports-site :data] path)))
+                    (->> (reduce-kv utils/set-field db)))]
+     {:db       new-db
       :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
 (re-frame/reg-event-db

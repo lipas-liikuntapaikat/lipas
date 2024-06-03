@@ -52,6 +52,20 @@
        edit-data))))
 
 (re-frame/reg-sub
+ ::editing-first-point
+ (fn [[_ lipas-id] _]
+   [(re-frame/subscribe [::editing-rev lipas-id])
+    (re-frame/subscribe [::new-site-data])])
+ (fn [[edit-data new-site-edit-data] [_ _lipas-id]]
+   (let [sports-site (or edit-data new-site-edit-data)
+         first-geom  (-> sports-site :location :geometries :features first :geometry)]
+     (case (:type first-geom)
+       "Point"      (-> first-geom :coordinates)
+       "LineString" (-> first-geom :coordinates first)
+       "Polygon"    (-> first-geom :coordinates first first)
+       nil))))
+
+(re-frame/reg-sub
  ::editing?
  (fn [[_ lipas-id] _]
    (re-frame/subscribe [::editing-rev lipas-id]))
@@ -428,7 +442,8 @@
                                (map #(update % :audience-stand-access
                                              (fn [v]
                                                (get-in audience-stand-access [v locale])))))
-           :locker-rooms  (:locker-rooms latest)})
+           :locker-rooms  (:locker-rooms latest)
+           :audits (:audits latest)})
 
         ;; TODO maybe check activities for type
         (when true

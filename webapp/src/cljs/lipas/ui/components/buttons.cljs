@@ -66,6 +66,12 @@
     [mui/fab (merge props {:on-click on-click :size "small"})
      [mui/icon {:class "material-icons-outlined"} "close"]]]])
 
+(defn locator-button [{:keys [on-click tooltip] :as props}]
+  [mui/tooltip {:title (or tooltip "") :placement "top"}
+   [:span
+    [mui/fab (merge props {:on-click on-click :size "small"})
+     [mui/icon {:class "material-icons-outlined"} "location_searching"]]]])
+
 (defn delete-button [{:keys [on-click tooltip] :as props}]
   [mui/tooltip {:title (or tooltip "") :placement "top"}
    [:span

@@ -243,7 +243,8 @@
     (update sports-site :activities
             (fn [activities]
               (reduce-kv (fn [m k v]
-                           (if (get-in m [k :routes])
+                           (if (and (get-in m [k :routes])
+                                    (get-in sports-site [:activities k :routes]))
                              (update-in m [k :routes] (fn [routes]
                                                         (mapv #(deref-fids sports-site %) routes)))
                              m))
@@ -251,10 +252,15 @@
                          activities)))
     sports-site))
 
-(defn get-sports-site [db lipas-id]
-  (-> (db/get-sports-site db lipas-id)
-      (enrich-activities)
-      not-empty))
+(defn get-sports-site
+  ([db lipas-id] (get-sports-site db lipas-id :none))
+  ([db lipas-id locale]
+   (let [m (-> (db/get-sports-site db lipas-id)
+               (enrich-activities))]
+     (cond
+       (#{:fi :en :se} locale) (i18n/localize locale m)
+       (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
+       :else                   m))))
 
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))
@@ -383,9 +389,15 @@
         main-category (-> type-code types :main-category types/main-categories)
         sub-category  (-> type-code types :sub-category types/sub-categories)
         field-types   (->> sports-site :fields (map :type) distinct)
-        search-meta   {:name (utils/->sortable-name (:name sports-site))
-                       :admin {:name (-> sports-site :admin admins)}
-                       :owner {:name (-> sports-site :owner owners)}
+        latest-audit  (some-> sports-site
+                              :audits
+                              (->> (sort-by :audit-date utils/reverse-cmp))
+                              first
+                              :audit-date)
+        search-meta   {:name   (utils/->sortable-name (:name sports-site))
+                       :admin  {:name (-> sports-site :admin admins)}
+                       :owner  {:name (-> sports-site :owner owners)}
+                       :audits {:latest-audit-date latest-audit}
                        :location
                        {:wgs84-point  start-coords
                         :wgs84-center center-coords
@@ -458,14 +470,21 @@
         :hits
         (->> (map :_source)))))
 
-(defn add-to-integration-out-queue! [db sports-site]
+(defn add-to-integration-out-queue!
+  [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
-(defn add-to-analysis-queue! [db sports-site]
+(defn add-to-analysis-queue!
+  [db sports-site]
   (db/add-to-analysis-queue! db (:lipas-id sports-site)))
 
-(defn add-to-elevation-queue! [db sports-site]
+(defn add-to-elevation-queue!
+  [db sports-site]
   (db/add-to-elevation-queue! db (:lipas-id sports-site)))
+
+(defn add-to-webhook-queue!
+  [db {:keys [_lipas-ids _loi-ids] :as m}]
+  (db/add-to-webhook-queue! db m))
 
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
@@ -492,7 +511,9 @@
            (add-to-integration-out-queue! tx resp))
 
          ;; Analysis doesn't require elevation information
-         (add-to-analysis-queue! tx resp))
+         (add-to-analysis-queue! tx resp)
+
+         (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
 
        resp))))
 
@@ -864,6 +885,7 @@
   [db search user loi]
   (jdbc/with-db-transaction [tx db]
     (db/upsert-loi! tx user loi)
+    (add-to-webhook-queue! tx {:loi-ids [(:id loi)]})
     (index-loi! search loi :sync)))
 
 (defn upload-utp-image!

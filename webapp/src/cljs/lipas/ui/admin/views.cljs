@@ -49,7 +49,18 @@
       :close-label (tr :actions/close)
       :on-close    #(==> [::events/set-user-to-edit nil])
       :bottom-actions
-      [;; Archive button
+      [;; GDPR remove button
+       [mui/button
+        {:variant  "contained"
+         :color    "secondary"
+         :on-click (fn []
+                     (==> [:lipas.ui.events/confirm
+                           "Haluatko varmasti GDPR-poistaa tämän käyttäjän?"
+                           (fn []
+                             (==> [::events/gdpr-remove-user user]))]))}
+        [mui/icon {:style {:margin-right "0.25em"}} "gpp_bad"]
+        "GDPR-poista"]
+       ;; Archive button
        (when (= "active" (:status user))
          [mui/button
           {:variant  "contained"

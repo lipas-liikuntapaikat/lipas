@@ -15,6 +15,9 @@
    "sand"                          {:fi "Hiekka"
                                     :se "Sand"
                                     :en "Sand"}
+   "carpet"                        {:fi "Matto"
+                                    :se "Matta"
+                                    :en "Carpet"}
    "concrete"                      {:fi "Betoni"
                                     :se "Betong"
                                     :en "Concrete"}
@@ -45,7 +48,7 @@
    "fiberglass"                    {:fi "Lasikuitu"
                                     :se "Glasfiber"
                                     :en "Fiberglass"}
-   "soil"                          {:fi "Maa"
+   "soil"                          {:fi "Maa / luonnonmukainen"
                                     :se "Jordet"
                                     :en "Soil"}
    "wood"                          {:fi "Puu"
@@ -152,10 +155,11 @@
                     "rock-dust" "fiberglass" "soil" "metal" "synthetic" "grass"
                     "wood" "sawdust" "deinked-pulp" "gravel" "textile"
                     "brick-crush" "water" "artificial-turf"
-                    "sand-infilled-artificial-turf" "resin" "natural-surface"]))
+                    "sand-infilled-artificial-turf" "resin" "natural-surface"
+                    "carpet"]))
+
+(def sports-site-surface-materials
+  (dissoc surface-materials "carpet" "natural-surface" "resin"))
 
 (def field-surface-materials
-  (merge (select-keys surface-materials ["resin" "wood" "synthetic"])
-         {"carpet" {:fi "Matto"
-                    :se "Matta"
-                    :en "Carpet"}}))
+  (select-keys surface-materials ["resin" "wood" "synthetic" "carpet"]))

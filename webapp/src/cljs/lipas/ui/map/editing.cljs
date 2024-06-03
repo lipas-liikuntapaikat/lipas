@@ -287,6 +287,50 @@
     (==> [::events/undo-done lipas-id undo-geoms])
     map-ctx))
 
+(defn set-view-only-edit-mode!
+  [{:keys [layers] :as map-ctx} {:keys [geoms]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)]
+
+    (.addFeatures source features)
+
+    map-ctx))
+
+(defn set-travel-direction-edit-mode!
+  [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)
+        hover     (Select. #js{:layers    #js[layer]
+                               :condition events-condition/pointerMove
+                               :style     styles/line-direction-hover-style-fn})
+        select    (Select. #js{:layers #js[layer]
+                               :style  styles/line-direction-hover-style-fn})]
+
+    (.on select "select" (fn [e]
+                           (let [selected (gobj/get e "selected")]
+                             (when (not-empty selected)
+                               (let [f        (first selected)
+                                     fid      (.getId f)
+                                     lipas-id (.get f "lipas-id")]
+                                 (println "lipas" lipas-id "fid" fid)
+                                 (==> [::events/toggle-travel-direction lipas-id fid]))))))
+
+    (.addInteraction lmap hover)
+    (.addInteraction lmap select)
+
+    (doseq [f features]
+      (.setStyle f (styles/line-direction-style-fn f)))
+
+    (.addFeatures source features)
+
+    (-> map-ctx
+        (assoc-in [:interactions :travel-direction-select] select)
+        (assoc-in [:interactions :travel-direction-hover] hover))))
+
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
@@ -308,6 +352,7 @@
                         )]
 
      (case sub-mode
+       :view-only    (set-view-only-edit-mode! map-ctx mode)
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)
        :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons
        :editing      (if continue?
@@ -328,7 +373,9 @@
        :importing    (refresh-edits! map-ctx mode)
        :simplifying  (simplify-edits! map-ctx mode)
        :selecting    (-> map-ctx
-                         (enable-highlighting! mode))))))
+                         (enable-highlighting! mode))
+       :travel-direction (-> map-ctx
+                             (set-travel-direction-edit-mode! mode))))))
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -349,6 +396,9 @@
       (-> map-ctx
           (refresh-edits! mode)
           (set-editing-mode! mode :continue))
+
+      (= :travel-direction (:sub-mode mode))
+      (set-editing-mode! map-ctx mode)
 
       (= (:sub-mode mode) (:sub-mode old-mode))
       map-ctx

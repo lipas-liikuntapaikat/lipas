@@ -9,16 +9,19 @@
   [{:keys [editing? valid? logged-in?  user-can-publish? on-discard
            discard-tooltip edit-tooltip publish-tooltip on-edit-start
            invalid-message on-edit-end delete-tooltip on-delete
-           on-publish editing-allowed? save-in-progress?]}]
+           on-publish editing-allowed? save-in-progress?
+           edit-activities-only?]}]
 
-  [(when (and editing? user-can-publish?)
+  [(when (and editing? (or user-can-publish? edit-activities-only?))
      [buttons/save-button
       {:on-click         on-publish
        :disabled         (or save-in-progress? (not valid?))
        :disabled-tooltip invalid-message
        :tooltip          publish-tooltip}])
 
-   (when (and logged-in? editing-allowed? user-can-publish? (not editing?))
+   (when (and logged-in? editing-allowed?
+              (or user-can-publish? edit-activities-only?)
+              (not editing?))
      [buttons/edit-button
       {:color    "secondary"
        :disabled (and editing? (not valid?))

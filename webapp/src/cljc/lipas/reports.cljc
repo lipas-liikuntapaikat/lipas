@@ -93,15 +93,23 @@
           prop-types/all))
 
 (def meta-fields
-  {"search-meta.location.wgs84-point"      {:fi "Koordinaatit (WGS84)"
-                                            :se "Koordinater (WGS84)"
-                                            :en "Coordinates (WGS84)"}
-   "search-meta.location.avi-area.name.fi" {:fi "AVI-alue" :en "AVI-area" :se "AVI"}
-   "search-meta.location.province.name.fi" {:fi "Maakunta" :en "Province" :se "Landskap"}
+  {"search-meta.location.wgs84-point"
+   {:fi "Koordinaatit (WGS84)" :se "Koordinater (WGS84)" :en "Coordinates (WGS84)"}
+
+   "search-meta.location.avi-area.name.fi"
+   {:fi "AVI-alue" :en "AVI-area" :se "AVI"}
+
+   "search-meta.location.province.name.fi"
+   {:fi "Maakunta" :en "Province" :se "Landskap"}
+
    "search-meta.type.main-category.name.fi"
    {:fi "Liikuntapaikkatyypin pääryhmä" :en "Type main-category" :se "Typ huvud kategori"}
+
    "search-meta.type.sub-category.name.fi"
-   {:fi "Liikuntapaikkatyypin alaryhmä" :en "Type sub-category" :se "Typ under kategori"}})
+   {:fi "Liikuntapaikkatyypin alaryhmä" :en "Type sub-category" :se "Typ under kategori"}
+
+   "search-meta.audits.latest-audit-date"
+   {:fi "Viimeisin katselmus" :se "Senaste revision" :en "Latest audit"}})
 
 (def area-fields
   (select-keys prop-fields ["properties.area-m2"
