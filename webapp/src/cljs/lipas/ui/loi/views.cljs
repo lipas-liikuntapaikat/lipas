@@ -451,17 +451,12 @@
          (when (and logged-in? (#{:editing :adding} view-mode))
            [mui/grid {:item true}
             [buttons/discard-button
-             {;; FIXME: MUI-v5
-              :color    "default"
-              :disabled false
-              :on-click #(==> [::events/discard-edits])
-              :tooltip  (tr :actions/discard)}]])
+             {:disabled false
+              :on-click #(==> [::events/discard-edits])}]])
 
          (when (and logged-in? (#{:display} view-mode))
            [mui/grid {:item true}
             [buttons/delete-button
-             {;; FIXME: MUI-v5
-              :color    "default"
-              :disabled false
+             {:disabled false
               :on-click #(reset! delete-dialog-open? true)
               :tooltip  (tr :actions/delete)}]])]]])))
