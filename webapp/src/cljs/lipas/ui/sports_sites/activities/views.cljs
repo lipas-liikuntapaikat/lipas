@@ -605,7 +605,8 @@
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
          :disabblePortal false
-         :modifiers      {:offset {:enabled true :offset "0px,20px"}}}
+         :modifiers      [{:name "offset"
+                           :options {:offset [0 20]}}]}
         [:img
          {:style {:max-width "400px"}
           :src   (:url @popper-state)}]]
