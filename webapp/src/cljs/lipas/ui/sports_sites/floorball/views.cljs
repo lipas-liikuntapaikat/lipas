@@ -21,6 +21,7 @@
               {:endAdornment
                (r/as-element
                 [mui/input-adornment
+                 {:position "end"}
                  [mui/tooltip {:title "Laske pituudesta ja leveydestä"}
                   [mui/icon-button
                    {:disabled (not (and (number? width-m) (number? length-m)))
