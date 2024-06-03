@@ -4,11 +4,12 @@
    [reagent.core :as r]))
 
 (defn floating-container
-  [{:keys [top right bottom left background-color]
+  [{:keys [ref top right bottom left background-color]
     :or   {background-color mui/gray2}} & children]
   (into
    [:div.no-print
-    {:style
+    {:ref ref
+     :style
      {:position         "fixed"
       :z-index          999
       :background-color background-color
