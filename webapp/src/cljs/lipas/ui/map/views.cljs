@@ -1230,7 +1230,9 @@
          {:active-step      active-step
           :alternativeLabel true
           :style            {:margin-left  "-18px"}
-          :orientation      "horizontal"}
+          :orientation      "horizontal"
+          :sx (fn [theme]
+                #js {".Mui-active" #js {:fill (.. theme -palette -secondary -main)}})}
 
          ;; Step 1 - Select type
          [mui/step {:active (= (dec 1) active-step)}
@@ -1413,7 +1415,8 @@
                       :disabled (-> geom :features empty?)
                       :style    (when (= sub-mode :deleting)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [:> Eraser]]]]])
 
                ;; Split
@@ -1428,7 +1431,8 @@
                       :disabled (-> geom :features empty?)
                       :style    (when (= sub-mode :splitting)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [:> ContentCut]]]]])
 
                ;; Simplify
@@ -1442,7 +1446,8 @@
                                     (= sub-mode :simplifying))
                       :style    (when (= sub-mode :simplifying)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [mui/icon "auto_fix_high"]]]]])
 
                ;; Delete vertices helper text
