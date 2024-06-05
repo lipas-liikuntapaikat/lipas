@@ -20,7 +20,7 @@
 
         width (mui/use-width)]
 
-    ;; TODO: Juho-later Would be better to just use responsive sx styles everywhere
+    ;; TODO: Juho later Would be better to just use responsive sx styles everywhere
     ;; app logic (re-frame event handlers) shouldn't care about screen size?
     (==> [::events/set-screen-size width])
 

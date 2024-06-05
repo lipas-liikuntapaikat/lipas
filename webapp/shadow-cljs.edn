@@ -13,6 +13,9 @@
    :modules
    {:app
     {:init-fn lipas.ui.core/init}}
+   ;; TODO: Consider moving e.g. recharts to its own module,
+   ;; load when navigation to tilastot.
+   ;; TODO: module-hash-names
    :devtools
    {:after-load lipas.ui.core/mount-root
     :preloads   [devtools.preload
