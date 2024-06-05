@@ -292,6 +292,7 @@
                                           :margin-bottom "5em"}}
 
       (let [min 500 max 1500 step 100]
+        ;; TODO: Juho later, could use MUI slider
         [:> Slider
          {:min       min
           :max       max
