@@ -391,29 +391,30 @@
          :container       true
          :justify-content "space-between"
          :align-items     "center"}
-        [mui/grid {:item true}
+        [mui/grid {:item true
+                   :container true
+                   :align-items "center"
+                   :spacing 1}
+         [mui/grid {:item true}
+          [lui/select
+           {:items     sites
+            :value     selected-site
+            :style     {:fontFamily    "Lato, serif",
+                        :fontWeight    700,
+                        :fontSize      "1.25rem",
+                        :lineHeight    1.6,
+                        :textTransform "uppercase"}
+            :label-fn  :site-name
+            :value-fn  :lipas-id
+            :on-change #(==> [::events/select-sports-site %])}]]
 
-         [mui/grid {:container true :align-items "center" :spacing 1}
-          [mui/grid {:item true}
-           [lui/select
-            {:items     sites
-             :value     selected-site
-             :style     {:fontFamily    "Lato, serif",
-                         :fontWeight    700,
-                         :fontSize      "1.25rem",
-                         :lineHeight    1.6,
-                         :textTransform "uppercase"}
-             :label-fn  :site-name
-             :value-fn  :lipas-id
-             :on-change #(==> [::events/select-sports-site %])}]]
-
-          [mui/grid {:item true}
-           [mui/tooltip {:title "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla"}
-            [mui/icon-button
-             {:on-click #()
-              :color    "secondary"
-              :size     "medium"}
-             [mui/icon "add"]]]]]]
+         [mui/grid {:item true}
+          [mui/tooltip {:title "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla"}
+           [mui/icon-button
+            {:on-click #()
+             :color    "secondary"
+             :size     "medium"}
+            [mui/icon "add"]]]]]
 
         ;; Craete report button
         (when selected-site
