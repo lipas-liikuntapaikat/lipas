@@ -154,14 +154,13 @@
    {:mode      "dark"
     :primary   {:main primary}
     :secondary {:main secondary}
+    :gray1     {:main gray1}
     :text      {:disabled "rgba(255,255,255,0.88)"}}
    :components
    {:MuiCardHeader {:styleOverrides {:title {:fontSize "2rem"}
                                      :action {:mt 0}}}
     :MuiTooltip {:styleOverrides {:tooltip {:fontSize "0.8rem"}}}
-    :MuiStepIcon {:styleOverrides {:root      {:fill "rgba(0,0,0,0.5)"
-                                               "&.Mui-completed" {:fill primary}
-                                               "&.Mui-active"     {:fill secondary}}}}
+    :MuiStepIcon {:styleOverrides {:root {:fill "rgba(0,0,0,0.5)"}}}
     :MuiInputLabel {:styleOverrides {:root   {:color "gray"}
                                      :shrink {:color "inherit"}}}
     ;; MUI v4 used body2 font-size for <body>
