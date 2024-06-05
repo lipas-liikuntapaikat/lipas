@@ -67,6 +67,7 @@
                                      (when adornment
                                        (->adornment adornment))))
                        (assoc :on-blur #(if (= "number" type)
+                                          ;; FIXME: Juho later, better to read with parseInt or such
                                           (on-change (read-string (str value)))
                                           (when (string? value)
                                             (let [value (-> value string/trim not-empty)]

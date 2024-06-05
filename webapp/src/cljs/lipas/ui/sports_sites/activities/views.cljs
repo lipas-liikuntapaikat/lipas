@@ -292,6 +292,7 @@
 
     [mui/grid {:item true :xs 12}
      [mui/grid {:item true :xs 12}
+      ;; FIXME: MUI-v5 input height or paddings are wrong
        [lui/text-field
         {:fullWidth   true
          :required    true
@@ -982,7 +983,7 @@
 
 (defn make-field
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k]}]
-  (condp = (:type field)
+  (case (:type field)
 
     "select" [lui/select
               {:disabled    read-only?
@@ -1039,6 +1040,7 @@
                     :on-change   #(set-field prop-k %)
                     :value       (get-in edit-data [prop-k])})]
 
+    ;; FIXME: MUI-v5, outlined input is missing x-padding
     "textarea" [lui/text-field
                 {:disabled        read-only?
                  :variant         "outlined"
