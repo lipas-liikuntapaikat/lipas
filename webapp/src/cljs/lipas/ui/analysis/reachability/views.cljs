@@ -244,6 +244,9 @@
       [mui/grid {:container true}
 
        ;; Slider
+       ;; Rc-slider works better here, MUI does allow
+       ;; multiple values, but probably not separate track colors
+       ;; between the values ("korit")
        [mui/grid {:item true :xs 10 :style {:padding "1em"}}
         [:> RangeSlider
          {:min             0
