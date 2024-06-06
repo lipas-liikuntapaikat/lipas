@@ -2,9 +2,6 @@ name: dev deployment
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-        - deployment-scripts
 
 jobs:
   build:
@@ -84,5 +81,5 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: app.js
-      - name: Display structure of downloaded files
+      - name: list downloaded files
         run: ls -larth
