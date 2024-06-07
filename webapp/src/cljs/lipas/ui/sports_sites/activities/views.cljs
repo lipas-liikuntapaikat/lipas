@@ -800,11 +800,10 @@
            locale geom-type label description set-field activity-k
            route]
     :as   props}]
-  (r/with-let [route-form-state (r/atom route)]
-
-    (add-watch route-form-state :lol
-               (fn [_key _atom _old-state new-state]
-                 (set-field [new-state])))
+  (r/with-let [route-form-state (r/atom route)
+               _ (add-watch route-form-state :lol
+                            (fn [_key _atom _old-state new-state]
+                              (set-field [new-state])))]
 
     (let [tr           (<== [:lipas.ui.subs/translator])
           field-sorter (<== [::subs/field-sorter activity-k])
