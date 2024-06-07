@@ -41,13 +41,13 @@
     "rc-slider": "^9.7.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-virtualized": "9.21.1",
+    "react-virtualized": "9.22.4",
     "recharts": "^2.2.0",
     "shpjs": "^4.0.4",
     "togpx": "^0.5.4",
     "zipcelx": "^1.6.2"
   },
   "devDependencies": {
-    "shadow-cljs": "^2.25.2"
+    "shadow-cljs": "^2.28.8"
   }
 }
