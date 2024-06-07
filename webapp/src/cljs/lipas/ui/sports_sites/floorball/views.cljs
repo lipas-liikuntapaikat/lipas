@@ -17,7 +17,7 @@
      [lui/text-field
       (merge props
              {:InputLabelProps {:shrink (number? value)}
-              :Input-props
+              :InputProps
               {:endAdornment
                (r/as-element
                 [mui/input-adornment
