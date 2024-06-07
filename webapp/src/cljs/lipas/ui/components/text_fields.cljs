@@ -17,7 +17,7 @@
     false))
 
 (defn ->adornment [s]
-  {:end-adornment
+  {:endAdornment
    (r/as-element
     [mui/input-adornment s])})
 
@@ -44,41 +44,38 @@
 (def patched-textarea (patch-input :textarea))
 
 (defn text-field-controlled
-  [{:keys [value type on-change spec required defer-ms Input-props
+  [{:keys [value type on-change spec required
+           InputProps InputLabelProps
            adornment multiline read-only? tooltip on-blur]
-    :or   {defer-ms 200 tooltip ""}
+    :or   {tooltip ""}
     :as   props} & children]
-  #_(r/with-let [tf-state (r/atom value)])
-  (let [#_#_on-change2 (gfun/debounce #(on-change @tf-state) defer-ms)
-        #_#_on-change3 (fn [e]
-                     (let [new-val (->> e .-target .-value (coerce type))]
-                       (reset! tf-state new-val)
-                       (on-change2)))
-        input      (if multiline
+  (let [input      (if multiline
                      patched-textarea
                      patched-input)
-        props      (-> (dissoc props :read-only? :defer-ms :spec)
-                       (as-> $ (if (= "number" type) (dissoc $ :type) $))
-                       (assoc :error (error? spec value required))
-                       (assoc :InputLabelProps {:shrink (some? value)})
-                       (assoc :Input-props
-                              (merge Input-props
-                                     {:input-component input}
-                                     (when adornment
-                                       (->adornment adornment))))
-                       (assoc :on-blur #(if (= "number" type)
-                                          ;; FIXME: Juho later, better to read with parseInt or such
-                                          (on-change (read-string (str value)))
-                                          (when (string? value)
-                                            (let [value (-> value string/trim not-empty)]
-                                              (on-change value)
-                                              (when on-blur
-                                                (on-blur value))))))
-                       #_(assoc :value @tf-state)
-                       #_(assoc :on-change on-change3)
-                       (assoc :value value)
-                       (assoc :on-change (fn [e]
-                                           (on-change (->> e .-target .-value (coerce type))))))]
+        props      (-> (if (= "number" type) (dissoc props :type) props)
+                       (dissoc :read-only? :defer-ms :spec)
+                       (assoc
+                         :error (error? spec value required)
+                         ;; Use MUI prop names as-is
+                         :InputLabelProps
+                         (merge {:shrink (some? value)}
+                                InputLabelProps)
+                         :InputProps
+                         (merge InputProps
+                                {:inputComponent input}
+                                (when adornment
+                                  (->adornment adornment)))
+                         :on-blur #(if (= "number" type)
+                                     ;; FIXME: Juho later, better to read with parseInt or such
+                                     (on-change (read-string (str value)))
+                                     (when (string? value)
+                                       (let [value (-> value string/trim not-empty)]
+                                         (on-change value)
+                                         (when on-blur
+                                           (on-blur value)))))
+                         :value value
+                         :on-change (fn [e]
+                                      (on-change (->> e .-target .-value (coerce type))))))]
 
     [mui/tooltip {:title tooltip}
      (into [mui/text-field (merge {:variant "standard"}
