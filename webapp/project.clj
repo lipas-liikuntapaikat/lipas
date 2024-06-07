@@ -1,7 +1,7 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.11.1"]
+   [org.clojure/clojure "1.11.3"]
    [camel-snake-kebab "0.4.0"]
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
@@ -11,10 +11,10 @@
    [metosin/malli "0.13.0"]
 
    ;;; Frontend ;;;
-   [thheller/shadow-cljs "2.22.9"]
-   [org.clojure/clojurescript "1.11.60"]
+   [thheller/shadow-cljs "2.28.8"]
+   [org.clojure/clojurescript "1.11.132"]
    [reagent "1.2.0"]
-   [re-frame "1.3.0"]
+   [re-frame "1.4.3"]
    [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.1.6"]
 
@@ -91,9 +91,9 @@
     :source-paths ["src/cljs" "src/cljc" "src/js"]
     :dependencies
     [;;; Frontend ;;;
-     [binaryage/devtools "1.0.6"]
-     [day8.re-frame/re-frame-10x "1.5.0"]
-     [cider/piggieback "0.4.0"]
+     [binaryage/devtools "1.0.7"]
+     [day8.re-frame/re-frame-10x "1.9.0"]
+     [cider/piggieback "0.5.3"]
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
