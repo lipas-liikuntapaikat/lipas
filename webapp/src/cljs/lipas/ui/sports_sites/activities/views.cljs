@@ -20,10 +20,10 @@
 
 (defn nice-form
   [props & children]
-  [into [mui/grid {:container true :spacing 2}]
-   (for [child children]
-     [mui/grid {:item true :xs 12}
-      child])])
+  (into [mui/grid {:container true :spacing 2}]
+        (for [child children]
+          [mui/grid {:item true :xs 12}
+           child]) ))
 
 (defn form-label
   [{:keys [label]}]
@@ -82,23 +82,24 @@
       [mui/form-helper-text helper-text]]
 
      ;; Chekboxes
-     (into [:<>]
-           (for [item (if sort-fn (sort-by sort-fn items) items)]
-             (let [[k _] item]
-               [:<>
-                [mui/grid {:item true :xs 12}
-                 [lui/checkbox
-                  {:label     (label-fn item)
-                   :value     (contains? vs k)
-                   :disabled  read-only?
-                   :on-change (fn [_]
-                                (if (contains? vs k)
-                                  (on-change (disj vs k))
-                                  (on-change (conj vs k))))}]]
-                (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
-                  [mui/grid {:item true :xs 12 :style {:margin-top   "-1.5em"
-                                                       :padding-left "2.8em"}}
-                   [mui/typography {:variant "caption"} caption]])])))]))
+     [:<>
+      (for [item (if sort-fn (sort-by sort-fn items) items)]
+        (let [[k _] item]
+          [:<>
+           {:key k}
+           [mui/grid {:item true :xs 12}
+            [lui/checkbox
+             {:label     (label-fn item)
+              :value     (contains? vs k)
+              :disabled  read-only?
+              :on-change (fn [_]
+                           (if (contains? vs k)
+                             (on-change (disj vs k))
+                             (on-change (conj vs k))))}]]
+           (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
+             [mui/grid {:item true :xs 12 :style {:margin-top   "-1.5em"
+                                                  :padding-left "2.8em"}}
+              [mui/typography {:variant "caption"} caption]])]))]]))
 
 (defn contact-dialog
   [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
@@ -112,21 +113,25 @@
       :save-label    "Ok"
       :cancel-label  (tr :actions/cancel)}
 
-     (into [mui/grid {:container true :spacing 2}
-            [mui/grid {:item true :xs 12}
-             [lang-selector {:locale locale}]]]
-           (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-             [mui/grid {:item true :xs 12}
-              (make-field
-               {:field        field
-                :prop-k       prop-k
-                :edit-data    (:data @dialog-state)
-                :display-data (:data @dialog-state)
-                :locale       locale
-                :set-field    (fn [& args]
-                                (let [path (into [:data] (butlast args))
-                                      v (last args)]
-                                  (swap! dialog-state assoc-in path v)))})]))]))
+     [mui/grid {:container true :spacing 2}
+      [mui/grid {:item true :xs 12}
+       [lang-selector {:locale locale}]]
+      (doall
+       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+         [mui/grid
+          {:key prop-k
+           :item true
+           :xs 12}
+          [make-field
+           {:field        field
+            :prop-k       prop-k
+            :edit-data    (:data @dialog-state)
+            :display-data (:data @dialog-state)
+            :locale       locale
+            :set-field    (fn [& args]
+                            (let [path (into [:data] (butlast args))
+                                  v (last args)]
+                              (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field
@@ -210,20 +215,21 @@
   [{:keys [read-only? lipas-id locale label description set-field
            value accessibility-props]}]
 
-  (into
-   [mui/grid {:container true}
+  [mui/grid {:container true}
 
-    ;; Label
-    [mui/grid {:item true :xs 12}
-     [form-label {:label label}]]
+   ;; Label
+   [mui/grid {:item true :xs 12}
+    [form-label {:label label}]]
 
-    ;; Description
-    [mui/grid {:item true :xs 12}
-     [mui/typography {:variant "caption"} description]]]
+   ;; Description
+   [mui/grid {:item true :xs 12}
+    [mui/typography {:variant "caption"} description]]
 
    ;; Expansion panels for each accessibility category
    (for [[prop-k {:keys [field]}] accessibility-props]
-     [mui/grid {:item true :xs 12}
+     [mui/grid
+      {:key prop-k
+       :item true :xs 12}
       [lui/expansion-panel
        {:label            (get-in field [:label locale])
         :default-expanded false}
@@ -234,7 +240,7 @@
          :fullWidth true
          :variant   "outlined"
          :on-change #(set-field prop-k locale %)
-         :value     (get-in value [prop-k locale])}]]])))
+         :value     (get-in value [prop-k locale])}]]])])
 
 (defn duration
   [{:keys [tr locale label description set-field value]}]
@@ -768,25 +774,26 @@
 
 (defn route-form
   [{:keys [locale geom-type lipas-id route-props state read-only? field-sorter]}]
-  (into
-   [nice-form {:read-only? read-only?}]
-   (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
-     (when-not (and
-                (contains? route-props :independent-entity)
-                (not (:independent-entity @state))
-                (contains? independent-entity-ks prop-k))
-       (make-field
-        {:field        field
-         :prop-k       prop-k
-         :edit-data    @state
-         :display-data @state
-         :locale       locale
-         :set-field    (fn [& args]
-                         (let [path (butlast args)
-                               v (last args)]
-                           (swap! state assoc-in path v)))
-         :geom-type    geom-type
-         :lipas-id     lipas-id})))))
+  [nice-form {:read-only? read-only?}
+   (doall
+    (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
+      (when-not (and
+                  (contains? route-props :independent-entity)
+                  (not (:independent-entity @state))
+                  (contains? independent-entity-ks prop-k))
+        [make-field
+         {:key prop-k
+          :field        field
+          :prop-k       prop-k
+          :edit-data    @state
+          :display-data @state
+          :locale       locale
+          :set-field    (fn [& args]
+                          (let [path (butlast args)
+                                v (last args)]
+                            (swap! state assoc-in path v)))
+          :geom-type    geom-type
+          :lipas-id     lipas-id}])))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
@@ -1198,10 +1205,11 @@
 
        ;; Form
        [mui/grid {:item true :xs 12}
-        [into [nice-form {}]
+        [nice-form {}
          (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
            [make-field
-            {:field        field
+            {:key prop-k
+             :field        field
              :prop-k       prop-k
              :edit-data    (get-in edit-data [:activities activity-k])
              :read-only?   read-only?
