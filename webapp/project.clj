@@ -13,7 +13,7 @@
    ;;; Frontend ;;;
    [thheller/shadow-cljs "2.22.9"]
    [org.clojure/clojurescript "1.11.60"]
-   [reagent "1.1.1"]
+   [reagent "1.2.0"]
    [re-frame "1.3.0"]
    [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.1.6"]
