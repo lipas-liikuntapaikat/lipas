@@ -184,7 +184,8 @@
                  "--analytics" "analytics"
                  "--diversity" "diversity"
                  "search")
-        config (select-keys config/default-config [:db :search])
+        config (-> (select-keys config/default-config [:db :search])
+                   (assoc-in [:search :create-indices] false))
         system (backend/start-system! config)
         db     (:db system)
         search (:search system)]

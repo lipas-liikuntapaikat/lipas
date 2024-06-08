@@ -15,7 +15,8 @@
   [{:keys [locale]}]
   [mui/tabs
    {:value          (name locale)
-    :indicatorColor "primary"
+    :indicator-color "primary"
+    :text-color "inherit"
     :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
    [mui/tab {:value "fi" :label "Suomi"}]
    [mui/tab {:value "se" :label "Svenska"}]
@@ -135,7 +136,8 @@
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
          :disabblePortal false
-         :modifiers      {:offset {:enabled true :offset "0px,20px"}}}
+         :modifiers      [{:name "offset"
+                           :options {:offset [0 20]}}]}
         [:img
          {:style {:max-width "400px"}
           :src   (:url @popper-state)}]]
@@ -406,7 +408,8 @@
        [mui/tabs
         {:style          {:margin-top "0.5em"}
          :value          (name locale)
-         :indicatorColor "primary"
+         :indicator-color "primary"
+         :text-color     "inherit"
          :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
         [mui/tab {:value "fi" :label "Suomi"}]
         [mui/tab {:value "se" :label "Svenska"}]
@@ -448,15 +451,12 @@
          (when (and logged-in? (#{:editing :adding} view-mode))
            [mui/grid {:item true}
             [buttons/discard-button
-             {:color    "default"
-              :disabled false
-              :on-click #(==> [::events/discard-edits])
-              :tooltip  (tr :actions/discard)}]])
+             {:disabled false
+              :on-click #(==> [::events/discard-edits])}]])
 
          (when (and logged-in? (#{:display} view-mode))
            [mui/grid {:item true}
             [buttons/delete-button
-             {:color    "default"
-              :disabled false
+             {:disabled false
               :on-click #(reset! delete-dialog-open? true)
               :tooltip  (tr :actions/delete)}]])]]])))

@@ -301,6 +301,7 @@
         page-size  (-> pagination-opts :page-size)
         page       (-> pagination-opts :page)]
 
+    ;; TODO: Juho later Move to Stack - fix results height
     [mui/grid {:container true}
      [mui/grid {:item true :xs 12}
       [pagination

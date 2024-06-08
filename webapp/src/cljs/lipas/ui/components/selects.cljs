@@ -1,5 +1,6 @@
 (ns lipas.ui.components.selects
   (:require
+   ["@mui/material/Typography$default" :as Typography]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
@@ -47,7 +48,8 @@
      [mui/form-control
       {:required  required
        :fullWidth fullWidth
-       :error     (error? spec value required)}
+       :error     (error? spec value required)
+       :variant   "standard"}
       (when label [mui/input-label label])
       (into [mui/select props
              (when deselect?
@@ -76,7 +78,8 @@
     [mui/tooltip {:title tooltip}
      [mui/form-control {:fullWidth fullWidth
                         :required  required
-                        :error     (error? spec value required)}
+                        :error     (error? spec value required)
+                        :variant   "standard"}
       (when label [mui/input-label label])
       [mui/select
        (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
@@ -144,6 +147,7 @@
     props
     {:type      type
      :value     (or value "")
+     :variant   "standard"
      :Input-label-props
      {:error  (and required (empty? value))
       :shrink true} ; This makes the label show actually
@@ -193,10 +197,11 @@
       :multi?           true
       :value-fn         :region-id
       :label-fn         (comp locale :name)
-      :render-option-fn (fn [option]
+      :render-option-fn (fn [props option _]
                           (let [v (-> option read-string regions-by-v :name locale)]
                             (r/as-element
-                             [mui/typography
+                             [:r> Typography
+                              props
                               (cond
                                 (string/includes? option "province-") (strong1 v)
                                 (string/includes? option "avi-")      (strong2 v)
@@ -238,11 +243,15 @@
       :multi?           true
       :value-fn         :cat-id
       :label-fn         (fn [item] (str (:type-code item) " " (-> item :name locale)))
-      :render-option-fn (fn [option]
+      :render-option-fn (fn [props option _]
+                          ;; NOTE: The read-string here is a bad design,
+                          ;; currently the value is coerced from Clj to EDN string, which is
+                          ;; unnecessary.
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
-                             [mui/typography
+                             [:r> Typography
+                              props
                               (cond
                                 (string/includes? option "sub-cat")  (strong1 v)
                                 (string/includes? option "main-cat") (strong2 v)

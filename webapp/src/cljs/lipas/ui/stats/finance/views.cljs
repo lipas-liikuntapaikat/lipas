@@ -206,7 +206,9 @@
 
          ;; Comparison chart
          (if (= "comparison" chart-type)
-           [mui/grid {:item true :xs 12}
+           [mui/grid {:item true
+                      :xs 12
+                      :sx {:width 0}}
             [charts/finance-chart
              {:data     data
               :metrics  metrics
@@ -215,7 +217,10 @@
 
            ;; Ranking chart
            [mui/grid {:container true :item true :direction "column" :spacing 4}
-            [mui/grid {:item true :xs 12 :md 6}
+            [mui/grid {:item true
+                       :xs 12
+                       :md 6
+                       :sx {:width 0}}
              [charts/finance-ranking-chart
               {:data     ranking-data
                :metric   ranking-metric

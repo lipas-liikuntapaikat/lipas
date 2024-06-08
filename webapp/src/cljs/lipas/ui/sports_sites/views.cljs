@@ -147,6 +147,8 @@
      ;; Construction year
      {:label      (tr :lipas.sports-site/construction-year)
       :value      (-> display-data :construction-year)
+      ;; NOTE: This causes some MUI warnings if the value
+      ;; is nil, because that doesn't exists as an option.
       :form-field [lui/year-selector2
                    {:value     (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)
@@ -900,7 +902,9 @@
       [mui/typography (tr :lipas.energy-consumption/not-reported)]
       [:div
        [mui/tabs {:value     @selected-tab
-                  :on-change #(reset! selected-tab %2)}
+                  :on-change #(reset! selected-tab %2)
+                  :indicator-color "secondary"
+                  :text-color "inherit"}
         [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
         [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
 
@@ -962,7 +966,11 @@
       [mui/typography (tr :lipas.visitors/not-reported)]
 
       [:div
-       [mui/tabs {:value @selected-tab :on-change #(reset! selected-tab %2)}
+       [mui/tabs
+        {:value @selected-tab
+         :on-change #(reset! selected-tab %2)
+         :indicator-color "secondary"
+         :text-color "inherit"}
         [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
         [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
 

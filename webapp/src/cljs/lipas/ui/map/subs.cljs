@@ -533,7 +533,7 @@
  ::address-locator-dialog-open?
  :<- [::address-locator]
  (fn [m]
-   (:dialog-open? m)))
+   (boolean (:dialog-open? m))))
 
 (re-frame/reg-sub
  ::address-locator-addresses

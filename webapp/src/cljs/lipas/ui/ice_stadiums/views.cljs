@@ -13,10 +13,12 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn stats-tab* [{:keys [width]}]
+(defn stats-tab* []
   (let [tr    (<== [:lipas.ui.subs/translator])
         year  (<== [::subs/stats-year])
-        stats (<== [::subs/stats year])]
+        stats (<== [::subs/stats year])
+
+        width (mui/use-width)]
 
     [mui/grid {:container true :style {:background-color "#fff"}}
 
@@ -57,7 +59,7 @@
        :stats stats}]]))
 
 (defn stats-tab []
-  [:> ((mui/with-width*) (r/reactify-component stats-tab*))])
+  [:f> stats-tab*])
 
 (defn toggle-dialog
   ([dialog]
@@ -138,7 +140,6 @@
          [mui/tooltip {:title (tr :map/zoom-to-site)}
           [mui/fab
            {:size     "small"
-            :color    "default"
             :on-click #(show-on-map lipas-id)}
            [mui/icon {:color "secondary"}
             "place"]]]))}
@@ -749,6 +750,7 @@
        [mui/card-content
         [mui/tabs
          {:variant    "scrollable"
+          :indicator-color "secondary"
           :text-color "secondary"
           :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
           :value      active-tab}

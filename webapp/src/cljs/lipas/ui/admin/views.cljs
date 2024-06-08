@@ -315,7 +315,9 @@
       [mui/tool-bar
        [mui/tabs
         {:value     selected-tab
-         :on-change #(==> [::events/select-tab %2])}
+         :on-change #(==> [::events/select-tab %2])
+         :indicator-color "secondary"
+         :text-color "inherit"}
         [mui/tab {:label (tr :lipas.admin/users)}]
         [mui/tab {:label "Symbolityökalu"}]
         [mui/tab {:label "Tyyppikoodit"}]]]

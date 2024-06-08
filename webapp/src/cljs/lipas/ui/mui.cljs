@@ -1,86 +1,87 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
   (:require
-   ["@material-ui/core/Accordion$default" :as Accordion]
-   ["@material-ui/core/AccordionDetails$default" :as AccordionDetails]
-   ["@material-ui/core/AccordionSummary$default" :as AccordionSummary]
-   ["@material-ui/core/AppBar$default" :as AppBar]
-   ["@material-ui/core/Avatar$default" :as Avatar]
-   ["@material-ui/core/Button$default" :as Button]
-   ["@material-ui/core/Card$default" :as Card]
-   ["@material-ui/core/CardActions$default" :as CardActions]
-   ["@material-ui/core/CardContent$default" :as CardContent]
-   ["@material-ui/core/CardHeader$default" :as CardHeader]
-   ["@material-ui/core/Checkbox$default" :as Checkbox]
-   ["@material-ui/core/Chip$default" :as Chip]
-   ["@material-ui/core/CircularProgress$default" :as CircularProgress]
-   ["@material-ui/core/CssBaseline$default" :as CssBaseline]
-   ["@material-ui/core/Dialog$default" :as Dialog]
-   ["@material-ui/core/DialogActions$default" :as DialogActions]
-   ["@material-ui/core/DialogContent$default" :as DialogContent]
-   ["@material-ui/core/DialogTitle$default" :as DialogTitle]
-   ["@material-ui/core/Divider$default" :as Divider]
-   ["@material-ui/core/Drawer$default" :as Drawer]
-   ["@material-ui/core/Fab$default" :as Fab]
-   ["@material-ui/core/FormControl$default" :as FormControl]
-   ["@material-ui/core/FormControlLabel$default" :as FormControlLabel]
-   ["@material-ui/core/FormLabel$default" :as FormLabel]
-   ["@material-ui/core/FormGroup$default" :as FormGroup]
-   ["@material-ui/core/FormHelperText$default" :as FormHelperText]
-   ["@material-ui/core/Grid$default" :as Grid]
-   ["@material-ui/core/Hidden$default" :as Hidden]
-   ["@material-ui/core/Icon$default" :as Icon]
-   ["@material-ui/core/IconButton$default" :as IconButton]
-   ["@material-ui/core/InputAdornment$default" :as InputAdornment]
-   ["@material-ui/core/InputLabel$default" :as InputLabel]
-   ["@material-ui/core/Link$default" :as Link]
-   ["@material-ui/core/List$default" :as List]
-   ["@material-ui/core/ListItem$default" :as ListItem]
-   ["@material-ui/core/ListItemIcon$default" :as ListItemIcon]
-   ["@material-ui/core/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
-   ["@material-ui/core/ListItemText$default" :as ListItemText]
-   ["@material-ui/core/Menu$default" :as Menu]
-   ["@material-ui/core/MenuItem$default" :as MenuItem]
-   ["@material-ui/core/Paper$default" :as Paper]
-   ["@material-ui/core/Popper$default" :as Popper]
-   ["@material-ui/core/Select$default" :as Select]
-   ["@material-ui/core/Slide$default" :as Slide]
-   ["@material-ui/core/Slider$default" :as Slider]
-   ["@material-ui/core/Snackbar$default" :as Snackbar]
-   ["@material-ui/core/SnackbarContent$default" :as SnackbarContent]
-   ["@material-ui/core/Step$default" :as Step]
-   ["@material-ui/core/StepContent$default" :as StepContent]
-   ["@material-ui/core/StepLabel$default" :as StepLabel]
-   ["@material-ui/core/Stepper$default" :as Stepper]
-   ["@material-ui/core/SvgIcon$default" :as SvgIcon]
-   ["@material-ui/core/SwipeableDrawer$default" :as SwipeableDrawer]
-   ["@material-ui/core/Switch$default" :as Switch]
-   ["@material-ui/core/Tab$default" :as Tab]
-   ["@material-ui/core/Table$default" :as Table]
-   ["@material-ui/core/TableBody$default" :as TableBody]
-   ["@material-ui/core/TableContainer$default" :as TableContainer]
-   ["@material-ui/core/TableCell$default" :as TableCell]
-   ["@material-ui/core/TableHead$default" :as TableHead]
-   ["@material-ui/core/TablePagination$default" :as TablePagination]
-   ["@material-ui/core/TableRow$default" :as TableRow]
-   ["@material-ui/core/TableSortLabel$default" :as TableSortLabel]
-   ["@material-ui/core/Tabs$default" :as Tabs]
-   ["@material-ui/core/TextField$default" :as TextField]
-   ["@material-ui/core/Toolbar$default" :as Toolbar]
-   ["@material-ui/core/Tooltip$default" :as Tooltip]
-   ["@material-ui/core/Typography$default" :as Typography]
-   ["@material-ui/core/styles" :refer [createTheme ThemeProvider]]
-   ["@material-ui/core/withWidth$default" :as withWidth]
-   ["@material-ui/lab/Autocomplete$default" :as Autocomplete]
-   #_["@material-ui/core/CardMedia$default" :as CardMedia]
-   #_["@material-ui/core/AccordionActions$default" :as AccordionActions]
-   #_["@material-ui/core/Fade$default" :as Fade]
-   #_["@material-ui/core/FormLabel$default" :as FormLabel]
-   #_["@material-ui/core/Grow$default" :as Grow]
-   #_["@material-ui/core/MenuList$default" :as MenuList]
-   #_["@material-ui/core/Radio$default" :as Radio]
-   #_["@material-ui/core/RadioGroup$default" :as RadioGroup]
-   #_["@material-ui/core/Zoom$default" :as Zoom]
+   ["@mui/material/useMediaQuery$default" :as useMediaQuery]
+   ["@mui/material/Accordion$default" :as Accordion]
+   ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+   ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+   ["@mui/material/AppBar$default" :as AppBar]
+   ["@mui/material/Avatar$default" :as Avatar]
+   ["@mui/material/Button$default" :as Button]
+   ["@mui/material/Card$default" :as Card]
+   ["@mui/material/CardActions$default" :as CardActions]
+   ["@mui/material/CardContent$default" :as CardContent]
+   ["@mui/material/CardHeader$default" :as CardHeader]
+   ["@mui/material/Checkbox$default" :as Checkbox]
+   ["@mui/material/Chip$default" :as Chip]
+   ["@mui/material/CircularProgress$default" :as CircularProgress]
+   ["@mui/material/CssBaseline$default" :as CssBaseline]
+   ["@mui/material/Dialog$default" :as Dialog]
+   ["@mui/material/DialogActions$default" :as DialogActions]
+   ["@mui/material/DialogContent$default" :as DialogContent]
+   ["@mui/material/DialogTitle$default" :as DialogTitle]
+   ["@mui/material/Divider$default" :as Divider]
+   ["@mui/material/Drawer$default" :as Drawer]
+   ["@mui/material/Fab$default" :as Fab]
+   ["@mui/material/FormControl$default" :as FormControl]
+   ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+   ["@mui/material/FormLabel$default" :as FormLabel]
+   ["@mui/material/FormGroup$default" :as FormGroup]
+   ["@mui/material/FormHelperText$default" :as FormHelperText]
+   ["@mui/material/Grid$default" :as Grid]
+   ["@mui/material/Unstable_Grid2$default" :as Grid2]
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/InputAdornment$default" :as InputAdornment]
+   ["@mui/material/InputLabel$default" :as InputLabel]
+   ["@mui/material/Link$default" :as Link]
+   ["@mui/material/List$default" :as List]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+   ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+   ["@mui/material/ListItemText$default" :as ListItemText]
+   ["@mui/material/Menu$default" :as Menu]
+   ["@mui/material/MenuItem$default" :as MenuItem]
+   ["@mui/material/Paper$default" :as Paper]
+   ["@mui/material/Popper$default" :as Popper]
+   ["@mui/material/Select$default" :as Select]
+   ["@mui/material/Slide$default" :as Slide]
+   ["@mui/material/Slider$default" :as Slider]
+   ["@mui/material/Snackbar$default" :as Snackbar]
+   ["@mui/material/SnackbarContent$default" :as SnackbarContent]
+   ["@mui/material/Step$default" :as Step]
+   ["@mui/material/StepContent$default" :as StepContent]
+   ["@mui/material/StepLabel$default" :as StepLabel]
+   ["@mui/material/Stepper$default" :as Stepper]
+   ["@mui/material/SvgIcon$default" :as SvgIcon]
+   ["@mui/material/SwipeableDrawer$default" :as SwipeableDrawer]
+   ["@mui/material/Switch$default" :as Switch]
+   ["@mui/material/Tab$default" :as Tab]
+   ["@mui/material/Table$default" :as Table]
+   ["@mui/material/TableBody$default" :as TableBody]
+   ["@mui/material/TableContainer$default" :as TableContainer]
+   ["@mui/material/TableCell$default" :as TableCell]
+   ["@mui/material/TableHead$default" :as TableHead]
+   ["@mui/material/TablePagination$default" :as TablePagination]
+   ["@mui/material/TableRow$default" :as TableRow]
+   ["@mui/material/TableSortLabel$default" :as TableSortLabel]
+   ["@mui/material/Tabs$default" :as Tabs]
+   ["@mui/material/TextField$default" :as TextField]
+   ["@mui/material/Toolbar$default" :as Toolbar]
+   ["@mui/material/Tooltip$default" :as Tooltip]
+   ["@mui/material/Typography$default" :as Typography]
+   ["@mui/material/styles" :refer [createTheme ThemeProvider useTheme]]
+   ; ["@mui/material/withWidth$default" :as withWidth]
+   ["@mui/material/Autocomplete$default" :as Autocomplete]
+   #_["@mui/material/CardMedia$default" :as CardMedia]
+   #_["@mui/material/AccordionActions$default" :as AccordionActions]
+   #_["@mui/material/Fade$default" :as Fade]
+   #_["@mui/material/FormLabel$default" :as FormLabel]
+   #_["@mui/material/Grow$default" :as Grow]
+   #_["@mui/material/MenuList$default" :as MenuList]
+   #_["@mui/material/Radio$default" :as Radio]
+   #_["@mui/material/RadioGroup$default" :as RadioGroup]
+   #_["@mui/material/Zoom$default" :as Zoom]
    [camel-snake-kebab.core :refer [convert-case]]
    [camel-snake-kebab.extras :refer [transform-keys]]
    [clojure.string :as s]
@@ -150,40 +151,41 @@
     :button
     {:font-weight 700}}
    :palette
-   {:type      "dark"
+   {:mode      "dark"
     :primary   {:main primary}
     :secondary {:main secondary}
+    :gray1     {:main gray1}
     :text      {:disabled "rgba(255,255,255,0.88)"}}
-   :overrides
-   {:Mui-card-header
-    {:title
-     {:font-size "2rem"}
-     :action
-     {:margin-top 0}}
-    :Mui-tooltip
-    {:tooltip
-     {:font-size "0.8rem"}}
-    :Mui-step-icon
-    {:root      {:fill "rgba(0,0,0,0.5)"}
-     :active    {:fill secondary}
-     :completed {:fill primary}}
-    :MuiInputLabel
-    {:root   {:color "gray"}
-     :shrink {:color "inherit"}}}})
+   :components
+   {:MuiCardHeader {:styleOverrides {:title {:fontSize "2rem"}
+                                     :action {:mt 0}}}
+    :MuiTooltip {:styleOverrides {:tooltip {:fontSize "0.8rem"}}}
+    :MuiStepIcon {:styleOverrides {:root {:fill "rgba(0,0,0,0.5)"}}}
+    :MuiInputLabel {:styleOverrides {:root   {:color "gray"}
+                                     :shrink {:color "inherit"}}}
+    ;; MUI v4 used body2 font-size for <body>
+    :MuiCssBaseline {:styleOverrides {:body {:fontSize "0.875rem"
+                                             :lineHeight 1.43
+                                             :letterSpacing "0.01071rem"
+                                             ;; Use light mode background color for <body>
+                                             :backgroundColor "#fafafa"}}}
+    :MuiAppBar {:styleOverrides {:root {;; Disable gradient
+                                        :backgroundImage "none"}}}
+    :MuiLink {:defaultProps {:underline "hover"}}
+    :MuiIconButton {:defaultProps {:size "large"}}}})
 
 
 (def jyu-styles-light
   (utils/deep-merge
    jyu-styles-dark
    {:palette
-    {:type "light"
+    {:mode "light"
      :text {:disabled "rgba(0,0,0,0.88)"}}
     :typography
     {:body1 {:color primary}
      :body2 {:color primary}}
-    :overrides
-    {:Mui-card-header
-     {:title {:color secondary}}}}))
+    :components
+    {:MuiCardHeader {:styleOverrides {:title {:color secondary}}}}}))
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))
@@ -222,9 +224,11 @@
 (def form-group (r/adapt-react-class FormGroup))
 (def form-helper-text (r/adapt-react-class FormHelperText))
 #_(def form-label (r/adapt-react-class FormLabel))
+;; In v5 regular Grid item only has top and left padding,
+;; the new v2 Grid has padding all around.
 (def grid (r/adapt-react-class Grid))
+(def grid2 (r/adapt-react-class Grid2))
 #_(def grow (r/adapt-react-class Grow))
-(def hidden (r/adapt-react-class Hidden))
 (def icon (r/adapt-react-class Icon))
 (def icon-button (r/adapt-react-class IconButton))
 (def input-adornment (r/adapt-react-class InputAdornment))
@@ -271,4 +275,16 @@
 (def typography (r/adapt-react-class Typography))
 #_(def zoom (r/adapt-react-class Zoom))
 
-(def with-width* withWidth)
+(defn use-width []
+  (let [theme (useTheme)
+        breakpoints (.-breakpoints theme)
+        sm (useMediaQuery (.up breakpoints "sm"))
+        md (useMediaQuery (.up breakpoints "md"))
+        lg (useMediaQuery (.up breakpoints "lg"))
+        xl (useMediaQuery (.up breakpoints "xl"))]
+    (cond
+      xl "xl"
+      lg "lg"
+      md "md"
+      sm "sm"
+      :else "xs")))

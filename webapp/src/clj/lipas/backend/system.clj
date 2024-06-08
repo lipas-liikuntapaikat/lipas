@@ -33,14 +33,15 @@
         indices (:indices config)]
 
     ;; Ensure indices exist
-    (doseq [[group m]      indices
-            [_k index-name] m]
-      (println "Ensuring index" index-name "exists")
-      (when-not (search/index-exists? client index-name)
-        (let [mappings (get-in search/mappings [group] {})]
-          (println "Creating index" index-name "with mappings:")
-          (pprint mappings)
-          (search/create-index! client index-name mappings))))
+    (when (:create-indices config true)
+      (doseq [[group m]      indices
+              [_k index-name] m]
+        (println "Ensuring index" index-name "exists")
+        (when-not (search/index-exists? client index-name)
+          (let [mappings (get-in search/mappings [group] {})]
+            (println "Creating index" index-name "with mappings:")
+            (pprint mappings)
+            (search/create-index! client index-name mappings)))))
 
     {:client   client
      :indices  indices
