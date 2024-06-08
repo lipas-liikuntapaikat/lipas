@@ -84,16 +84,18 @@
          [mui/icon "exit_to_app"]]
         [mui/list-item-text {:primary (tr :login/logout)}]])]))
 
-(defn separator []
+(defn separator [props]
   [mui/typography
-   {:component "span"
-    :color     "secondary"
-    :variant   "h6"
-    :style
-    {:display     "inline"
-     :font-weight "bold"
-     :font-size   "1em"
-     :margin      "0.5em"}}
+   (merge {:component "span"
+           :color     "secondary"
+           :variant   "h6"
+           :sx
+           (merge {:display     "inline"
+                   :font-weight "bold"
+                   :font-size   "1em"
+                   :margin      "0.5em"}
+                  (:sx props))}
+          (dissoc props :sx))
    "|"])
 
 (defn lang-btn [locale]
@@ -103,8 +105,10 @@
    [mui/typography {:variant "body2"}
     (-> locale name string/upper-case)]])
 
-(defn lang-selector []
-  [mui/grid {:item true :style {:margin "1em"}}
+(defn lang-selector [props]
+  [mui/grid
+   (merge {:item true :style {:margin "1em"}}
+          props)
    [lang-btn :fi]
    [separator]
    [lang-btn :se]
@@ -246,7 +250,9 @@
     [mui/app-bar
      {:position   "static"
       :color      "primary"
-      :style      {:border-box "1px solid black"}
+      :sx         {:border-box "1px solid black"
+                   :backgroundColor "primary.main"}
+      :enableColorOnDark true
       :class-name :no-print}
 
      [mui/tool-bar {:disable-gutters true}
@@ -267,22 +273,24 @@
          :font-weight "bold"}}
 
        ;; University of Jyväskylä
-       [mui/hidden {:sm-down true}
-        [mui/typography
-         {:component "a"
-          :variant   "h6"
-          :href      "https://www.jyu.fi"
-          :style
-          (merge
-           mui/headline-aleo
-           {:display         "inline"
-            :font-size       "1em"
-            :color           "#ffffff"
-            :text-transform  "none"
-            :text-decoration "none"})}
-         (tr :menu/jyu)]
+       [mui/typography
+        {:component "a"
+         :variant   "h6"
+         :href      "https://www.jyu.fi"
+         :sx
+         (merge
+          mui/headline-aleo
+          {:font-size       "1em"
+           :color           "#ffffff"
+           :text-transform  "none"
+           :text-decoration "none"
+           :display {:xs "none"
+                     :md "inline"}})}
+        (tr :menu/jyu)]
 
-        [separator]]
+       [separator
+        {:sx {:display {:xs "none"
+                        :md "inline"}}}]
 
        ;; LIPAS
        [mui/typography
@@ -318,8 +326,9 @@
           (:text sub-page)])]
 
       ;; Lang selector
-      [mui/hidden {:sm-down true}
-       [lang-selector]]
+      [lang-selector
+       {:sx {:display {:xs "none"
+                       :md "block"}}}]
 
     ;;; Account menu button
       [account-menu-button {:tr tr :logged-in? logged-in?}]

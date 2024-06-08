@@ -7,16 +7,18 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "npx shadow-cljs watch app",
+    "build-report": "npx shadow-cljs run shadow.cljs.build-report app report.html"
   },
   "keywords": [],
   "author": "University of Jyväskylä, Valtteri Harmainen",
   "license": "ISC",
   "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
     "@mapbox/togeojson": "^0.16.0",
-    "@material-ui/core": "^4.12.4",
-    "@material-ui/icons": "4.11.3",
-    "@material-ui/lab": "4.0.0-alpha.61",
+    "@mui/material": "^5.15.19",
     "@turf/area": "^6.5.0",
     "@turf/bbox": "^6.0.1",
     "@turf/buffer": "^6.5.0",
@@ -32,20 +34,20 @@
     "@turf/truncate": "^6.5.0",
     "file-saver": "^2.0.2",
     "highlight.js": "^11.7.0",
-    "mdi-material-ui": "6.27.0",
+    "mdi-material-ui": "7.9.1",
     "ol": "^7.5.2",
     "ol-ext": "^4.0.4",
     "proj4": "^2.5.0",
     "rc-slider": "^9.7.5",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6",
-    "react-virtualized": "9.21.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-virtualized": "9.22.4",
     "recharts": "^2.2.0",
     "shpjs": "^4.0.4",
     "togpx": "^0.5.4",
     "zipcelx": "^1.6.2"
   },
   "devDependencies": {
-    "shadow-cljs": "^2.25.2"
+    "shadow-cljs": "^2.28.8"
   }
 }

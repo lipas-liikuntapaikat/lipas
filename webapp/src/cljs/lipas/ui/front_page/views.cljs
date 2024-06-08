@@ -87,12 +87,18 @@
 
    ;; Title
    [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
-    [mui/hidden {:smUp true}
-     [mui/typography {:variant "h5" :style title-style}
-      title]]
-    [mui/hidden {:xsDown true}
-     [mui/typography {:variant "h4" :style title-style}
-      title]]]
+    ;; smUp
+    [mui/typography
+     {:variant "h5" :style title-style
+      :sx {:display {:xs "block"
+                     :sm "none"}}}
+     title]
+    ;; xsDown
+    [mui/typography
+     {:variant "h4" :style title-style
+      :sx {:display {:xs "none"
+                     :sm "block"}}}
+     title]]
 
    ;; Content
    [mui/grid {:item true :xs 12}

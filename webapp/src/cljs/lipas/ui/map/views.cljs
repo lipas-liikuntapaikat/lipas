@@ -7,6 +7,7 @@
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    #_[lipas.ui.feedback.views :as feedback]
    #_[lipas.ui.sports-sites.football.views :as football]
+   ["react" :as react]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
@@ -30,6 +31,10 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
+;; TODO: Juho later This pattern makes development inconvenient as
+;; the component might crash and shadow-cljs reloads don't update it.
+;; The pattern is used to change the tool properties
+;; between editing existing sites and adding new site.
 (defonce simplify-tool-component (r/atom nil))
 
 (defn rreset!
@@ -73,8 +78,10 @@
   []
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [mui/slide {:direction "up" :in open?}
-     [lui/floating-container {:bottom 12 :left 550}
-      @simplify-tool-component]]))
+     [:r> (react/forwardRef
+            (fn [_props ref]
+              (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
+                             @simplify-tool-component])))]]))
 
 (defn simplify-tool
   [{:keys [tr on-change on-close]
@@ -99,7 +106,8 @@
         ;; The Slider
         [mui/grid {:item true :xs true}
          [mui/slider
-          {:on-change #(==> [::events/set-simplify-tolerance %2])
+          {:size "small"
+           :on-change #(==> [::events/set-simplify-tolerance %2])
            :value     tolerance
            :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
            :step      0.5
@@ -125,8 +133,7 @@
         ;; Cancel
         [mui/grid {:item true}
          [mui/button
-          {:variant  "contained"
-           :color    "default"
+          {:variant  "outlined"
            :on-click on-close}
           (tr :actions/cancel)]]]]]]))
 
@@ -197,6 +204,7 @@
              {:checked   (boolean v)
               :size      "medium"
               :value     (str v)
+              :color     "secondary"
               :on-change #()}]]
            [mui/list-item-text
             {:primaryTypographyProps   {:style {:font-size "0.9em" :margin-right "2em"}}
@@ -243,9 +251,10 @@
       [mui/grid {:container true}
        [mui/grid {:item true :xs 12}
         [mui/text-field {:label (tr :search/search)
-                        :xs 3
-                        :on-change #(reset! search-term (-> % .-target .-value))
-                        :placeholder nil}]]
+                         :xs 3
+                         :on-change #(reset! search-term (-> % .-target .-value))
+                         :placeholder nil
+                         :variant "standard"}]]
        [mui/grid {:item true :xs 12}
         [mui/table-container
         [mui/table
@@ -505,7 +514,8 @@
         :placement "top-end"
         :anchor-el anchor-el
         :container anchor-el
-        :modifiers {:offset {:enabled true :offset "0px,10px"}}}
+        :modifiers [{:name "offset"
+                     :options {:offset [0 10]}}]}
        [popup-body (assoc popup' :tr tr)]])))
 
 (defn set-field
@@ -645,6 +655,7 @@
         #_#_:variant "scrollable"
         #_#_:variant "standard"
         :style       {:margin-bottom "1em"}
+        :indicator-color "secondary"
         :text-color  "secondary"}
        [mui/tab
         {:style {:min-width 0}
@@ -1218,9 +1229,10 @@
         [mui/stepper
          {:active-step      active-step
           :alternativeLabel true
-          :style            {:padding-left 0 :padding-right 0
-                             :margin-left  "-18px"}
-          :orientation      "horizontal"}
+          :style            {:margin-left  "-18px"}
+          :orientation      "horizontal"
+          :sx (fn [theme]
+                #js {".Mui-active" #js {:fill (.. theme -palette -secondary -main)}})}
 
          ;; Step 1 - Select type
          [mui/step {:active (= (dec 1) active-step)}
@@ -1261,6 +1273,7 @@
                 [mui/tabs {:value      @geom-tab
                            :on-change  #(reset! geom-tab %2)
                            :variant    "fullWidth"
+                           :indicator-color "secondary"
                            :text-color "secondary"}
                  [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
                  (when (#{"LineString" "Polygon"} geom-type)
@@ -1402,7 +1415,8 @@
                       :disabled (-> geom :features empty?)
                       :style    (when (= sub-mode :deleting)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [:> Eraser]]]]])
 
                ;; Split
@@ -1417,7 +1431,8 @@
                       :disabled (-> geom :features empty?)
                       :style    (when (= sub-mode :splitting)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [:> ContentCut]]]]])
 
                ;; Simplify
@@ -1431,7 +1446,8 @@
                                     (= sub-mode :simplifying))
                       :style    (when (= sub-mode :simplifying)
                                   {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"}
+                      :variant  "contained"
+                      :color    "gray1"}
                      [mui/icon "auto_fix_high"]]]]])
 
                ;; Delete vertices helper text
@@ -1504,6 +1520,8 @@
              {:value     selected-tab
               :on-change #(==> [::events/select-new-sports-site-tab %2])
               :variant   "fullWidth"
+              :indicator-color "secondary"
+              :text-color "inherit"
               :style     {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
              [mui/tab {:label (tr :lipas.sports-site/properties)}]
@@ -1555,7 +1573,11 @@
                   ;; Floorball specific
                   floorball-types
                   [:<>
-                   [mui/tabs {:value "floorball" :variant "standard"}
+                   [mui/tabs
+                    {:value "floorball"
+                     :variant "standard"
+                     :indicator-color "secondary"
+                     :text-color "inherit"}
                     [mui/tab {:value "floorball" :label "Salibandy"}]]
                    [floorball/form
                     {:tr           tr
@@ -1668,7 +1690,9 @@
        [mui/tabs
         {:value     add-mode
          :on-change #(==> [::events/select-add-mode %2])
-         :variant   "fullWidth"}
+         :variant   "fullWidth"
+         :indicator-color "secondary"
+         :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
         [mui/tab {:value "loi" :label "Muu kohde"}]])
 
@@ -1699,10 +1723,11 @@
        [:div {:style {:padding "0.5em"}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
-(defn map-view [{:keys [width]}]
+(defn map-view []
   (let [tr           (<== [:lipas.ui.subs/translator])
         logged-in?   (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
+        width (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
@@ -1754,7 +1779,7 @@
        :right            "3.5em"
        :background-color "transparent"}
 
-      [mui/grid
+      [mui/grid2
        {:container   true
         :align-items "center"
         :spacing     1
@@ -1763,22 +1788,22 @@
         :wrap        "nowrap"}
 
        ;; Feedback btn
-       #_[mui/grid {:item true}
+       #_[mui/grid2
           [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
            [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
-       [mui/grid {:item true}
+       [mui/grid2
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [user-location-btn {:tr tr}]]]
 
        ;; Overlay selector
-       [mui/grid {:item true}
+       [mui/grid2
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [overlay-selector {:tr tr}]]]
 
        ;; Base Layer switcher
-       [mui/grid {:item true}
+       [mui/grid2
         [mui/paper
          {:elevation 1
           :style
@@ -1794,4 +1819,4 @@
      [ol-map/map-outer]]))
 
 (defn main []
-  [:> ((mui/with-width*) (r/reactify-component map-view))])
+  [:f> map-view])

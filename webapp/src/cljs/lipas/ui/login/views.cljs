@@ -186,6 +186,7 @@
         [mui/tabs {:value      login-mode
                    :on-change  #(==> [::events/select-login-mode (keyword %2)])
                    :style      {:margin-bottom "1em"}
+                   :indicator-color "secondary"
                    :text-color "secondary"}
          [mui/tab {:label (tr :login/login-with-password) :value :password}]
          [mui/tab {:label (tr :login/login-with-magic-link) :value :magic-link}]]

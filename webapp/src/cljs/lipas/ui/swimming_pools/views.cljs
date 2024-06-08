@@ -108,7 +108,6 @@
          [mui/tooltip {:title (tr :map/zoom-to-site)}
           [mui/fab
            {:size     "small"
-            :color    "default"
             :on-click #(show-on-map lipas-id)}
            [mui/icon {:color "secondary"}
             "place"]]]))}
@@ -732,7 +731,8 @@
          {:variant    "scrollable"
           :text-color "secondary"
           :on-change  #(==> [:lipas.ui.events/navigate (get tabs %2)])
-          :value      active-tab}
+          :value      active-tab
+          :indicator-color "secondary"}
 
          ;; 0 Stats
          ;; [mui/tab {:label (tr :swim/headline)

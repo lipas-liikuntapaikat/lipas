@@ -33,24 +33,26 @@
        {:label            (tr :analysis/filter-types)
         :default-expanded false}
 
-       ;; Types selector
-       [mui/grid {:item true :xs 10}
-        [lui/type-category-selector
-         {:value     selected-types
-          :on-change #(==> [::events/set-type-codes-filter %])
-          :label     (tr :actions/select-types)}]]
+       [mui/grid {:container true}
+        ;; Types selector
+        [mui/grid {:item true :xs 10}
+         [lui/type-category-selector
+          {:value     selected-types
+           :on-change #(==> [::events/set-type-codes-filter %])
+           :label     (tr :actions/select-types)}]]
 
-       ;; Clear filter button
-       (when (seq selected-types)
-         [mui/grid {:item true :xs 2}
-          [mui/tooltip {:title (tr :search/clear-filters)}
-           [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
-            [mui/icon {:color "secondary"} "filter_alt"]]]])]]
+        ;; Clear filter button
+        (when (seq selected-types)
+          [mui/grid {:item true :xs 2}
+           [mui/tooltip {:title (tr :search/clear-filters)}
+            [mui/icon-button {:on-click #(==> [::events/set-type-codes-filter []])}
+             [mui/icon {:color "secondary"} "filter_alt"]]]])]]]
 
      ;; Tabs
      [mui/grid {:item true :xs 12}
       [mui/tabs {:value          sports-sites-view
-                 :indicatorColor "primary"
+                 :indicator-color "primary"
+                 :text-color     "inherit"
                  :variant        "fullWidth"
 
                  :on-change #(==> [::events/select-sports-sites-view %2])}
@@ -195,7 +197,8 @@
 
      [mui/grid {:item true :xs 12}
       [mui/tabs {:value          schools-view
-                 :indicatorColor "primary"
+                 :indicator-color "primary"
+                 :text-color     "inherit"
                  :variant        "fullWidth"
 
                  :on-change #(==> [::events/select-schools-view %2])}
@@ -241,6 +244,9 @@
       [mui/grid {:container true}
 
        ;; Slider
+       ;; Rc-slider works better here, MUI does allow
+       ;; multiple values, but probably not separate track colors
+       ;; between the values ("korit")
        [mui/grid {:item true :xs 10 :style {:padding "1em"}}
         [:> RangeSlider
          {:min             0
@@ -388,29 +394,30 @@
          :container       true
          :justify-content "space-between"
          :align-items     "center"}
-        [mui/grid {:item true}
+        [mui/grid {:item true
+                   :container true
+                   :align-items "center"
+                   :spacing 1}
+         [mui/grid {:item true}
+          [lui/select
+           {:items     sites
+            :value     selected-site
+            :style     {:fontFamily    "Lato, serif",
+                        :fontWeight    700,
+                        :fontSize      "1.25rem",
+                        :lineHeight    1.6,
+                        :textTransform "uppercase"}
+            :label-fn  :site-name
+            :value-fn  :lipas-id
+            :on-change #(==> [::events/select-sports-site %])}]]
 
-         [mui/grid {:container true :align-items "center" :spacing 1}
-          [mui/grid {:item true}
-           [lui/select
-            {:items     sites
-             :value     selected-site
-             :style     {:fontFamily    "Lato, serif",
-                         :fontWeight    700,
-                         :fontSize      "1.25rem",
-                         :lineHeight    1.6,
-                         :textTransform "uppercase"}
-             :label-fn  :site-name
-             :value-fn  :lipas-id
-             :on-change #(==> [::events/select-sports-site %])}]]
-
-          [mui/grid {:item true}
-           [mui/tooltip {:title "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla"}
-            [mui/icon-button
-             {:on-click #()
-              :color    "secondary"
-              :size     "medium"}
-             [mui/icon "add"]]]]]]
+         [mui/grid {:item true}
+          [mui/tooltip {:title "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla"}
+           [mui/icon-button
+            {:on-click #()
+             :color    "secondary"
+             :size     "medium"}
+            [mui/icon "add"]]]]]
 
         ;; Craete report button
         (when selected-site
@@ -432,6 +439,7 @@
         [mui/tabs {:value      selected-tab
                    :on-change  #(==> [::events/select-analysis-tab %2])
                    :style      {:margin-bottom "1em"}
+                   :indicator-color "secondary"
                    :text-color "secondary"}
          [mui/tab {:label (tr :sport/headline) :value :sports-sites}]
          [mui/tab {:label (tr :analysis/population) :value :population}]

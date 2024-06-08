@@ -231,7 +231,9 @@
 
         [mui/tabs
          {:value     (int @monthly-energy?)
-          :on-change #(swap! monthly-energy? not)}
+          :on-change #(swap! monthly-energy? not)
+          :indicator-color "secondary"
+          :text-color "inherit"}
          [mui/tab {:label (tr :lipas.energy-consumption/yearly)}]
          [mui/tab {:label (tr :lipas.energy-consumption/monthly)}]]
 
@@ -473,7 +475,7 @@
           [mui/list-item {:style {:break-inside :avoid}}
            [mui/list-item-icon {:style {:margin-right 0 :color mui/gold}}
             [mui/icon "star"]]
-           [mui/list-item-text {:variant "body2" :color "default"}
+           [mui/list-item-text {:variant "body2"}
             (:name m)]]))]]]]])
 
 (defn localize-months [tr]

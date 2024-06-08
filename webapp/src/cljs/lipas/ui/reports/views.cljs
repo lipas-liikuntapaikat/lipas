@@ -73,7 +73,9 @@
        [mui/tooltip {:title (tr :reports/tooltip)}
         (if (= btn-variant :fab)
           [mui/fab
-           {:variant "circular" :color "default" :on-click toggle :size "small"}
+           {:variant "circular"
+            :on-click toggle
+            :size "small"}
            [mui/icon "list_alt"]]
           [mui/button {:variant "contained" :color "secondary" :on-click toggle}
            (tr :reports/download-as-excel)])])

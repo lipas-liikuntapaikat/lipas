@@ -16,6 +16,7 @@
                  {:value     (str (boolean value))
                   :checked   (boolean value)
                   :disabled  disabled
+                  :color     "secondary"
                   ;; %2 = checked?
                   :on-change #(on-change %2)}
                  (when icon
@@ -34,5 +35,6 @@
        (merge
         {:value     value
          :checked   value
+         :color     "secondary"
          :on-change #(on-change (-> % .-target .-checked))}
         (dissoc props :on-change))])}]])
