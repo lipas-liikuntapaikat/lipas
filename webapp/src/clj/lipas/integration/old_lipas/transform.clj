@@ -78,6 +78,8 @@
 
          (update-in [:location :city] dissoc :neighborhood)
 
+         (update-in [:location :address] #(if (< 100 (count %)) (subs % 0 100) %))
+
          (update :properties #(-> %
                                   (dissoc :school-use? :free-use?)
                                   (update :surface-material
