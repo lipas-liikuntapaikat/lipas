@@ -1365,8 +1365,8 @@
    :activity-service-company?
    {:name
     {:fi "Ohjelmapalveluyritys"
-     :se "Activity service company"
-     :en ""}
+     :se ""
+     :en "Activity service company"}
     :data-type "boolean"
     :description
     {:fi "Toimiiko kohteessa ohjelmapalveluyritys.",
