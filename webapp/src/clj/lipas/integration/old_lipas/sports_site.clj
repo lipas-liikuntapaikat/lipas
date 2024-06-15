@@ -195,7 +195,10 @@
    :pool2MaxDepthM               :pool-2-max-depth-m,
    :pool4LengthM                 :pool-4-length-m,
    :pool2TemperatureC            :pool-2-temperature-c
-   :padelCourtsCount             :padel-courts-count})
+   :padelCourtsCount             :padel-courts-count
+   :rapidCanoeingCentre          :rapid-canoeing-centre?
+   :canoeingClub                 :canoeing-club?
+   :activityServiceCompany       :activity-service-company?})
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 
