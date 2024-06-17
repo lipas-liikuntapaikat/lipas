@@ -1,5 +1,19 @@
 # Operations manual
 
+## Database
+
+### Dump
+
+```
+docker exec -i lipas_postgres_1 pg_dump -U lipas -Fc lipas > $(date --iso-8601).$(hostname).db.backup
+```
+
+### Restore
+
+```
+docker exec -i lipas_postgres_1 pg_restore -U lipas -d lipas < 2024-06-17.lipas-prod2.db.backup > restore.log
+```
+
 ## Updating OSM data
 
 OSM data is used by OSRM to calculate distances and travel times by walking, car or bicycle. This is used in analysis tools (diversity, reachability).
