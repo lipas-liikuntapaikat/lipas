@@ -7,12 +7,13 @@
 
 (defn autocomplete
   [{:keys [label items value value-fn label-fn on-change sort-fn spec multi?
-           required helper-text deselect? sort-cmp render-option-fn disabled]
+           required helper-text deselect? sort-cmp render-option-fn disabled variant]
     :or   {label-fn :label
            disabled false
            sort-fn  label-fn
            sort-cmp compare
-           value-fn :value}}]
+           value-fn :value
+           variant  "standard"}}]
   (let [items-by-vals (utils/index-by (comp pr-str value-fn) items)]
     (r/with-let [state   (r/atom "")]
       [mui/autocomplete
@@ -35,6 +36,7 @@
                                     (-> v items-by-vals value-fn))))
          :on-input-change      (fn [_evt v] (reset! state v))
          :renderInput          (fn [^js params]
+                                 (set! (.-variant params) variant)
                                  (set! (.-label params) label)
                                  (set! (.-required params) (boolean required))
                                  #_(set! (.-shrink (.-InputLabelProps params))
