@@ -1,5 +1,6 @@
 (ns lipas.ui.map.events
   (:require
+   ["@turf/simplify$default" :as turf-simplify]
    ["ol/proj" :as proj]
    ["togpx" :as togpx]
    [ajax.core :as ajax]
@@ -523,7 +524,13 @@
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON geom-type]]
-   (let [fcoll (js->clj geoJSON :keywordize-keys true)
+   ;; Especially GPX tracks are way to dense so we simplify all geoms
+   ;; by default.
+   (let [fcoll (-> geoJSON
+                   (turf-simplify #js{:mutate      true
+                                      :tolerance   (map-utils/simplify-scale 3)
+                                      :highQuality true})
+                   (js->clj :keywordize-keys true))
          fs    (->> fcoll
                     :features
                     (filter (comp #{geom-type} :type :geometry))
