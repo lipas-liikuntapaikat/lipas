@@ -1,5 +1,6 @@
 (ns lipas.ui.components.dialogs
   (:require
+   ["@mui/material/Slide$default" :as Slide]
    [lipas.ui.mui :as mui]
    [reagent.core :as r]))
 
@@ -19,15 +20,12 @@
       [mui/button {:on-click on-save :disabled (not save-enabled?)}
        save-label])]])
 
-(defn slide [props]
-  [mui/slide props])
-
 (defn full-screen-dialog
   [{:keys [open? title on-close close-label top-actions
            bottom-actions]} & contents]
   [mui/dialog {:open                 open?
                :full-screen          true
-               :Transition-component (r/reactify-component slide)
+               :Transition-component Slide
                :Transition-props     {:direction "up"}
                :on-close             on-close
                :Paper-Props          {:style {:background-color mui/gray1}}}
