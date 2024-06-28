@@ -491,7 +491,7 @@
                          :version      "2.0.0"
                          :request      "GetFeature"
                          :srsName      "EPSG:4326"
-                         :typeNames    "postialue:pno_2022"
+                         :typeNames    "postialue:pno_2024"
                          :cql_filter   (str "kuntanro=" city-code)
                          :outputFormat "json"}
        :format          (ajax/json-request-format)
