@@ -19,11 +19,11 @@
   (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn nice-form
-  [props & children]
-  (into [mui/grid {:container true :spacing 2}]
-        (for [child children]
-          [mui/grid {:item true :xs 12}
-           child]) ))
+  [props children]
+  [mui/grid {:container true :spacing 4}
+   (doall
+    (for [[idx child] (map vector (range) children)]
+      [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -172,7 +172,8 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
+         {:key              (str (count (vals @state)))
+          :headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
                              [:_role (get-in contact-props [:role :field :label locale])]]
           :hide-header-row? false
           :read-only?       false
@@ -202,8 +203,7 @@
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
-          :add-btn-size     "small"
-          :key-fn           :url}]]
+          :add-btn-size     "small"}]]
 
        ;; Debug
        (when config/debug?
@@ -346,10 +346,13 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers          [[locale label]]
+         {:key              (str (count (vals @state)))
+          :headers          [[locale label]]
           :hide-header-row? true
           :read-only?       false
           :items            (->> @state vals)
+          :on-dnd-end       (fn [res]
+                              )
           :on-add           (fn []
                               (reset! dialog-state {:open? true
                                                     :mode  :add
@@ -363,12 +366,14 @@
                               (set-field (->> @state
                                               vals
                                               (mapv #(dissoc % :id)))))
+          :on-user-sort (fn [items]
+                          (set-field (mapv #(dissoc % :id) items)))
           :add-tooltip      "Lisää"
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
           :add-btn-size     "small"
-          :key-fn           :url}]]])))
+          :key-fn           (fn [m] (apply str ((juxt :fi :se :en) m)))}]]])))
 
 
 (defn rules-dialog
@@ -630,7 +635,8 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers    [[:_filename (tr :general/name)]
+         {:key (str (count (vals @state)))
+          :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
           :read-only? false
           :items      (->> @state
@@ -659,12 +665,16 @@
                                                          :url       img-url})))
           :on-custom-hover-out (fn [_evt _item]
                                  (swap! popper-state assoc :open? false))
+
+          :on-user-sort (fn [items]
+                          (on-change (->> items
+                                          (mapv #(dissoc % :id)))))
           :add-tooltip         (tr :actions/add)
           :edit-tooltip        (tr :actions/edit)
           :delete-tooltip      (tr :actions/delete)
           :confirm-tooltip     (tr :confirm/press-again-to-delete)
           :add-btn-size        "small"
-          :key-fn              :url}]]])))
+          #_#_:key-fn              :url}]]])))
 
 (defn video-dialog
   [{:keys [tr label helper-text locale dialog-state on-save on-close]}]
@@ -743,7 +753,8 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers         [[:url "Linkki"]
+         {:key             (str (count (vals @state)))
+          :headers         [[:url "Linkki"]
                             [:_description "Kuvaus"][]]
           :read-only?      false
           :items           (->> @state
@@ -762,6 +773,11 @@
                              (on-change (->> @state
                                              vals
                                              (mapv #(dissoc % :id)))))
+
+          :on-user-sort (fn [items]
+                          (on-change (->> items
+                                          (mapv #(dissoc % :id)))))
+
           :add-tooltip     "Lisää"
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)
@@ -1233,4 +1249,14 @@
 
   (==> [:lipas.ui.map.events/show-sports-site 607314])
 
+
+  (def arr #js[1 2 3])
+  (.splice arr 1 0 "kissa")
+  arr
+  (map-indexed vector arr)
   )
+
+;; 1
+;; 2
+;; 3
+;; 4
