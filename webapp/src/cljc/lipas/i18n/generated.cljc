@@ -4,7 +4,21 @@
 
 (def dicts
   {:fi
-   {:newsletter
+   {:utp
+    {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
+     :add-contact          "Lisää yhteystieto"
+     :unit                 "yksikkö"
+     :highlight            "Kohokohta"
+     :add-highlight        "Lisää kohokohta"
+     :photo                "Valokuva"
+     :add-photo            "Lisää valokuva"
+     :video                "Video"
+     :add-video            "Lisää video"
+     :link                 "Linkki"
+     :length-km            "Pituus km"
+     :add-subroute         "Lisää osareitti"
+     :delete-route-prompt  "Haluatko varmasti poistaa tämän reitin?"}
+    :newsletter
     {:subscribe-short      "Tilaa"
      :subscribe            "Tilaa uutiskirje"
      :subscription-failed  "Uutiskirjeen tilaus epäonnistui. Yritä uudelleen."
@@ -518,8 +532,8 @@
     :map.resolve-address
     {:tooltip        "Selvitä osoite automaattisesti"
      :choose-address "Valitse osoite"
-     :helper-text1    "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella."
-     :helper-text2    "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK napin painamisen jälkeen."
+     :helper-text1   "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella."
+     :helper-text2   "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK napin painamisen jälkeen."
      :addresses      "Lähimmät osoitteet"}
     :ice-comparison     {:headline "Hallien vertailu"},
     :lipas.visitors
@@ -953,7 +967,65 @@
      :plate-heat-exchanger "Levysiirrin",
      :thermal-wheel        "Pyörivä"}},
    :se
-   {:sport
+   {:utp
+    {:read-only-disclaimer "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen."
+     :add-contact          "Lägg till kontaktuppgift"
+     :unit                 "enhet"
+     :highlight            "Höjdpunkt"
+     :add-highlight        "Lägg till höjdpunkt"
+     :photo                "Foto"
+     :add-photo            "Lägg till foto"
+     :video                "Video"
+     :add-video            "Lägg till video"
+     :link                 "Länk"
+     :length-km            "Längd km"
+     :add-subroute         "Lägg till delrutt"
+     :delete-route-prompt  "Är du säker på att du vill ta bort den här rutten?"}
+
+    :analysis
+    {:headline                   "Analysverktyg (beta)"
+     :description                "Med analysverktyget kan du utvärdera utbudet och tillgängligheten av motionsförhållanden genom att jämföra avståndet och restiderna till motionsplatser i förhållande till andra motionsplatser, befolkningen och läroanstalter."
+     :results                    "Resultat"
+     :mean                       "Medelvärde"
+     :population-weighted-mean   "Befolkningsvägd mångfaldighetsindex"
+     :median                     "Median"
+     :mode                       "Typvärde"
+     :reachability               "Tillgänglighet"
+     :categories                 "Kategorier"
+     :diversity                  "Mångfald"
+     :diversity-grid             "Resultatgrid"
+     :diversity-help1            "Med mångfaldsverktyget kan du utvärdera och jämföra mångfalden av motionsförhållanden i invånarnas närmiljö på rutnäts- och områdesnivå. Den mångfaldighetsindex som beräknas av mångfaldsverktyget beskriver hur mångfaldigt olika motionsaktivitetsmöjligheter invånaren kan nå inom den valda avståndet längs väg- och stignätet (förutsatt 800 m). Ju högre indexvärde, desto fler olika motionsplatser finns i invånarnas närmiljö."
+     :diversity-help2            "Verktyget använder indelning i postnummerområden som standard. Indelningen kan också göras utifrån annan befintlig områdesindelning genom att importera önskad geometrisk fil (Shapefile, GeoJSON eller KML)."
+     :diversity-help3            "Beräkningen görs per 250 x 250 m befolkningsrutor från Statistikcentralen. Områdesresultaten visar den genomsnittliga mångfalden av motionsförhållanden i invånarnas närmiljö (befolkningsvägd medeltal av mångfaldighetsindex). Beräkningsavståndet för mångfaldsverktyget baseras på vägnätsdata från OpenStreetMap och OSRM-verktyget."
+     :analysis-areas             "Analysområden"
+     :categories-help            "Motionsplatskategorier som tillhör samma kategori påverkar mångfaldighetsindexet endast en gång."
+     :description2               "Befolkningsdata används från Statistikcentralens 250x250m och 1x1km rutnätsdata, som visar befolkningsfördelningen i tre åldersgrupper (0-14, 15-65, 65-) i varje ruta."
+     :description3               "Beräkningen av restider med olika färdsätt (till fots, cykel, bil) baseras på öppna OpenStreetMap-data och OSRM-verktyget."
+     :description4               "Uppgifter om läroanstalters namn och plats baseras på öppna data från Statistikcentralen. Uppgifter om förskoleenheter baseras på data som samlats in och tillhandahållits av LIKES."
+     :add-new                    "Lägg till ny"
+     :distance                   "Avstånd"
+     :travel-time                "Restid"
+     :zones                      "Zoner"
+     :zone                       "Zon"
+     :schools                    "Skolor"
+     :daycare                    "Förskoleenhet"
+     :elementary-school          "Grundskola"
+     :high-school                "Gymnasium"
+     :elementary-and-high-school "Grund- och gymnasieskola"
+     :special-school             "Specialskola"
+     :population                 "Befolkning"
+     :direct                     "Fågelvägen"
+     :by-foot                    "Till fots"
+     :by-car                     "Med bil"
+     :by-bicycle                 "Med cykel"
+     :analysis-buffer            "Analysområde"
+     :filter-types               "Filtrera efter typ"
+     :settings                   "Inställningar"
+     :settings-map               "Objekt som visas på kartan"
+     :settings-zones             "Avstånd och restider"
+     :settings-help              "Analysområdet bestäms av den största avståndzonen. Restider beräknas heller inte utanför detta område."}
+
+    :sport
     {:description     "LIPAS är en landsomfattande databas för offentliga finländska idrottsplatser.",
      :headline        "Idrottsanläggningar",
      :open-interfaces "Öppna gränssnitt",
@@ -1714,30 +1786,63 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "Du har rättighet att uppdatera de här typerna:"},
     :heat-recovery-types {:thermal-wheel "Hjälp"}},
    :en
-   {:analysis
-    {:headline                   "Analysis tool (beta)"
+   {:utp
+    {:read-only-disclaimer "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol."
+     :add-contact          "Add contact information"
+     :unit                 "unit"
+     :highlight            "Highlight"
+     :add-highlight        "Add highlight"
+     :photo                "Photograph"
+     :add-photo            "Add photograph"
+     :video                "Video"
+     :add-video            "Add video"
+     :link                 "Link"
+     :length-km            "Length km"
+     :add-subroute         "Add sub-route"
+     :delete-route-prompt  "Are you sure you want to delete this route?"}
+    :analysis
+    {:headline                   "Analysis Tool (beta)"
+     :description                "The analysis tool can be used to evaluate the supply and accessibility of physical activity conditions by comparing the distance and travel times to physical activity facilities in relation to other facilities, population, and educational institutions."
+     :results                    "Results"
+     :mean                       "Mean"
+     :population-weighted-mean   "Population-weighted diversity index"
+     :median                     "Median"
+     :mode                       "Mode"
+     :reachability               "Reachability"
+     :categories                 "Categories"
+     :diversity                  "Diversity"
+     :diversity-grid             "Result grid"
+     :diversity-help1            "The diversity tool can be used to evaluate and compare the diversity of physical activity conditions in the residents' local environment at the grid and area level. The diversity index calculated by the diversity tool describes how diversely different physical activity opportunities the resident can reach within the selected distance along the road and path network (assuming 800 m). The higher the index value, the more diverse physical activity facilities are available in the residents' local environment."
+     :diversity-help2            "The tool uses a postal code-based area division by default. The division can also be made based on another existing area division by importing the desired geometry file (Shapefile, GeoJSON or KML)."
+     :diversity-help3            "The calculation is done per 250 x 250 m population grid from Statistics Finland. The area-level results indicate the average diversity of physical activity conditions in the residents' local environments (population-weighted average of the diversity index). The calculation distance of the diversity tool is based on the OpenStreetMap road network data and the OSRM tool."
+     :analysis-areas             "Analysis areas"
+     :categories-help            "Physical activity facility types belonging to the same category affect the diversity index only once."
+     :description2               "The population data used is from Statistics Finland's 250x250m and 1x1km grid data, which shows the population distribution in three age groups (0-14, 15-65, 65-) in each grid."
+     :description3               "The calculation of travel times by different modes of transport (walking, cycling, car) is based on open OpenStreetMap data and the OSRM tool."
+     :description4               "The name and location data of educational institutions is based on open data from Statistics Finland. The name and location data of early childhood education units is based on data collected and provided by LIKES."
      :add-new                    "Add new"
      :distance                   "Distance"
      :travel-time                "Travel time"
-     :zones                      "Baskets"
-     :zone                       "Basket"
+     :zones                      "Zones"
+     :zone                       "Zone"
      :schools                    "Schools"
-     :daycare                    "Early childhood education"
+     :daycare                    "Early childhood education unit"
      :elementary-school          "Elementary school"
      :high-school                "High school"
      :elementary-and-high-school "Elementary and high school"
-     :special-school             "Special education school"
-     :direct                     "Beeline"
-     :by-foot                    "By foot"
+     :special-school             "Special school"
+     :population                 "Population"
+     :direct                     "As the crow flies"
+     :by-foot                    "On foot"
      :by-car                     "By car"
      :by-bicycle                 "By bicycle"
-     :population                 "Population"
-     :analysis-buffer            "Analysis buffer"
+     :analysis-buffer            "Analysis area"
      :filter-types               "Filter by type"
      :settings                   "Settings"
-     :settings-map               "What's visible on map"
+     :settings-map               "Objects shown on the map"
      :settings-zones             "Distances and travel times"
-     :settings-help              "Note: analysis area will be determined by the maximum distance defined here. Travel times are not calculated outside the maximum distance."}
+     :settings-help              "The analysis area is determined by the largest distance zone. Travel times are also not calculated outside this area."}
+
     :sport
     {:description
      "LIPAS is the national database of sports facilities and their conditions in Finland.",

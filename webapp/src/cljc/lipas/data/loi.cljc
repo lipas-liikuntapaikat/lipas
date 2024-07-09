@@ -20,15 +20,23 @@
    {:schema localized-string-schema
     :field
     {:type        "textfield"
-     :description {:fi "Esim. \"Haltia pihan opastustaulu\""}
-     :label       {:fi "Kohteen nimi"}}}
+     :description {:fi "Esim. \"Haltia pihan opastustaulu\""
+                   :se "T.ex. \"Haltia gårds informationsstavla\""
+                   :en "E.g. \"Information board on Haltia yard\""}
+     :label       {:fi "Kohteen nimi"
+                   :se "Objektets namn"
+                   :en "Name of the object"}}}
 
    :description
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Rakenteen esittämiseen liittyvää tietoa."}
-     :label       {:fi "Yleiskuvaus"}}}
+     :description {:fi "Rakenteen esittämiseen liittyvää tietoa."
+                   :se "Information om presentationen av strukturen"
+                   :en "Information about the presentation of the structure"}
+     :label       {:fi "Yleiskuvaus"
+                   :se "Allmän beskrivning"
+                   :en "Overview"}}}
 
    :images
    {:schema [:sequential
@@ -38,8 +46,12 @@
               [:alt-text {:optional true} localized-string-schema]]]
     :field
     {:type        "images"
-     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."}
-     :label       {:fi "Valokuvat"}
+     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."
+                   :se "Lägg till foton som visar landskapet, naturen eller rekreationsförhållandena på platsen. Du kan bara lägga till bildfiler, inte URL-bildlänkar. Giltiga filformat är .jpg, .jpeg och .png. Se till att du har behörighet att lägga till bilden."
+                   :en "Add photographs depicting the landscapes, nature, or conditions of activity of the place. You can add only image files, not URL links. Allowed file extensions are .jpg, .jpeg and .png. Make sure that you have a permission to add the photographs."}
+     :label       {:fi "Valokuvat"
+                   :se "Fotografier"
+                   :en "Photographs"}
      :props
      {:url
       {:field
@@ -48,28 +60,44 @@
       :description
       {:field
        {:type        "textarea"
-        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."}
-        :label       {:fi "Kuvateksti"}}}
+        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."
+                      :se "Text som visas tillsammans med bilden om vad som visas i den."
+                      :en "Text to be displayed with the image about what is shown in it."}
+        :label       {:fi "Kuvateksti"
+                      :se "Bildtext"
+                      :en "Image description"}}}
       :alt-text
       {:field
        {:type        "textarea"
-        :description {:fi "Ruudunlukijan näkövammaisille kertoma teksti kuvassa esitettävistä asioista. Lue lisää: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
-        :label       {:fi "Alt-teksti"}}}}}}})
+        :description {:fi "Ruudunlukijan näkövammaisille kertoma teksti kuvassa esitettävistä asioista. Lue lisää: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"
+                      :se "Text som skärmläsaren berättar för synskadade om vad som visas i bilden. Läs mer: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"
+                      :en "Text that the screen reader tells visually impaired users about what is shown in the image. Read more: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
+        :label       {:fi "Alt-teksti"
+                      :se "Alt-text"
+                      :en "Alt text"}}}}}}})
 
 (def accessibility-props
   {:accessible?
    {:schema [:boolean]
     :field
     {:type        "checkbox"
-     :description {:fi "Onko kohde esteetön"}
-     :label       {:fi "Esteetön"}}}
+     :description {:fi "Onko kohde esteetön"
+                   :se "Är destinationen tillgänglig?"
+                   :en "Is the destination accessible?"}
+     :label       {:fi "Esteetön"
+                   :se "Tillgänglig"
+                   :en "Accessible"}}}
 
    :accessibility
    {:schema localized-string-schema
     :field
     {:type        "textarea"
-     :description {:fi "Yleistä tietoa kohteen esteettömyydestä"}
-     :label       {:fi "Esteettömyys"}}}})
+     :description {:fi "Yleistä tietoa kohteen esteettömyydestä"
+                   :se "Allmän information om platsens tillgänglighet"
+                   :en "General information about the accessibility of the place"}
+     :label       {:fi "Esteettömyys"
+                   :se "Tillgänglighet"
+                   :en "Accessibility"}}}})
 
 (def fire-props
   {:use-structure-during-fire-warning
@@ -77,62 +105,51 @@
     :field
     {:type        "checkbox"
      :label       {:fi "Rakenteen käyttö maastopalovaroituksen aikana"
-                   :en ""
-                   :se ""}
+                   :se "Användning av strukturen under en varning för terrängbrand"
+                   :en "Use of structure under a wildfire warning"}
      :description {:fi "Valitse kenttä, jos rakennetta on sallittua käyttää tulentekoon maastopalovaroituksen aikana"
-                   :se ""
-                   :en ""}}}})
+                   :se "Välj fältet om strukturen får användas för att göra upp eld under en varning för terrängsbrand."
+                   :en "Select the field if the structure can to be used for making a campfire during a wildfire warning."}}}})
 
 (def water-conditions-hazards
-  {"rapid"      {:fi "Koski"}
-   "open-water" {:fi "Avoin selkä"}})
+  {"rapid"      {:fi "Koski"
+                 :se "Fors"
+                 :en "Rapid"}
+   "open-water" {:fi "Avoin selkä"
+                 :se "Öppen sjö"
+                 :en "Open part of the lake"}})
 
 (def categories
   {"water-conditions"
    {:label {:fi "Vesiolosuhteet"}
     :types
     {:hazard
-     {:label {:fi "Vaaranpaikka"}
+     {:label {:fi "Vaaranpaikka" :se "Farlig plats" :en "Dangerous place"}
       :value "hazard"
-      :props common-props
-      #_     (merge
-              (select-keys common-props [:name])
-              {:hazard-type
-               {:schema (into [:enum] (keys water-conditions-hazards))
-                :field
-                {:type        "select"
-                 :label       {:fi "Tyyppi"}
-                 :description {:fi "Vaaranpaikan tyyppi"}
-                 :opts        water-conditions-hazards}}
-               :description
-               {:schema localized-string-schema
-                :field
-                {:type        "textarea"
-                 :label       {:fi "Kuvaus"}
-                 :description {:fi "Tekstimuotoinen kuvaus vaaranpaikasta"}}}})}
+      :props common-props}
 
      :landing-spot
-     {:label {:fi "Rantautumispaikka"}
+     {:label {:fi "Rantautumispaikka" :se "Landstigningsplats" :en "Landing spot"}
       :value "landing-spot"
       :props common-props}
 
      :rapid
-     {:label {:fi "Koski"}
+     {:label {:fi "Koski" :se "Fors" :en "Rapid"}
       :value "rapid"
       :props common-props}
 
      :open-water
-     {:label {:fi "Avoin selkä"}
+     {:label {:fi "Avoin selkä" :se "Öppen sjö" :en "Open part of the lake"}
       :value "open-water"
       :props common-props}
 
      :boat-lane
-     {:label {:fi "Veneväylä"}
+     {:label {:fi "Veneväylä" :se "Farled" :en "Boat lane"}
       :value "boat-lane"
       :props common-props}
 
      :whitewater-canoeing
-     {:label {:fi "Koskimelontakohde"}
+     {:label {:fi "Koskimelontakohde" :se "Forspaddlingsplats" :en "Rapid paddling site"}
       :value "whitewater-canoeing"
       :props common-props}}}
 
@@ -140,56 +157,56 @@
    {:label {:fi "Retkeily ja ulkoilurakenteet"}
     :types
     {:information-board
-     {:label {:fi "Infotaulu"}
+     {:label {:fi "Infotaulu" :se "Informationsstavla" :en "Information board"}
       :value "information-board"
       :props (merge
               common-props
               accessibility-props)}
 
      :parking-spot
-     {:label {:fi "Pysäköintipaikka"}
+     {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
       :value "parking-spot"
       :props (merge common-props accessibility-props)}
 
      :canopy
-     {:label {:fi "Katos"}
+     {:label {:fi "Katos" :se "Tak" :en "Canopy"}
       :value "canopy"
       :props (merge common-props accessibility-props)}
 
      :cooking-shelter
-     {:label {:fi "Keittokatos"}
+     {:label {:fi "Keittokatos" :se "Kokskjul" :en "Cooking shelter"}
       :value "cooking-shelter"
       :props
       (merge common-props accessibility-props fire-props)}
 
      :fire-pit
-     {:label {:fi "Tulentekopaikka"}
+     {:label {:fi "Tulentekopaikka" :se "Eldplats" :en "Fire pit"}
       :value "fire-pit"
       :props
       (merge common-props accessibility-props fire-props)}
 
      :rest-area
-     {:label {:fi "Taukopaikka"}
+     {:label {:fi "Taukopaikka" :se "Rastplats" :en "Rest area"}
       :value "rest-area"
       :props (merge common-props accessibility-props)}
 
      :woodshed
-     {:label {:fi "Puuvaja"}
+     {:label {:fi "Puuvaja" :se "Vedlider" :en "Woodshed"}
       :value "woodshed"
       :props (merge common-props accessibility-props)}
 
      :dry-toilet
-     {:label {:fi "Kuivakäymälä"}
+     {:label {:fi "Kuivakäymälä" :se "Torrkloset" :en "Dry toilet"}
       :value "dry-toilet"
       :props (merge common-props accessibility-props)}
 
      :wc
-     {:label {:fi "WC"}
+     {:label {:fi "WC" :se "WC" :en "Toilet"}
       :value "wc"
       :props (merge common-props accessibility-props)}
 
      :tent-site
-     {:label {:fi "Telttapaikka"}
+     {:label {:fi "Telttapaikka" :se "Tältplats" :en "Tent site"}
       :value "tent-site"
       :props (merge common-props accessibility-props)}
 
@@ -199,27 +216,27 @@
       :props (merge common-props)}
 
      :well
-     {:label {:fi "Kaivo" :en "Well"}
+     {:label {:fi "Kaivo" :se "Brunn" :en "Well"}
       :value "well"
       :props (merge common-props)}
 
      :water-source
-     {:label {:fi "Vesipiste" :en "Water source"}
+     {:label {:fi "Vesipiste" :en "Water source" :se "Tappställe"}
       :value "water-source"
       :props (merge common-props)}
 
      :viewpoint
-     {:label {:fi "Näköalapaikka" :en "Viewpoint"}
+     {:label {:fi "Näköalapaikka" :en "Viewpoint" :se "Utsiktspunkt"}
       :value "viewpoint"
       :props (merge common-props)}
 
      :viewing-platform
-     {:label {:fi "Näköalatasanne" :en "Viewing platform"}
+     {:label {:fi "Näköalatasanne" :en "Viewing platform" :se "Utsiktsterrass"}
       :value "viewing-platform"
       :props (merge common-props accessibility-props)}
 
      :refueling-point
-     {:label {:fi "Tankkauspiste" :en "Refueling point"}
+     {:label {:fi "Tankkauspiste" :en "Refueling point" :se "Tankningsplats"}
       :value "refueling-point"
       :props (merge common-props)}
 
@@ -362,16 +379,13 @@
      :bridge
      {:label {:fi "Silta" :en "Bridge" :se "Bro"}
       :value "bridge"
-      :props (merge common-props)}
-
-     }}
+      :props (merge common-props)}}}
 
    "natural-attractions-and-geo-objects"
-   {:label {:fi "Luonnonnähtävyydet / geokohteet"}
+   {:label {:fi "Luonnonnähtävyydet / geokohteet" :se "Natursevärdheter / Geologiska platser" :en "Natural Attractions / Geological sites"}
     :types
-
     {:geo-object
-     {:label {:fi "Geokohde" :en "Geographic object" :se ""}
+     {:label {:fi "Geokohde" :en "Geographic object" :se "Geologisk plats"}
       :value "geo-object"
       :props (merge common-props)}
 
@@ -381,19 +395,18 @@
       :props (merge common-props)}}}
 
    "protected-areas"
-   {:label {:fi "Käyttörajoitusalueet"}
+   {:label {:fi "Käyttörajoitusalueet" :se "Områden med begränsat tillträde" :en "Restricted areas"}
     :types
-
     {:nature-reserve
-     {:label     {:fi "Luonnonsuojelualue" :en "Nature reserve" :se "Naturreservat"}
+     {:label     {:fi "Luonnonsuojelualue" :se "Naturreservat" :en "Nature reserve"}
       :value     "nature-reserve"
       :geom-type "Polygon"
       :props     (merge common-props)}
 
      :other-area-with-movement-restrictions
      {:label     {:fi "Muu alue, jolla on liikkumisrajoituksia"
-                  :en "Other area with movement restrictions"
-                  :se "Annat område med rörelserestriktioner"}
+                  :se "Annat område med rörelserestriktioner"
+                  :en "Other area with movement restrictions"}
       :value     "other-area-with-movement-restrictions"
       :geom-type "Polygon"
       :props     (merge common-props)}}}})

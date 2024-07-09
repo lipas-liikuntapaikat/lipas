@@ -33,15 +33,13 @@
 (defn lang-selector
   [{:keys [locale]}]
   [mui/tabs
-   {:value          (name locale)
+   {:value           (name locale)
     :indicator-color "primary"
-    :text-color     "inherit"
-    :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
+    :text-color      "inherit"
+    :on-change       #(==> [:lipas.ui.events/set-translator (keyword %2)])}
    [mui/tab {:value "fi" :label "Suomi"}]
-   ;; :se and :en disabled in prod until we get translations
-   [mui/tab {:value "se" :label "Svenska" :disabled (utils/prod?)}]
-   [mui/tab {:value "en" :label "English":disabled (utils/prod?)}]])
-
+   [mui/tab {:value "se" :label "Svenska"}]
+   [mui/tab {:value "en" :label "English"}]])
 
 (defn checkbox
   [{:keys [read-only? label helper-text on-change value
@@ -85,9 +83,9 @@
      [:<>
       (for [item (if sort-fn (sort-by sort-fn items) items)]
         (let [[k _] item]
+          ^{:key k}
           [:<>
-           {:key k}
-           [mui/grid {:item true :xs 12}
+           [mui/grid {:item true :xs 12 :key k}
             [lui/checkbox
              {:label     (label-fn item)
               :value     (contains? vs k)
@@ -105,7 +103,7 @@
   [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
   (let [field-sorter (<== [::subs/field-sorter :default])]
     [lui/dialog
-     {:title         "Lisää yhteystieto"
+     {:title         (tr :utp/add-contact)
       :open?         (:open? @dialog-state)
       :on-save       on-save
       :on-close      #(swap! dialog-state assoc :open? false)
@@ -199,7 +197,7 @@
                               (set-field (->> @state
                                               vals
                                               (mapv #(dissoc % :id)))))
-          :add-tooltip      "Lisää"
+          :add-tooltip      (tr :actions/add)
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
@@ -243,49 +241,57 @@
          :value     (get-in value [prop-k locale])}]]])])
 
 (defn duration
-  [{:keys [tr locale label description set-field value]}]
-  [mui/form-control {:focused true}
-   [form-label {:label label}]
+  [{:keys [locale label description set-field value]}]
+  (let [tr (<== [:lipas.ui.subs/translator])]
+    [mui/form-control {:focused true}
+     [form-label {:label label}]
 
-   [mui/grid {:container true :spacing 2}
+     [mui/grid {:container true :spacing 2}
 
-    [mui/grid {:item true :xs 12}
-     [mui/typography {:variant "caption"} description]]
+      [mui/grid {:item true :xs 12}
+       [mui/typography {:variant "caption"} description]]
 
-    [mui/grid {:item true :xs 3}
-     [lui/text-field
-      {:type      "number"
-       :value     (:min value)
-       :label     "Min"
-       :on-change #(set-field :min %)}]]
+      [mui/grid {:item true :xs 3}
+       [lui/text-field
+        {:type      "number"
+         :value     (:min value)
+         :label     "Min"
+         :on-change #(set-field :min %)}]]
 
-    [mui/grid {:item true :xs 3}
-     [lui/text-field
-      {:type      "number"
-       :value     (:max value)
-       :label     "Max"
-       :on-change #(set-field :max %)}]]
+      [mui/grid {:item true :xs 3}
+       [lui/text-field
+        {:type      "number"
+         :value     (:max value)
+         :label     "Max"
+         :on-change #(set-field :max %)}]]
 
-    [mui/grid {:item true :xs 6}
-     [lui/select
-      {:items     [{:label "minuuttia" :value "minutes" :sort 1}
-                   {:label "tuntia" :value "hours" :sort 2}
-                   {:label "päivää" :value "days" :sort 3}]
-       :sort-fn   :sort
-       :style     {:min-width "170px"}
-       :value     (:unit value)
-       :label     "Yksikkö"
-       :on-change #(set-field :unit %)}]]]])
+      [mui/grid {:item true :xs 6}
+       [lui/select
+        {:items     [{:label {:fi "minuuttia" :se "minuter" :en "minutes"}
+                      :value "minutes"
+                      :sort  1}
+                     {:label {:fi "tuntia" :se "timmar" :en "hours"}
+                      :value "hours"
+                      :sort  2}
+                     {:label {:fi "päivää" :se "dagar" :en "days"}
+                      :value "days"
+                      :sort  3}]
+         :sort-fn   :sort
+         :label-fn  (comp locale :label)
+         :style     {:min-width "170px"}
+         :value     (:unit value)
+         :label     (tr :utp/unit)
+         :on-change #(set-field :unit %)}]]]]))
 
 (defn textlist-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id label description]}]
   [lui/dialog
-   {:title         "Lisää kohokohta"
+   {:title         (tr :utp/add-highlight)
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
     :save-enabled? true
-    :save-label    "Ok"
+    :save-label    "OK"
     :cancel-label  (tr :actions/cancel)}
 
    [mui/grid {:container true :spacing 2}
@@ -305,7 +311,7 @@
          :helper-text description
          :value       (-> @dialog-state :data locale)
          :on-change   #(swap! dialog-state assoc-in [:data locale] %)
-         :label       "Kohokohta"
+         :label       (tr :utp/highlight)
          :variant     "outlined"}]]]]])
 
 (defn textlist
@@ -346,13 +352,19 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:key              (str (count (vals @state)))
+         {:key              @state
           :headers          [[locale label]]
           :hide-header-row? true
           :read-only?       false
           :items            (->> @state vals)
-          :on-dnd-end       (fn [res]
-                              )
+          :on-dnd-end       (fn [items]
+                              (reset! state
+                                      (->> items
+                                           (map #(assoc % :id (gensym)))
+                                           (utils/index-by :id)))
+                              (set-field (->> @state
+                                              vals
+                                              (mapv #(dissoc % :id)))))
           :on-add           (fn []
                               (reset! dialog-state {:open? true
                                                     :mode  :add
@@ -366,14 +378,13 @@
                               (set-field (->> @state
                                               vals
                                               (mapv #(dissoc % :id)))))
-          :on-user-sort (fn [items]
-                          (set-field (mapv #(dissoc % :id) items)))
+          :on-user-sort     (fn [items]
+                              (set-field (mapv #(dissoc % :id) items)))
           :add-tooltip      "Lisää"
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
-          :add-btn-size     "small"
-          :key-fn           (fn [m] (apply str ((juxt :fi :se :en) m)))}]]])))
+          :add-btn-size     "small"}]]])))
 
 
 (defn rules-dialog
@@ -385,7 +396,7 @@
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
     :save-enabled? true
-    :save-label    "Ok"
+    :save-label    "OK"
     :cancel-label  (tr :actions/cancel)}
 
    [mui/grid {:container true :spacing 2}
@@ -460,7 +471,7 @@
          {:label       label
           :value       (:common-rules @state)
           :helper-text description
-          :sort-fn     (comp locale :label second )
+          :sort-fn     (comp locale :label second)
           :items       common-rules
           :label-fn    (comp locale :label second)
           :caption-fn  (comp locale :description second)
@@ -510,8 +521,8 @@
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
   [lui/dialog
    {:title         (if (-> @dialog-state :data :url)
-                     "Valokuva"
-                     "Lisää valokuva")
+                     (tr :utp/photo)
+                     (tr :utp/add-photo))
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -680,8 +691,8 @@
   [{:keys [tr label helper-text locale dialog-state on-save on-close]}]
   [lui/dialog
    {:title         (if (-> @dialog-state :data :url)
-                     "Video"
-                     "Lisää video")
+                     (tr :utp/video)
+                     (tr :utp/add-video))
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -709,7 +720,7 @@
       {:fullWidth true
        :value     (-> @dialog-state :data :description locale)
        :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
-       :label     "Kuvaus"
+       :label     (tr :general/description)
        :multiline true
        :rows      5
        :variant   "outlined"}]]]])
@@ -754,8 +765,8 @@
        [mui/grid {:item true :xs 12}
         [lui/form-table
          {:key             (str (count (vals @state)))
-          :headers         [[:url "Linkki"]
-                            [:_description "Kuvaus"][]]
+          :headers         [[:url (tr :utp/link)]
+                            [:_description (tr :general/description)][]]
           :read-only?      false
           :items           (->> @state
                                 vals
@@ -778,7 +789,7 @@
                           (on-change (->> items
                                           (mapv #(dissoc % :id)))))
 
-          :add-tooltip     "Lisää"
+          :add-tooltip     (tr :actions/add)
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)
           :confirm-tooltip (tr :confirm/press-again-to-delete)
@@ -864,8 +875,8 @@
              [form-label {:label label}]
              [lui/table
               {:headers
-               [[:_route-name "Nimi"]
-                [:route-length "Pituus (km)"]]
+               [[:_route-name (tr :general/name)]
+                [:route-length (tr :utp/length-km)]]
                :items          (->> routes
                                     (mapv (fn [m]
                                             (assoc m :_route-name (get-in m [:route-name locale])))))
@@ -889,7 +900,7 @@
                :on-click (fn []
                            (reset! route-form-state {})
                            (==> [::events/add-route lipas-id activity-k]))}
-              "Lisää osareitti"]])])
+              (tr :utp/add-subroute)]])])
 
        (when (and editing? (= :add-route mode))
          [:<>
@@ -938,7 +949,7 @@
             [mui/button
              {:variant  "contained"
               :on-click #(==> [:lipas.ui.events/confirm
-                               "Haluatko varmasti poistaa tämän reitin?"
+                               (tr :utp/delete-route-prompt)
                                (fn []
                                  (==> [::events/delete-route lipas-id activity-k selected-route-id]))])}
              (tr :actions/delete)]]
@@ -1194,7 +1205,7 @@
                          (get activities :props))]
 
     (if read-only?
-      [mui/typography "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."]
+      [mui/typography (tr :utp/read-only-disclaimer)]
 
       [:<>
 
@@ -1248,15 +1259,4 @@
     (==> [:lipas.ui.map.events/set-center 6919553.618920735 445619.43358133035]))
 
   (==> [:lipas.ui.map.events/show-sports-site 607314])
-
-
-  (def arr #js[1 2 3])
-  (.splice arr 1 0 "kissa")
-  arr
-  (map-indexed vector arr)
   )
-
-;; 1
-;; 2
-;; 3
-;; 4
