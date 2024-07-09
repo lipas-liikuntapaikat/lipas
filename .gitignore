@@ -30,3 +30,5 @@ webapp/.lsp
 webapp/out
 webapp/.shadow-cljs
 webapp/.lein-repl-history
+
+elasticsearch/backups

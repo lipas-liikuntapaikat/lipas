@@ -319,6 +319,9 @@ services:
       - "ES_JAVA_OPTS=${ES_JAVA_OPTS}"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
+      - "./elasticsearch/backups:/mount/backups:z"
+      - "./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:z"
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.12.0
