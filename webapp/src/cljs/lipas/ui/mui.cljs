@@ -49,6 +49,7 @@
    ["@mui/material/Slider$default" :as Slider]
    ["@mui/material/Snackbar$default" :as Snackbar]
    ["@mui/material/SnackbarContent$default" :as SnackbarContent]
+   ["@mui/material/Stack$default" :as Stack]
    ["@mui/material/Step$default" :as Step]
    ["@mui/material/StepContent$default" :as StepContent]
    ["@mui/material/StepLabel$default" :as StepLabel]
@@ -252,6 +253,7 @@
 (def slider (r/adapt-react-class Slider))
 (def snackbar (r/adapt-react-class Snackbar))
 (def snackbar-content (r/adapt-react-class SnackbarContent))
+(def stack (r/adapt-react-class Stack))
 (def step (r/adapt-react-class Step))
 (def step-content (r/adapt-react-class StepContent))
 (def step-label (r/adapt-react-class StepLabel))
