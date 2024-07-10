@@ -1,16 +1,17 @@
 (ns lipas.ui.sports-sites.activities.views
   (:require
    [clojure.pprint :as pprint]
+   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.buttons :as lui-btn]
    [lipas.ui.config :as config]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.activities.events :as events]
    [lipas.ui.sports-sites.activities.subs :as subs]
    [lipas.ui.sports-sites.views :as sports-site-views]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]
-   [clojure.spec.alpha :as s]))
+   [reagent.core :as r]))
 
 (declare make-field)
 
@@ -65,8 +66,9 @@
 
 (defn checkboxes
   [{:keys [read-only? items label helper-text label-fn value-fn
-           on-change value sort-fn caption-fn]
-    :or   {value-fn identity}}]
+           on-change value sort-fn caption-fn component]
+    :or   {value-fn  identity
+           component lui/switch}}]
   (let [vs (set value)]
     [mui/grid {:container true :spacing 2}
 
@@ -86,7 +88,7 @@
           ^{:key k}
           [:<>
            [mui/grid {:item true :xs 12 :key k}
-            [lui/checkbox
+            [component
              {:label     (label-fn item)
               :value     (contains? vs k)
               :disabled  read-only?
@@ -386,47 +388,6 @@
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
           :add-btn-size     "small"}]]])))
 
-
-(defn rules-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id label
-           description common-rules]}]
-  [lui/dialog
-   {:title         (str (tr :actions/add) " " label)
-    :open?         (:open? @dialog-state)
-    :on-save       on-save
-    :on-close      #(swap! dialog-state assoc :open? false)
-    :save-enabled? true
-    :save-label    "OK"
-    :cancel-label  (tr :actions/cancel)}
-
-   [mui/grid {:container true :spacing 2}
-    [mui/grid {:item true :xs 12}
-     [lang-selector {:locale locale}]]
-
-    [mui/grid {:item true :xs 12}
-     [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-      [mui/typography description]]]
-
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:fullWidth   true
-       :required    true
-       #_#_:helper-text description
-       :value       (-> @dialog-state :data :label locale)
-       :on-change   #(swap! dialog-state assoc-in [:data :label locale] %)
-       :label       (tr :general/headline)
-       :variant     "outlined"}]]
-
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:fullWidth   true
-       :required    true
-       #_#_:helper-text description
-       :value       (-> @dialog-state :data :description locale)
-       :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
-       :label       (tr :general/description)
-       :variant     "outlined"}]]]])
-
 (defn rules
   [{:keys [locale label description set-field value common-rules]}]
   (r/with-let [state (r/atom {:common-rules    (:common-rules value)
@@ -442,24 +403,92 @@
 
       ;; Dialog
       [mui/grid {:container true :spacing 2}
-       [rules-dialog
-        {:tr           tr
-         :locale       locale
-         :label        label
-         :description  description
-         :dialog-state dialog-state
-         :on-save      (fn []
-                         (let [data (:data @dialog-state)]
-                           (swap! state (fn [state]
-                                          (-> state
-                                              (assoc-in [:custom-rules (:value data)] data)
-                                              (update :custom-rules-vs conj (:value data)))))
+       [lui/dialog
+        {:title   label
+         :open?   (:open? @dialog-state)
+         :on-save (fn []
+                    (let [data (:data @dialog-state)
+                          vs   (map :value (vals data))]
 
-                           (set-field :custom-rules (-> @state
-                                                        :custom-rules
-                                                        (select-keys (:custom-rules-vs @state))
-                                                        vals)))
-                         (reset! dialog-state dialog-init-state))}]
+                      ;; Update local state
+                      (swap! state (fn [curr]
+                                     (-> curr
+                                         (assoc :custom-rules data)
+                                         (assoc :custom-rules-vs vs))))
+
+                      ;; Update app-db state
+                      (set-field :custom-rules (vals data))
+
+                      ;; Close the dialog
+                      (swap! dialog-state assoc :open? false)))
+
+         :on-close      #(swap! dialog-state assoc :open? false)
+         :save-enabled? true
+         :save-label    "OK"
+         :cancel-label  (tr :actions/cancel)}
+
+        [mui/grid {:container true :spacing 2}
+
+         ;; Lang selector
+         [mui/grid {:item true :xs 12}
+          [lang-selector {:locale locale}]]
+
+         ;; Halper text
+         [mui/grid {:item true :xs 12}
+          [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
+              [mui/typography description]]]
+
+         (doall
+          (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
+            ^{:key k}
+            [:<>
+             [mui/grid {:item true :xs 12}
+              [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
+
+             ;; Label
+             [mui/grid {:item true :xs 12}
+              [lui/text-field
+               {:fullWidth       true
+                :required        true
+                #_#_:helper-text description
+                :value           (-> @dialog-state :data (get k) :label locale)
+                :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
+                :label           (tr :general/headline)
+                :variant         "outlined"}]]
+
+             ;; Description
+             [mui/grid {:item true :xs 12}
+              [lui/text-field
+               {:fullWidth       true
+                :required        true
+                #_#_:helper-text description
+                :value           (-> @dialog-state :data (get k) :description locale)
+                :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
+                :label           (tr :general/description)
+                :variant         "outlined"}]]
+
+             ;; Delete btn
+             [mui/grid {:item true :style {:text-align "right"}}
+              [lui-btn/confirming-delete-button
+               {:tooltip         (tr :actions/delete)
+                :confirm-tooltip (tr :confirm/press-again-to-delete)
+                :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
+
+             [mui/grid {:item true :xs 12}
+              [mui/divider]]]))
+
+         ;; Add / edit btn
+         [mui/grid {:item true :xs 12}
+          [mui/grid {:container true :justify-content "flex-end" :align-items "center"}
+           [mui/grid {:item true}
+            [mui/tooltip {:title (tr :actions/add) :placement "right"}
+             [mui/fab
+              {:on-click (fn []
+                           (let [id (str (random-uuid))]
+                             (swap! dialog-state assoc-in [:data id] {:value id})))
+               :size     "small"
+               :color    "secondary"}
+              [mui/icon "add"]]]]]]]]
 
        ;; ;; Label
        ;; [mui/grid {:item true :xs 12}
@@ -480,10 +509,15 @@
                          (swap! state assoc :common-rules vs)
                          (set-field :common-rules vs))}]]
 
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "subtitle2"} "Omat säännöt"]
+        #_[mui/divider
+           [mui/chip {:size "small" :label "Omat säännöt"}]]]
+
        ;; Custom rules
        [mui/grid {:item true :xs 12}
         [checkboxes
-         {:label nil
+         {:label           nil
           :value           (:custom-rules-vs @state)
           #_#_:helper-text description
           :sort-fn         (comp locale :label second)
@@ -497,25 +531,27 @@
                                                           :custom-rules
                                                           (select-keys vs)
                                                           vals)))}]]
-
-       ;; Add custom rule btn
+       ;; Add / modify custom rules btn
        [mui/grid
         {:item       true
          :xs         12
          :style      {:text-align "right"}
          :class-name :no-print}
-        [mui/tooltip {:title (tr :actions/add) :placement "left"}
+        [mui/tooltip {:title     (if (seq (:custom-rules @state))
+                                   (tr :actions/edit)
+                                   (tr :actions/add))
+                      :placement "left"}
          [mui/fab
           {:style    {:margin-top "1em"}
            :on-click (fn []
                        (reset! dialog-state {:open? true
                                              :mode  :add
-                                             :data  {:value (str (random-uuid))}}))
+                                             :data  (:custom-rules @state)}))
            :size     "small"
            :color    "secondary"}
-          [mui/icon "add"]]]]
-
-       ])))
+          [mui/icon (if (seq (:custom-rules @state))
+                      "edit"
+                      "add")]]]]])))
 
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
