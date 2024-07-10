@@ -43,7 +43,8 @@
              [:map
               [:url [:string]]
               [:description {:optional true} localized-string-schema]
-              [:alt-text {:optional true} localized-string-schema]]]
+              [:alt-text {:optional true} localized-string-schema]
+              [:copyright {:optional true} localized-string-schema]]]
     :field
     {:type        "images"
      :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."
@@ -74,7 +75,17 @@
                       :en "Text that the screen reader tells visually impaired users about what is shown in the image. Read more: https://www.saavutettavasti.fi/kuva-ja-aani/kuvat/"}
         :label       {:fi "Alt-teksti"
                       :se "Alt-text"
-                      :en "Alt text"}}}}}}})
+                      :en "Alt text"}}}
+
+      :copyright
+      {:field
+       {:type        "textarea"
+        :description {:fi "Syötä kuvan ottaja, kuvan lähde, mahdollinen lisenssi sekä päivämäärä, jos tiedossa."
+                      :se "Ange fotografens namn, bildkälla, eventuell licens och datum om det är känt."
+                      :en "Enter the photographer, image source, possible license, and date if known."}
+        :label       {:fi "Tekijänoikeustiedot"
+                      :se "Upphovsrättsinformation"
+                      :en "Copyright information"}}}}}}})
 
 (def accessibility-props
   {:accessible?

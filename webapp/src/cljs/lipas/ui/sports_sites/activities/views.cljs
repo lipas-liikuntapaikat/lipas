@@ -567,6 +567,7 @@
         {:style {:max-width "100%"}
          :src   url}])]
 
+    ;; Description
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth   true
@@ -579,6 +580,7 @@
        :rows        5
        :variant     "outlined"}]]
 
+    ;; Alt-text
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth   true
@@ -591,7 +593,18 @@
        :rows        5
        :variant     "outlined"}]]
 
-    ]])
+    ;; Copyright
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :copyright locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :copyright locale] %)
+       :label       (get-in image-props [:copyright :field :label locale])
+       :helper-text (get-in image-props [:copyright :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]]])
 
 (defn images
   [{:keys [value on-change locale label helper-text tr read-only? lipas-id image-props]}]
