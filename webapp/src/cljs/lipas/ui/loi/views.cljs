@@ -76,6 +76,7 @@
          :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
          :label     "Url"}]]
 
+    ;; Description
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth   true
@@ -88,6 +89,7 @@
        :rows        5
        :variant     "outlined"}]]
 
+    ;; Alt text
     [mui/grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth   true
@@ -96,6 +98,19 @@
        :on-change   #(swap! dialog-state assoc-in [:data :alt-text locale] %)
        :label       (get-in image-props [:alt-text :field :label locale])
        :helper-text (get-in image-props [:alt-text :field :description locale])
+       :multiline   true
+       :rows        5
+       :variant     "outlined"}]]
+
+    ;; Copyright
+    [mui/grid {:item true :xs 12}
+     [lui/text-field
+      {:fullWidth   true
+       :required    true
+       :value       (-> @dialog-state :data :copyright locale)
+       :on-change   #(swap! dialog-state assoc-in [:data :copyright locale] %)
+       :label       (get-in image-props [:copyright :field :label locale])
+       :helper-text (get-in image-props [:copyright :field :description locale])
        :multiline   true
        :rows        5
        :variant     "outlined"}]]]])
@@ -136,7 +151,7 @@
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
          :disabblePortal false
-         :modifiers      [{:name "offset"
+         :modifiers      [{:name    "offset"
                            :options {:offset [0 20]}}]}
         [:img
          {:style {:max-width "400px"}
@@ -149,7 +164,8 @@
        ;; Table
        [mui/grid {:item true :xs 12}
         [lui/form-table
-         {:headers    [[:_filename (tr :general/name)]
+         {:key        (str (count (vals @state)))
+          :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
           :read-only? read-only?
           :items      (->> @state
@@ -170,6 +186,10 @@
                                         vals
                                         (mapv #(dissoc % :id)))))
 
+          :on-user-sort (fn [items]
+                          (on-change (->> items
+                                          (mapv #(dissoc % :id)))))
+
           :on-custom-hover-in (fn [evt item]
                                 (let [img-url (get-in item [:cms :public-urls :medium]
                                                       (:url item))]
@@ -184,8 +204,7 @@
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)
           :confirm-tooltip (tr :confirm/press-again-to-delete)
-          :add-btn-size    "small"
-          :key-fn          :url}]]])))
+          :add-btn-size    "small"}]]])))
 
 (defn form
   [{:keys [tr locale read-only? view-mode]}]
