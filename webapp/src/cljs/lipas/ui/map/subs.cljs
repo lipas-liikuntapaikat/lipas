@@ -44,6 +44,12 @@
    (:basemap m)))
 
 (re-frame/reg-sub
+ ::basemap-opacity
+ :<- [::basemap]
+ (fn [m _]
+   (:opacity m)))
+
+(re-frame/reg-sub
  ::selected-overlays
  :<- [::map]
  (fn [m _]

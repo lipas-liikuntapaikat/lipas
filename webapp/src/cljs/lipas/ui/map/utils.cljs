@@ -266,9 +266,10 @@
     (assoc map-ctx :lois geoms)))
 
 (defn set-basemap!
-  [{:keys [layers] :as map-ctx} basemap]
+  [{:keys [layers] :as map-ctx} {:keys [opacity layer] :as _basemap}]
   (doseq [[k ^js v] (:basemaps layers)
-          :let      [visible? (= k basemap)]]
+          :let      [visible? (= k layer)]]
+    (.setOpacity v opacity)
     (.setVisible v visible?))
   map-ctx)
 

@@ -63,6 +63,7 @@
            matrix-ids  mml-matrix-ids}}]
   (TileLayer.
    #js{:visible       visible?
+       :opacity       1.0
        :minResolution min-res
        :maxResolution max-res
        :source

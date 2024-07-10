@@ -5,7 +5,8 @@
    :center                       {:lon 435047 :lat 7201408}
    :zoom                         2
    :mode                         {:name :default}
-   :basemap                      :taustakartta
+   :basemap                      {:layer   :taustakartta
+                                  :opacity 1.0}
    :selected-overlays            #{:vectors
                                    :lois
                                    :edits
