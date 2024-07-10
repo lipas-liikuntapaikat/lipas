@@ -116,7 +116,12 @@
 (re-frame/reg-event-db
  ::select-basemap
  (fn [db [_ basemap]]
-   (assoc-in db [:map :basemap] basemap)))
+   (assoc-in db [:map :basemap :layer] basemap)))
+
+(re-frame/reg-event-db
+ ::set-basemap-opacity
+ (fn [db [_ opacity]]
+   (assoc-in db [:map :basemap :opacity] opacity)))
 
 (re-frame/reg-event-db
  ::toggle-overlay

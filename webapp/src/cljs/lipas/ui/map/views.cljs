@@ -146,7 +146,7 @@
      [mui/grid {:item true}
       [lui/select
        {:items     basemaps
-        :value     basemap
+        :value     (:layer basemap)
         :label-fn  second
         :value-fn  first
         :on-change #(==> [::events/select-basemap %])}]]
@@ -190,9 +190,11 @@
        (into
 
         [mui/menu
-         {:open      (boolean @anchor-el)
-          :anchor-el @anchor-el
-          :on-close  #(reset! anchor-el nil)}]
+         {:open            (boolean @anchor-el)
+          :anchorEl       @anchor-el
+          :anchorOrigin    {:vertical "top" :horizontal "left"}
+          :transformOrigin {:vertical "bottom" :horizontal "left"}
+          :on-close        #(reset! anchor-el nil)}]
 
         (for [[k {:keys [label label2 icon]}] overlays
               :let                            [v (contains? selected-overlays k)]]
@@ -216,9 +218,44 @@
        [mui/grid {:item true}
         [mui/tooltip {:title (tr :map.overlay/tooltip)}
          [mui/icon-button
-          {:on-click
-           (fn [evt] (reset! anchor-el (.-currentTarget evt)))}
+          {:color (if @anchor-el "secondary" "default")
+           :on-click
+           (fn [evt] (reset! anchor-el (if @anchor-el nil (.-currentTarget evt))))}
           [mui/icon "layers"]]]]])))
+
+(defn basemap-transparency-selector
+  [{:keys [tr]}]
+  (r/with-let [anchor-el (r/atom nil)]
+    (let [opacity (<== [::subs/basemap-opacity])]
+      [:<>
+       [mui/popper
+        {:id        "basemap-transparency-selector"
+         :placement "top"
+         :open      (some? @anchor-el)
+         :anchorEl  @anchor-el}
+        [mui/paper
+         {:style
+          {:width          "200px"
+           :padding-right  "2em"
+           :padding-left   "2em"
+           :padding-top    "0.5em"
+           :padding-bottom "0.5em"
+           :margin-bottom  "1em"}}
+         #_[mui/typography {:variant "caption"} (tr :map.basemap/transparency)]
+         [mui/slider
+          {:size      "small"
+           :value     (- 1 opacity)
+           :on-change #(==> [::events/set-basemap-opacity (- 1 %2)])
+           :marks     [{:value 0 :label "0%"}
+                       {:value 1 :label "100%"}]
+           :step      0.05
+           :min       0.0
+           :max       1.0}]]]
+       [mui/tooltip {:title (tr :map.basemap/transparency)}
+        [mui/icon-button
+         {:on-click (fn [evt]
+                      (reset! anchor-el (if @anchor-el nil (.-currentTarget evt))))}
+         [mui/icon {:color (if @anchor-el "secondary" "default")} "opacity"]]]])))
 
 (defn user-location-btn
   [{:keys [tr]}]
@@ -226,14 +263,6 @@
    [mui/icon-button {:on-click #(==> [::events/zoom-to-users-position])}
     [mui/icon {:color "inherit" :font-size "medium"}
      "my_location"]]])
-
-(defn helper-select-onclick [type-code geom-help-open?]
-  (reset! geom-help-open? false)
-  (==> [::sports-site-events/select-new-site-type type-code]))
-
-
-(defn helper-row [{:keys [type geom description on-select]}]
-  )
 
 (defn filter-by-term [term table-data]
   (let [lower-case-term (string/lower-case term)]
@@ -1802,7 +1831,12 @@
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [overlay-selector {:tr tr}]]]
 
-       ;; Base Layer switcher
+       ;; Basemap opacity selector
+       [mui/grid2
+        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+         [basemap-transparency-selector {:tr tr}]]]
+
+       ;; Basemap switcher
        [mui/grid2
         [mui/paper
          {:elevation 1

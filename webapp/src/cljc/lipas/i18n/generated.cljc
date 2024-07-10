@@ -562,7 +562,8 @@
     {:copyright    "© Maanmittauslaitos",
      :maastokartta "Maastokartta",
      :ortokuva     "Ilmakuva",
-     :taustakartta "Taustakartta"},
+     :taustakartta "Taustakartta"
+     :transparency "Taustakartan läpinäkyvyys"},
     :map.overlay
     {:tooltip                       "Muut karttatasot"
      :mml-kiinteisto                "Kiinteistörajat"
@@ -1421,7 +1422,8 @@
     {:copyright    "© Lantmäteriverket",
      :maastokartta "Terrängkarta",
      :ortokuva     "Flygfoto",
-     :taustakartta "Bakgrundskarta"},
+     :taustakartta "Bakgrundskarta"
+     :transparency "Bakgrundskartans genomskinlighet"},
     :lipas.swimming-pool.pools
     {:add-pool  "Lägg till en bassäng",
      :edit-pool "Redigera bassängen",
@@ -2316,7 +2318,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     {:copyright    "© National Land Survey",
      :maastokartta "Terrain",
      :ortokuva     "Satellite",
-     :taustakartta "Default"},
+     :taustakartta "Default"
+     :transparency "Basemap transparency"},
     :map.overlay
     {:tooltip                       "Other layers"
      :mml-kiinteisto                "Property boundaries"
