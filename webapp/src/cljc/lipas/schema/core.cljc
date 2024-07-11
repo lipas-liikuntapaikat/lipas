@@ -338,6 +338,15 @@
                                                           :NaN? false
                                                           :infinite? false))
 
+(s/def :lipas.location.coordinates/map-wgs84-bounds-lat (double-in :min 32.88
+                                                                   :max 84.73
+                                                                   :NaN? false
+                                                                   :infinite? false))
+(s/def :lipas.location.coordinates/map-wgs84-bounds-lon (double-in :min 16.1
+                                                                   :max 40.18
+                                                                   :NaN? false
+                                                                   :infinite? false))
+
 ;; Northing
 (s/def :lipas.location.coordinates/lat-euref (int-in -548576 1548576))
 ;; Easting

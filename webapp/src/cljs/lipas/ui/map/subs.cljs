@@ -283,21 +283,34 @@
 ;; Import geoms ;;
 
 (re-frame/reg-sub
- ::import-dialog-open?
+ ::import
  :<- [::map]
  (fn [m _]
-   (-> m :import :dialog-open?)))
+   (:import m)))
+
+(re-frame/reg-sub
+ ::import-dialog-open?
+ :<- [::import]
+ (fn [m _]
+   (:dialog-open? m)))
 
 (re-frame/reg-sub
  ::selected-import-file-encoding
- :<- [::map]
+ :<- [::import]
  (fn [m _]
-   (-> m :import :selected-encoding)))
+   (:selected-encoding m)))
+
+(re-frame/reg-sub
+ ::import-error
+ :<- [::import]
+ (fn [m _]
+   (:error m)))
 
 (re-frame/reg-sub
  ::import-data
- (fn [db _]
-   (-> db :map :import :data)))
+ :<- [::import]
+ (fn [m _]
+   (:data m)))
 
 (re-frame/reg-sub
  ::import-candidates

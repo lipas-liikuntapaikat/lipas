@@ -3,17 +3,18 @@
   necessary side-effects to take effect.`"
   (:require
    ["@mapbox/togeojson" :as toGeoJSON]
+   ["@turf/area$default" :as turf-area]
    ["@turf/buffer$default" :as turf-buffer]
    ["@turf/clean-coords$default" :as turf-clean-coords]
    ["@turf/combine$default" :as turf-combine]
    ["@turf/helpers" :refer [point convertArea]]
    ["@turf/kinks$default" :as turf-kinks]
    ["@turf/length$default" :as turf-length]
-   ["@turf/area$default" :as turf-area]
    ["@turf/line-split$default" :as turf-line-split]
+   ["@turf/meta" :as turf-meta]
    ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
-   ["@turf/truncate$default" :as turf-truncate]
    ["@turf/simplify$default" :as turf-simplify]
+   ["@turf/truncate$default" :as turf-truncate]
    ["ol/Feature$default" :as Feature]
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
@@ -24,13 +25,15 @@
    ["ol/proj" :as proj]
    ["shpjs" :as shp]
    [clojure.reader :refer [read-string]]
+   [clojure.spec.alpha :as spec]
    [clojure.string :as string]
    [goog.array :as garray]
    [goog.object :as gobj]
    [goog.string.path :as gpath]
    [lipas.ui.map.projection] ;; Loaded for side-effects
    [lipas.ui.map.styles :as styles]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [clojure.spec.alpha :as s]))
 
 (def geoJSON (GeoJSON. #js{:dataProjection    "EPSG:4326"
                            :featureProjection "EPSG:3067"}))
@@ -62,6 +65,13 @@
 (defn ->geom-coll [fcoll]
   {:type "GeometryCollection"
    :geometries (->> fcoll :features (map :geometry))})
+
+(defn every-coord-in-wgs84-finland-bounds?
+  [js-fcoll]
+  (every? (fn [[lon lat]]
+            (and (s/valid? :lipas.location.coordinates/map-wgs84-bounds-lon lon)
+                 (s/valid? :lipas.location.coordinates/map-wgs84-bounds-lat lat)))
+          (turf-meta/coordAll js-fcoll)))
 
 (defn parse-dom [text]
   (let [parser (js/DOMParser.)]
@@ -1085,7 +1095,6 @@
 ;;        [25.74586650741268 62.60877169751404]]},
 ;;      :properties nil,
 ;;      :id "temp15"}]})
-
 
 ;; (merge-linestrings easy)
 ;; (merge-linestrings easy2)
