@@ -526,29 +526,38 @@
  (fn [db [_ encoding]]
    (assoc-in db [:map :import :selected-encoding] encoding)))
 
+;; Especially GPX tracks are way to dense so we simplify all geoms
+;; by default.
+(defn process-imports
+  [geoJSON geom-type]
+  (let [fcoll (-> geoJSON
+                  (turf-simplify #js{:mutate      true
+                                     :tolerance   (map-utils/simplify-scale 3)
+                                     :highQuality true})
+                  (js->clj :keywordize-keys true))]
+    (->> fcoll
+         :features
+         (filter (comp #{geom-type} :type :geometry))
+         (reduce
+          (fn [res f]
+            (let [id (str (gensym))]
+              (assoc res id (assoc-in f [:properties :id] id))))
+          {})
+         (merge (map-utils/normalize-geom-colls fcoll geom-type)
+                (map-utils/normalize-multi-geoms fcoll geom-type)))))
+
 (re-frame/reg-event-db
  ::set-import-candidates
  (fn [db [_ geoJSON geom-type]]
-   ;; Especially GPX tracks are way to dense so we simplify all geoms
-   ;; by default.
-   (let [fcoll (-> geoJSON
-                   (turf-simplify #js{:mutate      true
-                                      :tolerance   (map-utils/simplify-scale 3)
-                                      :highQuality true})
-                   (js->clj :keywordize-keys true))
-         fs    (->> fcoll
-                    :features
-                    (filter (comp #{geom-type} :type :geometry))
-                    (reduce
-                     (fn [res f]
-                       (let [id (str (gensym))]
-                         (assoc res id (assoc-in f [:properties :id] id))))
-                     {})
-                    (merge (map-utils/normalize-geom-colls fcoll geom-type)
-                           (map-utils/normalize-multi-geoms fcoll geom-type)))]
-     (-> db
-         (assoc-in [:map :import :data] fs)
-         (assoc-in [:map :import :batch-id] (str (gensym)))))))
+   (try
+     (let [valid? (map-utils/every-coord-in-wgs84-finland-bounds? geoJSON)]
+       (if valid?
+         (-> db
+             (assoc-in [:map :import :data] (process-imports geoJSON geom-type))
+             (assoc-in [:map :import :batch-id] (str (gensym))))
+         (assoc-in db [:map :import :error] {:type :coords-not-in-finland-wgs84-bounds})))
+     (catch js/Error e
+       (assoc-in db [:map :import :error] {:type :unknown-error :error e})))))
 
 (re-frame/reg-event-fx
  ::load-geoms-from-file
@@ -564,7 +573,10 @@
                        [:lipas.ui.events/set-active-notification
                         {:message  (tr :map.import/unknown-format ext)
                          :success? false}])]}
-       {}))))
+       {:db (-> db
+                (assoc-in [:map :import :data] nil)
+                (assoc-in [:map :import :batch-id] nil)
+                (assoc-in [:map :import :error] nil))}))))
 
 (re-frame/reg-event-db
  ::select-import-items

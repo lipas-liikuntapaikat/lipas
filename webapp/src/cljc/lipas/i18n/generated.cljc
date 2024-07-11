@@ -633,7 +633,13 @@
      "Tuo .shp-, .dbf- ja .prj-tiedostot pakattuna .zip-muotoon.",
      :import-selected   "Tuo valitut",
      :tooltip           "Tuo geometriat tiedostosta",
-     :unknown-format    "Tuntematon tiedostopääte '{1}'"},
+     :unknown-format    "Tuntematon tiedostopääte '{1}'"
+     :unknown-error     "Odottamaton virhe tapahtui. Yritä toisella tiedostolla."
+     :no-geoms-of-type  "Annettu tiedosto ei sisällä {1} geometrioita."
+
+     :coords-not-in-finland-wgs84-bounds "Annettu tiedosto ei sisällä koordinaatteja WGS84 (EPSG:4326) koordinaatistossa. Tarkista että lähtöaineisto on oikeassa koordinaattijärjestelmässä."
+
+     },
     :error
     {:email-conflict    "Sähköpostiosoite on jo käytössä",
      :email-not-found   "Sähköpostiosoitetta ei ole rekisteröity.",
@@ -926,7 +932,7 @@
      :headline          "Vedenkäsittely",
      :ozonation?        "Otsonointi",
      :uv-treatment?     "UV-käsittely"},
-    :statuses           {:edited "{1} (muokattu)"},
+    :statuses {:edited "{1} (muokattu)"},
     :lipas.user
     {:email                     "Sähköposti",
      :permissions               "Käyttöoikeudet",
@@ -1098,7 +1104,7 @@
     {:description
      "LIPAS-system innehåller information av idrottsanläggningar, idrottsrutter och friluftsregioner. Data är öppen CC4.0 International.",
      :headline "Startsida"},
-    :ice-energy          {:finhockey-link "El", :headline "Bensin"},
+    :ice-energy         {:finhockey-link "El", :headline "Bensin"},
     :filtering-methods
     {:activated-carbon    "Kol",
      :coal                "Kol",
@@ -1127,7 +1133,7 @@
      :cold-pool         "Kallbassäng",
      :other-pool        "Annan bassäng",
      :teaching-pool     "Undervisningsbassäng"},
-    :disclaimer          {:headline "OBS!", :test-version "Automatisk"},
+    :disclaimer         {:headline "OBS!", :test-version "Automatisk"},
     :admin
     {:private-foundation      "Privat / stiftelse",
      :city-other              "Kommun / annat",
@@ -1140,7 +1146,7 @@
      :city-sports             "Kommun/ idrottsväsende",
      :state                   "Stat",
      :city-education          "Kommun / utbildingsväsende"},
-    :accessibility       {:lift "Lyft i bassängen", :slope "Ramp"},
+    :accessibility      {:lift "Lyft i bassängen", :slope "Ramp"},
     :general
     {:headline      "Rubrik"
      :description   "Beskrivning",
@@ -1160,7 +1166,7 @@
      :comment       "Kommentar",
      :measures      "Mått",
      :men           "Män"},
-    :dryer-duty-types    {:automatic "Automatisk", :manual "Manual"},
+    :dryer-duty-types   {:automatic "Automatisk", :manual "Manual"},
     :swim-energy
     {:description    "Information",
      :headline       "Energi information",
@@ -1192,7 +1198,7 @@
      :gasoline    "Bensin",
      :natural-gas "Naturgas",
      :propane     "Propan"},
-    :ice-rinks           {:headline "Du har admin rättigheter."},
+    :ice-rinks          {:headline "Du har admin rättigheter."},
     :month
     {:sep "September",
      :jan "Januari",
@@ -1213,7 +1219,7 @@
      :type-code     "Typkod"},
     :duration
     {:hour "timmar", :month "månader", :years "år", :years-short "år"},
-    :size-categories     {:large "Betong"},
+    :size-categories    {:large "Betong"},
     :lipas.admin
     {:access-all-sites           "Du har admin rättigheter.",
      :confirm-magic-link
@@ -1258,7 +1264,7 @@
      :importing-tooltip    "Importeringsverktyg vald",
      :deleting-tooltip     "Borttagningsverktyg vald",
      :splitting-tooltip    "Klippningsverktyg vald"},
-    :partners            {:headline "Tillsammans med"},
+    :partners           {:headline "Tillsammans med"},
     :actions
     {:duplicate                "Kopiera",
      :resurrect                "Öppna huvudmeny",
@@ -1355,7 +1361,7 @@
     {:headline       "Naturgas",
      :headline-short "El",
      :select-rink    "Bensin"},
-    :restricted          {:login-or-register "Logga in eller registrera dig"},
+    :restricted         {:login-or-register "Logga in eller registrera dig"},
     :lipas.sports-site
     {:properties        "Ytterligare information",
      :delete-tooltip    "Ta bort idrottsanläggningen...",
@@ -1400,8 +1406,8 @@
      :link     "Registrera här"
      :thank-you-for-registering
      "Tack för registrering! Du vill få e-posten snart."},
-    :map.address-search  {:title "Sök address", :tooltip "Sök address"},
-    :ice-comparison      {:headline "Jämförelse av hallar"},
+    :map.address-search {:title "Sök address", :tooltip "Sök address"},
+    :ice-comparison     {:headline "Jämförelse av hallar"},
     :lipas.visitors
     {:headline             "Användare",
      :not-reported         "Glömt lösenordet?",
@@ -1443,8 +1449,8 @@
      :R407A "R407A",
      :R407C "R407C",
      :R717  "R717"},
-    :harrastuspassi      {:disclaimer "När du kryssat för rutan ”Kan visas på Harrastuspassi.fi” flyttas uppgifterna om idrottsanläggningen automatiskt till Harrastuspassi.fi. Jag förbinder mig att uppdatera ändringar i uppgifterna om idrottsanläggningen utan dröjsmål i Lipas. Anläggningens administratör ansvarar för uppgifternas riktighet och anläggningens säkerhet. Uppgifterna visas i Harrastuspassi.fi om kommunen har kontrakt med Harrastuspassi.fi administratör för att använda Harrastuspassi.fi."}
-    :retkikartta         {:disclaimer "När du kryssat för rutan ”Kan visas på Utflyktskarta.fi” flyttas uppgifterna om naturutflyktsmålet automatiskt till karttjänsten Utflyktskarta.fi som Forststyrelsen administrerar.
+    :harrastuspassi     {:disclaimer "När du kryssat för rutan ”Kan visas på Harrastuspassi.fi” flyttas uppgifterna om idrottsanläggningen automatiskt till Harrastuspassi.fi. Jag förbinder mig att uppdatera ändringar i uppgifterna om idrottsanläggningen utan dröjsmål i Lipas. Anläggningens administratör ansvarar för uppgifternas riktighet och anläggningens säkerhet. Uppgifterna visas i Harrastuspassi.fi om kommunen har kontrakt med Harrastuspassi.fi administratör för att använda Harrastuspassi.fi."}
+    :retkikartta        {:disclaimer "När du kryssat för rutan ”Kan visas på Utflyktskarta.fi” flyttas uppgifterna om naturutflyktsmålet automatiskt till karttjänsten Utflyktskarta.fi som Forststyrelsen administrerar.
 Uppgifter överförs till karttjänsten en gång i dygnet. Jag förbinder mig att uppdatera ändringar i uppgifterna om naturutflyktsmålet utan dröjsmål i Lipas.
 Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflyktsmålets säkerhet samt för svar på respons och för eventuella kostnader i samband med privata vägar."},
     :reset-password
@@ -1484,7 +1490,11 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "Importera .shp .dbf och .prj filer i packade .zip filen.",
      :import-selected   "Importera valda",
      :tooltip           "Importera geometrier från filen",
-     :unknown-format    "Okänt filformat '{1}'"},
+     :unknown-format    "Okänt filformat '{1}'"
+     :unknown-error     "Ett oväntat fel inträffade. Försök med en annan fil."
+     :no-geoms-of-type  "Den angivna filen innehåller inga {1} geometrier."
+
+     :coords-not-in-finland-wgs84-bounds "Den angivna filen innehåller inte koordinater i WGS84 (EPSG:4326) koordinatsystemet. Kontrollera att ursprungsmaterialet är i rätt koordinatsystem."},
     :error
     {:email-conflict    "E-post är redan registrerad",
      :email-not-found   "E-post är inte registrerad",
@@ -2387,7 +2397,11 @@ The site administrator is responsible for the accuracy of information, safety of
      :shapefile         "Import zip file containing .shp .dbf and .prj file.",
      :import-selected   "Import selected",
      :tooltip           "Import from file",
-     :unknown-format    "Unkonwn format '{1}'"},
+     :unknown-format    "Unkonwn format '{1}'"
+     :unknown-error     "An unexpected error occurred. Try with another file."
+     :no-geoms-of-type  "The provided file does not contain any {1} geometries."
+
+     :coords-not-in-finland-wgs84-bounds "The provided file does not contain coordinates in the WGS84 (EPSG:4326) coordinate system. Check that the source material is in the correct coordinate system."},
     :error
     {:email-conflict      "Email is already in use",
      :email-not-found     "Email address is not registered",
@@ -2669,7 +2683,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :headline          "Water treatment",
      :ozonation?        "Ozonation",
      :uv-treatment?     "UV-treatment"},
-    :statuses         {:edited "{1} (edited)"},
+    :statuses {:edited "{1} (edited)"},
     :lipas.user
     {:email                     "Email",
      :permissions               "Permissions",

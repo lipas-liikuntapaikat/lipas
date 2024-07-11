@@ -29,6 +29,7 @@
         headers  (<== [::subs/import-candidates-headers])
         selected (<== [::subs/selected-import-items])
         replace? (<== [::subs/replace-existing-geoms?])
+        error    (<== [::subs/import-error])
 
         on-close #(==> [::events/toggle-import-dialog])]
 
@@ -80,15 +81,28 @@
             :label-fn  identity
             :on-change #(==> [::events/select-import-file-encoding %])}]]]]
 
-       [mui/grid {:item true :xs 12}
-        (when (not-empty data)
+       (when error
+         [mui/grid {:item true :xs 12}
+          [mui/paper
+           [mui/typography {:color "error"}
+            (tr (keyword :map.import (name (get error :type "unknown-error"))))]]])
+
+       (when (and batch-id (not (seq data)))
+         [mui/grid {:item true :xs 12}
+          [mui/paper
+           [mui/typography {:color "error"}
+            (tr :map.import/no-geoms-of-type geom-type)]]])
+
+       (when (seq data)
+         [mui/grid {:item true :xs 12}
+
           ^{:key batch-id}
           [lui/table-v2
            {:items         (-> data vals (->> (map :properties) (map #(update-vals % str))))
             :key-fn        :id
             :multi-select? true
             :on-select     #(==> [::events/select-import-items %])
-            :headers       headers}])]]]
+            :headers       headers}]])]]
 
      [mui/dialog-actions
 
