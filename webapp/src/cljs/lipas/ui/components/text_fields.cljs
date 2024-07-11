@@ -83,3 +83,30 @@
            children)]))
 
 (def text-field text-field-controlled)
+
+(defn expandable-text-area
+  [props & children]
+  (r/with-let [state (r/atom {:dialog-open? false})]
+    [:<>
+
+     [mui/dialog
+      {:open      (:dialog-open? @state)
+       :fullWidth true
+       :maxWidth  "lg"
+       :on-close  #(swap! state assoc :dialog-open? false)}
+      [mui/dialog-content
+       #_[mui/icon-button
+        {:on-click #(swap! state assoc :dialog-open? false)}
+        [mui/icon "open_in_full"]]
+       [text-field (assoc props :rows 15) children]]
+      [mui/dialog-actions
+       [mui/button {:on-click #(swap! state assoc :dialog-open? false)}
+        "OK"]]]
+
+     [mui/stack {:align-items "flex-end"}
+      [mui/icon-button
+       {:size "small"
+        :style {:margin-bottom "-35px" :z-index "1"}
+        :on-click #(swap! state assoc :dialog-open? true)}
+       [mui/icon "open_in_full"]]
+      [text-field props children]]]))
