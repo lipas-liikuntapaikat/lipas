@@ -5,6 +5,7 @@
    [clojure.string :as str]
    [lipas.ui.components :as lui]
    [lipas.ui.components.buttons :as lui-btn]
+   [lipas.ui.components.text-fields :as lui-tf]
    [lipas.ui.config :as config]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.activities.events :as events]
@@ -1123,7 +1124,7 @@
                     :value       (get-in edit-data [prop-k])})]
 
     ;; FIXME: MUI-v5, outlined input is missing x-padding
-    "textarea" [lui/text-field
+    "textarea" [lui-tf/expandable-text-area
                 {:disabled        read-only?
                  :variant         "outlined"
                  :label           (get-in field [:label locale])
