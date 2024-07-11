@@ -236,12 +236,13 @@
                    :en "Place description"}}}
 
    :contacts
-   {:schema [:map
-             [:organization {:optional true} localized-string-schema]
-             [:role {:optional true} (into [:enum] (keys contact-roles))]
-             [:email {:optional true} [:string]]
-             [:www {:optional true} [:string]]
-             [:phone-number {:optional true} [:string]]]
+   {:schema [:sequential
+             [:map
+              [:organization {:optional true} localized-string-schema]
+              [:role {:optional true} (into [:enum] (keys contact-roles))]
+              [:email {:optional true} [:string]]
+              [:www {:optional true} [:string]]
+              [:phone-number {:optional true} [:string]]]]
     :field
     {:type        "contacts"
      :description {:fi "Syötä kohteesta vastaavien tahojen yhteystiedot"
