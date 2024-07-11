@@ -25,4 +25,20 @@
     (reset! current-system (system/start-system! dev-config)))
 
 
+  (require '[migratus.core :as migratus])
+
+  (def migratus-config
+    {:store         :database
+     :migration-dir "migrations/"
+     :db            {:dbtype   "postgresql"
+                     :dbname   (get (System/getenv) "DB_NAME")
+                     :host     (get (System/getenv) "DB_HOST")
+                     :user     (get (System/getenv) "DB_USER")
+                     :port     (get (System/getenv) "DB_PORT")
+                     :password (get (System/getenv) "DB_PASSWORD")}})
+
+  (migratus/create migratus-config "organization")
+  (migratus/migrate migratus-config)
+
+
   )
