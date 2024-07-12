@@ -4,7 +4,12 @@
 
 (def dicts
   {:fi
-   {:ptv
+   {:loi
+    {:category                     "Kategoria"
+     :status                       "Tila"
+     :type                         "Kohteen tyyppi"
+     :type-and-category-disclaimer "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"}
+    :ptv
     {:tooltip "Vie Palvelutietovarantoon"}
     :utp
     {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
@@ -991,7 +996,12 @@
      :plate-heat-exchanger "Levysiirrin",
      :thermal-wheel        "Pyörivä"}},
    :se
-   {:utp
+   {:loi
+    {:category                     "Kategori"
+     :status                       "Status"
+     :type                         "Objekttyp"
+     :type-and-category-disclaimer "Kategori och typ måste väljas innan de läggs till på kartan"}
+    :utp
     {:read-only-disclaimer "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen."
      :add-contact          "Lägg till kontaktuppgift"
      :unit                 "enhet"
@@ -1829,7 +1839,12 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "Du har rättighet att uppdatera de här typerna:"},
     :heat-recovery-types {:thermal-wheel "Hjälp"}},
    :en
-   {:utp
+   {:loi
+    {:category                     "Category"
+     :status                       "Status"
+     :type                         "Object Type"
+     :type-and-category-disclaimer "Category and type must be selected before adding to the map"}
+    :utp
     {:read-only-disclaimer "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol."
      :add-contact          "Add contact information"
      :unit                 "unit"
