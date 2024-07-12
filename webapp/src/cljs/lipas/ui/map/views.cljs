@@ -1669,6 +1669,7 @@
 (defn default-tools
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
+        admin?              (<== [:lipas.ui.user.subs/admin?])
         mode-name           (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
         ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
@@ -1719,7 +1720,7 @@
             [mui/icon "insights"]]]])
 
        ;; PTV button
-       (when logged-in?
+       (when (and logged-in? admin?)
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
            [mui/fab
@@ -1776,7 +1777,7 @@
   (let [tr           (<== [:lipas.ui.subs/translator])
         logged-in?   (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
-        width (mui/use-width)
+        width        (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
