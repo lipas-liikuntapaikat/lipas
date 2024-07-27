@@ -8,227 +8,299 @@
     :name
     {:fi "Virkistyskohteet ja palvelut",
      :se "Rekreationsanläggningar och tjänster",
-     :en "Recreational destinations and services"}},
+     :en "Recreational destinations and services"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p37350"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]}},
    1000
    {:type-code 1000,
     :name
     {:fi "Ulkokentät ja liikuntapuistot",
      :se "Utomhusplaner och idrottsparker",
-     :en "Outdoor fields and sports parks"}},
+     :en "Outdoor fields and sports parks"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p69291"
+                       "http://www.yso.fi/onto/koko/p67276"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]}},
    2000
    {:type-code 2000,
     :name
     {:fi "Sisäliikuntatilat",
      :se "Anläggningar för inomhusidrott",
-     :en "Indoor sports facilities"}},
+     :en "Indoor sports facilities"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p69660"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.1"]}},
    3000
    {:type-code 3000,
     :name
     {:fi "Vesiliikuntapaikat",
      :se "Anläggningar för vattenidrott",
-     :en "Water sports facilities"}},
+     :en "Water sports facilities"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p18621"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.1"
+                       "http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]}},
    4000
    {:type-code 4000,
     :name
     {:fi "Maastoliikuntapaikat",
      :se "Anläggningar för terrängidrott",
-     :en "Cross-country sports facilities"}},
+     :en "Cross-country sports facilities"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p12424"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]}},
    5000
    {:type-code 5000,
     :name
     {:fi "Veneily, ilmailu ja moottoriurheilu",
      :se "Anläggningar för båtsport, flygsport och motorsport",
-     :en "Boating, aviation and motor sports"}},
+     :en "Boating, aviation and motor sports"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p34055"
+                       "http://www.yso.fi/onto/koko/p36083"
+                       "http://www.yso.fi/onto/koko/p18298"
+                       "http://www.yso.fi/onto/koko/p75772"
+                       "http://www.yso.fi/onto/koko/p31773"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]}},
    6000
    {:type-code 6000,
     :name
     {:fi "Eläinurheilualueet",
      :se "Anläggningar för djursport",
-     :en "Animal sports areas"}},
+     :en "Animal sports areas"}
+    :ptv
+    {:ontology-urls   ["http://www.yso.fi/onto/koko/p10416"
+                       "http://www.yso.fi/onto/koko/p8973"]
+     :service-classes ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.1"]}},
    7000
    {:type-code 7000,
     :name
     {:fi "Huoltorakennukset",
      :se "Servicebyggnader",
-     :en "Maintenance/service buildings"}}})
+     :en "Maintenance/service buildings"}
+    :ptv
+    {:ontology-urls   []
+     :service-classes []}}})
 
 (def sub-categories
   {2100
-   {:type-code 2100,
+   {:type-code     2100,
     :name
     {:fi "Kuntoilukeskukset ja liikuntasalit",
      :se "Konditionsidrottscentra och idrottssalar",
      :en "Fitness centres and sports halls"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p30560"
+                                    "http://www.yso.fi/onto/koko/p85878"]}
     :main-category "2000"},
    5200
-   {:type-code 5200,
+   {:type-code     5200,
     :name
     {:fi "Urheiluilmailualueet",
      :se "Områden för flygsport",
      :en "Sport aviation areas"},
     :main-category "5000"},
+   :ptv {:ontology-urls ["http://www.yso.fi/onto/koko/p18298"]}
    4200
-   {:type-code 4200,
+   {:type-code     4200,
     :name
     {:fi "Katetut talviurheilupaikat",
      :se "Vintersportplatser under tak",
      :en "Covered winter sports facilities"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p8460"]}
     :main-category "4000"},
    2200
-   {:type-code 2200,
+   {:type-code     2200,
     :name
     {:fi "Liikuntahallit", :se "Idrottshallar", :en "Sports halls"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p33522"]}
     :main-category "2000"},
    1
-   {:type-code 1,
+   {:type-code     1,
     :name
     {:fi "Virkistys- ja retkeilyalueet",
      :se "Rekreations- och friluftsområden",
      :en "Recreational and outdoor areas "},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p37350"
+                                    "http://www.yso.fi/onto/koko/p33303"]}
     :main-category "0"},
    7000
-   {:type-code 7000,
+   {:type-code     7000,
     :name
     {:fi "Huoltotilat",
      :se "Servicebyggnader",
      :en "Maintenance/service buildings"},
     :main-category "7000"},
    4400
-   {:type-code 4400,
+   {:type-code     4400,
     :name
     {:fi "Liikunta- ja ulkoilureitit",
      :se "Idrotts- och friluftsleder",
      :en "Sports and outdoor recreation routes "},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p32315"]}
     :main-category "4000"},
    1300
-   {:type-code 1300,
+   {:type-code     1300,
     :name
     {:fi "Pallokentät", :se "Bollplaner", :en "Ball games courts"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p75504"]}
     :main-category "1000"},
    6100
-   {:type-code 6100,
+   {:type-code     6100,
     :name
     {:fi "Hevosurheilu", :se "Hästsport", :en "Equestrian sports"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p35523"]}
     :main-category "6000"},
    4700
-   {:type-code 4700,
+   {:type-code     4700,
     :name
     {:fi "Kiipeilypaikat",
      :se "Klättringsplatser",
      :en "Climbing venues"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p4261"]}
     :main-category "4000"},
    3100
-   {:type-code 3100,
+   {:type-code     3100,
     :name
     {:fi "Uima-altaat, hallit ja kylpylät",
      :se "Simbassänger, hallar och badinrättningar",
      :en "Indoor swimming pools, halls and spas"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p1459"
+                                    "http://www.yso.fi/onto/koko/p11070"
+                                    "http://www.yso.fi/onto/koko/p35112"]}
     :main-category "3000"},
    2500
-   {:type-code 2500,
-    :name {:fi "Jäähallit", :se "Ishallar", :en "Ice-skating arenas"},
+   {:type-code     2500,
+    :name          {:fi "Jäähallit", :se "Ishallar", :en "Ice-skating arenas"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p11376"]}
     :main-category "2000"},
    1200
-   {:type-code 1200,
+   {:type-code     1200,
     :name
     {:fi "Yleisurheilukentät ja -paikat",
      :se "Planer och platser för friidrott",
      :en "Athletics fields and venues"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p85607"]}
     :main-category "1000"},
    5300
-   {:type-code 5300,
+   {:type-code     5300,
     :name
     {:fi "Moottoriurheilualueet",
      :se "Områden för motorsport",
      :en "Motor sports areas"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p31773"]}
     :main-category "5000"},
    1600
-   {:type-code 1600,
-    :name {:fi "Golfkentät", :se "Golfbanor", :en "Golf courses"},
+   {:type-code     1600,
+    :name          {:fi "Golfkentät", :se "Golfbanor", :en "Golf courses"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p32648"]}
     :main-category "1000"},
    1500
-   {:type-code 1500,
+   {:type-code     1500,
     :name
     {:fi "Jääurheilualueet ja luonnonjäät",
      :se "Isidrottsområden och naturisar",
      :en "Ice sports areas and sites with natural ice"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p75572"]}
     :main-category "1000"},
    6200
-   {:type-code 6200,
-    :name {:fi "Koiraurheilu", :se "Hundsport", :en "Dog sports"},
+   {:type-code     6200,
+    :name          {:fi "Koiraurheilu", :se "Hundsport", :en "Dog sports"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p72589"]}
     :main-category "6000"},
    3200
-   {:type-code 3200,
+   {:type-code     3200,
     :name
     {:fi "Maauimalat ja uimarannat",
      :se "Utebassänger och badstränder",
      :en "Open air pools and beaches"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p32279"
+                                    "http://www.yso.fi/onto/koko/p76123"
+                                    "http://www.yso.fi/onto/koko/p13459"]}
     :main-category "3000"},
    2
-   {:type-code 2,
+   {:type-code     2,
     :name
     {:fi "Retkeilyn palvelut",
      :se "Utflyktstjänster",
      :en "Hiking facilities"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p36881"]}
     :main-category "0"},
    1100
-   {:type-code 1100,
+   {:type-code     1100,
     :name
     {:fi "Lähiliikunta ja liikuntapuistot",
      :se "Närmotion och idrottsparker",
      :en "Neighbourhood sports facilities and parks "},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p84486"
+                                    "http://www.yso.fi/onto/koko/p69291"]}
     :main-category "1000"},
    4100
-   {:type-code 4100,
+   {:type-code     4100,
     :name
     {:fi "Laskettelurinteet ja rinnehiihtokeskukset",
      :se "Slalombackar och alpina skidcentra",
      :en "Ski slopes and downhill ski resorts"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p10549"
+                                    "http://www.yso.fi/onto/koko/p84378"
+                                    "http://www.yso.fi/onto/koko/p4432"]}
     :main-category "4000"},
    5100
-   {:type-code 5100,
+   {:type-code     5100,
     :name
     {:fi "Veneurheilupaikat",
      :se "Platser för båtsport",
      :en "Boating sports facilities"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p75772"]}
     :main-category "5000"},
    2600
-   {:type-code 2600,
+   {:type-code     2600,
     :name
     {:fi "Keilahallit", :se "Bowlinghallar", :en "Bowling alleys"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p9812"]}
     :main-category "2000"},
    2300
-   {:type-code 2300,
+   {:type-code     2300,
     :name
     {:fi "Yksittäiset lajikohtaiset sisäliikuntapaikat",
      :se "Enstaka grenspecifika anläggningar för inomhusidrott",
      :en "Indoor venues for various sports "},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p66287"]}
     :main-category "2000"},
    4300
-   {:type-code 4300,
+   {:type-code     4300,
     :name
     {:fi "Hyppyrimäet", :se "Hoppbackar", :en "Ski jumping hills"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p72457"]}
     :main-category "4000"},
    4500
-   {:type-code 4500,
+   {:type-code     4500,
     :name
     {:fi "Suunnistusalueet",
      :se "Orienteringsområden",
      :en "Orienteering areas"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p5355"]}
     :main-category "4000"},
    4600
-   {:type-code 4600,
+   {:type-code     4600,
     :name
     {:fi "Maastohiihtokeskukset",
      :se "Längdåkningscentra",
      :en "Cross-country ski resorts"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p75831"]}
     :main-category "4000"},
    4800
-   {:type-code 4800,
+   {:type-code     4800,
     :name
     {:fi "Ampumaurheilupaikat",
      :se "Sportskytteplatser",
      :en "Shooting sports facilities"},
+    :ptv           {:ontology-urls ["http://www.yso.fi/onto/koko/p25336"]}
     :main-category "4000"}})
 
 (def all
