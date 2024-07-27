@@ -1,8 +1,17 @@
 (ns lipas.ui.ptv.events
   (:require
-   [re-frame.core :as re-frame]
    [ajax.core :as ajax]
-   [lipas.ui.utils :as utils]))
+   [clojure.set :as set]
+   [lipas.ui.utils :as utils]
+   [lipas.data.ptv :as ptv-data]
+   [re-frame.core :as re-frame]
+   [clojure.string :as str]))
+
+(def ptv-root-url-prod
+  "https://api.palvelutietovaranto.suomi.fi")
+
+(def ptv-root-url-test
+  "https://api.palvelutietovaranto.trn.suomi.fi")
 
 (re-frame/reg-event-db
  ::open-dialog
@@ -21,19 +30,17 @@
     :fx [[:dispatch [::fetch-org-data org]]
          [:dispatch [::fetch-integration-candidates org]]]}))
 
-(comment
-  (re-frame/dispatch [::select-org nil])
-  )
-
 (re-frame/reg-event-db
  ::select-tab
  (fn [db [_ v]]
    (assoc-in db [:ptv :selected-tab] v)))
 
 (def org-id->params
-  {"7b83257d-06ad-4e3b-985d-16a5c9d3fced" ;; Utajärvi
-   {:city-codes [889]
-    :owners     ["city" "city-main-owner"]}})
+  {ptv-data/uta-org-id-test ;; Utajärvi
+   {:org-id              ptv-data/uta-org-id-test
+    :city-codes          [889]
+    :owners              ["city" "city-main-owner"]
+    :supported-languages ["fi" "sv" "en"]}})
 
 (re-frame/reg-event-fx
  ::fetch-integration-candidates
@@ -42,10 +49,9 @@
      (let [token (-> db :user :login :token)]
        {:db (assoc-in db [:ptv :loading-from-lipas :candidates] true)
         :fx [[:http-xhrio
-              {:method  :post
-               :headers {:Authorization (str "Token " token)}
-               :uri     (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-
+              {:method          :post
+               :headers         {:Authorization (str "Token " token)}
+               :uri             (str (:backend-url db) "/actions/get-ptv-integration-candidates")
                :params          (get org-id->params (:id org))
                :format          (ajax/transit-request-format)
                :response-format (ajax/transit-response-format)
@@ -75,32 +81,66 @@
  (fn [{:keys [_db]} [_ org]]
    (when org
      {:fx [[:dispatch [::fetch-integration-candidates org]]
+           [:dispatch [::fetch-org org]]
            [:dispatch [::fetch-services org]]
            [:dispatch [::fetch-service-channels org]]
            [:dispatch [::fetch-service-collections org]]]})))
+
+(re-frame/reg-event-fx
+ ::fetch-org
+ (fn [{:keys [db]} [_ org]]
+   (when org
+    {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
+     :fx [[:http-xhrio
+           {:method          :get
+            :uri             (str ptv-root-url-test "/api/v11/Organization/" (:id org))
+            :response-format (ajax/json-response-format {:keywords? true})
+            :on-success      [::fetch-org-success (:id org)]
+            :on-failure      [::fetch-org-failure]}]]})))
+
+(re-frame/reg-event-fx
+ ::fetch-org-success
+ (fn [{:keys [db]} [_ org-id resp]]
+   {:db (-> db
+            (assoc-in [:ptv :loading-from-ptv :org] false)
+            (assoc-in [:ptv :org org-id :data :org org-id] resp))}))
+
+(re-frame/reg-event-fx
+ ::fetch-org-failure
+ (fn [{:keys [db]} [_ resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/get-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-ptv :org] false)
+              (assoc-in [:ptv :errors :org] resp))
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 
 (re-frame/reg-event-fx
  ::fetch-services
  (fn [{:keys [db]} [_ org]]
-   (when org
-    {:db (assoc-in db [:ptv :loading-from-ptv :services] true)
-     :fx [[:http-xhrio
-           {:method          :get
-            :uri             (str "https://api.palvelutietovaranto.suomi.fi"
-                                  "/api/v11/Service/list/organization"
-                                  "?organizationId=" (:id org))
-
-            :response-format (ajax/json-response-format {:keywords? true})
-            :on-success      [::fetch-services-success (:id org)]
-            :on-failure      [::fetch-services-failure]}]]})))
+   (let [token (-> db :user :login :token)]
+     (when org
+       {:db (assoc-in db [:ptv :loading-from-ptv :services] true)
+        :fx [[:http-xhrio
+              {:method          :post
+               :headers         {:Authorization (str "Token " token)}
+               :uri             (str (:backend-url db) "/actions/fetch-ptv-services")
+               :params          {:org-id (:id org)}
+               :format          (ajax/transit-request-format)
+               :response-format (ajax/json-response-format {:keywords? true})
+               :on-success      [::fetch-services-success (:id org)]
+               :on-failure      [::fetch-services-failure]}]]}))))
 
 (re-frame/reg-event-fx
  ::fetch-services-success
  (fn [{:keys [db]} [_ org-id resp]]
-   {:db (-> db
-            (assoc-in [:ptv :loading-from-ptv :services] false)
-            (assoc-in [:ptv :org org-id :data :services] (:itemList resp)))}))
+   (let [services (->> resp :itemList (utils/index-by :id))]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-ptv :services] false)
+              (assoc-in [:ptv :org org-id :data :services] services))
+      :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 
 (re-frame/reg-event-fx
  ::fetch-services-failure
@@ -120,7 +160,7 @@
     {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
      :fx [[:http-xhrio
            {:method          :get
-            :uri             (str "https://api.palvelutietovaranto.suomi.fi"
+            :uri             (str ptv-root-url-test
                                   "/api/v11/ServiceChannel/organization/"
                                   (:id org))
 
@@ -131,9 +171,10 @@
 (re-frame/reg-event-fx
  ::fetch-service-channels-success
  (fn [{:keys [db]} [_ org-id resp]]
-   {:db (-> db
-            (assoc-in [:ptv :loading-from-ptv :service-channels] false)
-            (assoc-in [:ptv :org org-id :data :service-channels] (:itemList resp)))}))
+   (let [service-channels (->> resp :itemList (utils/index-by :id))]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-ptv :service-channels] false)
+              (assoc-in [:ptv :org org-id :data :service-channels] service-channels))})))
 
 (re-frame/reg-event-fx
  ::fetch-service-channels-failure
@@ -152,11 +193,10 @@
    (when org
      {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
       :fx [[:http-xhrio
-            {:method :get
-             :uri    (str "https://api.palvelutietovaranto.suomi.fi"
+            {:method          :get
+             :uri             (str ptv-root-url-test
                                    "/api/v11/ServiceCollection/organization"
                                    "?organizationId=" (:id org))
-
              :response-format (ajax/json-response-format {:keywords? true})
              :on-success      [::fetch-service-collections-success (:id org)]
              :on-failure      [::fetch-service-collections-failure]}]]})))
@@ -164,9 +204,10 @@
 (re-frame/reg-event-fx
  ::fetch-service-collections-success
  (fn [{:keys [db]} [_ org-id resp]]
-   {:db (-> db
-            (assoc-in [:ptv :loading-from-ptv :service-collections] false)
-            (assoc-in [:ptv :org org-id :data :service-collections] (:itemList resp)))}))
+   (let [service-collections (->> resp :itemList (utils/index-by :id))]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-ptv :service-collections] false)
+              (assoc-in [:ptv :org org-id :data :service-collections] service-collections))})))
 
 (re-frame/reg-event-fx
  ::fetch-service-collections-failure
@@ -187,16 +228,16 @@
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v))))
 
 (re-frame/reg-event-db
- ::select-service
+ ::select-services
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
-     (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-id] v))))
+     (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-ids] v))))
 
 (re-frame/reg-event-db
- ::select-service-channel
+ ::select-service-channels
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
-     (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-id] v))))
+     (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))
 
 (re-frame/reg-event-db
  ::select-service-integration
@@ -251,3 +292,497 @@
  (fn [db [_ {:keys [lipas-id]} locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :description locale] v))))
+
+;;; Service location descriptions generation ;;;
+
+(re-frame/reg-event-fx
+ ::generate-descriptions
+ (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
+   (let [token (-> db :user :login :token)]
+     {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+      :fx [[:http-xhrio
+            {:method  :post
+             :headers {:Authorization (str "Token " token)}
+             :uri     (str (:backend-url db) "/actions/generate-ptv-descriptions")
+
+             :params          {:lipas-id lipas-id}
+             :format          (ajax/transit-request-format)
+             :response-format (ajax/transit-response-format)
+             :on-success      [::generate-descriptions-success lipas-id success-fx]
+             :on-failure      [::generate-descriptions-failure lipas-id failure-fx]}]]})))
+
+(re-frame/reg-event-fx
+ ::generate-descriptions-success
+ (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+              (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))
+      :fx extra-fx})))
+
+(re-frame/reg-event-fx
+ ::generate-descriptions-failure
+ (fn [{:keys [db]} [_ _lipas-id extra-fx resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/get-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+              (assoc-in [:ptv :errors :descriptions] resp))
+      :fx (or extra-fx
+              [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+(re-frame/reg-event-db
+ ::toggle-sync-all
+ (fn [db [_ enabled]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     (update-in db
+                [:ptv :org org-id :data :sports-sites]
+                (fn [ms]
+                  (reduce (fn [res lipas-id]
+                            (assoc-in res [lipas-id :ptv :sync-enabled] enabled))
+                          ms
+                          (keys ms)))))))
+
+(re-frame/reg-event-fx
+ ::generate-all-descriptions*
+ (fn [{:keys [db]} [_ org-id lipas-ids]]
+   (let [halt?             (get-in db [:ptv :batch-descriptions-generation :halt?] false)
+         lipas-ids*        (get-in db [:ptv :batch-descriptions-generation :lipas-ids])
+         processed         (set/difference (set lipas-ids*) (set lipas-ids))
+         on-single-success [[:dispatch [::generate-all-descriptions* org-id (rest lipas-ids)]]]
+         on-single-failure [#_[:dispatch [::generate-all-descriptions* org-id (rest lipas-ids)]]
+                            [:dispatch [::halt-descriptions-generation]]]]
+     {:db (-> db
+              (update-in [:ptv :batch-descriptions-generation]
+                         merge
+                         {:in-progress?        (if halt? false (boolean (seq lipas-ids)))
+                          :processed-lipas-ids processed
+                          :halt?               halt?}))
+      :fx [(when (and (not halt?) (seq lipas-ids))
+             [:dispatch [::generate-descriptions
+                         (first lipas-ids)
+                         on-single-success
+                         on-single-failure]])]})))
+
+(re-frame/reg-event-fx
+ ::generate-all-descriptions
+ (fn [{:keys [db]} [_ sports-sites]]
+   (let [org-id    (-> db :ptv :selected-org :id)
+         lipas-ids (map :lipas-id sports-sites)]
+     {:db (update-in db [:ptv :batch-descriptions-generation]
+                     merge
+                     {:batch-size (count lipas-ids)
+                      :halt?      false
+                      :size       (count lipas-ids)
+                      :lipas-ids  (set lipas-ids)})
+      :fx [[:dispatch [::generate-all-descriptions* org-id lipas-ids]]]})))
+
+(re-frame/reg-event-db
+ ::halt-descriptions-generation
+ (fn [db _]
+   (-> db
+       (assoc-in [:ptv :batch-descriptions-generation :halt?] true))))
+
+(re-frame/reg-event-db
+ ::select-sports-sites-filter
+ (fn [db [_ v]]
+   (assoc-in db [:ptv :batch-descriptions-generation :sports-sites-filter] v)))
+
+;;; TODO Save settings ;;;
+
+(re-frame/reg-event-fx
+ :save
+ (fn [{:keys [db]} [_ org]]
+   (when org
+     (let [token (-> db :user :login :token)]
+       {:db (assoc-in db [:ptv :save-in-progress?] true)
+        :fx [[:http-xhrio
+              {:method          :post
+               :headers         {:Authorization (str "Token " token)}
+               :uri             (str (:backend-url db) "/actions/save-ptv-integration-definitions")
+               :params          (get db :ptv)
+               :format          (ajax/transit-request-format)
+               :response-format (ajax/transit-response-format)
+               :on-success      [:save-success (:id org)]
+               :on-failure      [:save-failure]}]]}))))
+
+(re-frame/reg-event-fx
+ :save-success
+ (fn [{:keys [db]} [_ org-id resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/save-success)
+                       :success? true}]
+     {:db (-> db (assoc-in [:ptv :save-in-progress?] false))
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(re-frame/reg-event-fx
+ :save-failure
+ (fn [{:keys [db]} [_ resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/save-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :save-in-progress?] false)
+              (assoc-in [:ptv :errors :save] resp))
+      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;;; Service descriptions generation ;;;
+
+(re-frame/reg-event-fx
+ ::generate-service-descriptions
+ (fn [{:keys [db]} [_ id success-fx failure-fx]]
+   (let [token  (-> db :user :login :token)
+         org-id (-> db :ptv :selected-org :id)]
+     {:db (assoc-in db [:ptv :loading-from-lipas :service-descriptions] true)
+      :fx [[:http-xhrio
+            {:method  :post
+             :headers {:Authorization (str "Token " token)}
+             :uri     (str (:backend-url db) "/actions/generate-ptv-service-descriptions")
+
+             :params          (merge
+                               (org-id->params org-id)
+                               {:sourceId        id
+                                :sub-category-id (parse-long (last (str/split id #"-")))})
+             :format          (ajax/transit-request-format)
+             :response-format (ajax/transit-response-format)
+             :on-success      [::generate-service-descriptions-success id success-fx]
+             :on-failure      [::generate-service-descriptions-failure id failure-fx]}]]})))
+
+(re-frame/reg-event-fx
+ ::generate-service-descriptions-success
+ (fn [{:keys [db]} [_ id extra-fx resp]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
+              (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
+      :fx extra-fx})))
+
+(re-frame/reg-event-fx
+ ::generate-service-descriptions-failure
+ (fn [{:keys [db]} [_ _id extra-fx resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/get-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :service-descriptions] false)
+              (assoc-in [:ptv :errors :service-descriptions] resp))
+      :fx (or extra-fx
+              [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+(re-frame/reg-event-fx
+ ::generate-all-service-descriptions*
+ (fn [{:keys [db]} [_ org-id ids]]
+   (let [halt?             (get-in db [:ptv :service-descriptions-generation :halt?] false)
+         ids*              (get-in db [:ptv :service-descriptions-generation :ids])
+         processed         (set/difference (set ids*) (set ids))
+         on-single-success [[:dispatch [::generate-all-service-descriptions* org-id (rest ids)]]]
+         on-single-failure [[:dispatch [::halt-service-descriptions-generation]]]]
+     {:db (-> db
+              (update-in [:ptv :service-descriptions-generation]
+                         merge
+                         {:in-progress?  (if halt? false (boolean (seq ids)))
+                          :processed-ids processed
+                          :halt?         halt?}))
+      :fx [(when (and (not halt?) (seq ids))
+             [:dispatch [::generate-service-descriptions
+                         (first ids)
+                         on-single-success
+                         on-single-failure]])]})))
+
+(re-frame/reg-event-fx
+ ::generate-all-service-descriptions
+ (fn [{:keys [db]} [_ ms]]
+   (let [org-id (-> db :ptv :selected-org :id)
+         ids    (map :source-id ms)]
+     {:db (update-in db [:ptv :service-descriptions-generation]
+                     merge
+                     {:batch-size (count ids)
+                      :halt?      false
+                      :size       (count ids)
+                      :ids        (set ids)})
+      :fx [[:dispatch [::generate-all-service-descriptions* org-id ids]]]})))
+
+(re-frame/reg-event-db
+ ::halt-service-descriptions-generation
+ (fn [db _]
+   (-> db
+       (assoc-in [:ptv :service-descriptions-generation :halt?] true))))
+
+
+(re-frame/reg-event-db
+ ::set-service-candidate-summary
+ (fn [db [_ id locale v]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] v))))
+
+(re-frame/reg-event-db
+ ::set-service-candidate-description
+ (fn [db [_ id locale v]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] v))))
+
+
+;;; Create Services in PTV ;;;
+
+(re-frame/reg-event-fx
+ ::create-ptv-service
+ (fn [{:keys [db]} [_ id success-fx failure-fx]]
+   (let [token  (-> db :user :login :token)
+         org-id (-> db :ptv :selected-org :id)
+         data   (-> (get-in db [:ptv :services-creation :data id]))]
+     {:db (assoc-in db [:ptv :loading-from-lipas :services] true)
+      :fx [[:http-xhrio
+            {:method          :post
+             :headers         {:Authorization (str "Token " token)}
+             :uri             (str (:backend-url db) "/actions/save-ptv-service")
+             :params          (merge data (org-id->params org-id))
+             :format          (ajax/transit-request-format)
+             :response-format (ajax/transit-response-format)
+             :on-success      [::create-ptv-service-success id success-fx]
+             :on-failure      [::create-ptv-service-failure id failure-fx]}]]})))
+
+(re-frame/reg-event-fx
+ ::create-ptv-service-success
+ (fn [{:keys [db]} [_ id extra-fx resp]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :services] false)
+              (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
+              (update-in [:ptv :org org-id :data :service-candidates id]
+                         assoc :created-in-ptv true))
+      :fx extra-fx})))
+
+(re-frame/reg-event-fx
+ ::create-ptv-service-failure
+ (fn [{:keys [db]} [_ _id extra-fx resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/get-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :services] false)
+              (assoc-in [:ptv :errors :services-creation] resp))
+      :fx (or extra-fx
+              [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+(re-frame/reg-event-fx
+ ::create-all-ptv-services*
+ (fn [{:keys [db]} [_ org-id ids]]
+   (let [halt?             (get-in db [:ptv :services-creation :halt?] false)
+         ids*              (get-in db [:ptv :services-creation :ids])
+         processed         (set/difference (set ids*) (set ids))
+         on-single-success [[:dispatch [::create-all-ptv-services* org-id (rest ids)]]
+                            [:dispatch [::assign-services-to-sports-sites]]]
+         on-single-failure [[:dispatch [::halt-services-creation]]]]
+     {:db (-> db
+              (update-in [:ptv :services-creation]
+                         merge
+                         {:in-progress?  (if halt? false (boolean (seq ids)))
+                          :processed-ids processed
+                          :halt?         halt?}))
+      :fx [(when (and (not halt?) (seq ids))
+             [:dispatch [::create-ptv-service
+                         (first ids)
+                         on-single-success
+                         on-single-failure]])]})))
+
+(re-frame/reg-event-fx
+ ::create-all-ptv-services
+ (fn [{:keys [db]} [_ ms]]
+   (let [org-id (-> db :ptv :selected-org :id)
+         ids    (map :source-id ms)]
+     {:db (update-in db [:ptv :services-creation]
+                     merge
+                     {:batch-size (count ids)
+                      :halt?      false
+                      :size       (count ids)
+                      :data       (utils/index-by :source-id ms)
+                      :ids        (set ids)})
+      :fx [[:dispatch [::create-all-ptv-services* org-id ids]]]})))
+
+(re-frame/reg-event-db
+ ::halt-services-creation
+ (fn [db _]
+   (-> db
+       (assoc-in [:ptv :services-creation :halt?] true))))
+
+(re-frame/reg-event-db
+ ::assign-services-to-sports-sites
+ (fn [db _]
+   (let [org-id   (get-in db [:ptv :selected-org :id])
+         types    (get-in db [:sports-sites :types])
+         services (->> (get-in db [:ptv :org org-id :data :services])
+                       vals
+                       (utils/index-by :sourceId))]
+     (-> db
+         (update-in [:ptv :org org-id :data :sports-sites]
+                    (fn [m]
+                      (reduce-kv
+                       (fn [m lipas-id sports-site]
+                         (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
+                               source-id  (str "lipas-" org-id "-" sub-cat-id)]
+                           (if-let [service (get services source-id)]
+                             (update-in m [lipas-id :ptv :service-ids] #(set (conj % (:id service))))
+                             m)))
+                       m
+                       m)))))))
+
+
+;;; Create service locations in PTV ;;;
+
+
+(re-frame/reg-event-fx
+ ::create-ptv-service-location
+ (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
+   (let [token  (-> db :user :login :token)
+         org-id (-> db :ptv :selected-org :id)
+         site   (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+         data   (get-in db [:ptv :service-locations-creation :data lipas-id])]
+     {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
+      :fx [[:http-xhrio
+            {:method          :post
+             :headers         {:Authorization (str "Token " token)}
+             :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
+             :params          {:sports-site (update site [:ptv ] merge
+                                                    (select-keys data
+                                                                 [:languages
+                                                                  :service-ids
+                                                                  :service-channel-ids
+                                                                  :description
+                                                                  :summary
+                                                                  :descriptions-integration
+                                                                  :service-integration
+                                                                  :service-channel-integration]))
+                               :org         (org-id->params org-id)}
+             :format          (ajax/transit-request-format)
+             :response-format (ajax/transit-response-format)
+             :on-success      [::create-ptv-service-location-success lipas-id success-fx]
+             :on-failure      [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
+
+(re-frame/reg-event-fx
+ ::create-ptv-service-location-success
+ (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
+   (let [org-id   (get-in db [:ptv :selected-org :id])]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :service-locations] false)
+              (assoc-in [:ptv :org org-id :data :service-locations (:id resp)] resp)
+              (update-in [:ptv :org org-id :data :sports-sites lipas-id]
+                         update-in [:ptv :service-location-ids] (fn [ids]
+                                                                  (set (conj ids (:id resp))))))
+      :fx extra-fx})))
+
+(re-frame/reg-event-fx
+ ::create-ptv-service-location-failure
+ (fn [{:keys [db]} [_ _id extra-fx resp]]
+   (let [tr           (:translator db)
+         notification {:message  (tr :notifications/get-failed)
+                       :success? false}]
+     {:db (-> db
+              (assoc-in [:ptv :loading-from-lipas :service-locations] false)
+              (assoc-in [:ptv :errors :service-locations-creation] resp))
+      :fx (or extra-fx
+              [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+(re-frame/reg-event-fx
+ ::create-all-ptv-service-locations*
+ (fn [{:keys [db]} [_ org-id ids]]
+   (let [halt?             (get-in db [:ptv :service-locations-creation :halt?] false)
+         ids*              (get-in db [:ptv :service-locations-creation :ids])
+         processed         (set/difference (set ids*) (set ids))
+         on-single-success [[:dispatch [::create-all-ptv-service-locations* org-id (rest ids)]]
+                            [:dispatch [::assign-service-locations-to-sports-sites]]]
+         on-single-failure [[:dispatch [::halt-service-locations-creation]]]]
+     {:db (-> db
+              (update-in [:ptv :service-locations-creation]
+                         merge
+                         {:in-progress?  (if halt? false (boolean (seq ids)))
+                          :processed-ids processed
+                          :halt?         halt?}))
+      :fx [(when (and (not halt?) (seq ids))
+             [:dispatch [::create-ptv-service-location
+                         (first ids)
+                         on-single-success
+                         on-single-failure]])]})))
+
+(re-frame/reg-event-fx
+ ::create-all-ptv-service-locations
+ (fn [{:keys [db]} [_ sports-sites]]
+   (let [org-id (-> db :ptv :selected-org :id)
+         ids    (->> sports-sites
+                     (filter :sync-enabled)
+                     (map :lipas-id))]
+
+     {:db (update-in db [:ptv :service-locations-creation]
+                     merge
+                     {:data       (utils/index-by :lipas-id sports-sites)
+                      :batch-size (count ids)
+                      :halt?      false
+                      :size       (count ids)
+                      :ids        (set ids)})
+      :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]]})))
+
+(re-frame/reg-event-db
+ ::halt-service-locations-creation
+ (fn [db _]
+   (-> db
+       (assoc-in [:ptv :service-locations-creation :halt?] true))))
+
+
+(comment
+
+  (require '[re-frame.db])
+  (-> re-frame.db/app-db
+      deref
+      (get-in [:ptv :selected-org :id]))
+  ;; => "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+
+  (-> re-frame.db/app-db
+      deref
+      (get-in [:ptv :org ptv-data/uta-org-id-test :data :sports-sites])
+      )
+
+  (def sdefs
+    (-> re-frame.db/app-db
+        deref
+        (get-in [:ptv :org ptv-data/uta-org-id-test :data])
+        :service-candidates
+        ))
+
+  (def sss
+    (-> re-frame.db/app-db
+        deref
+        (get-in [:ptv :org ptv-data/uta-org-id-test :data])
+        :services
+        vals
+        (->> (filter :sourceId)
+             (map #(select-keys % [:sourceId :serviceNames])))))
+
+  (for [{:keys [sub-category] :as m} (vals sdefs)]
+    (assoc m :id (->> sss
+                      vals
+                      (some (fn [x]
+                              (when (->> x
+                                         :serviceNames
+                                         (some (fn [y] (= (:value y) sub-category))))
+                                (:id x)))))))
+
+  (-> re-frame.db/app-db
+      deref
+      (get-in [:sports-sites :types])
+
+      )
+
+  (-> re-frame.db/app-db
+      deref
+      :user :login :token
+      )
+
+  (-> re-frame.db/app-db
+      deref
+      :ptv :services-creation
+      )
+
+
+  (re-frame/dispatch [::fetch-services {:id ptv-data/uta-org-id-test}])
+    (re-frame/dispatch [::select-org nil])
+  )

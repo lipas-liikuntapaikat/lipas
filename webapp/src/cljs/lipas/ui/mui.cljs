@@ -16,6 +16,7 @@
    ["@mui/material/Checkbox$default" :as Checkbox]
    ["@mui/material/Chip$default" :as Chip]
    ["@mui/material/CircularProgress$default" :as CircularProgress]
+   ["@mui/material/LinearProgress$default" :as LinearProgress]
    ["@mui/material/Collapse$default" :as Collapse]
    ["@mui/material/CssBaseline$default" :as CssBaseline]
    ["@mui/material/Dialog$default" :as Dialog]
@@ -207,6 +208,7 @@
 (def checkbox (r/adapt-react-class Checkbox))
 (def chip (r/adapt-react-class Chip))
 (def circular-progress (r/adapt-react-class CircularProgress))
+(def linear-progress (r/adapt-react-class LinearProgress))
 (def collapse (r/adapt-react-class Collapse))
 (def css-baseline (r/adapt-react-class CssBaseline))
 (def dialog (r/adapt-react-class Dialog))

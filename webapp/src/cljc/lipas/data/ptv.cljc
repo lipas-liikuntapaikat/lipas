@@ -13,25 +13,45 @@
 
 ;; json-patch https://github.com/borgeby/clj-json-pointer
 
-(def locale->language
-  {:fi "fi" :se "sv" :en "en"})
+(def uta-org-id-test "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53")
+<
+#_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
+#_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
+
+(def lang->locale
+  {"fi" :fi, "sv" :se, "en" :en})
 
 (def placeholder "TODO: Value missing!")
 
-(defn ->ptv-lang-item
-  [m]
-  (->> (select-keys m [:fi :se :en])
-       (map (fn [[locale s]] {:value s :language (locale->language locale)}))))
+(def default-langs ["fi"])
 
 (defn ->ptv-service
-  [org type-code]
-  (let [type     (get types/all type-code)
-        sub-cat  (get types/sub-categories (:sub-category type))
-        main-cat (get types/main-categories (:main-category type))]
-    {:keywords (->> type :tags (map ->ptv-lang-item))
+  [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
+    :or   {languages default-langs} :as m}]
+  (let [languages (set languages)
+        #_#_type  (get types/all type-code)
+        sub-cat   (get types/sub-categories sub-category-id)
+        main-cat  (get types/main-categories (parse-long (:main-category sub-cat)))]
+
+    {:sourceId source-id
+
+     #_#_:keywords (let [tags (:tags type)]
+                     (for [locale [:fi :se :en]
+                           :let   [kws (get tags locale)]
+                           kw     kws
+                           :when  (some? kw)]
+                       {:language (locale->language locale) :value kw}))
 
      ;; List of ontology term urls (see http://finto.fi/koko/fi/)
-     :ontologyTerms []
+     :ontologyTerms (into []
+                          (comp cat (distinct))
+                          [(-> main-cat :ptv :ontology-urls)
+                           (-> sub-cat :ptv :ontology-urls)])
+
+     :serviceClasses (into []
+                           (comp (remove nil?) cat (distinct))
+                           [(-> sub-cat :ptv :service-classes)
+                            (-> main-cat :ptv :service-classes)])
 
      ;; https://stat.fi/fi/luokitukset/toimiala/
      ;;:industrialClasses []
@@ -49,29 +69,41 @@
      :type "Service" ; Service | PermitOrObligation | ProfessionalQualification
 
      ;; General description overrides this
-     :serviceChargeType "Chargeable" ; Chargeable | FreeOfCharge
+     #_#_:serviceChargeType "Chargeable" ; Chargeable | FreeOfCharge
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
-     :serviceNames (for [[locale lang] locale->language]
-                     {:type      "Name" ; Name | AlternativeName
-                      :languaage lang
-                      :value     (get-in sub-cat [:name locale])})
+     :serviceNames (for [[lang locale] (select-keys lang->locale languages)]
+                     {:type     "Name" ; Name | AlternativeName
+                      :language lang
+                      :value    (get-in sub-cat [:name locale])})
 
-     ;; List of target group urls (see
-     ;; http://finto.fi/ptvl/fi/page/?uri=http://urn.fi/URN:NBN:fi:au:ptvl:KR)
+     ;; List of target group urls
+     ;; https://koodistot.suomi.fi/codescheme;registryCode=ptv;schemeCode=ptvkohderyhmat
      ;; General description overrides this
-     :targetGroups []
+     :targetGroups ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] ;; Kansalaiset
 
      ;; Nationwide | NationwideExceptAlandIslands | LimitedType
      :areaType "LimitedType"
 
+
+     :areas (for [city-code city-codes]
+              ;; Type of the area. Possible values are: Municipality,
+              ;; Region, BusinessSubRegion, HospitalDistrict or
+              ;; WellbeingServiceCounties.
+              {:type      "Municipality"
+               ;; List of area codes related to type. For example if
+               ;; type = Municipality, areaCodes-list need to include
+               ;; municipality codes like 491 or 091.
+               :areaCodes [city-code]})
+
      ;; TODO is this the actual language in which the service is
      ;; provided? Maybe default to just "fi"?
-     :languages (vals locale->language)
+     :languages languages
 
-     :serviceDescriptions (for [[locale lang] locale->language]
-                            {:type      "Summary" ; Description |
+     :serviceDescriptions (for [[k v]         {:summary "Summary" :description "Description"}
+                                [lang locale] (select-keys lang->locale languages)]
+                            {:type     v ; Description |
                                         ; Summary |
                                         ; UserInstruction |
                                         ; ValidityTime |
@@ -79,86 +111,94 @@
                                         ; DeadLine |
                                         ; ChargeTypeAdditionalInfo
                                         ; | ServiceType
-                             :languaage lang
-                             :value     (get-in sub-cat [:description locale] placeholder)})
+                             :language lang
+                             :value    (get-in m [k locale] placeholder)})
 
      ;; TODO can this be inferred from owner / admin info reliably or do we
      :serviceProducers [{;; SelfProducedServices | ProcuredServices | Other
-                         :provisionType "SelfProducedServices"}]
+                         :provisionType "SelfProducedServices"
+                         :organizations [org-id]}]
 
      :publishingStatus "Published" ; Draft | Published
 
      ;; Attach with ServiceChannelId
      ;;:serviceChannels []
 
-     :mainResponsibleOrganization (:id org)
+     :mainResponsibleOrganization org-id
      }))
 
-(defn ->ptv-service-location-channel
-  [org {:keys [ptv lipas-id location] :as sports-site}]
-  (let [type     (get types/all (get-in sports-site [:type :type-code]))
+(defn ->ptv-service-location
+  [org
+   coord-transform-fn
+   {:keys [ptv lipas-id location search-meta] :as sports-site}]
+  (let [languages (set (get ptv :languages default-langs))
+        type     (get types/all (get-in sports-site [:type :type-code]))
         sub-cat  (get types/sub-categories (:sub-category type))
         main-cat (get types/main-categories (:main-category type))]
-    {:organizationId      (:id org)
-     :sourceId            (str "lipas-" lipas-id)
+    {:organizationId      (:org-id org)
+     :sourceId            (str "lipas-" (:org-id org) "-" lipas-id)
      :serviceChannelNames (keep identity
-                                [(when-let [s (:name sports-site)]
-                                   {:type     "Name"
-                                    :value    s
-                                    :language "fi"})
+                                (let [fallback (get-in sports-site [:name])]
+                                  [(when (contains? languages "fi")
+                                     {:type     "Name"
+                                     :value    fallback
+                                     :language "fi"})
 
-                                 (when-let [s (get-in sports-site [:name-localized :se])]
-                                   {:type     "Name"
-                                    :value    s
-                                    :language "sv"})
+                                   (when (contains? languages "sv")
+                                     {:type     "Name"
+                                      :value    (get-in sports-site [:name-localized :se] fallback)
+                                      :language "sv"})
 
-                                 (when-let [s (get-in sports-site [:name-localized :en])]
-                                   {:type     "Name"
-                                    :value    s
-                                    :language "en"})
+                                   (when (contains? languages "en")
+                                       {:type     "Name"
+                                        :value    (get-in sports-site [:name-localized :en] fallback)
+                                        :language "en"})
 
-                                 (when-let [s (:marketing-name sports-site)]
-                                   {:type     "AlternativeName"
-                                    :value    s
-                                    :language "fi"})])
+                                   (when (contains? languages "fi")
+                                     (when-let [s (:marketing-name sports-site)]
+                                       {:type     "AlternativeName"
+                                        :value    s
+                                        :language "fi"}))]))
 
-     :displayNameType [{:type "Name" :language "fi"}
-                       {:type "Name" :language "sv"}
-                       {:type "Name" :language "en"}]
+     :displayNameType (keep identity
+                            [(when (contains? languages "fi") {:type "Name" :language "fi"})
+                             (when (contains? languages "sv") {:type "Name" :language "sv"})
+                             (when (contains? languages "en") {:type "Name" :language "en"})])
 
      :serviceChannelDescriptions (keep identity
-                                       (for [[type-k type-v] {:summary "Summary" :description "Description"}
-                                             [locale lang]   locale->language]
-                                         (when-let [v (get-in ptv [type-k locale])]
+                                       (let [fallback "TODO text missing"]
+                                         (for [[type-k type-v] {:summary     "Summary"
+                                                                :description "Description"}
+                                               [lang locale] (select-keys lang->locale languages)]
                                            {:type     type-v
-                                            :value    v
+                                            :value    (get-in ptv [type-k locale] fallback)
                                             :language lang})))
 
      ;; TODO should this be controlled in org or sports-site level?
-     :languages {:supported-languages org}
+     :languages languages
 
      :addresses [{:type    "Location" ; Location | Postal
-                  :subType "Street" ; | Single | Street | PostOfficeBox | Abroad | Other.
+                  :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
                   :country "FI"
                   :streetAddress
-                  (let [[lon lat] (-> location :geometries :features first
-                                      :geometry :coordinates)]
+                  (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)]
                     {:municipality (-> location
                                        :city
                                        :city-code
                                        (utils/zero-left-pad 3))
-                     :street       [{:value (:address location) :language "fi"}]
+                     :street       (for [lang languages]
+                                     {:value (:address location) :language lang})
+                     :postalCode   (-> location :postal-code)
                      :latitude     lat
                      :longitude    lon})}]
 
-     :publishigStatus "Published" ; Draft | Published
+     :publishingStatus "Published" ; Draft | Published
 
      ;; Link services by serviceId
-     :services []
+     :services (-> sports-site :ptv :service-ids)
      }))
 
 (comment
-  (->ptv-service {:id "lol org id"} 1530)
 
   (def uta-jh
     {:properties {:area-m2 1539, :surface-material []},
@@ -226,5 +266,5 @@
       :city-code
       (utils/zero-left-pad 3))
 
-  (->ptv-service-location-channel {:id "lol org id" :supported-languages ["fi"]} uta-jh)
+
   )

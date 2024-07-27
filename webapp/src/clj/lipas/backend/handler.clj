@@ -84,7 +84,12 @@
       ["/swagger.json"
        {:get
         {:no-doc  true
-         :swagger {:info {:title "Lipas-API v2"}}
+         :swagger {:info {:title "Lipas-API v2"}
+                   :securityDefinitions
+                   {:token-auth
+                    {:type "apiKey"
+                     :in   "header"
+                     :name "Authorization"}}}
          :handler (swagger/create-swagger-handler)}}]
 
       ["/health"
@@ -695,7 +700,77 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/get-ptv-integration-candidates search body-params)})}}]]]
+            :body   (core/get-ptv-integration-candidates search body-params)})}}]
+
+      ["/actions/generate-ptv-descriptions"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/generate-ptv-descriptions search body-params)})}}]
+
+      ["/actions/generate-ptv-service-descriptions"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
+
+      ["/actions/save-ptv-service"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/upsert-ptv-service! body-params)})}}]
+
+      ["/actions/fetch-ptv-services"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/fetch-ptv-services body-params)})}}]
+
+      ["/actions/sync-to-ptv"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [identity body-params]}]
+           {:status 200
+            :body   (core/sync-to-ptv! db search identity body-params)})}}]
+
+      ["/actions/save-ptv-service-location"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
+
+      ["/actions/save-ptv-integration-definitions"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/save-ptv-integration-definitions db search body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

@@ -10,7 +10,79 @@
      :type                         "Kohteen tyyppi"
      :type-and-category-disclaimer "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"}
     :ptv
-    {:tooltip "Vie Palvelutietovarantoon"}
+    {:tooltip          "Vie Palvelutietovarantoon"
+     :service          "Palvelu"
+     :services         "Palvelut"
+     :service-channel  "Palvelukanava"
+     :service-channels "Palvelukanavat"
+     :description      "Kuvaus"
+     :descriptions     "Kuvaukset"
+     :summary          "Tiivistelmä"
+     :loading-from-ptv "Haetaan tietoja PTV:sta..."
+     :sports-sites     "Liikuntapaikat"
+     :tools            "Massatyökalut"
+     :settings         "Asetukset"
+     :wizard           "Käyttöönotto"}
+    :ptv.wizard
+    {:generate-descriptions         "Laadi kuvaukset"
+     :generate-descriptions-helper1 "Palvelut voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
+
+     :generate-descriptions-helper2   "Paina \"Laadi kuvaukset\" painiketta luodaksesi kuvaukset automaattisesti tekoälyn avulla. Kuvaukset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta."
+     :services-to-add                 "Perustettavat palvelut"
+     :export-services-to-ptv          "Vie palvelutietovarantoon"
+     :export-service-locations-to-ptv "Vie palvelutietovarantoon"
+     :all-services-exist              "Kaikki tarvittavat palvelut on PTV:ssa. Hieno juttu!"
+     :integrate-service-locations     "Luo liikuntapaikoista palvelupaikat"
+     :assign-services-to-sports-sites "Kytke liikuntapaikat palveluihin"
+     :generate-descriptions-helper3   "Palvelupaikat voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
+     :unselect-helper "Jos et halua viedä tiettyä kohdetta, voit avata
+     kohteen oikealta ja laittaa \"Vie\" liikukytkimen pois päältä."}
+    :ptv.tools.generate-services
+    {:headline "Luo palvelut PTV:oon"}
+    :ptv.tools.ai
+    {:headline     "Laadi palvelupaikkojen kuvaukset tekoälyn avulla"
+     :start        "Aloita"
+     :start-helper "Voit muokata tekoälyn ehdotuksia sitä mukaa kun ne valmistuvat."
+     :canceling    "Peruutetaan... Odota hetki"}
+    :ptv.tools.ai.sports-sites-filter
+    {:label                                "Valitse liikuntapaikat"
+     :all                                  "Kaikki"
+     :sync-enabled                         "Vietäväksi valitut"
+     :no-existing-description              "Kaikki joista kuvaus puuttuu"
+     :sync-enabled-no-existing-description "Vietäväksi valitut joista kuvaus puuttuu"}
+    :ptv.actions
+    {:export                 "Vie"
+     :select-org             "Valitse organisaatio"
+     :select-integration     "Valitse liittämistapa"
+     :generate-with-ai       "Generoi tekoälyllä"
+     :select-service         "Valitse palvelu"
+     :select-service-channel "Valitse palvelukanava"}
+    :ptv.integration
+    {:manual "Liitä manuaalisesti"}
+    :ptv.integration.service
+    {:lipas-managed        "LIPAS määrittää palvelut (suositeltu)"
+     :lipas-managed-helper "LIPAS perustaa tarvittavat palvelut PTV:oon DVV:n suositusten mukaisesti ja liittää palvelukanavat (liikuntapaikat) niihin automaattisesti."
+     :manual-helper        "Liikuntapaikat liitetään olemassa oleviin Palvelutietovarannon palveluihin manuaalisesti tässä työkalussa. Liitos tarvitsee tehdä jokaiselle liikuntapaikalle kerran."}
+    :ptv.integration.service-channel
+    {:lipas-managed        "LIPAS määrittää palvelukanavat (suositeltu)"
+     :lipas-managed-helper "LIPAS perustaa jokaiselle liikuntapaikalle palvelukanavan PTV:oon ja liittää liikuntapaikkojen tiedot niihin automaattisesti."
+     :manual-helper        "Liikuntapaikka liitetään olemassa olevaan palvelukanavaan manuaalisesti tässä työkalussa. Liitos tarvitsee tehdä jokaiselle liikuntapaikalle kerran"}
+    :ptv.integration.default-settings
+    {:headline "Oletusasetukset"
+     :helper   "Oletusasetukset voi ylikirjoittaa määrittämällä Liikuntapaikat-välilehdellä kohdekohtaiset asetukset."}
+    :ptv.integration.interval
+    {:headline  "Vienti Palvelutietovarantoon"
+     :label     "Milloin muutokset viedään Palvelutietovarantoon"
+     :immediate "Automaattisesti kun muutoksia tallennetaan Lipaksessa (suositeltu)"
+     :daily     "Automaattisesti kerran päivässä"
+     :manual    "Vain manuaalisesti"}
+    :ptv.integration.description
+    {:lipas-managed-comment-field        "Käytä liikuntapaikan lisätietokenttää"
+     :lipas-managed-comment-field-helper "Palvelukanavan kuvaus ylläpidetään liikuntapaikan lisätietokentässä. Tiivistelmä on lisätietokentän ensimmäinen enter-painikkeella erotettu kappale."
+     :lipas-managed-ptv-fields           "Käytä erillistä kuvausta"
+     :lipas-managed-ptv-fields-helper    "Kuvaus ja tiivistelmä ylläpidetään liikuntapaikasta erillään tässä työkalussa. Kuvausehdotukset voidaan laatia automaattisesti tekoälyn avulla."
+     :ptv-managed                        "Älä päivitä kuvauksia"
+     :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssa. Lipas ei muuta tai päivitä kuvauksia."}
     :utp
     {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
      :add-contact          "Lisää yhteystieto"
