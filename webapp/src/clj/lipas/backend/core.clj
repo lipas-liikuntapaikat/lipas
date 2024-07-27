@@ -7,6 +7,7 @@
    [clojure.java.jdbc :as jdbc]
    [clojure.string :as str]
    [dk.ative.docjure.spreadsheet :as excel]
+   [lipas.ai.core :as ai]
    [lipas.backend.accessibility :as accessibility]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.analysis.reachability :as reachability]
@@ -902,6 +903,76 @@
   [search criteria]
   (ptv/get-eligible-sites search criteria))
 
+(defn sync-to-ptv!
+  [db search user sports-site]
+  (let [site (save-sports-site! db search user sports-site)]
+    ))
+
+(defn generate-ptv-descriptions
+  [{:keys [client indices] :as _search}
+   {:keys [lipas-id]}]
+  (let [idx (get-in indices [:sports-site :search])
+        doc (-> (search/fetch-document client idx lipas-id) :body :_source)]
+    (-> (ai/generate-ptv-descriptions doc)
+        :message
+        :content)))
+
+(defn make-overview
+  [sites]
+  {:city-name         (->> sites first :search-meta :location :city :name)
+   :service-name      (->> sites first :search-meta :type :sub-category :name)
+   :sports-facilities (for [site sites]
+                        {:type (-> site :search-meta :type :name :fi)})})
+
+(defn generate-ptv-service-descriptions
+  [search
+   {:keys [_id sub-category-id city-codes]}]
+  (let [type-codes (->> (types/by-sub-category sub-category-id)
+                        (map :type-code))
+        sites      (ptv/get-eligible-sites search {:type-codes type-codes
+                                                   :city-codes city-codes
+                                                   :owners     ["city" "city-main-owner"]})
+        doc        (make-overview sites)]
+    (-> (ai/generate-ptv-service-descriptions doc)
+        :message
+        :content)))
+
+(defn upsert-ptv-service!
+  [{:keys [id source-id] :as m}]
+  {:pre [(some? source-id)]}
+  (let [config {:org-id (get-in ptv/test-config [:creds :org-id])}
+        data   (ptv/->ptv-service (merge config m))]
+    (if id
+      (ptv/update-service config id data)
+      (ptv/create-service config data))))
+
+(defn fetch-ptv-services
+  [{:keys [org-id] :as m}]
+  {:pre [(some? org-id)]}
+  (ptv/get-org-services {} org-id))
+
+(defn upsert-ptv-service-location!
+  [db search user {:keys [org data sports-site] :as m}]
+  (let [config {:org-id (get-in ptv/test-config [:creds :org-id])}
+        id     (first (get-in sports-site [:ptv :service-location-ids]))
+        data   (ptv/->ptv-service-location org gis/wgs84->tm35fin-no-wrap sports-site)
+        resp   (if id
+               (ptv/update-service-location config id data)
+               (ptv/create-service-location config data))]
+
+    (assert (:lipas-id sports-site))
+
+    (let [site (db/get-sports-site db (:lipas-id sports-site))]
+      (save-sports-site! db search user (-> site
+                                            (assoc :event-date (utils/timestamp))
+                                            (assoc :ptv (:ptv sports-site)))))
+
+    resp))
+
+(defn save-ptv-integration-definitions
+  [db search ptv]
+  )
+
 (comment
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
@@ -956,7 +1027,7 @@
                     :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}]
     (search search2 query))
 
-  (flat-finance-report db-spec [992 175] )
+  #_(flat-finance-report db-spec [992 175] )
 
   (process-elevation-queue! db-spec search2)
   search2
