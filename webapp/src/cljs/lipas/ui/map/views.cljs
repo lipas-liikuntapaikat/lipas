@@ -721,7 +721,7 @@
          [mui/tab
           {:style {:min-width 0}
            :value 4
-           :label "Korkeusprofiili"}])]
+           :label (:tr :sports-site.height-profile/headline)}])]
 
       (when delete-dialog-open?
         [sports-sites/delete-dialog
@@ -890,15 +890,15 @@
              [mui/tooltip
               {:title
                (case sub-mode
-                 :drawing          "Piirtotyökalu valittu"
-                 :drawing-hole     "Reikäpiirtotyökalu valittu"
+                 :drawing          (tr :map.tools/drawing-tooltip)
+                 :drawing-hole     (tr :map.tools/drawing-hole-tooltip)
                  (:editing :undo)  (tr :map/delete-vertices-hint)
-                 :importing        "Tuontityökalu valittu"
-                 :deleting         "Poistotyökalu valittu"
-                 :splitting        "Katkaisutyökalu valittu"
-                 :simplifying      "Yskinkertaistystyökalu valittu"
-                 :selecting        "Valintatyökalu valittu"
-                 :travel-direction "Kulkusuuntatyökalu valittu"
+                 :importing        (tr :map.tools/importing-tooltip)
+                 :deleting         (tr :map.tools/deleting-tooltip)
+                 :splitting        (tr :map.tools/splitting-tooltip)
+                 :simplifying      (tr :map.tools/simplifying-tooltip)
+                 :selecting        (tr :map.tools/selecting-tooltip)
+                 :travel-direction (tr :map.tools/travel-direction-tooltip)
                  :view-only        "-")}
               [mui/fab
                {:size     "small"

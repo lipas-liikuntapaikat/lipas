@@ -336,13 +336,16 @@
      :school-use-filter     "Koulujen liikuntapaikat",
      :clear-filters         "Poista rajaukset"},
     :map.tools
-    {:drawing-tooltip      "Piirtotyökalu valittu",
-     :drawing-hole-tooltip "Reikäpiirtotyökalu valittu",
-     :edit-tool            "Muokkaustyökalu",
-     :importing-tooltip    "Tuontityökalu valittu",
-     :deleting-tooltip     "Poistotyökalu valittu",
-     :splitting-tooltip    "Katkaisutyökalu valittu"
-     :simplify             "Yksinkertaista"},
+    {:drawing-tooltip          "Piirtotyökalu valittu",
+     :drawing-hole-tooltip     "Reikäpiirtotyökalu valittu",
+     :edit-tool                "Muokkaustyökalu",
+     :importing-tooltip        "Tuontityökalu valittu",
+     :deleting-tooltip         "Poistotyökalu valittu",
+     :splitting-tooltip        "Katkaisutyökalu valittu"
+     :simplifying              "Yksinkertaistutyökalu valittu"
+     :selecting                "Valintatyökalu valittu"
+     :simplify                 "Yksinkertaista"
+     :travel-direction-tooltip "Kulkusuuntatyökalu valittu"},
     :map.tools.simplify
     {:headline "Yksinkertaista geometrioita"}
     :partners           {:headline "Kehittä​misessä mukana"},
@@ -483,6 +486,13 @@
      :add-rink      "Lisää kenttä",
      :edit-rink     "Muokkaa kenttää",
      :headline      "Kentät"},
+    :sports-site.height-profile
+    {:headline                "Korkeusprofiili"
+     :distance-from-start-m   "Etäisyys alusta (m)"
+     :distance-from-start-km  "Etäisyys alusta (km)"
+     :height-from-sea-level-m "Korkeus merenpinnasta (m)"
+     :total-ascend            "Nousua yhteensä"
+     :total-descend           "Laskua yhteensä"}
     :lipas.sports-site
     {:properties          "Lisätiedot",
      :delete-tooltip      "Poista liikuntapaikka...",
@@ -1260,12 +1270,16 @@
      :school-use-filter     "Idrottsanläggningar nära skolor",
      :clear-filters         "Avmarkera filter"},
     :map.tools
-    {:drawing-tooltip      "Ritningsverktyg vald",
-     :drawing-hole-tooltip "Hålverktyg vald",
-     :edit-tool            "Redigeringsverktyg",
-     :importing-tooltip    "Importeringsverktyg vald",
-     :deleting-tooltip     "Borttagningsverktyg vald",
-     :splitting-tooltip    "Klippningsverktyg vald"},
+    {:drawing-tooltip          "Ritverktyg valt",
+     :drawing-hole-tooltip     "Hålteckningsverktyg valt",
+     :edit-tool                "Redigeringsverktyg",
+     :importing-tooltip        "Importverktyg valt",
+     :deleting-tooltip         "Raderingsverktyg valt",
+     :splitting-tooltip        "Delningsverktyg valt",
+     :simplifying              "Förenklingsverktyg valt",
+     :selecting                "Valverktyg valt",
+     :simplify                 "Förenkla",
+     :travel-direction-tooltip "Reseriktningverktyg valt"}
     :partners           {:headline "Tillsammans med"},
     :actions
     {:duplicate                "Kopiera",
@@ -1364,6 +1378,13 @@
      :headline-short "El",
      :select-rink    "Bensin"},
     :restricted         {:login-or-register "Logga in eller registrera dig"},
+    :sports-site.height-profile
+    {:headline                "Höjdprofil",
+     :distance-from-start-m   "Avstånd från start (m)",
+     :distance-from-start-km  "Avstånd från start (km)",
+     :height-from-sea-level-m "Höjd över havet (m)",
+     :total-ascend            "Total stigning",
+     :total-descend           "Total nedstigning"}
     :lipas.sports-site
     {:properties        "Ytterligare information",
      :delete-tooltip    "Ta bort idrottsanläggningen...",
@@ -2124,13 +2145,16 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :school-use-filter     "Used by schools",
      :clear-filters         "Clear filters"},
     :map.tools
-    {:drawing-tooltip      "Draw tool selected",
-     :drawing-hole-tooltip "Draw hole tool selected",
-     :edit-tool            "Edit tool",
-     :importing-tooltip    "Import tool selected",
-     :deleting-tooltip     "Delete tool selected",
-     :splitting-tooltip    "Split tool selected"
-     :simplify             "Simplify"},
+    {:drawing-tooltip          "Drawing tool selected",
+     :drawing-hole-tooltip     "Hole drawing tool selected",
+     :edit-tool                "Edit tool",
+     :importing-tooltip        "Import tool selected",
+     :deleting-tooltip         "Delete tool selected",
+     :splitting-tooltip        "Split tool selected",
+     :simplifying              "Simplify tool selected",
+     :selecting                "Select tool selected",
+     :simplify                 "Simplify",
+     :travel-direction-tooltip "Travel direction tool selected"},
     :map.tools.simplify
     {:headline "Simplify geometries"}
     :partners         {:headline "In association with"},
@@ -2262,6 +2286,13 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :rink1-area-m2 "Rink 1 area m²"
      :rink2-area-m2 "Rink 2 area m²"
      :rink3-area-m2 "Rink 3 area m²"},
+    :sports-site.height-profile
+    {:headline                "Elevation Profile",
+     :distance-from-start-m   "Distance from Start (m)",
+     :distance-from-start-km  "Distance from Start (km)",
+     :height-from-sea-level-m "Height from Sea Level (m)",
+     :total-ascend            "Total Ascent",
+     :total-descend           "Total Descent"}
     :lipas.sports-site
     {:properties        "Properties",
      :delete-tooltip    "Delete sports facility...",
