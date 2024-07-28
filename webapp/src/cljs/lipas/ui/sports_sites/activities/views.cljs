@@ -383,7 +383,7 @@
                                               (mapv #(dissoc % :id)))))
           :on-user-sort     (fn [items]
                               (set-field (mapv #(dissoc % :id) items)))
-          :add-tooltip      "Lisää"
+          :add-tooltip      (tr :actions/add)
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
           :confirm-tooltip  (tr :confirm/press-again-to-delete)
@@ -511,7 +511,7 @@
                          (set-field :common-rules vs))}]]
 
        [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "subtitle2"} "Omat säännöt"]
+        [mui/typography {:variant "subtitle2"} (tr :utp/custom-rules)]
         #_[mui/divider
            [mui/chip {:size "small" :label "Omat säännöt"}]]]
 
