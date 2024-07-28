@@ -357,12 +357,14 @@
                                                      (js->clj (.-dragHandleProps provided)))
 
                                 [mui/table-cell {:padding "checkbox"}
-                                 [mui/checkbox
-                                  {:color     "secondary"
-                                   :checked   (= item @selected-item)
-                                   :on-change (fn [_ checked?]
-                                                (let [v (when checked? item)]
-                                                  (reset! selected-item v)))}]]
+                                 [mui/stack {:direction "row" :align-items "center"}
+                                  [mui/icon "drag_indicator"]
+                                  [mui/checkbox
+                                   {:color     "secondary"
+                                    :checked   (= item @selected-item)
+                                    :on-change (fn [_ checked?]
+                                                 (let [v (when checked? item)]
+                                                   (reset! selected-item v)))}]]]
 
                                 ;; Cells
                                 (doall
