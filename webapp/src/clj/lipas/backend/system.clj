@@ -71,6 +71,18 @@
 (defmethod ig/halt-key! :lipas/aws [_ m]
   )
 
+(defmethod ig/init-key :open-ai [_ config]
+  )
+
+(defmethod ig/halt-key! :open-ai [_ m]
+  )
+
+(defmethod ig/init-key :ptv [_ config]
+  )
+
+(defmethod ig/halt-key! :ptv [_ m]
+  )
+
 (defn mask [_s]
   "[secret]")
 
