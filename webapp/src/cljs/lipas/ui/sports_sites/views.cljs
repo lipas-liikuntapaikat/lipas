@@ -1126,12 +1126,13 @@
 (defn elevation-profile
   [{:keys [lipas-id]}]
   (r/with-let [selected-segment (r/atom 0)]
-    (let [elevation  (<== [::subs/elevation lipas-id])
+    (let [tr         (<== [:lipas.ui.subs/translator])
+          elevation  (<== [::subs/elevation lipas-id])
           stats      (<== [::subs/elevation-stats lipas-id])
           curr-stats (nth stats @selected-segment)
-          labels     {:distance-m  "Etäisyys alusta (m)"
-                      :distance-km "Etäisyys alusta (km)"
-                      :elevation-m "Korkeus merenpinnasta (m)"}]
+          labels     {:distance-m  (tr :sports-site.height-profile/distance-from-start-m)
+                      :distance-km (tr :sports-site.height-profile/distance-from-start-km)
+                      :elevation-m (tr :sports-site.height-profile/height-from-sea-level-m)}]
       [mui/grid {:container true :spacing 2}
        [mui/grid {:item true :xs 12}
         [mui/grid
@@ -1207,14 +1208,11 @@
         [mui/table {:size "medium"}
          [mui/table-body
           [mui/table-row
-           [mui/table-cell "Nousua yhteensä"]
+           [mui/table-cell (tr :sports-site.height-profile/total-ascend)]
            [mui/table-cell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
           [mui/table-row
-           [mui/table-cell "Laskua yhteensä"]
+           [mui/table-cell (tr :sports-site.height-profile/total-descend)]
            [mui/table-cell (str (-> curr-stats :descend-m  utils/round-safe) "m")]]]]]
 
        ;; landing bay for fabs
        [mui/grid {:item true :xs 12 :style {:height "3em"}}]])))
-
-(defn main []
-  [mui/typography "Nothing here"])
