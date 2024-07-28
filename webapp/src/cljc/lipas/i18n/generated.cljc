@@ -564,7 +564,7 @@
      :maastokartta "Maastokartta",
      :ortokuva     "Ilmakuva",
      :taustakartta "Taustakartta"
-     :transparency "Taustakartan läpinäkyvyys"},
+     :transparency "Pohjakartan läpinäkyvyys"},
     :map.overlay
     {:tooltip                       "Muut karttatasot"
      :mml-kiinteisto                "Kiinteistörajat"
