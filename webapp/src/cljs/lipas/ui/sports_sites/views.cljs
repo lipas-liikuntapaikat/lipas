@@ -499,6 +499,7 @@
         data-type (get prop-type :data-type)
         on-change set-field
         k         prop-k]
+
     (cond
       (material-field? k) [surface-material-selector
                            {:tr        tr
@@ -545,15 +546,26 @@
                                       :tooltip   tooltip
                                       :disabled  disabled?
                                       :on-change on-change}]
-      :else                         [lui/text-field
-                                     {:value     value
-                                      :label     label
-                                      :disabled  disabled?
-                                      :tooltip   tooltip
-                                      :spec      spec
-                                      :type      (when (#{"numeric" "integer"} data-type)
-                                                   "number")
-                                      :on-change on-change}])))
+
+      (= "enum" data-type k) [lui/select
+                              {:items       (:opts prop-type)
+                               :deselect?   true
+                               :value       value
+                               :helper-text tooltip
+                               :label       label
+                               :disabled    disabled?
+                               :value-fn    first
+                               :label-fn    (comp locale :name second)}]
+
+      :else [lui/text-field
+             {:value     value
+              :label     label
+              :disabled  disabled?
+              :tooltip   tooltip
+              :spec      spec
+              :type      (when (#{"numeric" "integer"} data-type)
+                           "number")
+              :on-change on-change}])))
 
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
@@ -664,6 +676,16 @@
                                             :tooltip   tooltip
                                             :disabled  disabled?
                                             :on-change on-change}]
+            (= "enum" data-type)          [lui/select
+                                           {:items       (:opts v)
+                                            :deselect?   true
+                                            :value       value
+                                            :helper-text tooltip
+                                            :label       label
+                                            :on-change   on-change
+                                            :disabled    disabled?
+                                            :value-fn    first
+                                            :label-fn    (comp locale :label second)}]
             :else                         [lui/text-field
                                            {:value     value
                                             :disabled  disabled?
