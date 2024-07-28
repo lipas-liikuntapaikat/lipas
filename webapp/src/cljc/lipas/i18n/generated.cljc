@@ -18,7 +18,8 @@
      :length-km            "Pituus km"
      :add-subroute         "Lisää osareitti"
      :delete-route-prompt  "Haluatko varmasti poistaa tämän reitin?"
-     :custom-rule          "Oma lupa, sääntö, ohje"}
+     :custom-rule          "Oma lupa, sääntö, ohje"
+     :custom-rules         "Omat säännöt"}
     :newsletter
     {:subscribe-short      "Tilaa"
      :subscribe            "Tilaa uutiskirje"
@@ -989,7 +990,8 @@
      :length-km            "Längd km"
      :add-subroute         "Lägg till delrutt"
      :delete-route-prompt  "Är du säker på att du vill ta bort den här rutten?"
-     :custom-rule          "Egna tillstånd, regler, anvisningar"}
+     :custom-rule          "Egna tillstånd, regler, anvisningar"
+     :cusotm-rules         "Egen regler"}
 
     :analysis
     {:headline                   "Analysverktyg (beta)"
@@ -1814,7 +1816,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :length-km            "Length km"
      :add-subroute         "Add sub-route"
      :delete-route-prompt  "Are you sure you want to delete this route?"
-     :custom-rule          "Custom permit, regulation, instruction"}
+     :custom-rule          "Custom permit, regulation, instruction"
+     :custom-rules         "Custom instructions"}
     :analysis
     {:headline                   "Analysis Tool (beta)"
      :description                "The analysis tool can be used to evaluate the supply and accessibility of physical activity conditions by comparing the distance and travel times to physical activity facilities in relation to other facilities, population, and educational institutions."
