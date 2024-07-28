@@ -501,7 +501,7 @@
          {:label       label
           :value       (:common-rules @state)
           :helper-text description
-          :sort-fn     (comp locale :label second)
+          :sort-fn     (comp :fi :label second)
           :items       common-rules
           :label-fn    (comp locale :label second)
           :caption-fn  (comp locale :description second)
