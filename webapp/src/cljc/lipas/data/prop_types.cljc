@@ -90,6 +90,8 @@
 
       ;; Update surface material description
       (assoc-in [:surface-material :description :fi] "Liikunta-alueiden pääasiallinen pintamateriaali - tarkempi kuvaus liikuntapaikan eri tilojen pintamateriaalista voidaan antaa pintamateriaalin lisätietokentässä")
+
+      ;; Update surface material info description
       (assoc-in [:surface-material-info :description :fi] "Syötä pintamateriaalin tarkempi kuvaus-  esim. tekonurmen yleisnimitys ”esim. Kumirouhetekonurmi”, tuotenimi ja tieto täytemateriaalin laadusta (esim. biohajoava/perinteinen kumirouhe).")
 
       ;; Update toilet? description
@@ -169,6 +171,30 @@
       ;; Update Temppurinne name
       (assoc-in [:snowpark-or-street? :name :fi] "Parkki")
 
+      ;; Update :free-use? name
+      (assoc-in [:free-use? :name :fi] "Kohde on vapaasti käytettävissä")
+
+      ;; Add new "korkein pudotus (m) prop"
+      (assoc :highest-drop-m
+             {:name      {:fi "Korkein pudotus m"
+                          :se "Den högsta droppen"
+                          :en "Highest drop"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :fitness-stairs-length-m prop
+      (assoc :fitness-stairs-length-m
+             {:name      {:fi "Kuntoportaiden pituus m"
+                          :se "Längden på tränings trapporna m"
+                          :en "Length of the fitness stairs m"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
       ))
 
 (def used
