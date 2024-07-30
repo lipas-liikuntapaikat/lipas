@@ -702,26 +702,26 @@
          [mui/tab
           {:style {:min-width 0}
            :value 2
-           :label "Esteettömyys"}])
+           :label (tr :lipas.sports-site/accessibility)}])
 
        (when (and (floorball-types type-code)
                   (= :floorball floorball-visibility))
          [mui/tab
           {:style {:min-width 0}
            :value 3
-           :label "Olosuhteet"}])
+           :label (:tr :lipas.floorball/headline)}])
 
        (when show-activities?
          [mui/tab
           {:style {:min-width 0}
            :value 5
-           :label "Ulkoilutietopalvelu"}])
+           :label (tr :utp/headline)}])
 
        (when (#{"LineString"} geom-type)
          [mui/tab
           {:style {:min-width 0}
            :value 4
-           :label (:tr :sports-site.height-profile/headline)}])]
+           :label (tr :sports-site.elevation-profile/headline)}])]
 
       (when delete-dialog-open?
         [sports-sites/delete-dialog

@@ -5,7 +5,8 @@
 (def dicts
   {:fi
    {:utp
-    {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
+    {:headline             "Ulkoilutietopalvelu"
+     :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
      :add-contact          "Lisää yhteystieto"
      :unit                 "yksikkö"
      :highlight            "Kohokohta"
@@ -146,6 +147,8 @@
      :headline    "Avoin data",
      :rest        "REST",
      :wms-wfs     "WMS & WFS"},
+    :lipas.floorball
+    {:headline "Olosuhteet"}
     :lipas.swimming-pool.pool
     {:accessibility "Saavutettavuus", :outdoor-pool? "Ulkoallas"},
     :pool-types
@@ -486,7 +489,7 @@
      :add-rink      "Lisää kenttä",
      :edit-rink     "Muokkaa kenttää",
      :headline      "Kentät"},
-    :sports-site.height-profile
+    :sports-site.elevation-profile
     {:headline                "Korkeusprofiili"
      :distance-from-start-m   "Etäisyys alusta (m)"
      :distance-from-start-km  "Etäisyys alusta (km)"
@@ -494,7 +497,8 @@
      :total-ascend            "Nousua yhteensä"
      :total-descend           "Laskua yhteensä"}
     :lipas.sports-site
-    {:properties          "Lisätiedot",
+    {:accessibility       "Esteettömyys"
+     :properties          "Lisätiedot",
      :delete-tooltip      "Poista liikuntapaikka...",
      :headline            "Liikuntapaikka",
      :new-site-of-type    "Uusi {1}",
@@ -1378,7 +1382,7 @@
      :headline-short "El",
      :select-rink    "Bensin"},
     :restricted         {:login-or-register "Logga in eller registrera dig"},
-    :sports-site.height-profile
+    :sports-site.elevation-profile
     {:headline                "Höjdprofil",
      :distance-from-start-m   "Avstånd från start (m)",
      :distance-from-start-km  "Avstånd från start (km)",
@@ -1728,6 +1732,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :center-map-to-site     "Fokusera kartan på platsen",
      :draw-hole              "Lägg till hål",
      :split-linestring       "Klippa ruttdel",
+     :travel-direction       "Bestäm riktningen"
      :delete-vertices-hint
      "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",
      :calculate-route-length "Räkna ut längden",
@@ -2286,7 +2291,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :rink1-area-m2 "Rink 1 area m²"
      :rink2-area-m2 "Rink 2 area m²"
      :rink3-area-m2 "Rink 3 area m²"},
-    :sports-site.height-profile
+    :sports-site.elevation-profile
     {:headline                "Elevation Profile",
      :distance-from-start-m   "Distance from Start (m)",
      :distance-from-start-km  "Distance from Start (km)",
@@ -2658,6 +2663,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :split-linestring       "Split",
      :delete-vertices-hint
      "Vertices can be deleted by pressing alt-key and clicking.",
+     :travel-direction       "Define travel direction"
      :calculate-route-length "Calculate route length",
      :calculate-area         "Calculate area",
      :remove-polygon         "Remove area",
