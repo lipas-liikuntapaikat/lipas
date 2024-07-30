@@ -459,8 +459,6 @@
 
 (s/def :lipas.sports-site.properties/surface-material*
   (s/coll-of (into #{} (keys materials/surface-materials))
-             :min-count 0
-             :max-count (count materials/surface-materials)
              :distinct true
              :into []))
 
@@ -642,8 +640,16 @@
 (s/def :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi? boolean?)
 (s/def :lipas.sports-site.properties/padel-courts-count ::real)
 (s/def :lipas.sports-site.properties/rapid-canoeing-centre? boolean?)
-(s/def :lipas.sports-site.properties/canoeing-club?? boolean?)
+(s/def :lipas.sports-site.properties/canoeing-club? boolean?)
 (s/def :lipas.sports-site.properties/activity-service-company? boolean?)
+(s/def :lipas.sports-site.properties/boating-service-class string?)
+(s/def :lipas.sports-site.properties/water-point string?)
+(s/def :lipas.sports-site.properties/customer-service-point? boolean?)
+(s/def :lipas.sports-site.properties/height-of-basket-or-net-adjustable? boolean?)
+(s/def :lipas.sports-site.properties/changing-rooms-m2 ::real)
+(s/def :lipas.sports-site.properties/ligthing-info string?)
+(s/def :lipas.sports-site.properties/highest-drop-m ::real)
+(s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -800,8 +806,16 @@
                    :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi?
                    :lipas.sports-site.properties/padel-courts-count
                    :lipas.sports-site.properties/activity-service-company?
-                   :lipas.sports-site.properties/canoeing-club??
-                   :lipas.sports-site.properties/rapid-canoeing-centre?]))
+                   :lipas.sports-site.properties/canoeing-club?
+                   :lipas.sports-site.properties/rapid-canoeing-centre?
+                   :lipas.sports-site.properties/fitness-stairs-length-m
+                   :lipas.sports-site.properties/highest-drop-m
+                   :lipas.sports-site.properties/ligthing-info
+                   :lipas.sports-site.properties/changing-rooms-m2
+                   :lipas.sports-site.properties/height-of-basket-or-net-adjustable?
+                   :lipas.sports-site.properties/customer-service-point?
+                   :lipas.sports-site.properties/water-point
+                   :lipas.sports-site.properties/boating-service-class]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)
