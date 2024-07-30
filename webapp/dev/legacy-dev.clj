@@ -546,6 +546,7 @@
   (maint/merge-types (:db @current-system) (:search @current-system) robot 104 103)
   (maint/merge-types (:db @current-system) (:search @current-system) robot 102 101)
   (maint/merge-types (:db @current-system) (:search @current-system) robot 108 106)
+  (maint/merge-types (:db @current-system) (:search @current-system) robot 205 203)
 
 
   (require '[lipas.backend.gis :as gis])
