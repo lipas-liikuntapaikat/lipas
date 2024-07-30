@@ -1130,9 +1130,9 @@
           elevation  (<== [::subs/elevation lipas-id])
           stats      (<== [::subs/elevation-stats lipas-id])
           curr-stats (nth stats @selected-segment)
-          labels     {:distance-m  (tr :sports-site.height-profile/distance-from-start-m)
-                      :distance-km (tr :sports-site.height-profile/distance-from-start-km)
-                      :elevation-m (tr :sports-site.height-profile/height-from-sea-level-m)}]
+          labels     {:distance-m  (tr :sports-site.elevation-profile/distance-from-start-m)
+                      :distance-km (tr :sports-site.elevation-profile/distance-from-start-km)
+                      :elevation-m (tr :sports-site.elevation-profile/height-from-sea-level-m)}]
       [mui/grid {:container true :spacing 2}
        [mui/grid {:item true :xs 12}
         [mui/grid
@@ -1208,10 +1208,10 @@
         [mui/table {:size "medium"}
          [mui/table-body
           [mui/table-row
-           [mui/table-cell (tr :sports-site.height-profile/total-ascend)]
+           [mui/table-cell (tr :sports-site.elevation-profile/total-ascend)]
            [mui/table-cell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
           [mui/table-row
-           [mui/table-cell (tr :sports-site.height-profile/total-descend)]
+           [mui/table-cell (tr :sports-site.elevation-profile/total-descend)]
            [mui/table-cell (str (-> curr-stats :descend-m  utils/round-safe) "m")]]]]]
 
        ;; landing bay for fabs
