@@ -16,45 +16,48 @@
            variant  "standard"}}]
   (let [items-by-vals (utils/index-by (comp pr-str value-fn) items)]
     (r/with-let [state   (r/atom "")]
-      [mui/autocomplete
-       (merge
-        {:multiple             multi?
-         :value                (if multi?
-                                 (clj->js (map pr-str value))
-                                 (pr-str value))
-         :disabled             disabled
-         :label                label
-         :disableCloseOnSelect multi?
-         :disableClearable     (not deselect?)
-         :on-change            (fn [_evt v]
-                                 (on-change
-                                  (if multi?
-                                    (->> v
-                                         (select-keys items-by-vals)
-                                         vals
-                                         (map value-fn))
-                                    (-> v items-by-vals value-fn))))
-         :on-input-change      (fn [_evt v] (reset! state v))
-         :renderInput          (fn [^js params]
-                                 (set! (.-variant params) variant)
-                                 (set! (.-label params) label)
-                                 (set! (.-required params) (boolean required))
-                                 #_(set! (.-shrink (.-InputLabelProps params))
-                                         (boolean (or (and (coll? value) (seq value))
-                                                      (seq @state))))
-                                 (when required
-                                   (set! (.-required (.-InputLabelProps params)) true))
+      [:<>
+       [mui/autocomplete
+        (merge
+         {:multiple             multi?
+          :value                (if multi?
+                                  (clj->js (map pr-str value))
+                                  (pr-str value))
+          :disabled             disabled
+          :label                label
+          :disableCloseOnSelect multi?
+          :disableClearable     (not deselect?)
+          :on-change            (fn [_evt v]
+                                  (on-change
+                                   (if multi?
+                                     (->> v
+                                          (select-keys items-by-vals)
+                                          vals
+                                          (map value-fn))
+                                     (-> v items-by-vals value-fn))))
+          :on-input-change      (fn [_evt v] (reset! state v))
+          :renderInput          (fn [^js params]
+                                  (set! (.-variant params) variant)
+                                  (set! (.-label params) label)
+                                  (set! (.-required params) (boolean required))
+                                  #_(set! (.-shrink (.-InputLabelProps params))
+                                          (boolean (or (and (coll? value) (seq value))
+                                                       (seq @state))))
+                                  (when required
+                                    (set! (.-required (.-InputLabelProps params)) true))
 
-                                 (when (and required (not value))
-                                   (set! (.-error (.-InputLabelProps params)) true))
-                                 (r/create-element TextField params))
-         :getOptionLabel (fn [opt]
-                           (-> opt items-by-vals label-fn str))
-         :options        (->> items
-                              (sort-by sort-fn sort-cmp)
-                              (map (comp pr-str value-fn)))}
-        (when render-option-fn
-          {:renderOption render-option-fn}))])))
+                                  (when (and required (not value))
+                                    (set! (.-error (.-InputLabelProps params)) true))
+                                  (r/create-element TextField params))
+          :getOptionLabel (fn [opt]
+                            (-> opt items-by-vals label-fn str))
+          :options        (->> items
+                               (sort-by sort-fn sort-cmp)
+                               (map (comp pr-str value-fn)))}
+         (when render-option-fn
+           {:renderOption render-option-fn}))]
+       (when helper-text
+         [mui/form-helper-text helper-text])])))
 
 (defn year-selector [{:keys [label value on-change required years]
                       :as   props}]
