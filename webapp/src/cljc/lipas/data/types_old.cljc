@@ -628,7 +628,7 @@
     :props
     {:surface-material                   {:priority 1},
      :surface-material-info              {:priority 0},
-     :lifts-count                        {:priority nil},
+     :lifts-count                        {:priority 0},
      :free-use?                          {:priority 0},
      :track-width-m                      {:priority 0},
      :altitude-difference                {:priority 1},
@@ -740,7 +740,7 @@
      :running-track-surface-material     {:priority 0},
      :area-m2                            {:priority 1},
      :field-width-m                      {:priority 1},
-     :scoreboard?                        {:priority nil},
+     :scoreboard?                        {:priority 0},
      :futsal-fields-count                {:priority 0},
      :shotput-count                      {:priority 0},
      :longjump-places-count              {:priority 0},
@@ -845,7 +845,7 @@
     :props
     {:area-m2                            {:priority 1},
      :playground?                        {:priority 0},
-     :accessibility-info                 {:priority nil},
+     :accessibility-info                 {:priority 0},
      :ligthing?                          {:priority 1},
      :fields-count                       {:priority 0},
      :school-use?                        {:priority 0},
@@ -1007,7 +1007,7 @@
      :free-use?                          {:priority 0},
      :track-width-m                      {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
-     :toilet?                            {:priority nil},
+     :toilet?                            {:priority 0},
      :shooting-positions-count           {:priority 1},
      :area-m2                            {:priority 0},
      :ligthing?                          {:priority 1},
@@ -1110,7 +1110,7 @@
     :sub-category  2,
     :geometry-type "Point",
     :props
-    {:toilet?                            {:priority nil},
+    {:toilet?                            {:priority 0},
      :may-be-shown-in-excursion-map-fi?  {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
@@ -1525,7 +1525,7 @@
     :geometry-type "Point",
     :props
     {:shooting-positions-count           {:priority 1},
-     :toilet?                            {:priority nil},
+     :toilet?                            {:priority 0},
      :track-length-m                     {:priority 1},
      :ligthing?                          {:priority 1},
      :school-use?                        {:priority 0},
@@ -2269,7 +2269,7 @@
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi?  {:priority 0},
-     :toilet?                            {:priority nil},
+     :toilet?                            {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
@@ -2577,8 +2577,8 @@
     :props
     {:track-length-m                     {:priority 0},
      :area-m2                            {:priority 0},
-     :surface-material-info              {:priority nil},
-     :surface-material                   {:priority nil},
+     :surface-material-info              {:priority 0},
+     :surface-material                   {:priority 0},
      :track-width-m                      {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
@@ -2651,7 +2651,7 @@
     :sub-category  2,
     :geometry-type "Point",
     :props
-    {:toilet?                            {:priority nil},
+    {:toilet?                            {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}}
@@ -2933,7 +2933,7 @@
     :geometry-type "Point",
     :props
     {:may-be-shown-in-excursion-map-fi?  {:priority 0},
-     :toilet?                            {:priority nil},
+     :toilet?                            {:priority 0},
      :school-use?                        {:priority 0},
      :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
