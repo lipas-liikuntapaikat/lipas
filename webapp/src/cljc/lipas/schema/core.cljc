@@ -17,6 +17,7 @@
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
+   [lipas.data.types-old :as sports-site-types-old]
    [lipas.reports :as reports]
    [lipas.utils :as utils]
    [spec-tools.core :as st]
@@ -406,7 +407,11 @@
 
 (s/def :lipas.sports-site/comment (str-in 1 2048))
 
-(def type-codes (keys sports-site-types/all))
+(def type-codes
+  (into #{}
+        cat
+        [(keys sports-site-types/all)
+         (keys sports-site-types-old/all)]))
 
 (s/def :lipas.sports-site.type/type-code*
   (into #{} type-codes))
