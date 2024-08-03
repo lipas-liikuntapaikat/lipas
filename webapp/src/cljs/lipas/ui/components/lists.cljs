@@ -29,7 +29,7 @@
    (fn [m]
      (let [row-height 64
            width      (gobj/get m "width")
-           height     (max (gobj/get m "height") (* 5 row-height))]
+           height     (max (gobj/get m "height") (* 10 row-height))]
        (r/as-element
         [:> List
          {:row-width    width

@@ -11,20 +11,21 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [reagent.core :as r]))
 
-(defn- filter-layout [props & children]
-  [mui/grid {:item true :style {:min-width  "365px"}}
-   [mui/paper {:style {:padding "1em" :height "100%"}}
-    (into [mui/grid {:container true :direction "column"}]
-          (for [c children]
-            [mui/grid {:item true}
-             c]))]])
+(defn- filter-layout
+  [{:keys [size] :as _props} & children]
+  [mui/grid (merge {:item true} (when (= "large" size) {:xs 12 :md 6 :lg 4}))
+   (into [mui/grid {:container true :direction "column"}]
+         (for [c children]
+           [mui/grid {:item true}
+            c]))])
 
 ;; Text-fields are nasty to reset and filters contain many of
 ;; them. Therefore we use this ugly hack to change react-key for the
 ;; filter container component when "clear filters" button is clicked.
 (def ugly-forcer (r/atom 0))
 
-(defn filters [{:keys [tr]}]
+(defn filters
+  [{:keys [tr size]}]
   (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
         statuses          (<== [::subs/statuses-filter])
         type-codes        (<== [::subs/types-filter])
@@ -41,16 +42,19 @@
         school-use?       (<== [::subs/school-use-filter])]
 
     ^{:key @ugly-forcer}
-    [mui/grid {:container true :spacing 2}
+    [mui/grid
+     {:container true
+      :spacing   3
+      :direction (if (= "large" size) "row" "column")}
 
      ;; Permissions filter
      (when logged-in?
-       [filter-layout ()
+       [filter-layout {:size size}
         [mui/button {:on-click #(==> [::events/set-filters-by-permissions])}
          (tr :search/permissions-filter)]])
 
      ;; Types filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/select-types)]
 
@@ -60,7 +64,7 @@
         :on-change #(==> [::events/set-type-filter %])}]]
 
      ;; Regions filter (cities, avis, provinces)
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/select-cities)]
 
@@ -69,7 +73,7 @@
         :on-change #(==> [::events/set-city-filter %])}]]
 
      ;; Admins filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/select-admins)]
 
@@ -79,7 +83,7 @@
         :on-change #(==> [::events/set-admins-filter %])}]]
 
      ;; Owners filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/select-owners)]
 
@@ -89,7 +93,7 @@
         :on-change #(==> [::events/set-owners-filter %])}]]
 
      ;; Surface materials filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/filter-surface-materials)]
 
@@ -99,28 +103,28 @@
         :on-change #(==> [::events/set-surface-materials-filter %])}]]
 
      ;; Retkikartta.fi filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [lui/checkbox
        {:value     retkikartta?
         :label     (tr :search/retkikartta-filter)
         :on-change #(==> [::events/set-retkikartta-filter %])}]]
 
      ;; Harrastuspassi.fi filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [lui/checkbox
        {:value     harrastuspassi?
         :label     (tr :search/harrastuspassi-filter)
         :on-change #(==> [::events/set-harrastuspassi-filter %])}]]
 
      ;; School-use? filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [lui/checkbox
        {:value     school-use?
         :label     (tr :search/school-use-filter)
         :on-change #(==> [::events/set-school-use-filter %])}]]
 
      ;; Area filters
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/filter-area-m2)]
 
@@ -145,7 +149,7 @@
           :on-change #(==> [::events/set-area-max-filter %])}]]]]
 
      ;; Construction year filters
-     [filter-layout {}
+     [filter-layout {:size size}
       [mui/typography {:variant "caption"}
        (tr :actions/filter-construction-year)]
 
@@ -170,7 +174,7 @@
           :on-change #(==> [::events/set-construction-year-max-filter %])}]]]]
 
      ;; Statuses filter
-     [filter-layout {}
+     [filter-layout {:size size}
       [lui/status-selector
        {:multi?    true
         :value     statuses
@@ -302,52 +306,52 @@
         page       (-> pagination-opts :page)]
 
     ;; TODO: Juho later Move to Stack - fix results height
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [pagination
-       {:tr                tr
-        :total             total
-        :page              page
-        :page-size         page-size
-        :page-sizes        page-sizes
-        :change-page-size? true
-        :style             {:padding-right 0 :padding-left 0}}]]
+    ;; NOTE: Valtteri changed to stack already
+    [mui/stack
+
+     [pagination
+      {:tr                tr
+       :total             total
+       :page              page
+       :page-size         page-size
+       :page-sizes        page-sizes
+       :change-page-size? true
+       :style             {:padding-right 0 :padding-left 0}}]
 
      (if in-progress?
        ;; Spinner
-       [mui/grid {:item true :xs 12 :style {:text-align "center"}}
-        [mui/circular-progress {:style {:margin-top "1em"}}]]
+       [mui/circular-progress {:style {:margin-top "1em"}}]
 
        ;; Results
-       [mui/grid {:item true :xs 12 :flex 1}
-        [:div {:style {:width "100%" :height "500px"}}
-         [lists/virtualized-list
-          {:items         results
-           :label-fn      :name
-           :label2-fn     #(when %
-                             (str (-> % :type.name) ", "
-                                  (-> % :location.city.name)
-                                  ;; uncomment for search tuning
-                                  ;;" " (-> % :score)
-                                  ))
-           :on-item-click on-result-click}]]])]))
+       [:div {:style {:width "100%" :height "100%"}}
+        [lists/virtualized-list
+         {:items         results
+          :label-fn      :name
+          :label2-fn     #(when %
+                            (str (-> % :type.name) ", "
+                                 (-> % :location.city.name)
+                                 ;; uncomment for search tuning
+                                 ;;" " (-> % :score)
+                                 ))
+          :on-item-click on-result-click}]])]))
 
-(defn search-input []
+(defn search-input
+  [{:keys [max-width]}]
   (let [tr         (<== [:lipas.ui.subs/translator])
         search-str (<== [::subs/search-string])]
 
-    [mui/grid {:container true}
-     [mui/grid {:item true :style {:flex-grow 1}}
+    [:div {:style (merge {:width "100%"} (when max-width {:max-width max-width}))}
+     [mui/stack {:direction "row"}
       [lui/text-field
        {:value        search-str
         :placeholder  (tr :search/placeholder)
-        :full-width   true
+        :fullWidth    true
         :defer-ms     10
         :on-change    #(==> [::events/update-search-string %])
         :on-key-press (fn [e]
                         (when (= 13 (.-charCode e)) ; Enter
-                          (==> [::events/search-with-keyword :fit-view])))}]]
-     [mui/grid {:item true}
+                          (==> [::events/search-with-keyword :fit-view])))}]
+
       [mui/button {:on-click #(==> [::events/search-with-keyword :fit-view])}
        [mui/icon "search"]
        (tr :search/search)]]]))
@@ -384,105 +388,93 @@
      (when (= result-view :table)
        [save-dialog])
 
-     [mui/grid
-      {:container       true
-       :style           {:padding "0em 1em 0.5em 1em"}
-       :align-items     "flex-start"
-       :justify-content "flex-start"
-       :direction       "row"}
+     [mui/stack
+      {:style       {:padding "0em 1em 0.5em 1em"}
+       :spacing     1
+       :align-items "flex-start"
+       :direction   "column"}
 
       ;; Search input and button
-      [mui/grid {:item true :xs 12}
-       (if (= :list result-view)
-         [search-input]
-         [mui/grid {:container true :direction "row" :align-items "flex-end"}
+      (if (= :list result-view)
+        [search-input]
+
+        [:div {:style {:width "100%"}}
+         [mui/stack {:spacing 2 :direction "row" :align-items "flex-end" :justify-content "space-between"}
 
           ;; LIPAS-text
-          [mui/grid {:item true :xs 12 :md 6}
-           [mui/typography {:variant "h2" :style {:opacity 0.7}}
-            "LIPAS"]]
+          [mui/typography {:variant "h2" :style {:opacity 0.7}}
+           "LIPAS"]
 
-          [mui/grid {:item true :xs 12 :md 6}
-           [search-input]]
-
-          [mui/grid {:item true :xs 12 :style {:min-height "1em"}}]])]
+          [search-input {:max-width "300px"}]]])
 
       ;; Search only from area visible on map
       (when (= result-view :list)
-        [mui/grid {:item true :xs 12}
-         [lui/checkbox
-          {:label     (tr :map/bounding-box-filter)
-           :disabled  (not bbox-enabled?)
-           :value     bbox-only?
-           :on-change #(==> [::events/set-bounding-box-filter %])}]])
+        [lui/checkbox
+         {:label     (tr :map/bounding-box-filter)
+          :disabled  (not bbox-enabled?)
+          :value     bbox-only?
+          :on-change #(==> [::events/set-bounding-box-filter %])}])
 
       ;; Filters expansion panel
-      [mui/grid {:item true :xs 12}
-       [lui/expansion-panel
-        {:label            (tr :search/filters)
-         :style            {}
-         :default-expanded false}
-        [filters {:tr tr}]]]
+      [lui/expansion-panel
+       {:label            (tr :search/filters)
+        :style            {:width "100%"}
+        :default-expanded false}
+       [filters {:tr tr :size (if (= :list result-view) "small" "large")}]]
 
       ;; Results count, clear filters button and result view selectors
-      [mui/grid {:item true :xs 12}
-       [mui/grid
-        {:container       true
+      [:div {:style {:width "100%"}}
+       [mui/stack
+        {:align-items     "center"
+         :spacing         1
          :justify-content "space-between"
-         :align-items     "center"
+         :direction       "row"
          :style           {:padding-top "0.5em" :padding-bottom "0.5em"}}
-        [mui/grid {:item true}
-         [mui/grid {:container true :align-items "center" :spacing 2}
 
-          ;; Results ocunt
-          [mui/grid {:item true}
-           [mui/typography
-            {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
-            (tr :search/results-count total)]]
+        ;; Results ocunt
+        [mui/typography
+         {:variant "body2" :style {:font-size "0.9rem" :margin-left "0.5em"}}
+         (tr :search/results-count total)]
 
-          ;; Clear filters button
-          (when (and filters-active? (= :table result-view))
-            [mui/grid {:item true}
-             [mui/button
-              {:color    "secondary"
-               :size     "small"
-               :on-click (fn []
-                           (==> [::events/clear-filters])
-                           (swap! ugly-forcer inc))}
-              (tr :search/clear-filters)]])
+        ;; Clear filters button
+        (when (and filters-active? (= :table result-view))
+          [mui/button
+           {:color    "secondary"
+            :size     "small"
+            :on-click (fn []
+                        (==> [::events/clear-filters])
+                        (swap! ugly-forcer inc))}
+           (tr :search/clear-filters)])
 
-          ;; Save search btn
-          (when (and filters-active? logged-in? (= :table result-view))
-            [mui/tooltip {:title "Tallenna haku"}
-             [mui/grid {:item true}
-              [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
-               [mui/icon "save"]]]])
+        ;; Save search btn
+        (when (and filters-active? logged-in? (= :table result-view))
+          [mui/tooltip {:title "Tallenna haku"}
+           [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
+            [mui/icon "save"]]])
 
-          ;; Saved searches select
-          (when (and logged-in?  (= :table result-view) saved-searches)
-            [mui/grid {:item true}
-             [lui/select
-              {:style        {:width "170px"}
-               :items        saved-searches
-               :value        "dummy"
-               :render-value (constantly (str (tr :lipas.user/saved-searches) "..."))
-               :label-fn     :name
-               :value-fn     identity
-               :on-change    #(==> [::events/select-saved-search %])}]])]]
+        ;; Saved searches select
+        (when (and logged-in?  (= :table result-view) saved-searches)
+          [lui/select
+           {:style        {:width "170px"}
+            :items        saved-searches
+            :value        "dummy"
+            :render-value (constantly (str (tr :lipas.user/saved-searches) "..."))
+            :label-fn     :name
+            :value-fn     identity
+            :on-change    #(==> [::events/select-saved-search %])}])
 
         (when (and filters-active? (= :list result-view))
-          [mui/grid {:item true}
-           [mui/button
-            {:color    "secondary"
-             :size     "small"
-             :on-click (fn []
-                         (==> [::events/clear-filters])
-                         (swap! ugly-forcer inc))}
-            (tr :search/clear-filters)]])
+          [mui/button
+           {:color    "secondary"
+            :size     "small"
+            :on-click (fn []
+                        (==> [::events/clear-filters])
+                        (swap! ugly-forcer inc))}
+           (tr :search/clear-filters)])
 
         ;; Change result view (list | table)
-        [mui/grid {:item true}
 
+        [mui/stack {:direction "row"}
          [mui/tooltip {:title (tr :search/list-view)}
           [mui/icon-button {:on-click #(==> [::events/set-results-view :list])}
            [mui/icon {:color (if (= :list result-view)
@@ -495,10 +487,7 @@
            [mui/icon {:color (if-not (= :list result-view)
                                "secondary"
                                "inherit")}
-            "view_column"]]]]]]
-
-      [mui/grid {:item true :xs 12}
-       [mui/divider]]]
+            "view_column"]]]]]]]
 
      ;; Results
      (if (= :list result-view)
