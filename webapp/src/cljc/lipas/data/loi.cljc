@@ -302,10 +302,12 @@
       :value "guest-boat-dock"
       :props (merge common-props)}
 
-     :canoe-dock
-     {:label {:fi "Melontalaituri" :en "Canoe dock" :se "Kanotbrygga"}
-      :value "canoe-dock"
-      :props (merge common-props)}
+     ;; Removed due to these belonging to sports site type 203
+     ;;
+     ;; :canoe-dock
+     ;; {:label {:fi "Melontalaituri" :en "Canoe dock" :se "Kanotbrygga"}
+     ;;  :value "canoe-dock"
+     ;;  :props (merge common-props)}
 
      :mooring-ring
      {:label {:fi "Kiinnitysrengas" :en "Mooring ring" :se "Mooringsring"}
