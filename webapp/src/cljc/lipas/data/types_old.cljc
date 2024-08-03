@@ -1,4 +1,5 @@
 (ns lipas.data.types-old
+  "Type codes went through a major overhaul in the summer of 2024. This namespace represents the situation before the changes were made."
   (:require
    [lipas.utils :as utils]))
 

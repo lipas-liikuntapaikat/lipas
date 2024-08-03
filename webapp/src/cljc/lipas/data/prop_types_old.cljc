@@ -1,4 +1,5 @@
-(ns lipas.data.prop-types-old)
+(ns lipas.data.prop-types-old
+  "Type codes went through a major overhaul in the summer of 2024. This namespace represents the situation before the changes were made.")
 
 (def all
   {:height-m
