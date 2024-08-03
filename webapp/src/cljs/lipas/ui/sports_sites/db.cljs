@@ -16,9 +16,10 @@
    :document-statuses sports-sites/document-statuses ;; unused?
    :field-types       sports-sites/field-types
 
-   :admins admins/all
-   :owners owners/all
-   :types  types/all
+   :admins       admins/all
+   :owners       owners/all
+   :types        types/all
+   :active-types types/active
 
    :prop-types prop-types/used
 
@@ -34,6 +35,6 @@
     :selected-status nil
     :selected-year   utils/this-year}
 
-   :football  football/default-db
-   :floorball floorball/default-db
+   :football   football/default-db
+   :floorball  floorball/default-db
    :activities activities/default-db})
