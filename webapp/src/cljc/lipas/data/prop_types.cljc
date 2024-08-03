@@ -197,6 +197,10 @@
               {:fi ""
                :se ""
                :en ""}})
+
+      ;; update :climbing-wall? description
+      (assoc-in [:climbing-wall? :description :fi] "Onko kohteessa kiipeilyseinä?")
+
       ))
 
 (def used

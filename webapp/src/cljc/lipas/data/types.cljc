@@ -39,13 +39,13 @@
       ;; merge 108 -> 106
       (assoc-in [108 :status] "deprecated")
       (assoc-in [106 :name :fi] "Monikäyttöalueet ja virkistysmetsät, joissa on virkistyspalveluita")
-      (assoc-in [106 :description :fi] "Monikäyttöalueiksi voidaan nimittää jokamiehenoikeuksin ulkoiluun käytettäviä maa- ja metsätalousalueita. Monikäyttöalueita ovat erityisesti rakentamattomat rannat ja taajamien läheiset maa- ja metsätalousalueet. Kaavamerkintä MU. Virkistysmetsien metsätaloudessa on huomioitu mm. maisemalliset arvot ja ne on perustettu metsähallituksen päätöksellä. Virkistysmetsien osalta Lipas-aineisto perustuu Metsähallituksen tietoihin.")
+      (assoc-in [106 :description :fi] "Monikäyttöalueiksi voidaan nimittää jokaisenoikeuksin ulkoiluun käytettäviä maa- ja metsätalousalueita. Monikäyttöalueita ovat erityisesti rakentamattomat rannat ja taajamien läheiset maa- ja metsätalousalueet. Kaavamerkintä MU. Virkistysmetsien metsätaloudessa on huomioitu mm. maisemalliset arvot ja ne on perustettu metsähallituksen päätöksellä. Virkistysmetsien osalta Lipas-aineisto perustuu Metsähallituksen tietoihin.")
 
       ;; 106 prop changes
       (update-in [106 :props] dissoc :school-use? :free-use? :playground?)
 
       ;; 107 prop changes
-      (update-in [107 :props] dissoc :free-use? :school-use?)
+      (update-in [107 :props] dissoc :school-use?)
       (assoc-in [107 :props :toilet?] {:priority 0})
       (assoc-in [107 :description :fi] "Matkailupalvelujen alueet ovat matkailua palveleville toiminnoille varattuja alueita, jotka sisältävät myös sisäiset liikenneväylät ja -alueet, alueen toimintoja varten tarpeelliset palvelut ja virkistysalueet sekä yhdyskuntateknisen huollon alueet. Kohteet voivat toimia myös retkeilyauto- ja pyörämatkailijoiden tauko- ja yöpymispaikkoina. Kaavamerkintä RM.")
 
@@ -66,8 +66,9 @@
       ;; Merge 205 -> 203
       (assoc-in [205 :status] "deprecated")
 
-      ;; 203 new :boating-service-class prop
+      ;; 203 Veneilyn palvelupaikka
       (assoc-in [203 :props :boating-service-class] {:priority 1})
+      (assoc-in [203 :description :fi] "Kohteessa on veneilyyn liittyviä palveluita kuten säilytysmahdollisuus, vesillelaskupaikka tai veneen kiinnitysmahdollisuus. Kohteelle määritetään venesatamaluokka, jonka palveluvarustus kuvataan lisätiedoissa. Jos kyse on melontalaiturista, se kirjataan kyseisen laituriluokan alle. Kohde tulee merkitä tärkeimmän laiturin läheisyyteen, jos sellainen kohteessa on.")
 
       ;; 207 -> lois
       ;; TODO
@@ -250,6 +251,7 @@
       (assoc-in [1620 :name :fi] "Golfkenttä (piste)")
       (assoc 1650 (-> (get old/all 1620)
                       (assoc-in [:name :fi] "Golfkenttä (alue)")
+                      (assoc-in [:description :fi] "Ensisijaisesti golfin pelaamiseen tarkoitettu alue kesäkaudella. Reikien määrä merkitään lisätietoihin.")
                       (assoc-in [:type-code] 1650)
                       (assoc-in [:geometry-type] "Polygon")
                       (assoc-in [:props :customer-service-point?] {:priority 0})))
