@@ -241,10 +241,10 @@ jobs:
           cache-dependency-path: webapp/package-lock.json
 
       - name: Run backend tests
-        run: docker-compose run --rm backend-tests
+        run: docker compose run --rm backend-tests
 
       - name: Build backend jar
-        run: docker-compose run --rm backend-build
+        run: docker compose run --rm backend-build
 
       - name: Build frontend
         run:  |
@@ -253,19 +253,19 @@ jobs:
         working-directory: ./webapp
 
       # - name: Install npm dependencies
-      #   run: docker-compose run --rm frontend-npm-deps
+      #   run: docker compose run --rm frontend-npm-deps
 
       # - name: Build frontend
-      #   run: docker-compose run --rm frontend-build
+      #   run: docker compose run --rm frontend-build
 
       # - name: Run backend migrations
-      #   run: docker-compose run --rm backend-migrate
+      #   run: docker compose run --rm backend-migrate
 
       # - name: Seed backend data to db
-      #   run: docker-compose run --rm backend-seed
+      #   run: docker compose run --rm backend-seed
 
       # - name: Index backend data to ES
-      #   run: docker-compose run --rm backend-index-search
+      #   run: docker compose run --rm backend-index-search
 
       # - name: Generate self-sigend SSL-certificate
       #   run: |
@@ -274,8 +274,8 @@ jobs:
       #       -keyout certs/server.key -out certs/server.crt
 
       # - name: Run integration tests
-      #   run: docker-compose run --rm integration-tests
+      #   run: docker compose run --rm integration-tests
 
       - name: docker logs
         if: ${{ failure() }}
-        run: docker-compose logs
+        run: docker compose logs
