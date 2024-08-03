@@ -20,7 +20,8 @@
     [mui/avatar {:style {:font-size "0.65em" :color "#fff"}}
      initials]))
 
-(defn account-menu-button [{:keys [tr logged-in?]}]
+(defn account-menu-button
+  [{:keys [tr logged-in?]}]
   [mui/icon-button
    {:on-click   #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
     :id         "account-btn"
@@ -29,8 +30,10 @@
      [avatar]
      [mui/icon "account_circle"])])
 
-(defn account-menu [{:keys [tr logged-in?]}]
-  (let [anchor (<== [::subs/account-menu-anchor])
+(defn account-menu
+  [{:keys [tr logged-in?]}]
+  (let [admin? (<== [:lipas.ui.user.subs/admin?])
+        anchor (<== [::subs/account-menu-anchor])
         close  #(==> [:lipas.ui.events/show-account-menu nil])]
 
     [mui/menu {:anchor-el anchor
@@ -61,6 +64,14 @@
         [mui/list-item-icon
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
+
+     ;; Admin
+     (when admin?
+       [mui/menu-item {:id       "account-menu-item-admin"
+                       :on-click (comp close #(navigate! "/admin"))}
+        [mui/list-item-icon
+         [mui/icon "settings"]]
+        [mui/list-item-text {:primary (tr :lipas.admin/headline)}]])
 
      ;; Help
      [mui/menu-item {:id       "account-menu-item-help"

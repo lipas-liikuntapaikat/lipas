@@ -1,6 +1,7 @@
 (ns lipas.data.types
   (:require
-   [lipas.data.types-old :as old]))
+   [lipas.data.types-old :as old]
+   [lipas.utils :as utils]))
 
 (def main-categories
   old/main-categories)
@@ -14,7 +15,7 @@
       ;;; Virkistys ;;;
 
       ;; merge 102 -> 101
-      (dissoc 102)
+      (assoc-in [102 :status] "deprecated")
       (assoc-in [101 :name :fi] "Lähi-/ulkoilupuisto")
       (assoc-in [101 :description :fi] "Sijaitsevat taajamissa, max 1 km asutuksesta. Toimivat kävely-, leikki-, oleskelu-, lenkkeily- ja pyöräilypaikkoina. Kaavamerkintä V tai VL. Esimerkkejä lähi- tai ulkoilupuistoista: leikkipuistot, liikennepuistot, perhepuistot, oleskelupuistot, keskuspuistot ja kirkkopuistot.")
 
@@ -24,7 +25,7 @@
       (update-in [101 :props] dissoc :school-use? :free-use?)
 
       ;; Merge 104 -> 103
-      (dissoc 104)
+      (assoc-in [104 :status] "deprecated")
       (assoc-in [103 :name :fi] "Ulkoilu-/virkistysalue")
       (assoc-in [103 :description :fi] "Voivat sijaita taajaman reunoilla, vyöhykkeittäin taajaman sisällä tai taajaman ulkopuolella. Kohteissa voi olla myös taajamasta lähteviä tai taajamaan palaavia reittejä tai polku- ja reittiverkosto. Kohteet sisältävät vaihtelevaa maastoa ja luonnonmukaisia tai puistomaisia alueita. Kohteet voivat myös sijaita vesialuiden lähellä kuten rannoilla tai saarissa. Kohteiden pääasiallinen käyttö on retkeilyä ja luonnossa virkistäytymistä, mutta niitä voidaan käyttää monipuolisesti erilaisen liikunnan kuten hiihdon, lenkkeilyn tai uinnin harrastamiseen.  Kaavamerkintä esim. VR. HUOM! Uusien liikunta- ja ulkoilupaikkojen lisäksi Ulkoilu-/virkistysalueluokka sisältää ennen vuotta 2024 Ulkoilualueet ja Retkeilyalueet tyyppiluokkiin lisätyt olosuhteet")
       (update-in [103 :props] dissoc :playground?)
@@ -34,7 +35,7 @@
       (update-in [103 :props] dissoc :school-use? :free-use?)
 
       ;; merge 108 -> 106
-      (dissoc 108)
+      (assoc-in [108 :status] "deprecated")
       (assoc-in [106 :name :fi] "Monikäyttöalueet ja virkistysmetsät, joissa on virkistyspalveluita")
       (assoc-in [106 :description :fi] "Monikäyttöalueiksi voidaan nimittää jokamiehenoikeuksin ulkoiluun käytettäviä maa- ja metsätalousalueita. Monikäyttöalueita ovat erityisesti rakentamattomat rannat ja taajamien läheiset maa- ja metsätalousalueet. Kaavamerkintä MU. Virkistysmetsien metsätaloudessa on huomioitu mm. maisemalliset arvot ja ne on perustettu metsähallituksen päätöksellä. Virkistysmetsien osalta Lipas-aineisto perustuu Metsähallituksen tietoihin.")
 
@@ -61,14 +62,14 @@
       (assoc-in [112 :description :fi] "Muut luonnonsuojelualueet kuin kansallispuistot. Tietoja kerätään vain sellaisilta luonnonsuojelualueilta ja luonnonpuistoilta, joiden virkistyskäyttö on mahdollista. Esim. kunta- tai yksityisomisteisille maille perustetut suojelualueet. Kaavamerkintä S, SL.")
 
       ;; Merge 205 -> 203
-      (dissoc 205)
+      (assoc-in [205 :status] "deprecated")
 
       ;; 203 new :boating-service-class prop
       (assoc-in [203 :props :boating-service-class] {:priority 1})
 
       ;; 207 -> lois
       ;; TODO
-      (dissoc 207)
+      (assoc-in [207 :status] "deprecated")
 
       ;; 201 kalastuspiste prop changes
       (assoc-in [201 :props :pier?] {:priority 0})
@@ -335,11 +336,17 @@
 
       ))
 
+(def active
+  (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
+
 (def unknown
   old/unknown)
 
-(def by-main-category old/by-main-category)
-(def by-sub-category old/by-sub-category)
+(def by-main-category (group-by :main-category (vals active)))
+(def by-sub-category (group-by :sub-category (vals active)))
 
-(def main-category-by-fi-name old/main-category-by-fi-name)
-(def sub-category-by-fi-name old/sub-category-by-fi-name)
+(def main-category-by-fi-name
+  (utils/index-by (comp :fi :name) (vals main-categories)))
+
+(def sub-category-by-fi-name
+  (utils/index-by (comp :fi :name) (vals sub-categories)))

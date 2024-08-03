@@ -162,7 +162,7 @@
  :<- [::selected-org-id]
  :<- [::services-by-id]
  :<- [::sports-sites]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [[org-id services sports-sites types] _]
    (resolve-missing-services org-id services types sports-sites)))
 
@@ -252,7 +252,7 @@
  :<- [::service-channels-by-id]
  :<- [::default-settings]
  :<- [:lipas.ui.subs/translator]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [::org-languages]
  (fn [[ptv org-id services service-channels org-defaults tr types org-langs] _]
    (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]

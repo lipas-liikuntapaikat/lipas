@@ -9,24 +9,33 @@
    (:logged-in? db)))
 
 (re-frame/reg-sub
- ::admin?
+ ::user
  (fn [db _]
-   (-> db :user :login :permissions :admin?)))
+   (:user db)))
+
+(re-frame/reg-sub
+ ::admin?
+ :<- [::user]
+ (fn [user _]
+   (-> user :login :permissions :admin?)))
 
 (re-frame/reg-sub
  ::user-data
- (fn [db _]
-   (-> db :user :login)))
+  :<- [::user]
+ (fn [user _]
+   (:login user)))
 
 (re-frame/reg-sub
  ::access-to-sports-sites
- (fn [db _]
-   (-> db :user :login :permissions :sports-sites)))
+ :<- [::user]
+ (fn [user _]
+   (-> user :login :permissions :sports-sites)))
 
 (re-frame/reg-sub
  ::permissions
- (fn [db _]
-   (-> db :user :login :permissions)))
+ :<- [::user]
+ (fn [user _]
+   (-> user :login :permissions)))
 
 (re-frame/reg-sub
  ::utp-user?
@@ -46,7 +55,7 @@
 (re-frame/reg-sub
  ::permission-to-types
  :<- [::permissions]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [[{:keys [admin? all-types? types]} all-types] _]
    (if (or admin? all-types?)
      all-types
@@ -120,7 +129,7 @@
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  :<- [::permissions]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [[sites permissions cities types] [_ locale]]
    (when (and permissions sites)
      (->> sites
@@ -130,8 +139,9 @@
 
 (re-frame/reg-sub
  ::selected-sports-site
- (fn [db _]
-   (-> db :user :selected-sports-site)))
+ :<- [::user]
+ (fn [user _]
+   (-> user :selected-sports-site)))
 
 (re-frame/reg-sub
  ::saved-reports
@@ -153,5 +163,6 @@
 
 (re-frame/reg-sub
  ::experimental-features?
- (fn [db _]
-   (-> db :user :experimental-features?)))
+ :<- [::data]
+ (fn [user _]
+   (-> user :experimental-features?)))
