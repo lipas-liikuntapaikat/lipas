@@ -8,20 +8,20 @@
 (def ^:dynamic *driver*)
 
 (defn remote-driver []
-  (e/create-driver :chrome-headless
-                   {:host      "headless-chrome"
-                    :port      4444
-                    :log-level :info}))
+  (e/chrome-headless ))
+
+(def driver-opts
+  {:host      "headless-chrome"
+   :port      4444
+   :log-level :info})
 
 (defn fixture-driver
   "Executes a test running a driver. Bounds a driver
    with the global *driver* variable."
   [f]
-  (let [driver (remote-driver)]
+  (e/with-chrome-headless driver-opts driver
     (binding [*driver* driver]
-      (e/connect-driver driver)
-      (f)
-      (e/disconnect-driver driver))))
+      (f))))
 
 (use-fixtures
   :each ;; start and stop driver for each test
