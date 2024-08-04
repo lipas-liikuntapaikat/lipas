@@ -58,11 +58,11 @@
     :s3-bucket         (env! :aws-s3-bucket)
     :s3-bucket-prefix  (env! :aws-s3-bucket-prefix)}
    :app
-   {:db        (ig/ref :db)
-    :emailer   (ig/ref :emailer)
-    :search    (ig/ref :search)
-    :mailchimp (ig/ref :mailchimp)
-    :aws       (ig/ref :aws)
+   {:db        (ig/ref :lipas/db)
+    :emailer   (ig/ref :lipas/emailer)
+    :search    (ig/ref :lipas/search)
+    :mailchimp (ig/ref :lipas/mailchimp)
+    :aws       (ig/ref :lipas/aws)
     :utp
     {:cms-api-url                 (env! :utp-cms-api-url)
      :cms-api-user                (env! :utp-cms-api-user)
@@ -81,8 +81,19 @@
     {:api-key      (env! :mml-api-key)
      :coverage-url (env! :mml-coverage-url)}}
    :server
-   {:app  (ig/ref :app)
+   {:app  (ig/ref :lipas/app)
     :port 8091}
    :nrepl
    {:port 7888
     :bind "0.0.0.0"}})
+
+(defn ->system-config
+  [config]
+  (update-keys config #(keyword "lipas" (name %))))
+
+(def system-config
+  "Integrant requires system map keys to be fully qualified since
+  2020. There are several references directly to `default-config` in
+  the code, so we create another var for system config and leave the
+  `default-config` as is."
+  (->system-config default-config))

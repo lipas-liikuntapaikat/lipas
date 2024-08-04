@@ -164,15 +164,15 @@
       ["/lois"
        {:get
         {:no-doc     false
-         :responses  {200 {:body (s/coll-of :lipas.loi/document)}}
+         :responses  {200 {:body :lipas.loi/documents}}
          :parameters {}
          :handler
          (fn []
            (let [query {:size 10000 :query {:match_all {}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}
+              :body   (core/search-lois search query)}))}}]
 
-      ["/:loi-id"
+      ["/lois/:loi-id"
        {:get
         {:no-doc     false
          :responses  {200 {:body :lipas.loi/document}}
@@ -180,12 +180,12 @@
          :handler
          (fn [{:keys [parameters]}]
            {:status 200
-            :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]]
+            :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]
 
       ["/lois/type/:loi-type"
        {:get
         {:no-doc    false
-         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :responses {200 {:body :lipas.loi/documents}}
          :parameters
          {:path  {:loi-type :lipas.loi/loi-type}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
@@ -199,7 +199,7 @@
       ["/lois/category/:loi-category"
        {:get
         {:no-doc    false
-         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :responses {200 {:body :lipas.loi/documents}}
          :parameters
          {:path  {:loi-category :lipas.loi/loi-category}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
@@ -213,7 +213,7 @@
       ["/lois/status/:status"
        {:get
         {:no-doc    false
-         :responses {200 {:body (s/coll-of :lipas.loi/document)}}
+         :responses {200 {:body :lipas.loi/documents}}
          :parameters
          {:path  {:status :lipas.loi/status}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}

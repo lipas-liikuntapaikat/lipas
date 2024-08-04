@@ -111,11 +111,11 @@
                                     (str/join "," tables)
                                     " RESTART IDENTITY CASCADE")]))
 
-(def system (system/start-system! config))
+(def system (system/start-system! (config/->system-config config)))
 
-(def db (:db system))
-(def app (:app system))
-(def search (:search system))
+(def db (:lipas/db system))
+(def app (:lipas/app system))
+(def search (:lipas/search system))
 
 (defn prune-es! []
   (let [client   (:client search)

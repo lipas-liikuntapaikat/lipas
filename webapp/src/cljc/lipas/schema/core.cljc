@@ -2043,6 +2043,10 @@
                    :lipas.loi/geometries]
           :opt-un [:lipas.loi/id]))
 
+(s/def :lipas.loi/documents
+  (s/coll-of :lipas.loi/document))
+
+
 ;; LOI search API
 (s/def :lipas.api.search-lois.payload/distance ::real)
 
