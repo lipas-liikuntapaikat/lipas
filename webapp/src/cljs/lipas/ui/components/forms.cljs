@@ -20,7 +20,11 @@
   (let [value (utils/display-value value :empty "-" :links? false)]
     (if-not (= "-" value)
       [:<>
-       [mui/input-label {:shrink true :style {:color "rgba(0, 0, 0, 0.88)"}}
+       [mui/input-label
+        {:shrink true
+         :margin "dense"
+         :style  {:transform "translate(0px, -1.5px) scale(0.75)"
+                  :color     "rgba(0, 0, 0, 0.88)"}}
         label]
        [mui/link
         {:href    (if (utils/link-strict? value)
