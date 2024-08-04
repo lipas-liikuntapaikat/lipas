@@ -14,7 +14,7 @@
   (require '[lipas.backend.config :as config])
   (require '[lipas.backend.system :as system])
 
-  (def dev-config (dissoc config/default-config :nrepl))
+  (def dev-config (dissoc config/system-config :lipas/nrepl))
   (def s0 (system/start-system!))
 
   (def current-system (atom nil))
