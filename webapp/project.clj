@@ -1,33 +1,33 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.11.3"]
+   [org.clojure/clojure "1.11.4"]
    [camel-snake-kebab "0.4.0"]
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
-   [metosin/reitit "0.5.18"]
-   [metosin/spec-tools "0.10.5"]
-   [metosin/malli "0.13.0"]
+   [metosin/reitit "0.7.1"]
+   [metosin/spec-tools "0.10.7"]
+   [metosin/malli "0.16.2"]
 
    ;;; Frontend ;;;
-   [thheller/shadow-cljs "2.28.8"]
+   [thheller/shadow-cljs "2.28.11"]
    [org.clojure/clojurescript "1.11.132"]
    [reagent "1.2.0"]
    [re-frame "1.4.3"]
    [tongue "0.4.4"]
-   [day8.re-frame/http-fx "0.1.6"]
+   [day8.re-frame/http-fx "0.2.4"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
-   [cheshire "5.8.0"]
+   [cheshire "5.13.0"]
    [buddy "2.0.0"]
    [com.layerware/hugsql "0.4.8"]
    [org.postgresql/postgresql  "42.2.2"]
-   [nrepl "1.0.0"]
+   [nrepl "1.2.0"]
    [hikari-cp "2.7.0"]
    [cc.qbits/spandex "0.8.2"]
-   [integrant "0.6.3"]
+   [integrant "0.10.0"]
    [migratus "1.0.6"]
    [environ "1.1.0"]
    [com.draines/postal "2.0.2"]
@@ -35,8 +35,7 @@
    [org.clojure/data.csv "0.1.4"]
    [dk.ative/docjure "1.12.0"]
    [tea-time "1.0.0"]
-   [etaoin "0.2.8-SNAPSHOT"]
-   [clj-http "3.9.1"]
+   [clj-http "3.13.0"]
    [factual/geo "3.0.1"]
    #_[com.amazonaws/aws-java-sdk-core "1.12.538"]
    [software.amazon.awssdk/regions "2.20.135"]
@@ -92,12 +91,13 @@
     :dependencies
     [;;; Frontend ;;;
      [binaryage/devtools "1.0.7"]
-     [day8.re-frame/re-frame-10x "1.9.0"]
+     [day8.re-frame/re-frame-10x "1.9.9"]
      [cider/piggieback "0.5.3"]
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
-     [org.clojure/test.check "0.9.0"]]}
+     [org.clojure/test.check "0.9.0"]
+     [etaoin "1.0.40"]]}
    :uberjar
    {:main         lipas.aot
     :aot          [lipas.aot]

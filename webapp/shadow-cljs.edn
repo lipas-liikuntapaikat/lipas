@@ -19,4 +19,4 @@
    :devtools
    {:after-load lipas.ui.core/mount-root
     :preloads   [devtools.preload
-                 #_day8.re-frame-10x.preload]}}}}
+                 day8.re-frame-10x.preload]}}}}
