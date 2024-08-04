@@ -12,7 +12,7 @@
   (:import
    (software.amazon.awssdk.auth.credentials DefaultCredentialsProvider)))
 
-(defmethod ig/init-key :db [_ db-spec]
+(defmethod ig/init-key :lipas/db [_ db-spec]
   (if (:dev db-spec)
     (do
       (println "Setting up db in dev mode (no pooling)")
@@ -21,14 +21,14 @@
       (println "Setting up db with connection pool")
       (db/setup-connection-pool db-spec))))
 
-(defmethod ig/halt-key! :db [_ pool]
+(defmethod ig/halt-key! :lipas/db [_ pool]
   (when-not (and (map? pool) (:dev pool))
     (db/stop-connection-pool pool)))
 
-(defmethod ig/init-key :emailer [_ config]
+(defmethod ig/init-key :lipas/emailer [_ config]
   (email/->SMTPEmailer config))
 
-(defmethod ig/init-key :search [_ config]
+(defmethod ig/init-key :lipas/search [_ config]
   (let [client  (search/create-cli config)
         indices (:indices config)]
 
@@ -47,28 +47,28 @@
      :indices  indices
      :mappings search/mappings}))
 
-(defmethod ig/init-key :mailchimp [_ config]
+(defmethod ig/init-key :lipas/mailchimp [_ config]
   config)
 
-(defmethod ig/init-key :app [_ config]
+(defmethod ig/init-key :lipas/app [_ config]
   (handler/create-app config))
 
-(defmethod ig/init-key :server [_ {:keys [app port]}]
+(defmethod ig/init-key :lipas/server [_ {:keys [app port]}]
   (jetty/run-jetty app {:port port :join? false}))
 
-(defmethod ig/halt-key! :server [_ server]
+(defmethod ig/halt-key! :lipas/server [_ server]
   (.stop server))
 
-(defmethod ig/init-key :nrepl [_ {:keys [port bind]}]
+(defmethod ig/init-key :lipas/nrepl [_ {:keys [port bind]}]
   (nrepl/start-server :port port :bind bind))
 
-(defmethod ig/halt-key! :nrepl [_ server]
+(defmethod ig/halt-key! :lipas/nrepl [_ server]
   (nrepl/stop-server server))
 
-(defmethod ig/init-key :aws [_ config]
+(defmethod ig/init-key :lipas/aws [_ config]
   (assoc config :credentials-provider (DefaultCredentialsProvider/create)))
 
-(defmethod ig/halt-key! :aws [_ m]
+(defmethod ig/halt-key! :lipas/aws [_ m]
   )
 
 (defn mask [_s]
@@ -76,23 +76,23 @@
 
 (defn start-system!
   ([]
-   (start-system! config/default-config))
+   (start-system! config/system-config))
   ([config]
    (let [system (ig/init config)]
      (prn "System started with config:")
      (pprint (-> config
-                 (update-in [:db :password] mask)
-                 (update-in [:emailer :pass] mask)
-                 (update-in [:search :pass] mask)
-                 (update-in [:mailchimp :api-key] mask)
-                 (update-in [:app :accessibility-register :secret-key] mask)
-                 (update-in [:app :mml-api :api-key] mask)
-                 (update-in [:aws :access-key-id] mask)
-                 (update-in [:aws :secret-access-key] mask)))
+                 (update-in [:lipas/db :password] mask)
+                 (update-in [:lipas/emailer :pass] mask)
+                 (update-in [:lipas/search :pass] mask)
+                 (update-in [:lipas/mailchimp :api-key] mask)
+                 (update-in [:lipas/app :accessibility-register :secret-key] mask)
+                 (update-in [:lipas/app :mml-api :api-key] mask)
+                 (update-in [:lipas/aws :access-key-id] mask)
+                 (update-in [:lipas/aws :secret-access-key] mask)))
      system)))
 
 (defn stop-system! [system]
   (ig/halt! system))
 
 (defn -main [& _args]
-  (start-system! config/default-config))
+  (start-system! config/system-config))
