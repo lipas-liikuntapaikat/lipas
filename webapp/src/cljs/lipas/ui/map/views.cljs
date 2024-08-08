@@ -709,7 +709,7 @@
          [mui/tab
           {:style {:min-width 0}
            :value 3
-           :label (:tr :lipas.floorball/headline)}])
+           :label (tr :lipas.floorball/headline)}])
 
        (when show-activities?
          [mui/tab
