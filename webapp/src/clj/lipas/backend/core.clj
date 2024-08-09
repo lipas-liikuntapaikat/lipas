@@ -951,27 +951,54 @@
   {:pre [(some? org-id)]}
   (ptv/get-org-services {} org-id))
 
+(def ptv-keys [:languages
+               :summary
+               :description
+               :last-sync
+               :org-id
+               :sync-enabled
+               :service-integration
+               :descriptions-integration
+               :service-channel-integration
+               :service-ids
+               :service-channel-ids])
+
 (defn upsert-ptv-service-location!
   [db search user {:keys [org data sports-site] :as m}]
-  (let [config {:org-id (get-in ptv/test-config [:creds :org-id])}
-        id     (first (get-in sports-site [:ptv :service-location-ids]))
+  (assert (:lipas-id sports-site))
+  (let [site   (db/get-sports-site db (:lipas-id sports-site))
+        _      (assert (some? site)
+                       (str "Sports site " (:lipas-id sports-site) " not found in DB"))
+        config {:org-id (get-in ptv/test-config [:creds :org-id])}
+        id     (first (get-in sports-site [:ptv :service-channel-ids]))
         data   (ptv/->ptv-service-location org gis/wgs84->tm35fin-no-wrap sports-site)
         resp   (if id
-               (ptv/update-service-location config id data)
-               (ptv/create-service-location config data))]
+                 (ptv/update-service-location config id data)
+                 (ptv/create-service-location config data))
+        now    (utils/timestamp)]
 
-    (assert (:lipas-id sports-site))
-
-    (let [site (db/get-sports-site db (:lipas-id sports-site))]
-      (save-sports-site! db search user (-> site
-                                            (assoc :event-date (utils/timestamp))
-                                            (assoc :ptv (:ptv sports-site)))))
+    (save-sports-site! db search user (-> site
+                                          (assoc :event-date now)
+                                          (assoc :ptv (-> sports-site
+                                                          :ptv
+                                                          (select-keys ptv-keys)
+                                                          (assoc :last-sync now)))))
 
     resp))
 
 (defn save-ptv-integration-definitions
-  [db search ptv]
-  )
+  "Saves ptv definitions under key :ptv. Does not notify webhooks,
+  integrations or analysis queues since they're not likely interested
+  in this."
+  [db search user lipas-id->ptv-meta]
+  (jdbc/with-db-transaction [tx db]
+    (doseq [[lipas-id ptv] lipas-id->ptv-meta]
+      ;; TODO take when-let -> let and add assert
+      (when-let [site (-> (get-sports-site tx lipas-id)
+                          (assoc :event-date (utils/timestamp))
+                          (assoc :ptv ptv))]
+        (upsert-sports-site! tx user site)
+        (index! search site :sync)))))
 
 (comment
   (require '[lipas.backend.config :as config])

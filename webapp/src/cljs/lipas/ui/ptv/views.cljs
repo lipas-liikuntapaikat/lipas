@@ -52,7 +52,7 @@
   [{:keys [value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
-  (let [items (<== [::subs/service-channels])]
+  (let [items (<== [::subs/service-channels-list])]
     [lui/autocomplete
      {:items     items
       :multi?    true
@@ -656,6 +656,9 @@
                               [mui/icon {:color "success"} "done"]
                               [mui/icon {:color "disabled"} "done"])}
                [mui/stack {:spacing 2}
+
+                ;; TODO SERVICE SELECTOR HERE
+
                 [mui/tabs
                  {:value     @selected-tab
                   :on-change #(reset! selected-tab (keyword %2))}
@@ -687,12 +690,12 @@
         sports-sites-count  (<== [::subs/sports-sites-count])
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
-        {:keys                 [in-progress?
-                        processed-lipas-ids
-                        processed-count
-                        total-count
-                        processed-percent
-                        halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
+        {:keys                                                 [in-progress?
+                                                        processed-lipas-ids
+                                                        processed-count
+                                                        total-count
+                                                        processed-percent
+                                                        halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
 
     [lui/expansion-panel
      {:label      (str "2. " (tr :ptv.wizard/integrate-service-locations))
@@ -717,35 +720,35 @@
         [mui/typography (tr :ptv.tools.ai/start-helper)]
 
         #_[mui/form-control
-         [mui/form-label (tr :ptv.tools.ai.sports-sites-filter/label)]
+           [mui/form-label (tr :ptv.tools.ai.sports-sites-filter/label)]
 
-         #_[mui/radio-group
-            {:on-change #(==> [::events/select-sports-sites-filter %2])
-             :value     sports-sites-filter}
-          [mui/form-control-label
-           {:value   "all"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/all)
-            :control (r/as-element [mui/radio])}]
+           #_[mui/radio-group
+              {:on-change #(==> [::events/select-sports-sites-filter %2])
+               :value     sports-sites-filter}
+              [mui/form-control-label
+               {:value   "all"
+                :label   (tr :ptv.tools.ai.sports-sites-filter/all)
+                :control (r/as-element [mui/radio])}]
 
-          [mui/form-control-label
-           {:value   "no-existing-description"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/no-existing-description)
-            :control (r/as-element [mui/radio])}]
+              [mui/form-control-label
+               {:value   "no-existing-description"
+                :label   (tr :ptv.tools.ai.sports-sites-filter/no-existing-description)
+                :control (r/as-element [mui/radio])}]
 
-          [mui/form-control-label
-           {:value   "sync-enabled"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled)
-            :control (r/as-element [mui/radio])}]
+              [mui/form-control-label
+               {:value   "sync-enabled"
+                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled)
+                :control (r/as-element [mui/radio])}]
 
-          [mui/form-control-label
-           {:value   "sync-enabled-no-existing-description"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled-no-existing-description)
-            :control (r/as-element [mui/radio])}]
+              [mui/form-control-label
+               {:value   "sync-enabled-no-existing-description"
+                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled-no-existing-description)
+                :control (r/as-element [mui/radio])}]
 
-          #_[mui/form-control-label
-             {:value   "manual"
-              :label   (tr :ptv.tools.ai.sports-sites-filter/manual)
-              :control (r/as-element [mui/radio])}]]]
+              #_[mui/form-control-label
+                 {:value   "manual"
+                  :label   (tr :ptv.tools.ai.sports-sites-filter/manual)
+                  :control (r/as-element [mui/radio])}]]]
 
         ;; Start button
         [mui/button
@@ -787,12 +790,12 @@
           :on-click  #(==> [::events/create-all-ptv-service-locations sports-sites])}
          (tr :ptv.wizard/export-service-locations-to-ptv)]
 
-        (let [{:keys        [in-progress?
-                             processed-lipas-ids
-                             processed-count
-                             total-count
-                             processed-percent
-                             halt?] :as m} (<== [::subs/service-location-creation-progress])]
+        (let [{:keys                                        [in-progress?
+                                                     processed-lipas-ids
+                                                     processed-count
+                                                     total-count
+                                                     processed-percent
+                                                     halt?] :as m} (<== [::subs/service-location-creation-progress])]
           (when in-progress?
             [mui/stack {:direction "row" :spacing 2 :align-items "center"}
              [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
@@ -816,14 +819,19 @@
            (str sports-sites-count " kpl")]
 
           (doall
-           (for [{:keys [lipas-id valid sync-enabled service-name] :as site} sports-sites]
+           (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
              ^{:key lipas-id}
              [lui/expansion-panel
               {:label      (:name site)
                :style      (merge {:margin-top "1em"}
                                   (when (false? sync-enabled) {:background-color mui/gray3}))
-               :label-icon [mui/icon {:color (if valid "success" "disabled")}
-                            "done"]}
+               :label-icon [mui/icon {:color (cond
+                                               valid "success"
+
+                                               name-conflict "warning"
+
+                                               :else "disabled")}
+                            (if name-conflict "warning" "done")]}
 
               [mui/stack {:spacing 2}
 
@@ -832,11 +840,31 @@
                  :value     sync-enabled
                  :on-change #(==> [::events/toggle-sync-enabled site %])}]
 
-               #_[services-selector
-                  {:value     (:service-ids site)
-                   :on-change #(==> [::events/select-services site %])
-                   :value-fn  :service-id
-                   :label     (tr :ptv/services)}]
+               ;; Services selector
+               [services-selector
+                {:value     service-ids
+                 :value-fn  :service-id
+                 :on-change #(==> [::events/select-services site %])
+                 :label     (tr :ptv/services)}]
+
+               ;; Service channel selector
+
+               (when name-conflict
+                 [mui/stack
+                  [lui/icon-text
+                   {:icon       "warning"
+                    :icon-color "warning"
+                    :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
+                  [:ul
+                   [:li (tr :ptv.name-conflict/opt1)]
+                   [:li (tr :ptv.name-conflict/opt2)]
+                   [:li (tr :ptv.name-conflict/opt3)]]])
+
+               [service-channel-selector
+                {:value     service-channel-ids
+                 :value-fn  :service-channel-id
+                 :on-change #(==> [::events/select-service-channels site %])
+                 :label     (tr :ptv/service-channel)}]
 
                [mui/tabs
                 {:value     @selected-tab
@@ -890,11 +918,12 @@
   (let [open?        (<== [::subs/dialog-open?])
         selected-tab (<== [::subs/selected-tab])
         loading?     (<== [::subs/loading-from-ptv?])
-        org-data     (<== [::subs/selected-org-data])]
+        org-data     (<== [::subs/selected-org-data])
+        sites        (<== [::subs/sports-sites])]
 
     [lui/dialog
      {:open?         open?
-      :on-save       #(==> [::events/save])
+      :on-save       #(==> [::events/save sites])
       :save-enabled? true
       :save-label    (tr :actions/save)
       :title         (tr :ptv/tooltip)

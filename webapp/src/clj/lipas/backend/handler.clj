@@ -762,15 +762,15 @@
            {:status 200
             :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
 
-      ["/actions/save-ptv-integration-definitions"
+      ["/actions/save-ptv-meta"
        {:post
         {:no-doc     false
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
-         (fn [{:keys [body-params]}]
+         (fn [{:keys [body-params identity]}]
            {:status 200
-            :body   (core/save-ptv-integration-definitions db search body-params)})}}]]]
+            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

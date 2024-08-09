@@ -3,7 +3,9 @@
    [lipas.backend.system :as backend]
    [lipas.backend.config :as config]
    [ring.middleware.reload :refer [wrap-reload]]
-   [lipas.backend.core :as core]))
+   [lipas.backend.core :as core]
+   [lipas.search-indexer :as si]
+   [lipas.data.types :as types]))
 
 (def system (backend/start-system! (dissoc config/system-config :lipas/server :lipas/nrepl)))
 (def app (:app system))
@@ -14,6 +16,7 @@
 
   (require '[lipas.backend.config :as config])
   (require '[lipas.backend.system :as system])
+  (require '[lipas.backend.core :as core])
 
   (def dev-config (dissoc config/system-config :lipas/nrepl))
   (def s0 (system/start-system!))
@@ -41,6 +44,14 @@
   (migratus/create migratus-config "organization")
   (migratus/migrate migratus-config)
 
+  (require '[lipas.data.types :as types])
+
+  (require '[lipas.search-indexer :as si])
+  (si/main
+   nil
+   (:lipas/db @current-system)
+   (:lipas/search @current-system)
+   "search")
 
 
   )

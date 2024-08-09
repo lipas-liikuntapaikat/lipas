@@ -190,24 +190,56 @@
                                              (some-> summary :fi count (> 5))))))))))))
 
 (re-frame/reg-sub
- ::service-channels
+ ::service-channels-by-id
  :<- [::ptv]
  :<- [::selected-org-id]
  (fn [[ptv org-id] _]
    (when org-id
-     (vals (get-in ptv [:org org-id :data :service-channels])))))
+     (get-in ptv [:org org-id :data :service-channels]))))
 
 (re-frame/reg-sub
- ::service-channels-by-id
+ ::service-channels
+ :<- [::service-channels-by-id]
+ (fn [channels _]
+   (vals channels)))
+
+(defn resolve-service-channel-name
+  "Sometimes these seem to have the name under undocumented :name
+  property and sometimes under documented :serviceChannelNames
+  array. Wtf."
+  [service-channel]
+  (or (:name service-channel)
+      (some (fn [m]
+              (when (= "fi" (:language m))
+                (:value m)))
+            (:serviceChannelNames service-channel))))
+
+(re-frame/reg-sub
+ ::service-channels-list
  :<- [::service-channels]
  (fn [channels _]
-   channels))
+   (for [m channels]
+     {:service-channel-id (:id m)
+      :name               (resolve-service-channel-name m)})))
 
 (defn parse-summary
   "Returns first line-delimited paragraph."
   [s]
   (when (string? s)
     (first (str/split s #"\r?\n"))))
+
+(defn detect-name-conflict
+  [sports-site service-channels]
+  (let [s1                (some-> sports-site :name str/trim str/lower-case)
+        attached-channels (-> sports-site :ptv :service-channel-ids set)]
+    (some (fn [service-channel]
+            (let [ssname (resolve-service-channel-name service-channel)
+                  s2     (some-> ssname str/trim str/lower-case)]
+              (when (and
+                     (not (contains? attached-channels (:id service-channel)))
+                     (= s1 s2))
+                {:service-channel-id (:id service-channel)})))
+          service-channels)))
 
 (re-frame/reg-sub
  ::sports-sites
@@ -249,10 +281,12 @@
                                          (some-> summary :fi count (> 5))))
           :lipas-id        (:lipas-id site)
           :name            (:name site)
+          :name-conflict   (detect-name-conflict site (vals service-channels))
           :marketing-name  (:marketing-name site)
           :type            (-> site :search-meta :type :name :fi)
           :sub-category    (-> site :search-meta :type :sub-category :name :fi)
           :sub-category-id (-> site :type :type-code types :sub-category)
+          :org-id          org-id
           :admin           (-> site :search-meta :admin :name :fi)
           :owner           (-> site :search-meta :owner :name :fi)
           :summary         summary
@@ -269,7 +303,8 @@
                                            (:service-integration org-defaults))
           :service-channel-id          service-channel-id
           :service-channel-ids         (-> site :ptv :service-channel-ids)
-          :service-channel-name        (get-in service-channels [service-channel-id :name])
+          :service-channel-name        (-> (get service-channels service-channel-id)
+                                           (resolve-service-channel-name))
           :service-channel-integration (or (-> site :ptv :service-channel-integration)
                                            (:service-channel-integration org-defaults))})))))
 
