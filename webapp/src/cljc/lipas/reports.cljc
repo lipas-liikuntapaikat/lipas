@@ -49,6 +49,8 @@
    {:fi "Nimi suomeksi" :en "Finnish name" :se "Namn på finska"}
    "name-localized.se"
    {:fi "Nimi ruotsiksi" :en "Swedish name" :se "Namn på svenska"}
+   "name-localized.en"
+   {:fi "Nimi englanniksi" :en "English name" :se "Namn på engelska"}
    "marketing-name"
    {:fi "Markkinointinimi" :en "Marketing name" :se "Varumärkesnamn"}
    "event-date"
