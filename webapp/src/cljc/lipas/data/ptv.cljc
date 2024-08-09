@@ -135,6 +135,11 @@
         type     (get types/all (get-in sports-site [:type :type-code]))
         sub-cat  (get types/sub-categories (:sub-category type))
         main-cat (get types/main-categories (:main-category type))]
+
+    (println "PTV data")
+    (prn-str ptv)
+    (println "Langauges resolved" languages)
+
     {:organizationId      (:org-id org)
      :sourceId            (str "lipas-" (:org-id org) "-" lipas-id)
      :serviceChannelNames (keep identity

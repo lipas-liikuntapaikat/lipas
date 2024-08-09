@@ -72,7 +72,7 @@
     :project         "ptv"
     :completions-url "https://api.openai.com/v1/chat/completions"
     :models-url      "https://api.openai.com/v1/models"
-    :model           #_ "gpt-4o" "gpt-4-turbo" #_ "gpt-3.5-turbo" #_ "gpt-3.5-turbo-1106"}
+    :model           "gpt-4o-mini" #_ "gpt-4o" #_"gpt-4-turbo" #_ "gpt-3.5-turbo" #_ "gpt-3.5-turbo-1106"}
    :app
    {:db        (ig/ref :lipas/db)
     :emailer   (ig/ref :lipas/emailer)

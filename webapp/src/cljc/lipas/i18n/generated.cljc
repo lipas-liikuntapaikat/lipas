@@ -23,6 +23,10 @@
      :tools            "Massatyökalut"
      :settings         "Asetukset"
      :wizard           "Käyttöönotto"}
+    :ptv.name-conflict
+    {:opt1 "Kytke liikuntapaikka olemassa olevaan palvelupaikkaan käyttämällä alla olevaa valitsinta (suositus)"
+     :opt2 "Laita \"View\" liukukytkin pois päältä, jolloin tätä kohdetta ei integroida PTV:oon."
+     :opt3 "Poista kyseinen palvelupaikka PTV:sta."}
     :ptv.wizard
     {:generate-descriptions         "Laadi kuvaukset"
      :generate-descriptions-helper1 "Palvelut voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
@@ -35,8 +39,9 @@
      :integrate-service-locations     "Luo liikuntapaikoista palvelupaikat"
      :assign-services-to-sports-sites "Kytke liikuntapaikat palveluihin"
      :generate-descriptions-helper3   "Palvelupaikat voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
-     :unselect-helper "Jos et halua viedä tiettyä kohdetta, voit avata
-     kohteen oikealta ja laittaa \"Vie\" liikukytkimen pois päältä."}
+     :unselect-helper                 "Jos et halua viedä tiettyä kohdetta, voit avata
+     kohteen oikealta ja laittaa \"Vie\" liikukytkimen pois päältä."
+     :service-channel-name-conflict   "PTV:ssa on jo olemassa palvelupaikka nimellä {1}."}
     :ptv.tools.generate-services
     {:headline "Luo palvelut PTV:oon"}
     :ptv.tools.ai
