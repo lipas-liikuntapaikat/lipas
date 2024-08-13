@@ -69,6 +69,7 @@ services:
       MAPPROXY_GROUP_ID: 1000
       TZ: Europe/Helsinki
       MML_AUTH:
+    entrypoint: ["/bin/bash", "/start.sh"]
     command: /start.sh
     volumes:
       - './mapproxy:/lipas:z'
