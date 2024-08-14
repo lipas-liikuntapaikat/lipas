@@ -20,8 +20,10 @@
 ;; - auto-sync on save
 
 (def orgs
-  [{:name "Utajärven kunta"
-    :id ptv-data/uta-org-id-test}])
+  [{:name "Utajärven kunta (test)"
+    :id ptv-data/uta-org-id-test}
+   {:name "Utajärven kunta (prod)"
+    :id ptv-data/uta-org-id-prod}])
 
 (defn org-selector
   [{:keys [label]}]
@@ -598,7 +600,7 @@
           [mui/typography (tr :ptv.wizard/generate-descriptions-helper2)]
           [mui/typography (tr :ptv.tools.ai/start-helper)]
 
-          ;; Start button
+          ;; Start descriptions generation button
           [mui/button
            {:variant   "outlined"
             :disabled  in-progress?
@@ -607,7 +609,7 @@
             :on-click  #(==> [::events/generate-all-service-descriptions service-candidates])}
            (tr :ptv.wizard/generate-descriptions)]
 
-          ;; Cancel button
+          ;; Cancel descriptions generation button
           (when in-progress?
             [mui/button
              {:variant   "outlined"
@@ -627,6 +629,7 @@
 
           [mui/typography (tr :ptv.wizard/generate-descriptions-helper1)]
 
+          ;; Sync to PTV button
           [mui/button
            {:variant   "outlined"
             :disabled  (some false? (map :valid service-candidates))
@@ -635,7 +638,7 @@
             :on-click  #(==> [::events/create-all-ptv-services service-candidates])}
            (tr :ptv.wizard/export-services-to-ptv)]]]
 
-        ;; Results
+        ;; Results panel
         [mui/grid {:item true :xs 12 :lg 8}
          [mui/stack {:spacing 4}
 
@@ -657,7 +660,26 @@
                               [mui/icon {:color "disabled"} "done"])}
                [mui/stack {:spacing 2}
 
-                ;; TODO SERVICE SELECTOR HERE
+                [mui/form-control
+                 [mui/form-label (tr :ptv.integration.interval/label)]
+                 [mui/radio-group
+                  {:on-change #(==> [::events/select-integration-interval %2])
+                   :value     "lipas-managed"}
+                  [mui/form-control-label
+                   {:value   "lipas-managed"
+                    :label   (tr :ptv.integration.service/lipas-managed)
+                    :control (r/as-element [mui/radio])}]
+
+                  [mui/form-control-label
+                   {:value   "manual"
+                    :label   (tr :ptv.integration/manual)
+                    :control (r/as-element [mui/radio])}]]]
+
+                [services-selector
+                 {:value     (get m :service-ids)
+                  :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
+                  :value-fn  :service-id
+                  :label     (tr :ptv/services)}]
 
                 [mui/tabs
                  {:value     @selected-tab
