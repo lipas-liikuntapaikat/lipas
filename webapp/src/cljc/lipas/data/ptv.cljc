@@ -140,8 +140,8 @@
     (prn-str ptv)
     (println "Langauges resolved" languages)
 
-    {:organizationId      (:org-id org)
-     :sourceId            (str "lipas-" (:org-id org) "-" lipas-id)
+    {:organizationId      (:org-id ptv)
+     :sourceId            (str "lipas-" (:org-id ptv) "-" lipas-id)
      :serviceChannelNames (keep identity
                                 (let [fallback (get-in sports-site [:name])]
                                   [(when (contains? languages "fi")
@@ -149,7 +149,7 @@
                                      :value    fallback
                                      :language "fi"})
 
-                                   (when (contains? languages "sv")
+                                   (when (contains? languages "se")
                                      {:type     "Name"
                                       :value    (get-in sports-site [:name-localized :se] fallback)
                                       :language "sv"})
@@ -167,7 +167,7 @@
 
      :displayNameType (keep identity
                             [(when (contains? languages "fi") {:type "Name" :language "fi"})
-                             (when (contains? languages "sv") {:type "Name" :language "sv"})
+                             (when (contains? languages "se") {:type "Name" :language "sv"})
                              (when (contains? languages "en") {:type "Name" :language "en"})])
 
      :serviceChannelDescriptions (keep identity
@@ -206,70 +206,91 @@
 (comment
 
   (def uta-jh
-    {:properties {:area-m2 1539, :surface-material []},
-      :email "palaute@utajarvi.fi",
-      :envelope
-      {:insulated-ceiling? true,
-       :insulated-exterior? false,
-       :low-emissivity-coating? false},
-      :phone-number "+358858755700",
-      :building
-      {:total-volume-m3 17700,
-       :seating-capacity 250,
-       :total-ice-area-m2 1539,
-       :total-surface-area-m2 2457,
-       :total-ice-surface-area-m2 1539},
-      :ventilation
-      {:dryer-type "munters",
-       :heat-pump-type "none",
-       :dryer-duty-type "automatic",
-       :heat-recovery-type "thermal-wheel",
-       :heat-recovery-efficiency 75},
-      :admin "city-technical-services",
-      :www "https://www.utajarvi.fi",
-      :name "Utajärven jäähalli",
-      :construction-year 1997,
-      :type {:type-code 2520, :size-category "small"},
-      :lipas-id 89913,
-      :renovation-years [2014],
-      :conditions
-      {:open-months 6,
-       :stand-temperature-c 7,
-       :ice-average-thickness-mm 40,
-       :air-humidity-min 60,
-       :air-humidity-max 90,
-       :maintenance-water-temperature-c 45,
-       :ice-surface-temperature-c -4,
-       :weekly-maintenances 12,
-       :skating-area-temperature-c 7,
-       :daily-open-hours 11,
-       :average-water-consumption-l 700},
-      :status "active",
-      :event-date "2019-04-05T13:54:19.910Z",
-      :refrigeration
-      {:original? true,
-       :refrigerant "R404A",
-       :refrigerant-solution "freezium"},
-      :location
-      {:city {:city-code 889},
-       :address "Laitilantie 5",
-       :geometries
-       {:type "FeatureCollection",
-        :features
-        [{:type "Feature",
-          :geometry
-          {:type "Point",
-           :coordinates [26.4131256689191 64.7631112249574]}}]},
-       :postal-code "91600",
-       :postal-office "Utajärvi"},
-      :owner "city",
-     :hall-id "91600UT1"})
+    {:properties        {:area-m2 1539, :surface-material []},
+     :email             "palaute@utajarvi.fi",
+     :envelope
+     {:insulated-ceiling?      true,
+      :insulated-exterior?     false,
+      :low-emissivity-coating? false},
+     :phone-number      "+358858755700",
+     :building
+     {:total-volume-m3           17700,
+      :seating-capacity          250,
+      :total-ice-area-m2         1539,
+      :total-surface-area-m2     2457,
+      :total-ice-surface-area-m2 1539},
+     :ventilation
+     {:dryer-type               "munters",
+      :heat-pump-type           "none",
+      :dryer-duty-type          "automatic",
+      :heat-recovery-type       "thermal-wheel",
+      :heat-recovery-efficiency 75},
+     :admin             "city-technical-services",
+     :www               "https://www.utajarvi.fi",
+     :name              "Utajärven jäähalli",
+     :construction-year 1997,
+     :type              {:type-code 2520, :size-category "small"},
+     :lipas-id          89913,
+     :renovation-years  [2014],
+     :conditions
+     {:open-months                     6,
+      :stand-temperature-c             7,
+      :ice-average-thickness-mm        40,
+      :air-humidity-min                60,
+      :air-humidity-max                90,
+      :maintenance-water-temperature-c 45,
+      :ice-surface-temperature-c       -4,
+      :weekly-maintenances             12,
+      :skating-area-temperature-c      7,
+      :daily-open-hours                11,
+      :average-water-consumption-l     700},
+     :status            "active",
+     :event-date        "2019-04-05T13:54:19.910Z",
+     :refrigeration
+     {:original?            true,
+      :refrigerant          "R404A",
+      :refrigerant-solution "freezium"},
+     :location
+     {:city          {:city-code 889},
+      :address       "Laitilantie 5",
+      :geometries
+      {:type "FeatureCollection",
+       :features
+       [{:type "Feature",
+         :geometry
+         {:type        "Point",
+          :coordinates [26.4131256689191 64.7631112249574]}}]},
+      :postal-code   "91600",
+      :postal-office "Utajärvi"},
+     :owner             "city",
+     :hall-id           "91600UT1"})
 
   (-> uta-jh
       :location
       :city
       :city-code
       (utils/zero-left-pad 3))
+
+  (def uta-jh-with-ptv-meta
+    (-> uta-jh
+        (assoc :ptv {:languages                   ["fi" "en"]
+                     :summary                     {:fi "Tiivistelmä suomeksi"
+                                                   :se "Jätte tiivistelmä på svenska"
+                                                   :en "English Summary text"}
+                     :description                 {:fi "Kuvaus suomeksi"
+                                                   :se "Jätte deskription på svenska"
+                                                   :en "Description in English"}
+                     :org-id                      "11111-aaaaa-bbbbb-cccccc-ddddd"
+                     :sync-enabled                true
+                     :service-integration         "manual"
+                     :descriptions-integration    "lipas-managed"
+                     :service-channel-integration "lipas-managed"
+                     :service-ids                 #{"sid-1"}
+                     :service-channel-ids         #{"ssid-1"}})))
+
+
+  (->ptv-service-location nil (constantly [123 456])  uta-jh-with-ptv-meta)
+
 
 
   )

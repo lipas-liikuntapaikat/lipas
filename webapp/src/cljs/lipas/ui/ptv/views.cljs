@@ -22,7 +22,7 @@
 (def orgs
   [{:name "Utajärven kunta (test)"
     :id ptv-data/uta-org-id-test}
-   {:name "Utajärven kunta (prod)"
+   #_{:name "Utajärven kunta (prod)"
     :id ptv-data/uta-org-id-prod}])
 
 (defn org-selector

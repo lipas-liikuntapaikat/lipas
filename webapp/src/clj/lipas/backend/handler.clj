@@ -17,14 +17,20 @@
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
    [ring.middleware.params :as params]
-   [ring.util.io :as ring-io]))
+   [ring.util.io :as ring-io]
+   [taoensso.timbre :as log]))
 
-(defn exception-handler [status type]
-  (fn [^Exception e _request]
-    (-> {:status status
-         :body   {:message (.getMessage e)
-                  :type    type}}
-        mw/add-cors-headers)))
+(defn exception-handler
+  ([status type]
+   (exception-handler status type false))
+  ([status type print-stack?]
+   (fn [^Exception e _request]
+     (when print-stack?
+       (log/error e))
+     (-> {:status status
+          :body   {:message (.getMessage e)
+                   :type    type}}
+         mw/add-cors-headers))))
 
 (def exception-handlers
   {:username-conflict  (exception-handler 409 :username-conflict)
@@ -34,20 +40,17 @@
    :email-not-found    (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
 
-   :qbits.spandex/response-exception (exception-handler 500 :internal-server-error)})
+   :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
+
+   ;; Return 500 and print stack trace for exceptions that are not
+   ;; specifically handled
+   ::exception/default (exception-handler 500 :internal-server-error :print-stack)})
 
 (def exceptions-mw
   (exception/create-exception-middleware
    (merge
     exception/default-handlers
-    exception-handlers
-    ;;Prints all stack traces
-    {::exception/wrap
-     (fn [handler e request]
-       (prn (ex-data e))
-       (.printStackTrace e)
-       (handler e request))}
-    )))
+    exception-handlers)))
 
 (defn create-app
   [{:keys [db emailer search mailchimp aws]}]
@@ -741,16 +744,6 @@
          (fn [{:keys [body-params]}]
            {:status 200
             :body   (core/fetch-ptv-services body-params)})}}]
-
-      ["/actions/sync-to-ptv"
-       {:post
-        {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [identity body-params]}]
-           {:status 200
-            :body   (core/sync-to-ptv! db search identity body-params)})}}]
 
       ["/actions/save-ptv-service-location"
        {:post
