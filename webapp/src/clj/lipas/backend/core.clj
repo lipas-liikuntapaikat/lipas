@@ -903,11 +903,6 @@
   [search criteria]
   (ptv/get-eligible-sites search criteria))
 
-(defn sync-to-ptv!
-  [db search user sports-site]
-  (let [site (save-sports-site! db search user sports-site)]
-    ))
-
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
    {:keys [lipas-id]}]
@@ -1051,7 +1046,7 @@
                   :aggs
                   {:grouping
                    {:terms {:field (keyword grouping) :size 400}
-                    :aggs  {:area_m2_stats {:stats {:field :properties.area-m2}}}}}}]
+                    :aggs  {:area_m2_stats {:stats {:field "properties.area-m2"}}}}}}]
     (search search2 query))
 
   #_(flat-finance-report db-spec [992 175] )
