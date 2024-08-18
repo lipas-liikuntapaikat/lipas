@@ -1,6 +1,7 @@
 (ns lipas.ui.effects
   (:require
    [re-frame.core :as re-frame]
+   [lipas.ui.config :as config]
    [lipas.ui.routes :as routes]
    ["zipcelx$default" :as zipcelx]
    ["file-saver" :as filesaver]))
@@ -40,19 +41,22 @@
  :tracker/page-view!
  (fn [[path]]
    #_(println "Track!" path)
-   (.push (.-_paq js/window) #js["trackPageView" (str path)])))
+   (when-not config/debug?
+     (.push (.-_paq js/window) #js["trackPageView" (str path)]))))
 
 (re-frame/reg-fx
  :tracker/event!
  (fn [[category action k v]]
    #_(println "Event!" category action k v)
-   (.push (.-_paq js/window) #js["trackEvent" category action k v])))
+   (when-not config/debug?
+     (.push (.-_paq js/window) #js["trackEvent" category action k v]))))
 
 (re-frame/reg-fx
  :tracker/search!
  (fn [[k category results-count]]
    #_(println "Search!" k category results-count)
-   (.push (.-_paq js/window) #js["trackSiteSearch" k category results-count])))
+   (when-not config/debug?
+     (.push (.-_paq js/window) #js["trackSiteSearch" k category results-count]))))
 
 (def dimensions
   {"user-type" 1})
