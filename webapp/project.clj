@@ -1,7 +1,7 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.11.4"]
+   [org.clojure/clojure "1.12.0-rc1"]
    [camel-snake-kebab "0.4.0"]
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
@@ -96,6 +96,8 @@
 
      ;;; Backend ;;;
      [ring/ring-mock "0.3.2"]
+     [ring/ring-devel "1.12.2"]
+     [integrant/repl "0.3.3"]
      [org.clojure/test.check "0.9.0"]
      [etaoin "1.0.40"]]}
    :uberjar
