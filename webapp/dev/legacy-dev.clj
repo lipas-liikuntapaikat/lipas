@@ -1,4 +1,5 @@
 (ns lipas.dev
+  "Entrypoint for `lein ring` dev server."
   (:require
    [lipas.backend.system :as backend]
    [lipas.backend.config :as config]
@@ -11,8 +12,9 @@
 (def app (:app system))
 (def dev-handler (-> #'app wrap-reload))
 
-
 (comment
+
+  ;; See `lipas.repl` for more automated solution
 
   (require '[lipas.backend.config :as config])
   (require '[lipas.backend.system :as system])

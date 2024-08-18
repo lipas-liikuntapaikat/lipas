@@ -111,6 +111,7 @@
                                     (str/join "," tables)
                                     " RESTART IDENTITY CASCADE")]))
 
+(println "Starting test-system!")
 (def system (system/start-system! (config/->system-config config)))
 
 (def db (:lipas/db system))
