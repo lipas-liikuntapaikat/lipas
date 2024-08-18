@@ -617,7 +617,7 @@
              :headers         {:Authorization (str "Token " token)}
              :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
              :params          {:sports-site (update site [:ptv] merge (select-keys data ks))
-                               :org         (org-id->params org-id)}
+                               :org         (orog-id->params org-id)}
              :format          (ajax/transit-request-format)
              :response-format (ajax/transit-response-format)
              :on-success      [::create-ptv-service-location-success lipas-id success-fx]

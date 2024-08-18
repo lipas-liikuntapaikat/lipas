@@ -120,7 +120,7 @@
   (let [params {:headers {:Content-Type  "application/json"
                           :Authorization (str "bearer " token)}
                 :body    (json/encode service)}]
-    (log/info "Create service" service)
+    (log/info "Create PTV service" service)
     (-> (client/post service-url params)
         :body
         (json/decode keyword))))
@@ -131,7 +131,7 @@
            token       (get-token)}}
    service-id
    data]
-  (log/info "update service with id " service-id "and data" data)
+  (log/info "Update PTV service with id " service-id "and data" data)
   (let [ params {:headers {:Content-Type  "application/json"
                            :Authorization (str "bearer " token)}
                  :body    (json/encode data)}]
@@ -147,7 +147,7 @@
   (let [params {:headers {:Content-Type  "application/json"
                           :Authorization (str "bearer " token)}
                 :body    (json/encode service-location)}]
-    (log/info "Create service location" service-location)
+    (log/info "Create PTV service location" service-location)
     (-> (client/post service-location-url params)
         :body
         (json/decode keyword))))
