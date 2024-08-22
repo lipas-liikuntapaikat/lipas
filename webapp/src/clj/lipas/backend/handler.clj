@@ -513,14 +513,11 @@
       ["/actions/calculate-stats"
        {:post
         {:no-doc     true
-         :parameters {}
+         :parameters {:body :lipas.api.calculate-stats/payload}
          :handler
          (fn [{:keys [body-params]}]
-           (let [city-codes (-> body-params :city-codes)
-                 type-codes (-> body-params :type-codes)
-                 grouping   (-> body-params (:grouping "location.city.city-code"))]
-             {:status 200
-              :body   (core/calculate-stats db search city-codes type-codes grouping)}))}}]
+           {:status 200
+            :body   (core/calculate-stats db search body-params)})}}]
 
       ;; Accessibility
       ["/actions/get-accessibility-statements"

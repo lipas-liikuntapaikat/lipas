@@ -68,21 +68,23 @@
 (re-frame/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
-   (let [city-codes (-> db :stats :sport :selected-cities)
+   (let [year       (-> db :stats :sport :population-year)
+         city-codes (-> db :stats :sport :selected-cities)
          type-codes (-> db :stats :sport :selected-types)
          grouping   (-> db :stats :sport :selected-grouping)]
-     {:dispatch [::create-report* city-codes type-codes grouping]})))
+     {:dispatch [::create-report* city-codes type-codes grouping year]})))
 
-(defn ->query [city-codes type-codes grouping]
+(defn ->query [city-codes type-codes grouping year]
   (cond-> {}
+    year       (assoc :year year)
     grouping   (assoc :grouping grouping)
     city-codes (assoc :city-codes city-codes)
     type-codes (assoc :type-codes type-codes)))
 
 (re-frame/reg-event-fx
  ::create-report*
- (fn [{:keys [db]} [_ city-codes type-codes grouping]]
-   (let [query (->query city-codes type-codes grouping)
+ (fn [{:keys [db]} [_ city-codes type-codes grouping year]]
+   (let [query (->query city-codes type-codes grouping year)
          url   (str (:backend-url db) "/actions/calculate-stats")]
      {:http-xhrio
       {:method          :post

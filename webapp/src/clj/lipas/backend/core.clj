@@ -529,14 +529,17 @@
          (swap! cache assoc :all-cities)
          :all-cities))))
 
-(defn get-populations [db year]
-  (->> (get-cities db)
-       (reduce
-        (fn [res m]
-          (if-let [v (get-in m [:stats year :population])]
-            (assoc res (:city-code m) v)
-            res))
-        {})))
+(defn get-populations
+  [{:keys [indices client]} year]
+  (let [idx (get-in indices [:report :city-stats])]
+    (-> (search/search client idx {:size    500 ;; Finland has ~300 cities
+                                   :_source {:includes ["city-code" "population" "year"] }
+                                   :query
+                                   {:terms {:year [year]}}})
+         (get-in [:body :hits :hits])
+         (->> (map :_source)
+              (utils/index-by :city-code))
+         (update-vals :population))))
 
 ;;; Subsidies ;;;
 
@@ -634,8 +637,9 @@
     (:body (search/search client idx-name params))))
 
 (defn calculate-stats
-  [db search* city-codes type-codes grouping]
-  (let [pop-data  (get-populations db 2019)
+  [db search* {:keys [city-codes type-codes grouping year]
+               :or   {grouping "location.city.city-code"}}]
+  (let [pop-data  (get-populations search* year)
         statuses  ["active" "out-of-service-temporarily"]
         query     {:size 0,
                    :query

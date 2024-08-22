@@ -2064,6 +2064,21 @@
   (s/keys :opt-un [:lipas.api.search-lois.payload/loi-statuses
                    :lipas.api.search-lois.payload/location]))
 
+
+;;; Calc stats API
+
+(s/def :lipas.city.population/year (into #{} (range 2000 (inc 2022))))
+(s/def :lipas.stats.sports-sites/grouping #{"location.city.city-code"
+                                            "type.type-code"})
+
+
+(s/def :lipas.api.calculate-stats/payload
+  (s/keys :req-un [:lipas.city.population/year]
+          :opt-un [:lipas.api.report.req/city-codes
+                   :lipas.api.report.req/type-codes
+                   :lipas.stats.sports-sites/grouping]))
+
+
 (comment
   (s/valid? :lipas.api.search-lois/payload {:loi-statuses ["active" "planned"]
                                             :location {:lon 25.48347583491476

@@ -7,4 +7,5 @@
    :selected-grouping "location.city.city-code"
    :metrics           reports/sports-stats-metrics
    :selected-metric   "sites-count"
-   :selected-view     "chart"})
+   :selected-view     "chart"
+   :population-year   2022})
