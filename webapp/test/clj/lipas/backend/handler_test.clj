@@ -663,7 +663,7 @@
     (is (= "Lipas-id" header-1))))
 
 (deftest finance-report-test
-  (let [_    (seed/seed-city-data! db)
+  (let [_    (seed/seed-city-data! db search)
         path "/api/actions/create-finance-report"
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/json")
@@ -674,7 +674,7 @@
     (is (= '(:275 :972) (-> body :data-points keys)))))
 
 (deftest calculate-stats-test
-  (let [_    (seed/seed-city-data! db)
+  (let [_    (seed/seed-city-data! db search)
         user (gen-user {:db? true :admin? true})
         site (-> (tu/gen-sports-site)
                  (assoc :status "active")
@@ -686,7 +686,7 @@
         resp (app (-> (mock/request :post path)
                       (mock/content-type "application/transit+json")
                       (mock/header "Accept" "application/transit+json")
-                      (mock/body (->transit {:city-codes [275 972]}))))
+                      (mock/body (->transit {:city-codes [275 972] :year 2019}))))
         body (-> resp :body <-transit)]
     (is (= 200 (:status resp)))
     (is (number? (get-in body [275 :area-m2-pc])))))
@@ -757,5 +757,6 @@
   (t/run-tests *ns*)
   (t/run-test search-order-test)
   (t/run-test search-loi-by-status)
+  (t/run-test calculate-stats-test)
   (t/run-test get-loi-by-id)
   )

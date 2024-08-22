@@ -7,6 +7,7 @@
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
    [lipas.backend.system :as backend]
+   [lipas.maintenance :as maintenance]
    [lipas.schema.core]
    [taoensso.timbre :as log]))
 
@@ -208,21 +209,22 @@
     (core/upsert-sports-site!* db user (gen-sports-site)))
   (log/info "Seeding done!"))
 
-(defn seed-city-data! [db]
+(defn seed-city-data! [db search]
   (log/info "Seeding city data for cities " (map :city-code city-data))
   (doseq [city city-data]
     (db/add-city! db city))
+  (maintenance/index-city-finance-data! {:db db :search search})
   (log/info "Seeding done!"))
 
 (defn -main [& args]
-  (let [config (select-keys config/default-config [:db])
+  (let [config (select-keys config/system-config [:lipas/db :lipas/search])
         system (backend/start-system! config)
-        db     (:db system)
-        search (:search system)]
+        db     (:lipas/db system)
+        search (:lipas/search system)]
     (try
       (seed-default-users! db)
       (seed-demo-users! db)
-      (seed-city-data! db)
+      (seed-city-data! db search)
       (let [user (core/get-user db (:email admin))]
         (seed-sports-sites! db user :lipas/sports-site 10)
         (seed-lois! db search user :lipas.loi/document 10))
