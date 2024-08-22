@@ -6,39 +6,57 @@
 ;;; Sports stats ;;;
 
 (re-frame/reg-sub
- ::metrics
+ ::sports-stats
  (fn [db _]
-   (-> db :stats :sport :metrics)))
+   (-> db :stats :sport)))
+
+(re-frame/reg-sub
+ ::metrics
+ :<- [::sports-stats]
+ (fn [m _]
+   (:metrics m)))
 
 (re-frame/reg-sub
  ::selected-metric
- (fn [db _]
-   (-> db :stats :sport :selected-metric)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:selected-metric m)))
 
 (re-frame/reg-sub
  ::groupings
- (fn [db _]
-   (-> db :stats :sport :groupings)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:groupings m)))
 
 (re-frame/reg-sub
  ::selected-grouping
- (fn [db _]
-   (-> db :stats :sport :selected-grouping)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:selected-grouping m)))
 
 (re-frame/reg-sub
  ::selected-cities
- (fn [db _]
-   (-> db :stats :sport :selected-cities)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:selected-cities m)))
 
 (re-frame/reg-sub
  ::selected-types
- (fn [db _]
-   (-> db :stats :sport :selected-types)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:selected-types m)))
+
+(re-frame/reg-sub
+ ::population-year
+ :<- [::sports-stats]
+ (fn [m _]
+   (:population-year m)))
 
 (re-frame/reg-sub
  ::data*
- (fn [db _]
-   (-> db :stats :sport :data)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:data m)))
 
 (re-frame/reg-sub
  ::data
@@ -75,9 +93,10 @@
  ::labels
  :<- [:lipas.ui.subs/translator]
  :<- [::metrics]
- (fn [[tr metrics] _]
+ :<- [::population-year]
+ (fn [[tr metrics pop-year] _]
    (let [locale (tr)]
-     (into {:population      (tr :stats/population)
+     (into {:population      (str (tr :stats/population) " " pop-year)
             :area-m2-sum     (tr :stats/area-m2-sum)
             :area-m2-avg     (tr :stats/area-m2-avg)
             :area-m2-min     (tr :stats/area-m2-min)
@@ -95,7 +114,8 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::metrics]
  :<- [::selected-grouping]
- (fn [[tr metrics grouping] _]
+ :<- [::population-year]
+ (fn [[tr metrics grouping pop-year] _]
    (let [locale (tr)]
      (remove
       nil?
@@ -108,7 +128,7 @@
           [:province-name (tr :lipas.location/province)])
         (when (= "location.city.city-code" grouping)
           [:avi-name (tr :lipas.location/avi-area)])
-        [:population (tr :stats/population)]
+        [:population (str (tr :stats/population) " " pop-year)]
         [:area-m2-sum (tr :stats/area-m2-sum)]
         [:area-m2-avg (tr :stats/area-m2-avg)]
         [:area-m2-min (tr :stats/area-m2-min)]
@@ -122,5 +142,6 @@
 
 (re-frame/reg-sub
  ::selected-view
- (fn [db _]
-   (-> db :stats :sport :selected-view)))
+ :<- [::sports-stats]
+ (fn [m _]
+   (:selected-view m)))

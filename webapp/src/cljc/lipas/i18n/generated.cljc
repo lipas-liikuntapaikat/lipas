@@ -728,7 +728,9 @@
      :headline      "Sijainti",
      :neighborhood  "Kuntaosa",
      :postal-code   "Postinumero",
-     :postal-office "Postitoimipaikka"},
+     :postal-office "Postitoimipaikka"
+     :province      "Maakunta"
+     :avi-area      "AVI-alue"},
     :lipas.user.permissions
     {:admin?       "Admin",
      :all-cities?  "Oikeus kaikkiin kuntiin",
