@@ -93,7 +93,8 @@
      :ptv-managed                        "Älä päivitä kuvauksia"
      :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssa. Lipas ei muuta tai päivitä kuvauksia."}
     :utp
-    {:read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
+    {:headline "Ulkoilutietopalvelu"
+     :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
      :add-contact          "Lisää yhteystieto"
      :unit                 "yksikkö"
      :highlight            "Kohokohta"
