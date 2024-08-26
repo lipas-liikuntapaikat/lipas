@@ -1031,7 +1031,7 @@
 
      ;; Hidden until UTP can support multi-tiered routes
 
-     #_[mui/grid {:item true :xs 12}
+     [mui/grid {:item true :xs 12}
       [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
                    :value     (= :multi route-view)
                    :disabled  (> route-count 1)
