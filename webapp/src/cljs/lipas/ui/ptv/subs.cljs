@@ -72,6 +72,9 @@
  (fn [[ptv org-defaults] _]
    (merge (:default-settings ptv) org-defaults)))
 
+(def lang
+  {"fi" "fi" "sv" "se" "en" "en"})
+
 (re-frame/reg-sub
  ::org-languages
  :<- [::ptv]
@@ -84,7 +87,7 @@
    ;; 'supported languages' so we infer them from org name
    ;; translations. wtf
    (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
-        (map :language))))
+        (keep #(get lang (:language %))))))
 
 (re-frame/reg-sub
  ::selected-org-data
@@ -118,24 +121,52 @@
    (when org-id
      (get-in ptv [:org org-id :data :services]))))
 
+(def langs {"sv" "se" "fi" "fi" "en" "en"})
+
 (re-frame/reg-sub
  ::services
  :<- [::services-by-id]
  (fn [services _]
    (for [[id service] services]
      (let [service-name (->> service :serviceNames (some #(when (= "fi" (:language %))
-                                                            (:value %))))]
-       {:label            service-name
-        :service-id       id
-        :source-id        (:sourceId service)
-        :service-name     service-name
-        :service-modified (:modified service)}))))
+                                                            (:value %))))
+           descriptions (->> service :serviceDescriptions (filter #(= (:type %) "Description")))
+           summaries    (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
+       {:label               service-name
+        :service-id          id
+        :source-id           (:sourceId service)
+        :last-modified       (:modified service)
+        :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
+        :service-classes     (->> service
+                               :serviceClasses
+                               (map (fn [m]
+                                      (utils/index-by (comp langs :language) :value (:name m)))))
+        :languages           (map langs (:languages service))
+        :summary             (utils/index-by (comp langs :language) :value summaries)
+        :description         (utils/index-by (comp langs :language) :value descriptions)
+        :service-name        service-name
+        :service-modified    (:modified service)
+        :service-channels    (->> service :serviceChannels (map :serviceChannel))
+        :ontology-terms      (->> service
+                               :ontologyTerms
+                               (map (fn [m]
+                                      (utils/index-by (comp langs :language) :value (:name m)))))}))))
 
 (re-frame/reg-sub
- ::lipas-managed-services
+ ::services-filter
+ :<- [::ptv]
+ (fn [ptv _]
+   (:services-filter ptv )))
+
+(re-frame/reg-sub
+ ::services-filtered
  :<- [::services]
- (fn [services _]
-   (filter (fn [m] (some-> m :sourceId (str/starts-with? "lipas-"))) services)))
+ :<- [::services-filter]
+ (fn [[services filter'] _]
+   (sort-by :label
+            (case filter'
+              "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
+              services))))
 
 (defn ->source-id
   [org-id sub-category-id]
@@ -295,7 +326,12 @@
 
           :descriptions-integration    descriptions-integration
           :sync-enabled                (get-in site [:ptv :sync-enabled] true)
-          :last-sync                   (or (-> site :ptv :last-sync) "Ei koskaan")
+          :last-sync                   (-> site :ptv :last-sync)
+          :last-sync-human                   (or (some-> site
+                                                         :ptv
+                                                         :last-sync
+                                                         utils/->human-date-time-at-user-tz)
+                                           "Ei koskaan")
           :service-ids                 (-> site :ptv :service-ids)
           :service-name                (-> services (get service-id) :serviceNames
                                            (->> (some #(when (= "fi" (:language %)) (:value %)))))
@@ -341,6 +377,15 @@
                                   0
                                   (* 100 (- 1 (/ (- size processed-count) size))))
                                 100)})))
+
+(re-frame/reg-sub
+ ::sports-site-setup-done
+ :<- [::sports-sites]
+ (fn [ms _]
+   (every? (fn [{:keys [last-sync sync-enabled] :as _m}]
+             (or (utils/iso-date-time-string? last-sync)
+                 (not sync-enabled)))
+           ms)))
 
 (re-frame/reg-sub
  ::sports-sites-filter

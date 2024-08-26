@@ -40,7 +40,7 @@
    {:org-id              ptv-data/uta-org-id-test
     :city-codes          [889]
     :owners              ["city" "city-main-owner"]
-    :supported-languages ["fi" "sv" "en"]}})
+    :supported-languages ["fi" "se" "en"]}})
 
 (re-frame/reg-event-fx
  ::fetch-integration-candidates
@@ -220,6 +220,16 @@
               (assoc-in [:ptv :errors :service-collections] resp))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
+;;; Services views and manipulation ;;;
+
+(re-frame/reg-event-db
+ ::toggle-services-filter
+ (fn [db _]
+   (let [current-val (get-in db [:ptv :services-filter])
+         new-val     (if (= current-val "lipas-managed") "lol" "lipas-managed")]
+     (assoc-in db [:ptv :services-filter] new-val))))
+
+;;; Service locations views and manipulation ;;;
 
 (re-frame/reg-event-db
  ::toggle-sync-enabled
@@ -616,8 +626,9 @@
             {:method          :post
              :headers         {:Authorization (str "Token " token)}
              :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
-             :params          {:sports-site (update site [:ptv] merge (select-keys data ks))
-                               :org         (orog-id->params org-id)}
+             :params          {:sports-site site
+                               :ptv-meta    data
+                               :org         (org-id->params org-id)}
              :format          (ajax/transit-request-format)
              :response-format (ajax/transit-response-format)
              :on-success      [::create-ptv-service-location-success lipas-id success-fx]
