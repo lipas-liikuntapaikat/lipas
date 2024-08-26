@@ -40,7 +40,7 @@
    {:org-id              ptv-data/uta-org-id-test
     :city-codes          [889]
     :owners              ["city" "city-main-owner"]
-    :supported-languages ["fi" "sv" "en"]}})
+    :supported-languages ["fi" "se" "en"]}})
 
 (re-frame/reg-event-fx
  ::fetch-integration-candidates
@@ -616,8 +616,9 @@
             {:method          :post
              :headers         {:Authorization (str "Token " token)}
              :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
-             :params          {:sports-site (update site [:ptv] merge (select-keys data ks))
-                               :org         (orog-id->params org-id)}
+             :params          {:sports-site site
+                               :ptv-meta    data
+                               :org         (org-id->params org-id)}
              :format          (ajax/transit-request-format)
              :response-format (ajax/transit-response-format)
              :on-success      [::create-ptv-service-location-success lipas-id success-fx]

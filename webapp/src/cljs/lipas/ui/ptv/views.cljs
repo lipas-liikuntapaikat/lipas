@@ -57,12 +57,14 @@
   (let [items (<== [::subs/service-channels-list])]
     [lui/autocomplete
      {:items     items
-      :multi?    true
+      :multi?    false
       :label     label
       :label-fn  :name
       :value-fn  value-fn
-      :value     value
-      :on-change on-change}]))
+      :value     (first value)
+      :on-change (fn [v]
+                   (println v)
+                   (on-change [v]))}]))
 
 (defn info-text
   [s]
@@ -414,7 +416,7 @@
 
                 ;; Last-sync
                 [mui/table-cell
-                 (:last-sync site)]
+                 (:last-sync-human site)]
 
                 ;; Name
                 [mui/table-cell
@@ -709,19 +711,20 @@
   []
   (let [tr                  (<== [:lipas.ui.subs/translator])
         sports-sites        (<== [::subs/sports-sites])
+        setup-done?         (<== [::subs/sports-site-setup-done])
         sports-sites-count  (<== [::subs/sports-sites-count])
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
-        {:keys                                                 [in-progress?
-                                                        processed-lipas-ids
-                                                        processed-count
-                                                        total-count
-                                                        processed-percent
-                                                        halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
+        {:keys                                                                                                                 [in-progress?
+                                                                                                                        processed-lipas-ids
+                                                                                                                        processed-count
+                                                                                                                        total-count
+                                                                                                                        processed-percent
+                                                                                                                        halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
 
     [lui/expansion-panel
      {:label      (str "2. " (tr :ptv.wizard/integrate-service-locations))
-      :label-icon (if false
+      :label-icon (if setup-done?
                     [mui/icon {:color "success"} "done"]
                     [mui/icon {:color "disabled"}  "done"])}
 
@@ -812,12 +815,14 @@
           :on-click  #(==> [::events/create-all-ptv-service-locations sports-sites])}
          (tr :ptv.wizard/export-service-locations-to-ptv)]
 
-        (let [{:keys                                        [in-progress?
-                                                     processed-lipas-ids
-                                                     processed-count
-                                                     total-count
-                                                     processed-percent
-                                                     halt?] :as m} (<== [::subs/service-location-creation-progress])]
+        (let [{:keys                         [in-progress?
+                                              processed-lipas-ids
+                                              processed-count
+                                              total-count
+                                              processed-percent
+                                              halt?] :as m}
+              (<== [::subs/service-location-creation-progress])]
+
           (when in-progress?
             [mui/stack {:direction "row" :spacing 2 :align-items "center"}
              [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
@@ -844,21 +849,19 @@
            (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
              ^{:key lipas-id}
              [lui/expansion-panel
-              {:label      (:name site)
-               :style      (merge {:margin-top "1em"}
-                                  (when (false? sync-enabled) {:background-color mui/gray3}))
-               :label-icon [mui/icon {:color (cond
-                                               valid "success"
-
-                                               name-conflict "warning"
-
-                                               :else "disabled")}
-                            (if name-conflict "warning" "done")]}
+              {:label (:name site)
+               :style (merge {:margin-top "1em"}
+                             (when (false? sync-enabled) {:background-color mui/gray3}))
+               :label-icon
+               (cond
+                 name-conflict [mui/icon {:color "warning"} "warning"]
+                 valid         [mui/icon {:color "success"} "done"]
+                 :else         [mui/icon {:color "success"} "disabled"])}
 
               [mui/stack {:spacing 2}
 
                [lui/switch
-                {:label     (tr :ptv.actions/export)
+                {:label     (tr :ptv.actions/export-disclaimer)
                  :value     sync-enabled
                  :on-change #(==> [::events/toggle-sync-enabled site %])}]
 
@@ -871,22 +874,39 @@
 
                ;; Service channel selector
 
-               (when name-conflict
-                 [mui/stack
-                  [lui/icon-text
-                   {:icon       "warning"
-                    :icon-color "warning"
-                    :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
-                  [:ul
-                   [:li (tr :ptv.name-conflict/opt1)]
-                   [:li (tr :ptv.name-conflict/opt2)]
-                   [:li (tr :ptv.name-conflict/opt3)]]])
+               [:span (when name-conflict {:style
+                                           {:border  "1px solid rgb(237, 108, 2)"
+                                            :padding "1em"}})
 
-               [service-channel-selector
-                {:value     service-channel-ids
-                 :value-fn  :service-channel-id
-                 :on-change #(==> [::events/select-service-channels site %])
-                 :label     (tr :ptv/service-channel)}]
+                (when name-conflict
+                  [mui/stack
+                   [lui/icon-text
+                    {:icon       "warning"
+                     :icon-color "warning"
+                     :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
+
+                   [mui/typography
+                    {:style   {:padding-left "1em" :margin-bottom "0"}
+                     :variant "body2"}
+                    (tr :ptv.name-conflict/do-one-of-these)]
+
+                   [:ul
+                    [:li (tr :ptv.name-conflict/opt1)]
+                    [:li (tr :ptv.name-conflict/opt2)]
+                    [:li (tr :ptv.name-conflict/opt3)]
+                    #_[:li (tr :ptv.name-conflict/opt4)]]])
+
+                (when name-conflict
+                  [mui/button
+                   {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
+                                     [(:service-channel-id name-conflict)]])}
+                   (tr :ptv.wizard/attach-to-conflicting-service-channel)])
+
+                [service-channel-selector
+                 {:value     service-channel-ids
+                  :value-fn  :service-channel-id
+                  :on-change #(==> [::events/select-service-channels site %])
+                  :label     (tr :ptv/service-channel)}]]
 
                [mui/tabs
                 {:value     @selected-tab

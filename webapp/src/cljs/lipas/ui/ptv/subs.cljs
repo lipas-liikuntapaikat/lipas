@@ -72,6 +72,9 @@
  (fn [[ptv org-defaults] _]
    (merge (:default-settings ptv) org-defaults)))
 
+(def lang
+  {"fi" "fi" "sv" "se" "en" "en"})
+
 (re-frame/reg-sub
  ::org-languages
  :<- [::ptv]
@@ -84,7 +87,7 @@
    ;; 'supported languages' so we infer them from org name
    ;; translations. wtf
    (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
-        (map :language))))
+        (keep #(get lang (:language %))))))
 
 (re-frame/reg-sub
  ::selected-org-data
@@ -295,7 +298,12 @@
 
           :descriptions-integration    descriptions-integration
           :sync-enabled                (get-in site [:ptv :sync-enabled] true)
-          :last-sync                   (or (-> site :ptv :last-sync) "Ei koskaan")
+          :last-sync                   (-> site :ptv :last-sync)
+          :last-sync-human                   (or (some-> site
+                                                         :ptv
+                                                         :last-sync
+                                                         utils/->human-date-time-at-user-tz)
+                                           "Ei koskaan")
           :service-ids                 (-> site :ptv :service-ids)
           :service-name                (-> services (get service-id) :serviceNames
                                            (->> (some #(when (= "fi" (:language %)) (:value %)))))
@@ -341,6 +349,16 @@
                                   0
                                   (* 100 (- 1 (/ (- size processed-count) size))))
                                 100)})))
+
+(re-frame/reg-sub
+ ::sports-site-setup-done
+ :<- [::sports-sites]
+ (fn [ms _]
+   (every? (fn [{:keys [last-sync sync-enabled] :as _m}]
+             (println (select-keys _m [:last-sync :sync-enabled]))
+             (or (utils/iso-date-time-string? last-sync)
+                 (not sync-enabled)))
+           ms)))
 
 (re-frame/reg-sub
  ::sports-sites-filter

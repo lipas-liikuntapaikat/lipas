@@ -21,6 +21,9 @@
 (def lang->locale
   {"fi" :fi, "sv" :se, "en" :en})
 
+(def lipas-lang->ptv-lang
+  {"fi" "fi", "se" "sv", "en" "en"})
+
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
@@ -131,14 +134,18 @@
   [org
    coord-transform-fn
    {:keys [ptv lipas-id location search-meta] :as sports-site}]
-  (let [languages (set (get ptv :languages default-langs))
+  (let [languages (-> ptv
+                      (get :languages default-langs)
+                      (->> (map lipas-lang->ptv-lang))
+                      set)
         type     (get types/all (get-in sports-site [:type :type-code]))
         sub-cat  (get types/sub-categories (:sub-category type))
         main-cat (get types/main-categories (:main-category type))]
 
     (println "PTV data")
-    (prn-str ptv)
+    (prn ptv)
     (println "Langauges resolved" languages)
+    (prn location)
 
     {:organizationId      (:org-id ptv)
      :sourceId            (str "lipas-" (:org-id ptv) "-" lipas-id)
@@ -149,7 +156,7 @@
                                      :value    fallback
                                      :language "fi"})
 
-                                   (when (contains? languages "se")
+                                   (when (contains? languages "sv")
                                      {:type     "Name"
                                       :value    (get-in sports-site [:name-localized :se] fallback)
                                       :language "sv"})
@@ -167,7 +174,7 @@
 
      :displayNameType (keep identity
                             [(when (contains? languages "fi") {:type "Name" :language "fi"})
-                             (when (contains? languages "se") {:type "Name" :language "sv"})
+                             (when (contains? languages "sv") {:type "Name" :language "sv"})
                              (when (contains? languages "en") {:type "Name" :language "en"})])
 
      :serviceChannelDescriptions (keep identity

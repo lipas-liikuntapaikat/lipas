@@ -372,6 +372,10 @@
                                        (assoc-in [:properties :type-code] type-code)))
                                  %)))))
 
+(defn iso-date-time-string?
+  [s]
+  (not (js/isNaN (.getTime (js/Date. s)))))
+
 (defn ->short-date [s]
   (-> s (string/split #"T") first))
 
@@ -384,10 +388,11 @@
       (->> (string/join "."))))
 
 (defn ->human-date-time-at-user-tz [s]
-  (let [gd (gdate/DateTime.fromIsoString s)]
-    (str (->human-date (.toIsoString gd true))
-         " "
-         (.toIsoTimeString gd))))
+  (when (iso-date-time-string? s)
+    (let [gd (gdate/DateTime.fromIsoString s)]
+      (str (->human-date (.toIsoString gd true))
+           " "
+           (.toIsoTimeString gd)))))
 
 (defn navigate!
   ([path]
