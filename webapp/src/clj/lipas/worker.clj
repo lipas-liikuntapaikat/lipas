@@ -18,9 +18,9 @@
   "Runs all tasks if no task names are given in args. Else runs tasks
   defined in args."
   [& args]
-  (let [config (select-keys config/default-config [:db :emailer :search])
+  (let [config (select-keys config/system-config [:lipas/db :lipas/emailer :lipas/search])
 
-        {:keys [db emailer search]} (backend/start-system! config)
+        {:lipas/keys [db emailer search]} (backend/start-system! config)
         task-ks                     (or (not-empty (mapv keyword args))
                                         all-tasks)]
 
@@ -53,8 +53,8 @@
 
   (:analysis @tasks)
 
-  (def my-conf (select-keys config/default-config [:db :emailer :search]))
+  (def my-conf (select-keys config/system-config [:lipas/db :lipas/emailer :lipas/search]))
   (def my-system (backend/start-system! my-conf))
-  (core/process-analysis-queue! (:db my-system) (:search my-system))
+  (core/process-analysis-queue! (:lipas/db my-system) (:lipas/search my-system))
 
   )

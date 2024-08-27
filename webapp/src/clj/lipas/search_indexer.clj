@@ -184,11 +184,11 @@
                  "--analytics" "analytics"
                  "--diversity" "diversity"
                  "search")
-        config (-> (select-keys config/default-config [:db :search])
+        config (-> (select-keys config/system-config [:lipas/db :lipas/search])
                    (assoc-in [:search :create-indices] false))
         system (backend/start-system! config)
-        db     (:db system)
-        search (:search system)]
+        db     (:lipas/db system)
+        search (:lipas/search system)]
     (try
       (if (= "diversity" mode)
         (let [csv-path (second args)
