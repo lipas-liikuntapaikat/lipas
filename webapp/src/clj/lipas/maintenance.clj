@@ -324,10 +324,10 @@
     (println task)))
 
 (defn run-task! [task-fn args]
-  (let [config (select-keys config/default-config [:db :search])
+  (let [config (select-keys config/system-config [:lipas/db :lipas/search])
         system (backend/start-system! config)
-        db     (:db system)
-        search (:search system)
+        db     (:lipas/db system)
+        search (:lipas/search system)
         user   (core/get-user db "import@lipas.fi")
         args'  {:db db :search search :user user}]
     (try
