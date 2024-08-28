@@ -26,15 +26,13 @@
 
 (defn virtualized-list [{:keys [items] :as props}]
   [:> AutoSizer
-   (fn [m]
-     (let [row-height 64
-           width      (gobj/get m "width")
-           height     (max (gobj/get m "height") (* 10 row-height))]
+   (fn [^js measure]
+     (let [row-height 64]
        (r/as-element
         [:> List
-         {:row-width    width
-          :width        width
-          :height       height
+         {:row-width    (.-width measure)
+          :width        (.-width measure)
+          :height       (.-height measure)
           :row-height   row-height
           :row-renderer (partial row-renderer props)
           :row-count    (inc (count items))}])))])
