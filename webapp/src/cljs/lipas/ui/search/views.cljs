@@ -1,7 +1,6 @@
 (ns lipas.ui.search.views
   (:require
    [clojure.spec.alpha :as s]
-   [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.components.lists :as lists]
    [lipas.ui.mui :as mui]
@@ -188,12 +187,8 @@
      :rows-per-page         page-size
      :rows-per-page-options #js [page-size]
      :label-displayed-rows
-     (fn [props]
-       (let [from  (gobj/get props "from")
-             to    (gobj/get props "to")
-             total (gobj/get props "count")
-             page  (gobj/get props "page")]
-         (tr :search/pagination from to total page)))
+     (fn [^js props]
+       (tr :search/pagination (.-from props) (.-to props) (.-count props) (.-page props)))
      :count                 (or total 0)
      :on-page-change        #(==> [::events/change-result-page %2])
 
