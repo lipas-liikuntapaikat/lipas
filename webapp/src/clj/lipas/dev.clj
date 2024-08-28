@@ -4,7 +4,7 @@
    [lipas.backend.config :as config]
    [ring.middleware.reload :refer [wrap-reload]]))
 
-(def system (backend/start-system! (dissoc config/default-config :server :nrepl)))
+(def system (backend/start-system! (dissoc config/system-config :lipas/server :lipas/nrepl)))
 (def app (:app system))
 (def dev-handler (-> #'app wrap-reload))
 
