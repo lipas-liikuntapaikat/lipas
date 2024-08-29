@@ -1749,7 +1749,8 @@
 
      ;; Floating bottom toolbar
      (when show-tools?
-       [:div {:style {:padding "0.5em"}}
+       [mui/stack
+        {:sx {:px 1}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
 (defn map-view []

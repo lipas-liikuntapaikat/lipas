@@ -52,9 +52,11 @@
   (let [resp (es/request client {:method :head
                                  :url    (es-utils/url [index-name])
                                  :exception-handler (fn [e]
-                                                      (if (= 404 (-> e                                                                                                 (.getResponse)
-                                                                     (.getStatusLine)
-                                                                     (.getStatusCode)))
+                                                      (if (and (instance? org.elasticsearch.client.ResponseException e)
+                                                               (= 404 (-> e
+                                                                          (.getResponse)
+                                                                          (.getStatusLine)
+                                                                          (.getStatusCode))))
                                                         {:status 404}
                                                         (throw e)))})]
     (= 200 (:status resp))))
