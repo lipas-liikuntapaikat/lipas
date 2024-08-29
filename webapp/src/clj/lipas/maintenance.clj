@@ -183,8 +183,7 @@
     (->> (core/get-cities db :no-cache)
          ->city-finance-entries
          (search/->bulk es-index :id)
-         (search/bulk-index! client)
-         deref)
+         (search/bulk-index-sync! client))
     (log/info "All done!")))
 
 (defn ->number-div-by-1000 [x]
