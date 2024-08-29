@@ -107,7 +107,8 @@
 (defn bulk-index-sync!
   ([client data]
    (let [{:keys [input-ch output-ch]}
-         (es/bulk-chan client {:flush-threshold         100
+         (es/bulk-chan client {:url                     "/_bulk?refresh=wait_for"
+                               :flush-threshold         100
                                :flush-interval          5000
                                :max-concurrent-requests 3})]
 
