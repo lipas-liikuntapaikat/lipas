@@ -8,7 +8,6 @@
    ; ["@mui/material/withWidth$default" :as withWidth]
    ["@mui/material/Autocomplete$default" :as Autocomplete]
    ["@mui/material/Avatar$default" :as Avatar]
-   ["@mui/material/Box$default" :as Box]
    ["@mui/material/Button$default" :as Button]
    ["@mui/material/Card$default" :as Card]
    ["@mui/material/CardActions$default" :as CardActions]
@@ -200,7 +199,6 @@
 (def autocomplete (r/adapt-react-class Autocomplete))
 (def app-bar (r/adapt-react-class AppBar))
 (def avatar (r/adapt-react-class Avatar))
-(def box (r/adapt-react-class box))
 (def button (r/adapt-react-class Button))
 (def card (r/adapt-react-class Card))
 (def card-actions (r/adapt-react-class CardActions))
