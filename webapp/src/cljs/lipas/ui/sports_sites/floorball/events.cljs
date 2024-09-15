@@ -7,7 +7,11 @@
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
-(def surface-materials-set (into #{} (keys materials/surface-materials)))
+(def surface-materials-set (into #{} (keys materials/sports-site-surface-materials)))
+
+(defn pos
+  [x]
+  (when (pos? x) x))
 
 (def prop-k->derive-fn
   {:field-length-m         (fn [sports-site]
@@ -17,7 +21,10 @@
    :height-m               (fn [sports-site]
                              (->> sports-site :fields first second :minimum-height-m))
    :area-m2                (fn [sports-site]
-                             (->> sports-site :fields vals (keep :surface-area-m2) (apply +)))
+                             (->> sports-site :fields vals
+                                  (keep :surface-area-m2)
+                                  (apply +)
+                                  pos))
    :surface-material       (fn [sports-site]
                              (->> sports-site
                                   :fields
@@ -33,7 +40,8 @@
    :stand-capacity-person (fn [sports-site]
                             (->> sports-site :fields vals
                                  (keep :stands-total-capacity-person)
-                                 (apply +)))})
+                                 (apply +)
+                                 pos))})
 
 (defmethod sports-sites.events/calc-derived-fields 2240
   [sports-site]
@@ -41,9 +49,8 @@
       (update :properties (fn [props]
                             (reduce-kv
                              (fn [props prop-k derive-fn]
-                               (if-let [v (derive-fn sports-site)]
-                                 (assoc props prop-k v)
-                                 props))
+                               (let [v (derive-fn sports-site)]
+                                 (assoc props prop-k v)))
                              props
                              prop-k->derive-fn)))))
 
