@@ -147,7 +147,6 @@
 
       ;; 1130 ulkokuntoilupaikka
       (assoc-in [1130 :description :fi] "Ulkokuntoilupaikka on esimerkiksi kuntoilulaitteita, voimailulaitteita tai kuntoportaat sisältävä liikuntapaikka. Kohde voi olla osa liikuntapuistoa, liikuntareitin varrella oleva kuntoilupaikka tai ns. \"ulkokuntosali\".")
-      (update-in [1130 :props] dissoc :free-use?)
       (assoc-in [1130 :props :fitness-stairs-length-m] {:priority 0})
 
       ;; 1140 Parkour-alue

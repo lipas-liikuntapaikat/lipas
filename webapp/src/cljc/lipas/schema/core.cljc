@@ -652,7 +652,7 @@
 (s/def :lipas.sports-site.properties/height-of-basket-or-net-adjustable? boolean?)
 (s/def :lipas.sports-site.properties/changing-rooms-m2 ::real)
 (s/def :lipas.sports-site.properties/ligthing-info string?)
-(s/def :lipas.sports-site.properties/highest-drop-m ::real)
+(s/def :lipas.sports-site.properties/highest-obstacle-m ::real)
 (s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 
 (s/def :lipas.sports-site/properties
@@ -813,7 +813,7 @@
                    :lipas.sports-site.properties/canoeing-club?
                    :lipas.sports-site.properties/rapid-canoeing-centre?
                    :lipas.sports-site.properties/fitness-stairs-length-m
-                   :lipas.sports-site.properties/highest-drop-m
+                   :lipas.sports-site.properties/highest-obstacle-m
                    :lipas.sports-site.properties/ligthing-info
                    :lipas.sports-site.properties/changing-rooms-m2
                    :lipas.sports-site.properties/height-of-basket-or-net-adjustable?

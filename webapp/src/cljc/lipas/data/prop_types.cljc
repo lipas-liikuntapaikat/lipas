@@ -176,11 +176,11 @@
       ;; Update :free-use? name
       (assoc-in [:free-use? :name :fi] "Kohde on vapaasti käytettävissä")
 
-      ;; Add new "korkein pudotus (m) prop"
-      (assoc :highest-drop-m
-             {:name      {:fi "Korkein pudotus m"
-                          :se "Den högsta droppen"
-                          :en "Highest drop"}
+      ;; Add new "korkeimman esteen korkeus (m) prop"
+      (assoc :highest-obstacle-m
+             {:name      {:fi "Korkeimman esteen korkeus (m)"
+                          :se "Höjden på den högsta hindret (m)"
+                          :en "The height of the highest obstacle (m)"}
               :data-type "numeric"
               :description
               {:fi ""
