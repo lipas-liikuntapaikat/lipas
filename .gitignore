@@ -13,6 +13,7 @@
 !/osrm/update-data.sh
 .calva
 repl.clj*
+node_modules
 
 webapp/.nrepl-port
 webapp/*.log
