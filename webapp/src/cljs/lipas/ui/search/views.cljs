@@ -1,7 +1,6 @@
 (ns lipas.ui.search.views
   (:require
    [clojure.spec.alpha :as s]
-   [goog.object :as gobj]
    [lipas.ui.components :as lui]
    [lipas.ui.components.lists :as lists]
    [lipas.ui.mui :as mui]
@@ -186,18 +185,39 @@
    (merge
     {:component             "div"
      :rows-per-page         page-size
-     :rows-per-page-options #js[page-size]
+     :rows-per-page-options #js [page-size]
      :label-displayed-rows
-     (fn [props]
-       (let [from  (gobj/get props "from")
-             to    (gobj/get props "to")
-             total (gobj/get props "count")
-             page  (gobj/get props "page")]
-         (tr :search/pagination from to total page)))
+     (fn [^js props]
+       (tr :search/pagination (.-from props) (.-to props) (.-count props) (.-page props)))
      :count                 (or total 0)
      :on-page-change        #(==> [::events/change-result-page %2])
 
-     :page page}
+     :page page
+     :sx (fn [^js theme]
+           #js {;; Adjust flexbox shrink so that "Näytä kerralla" and "Tuloset x-y"
+                ;; shrink on narrow (mobile screens).
+                ;; Enable text-overflow ellipsis for them.
+                ;; Try responsive reduce margins on small screens to allow text to fit better.
+                ".MuiTablePagination-spacer" #js {:flex "1 1 0%"}
+                ".MuiTablePagination-selectLabel" #js {:flexBasis "auto"
+                                                       :flexShrink 1
+                                                       :white-space "nowrap"
+                                                       :overflow "hidden"
+                                                       :textOverflow "ellipsis"}
+                ".MuiTablePagination-input" (clj->js {:mr 1
+                                                      :ml 0.5
+                                                      (.. theme -breakpoints (up "sm")) #js {:ml 4
+                                                                                            :mr 1}})
+                ".MuiTablePagination-displayedRows" #js {:flexBasis "auto"
+                                                     :flexShrink 1
+                                                     :white-space "nowrap"
+                                                     :overflow "hidden"
+                                                     ;; Change right-to-left text to get the ellipsis in the beginning...
+                                                     ;; does this have other undesired side-effects?
+                                                     :direction "rtl"
+                                                     :textOverflow "ellipsis"}
+                ".MuiTablePagination-actions" (clj->js {:ml 0.5
+                                                        (.. theme -breakpoints (up "sm")) #js {:ml 2.5}})})}
     (when change-page-size?
       {:rows-per-page-options   (clj->js page-sizes)
        :on-rows-per-page-change #(==> [::events/change-result-page-size
@@ -305,10 +325,9 @@
         page-size  (-> pagination-opts :page-size)
         page       (-> pagination-opts :page)]
 
-    ;; TODO: Juho later Move to Stack - fix results height
-    ;; NOTE: Valtteri changed to stack already
     [mui/stack
-
+     {:flexGrow 1
+      :direction "column"}
      [pagination
       {:tr                tr
        :total             total
@@ -323,7 +342,9 @@
        [mui/circular-progress {:style {:margin-top "1em"}}]
 
        ;; Results
-       [:div {:style {:width "100%" :height "100%"}}
+       [mui/stack
+        {:flexGrow 1
+         :direction "column"}
         [lists/virtualized-list
          {:items         results
           :label-fn      :name
@@ -383,13 +404,16 @@
         saved-searches  (<== [:lipas.ui.user.subs/saved-searches])
         logged-in?      (<== [:lipas.ui.subs/logged-in?])]
 
-    [:div {:style {:height "100%"}}
+    [mui/stack
+     {:flexGrow 1
+      :direction "column"}
 
      (when (= result-view :table)
        [save-dialog])
 
      [mui/stack
-      {:style       {:padding "0em 1em 0.5em 1em"}
+      {:sx {:px 2
+            :pb 1}
        :spacing     1
        :align-items "flex-start"
        :direction   "column"}
@@ -398,14 +422,16 @@
       (if (= :list result-view)
         [search-input]
 
-        [:div {:style {:width "100%"}}
-         [mui/stack {:spacing 2 :direction "row" :align-items "flex-end" :justify-content "space-between"}
+        [mui/stack
+         {:spacing 2
+          :direction "row"
+          :align-items "flex-end"
+          :justify-content "space-between"}
+         ;; LIPAS-text
+         [mui/typography {:variant "h2" :style {:opacity 0.7}}
+          "LIPAS"]
 
-          ;; LIPAS-text
-          [mui/typography {:variant "h2" :style {:opacity 0.7}}
-           "LIPAS"]
-
-          [search-input {:max-width "300px"}]]])
+         [search-input {:max-width "300px"}]])
 
       ;; Search only from area visible on map
       (when (= result-view :list)

@@ -121,24 +121,52 @@
    (when org-id
      (get-in ptv [:org org-id :data :services]))))
 
+(def langs {"sv" "se" "fi" "fi" "en" "en"})
+
 (re-frame/reg-sub
  ::services
  :<- [::services-by-id]
  (fn [services _]
    (for [[id service] services]
      (let [service-name (->> service :serviceNames (some #(when (= "fi" (:language %))
-                                                            (:value %))))]
-       {:label            service-name
-        :service-id       id
-        :source-id        (:sourceId service)
-        :service-name     service-name
-        :service-modified (:modified service)}))))
+                                                            (:value %))))
+           descriptions (->> service :serviceDescriptions (filter #(= (:type %) "Description")))
+           summaries    (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
+       {:label               service-name
+        :service-id          id
+        :source-id           (:sourceId service)
+        :last-modified       (:modified service)
+        :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
+        :service-classes     (->> service
+                               :serviceClasses
+                               (map (fn [m]
+                                      (utils/index-by (comp langs :language) :value (:name m)))))
+        :languages           (map langs (:languages service))
+        :summary             (utils/index-by (comp langs :language) :value summaries)
+        :description         (utils/index-by (comp langs :language) :value descriptions)
+        :service-name        service-name
+        :service-modified    (:modified service)
+        :service-channels    (->> service :serviceChannels (map :serviceChannel))
+        :ontology-terms      (->> service
+                               :ontologyTerms
+                               (map (fn [m]
+                                      (utils/index-by (comp langs :language) :value (:name m)))))}))))
 
 (re-frame/reg-sub
- ::lipas-managed-services
+ ::services-filter
+ :<- [::ptv]
+ (fn [ptv _]
+   (:services-filter ptv )))
+
+(re-frame/reg-sub
+ ::services-filtered
  :<- [::services]
- (fn [services _]
-   (filter (fn [m] (some-> m :sourceId (str/starts-with? "lipas-"))) services)))
+ :<- [::services-filter]
+ (fn [[services filter'] _]
+   (sort-by :label
+            (case filter'
+              "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
+              services))))
 
 (defn ->source-id
   [org-id sub-category-id]
@@ -162,7 +190,7 @@
  :<- [::selected-org-id]
  :<- [::services-by-id]
  :<- [::sports-sites]
- :<- [:lipas.ui.sports-sites.subs/active-types]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [[org-id services sports-sites types] _]
    (resolve-missing-services org-id services types sports-sites)))
 
@@ -252,7 +280,7 @@
  :<- [::service-channels-by-id]
  :<- [::default-settings]
  :<- [:lipas.ui.subs/translator]
- :<- [:lipas.ui.sports-sites.subs/active-types]
+ :<- [:lipas.ui.sports-sites.subs/all-types]
  :<- [::org-languages]
  (fn [[ptv org-id services service-channels org-defaults tr types org-langs] _]
    (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]
@@ -355,9 +383,8 @@
  :<- [::sports-sites]
  (fn [ms _]
    (every? (fn [{:keys [last-sync sync-enabled] :as _m}]
-             (println (select-keys _m [:last-sync :sync-enabled]))
-             (or (utils/iso-date-time-string? last-sync)
-                 (not sync-enabled)))
+             (or (utils/iso-date-time-string? (or last-sync ""))
+                 (false? sync-enabled)))
            ms)))
 
 (re-frame/reg-sub

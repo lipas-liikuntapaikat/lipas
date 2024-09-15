@@ -19,12 +19,12 @@
   "Runs all integrations if no task names are given in args. Else runs
   only integrations defined in args."
   [& args]
-  (let [config (select-keys config/default-config [:db :search])
+  (let [config (select-keys config/system-config [:lipas/db :lipas/search])
 
-        {:keys [db search]} (backend/start-system! config)
-        user                (core/get-user db "import@lipas.fi")
-        task-ks             (or (not-empty (mapv keyword args))
-                                all-tasks)]
+        {:lipas/keys [db search]} (backend/start-system! config)
+        user                      (core/get-user db "import@lipas.fi")
+        task-ks                   (or (not-empty (mapv keyword args))
+                                      all-tasks)]
 
     (log/info "Starting to run integrations:" task-ks)
 

@@ -22,7 +22,11 @@
      :sports-sites     "Liikuntapaikat"
      :tools            "Massatyökalut"
      :settings         "Asetukset"
-     :wizard           "Käyttöönotto"}
+     :wizard           "Käyttöönotto"
+     :keywords         "Avainsanat"}
+    :ptv.service
+    {:classes                 "Palveluluokat"
+     :show-only-lipas-managed "Näytä vain Lipakseen liitetyt palvelut"}
     :ptv.name-conflict
     {:opt1            "Liitä liikuntapaikka olemassa olevaan palvelupaikkaan painamalla \"Liitä tähän palvelupaikkaan\" painiketta (suositus)"
      :opt2            "Valitse haluamasi palvelupaikka alla olevasta valitsimesta"
@@ -65,7 +69,8 @@
      :select-integration     "Valitse liittämistapa"
      :generate-with-ai       "Generoi tekoälyllä"
      :select-service         "Valitse palvelu"
-     :select-service-channel "Valitse palvelupaikka"}
+     :select-service-channel "Valitse palvelupaikka"
+     :select-languages       "Valitse kielet"}
     :ptv.integration
     {:manual "Liitä manuaalisesti"}
     :ptv.integration.service

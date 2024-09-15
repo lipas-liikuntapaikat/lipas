@@ -52,9 +52,11 @@
   (let [resp (es/request client {:method :head
                                  :url    (es-utils/url [index-name])
                                  :exception-handler (fn [e]
-                                                      (if (= 404 (-> e                                                                                                 (.getResponse)
-                                                                     (.getStatusLine)
-                                                                     (.getStatusCode)))
+                                                      (if (and (instance? org.elasticsearch.client.ResponseException e)
+                                                               (= 404 (-> e
+                                                                          (.getResponse)
+                                                                          (.getStatusLine)
+                                                                          (.getStatusCode))))
                                                         {:status 404}
                                                         (throw e)))})]
     (= 200 (:status resp))))
@@ -107,7 +109,8 @@
 (defn bulk-index-sync!
   ([client data]
    (let [{:keys [input-ch output-ch]}
-         (es/bulk-chan client {:flush-threshold         100
+         (es/bulk-chan client {:url                     "/_bulk?refresh=wait_for"
+                               :flush-threshold         100
                                :flush-interval          5000
                                :max-concurrent-requests 3})]
 

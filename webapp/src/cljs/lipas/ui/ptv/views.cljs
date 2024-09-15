@@ -25,6 +25,21 @@
    #_{:name "Utajärven kunta (prod)"
     :id ptv-data/uta-org-id-prod}])
 
+<<<<<<< HEAD
+=======
+(defn lang-selector
+  [{:keys [value on-change opts]}]
+  (let [opts (set opts)]
+    [mui/tabs
+     {:value     value
+      :on-change on-change}
+     [mui/tab {:value "fi" :label "FI"}]
+     (when (contains? opts "se")
+       [mui/tab {:value "se" :label "SE"}])
+     (when (contains? opts "en")
+       [mui/tab {:value "en" :label "EN" :disabled (not (contains? opts "en"))}])]))
+
+>>>>>>> ptv/initial
 (defn org-selector
   [{:keys [label]}]
   (let [selected-org (<== [::subs/selected-org])]
@@ -652,7 +667,7 @@
 
           [:div
            (doall
-            (for [{:keys [source-id valid sub-category sub-category-id] :as m} service-candidates]
+            (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
 
               ^{:key sub-category-id}
               [lui/expansion-panel
@@ -662,7 +677,7 @@
                               [mui/icon {:color "disabled"} "done"])}
                [mui/stack {:spacing 2}
 
-                [mui/form-control
+                #_[mui/form-control
                  [mui/form-label (tr :ptv.integration.interval/label)]
                  [mui/radio-group
                   {:on-change #(==> [::events/select-integration-interval %2])
@@ -677,18 +692,33 @@
                     :label   (tr :ptv.integration/manual)
                     :control (r/as-element [mui/radio])}]]]
 
+                [lui/autocomplete
+                 {:label     (tr :ptv.actions/select-languages)
+                  :multi?    true
+                  :items     [{:label "FI" :value "fi"}
+                              {:label "SE" :value "se"}
+                              {:label "EN" :value "en"}]
+                  :value     languages
+                  :value-fn  :value
+                  :label-fn  :label
+                  :on-change #(==> [::events/set-service-candidate-languages source-id %])}]
+
                 [services-selector
                  {:value     (get m :service-ids)
                   :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
                   :value-fn  :service-id
-                  :label     (tr :ptv/services)}]
+                  :label     (tr :ptv/service)}]
 
-                [mui/tabs
-                 {:value     @selected-tab
-                  :on-change #(reset! selected-tab (keyword %2))}
-                 [mui/tab {:value "fi" :label "FI"}]
-                 [mui/tab {:value "se" :label "SE"}]
-                 [mui/tab {:value "en" :label "EN"}]]
+                (let [languages (set languages)]
+                  [mui/tabs
+                   {:value     @selected-tab
+                    :on-change #(reset! selected-tab (keyword %2))}
+                   (when (contains? languages "fi")
+                     [mui/tab {:value "fi" :label "FI"}])
+                   (when (contains? languages "se")
+                         [mui/tab {:value "se" :label "SE"}])
+                   (when (contains? languages "en")
+                     [mui/tab {:value "en" :label "EN"}])])
 
                 ;; Summary
                 [lui/text-field
@@ -856,7 +886,7 @@
                (cond
                  name-conflict [mui/icon {:color "warning"} "warning"]
                  valid         [mui/icon {:color "success"} "done"]
-                 :else         [mui/icon {:color "success"} "disabled"])}
+                 :else         [mui/icon {:color "disabled"} "done"])}
 
               [mui/stack {:spacing 2}
 
@@ -939,14 +969,91 @@
   [mui/paper
    [descriptions-generator]])
 
+(defn service-panel
+  [{:keys [service]}]
+  (r/with-let [lang (r/atom "fi")]
+    (let [tr (<== [:lipas.ui.subs/translator])]
+      [lui/expansion-panel {:label (:label service)}
+
+       [mui/stack {:spacing 2}
+        [lang-selector
+         {:value     @lang
+          :opts      (:languages service)
+          :on-change #(reset! lang %2)}]
+
+        [mui/stack {:direction "row" :spacing 2}
+         [mui/stack {:spacing 2 :flex 1}
+
+          ;; Last modified
+          [mui/typography (str (tr :general/last-modified) " " (:last-modified-human service))]
+
+          ;; Service classes
+          [mui/typography (tr :ptv.service/classes)]
+          [mui/stack {:direction "row" :spacing 1}
+           (doall
+            (for [class (:service-classes service)]
+              (let [label (get class @lang)]
+                ^{:key label}
+                [mui/chip {:label label :variant "outlined"}])))]
+
+          ;; keywords
+          [mui/typography (tr :ptv/keywords)]
+          [mui/stack {:direction "row" :spacing 1}
+           (doall
+            (for [onto (:ontology-terms service)]
+              (let [label (get onto @lang)]
+                ^{:key label}
+                [mui/chip {:label label :variant "outlined"}])))]
+
+          ;; Summary
+          [mui/typography (tr :ptv/summary)]
+          [mui/typography {:variant "body2"} (get-in service [:summary @lang])]
+          #_[lui/text-field
+             {:disabled  true
+              :on-change #()
+              :multiline true
+              :label     (tr :ptv/summary)
+              :value     (get-in service [:summary @lang])}]
+
+          ;; Descriptions
+          [mui/typography (tr :ptv/description)]
+          [mui/typography {:variant "body2"} (get-in service [:description @lang])]
+          #_[lui/text-field
+             {:disabled  true
+              :on-change #()
+              :multiline true
+              :label     (tr :ptv/description)
+              :value     (get-in service [:description @lang])}]]
+
+         [mui/stack {:spacing 2 :flex 1}
+
+          ;; Service channels
+          [mui/typography (tr :ptv/service-channels)]
+          [:ul
+           (doall
+            (for [sc (sort-by :name (:service-channels service))]
+              (let [label (:name sc)]
+                ^{:key label}
+                [:li label])))]]]]])))
+
 (defn services
   []
-  (let [services (<== [::subs/services])]
+  (let [tr              (<== [:lipas.ui.subs/translator])
+        services-filter (<== [::subs/services-filter])
+        services        (<== [::subs/services-filtered])]
     [mui/paper
+
+     ;; Filter checkbox
+     [lui/checkbox
+      {:label     (tr :ptv.service/show-only-lipas-managed)
+       :value     (= "lipas-managed" services-filter)
+       :on-change #(==> [::events/toggle-services-filter])}]
+
+     ;; Services list
      (doall
-      (for [s services]
-        ^{:key (:service-id s)}
-        [lui/expansion-panel {:label (:label s)}]))]))
+      (for [service services]
+        ^{:key (:service-id service)}
+        [service-panel {:service service}]))]))
 
 (defn wizard
   []

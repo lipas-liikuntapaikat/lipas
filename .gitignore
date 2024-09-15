@@ -12,8 +12,8 @@
 !/osrm/README.md
 !/osrm/update-data.sh
 .calva
-repl.clj*
-
+repl*.clj*
+!webapp/dev/repl.clj
 webapp/.nrepl-port
 webapp/*.log
 webapp/target

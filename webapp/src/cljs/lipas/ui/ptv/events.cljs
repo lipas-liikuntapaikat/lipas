@@ -220,6 +220,16 @@
               (assoc-in [:ptv :errors :service-collections] resp))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
+;;; Services views and manipulation ;;;
+
+(re-frame/reg-event-db
+ ::toggle-services-filter
+ (fn [db _]
+   (let [current-val (get-in db [:ptv :services-filter])
+         new-val     (if (= current-val "lipas-managed") "lol" "lipas-managed")]
+     (assoc-in db [:ptv :services-filter] new-val))))
+
+;;; Service locations views and manipulation ;;;
 
 (re-frame/reg-event-db
  ::toggle-sync-enabled
