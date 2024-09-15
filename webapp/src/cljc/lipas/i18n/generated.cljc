@@ -69,7 +69,8 @@
      :select-integration     "Valitse liittämistapa"
      :generate-with-ai       "Generoi tekoälyllä"
      :select-service         "Valitse palvelu"
-     :select-service-channel "Valitse palvelupaikka"}
+     :select-service-channel "Valitse palvelupaikka"
+     :select-languages       "Valitse kielet"}
     :ptv.integration
     {:manual "Liitä manuaalisesti"}
     :ptv.integration.service

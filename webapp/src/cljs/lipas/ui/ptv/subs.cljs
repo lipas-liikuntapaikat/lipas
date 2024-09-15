@@ -383,8 +383,8 @@
  :<- [::sports-sites]
  (fn [ms _]
    (every? (fn [{:keys [last-sync sync-enabled] :as _m}]
-             (or (utils/iso-date-time-string? last-sync)
-                 (not sync-enabled)))
+             (or (utils/iso-date-time-string? (or last-sync ""))
+                 (false? sync-enabled)))
            ms)))
 
 (re-frame/reg-sub
