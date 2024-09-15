@@ -41,11 +41,11 @@
   (mount-root)
 
   ;; TODO remove after platform migration
-  (when (utils/prod?)
+  #_(when (utils/prod?)
     (re-frame/dispatch [::show-service-break-disclaimer])))
 
 ;; TODO remove after platform migration
-(re-frame/reg-event-db
+#_(re-frame/reg-event-db
  ::show-service-break-disclaimer
  (fn [db _]
    (assoc db :active-disclaimer "Lipas-järjestelmän alustan päivitystöistä johtuva käyttökatko maanantaina 26.8. klo 18.00 – 20.00. Lipas-sovellus ja rajapinnat eivät ole tällöin käytettävissä.")))
