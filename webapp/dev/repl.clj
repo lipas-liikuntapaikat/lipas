@@ -10,7 +10,7 @@
    [lipas.backend.system :as system]
    [lipas.integration.core :as integrations]
    [lipas.maintenance :as maintenance]
-   [lipas.search-indexer :as si]
+   [lipas.search-indexer :as search-indexer]
    [lipas.worker :as worker]))
 
 (def dev-config (dissoc config/system-config :lipas/nrepl))
@@ -18,9 +18,8 @@
 (integrant.repl/set-prep! #(identity dev-config))
 #_(clojure.tools.namespace.repl/set-refresh-dirs "/src")
 
-(comment
-  (integrant.repl/prep)
-  (integrant.repl/init))
+(defn current-config []
+  integrant.repl.state/config)
 
 (defn current-system []
   integrant.repl.state/system)
@@ -64,8 +63,27 @@
   (assert-running-system)
   (:lipas/search (current-system)))
 
+(defn reindex-search!
+  []
+  (search-indexer/main (db) (search) "search"))
+
+(defn reindex-analytics!
+  []
+  (search-indexer/main (db) (search) "analytics"))
+
+(defn reset-password!
+  [email password]
+  (let [user (core/get-user (db) email)]
+    (core/reset-password! (db) user password)))
+
+(defn reset-admin-password!
+  [password]
+  (reset-password! "admin@lipas.fi" password))
+
 (comment
   (start!)
   (reload!)
-
+  (reindex-search!)
+  (reindex-analytics!)
+  (reset-admin-password! "kissa13")
   )
