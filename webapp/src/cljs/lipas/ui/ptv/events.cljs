@@ -483,6 +483,12 @@
 
 
 (re-frame/reg-event-db
+ ::set-service-candidate-languages
+ (fn [db [_ id v]]
+   (let [org-id (get-in db [:ptv :selected-org :id])]
+     (assoc-in db [:ptv :org org-id :data :service-candidates id :languages] v))))
+
+(re-frame/reg-event-db
  ::set-service-candidate-summary
  (fn [db [_ id locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]

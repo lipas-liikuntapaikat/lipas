@@ -27,8 +27,10 @@
      {:username ""
       :password ""}
      :api
-     {:username "API17@testi.fi"
-      :password "APIinterfaceUser17-1017*"}}}))
+     #_{:username "API17@testi.fi"
+      :password "APIinterfaceUser17-1017*"}
+     {:username "API9@testi.fi"
+      :password "APIinterfaceUser9-1009*"}}}))
 
 #_(def test-config
   {:api-url              "https://api.palvelutietovaranto.trn.suomi.fi/api"

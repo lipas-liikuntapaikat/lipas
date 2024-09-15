@@ -664,7 +664,7 @@
 
           [:div
            (doall
-            (for [{:keys [source-id valid sub-category sub-category-id] :as m} service-candidates]
+            (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
 
               ^{:key sub-category-id}
               [lui/expansion-panel
@@ -674,7 +674,7 @@
                               [mui/icon {:color "disabled"} "done"])}
                [mui/stack {:spacing 2}
 
-                [mui/form-control
+                #_[mui/form-control
                  [mui/form-label (tr :ptv.integration.interval/label)]
                  [mui/radio-group
                   {:on-change #(==> [::events/select-integration-interval %2])
@@ -689,18 +689,33 @@
                     :label   (tr :ptv.integration/manual)
                     :control (r/as-element [mui/radio])}]]]
 
+                [lui/autocomplete
+                 {:label     (tr :ptv.actions/select-languages)
+                  :multi?    true
+                  :items     [{:label "FI" :value "fi"}
+                              {:label "SE" :value "se"}
+                              {:label "EN" :value "en"}]
+                  :value     languages
+                  :value-fn  :value
+                  :label-fn  :label
+                  :on-change #(==> [::events/set-service-candidate-languages source-id %])}]
+
                 [services-selector
                  {:value     (get m :service-ids)
                   :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
                   :value-fn  :service-id
-                  :label     (tr :ptv/services)}]
+                  :label     (tr :ptv/service)}]
 
-                [mui/tabs
-                 {:value     @selected-tab
-                  :on-change #(reset! selected-tab (keyword %2))}
-                 [mui/tab {:value "fi" :label "FI"}]
-                 [mui/tab {:value "se" :label "SE"}]
-                 [mui/tab {:value "en" :label "EN"}]]
+                (let [languages (set languages)]
+                  [mui/tabs
+                   {:value     @selected-tab
+                    :on-change #(reset! selected-tab (keyword %2))}
+                   (when (contains? languages "fi")
+                     [mui/tab {:value "fi" :label "FI"}])
+                   (when (contains? languages "se")
+                         [mui/tab {:value "se" :label "SE"}])
+                   (when (contains? languages "en")
+                     [mui/tab {:value "en" :label "EN"}])])
 
                 ;; Summary
                 [lui/text-field
@@ -726,6 +741,7 @@
         setup-done?         (<== [::subs/sports-site-setup-done])
         sports-sites-count  (<== [::subs/sports-sites-count])
         sports-sites-filter (<== [::subs/sports-sites-filter])
+        _ (println "setup " setup-done? )
 
         {:keys                                                                                                                 [in-progress?
                                                                                                                         processed-lipas-ids
@@ -868,7 +884,7 @@
                (cond
                  name-conflict [mui/icon {:color "warning"} "warning"]
                  valid         [mui/icon {:color "success"} "done"]
-                 :else         [mui/icon {:color "success"} "disabled"])}
+                 :else         [mui/icon {:color "disabled"} "done"])}
 
               [mui/stack {:spacing 2}
 
