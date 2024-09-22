@@ -756,4 +756,19 @@
      :line-cap "round",
      :line-join "round",
      :line-dash [5 2]},
-    :fill {:color "#000000"}}})
+    :fill {:color "#000000"}}
+   2225
+   {:shape "square",
+    :radius 9,
+    :fill {:color "#ac6c46"},
+    :stroke {:color "#000000"}}
+   2620
+   {:shape "square",
+    :radius 9,
+    :fill {:color "#ac6c46"},
+    :stroke {:color "#000000"}}
+   3250
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#aaaaff"},
+    :stroke {:color "#000000"}}})

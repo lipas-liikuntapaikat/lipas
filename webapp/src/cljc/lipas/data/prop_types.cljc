@@ -201,6 +201,230 @@
       ;; update :climbing-wall? description
       (assoc-in [:climbing-wall? :description :fi] "Onko kohteessa kiipeilyseinä?")
 
+      ;; Add new :free-customer-use? prop
+      (assoc :free-customer-use?
+             {:name      {:fi "Vapaa asiakaskäyttö"
+                          :se "Fri kundanvändning"
+                          :en "Free customer use"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :space-divisible prop
+      (assoc :space-divisible
+             {:name      {:fi "Tila jaettavissa osiin"
+                          :se "Utrymmet kan delas upp"
+                          :en "Space can be divided"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :auxiliary-training-area prop
+      (assoc :auxiliary-training-area
+             {:name      {:fi "Oheisharjoittelutila"
+                          :se "Kompletterande träningsområde"
+                          :en "Auxiliary training area"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :sport-specification prop
+      (assoc :sport-specification
+             {:name      {:fi "Lajitarkenne"
+                          :se "Sportspecifikation"
+                          :en "Sport specification"}
+              :data-type "string"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :active-space-width-m prop
+      (assoc :active-space-width-m
+             {:name      {:fi "Liikuntakäytössä olevan tilan leveys m"
+                          :se "Bredd på aktivt utrymme m"
+                          :en "Width of active space m"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :active-space-length-m prop
+      (assoc :active-space-length-m
+             {:name      {:fi "Liikuntakäytössä olevan tilan pituus m"
+                          :se "Längd på aktivt utrymme m"
+                          :en "Length of active space m"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :mirror-wall prop
+      (assoc :mirror-wall?
+             {:name      {:fi "Peiliseinä"
+                          :se "Spegelvägg"
+                          :en "Mirror wall"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :parkour-hall-equipment-and-structures prop
+      (assoc :parkour-hall-equipment-and-structures
+             {:name      {:fi "Parkour-salin varustelu ja rakenteet"
+                          :se "Utrustning och strukturer i parkourhallen"
+                          :en "Parkour hall equipment and structures"}
+              :data-type "string"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :ringette-boundary-markings prop
+      (assoc :ringette-boundary-markings?
+             {:name      {:fi "Ringeten rajamerkinnät"
+                          :se "Gränsmarkeringar för ringette"
+                          :en "Ringette boundary markings"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :field-1-flexible-rink prop
+      (assoc :field-1-flexible-rink?
+             {:name      {:fi "1. kenttä: onko joustokaukalo?"
+                          :se "Fält 1: finns det flexibel rink?"
+                          :en "Field 1: is there a flexible rink?"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :field-2-flexible-rink prop
+      (assoc :field-2-flexible-rink?
+             {:name      {:fi "2. kenttä: onko joustokaukalo?"
+                          :se "Fält 2: finns det flexibel rink?"
+                          :en "Field 2: is there a flexible rink?"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :field-3-flexible-rink prop
+      (assoc :field-3-flexible-rink?
+             {:name      {:fi "3. kenttä: onko joustokaukalo?"
+                          :se "Fält 3: finns det flexibel rink?"
+                          :en "Field 3: is there a flexible rink?"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :pool-tables-count prop
+      (assoc :pool-tables-count
+             {:name      {:fi "Poolpöydät lkm"
+                          :se "Antal poolbord"
+                          :en "Number of pool tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :snooker-tables-count prop
+      (assoc :snooker-tables-count
+             {:name      {:fi "Snookerpöydät lkm"
+                          :se "Antal snookerbord"
+                          :en "Number of snooker tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :kaisa-tables-count prop
+      (assoc :kaisa-tables-count
+             {:name      {:fi "Kaisapöydät lkm"
+                          :se "Antal kaisabord"
+                          :en "Number of kaisa tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :pyramid-tables-count prop
+      (assoc :pyramid-tables-count
+             {:name      {:fi "Pyramidipöydät lkm"
+                          :se "Antal pyramidbord"
+                          :en "Number of pyramid tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :carom-tables-count prop
+      (assoc :carom-tables-count
+             {:name      {:fi "Karapöydät lkm"
+                          :se "Antal karombord"
+                          :en "Number of carom tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new :total-billiard-tables-count prop
+      (assoc :total-billiard-tables-count
+             {:name      {:fi "Biljardipöydät yhteensä lkm"
+                          :se "Totalt antal biljardbord"
+                          :en "Total number of billiard tables"}
+              :data-type "numeric"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Generated from template
+
+      #_(assoc-in [:kiosk? :name :fi] "Myynti- tai asiakaspalvelupiste")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      #_(assoc-in [:kiosk? :description :fi] "Liikuntapaikalla on pysyvä myynti- tai asiakaspalvelupiste, josta on saatavissa asiakaspalvelua. Myynti- tai asiakaspalvelupiste voi olla rajoitetusti avoinna liikuntapaikan käyttöaikojen puitteissa.")
+      (assoc-in [:surface-material :description :fi] "Liikunta-alueiden pääasiallinen pintamateriaali - tarkempi kuvaus liikuntapaikan eri tilojen pintamateriaalista voidaan antaa pintamateriaalin lisätietokentässä")
+      (assoc-in [:toilet? :description :fi] "Onko kohteessa yleiseen käyttöön tarkoitettuja wc-tiloja?")
+      (assoc-in [:free-customer-use? :description :fi] "Liikuntapaikka on asiakkaiden käytettävissä esim. kulkukortilla ilman henkilökunnan läsnäoloa. Vapaa asiakaskäyttö voi olla rajattu tiettyihin kellonaikoihin.")
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [:space-divisible :description :fi] "Onko tila jaettavissa osiin esim. jakoseinien tai -verhojen avulla")
+      (assoc-in [:auxiliary-training-area? :description :fi] "Onko kohteessa oheisharjoitteluun soveltuva tila? Oheisharjoittelutila on liikuntapaikan käyttäjille tarkoitettu erillinen pienliikuntatila, jota voidaan käyttää esim. lämmittelyyn tai oheisharjoitteluun. Tilan koko, varustelu ja pintamateriaali ovat oheisharjoitteluun soveltuvia.")
+      ;;  Ominaisuuden nimi esim. "Lajitarkenne". Vastaava toiminnallisuus kuin veneilyn palvelupaikoissa - eli lisätiedoissa voidaan tarkentaa, minkä voimistelulajin harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot: a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit mahdollisia d. Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön e. Ei tietoa
+      (assoc-in [:sport-specification :description :fi] "Valitse voimistelulaji, johon tila on pääasiassa tarkoitettu.")
+      (assoc-in [:free-use :name :fi] "Kohde on vapaasti käytettävissä")
+      (assoc-in [:active-space-width-m :description :fi] "Liikuntakäytössä olevan tilan leveys (m)")
+      (assoc-in [:active-space-length-m :description :fi] "Liikuntakäytössä olevan tilan pituus (m)")
+      (assoc-in [:mirror-wall? :description :fi] "Liikuntatilassa vähintään yhdellä seinällä on kiinteät peilit")
+      (assoc-in [:highest-obstacle-m :description :fi] "Korkeimman esteen korkeus (m)")
+      ;;  Pintamateriaalikentän valittavissa seuraavista ne ominaisuudet, jotka saliin sopivat: a) Kiinteät esteet / rakennelmat b) Liikkuvat esteet / rakennelmat c) Permanto/akrobatiatila d) Kuntosali-/voimailutila
+      (assoc-in [:parkour-hall-equipment-and-structures :description :fi] "Valitse parkour-salissa olevat rakenteet tai varusteet")
+      (assoc-in [:ringette-boundary-markings :description :fi] "Onko kaukaloissa ringeten rajamerkinnät?")
+      (assoc-in [:swimming-pool-count :name :fi] "Altaiden lukumäärä")
+      ;;  Laskenta mahdollista tehdä automaattisesti syötettyjen altaiden perusteella (lasketaan yksinkertaisesti kaikki altaat yhteen tai luvun voi tarvittaessa korjata käsin, samaan tapaan kuin reittien pituuslaskuri toimii)
+      (assoc-in [:swimming-pool-count :description :fi] "Altaiden lukumäärä yhteensä. Syötä tieto tai laske automaattisesti.")
+      (assoc-in [:pool-water-area-m2 :description :fi] "Asiakaskäytössä oleva vesipinta-ala yhteensä.")
+
       ))
 
 (def used

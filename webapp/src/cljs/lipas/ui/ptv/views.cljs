@@ -25,8 +25,6 @@
    #_{:name "Utajärven kunta (prod)"
     :id ptv-data/uta-org-id-prod}])
 
-<<<<<<< HEAD
-=======
 (defn lang-selector
   [{:keys [value on-change opts]}]
   (let [opts (set opts)]
@@ -39,7 +37,6 @@
      (when (contains? opts "en")
        [mui/tab {:value "en" :label "EN" :disabled (not (contains? opts "en"))}])]))
 
->>>>>>> ptv/initial
 (defn org-selector
   [{:keys [label]}]
   (let [selected-org (<== [::subs/selected-org])]

@@ -337,6 +337,206 @@
                                  (assoc-in [:props :ligthing-info] {:priority 0}))))
                       {}))
 
+      ;;; Sisä- ja vesiliikunta ;;;
+
+      ;; Add new type 2225 Sisäleikki-/sisäaktiviteettipuisto
+      (assoc 2225 {:status        "active"
+                   :geometry-type "Point"
+                   :type-code     2225
+                   :main-category 2000
+                   :sub-category  2200
+                   :tags          {:fi []}})
+
+      ;; Add new type 2620 Biljardisali
+      (assoc 2620 {:status        "active"
+                   :geometry-type "Point"
+                   :type-code     2620
+                   :main-category 2000
+                   :sub-category  2600
+                   :tags          {:fi []}})
+
+      ;; Add new type 3250 Vesiurheilukeskus
+      (assoc 3250 {:status        "active"
+                   :geometry-type "Point"
+                   :type-code     3250
+                   :main-category 3000
+                   :sub-category  3200
+                   :tags          {:fi []}})
+
+      ;; Generated from template
+      (assoc-in [2110 :description :fi] "Erilasia liikuntapalveluita ja -tiloja tarjoava kuntokeskus. Kohteessa voi olla esimerkiksi kuntosali- ja ryhmäliikuntatiloja.")
+      (update-in [2110 :props] dissoc :boxing-rings-count)
+      (update-in [2110 :props] dissoc :free-use?)
+      (assoc-in [2110 :props :free-customer-use?] {:priority 0})
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2110 :props :customer-service-point?] {:priority 0})
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2120 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2120 :props :free-customer-use?] {:priority 0})
+      (update-in [2120 :props] dissoc :free-use?)
+      (assoc-in [2130 :description :fi] "Painonnostoon tai toiminnalliseen voimaharjoitteluun varustettu kuntoilutila tai voimailusali. Esimerkiksi crossfit- ja painonnostosalit.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2130 :props :customer-service-point?] {:priority 0})
+      (update-in [2130 :props] dissoc :free-use?)
+      (assoc-in [2130 :props :free-customer-use?] {:priority 0})
+      (assoc-in [2140 :description :fi] "Sali, jossa voi harrastaa kamppailulajeja kuten painia, nyrkkeilyä tai budolajeja. Tilan koko ja varustus kerrotaan kohteen lisätiedoissa.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2140 :props :customer-service-point?] {:priority 0})
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [2140 :props :space-divisible] {:priority 0})
+      (update-in [2140 :props] dissoc :free-use?)
+      (assoc-in [2150 :description :fi] "Muun rakennuksen yhteydessä oleva avoin liikuntatila, joka sopii monipuolisesti erilaisten liikuntamuotojen harrastamiseen. Salin liikuntapinta-ala vaihtelee tyypillisesti alle 300 neliöstä noin 750 neliöön. Esim. koulurakennuksessa sijaitseva liikuntasali.")
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [2150 :props :space-divisible] {:priority 0})
+      (assoc-in [2210 :description :fi] "Liikuntahalli on itsenäinen rakennus, jossa voi olla useita liikuntatiloja tai osiin jaettavissa oleva pääsali.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2210 :props :customer-service-point?] {:priority 0})
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [2210 :props :space-divisible] {:priority 0})
+      (assoc-in [2210 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2220 :description :fi] "Monitoimihalli on suuri liikuntatila, joka on merkittävä monien lajien kilpailu- ja tapahtumapaikka. Liikuntapinta-ala on suurempi kuin 5 000 m2.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2220 :props :customer-service-point?] {:priority 0})
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [2220 :props :space-divisible] {:priority 0})
+      (assoc-in [2220 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2230 :description :fi] "Ensisijaisesti jalkapalloiluun tarkoitettu halli. Halli voi olla ympärivuotisessa käytössä tai erikseen talviajalle pystytettävä kevythalli. Kentän pintamateriaalina on yleensä tekonurmi.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2230 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2230 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2240 :description :fi] "Ensisijaisesti salibandyyn tarkoitettu halli. Kenttien määrä ja pintamateriaali kirjataan lisätietoihin.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2240 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2240 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2250 :description :fi] "Ensisijaisesti skeittausta varten varustettu halli. Hallia voidaan käyttää bmx-pyöräilyn tai muiden soveltuvien lajien harrastamiseen.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2250 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2260 :description :fi] "Ensisijaisesti sulkapallon pelaamiseen tarkoitettu halli. Vapaa korkeus ilmoitetaan lisätiedoissa.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2260 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2270 :description :fi] "Ensisijaisesti squashin pelaamiseen tarkoitettu halli. Yksittäisen kentän mitat 9,75 m x 6,4 m. Vapaa korkeus ja pintamateriaali ilmoitetaan lisätiedoissa.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2270 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2280 :description :fi] "Tenniksen pelaamiseen varusteltu halli. Kenttien lukumäärä ja pintamateriaali kerrotaan kohteen lisätiedoissa.")
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2280 :props :customer-service-point?] {:priority 0})
+      ;;  Tuotannossa tämä tietokenttä on vanhalla nimellä "kioski". Devissä ei ole kioskia eikä tätä uutta ominaisuutta.
+      (assoc-in [2290 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2295 :description :fi] "Yksi tai useampi padelkenttä sisällä. Pintamateriaali tekonurmi (hiekkatekonurmi). Lajivaatimusten mukaiset seinät. Vapaa korkeus ilmoitetaan lisätiedoissa.")
+      ;;  Uusi tyyppiluokka
+      (assoc-in [2225 :name :fi] "Sisäleikki-/sisäaktiviteettipuisto")
+      ;;  Uusi tyyppiluokka
+      (assoc-in [2225 :description :fi] "Sisäleikkipuistot ovat yleensä pienille lapsille tarkoitettuja liikunnallisia leikkipaikkoja. Sisäaktiviteettipuistot ovat tyypillisesti lapsille ja nuorille tarkoitettuja liikuntakeskuksia, jotka sisältävät erilaisia liikunnallisia kohteita.")
+      (assoc-in [2225 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2225 :props :height-m] {:priority 0})
+      (assoc-in [2225 :props :area-m2] {:priority 0})
+      (assoc-in [2310 :description :fi] "Yksittäinen yleisurheilun olosuhde sisätiloissa esim. liikunta- tai monitoimihallin yhteydessä. Suorituspaikat kuvataan lisätiedoissa.")
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2310 :props :free-use?] {:priority 0})
+      (assoc-in [2320 :name :fi] "Voimistelutila")
+      (assoc-in [2320 :description :fi] "Pysyvästi voimisteluun varustettu tila. Voimistelutilassa on erilaisia kiinteitä voimistelutelineitä ja -rakenteita (esim. volttimonttu, rekki tai trampoliini). Myös cheerleadingin ja sirkusharjoittelun olosuhteet luetaan voimistelutiloiksi. Tarkempi olosuhdetieto kerrotaan lisätiedoissa.")
+      ;;  Ominaisuuden nimi esim. "Lajitarkenne". Vastaava toiminnallisuus kuin veneilyn palvelupaikoissa - eli lisätiedoissa voidaan tarkentaa, minkä voimistelulajin harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot: a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit mahdollisia d. Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön e. Ei tietoa
+      (assoc-in [2320 :props :sport-specification] {:priority 0})
+      ;;  Toteutus esim: Valinta Kyllä/Ei ->  Jos kyllä, täydennettävä kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen osaan).
+      (assoc-in [2320 :props :space-divisible] {:priority 0})
+      (assoc-in [2330 :props :active-space-width-m] {:priority 0})
+      (assoc-in [2330 :props :active-space-length-m] {:priority 0})
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2330 :props :free-use?] {:priority 0})
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2340 :props :free-use?] {:priority 0})
+      (assoc-in [2350 :name :fi] "Tanssi-/ryhmäliikuntatila")
+      (assoc-in [2350 :description :fi] "Pysyvästi tanssi-, ilmaisu- tai ryhmäliikuntaan varustettu itsenäinen tila, joka ei ole osa esim. kuntokeskusta. Myös boutique-, fitness- ja mikrostudiot ovat tanssi- tai ryhmäliikuntatiloja.")
+      (assoc-in [2350 :props :active-space-width-m] {:priority 0})
+      (assoc-in [2350 :props :active-space-length-m] {:priority 0})
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2350 :props :free-use?] {:priority 0})
+      (assoc-in [2350 :props :mirror-wall?] {:priority 0})
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (update-in [2360 :props] dissoc :free-use?)
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (update-in [2370 :props] dissoc :free-use?)
+      (assoc-in [2380 :props :highest-obstacle-m] {:priority 0})
+      (update-in [2380 :props] dissoc :height-m)
+      (update-in [2380 :props] dissoc :landing-places-count)
+      (update-in [2380 :props] dissoc :gymnastic-routines-count)
+      ;;  Ei tarvetta kioskille eikä myynti- tai asiakaspalvelupisteelle
+      (update-in [2380 :props] dissoc :kiosk?'')
+      (update-in [2380 :props] dissoc :climbing-wall-height-m)
+      (update-in [2380 :props] dissoc :climbing-routes-count)
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2380 :props :free-use?] {:priority 0})
+      ;;  Pintamateriaalikentän valittavissa seuraavista ne ominaisuudet, jotka saliin sopivat: a) Kiinteät esteet / rakennelmat b) Liikkuvat esteet / rakennelmat c) Permanto/akrobatiatila d) Kuntosali-/voimailutila
+      (assoc-in [2380 :props :parkour-hall-equipment-and-structures] {:priority 0})
+      (assoc-in [2380 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2510 :description :fi] "Harjoitusjäähalli on pääasiassa jääurheilun harjoitteluun ja jääliikuntaan käytettävä jäähalli.")
+      (assoc-in [2510 :props :ringette-boundary-markings?] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2510 :props :field-1-flexible-rink?] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2510 :props :field-2-flexible-rink?] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2510 :props :field-3-flexible-rink?] {:priority 0})
+      (assoc-in [2510 :props :auxiliary-training-area?] {:priority 0})
+      (update-in [2510 :props] dissoc :heating?)
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2510 :props :free-use?] {:priority 0})
+      (assoc-in [2520 :description :fi] "Kilpajäähalli on jääurheilun kilpailu- ja ottelutapahtumiin soveltuva jäähalli. Katsomon koko, kenttien lukumäärä ja muut tarkemmat tiedot kuvataan lisätiedoissa.")
+      (assoc-in [2520 :props :ringette-boundary-markings] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2520 :props :field-1-flexible-rink?] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2520 :props :field-2-flexible-rink?] {:priority 0})
+      ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
+      (assoc-in [2520 :props :field-3-flexible-rink?] {:priority 0})
+      (assoc-in [2520 :props :auxiliary-training-area?] {:priority 0})
+      (update-in [2520 :props] dissoc :heating?)
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2520 :props :free-use?] {:priority 0})
+      (assoc-in [2530 :description :fi] "Pikaluisteluun tarkoitettu halli.")
+      (update-in [2530 :props] dissoc :heating?)
+      ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
+      (assoc-in [2530 :props :free-use?] {:priority 0})
+      (assoc-in [2530 :props :auxiliary-training-area?] {:priority 0})
+      (assoc-in [2610 :description :fi] "Keilailuun varustettu halli. Ratojen määrä ja palveluvarustus kirjataan lisätietoihin.")
+      (update-in [2610 :props] dissoc :automated-scoring?)
+      ;;  Uusi liikuntapaikkatyyppi
+      (assoc-in [2620 :name :fi] "Biljardisali")
+      ;;  Uusi liikuntapaikkatyyppi
+      (assoc-in [2620 :description :fi] "Biljardisali on biljardin pelaamiseen tarkoitettu tila. Biljardipöytien määrä ja tyyppi kuvataan lisätiedoissa.")
+      (assoc-in [2620 :props :customer-service-point?] {:priority 0})
+      (assoc-in [2620 :props :toilet?] {:priority 0})
+      (assoc-in [2620 :props :school-use?] {:priority 0})
+      (assoc-in [2620 :props :may-be-shown-in-harrastuspassi-fi?] {:priority 0})
+      (assoc-in [2620 :props :pool-tables-count] {:priority 0})
+      (assoc-in [2620 :props :snooker-tables-count] {:priority 0})
+      (assoc-in [2620 :props :kaisa-tables-count] {:priority 0})
+      (assoc-in [2620 :props :pyramid-tables-count] {:priority 0})
+      (assoc-in [2620 :props :carom-tables-count] {:priority 0})
+      (assoc-in [2620 :props :total-billiard-tables-count] {:priority 0})
+      (update-in [3110 :props] dissoc :free-use)
+      (update-in [3120 :props] dissoc :free-use)
+      (assoc-in [3120 :name :fi] "Uima-allastila")
+      (assoc-in [3120 :description :fi] "Yksittäinen tai useampi pieni uima-allas muun kuin uimahallin tai kylpylän yhteydessä. Uima-allastilat voivat olla pääasiassa esim. kuntoutus- tai terapiakäytössä. Altaiden määrä ja vesipinta-ala kerrotaan ominaisuustiedoissa.")
+      (update-in [3130 :props] dissoc :free-use)
+      (assoc-in [3210 :name :fi] "Maauimala / vesipuisto")
+      (assoc-in [3210 :description :fi] "Maauimala tai vesipuisto on ulkona sijaitseva, vedenpuhdistusjärjestelmällä varustettu uintiin tarkoitettu ja hoidettu vesistö tai uima-altaita/allas. Lisäksi kohteessa voi olla vesiliukumäkiä.")
+      (update-in [3210 :props] dissoc :other-pools-count)
+      ;;  Uusi liikuntapaikkatyyppi
+      (assoc-in [3250 :name :fi] "Vesiurheilukeskus")
+      ;;  Uusi liikuntapaikkatyyppi
+      (assoc-in [3250 :description :fi] "Vesiurheilukeskuksessa on vesistössä sijaitsevia liikuntapalveluita tai palvelukokonaisuus, joka voi muodostua erilaisista veden päällä tai vedessä olevista suorituspaikoista tai -radoista.")
+      (assoc-in [3250 :props :customer-service-point?] {:priority 0})
+      (assoc-in [3250 :props :pier?] {:priority 0})
+      (assoc-in [3250 :props :changing-rooms?] {:priority 0})
+      (assoc-in [3250 :props :sauna?] {:priority 0})
+      (assoc-in [3250 :props :shower?] {:priority 0})
+      (assoc-in [3250 :props :toilet?] {:priority 0})
+      (assoc-in [3250 :props :pool-water-area-m2] {:priority 0})
+      (assoc-in [3250 :props :may-be-shown-in-harrastuspassi-fi?] {:priority 0})
+      (assoc-in [3250 :props :free-use?] {:priority 0})
+      (update-in [3220 :props] dissoc :eu-beach?)
+
       ))
 
 (def active
@@ -353,3 +553,7 @@
 
 (def sub-category-by-fi-name
   (utils/index-by (comp :fi :name) (vals sub-categories)))
+
+(comment
+  (all 2620)
+  )
