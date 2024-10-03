@@ -41,13 +41,6 @@
   [handler]
   (wrap-authentication handler auth/token-backend))
 
-;; TODO: Replace with check-privilege
-(defn ^:deprecated admin [handler]
-  (fn [request]
-    (if (-> request :identity :permissions :admin?)
-      (handler request)
-      (resp/forbidden {:error "Admin access required"}))))
-
 (def privilege-middleware
   {:name ::requires-privilege
    :compile

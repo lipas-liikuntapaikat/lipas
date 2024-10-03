@@ -1,111 +1,94 @@
 (ns lipas.roles)
 
 (def privileges
-  {;; Oikeus lisätä ja muokata liikuntapaikkoja
-   :create {}
-   ;; Oikeus nähdä kaikki liikuntapaikat, muut kohteet ja niihin syötetyt
-   ;; perustiedot ja lisätiedot (oma tietomalli)
-   :view {}
-   :edit {}
+  {:create {:doc "Oikeus lisätä liikuntapaikkoja"}
+   :view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot
+               ja lisätiedot"}
+   :edit {:doc "Oikeus muokata liikuntapaikkoja"}
 
-   :view-activities {}
-   :edit-activities {}
+   :view-activity {:doc "Nähdä UTP tiedot"}
+   :edit-activity {:doc "Oikeus muokata UTP tietoja"}
 
-   ;; "Muita kohteita"
-   :create-loi {}
-   :view-loi {}
-   :edit-loi {}
+   :create-loi {:doc "Oikeus luoda Muita kohteita"}
+   :view-loi {:doc "Oikeus nähdä Muita kohteita"}
+   :edit-loi {:doc "Oikeus muokata Muita kohteita"}
 
-   ;; "Erillissisältö"
-   :view-floorball {}
-   :edit-floorball {}
+   :view-floorball {:doc "Oikeus nähdä Salibandy lisätiedot"}
+   :edit-floorball {:doc "Oikeus muokata Salibandy lisätietoja"}
 
-   :analysis-tool {}
+   :analysis-tool {:doc "Oikeus käyttää analyysityökalua"}
 
-   :user-self {}
-   :user-management {}})
+   :user-self {:doc "Oikeus omiin käyttäjätietoihin (salasanan vaihto jne)"}
+   :user-management {:doc "Käyttäjien hallinta (admin)"}})
 
 (def roles
-  {;; Kaikkien sisältöjen hallinta oikeudet
-   :admin
+  {:admin
+   ;; all privileges
    {:privileges (set (keys privileges))}
 
-   ;; Kirjautumattomat ja kaikki käyttäjät
-   :everyone
+   ;; Unsigned users, basis for everyone
+   :default
    {:privileges #{:view
-                  ;; Toistaiseksi uusi ominaisuus piilossa,
-                  ;; myöhemmin kaikille.
+                  ;; New feature currently hidden,
+                  ;; will later be enabled for everyone.
                   ;; :view-loi
                   :view-floorball}}
 
    :basic-manager
    {:privileges #{:create
                   :edit
-                  :view-activities
+                  :view-activity
                   :analysis-tool}}
 
    :activities-manager
-   {:privileges #{:view-activities
-                  :view-loi
-                  :edit-activities
+   {:privileges #{:view-activity
+                  :edit-activity
+                  :view-loi ;; Temporarily only enabled here
                   :create-loi
                   :edit-loi}}
 
    :floorball-manager
    {:privileges #{:edit-floorball}}})
 
-(def test-org
-  {:permissions {:roles []}})
-
-(def test-user
-  {:permissions {:roles [;; App wide role
-                         {:role :admin}
-                         {:city-code 837 :role :basic-information}
-                         {:type-code 2001 :activity "outdoor-recreation-areas" :role :activities-information}
-                         ;; Possible, might not be needed
-                         ;; Combining lipas-id with others doesn't make sense, but possible
-                         {:type-code 1 :city-code 1 :role :activities-information}
-                         {:lipas-id 1 :role :basic-information}
-                         {:lipas-id 1 :role :activities-information}]}})
-
 (defn get-privileges [active-roles]
-  (-> (mapcat (fn [role-k]
-                (:privileges (get roles role-k)))
-              active-roles)
-      set))
+  (set (mapcat (fn [role-k]
+                 (:privileges (get roles role-k)))
+               active-roles)))
+
+(defn select-role
+  "Check if the role is active with given selection.
+
+  When a role is missing (or has a nil value) for one of
+  the conditions, it is always active."
+  [selection role]
+  (when (and (or (nil? (:city-code role))
+                 (= (:city-code selection) (:city-code role)))
+             (or (nil? (:type-code role))
+                 (= (:type-code selection) (:type-code role)))
+             (or (nil? (:activity role))
+                 (= (:activity selection) (:activity role)))
+             (or (nil? (:lipas-id role))
+                 (= (:lipas-id selection) (:lipas-id role))))
+    (:role role)))
 
 (defn check-privilege
-  "E.g. user-management (admin)"
-  [user required-privilege]
-  (let [active-roles (->> (:permissions user)
+  "Check if given user has the asked privilege
+  which is active for defined context.
+
+  Context:
+  - :site
+  - :activity"
+  [user {:keys [site activity] :as _role-context} required-privilege]
+  (let [selection {:type-code (-> site :type :type-code)
+                   :lipas-id (:lipas-id site)
+                   :city-code (-> site :location :city :city-code)
+                   :activity activity}
+
+        ;; TODO: Later this can be extended to check roles from org
+        active-roles (->> (:permissions user)
                           (:roles)
-                          (filter (fn [role]
-                                    (and (nil? (:city-code role))
-                                         (nil? (:type-code role))
-                                         (nil? (:lipas-id role)))))
-                          (map :role))
+                          (keep (fn [role]
+                                  (select-role selection role)))
+                          (into #{:default}))
         privileges (get-privileges active-roles)]
     (contains? privileges required-privilege)))
-
-(defn check-site-privilege
-  ([user site required-privilege]
-   (check-site-privilege user site nil required-privilege))
-  ([user site activity required-privilege]
-   (let [;; TODO: Nested somewhere
-         {:keys [lipas-id city-code]} site
-         type-code (-> site :type :type-code)
-
-         active-roles (->> (:permissions user)
-                           (:roles)
-                           (filter (fn [role]
-                                     (and (or (nil? (:city-code role))
-                                              (= city-code (:city-code role)))
-                                          (or (nil? (:type-code role))
-                                              (= type-code (:type-code role)))
-                                          (or (nil? (:activity role))
-                                              (= activity (:activity role)))
-                                          (or (nil? (:lipas-id role))
-                                              (= lipas-id (:lipas-id role))))))
-                           (map :role))
-         privileges (get-privileges active-roles)]
-     (contains? privileges required-privilege))))
