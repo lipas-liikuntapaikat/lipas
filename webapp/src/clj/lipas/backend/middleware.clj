@@ -3,6 +3,7 @@
    [buddy.auth :refer [authenticated?]]
    [buddy.auth.middleware :refer [wrap-authentication]]
    [lipas.backend.auth :as auth]
+   [lipas.roles :as roles]
    [ring.util.http-response :as resp]))
 
 (defn auth
@@ -40,8 +41,23 @@
   [handler]
   (wrap-authentication handler auth/token-backend))
 
-(defn admin [handler]
+;; TODO: Replace with check-privilege
+(defn ^:deprecated admin [handler]
   (fn [request]
     (if (-> request :identity :permissions :admin?)
       (handler request)
       (resp/forbidden {:error "Admin access required"}))))
+
+(def privilege-middleware
+  {:name ::requires-privilege
+   :compile
+   (fn [route-data _opts]
+     (if-let [required-privilege (:required-privilege route-data)]
+       (-> (fn [next-handler]
+             (fn [req]
+               (if (roles/check-privilege (:identity req) required-privilege)
+                 (next-handler req)
+                 (resp/forbidden {:error "Missing privilege"}))))
+           (auth)
+           (token-auth))
+       {}))})

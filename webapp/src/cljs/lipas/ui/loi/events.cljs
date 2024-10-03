@@ -108,6 +108,8 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
+   ;; TODO: Toistaiseksi Muut kohteet on piilossa muilta kuin utp käyttäjiltä
+   ;; -> Katsotaan jatkossa vain :view-loi privilege
    (if (-> db :user :login :permissions permissions/activities?)
      {:http-xhrio
       {:method          :post

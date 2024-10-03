@@ -107,7 +107,8 @@
       ["/sports-sites"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         ;; :middleware [mw/token-auth mw/auth]
+         :require-privilege :create
          :responses  {201 {:body :lipas/sports-site}
                       400 {:body map?}}
          :parameters
@@ -236,7 +237,8 @@
       ["/users"
        {:get
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         ;; :middleware [mw/token-auth mw/auth]
+         :require-privilege :user-management
          :handler
          (fn [_]
            {:status 200
@@ -245,7 +247,8 @@
       ["/actions/gdpr-remove-user"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :middleware [mw/token-auth mw/auth]
+         :require-privilege :user-management
          :handler
          (fn [{:keys [body-params]}]
            (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
@@ -318,6 +321,8 @@
        {:post
         {:no-doc     true
          :middleware [mw/token-auth mw/auth]
+         ;; TODO:
+         ;; :require-role :user-self
          :parameters {:body {:password string?}}
          :handler
          (fn [req]
@@ -330,7 +335,8 @@
       ["/actions/update-user-permissions"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :middleware [mw/token-auth mw/auth]
+         :require-privilege :user-management
          :parameters
          {:body
           {:id          string?
@@ -346,7 +352,8 @@
       ["/actions/update-user-status"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :middleware [mw/token-auth mw/auth]
+         :require-privilege :user-management
          :parameters
          {:body
           {:id     string?
@@ -391,7 +398,8 @@
       ["/actions/send-magic-link"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :middleware [mw/token-auth mw/auth]
+         :require-privilege :user-management
          :parameters
          {:body
           {:login-url string?
@@ -783,7 +791,12 @@
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance
-      :middleware [;; query-params & form-params
+      :middleware [;; privilege check based on route-data,
+                   ;; also enables token-auth and auth checks
+                   ;; per route.
+                   mw/privilege-middleware
+
+                   ;; query-params & form-params
                    params/wrap-params
                    ;; content-negotiation
                    muuntaja/format-negotiate-middleware

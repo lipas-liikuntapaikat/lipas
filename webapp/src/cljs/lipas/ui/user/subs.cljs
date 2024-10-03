@@ -17,6 +17,7 @@
  ::admin?
  :<- [::user]
  (fn [user _]
+   ;; TODO: New roles
    (-> user :login :permissions :admin?)))
 
 (re-frame/reg-sub
@@ -65,6 +66,7 @@
  ::can-add-sports-sites?
  :<- [::permissions]
  (fn [{:keys [admin? types all-types? cities all-cities?]} _]
+   ;; TODO: :create privilege
    (or admin?
        (and
         (or all-cities? (seq cities))

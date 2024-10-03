@@ -1,4 +1,5 @@
 (ns lipas.permissions
+  {:deprecated true}
   (:require
    [clojure.spec.alpha :as s]
    [lipas.data.activities :as activities]
