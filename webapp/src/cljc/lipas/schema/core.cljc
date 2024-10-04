@@ -18,6 +18,7 @@
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
    [lipas.reports :as reports]
+   [lipas.roles :as roles]
    [lipas.utils :as utils]
    [spec-tools.core :as st]
    [spec-tools.parse :as stp]))
@@ -239,6 +240,7 @@
           :opt-un [:lipas.user.user-data/saved-reports
                    :lipas.user.user-data/saved-diversity-settings]))
 
+;; Deprecated permissions model
 (s/def :lipas.user.permissions/sports-sites
   (s/coll-of :lipas.sports-site/lipas-id
              :min-count 0
@@ -281,6 +283,32 @@
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types
                    :lipas.user.permissions/activities]))
+
+;; Role based permissions
+(s/def :lipas.role/role (set (keys roles/roles)))
+
+(s/def :lipas.role/activity :lipas.sports-site.activity/value)
+
+(s/def :lipas.user.permissions.roles/role
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.sports-site/lipas-id
+                   :lipas.sports-site.type/type-code
+                   :lipas.location.city/city-code
+                   :lipas.role/activity]))
+
+(s/def :lipas.user.permissions/roles
+  (s/coll-of :lipas.user.permissions.roles/role
+             :min-count 0
+             :distinct true
+             :into []))
+
+(comment
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :admin}])
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :basic-manager :city-id 837 :type-code 205}])
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :activities-manager :activity "fishing"}]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
