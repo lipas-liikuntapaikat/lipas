@@ -271,6 +271,16 @@
              (tr :user/promo1-link)]
 
 
+          ]]]
+
+       [mui/grid {:item true :xs 12}
+        [mui/card card-props
+         [mui/card-header {:title (tr :user/data-ownership)}]
+         [mui/card-content
+          [mui/typography (tr :disclaimer/data-ownership)]
+
+
+
           ]]]]]
 
      ;; Experimental features

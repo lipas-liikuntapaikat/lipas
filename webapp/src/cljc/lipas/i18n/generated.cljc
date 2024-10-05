@@ -98,7 +98,7 @@
      :ptv-managed                        "Älä päivitä kuvauksia"
      :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssa. Lipas ei muuta tai päivitä kuvauksia."}
     :utp
-    {:headline "Ulkoilutietopalvelu"
+    {:headline             "Ulkoilutietopalvelu"
      :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
      :add-contact          "Lisää yhteystieto"
      :unit                 "yksikkö"
@@ -264,9 +264,10 @@
      :low-emissivity-coating?
      "Yläpohjassa  matalaemissiiviteettipinnoite (heijastus/säteily)"},
     :disclaimer
-    {:headline "HUOMIO!",
+    {:headline       "HUOMIO!",
      :test-version
-     "Tämä on LIPAS-sovelluksen testiversio ja  tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan  Lipakseen."},
+     "Tämä on LIPAS-sovelluksen testiversio ja  tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan  Lipakseen."
+     :data-ownership "LIPAS-paikkatietojärjestelmän tietovarannon omistaa ja sitä hallinnoi Jyväskylän yliopisto. Jyväskylän yliopisto pidättää oikeudet kaikkeen järjestelmään lisättyyn sekä järjestelmän kehittämisen yhteydessä luotuun sisältöön, tietoon ja aineistoon. Aineistoa järjestelmään lisäävä käyttäjä vastaa siitä, että aineisto on oikeellista eikä se loukkaa kolmannen osapuolen tekijänoikeuksia. Jyväskylän yliopisto ei vastaa aineistoon kohdistuvista kolmansien osapuolten vaateista. Lisäämällä tietoaineistoa LIPAS-paikkatietojärjestelmään käyttäjän katsotaan hyväksyneen lisäämänsä aineiston käytön järjestelmässä osana tietovarantoa. LIPAS-tietokantaan tallennettu tietoaineisto on avointa ja vapaasti käytettävissä CC 4.0 Nimeä -lisenssin mukaisesti."},
     :admin
     {:private-foundation      "Yksityinen / säätiö",
      :city-other              "Kunta / muu",
@@ -905,7 +906,8 @@
      :promo1-text         "Avaa PDF",
      :ice-stadiums-link   "Jäähallit",
      :greeting            "Hei {1} {2}!",
-     :promo1-topic        "TIEDOTE LIPAS-TYYPPILUOKKAPÄIVITYKSISTÄ (11.1.2022)"},
+     :promo1-topic        "TIEDOTE LIPAS-TYYPPILUOKKAPÄIVITYKSISTÄ (11.1.2022)"
+     :data-ownership      "Käyttöehdot"},
     :building-materials
     {:brick      "Tiili",
      :concrete   "Betoni",
@@ -1249,7 +1251,9 @@
      :cold-pool         "Kallbassäng",
      :other-pool        "Annan bassäng",
      :teaching-pool     "Undervisningsbassäng"},
-    :disclaimer         {:headline "OBS!", :test-version "Automatisk"},
+    :disclaimer
+    {:headline       "OBS!", :test-version "Automatisk"
+     :data-ownership "LIPAS-geografiska informationssystemets datalager ägs och förvaltas av Jyväskylä universitet. Jyväskylä universitet förbehåller sig rätten till allt innehåll, information och material som lagts till i systemet och som skapats under systemets utveckling. Användaren som lägger till material i systemet ansvarar för att materialet är korrekt och inte kränker tredje parts upphovsrätt. Jyväskylä universitet ansvarar inte för krav från tredje part avseende materialet. Genom att lägga till data i LIPAS-geografiska informationssystemet anses användaren ha godkänt användningen av det tillagda materialet i systemet som en del av datalagret. De data som lagras i LIPAS-databasen är öppna och fritt tillgängliga enligt CC 4.0 Erkännande-licensen."},
     :admin
     {:private-foundation      "Privat / stiftelse",
      :city-other              "Kommun / annat",
@@ -1758,7 +1762,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :promo1-text         "Öppna PDF",
      :ice-stadiums-link   "Ishallsportal",
      :greeting            "Hej {1} {2} !",
-     :promo1-topic        "OBS! EN UPPDATERING I KLASSIFICERING AV IDROTTS- OCH FRILUFTSPLATSER I LIPAS-SYSTEMET (11 januari 2022)"},
+     :promo1-topic        "OBS! EN UPPDATERING I KLASSIFICERING AV IDROTTS- OCH FRILUFTSPLATSER I LIPAS-SYSTEMET (11 januari 2022)"
+     :data-ownership      "Användarvillkor och ansvar"},
     :building-materials
     {:brick      "Tegel",
      :concrete   "Betong",
@@ -2096,9 +2101,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :insulated-exterior?     "Insulated exterior",
      :low-emissivity-coating? "Low emissivity coating"},
     :disclaimer
-    {:headline "NOTICE!",
+    {:headline       "NOTICE!",
      :test-version
-     "This is LIPAS TEST-ENVIRONMENT. Changes made here  don't affect the production system."},
+     "This is LIPAS TEST-ENVIRONMENT. Changes made here  don't affect the production system."
+     :data-ownership "The LIPAS geographic information system's data repository is owned and managed by the University of Jyväskylä. The University of Jyväskylä reserves the rights to all content, information, and material added to the system and created during the system's development. The user who adds material to the system is responsible for ensuring that the material is accurate and does not infringe on third-party copyrights. The University of Jyväskylä is not liable for claims made by third parties regarding the material. By adding data to the LIPAS geographic information system, the user is considered to have accepted the use of the added material in the system as part of the data repository. The data stored in the LIPAS database is open and freely available under the CC 4.0 Attribution license."},
     :admin
     {:private-foundation      "Private / foundation",
      :city-other              "City / other",
@@ -2692,7 +2698,8 @@ The site administrator is responsible for the accuracy of information, safety of
      :promo1-headline     "Important",
      :promo1-topic        "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
      :promo1-text         "View PDF",
-     :swimming-pools-link "Swimming pools"},
+     :swimming-pools-link "Swimming pools"
+     :data-ownership      "Terms of use "},
     :building-materials
     {:brick      "Brick",
      :concrete   "Concrete",

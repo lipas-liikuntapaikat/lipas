@@ -91,6 +91,13 @@
        :target "_blank"}
       (tr :help/privacy-policy)]
 
+     ;; Terms
+     [mui/typography {:variant "body1" :sx {:mt 1 :mb 1}}
+      (tr :user/data-ownership)]
+
+     [mui/typography {:variant "body1" :style {:font-size "0.9em"}}
+      (tr :disclaimer/data-ownership)]
+
      ;; Error messages
      (when error
        [mui/typography {:color "error"}
