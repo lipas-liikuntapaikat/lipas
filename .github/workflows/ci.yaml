@@ -103,7 +103,7 @@ jobs:
 
       - name: Check if there are changes
         id: changed-files
-        uses: tj-actions/changed-files@v40
+        uses: tj-actions/changed-files@v41
         with:
           files: |
             webapp/src/cljc/lipas/data/activities.cljc
@@ -170,7 +170,7 @@ jobs:
 
       - name: Check if there are changes
         id: changed-files
-        uses: tj-actions/changed-files@v40
+        uses: tj-actions/changed-files@v41
         with:
           files: |
             webapp/src/cljc/lipas/data/loi.cljc
