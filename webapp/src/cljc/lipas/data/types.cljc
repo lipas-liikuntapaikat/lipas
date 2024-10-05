@@ -3,22 +3,22 @@
   namespace hosts a controlled place to roll-out the changes."
   (:require
    [lipas.data.types-old :as old]
-   #_[lipas.data.types-new :as new]
+   [lipas.data.types-new :as new]
    [lipas.utils :as utils]))
 
 (def main-categories
-  old/main-categories)
+  new/main-categories)
 
 (def sub-categories
-  old/sub-categories)
+  new/sub-categories)
 
-(def all old/all)
+(def all new/all)
 
 (def active
   (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
 
 (def unknown
-  old/unknown)
+  new/unknown)
 
 (def by-main-category (group-by :main-category (vals active)))
 (def by-sub-category (group-by :sub-category (vals active)))
