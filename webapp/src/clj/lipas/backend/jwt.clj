@@ -13,7 +13,7 @@
   `terse?` include only users :id in payload (fits in URL)"
   [user & {:keys [terse? valid-seconds]
            :or   {terse?        false
-                  valid-seconds 7200}}] ;; 2 hours
+                  valid-seconds (* 6 3600)}}] ;; 6 hours
   (let [fields  (if terse?
                   [:id]
                   [:id :email :username :permissions])

@@ -31,8 +31,8 @@
   [{:keys [tr locale dialog-state on-save on-close lipas-id helper-text image-props]}]
   [lui/dialog
    {:title         (if (-> @dialog-state :data :url)
-                     "Valokuva"
-                     "Lisää valokuva")
+                     (tr :utp/photo)
+                     (tr :utp/photo))
     :open?         (:open? @dialog-state)
     :on-save       on-save
     :on-close      #(swap! dialog-state assoc :open? false)
@@ -260,7 +260,7 @@
       [lui/select
        {:items     statuses
         :disabled  read-only?
-        :label     "Status"
+        :label     (tr :loi/status)
         :on-change #(==> [::events/edit-loi-field :status %])
         :value-fn  first
         :label-fn  (comp locale second)
@@ -271,7 +271,7 @@
       [lui/select
        {:items     loi-cats
         :disabled  read-only?
-        :label     "Kategoria"
+        :label     (tr :loi/category)
         :value-fn  first
         :label-fn  (comp locale :label second)
         :on-change #(==> [::events/edit-loi-field :loi-category %])
@@ -282,7 +282,7 @@
       [lui/autocomplete
        {:items     (vals (get-in loi-cats [loi-cat :types]))
         :disabled  read-only?
-        :label     "Kohteen tyyppi"
+        :label     (tr :loi/type)
         :value-fn  :value
         :label-fn  (comp locale :label)
         :on-change #(==> [::events/edit-loi-field :loi-type %])
@@ -298,7 +298,7 @@
      (when (and editing? (or (not loi-cat) (not loi-type)))
        [mui/grid {:item true :xs 12}
         [mui/typography {:variant "body2" :color :error}
-         "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"]])
+         (tr :loi/type-and-category-disclaimer)]])
 
      ;; Add to map button
      (when (and editing? (not geoms))

@@ -406,7 +406,11 @@
 
 (s/def :lipas.sports-site/comment (str-in 1 2048))
 
-(def type-codes (keys sports-site-types/all))
+(def type-codes
+  (keys sports-site-types/all))
+
+(def old-type-codes
+  )
 
 (s/def :lipas.sports-site.type/type-code*
   (into #{} type-codes))
@@ -459,8 +463,6 @@
 
 (s/def :lipas.sports-site.properties/surface-material*
   (s/coll-of (into #{} (keys materials/surface-materials))
-             :min-count 0
-             :max-count (count materials/surface-materials)
              :distinct true
              :into []))
 
@@ -642,8 +644,35 @@
 (s/def :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi? boolean?)
 (s/def :lipas.sports-site.properties/padel-courts-count ::real)
 (s/def :lipas.sports-site.properties/rapid-canoeing-centre? boolean?)
-(s/def :lipas.sports-site.properties/canoeing-club?? boolean?)
+(s/def :lipas.sports-site.properties/canoeing-club? boolean?)
 (s/def :lipas.sports-site.properties/activity-service-company? boolean?)
+(s/def :lipas.sports-site.properties/boating-service-class string?)
+(s/def :lipas.sports-site.properties/water-point string?)
+(s/def :lipas.sports-site.properties/customer-service-point? boolean?)
+(s/def :lipas.sports-site.properties/height-of-basket-or-net-adjustable? boolean?)
+(s/def :lipas.sports-site.properties/changing-rooms-m2 ::real)
+(s/def :lipas.sports-site.properties/ligthing-info string?)
+(s/def :lipas.sports-site.properties/highest-obstacle-m ::real)
+(s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
+(s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
+(s/def :lipas.sports-site.properties/free-customer-use? boolean?)
+(s/def :lipas.sports-site.properties/space-divisible string?)
+(s/def :lipas.sports-site.properties/auxiliary-training-area? boolean?)
+(s/def :lipas.sports-site.properties/sport-specification string?)
+(s/def :lipas.sports-site.properties/width-of-active-space-m ::real)
+(s/def :lipas.sports-site.properties/length-of-active-space-m ::real)
+(s/def :lipas.sports-site.properties/mirror-wall? boolean?)
+(s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures string?)
+(s/def :lipas.sports-site.properties/ringette-boundary-markings? boolean?)
+(s/def :lipas.sports-site.properties/field-1-flexible-rink? boolean?)
+(s/def :lipas.sports-site.properties/field-2-flexible-rink? boolean?)
+(s/def :lipas.sports-site.properties/field-3-flexible-rink? boolean?)
+(s/def :lipas.sports-site.properties/pool-tables-count ::real)
+(s/def :lipas.sports-site.properties/snooker-tables-count ::real)
+(s/def :lipas.sports-site.properties/kaisa-tables-count ::real)
+(s/def :lipas.sports-site.properties/pyramid-tables-count ::real)
+(s/def :lipas.sports-site.properties/carom-tables-count ::real)
+(s/def :lipas.sports-site.properties/total-billiard-tables-count ::real)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -800,8 +829,35 @@
                    :lipas.sports-site.properties/may-be-shown-in-harrastuspassi-fi?
                    :lipas.sports-site.properties/padel-courts-count
                    :lipas.sports-site.properties/activity-service-company?
-                   :lipas.sports-site.properties/canoeing-club??
-                   :lipas.sports-site.properties/rapid-canoeing-centre?]))
+                   :lipas.sports-site.properties/canoeing-club?
+                   :lipas.sports-site.properties/rapid-canoeing-centre?
+                   :lipas.sports-site.properties/fitness-stairs-length-m
+                   :lipas.sports-site.properties/highest-obstacle-m
+                   :lipas.sports-site.properties/ligthing-info
+                   :lipas.sports-site.properties/changing-rooms-m2
+                   :lipas.sports-site.properties/height-of-basket-or-net-adjustable?
+                   :lipas.sports-site.properties/customer-service-point?
+                   :lipas.sports-site.properties/water-point
+                   :lipas.sports-site.properties/boating-service-class
+                   :lipas.sports-site.properties/free-customer-use?
+                   :lipas.sports-site.properties/space-divisible
+                   :lipas.sports-site.properties/auxiliary-training-area?
+                   :lipas.sports-site.properties/sport-specification
+                   :lipas.sports-site.properties/width-of-active-space-m
+                   :lipas.sports-site.properties/length-of-active-space-m
+                   :lipas.sports-site.properties/mirror-wall?
+                   :lipas.sports-site.properties/parkour-hall-equipment-and-structures
+                   :lipas.sports-site.properties/ringette-boundary-markings?
+                   :lipas.sports-site.properties/field-1-flexible-rink?
+                   :lipas.sports-site.properties/field-2-flexible-rink?
+                   :lipas.sports-site.properties/field-3-flexible-rink?
+                   :lipas.sports-site.properties/pool-tables-count
+                   :lipas.sports-site.properties/snooker-tables-count
+                   :lipas.sports-site.properties/kaisa-tables-count
+                   :lipas.sports-site.properties/pyramid-tables-count
+                   :lipas.sports-site.properties/carom-tables-count
+                   :lipas.sports-site.properties/total-billiard-tables-count
+                   ]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)

@@ -11,14 +11,51 @@
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
+   [lipas.backend.gis :as gis]
    [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
    [lipas.data.owners :as owners]
+   [lipas.data.types :as types]
+   [lipas.data.types-old :as old-types]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [taoensso.timbre :as log])
   (:import java.lang.Math))
+
+(defn merge-types
+  [db search user type-code-from type-code-to]
+  (let [types* (merge old-types/all types/all)]
+    (assert (contains? types*  type-code-from))
+    (assert (contains? types/all type-code-to))
+    (assert (= (get-in types* [type-code-from :geometry-type])
+               (get-in types/all [type-code-to :geometry-type]))))
+  (let [sites (core/get-sports-sites-by-type-code db type-code-from)]
+    (log/info "Migrating" (count sites) "type" type-code-from " -> " type-code-to)
+    (doseq [site sites]
+      (log/info "Migrating" (:lipas-id site))
+      (core/save-sports-site! db search user (assoc-in site [:type :type-code] type-code-to)))
+    (log/info "All done!")))
+
+(defn duplicate-point->area-draft
+  [db search user type-code-from type-code-to]
+  (let [types* (merge old-types/all types/all)]
+    (assert (contains? types*  type-code-from))
+    (assert (contains? types/all type-code-to))
+    (assert (= "Point" (get-in types* [type-code-from :geometry-type])))
+    (assert (= "Polygon" (get-in types/all [type-code-to :geometry-type]))))
+  (let [sites (core/get-sports-sites-by-type-code db type-code-from)]
+    (log/info "Migrating" (count sites) "type" type-code-from "(Point) ->" type-code-to "(Polygon)")
+    (doseq [site sites]
+      (log/info "Migrating" (:lipas-id site))
+      (core/save-sports-site! db search user
+                              (-> site
+                                  (dissoc :lipas-id)
+                                  (assoc :event-date (utils/timestamp))
+                                  (assoc :status "planning")
+                                  (assoc-in [:type :type-code] type-code-to)
+                                  (update-in [:location :geometries] gis/point->dummy-area))))
+    (log/info "All done!")))
 
 (def all-cities
   (merge

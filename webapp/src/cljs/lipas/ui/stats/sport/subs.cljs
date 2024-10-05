@@ -63,7 +63,7 @@
  :<- [::data*]
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [::selected-grouping]
  :<- [::selected-metric]
  :<- [:lipas.ui.sports-sites.subs/provinces]

@@ -106,7 +106,7 @@
 
 (re-frame/reg-sub
  ::types-by-type-code
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [types _]
    (select-keys types [3110 3120 3130])))
 

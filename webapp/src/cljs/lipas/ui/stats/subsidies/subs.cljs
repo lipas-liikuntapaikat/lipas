@@ -52,7 +52,7 @@
 
 (re-frame/reg-sub
  ::types
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [types _]
    (assoc types (:type-code types/unknown) types/unknown)))
 

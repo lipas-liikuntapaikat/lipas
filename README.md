@@ -2,7 +2,7 @@
 
 [prod](https://www.lipas.fi/) |
  [dev](https://lipas-dev.cc.jyu.fi/) |
- [ci](https://travis-ci.com/lipas-liikuntapaikat/lipas) |
+ [ci](https://github.com/lipas-liikuntapaikat/lipas/actions) |
  [issues](https://github.com/lipas-liikuntapaikat/lipas/issues) |
  [dev-tasks](https://trello.com/b/q7dgXf28/lipas-20-dev) |
  [use-cases](https://trello.com/b/S8i6NexB/k%C3%A4ytt%C3%B6tapaukset) (finnish) |

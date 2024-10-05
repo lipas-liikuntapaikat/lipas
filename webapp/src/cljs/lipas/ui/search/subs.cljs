@@ -166,7 +166,7 @@
  ::search-results-table-data
  :<- [::search-results-fast]
  :<- [:lipas.ui.subs/translator]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
@@ -200,7 +200,7 @@
  ::search-results-list-data
  :<- [::search-results-fast]
  :<- [:lipas.ui.subs/translator]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  (fn [[results tr types cities] _]
    (let [locale (tr)

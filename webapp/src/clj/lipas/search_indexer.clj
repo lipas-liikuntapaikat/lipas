@@ -154,30 +154,33 @@
 
     (log/info "Diversity indexing DONE!")))
 
-(defn main [system db {:keys [indices client]} mode]
-  (let [idx-name (str mode "-" (search/gen-idx-name))
-        mappings (:sports-sites search/mappings)
-        types    (keys types/all)
-        alias    (case mode
-                   "search"    (get-in indices [:sports-site :search])
-                   "analytics" (get-in indices [:sports-site :analytics]))]
-        (log/info "Starting to re-index types" types)
-        (search/create-index! client idx-name mappings)
-        (log/info "Created index" idx-name)
-        (log/info "Starting to index data...")
+(defn main
+  ([db search mode]
+   (main nil db search mode))
+  ([_system db {:keys [indices client]} mode]
+   (let [idx-name (str mode "-" (search/gen-idx-name))
+         mappings (:sports-sites search/mappings)
+         types    (keys types/all)
+         alias    (case mode
+                    "search"    (get-in indices [:sports-site :search])
+                    "analytics" (get-in indices [:sports-site :analytics]))]
+     (log/info "Starting to re-index types" types)
+     (search/create-index! client idx-name mappings)
+     (log/info "Created index" idx-name)
+     (log/info "Starting to index data...")
 
-        (case mode
-          "search"    (index-search-sports-sites! db client idx-name types)
-          "analytics" (let [users (get-users db)]
-                        (index-analytics2! db client idx-name types users))          )
+     (case mode
+       "search"    (index-search-sports-sites! db client idx-name types)
+       "analytics" (let [users (get-users db)]
+                     (index-analytics2! db client idx-name types users))          )
 
-        (log/info "Indexing data done!")
-        (log/info "Swapping alias" alias "to point to index" idx-name)
-        (let [old-idxs (search/swap-alias! client {:new-idx idx-name :alias alias})]
-          (doseq [idx old-idxs]
-            (log/info "Deleting old index" idx)
-            (search/delete-index! client idx)))
-        (log/info "All done!")))
+     (log/info "Indexing data done!")
+     (log/info "Swapping alias" alias "to point to index" idx-name)
+     (let [old-idxs (search/swap-alias! client {:new-idx idx-name :alias alias})]
+       (doseq [idx old-idxs]
+         (log/info "Deleting old index" idx)
+         (search/delete-index! client idx)))
+     (log/info "All done!"))))
 
 (defn -main [& args]
   (let [mode   (case (first args)

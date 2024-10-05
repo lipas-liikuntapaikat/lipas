@@ -158,7 +158,7 @@
 
 (re-frame/reg-sub
  ::type-categories
- :<- [::all-types]
+ :<- [::active-types]
  (fn [types _]
    (concat
     (for [[k v] types]
@@ -170,7 +170,7 @@
 
 (re-frame/reg-sub
  ::type-table
- :<- [::all-types]
+ :<- [::active-types]
  :<- [:lipas.ui.subs/locale]
  (fn [[types locale]]
    (for [[type-code m] types]
@@ -201,14 +201,20 @@
    (-> sports-sites :types)))
 
 (re-frame/reg-sub
+ ::active-types
+ :<- [::sports-sites]
+ (fn [sports-sites _]
+   (-> sports-sites :active-types)))
+
+(re-frame/reg-sub
  ::type-by-type-code
- :<- [::all-types]
+ :<- [::active-types]
  (fn [types [_ type-code]]
    (types type-code)))
 
 (re-frame/reg-sub
  ::types-by-geom-type
- :<- [::all-types]
+ :<- [::active-types]
  (fn [types [_ geom-type]]
    (filter (comp #{geom-type} :geometry-type second) types)))
 
@@ -222,7 +228,7 @@
 
 (re-frame/reg-sub
  ::types-list
- :<- [::all-types]
+ :<- [::active-types]
  (fn [types _]
    (vals types)))
 
@@ -264,7 +270,7 @@
 
 (re-frame/reg-sub
  ::types-props
- :<- [::all-types]
+ :<- [::active-types]
  :<- [::prop-types]
  (fn [[types prop-types] [_ type-code]]
    (let [props (-> (types type-code) :props)]
@@ -334,7 +340,7 @@
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/admins])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/owners])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/all-types])
+    (re-frame/subscribe [:lipas.ui.sports-sites.subs/active-types])
     (re-frame/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/materials])
     (re-frame/subscribe [:lipas.ui.sports-sites.subs/statuses])
@@ -486,7 +492,7 @@
  :<- [::cities-by-city-code]
  :<- [::admins]
  :<- [::owners]
- :<- [::all-types]
+ :<- [::active-types]
  :<- [:lipas.ui.ice-stadiums.subs/size-categories]
  (fn [[sites cities admins owners types size-categories]
       [_ locale type-codes sites-filter]]
@@ -522,7 +528,7 @@
 (re-frame/reg-sub
  ::new-site-type
  :<- [::new-sports-site]
- :<- [::all-types]
+ :<- [::active-types]
  (fn [[new-sports-site types]  _]
    (let [type-code (-> new-sports-site :type)]
      (get types type-code))))

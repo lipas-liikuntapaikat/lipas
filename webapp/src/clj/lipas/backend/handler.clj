@@ -5,6 +5,7 @@
    [lipas.backend.core :as core]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
+   [lipas.flags :as flags]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [muuntaja.core :as m]
@@ -17,14 +18,20 @@
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
    [ring.middleware.params :as params]
-   [ring.util.io :as ring-io]))
+   [ring.util.io :as ring-io]
+   [taoensso.timbre :as log]))
 
-(defn exception-handler [status type]
-  (fn [^Exception e _request]
-    (-> {:status status
-         :body   {:message (.getMessage e)
-                  :type    type}}
-        mw/add-cors-headers)))
+(defn exception-handler
+  ([status type]
+   (exception-handler status type false))
+  ([status type print-stack?]
+   (fn [^Exception e _request]
+     (when print-stack?
+       (log/error e))
+     (-> {:status status
+          :body   {:message (.getMessage e)
+                   :type    type}}
+         mw/add-cors-headers))))
 
 (def exception-handlers
   {:username-conflict  (exception-handler 409 :username-conflict)
@@ -34,20 +41,17 @@
    :email-not-found    (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
 
-   :qbits.spandex/response-exception (exception-handler 500 :internal-server-error)})
+   :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
+
+   ;; Return 500 and print stack trace for exceptions that are not
+   ;; specifically handled
+   ::exception/default (exception-handler 500 :internal-server-error :print-stack)})
 
 (def exceptions-mw
   (exception/create-exception-middleware
    (merge
     exception/default-handlers
-    exception-handlers
-    ;;Prints all stack traces
-    {::exception/wrap
-     (fn [handler e request]
-       (prn (ex-data e))
-       (.printStackTrace e)
-       (handler e request))}
-    )))
+    exception-handlers)))
 
 (defn create-app
   [{:keys [db emailer search mailchimp aws]}]
@@ -84,7 +88,12 @@
       ["/swagger.json"
        {:get
         {:no-doc  true
-         :swagger {:info {:title "Lipas-API v2"}}
+         :swagger {:info {:title "Lipas-API v2"}
+                   :securityDefinitions
+                   {:token-auth
+                    {:type "apiKey"
+                     :in   "header"
+                     :name "Authorization"}}}
          :handler (swagger/create-swagger-handler)}}]
 
       ["/health"
@@ -684,7 +693,92 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois-with-params search body-params)})}}]]]
+            :body   (core/search-lois-with-params search body-params)})}}]
+
+      ;; PTV
+      ["/actions/get-ptv-integration-candidates"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/get-ptv-integration-candidates search body-params)}))}}]
+
+      ["/actions/generate-ptv-descriptions"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/generate-ptv-descriptions search body-params)}))}}]
+
+      ["/actions/generate-ptv-service-descriptions"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/generate-ptv-service-descriptions search body-params)}))}}]
+
+      ["/actions/save-ptv-service"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/upsert-ptv-service! body-params)}))}}]
+
+      ["/actions/fetch-ptv-services"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/fetch-ptv-services body-params)}))}}]
+
+      ["/actions/save-ptv-service-location"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/upsert-ptv-service-location! db search identity body-params)}))}}]
+
+      ["/actions/save-ptv-meta"
+       {:post
+        {:no-doc     false
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           (if-not flags/ptv-enabled?
+             {:status 501 :body "Not implemented"}
+             {:status 200
+              :body   (core/save-ptv-integration-definitions db search identity body-params)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

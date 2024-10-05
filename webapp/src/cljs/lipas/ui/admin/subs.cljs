@@ -44,7 +44,7 @@
  :<- [::users-status]
  :<- [::users-filter]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [:lipas.ui.sports-sites.activities.subs/data]
  (fn [[users status filter-text cities types activities] _]
    (let [users (->> users
@@ -64,7 +64,7 @@
  :<- [::archived-users]
  :<- [::users-filter]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [[users filter-text cities types] _]
    (let [users (->> users (map (partial ->users-list-entry cities types)))]
      (if (not-empty filter-text)
@@ -99,8 +99,13 @@
         (map #(update % :event-date prettify-timestamp))
         (sort-by :event-date cutils/reverse-cmp))))
 
-(defn ->list-entry [locale [k v]]
-  {:value k :label (str (get-in v [:name locale]) " " k)})
+(defn ->list-entry
+  [locale [k v]]
+  {:value k :label (str (get-in v [:name locale])
+                        " "
+                        k
+                        (when (not= "active" (:status v))
+                          " POISTUNUT"))})
 
 (re-frame/reg-sub
  ::types-list

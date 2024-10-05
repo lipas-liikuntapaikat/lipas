@@ -213,7 +213,7 @@
 (defn color-selector []
   (let [new-colors (<== [::subs/selected-colors])
         pick-color (fn [k1 k2 v] (==> [::events/select-color k1 k2 v]))
-        types      (<== [:lipas.ui.sports-sites.subs/all-types])]
+        types      (<== [:lipas.ui.sports-sites.subs/active-types])]
     [mui/table
      [mui/table-head
       [mui/table-row
@@ -310,83 +310,84 @@
         users        (<== [::subs/users-list])
         users-filter (<== [::subs/users-filter])
         selected-tab (<== [::subs/selected-tab])]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/tool-bar
-       [mui/tabs
-        {:value     selected-tab
-         :on-change #(==> [::events/select-tab %2])
-         :indicator-color "secondary"
-         :text-color "inherit"}
-        [mui/tab {:label (tr :lipas.admin/users)}]
-        [mui/tab {:label "Symbolityökalu"}]
-        [mui/tab {:label "Tyyppikoodit"}]]]
+    [mui/paper
+     [mui/grid {:container true}
+      [mui/grid {:item true :xs 12}
+       [mui/tool-bar
+        [mui/tabs
+         {:value     selected-tab
+          :on-change #(==> [::events/select-tab %2])
+          :indicator-color "secondary"
+          :text-color "inherit"}
+         [mui/tab {:label (tr :lipas.admin/users)}]
+         [mui/tab {:label "Symbolityökalu"}]
+         [mui/tab {:label "Tyyppikoodit"}]]]
 
-      (when (= 1 selected-tab)
-        [:<>
-         [color-selector]
-         [mui/fab
-          {:style    {:position "sticky" :bottom "1em" :left "1em"}
-           :variant  "extended"
-           :color    "secondary"
-           :on-click #(==> [::events/download-new-colors-excel])}
-          [mui/icon "save"]
-          "Lataa"]])
+       (when (= 1 selected-tab)
+         [:<>
+          [color-selector]
+          [mui/fab
+           {:style    {:position "sticky" :bottom "1em" :left "1em"}
+            :variant  "extended"
+            :color    "secondary"
+            :on-click #(==> [::events/download-new-colors-excel])}
+           [mui/icon "save"]
+           "Lataa"]])
 
-      (when (= 0 selected-tab)
-        [mui/card {:square true}
-         [mui/card-content
-          [mui/typography {:variant "h5"}
-           (tr :lipas.admin/users)]
+       (when (= 0 selected-tab)
+         [mui/card {:square true}
+          [mui/card-content
+           [mui/typography {:variant "h5"}
+            (tr :lipas.admin/users)]
 
-          ;; Full-screen user dialog
-          [user-dialog tr]
+           ;; Full-screen user dialog
+           [user-dialog tr]
 
-          [mui/grid {:container true :spacing 4}
+           [mui/grid {:container true :spacing 4}
 
-           ;; Add user button
-           [mui/grid {:item true :style {:flex-grow 1}}
-            [mui/fab
-             {:color    "secondary"
-              :size     "small"
-              :style    {:margin-top "1em"}
-              :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-             [mui/icon "add"]]]
+            ;; Add user button
+            [mui/grid {:item true :style {:flex-grow 1}}
+             [mui/fab
+              {:color    "secondary"
+               :size     "small"
+               :style    {:margin-top "1em"}
+               :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
+              [mui/icon "add"]]]
 
-           ;; Status selector
-           [mui/grid {:item true}
-            [lui/select
-             {:style     {:width "150px"}
-              :label     "Status"
-              :value     status
-              :items     ["active" "archived"]
-              :value-fn  identity
-              :label-fn  identity
-              :on-change #(==> [::events/select-status %])}]]
+            ;; Status selector
+            [mui/grid {:item true}
+             [lui/select
+              {:style     {:width "150px"}
+               :label     "Status"
+               :value     status
+               :items     ["active" "archived"]
+               :value-fn  identity
+               :label-fn  identity
+               :on-change #(==> [::events/select-status %])}]]
 
-           ;; Users filter
-           [mui/grid {:item true}
-            [lui/text-field
-             {:label     (tr :search/search)
-              :on-change #(==> [::events/filter-users %])
-              :value     users-filter}]]]
+            ;; Users filter
+            [mui/grid {:item true}
+             [lui/text-field
+              {:label     (tr :search/search)
+               :on-change #(==> [::events/filter-users %])
+               :value     users-filter}]]]
 
-          ;; Users table
-          [lui/table
-           {:headers
-            [[:email (tr :lipas.user/email)]
-             [:firstname (tr :lipas.user/firstname)]
-             [:lastname (tr :lipas.user/lastname)]
-             [:sports-sites (tr :lipas.user.permissions/sports-sites)]
-             [:cities (tr :lipas.user.permissions/cities)]
-             [:types (tr :lipas.user.permissions/types)]
-             [:activities (tr :lipas.user.permissions/activities)]]
-            :sort-fn   :email
-            :items     users
-            :on-select #(==> [::events/set-user-to-edit %])}]]])
+           ;; Users table
+           [lui/table
+            {:headers
+             [[:email (tr :lipas.user/email)]
+              [:firstname (tr :lipas.user/firstname)]
+              [:lastname (tr :lipas.user/lastname)]
+              [:sports-sites (tr :lipas.user.permissions/sports-sites)]
+              [:cities (tr :lipas.user.permissions/cities)]
+              [:types (tr :lipas.user.permissions/types)]
+              [:activities (tr :lipas.user.permissions/activities)]]
+             :sort-fn   :email
+             :items     users
+             :on-select #(==> [::events/set-user-to-edit %])}]]])
 
-      (when (= 2 selected-tab)
-        [type-codes-view])]]))
+       (when (= 2 selected-tab)
+         [type-codes-view])]]]))
 
 (defn main []
   (let [admin? (<== [:lipas.ui.user.subs/admin?])]

@@ -27,12 +27,14 @@
     (into [mui/card-content] content)]])
 
 (defn expansion-panel
-  [{:keys [label label-color default-expanded style]
-    :or   {label-color "inherit" style {:margin-top "1em"}}} & children]
+  [{:keys [label label-icon label-color default-expanded style disabled]
+    :or   {label-color "inherit" style {:margin-top "1em"} disabled false}}
+   & children]
   [mui/expansion-panel
-   {:default-expanded default-expanded :style style}
+   {:default-expanded default-expanded :style style :disabled disabled}
    [mui/expansion-panel-summary
     {:expand-icon (r/as-element [mui/icon "expand_more"])}
-
+    (when label-icon
+      [:span {:style {:margin-right "12px"}} label-icon])
     [mui/typography {:color label-color :variant "button"} label]]
    (into [mui/expansion-panel-details] children)])

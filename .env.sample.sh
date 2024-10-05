@@ -96,3 +96,15 @@ export UTP_WEBHOOK_SUBSCRIPTION_KEY=***FILL_THIS***
 export UTP_WEBHOOK_TOKEN_CLIENT_ID="36e1fff5-f466-4e42-a10d-1467d8a68109"
 export UTP_WEBHOOK_TOKEN_CLIENT_SECRET=***FILL_THIS***
 export UTP_WEBHOOK_TOKEN_URL="https://login.microsoftonline.com/bdb27328-5c0b-4132-9b09-c24522571ad9/oauth2/token"
+
+# PTV
+export PTV_API_URL="https://api.palvelutietovaranto.trn.suomi.fi/api"
+export PTV_TOKEN_URL="https://palvelutietovaranto.trn.suomi.fi/api/auth/api-login"
+export PTV_SERVICE_URL="https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
+export PTV_SERVICE_LOCATION_URL="https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
+export PTV_ORG_ID=***FILL_THIS***
+export PTV_API_USERNAME=***FILL_THIS***
+export PTV_API_PASSWORD=***FILL_THIS***
+
+# Open AI
+export OPEN_AI_API_KEY=***FILL_THIS***

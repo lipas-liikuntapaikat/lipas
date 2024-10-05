@@ -385,12 +385,15 @@
                      (enable-highlighting! mode)
                      map-utils/clear-problems!
                      (map-utils/show-problems! problems))]
+    #_(println "mode" (:name mode))
+    #_(println "submode" (:sub-mode mode))
     (cond
       (= :simplifying (:sub-mode mode))
       (simplify-edits! map-ctx mode)
 
       (= :selecting (:sub-mode mode))
-      (enable-highlighting! map-ctx mode)
+      (-> map-ctx
+          (set-editing-mode! mode))
 
       (= :simplifying (:sub-mode old-mode))
       (-> map-ctx

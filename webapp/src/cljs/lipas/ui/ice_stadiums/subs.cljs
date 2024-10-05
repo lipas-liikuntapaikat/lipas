@@ -96,7 +96,7 @@
 
 (re-frame/reg-sub
  ::types-by-type-code
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [types _]
    (select-keys types [2510 2520])))
 
@@ -168,7 +168,7 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
- :<- [:lipas.ui.sports-sites.subs/all-types]
+ :<- [:lipas.ui.sports-sites.subs/active-types]
  :<- [::size-categories]
  :<- [::condensate-energy-targets]
  :<- [::refrigerants]

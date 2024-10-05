@@ -1,7 +1,7 @@
 (ns lipas.ui.subs
   (:require
-   [re-frame.core :as re-frame]
-   [clojure.string :refer [upper-case]]))
+   [clojure.string :refer [upper-case]]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::current-route

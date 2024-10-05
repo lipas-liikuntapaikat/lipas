@@ -30,6 +30,20 @@
 (defn- dummy-props [m]
   (assoc m :properties {}))
 
+(defn point->dummy-area
+  [fcoll]
+  (let [coords (-> fcoll :features first :geometry :coordinates)
+        [y x]  coords
+        delta  0.001] ; ~111m in WGS84
+    {:type     "FeatureCollection"
+     :features [{:type       "Feature"
+                 :geometry {:type        "Polygon"
+                            :coordinates [[coords
+                                           [y (+ x delta)]
+                                           [(+ y delta) (+ x delta)]
+                                           [(+ y delta) x]
+                                           coords]]}}]}))
+
 (defn point? [fcoll]
   (= "Point" (-> fcoll :features first :geometry :type)))
 

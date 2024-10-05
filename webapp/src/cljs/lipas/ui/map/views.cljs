@@ -5,12 +5,13 @@
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+   ["react" :as react]
    #_[lipas.ui.feedback.views :as feedback]
    #_[lipas.ui.sports-sites.football.views :as football]
-   ["react" :as react]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
+   [lipas.flags :as flags]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
@@ -21,6 +22,7 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.mui :as mui]
    [lipas.ui.navbar :as nav]
+   [lipas.ui.ptv.views :as ptv]
    [lipas.ui.reminders.views :as reminders]
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.views :as search]
@@ -1668,10 +1670,20 @@
 (defn default-tools
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
+        admin?              (<== [:lipas.ui.user.subs/admin?])
         mode-name           (<== [::subs/mode-name])
-        show-create-button? (<== [::subs/show-create-button?])]
+        show-create-button? (<== [::subs/show-create-button?])
+        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
     [:<>
+     ;; PTV dialog
+     ;; TODO Disabled until ready for release
+     (when (and flags/ptv-enabled? logged-in?)
+       [ptv/dialog {:tr tr}])
+
+     ;; Address search dialog
      [address-search-dialog]
+
+     ;; Floating container
      [lui/floating-container {:bottom 0 :background-color "transparent"}
       [mui/grid
        {:container   true
@@ -1707,7 +1719,18 @@
              :on-click #(==> (if (= mode-name :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
-            [mui/icon "insights"]]]])]]]))
+            [mui/icon "insights"]]]])
+
+       ;; PTV button
+       (when (and flags/ptv-enabled? logged-in? admin?)
+         [mui/tooltip {:title (tr :ptv/tooltip)}
+          [mui/grid {:item true}
+           [mui/fab
+            {:size     "small"
+             :on-click #(==> (if ptv-dialog-open?
+                               [:lipas.ui.ptv.events/close-dialog]
+                               [:lipas.ui.ptv.events/open-dialog]))}
+            [mui/icon "ios_share"]]]])]]]))
 
 (defn add-view
   [{:keys [tr width]}]
@@ -1757,7 +1780,7 @@
   (let [tr           (<== [:lipas.ui.subs/translator])
         logged-in?   (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
-        width (mui/use-width)
+        width        (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}

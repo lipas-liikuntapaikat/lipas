@@ -57,6 +57,22 @@
     :region            (env! :aws-region)
     :s3-bucket         (env! :aws-s3-bucket)
     :s3-bucket-prefix  (env! :aws-s3-bucket-prefix)}
+   :ptv
+   {:api-url              (env! :ptv-api-url)
+    :token-url            (env! :ptv-token-url)
+    :service-url          (env! :ptv-service-url)
+    :service-location-url (env! :ptv-service-location-url)
+    :creds
+    {:org-id (env! :ptv-org-id)
+     :api
+     {:username (env! :ptv-api-username)
+      :password (env! :ptv-api-password)}}}
+   :open-ai
+   {:api-key         (env! :open-ai-api-key)
+    :project         "ptv"
+    :completions-url "https://api.openai.com/v1/chat/completions"
+    :models-url      "https://api.openai.com/v1/models"
+    :model           "gpt-4o-mini" #_ "gpt-4o" #_"gpt-4-turbo" #_ "gpt-3.5-turbo" #_ "gpt-3.5-turbo-1106"}
    :app
    {:db        (ig/ref :lipas/db)
     :emailer   (ig/ref :lipas/emailer)

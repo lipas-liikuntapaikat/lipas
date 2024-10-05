@@ -1,6 +1,6 @@
 (ns lipas.data.admins)
 
-(def all
+(def old
   {"city-sports"             {:fi "Kunta / liikuntatoimi"
                               :en "City / sports"
                               :se "Kommun/ idrottsväsende"}
@@ -34,3 +34,9 @@
    "unknown"                 {:fi "Ei tietoa"
                               :en "Unkonwn"
                               :se "Okänt"}})
+
+(def all
+  (-> old
+      (assoc-in ["private-association" :fi] "Yhdistys")
+      (assoc-in ["private-company" :fi] "Yritys")
+      (assoc-in ["private-foundation" :fi] "Säätiö")))

@@ -126,6 +126,11 @@
     :radius 9,
     :fill {:color "#8fed75"},
     :stroke {:color "#000000"}},
+   1190
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#ffffff"},
+    :stroke {:color "#000000"}},
    4422
    {:shape "linestring",
     :stroke
@@ -518,6 +523,10 @@
     :radius 9,
     :fill {:color "#62d53c"},
     :stroke {:color "#000000"}},
+   1650
+   {:shape "polygon",
+    :fill {:color "#62d53c"},
+    :stroke {:color "#000000" :width 1.5}},
    2250
    {:shape "square",
     :radius 9,
@@ -747,4 +756,19 @@
      :line-cap "round",
      :line-join "round",
      :line-dash [5 2]},
-    :fill {:color "#000000"}}})
+    :fill {:color "#000000"}}
+   2225
+   {:shape "square",
+    :radius 9,
+    :fill {:color "#ac6c46"},
+    :stroke {:color "#000000"}}
+   2620
+   {:shape "square",
+    :radius 9,
+    :fill {:color "#ac6c46"},
+    :stroke {:color "#000000"}}
+   3250
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#aaaaff"},
+    :stroke {:color "#000000"}}})

@@ -130,6 +130,14 @@ services:
       AWS_REGION:
       AWS_S3_BUCKET:
       AWS_S3_BUCKET_PREFIX:
+      PTV_API_URL:
+      PTV_TOKEN_URL:
+      PTV_SERVICE_URL:
+      PTV_SERVICE_LOCATION_URL:
+      PTV_ORG_ID:
+      PTV_API_USERNAME:
+      PTV_API_PASSWORD:
+      OPEN_AI_API_KEY:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
