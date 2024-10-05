@@ -175,6 +175,7 @@
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
 (s/def :lipas/hours-in-day (int-in  0 (inc 24)))
+(s/def :lipas/hours-in-day-with-fractions (number-in {:min 0 :max (inc 24)}))
 
 (s/def :lipas/locale* #{:fi :se :en})
 (s/def :lipas/locale
@@ -1551,7 +1552,7 @@
 (s/def :lipas.ice-stadium.conditions/air-humidity-min (int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/air-humidity-max (int-in 0 (inc 100)))
 (s/def :lipas.ice-stadium.conditions/stand-temperature-c (int-in -10 (inc 50)))
-(s/def :lipas.ice-stadium.conditions/daily-open-hours :lipas/hours-in-day)
+(s/def :lipas.ice-stadium.conditions/daily-open-hours :lipas/hours-in-day-with-fractions)
 (s/def :lipas.ice-stadium.conditions/open-months (int-in 0 (inc 12)))
 
 (s/def :lipas.ice-stadium.conditions/ice-surface-temperature-c
@@ -1804,14 +1805,14 @@
 ;; Conditions ;;
 
 (s/def :lipas.swimming-pool.conditions/open-days-in-year (int-in 0 (inc 365)))
-(s/def :lipas.swimming-pool.conditions/daily-open-hours :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-mon :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-tue :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-wed :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-thu :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-fri :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-sat :lipas/hours-in-day)
-(s/def :lipas.swimming-pool.conditions/open-hours-sun :lipas/hours-in-day)
+(s/def :lipas.swimming-pool.conditions/daily-open-hours :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-mon :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-tue :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-wed :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-thu :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-fri :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-sat :lipas/hours-in-day-with-fractions)
+(s/def :lipas.swimming-pool.conditions/open-hours-sun :lipas/hours-in-day-with-fractions)
 
 (s/def :lipas.swimming-pool/conditions
   (s/keys :opt-un [:lipas.swimming-pool.conditions/open-days-in-year
