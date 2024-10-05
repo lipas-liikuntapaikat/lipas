@@ -5,12 +5,13 @@
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+   ["react" :as react]
    #_[lipas.ui.feedback.views :as feedback]
    #_[lipas.ui.sports-sites.football.views :as football]
-   ["react" :as react]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
+   [lipas.flags :as flags]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
@@ -1675,7 +1676,8 @@
         ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
     [:<>
      ;; PTV dialog
-     (when logged-in?
+     ;; TODO Disabled until ready for release
+     (when (and flags/ptv-enabled? logged-in?)
        [ptv/dialog {:tr tr}])
 
      ;; Address search dialog
@@ -1720,7 +1722,7 @@
             [mui/icon "insights"]]]])
 
        ;; PTV button
-       (when (and logged-in? admin?)
+       (when (and flags/ptv-enabled? logged-in? admin?)
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
            [mui/fab

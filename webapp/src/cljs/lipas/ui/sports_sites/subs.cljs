@@ -158,7 +158,7 @@
 
 (re-frame/reg-sub
  ::type-categories
- :<- [:active-types]
+ :<- [::active-types]
  (fn [types _]
    (concat
     (for [[k v] types]
