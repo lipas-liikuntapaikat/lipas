@@ -643,7 +643,7 @@
     {:tooltip        "Selvitä osoite automaattisesti"
      :choose-address "Valitse osoite"
      :helper-text1   "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella."
-     :helper-text2   "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK napin painamisen jälkeen."
+     :helper-text2   "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK-napin painamisen jälkeen."
      :addresses      "Lähimmät osoitteet"}
     :ice-comparison     {:headline "Hallien vertailu"},
     :lipas.visitors
