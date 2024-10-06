@@ -263,11 +263,11 @@
           [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
 
           ;; Address locator
-          (when address-locator-component
+          (when (and editing? address-locator-component)
             address-locator-component)])
 
        ;; No address switch
-       (when-not address-required?
+       (when (and editing? (not address-required?))
          {:label      (tr :lipas.location/no-address)
           :value      @no-address?
           :form-field [lui/switch
