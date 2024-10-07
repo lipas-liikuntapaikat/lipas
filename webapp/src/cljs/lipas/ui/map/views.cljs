@@ -1187,6 +1187,7 @@
            ]
 
           (concat
+           ;; FIXME: Just reagent elements, maybe :<>
            (lui/edit-actions-list
             {:editing?              editing?
              :editing-allowed?      editing-allowed?

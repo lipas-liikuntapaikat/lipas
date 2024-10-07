@@ -1,4 +1,4 @@
-(ns lipas.dev
+(ns legacy-dev
   "Entrypoint for `lein ring` dev server."
   (:require
    [lipas.backend.system :as backend]

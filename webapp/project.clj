@@ -11,7 +11,7 @@
    [metosin/malli "0.16.2"]
 
    ;;; Frontend ;;;
-   [thheller/shadow-cljs "2.28.11"]
+   [thheller/shadow-cljs "2.28.16"]
    [org.clojure/clojurescript "1.11.132"]
    [reagent "1.2.0"]
    [re-frame "1.4.3"]
@@ -54,7 +54,7 @@
   :plugins [[lein-ring "0.12.5"]
             [migratus-lein "0.7.0"]]
 
-  :ring {:handler      lipas.dev/dev-handler
+  :ring {:handler      legacy-dev/dev-handler
          :port         8091
          :auto-reload? true
          :reload-paths ["src/clj" "src/cljc"]}
@@ -87,11 +87,12 @@
   :profiles
   {:dev
    {:repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-    :source-paths ["src/cljs" "src/cljc" "src/js"]
+    :source-paths ["src/cljs" "src/cljc" "src/js" "dev"]
     :dependencies
     [;;; Frontend ;;;
      [binaryage/devtools "1.0.7"]
      [day8.re-frame/re-frame-10x "1.9.9"]
+     [metosin/reagent-dev-tools "1.0.3"]
      [cider/piggieback "0.5.3"]
 
      ;;; Backend ;;;

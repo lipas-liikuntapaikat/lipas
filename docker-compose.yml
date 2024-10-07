@@ -47,6 +47,17 @@ services:
     volumes:
       - './nginx/proxy_dev.conf:/etc/nginx/templates/default.conf.template:z'
 
+  proxy-local:
+    extends:
+      service: proxy-base
+    links:
+      - mapproxy
+      - logstash
+      - kibana
+      - geoserver
+    volumes:
+      - './nginx/proxy_local.conf:/etc/nginx/templates/default.conf.template:z'
+
   htpasswd:
     image: lipas/htpasswd
     build:
@@ -75,8 +86,9 @@ services:
       - './mapproxy:/lipas:z'
       - './mapproxy/start.sh:/start.sh:z'
       - 'mapproxy_cache:/mapproxy/cache_data'
-    ports:
-      - '8080:8080'
+      # No need to expose
+      #ports:
+      #  - '8080:8080'
 
   backend-base:
     image: clojure:lein

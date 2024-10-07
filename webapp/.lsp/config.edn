@@ -1,0 +1,4 @@
+{:clean {:automatically-after-ns-refactor true
+         :ns-inner-blocks-indentation :keep
+         :sort {:require :lexicographically}}
+ :log-path "lsp.log"}

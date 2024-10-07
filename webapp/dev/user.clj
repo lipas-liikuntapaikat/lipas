@@ -1,21 +1,12 @@
-(ns lipas.repl
+(ns user
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
    [clojure.tools.namespace.repl]
-   [integrant.core :as ig]
-   [integrant.repl]
-   [integrant.repl.state]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.system :as system]
-   [lipas.integration.core :as integrations]
-   [lipas.maintenance :as maintenance]
-   [lipas.search-indexer :as search-indexer]
-   [lipas.worker :as worker]))
+   [integrant.repl :refer [reset reset-all halt go]]
+   [integrant.repl.state]))
 
-(def dev-config (dissoc config/system-config :lipas/nrepl))
-
-(integrant.repl/set-prep! #(identity dev-config))
+(integrant.repl/set-prep! (fn []
+                            (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
 #_(clojure.tools.namespace.repl/set-refresh-dirs "/src")
 
 (defn current-config []
@@ -29,25 +20,6 @@
 
 (defn current-config []
   integrant.repl.state/config)
-
-(defn start! []
-  (integrant.repl/go))
-
-(defn stop! []
-  (integrant.repl/halt))
-
-(defn resume! []
-  (integrant.repl/resume))
-
-(defn reload!
-  "Reloads code for changed files in classpath and restarts the system."
-  []
-  (integrant.repl/reset))
-
-(defn reload-all!
-  "Reloads code for all files in classpath and restarts the system."
-  []
-  (integrant.repl/reset-all))
 
 (defn db
   "Returns the :lipas/db key of the currently running system. Useful for
@@ -65,25 +37,28 @@
 
 (defn reindex-search!
   []
-  (search-indexer/main (db) (search) "search"))
+  ((requiring-resolve 'lipas.backend.search-indexer/main) (db) (search) "search"))
 
 (defn reindex-analytics!
   []
-  (search-indexer/main (db) (search) "analytics"))
+  ((requiring-resolve 'lipas.backend.search-indexer/main) (db) (search) "analytics"))
 
 (defn reset-password!
   [email password]
-  (let [user (core/get-user (db) email)]
-    (core/reset-password! (db) user password)))
+  (let [user ((requiring-resolve 'lipas.backend.core/get-user) (db) email)]
+    ((requiring-resolve 'lipas.backend.core/reset-password!) (db) user password)))
 
 (defn reset-admin-password!
   [password]
   (reset-password! "admin@lipas.fi" password))
 
 (comment
-  (start!)
-  (reload!)
+  (go)
+  (reset)
   (reindex-search!)
   (reindex-analytics!)
   (reset-admin-password! "kissa13")
+
+  (require '[migratus.core :as migratus])
+  (migratus/create nil "roles" :edn)
   )

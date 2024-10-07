@@ -7,7 +7,6 @@
 /geoserver/*
 !/geoserver/README.md
 /.clj-kondo
-/.lsp
 /osrm/*
 !/osrm/README.md
 !/osrm/update-data.sh
@@ -28,7 +27,7 @@ webapp/.clj-kondo/*
 !webapp/.clj-kondo/config.edn
 webapp/node_modules
 webapp/dist
-webapp/.lsp
+webapp/.lsp/.cache
 webapp/out
 webapp/.shadow-cljs
 webapp/.lein-repl-history
