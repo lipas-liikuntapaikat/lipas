@@ -1,7 +1,17 @@
 (ns lipas.ui.admin.views
   (:require
+   ["@mui/material/Button$default" :as Button]
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/List$default" :as List]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+   ["@mui/material/ListItemText$default" :as ListItemText]
+   ["@mui/material/MenuItem$default" :as MenuItem]
+   ["@mui/material/Select$default" :as Select]
    [clojure.spec.alpha :as s]
    [lipas.data.styles :as styles]
+   [lipas.roles :as roles]
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
@@ -129,6 +139,62 @@
           :value     (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
           :disabled  existing?}]]]
+
+      [lui/form-card {:title "Roolit"}
+       [mui/form-group
+        [mui/card {:style {:background-color mui/gray3
+                           :margin-bottom    "1em"}}
+         [mui/card-header {:subheader (tr :lipas.user/requested-permissions)}]
+         [mui/card-content
+          [mui/typography
+           [:i (or (-> user :user-data :permissions-request)
+                   "-")]]]]
+
+        [:> List
+         (for [{:keys [role city-code type-code activity lipas-id] :as x} (-> user :permissions :roles)]
+           [:> ListItem
+            {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
+            [:> ListItemText
+             (pr-str x)]
+            [:> ListItemSecondaryAction
+             [:> IconButton
+              [:> Icon "delete"]]]])]
+
+        [:h4 "Uusi käyttäjärooli"]
+
+        [:> Select
+         {:value nil
+          :on-change (fn [_e])}
+         (for [[k _] roles/roles]
+           [:> MenuItem
+            {:value k}
+            k])]
+
+        [lui/autocomplete
+         {:items     sites
+          :label     "Paikka"
+          :value     nil
+          :multi?    true
+          :on-change nil}]
+
+        [lui/autocomplete
+         {:items     types
+          :label     "Tyyppi"
+          :value     nil
+          :multi?    true
+          :on-change nil}]
+
+        [lui/autocomplete
+         {:items     cities
+          :label     "Kaupunki"
+          :value     nil
+          :multi?    true
+          :on-change nil}]
+
+        [:> Button
+         "Lisää"]
+
+        ]]
 
       ;;; Permissions
       ;; TODO: Replace this with roles management
@@ -380,7 +446,7 @@
              [[:email (tr :lipas.user/email)]
               [:firstname (tr :lipas.user/firstname)]
               [:lastname (tr :lipas.user/lastname)]
-              [:sports-sites (tr :lipas.user.permissions/sports-sites)]
+              ;; [:sports-sites (tr :lipas.user.permissions/sports-sites)]
               [:cities (tr :lipas.user.permissions/cities)]
               [:types (tr :lipas.user.permissions/types)]
               [:activities (tr :lipas.user.permissions/activities)]]
