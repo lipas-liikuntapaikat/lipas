@@ -39,12 +39,14 @@
  (fn [user _]
    (-> user :login :permissions)))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::utp-user?
  :<- [::permissions]
  (fn [permissions _]
    (permissions/activities? permissions)))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::permission-to-cities
  :<- [::permissions]
@@ -54,6 +56,7 @@
      all-cities
      (select-keys all-cities cities))))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::permission-to-types
  :<- [::permissions]
@@ -63,6 +66,7 @@
      all-types
      (select-keys all-types types))))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-sports-sites?
  :<- [::permissions]
@@ -73,6 +77,7 @@
         (or all-cities? (seq cities))
         (or all-types? (seq types))))))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::permission-to-activities
  :<- [::permissions]
@@ -82,12 +87,14 @@
      all-activities
      (select-keys all-activities activities))))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-lois?
  :<- [::permissions]
  (fn [permissions _]
    (permissions/activities? permissions)))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-lois-only?
  :<- [::can-add-sports-sites?]
@@ -95,6 +102,7 @@
  (fn [[can-add-sports-sites? can-add-lois?] _]
    (and can-add-lois? (not can-add-sports-sites?))))
 
+;; FIXME: Remove
 (re-frame/reg-sub
  ::permission-to-publish?
  (fn [[_ lipas-id]]
@@ -103,13 +111,6 @@
  (fn [[permissions sports-site] _]
    (when (and permissions sports-site)
      (permissions/modify-sports-site? permissions sports-site))))
-
-(re-frame/reg-sub
- ::permission-to-publish-site?
- :<- [::permissions]
- (fn [permissions [_ sports-site]]
-   (when (and permissions sports-site)
-     (permissions/publish? permissions sports-site))))
 
 (defn ->list-entry [locale cities types sports-site]
   (let [city-code (-> sports-site :location :city :city-code)

@@ -1,11 +1,17 @@
 (ns lipas.ui.user.views
   (:require
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/Stack$default" :as Stack]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.user.events :as events]
    [lipas.ui.user.subs :as subs]
    [lipas.ui.utils :refer [<== ==> navigate!]]
-   [re-frame.core :as rf]))
+   [re-frame.core :as rf]
+   ["@mui/material/Typography$default" :as Typography]
+   ["@mui/material/ListItemText$default" :as ListItemText]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/List$default" :as List]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -83,6 +89,100 @@
 1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
 3130, 3210 4401, 4402, 4403, 4404, 4405})
 
+;; TODO: Localization
+(def role-context-k->label
+  {:city-code (fn [city-code]
+                (if city-code
+                  (:fi (:name @(rf/subscribe [:lipas.ui.sports-sites.subs/city city-code])))
+                  "Kaikki kaupungit"))
+   :type-code (fn [type-code]
+                (if type-code
+                  (:fi (:name @(rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code type-code])))
+                  "Kaikki tyypit"))
+   :activity (fn [activity]
+               (str "Activity tyyppi: " activity))
+   :lipas-id (fn [lipas-id]
+               (str "Paikka: " lipas-id))})
+
+(defn role-context-list
+  [{:keys [role-ctx-k
+           role-ctx-ks
+           roles]}]
+  (let [has-ctx (some (fn [role]
+                        (contains? role role-ctx-k))
+                      roles)
+        ctx-vs (group-by role-ctx-k roles)]
+    (if has-ctx
+      [:> List
+       {:dense true
+        :sx {:pl 2}}
+       (doall
+         (for [[v roles] ctx-vs]
+           [:<>
+            {:key (or v "all")}
+            [:> ListItem
+             [:> ListItemText
+              ((get role-context-k->label role-ctx-k) v)]]
+            (when (seq role-ctx-ks)
+              [role-context-list
+               {:role-ctx-k (first role-ctx-ks)
+                :role-ctx-ks (rest role-ctx-ks)
+                :roles roles}])]))]
+      (when (seq role-ctx-ks)
+        [role-context-list
+         {:role-ctx-k (first role-ctx-ks)
+          :role-ctx-ks (rest role-ctx-ks)
+          :roles roles}]))))
+
+(defn explain-roles []
+  (let [roles (or [{:role :basic-manager
+                    :city-code 91
+                    :type-code 104}
+                   {:role :basic-manager
+                    :city-code 92
+                    :type-code 104}
+                   {:role :basic-manager
+                    :city-code 91
+                    :type-code 103}
+                   {:role :basic-manager
+                    :city-code 92
+                    :type-code 103}
+                   {:role :basic-manager
+                    :city-code 142}
+                   {:role :basic-manager
+                    :lipas-id 123}
+                   {:role :floorball-manager
+                    :city-code 837}
+                   {:role :floorball-manager
+                    :city-code 92
+                    :type-code 103}
+                   {:role :acitivities-manager
+                    :activity "fishing"}]
+                  @(rf/subscribe [::subs/roles]))
+        role-ctx-ks [:city-code
+                     :type-code
+                     :activity
+                     :lipas-id]
+        role-k->roles (group-by :role roles) ]
+    [:<>
+     (doall
+       (for [[role-k roles] role-k->roles]
+         [:<>
+          {:key role-k}
+          [:> Stack
+           {:direction "row"
+            :sx {:alignItems "center"
+                 :p 1}}
+           [:> Icon "lock_open"]
+           [:> Typography
+            {:variant "body2"
+             :sx {:ml 1}}
+            role-k]]
+          [role-context-list
+           {:role-ctx-k (first role-ctx-ks)
+            :role-ctx-ks (rest role-ctx-ks)
+            :roles roles}]]))]))
+
 (defn user-panel [tr user]
   (let [;; TODO: Replaces these with role/privilege checks
         admin?     (<== [::subs/admin?])
@@ -155,7 +255,9 @@
          [mui/card-header {:title (tr :lipas.user/permissions)}]
          [mui/card-content
 
-          ;; TODO: Check roles directly?
+          [explain-roles]
+
+          ;; TODO: Remove the old version
           (when admin?
             [lui/icon-text
              {:icon "lock_open"

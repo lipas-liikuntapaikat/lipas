@@ -593,3 +593,9 @@
  :<- [::sports-sites]
  (fn [sports-sites _]
    (-> sports-sites :name-check :response :status (= :conflict))))
+
+(re-frame/reg-sub
+  ::city
+  :<- [::cities-by-city-code]
+  (fn [cities [_ city-code]]
+    (get cities city-code)))
