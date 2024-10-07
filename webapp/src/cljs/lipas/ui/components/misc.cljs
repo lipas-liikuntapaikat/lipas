@@ -5,6 +5,7 @@
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
+;; Just return react elements, with <>
 (defn edit-actions-list
   [{:keys [editing? valid? logged-in?  user-can-publish? on-discard
            discard-tooltip edit-tooltip publish-tooltip on-edit-start

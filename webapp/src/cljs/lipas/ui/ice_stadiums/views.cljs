@@ -116,6 +116,7 @@
       :on-close    close
 
       :bottom-actions
+      ;; FIXME: Just reagent elements, maybe :<>
       (conj
        (lui/edit-actions-list
         {:editing?          editing?

@@ -85,6 +85,7 @@
       :close-label (tr :actions/back-to-listing)
 
       :bottom-actions
+      ;; FIXME: Just reagent elements, maybe :<>
       (conj
        (lui/edit-actions-list
         {:editing?          editing?

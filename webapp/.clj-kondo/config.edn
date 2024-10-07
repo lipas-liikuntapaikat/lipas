@@ -1,3 +1,5 @@
 {:lint-as
  {reagent.core/with-let clojure.core/let
-  etaoin.api/doto-wait clojure.core/doto}}
+  etaoin.api/doto-wait clojure.core/doto}
+ :linters {:unsorted-requires-namespaces {:level :warning
+                                          :sort :case-sensitive}}}
