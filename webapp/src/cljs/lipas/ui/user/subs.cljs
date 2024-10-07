@@ -1,7 +1,8 @@
 (ns lipas.ui.user.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.permissions :as permissions]))
+   [lipas.permissions :as permissions]
+   [lipas.roles :as roles]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::logged-in?
@@ -168,3 +169,28 @@
  :<- [::data]
  (fn [user _]
    (-> user :experimental-features?)))
+
+;; Role basic permissions
+
+(re-frame/reg-sub
+  ::roles
+  :<- [::permissions]
+  (fn [x _]
+    (:roles x)))
+
+(re-frame/reg-sub
+  ::dev-overrides
+  (fn [db _]
+    ;; This value is only ever set from dev tools, which is only enabled on local builds
+    (:project-devtools/privilege-override db)))
+
+(re-frame/reg-sub
+  ::check-privilege
+  :<- [::user]
+  :<- [::dev-overrides]
+  (fn [[user overrides] [_ role-context k disable-overrides?]]
+    (let [has-override? (when-not (true? disable-overrides?)
+                          (contains? overrides k))]
+      (if has-override?
+        (get overrides k)
+        (roles/check-privilege (:login user) role-context k)))))

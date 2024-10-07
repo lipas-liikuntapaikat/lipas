@@ -6,7 +6,8 @@
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [re-frame.core :as rf]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open?    (<== [::subs/magic-link-dialog-open?])
@@ -130,6 +131,7 @@
           :disabled  existing?}]]]
 
       ;;; Permissions
+      ;; TODO: Replace this with roles management
       [lui/form-card {:title (tr :lipas.user/permissions)}
        [mui/form-group
 
@@ -390,7 +392,7 @@
          [type-codes-view])]]]))
 
 (defn main []
-  (let [admin? (<== [:lipas.ui.user.subs/admin?])]
+  (let [admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :user-management])]
     (if admin?
       [admin-panel]
       (==> [:lipas.ui.events/navigate "/"]))))

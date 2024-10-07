@@ -660,6 +660,7 @@
       ["/actions/create-upload-url"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.api.create-upload-url/payload}
@@ -671,6 +672,7 @@
       ["/actions/upload-utp-image"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
          :parameters {:multipart {:file multipart/temp-file-part}}
          :handler
@@ -685,6 +687,7 @@
       ["/actions/save-loi"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.loi/document}
@@ -707,6 +710,7 @@
       ["/actions/get-ptv-integration-candidates"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -719,6 +723,7 @@
       ["/actions/generate-ptv-descriptions"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -731,6 +736,7 @@
       ["/actions/generate-ptv-service-descriptions"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -755,6 +761,7 @@
       ["/actions/fetch-ptv-services"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -779,6 +786,7 @@
       ["/actions/save-ptv-meta"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -791,11 +799,7 @@
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance
-      :middleware [;; privilege check based on route-data,
-                   ;; also enables token-auth and auth checks
-                   ;; per route.
-                   mw/privilege-middleware
-
+      :middleware [
                    ;; query-params & form-params
                    params/wrap-params
                    ;; content-negotiation
@@ -809,7 +813,11 @@
                    ;; coercing response bodys
                    coercion/coerce-response-middleware
                    ;; coercing request parameters
-                   coercion/coerce-request-middleware]}})
+                   coercion/coerce-request-middleware
+                   ;; privilege check based on route-data,
+                   ;; also enables token-auth and auth checks
+                   ;; per route.
+                   mw/privilege-middleware]}})
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
     (ring/create-default-handler))))

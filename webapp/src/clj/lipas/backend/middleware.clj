@@ -4,7 +4,8 @@
    [buddy.auth.middleware :refer [wrap-authentication]]
    [lipas.backend.auth :as auth]
    [lipas.roles :as roles]
-   [ring.util.http-response :as resp]))
+   [ring.util.http-response :as resp]
+   [taoensso.timbre :as log]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not
@@ -42,15 +43,15 @@
   (wrap-authentication handler auth/token-backend))
 
 (def privilege-middleware
-  {:name ::requires-privilege
+  {:name ::require-privilege
    :compile
    (fn [route-data _opts]
-     (if-let [required-privilege (:required-privilege route-data)]
-       (-> (fn [next-handler]
-             (fn [req]
-               (if (roles/check-privilege (:identity req) required-privilege)
+     (if-let [required-privilege (:require-privilege route-data)]
+       (fn [next-handler]
+         (-> (fn [req]
+               (if (roles/check-privilege (:identity req) nil required-privilege)
                  (next-handler req)
-                 (resp/forbidden {:error "Missing privilege"}))))
-           (auth)
-           (token-auth))
+                 (resp/forbidden {:error "Missing privilege"})))
+             (auth)
+             (token-auth)))
        {}))})

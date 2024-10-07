@@ -69,7 +69,8 @@
                  (= (:activity selection) (:activity role)))
              (or (nil? (:lipas-id role))
                  (= (:lipas-id selection) (:lipas-id role))))
-    (:role role)))
+    ;; Cast to keyword, DB and JSON return string values
+    (keyword (:role role))))
 
 (defn check-privilege
   "Check if given user has the asked privilege

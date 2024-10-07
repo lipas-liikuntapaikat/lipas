@@ -1,6 +1,7 @@
 (ns lipas.migrations.roles
   (:require [clojure.test :refer [deftest is testing]]
-            [lipas.backend.db.db :refer [get-users]]))
+            [lipas.backend.db.db :refer [get-users]]
+            [lipas.backend.db.user :as user]))
 
 (defn permissions->roles [permissions]
   (let [{:keys [admin? sports-sites cities types
@@ -66,8 +67,10 @@
              (permissions->roles {:cities [1 2]
                                   :types [100 200]})))))
 
-  ;; ???
-  ;; {:types [3210 3120 3110 3130], :cities [853], :draft? true, :all-types? true}
+  (testing "ignore types if all-types given"
+    (is (= [{:role :basic-manager
+             :city-code 853}]
+           (permissions->roles {:types [3210 3120 3110 3130], :cities [853], :draft? true, :all-types? true}))))
 
   (testing "existing user with access-to-activity"
     (is (= [{:role :activities-manager
@@ -78,15 +81,21 @@
                                              "fishing"]}))))
   )
 
-(defn migrate-up [{:keys [db] :as config}]
+(defn migrate-up [{:keys [db] :as _config}]
   (let [users (get-users db)]
-    (doseq [user users]
+    (doseq [user users
+            :let [roles (permissions->roles (:permissions user))]]
+      (user/update-user-permissions! db {:id (:id user)
+                                    :permissions (assoc (:permissions user) :roles roles)})
       (println (dissoc user :history :user-data))
-      (println (permissions->roles (:permissions user)))
+      (println roles)
       (println))))
 
-(defn migrate-down [config]
-  )
+(defn migrate-down [{:keys [db] :as _config}]
+  (let [users (get-users db)]
+    (doseq [user users]
+      (user/update-user-permissions! db {:id (:id user)
+                                         :permissions (dissoc (:permissions user))}))))
 
 (comment
   (migrate-up {:db (user/db)}))

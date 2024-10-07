@@ -1,10 +1,11 @@
 (ns lipas.ui.user.views
   (:require
-   [lipas.ui.mui :as mui]
    [lipas.ui.components :as lui]
-   [lipas.ui.user.subs :as subs]
+   [lipas.ui.mui :as mui]
    [lipas.ui.user.events :as events]
-   [lipas.ui.utils :refer [<== ==> navigate!]]))
+   [lipas.ui.user.subs :as subs]
+   [lipas.ui.utils :refer [<== ==> navigate!]]
+   [re-frame.core :as rf]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -83,7 +84,8 @@
 3130, 3210 4401, 4402, 4403, 4404, 4405})
 
 (defn user-panel [tr user]
-  (let [admin?     (<== [::subs/admin?])
+  (let [;; TODO: Replaces these with role/privilege checks
+        admin?     (<== [::subs/admin?])
         cities     (<== [::subs/permission-to-cities])
         types      (<== [::subs/permission-to-types])
         activities (<== [::subs/permission-to-activities])
@@ -121,7 +123,7 @@
           [mui/button {:href  "/passu-hukassa"
                        :color :primary}
            (str "> " (tr :reset-password/change-password))]
-          (when admin?
+          (when @(rf/subscribe [::subs/check-privilege nil :user-management])
             [mui/button {:href  "/admin"
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
@@ -153,6 +155,7 @@
          [mui/card-header {:title (tr :lipas.user/permissions)}]
          [mui/card-content
 
+          ;; TODO: Check roles directly?
           (when admin?
             [lui/icon-text
              {:icon "lock_open"
