@@ -275,17 +275,21 @@
              :into []))
 
 (s/def :lipas.user/permissions
-  (s/keys :opt-un [:lipas.user.permissions/admin?
+  (s/keys :opt-un [;; Old permissions
+                   :lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
                    :lipas.user.permissions/sports-sites
                    :lipas.user.permissions/all-cities?
                    :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types
-                   :lipas.user.permissions/activities]))
+                   :lipas.user.permissions/activities
+                   ;; New roles
+                   :lipas.user.permissions/roles]))
 
 ;; Role based permissions
-(s/def :lipas.role/role (set (keys roles/roles)))
+(s/def :lipas.role/role (st/spec {:spec (set (keys roles/roles))
+                                  :decode/json #(keyword %2)}))
 
 (s/def :lipas.role/activity :lipas.sports-site.activity/value)
 
@@ -2178,5 +2182,8 @@
   (stp/parse-spec :lipas/timestamp)
   (stp/parse-spec :lipas.sports-site/lipas-id)
 
-
-  )
+  (st/conform! :lipas.user/permissions
+               {:roles [{:role "basic-manager"
+                         :type-code 1620
+                         :city-code 20}]}
+               st/json-transformer))

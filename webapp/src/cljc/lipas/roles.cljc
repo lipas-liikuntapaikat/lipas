@@ -20,7 +20,9 @@
    :analysis-tool {:doc "Oikeus käyttää analyysityökalua"}
 
    :user-self {:doc "Oikeus omiin käyttäjätietoihin (salasanan vaihto jne)"}
-   :user-management {:doc "Käyttäjien hallinta (admin)"}})
+   :user-management {:doc "Käyttäjien hallinta (admin)"}
+
+   :ptv-management {:doc ""}})
 
 (def roles
   {:admin

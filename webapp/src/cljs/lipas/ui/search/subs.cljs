@@ -262,6 +262,7 @@
  :<- [:lipas.ui.subs/translator]
  :<- [::selected-results-table-columns]
  :<- [::results-table-specs]
+ ;; FIXME: What does this do with this types list? Currently checking for :create privilege
  :<- [:lipas.ui.user.subs/permission-to-types]
  :<- [:lipas.ui.user.subs/permission-to-cities]
  (fn [[tr selected-cols specs types cities] _]

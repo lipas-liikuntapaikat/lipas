@@ -32,25 +32,28 @@
  (fn [user _]
    (-> user :login :permissions)))
 
-;; FIXME: Roles
 (re-frame/reg-sub
- ::permission-to-cities
- :<- [::permissions]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- (fn [[{:keys [admin? all-cities? cities]} all-cities] _]
-   (if (or admin? all-cities?)
-     all-cities
-     (select-keys all-cities cities))))
+  ::permission-to-cities
+  :<- [::user]
+  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+  (fn [[user all-cities] _]
+    (into {} (filter (fn [[city-code _v]]
+                       (roles/check-privilege (:login user)
+                                              {:city-code city-code
+                                               :type-code ::roles/any}
+                                              :create))
+                     all-cities))))
 
-;; FIXME: Roles
-(re-frame/reg-sub
- ::permission-to-types
- :<- [::permissions]
- :<- [:lipas.ui.sports-sites.subs/active-types]
- (fn [[{:keys [admin? all-types? types]} all-types] _]
-   (if (or admin? all-types?)
-     all-types
-     (select-keys all-types types))))
+(re-frame/reg-sub ::permission-to-types
+  :<- [::user]
+  :<- [:lipas.ui.sports-sites.subs/active-types]
+  (fn [[user all-types] _]
+    (into {} (filter (fn [[type-code _v]]
+                       (roles/check-privilege (:login user)
+                                              {:type-code type-code
+                                               :city-code ::roles/any}
+                                              :create))
+                     all-types))))
 
 (re-frame/reg-sub
  ::can-add-sports-sites?
@@ -61,7 +64,7 @@
  (fn [x _]
    x))
 
-;; FIXME: Remove
+;; FIXME: Roles
 (re-frame/reg-sub
  ::permission-to-activities
  :<- [::permissions]
@@ -147,12 +150,6 @@
  :<- [::user-data]
  (fn [user _]
    (-> user :user-data :saved-diversity-settings)))
-
-(re-frame/reg-sub
- ::experimental-features?
- :<- [::data]
- (fn [user _]
-   (-> user :experimental-features?)))
 
 ;; Role basic permissions
 
