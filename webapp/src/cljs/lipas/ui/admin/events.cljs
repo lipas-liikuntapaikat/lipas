@@ -56,6 +56,29 @@
  (fn [db [_ path value]]
    (assoc-in db (into [:admin :editing-user] path) value)))
 
+(re-frame/reg-event-db ::set-new-role-value
+  (fn [db [_ k value]]
+    (if value
+      (update-in db [:admin :new-role] assoc k value)
+      (update-in db [:admin :new-role] dissoc k))))
+
+(re-frame/reg-event-db ::add-new-role
+  (fn [db _]
+    (let [role (reduce (fn [acc [k v]]
+                         (assoc acc k (:value v)))
+                       {}
+                       (:new-role (:admin db)))]
+      (-> db
+          (update-in [:admin :editing-user :permissions :roles] conj role)
+          (update-in [:admin] dissoc :new-role)))))
+
+(re-frame/reg-event-db ::remove-role
+  (fn [db [_ role]]
+    (update-in db [:admin :editing-user :permissions :roles]
+               (fn [roles]
+                 (into (empty roles)
+                       (remove #(= role %) roles))))))
+
 (re-frame/reg-event-db
  ::grant-access-to-activity-types
  (fn [db _]

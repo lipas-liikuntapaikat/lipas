@@ -75,8 +75,8 @@
         cities (use-subscribe [::subs/cities-list locale])
         types  (use-subscribe [::subs/types-list locale])
         sites  (use-subscribe [::subs/sites-list])
-        ;; activities (<== [::subs/activities-list locale])
-        ]
+        activities (<== [::subs/activities-list locale])
+        new-role (use-subscribe [::subs/new-role])]
     ($ Stack
        {:direction "column"
         :sx #js {:gap 1}}
@@ -87,47 +87,41 @@
        ($ Typography
           (tr :lipas.user.permissions.roles/new-role-explanation))
 
-       ($ FormControl
-          ($ InputLabel (tr :lipas.user.permissions.roles/role))
-          ($ Select
-             {:value ""
-              :on-change (fn [_e])
-              :variant "standard"
-              :label (tr :lipas.user.permissions.roles/role)
-              :displayEmpty true}
-             (for [[k {:keys [assignable]}] roles/roles
-                   :when assignable]
-               ($ MenuItem
-                  {:key k
-                   :value (name k)}
-                  (tr (keyword :lipas.user.permissions.roles.role-names k))))))
+       ($ autocomplete2
+          {:options   (to-array (for [[k {:keys [assignable]}] roles/roles
+                                      :when assignable]
+                                  {:value k
+                                   :label (tr (keyword :lipas.user.permissions.roles.role-names k))}))
+           :label     (tr :lipas.user.permissions.roles/role)
+           :value     (:role new-role)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :role v]))})
 
        ($ autocomplete2
           {:options   (to-array sites)
            :label     (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-           :value     nil
-           :onChange  nil})
+           :value     (:lipas-id new-role)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :lipas-id v]))})
 
        ($ autocomplete2
           {:options   (to-array types)
            :label     (tr :lipas.user.permissions.roles.context-keys/type-code)
-           :value     nil
-           :onChange  nil})
+           :value     (:type-code new-role)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :type-code v]))})
 
        ($ autocomplete2
           {:options   (to-array cities)
            :label     (tr :lipas.user.permissions.roles.context-keys/city-code)
-           :value     nil
-           :onChange  nil})
+           :value     (:city-code new-role)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :city-code v]))})
 
        ($ autocomplete2
-          {:options   (to-array [])
+          {:options   (to-array activities)
            :label     (tr :lipas.user.permissions.roles.context-keys/activity)
-           :value     nil
-           :onChange  nil})
+           :value     (:activity new-role)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :activity v]))})
 
        ($ Button
-          {}
+          {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
           "Lisää"))))
 
 (rf/reg-sub ::context-value-name
@@ -190,6 +184,7 @@
                                  :tr tr})))
                         ($ ListItemSecondaryAction
                            ($ IconButton
+                              {:onClick (fn [_e] (rf/dispatch [::events/remove-role x]))}
                               ($ Icon "delete"))))))
 
                 ($ new-role

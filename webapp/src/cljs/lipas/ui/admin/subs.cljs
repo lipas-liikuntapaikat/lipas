@@ -85,6 +85,11 @@
  (fn [db _]
    (get-in db [:admin :editing-user])))
 
+(re-frame/reg-sub
+ ::new-role
+ (fn [db _]
+   (get-in db [:admin :new-role])))
+
 (defn prettify-timestamp [s]
   (-> s
       (string/replace "T" " ")
