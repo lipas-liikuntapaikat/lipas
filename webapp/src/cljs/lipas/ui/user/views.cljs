@@ -1,17 +1,19 @@
 (ns lipas.ui.user.views
   (:require
    ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/List$default" :as List]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemText$default" :as ListItemText]
    ["@mui/material/Stack$default" :as Stack]
+   ["@mui/material/Typography$default" :as Typography]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.user.events :as events]
    [lipas.ui.user.subs :as subs]
    [lipas.ui.utils :refer [<== ==> navigate!]]
    [re-frame.core :as rf]
-   ["@mui/material/Typography$default" :as Typography]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/List$default" :as List]))
+   [uix.core :as uix :refer [defui $]]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -134,8 +136,23 @@
           :role-ctx-ks (rest role-ctx-ks)
           :roles roles}]))))
 
-(defn explain-roles []
-  (let [roles (or [{:role :basic-manager
+(defui role-context [{:keys [tr k v]}]
+  (let [locale (tr)
+        localized (use-subscribe [::subs/context-value-name k v locale])]
+    ($ Typography
+       {:key k
+        :component "span"
+        :sx #js {:mr 1}}
+       ;; Role context key name
+       (tr (keyword :lipas.user.permissions.roles.context-keys k))
+       ": "
+       (if (= :all v)
+         ($ :i (tr :lipas.user.permissions.roles/context-value-all))
+         localized))))
+
+(defui explain-roles [{:keys [tr]}]
+  (let [roles (use-subscribe [::subs/roles])
+        roles (or [{:role :basic-manager
                     :city-code 91
                     :type-code 104}
                    {:role :basic-manager
@@ -150,38 +167,39 @@
                    {:role :basic-manager
                     :city-code 142}
                    {:role :basic-manager
-                    :lipas-id 123}
+                    :lipas-id 505861}
                    {:role :floorball-manager
                     :city-code 837}
                    {:role :floorball-manager
                     :city-code 92
                     :type-code 103}
-                   {:role :acitivities-manager
-                    :activity "fishing"}]
-                  @(rf/subscribe [::subs/roles]))
-        role-ctx-ks [:city-code
-                     :type-code
-                     :activity
-                     :lipas-id]
-        role-k->roles (group-by :role roles) ]
-    [:<>
-     (doall
-       (for [[role-k roles] role-k->roles]
-         [:<>
-          {:key role-k}
-          [:> Stack
-           {:direction "row"
-            :sx {:alignItems "center"
-                 :p 1}}
-           [:> Icon "lock_open"]
-           [:> Typography
-            {:variant "body2"
-             :sx {:ml 1}}
-            role-k]]
-          [role-context-list
-           {:role-ctx-k (first role-ctx-ks)
-            :role-ctx-ks (rest role-ctx-ks)
-            :roles roles}]]))]))
+                   {:role :activities-manager
+                    :activity "fishing"}
+                   ]
+                  roles)
+        roles (sort-by (juxt :role :city-code :type-code :activities :lipas-id) roles)]
+    ($ :<>
+       (for [{:keys [role city-code type-code lipas-id activity] :as x} roles]
+         ($ :<>
+            {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
+            ($ Stack
+               {:direction "row"
+                :sx #js {:alignItems "center"
+                         :p 1}}
+               ($ Icon "lock_open")
+               ($ Typography
+                  {:variant "body2"
+                   :sx #js {:ml 1
+                            :mr 2}}
+                  (tr (keyword :lipas.user.permissions.roles.role-names role)))
+               (for [[k v] (cond-> (dissoc x :role)
+                             (and (:city-code x) (not (:type-code x))) (assoc :type-code :all)
+                             (and (:type-code x) (not (:city-code x))) (assoc :city-code :all))]
+                 ($ role-context
+                    {:key k
+                     :k k
+                     :v v
+                     :tr tr}))))))))
 
 (defn user-panel [tr user]
   (let [;; TODO: Replaces these with role/privilege checks
@@ -255,19 +273,23 @@
          [mui/card-header {:title (tr :lipas.user/permissions)}]
          [mui/card-content
 
-          [explain-roles]
+          ($ explain-roles
+             {:tr tr})
 
           ;; TODO: Remove the old version
+          #_
           (when admin?
             [lui/icon-text
              {:icon "lock_open"
               :text (tr :lipas.admin/access-all-sites)}])
 
+          #_
           (when (and all-cities? (not admin?))
             [lui/icon-text
              {:icon "lock_open"
               :text (tr :lipas.user/permission-to-all-cities)}])
 
+          #_
           (when (and (not-empty cities) (not all-cities?))
             [:<>
              [lui/icon-text
@@ -279,11 +301,13 @@
                 [mui/list-item
                  [mui/list-item-text s]]))])
 
+          #_
           (when (and all-types? (not admin?))
             [lui/icon-text
              {:icon "lock_open"
               :text (tr :lipas.user/permission-to-all-types)}])
 
+          #_
           (when (and (not-empty types) (not all-types?))
             [:<>
              [lui/icon-text
@@ -295,6 +319,7 @@
                 [mui/list-item
                  [mui/list-item-text t]]))])
 
+          #_
           (when (and (not all-cities?) (not all-types?) (empty? sites)
                      (empty? cities) (empty? types) (empty? activities))
             [mui/grid {:container true}
@@ -302,6 +327,7 @@
               {:icon "lock"
                :text (tr :lipas.user/no-permissions)}]])
 
+          #_
           (when (and (not admin?) (not-empty sites))
             [:<>
              [lui/icon-text

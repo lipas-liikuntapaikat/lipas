@@ -14,6 +14,11 @@
  (fn [activities _]
    (:data activities)))
 
+(re-frame/reg-sub ::activity-by-value
+  :<- [::data]
+  (fn [activities [_ value]]
+    (get activities value)))
+
 (re-frame/reg-sub
  ::mode
  :<- [::activities]

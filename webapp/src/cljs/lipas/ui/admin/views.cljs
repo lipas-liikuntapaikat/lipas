@@ -23,6 +23,7 @@
    [lipas.roles :as roles]
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
+   [lipas.ui.user.subs :as user-subs]
    [lipas.ui.components :as lui]
    [lipas.ui.components.autocompletes :refer [autocomplete2]]
    [lipas.ui.mui :as mui]
@@ -124,19 +125,9 @@
           {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
           "Lisää"))))
 
-(rf/reg-sub ::context-value-name
-  (fn [[_ context-key v _locale]]
-    (case context-key
-      :city-code (rf/subscribe [:lipas.ui.sports-sites.subs/city v])
-      :type-code (rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
-      :activities nil
-      :lipas-id nil))
-  (fn [x [_ _context-key _v locale]]
-    (get (:name x) locale)))
-
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
-        l-v (use-subscribe [::context-value-name k v locale])]
+        localized (use-subscribe [::user-subs/context-value-name k v locale])]
     ($ Typography
        {:key k
         :component "span"
@@ -145,7 +136,7 @@
        (tr (keyword :lipas.user.permissions.roles.context-keys k))
        ": "
        ;; Value localized name
-       l-v
+       localized
        ;; Value code
        " (" v ")")))
 
