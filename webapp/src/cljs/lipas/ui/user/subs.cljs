@@ -38,6 +38,7 @@
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
   (fn [[user all-cities] _]
     (into {} (filter (fn [[city-code _v]]
+                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
                        (roles/check-privilege (:login user)
                                               {:city-code city-code
                                                :type-code ::roles/any}
@@ -49,6 +50,7 @@
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [[user all-types] _]
     (into {} (filter (fn [[type-code _v]]
+                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
                        (roles/check-privilege (:login user)
                                               {:type-code type-code
                                                :city-code ::roles/any}
@@ -80,7 +82,6 @@
  (fn [x _]
    x))
 
-;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-lois-only?
  :<- [::can-add-sports-sites?]
@@ -88,7 +89,7 @@
  (fn [[can-add-sports-sites? can-add-lois?] _]
    (and can-add-lois? (not can-add-sports-sites?))))
 
-;; FIXME: Remove
+;; FIXME: Roles
 (re-frame/reg-sub
  ::permission-to-publish?
  (fn [[_ lipas-id]]
@@ -121,6 +122,7 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [[sites permissions cities types] [_ locale]]
+   ;; TODO: Roles
    (when (and permissions sites)
      (->> sites
           vals

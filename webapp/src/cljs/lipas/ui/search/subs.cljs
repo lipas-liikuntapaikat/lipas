@@ -171,6 +171,7 @@
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
  :<- [:lipas.ui.user.subs/logged-in?]
+ ;; FIXME: Roles
  :<- [:lipas.ui.user.subs/permissions]
  (fn [[results tr types cities admins owners logged-in? permissions] _]
    (let [locale (tr)
