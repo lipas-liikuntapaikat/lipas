@@ -152,31 +152,6 @@
 
 (defui explain-roles [{:keys [tr]}]
   (let [roles (use-subscribe [::subs/roles])
-        roles (or [{:role :basic-manager
-                    :city-code 91
-                    :type-code 104}
-                   {:role :basic-manager
-                    :city-code 92
-                    :type-code 104}
-                   {:role :basic-manager
-                    :city-code 91
-                    :type-code 103}
-                   {:role :basic-manager
-                    :city-code 92
-                    :type-code 103}
-                   {:role :basic-manager
-                    :city-code 142}
-                   {:role :basic-manager
-                    :lipas-id 505861}
-                   {:role :floorball-manager
-                    :city-code 837}
-                   {:role :floorball-manager
-                    :city-code 92
-                    :type-code 103}
-                   {:role :activities-manager
-                    :activity "fishing"}
-                   ]
-                  roles)
         roles (sort-by (juxt :role :city-code :type-code :activities :lipas-id) roles)]
     ($ :<>
        (for [{:keys [role city-code type-code lipas-id activity] :as x} roles]
