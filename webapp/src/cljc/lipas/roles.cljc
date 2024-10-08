@@ -62,19 +62,29 @@
                active-roles)))
 
 (defn select-role
-  "Check if the role is active with given selection.
+  "Check if the role is active with given role-context.
 
   When a role is missing (or has a nil value) for one of
-  the conditions, it is always active."
-  [selection role]
+  the conditions, it is always active.
+  ::any value can be used to check if there are any
+  role-context where the privilege is given,
+  e.g. to check for :create privilege before
+  city-code or type-code is selected (available
+  values for those are then filtered using privileges
+  in the create form.)"
+  [role-context role]
   (when (and (or (nil? (:city-code role))
-                 (= (:city-code selection) (:city-code role)))
+                 (= ::any (:city-code role-context))
+                 (= (:city-code role-context) (:city-code role)))
              (or (nil? (:type-code role))
-                 (= (:type-code selection) (:type-code role)))
+                 (= ::any (:type-code role-context))
+                 (= (:type-code role-context) (:type-code role)))
              (or (nil? (:activity role))
-                 (= (:activity selection) (:activity role)))
+                 (= ::any (:activity role-context))
+                 (= (:activity role-context) (:activity role)))
              (or (nil? (:lipas-id role))
-                 (= (:lipas-id selection) (:lipas-id role))))
+                 (= ::any (:lipas-id role-context))
+                 (= (:lipas-id role-context) (:lipas-id role))))
     ;; Cast to keyword, DB and JSON return string values
     (keyword (:role role))))
 
@@ -83,19 +93,16 @@
   which is active for defined context.
 
   Context:
-  - :site
+  - :city-code
+  - :type-code
+  - :lipas-id
   - :activity"
-  [user {:keys [site activity] :as _role-context} required-privilege]
-  (let [selection {:type-code (-> site :type :type-code)
-                   :lipas-id (:lipas-id site)
-                   :city-code (-> site :location :city :city-code)
-                   :activity activity}
-
-        ;; TODO: Later this can be extended to check roles from org
+  [user {:as role-context} required-privilege]
+  (let [;; TODO: Later this can be extended to check roles from org
         active-roles (->> (:permissions user)
                           (:roles)
                           (keep (fn [role]
-                                  (select-role selection role)))
+                                  (select-role role-context role)))
                           (into #{:default}))
         privileges (get-privileges active-roles)]
     (contains? privileges required-privilege)))

@@ -17,37 +17,43 @@
   (testing "missing privilege"
     (is (false? (sut/check-privilege
                   {:permissions {:roles []}}
-                  {:site {:lipas-id 1}}
+                  {:lipas-id 1}
                   :create))))
 
   (testing "default privileges"
     (is (true? (sut/check-privilege
                  {:permissions {:roles []}}
-                 {:site {:lipas-id 1}}
+                 {:lipas-id 1}
                  :view))))
 
   (testing "lipas-id context"
     (is (true? (sut/check-privilege
                  {:permissions {:roles [{:lipas-id 1 :role :basic-manager}]}}
-                 {:site {:lipas-id 1}}
+                 {:lipas-id 1}
                  :create))))
 
   (testing "type-code context"
     (is (true? (sut/check-privilege
                  {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
-                 {:site {:type {:type-code 100}
-                         :location {:city {:city-code 837}}}}
+                 {:type-code 100
+                  :city-code 837}
                  :edit)))
 
     (is (false? (sut/check-privilege
                  {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
-                 {:site {:type {:type-code 100}
-                         :location {:city {:city-code 100}}}}
-                 :edit))))
+                 {:type-code 100
+                  :city-code 100}
+                 :edit)))
+
+    (testing "::any context value"
+      (is (true? (sut/check-privilege
+                   {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
+                   {:type-code ::sut/any
+                    :city-code ::sut/any}
+                   :create)))))
 
   (testing "activity role context"
     (is (true? (sut/check-privilege
                  {:permissions {:roles [{:activity "fishing" :role :activities-manager}]}}
-                 {:site {:lipas-id 1}
-                  :activity "fishing"}
+                 {:activity "fishing"}
                  :edit-activity)))))
