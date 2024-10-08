@@ -1,5 +1,6 @@
 (ns lipas.roles)
 
+;; :doc here is just a developer comment, translations are elsewhere
 (def privileges
   {:create {:doc "Oikeus lisätä liikuntapaikkoja"}
    :view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot
@@ -24,31 +25,36 @@
 (def roles
   {:admin
    ;; all privileges
-   {:privileges (set (keys privileges))}
+   {:assignable true
+    :privileges (set (keys privileges))}
 
    ;; Unsigned users, basis for everyone
    :default
-   {:privileges #{:view
+   {:assignable false
+    :privileges #{:view
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
                   ;; :view-loi
                   :view-floorball}}
 
    :basic-manager
-   {:privileges #{:create
+   {:assignable true
+    :privileges #{:create
                   :edit
                   :view-activity
                   :analysis-tool}}
 
    :activities-manager
-   {:privileges #{:view-activity
+   {:assignable true
+    :privileges #{:view-activity
                   :edit-activity
                   :view-loi ;; Temporarily only enabled here
                   :create-loi
                   :edit-loi}}
 
    :floorball-manager
-   {:privileges #{:edit-floorball}}})
+   {:assignable true
+    :privileges #{:edit-floorball}}})
 
 (defn get-privileges [active-roles]
   (set (mapcat (fn [role-k]

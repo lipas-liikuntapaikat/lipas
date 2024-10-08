@@ -101,11 +101,12 @@
 
 (defn ->list-entry
   [locale [k v]]
-  {:value k :label (str (get-in v [:name locale])
-                        " "
-                        k
-                        (when (not= "active" (:status v))
-                          " POISTUNUT"))})
+  {:value k
+   :label (str (get-in v [:name locale])
+               " "
+               k
+               (when (not= "active" (:status v))
+                 " POISTUNUT"))})
 
 (re-frame/reg-sub
  ::types-list
