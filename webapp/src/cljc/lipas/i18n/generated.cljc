@@ -838,6 +838,7 @@
      :role "Rooli"
      :new-role "Uusi rooli"
      :new-role-explanation "Valitse lisättävä rooli ja mahdolliset rajaukset mihin resursseihin rooli vaikuttaa"
+     :context-value-all "Kaikki"
      :role-names {:admin "Admin"
                   :basic-manager "Kuntakäyttäjä"
                   :activities-manager "Aktiviteetti hallitsija"

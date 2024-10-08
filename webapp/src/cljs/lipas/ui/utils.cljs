@@ -1,11 +1,13 @@
 (ns lipas.ui.utils
   (:require
+   ;; FIXME: cemerick.url is deprecated
    [cemerick.url :as url]
    ;;[clojure.data :as data]
    [clojure.reader :refer [read-string]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [clojure.walk :as walk]
+   ;; FIXME: Closure-lib is deprecated
    [goog.crypt.base64 :as b64]
    [goog.labs.userAgent.browser :as gbrowser]
    [goog.date :as gdate]

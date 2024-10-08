@@ -195,3 +195,16 @@
       (if has-override?
         (get overrides k)
         (roles/check-privilege (:login user) role-context k)))))
+
+(re-frame/reg-sub ::context-value-name
+  (fn [[_ context-key v _locale]]
+    (case context-key
+      :city-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/city v])
+      :type-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
+      :activity (re-frame/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
+      :lipas-id (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])))
+  (fn [x [_ context-key _v locale]]
+    (case context-key
+      :lipas-id (:name x)
+      :activity (get (:label x) locale)
+      (get (:name x) locale))))
