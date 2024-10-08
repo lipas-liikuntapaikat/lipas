@@ -91,51 +91,6 @@
 1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
 3130, 3210 4401, 4402, 4403, 4404, 4405})
 
-;; TODO: Localization
-(def role-context-k->label
-  {:city-code (fn [city-code]
-                (if city-code
-                  (:fi (:name @(rf/subscribe [:lipas.ui.sports-sites.subs/city city-code])))
-                  "Kaikki kaupungit"))
-   :type-code (fn [type-code]
-                (if type-code
-                  (:fi (:name @(rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code type-code])))
-                  "Kaikki tyypit"))
-   :activity (fn [activity]
-               (str "Activity tyyppi: " activity))
-   :lipas-id (fn [lipas-id]
-               (str "Paikka: " lipas-id))})
-
-(defn role-context-list
-  [{:keys [role-ctx-k
-           role-ctx-ks
-           roles]}]
-  (let [has-ctx (some (fn [role]
-                        (contains? role role-ctx-k))
-                      roles)
-        ctx-vs (group-by role-ctx-k roles)]
-    (if has-ctx
-      [:> List
-       {:dense true
-        :sx {:pl 2}}
-       (doall
-         (for [[v roles] ctx-vs]
-           [:<>
-            {:key (or v "all")}
-            [:> ListItem
-             [:> ListItemText
-              ((get role-context-k->label role-ctx-k) v)]]
-            (when (seq role-ctx-ks)
-              [role-context-list
-               {:role-ctx-k (first role-ctx-ks)
-                :role-ctx-ks (rest role-ctx-ks)
-                :roles roles}])]))]
-      (when (seq role-ctx-ks)
-        [role-context-list
-         {:role-ctx-k (first role-ctx-ks)
-          :role-ctx-ks (rest role-ctx-ks)
-          :roles roles}]))))
-
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
         localized (use-subscribe [::subs/context-value-name k v locale])
@@ -202,9 +157,7 @@
         firstname (-> user :user-data :firstname)
         lastname  (-> user :user-data :lastname)
 
-        saved-searches (<== [::subs/saved-searches])
-
-        experimental-features? (<== [::subs/experimental-features?])]
+        saved-searches (<== [::subs/saved-searches])]
 
     [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
