@@ -78,6 +78,7 @@
    [(re-frame/subscribe [::latest-rev lipas-id])
     (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
  (fn [[rev admin?] _]
+   ;; TODO: Add "edit-any-status" or such privilege which only admin has?
    (or admin?
        (->> rev :status #{"active"
                           "out-of-service-temporarily"

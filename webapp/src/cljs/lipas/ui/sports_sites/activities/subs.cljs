@@ -51,6 +51,7 @@
     (re-frame/subscribe [:lipas.ui.user.subs/permission-to-activities])
     (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
  (fn [[activity activities-perms admin?] _]
+   ;; TODO: Check acitivities role?
    (or admin?
        (and (some? activity)
             (some #{(:value activity)} (keys activities-perms))))))

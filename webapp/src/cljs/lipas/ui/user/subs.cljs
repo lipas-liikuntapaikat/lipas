@@ -16,10 +16,9 @@
 
 (re-frame/reg-sub
  ::admin?
- :<- [::user]
- (fn [user _]
-   ;; TODO: New roles
-   (-> user :login :permissions :admin?)))
+ :<- [::check-privilege {} :user-management]
+ (fn [x _]
+   x))
 
 (re-frame/reg-sub
  ::user-data
@@ -28,25 +27,12 @@
    (:login user)))
 
 (re-frame/reg-sub
- ::access-to-sports-sites
- :<- [::user]
- (fn [user _]
-   (-> user :login :permissions :sports-sites)))
-
-(re-frame/reg-sub
  ::permissions
  :<- [::user]
  (fn [user _]
    (-> user :login :permissions)))
 
-;; FIXME: Remove
-(re-frame/reg-sub
- ::utp-user?
- :<- [::permissions]
- (fn [permissions _]
-   (permissions/activities? permissions)))
-
-;; FIXME: Remove
+;; FIXME: Roles
 (re-frame/reg-sub
  ::permission-to-cities
  :<- [::permissions]
@@ -56,7 +42,7 @@
      all-cities
      (select-keys all-cities cities))))
 
-;; FIXME: Remove
+;; FIXME: Roles
 (re-frame/reg-sub
  ::permission-to-types
  :<- [::permissions]
@@ -66,16 +52,11 @@
      all-types
      (select-keys all-types types))))
 
-;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-sports-sites?
- :<- [::permissions]
- (fn [{:keys [admin? types all-types? cities all-cities?]} _]
-   ;; TODO: :create privilege
-   (or admin?
-       (and
-        (or all-cities? (seq cities))
-        (or all-types? (seq types))))))
+ :<- [::check-privilege {} :create]
+ (fn [x _]
+   x))
 
 ;; FIXME: Remove
 (re-frame/reg-sub
@@ -87,12 +68,11 @@
      all-activities
      (select-keys all-activities activities))))
 
-;; FIXME: Remove
 (re-frame/reg-sub
  ::can-add-lois?
- :<- [::permissions]
- (fn [permissions _]
-   (permissions/activities? permissions)))
+ :<- [::check-privilege {} :create-loi]
+ (fn [x _]
+   x))
 
 ;; FIXME: Remove
 (re-frame/reg-sub

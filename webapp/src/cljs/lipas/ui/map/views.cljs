@@ -1723,6 +1723,7 @@
             [mui/icon "insights"]]]])
 
        ;; PTV button
+       ;; TODO: Add and check a new role?
        (when (and flags/ptv-enabled? logged-in? admin?)
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
