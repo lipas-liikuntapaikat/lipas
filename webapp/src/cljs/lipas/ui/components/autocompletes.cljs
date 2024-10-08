@@ -84,10 +84,17 @@
   [{:keys [input-props label] :as props}]
   ($ Autocomplete
      (spread-props {:renderInput (fn [^js props]
-                                   ($ TextField (spread-props {:label label
-                                                               :variant "standard"}
-                                                              props
-                                                              input-props)))
+                                   ($ TextField
+                                      (spread-props {:label label
+                                                     :variant "standard"}
+                                                    props
+                                                    input-props)))
                     :getOptionKey (fn [item] (:value item))
-                    :getOptionLabel (fn [item] (:label item))}
+                    :getOptionLabel (fn [item]
+                                      ;; This fn is called for both :value and :options
+                                      (if (map? item)
+                                        (:label item)
+                                        (str item)))
+                    :isOptionEqualToValue (fn [option value] (= (:value option)
+                                                                (:value value)))}
                    (dissoc props :input-props :label))))
