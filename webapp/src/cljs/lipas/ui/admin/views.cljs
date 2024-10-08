@@ -1,23 +1,36 @@
 (ns lipas.ui.admin.views
   (:require
    ["@mui/material/Button$default" :as Button]
+   ["@mui/material/Card$default" :as Card]
+   ["@mui/material/CardContent$default" :as CardContent]
+   ["@mui/material/CardHeader$default" :as CardHeader]
+   ["@mui/material/FormControl$default" :as FormControl]
+   ["@mui/material/FormGroup$default" :as FormGroup]
+   ["@mui/material/Grid$default" :as Grid]
    ["@mui/material/Icon$default" :as Icon]
    ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/InputLabel$default" :as InputLabel]
    ["@mui/material/List$default" :as List]
    ["@mui/material/ListItem$default" :as ListItem]
    ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
    ["@mui/material/ListItemText$default" :as ListItemText]
    ["@mui/material/MenuItem$default" :as MenuItem]
    ["@mui/material/Select$default" :as Select]
+   ["@mui/material/Stack$default" :as Stack]
+   ["@mui/material/Typography$default" :as Typography]
    [clojure.spec.alpha :as s]
    [lipas.data.styles :as styles]
    [lipas.roles :as roles]
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.autocompletes :refer [autocomplete2]]
    [lipas.ui.mui :as mui]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [re-frame.core :as rf]))
+   [re-frame.core :as rf]
+   [reagent.core :as r]
+   [uix.core :as uix :refer [$ defui]]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open?    (<== [::subs/magic-link-dialog-open?])
@@ -43,6 +56,144 @@
         {:style    {:margin-top "1em"}
          :on-click #(==> [::events/close-magic-link-dialog])}
         (tr :actions/cancel)]]]]))
+
+(defui permissions-request-card [{:keys [permissions-request tr]}]
+  ($ Card
+     ;; TODO: Add the color to the theme
+     {:sx #js {:backgroundColor mui/gray3
+               :mb 2}}
+     ($ CardHeader
+        {:subheader (tr :lipas.user/requested-permissions)})
+     ($ CardContent
+        ($ Typography
+           {:sx #js {:fontStyle "italic"}}
+           (or permissions-request
+               "-")))))
+
+(defui new-role [{:keys [tr]}]
+  (let [locale (tr)
+        cities (use-subscribe [::subs/cities-list locale])
+        types  (use-subscribe [::subs/types-list locale])
+        sites  (use-subscribe [::subs/sites-list])
+        ;; activities (<== [::subs/activities-list locale])
+        ]
+    ($ Stack
+       {:direction "column"
+        :sx #js {:gap 1}}
+       ($ Typography
+          {:variant "h6"}
+          (tr :lipas.user.permissions.roles/new-role))
+
+       ($ Typography
+          (tr :lipas.user.permissions.roles/new-role-explanation))
+
+       ($ FormControl
+          ($ InputLabel (tr :lipas.user.permissions.roles/role))
+          ($ Select
+             {:value ""
+              :on-change (fn [_e])
+              :variant "standard"
+              :label (tr :lipas.user.permissions.roles/role)
+              :displayEmpty true}
+             (for [[k {:keys [assignable]}] roles/roles
+                   :when assignable]
+               ($ MenuItem
+                  {:key k
+                   :value (name k)}
+                  (tr (keyword :lipas.user.permissions.roles.role-names k))))))
+
+       ($ autocomplete2
+          {:options   (to-array sites)
+           :label     (tr :lipas.user.permissions.roles.context-keys/lipas-id)
+           :value     nil
+           :onChange  nil})
+
+       ($ autocomplete2
+          {:options   (to-array types)
+           :label     (tr :lipas.user.permissions.roles.context-keys/type-code)
+           :value     nil
+           :onChange  nil})
+
+       ($ autocomplete2
+          {:options   (to-array cities)
+           :label     (tr :lipas.user.permissions.roles.context-keys/city-code)
+           :value     nil
+           :onChange  nil})
+
+       ($ autocomplete2
+          {:options   (to-array [])
+           :label     (tr :lipas.user.permissions.roles.context-keys/activity)
+           :value     nil
+           :onChange  nil})
+
+       ($ Button
+          {}
+          "Lisää"))))
+
+(rf/reg-sub ::context-value-name
+  (fn [[_ context-key v _locale]]
+    (case context-key
+      :city-code (rf/subscribe [:lipas.ui.sports-sites.subs/city v])
+      :type-code (rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
+      :activities nil
+      :lipas-id nil))
+  (fn [x [_ _context-key _v locale]]
+    (get (:name x) locale)))
+
+(defui role-context [{:keys [tr k v]}]
+  (let [locale (tr)
+        l-v (use-subscribe [::context-value-name k v locale])]
+    ($ Typography
+       {:key k
+        :component "span"
+        :sx #js {:mr 1}}
+       ;; Role context key name
+       (tr (keyword :lipas.user.permissions.roles.context-keys k))
+       ": "
+       ;; Value localized name
+       l-v
+       ;; Value code
+       " (" v ")")))
+
+(defui roles-card [{:keys [tr]}]
+  (let [user (use-subscribe [::subs/editing-user])]
+    ;; TODO: replace the container grid
+    ($ Grid
+       {:item true
+        :xs 12
+        :md 6}
+       ($ Card
+          {:square true}
+          ($ CardHeader
+             {:title "Roolit"})
+          ($ CardContent
+             ($ FormGroup
+                ($ permissions-request-card
+                   {:permissions-request (-> user :user-data :permissions-request)
+                    :tr tr})
+
+                ($ List
+                   (for [{:keys [role city-code type-code activity lipas-id] :as x} (-> user :permissions :roles)]
+                     ($ ListItem
+                        {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
+                        ($ ListItemText
+                           ($ Typography
+                              {:component "span"
+                               :sx #js {:mr 2
+                                        :fontWeight "bold"}}
+                              (tr (keyword :lipas.user.permissions.roles.role-names role)))
+                           (for [[k v] (dissoc x :role)]
+                             ($ role-context
+                                {:key k
+                                 :k k
+                                 :v v
+                                 :tr tr})))
+                        ($ ListItemSecondaryAction
+                           ($ IconButton
+                              ($ Icon "delete"))))))
+
+                ($ new-role
+                   {:tr tr})))))))
 
 (defn user-dialog [tr]
   (let [locale     (tr)
@@ -140,74 +291,17 @@
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
           :disabled  existing?}]]]
 
-      [lui/form-card {:title "Roolit"}
-       [mui/form-group
-        [mui/card {:style {:background-color mui/gray3
-                           :margin-bottom    "1em"}}
-         [mui/card-header {:subheader (tr :lipas.user/requested-permissions)}]
-         [mui/card-content
-          [mui/typography
-           [:i (or (-> user :user-data :permissions-request)
-                   "-")]]]]
-
-        [:> List
-         (for [{:keys [role city-code type-code activity lipas-id] :as x} (-> user :permissions :roles)]
-           [:> ListItem
-            {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
-            [:> ListItemText
-             (pr-str x)]
-            [:> ListItemSecondaryAction
-             [:> IconButton
-              [:> Icon "delete"]]]])]
-
-        [:h4 "Uusi käyttäjärooli"]
-
-        [:> Select
-         {:value nil
-          :on-change (fn [_e])}
-         (for [[k _] roles/roles]
-           [:> MenuItem
-            {:value k}
-            k])]
-
-        [lui/autocomplete
-         {:items     sites
-          :label     "Paikka"
-          :value     nil
-          :multi?    true
-          :on-change nil}]
-
-        [lui/autocomplete
-         {:items     types
-          :label     "Tyyppi"
-          :value     nil
-          :multi?    true
-          :on-change nil}]
-
-        [lui/autocomplete
-         {:items     cities
-          :label     "Kaupunki"
-          :value     nil
-          :multi?    true
-          :on-change nil}]
-
-        [:> Button
-         "Lisää"]
-
-        ]]
+      ($ roles-card
+         {:tr tr})
 
       ;;; Permissions
       ;; TODO: Replace this with roles management
       [lui/form-card {:title (tr :lipas.user/permissions)}
        [mui/form-group
 
-        [mui/card {:style {:background-color mui/gray3
-                           :margin-bottom    "1em"}}
-         [mui/card-header {:subheader (tr :lipas.user/requested-permissions)}]
-         [mui/card-content
-          [mui/typography
-           [:i (or (-> user :user-data :permissions-request)
-                   "-")]]]]
+        ($ permissions-request-card
+           {:permissions-request (-> user :user-data :permissions-request)
+            :tr tr})
 
         ;; Admin?
         [lui/checkbox

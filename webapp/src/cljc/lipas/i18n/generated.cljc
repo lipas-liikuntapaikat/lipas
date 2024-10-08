@@ -833,6 +833,19 @@
      :sports-sites "Liikunta- ja ulkoilupaikat",
      :types        "Tyypit"
      :activities   "Aktiviteetit"},
+    :lipas.user.permissions.roles
+    {:roles "Roolit"
+     :role "Rooli"
+     :new-role "Uusi rooli"
+     :new-role-explanation "Valitse lisättävä rooli ja mahdolliset rajaukset mihin resursseihin rooli vaikuttaa"
+     :role-names {:admin "Admin"
+                  :basic-manager "Kuntakäyttäjä"
+                  :activities-manager "Aktiviteetti hallitsija"
+                  :floorball-manager "Salibandy muokkaaja"}
+     :context-keys {:city-code "Kunta"
+                    :type-code "Tyyppi"
+                    :activity "Aktiviteetti"
+                    :lipas-id "Paikka"}}
     :help
     {:headline                 "Ohjeet",
      :permissions-help
