@@ -54,7 +54,10 @@
 
 (re-frame/reg-sub
  ::can-add-sports-sites?
- :<- [::check-privilege {} :create]
+ :<- [::check-privilege
+      {:type-code ::roles/any
+       :city-code ::roles/any}
+      :create]
  (fn [x _]
    x))
 
@@ -70,7 +73,7 @@
 
 (re-frame/reg-sub
  ::can-add-lois?
- :<- [::check-privilege {} :create-loi]
+ :<- [::check-privilege {:city-code ::roles/any} :create-loi]
  (fn [x _]
    x))
 
