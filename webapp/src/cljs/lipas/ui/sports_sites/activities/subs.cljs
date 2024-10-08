@@ -44,6 +44,7 @@
  (fn [activities _]
    (some? activities)))
 
+;; FIXME: Roles
 (re-frame/reg-sub
  ::show-activities?
  (fn [[_ type-code]]
@@ -56,6 +57,7 @@
        (and (some? activity)
             (some #{(:value activity)} (keys activities-perms))))))
 
+;; FIXME: Roles
 (re-frame/reg-sub
  ::edit-activities-only?
  (fn [[_ type-code]]
