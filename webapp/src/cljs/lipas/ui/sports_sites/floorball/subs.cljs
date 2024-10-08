@@ -16,6 +16,7 @@
 
 (re-frame/reg-sub
  ::visibility
+ ;; TODO: Drop admin check, just check floorball privilege
  :<- [:lipas.ui.user.subs/admin?]
  :<- [:lipas.ui.user.subs/user-data]
  (fn [[admin? {:keys [email] :as _user-data}] _]
