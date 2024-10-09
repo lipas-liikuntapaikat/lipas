@@ -6,15 +6,12 @@
 *.jar
 /geoserver/*
 !/geoserver/README.md
-/.clj-kondo
 /osrm/*
 !/osrm/README.md
 !/osrm/update-data.sh
 .calva
-repl.clj*
-node_modules
+
 !webapp/dev/repl.clj
->>>>>>> type-code-renewal
 webapp/.nrepl-port
 webapp/*.log
 webapp/target
@@ -23,8 +20,7 @@ webapp/resources/public/js/compiled
 webapp/.cljs_rhino_repl
 webapp/.lein-env
 webapp/.lein-failures
-webapp/.clj-kondo/*
-!webapp/.clj-kondo/config.edn
+webapp/.clj-kondo/.cache
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache

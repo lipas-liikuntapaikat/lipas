@@ -46,6 +46,7 @@
     "recharts": "^2.2.0",
     "shpjs": "^4.0.4",
     "togpx": "^0.5.4",
+    "use-sync-external-store": "^1.2.2",
     "zipcelx": "^1.6.2"
   },
   "devDependencies": {

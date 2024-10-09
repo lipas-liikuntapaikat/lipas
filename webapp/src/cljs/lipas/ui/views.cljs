@@ -16,6 +16,11 @@
         disclaimer   (<== [::subs/active-disclaimer])
         show-nav?    (<== [::subs/show-nav?])
         view         (<== [::subs/current-view])
+        ;; TODO: Make tr available in React Context or something?
+        ;; It should not be necessary to pass it into every component.
+        ;; Or just an atom somewhere? It doesn't likely even need to be
+        ;; reactive as we can force top-level re-render when the value
+        ;; changes.
         tr           (<== [::subs/translator])
 
         width (mui/use-width)]

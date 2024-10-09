@@ -34,4 +34,4 @@ printf "\n *** Starting backend services *** \n\n"
 docker compose up -d proxy-dev
 
 printf "\n *** Starting shadow-cljs *** \n\n"
-npx shadow-cljs watch app
+npm run watch

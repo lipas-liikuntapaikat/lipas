@@ -5,6 +5,12 @@
    [lipas.ui.utils :as utils]
    [reagent.core :as r]))
 
+;; TODO: Deprecate/replace this, this has bad choices:
+;; 1. :value is going through clj->js
+;; 2. :options goes through pr-str
+;; 3. multiple "helpful" options with different names than the MUI component
+;;    which magically effect multiple things
+;; 4. items-by-vals ???
 (defn autocomplete
   [{:keys [label items value value-fn label-fn on-change sort-fn spec multi?
            required helper-text deselect? sort-cmp render-option-fn disabled variant]

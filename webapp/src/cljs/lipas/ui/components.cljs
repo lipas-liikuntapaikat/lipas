@@ -1,4 +1,8 @@
 (ns lipas.ui.components
+  "Remove this namespace, it is inconvenient to jump to the
+  definitions through an extra ns.
+  This also prevents DCE because all the components are
+  being referred here."
   (:require
    [lipas.ui.components.selects :as selects]
    [lipas.ui.components.tables :as tables]

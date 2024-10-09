@@ -37,7 +37,8 @@
                           {:margin           0
                            :padding-right    "0.5em"
                            :background-color mui/primary}}
-      [mui/dialog-title {:style {:flex-grow 1}}
+      [mui/dialog-title {:sx {:flex-grow 1
+                              :color "white"}}
        (or title "")]]
      top-actions)]
 

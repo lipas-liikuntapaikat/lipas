@@ -17,6 +17,7 @@
    [re-frame "1.4.3"]
    [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.2.4"]
+   [com.pitch/uix.core "1.1.1"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
@@ -87,6 +88,8 @@
   :profiles
   {:dev
    {:repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+    ;; FIXME: cljs clj macro ns are also included in the REPL classpath,
+    ;; but for now, Cljs libs are also available so should work.
     :source-paths ["src/cljs" "src/cljc" "src/js" "dev"]
     :dependencies
     [;;; Frontend ;;;

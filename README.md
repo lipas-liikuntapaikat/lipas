@@ -71,8 +71,20 @@ cp .env.sample.sh .env.sh
 # Fill in secrets
 $EDITOR .env.sh
 
-# Run setup script
+# 1. ALTERNATIVE: Run setup script
+# This runs the clj app in a container also
 ./setup-dev.sh
+
+# 2. ALTERNATIVE:
+# Start proxy-local container
+bb up
+cd webapp
+# Start repl
+lein repl
+user=> (reset)
+# Start cljs build
+npm i
+npm run watch
 ```
 
 ### Extra
