@@ -148,7 +148,14 @@
      :or   {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
-                  (assoc-in [:permissions :admin?] admin?))]
+                  ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
+                  ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
+                  (update :permissions (fn [permissions]
+                                         (cond-> (or permissions {})
+                                           ;; generated result might include admin role, remove if the flag is false
+                                           (not admin?) (update :roles (fn [roles]
+                                                                         (into [] (remove (fn [x] (= :admin (:role x))) roles))))
+                                           admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
        (do
          (core/add-user! db user)
@@ -436,8 +443,10 @@
         site-log (->> (core/get-sports-site-history db 123)
                       (utils/index-by :event-date))]
     (is (= 200 (:status resp)))
-    (is (= perms (-> (core/get-user db (:email user))
-                     :permissions)))
+    ;; NOTE: DB returns :role values as strings currently
+    (is (= {:roles [{:role "admin"}]}
+           (-> (core/get-user db (:email user))
+               :permissions)))
     (is (= "active" (:status (get site-log event-date))))))
 
 (deftest update-user-permissions-requires-admin-test
