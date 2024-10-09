@@ -155,11 +155,7 @@
      :location.postal-office  (-> site :location :postal-office)
      :location.city.city-code city-code
      :location.city.name      (get-in cities [city-code :name locale])
-     :permission?             (roles/check-privilege user
-                                                     {:lipas-id (:lipas-id site)
-                                                      :city-code city-code
-                                                      :type-code type-code}
-                                                     :edit)}))
+     :permission?             (roles/check-privilege user (roles/site-roles-context site) :edit)}))
 
 (defn ->table-entry2 [m hit]
   (->table-entry m (js->clj hit :keywordize-keys true)))

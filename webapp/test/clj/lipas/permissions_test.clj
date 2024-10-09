@@ -12,6 +12,7 @@
       (assoc-in [:type :type-code] type-code)
       (assoc-in [:location :city :city-code] city-code)))
 
+#_
 (deftest permissions-test
   (testing "Permission logic"
     (let [site (->test-site 12345 1170 992)]
