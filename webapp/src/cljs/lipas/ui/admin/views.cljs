@@ -158,9 +158,13 @@
                     :tr tr})
 
                 ($ List
-                   (for [{:keys [role city-code type-code activity lipas-id] :as x} (-> user :permissions :roles)]
+                   (for [{:keys [role] :as x}
+                         (->> user
+                              :permissions
+                              :roles
+                              (sort-by roles/role-sort-fn))]
                      ($ ListItem
-                        {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
+                        {:key (roles/role-key-fn x)}
                         ($ ListItemText
                            ($ Typography
                               {:component "span"
