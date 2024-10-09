@@ -1,9 +1,9 @@
 (ns lipas.ui.events
   (:require
    [lipas.i18n.core :as i18n]
+   [lipas.roles :as roles]
    [lipas.ui.db :as db]
    [lipas.ui.search.db :as search-db]
-   [lipas.ui.routes :as routes]
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]
    [reitit.frontend.controllers :as rfc]))
@@ -13,7 +13,8 @@
  [(re-frame/inject-cofx :lipas.ui.local-storage/get :login-data)]
  (fn  [{:keys [local-storage]}]
    (if-let [login-data (:login-data local-storage)]
-     (let [admin? (-> login-data :permissions :admin?)]
+     (let [;; login-data (assoc login-data :permissions (st/conform! (:permissions login-data) :lipas.user/permissions st/json-transformer))
+           admin? (roles/check-role login-data :admin)]
        {:db                     (-> db/default-db
                                     (assoc-in [:user :login] login-data)
                                     (assoc :logged-in? true)

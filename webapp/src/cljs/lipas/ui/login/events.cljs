@@ -27,7 +27,8 @@
 (re-frame/reg-event-fx
  ::login-success
  (fn [{:keys [db]} [_ login-type body]]
-   (let [admin?             (-> body :permissions :admin?)
+   (let [;; FIXME: Roles
+         admin?             (-> body :permissions :admin?)
          refresh-interval-s 900] ; 15 minutes
      (merge
       {:db (-> db

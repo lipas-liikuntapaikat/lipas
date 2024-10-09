@@ -1,7 +1,7 @@
 (ns lipas.ui.search.subs
   (:require
    [goog.object :as gobj]
-   [lipas.permissions :as permissions]
+   [lipas.roles :as roles]
    [lipas.ui.components :as lui]
    [lipas.ui.search.db :as db]
    [lipas.ui.utils :as utils]
@@ -129,7 +129,7 @@
      0)))
 
 (defn ->table-entry
-  [{:keys [locale types cities admins owners logged-in? permissions]} hit]
+  [{:keys [locale types cities admins owners user]} hit]
   (let [site      (:_source hit)
         type-code (-> site :type :type-code)
         city-code (-> site :location :city :city-code)]
@@ -155,9 +155,11 @@
      :location.postal-office  (-> site :location :postal-office)
      :location.city.city-code city-code
      :location.city.name      (get-in cities [city-code :name locale])
-     :permission?             (if logged-in?
-                                (permissions/publish? permissions site)
-                                false)}))
+     :permission?             (roles/check-privilege user
+                                                     {:lipas-id (:lipas-id site)
+                                                      :city-code city-code
+                                                      :type-code type-code}
+                                                     :edit)}))
 
 (defn ->table-entry2 [m hit]
   (->table-entry m (js->clj hit :keywordize-keys true)))
@@ -170,14 +172,16 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
- :<- [:lipas.ui.user.subs/logged-in?]
- ;; FIXME: Roles
- :<- [:lipas.ui.user.subs/permissions]
- (fn [[results tr types cities admins owners logged-in? permissions] _]
+ :<- [:lipas.ui.user.subs/user]
+ (fn [[results tr types cities admins owners user] _]
    (let [locale (tr)
-         data   {:types       types  :cities cities :locale     locale
-                 :admins      admins :owners owners :logged-in? logged-in?
-                 :permissions permissions}
+         data   {:types  types
+                 :cities cities
+                 :locale locale
+                 :admins admins
+                 :owners owners
+                 :user   (:login user)}
+         ;; FIXME: ~never use gobj
          hits   (gobj/get results "hits")]
      (when hits
        (->> (gobj/get hits "hits")
