@@ -6,7 +6,6 @@
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
    [lipas.flags :as flags]
-   [lipas.roles :as roles]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [muuntaja.core :as m]
@@ -320,8 +319,6 @@
        {:post
         {:no-doc     true
          :middleware [mw/token-auth mw/auth]
-         ;; TODO:
-         ;; :require-role :user-self
          :parameters {:body {:password string?}}
          :handler
          (fn [req]
@@ -695,6 +692,7 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
+         ;; TODO: roles, check for :view-loi ?
          #_#_:middleware [mw/token-auth mw/auth]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler
@@ -745,6 +743,7 @@
       ["/actions/save-ptv-service"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler
@@ -770,6 +769,7 @@
       ["/actions/save-ptv-service-location"
        {:post
         {:no-doc     false
+         ;; TODO: role
          :middleware [mw/token-auth mw/auth]
          :parameters {:body map?}
          :handler

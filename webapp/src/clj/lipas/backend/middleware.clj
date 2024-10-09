@@ -48,6 +48,11 @@
    ;; Use:
    ;; :required-privilege :user-management
    ;; :required-privilege [{:type-code ::roles/any} :create]
+   ;; NOTE: Consider case where role-context values are available in the
+   ;; request? For example :body-params :lipas-id. Maybe allow role-context to
+   ;; be fn of req=>role-context. But maybe it is best to just handle these
+   ;; cases in handler fn, because often building the correct role-context
+   ;; might require loading the site from db first.
    (fn [route-data _opts]
      (if-let [required-privilege (:require-privilege route-data)]
        (let [[role-context privilege] (if (vector? required-privilege)

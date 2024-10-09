@@ -2,11 +2,13 @@
 
 ;; :doc here is just a developer comment, translations are elsewhere (if we even need
 ;; translations for privileges)
+;; TODO: Combine create and edit privileges?
 (def privileges
   {:create {:doc "Oikeus lisätä liikuntapaikkoja"}
    :view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot
                ja lisätiedot"}
    :edit {:doc "Oikeus muokata liikuntapaikkoja"}
+   :edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
 
    :view-activity {:doc "Nähdä UTP tiedot"}
    :edit-activity {:doc "Oikeus muokata UTP tietoja"}
