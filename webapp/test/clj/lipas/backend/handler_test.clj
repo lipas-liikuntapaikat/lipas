@@ -148,7 +148,7 @@
      :or   {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
-                  (assoc-in [:permissions :admin?] admin?))]
+                  (cond-> admin? (update-in [:permissions :roles] (fnil conj []) {:role :admin})))]
      (if db?
        (do
          (core/add-user! db user)
