@@ -152,7 +152,7 @@
                   ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
                   (update :permissions (fn [permissions]
                                          (cond-> (or permissions {})
-                                           admin? (update permissions :roles (fnil conj []) {:role :admin})))))]
+                                           admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
        (do
          (core/add-user! db user)

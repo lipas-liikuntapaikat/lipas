@@ -841,7 +841,7 @@
      :context-value-all "Kaikki"
      :role-names {:admin "Admin"
                   :basic-manager "Kuntakäyttäjä"
-                  :activities-manager "Aktiviteetti hallitsija"
+                  :activities-manager "Ulkotietopalvelukäyttäjä"
                   :floorball-manager "Salibandy muokkaaja"}
      :context-keys {:city-code "Kunta"
                     :type-code "Tyyppi"

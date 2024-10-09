@@ -8,6 +8,8 @@
                 all-cities? all-types?
                 activities]} permissions
 
+        ;; TODO: Add floorball-manager role usinbg email?
+        ;; check lipas.ui.sports-sites.floorball.subs/floorball-user?
         roles (for [type-code (if all-types? [nil] types)
                     city-code (if all-cities? [nil] cities)]
                 (cond-> {:role :basic-manager}
