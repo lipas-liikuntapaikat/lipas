@@ -2,30 +2,26 @@
 
 ;; :doc here is just a developer comment, translations are elsewhere (if we even need
 ;; translations for privileges)
-;; TODO: Combine create and edit privileges?
+;; Use namespaced keys for easier searching in the codebase
 (def privileges
-  {:create {:doc "Oikeus lisätä liikuntapaikkoja"}
-   :view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot
-               ja lisätiedot"}
-   :edit {:doc "Oikeus muokata liikuntapaikkoja"}
-   :edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
+  {:site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
+   :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
+   :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
 
-   :view-activity {:doc "Nähdä UTP tiedot"}
-   :edit-activity {:doc "Oikeus muokata UTP tietoja"}
+   :activity/view {:doc "Nähdä UTP tiedot"}
+   :activity/edit {:doc "Oikeus muokata UTP tietoja"}
 
-   :create-loi {:doc "Oikeus luoda Muita kohteita"}
-   :view-loi {:doc "Oikeus nähdä Muita kohteita"}
-   :edit-loi {:doc "Oikeus muokata Muita kohteita"}
+   :loi/create-edit {:doc "Oikeus luoda ja muokata Muita kohteita"}
+   :loi/view {:doc "Oikeus nähdä Muita kohteita"}
 
-   :view-floorball {:doc "Oikeus nähdä Salibandy lisätiedot"}
-   :edit-floorball {:doc "Oikeus muokata Salibandy lisätietoja"}
+   :floorball/view {:doc "Oikeus nähdä Salibandy lisätiedot"}
+   :floorball/edit {:doc "Oikeus muokata Salibandy lisätietoja"}
 
-   :analysis-tool {:doc "Oikeus käyttää analyysityökalua"}
+   :analysis-tool/use {:doc "Oikeus käyttää analyysityökalua"}
 
-   :user-self {:doc "Oikeus omiin käyttäjätietoihin (salasanan vaihto jne)"}
-   :user-management {:doc "Käyttäjien hallinta (admin)"}
+   :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
-   :ptv-management {:doc ""}})
+   :ptv/manage {:doc ""}})
 
 (def roles
   {:admin
@@ -40,27 +36,26 @@
     :privileges #{:view
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
-                  ;; :view-loi
-                  :view-floorball}}
+                  ;; :loi/view
+                  :floorball/view}}
 
    :basic-manager
    {:assignable true
-    :privileges #{:create
-                  :edit
-                  :view-activity
-                  :analysis-tool}}
+    :privileges #{:site/create-edit
+                  :activity/view
+                  :analysis-tool/use}}
 
    :activities-manager
    {:assignable true
-    :privileges #{:view-activity
-                  :edit-activity
-                  :view-loi ;; Temporarily only enabled here
-                  :create-loi
-                  :edit-loi}}
+    :privileges #{:activity/view
+                  :activity/edit
+
+                  :loi/view ;; Temporarily only enabled here
+                  :loi/create-edit}}
 
    :floorball-manager
    {:assignable true
-    :privileges #{:edit-floorball}}})
+    :privileges #{:floorball/edit}}})
 
 (defn get-privileges
   "Get set of privileges for given list of roles"

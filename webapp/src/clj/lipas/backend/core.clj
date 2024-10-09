@@ -92,7 +92,7 @@
 (defn publish-users-drafts! [db {:keys [id] :as user}]
   (let [drafts (->> (db/get-users-drafts db user)
                     (filter (fn [draft]
-                              (roles/check-privilege user (roles/site-roles-context draft) :edit))))]
+                              (roles/check-privilege user (roles/site-roles-context draft) :site/create-edit))))]
     (log/info "Publishing" (count drafts) "drafts from user" id)
     (doseq [draft drafts]
       (db/upsert-sports-site! db user (assoc draft :status "active")))))
@@ -270,7 +270,7 @@
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
                 (new? sports-site)
-                (roles/check-privilege user (roles/site-roles-context sports-site) :edit))
+                (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
@@ -295,7 +295,7 @@
   Motivation is to ensures that user who creates the sports-site has
   permission to it."
   [db user {:keys [lipas-id] :as sports-site}]
-  (when-not (roles/check-privilege user (roles/site-roles-context sports-site) :edit)
+  (when-not (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
     (let [user (update-in user [:permissions :roles]
                           (fnil conj [])
                           {:role :basic-manager

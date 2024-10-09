@@ -53,8 +53,10 @@
     (re-frame/subscribe [::activities-for-type type-code])])
  (fn [[user activity] _]
    ;; check if user has privilege to view(?) activity for given type-code
-   (roles/check-privilege user {:activity activity
-                                :city-code ::roles/any} :view-activity)))
+   (roles/check-privilege user
+                          {:activity activity
+                           :city-code ::roles/any}
+                          :activity/view)))
 
 (re-frame/reg-sub
  ::edit-activities-only?

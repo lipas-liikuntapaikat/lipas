@@ -16,7 +16,7 @@
 (re-frame/reg-sub
  ::admin?
  ;; TODO: Check for role / replace most uses of this sub.
- :<- [::check-privilege {} :user-management]
+ :<- [::check-privilege {} :users/manage]
  (fn [x _]
    x))
 
@@ -35,7 +35,7 @@
                        (roles/check-privilege user
                                               {:city-code city-code
                                                :type-code ::roles/any}
-                                              :create))
+                                              :site/create-edit))
                      all-cities))))
 
 (re-frame/reg-sub ::permission-to-types
@@ -47,7 +47,7 @@
                        (roles/check-privilege user
                                               {:type-code type-code
                                                :city-code ::roles/any}
-                                              :create))
+                                              :site/create-edit))
                      all-types))))
 
 (re-frame/reg-sub
@@ -55,7 +55,7 @@
  :<- [::check-privilege
       {:type-code ::roles/any
        :city-code ::roles/any}
-      :create]
+      :site/create-edit]
  (fn [x _]
    x))
 
@@ -66,11 +66,11 @@
     (into {} (filter (fn [[activity-name _v]]
                        (roles/check-privilege user
                                               {:activity activity-name}
-                                              :edit-activity))
+                                              :activity/edit))
                      all-activities))))
 
 (re-frame/reg-sub ::can-add-lois?
-  :<- [::check-privilege {:city-code ::roles/any} :create-loi]
+  :<- [::check-privilege {:city-code ::roles/any} :loi/create-edit]
   (fn [x _]
     x))
 
@@ -86,7 +86,7 @@
      (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
   (fn [[user sports-site] _]
     (when (and user sports-site)
-      (roles/check-privilege user (roles/site-roles-context sports-site) :edit))))
+      (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))))
 
 (defn ->list-entry [locale cities types sports-site]
   (let [city-code (-> sports-site :location :city :city-code)
@@ -101,7 +101,7 @@
 (defn show?
   [user {:keys [status] :as sports-site}]
   (and
-    (roles/check-privilege user (roles/site-roles-context sports-site) :edit)
+    (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
     (#{"planned" "active" "out-of-service-temporarily"} status)))
 
 ;; This is used in ice-stadiums and swimming-pools views list

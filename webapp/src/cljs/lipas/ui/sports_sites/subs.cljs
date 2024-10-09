@@ -79,7 +79,7 @@
    [(re-frame/subscribe [::latest-rev lipas-id])
     (re-frame/subscribe [:lipas.ui.user.subs/user-data])])
  (fn [[rev user] _]
-   (or (roles/check-privilege user (roles/site-roles-context rev) :edit-any-status)
+   (or (roles/check-privilege user (roles/site-roles-context rev) :site/edit-any-status)
        (->> rev :status #{"active"
                           "out-of-service-temporarily"
                           "planned"

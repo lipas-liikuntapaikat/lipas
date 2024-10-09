@@ -44,10 +44,10 @@
      [:th "Effective value"]]
     [:tbody
      (doall
-       (for [[k _x] roles/privileges]
+       (for [[k _x] (sort-by first roles/privileges)]
          [:tr
-          {:key k}
-          [:td k]
+          {:key (str (namespace k) "/" (name k))}
+          [:td (namespace k) "/" (name k)]
           [:td (if @(rf/subscribe [::user-subs/check-privilege nil k true])
                  "Yes"
                  "No")]

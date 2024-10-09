@@ -66,7 +66,7 @@
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
      ;; Admin
-     (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :user-management])
+     (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
        [mui/menu-item {:id       "account-menu-item-admin"
                        :on-click (comp close #(navigate! "/admin"))}
         [mui/list-item-icon
@@ -192,7 +192,7 @@
       [mui/divider]
 
       ;; Admin
-      (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :user-management])
+      (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
         [mui/list-item {:button   true
                         :on-click #(hide-and-navigate! "/admin")}
          [mui/list-item-icon

@@ -177,7 +177,7 @@
           [mui/button {:href  "/passu-hukassa"
                        :color :primary}
            (str "> " (tr :reset-password/change-password))]
-          (when @(rf/subscribe [::subs/check-privilege nil :user-management])
+          (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
             [mui/button {:href  "/admin"
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
