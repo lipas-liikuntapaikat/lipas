@@ -6,6 +6,7 @@
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
    [lipas.flags :as flags]
+   [lipas.roles :as roles]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [muuntaja.core :as m]
@@ -653,7 +654,7 @@
       ["/actions/create-upload-url"
        {:post
         {:no-doc     false
-         ;; TODO: role
+         ;; TODO: role, :activity/edit?
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.api.create-upload-url/payload}
@@ -665,7 +666,7 @@
       ["/actions/upload-utp-image"
        {:post
         {:no-doc     false
-         ;; TODO: role
+         ;; TODO: role, :activity/edit?
          :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
          :parameters {:multipart {:file multipart/temp-file-part}}
          :handler
@@ -680,8 +681,10 @@
       ["/actions/save-loi"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-privilege [{:type-code ::roles/any
+                              :city-code ::roles/any
+                              :activity ::roles/any}
+                             :loi/create-edit]
          :parameters
          {:body :lipas.loi/document}
          :handler
@@ -692,8 +695,10 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
-         ;; TODO: roles, check for :loi/view ?
-         #_#_:middleware [mw/token-auth mw/auth]
+         :require-privilege [{:type-code ::roles/any
+                              :city-code ::roles/any
+                              :activity ::roles/any}
+                             :loi/view]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
@@ -704,8 +709,7 @@
       ["/actions/get-ptv-integration-candidates"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
@@ -717,8 +721,7 @@
       ["/actions/generate-ptv-descriptions"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
@@ -730,8 +733,7 @@
       ["/actions/generate-ptv-service-descriptions"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
@@ -743,8 +745,7 @@
       ["/actions/save-ptv-service"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
@@ -756,8 +757,7 @@
       ["/actions/fetch-ptv-services"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
@@ -769,8 +769,7 @@
       ["/actions/save-ptv-service-location"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]
@@ -782,8 +781,7 @@
       ["/actions/save-ptv-meta"
        {:post
         {:no-doc     false
-         ;; TODO: role
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]

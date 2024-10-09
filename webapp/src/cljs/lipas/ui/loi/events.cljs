@@ -108,8 +108,14 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   ;; TODO: Which role context values should this check?
-   (if (roles/check-privilege (:login (:user db)) {:city-code ::roles/any} :loi/view)
+   ;; Currently users with activities-manager roles should see/edit LOI data
+   ;; The activitier-manager role has context with activity/type-code etc.
+   ;; but ignore role-context here because LOI don't even have (site-)type-code or city-code.
+   (if (roles/check-privilege (:login (:user db))
+                              {:city-code ::roles/any
+                               :type-code ::roles/any
+                               :activity ::roles/any}
+                              :loi/view)
      {:http-xhrio
       {:method          :post
        :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])
