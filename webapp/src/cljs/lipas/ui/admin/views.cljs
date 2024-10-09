@@ -58,7 +58,7 @@
                            "Haluatko varmasti GDPR-poistaa tämän käyttäjän?"
                            (fn []
                              (==> [::events/gdpr-remove-user user]))]))}
-        [mui/icon {:style {:margin-right "0.25em"}} "gpp_bad"]
+        [mui/icon {:sx {:mr 1}} "gpp_bad"]
         "GDPR-poista"]
        ;; Archive button
        (when (= "active" (:status user))
@@ -66,7 +66,7 @@
           {:variant  "contained"
            :color    "secondary"
            :on-click #(==> [::events/update-user-status user "archived"])}
-          [mui/icon {:style {:margin-right "0.25em"}} "archive"]
+          [mui/icon {:sx {:mr 1}} "archive"]
           "Arkistoi"])
 
        ;; Restore button
@@ -75,7 +75,7 @@
           {:variant  "contained"
            :color    "secondary"
            :on-click #(==> [::events/update-user-status user "active"])}
-          [mui/icon {:style {:margin-right "0.25em"}} "restore"]
+          [mui/icon {:sx {:mr 1}} "restore"]
           "Palauta"])
 
        ;; Send magic link button
@@ -90,7 +90,7 @@
           {:variant  "contained"
            :color    "secondary"
            :on-click #(==> [::events/save-user user])}
-          [mui/icon {:style {:margin-right "0.25em"}} "save"]
+          [mui/icon {:sx {:mr 1}} "save"]
           (tr :actions/save)])]}
 
      [mui/grid {:container true :spacing 1}

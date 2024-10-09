@@ -721,11 +721,11 @@
 (defn energy-form-tab [tr]
   (let [locale         (tr)
         editable-sites (<== [::subs/sites-to-edit-list locale])]
-    (energy/energy-consumption-form
+    [energy/energy-consumption-form
      {:tr             tr
       :cold?          true
       :spectators?    true
-      :editable-sites editable-sites})))
+      :editable-sites editable-sites}]))
 
 (defn reports-tab [tr]
   [sports-site/contacts-report
