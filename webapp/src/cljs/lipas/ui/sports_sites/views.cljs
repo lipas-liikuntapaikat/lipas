@@ -37,6 +37,8 @@
    true
    (= (:status display-data) (tr (keyword :status "out-of-service-temporarily")))))
 
+;; FIXME: Strange check. Would be simpler if display-data was still a
+;; status value, not localized string?
 (defn- show-status? [tr display-data]
   (or
    (= (:status display-data) (tr (keyword :status "incorrect-data")))

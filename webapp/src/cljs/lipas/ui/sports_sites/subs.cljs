@@ -4,6 +4,7 @@
    ["@turf/length$default" :as turf-length]
    [clojure.spec.alpha :as s]
    [lipas.data.types :as types]
+   [lipas.roles :as roles]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
@@ -76,10 +77,9 @@
  ::editing-allowed?
  (fn [[_ lipas-id] _]
    [(re-frame/subscribe [::latest-rev lipas-id])
-    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
- (fn [[rev admin?] _]
-   ;; TODO: Add "edit-any-status" or such privilege which only admin has?
-   (or admin?
+    (re-frame/subscribe [:lipas.ui.user.subs/user-data])])
+ (fn [[rev user] _]
+   (or (roles/check-privilege user (roles/site-roles-context rev) :edit-any-status)
        (->> rev :status #{"active"
                           "out-of-service-temporarily"
                           "planned"
