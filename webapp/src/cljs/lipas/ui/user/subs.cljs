@@ -26,13 +26,6 @@
  (fn [user _]
    (:login user)))
 
-;; TODO: Remove uses
-(re-frame/reg-sub
- ::permissions
- :<- [::user]
- (fn [user _]
-   (-> user :login :permissions)))
-
 (re-frame/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
