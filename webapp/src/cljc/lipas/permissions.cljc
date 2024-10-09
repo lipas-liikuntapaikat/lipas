@@ -5,13 +5,6 @@
    [lipas.data.activities :as activities]
    [lipas.schema.core]))
 
-(def default-permissions {:draft? true})
-
-(def draft?
-  "All users are allowed to make drafts of any sports-sites in any
-  city."
-  (constantly true))
-
 (defn- access-to-sports-site? [{:keys [sports-sites]} sports-site]
   (let [lipas-id (-> sports-site :lipas-id)]
     (when lipas-id

@@ -1,6 +1,7 @@
 (ns lipas.roles)
 
-;; :doc here is just a developer comment, translations are elsewhere
+;; :doc here is just a developer comment, translations are elsewhere (if we even need
+;; translations for privileges)
 (def privileges
   {:create {:doc "Oikeus lisätä liikuntapaikkoja"}
    :view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot
@@ -31,6 +32,7 @@
     :privileges (set (keys privileges))}
 
    ;; Unsigned users, basis for everyone
+   ;; Can't be assigned to users on the user-management
    :default
    {:assignable false
     :privileges #{:view
@@ -58,7 +60,9 @@
    {:assignable true
     :privileges #{:edit-floorball}}})
 
-(defn get-privileges [active-roles]
+(defn get-privileges
+  "Get set of privileges for given list of roles"
+  [active-roles]
   (set (mapcat (fn [role-k]
                  (:privileges (get roles role-k)))
                active-roles)))
@@ -88,6 +92,7 @@
                  (= ::any (:lipas-id role-context))
                  (= (:lipas-id role-context) (:lipas-id role))))
     ;; Cast to keyword, DB and JSON return string values
+    ;; NOTE: Or BE cnd FE ould conform the value
     (keyword (:role role))))
 
 (defn check-privilege
@@ -100,14 +105,19 @@
   - :lipas-id
   - :activity"
   [user {:as role-context} required-privilege]
-  (let [;; TODO: Later this can be extended to check roles from org
-        active-roles (->> (:permissions user)
+  (let [active-roles (->> (:permissions user)
                           (:roles)
-                          (keep (fn [role]
-                                  (select-role role-context role)))
+                          (keep (fn [role] (select-role role-context role)))
                           (into #{:default}))
         privileges (get-privileges active-roles)]
     (contains? privileges required-privilege)))
+
+(defn site-roles-context
+  "Create role-context for given site"
+  [site]
+  {:lipas-id  (:lipas-id site)
+   :type-code (-> site :type :type-code)
+   :city-code (-> site :location :city :city-code)})
 
 (defn check-role
   "Check if user has the given role USUALLY

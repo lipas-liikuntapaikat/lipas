@@ -6,6 +6,7 @@
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
    [lipas.flags :as flags]
+   [lipas.roles :as roles]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [muuntaja.core :as m]
@@ -107,8 +108,8 @@
       ["/sports-sites"
        {:post
         {:no-doc     false
-         ;; :middleware [mw/token-auth mw/auth]
-         :require-privilege :create
+         :middleware [mw/token-auth mw/auth]
+         ;; NOTE: privilege checked in the core code
          :responses  {201 {:body :lipas/sports-site}
                       400 {:body map?}}
          :parameters

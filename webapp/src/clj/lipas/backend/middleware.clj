@@ -45,13 +45,19 @@
 (def privilege-middleware
   {:name ::require-privilege
    :compile
+   ;; Use:
+   ;; :required-privilege :user-management
+   ;; :required-privilege [{:type-code ::roles/any} :create]
    (fn [route-data _opts]
      (if-let [required-privilege (:require-privilege route-data)]
-       (fn [next-handler]
-         (-> (fn [req]
-               (if (roles/check-privilege (:identity req) nil required-privilege)
-                 (next-handler req)
-                 (resp/forbidden {:error "Missing privilege"})))
-             (auth)
-             (token-auth)))
+       (let [[role-context privilege] (if (vector? required-privilege)
+                                        required-privilege
+                                        [nil required-privilege])]
+         (fn [next-handler]
+           (-> (fn [req]
+                 (if (roles/check-privilege (:identity req) role-context privilege)
+                   (next-handler req)
+                   (resp/forbidden {:error "Missing privilege"})))
+               (auth)
+               (token-auth))))
        {}))})
