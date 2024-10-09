@@ -108,3 +108,17 @@
                           (into #{:default}))
         privileges (get-privileges active-roles)]
     (contains? privileges required-privilege)))
+
+(defn check-role
+  "Check if user has the given role USUALLY
+  this should not be used to grant privileges.
+  Admin role is ocassionally checked for tracking etc. non
+  authorization purposes."
+  [user role]
+  (->> user
+       :permissions
+       :roles
+       (some (fn [x]
+               ;; NOTE: Could also check that role doesn't have any role-context?
+               ;; SHOULDN'T matter for admin role.
+               (= role (:role x))))))
