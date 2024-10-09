@@ -1,7 +1,8 @@
 (ns lipas.ui.sports-sites.activities.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.map.utils :as map-utils]))
+   [lipas.roles :as roles]
+   [lipas.ui.map.utils :as map-utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::activities
@@ -44,28 +45,23 @@
  (fn [activities _]
    (some? activities)))
 
-;; FIXME: Roles
+;; TODO: Check role-context for given site, not just type-code
 (re-frame/reg-sub
  ::show-activities?
  (fn [[_ type-code]]
-   [(re-frame/subscribe [::activities-for-type type-code])
-    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-activities])
-    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
- (fn [[activity activities-perms admin?] _]
-   ;; TODO: Check acitivities role?
-   (or admin?
-       (and (some? activity)
-            (some #{(:value activity)} (keys activities-perms))))))
+   [(re-frame/subscribe [:lipas.ui.user.subs/user-data])
+    (re-frame/subscribe [::activities-for-type type-code])])
+ (fn [[user activity] _]
+   ;; check if user has privilege to view(?) activity for given type-code
+   (roles/check-privilege user {:activity activity
+                                :city-code ::roles/any} :view-activity)))
 
-;; FIXME: Roles
 (re-frame/reg-sub
  ::edit-activities-only?
  (fn [[_ type-code]]
-   [(re-frame/subscribe [::show-activities? type-code])
-    (re-frame/subscribe [:lipas.ui.user.subs/permissions])])
- (fn [[show-activities? {:keys [admin? types all-types?] :as lol}] [_ type-code can-publish?]]
-   (and (not (true? admin?))
-        (not can-publish?)
+   [(re-frame/subscribe [::show-activities? type-code])])
+ (fn [[show-activities?] [_ _type-code can-publish?]]
+   (and (not can-publish?)
         show-activities?)))
 
 (re-frame/reg-sub

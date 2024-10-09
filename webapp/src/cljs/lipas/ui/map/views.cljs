@@ -619,6 +619,7 @@
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
+        ;; FIXME: Should also consider site city-code and maybe even lipas-id, like other roles?
         show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
         hide-actions?        (<== [::subs/hide-actions?])
         admin?               (<== [:lipas.ui.user.subs/admin?])
