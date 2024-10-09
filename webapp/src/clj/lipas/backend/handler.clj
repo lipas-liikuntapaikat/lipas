@@ -238,7 +238,6 @@
       ["/users"
        {:get
         {:no-doc     true
-         ;; :middleware [mw/token-auth mw/auth]
          :require-privilege :user-management
          :handler
          (fn [_]
@@ -248,7 +247,6 @@
       ["/actions/gdpr-remove-user"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth]
          :require-privilege :user-management
          :handler
          (fn [{:keys [body-params]}]
@@ -336,7 +334,6 @@
       ["/actions/update-user-permissions"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth]
          :require-privilege :user-management
          :parameters
          {:body
@@ -353,7 +350,6 @@
       ["/actions/update-user-status"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth]
          :require-privilege :user-management
          :parameters
          {:body
@@ -399,7 +395,6 @@
       ["/actions/send-magic-link"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth]
          :require-privilege :user-management
          :parameters
          {:body

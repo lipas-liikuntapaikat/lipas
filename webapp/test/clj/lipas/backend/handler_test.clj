@@ -152,6 +152,9 @@
                   ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
                   (update :permissions (fn [permissions]
                                          (cond-> (or permissions {})
+                                           ;; generated result might include admin role, remove if the flag is false
+                                           (not admin?) (update :roles (fn [roles]
+                                                                         (into (empty roles) (remove (fn [x] (= :admin (:role x))) roles))))
                                            admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
        (do
