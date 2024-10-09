@@ -1,7 +1,7 @@
 (ns lipas.ui.loi.events
   (:require
    [ajax.core :as ajax]
-   [lipas.permissions :as permissions]
+   [lipas.roles :as roles]
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]))
 
@@ -108,9 +108,9 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   ;; TODO: Toistaiseksi Muut kohteet on piilossa muilta kuin utp käyttäjiltä
-   ;; -> Katsotaan jatkossa vain :view-loi privilege
-   (if (-> db :user :login :permissions permissions/activities?)
+   (if (roles/check-privilege (:login (:user db))
+                              {:city-code ::roles/any}
+                              :view-loi)
      {:http-xhrio
       {:method          :post
        :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])
