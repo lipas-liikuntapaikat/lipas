@@ -431,7 +431,7 @@
                        (assoc :lipas-id 123))
         _          (core/upsert-sports-site!* db user site draft?)
 
-        perms {:admin? true}
+        perms {:roles [{:role :admin}]}
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
                        (mock/content-type "application/json")
