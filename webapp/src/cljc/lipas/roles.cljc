@@ -5,6 +5,7 @@
 ;; Use namespaced keys for easier searching in the codebase
 (def privileges
   {:site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
+   ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
 
@@ -34,7 +35,7 @@
    ;; Can't be assigned to users on the user-management
    :default
    {:assignable false
-    :privileges #{:view
+    :privileges #{:site/view
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
                   ;; :loi/view
