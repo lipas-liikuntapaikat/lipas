@@ -286,7 +286,8 @@
 
       ;;; Permissions
       ;; TODO: Replace this with roles management
-      [lui/form-card {:title (tr :lipas.user/permissions)}
+      [lui/form-card {:title (str (tr :lipas.user/permissions)
+                                  " " (tr :lipas.user.permissions.roles/permissions-old))}
        [mui/form-group
 
         ($ permissions-request-card
@@ -295,25 +296,29 @@
 
         ;; Admin?
         [lui/checkbox
-         {:label     (tr :lipas.user.permissions/admin?)
+         {:disabled true
+          :label     (tr :lipas.user.permissions/admin?)
           :value     (-> user :permissions :admin?)
           :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
 
         ;; Permission to all types?
         [lui/checkbox
-         {:label     (tr :lipas.user.permissions/all-types?)
+         {:disabled true
+          :label     (tr :lipas.user.permissions/all-types?)
           :value     (-> user :permissions :all-types?)
           :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
 
         ;; Permission to all cities?
         [lui/checkbox
-         {:label     (tr :lipas.user.permissions/all-cities?)
+         {:disabled true
+          :label     (tr :lipas.user.permissions/all-cities?)
           :value     (-> user :permissions :all-cities?)
           :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
 
         ;; Permission to individual spoorts-sites
         [lui/autocomplete
-         {:items     sites
+         {:disabled true
+          :items     sites
           :label     (tr :lipas.user.permissions/sports-sites)
           :value     (-> user :permissions :sports-sites)
           :multi?    true
@@ -321,7 +326,8 @@
 
         ;; Permission to individual types
         [lui/autocomplete
-         {:items     types
+         {:disabled true
+          :items     types
           :label     (tr :lipas.user.permissions/types)
           :value     (-> user :permissions :types)
           :multi?    true
@@ -329,7 +335,8 @@
 
         ;; Permission to individual cities
         [lui/autocomplete
-         {:items     cities
+         {:disabled true
+          :items     cities
           :label     (tr :lipas.user.permissions/cities)
           :value     (-> user :permissions :cities)
           :multi?    true
@@ -337,14 +344,16 @@
 
         ;; Permission to activities
         [lui/autocomplete
-         {:items     activities
+         {:disabled true
+          :items     activities
           :label     (tr :lipas.user.permissions/activities)
           :value     (-> user :permissions :activities)
           :multi?    true
           :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
 
         [mui/button
-         {:on-click #(==> [::events/grant-access-to-activity-types
+         {:disabled true
+          :on-click #(==> [::events/grant-access-to-activity-types
                            (-> user :permissions :activities)])}
          "Anna oikeus aktiviteettien tyyppeihin"]]]
 

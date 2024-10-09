@@ -846,7 +846,8 @@
      :context-keys {:city-code "Kunta"
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"
-                    :lipas-id "Paikka"}}
+                    :lipas-id "Paikka"}
+     :permissions-old "(vanhat, vain luku)"}
     :help
     {:headline                 "Ohjeet",
      :permissions-help
