@@ -407,7 +407,8 @@
           :postal-code   (-> latest :location :postal-code)
           :postal-office (-> latest :location :postal-office)
           :city
-          {:name         (-> city :name locale)
+          {:city-code    (-> latest :location :city :city-code)
+           :name         (-> city :name locale)
            :neighborhood (-> latest :location :city :neighborhood)}}
 
          :building (:building latest)}

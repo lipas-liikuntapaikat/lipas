@@ -1,6 +1,6 @@
 (ns lipas.ui.sports-sites.floorball.subs
   (:require
-   [clojure.string :as str]
+   [lipas.roles :as roles]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
@@ -8,23 +8,12 @@
  (fn [db _]
    (-> db :sports-sites :floorball)))
 
-;; TODO: Remove, use roles
-(defn floorball-user?
-  [email]
-  (and email
-       (or (str/ends-with? email "@salibandy.fi")
-           (str/ends-with? email "@lipas.fi"))))
-
 (re-frame/reg-sub ::visibility
-  ;; TODO: Roles
-  ;; Drop admin check, just check floorball privilege
-  :<- [:lipas.ui.user.subs/admin?]
   :<- [:lipas.ui.user.subs/user-data]
-  (fn [[admin? {:keys [email] :as _user-data}] _]
-    (cond
-      admin?                  :floorball
-      (floorball-user? email) :floorball
-      :else                   :public)))
+  (fn [user [_ role-context]]
+    (if (roles/check-privilege user role-context :floorball/view)
+      :floorball
+      :public)))
 
 (re-frame/reg-sub
  ::type-codes

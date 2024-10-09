@@ -6,12 +6,11 @@
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    ["react" :as react]
-   #_[lipas.ui.feedback.views :as feedback]
-   #_[lipas.ui.sports-sites.football.views :as football]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
    [lipas.flags :as flags]
+   [lipas.roles :as roles]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
@@ -615,7 +614,7 @@
 
         type-code            (-> display-data :type :type-code)
         floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context display-data)])
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
@@ -1231,7 +1230,7 @@
                   selected-tab]} (<== [::subs/add-sports-site-view])
 
           floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context data)])
           set-field            set-new-site-field
           geom-type            (:geometry-type type)]
 
