@@ -26,7 +26,8 @@
 (def roles
   {:admin
    ;; all privileges
-   {:assignable true
+   {:sort 0
+    :assignable true
     :privileges (set (keys privileges))}
 
    ;; Unsigned users, basis for everyone
@@ -40,13 +41,15 @@
                   :floorball/view}}
 
    :basic-manager
-   {:assignable true
+   {:sort 10
+    :assignable true
     :privileges #{:site/create-edit
                   :activity/view
                   :analysis-tool/use}}
 
    :activities-manager
-   {:assignable true
+   {:sort 20
+    :assignable true
     :privileges #{:activity/view
                   :activity/edit
 
@@ -54,8 +57,21 @@
                   :loi/create-edit}}
 
    :floorball-manager
-   {:assignable true
+   {:sort 30
+    :assignable true
     :privileges #{:floorball/edit}}})
+
+(defn role-key-fn [x]
+  (str (:role x) "-" (:city-code x) "-" (:type-code x) "-" (:activity x) "-" (:lipas-id x)))
+
+(defn role-sort-fn
+  "Note: sorts using codes, not localized names."
+  [{:keys [role city-code type-code activity lipas-id]}]
+  [(:sort (get roles (keyword role)) 100)
+   city-code
+   type-code
+   activity
+   lipas-id])
 
 (defn get-privileges
   "Get set of privileges for given list of roles"

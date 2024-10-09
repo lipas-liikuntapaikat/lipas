@@ -1,11 +1,9 @@
 (ns lipas.ui.user.views
   (:require
    ["@mui/material/Icon$default" :as Icon]
-   ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/ListItemText$default" :as ListItemText]
    ["@mui/material/Stack$default" :as Stack]
    ["@mui/material/Typography$default" :as Typography]
+   [lipas.roles :as roles]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.uix.hooks :refer [use-subscribe]]
@@ -116,7 +114,7 @@
 
 (defui explain-roles [{:keys [tr]}]
   (let [roles (use-subscribe [::subs/roles])
-        roles (sort-by (juxt :role :city-code :type-code :activities :lipas-id) roles)]
+        roles (sort-by roles/role-sort-fn roles)]
     (if (empty? roles)
       ($ Stack
          {:direction "row"
@@ -131,7 +129,7 @@
       ($ :<>
          (for [{:keys [role city-code type-code lipas-id activity] :as x} roles]
            ($ :<>
-              {:key (str role "-" city-code "-" type-code "-" activity "-" lipas-id)}
+              {:key (roles/role-key-fn x)}
               ($ Stack
                  {:direction "row"
                   :sx #js {:alignItems "center"

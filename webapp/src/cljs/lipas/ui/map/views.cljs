@@ -617,9 +617,9 @@
         floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context display-data)])
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
-        activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
-        ;; FIXME: Should also consider site city-code and maybe even lipas-id, like other roles?
-        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
+        activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
+        has-activity?        (some? activity-value)
+        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
         hide-actions?        (<== [::subs/hide-actions?])
         admin?               (<== [:lipas.ui.user.subs/admin?])
 
@@ -630,7 +630,7 @@
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
-        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? type-code can-publish?])
+        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? activity-value (roles/site-roles-context display-data) can-publish?])
 
         set-field (partial set-field lipas-id)]
 
@@ -766,7 +766,7 @@
                :address-required?         (not (#{201 2011} type-code))}]]]
 
          ;; Properties tab
-         1 (r/with-let [prop-tab (r/atom (if (and activity-type? edit-activities-only?)
+         1 (r/with-let [prop-tab (r/atom (if (and has-activity? edit-activities-only?)
                                            "activities"
                                            "props"))]
              [:<>
@@ -776,9 +776,9 @@
                   :variant        "standard"
                   :indicatorColor "primary"
                   :on-change      #(reset! prop-tab %2)}
-                 (when-not (and activity-type? can-edit-activities?)
+                 (when-not (and has-activity? can-edit-activities?)
                    [mui/tab {:value "props" :label "Ominaisuudet"}])
-                 (when (and activity-type? can-edit-activities?)
+                 (when (and has-activity? can-edit-activities?)
                    [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}])]
 
               #_(when (= "props" @prop-tab))
