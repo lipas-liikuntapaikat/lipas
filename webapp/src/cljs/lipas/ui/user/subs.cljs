@@ -1,6 +1,5 @@
 (ns lipas.ui.user.subs
   (:require
-   [lipas.permissions :as permissions]
    [lipas.roles :as roles]
    [re-frame.core :as re-frame]))
 
