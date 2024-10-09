@@ -7,19 +7,11 @@
 (re-frame/reg-event-fx
   ::get-users-sports-sites
   (fn [{:keys [db]} _]
-    (let [permissions (-> db :user :login :permissions)]
-      {:dispatch-n
-       (-> []
-           ;; TODO: Old permissions version, clean later
-           (into (map (fn [lipas-id]
-                        [:lipas.ui.sports-sites.events/get lipas-id]))
-                 (:sports-sites permissions))
-           ;; Also get the sites for new roles
-           (into (keep (fn [{:keys [lipas-id]}]
-                         (when lipas-id
-                           [:lipas.ui.sports-sites.events/get lipas-id]))
-                       (or [{:lipas-id 505861}]
-                           (:roles permissions)))))})))
+    (let [roles (-> db :user :login :permissions :roles)]
+      {:dispatch-n (into [] (keep (fn [{:keys [lipas-id]}]
+                                    (when lipas-id
+                                      [:lipas.ui.sports-sites.events/get lipas-id])) 
+                                  roles))})))
 
 (re-frame/reg-event-fx
  ::select-sports-site
