@@ -131,4 +131,4 @@
        (some (fn [x]
                ;; NOTE: Could also check that role doesn't have any role-context?
                ;; SHOULDN'T matter for admin role.
-               (= role (:role x))))))
+               (= role (keyword (:role x)))))))
