@@ -108,9 +108,8 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   (if (roles/check-privilege (:login (:user db))
-                              {:city-code ::roles/any}
-                              :view-loi)
+   ;; TODO: Which role context values should this check?
+   (if (roles/check-privilege (:login (:user db)) {:city-code ::roles/any} :loi/view)
      {:http-xhrio
       {:method          :post
        :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])

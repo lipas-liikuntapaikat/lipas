@@ -538,7 +538,7 @@
          [type-codes-view])]]]))
 
 (defn main []
-  (let [admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :user-management])]
+  (let [admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])]
     (if admin?
       [admin-panel]
       (==> [:lipas.ui.events/navigate "/"]))))

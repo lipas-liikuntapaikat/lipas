@@ -46,8 +46,8 @@
   {:name ::require-privilege
    :compile
    ;; Use:
-   ;; :required-privilege :user-management
-   ;; :required-privilege [{:type-code ::roles/any} :create]
+   ;; :required-privilege :users/manage
+   ;; :required-privilege [{:type-code ::roles/any} :site/create-dit]
    ;; NOTE: Consider case where role-context values are available in the
    ;; request? For example :body-params :lipas-id. Maybe allow role-context to
    ;; be fn of req=>role-context. But maybe it is best to just handle these

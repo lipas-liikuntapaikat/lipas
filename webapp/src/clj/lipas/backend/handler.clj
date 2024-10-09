@@ -237,7 +237,7 @@
       ["/users"
        {:get
         {:no-doc     true
-         :require-privilege :user-management
+         :require-privilege :users/manage
          :handler
          (fn [_]
            {:status 200
@@ -246,7 +246,7 @@
       ["/actions/gdpr-remove-user"
        {:post
         {:no-doc     true
-         :require-privilege :user-management
+         :require-privilege :users/manage
          :handler
          (fn [{:keys [body-params]}]
            (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
@@ -331,7 +331,7 @@
       ["/actions/update-user-permissions"
        {:post
         {:no-doc     true
-         :require-privilege :user-management
+         :require-privilege :users/manage
          :parameters
          {:body
           {:id          string?
@@ -347,7 +347,7 @@
       ["/actions/update-user-status"
        {:post
         {:no-doc     true
-         :require-privilege :user-management
+         :require-privilege :users/manage
          :parameters
          {:body
           {:id     string?
@@ -392,7 +392,7 @@
       ["/actions/send-magic-link"
        {:post
         {:no-doc     true
-         :require-privilege :user-management
+         :require-privilege :users/manage
          :parameters
          {:body
           {:login-url string?
@@ -692,7 +692,7 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
-         ;; TODO: roles, check for :view-loi ?
+         ;; TODO: roles, check for :loi/view ?
          #_#_:middleware [mw/token-auth mw/auth]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler

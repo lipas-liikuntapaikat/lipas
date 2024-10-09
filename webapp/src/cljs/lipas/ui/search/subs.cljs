@@ -155,7 +155,7 @@
      :location.postal-office  (-> site :location :postal-office)
      :location.city.city-code city-code
      :location.city.name      (get-in cities [city-code :name locale])
-     :permission?             (roles/check-privilege user (roles/site-roles-context site) :edit)}))
+     :permission?             (roles/check-privilege user (roles/site-roles-context site) :site/create-edit)}))
 
 (defn ->table-entry2 [m hit]
   (->table-entry m (js->clj hit :keywordize-keys true)))
