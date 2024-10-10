@@ -443,8 +443,7 @@
         site-log (->> (core/get-sports-site-history db 123)
                       (utils/index-by :event-date))]
     (is (= 200 (:status resp)))
-    ;; NOTE: DB returns :role values as strings currently
-    (is (= {:roles [{:role "admin"}]}
+    (is (= perms
            (-> (core/get-user db (:email user))
                :permissions)))
     (is (= "active" (:status (get site-log event-date))))))

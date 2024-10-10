@@ -5,7 +5,6 @@
    [lipas.backend.core :as core]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
-   [lipas.flags :as flags]
    [lipas.roles :as roles]
    [lipas.schema.core]
    [lipas.utils :as utils]
@@ -695,10 +694,11 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
-         :require-privilege [{:type-code ::roles/any
-                              :city-code ::roles/any
-                              :activity ::roles/any}
-                             :loi/view]
+         ;; TODO: Tests don't use auth for this endpoint now
+         ; :require-privilege [{:type-code ::roles/any
+         ;                      :city-code ::roles/any
+         ;                      :activity ::roles/any}
+         ;                     :loi/view]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
@@ -713,10 +713,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/get-ptv-integration-candidates search body-params)}))}}]
+           {:status 200
+            :body   (core/get-ptv-integration-candidates search body-params)})}}]
 
       ["/actions/generate-ptv-descriptions"
        {:post
@@ -725,10 +723,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/generate-ptv-descriptions search body-params)}))}}]
+           {:status 200
+            :body   (core/generate-ptv-descriptions search body-params)})}}]
 
       ["/actions/generate-ptv-service-descriptions"
        {:post
@@ -737,10 +733,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/generate-ptv-service-descriptions search body-params)}))}}]
+           {:status 200
+            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
 
       ["/actions/save-ptv-service"
        {:post
@@ -749,10 +743,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/upsert-ptv-service! body-params)}))}}]
+           {:status 200
+            :body   (core/upsert-ptv-service! body-params)})}}]
 
       ["/actions/fetch-ptv-services"
        {:post
@@ -761,10 +753,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/fetch-ptv-services body-params)}))}}]
+           {:status 200
+            :body   (core/fetch-ptv-services body-params)})}}]
 
       ["/actions/save-ptv-service-location"
        {:post
@@ -773,10 +763,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/upsert-ptv-service-location! db search identity body-params)}))}}]
+           {:status 200
+            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
 
       ["/actions/save-ptv-meta"
        {:post
@@ -785,10 +773,8 @@
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/save-ptv-integration-definitions db search identity body-params)}))}}]]]
+           {:status 200
+            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

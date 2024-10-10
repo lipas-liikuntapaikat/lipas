@@ -25,5 +25,7 @@
   (jws {:secret (env :auth-key)
         :authfn (fn [token-data]
                   ;; unmarshall the permissions/roles to use keywords and sets
-                  (update token-data :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer))))
+                  (if (:permissions token-data)
+                    (update token-data :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer)))
+                    token-data))
         :options {:alg :hs512}}))
