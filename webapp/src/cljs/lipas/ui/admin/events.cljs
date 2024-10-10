@@ -1,6 +1,7 @@
 (ns lipas.ui.admin.events
   (:require
    [ajax.core :as ajax]
+   [lipas.roles :as roles]
    [lipas.ui.utils :as utils]
    [re-frame.core :as re-frame]))
 
@@ -56,7 +57,18 @@
  (fn [db [_ path value]]
    (assoc-in db (into [:admin :editing-user] path) value)))
 
-(re-frame/reg-event-db ::set-new-role-value
+(re-frame/reg-event-db ::set-new-role
+  (fn [db [_ role]]
+    (let [allowed-keys (set (concat [:role]
+                                    (:required-context-keys (get roles/roles (:value role)))
+                                    (:optional-context-keys (get roles/roles (:value role)))))]
+      (update-in db [:admin :new-role] (fn [x]
+                                         (-> (if role
+                                               (assoc x :role role)
+                                               (dissoc x :role))
+                                             (select-keys allowed-keys)))))))
+
+(re-frame/reg-event-db ::set-new-role-context-value
   (fn [db [_ k value]]
     (if value
       (update-in db [:admin :new-role] assoc k value)
@@ -64,10 +76,11 @@
 
 (re-frame/reg-event-db ::add-new-role
   (fn [db _]
-    (let [role (reduce (fn [acc [k v]]
-                         (assoc acc k (:value v)))
-                       {}
-                       (:new-role (:admin db)))]
+    (let [v (:new-role (:admin db))
+          role (reduce (fn [acc [k v]]
+                         (assoc acc k (set (map :value v))))
+                       {:role (:value (:role v))}
+                       (dissoc v :role))]
       (-> db
           (update-in [:admin :editing-user :permissions :roles] conj role)
           (update-in [:admin] dissoc :new-role)))))

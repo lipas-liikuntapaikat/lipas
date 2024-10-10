@@ -1,8 +1,11 @@
 (ns lipas.migrations.roles
-  (:require [clojure.string :as str]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [lipas.backend.db.db :refer [get-users]]
-            [lipas.backend.db.user :as user]))
+            [lipas.backend.db.user :as user]
+            [lipas.schema.core]
+            [taoensso.timbre :as log]))
 
 (defn floorball-user?
   [email]
@@ -15,85 +18,101 @@
                 all-cities? all-types?
                 activities]} permissions
 
-        roles (for [type-code (if all-types? [nil] types)
-                    city-code (if all-cities? [nil] cities)]
-                (cond-> {:role :basic-manager}
-                  type-code (assoc :type-code type-code)
-                  city-code (assoc :city-code city-code)))
-        roles (if (floorball-user? email)
-                (concat roles (map (fn [type-code]
-                                     {:role :floorball-manager
-                                      :type-code type-code})
-                                   types))
-                roles)]
-    (cond-> (vec roles)
-      admin? (conj {:role :admin})
-      sports-sites (into (map (fn [id]
-                                {:role :basic-manager
-                                 :lipas-id id})
-                              sports-sites))
-      activities (into (map (fn [activity]
-                          {:role :activities-manager
-                           :activity activity})
-                        activities))
-      )))
+        roles (cond
+                admin?
+                [{:role :admin}]
+
+                ;; No permissions
+                (= {:draft? true} permissions)
+                []
+
+                (and all-cities? all-types?)
+                (do
+                  (log/errorf "Surprising user permissions, ignored and given no role: %s" email)
+                  [])
+
+                (and (seq cities) all-types?)
+                [{:role :city-manager
+                  :city-code (set cities)}]
+
+                (and (seq types) all-cities?)
+                [{:role :type-manager
+                  :type-code (set types)}]
+
+                (and (seq types) (seq cities))
+                [{:role (if (< (count types) (count cities))
+                          :type-manager
+                          :city-manager)
+                  :type-code (set types)
+                  :city-code (set cities)}]
+
+                :else
+                (do
+                  (log/errorf "How did we get here? %s" email)
+                  []))
+
+        result (cond-> (vec roles)
+                 (and (floorball-user? email) (not admin?)
+                      (or all-types? (seq types)))
+                 ;; FIXME: If no types, add the 4 salibandy types?
+                 (conj (if all-types?
+                         {:role :floorball-manager}
+                         {:role :floorball-manager
+                          :type-code (set types)}))
+
+                 (seq sports-sites)
+                 (conj {:role :site-manager
+                        :lipas-id (set sports-sites)})
+
+                 (seq activities)
+                 (conj {:role :activities-manager
+                        :activity (set activities)}))]
+    result))
 
 (deftest permissions->roles-test
   (is (= [{:role :admin}]
          (permissions->roles {:admin? true} nil)))
 
   (testing "access-to-sports-site"
-    (is (= [{:role :basic-manager
-             :lipas-id 1}
-            {:role :basic-manager
-             :lipas-id 2}]
+    (is (= [{:role :site-manager
+             :lipas-id #{1 2}}]
            (permissions->roles {:sports-sites [1 2]} nil))))
 
   (testing "salibandy"
-    (is (= [{:role :basic-manager
-             :type-code 1}
-            {:role :basic-manager
-             :type-code 2}
+    (is (= [{:role :type-manager
+             :type-code #{101 102}}
             {:role :floorball-manager
-             :type-code 1}
-            {:role :floorball-manager
-             :type-code 2}]
+             :type-code #{101 102}}]
            (permissions->roles {:all-cities? true
-                                :types [1 2]}
+                                :types [101 102]}
                                "foo@salibandy.fi"))))
 
   (testing "publish/modify-sports-site implicitly case"
-    (is (= [{:role :basic-manager
-             :type-code 1}
-            {:role :basic-manager
-             :type-code 2}]
-           (permissions->roles {:types [1 2]
+    (is (= [{:role :type-manager
+             :type-code #{101 102}}]
+           (permissions->roles {:types [101 202]
                                 :all-cities? true}
                                nil)))
 
-    (is (= [{:role :basic-manager
-             :city-code 1}
-            {:role :basic-manager
-             :city-code 2}]
-           (permissions->roles {:cities [1 2]
+    (is (= [{:role :city-manager
+             :city-code #{4 5}}]
+           (permissions->roles {:cities [9 10]
                                 :all-types? true}
                                nil)))
 
     (testing "both cities and types listed"
-      (is (= [{:role :basic-manager
-               :city-code 1
-               :type-code 100}
-              {:role :basic-manager
-               :city-code 2
-               :type-code 100}
-              {:role :basic-manager
-               :city-code 1
-               :type-code 200}
-              {:role :basic-manager
-               :city-code 2
-               :type-code 200}]
-             (permissions->roles {:cities [1 2]
-                                  :types [100 200]}
+      (is (= [{:role :type-manager
+               :city-code #{9 10}
+               :type-code #{101}}]
+             (permissions->roles {:cities [9 10]
+                                  :types [101]}
+                                 nil)))
+
+      (is (= [{:role :city-manager
+               :city-code #{9}
+               :type-code #{101 102}}]
+             (permissions->roles {:cities [9]
+                                  :types [101 102]}
                                  nil)))))
 
   (testing "ignore types if all-types given"
@@ -109,24 +128,29 @@
              :activity "fishing"}]
            (permissions->roles {:activities ["outdoor-recreation-facilities"
                                              "fishing"]}
-                               nil))))
-  )
+                               nil)))))
 
 (defn migrate-up [{:keys [db] :as _config}]
   (let [users (get-users db)]
     (doseq [user users
             :let [roles (permissions->roles (:permissions user) (:email user))]]
-      (user/update-user-permissions! db {:id (:id user)
-                                    :permissions (assoc (:permissions user) :roles roles)})
       (println (dissoc user :history :user-data))
       (println roles)
-      (println))))
+      (println)
+
+      (when-let [err (s/explain-data :lipas.user.permissions/roles roles)]
+        (throw (ex-info "Bad roles" {:roles roles
+                                     :err err})))
+
+      (user/update-user-permissions! db {:id (:id user)
+                                    :permissions (assoc (:permissions user) :roles roles)}))))
 
 (defn migrate-down [{:keys [db] :as _config}]
   (let [users (get-users db)]
     (doseq [user users]
       (user/update-user-permissions! db {:id (:id user)
-                                         :permissions (dissoc (:permissions user))}))))
+                                         :permissions (dissoc (:permissions user) :roles)}))))
 
 (comment
+  (require 'user)
   (migrate-up {:db (user/db)}))

@@ -24,12 +24,21 @@
 
    :ptv/manage {:doc ""}})
 
+(def basic #{:site/create-edit
+             :activity/view
+             :analysis-tool/use})
+
 (def roles
   {:admin
    ;; all privileges
    {:sort 0
     :assignable true
-    :privileges (set (keys privileges))}
+    :privileges (set (keys privileges))
+    ;; This is kind of duplicated from specs, not sure if needed or
+    ;; if the UI can introspect the spec.
+    ;; These are also used to get the ORDER of UI fields for edit.
+    :required-context-keys []
+    :optional-context-keys []}
 
    ;; Unsigned users, basis for everyone
    ;; Can't be assigned to users on the user-management
@@ -39,14 +48,31 @@
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
                   ;; :loi/view
-                  :floorball/view}}
+                  :floorball/view}
+    :required-context-keys []
+    :optional-context-keys []}
 
-   :basic-manager
+   ;; Basic privileges
+   :type-manager
    {:sort 10
     :assignable true
-    :privileges #{:site/create-edit
-                  :activity/view
-                  :analysis-tool/use}}
+    :privileges basic
+    :required-context-keys [:type-code]
+    :optional-context-keys [:city-code]}
+
+   :city-manager
+   {:sort 11
+    :assignable true
+    :privileges basic
+    :required-context-keys [:city-code]
+    :optional-context-keys [:type-code]}
+
+   :site-manager
+   {:sort 12
+    :assignable true
+    :privileges basic
+    :required-context-keys [:lipas-id]
+    :optional-context-keys []}
 
    :activities-manager
    {:sort 20
@@ -55,12 +81,16 @@
                   :activity/edit
 
                   :loi/view ;; Temporarily only enabled here
-                  :loi/create-edit}}
+                  :loi/create-edit}
+    :required-context-keys [:activity]
+    :optional-context-keys [:city-code :type-code]}
 
    :floorball-manager
    {:sort 30
     :assignable true
-    :privileges #{:floorball/edit}}})
+    :privileges #{:floorball/edit}
+    :required-context-keys []
+    :optional-context-keys [:type-code]}})
 
 (defn role-key-fn [x]
   (str (:role x) "-" (:city-code x) "-" (:type-code x) "-" (:activity x) "-" (:lipas-id x)))

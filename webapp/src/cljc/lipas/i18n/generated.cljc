@@ -840,7 +840,9 @@
      :new-role-explanation "Valitse lisättävä rooli ja mahdolliset rajaukset mihin resursseihin rooli vaikuttaa"
      :context-value-all "Kaikki"
      :role-names {:admin "Admin"
-                  :basic-manager "Peruskäyttäjä"
+                  :city-manager "Kuntakäyttäjä"
+                  :type-manager "Tyyppikäyttäjä"
+                  :site-manager "Paikkakäyttäjä"
                   :activities-manager "UTP-käyttäjä"
                   :floorball-manager "Salibandy muokkaaja"}
      :context-keys {:city-code "Kunta"
