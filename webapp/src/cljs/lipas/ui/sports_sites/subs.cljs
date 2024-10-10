@@ -4,6 +4,7 @@
    ["@turf/length$default" :as turf-length]
    [clojure.spec.alpha :as s]
    [lipas.data.types :as types]
+   [lipas.roles :as roles]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
    [re-frame.core :as re-frame]))
@@ -76,9 +77,9 @@
  ::editing-allowed?
  (fn [[_ lipas-id] _]
    [(re-frame/subscribe [::latest-rev lipas-id])
-    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
- (fn [[rev admin?] _]
-   (or admin?
+    (re-frame/subscribe [:lipas.ui.user.subs/user-data])])
+ (fn [[rev user] _]
+   (or (roles/check-privilege user (roles/site-roles-context rev) :site/edit-any-status)
        (->> rev :status #{"active"
                           "out-of-service-temporarily"
                           "planned"
@@ -406,7 +407,8 @@
           :postal-code   (-> latest :location :postal-code)
           :postal-office (-> latest :location :postal-office)
           :city
-          {:name         (-> city :name locale)
+          {:city-code    (-> latest :location :city :city-code)
+           :name         (-> city :name locale)
            :neighborhood (-> latest :location :city :neighborhood)}}
 
          :building (:building latest)}
@@ -593,3 +595,9 @@
  :<- [::sports-sites]
  (fn [sports-sites _]
    (-> sports-sites :name-check :response :status (= :conflict))))
+
+(re-frame/reg-sub
+  ::city
+  :<- [::cities-by-city-code]
+  (fn [cities [_ city-code]]
+    (get cities city-code)))

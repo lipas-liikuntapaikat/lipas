@@ -3,7 +3,9 @@
    [buddy.auth :refer [authenticated?]]
    [buddy.auth.middleware :refer [wrap-authentication]]
    [lipas.backend.auth :as auth]
-   [ring.util.http-response :as resp]))
+   [lipas.roles :as roles]
+   [ring.util.http-response :as resp]
+   [taoensso.timbre :as log]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not
@@ -40,8 +42,27 @@
   [handler]
   (wrap-authentication handler auth/token-backend))
 
-(defn admin [handler]
-  (fn [request]
-    (if (-> request :identity :permissions :admin?)
-      (handler request)
-      (resp/forbidden {:error "Admin access required"}))))
+(def privilege-middleware
+  {:name ::require-privilege
+   :compile
+   ;; Use:
+   ;; :required-privilege :users/manage
+   ;; :required-privilege [{:type-code ::roles/any} :site/create-dit]
+   ;; NOTE: Consider case where role-context values are available in the
+   ;; request? For example :body-params :lipas-id. Maybe allow role-context to
+   ;; be fn of req=>role-context. But maybe it is best to just handle these
+   ;; cases in handler fn, because often building the correct role-context
+   ;; might require loading the site from db first.
+   (fn [route-data _opts]
+     (if-let [required-privilege (:require-privilege route-data)]
+       (let [[role-context privilege] (if (vector? required-privilege)
+                                        required-privilege
+                                        [nil required-privilege])]
+         (fn [next-handler]
+           (-> (fn [req]
+                 (if (roles/check-privilege (:identity req) role-context privilege)
+                   (next-handler req)
+                   (resp/forbidden {:error "Missing privilege"})))
+               (auth)
+               (token-auth))))
+       {}))})

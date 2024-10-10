@@ -1,70 +1,60 @@
 (ns lipas.ui.sports-sites.activities.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.map.utils :as map-utils]))
+   [lipas.roles :as roles]
+   [lipas.ui.map.utils :as map-utils]
+   [re-frame.core :as re-frame]))
 
-(re-frame/reg-sub
- ::activities
- (fn [db _]
-   (->> db :sports-sites :activities)))
+(re-frame/reg-sub ::activities
+  (fn [db _]
+    (->> db :sports-sites :activities)))
 
-(re-frame/reg-sub
- ::data
- :<- [::activities]
- (fn [activities _]
-   (:data activities)))
+(re-frame/reg-sub ::data
+  :<- [::activities]
+  (fn [activities _]
+    (:data activities)))
 
-(re-frame/reg-sub
- ::mode
- :<- [::activities]
- (fn [activities _]
-   (:mode activities)))
+(re-frame/reg-sub ::activity-by-value
+  :<- [::data]
+  (fn [activities [_ value]]
+    (get activities value)))
 
-(re-frame/reg-sub
- ::activities-by-type-code
- :<- [::activities]
- (fn [activities _]
-   (:by-type-code activities)))
+(re-frame/reg-sub ::mode
+  :<- [::activities]
+  (fn [activities _]
+    (:mode activities)))
 
-(re-frame/reg-sub
- ::activities-for-type
- :<- [::activities-by-type-code]
- (fn [activities [_ type-code]]
-   (get activities type-code)))
+(re-frame/reg-sub ::activities-by-type-code
+  :<- [::activities]
+  (fn [activities _]
+    (:by-type-code activities)))
 
-(re-frame/reg-sub
- ::activity-type?
- (fn [[_ type-code]]
-   (re-frame/subscribe [::activities-for-type type-code]))
- (fn [activities _]
-   (some? activities)))
+(re-frame/reg-sub ::activity-for-type-code
+  :<- [::activities-by-type-code]
+  (fn [activities [_ type-code]]
+    (get activities type-code)))
 
-(re-frame/reg-sub
- ::show-activities?
- (fn [[_ type-code]]
-   [(re-frame/subscribe [::activities-for-type type-code])
-    (re-frame/subscribe [:lipas.ui.user.subs/permission-to-activities])
-    (re-frame/subscribe [:lipas.ui.user.subs/admin?])])
- (fn [[activity activities-perms admin?] _]
-   (or admin?
-       (and (some? activity)
-            (some #{(:value activity)} (keys activities-perms))))))
+(re-frame/reg-sub ::activity-value-for-type-code
+  (fn [[_ type-code]]
+    (re-frame/subscribe [::activity-for-type-code type-code]))
+  (fn [activity _]
+    (:value activity)))
 
-(re-frame/reg-sub
- ::edit-activities-only?
- (fn [[_ type-code]]
-   [(re-frame/subscribe [::show-activities? type-code])
-    (re-frame/subscribe [:lipas.ui.user.subs/permissions])])
- (fn [[show-activities? {:keys [admin? types all-types?] :as lol}] [_ type-code can-publish?]]
-   (and (not (true? admin?))
-        (not can-publish?)
-        show-activities?)))
+(re-frame/reg-sub ::show-activities?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user [_ activity-value role-context]]
+    (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit)))
 
-(re-frame/reg-sub
- ::selected-features
- :<- [:lipas.ui.map.subs/selected-features]
- (fn [fs _]
-   fs))
+;; NOTE: Refactor this?
+(re-frame/reg-sub ::edit-activities-only?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user [_ activity-value role-context can-publish?]]
+    (and (not can-publish?)
+         (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
+
+(re-frame/reg-sub ::selected-features
+  :<- [:lipas.ui.map.subs/selected-features]
+  (fn [fs _]
+    fs))
 
 (re-frame/reg-sub
  ::route-view

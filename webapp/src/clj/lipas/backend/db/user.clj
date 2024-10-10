@@ -1,7 +1,10 @@
 (ns lipas.backend.db.user
   (:require
+   [clojure.spec.alpha :as s]
    [hugsql.core :as hugsql]
-   [lipas.backend.db.utils :as utils]))
+   [lipas.backend.db.utils :as utils]
+   [lipas.schema.core]
+   [spec-tools.core :as st]))
 
 (defn marshall [{:keys [history] :as user}]
   (-> user
@@ -14,7 +17,14 @@
     (-> user
         (dissoc :history)
         (utils/->kebab-case-keywords)
-        (assoc :history history))))
+        (assoc :history history)
+        (update :permissions (fn [x]
+                               ;; TODO: What if this fails?
+                               ;; Maybe ignore failures, users just don't get roles?
+                               (let [res (st/conform :lipas.user/permissions x st/json-transformer)]
+                                 (if (= ::s/invalid res)
+                                   x
+                                   res)))))))
 
 ;; TODO: Nearly all of these could be handled with next.jdbc.sql
 (declare all-users

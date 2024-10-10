@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.floorball.views
   (:require
    ["mdi-material-ui/Calculator$default" :as Calculator]
+   [lipas.roles :as roles]
    [lipas.ui.components :as lui]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.floorball.events :as events]
@@ -1223,7 +1224,7 @@
 
 (defn form
   [{:keys [tr read-only? on-change display-data edit-data type-code lipas-id]}]
-  (let [visibility (<== [::subs/visibility])]
+  (let [visibility (<== [::subs/visibility (roles/site-roles-context display-data)])]
     [:<>
 
      [field-dialog

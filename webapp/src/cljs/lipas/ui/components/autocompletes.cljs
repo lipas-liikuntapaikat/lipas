@@ -1,9 +1,12 @@
 (ns lipas.ui.components.autocompletes
   (:require
+   ["@mui/material/Autocomplete$default" :as Autocomplete]
    ["@mui/material/TextField$default" :as TextField]
    [lipas.ui.mui :as mui]
+   [lipas.ui.uix.utils :refer [spread-props]]
    [lipas.ui.utils :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [uix.core :refer [$ defui]]))
 
 ;; TODO: Deprecate/replace this, this has bad choices:
 ;; 1. :value is going through clj->js
@@ -76,3 +79,22 @@
              :sort-cmp  utils/reverse-cmp
              :value     value
              :required  required})]))
+
+(defui autocomplete2
+  [{:keys [input-props label] :as props}]
+  ($ Autocomplete
+     (spread-props {:renderInput (fn [^js props]
+                                   ($ TextField
+                                      (spread-props {:label label
+                                                     :variant "standard"}
+                                                    props
+                                                    input-props)))
+                    :getOptionKey (fn [item] (:value item))
+                    :getOptionLabel (fn [item]
+                                      ;; This fn is called for both :value and :options
+                                      (if (map? item)
+                                        (:label item)
+                                        (str item)))
+                    :isOptionEqualToValue (fn [option value] (= (:value option)
+                                                                (:value value)))}
+                   (dissoc props :input-props :label))))

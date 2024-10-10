@@ -1,0 +1,4 @@
+{:ns lipas.migrations.roles
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}

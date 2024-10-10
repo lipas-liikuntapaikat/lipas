@@ -23,6 +23,7 @@
    [metosin/ring-http-response "0.9.0"]
    [cheshire "5.13.0"]
    [buddy "2.0.0"]
+   [com.github.seancorfield/next.jdbc "1.3.939"]
    [com.layerware/hugsql "0.4.8"]
    [org.postgresql/postgresql  "42.2.2"]
    [nrepl "1.2.0"]
