@@ -1,8 +1,10 @@
 (ns lipas.ui.admin.events
   (:require
    [ajax.core :as ajax]
+   [clojure.spec.alpha :as s]
    [lipas.roles :as roles]
    [lipas.ui.utils :as utils]
+   [lipas.schema.core]
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-db
@@ -81,9 +83,11 @@
                          (assoc acc k (set (map :value v))))
                        {:role (:value (:role v))}
                        (dissoc v :role))]
-      (-> db
-          (update-in [:admin :editing-user :permissions :roles] conj role)
-          (update-in [:admin] dissoc :new-role)))))
+      (if (s/valid? :lipas.user.permissions.roles/role role)
+        (-> db
+            (update-in [:admin :editing-user :permissions :roles] conj role)
+            (update-in [:admin] dissoc :new-role))
+        db))))
 
 (re-frame/reg-event-db ::remove-role
   (fn [db [_ role]]
