@@ -93,9 +93,8 @@
     :optional-context-keys [:type-code]}})
 
 (defn role-sort-fn
-  "Note: sorts using codes, not localized names."
-  [{:keys [role city-code type-code activity lipas-id]}]
-  (:sort (get roles role) 100))
+  [{:keys [role]}]
+  (:sort (get roles role)))
 
 (defn get-privileges
   "Get set of privileges for given list of roles"

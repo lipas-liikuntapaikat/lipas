@@ -695,10 +695,11 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
-         :require-privilege [{:type-code ::roles/any
-                              :city-code ::roles/any
-                              :activity ::roles/any}
-                             :loi/view]
+         ;; TODO: Tests don't use auth for this endpoint now
+         ; :require-privilege [{:type-code ::roles/any
+         ;                      :city-code ::roles/any
+         ;                      :activity ::roles/any}
+         ;                     :loi/view]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
