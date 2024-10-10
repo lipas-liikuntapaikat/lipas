@@ -5,7 +5,8 @@
    [lipas.ui.db :as db]
    [lipas.ui.local-storage :as local-storage]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as re-frame]
+   [spec-tools.core :as st]))
 
 (re-frame/reg-event-db
  ::set-field
@@ -28,7 +29,9 @@
 (re-frame/reg-event-fx
  ::login-success
  (fn [{:keys [db]} [_ login-type body]]
-   (let [refresh-interval-s 900] ; 15 minutes
+   (let [;; 15 minutes
+         refresh-interval-s 900
+         body (update body :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer)))]
      (merge
       {:db (-> db
                (assoc-in [:logged-in?] true)

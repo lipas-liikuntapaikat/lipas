@@ -14,6 +14,7 @@
  (fn  [{:keys [local-storage]}]
    (if-let [login-data (:login-data local-storage)]
      (let [;; login-data (assoc login-data :permissions (st/conform! (:permissions login-data) :lipas.user/permissions st/json-transformer))
+           ;; TODO: If no :roles, ignore login-data -> go to login to get a new token with new roles
            admin? (roles/check-role login-data :admin)]
        {:db                     (-> db/default-db
                                     (assoc-in [:user :login] login-data)

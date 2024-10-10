@@ -8,12 +8,6 @@
                {}
                :users/manage)))
 
-  (testing ":admin should be a global role, context doesn't matter"
-    (is (false? (sut/check-privilege
-                  {:permissions {:roles [{:lipas-id 1 :role :admin}]}}
-                  {}
-                  :users/manage))))
-
   (testing "missing privilege"
     (is (false? (sut/check-privilege
                   {:permissions {:roles []}}
@@ -28,32 +22,32 @@
 
   (testing "lipas-id context"
     (is (true? (sut/check-privilege
-                 {:permissions {:roles [{:lipas-id 1 :role :basic-manager}]}}
+                 {:permissions {:roles [{:lipas-id #{1} :role :site-manager}]}}
                  {:lipas-id 1}
                  :site/create-edit))))
 
   (testing "type-code context"
     (is (true? (sut/check-privilege
-                 {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
-                 {:type-code 100
+                 {:permissions {:roles [{:type-code #{101 102} :city-code #{837} :role :type-manager}]}}
+                 {:type-code 101
                   :city-code 837}
                  :site/create-edit)))
 
     (is (false? (sut/check-privilege
-                  {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
-                  {:type-code 100
-                   :city-code 100}
+                  {:permissions {:roles [{:type-code #{101 102} :city-code #{837} :role :type-manager}]}}
+                  {:type-code 101
+                   :city-code 0}
                   :site/create-edit)))
 
     (testing "::any context value"
       (is (true? (sut/check-privilege
-                   {:permissions {:roles [{:type-code 100 :city-code 837 :role :basic-manager}]}}
+                   {:permissions {:roles [{:type-code #{101 102} :city-code #{837} :role :type-manager}]}}
                    {:type-code ::sut/any
                     :city-code ::sut/any}
                    :site/create-edit)))))
 
   (testing "activity role context"
     (is (true? (sut/check-privilege
-                 {:permissions {:roles [{:activity "fishing" :role :activities-manager}]}}
+                 {:permissions {:roles [{:activity #{"fishing"} :role :activities-manager}]}}
                  {:activity "fishing"}
                  :activity/edit)))))

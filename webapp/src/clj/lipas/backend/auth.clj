@@ -5,7 +5,8 @@
    [buddy.hashers :as hashers]
    [environ.core :refer [env]]
    [lipas.backend.jwt :as jwt]
-   [lipas.backend.core :as core]))
+   [lipas.backend.core :as core]
+   [spec-tools.core :as st]))
 
 (defn basic-auth
   [db request {:keys [username password]}]
@@ -21,4 +22,8 @@
   (http-basic-backend {:authfn (partial basic-auth db)}))
 
 (def token-backend
-  (jws {:secret (env :auth-key) :options {:alg :hs512}}))
+  (jws {:secret (env :auth-key)
+        :authfn (fn [token-data]
+                  ;; unmarshall the permissions/roles to use keywords and sets
+                  (update token-data :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer))))
+        :options {:alg :hs512}}))

@@ -8,10 +8,11 @@
   ::get-users-sports-sites
   (fn [{:keys [db]} _]
     (let [roles (-> db :user :login :permissions :roles)]
-      {:dispatch-n (into [] (keep (fn [{:keys [lipas-id]}]
-                                    (when lipas-id
-                                      [:lipas.ui.sports-sites.events/get lipas-id])) 
-                                  roles))})))
+      {:dispatch-n (->> roles
+                        ;; could be multiple roles with sets of lipas-ids
+                        (mapcat :lipas-id)
+                        (mapv (fn [lipas-id]
+                               [:lipas.ui.sports-sites.events/get lipas-id]))) })))
 
 (re-frame/reg-event-fx
  ::select-sports-site
