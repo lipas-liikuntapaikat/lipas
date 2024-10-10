@@ -53,7 +53,12 @@
    x))
 
 (re-frame/reg-sub ::can-add-lois?
-  :<- [::check-privilege {:city-code ::roles/any} :loi/create-edit]
+  :<- [::check-privilege
+       ;; Usually given with activities-manager, but should ignore role-context
+       {:city-code ::roles/any
+        :type-code ::roles/any
+        :activity ::roles/any}
+       :loi/create-edit]
   (fn [x _]
     x))
 
