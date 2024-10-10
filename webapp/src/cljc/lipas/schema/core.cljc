@@ -2233,7 +2233,7 @@
   (stp/parse-spec :lipas.sports-site/lipas-id)
 
   (st/conform! :lipas.user/permissions
-               {:roles [{:role "basic-manager"
-                         :type-code 1620
-                         :city-code 20}]}
+               {:roles [{:role "city-manager"
+                         :type-code [1620]
+                         :city-code [20]}]}
                st/json-transformer))
