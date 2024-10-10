@@ -134,7 +134,6 @@
                :se "T.ex. lux-mängd eller annan förtydligande information"
                :en "E.g. lux amount or other specifying information"}})
 
-
       ;; Update :weight-lifting-spots-count name and description
       (assoc-in [:weight-lifting-spots-count :name]
                 {:fi "Painonnostopaikat/nostolavat lkm"
