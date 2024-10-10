@@ -9,7 +9,6 @@
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
-   [lipas.flags :as flags]
    [lipas.roles :as roles]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
@@ -1676,7 +1675,7 @@
     [:<>
      ;; PTV dialog
      ;; TODO Disabled until ready for release
-     (when (and flags/ptv-enabled? logged-in?)
+     (when ptv-privilege
        [ptv/dialog {:tr tr}])
 
      ;; Address search dialog
