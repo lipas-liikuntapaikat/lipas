@@ -291,14 +291,64 @@
 (s/def :lipas.role/role (st/spec {:spec (set (keys roles/roles))
                                   :decode/json #(keyword %2)}))
 
-(s/def :lipas.role/activity :lipas.sports-site.activity/value)
+;; Context keys
+(s/def :lipas.role/type-code
+  (s/coll-of :lipas.sports-site.type/type-code
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/city-code
+  (s/coll-of :lipas.location.city/city-code
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/activity
+  (s/coll-of :lipas.role/activity
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/lipas-id
+  (s/coll-of :lipas.sports-site/lipas-id
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/activity
+  (s/coll-of :lipas.sports-site.activity/value
+             :min-count 1
+             :distint true
+             :into #{}))
+
+(defmulti role-type :role)
+
+(defmethod role-type :type-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/type-code]
+          :opt-un [:lipas.role/city-code]))
+
+(defmethod role-type :city-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/city-code]
+          :opt-un [:lipas.role/type-code]))
+
+(defmethod role-type :site-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/lipas-id]))
+
+(defmethod role-type :activity-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/activity]
+          :opt-un [:lipas.role/city-code :lipas.role/type-code]))
+
+(defmethod role-type :floorball-manager [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/type-code]))
+
+;; :admin and others without any role-context-keys
+(defmethod role-type :default [_]
+  (s/keys :req-un [:lipas.role/role]))
 
 (s/def :lipas.user.permissions.roles/role
-  (s/keys :req-un [:lipas.role/role]
-          :opt-un [:lipas.sports-site/lipas-id
-                   :lipas.sports-site.type/type-code
-                   :lipas.location.city/city-code
-                   :lipas.role/activity]))
+  (s/multi-spec role-type :role))
 
 (s/def :lipas.user.permissions/roles
   (s/coll-of :lipas.user.permissions.roles/role

@@ -11,6 +11,7 @@
 (re-frame/reg-sub ::visibility
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user [_ role-context]]
+    ;; FIXME: Everyone has floorball view so check the floorball/edit privilege?
     (if (roles/check-privilege user role-context :floorball/view)
       :floorball
       :public)))

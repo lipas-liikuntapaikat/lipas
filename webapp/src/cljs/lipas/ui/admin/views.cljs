@@ -71,13 +71,72 @@
            (or permissions-request
                "-")))))
 
+(defui site-select [{:keys [tr required new-role]}]
+   (let [sites  (use-subscribe [::subs/sites-list])]
+      ($ autocomplete2
+         {:options   (to-array sites)
+          :label     (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
+                          (when required
+                             " *"))
+          :value     (to-array (or (:lipas-id new-role) []))
+          :onChange  (fn [_e v]
+                        (js/console.log v)
+                        (rf/dispatch [::events/set-new-role-context-value :lipas-id (vec v)]))
+          :multiple  true})))
+
+(defui type-code-select [{:keys [tr required new-role]}]
+   (let [types  (use-subscribe [::subs/types-list (tr)])]
+      ($ autocomplete2
+         {:options   (to-array types)
+          :label     (str (tr :lipas.user.permissions/types)
+                          (when required
+                             " *"))
+          :value     (to-array (or (:type-code new-role) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :type-code (vec v)]))
+          :multiple  true})))
+
+(defui city-code-select [{:keys [tr required new-role]}]
+   (let [cities (use-subscribe [::subs/cities-list (tr)])]
+      ($ autocomplete2
+         {:options   (to-array cities)
+          :label     (str (tr :lipas.user.permissions/cities)
+                          (when required
+                             " *"))
+          :value     (to-array (or (:city-code new-role) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :city-code (vec v)]))
+          :multiple  true})))
+
+(defui activity-select [{:keys [tr required new-role]}]
+   (let [activities (<== [::subs/activities-list (tr)])]
+      ($ autocomplete2
+         {:options   (to-array activities)
+          :label     (str (tr :lipas.user.permissions/activities)
+                          (when required
+                             " *"))
+          :value     (to-array (or (:activity new-role) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :activity (vec v)]))
+          :multiple  true})))
+
+(defui context-key-edit [{:keys [k] :as props}]
+   (case k
+      :lipas-id
+      ($ site-select props)
+
+      :type-code
+      ($ type-code-select props)
+
+      :city-code
+      ($ city-code-select props)
+
+      :activity
+      ($ activity-select props)))
+
 (defui new-role [{:keys [tr]}]
-  (let [locale (tr)
-        cities (use-subscribe [::subs/cities-list locale])
-        types  (use-subscribe [::subs/types-list locale])
-        sites  (use-subscribe [::subs/sites-list])
-        activities (<== [::subs/activities-list locale])
-        new-role (use-subscribe [::subs/new-role])]
+  (let [new-role (use-subscribe [::subs/new-role])
+
+        role (:value (:role new-role))
+        required-context-keys (:required-context-keys (get roles/roles role))
+        optional-context-keys (:optional-context-keys (get roles/roles role))]
     ($ Stack
        {:direction "column"
         :sx #js {:gap 1}}
@@ -95,31 +154,27 @@
                                    :label (tr (keyword :lipas.user.permissions.roles.role-names k))}))
            :label     (tr :lipas.user.permissions.roles/role)
            :value     (:role new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :role v]))})
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role v]))})
 
-       ($ autocomplete2
-          {:options   (to-array sites)
-           :label     (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-           :value     (:lipas-id new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :lipas-id v]))})
+       (when-not (:role new-role)
+          ($ Typography
+             "Valitse rooli ensiksi"))
 
-       ($ autocomplete2
-          {:options   (to-array types)
-           :label     (tr :lipas.user.permissions.roles.context-keys/type-code)
-           :value     (:type-code new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :type-code v]))})
+       (for [k required-context-keys]
+          ($ context-key-edit
+             {:key k
+              :k k
+              :required true
+              :tr tr
+              :new-role new-role}))
 
-       ($ autocomplete2
-          {:options   (to-array cities)
-           :label     (tr :lipas.user.permissions.roles.context-keys/city-code)
-           :value     (:city-code new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :city-code v]))})
+       (for [k optional-context-keys]
+          ($ context-key-edit
+             {:key k
+              :k k
+              :tr tr
+              :new-role new-role}))
 
-       ($ autocomplete2
-          {:options   (to-array activities)
-           :label     (tr :lipas.user.permissions.roles.context-keys/activity)
-           :value     (:activity new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-value :activity v]))})
 
        ($ Button
           {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
@@ -138,7 +193,7 @@
        ;; Value localized name
        localized
        ;; Value code
-       " (" v ")")))
+       " " v)))
 
 (defui roles-card [{:keys [tr]}]
   (let [user (use-subscribe [::subs/editing-user])]
@@ -171,12 +226,15 @@
                                :sx #js {:mr 2
                                         :fontWeight "bold"}}
                               (tr (keyword :lipas.user.permissions.roles.role-names role)))
-                           (for [[k v] (dissoc x :role)]
-                             ($ role-context
-                                {:key k
-                                 :k k
-                                 :v v
-                                 :tr tr})))
+                           (for [[context-key vs] (dissoc x :role)]
+                              ($ :<>
+                                 {:key context-key}
+                                 (for [v vs]
+                                    ($ role-context
+                                       {:key v
+                                        :k context-key
+                                        :v v
+                                        :tr tr})))))
                         ($ ListItemSecondaryAction
                            ($ IconButton
                               {:onClick (fn [_e] (rf/dispatch [::events/remove-role x]))}
