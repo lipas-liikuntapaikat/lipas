@@ -24,6 +24,9 @@
        (map user/unmarshall)
        (map #(dissoc % :password))))
 
+(comment
+  (get-users (:lipas/db integrant.repl.state/system)))
+
 (defn get-user-by-id [db-spec params]
   (when (uuid? (utils/->uuid-safe (:id params)))
     (-> (user/get-user-by-id db-spec params)

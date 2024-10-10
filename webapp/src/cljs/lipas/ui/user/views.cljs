@@ -127,9 +127,9 @@
                       :mr 2}}
             (tr :lipas.user/no-permissions)))
       ($ :<>
-         (for [{:keys [role city-code type-code lipas-id activity] :as x} roles]
+         (for [[i {:keys [role] :as x}] (map-indexed vector roles)]
            ($ :<>
-              {:key (roles/role-key-fn x)}
+              {:key i}
               ($ Stack
                  {:direction "row"
                   :sx #js {:alignItems "center"
@@ -140,14 +140,15 @@
                      :sx #js {:ml 1
                               :mr 2}}
                     (tr (keyword :lipas.user.permissions.roles.role-names role)))
-                 (for [[k v] (cond-> (dissoc x :role)
-                               (and (:city-code x) (not (:type-code x))) (assoc :type-code :all)
-                               (and (:type-code x) (not (:city-code x))) (assoc :city-code :all))]
-                   ($ role-context
-                      {:key k
-                       :k k
-                       :v v
-                       :tr tr})))))))))
+                 (for [[k vs] (dissoc x :role)]
+                   ($ :<>
+                      {:key k}
+                      (for [v vs]
+                        ($ role-context
+                           {:key k
+                            :k k
+                            :v v
+                            :tr tr})))))))))))
 
 (defn user-panel [tr user]
   (let [card-props {:square true}

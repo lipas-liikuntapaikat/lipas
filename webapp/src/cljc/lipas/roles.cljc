@@ -92,17 +92,10 @@
     :required-context-keys []
     :optional-context-keys [:type-code]}})
 
-(defn role-key-fn [x]
-  (str (:role x) "-" (:city-code x) "-" (:type-code x) "-" (:activity x) "-" (:lipas-id x)))
-
 (defn role-sort-fn
   "Note: sorts using codes, not localized names."
   [{:keys [role city-code type-code activity lipas-id]}]
-  [(:sort (get roles (keyword role)) 100)
-   city-code
-   type-code
-   activity
-   lipas-id])
+  (:sort (get roles role) 100))
 
 (defn get-privileges
   "Get set of privileges for given list of roles"
@@ -125,19 +118,17 @@
   [role-context role]
   (when (and (or (nil? (:city-code role))
                  (= ::any (:city-code role-context))
-                 (= (:city-code role-context) (:city-code role)))
+                 (contains? (:city-code role) (:city-code role-context)))
              (or (nil? (:type-code role))
                  (= ::any (:type-code role-context))
-                 (= (:type-code role-context) (:type-code role)))
+                 (contains? (:type-code role) (:type-code role-context)))
              (or (nil? (:activity role))
                  (= ::any (:activity role-context))
-                 (= (:activity role-context) (:activity role)))
+                 (contains? (:activity role) (:activity role-context)))
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
-                 (= (:lipas-id role-context) (:lipas-id role))))
-    ;; Cast to keyword, DB and JSON return string values
-    ;; NOTE: Or BE cnd FE ould conform the value
-    (keyword (:role role))))
+                 (contains? (:lipas-id role) (:lipas-id role-context))))
+    (:role role)))
 
 (defn check-privilege
   "Check if given user has the asked privilege
@@ -173,6 +164,4 @@
        :permissions
        :roles
        (some (fn [x]
-               ;; NOTE: Could also check that role doesn't have any role-context?
-               ;; SHOULDN'T matter for admin role.
-               (= role (keyword (:role x)))))))
+               (= role (:role x))))))

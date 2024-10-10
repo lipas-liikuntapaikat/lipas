@@ -55,6 +55,7 @@
                  (and (floorball-user? email) (not admin?)
                       (or all-types? (seq types)))
                  ;; FIXME: If no types, add the 4 salibandy types?
+                 ;; #{2240 2150 2210 2220}
                  (conj (if all-types?
                          {:role :floorball-manager}
                          {:role :floorball-manager

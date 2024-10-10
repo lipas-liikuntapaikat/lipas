@@ -213,13 +213,13 @@
                     :tr tr})
 
                 ($ List
-                   (for [{:keys [role] :as x}
-                         (->> user
-                              :permissions
-                              :roles
-                              (sort-by roles/role-sort-fn))]
+                   (for [[i {:keys [role] :as x}]
+                         (map-indexed vector (->> user
+                                               :permissions
+                                               :roles
+                                               (sort-by roles/role-sort-fn)))]
                      ($ ListItem
-                        {:key (roles/role-key-fn x)}
+                        {:key i}
                         ($ ListItemText
                            ($ Typography
                               {:component "span"
