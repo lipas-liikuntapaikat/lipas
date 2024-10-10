@@ -14,13 +14,6 @@
    (:user db)))
 
 (re-frame/reg-sub
- ::admin?
- ;; TODO: Check for role / replace most uses of this sub.
- :<- [::check-privilege {} :users/manage]
- (fn [x _]
-   x))
-
-(re-frame/reg-sub
  ::user-data
   :<- [::user]
  (fn [user _]
@@ -58,16 +51,6 @@
       :site/create-edit]
  (fn [x _]
    x))
-
-(re-frame/reg-sub ::permission-to-activities
-  :<- [::user-data]
-  :<- [:lipas.ui.sports-sites.activities.subs/data]
-  (fn [[user all-activities] _]
-    (into {} (filter (fn [[activity-name _v]]
-                       (roles/check-privilege user
-                                              {:activity activity-name}
-                                              :activity/edit))
-                     all-activities))))
 
 (re-frame/reg-sub ::can-add-lois?
   :<- [::check-privilege {:city-code ::roles/any} :loi/create-edit]

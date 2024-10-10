@@ -621,7 +621,6 @@
         has-activity?        (some? activity-value)
         show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
         hide-actions?        (<== [::subs/hide-actions?])
-        admin?               (<== [:lipas.ui.user.subs/admin?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -678,9 +677,8 @@
       [mui/tabs
        {:value       selected-tab
         :on-change   #(==> [::events/select-sports-site-tab %2])
-        :variant     (if (or admin?
-                             (and show-activities?
-                                  (not edit-activities-only?)))
+        :variant     (if (and show-activities?
+                              (not edit-activities-only?))
                        "scrollable"
                        "fullWidth")
         #_#_:variant "scrollable"
@@ -1671,10 +1669,10 @@
 (defn default-tools
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
-        admin?              (<== [:lipas.ui.user.subs/admin?])
         mode-name           (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
-        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
+        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])
+        ptv-privilege       (<== [:lipas.ui.user.subs/check-privilege {} :ptv/manage])]
     [:<>
      ;; PTV dialog
      ;; TODO Disabled until ready for release
@@ -1723,8 +1721,7 @@
             [mui/icon "insights"]]]])
 
        ;; PTV button
-       ;; TODO: Add and check a new role?
-       (when (and flags/ptv-enabled? logged-in? admin?)
+       (when ptv-privilege
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
            [mui/fab

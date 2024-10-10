@@ -80,7 +80,6 @@
                              " *"))
           :value     (to-array (or (:lipas-id new-role) []))
           :onChange  (fn [_e v]
-                        (js/console.log v)
                         (rf/dispatch [::events/set-new-role-context-value :lipas-id (vec v)]))
           :multiple  true})))
 
