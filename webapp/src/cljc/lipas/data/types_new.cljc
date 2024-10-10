@@ -150,8 +150,9 @@
       (assoc-in [1130 :props :fitness-stairs-length-m] {:priority 0})
 
       ;; 1140 Parkour-alue
-      (assoc-in [1140 :props :highest-drop-m] {:priority 0})
+      (assoc-in [1140 :props :highest-obstacle-m] {:priority 0})
       (assoc-in [1140 :props :climbing-wall?] {:priority 0})
+      (assoc-in [1140 :props :lighting-info] {:priority 0})
 
       ;; 1150 skeitti/rullaluistelupaikka
       (assoc-in [1150 :description :fi] "Rullaluistelua, skeittausta, potkulautailua varten varustettu paikka. Ominaisuustiedoissa tarkemmat tiedot kohteesta.")
