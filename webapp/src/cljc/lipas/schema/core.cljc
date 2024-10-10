@@ -304,12 +304,6 @@
              :distinct true
              :into #{}))
 
-(s/def :lipas.role/activity
-  (s/coll-of :lipas.role/activity
-             :min-count 1
-             :distinct true
-             :into #{}))
-
 (s/def :lipas.role/lipas-id
   (s/coll-of :lipas.sports-site/lipas-id
              :min-count 1
@@ -335,7 +329,7 @@
 (defmethod role-type :site-manager [_]
   (s/keys :req-un [:lipas.role/role :lipas.role/lipas-id]))
 
-(defmethod role-type :activity-manager [_]
+(defmethod role-type :activities-manager [_]
   (s/keys :req-un [:lipas.role/role :lipas.role/activity]
           :opt-un [:lipas.role/city-code :lipas.role/type-code]))
 
