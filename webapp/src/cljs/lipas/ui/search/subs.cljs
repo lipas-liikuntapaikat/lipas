@@ -168,7 +168,7 @@
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/admins]
  :<- [:lipas.ui.sports-sites.subs/owners]
- :<- [:lipas.ui.user.subs/user]
+ :<- [:lipas.ui.user.subs/user-data]
  (fn [[results tr types cities admins owners user] _]
    (let [locale (tr)
          data   {:types  types
@@ -176,7 +176,7 @@
                  :locale locale
                  :admins admins
                  :owners owners
-                 :user   (:login user)}
+                 :user   user}
          ;; FIXME: ~never use gobj
          hits   (gobj/get results "hits")]
      (when hits

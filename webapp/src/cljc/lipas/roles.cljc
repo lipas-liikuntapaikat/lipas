@@ -137,7 +137,10 @@
   - :city-code
   - :type-code
   - :lipas-id
-  - :activity"
+  - :activity
+
+  In FE, you should always (if possible) use `::user-data` sub to get the user,
+  because that sub applies the dev/overrides from the dev tool."
   [user {:as role-context} required-privilege]
   (let [active-roles (->> (:permissions user)
                           (:roles)
