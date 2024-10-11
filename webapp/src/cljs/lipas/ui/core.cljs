@@ -6,14 +6,12 @@
    [lipas.ui.events :as events]
    [lipas.ui.interceptors]
    [lipas.ui.local-storage]
-   [lipas.ui.mui :as mui]
+   [lipas.ui.project-devtools :as project-devtools]
    [lipas.ui.routes :as routes]
-   [lipas.ui.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
+   [lipas.ui.utils :refer [==>] :as utils]
    [lipas.ui.views :as views]
    [re-frame.core :as re-frame]
-   [reagent.dom :as reagent-dom]
-   [reagent.core :as reagent]))
+   [reagent.dom :as reagent-dom]))
 
 (def dev-backend-url "http://localhost:8091/api")
 
@@ -29,6 +27,7 @@
 
 (defn ^:dev/after-load mount-root []
   (re-frame/clear-subscription-cache!)
+  (project-devtools/start!)
   (routes/init!)
   (reagent-dom/render
    [:f> views/main-panel]

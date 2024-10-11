@@ -1,9 +1,10 @@
-(ns project-devtools
+(ns lipas.ui.project-devtools
   (:require [lipas.roles :as roles]
             [lipas.ui.user.subs :as user-subs]
             [re-frame.core :as rf]
             [re-frame.db]
-            [reagent-dev-tools.core :as dev-tools]))
+            [reagent-dev-tools.core :as dev-tools]
+            [lipas.ui.utils :as utils]))
 
 (rf/reg-event-db ::set-privilege-override
   (fn [db [_ k value]]
@@ -68,8 +69,19 @@
                  "Yes"
                  "No")]]))]]])
 
-(dev-tools/start!
-  {:state-atom re-frame.db/app-db
-   :panels [{:key :roles
-             :label "Roles"
-             :view [roles]}]})
+(def K "lipas.ui.dev-tools")
+
+(defn start! []
+  (when (or (= "localhost" (.. js/window -location -hostname))
+            (and (= "true" (js/localStorage.getItem K))
+                 (not (utils/prod?))))
+    (dev-tools/start!
+      {:state-atom re-frame.db/app-db
+       :panels [{:key :roles
+                 :label "Roles"
+                 :view [roles]}]})
+    :started))
+
+(defn ^:export enable []
+  (js/localStorage.setItem K "true")
+  (start!))

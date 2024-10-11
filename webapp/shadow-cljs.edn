@@ -18,5 +18,4 @@
    ;; TODO: module-hash-names
    :devtools
    {:preloads   [devtools.preload
-                 day8.re-frame-10x.preload
-                 project-devtools]}}}}
+                 day8.re-frame-10x.preload]}}}}
