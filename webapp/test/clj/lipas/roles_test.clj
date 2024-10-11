@@ -55,19 +55,18 @@
                  :activity/edit)))))
 
 (deftest roles-conform-test
-  (is (= {:roles [{:role :city-manager
-                   :type-code #{1620}
-                   :city-code #{20}}]}
+  (is (= [{:role :city-manager
+           :type-code #{1620}
+           :city-code #{20}}]
          (sut/conform-roles [{:role "city-manager"
                               :type-code [1620]
                               :city-code [20]}])))
-  (is (= {:roles [{:role :site-manager
-                   :lipas-id #{1}}]}
+  (is (= [{:role :site-manager
+           :lipas-id #{1}}]
          (sut/conform-roles [{:role "site-manager"
-                              :lipas-id [1]
-                              :city-code [20]}])))
+                              :lipas-id [1]}])))
 
-  (is (= {:roles [{:role :activities-manager
-                   :activity #{"fishing"}}]}
+  (is (= [{:role :activities-manager
+           :activity #{"fishing"}}]
          (sut/conform-roles [{:role "activities-manager"
                               :activity ["fishing"]}]))))
