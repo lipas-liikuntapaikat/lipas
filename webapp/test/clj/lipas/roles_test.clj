@@ -1,6 +1,8 @@
 (ns lipas.roles-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [lipas.roles :as sut]))
+  (:require [clojure.spec.alpha :as s]
+            [clojure.test :refer [deftest is testing]]
+            [lipas.roles :as sut]
+            [spec-tools.core :as st]))
 
 (deftest check-privilege-test
   (is (true? (sut/check-privilege
@@ -51,3 +53,21 @@
                  {:permissions {:roles [{:activity #{"fishing"} :role :activities-manager}]}}
                  {:activity "fishing"}
                  :activity/edit)))))
+
+(deftest roles-conform-test
+  (is (= {:roles [{:role :city-manager
+                   :type-code #{1620}
+                   :city-code #{20}}]}
+         (sut/conform-roles [{:role "city-manager"
+                              :type-code [1620]
+                              :city-code [20]}])))
+  (is (= {:roles [{:role :site-manager
+                   :lipas-id #{1}}]}
+         (sut/conform-roles [{:role "site-manager"
+                              :lipas-id [1]
+                              :city-code [20]}])))
+
+  (is (= {:roles [{:role :activities-manager
+                   :activity #{"fishing"}}]}
+         (sut/conform-roles [{:role "activities-manager"
+                              :activity ["fishing"]}]))))

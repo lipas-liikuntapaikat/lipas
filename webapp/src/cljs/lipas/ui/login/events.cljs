@@ -31,7 +31,7 @@
  (fn [{:keys [db]} [_ login-type body]]
    (let [;; 15 minutes
          refresh-interval-s 900
-         body (update body :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer)))]
+         body (update-in body [:permissions :roles] roles/conform-roles)]
      (merge
       {:db (-> db
                (assoc-in [:logged-in?] true)

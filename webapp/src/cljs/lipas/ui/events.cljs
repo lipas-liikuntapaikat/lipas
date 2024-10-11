@@ -13,7 +13,7 @@
  [(re-frame/inject-cofx :lipas.ui.local-storage/get :login-data)]
  (fn  [{:keys [local-storage]}]
    (if-let [login-data (:login-data local-storage)]
-     (let [;; login-data (assoc login-data :permissions (st/conform! (:permissions login-data) :lipas.user/permissions st/json-transformer))
+     (let [;; login-data (update-in login-data [:permissions :roles] roles/conform-roles)
            ;; TODO: If no :roles, ignore login-data -> go to login to get a new token with new roles
            admin? (roles/check-role login-data :admin)]
        {:db                     (-> db/default-db

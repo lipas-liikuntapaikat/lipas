@@ -1244,7 +1244,7 @@
 (defn view
   [{:keys [type-code display-data edit-data geom-type tr read-only?
            lipas-id]}]
-  (let [activities   (<== [::subs/activities-for-type type-code])
+  (let [activities   (<== [::subs/activity-for-type-code type-code])
         activity-k   (-> activities :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
         locale       (tr)

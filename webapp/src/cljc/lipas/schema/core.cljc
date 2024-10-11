@@ -2225,9 +2225,5 @@
   (stp/parse-spec :lipas.loi/document)
   (stp/parse-spec :lipas/timestamp)
   (stp/parse-spec :lipas.sports-site/lipas-id)
-
-  (st/conform! :lipas.user/permissions
-               {:roles [{:role "city-manager"
-                         :type-code [1620]
-                         :city-code [20]}]}
-               st/json-transformer))
+  (stp/parse-spec :lipas.user/permissions)
+  (stp/parse-spec :lipas.user.permissions/roles))

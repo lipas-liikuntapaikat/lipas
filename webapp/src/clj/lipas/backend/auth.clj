@@ -26,6 +26,6 @@
         :authfn (fn [token-data]
                   ;; unmarshall the permissions/roles to use keywords and sets
                   (if (:permissions token-data)
-                    (update token-data :permissions (fn [x] (st/conform! :lipas.user/permissions x st/json-transformer)))
+                    (update-in token-data [:permissions :roles] roles/conform-roles)
                     token-data))
         :options {:alg :hs512}}))
