@@ -13,11 +13,11 @@
  (fn [db _]
    (:user db)))
 
-(re-frame/reg-sub
- ::user-data
+(re-frame/reg-sub ::user-data
   :<- [::user]
- (fn [user _]
-   (:login user)))
+  :<- [::dev-overrides]
+  (fn [[user overrides] _]
+    (assoc (:login user) :dev/overrides overrides)))
 
 (re-frame/reg-sub ::permission-to-cities
   :<- [::user-data]
@@ -149,13 +149,8 @@
 (re-frame/reg-sub
   ::check-privilege
   :<- [::user-data]
-  :<- [::dev-overrides]
-  (fn [[user overrides] [_ role-context k disable-overrides?]]
-    (let [has-override? (when-not (true? disable-overrides?)
-                          (contains? overrides k))]
-      (if has-override?
-        (get overrides k)
-        (roles/check-privilege user role-context k)))))
+  (fn [user [_ role-context k]]
+    (roles/check-privilege user role-context k)))
 
 (re-frame/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]

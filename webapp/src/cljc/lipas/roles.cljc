@@ -143,8 +143,11 @@
                           (:roles)
                           (keep (fn [role] (select-role role-context role)))
                           (into #{:default}))
-        privileges (get-privileges active-roles)]
-    (contains? privileges required-privilege)))
+        privileges (get-privileges active-roles)
+        overrides (:dev/overrides user)]
+    (if (contains? overrides required-privilege)
+      (get overrides required-privilege)
+      (contains? privileges required-privilege))))
 
 (defn site-roles-context
   "Create role-context for given site"

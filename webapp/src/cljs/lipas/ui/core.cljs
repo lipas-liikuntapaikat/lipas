@@ -27,7 +27,7 @@
   (when-not (utils/prod?)
     (==> [::events/show-test-version-disclaimer])))
 
-(defn mount-root []
+(defn ^:dev/after-load mount-root []
   (re-frame/clear-subscription-cache!)
   (routes/init!)
   (reagent-dom/render
