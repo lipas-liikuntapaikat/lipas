@@ -143,14 +143,17 @@
 (re-frame/reg-sub
   ::dev-overrides
   (fn [db _]
-    ;; This value is only ever set from dev tools, which is only enabled on local builds
-    (:project-devtools/privilege-override db)))
+    ;; This value is only ever set from dev tools
+    (:lipas.ui.project-devtools/privilege-override db)))
 
 (re-frame/reg-sub
   ::check-privilege
   :<- [::user-data]
-  (fn [user [_ role-context k]]
-    (roles/check-privilege user role-context k)))
+  (fn [user [_ role-context k disable-overrides]]
+    (let [user (if disable-overrides
+                 (dissoc user :dev/overrides)
+                 user)]
+      (roles/check-privilege user role-context k))))
 
 (re-frame/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]
