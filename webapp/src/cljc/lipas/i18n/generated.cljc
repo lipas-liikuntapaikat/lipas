@@ -836,8 +836,6 @@
     :lipas.user.permissions.roles
     {:roles "Roolit"
      :role "Rooli"
-     :new-role "Uusi rooli"
-     :new-role-explanation "Valitse lisättävä rooli ja mahdolliset rajaukset mihin resursseihin rooli vaikuttaa"
      :context-value-all "Kaikki"
      :role-names {:admin "Admin"
                   :city-manager "Kuntakäyttäjä"
@@ -849,6 +847,9 @@
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"
                     :lipas-id "Paikka"}
+     :new-role {:header "Uusi rooli"
+                :add "Lisää"
+                :choose-role "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
      :permissions-old "(vanhat, vain luku)"}
     :help
     {:headline                 "Ohjeet",

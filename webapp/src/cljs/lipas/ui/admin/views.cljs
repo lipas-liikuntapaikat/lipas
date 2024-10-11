@@ -4,18 +4,14 @@
    ["@mui/material/Card$default" :as Card]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/CardHeader$default" :as CardHeader]
-   ["@mui/material/FormControl$default" :as FormControl]
    ["@mui/material/FormGroup$default" :as FormGroup]
    ["@mui/material/Grid$default" :as Grid]
    ["@mui/material/Icon$default" :as Icon]
    ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/InputLabel$default" :as InputLabel]
    ["@mui/material/List$default" :as List]
    ["@mui/material/ListItem$default" :as ListItem]
    ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
    ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/MenuItem$default" :as MenuItem]
-   ["@mui/material/Select$default" :as Select]
    ["@mui/material/Stack$default" :as Stack]
    ["@mui/material/Typography$default" :as Typography]
    [clojure.spec.alpha :as s]
@@ -23,14 +19,13 @@
    [lipas.roles :as roles]
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
-   [lipas.ui.user.subs :as user-subs]
    [lipas.ui.components :as lui]
    [lipas.ui.components.autocompletes :refer [autocomplete2]]
    [lipas.ui.mui :as mui]
    [lipas.ui.uix.hooks :refer [use-subscribe]]
+   [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [re-frame.core :as rf]
-   [reagent.core :as r]
    [uix.core :as uix :refer [$ defui]]))
 
 (defn magic-link-dialog [{:keys [tr]}]
@@ -141,10 +136,7 @@
         :sx #js {:gap 1}}
        ($ Typography
           {:variant "h6"}
-          (tr :lipas.user.permissions.roles/new-role))
-
-       ($ Typography
-          (tr :lipas.user.permissions.roles/new-role-explanation))
+          (tr :lipas.user.permissions.roles.new-role/header))
 
        ($ autocomplete2
           {:options   (to-array (for [[k {:keys [assignable]}] roles/roles
@@ -157,7 +149,7 @@
 
        (when-not (:role new-role)
           ($ Typography
-             "Valitse rooli ensiksi"))
+             (tr :lipas.user.permissions.roles.new-role/choose-role)))
 
        (for [k required-context-keys]
           ($ context-key-edit
@@ -177,7 +169,7 @@
 
        ($ Button
           {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
-          "Lisää"))))
+          (tr :lipas.user.permissions.roles.new-role/add)))))
 
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
