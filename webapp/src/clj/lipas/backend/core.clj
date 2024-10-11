@@ -19,7 +19,6 @@
    [lipas.backend.newsletter :as newsletter]
    [lipas.backend.s3 :as s3]
    [lipas.backend.search :as search]
-   [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.owners :as owners]
@@ -27,8 +26,8 @@
    [lipas.i18n.core :as i18n]
    [lipas.integration.ptv.core :as ptv]
    [lipas.integration.utp.cms :as utp-cms]
-   [lipas.permissions :as permissions]
    [lipas.reports :as reports]
+   [lipas.roles :as roles]
    [lipas.utils :as utils]
    [taoensso.timbre :as log])
   (:import
@@ -59,7 +58,7 @@
     (throw (ex-info "Email is already in use!"
                     {:type :email-conflict})))
 
-  (let [defaults {:permissions permissions/default-permissions
+  (let [defaults {:permissions {:roles []}
                   :status      "active"
                   :username    (:email user)
                   :user-data   {}
@@ -90,9 +89,10 @@
                                      (dissoc user :password))
   {:status "OK"})
 
-(defn publish-users-drafts! [db {:keys [permissions id] :as user}]
+(defn publish-users-drafts! [db {:keys [id] :as user}]
   (let [drafts (->> (db/get-users-drafts db user)
-                    (filter (partial permissions/publish? permissions)))]
+                    (filter (fn [draft]
+                              (roles/check-privilege user (roles/site-roles-context draft) :site/create-edit))))]
     (log/info "Publishing" (count drafts) "drafts from user" id)
     (doseq [draft drafts]
       (db/upsert-sports-site! db user (assoc draft :status "active")))))
@@ -270,7 +270,7 @@
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
                 (new? sports-site)
-                (permissions/publish? (:permissions user) sports-site))
+                (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
@@ -295,8 +295,11 @@
   Motivation is to ensures that user who creates the sports-site has
   permission to it."
   [db user {:keys [lipas-id] :as sports-site}]
-  (when-not (permissions/publish? (:permissions user) sports-site)
-    (let [user (update-in user [:permissions :sports-sites] conj lipas-id)]
+  (when-not (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
+    (let [user (update-in user [:permissions :roles]
+                          (fnil conj [])
+                          {:role :basic-manager
+                           :lipas-id lipas-id})]
       (db/update-user-permissions! db user))))
 
 (defn upsert-sports-site!

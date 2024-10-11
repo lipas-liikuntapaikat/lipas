@@ -16,8 +16,8 @@
    :status "active"
    :username "jhdemo"
    :password "jaahalli"
-   :permissions
-   {:sports-sites [89839]}
+   :permissions {:roles [{:role :basic-manager
+                          :lipas-id 89839}]}
    :user-data
    {:firstname           "Jää"
     :lastname            "Halli"
@@ -28,9 +28,8 @@
    :status   "active"
    :username "sbdemo"
    :password "atk-on-ihanaa"
-   :permissions
-   {:type-codes  [2240]
-    :all-cities? true}
+   :permissions {:roles [{:role :basic-manager
+                          :type-code 2240}]}
    :user-data
    {:firstname           "Testi"
     :lastname            "Testinen"
@@ -41,8 +40,8 @@
    :status   "active"
    :username "uhdemo"
    :password "uimahalli"
-   :permissions
-   {:sports-sites [506032]}
+   :permissions {:roles [{:role :basic-manager
+                          :lipas-id 506032}]}
    :user-data
    {:firstname           "Uima"
     :lastname            "Halli"
@@ -54,8 +53,7 @@
    :status   "active"
    :username "admin"
    :password (:admin-password env)
-   :permissions
-   {:admin? true}
+   :permissions {:roles [{:role :admin}]}
    :user-data
    {:firstname "Lipas"
     :lastname  "Admin"}})
@@ -67,8 +65,7 @@
    :status    "active"
    :username  "import"
    :password  (str (java.util.UUID/randomUUID)) ; no-one should know
-   :permissions
-   {:admin? true}
+   :permissions {:roles [{:role :admin}]}
    :user-data {}})
 
 ;; Robot user is similar to import user but meant for predictable
@@ -78,8 +75,7 @@
    :status    "active"
    :username  "robot"
    :password  (str (java.util.UUID/randomUUID)) ; no-one should know
-   :permissions
-   {:admin? true}
+   :permissions {:roles [{:role :admin}]}
    :user-data {}})
 
 (def city-data

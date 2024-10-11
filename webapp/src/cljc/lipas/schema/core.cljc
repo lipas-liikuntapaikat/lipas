@@ -18,6 +18,7 @@
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
    [lipas.reports :as reports]
+   [lipas.roles :as roles]
    [lipas.utils :as utils]
    [spec-tools.core :as st]
    [spec-tools.parse :as stp]))
@@ -239,6 +240,7 @@
           :opt-un [:lipas.user.user-data/saved-reports
                    :lipas.user.user-data/saved-diversity-settings]))
 
+;; Deprecated permissions model
 (s/def :lipas.user.permissions/sports-sites
   (s/coll-of :lipas.sports-site/lipas-id
              :min-count 0
@@ -273,14 +275,88 @@
              :into []))
 
 (s/def :lipas.user/permissions
-  (s/keys :opt-un [:lipas.user.permissions/admin?
+  (s/keys :opt-un [;; Old permissions
+                   :lipas.user.permissions/admin?
                    :lipas.user.permissions/draft?
                    :lipas.user.permissions/sports-sites
                    :lipas.user.permissions/all-cities?
                    :lipas.user.permissions/all-types?
                    :lipas.user.permissions/cities
                    :lipas.user.permissions/types
-                   :lipas.user.permissions/activities]))
+                   :lipas.user.permissions/activities
+                   ;; New roles
+                   :lipas.user.permissions/roles]))
+
+;; Role based permissions
+(s/def :lipas.role/role (st/spec {:spec (set (keys roles/roles))
+                                  :decode/json #(keyword %2)}))
+
+;; Context keys
+(s/def :lipas.role/type-code
+  (s/coll-of :lipas.sports-site.type/type-code
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/city-code
+  (s/coll-of :lipas.location.city/city-code
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/lipas-id
+  (s/coll-of :lipas.sports-site/lipas-id
+             :min-count 1
+             :distinct true
+             :into #{}))
+
+(s/def :lipas.role/activity
+  (s/coll-of :lipas.sports-site.activity/value
+             :min-count 1
+             :distint true
+             :into #{}))
+
+(defmulti role-type :role)
+
+(defmethod role-type :type-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/type-code]
+          :opt-un [:lipas.role/city-code]))
+
+(defmethod role-type :city-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/city-code]
+          :opt-un [:lipas.role/type-code]))
+
+(defmethod role-type :site-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/lipas-id]))
+
+(defmethod role-type :activities-manager [_]
+  (s/keys :req-un [:lipas.role/role :lipas.role/activity]
+          :opt-un [:lipas.role/city-code :lipas.role/type-code]))
+
+(defmethod role-type :floorball-manager [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/type-code]))
+
+;; :admin and others without any role-context-keys
+(defmethod role-type :default [_]
+  (s/keys :req-un [:lipas.role/role]))
+
+(s/def :lipas.user.permissions.roles/role
+  (s/multi-spec role-type :role))
+
+(s/def :lipas.user.permissions/roles
+  (s/coll-of :lipas.user.permissions.roles/role
+             :min-count 0
+             :distinct true
+             :into []))
+
+(comment
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :admin}])
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :basic-manager :city-id 837 :type-code 205}])
+  (s/valid? :lipas.user.permissions/roles
+            [{:role :activities-manager :activity "fishing"}]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
@@ -2149,6 +2225,5 @@
   (stp/parse-spec :lipas.loi/document)
   (stp/parse-spec :lipas/timestamp)
   (stp/parse-spec :lipas.sports-site/lipas-id)
-
-
-  )
+  (stp/parse-spec :lipas.user/permissions)
+  (stp/parse-spec :lipas.user.permissions/roles))

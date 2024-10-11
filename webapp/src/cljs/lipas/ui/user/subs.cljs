@@ -1,7 +1,7 @@
 (ns lipas.ui.user.subs
   (:require
-   [re-frame.core :as re-frame]
-   [lipas.permissions :as permissions]))
+   [lipas.roles :as roles]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
  ::logged-in?
@@ -13,100 +13,68 @@
  (fn [db _]
    (:user db)))
 
-(re-frame/reg-sub
- ::admin?
- :<- [::user]
- (fn [user _]
-   (-> user :login :permissions :admin?)))
-
-(re-frame/reg-sub
- ::user-data
+(re-frame/reg-sub ::user-data
   :<- [::user]
- (fn [user _]
-   (:login user)))
+  :<- [::dev-overrides]
+  (fn [[user overrides] _]
+    (assoc (:login user) :dev/overrides overrides)))
 
-(re-frame/reg-sub
- ::access-to-sports-sites
- :<- [::user]
- (fn [user _]
-   (-> user :login :permissions :sports-sites)))
+(re-frame/reg-sub ::permission-to-cities
+  :<- [::user-data]
+  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+  (fn [[user all-cities] _]
+    (into {} (filter (fn [[city-code _v]]
+                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
+                       (roles/check-privilege user
+                                              {:city-code city-code
+                                               :type-code ::roles/any}
+                                              :site/create-edit))
+                     all-cities))))
 
-(re-frame/reg-sub
- ::permissions
- :<- [::user]
- (fn [user _]
-   (-> user :login :permissions)))
-
-(re-frame/reg-sub
- ::utp-user?
- :<- [::permissions]
- (fn [permissions _]
-   (permissions/activities? permissions)))
-
-(re-frame/reg-sub
- ::permission-to-cities
- :<- [::permissions]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- (fn [[{:keys [admin? all-cities? cities]} all-cities] _]
-   (if (or admin? all-cities?)
-     all-cities
-     (select-keys all-cities cities))))
-
-(re-frame/reg-sub
- ::permission-to-types
- :<- [::permissions]
- :<- [:lipas.ui.sports-sites.subs/active-types]
- (fn [[{:keys [admin? all-types? types]} all-types] _]
-   (if (or admin? all-types?)
-     all-types
-     (select-keys all-types types))))
+(re-frame/reg-sub ::permission-to-types
+  :<- [::user-data]
+  :<- [:lipas.ui.sports-sites.subs/active-types]
+  (fn [[user all-types] _]
+    (into {} (filter (fn [[type-code _v]]
+                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
+                       (roles/check-privilege user
+                                              {:type-code type-code
+                                               :city-code ::roles/any}
+                                              :site/create-edit))
+                     all-types))))
 
 (re-frame/reg-sub
  ::can-add-sports-sites?
- :<- [::permissions]
- (fn [{:keys [admin? types all-types? cities all-cities?]} _]
-   (or admin?
-       (and
-        (or all-cities? (seq cities))
-        (or all-types? (seq types))))))
+ :<- [::check-privilege
+      {:type-code ::roles/any
+       :city-code ::roles/any}
+      :site/create-edit]
+ (fn [x _]
+   x))
 
-(re-frame/reg-sub
- ::permission-to-activities
- :<- [::permissions]
- :<- [:lipas.ui.sports-sites.activities.subs/data]
- (fn [[{:keys [admin? activities]} all-activities] _]
-   (if admin?
-     all-activities
-     (select-keys all-activities activities))))
+(re-frame/reg-sub ::can-add-lois?
+  :<- [::check-privilege
+       ;; Usually given with activities-manager, but should ignore role-context
+       {:city-code ::roles/any
+        :type-code ::roles/any
+        :activity ::roles/any}
+       :loi/create-edit]
+  (fn [x _]
+    x))
 
-(re-frame/reg-sub
- ::can-add-lois?
- :<- [::permissions]
- (fn [permissions _]
-   (permissions/activities? permissions)))
+(re-frame/reg-sub ::can-add-lois-only?
+  :<- [::can-add-sports-sites?]
+  :<- [::can-add-lois?]
+  (fn [[can-add-sports-sites? can-add-lois?] _]
+    (and can-add-lois? (not can-add-sports-sites?))))
 
-(re-frame/reg-sub
- ::can-add-lois-only?
- :<- [::can-add-sports-sites?]
- :<- [::can-add-lois?]
- (fn [[can-add-sports-sites? can-add-lois?] _]
-   (and can-add-lois? (not can-add-sports-sites?))))
-
-(re-frame/reg-sub
- ::permission-to-publish?
- (fn [[_ lipas-id]]
-   [(re-frame/subscribe [::permissions])
-    (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
- (fn [[permissions sports-site] _]
-   (when (and permissions sports-site)
-     (permissions/modify-sports-site? permissions sports-site))))
-
-(re-frame/reg-sub
- ::permission-to-publish-site?
- :<- [::permissions]
- (fn [permissions [_ sports-site]]
-   (when (and permissions sports-site)
-     (permissions/publish? permissions sports-site))))
+(re-frame/reg-sub ::permission-to-publish?
+  (fn [[_ lipas-id]]
+    [(re-frame/subscribe [::user-data])
+     (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
+  (fn [[user sports-site] _]
+    (when (and user sports-site)
+      (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))))
 
 (defn ->list-entry [locale cities types sports-site]
   (let [city-code (-> sports-site :location :city :city-code)
@@ -119,22 +87,25 @@
      :type-code type-code}))
 
 (defn show?
-  [permissions {:keys [status] :as sports-site}]
+  [user {:keys [status] :as sports-site}]
   (and
-   (permissions/publish? permissions sports-site)
-   (#{"planned" "active" "out-of-service-temporarily"} status)))
+    (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
+    (#{"planned" "active" "out-of-service-temporarily"} status)))
 
+;; This is used in ice-stadiums and swimming-pools views list
+;; which sites does the user have access to modify to report the
+;; energy use values.
 (re-frame/reg-sub
  ::sports-sites
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
- :<- [::permissions]
+ :<- [::user-data]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  :<- [:lipas.ui.sports-sites.subs/active-types]
- (fn [[sites permissions cities types] [_ locale]]
-   (when (and permissions sites)
+ (fn [[sites user cities types] [_ locale]]
+   (when (and user sites)
      (->> sites
           vals
-          (filter (partial show? permissions))
+          (filter (partial show? user))
           (map (partial ->list-entry locale cities types))))))
 
 (re-frame/reg-sub
@@ -161,8 +132,35 @@
  (fn [user _]
    (-> user :user-data :saved-diversity-settings)))
 
+;; Role basic permissions
+
 (re-frame/reg-sub
- ::experimental-features?
- :<- [::data]
- (fn [user _]
-   (-> user :experimental-features?)))
+  ::roles
+  :<- [::user-data]
+  (fn [user _]
+    (:roles (:permissions user))))
+
+(re-frame/reg-sub
+  ::dev-overrides
+  (fn [db _]
+    ;; This value is only ever set from dev tools, which is only enabled on local builds
+    (:project-devtools/privilege-override db)))
+
+(re-frame/reg-sub
+  ::check-privilege
+  :<- [::user-data]
+  (fn [user [_ role-context k]]
+    (roles/check-privilege user role-context k)))
+
+(re-frame/reg-sub ::context-value-name
+  (fn [[_ context-key v _locale]]
+    (case context-key
+      :city-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/city v])
+      :type-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
+      :activity (re-frame/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
+      :lipas-id (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])))
+  (fn [x [_ context-key _v locale]]
+    (case context-key
+      :lipas-id (:name x)
+      :activity (get (:label x) locale)
+      (get (:name x) locale))))

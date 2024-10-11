@@ -6,6 +6,7 @@
    [lipas.ui.subs :as subs]
    [lipas.ui.svg :as svg]
    [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
+   [re-frame.core :as rf]
    [reitit.frontend.easy :as rfe]))
 
 (def links
@@ -32,8 +33,7 @@
 
 (defn account-menu
   [{:keys [tr logged-in?]}]
-  (let [admin? (<== [:lipas.ui.user.subs/admin?])
-        anchor (<== [::subs/account-menu-anchor])
+  (let [anchor (<== [::subs/account-menu-anchor])
         close  #(==> [:lipas.ui.events/show-account-menu nil])]
 
     [mui/menu {:anchor-el anchor
@@ -66,7 +66,7 @@
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
      ;; Admin
-     (when admin?
+     (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
        [mui/menu-item {:id       "account-menu-item-admin"
                        :on-click (comp close #(navigate! "/admin"))}
         [mui/list-item-icon
@@ -131,7 +131,6 @@
 
 (defn drawer [{:keys [tr logged-in?]}]
   (let [open?              (<== [::subs/drawer-open?])
-        admin?             (<== [:lipas.ui.user.subs/admin?])
         hide-and-navigate! (comp toggle-drawer navigate!)]
     [mui/swipeable-drawer {:open     open?
                            :anchor   :top
@@ -193,7 +192,7 @@
       [mui/divider]
 
       ;; Admin
-      (when admin?
+      (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
         [mui/list-item {:button   true
                         :on-click #(hide-and-navigate! "/admin")}
          [mui/list-item-icon

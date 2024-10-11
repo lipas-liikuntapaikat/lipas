@@ -5,7 +5,7 @@
    [lipas.backend.core :as core]
    [lipas.backend.jwt :as jwt]
    [lipas.backend.middleware :as mw]
-   [lipas.flags :as flags]
+   [lipas.roles :as roles]
    [lipas.schema.core]
    [lipas.utils :as utils]
    [muuntaja.core :as m]
@@ -108,6 +108,7 @@
        {:post
         {:no-doc     false
          :middleware [mw/token-auth mw/auth]
+         ;; NOTE: privilege checked in the core code
          :responses  {201 {:body :lipas/sports-site}
                       400 {:body map?}}
          :parameters
@@ -236,7 +237,7 @@
       ["/users"
        {:get
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :require-privilege :users/manage
          :handler
          (fn [_]
            {:status 200
@@ -245,7 +246,7 @@
       ["/actions/gdpr-remove-user"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :require-privilege :users/manage
          :handler
          (fn [{:keys [body-params]}]
            (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
@@ -330,7 +331,7 @@
       ["/actions/update-user-permissions"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :require-privilege :users/manage
          :parameters
          {:body
           {:id          string?
@@ -346,7 +347,7 @@
       ["/actions/update-user-status"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :require-privilege :users/manage
          :parameters
          {:body
           {:id     string?
@@ -391,7 +392,7 @@
       ["/actions/send-magic-link"
        {:post
         {:no-doc     true
-         :middleware [mw/token-auth mw/auth mw/admin]
+         :require-privilege :users/manage
          :parameters
          {:body
           {:login-url string?
@@ -652,6 +653,7 @@
       ["/actions/create-upload-url"
        {:post
         {:no-doc     false
+         ;; TODO: role, :activity/edit?
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.api.create-upload-url/payload}
@@ -663,6 +665,7 @@
       ["/actions/upload-utp-image"
        {:post
         {:no-doc     false
+         ;; TODO: role, :activity/edit?
          :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
          :parameters {:multipart {:file multipart/temp-file-part}}
          :handler
@@ -677,7 +680,10 @@
       ["/actions/save-loi"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-privilege [{:type-code ::roles/any
+                              :city-code ::roles/any
+                              :activity ::roles/any}
+                             :loi/create-edit]
          :parameters
          {:body :lipas.loi/document}
          :handler
@@ -688,7 +694,11 @@
       ["/actions/search-lois"
        {:post
         {:no-doc         false
-         #_#_:middleware [mw/token-auth mw/auth]
+         ;; TODO: Tests don't use auth for this endpoint now
+         ; :require-privilege [{:type-code ::roles/any
+         ;                      :city-code ::roles/any
+         ;                      :activity ::roles/any}
+         ;                     :loi/view]
          :parameters     {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
@@ -699,91 +709,78 @@
       ["/actions/get-ptv-integration-candidates"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/get-ptv-integration-candidates search body-params)}))}}]
+           {:status 200
+            :body   (core/get-ptv-integration-candidates search body-params)})}}]
 
       ["/actions/generate-ptv-descriptions"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/generate-ptv-descriptions search body-params)}))}}]
+           {:status 200
+            :body   (core/generate-ptv-descriptions search body-params)})}}]
 
       ["/actions/generate-ptv-service-descriptions"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/generate-ptv-service-descriptions search body-params)}))}}]
+           {:status 200
+            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
 
       ["/actions/save-ptv-service"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/upsert-ptv-service! body-params)}))}}]
+           {:status 200
+            :body   (core/upsert-ptv-service! body-params)})}}]
 
       ["/actions/fetch-ptv-services"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/fetch-ptv-services body-params)}))}}]
+           {:status 200
+            :body   (core/fetch-ptv-services body-params)})}}]
 
       ["/actions/save-ptv-service-location"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/upsert-ptv-service-location! db search identity body-params)}))}}]
+           {:status 200
+            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
 
       ["/actions/save-ptv-meta"
        {:post
         {:no-doc     false
-         :middleware [mw/token-auth mw/auth]
+         :require-role :ptv/manage
          :parameters {:body map?}
          :handler
          (fn [{:keys [body-params identity]}]
-           (if-not flags/ptv-enabled?
-             {:status 501 :body "Not implemented"}
-             {:status 200
-              :body   (core/save-ptv-integration-definitions db search identity body-params)}))}}]]]
+           {:status 200
+            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance
-      :middleware [;; query-params & form-params
+      :middleware [
+                   ;; query-params & form-params
                    params/wrap-params
                    ;; content-negotiation
                    muuntaja/format-negotiate-middleware
@@ -796,7 +793,11 @@
                    ;; coercing response bodys
                    coercion/coerce-response-middleware
                    ;; coercing request parameters
-                   coercion/coerce-request-middleware]}})
+                   coercion/coerce-request-middleware
+                   ;; privilege check based on route-data,
+                   ;; also enables token-auth and auth checks
+                   ;; per route.
+                   mw/privilege-middleware]}})
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
     (ring/create-default-handler))))

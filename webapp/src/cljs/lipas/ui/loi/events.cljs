@@ -1,7 +1,7 @@
 (ns lipas.ui.loi.events
   (:require
    [ajax.core :as ajax]
-   [lipas.permissions :as permissions]
+   [lipas.roles :as roles]
    [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as re-frame]))
 
@@ -108,7 +108,15 @@
 (re-frame/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
-   (if (-> db :user :login :permissions permissions/activities?)
+   ;; Currently users with activities-manager roles should see/edit LOI data
+   ;; The activitier-manager role has context with activity/type-code etc.
+   ;; but ignore role-context here because LOI don't even have (site-)type-code or city-code.
+   ;; NOTE: This doesn't apply the dev/overrides
+   (if (roles/check-privilege (:login (:user db))
+                              {:city-code ::roles/any
+                               :type-code ::roles/any
+                               :activity ::roles/any}
+                              :loi/view)
      {:http-xhrio
       {:method          :post
        :params          {:location {:lat (get-in db [:map :center-wgs84 :lat])

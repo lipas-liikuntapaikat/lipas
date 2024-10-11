@@ -1,18 +1,18 @@
 (ns lipas.ui.user.events
   (:require
    [ajax.core :as ajax]
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils]))
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]))
 
 (re-frame/reg-event-fx
- ::get-users-sports-sites
- (fn [{:keys [db]} _]
-   (let [permissions (-> db :user :login :permissions)]
-     {:dispatch-n
-      (into []
-            (map (fn [lipas-id]
-                   [:lipas.ui.sports-sites.events/get lipas-id]))
-            (:sports-sites permissions))})))
+  ::get-users-sports-sites
+  (fn [{:keys [db]} _]
+    (let [roles (-> db :user :login :permissions :roles)]
+      {:dispatch-n (->> roles
+                        ;; could be multiple roles with sets of lipas-ids
+                        (mapcat :lipas-id)
+                        (mapv (fn [lipas-id]
+                               [:lipas.ui.sports-sites.events/get lipas-id]))) })))
 
 (re-frame/reg-event-fx
  ::select-sports-site

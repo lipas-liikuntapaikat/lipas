@@ -6,12 +6,10 @@
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    ["react" :as react]
-   #_[lipas.ui.feedback.views :as feedback]
-   #_[lipas.ui.sports-sites.football.views :as football]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
-   [lipas.flags :as flags]
+   [lipas.roles :as roles]
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
@@ -615,13 +613,13 @@
 
         type-code            (-> display-data :type :type-code)
         floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context display-data)])
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
-        activity-type?       (<== [:lipas.ui.sports-sites.activities.subs/activity-type? type-code])
-        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? type-code])
+        activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
+        has-activity?        (some? activity-value)
+        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
         hide-actions?        (<== [::subs/hide-actions?])
-        admin?               (<== [:lipas.ui.user.subs/admin?])
 
         {:keys [types cities admins owners editing? edits-valid?
                 problems?  editing-allowed? delete-dialog-open?
@@ -630,7 +628,7 @@
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
-        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? type-code can-publish?])
+        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? activity-value (roles/site-roles-context display-data) can-publish?])
 
         set-field (partial set-field lipas-id)]
 
@@ -678,9 +676,8 @@
       [mui/tabs
        {:value       selected-tab
         :on-change   #(==> [::events/select-sports-site-tab %2])
-        :variant     (if (or admin?
-                             (and show-activities?
-                                  (not edit-activities-only?)))
+        :variant     (if (and show-activities?
+                              (not edit-activities-only?))
                        "scrollable"
                        "fullWidth")
         #_#_:variant "scrollable"
@@ -766,7 +763,7 @@
                :address-required?         (not (#{201 2011} type-code))}]]]
 
          ;; Properties tab
-         1 (r/with-let [prop-tab (r/atom (if (and activity-type? edit-activities-only?)
+         1 (r/with-let [prop-tab (r/atom (if (and has-activity? edit-activities-only?)
                                            "activities"
                                            "props"))]
              [:<>
@@ -776,9 +773,9 @@
                   :variant        "standard"
                   :indicatorColor "primary"
                   :on-change      #(reset! prop-tab %2)}
-                 (when-not (and activity-type? can-edit-activities?)
+                 (when-not (and has-activity? can-edit-activities?)
                    [mui/tab {:value "props" :label "Ominaisuudet"}])
-                 (when (and activity-type? can-edit-activities?)
+                 (when (and has-activity? can-edit-activities?)
                    [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}])]
 
               #_(when (= "props" @prop-tab))
@@ -1230,7 +1227,7 @@
                   selected-tab]} (<== [::subs/add-sports-site-view])
 
           floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility])
+          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context data)])
           set-field            set-new-site-field
           geom-type            (:geometry-type type)]
 
@@ -1671,14 +1668,14 @@
 (defn default-tools
   [{:keys [tr logged-in?]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
-        admin?              (<== [:lipas.ui.user.subs/admin?])
         mode-name           (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
-        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])]
+        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])
+        ptv-privilege       (<== [:lipas.ui.user.subs/check-privilege {} :ptv/manage])]
     [:<>
      ;; PTV dialog
      ;; TODO Disabled until ready for release
-     (when (and flags/ptv-enabled? logged-in?)
+     (when ptv-privilege
        [ptv/dialog {:tr tr}])
 
      ;; Address search dialog
@@ -1723,7 +1720,7 @@
             [mui/icon "insights"]]]])
 
        ;; PTV button
-       (when (and flags/ptv-enabled? logged-in? admin?)
+       (when ptv-privilege
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
            [mui/fab

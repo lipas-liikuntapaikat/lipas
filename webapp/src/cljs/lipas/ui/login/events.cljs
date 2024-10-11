@@ -1,10 +1,12 @@
 (ns lipas.ui.login.events
   (:require
    [ajax.core :as ajax]
+   [lipas.roles :as roles]
    [lipas.ui.db :as db]
-   [lipas.ui.utils :as utils]
    [lipas.ui.local-storage :as local-storage]
-   [re-frame.core :as re-frame]))
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as re-frame]
+   [spec-tools.core :as st]))
 
 (re-frame/reg-event-db
  ::set-field
@@ -27,8 +29,9 @@
 (re-frame/reg-event-fx
  ::login-success
  (fn [{:keys [db]} [_ login-type body]]
-   (let [admin?             (-> body :permissions :admin?)
-         refresh-interval-s 900] ; 15 minutes
+   (let [;; 15 minutes
+         refresh-interval-s 900
+         body (update-in body [:permissions :roles] roles/conform-roles)]
      (merge
       {:db (-> db
                (assoc-in [:logged-in?] true)
@@ -50,7 +53,9 @@
           [:lipas.ui.search.events/set-logged-in-filters])]}
 
       (when (not= :refresh login-type)
-        {:tracker/set-dimension! ["user-type" (if admin? "admin" "user")]
+        {:tracker/set-dimension! ["user-type" (if (roles/check-role body :admin)
+                                                "admin"
+                                                "user")]
          :tracker/event!         ["user" "login-success"]})))))
 
 (re-frame/reg-event-fx

@@ -1,10 +1,17 @@
 (ns lipas.ui.user.views
   (:require
-   [lipas.ui.mui :as mui]
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/Stack$default" :as Stack]
+   ["@mui/material/Typography$default" :as Typography]
+   [lipas.roles :as roles]
    [lipas.ui.components :as lui]
-   [lipas.ui.user.subs :as subs]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.user.events :as events]
-   [lipas.ui.utils :refer [<== ==> navigate!]]))
+   [lipas.ui.user.subs :as subs]
+   [lipas.ui.utils :refer [<== ==> navigate!]]
+   [re-frame.core :as rf]
+   [uix.core :as uix :refer [$ defui]]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -82,26 +89,74 @@
 1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
 3130, 3210 4401, 4402, 4403, 4404, 4405})
 
+(defui role-context [{:keys [tr k v]}]
+  (let [locale (tr)
+        localized (use-subscribe [::subs/context-value-name k v locale])
+        link? (= :lipas-id k)]
+    ($ Typography
+       {:key k
+        :component (if link?
+                     "a"
+                     "span")
+        :sx #js [#js {:mr 1}
+                 (when link?
+                   #js {:cursor "pointer"
+                        :textDecoration "underline"})]
+        :onClick (when link?
+                   (fn [_e]
+                     (rf/dispatch [::events/select-sports-site {:lipas-id v}])))}
+       ;; Role context key name
+       (tr (keyword :lipas.user.permissions.roles.context-keys k))
+       ": "
+       (if (= :all v)
+         ($ :i (tr :lipas.user.permissions.roles/context-value-all))
+         localized))))
+
+(defui explain-roles [{:keys [tr]}]
+  (let [roles (use-subscribe [::subs/roles])
+        roles (sort-by roles/role-sort-fn roles)]
+    (if (empty? roles)
+      ($ Stack
+         {:direction "row"
+          :sx #js {:alignItems "center"
+                   :p 1}}
+         ($ Icon "lock")
+         ($ Typography
+            {:variant "body2"
+             :sx #js {:ml 1
+                      :mr 2}}
+            (tr :lipas.user/no-permissions)))
+      ($ :<>
+         (for [[i {:keys [role] :as x}] (map-indexed vector roles)]
+           ($ :<>
+              {:key i}
+              ($ Stack
+                 {:direction "row"
+                  :sx #js {:alignItems "center"
+                           :p 1}}
+                 ($ Icon "lock_open")
+                 ($ Typography
+                    {:variant "body2"
+                     :sx #js {:ml 1
+                              :mr 2}}
+                    (tr (keyword :lipas.user.permissions.roles.role-names role)))
+                 (for [[k vs] (dissoc x :role)]
+                   ($ :<>
+                      {:key k}
+                      (for [v vs]
+                        ($ role-context
+                           {:key k
+                            :k k
+                            :v v
+                            :tr tr})))))))))))
+
 (defn user-panel [tr user]
-  (let [admin?     (<== [::subs/admin?])
-        cities     (<== [::subs/permission-to-cities])
-        types      (<== [::subs/permission-to-types])
-        activities (<== [::subs/permission-to-activities])
-
-        sites (<== [::subs/sports-sites (tr)])
-
-        all-types?      (or admin? (-> user :permissions :all-types?))
-        all-cities?     (or admin? (-> user :permissions :all-cities?))
-
-        locale     (tr)
-        card-props {:square true}
+  (let [card-props {:square true}
 
         firstname (-> user :user-data :firstname)
         lastname  (-> user :user-data :lastname)
 
-        saved-searches (<== [::subs/saved-searches])
-
-        experimental-features? (<== [::subs/experimental-features?])]
+        saved-searches (<== [::subs/saved-searches])]
 
     [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
@@ -121,7 +176,7 @@
           [mui/button {:href  "/passu-hukassa"
                        :color :primary}
            (str "> " (tr :reset-password/change-password))]
-          (when admin?
+          (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
             [mui/button {:href  "/admin"
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
@@ -153,72 +208,8 @@
          [mui/card-header {:title (tr :lipas.user/permissions)}]
          [mui/card-content
 
-          (when admin?
-            [lui/icon-text
-             {:icon "lock_open"
-              :text (tr :lipas.admin/access-all-sites)}])
-
-          (when (and all-cities? (not admin?))
-            [lui/icon-text
-             {:icon "lock_open"
-              :text (tr :lipas.user/permission-to-all-cities)}])
-
-          (when (and (not-empty cities) (not all-cities?))
-            [:<>
-             [lui/icon-text
-              {:icon "lock_open"
-               :text (tr :lipas.user/permission-to-cities)}]
-             (into
-              [mui/list {:dense true}]
-              (for [s (->> cities (map (comp locale :name second)))]
-                [mui/list-item
-                 [mui/list-item-text s]]))])
-
-          (when (and all-types? (not admin?))
-            [lui/icon-text
-             {:icon "lock_open"
-              :text (tr :lipas.user/permission-to-all-types)}])
-
-          (when (and (not-empty types) (not all-types?))
-            [:<>
-             [lui/icon-text
-              {:icon "lock_open"
-               :text (tr :lipas.user/permission-to-types)}]
-             (into
-              [mui/list {:dense true}]
-              (for [t (->> types (map (comp locale :name second)))]
-                [mui/list-item
-                 [mui/list-item-text t]]))])
-
-          (when (and (not all-cities?) (not all-types?) (empty? sites)
-                     (empty? cities) (empty? types) (empty? activities))
-            [mui/grid {:container true}
-             [lui/icon-text
-              {:icon "lock"
-               :text (tr :lipas.user/no-permissions)}]])
-
-          (when (and (not admin?) (not-empty sites))
-            [:<>
-             [lui/icon-text
-              {:icon "lock_open"
-               :text (tr :lipas.user/permission-to-portal-sites)}]
-             [lui/table
-              {:headers   [[:name (tr :lipas.sports-site/name-short)]
-                           [:type (tr :lipas.sports-site/type)]
-                           [:city (tr :lipas.location/city)]]
-               :items     sites
-               :on-select #(==> [::events/select-sports-site %])}]])
-
-          (when (and (not admin?) (not-empty activities))
-            [:<>
-             [lui/icon-text
-              {:icon "lock_open"
-               :text (tr :lipas.user/permission-to-activities)}]
-             (into
-              [mui/list {:dense true}]
-              (for [s (->> activities vals (map (comp locale :label)))]
-                [mui/list-item
-                 [mui/list-item-text s]]))])]
+          ($ explain-roles
+             {:tr tr})]
 
          [mui/card-actions
           [mui/button {:href  "/liikuntapaikat"
