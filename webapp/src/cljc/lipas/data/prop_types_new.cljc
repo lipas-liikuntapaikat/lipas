@@ -123,8 +123,8 @@
                  :se "Antal hål/fairways"
                  :en "Number of holes/fairways"})
 
-      ;; Add new :ligthing-info prop
-      (assoc :ligthing-info
+      ;; Add new :lighting-info prop
+      (assoc :lighting-info
              {:name      {:fi "Valaistuksen lisätieto"
                           :se "Ytterligare information om belysningen"
                           :en "Additional information about the lighting"}
