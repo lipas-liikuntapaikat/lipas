@@ -489,18 +489,38 @@
          :items        (-> data :edit-data :rinks)
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
+(defn space-divisible-field
+  [{:keys [tr value label helper-text tooltip on-change spec disabled?] :as props}]
+  (r/with-let [checkbox-state (r/atom (some? value))]
+    [:<>
+     [lui/checkbox
+      {:label     label
+       :value     @checkbox-state
+       :on-change #(reset! checkbox-state %)}]
+     (when @checkbox-state
+       [lui/text-field
+        {:value     value
+         :label     helper-text
+         :disabled  disabled?
+         :tooltip   tooltip
+         :spec      spec
+         :type      "number"
+         :on-change on-change}])])
+  )
+
 (defn make-prop-field
   [{:keys [tr prop-k read-only? label description value set-field
            problems? geom-type geoms]}]
-  (let [locale    (tr)
-        prop-type (<== [::subs/prop-type prop-k])
-        spec      (keyword :lipas.sports-site.properties prop-k)
-        disabled? read-only?
-        label     (or label (get-in prop-type [:name locale]))
-        tooltip   (or description (get-in prop-type [:description locale]))
-        data-type (get prop-type :data-type)
-        on-change set-field
-        k         prop-k]
+  (let [locale      (tr)
+        prop-type   (<== [::subs/prop-type prop-k])
+        spec        (keyword :lipas.sports-site.properties prop-k)
+        disabled?   read-only?
+        label       (or label (get-in prop-type [:name locale]))
+        helper-text (get-in prop-type [:helper-text locale])
+        tooltip     (or description (get-in prop-type [:description locale]))
+        data-type   (get prop-type :data-type)
+        on-change   set-field
+        k           prop-k]
 
     (cond
       (material-field? k) [surface-material-selector
@@ -542,12 +562,24 @@
                                       :tooltip   tooltip
                                       :geoms     geoms
                                       :on-change on-change}]
-      (= "boolean" data-type)       [lui/checkbox
-                                     {:value     value
-                                      :label     label
-                                      :tooltip   tooltip
-                                      :disabled  disabled?
-                                      :on-change on-change}]
+
+      (= :space-divisible k) [space-divisible-field
+                              {:tr          tr
+                               :value       value
+                               :helper-text helper-text
+                               :type        "number"
+                               :spec        spec
+                               :label       label
+                               :tooltip     tooltip
+                               :geoms       geoms
+                               :on-change   on-change}]
+
+      (= "boolean" data-type) [lui/checkbox
+                               {:value     value
+                                :label     label
+                                :tooltip   tooltip
+                                :disabled  disabled?
+                                :on-change on-change}]
 
       (= "enum" data-type k) [lui/select
                               {:items       (:opts prop-type)
@@ -569,6 +601,7 @@
                            "number")
               :on-change on-change}])))
 
+;; TODO refactor to use `make-prop-field` function above
 (defn properties-form
   [{:keys [tr edit-data display-data type-code on-change read-only?
            key geoms geom-type problems? width]}]
@@ -620,6 +653,7 @@
       (into
        (for [[k v] types-props
              :let  [label     (-> types-props k :name locale)
+                    helper-text (-> types-props k :helper-text locale)
                     data-type (:data-type v)
                     tooltip   (if (:derived? v)
                                 "Lasketaan automaattisesti olosuhdetiedoista"
@@ -632,6 +666,8 @@
           :value     (-> display-data k)
           :disabled? disabled?
           :priority  (:priority v)
+
+          ;; TODO Could be nicer with a multi-method
           :form-field
           (cond
             (material-field? k) [surface-material-selector
@@ -673,29 +709,41 @@
                                             :tooltip   tooltip
                                             :geoms     geoms
                                             :on-change on-change}]
-            (= "boolean" data-type)       [lui/checkbox
-                                           {:value     value
-                                            :tooltip   tooltip
-                                            :disabled  disabled?
-                                            :on-change on-change}]
-            (= "enum" data-type)          [lui/select
-                                           {:items       (:opts v)
-                                            :deselect?   true
-                                            :value       value
-                                            :helper-text tooltip
-                                            :label       label
-                                            :on-change   on-change
-                                            :disabled    disabled?
-                                            :value-fn    first
-                                            :label-fn    (comp locale :label second)}]
-            :else                         [lui/text-field
-                                           {:value     value
-                                            :disabled  disabled?
-                                            :tooltip   tooltip
-                                            :spec      spec
-                                            :type      (when (#{"numeric" "integer"} data-type)
-                                                         "number")
-                                            :on-change on-change}])})
+
+            (= :space-divisible k) [space-divisible-field
+                                    {:tr          tr
+                                     :value       value
+                                     :type        "number"
+                                     :helper-text helper-text
+                                     :spec        spec
+                                     :label       label
+                                     :tooltip     tooltip
+                                     :geoms       geoms
+                                     :on-change   on-change}]
+
+            (= "boolean" data-type) [lui/checkbox
+                                     {:value     value
+                                      :tooltip   tooltip
+                                      :disabled  disabled?
+                                      :on-change on-change}]
+            (= "enum" data-type)    [lui/select
+                                     {:items       (:opts v)
+                                      :deselect?   true
+                                      :value       value
+                                      :helper-text tooltip
+                                      :label       label
+                                      :on-change   on-change
+                                      :disabled    disabled?
+                                      :value-fn    first
+                                      :label-fn    (comp locale :label second)}]
+            :else                   [lui/text-field
+                                     {:value     value
+                                      :disabled  disabled?
+                                      :tooltip   tooltip
+                                      :spec      spec
+                                      :type      (when (#{"numeric" "integer"} data-type)
+                                                   "number")
+                                      :on-change on-change}])})
 
        (concat
         ;; Ice stadium special props
