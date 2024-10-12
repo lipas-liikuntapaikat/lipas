@@ -9,7 +9,11 @@
   old/main-categories)
 
 (def sub-categories
-  old/sub-categories)
+  (-> old/sub-categories
+      ;; alaluokka "Keilahallit" tulee uudelleennimetä "Keilahallit ja biljardisalit"
+      (assoc-in [2600 :name] {:fi "Keilahallit ja biljardisalit"
+                              :se "Bowlinghallar och biljardsalonger"
+                              :en "Bowling alleys and billiard halls"})))
 
 (def all1
   (-> old/all
@@ -336,8 +340,10 @@
                                  true
                                  (update :props dissoc :kiosk?)
 
+                                 ;; There's unfortunate typo in the
+                                 ;; old lighting? prop
                                  (contains? (:props v) :ligthing?)
-                                 (assoc-in [:props :ligthing-info] {:priority 0}))))
+                                 (assoc-in [:props :lighting-info] {:priority 0}))))
                       {}))))
 
 (def all4
