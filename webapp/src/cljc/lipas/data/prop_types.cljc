@@ -3,10 +3,10 @@
   namespace represents the changes made."
   (:require
    [lipas.data.types :as types]
-   [lipas.data.prop-types-old :as old]
+   #_[lipas.data.prop-types-old :as old]
    [lipas.data.prop-types-new :as new]))
 
-(def all old/all)
+(def all new/all)
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
