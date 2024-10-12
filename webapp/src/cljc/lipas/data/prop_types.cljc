@@ -6,7 +6,7 @@
    [lipas.data.prop-types-new :as new]
    [lipas.data.prop-types-old :as old]))
 
-(def all old/all)
+(def all new/all)
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
