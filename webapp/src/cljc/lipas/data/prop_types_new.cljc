@@ -212,15 +212,23 @@
                :en ""}})
 
       ;; Add new :space-divisible prop
+
+      ;; Toteutus esim: Valinta Kyllä/Ei -> Jos kyllä, täydennettävä
+      ;; kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo
+      ;; esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen
+      ;; osaan).
       (assoc :space-divisible
-             {:name      {:fi "Tila jaettavissa osiin"
-                          :se "Utrymmet kan delas upp"
-                          :en "Space can be divided"}
-              :data-type "boolean"
+             {:name        {:fi "Tila jaettavissa osiin"
+                            :se "Utrymmet kan delas upp"
+                            :en "Space can be divided"}
+              :helper-text {:fi "Syötä numero moneenko osaan tila on jaettavissa"
+                            :se "Ange antalet delar som utrymmet kan delas in i"
+                            :en "Enter the number of sections into which the space can be divided"}
+              :data-type   "number"
               :description
-              {:fi ""
-               :se ""
-               :en ""}})
+              {:fi "Onko tila jaettavissa osiin esim. jakoseinien tai -verhojen avulla"
+               :se "Är utrymmet delbart i sektioner, till exempel med skiljeväggar eller gardiner?"
+               :en "Is the space divisible into sections, for example, with partition walls or curtains?"}})
 
       ;; Add new :auxiliary-training-area prop
       (assoc :auxiliary-training-area

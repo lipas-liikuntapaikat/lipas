@@ -733,7 +733,7 @@
 (s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 (s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 (s/def :lipas.sports-site.properties/free-customer-use? boolean?)
-(s/def :lipas.sports-site.properties/space-divisible string?)
+(s/def :lipas.sports-site.properties/space-divisible ::real)
 (s/def :lipas.sports-site.properties/auxiliary-training-area? boolean?)
 (s/def :lipas.sports-site.properties/sport-specification string?)
 (s/def :lipas.sports-site.properties/width-of-active-space-m ::real)
