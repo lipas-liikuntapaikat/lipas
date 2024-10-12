@@ -847,7 +847,7 @@
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"
                     :lipas-id "Paikka"}
-     :new-role {:header "Uusi rooli"
+     :new-role {:header "Lisää rooli"
                 :add "Lisää"
                 :choose-role "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
      :permissions-old "(vanhat, vain luku)"}
