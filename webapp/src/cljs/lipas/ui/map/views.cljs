@@ -29,6 +29,7 @@
    [lipas.ui.sports-sites.floorball.views :as floorball]
    [lipas.ui.sports-sites.views :as sports-sites]
    [lipas.ui.utils :refer [<== ==>] :as utils]
+   [re-frame.core :as rf]
    [reagent.core :as r]))
 
 ;; TODO: Juho later This pattern makes development inconvenient as
@@ -1100,7 +1101,10 @@
                [mui/icon "360"]]])
 
            ;; Analysis
-           (when (and logged-in? (not editing?))
+           (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
+                                      (roles/site-roles-context display-data)
+                                      :analysis-tool/use])
+                      (not editing?))
              [mui/tooltip {:title (tr :map.demographics/tooltip)}
               [mui/fab
                {:size     "small"
@@ -1707,7 +1711,13 @@
           [reports/dialog {:tr tr :btn-variant :fab}]])
 
        ;; Analysis tool btn
-       (when (and logged-in? (= :list result-view))
+       (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
+                                  {:type-code ::roles/any
+                                   :city-code ::roles/any
+                                   :lipas-id  ::roles/any}
+                                  :analysis-tool/use])
+                  ;; logged-in?
+                  (= :list result-view))
          [mui/tooltip {:title (tr :map.demographics/tooltip)}
           [mui/grid {:item true}
            [mui/fab
