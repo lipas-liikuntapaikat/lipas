@@ -70,3 +70,28 @@
            :activity #{"fishing"}}]
          (sut/conform-roles [{:role "activities-manager"
                               :activity ["fishing"]}]))))
+
+(deftest wrap-es-search-query
+  (is (= {:a 1}
+         (sut/wrap-es-search-query {:a 1}
+                                   {:permissions {:roles [{:role :admin}]}})))
+
+  (is (= {:bool {:must [{:a 1}
+                        {:bool {:should [{:terms {:location.city.city-code #{837}}}]}}]}}
+         (sut/wrap-es-search-query {:a 1}
+                                   {:permissions {:roles [{:role :city-manager
+                                                           :city-code #{837}}]}})))
+
+  (is (= {:bool {:must [{:a 1}
+                        {:bool {:should [{:terms {:location.city.city-code #{837}}}
+                                         {:bool {:must [{:terms {:location.city.city-code #{91 92 49}}}
+                                                        {:terms {:type.type-code #{2240}}}]}}
+                                         {:terms {:lipas-id #{1}}}]}}]}}
+         (sut/wrap-es-search-query {:a 1}
+                                   {:permissions {:roles [{:role :city-manager
+                                                           :city-code #{837}}
+                                                          {:role :type-manager
+                                                           :type-code #{2240}
+                                                           :city-code #{91 92 49}}
+                                                          {:role :site-manager
+                                                           :lipas-id #{1}}]}}))))

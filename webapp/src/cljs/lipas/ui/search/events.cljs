@@ -2,6 +2,7 @@
   (:require
    [ajax.core :as ajax]
    [clojure.string :as string]
+   [lipas.roles :as roles]
    [lipas.ui.search.db :as db]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
@@ -111,10 +112,10 @@
       :source "doc[\u0027search-meta.location.wgs84-end\u0027].arcDistance(params.lat, params.lon)"}}}})
 
 (defn ->es-search-body
-  ([params]
+  ([params user]
    (->es-search-body params false))
   ([{:keys [filters string center distance sort decay?
-            locale pagination zoom bbox geom]} terse?]
+            locale pagination zoom bbox geom]} user terse?]
    (let [string            (resolve-query-string string)
          bbox?             (and
                             (> zoom 3)
@@ -132,6 +133,7 @@
          admins            (-> filters :admins not-empty)
          owners            (-> filters :owners not-empty)
          statuses          (-> filters :statuses not-empty)
+         edit-permission?  (-> filters :edit-permission?)
          {:keys [lon lat]} center
 
          params (merge
@@ -261,7 +263,12 @@
          owners          (add-filter {:terms {:owner.keyword owners}})
          retkikartta?    (add-filter {:terms {:properties.may-be-shown-in-excursion-map-fi? [true]}})
          harrastuspassi? (add-filter {:terms {:properties.may-be-shown-in-harrastuspassi-fi? [true]}})
-         school-use?     (add-filter {:terms {:properties.school-use? [true]}}))))))
+         school-use?     (add-filter {:terms {:properties.school-use? [true]}})
+
+         ;; Add the condition to search based on site props which affect user roles.
+         ;; Keep function_score query at the top level, but add this query around other filters (like name, type etc.)
+         edit-permission? (update-in [:query :function_score :query] (fn [x]
+                                                                       (roles/wrap-es-search-query x user))))))))
 
 (re-frame/reg-event-fx
  ::search
@@ -269,7 +276,7 @@
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/search")
-     :params          (->es-search-body params)
+     :params          (->es-search-body params (-> db :user :login))
      :format          (ajax/json-request-format)
      :response-format (ajax/json-response-format {:keywords? true})
      :on-success      [::search-success fit-view?]
@@ -301,7 +308,7 @@
    {:http-xhrio
     {:method          :post
      :uri             (str (:backend-url db) "/actions/search")
-     :params          (->es-search-body params terse?)
+     :params          (->es-search-body params (-> db :user :login) terse?)
      :format          (ajax/json-request-format)
      :response-format (ajax/raw-response-format)
      :on-success      [::search-success-fast fit-view?]
@@ -352,6 +359,10 @@
    (let [params (collect-search-data db)
          terse? (-> db :search :results-view (= :list))]
      {:dispatch [::search-fast params fit-view? terse?]})))
+
+(re-frame/reg-sub ::search-debug
+  (fn [db _]
+    (->es-search-body (collect-search-data db) (-> db :user :login) false)))
 
 (re-frame/reg-event-fx
  ::search-with-keyword
@@ -427,8 +438,7 @@
    {:db       (assoc-in db [:search :filters :surface-materials] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
- ::set-retkikartta-filter
+(re-frame/reg-event-fx ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
     :dispatch [::filters-updated :fit-view]}))
@@ -484,7 +494,7 @@
  (fn [{:keys [db]} [_ fmt]]
    (let [params (-> db
                     collect-search-data
-                    ->es-search-body
+                    (->es-search-body (-> db :user :login))
                     (assoc-in [:_source :includes] ["*"] )
                     (assoc-in [:_source :excludes] ["location.geometries"])
                     ;; :track_total_hits is not supported by scroll
@@ -515,7 +525,7 @@
    {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
     :dispatch [::submit-search]}))
 
-(defn resolve-sort-change 
+(defn resolve-sort-change
   "If sort-fn has changed, reset sort order to ascending"
   [db sort]
   (if (= (-> db :search :sort :sort-fn) (sort :sort-fn))
@@ -524,7 +534,7 @@
 
 (re-frame/reg-event-fx
  ::change-sort-order
- (fn [{:keys [db]} [_ sort]] 
+ (fn [{:keys [db]} [_ sort]]
    (let [new-sort (resolve-sort-change db sort)]
      {:db       (update-in db [:search :sort] merge new-sort)
       :dispatch [::submit-search]})))
@@ -555,15 +565,10 @@
          [::set-bounding-box-filter true])]}))
 
 
-(re-frame/reg-event-fx
- ::set-filters-by-permissions
- (fn [{:keys [db]} _]
-   ;; FIXME: New roles
-   (let [permissions (-> db :user :login :permissions)]
-     {:db (assoc-in db [:search :filters] (merge (:filters db/default-db)
-                                                 {:type-codes (-> permissions :types)
-                                                  :city-codes (-> permissions :cities)}))
-      :dispatch [::submit-search]})))
+(re-frame/reg-event-fx ::set-filters-by-permissions
+  (fn [{:keys [db]} [_ v]]
+    {:db       (assoc-in db [:search :filters :edit-permission?] v)
+     :dispatch [::filters-updated :fit-view]}))
 
 (defn- kw->path [kw]
   (-> kw name (string/split #"\.") (->> (mapv keyword))))

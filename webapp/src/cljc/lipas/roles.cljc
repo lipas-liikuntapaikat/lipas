@@ -182,3 +182,40 @@
             (:lipas-id role) (update :lipas-id set)
             (:activity role) (update :activity set)))
         roles))
+
+(defn wrap-es-search-query
+  "Wraps a ES site search query with bool query to only returns
+  results where user has :site/create-edit role."
+  [query user]
+  (let [edit-all-sites? (check-privilege user {} :site/create-edit)
+        ;; Select user roles that would give the create-edit privilege to some sites
+        ctx {:type-code ::any
+             :city-code ::any
+             :lipas-id ::any}
+        affecting-roles (filter (fn [role] (select-role ctx role))
+                                (-> user :permissions :roles))]
+
+    (cond
+      edit-all-sites? query
+      (seq affecting-roles)
+
+      {:bool {:must [query
+                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
+                                             (reduce (fn [acc [es-k v]]
+                                                       (if (seq v)
+                                                         (let [t {:terms {es-k v}}]
+                                                           (cond
+                                                             (:bool acc) (update-in acc [:bool :must] conj t)
+                                                             (:terms acc) {:bool {:must [acc
+                                                                                         t]}}
+                                                             :else t))
+                                                         acc))
+                                                     {}
+                                                     [[:location.city.city-code city-code]
+                                                      [:type.type-code type-code]
+                                                      [:lipas-id lipas-id]]))
+                                           affecting-roles)}}]}}
+
+      ;; FIXME: No edit roles? Return empty list or just hide the button from the UI.
+      :else query
+      )))
