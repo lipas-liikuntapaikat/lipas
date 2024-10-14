@@ -427,7 +427,7 @@
      :search-more           "Hae lisää...",
      :page-size             "Näytä kerralla",
      :search                "Hae",
-     :permissions-filter    "Näytä kohteet joita voin muokata",
+     :permissions-filter    "Näytä vain kohteet joita voin muokata",
      :display-closest-first "Näytä lähimmät kohteet ensin",
      :list-view             "Näytä hakutulokset listana",
      :pagination            "Tulokset {1}-{2}",
@@ -1390,6 +1390,7 @@
      :search-more           "Sök mer...",
      :page-size             "Visa",
      :search                "Sök",
+     ;; TODO: "Näytä vain..."
      :permissions-filter    "Visa platser som jag kan redigera",
      :display-closest-first "Visa närmaste platser först",
      :list-view             "Visa resultaten i listan",

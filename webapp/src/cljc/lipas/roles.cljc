@@ -188,26 +188,31 @@
   results where user has :site/create-edit role."
   [query user]
   (let [edit-all-sites? (check-privilege user {} :site/create-edit)
-        ;; Select user roles that would give the create-edit privilege to some sites
+        ;; Select user roles that would give the create-edit privilege to some sites.
+        ;; The the role-context keys are applied later into the ES query itself.
         ctx {:type-code ::any
              :city-code ::any
              :lipas-id ::any}
-        affecting-roles (filter (fn [role] (select-role ctx role))
-                                (-> user :permissions :roles))]
+        affecting-roles (->> (-> user :permissions :roles)
+                             (filter (fn [role] (select-role ctx role))))]
 
     (cond
-      edit-all-sites? query
-      (seq affecting-roles)
+      ;; Admin etc. -> no reason to filter the sites
+      edit-all-sites?
+      query
 
+      (seq affecting-roles)
       {:bool {:must [query
                      {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
                                              (reduce (fn [acc [es-k v]]
                                                        (if (seq v)
                                                          (let [t {:terms {es-k v}}]
                                                            (cond
+                                                             ;; Already 2 terms queries -> add to the bool query
                                                              (:bool acc) (update-in acc [:bool :must] conj t)
-                                                             (:terms acc) {:bool {:must [acc
-                                                                                         t]}}
+                                                             ;; 1->2 terms queries, wrap in bool
+                                                             (:terms acc) {:bool {:must [acc t]}}
+                                                             ;; 1 terms query
                                                              :else t))
                                                          acc))
                                                      {}
