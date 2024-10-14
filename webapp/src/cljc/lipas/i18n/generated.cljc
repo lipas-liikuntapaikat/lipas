@@ -123,6 +123,7 @@
     {:headline                   "Analyysityökalu (beta)"
      :description                "Analyysityökalulla voi arvioida liikuntaolosuhteiden tarjontaa ja saavutettavuutta vertailemalla liikuntapaikan etäisyyttä ja matkustusaikoja suhteessa muihin liikuntapaikkoihin, väestöön sekä oppilaitoksiin."
      :results                    "Tulokset"
+     :close                      "Sulje analyysityökalut"
      :mean                       "Keskiarvo"
      :population-weighted-mean   "Väestöpainotettu monipuolisuusindeksi"
      :median                     "Mediaani"

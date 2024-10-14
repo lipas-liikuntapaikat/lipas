@@ -32,6 +32,9 @@
     ^{:key value}
     [lui/select
      {:value     value
+      ;; NOTE: Label would be nice, but probably hidden because
+      ;; this label doesn't fit that well into the reports dialog
+      ;; toolbar. Consider adding label element before select element?
       #_#_:label (tr :reports/file-format)
       :items     items
       :style     {:width "100px"}
@@ -164,8 +167,7 @@
         ;; Result count
         [mui/grid {:item true}
          [mui/typography
-          {:variant "caption"
-           :color   (if limits-exceeded? "error" "initial")}
+          {:color   (if limits-exceeded? "error" "initial")}
           (tr :search/results-count results-count)]]
 
         [:span {:style {:width "12px"}}]

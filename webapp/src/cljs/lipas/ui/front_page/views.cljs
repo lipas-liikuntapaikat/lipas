@@ -78,7 +78,9 @@
 
 (defn footer
   [{:keys [title bg-color title-style]
-    :or   {bg-color mui/gray1 title-style {:opacity 0.7}}} & contents]
+    :or   {bg-color mui/gray1
+           title-style {:opacity 0.7}}}
+   & contents]
 
   [mui/grid
    {:container true
@@ -184,8 +186,9 @@
                    :href      link}))
          title]]
        [mui/grid {:item true :xs 1}
-        [mui/icon-button {:href link :color "secondary"}
-         [mui/icon "arrow_forward_ios"]]]]]
+        (when link
+          [mui/icon-button {:href link :color "secondary"}
+           [mui/icon "arrow_forward_ios"]])]]]
 
      ;; Content
      (into [mui/grid {:item true :xs 12}] children)
@@ -279,7 +282,6 @@
        [mui/button
         {:color    "secondary"
          :on-click #(reset! open? true)}
-        [mui/icon {:style {:margin-right "0.25em"}} "arrow_forward_ios"]
         (tr :newsletter/subscribe)]])))
 
 (defn newsletter []
@@ -493,7 +495,7 @@
            [newsletter]])
 
         ;; Known LIPAS users
-        [grid-card {:xs 12 :md 12 :lg 12 :xl 6 :title (tr :data-users/headline)}
+        [grid-card {:xs 12 :md 12 :lg 12 :xl 8 :title (tr :data-users/headline)}
          (into
           [mui/grid {:container true :spacing 2}]
           (map ->link known-users))
@@ -514,7 +516,9 @@
             (tr :data-users/tell-us)]]]]]
 
        ;;Partner logos
-       [footer {:title (tr :partners/headline) :bg-color mui/gray2}
+       [footer {:title (tr :partners/headline)
+                :title-style {:color mui/secondary}
+                :bg-color mui/gray2}
         (into
          [mui/grid {:container true :align-items "center" :spacing 4}]
          (map ->logo logos))]])))

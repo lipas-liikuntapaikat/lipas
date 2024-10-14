@@ -1770,7 +1770,8 @@
      ;; Search, filters etc.
      (case view
        :adding   [add-view {:tr tr :width width}]
-       :analysis [analysis/view]
+       :analysis [analysis/view
+                  {:tr tr}]
        :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
        :loi      [loi/view {:display-data loi}]
        :search   [search/search-view

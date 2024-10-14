@@ -6,9 +6,10 @@
    [lipas.ui.analysis.subs :as subs]
    [lipas.ui.map.events :as map-events]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [<== ==>] :as utils]
+   ["@mui/material/Tooltip$default" :as Tooltip]))
 
-(defn view []
+(defn view [{:keys [tr]}]
   (let [selected-tool (<== [::subs/selected-tool])]
     [mui/grid
      {:container true
@@ -26,13 +27,15 @@
          :on-change      #(==> [::events/select-tool %2])
          :variant        "fullWidth"
          :centered       true
-         :text-color     "inherit"
-         :indicator-color "primary"}
+         :text-color     "secondary"
+         :indicator-color "secondary"}
         [mui/tab {:value "reachability" :label "Saavutettavuus"}]
         [mui/tab {:value "diversity" :label "Monipuolisuus"}]]]
       [mui/grid {:item true}
-       [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
-        [mui/icon "close"]]]]
+       [:> Tooltip
+        {:title (tr :analysis/close)}
+        [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
+        [mui/icon "close"]]]]]
 
      [mui/grid {:item true :xs 12}
       (condp = selected-tool

@@ -558,6 +558,7 @@
 (re-frame/reg-event-fx
  ::set-filters-by-permissions
  (fn [{:keys [db]} _]
+   ;; FIXME: New roles
    (let [permissions (-> db :user :login :permissions)]
      {:db (assoc-in db [:search :filters] (merge (:filters db/default-db)
                                                  {:type-codes (-> permissions :types)
