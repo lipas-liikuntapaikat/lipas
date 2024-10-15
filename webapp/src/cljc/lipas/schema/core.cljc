@@ -13,6 +13,7 @@
    [lipas.data.loi :as loi]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
+   [lipas.data.prop-types :as prop-types]
    [lipas.data.reminders :as reminders]
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as swimming-pools]
@@ -724,7 +725,8 @@
 (s/def :lipas.sports-site.properties/canoeing-club? boolean?)
 (s/def :lipas.sports-site.properties/activity-service-company? boolean?)
 (s/def :lipas.sports-site.properties/boating-service-class string?)
-(s/def :lipas.sports-site.properties/water-point string?)
+(s/def :lipas.sports-site.properties/water-point
+  (into #{} (keys (get-in prop-types/all [:water-point :opts]))))
 (s/def :lipas.sports-site.properties/customer-service-point? boolean?)
 (s/def :lipas.sports-site.properties/height-of-basket-or-net-adjustable? boolean?)
 (s/def :lipas.sports-site.properties/changing-rooms-m2 ::real)
@@ -739,7 +741,9 @@
 (s/def :lipas.sports-site.properties/width-of-active-space-m ::real)
 (s/def :lipas.sports-site.properties/length-of-active-space-m ::real)
 (s/def :lipas.sports-site.properties/mirror-wall? boolean?)
-(s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures string?)
+(s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:parkour-hall-equipment-and-structures :opts])))))
 (s/def :lipas.sports-site.properties/ringette-boundary-markings? boolean?)
 (s/def :lipas.sports-site.properties/field-1-flexible-rink? boolean?)
 (s/def :lipas.sports-site.properties/field-2-flexible-rink? boolean?)
@@ -750,6 +754,9 @@
 (s/def :lipas.sports-site.properties/pyramid-tables-count ::real)
 (s/def :lipas.sports-site.properties/carom-tables-count ::real)
 (s/def :lipas.sports-site.properties/total-billiard-tables-count ::real)
+(s/def :lipas.sports-site.properties/boating-service-class
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:boating-service-class :opts])))))
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -934,7 +941,7 @@
                    :lipas.sports-site.properties/pyramid-tables-count
                    :lipas.sports-site.properties/carom-tables-count
                    :lipas.sports-site.properties/total-billiard-tables-count
-                   ]))
+                   :lipas.sports-site.properties/boating-service-class]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)

@@ -589,7 +589,19 @@
                                :label       label
                                :disabled    disabled?
                                :value-fn    first
+                               :on-change   on-change
                                :label-fn    (comp locale :name second)}]
+
+      (= "enum-coll" data-type k) [lui/multi-select
+                                  {:items       (:opts prop-type)
+                                   :deselect?   true
+                                   :value       value
+                                   :helper-text tooltip
+                                   :on-change   on-change
+                                   :label       label
+                                   :disabled    disabled?
+                                   :value-fn    first
+                                   :label-fn    (comp locale :name second)}]
 
       :else [lui/text-field
              {:value     value
@@ -731,24 +743,38 @@
                                       :tooltip   tooltip
                                       :disabled  disabled?
                                       :on-change on-change}]
-            (= "enum" data-type)    [lui/select
-                                     {:items       (:opts v)
-                                      :deselect?   true
-                                      :value       value
-                                      :helper-text tooltip
-                                      :label       label
-                                      :on-change   on-change
-                                      :disabled    disabled?
-                                      :value-fn    first
-                                      :label-fn    (comp locale :label second)}]
-            :else                   [lui/text-field
-                                     {:value     value
-                                      :disabled  disabled?
-                                      :tooltip   tooltip
-                                      :spec      spec
-                                      :type      (when (#{"numeric" "integer"} data-type)
-                                                   "number")
-                                      :on-change on-change}])})
+
+            (= "enum" data-type) [lui/select
+                                  {:items       (:opts v)
+                                   :deselect?   true
+                                   :value       value
+                                   :helper-text tooltip
+                                   :label       label
+                                   :on-change   on-change
+                                   :disabled    disabled?
+                                   :value-fn    first
+                                   :label-fn    (comp locale :label second)}]
+
+            (= "enum-coll" data-type) [lui/autocomplete
+                                       {:multi?      true
+                                        :items       (:opts v)
+                                        :deselect?   true
+                                        :value       value
+                                        :helper-text tooltip
+                                        :on-change   on-change
+                                        :label       label
+                                        :disabled    disabled?
+                                        :value-fn    first
+                                        :label-fn    (comp locale :label second)}]
+
+            :else [lui/text-field
+                   {:value     value
+                    :disabled  disabled?
+                    :tooltip   tooltip
+                    :spec      spec
+                    :type      (when (#{"numeric" "integer"} data-type)
+                                 "number")
+                    :on-change on-change}])})
 
           (concat
         ;; Ice stadium special props
