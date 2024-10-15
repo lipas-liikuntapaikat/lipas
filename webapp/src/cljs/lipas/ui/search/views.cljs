@@ -1,6 +1,7 @@
 (ns lipas.ui.search.views
   (:require
    [clojure.spec.alpha :as s]
+   [lipas.roles :as roles]
    [lipas.ui.components :as lui]
    [lipas.ui.components.lists :as lists]
    [lipas.ui.mui :as mui]
@@ -36,6 +37,7 @@
         year-min          (<== [::subs/construction-year-min-filter])
         year-max          (<== [::subs/construction-year-max-filter])
         surface-materials (<== [::subs/surface-materials-filter])
+        has-edit-permission? (<== [::subs/edit-permission-filter])
         retkikartta?      (<== [::subs/retkikartta-filter])
         harrastuspassi?   (<== [::subs/harrastuspassi-filter])
         school-use?       (<== [::subs/school-use-filter])]
@@ -47,10 +49,16 @@
       :direction (if (= "large" size) "row" "column")}
 
      ;; Permissions filter
-     (when logged-in?
+     (when (<== [:lipas.ui.user.subs/check-privilege
+                 {:city-code ::roles/any
+                  :type-code ::roles/any
+                  :lipas-id ::roles/any}
+                 :site/create-edit])
        [filter-layout {:size size}
-        [mui/button {:on-click #(==> [::events/set-filters-by-permissions])}
-         (tr :search/permissions-filter)]])
+        [lui/checkbox
+         {:value     has-edit-permission?
+          :label     (tr :search/permissions-filter)
+          :on-change #(==> [::events/set-filters-by-permissions %])}]])
 
      ;; Types filter
      [filter-layout {:size size}

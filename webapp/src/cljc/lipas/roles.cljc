@@ -182,3 +182,56 @@
             (:lipas-id role) (update :lipas-id set)
             (:activity role) (update :activity set)))
         roles))
+
+(defn- es-add-terms [query [k v]]
+  (if (seq v)
+    (let [t {:terms {k v}}]
+      (cond
+        ;; Already 2 terms queries -> add to the bool query
+        (:bool query) (update-in query [:bool :must] conj t)
+        ;; 1->2 terms queries, wrap in bool
+        (:terms query) {:bool {:must [query t]}}
+        ;; 1 terms query
+        :else t))
+    query))
+
+(defn wrap-es-query-site-has-privilege
+  "Wraps a ES site search query with bool query to only returns
+  results where user has :site/create-edit role."
+  [query user required-privilege]
+  (let [;; If user can edit any sites (like admin) we don't need to add any ES queries
+        ;; to filter the results.
+        edit-all-sites? (check-privilege user {} required-privilege)
+        ;; Select user roles that would give the create-edit privilege to some sites.
+        ;; The the role-context keys are applied later into the ES query itself.
+        ctx {:type-code ::any
+             :city-code ::any
+             :lipas-id ::any}
+        affecting-roles (->> user :permissions :roles
+                             (filter (fn [role]
+                                       (and (contains? (:privileges (get roles (:role role))) required-privilege)
+                                            (select-role ctx role)))))]
+
+    (cond
+      ;; Admin etc. -> no reason to filter the sites
+      edit-all-sites?
+      query
+
+      (seq affecting-roles)
+      ;; Combine wrapped query AND new roles query
+      {:bool {:must [query
+                     ;; role1 OR role2 OR ...
+                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
+                                             ;; query for each role is role-context1 AND role-context2
+                                             ;; using sets/collections for a term checks if the
+                                             ;; document matches any value for the term collection.
+                                             (reduce es-add-terms
+                                                     {}
+                                                     [[:location.city.city-code city-code]
+                                                      [:type.type-code type-code]
+                                                      [:lipas-id lipas-id]]))
+                                           affecting-roles)}}]}}
+
+      ;; User doesn't have edit roles? No filtering
+      ;; The checkbox shouldn't be visible
+      :else query)))

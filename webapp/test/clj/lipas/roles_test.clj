@@ -70,3 +70,37 @@
            :activity #{"fishing"}}]
          (sut/conform-roles [{:role "activities-manager"
                               :activity ["fishing"]}]))))
+
+(deftest wrap-es-query-site-has-privileget-test
+  (is (= {:a 1}
+         (sut/wrap-es-query-site-has-privilege
+           {:a 1}
+           {:permissions {:roles [{:role :admin}]}}
+           :site/create-edit)))
+
+  (is (= {:bool {:must [{:a 1}
+                        {:bool {:should [{:terms {:location.city.city-code #{837}}}]}}]}}
+         (sut/wrap-es-query-site-has-privilege
+           {:a 1}
+           {:permissions {:roles [{:role :city-manager
+                                   :city-code #{837}}
+                                  ;; Ignored because this role doesn't provide the asked privilege
+                                  {:role :floorball-manager
+                                   :type-code #{2240}}]}}
+           :site/create-edit)))
+
+  (is (= {:bool {:must [{:a 1}
+                        {:bool {:should [{:terms {:location.city.city-code #{837}}}
+                                         {:bool {:must [{:terms {:location.city.city-code #{91 92 49}}}
+                                                        {:terms {:type.type-code #{2240}}}]}}
+                                         {:terms {:lipas-id #{1}}}]}}]}}
+         (sut/wrap-es-query-site-has-privilege
+           {:a 1}
+           {:permissions {:roles [{:role :city-manager
+                                   :city-code #{837}}
+                                  {:role :type-manager
+                                   :type-code #{2240}
+                                   :city-code #{91 92 49}}
+                                  {:role :site-manager
+                                   :lipas-id #{1}}]}}
+           :site/create-edit))))

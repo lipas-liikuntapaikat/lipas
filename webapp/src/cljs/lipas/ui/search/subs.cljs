@@ -86,6 +86,11 @@
    (-> db :search :filters :surface-materials)))
 
 (re-frame/reg-sub
+ ::edit-permission-filter
+ (fn [db _]
+   (-> db :search :filters :edit-permission?)))
+
+(re-frame/reg-sub
  ::retkikartta-filter
  (fn [db _]
    (-> db :search :filters :retkikartta?)))
