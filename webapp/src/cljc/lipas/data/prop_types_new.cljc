@@ -231,7 +231,7 @@
                :en "Is the space divisible into sections, for example, with partition walls or curtains?"}})
 
       ;; Add new :auxiliary-training-area prop
-      (assoc :auxiliary-training-area
+      (assoc :auxiliary-training-area?
              {:name      {:fi "Oheisharjoittelutila"
                           :se "Kompletterande träningsområde"
                           :en "Auxiliary training area"}
@@ -242,11 +242,50 @@
                :en ""}})
 
       ;; Add new :sport-specification prop
+
+      ;; Ominaisuuden nimi esim. "Lajitarkenne". Vastaava
+      ;; toiminnallisuus kuin veneilyn palvelupaikoissa - eli
+      ;; lisätiedoissa voidaan tarkentaa, minkä voimistelulajin
+      ;; harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot:
+      ;; a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit
+      ;; mahdollisia d. Pääasiassa cheerleading- tai
+      ;; sirkusharjoittelukäyttöön e. Ei tietoa
       (assoc :sport-specification
              {:name      {:fi "Lajitarkenne"
                           :se "Sportspecifikation"
                           :en "Sport specification"}
-              :data-type "string"
+              :data-type "enum"
+              :opts {"floor-disciplines"
+                     {:label {:fi "Lattialajit" :en "Floor disciplines" :se "Golvdiscipliner"}
+                      :description
+                      {:fi "Voimistelulajit, jotka suoritetaan pääasiassa lattialla."
+                       :en "Gymnastics disciplines that are primarily performed on the floor."
+                       :se "Gymnastikdiscipliner som huvudsakligen utförs på golvet."}}
+
+                     "apparatus-disciplines"
+                     {:label {:fi "Telinelajit" :en "Apparatus disciplines" :se "Redskapsgrenar"}
+                      :description
+                      {:fi "Voimistelulajit, jotka suoritetaan erilaisilla telineillä."
+                       :en "Gymnastics disciplines that are performed on various apparatus."
+                       :se "Gymnastikdiscipliner som utförs på olika redskap."}}
+
+                     "floor-and-apparatus"
+                     {:label {:fi "Lattia- ja telinelajit mahdollisia" :en "Both floor and apparatus disciplines possible" :se "Både golv- och redskapsgrenar möjliga"}
+                      :description
+                      {:fi "Tilassa voidaan harjoitella sekä lattia- että telinelajeja."
+                       :en "The space allows for practicing both floor and apparatus disciplines."
+                       :se "Utrymmet möjliggör träning av både golv- och redskapsgrenar."}}
+
+                     "cheerleading-circus"
+                     {:label {:fi "Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön" :en "Mainly for cheerleading or circus training" :se "Huvudsakligen för cheerleading- eller cirkusträning"}
+                      :description
+                      {:fi "Tila on ensisijaisesti tarkoitettu cheerleading- tai sirkusharjoitteluun."
+                       :en "The space is primarily intended for cheerleading or circus training."
+                       :se "Utrymmet är främst avsett för cheerleading- eller cirkusträning."}}
+
+                     "no-information"
+                     {:label {:fi "Ei tietoa" :en "No information" :se "Ingen information"}}}
+
               :description
               {:fi ""
                :se ""
@@ -290,7 +329,34 @@
              {:name      {:fi "Parkour-salin varustelu ja rakenteet"
                           :se "Utrustning och strukturer i parkourhallen"
                           :en "Parkour hall equipment and structures"}
-              :data-type "string"
+              :data-type "enum-coll"
+              :opts {"fixed-obstacles"
+                     {:label {:fi "Kiinteät esteet / rakennelmat" :en "Fixed obstacles / structures" :se "Fasta hinder / strukturer"}
+                      :description
+                      {:fi "Pysyvästi asennetut esteet tai rakennelmat harjoittelua varten."
+                       :en "Permanently installed obstacles or structures for training purposes."
+                       :se "Permanent installerade hinder eller strukturer för träningsändamål."}}
+
+                     "movable-obstacles"
+                     {:label {:fi "Liikkuvat esteet / rakennelmat" :en "Movable obstacles / structures" :se "Flyttbara hinder / strukturer"}
+                      :description
+                      {:fi "Siirrettävät tai muunneltavat esteet ja rakennelmat harjoittelua varten."
+                       :en "Movable or adjustable obstacles and structures for training purposes."
+                       :se "Flyttbara eller justerbara hinder och strukturer för träningsändamål."}}
+
+                     "floor-acrobatics-area"
+                     {:label {:fi "Permanto/akrobatiatila" :en "Floor/acrobatics area" :se "Golv/akrobatikområde"}
+                      :description
+                      {:fi "Avoin tila lattiaharjoittelua ja akrobaattisia liikkeitä varten."
+                       :en "Open space for floor exercises and acrobatic movements."
+                       :se "Öppet utrymme för golvövningar och akrobatiska rörelser."}}
+
+                     "gym-strength-area"
+                     {:label {:fi "Kuntosali-/voimailutila" :en "Gym/strength training area" :se "Gym/styrketräningsområde"}
+                      :description
+                      {:fi "Alue, joka on varustettu kuntosalilaitteilla ja välineillä voimaharjoittelua varten."
+                       :en "Area equipped with gym machines and equipment for strength training."
+                       :se "Område utrustat med gymmaskiner och utrustning för styrketräning."}}}
               :description
               {:fi ""
                :se ""
@@ -426,7 +492,7 @@
       (assoc-in [:highest-obstacle-m :description :fi] "Korkeimman esteen korkeus (m)")
       ;;  Pintamateriaalikentän valittavissa seuraavista ne ominaisuudet, jotka saliin sopivat: a) Kiinteät esteet / rakennelmat b) Liikkuvat esteet / rakennelmat c) Permanto/akrobatiatila d) Kuntosali-/voimailutila
       (assoc-in [:parkour-hall-equipment-and-structures :description :fi] "Valitse parkour-salissa olevat rakenteet tai varusteet")
-      (assoc-in [:ringette-boundary-markings :description :fi] "Onko kaukaloissa ringeten rajamerkinnät?")
+      (assoc-in [:ringette-boundary-markings? :description :fi] "Onko kaukaloissa ringeten rajamerkinnät?")
       (assoc-in [:swimming-pool-count :name :fi] "Altaiden lukumäärä")
       ;;  Laskenta mahdollista tehdä automaattisesti syötettyjen altaiden perusteella (lasketaan yksinkertaisesti kaikki altaat yhteen tai luvun voi tarvittaessa korjata käsin, samaan tapaan kuin reittien pituuslaskuri toimii)
       (assoc-in [:swimming-pool-count :description :fi] "Altaiden lukumäärä yhteensä. Syötä tieto tai laske automaattisesti.")
