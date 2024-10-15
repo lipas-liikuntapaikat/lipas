@@ -22,14 +22,15 @@
      initials]))
 
 (defn account-menu-button
-  [{:keys [tr logged-in?]}]
-  [mui/icon-button
-   {:on-click   #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
-    :id         "account-btn"
-    :aria-label (tr :actions/open-account-menu)}
-   (if logged-in?
-     [avatar]
-     [mui/icon "account_circle"])])
+  [{:keys [tr]}]
+  (let [logged-in?   (<== [:lipas.ui.subs/logged-in?])]
+    [mui/icon-button
+     {:on-click   #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
+      :id         "account-btn"
+      :aria-label (tr :actions/open-account-menu)}
+     (if logged-in?
+       [avatar]
+       [mui/icon "account_circle"])]))
 
 (defn account-menu
   [{:keys [tr logged-in?]}]

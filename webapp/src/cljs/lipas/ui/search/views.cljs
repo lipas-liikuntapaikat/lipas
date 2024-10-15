@@ -1,5 +1,8 @@
 (ns lipas.ui.search.views
   (:require
+   ["@mui/material/Button$default" :as Button]
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/Stack$default" :as Stack]
    [clojure.spec.alpha :as s]
    [lipas.roles :as roles]
    [lipas.ui.components :as lui]
@@ -8,8 +11,10 @@
    [lipas.ui.reports.views :as reports]
    [lipas.ui.search.events :as events]
    [lipas.ui.search.subs :as subs]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [uix.core :refer [$ defui]]))
 
 (defn- filter-layout
   [{:keys [size] :as _props} & children]
@@ -26,8 +31,7 @@
 
 (defn filters
   [{:keys [tr size]}]
-  (let [logged-in?        (<== [:lipas.ui.user.subs/logged-in?])
-        statuses          (<== [::subs/statuses-filter])
+  (let [statuses          (<== [::subs/statuses-filter])
         type-codes        (<== [::subs/types-filter])
         city-codes        (<== [::subs/cities-filter])
         admins            (<== [::subs/admins-filter])
@@ -364,26 +368,31 @@
                                  ))
           :on-item-click on-result-click}]])]))
 
-(defn search-input
-  [{:keys [max-width]}]
-  (let [tr         (<== [:lipas.ui.subs/translator])
-        search-str (<== [::subs/search-string])]
+(defui search-input [{:keys [sx]}]
+  (let [tr         (use-subscribe [:lipas.ui.subs/translator])
+        search-str (use-subscribe [::subs/search-string])]
 
-    [:div {:style (merge {:width "100%"} (when max-width {:max-width max-width}))}
-     [mui/stack {:direction "row"}
-      [lui/text-field
-       {:value        search-str
-        :placeholder  (tr :search/placeholder)
-        :fullWidth    true
-        :defer-ms     10
-        :on-change    #(==> [::events/update-search-string %])
-        :on-key-press (fn [e]
-                        (when (= 13 (.-charCode e)) ; Enter
-                          (==> [::events/search-with-keyword :fit-view])))}]
+    ($ Stack
+       {:direction "row"
+        :width "100%"
+        :alignItems "center"
+        :sx #js [#js {:py 1}
+                 sx]}
+       (r/as-element
+         [lui/text-field
+          {:value        search-str
+           :placeholder  (tr :search/placeholder)
+           :fullWidth    true
+           :defer-ms     10
+           :on-change    #(==> [::events/update-search-string %])
+           :on-key-press (fn [e]
+                           (when (= 13 (.-charCode e)) ; Enter
+                             (==> [::events/search-with-keyword :fit-view])))}])
 
-      [mui/button {:on-click #(==> [::events/search-with-keyword :fit-view])}
-       [mui/icon "search"]
-       (tr :search/search)]]]))
+       ($ Button
+          {:on-click #(==> [::events/search-with-keyword :fit-view])}
+          ($ Icon "search")
+          (tr :search/search)))))
 
 (defn save-dialog []
   (r/with-let [name' (r/atom nil)]
@@ -421,14 +430,14 @@
 
      [mui/stack
       {:sx {:px 2
-            :pb 1}
+            :py 1}
        :spacing     1
        :align-items "flex-start"
        :direction   "column"}
 
       ;; Search input and button
       (if (= :list result-view)
-        [search-input]
+        ($ search-input)
 
         [mui/stack
          {:spacing 2
@@ -439,7 +448,7 @@
          [mui/typography {:variant "h2" :style {:opacity 0.7}}
           "LIPAS"]
 
-         [search-input {:max-width "300px"}]])
+         ($ search-input {:sx #js {:maxWidth "300px"}})])
 
       ;; Search only from area visible on map
       (when (= result-view :list)

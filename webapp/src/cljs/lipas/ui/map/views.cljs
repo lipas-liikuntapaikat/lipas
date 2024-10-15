@@ -1,11 +1,17 @@
 (ns lipas.ui.map.views
   (:require
+   ["@mui/material/Box$default" :as Box]
+   ["@mui/material/Drawer$default" :as Drawer]
+   ["@mui/material/Fab$default" :as Fab]
+   ["@mui/material/Icon$default" :as Icon]
+   ["@mui/material/styles" :refer [ThemeProvider]]
    ["mdi-material-ui/ContentCut$default" :as ContentCut]
    ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
    ["mdi-material-ui/Eraser$default" :as Eraser]
    ["mdi-material-ui/FileUpload$default" :as FileUpload]
    ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
    ["react" :as react]
+   [cljs-bean.core :refer [->js]]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
    [lipas.data.sports-sites :as ss]
@@ -28,9 +34,11 @@
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
    [lipas.ui.sports-sites.views :as sports-sites]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [re-frame.core :as rf]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [uix.core :as uix :refer [$ defui]]))
 
 ;; TODO: Juho later This pattern makes development inconvenient as
 ;; the component might crash and shadow-cljs reloads don't update it.
@@ -1670,7 +1678,7 @@
               [:> MapSearchOutline]]]]]]]]])))
 
 (defn default-tools
-  [{:keys [tr logged-in?]}]
+  [{:keys [tr]}]
   (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
         mode-name           (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
@@ -1760,7 +1768,7 @@
        "sports-site" [add-sports-site-view {:tr tr :width width}]
        "loi"         [loi/view])]))
 
-(defn map-contents-view [{:keys [tr logged-in? width]}]
+(defn map-contents-view [{:keys [tr width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
         show-tools?   (<== [::subs/show-default-tools?])
         view          (<== [::subs/view])
@@ -1783,15 +1791,134 @@
      (when show-tools?
        [mui/stack
         {:sx {:px 1}}
-        [default-tools {:tr tr :logged-in? logged-in?}]])]))
+        [default-tools {:tr tr}]])]))
+
+(defui resize-handle [{:keys [width set-width]}]
+  (let [[{:keys [active delta]} set-state] (uix/use-state {:active false})
+        move-callback (uix/use-callback (fn [e]
+                                          (set-width (- (.-clientX e) delta)))
+                                        [delta set-width])
+        up-callback (uix/use-callback (fn [_e]
+                                        (set-state {:active false}))
+                                      [])]
+    (uix/use-effect (fn []
+                      (when active
+                        (.addEventListener js/window "mousemove" move-callback)
+                        (.addEventListener js/window "mouseup" up-callback)
+                        (fn []
+                          (.removeEventListener js/window "mousemove" move-callback)
+                          (.removeEventListener js/window "mouseup" up-callback))))
+                    [active move-callback up-callback])
+    ($ Box
+       {:sx (fn [theme]
+              #js {:position "absolute"
+                   :right 0
+                   :top 0
+                   :bottom 0
+                   :cursor "ew-resize"
+                   :width 5
+                   "&:hover" #js {"--border-color" (.. theme -palette -secondary -main)}})
+        :onMouseDown (fn [e]
+                       (.preventDefault e)
+                       (set-state {:active true
+                                   :delta (- (.-clientX e) width)}))}
+       ($ Box
+          {:sx #js {:position "absolute"
+                    :top 0
+                    :bottom 0
+                    :right 0
+                    :width "1px"
+                    :backgroundColor (if active
+                                       "secondary.main"
+                                       "var(--border-color)")}}))))
+
+(defui sidebar []
+  (let [tr           (use-subscribe [:lipas.ui.subs/translator])
+        drawer-open? (use-subscribe [::subs/drawer-open?])
+        width        (mui/use-width)
+        [xs-width sm-width md-width] (use-subscribe [::subs/drawer-width2])
+
+        [width set-width] (uix/use-state md-width)]
+    ($ ThemeProvider
+       {:theme mui/jyu-theme-light}
+
+       ;; Simplify tool container hack for Safari
+       (r/as-element [simplify-tool-container])
+
+       ;; TODO:
+       (when-not drawer-open?
+         ;; Open Drawer Button
+         ($ Fab
+            {;; :size     (if (utils/mobile? width) "small" "medium")
+             :on-click #(==> [::events/toggle-drawer])
+             :color    "secondary"
+             :sx       #js {:position "absolute"
+                            :top 0
+                            :left 0
+                            :ml 2
+                            :mt 2}}
+            ($ Icon "keyboard_arrow_right")))
+
+       ;; Closable left sidebar drawer
+       ($ Drawer
+          {:variant    "persistent"
+           :PaperProps #js {:sx (fn [theme]
+                                  (->js {:width xs-width
+                                         :overflow "unset"
+                                         :pr "5px"
+
+                                         (.. theme -breakpoints (up "sm"))
+                                         {:width sm-width}
+
+                                         (.. theme -breakpoints (up "md"))
+                                         {:width width}}))}
+           :SlideProps #js {:direction "right"}
+           :open       drawer-open?}
+
+          ;; Toggle (close) button
+          ($ Fab
+             {;; :size     (if (utils/mobile? width) "small" "medium")
+              :on-click #(==> [::events/toggle-drawer])
+              :color    "secondary"
+              :sx       (fn [theme]
+                          (->js {:position "absolute"
+                                 :top 0
+                                 :right 0
+                                 :transform (if (= "100%" xs-width)
+                                              ""
+                                              "translateX(50%)")
+                                 :zIndex 1000
+                                 :mr 0
+                                 :mt 2
+
+                                 (.. theme -breakpoints (up "sm"))
+                                 (if (= "100%" sm-width)
+                                   {}
+                                   {:transform "translateX(50%)"})
+
+                                 (.. theme -breakpoints (up "md"))
+                                 (if (= "100%" md-width)
+                                   {}
+                                   {:transform "translateX(50%)"})}))}
+             ($ Icon "keyboard_arrow_left"))
+
+          ($ resize-handle
+             {:width width
+              :set-width set-width})
+
+          ;; FIXME: Drawer Paper is the scroll container now.
+          ;; We would likely want to have the content element scrollable,
+          ;; and keep the header (title, tabs) and footer toolbar non scrollable.
+          ;; Right now the toggle button is also part of the scrollable Paper.
+          ;; FIXME: Don't pass the width to the contents component?
+
+          ;; Content
+          (r/as-element [map-contents-view
+                         {:tr tr
+                          :width width}])))))
 
 (defn map-view []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        logged-in?   (<== [:lipas.ui.subs/logged-in?])
-        drawer-open? (<== [::subs/drawer-open?])
-        width        (mui/use-width)
-        drawer-width (<== [::subs/drawer-width width])]
-
+  (let [tr           (<== [:lipas.ui.subs/translator])]
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
      ;; Mini-nav
@@ -1800,40 +1927,9 @@
       [mui/grid
        {:container true :direction "column" :align-items "flex-end" :spacing 2}
        [mui/grid {:item true}
-        [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
+        [nav/mini-nav {:tr tr}]]]]
 
-     [mui/mui-theme-provider {:theme mui/jyu-theme-light}
-
-      ;; Simplify tool container hack for Safari
-      [simplify-tool-container]
-
-      (when-not drawer-open?
-        ;; Open Drawer Button
-        [lui/floating-container {:background-color "transparent"}
-         [mui/tool-bar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
-          [mui/fab
-           {:size     (if (utils/mobile? width) "small" "medium")
-            :on-click #(==> [::events/toggle-drawer])
-            :color    "secondary"}
-           [mui/icon "search"]]]])
-
-      ;; Closable left sidebar drawer
-      [mui/drawer
-       {:variant    "persistent"
-        :PaperProps {:style {:width drawer-width}}
-        :SlideProps {:direction "down"}
-        :open       drawer-open?}
-
-       ;; Close button
-       [mui/button
-        {:on-click #(==> [::events/toggle-drawer])
-         :style    {:min-height "36px" :margin-bottom "1em"}
-         :variant  "outlined"
-         :color    "inherit"}
-        [mui/icon "expand_less"]]
-
-       ;; Content
-       [map-contents-view {:tr tr :logged-in? logged-in? :width width}]]]
+     ($ sidebar)
 
      ;; Floating container (bottom right)
      [lui/floating-container

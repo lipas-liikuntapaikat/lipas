@@ -96,6 +96,27 @@
      :else                         "530px")))
 
 (re-frame/reg-sub
+ ::drawer-width2
+ :<- [:lipas.ui.search.subs/search-results-view]
+ :<- [::selected-sports-site]
+ :<- [::mode-name]
+ (fn [[result-view selected-site mode-name] _]
+   ;; should return [xs-width sm-width md-width]
+   (cond
+     (= :table result-view)
+     ["100%" "100%" 530]
+
+     (and (= :table result-view)
+          (empty? selected-site))
+     ["100%" "100%" 530]
+
+     (= :analysis mode-name)
+     ["100%" "700px" 700]
+
+     :else
+     ["100%" "530px" 530])))
+
+(re-frame/reg-sub
  ::selected-sports-site-tab
  :<- [::map]
  (fn [m _]
