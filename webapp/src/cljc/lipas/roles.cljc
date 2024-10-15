@@ -195,20 +195,22 @@
         :else t))
     query))
 
-(defn wrap-es-search-query
+(defn wrap-es-query-site-has-privilege
   "Wraps a ES site search query with bool query to only returns
   results where user has :site/create-edit role."
-  [query user]
+  [query user required-privilege]
   (let [;; If user can edit any sites (like admin) we don't need to add any ES queries
         ;; to filter the results.
-        edit-all-sites? (check-privilege user {} :site/create-edit)
+        edit-all-sites? (check-privilege user {} required-privilege)
         ;; Select user roles that would give the create-edit privilege to some sites.
         ;; The the role-context keys are applied later into the ES query itself.
         ctx {:type-code ::any
              :city-code ::any
              :lipas-id ::any}
-        affecting-roles (->> (-> user :permissions :roles)
-                             (filter (fn [role] (select-role ctx role))))]
+        affecting-roles (->> user :permissions :roles
+                             (filter (fn [role]
+                                       (and (contains? (:privileges (get roles (:role role))) required-privilege)
+                                            (select-role ctx role)))))]
 
     (cond
       ;; Admin etc. -> no reason to filter the sites

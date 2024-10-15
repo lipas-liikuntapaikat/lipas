@@ -268,7 +268,7 @@
          ;; Add the condition to search based on site props which affect user roles.
          ;; Keep function_score query at the top level, but add this query around other filters (like name, type etc.)
          edit-permission? (update-in [:query :function_score :query] (fn [x]
-                                                                       (roles/wrap-es-search-query x user))))))))
+                                                                       (roles/wrap-es-query-site-has-privilege x user :site/create-edit))))))))
 
 (re-frame/reg-event-fx
  ::search
