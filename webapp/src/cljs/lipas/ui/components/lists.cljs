@@ -33,7 +33,7 @@
         ;; if user is changing browser default font size,
         ;; it could be something else.
         [measure-item-ref measure-item] (useMeasure)
-        height (if (js/isFinite (.-height measure))
+        height (if (pos? (.-height measure))
                  (.-height measure-item)
                  70)]
     ($ :<>

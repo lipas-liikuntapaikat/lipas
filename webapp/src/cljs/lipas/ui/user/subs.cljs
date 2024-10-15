@@ -3,8 +3,9 @@
    [lipas.roles :as roles]
    [re-frame.core :as re-frame]))
 
-(re-frame/reg-sub
- ::logged-in?
+;; TODO: Likely not very useful now. Checks should mainly be done using
+;; check-privilege which indirectly also handles if the user is logged in.
+(re-frame/reg-sub ::logged-in?
  (fn [db _]
    (:logged-in? db)))
 
