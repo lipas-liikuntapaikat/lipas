@@ -19,38 +19,28 @@
  (fn [db _]
    (-> db :admin :users-filter)))
 
-(defn- ->names-list [ks coll]
-  (->> (select-keys coll ks)
-       vals
-       (map (comp :fi :name))
-       (string/join ",")))
-
 (defn ->users-list-entry
-  [cities types activities user]
+  [tr user]
   {:id           (-> user :id)
    :email        (-> user :email)
    :firstname    (-> user :user-data :firstname)
    :lastname     (-> user :user-data :lastname)
-   :admin?       (-> user :permissions :admin?)
-   :sports-sites (-> user :permissions :sports-sites)
-   :cities       (-> user :permissions :cities (->names-list cities))
-   :types        (-> user :permissions :types (->names-list types))
-   :activities   (->> user :permissions :activities
-                      (map (fn [s] (get-in activities [s :label :fi]))))})
+   :roles        (->> user :permissions :roles
+                      (map (fn [x]
+                             (tr (keyword :lipas.user.permissions.roles.role-names (:role x)))))
+                      (string/join ", "))})
 
 (re-frame/reg-sub
  ::users-list
  :<- [::users]
  :<- [::users-status]
  :<- [::users-filter]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/active-types]
- :<- [:lipas.ui.sports-sites.activities.subs/data]
- (fn [[users status filter-text cities types activities] _]
+ :<- [:lipas.ui.subs/translator]
+ (fn [[users status filter-text tr] _]
    (let [users (->> users
                     vals
                     (filter (comp #{status} :status))
-                    (map (partial ->users-list-entry cities types activities)))]
+                    (map (partial ->users-list-entry tr)))]
      (if (seq filter-text)
        (filter
         #(-> %

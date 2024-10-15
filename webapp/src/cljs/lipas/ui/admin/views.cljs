@@ -588,11 +588,7 @@
              [[:email (tr :lipas.user/email)]
               [:firstname (tr :lipas.user/firstname)]
               [:lastname (tr :lipas.user/lastname)]
-              ;; FIXME: Use new roles, what to show?
-              ;; [:sports-sites (tr :lipas.user.permissions/sports-sites)]
-              [:cities (tr :lipas.user.permissions/cities)]
-              [:types (tr :lipas.user.permissions/types)]
-              [:activities (tr :lipas.user.permissions/activities)]]
+              [:roles (tr :lipas.user.permissions.roles/roles)]]
              :sort-fn   :email
              :items     users
              :on-select #(==> [::events/set-user-to-edit %])}]]])
