@@ -360,10 +360,6 @@
          terse? (-> db :search :results-view (= :list))]
      {:dispatch [::search-fast params fit-view? terse?]})))
 
-(re-frame/reg-sub ::search-debug
-  (fn [db _]
-    (->es-search-body (collect-search-data db) (-> db :user :login) false)))
-
 (re-frame/reg-event-fx
  ::search-with-keyword
  (fn [{:keys [db]} [_ fit-view?]]

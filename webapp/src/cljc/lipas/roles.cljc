@@ -183,11 +183,25 @@
             (:activity role) (update :activity set)))
         roles))
 
+(defn- es-add-terms [query [k v]]
+  (if (seq v)
+    (let [t {:terms {k v}}]
+      (cond
+        ;; Already 2 terms queries -> add to the bool query
+        (:bool query) (update-in query [:bool :must] conj t)
+        ;; 1->2 terms queries, wrap in bool
+        (:terms query) {:bool {:must [query t]}}
+        ;; 1 terms query
+        :else t))
+    query))
+
 (defn wrap-es-search-query
   "Wraps a ES site search query with bool query to only returns
   results where user has :site/create-edit role."
   [query user]
-  (let [edit-all-sites? (check-privilege user {} :site/create-edit)
+  (let [;; If user can edit any sites (like admin) we don't need to add any ES queries
+        ;; to filter the results.
+        edit-all-sites? (check-privilege user {} :site/create-edit)
         ;; Select user roles that would give the create-edit privilege to some sites.
         ;; The the role-context keys are applied later into the ES query itself.
         ctx {:type-code ::any
@@ -202,25 +216,20 @@
       query
 
       (seq affecting-roles)
+      ;; Combine wrapped query AND new roles query
       {:bool {:must [query
+                     ;; role1 OR role2 OR ...
                      {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
-                                             (reduce (fn [acc [es-k v]]
-                                                       (if (seq v)
-                                                         (let [t {:terms {es-k v}}]
-                                                           (cond
-                                                             ;; Already 2 terms queries -> add to the bool query
-                                                             (:bool acc) (update-in acc [:bool :must] conj t)
-                                                             ;; 1->2 terms queries, wrap in bool
-                                                             (:terms acc) {:bool {:must [acc t]}}
-                                                             ;; 1 terms query
-                                                             :else t))
-                                                         acc))
+                                             ;; query for each role is role-context1 AND role-context2
+                                             ;; using sets/collections for a term checks if the
+                                             ;; document matches any value for the term collection.
+                                             (reduce es-add-terms
                                                      {}
                                                      [[:location.city.city-code city-code]
                                                       [:type.type-code type-code]
                                                       [:lipas-id lipas-id]]))
                                            affecting-roles)}}]}}
 
-      ;; FIXME: No edit roles? Return empty list or just hide the button from the UI.
-      :else query
-      )))
+      ;; User doesn't have edit roles? No filtering
+      ;; The checkbox shouldn't be visible
+      :else query)))

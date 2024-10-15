@@ -48,8 +48,6 @@
       :spacing   3
       :direction (if (= "large" size) "row" "column")}
 
-     (js/console.log (<== [::events/search-debug]))
-
      ;; Permissions filter
      (when (<== [:lipas.ui.user.subs/check-privilege
                  {:city-code ::roles/any
