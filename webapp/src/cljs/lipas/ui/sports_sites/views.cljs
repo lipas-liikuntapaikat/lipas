@@ -605,7 +605,19 @@
                                :label       label
                                :disabled    disabled?
                                :value-fn    first
+                               :on-change   on-change
                                :label-fn    (comp locale :name second)}]
+
+      (= "enum-coll" data-type k) [lui/multi-select
+                                  {:items       (:opts prop-type)
+                                   :deselect?   true
+                                   :value       value
+                                   :helper-text tooltip
+                                   :on-change   on-change
+                                   :label       label
+                                   :disabled    disabled?
+                                   :value-fn    first
+                                   :label-fn    (comp locale :name second)}]
 
       :else [lui/text-field
              {:value     value
@@ -746,6 +758,7 @@
                                                :tooltip   tooltip
                                                :disabled  disabled?
                                                :on-change on-change}]
+
                (= "enum" data-type)          [lui/select
                                               {:items       (:opts v)
                                                :deselect?   true
@@ -757,6 +770,17 @@
                                                :value-fn    first
                                                :label-fn    (comp locale :label second)}]
 
+               (= "enum-coll" data-type) [lui/autocomplete
+                                          {:multi?      true
+                                           :items       (:opts v)
+                                           :deselect?   true
+                                           :value       value
+                                           :helper-text tooltip
+                                           :on-change   on-change
+                                           :label       label
+                                           :disabled    disabled?
+                                           :value-fn    first
+                                           :label-fn    (comp locale :label second)}]
                :else
                (let [el [lui/text-field
                          {;; form ->field adds the :label, but that doesn't work
