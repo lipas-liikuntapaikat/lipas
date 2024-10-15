@@ -9,7 +9,8 @@
    [lipas.ui.search.events :as events]
    [lipas.ui.search.subs :as subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [uix.core :refer [$]]))
 
 (defn- filter-layout
   [{:keys [size] :as _props} & children]
@@ -353,16 +354,18 @@
        [mui/stack
         {:flexGrow 1
          :direction "column"}
-        [lists/virtualized-list
-         {:items         results
-          :label-fn      :name
-          :label2-fn     #(when %
-                            (str (-> % :type.name) ", "
-                                 (-> % :location.city.name)
-                                 ;; uncomment for search tuning
-                                 ;;" " (-> % :score)
-                                 ))
-          :on-item-click on-result-click}]])]))
+        ($ lists/virtualized-list
+           {:items         results
+            :key-fn        :lipas-id
+            :label-fn      :name
+            :label2-fn     (fn [search-doc]
+                             (when search-doc
+                               (str (-> search-doc :type.name) ", "
+                                    (-> search-doc :location.city.name)
+                                    ;; uncomment for search tuning
+                                    ;;" " (-> % :score)
+                                    )))
+            :on-item-click on-result-click})])]))
 
 (defn search-input
   [{:keys [max-width]}]
