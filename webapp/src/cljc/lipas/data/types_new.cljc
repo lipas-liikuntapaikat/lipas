@@ -493,7 +493,7 @@
       ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
       (assoc-in [2510 :props :free-use?] {:priority 0})
       (assoc-in [2520 :description :fi] "Kilpajäähalli on jääurheilun kilpailu- ja ottelutapahtumiin soveltuva jäähalli. Katsomon koko, kenttien lukumäärä ja muut tarkemmat tiedot kuvataan lisätiedoissa.")
-      (assoc-in [2520 :props :ringette-boundary-markings] {:priority 0})
+      (assoc-in [2520 :props :ringette-boundary-markings?] {:priority 0})
       ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
       (assoc-in [2520 :props :field-1-flexible-rink?] {:priority 0})
       ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
