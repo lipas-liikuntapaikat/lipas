@@ -7,6 +7,7 @@
    ["ol/style/Stroke$default" :as Stroke]
    ["ol/style/Style$default" :as Style]
    ["ol/style/Circle$default" :as Circle]
+   ["ol/style/Text$default" :as Text]
    ["ol/style/RegularShape$default" :as RegularShape]
    [goog.color :as gcolor]
    [goog.color.alpha :as gcolora]
@@ -343,6 +344,30 @@
                          ;; Iteration stops on truthy vals but we want
                          ;; to keep going
                          false)))
+    styles))
+
+(def label-style
+  (Style.
+    #js {:text (Text.
+                 #js {:font "16px sans-serif"
+                      :fill (Fill. #js {:color "#000"})
+                      :backgroundFill (Fill. #js {:color "#fff"})
+                      :backgroundStroke (Stroke. #js {:color "blue"
+                                                      :width 4})
+                      ; :stroke (Stroke. #js {:color "#fff"
+                      ;                       :width 2})
+                      :padding #js [5 5 5 5]
+                      })}))
+
+(defn route-part-difficulty-style-fn
+  [feature]
+  (let [styles #js [edit-style
+                    label-style]
+        difficulty (or (.get feature "difficulty")
+                       "-")]
+    (.. label-style
+        (getText)
+        (setText (str "Difficulty: " difficulty)))
     styles))
 
 (defn line-direction-hover-style-fn

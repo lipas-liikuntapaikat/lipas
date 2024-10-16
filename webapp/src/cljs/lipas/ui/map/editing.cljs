@@ -331,6 +331,51 @@
         (assoc-in [:interactions :travel-direction-select] select)
         (assoc-in [:interactions :travel-direction-hover] hover))))
 
+(defn set-route-part-difficulty-edit-mode
+  [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)
+        hover     (Select. #js{:layers    #js [layer]
+                               :condition events-condition/pointerMove
+                               ;; :style     styles/line-direction-hover-style-fn
+                               })
+        select    (Select. #js{:layers #js [layer]
+                               ;; :style  styles/line-direction-hover-style-fn
+                               })
+
+        popup-overlay (-> map-ctx :overlays :popup)]
+
+    (.on select "select" (fn [e]
+                           (let [selected (.-selected e)
+                                 coords   (.. e -mapBrowserEvent -coordinate)]
+                             (when (not-empty selected)
+                               (let [f        (first selected)
+                                     fid      (.getId f)
+                                     lipas-id (.get f "lipas-id")]
+                                 (println "lipas" lipas-id "fid" fid coords popup-overlay)
+                                 ;; (-> selected map-utils/->geoJSON-clj)
+                                 (.setPosition popup-overlay coords)
+                                 (==> [::events/show-popup
+                                       {:anchor-el (js/document.getElementById "popup-anchor")
+                                        :type      :route-part-difficulty
+                                        :data      {:fid fid}}]))))))
+
+    (.addInteraction lmap hover)
+    (.addInteraction lmap select)
+
+    (doseq [f features]
+      (.setStyle f (styles/route-part-difficulty-style-fn f)))
+
+    (.addFeatures source features)
+
+    (-> map-ctx
+        (assoc-in [:interactions :route-part-difficulty-select] select)
+        (assoc-in [:interactions :route-part-difficulty-hover] hover))))
+
+
+
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
@@ -375,7 +420,12 @@
        :selecting    (-> map-ctx
                          (enable-highlighting! mode))
        :travel-direction (-> map-ctx
-                             (set-travel-direction-edit-mode! mode))))))
+                             (set-travel-direction-edit-mode! mode))
+       :route-part-difficulty (-> map-ctx
+                                  (set-route-part-difficulty-edit-mode mode))
+       (do
+         (js/console.warn "Unknown sub-mode: " sub-mode)
+         map-ctx)))))
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]

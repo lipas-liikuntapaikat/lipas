@@ -535,6 +535,17 @@
         [mui/typography {:paragraph true :variant "caption"}
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
+(defmethod popup-body :route-part-difficulty [popup]
+  (let [{:keys [fid]}   (-> popup :data)]
+    [mui/paper
+     {:sx
+      {:padding "0.5em"
+       :width "200px"}}
+     [mui/typography {:variant "body2"}
+      fid]
+     [mui/select
+      {:fullWidth true}]]))
+
 (defn popup []
   (let [{:keys [data anchor-el]
          :as   popup'} (<== [::subs/popup])
@@ -882,6 +893,7 @@
                  :simplifying      (tr :map.tools/simplifying-tooltip)
                  :selecting        (tr :map.tools/selecting-tooltip)
                  :travel-direction (tr :map.tools/travel-direction-tooltip)
+                 :route-part-difficulty (tr :map.tools/route-part-difficulty)
                  :view-only        "-")}
               [mui/fab
                {:size     "small"
@@ -901,22 +913,8 @@
                    :simplifying      [mui/icon props "auto_fix_high"]
                    :selecting        [mui/icon props "handshake"]
                    :travel-direction [mui/icon props "turn_slight_right"]
+                   :route-part-difficulty [mui/icon props "warning"]
                    :view-only        [mui/icon props "dash"]))]])
-
-           (when (and editing?
-                      (#{"LineString"} geom-type)
-                      can-publish?)
-             [mui/tooltip {:title (tr :map/travel-direction)}
-              [mui/fab
-               {:size     "small"
-                :color    (if (#{:travel-direction} sub-mode)
-                            "secondary"
-                            "default")
-                :on-click (fn [_]
-                            (if (#{:travel-direction} sub-mode)
-                              (==> [::events/start-editing lipas-id :view-only geom-type])
-                              (==> [::events/start-editing lipas-id :travel-direction geom-type])))}
-               [mui/icon "turn_slight_right"]]])
 
            ;; Tool select button
            (when (and editing?
@@ -1015,7 +1013,11 @@
                   [mui/list-item-text (tr :map/split-linestring)]])
 
                ;; Travel direction (limited to paddling for now)
-               (when (and editing? (#{"LineString"} geom-type) (#{4451 4452} type-code))
+               (when (and editing?
+                          (#{"LineString"} geom-type)
+                          ;; check for activity = paddling?
+                          ;; doesn't include 5150 now, but that would be Points
+                          (#{4451 4452} type-code))
                  [mui/menu-item
                   {:on-click
                    #(do
@@ -1026,6 +1028,20 @@
                     {:color (if (= sub-mode :travel-direction) "secondary" "inherit")}
                     "turn_slight_right"]]
                   [mui/list-item-text (tr :map/travel-direction)]])
+
+               (when (and editing?
+                          (#{"LineString"} geom-type)
+                          (= "cycling" activity-value))
+                 [mui/menu-item
+                  {:on-click
+                   #(do
+                      (==> [::events/close-more-tools-menu])
+                      (==> [::events/start-editing lipas-id :route-part-difficulty geom-type]))}
+                  [mui/list-item-icon
+                   [mui/icon
+                    {:color (if (= sub-mode :route-part-difficulty) "secondary" "inherit")}
+                    "warning"]]
+                  [mui/list-item-text (tr :map/route-part-difficulty)]])
 
                ;; Edit tool
                (when (and editing? (#{"LineString" "Polygon"} geom-type))
