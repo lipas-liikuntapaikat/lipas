@@ -847,6 +847,7 @@
                 :route-length-km
                 :duration
                 :cycling-difficulty
+                :cycling-route-difficulty
                 :surface-material
                 :unpaved-percentage
                 :trail-percentage
@@ -878,6 +879,7 @@
                  [:sequential (into [:enum] (keys cycling-activities))]]
                 [:cycling-difficulty {:optional true}
                  (into [:enum] (keys cycling-difficulty))]
+                [:cycling-route-difficulty {:optional true} localized-string-schema]
                 [:duration {:optional true} duration-schema]
                 [:food-and-water {:optional true} localized-string-schema]
                 [:accommodation {:optional true} localized-string-schema]
@@ -936,6 +938,16 @@
                         :se "Uppskattad utmaning för rutten"
                         :en "Estimated difficulty of the route"}
           :opts        cycling-difficulty}}
+
+        :cycling-route-difficulty
+        {:field
+         {:type        "textarea"
+          :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
+                        :se ""
+                        :en ""}
+          :label       {:fi "Haastavuus"
+                        :se "Utmaning"
+                        :en "Difficulty"}}}
 
         :duration
         {:field
