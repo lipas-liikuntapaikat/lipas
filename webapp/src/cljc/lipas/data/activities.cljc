@@ -840,8 +840,8 @@
    :type-codes  #{4411 4412}
    :sort-order  [:route-name
                 :description-short
-                :description-long
                 :route-notes
+                :description-long
                 :highlights
                 :cycling-activities
                 :route-length-km
@@ -898,7 +898,14 @@
                     :en "Route type"}
       :props
       (merge
-       (dissoc common-route-props :rules)
+       (-> (dissoc common-route-props :rules)
+           (update-in [:description-long :field] assoc
+                      :label {:fi "Reittikuvaus"
+                              :se ""
+                              :en ""}
+                      :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erota vaiheet omiksi kappaleiksi."
+                                    :se ""
+                                    :en ""}))
        {:route-name
         {:field
          {:type        "text-field"
@@ -973,12 +980,12 @@
         :route-notes
         {:field
          {:type        "textarea"
-          :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erottele eri vaiheet omiksi kappaleikseen."
-                        :se "En mer detaljerad beskrivning av ruttens olika etapper. T.ex. transportmöjligheter, attraktioner, rastplatser och tjänster. Dela upp stegen i egna stycken."
-                        :en "A more detailed description of the different stages of the route. E.g. passability, attractions, rest areas and services. Split the stages into individual paragraphs."}
-          :label       {:fi "Reittimuistiinpanot"
-                        :se "Anteckningar om rutten"
-                        :en "Route notes"}}}
+          :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista."
+                        :se ""
+                        :en ""}
+          :label       {:fi "Laajennettu yleiskuvaus"
+                        :se ""
+                        :en ""}}}
 
         :unpaved-percentage
         {:field
