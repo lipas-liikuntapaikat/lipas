@@ -45,13 +45,6 @@
     (and activity-value
          (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
 
-;; NOTE: Refactor this?
-(re-frame/reg-sub ::edit-activities-only?
-  :<- [:lipas.ui.user.subs/user-data]
-  (fn [user [_ activity-value role-context can-publish?]]
-    (and (not can-publish?)
-         (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
-
 (re-frame/reg-sub ::selected-features
   :<- [:lipas.ui.map.subs/selected-features]
   (fn [fs _]

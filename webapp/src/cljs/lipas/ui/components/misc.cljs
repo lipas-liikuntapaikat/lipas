@@ -11,9 +11,9 @@
            discard-tooltip edit-tooltip publish-tooltip on-edit-start
            invalid-message on-edit-end delete-tooltip on-delete
            on-publish editing-allowed? save-in-progress?
-           edit-activities-only?]}]
+           edit-activities?]}]
 
-  [(when (and editing? (or user-can-publish? edit-activities-only?))
+  [(when (and editing? (or user-can-publish? edit-activities?))
      [buttons/save-button
       {:on-click         on-publish
        :disabled         (or save-in-progress? (not valid?))
@@ -21,7 +21,7 @@
        :tooltip          publish-tooltip}])
 
    (when (and logged-in? editing-allowed?
-              (or user-can-publish? edit-activities-only?)
+              (or user-can-publish? edit-activities?)
               (not editing?))
      [buttons/edit-button
       {:color    "secondary"

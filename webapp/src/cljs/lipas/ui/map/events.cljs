@@ -417,13 +417,18 @@
 
 (re-frame/reg-event-fx
  ::edit-site
- (fn [_ [_ lipas-id geom-type edit-activities-only?]]
+ (fn [{:keys [db]} [_ lipas-id geom-type edit-activities-only?]]
    (let [sub-mode (if edit-activities-only? :view-only :editing)]
      {:dispatch-n
       [[:lipas.ui.sports-sites.events/edit-site lipas-id]
        ;;[::zoom-to-site lipas-id]
        [::clear-undo-redo]
-       [::start-editing lipas-id sub-mode geom-type]]})))
+       [::start-editing lipas-id sub-mode geom-type]
+       ;; Also jump to activities tab if user doesn't have permission to
+       ;; edit the basic site data.
+       (when (and edit-activities-only?
+                  (not= 5 (:selected-sports-site-tab (:map db))))
+         [::select-sports-site-tab 5])]})))
 
 (defn- on-success-default [{:keys [lipas-id]}]
   [[::stop-editing]

@@ -13,6 +13,7 @@
    [lipas.ui.accessibility.views :as accessibility]
    [lipas.ui.analysis.views :as analysis]
    [lipas.ui.components :as lui]
+   [lipas.ui.components.misc :as misc]
    [lipas.ui.loi.views :as loi]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.import :as import]
@@ -618,18 +619,23 @@
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
         activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
-        has-activity?        (some? activity-value)
-        show-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
+        ;; TODO: check :activity/view later, when we have the read view implemented
+        _view-activities?    nil
+        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
         hide-actions?        (<== [::subs/hide-actions?])
 
+        ;; FIXME: Bad pattern to combine n subs into one
         {:keys [types cities admins owners editing? edits-valid?
-                problems?  editing-allowed? delete-dialog-open?
+                problems? editing-allowed? delete-dialog-open?
                 can-publish? logged-in?  size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
-        edit-activities-only? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities-only? activity-value (roles/site-roles-context display-data) can-publish?])
+        ;; We have two privileges:
+        ;; - can-publish? - :site/create-edit - Edit basic info and properties
+        ;; - edit-activities? - :activity/edit: Edit activity
+        ;; If either is true, we show the edit button
 
         set-field (partial set-field lipas-id)]
 
@@ -677,8 +683,7 @@
       [mui/tabs
        {:value       selected-tab
         :on-change   #(==> [::events/select-sports-site-tab %2])
-        :variant     (if (and show-activities?
-                              (not edit-activities-only?))
+        :variant     (if edit-activities?
                        "scrollable"
                        "fullWidth")
         #_#_:variant "scrollable"
@@ -691,11 +696,10 @@
          :value 0
          :label (tr :lipas.sports-site/basic-data)}]
 
-       (when-not edit-activities-only?
-         [mui/tab
-          {:style {:min-width 0}
-           :value 1
-           :label (tr :lipas.sports-site/properties)}])
+       [mui/tab
+        {:style {:min-width 0}
+         :value 1
+         :label (tr :lipas.sports-site/properties)}]
 
        ;; Disabled in prod until this can be released
        (when (and (not (utils/prod?)) accessibility-type?)
@@ -711,7 +715,7 @@
            :value 3
            :label (tr :lipas.floorball/headline)}])
 
-       (when show-activities?
+       (when edit-activities?
          [mui/tab
           {:style {:min-width 0}
            :value 5
@@ -741,7 +745,8 @@
               {:tr              tr
                :display-data    display-data
                :edit-data       edit-data
-               :read-only?      (or (not editing?) (not can-publish?) edit-activities-only?)
+               ;; FIXME: Only activities?
+               :read-only?      (or (not editing?) (not can-publish?))
                :types           (vals types)
                :size-categories size-categories
                :admins          admins
@@ -753,7 +758,7 @@
              ^{:key (str "location-" lipas-id)}
              [sports-sites/location-form
               {:tr                        tr
-               :read-only?                (or (not editing?) (not can-publish?) edit-activities-only?)
+               :read-only?                (or (not editing?) (not can-publish?))
                :cities                    (vals cities)
                :edit-data                 (:location edit-data)
                :display-data              (:location display-data)
@@ -763,45 +768,18 @@
                                             [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
                :address-required?         (not (#{201 2011} type-code))}]]]
 
-         ;; Properties tab
-         1 (r/with-let [prop-tab (r/atom (if (and has-activity? edit-activities-only?)
-                                           "activities"
-                                           "props"))]
-             [:<>
-              #_[mui/tabs
-                 {:style          {:margin-bottom "1em" :margin-top "0.5em"}
-                  :value          @prop-tab
-                  :variant        "standard"
-                  :indicatorColor "primary"
-                  :on-change      #(reset! prop-tab %2)}
-                 (when-not (and has-activity? can-edit-activities?)
-                   [mui/tab {:value "props" :label "Ominaisuudet"}])
-                 (when (and has-activity? can-edit-activities?)
-                   [mui/tab {:value "activities" :label "Ulkoilutietopalvelu"}])]
-
-              #_(when (= "props" @prop-tab))
-              [sports-sites/properties-form
-               {:tr           tr
-                :type-code    (or (-> edit-data :type :type-code) type-code)
-                :read-only?   (or (not editing?) (not can-publish?) edit-activities-only?)
-                :on-change    (partial set-field :properties)
-                :display-data (:properties display-data)
-                :edit-data    (:properties edit-data)
-                :geoms        (-> edit-data :location :geometries)
-                :geom-type    geom-type
-                :problems?    problems?
-                :key          (-> edit-data :type :type-code)}]
-
-              #_[:div {:style {:margin-top "1em" :margin-bottom "1em"}}]
-              #_(when (= "activities" @prop-tab)
-                  [activities/view
-                   {:tr           tr
-                    :read-only?   (not editing?)
-                    :lipas-id     lipas-id
-                    :type-code    type-code
-                    :display-data display-data
-                    :edit-data    edit-data
-                    :geom-type    geom-type}])])
+         ;; Properties tab - "Lisätiedot"
+         1 [sports-sites/properties-form
+            {:tr           tr
+             :type-code    (or (-> edit-data :type :type-code) type-code)
+             :read-only?   (or (not editing?) (not can-publish?))
+             :on-change    (partial set-field :properties)
+             :display-data (:properties display-data)
+             :edit-data    (:properties edit-data)
+             :geoms        (-> edit-data :location :geometries)
+             :geom-type    geom-type
+             :problems?    problems?
+             :key          (-> edit-data :type :type-code)}]
 
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]
@@ -886,7 +864,7 @@
            ;; Active editing tool
            (when (and editing?
                       (#{"LineString" "Polygon"} geom-type)
-                      (not edit-activities-only?))
+                      can-publish?)
              [mui/tooltip
               {:title
                (case sub-mode
@@ -922,7 +900,7 @@
 
            (when (and editing?
                       (#{"LineString"} geom-type)
-                      edit-activities-only?)
+                      can-publish?)
              [mui/tooltip {:title (tr :map/travel-direction)}
               [mui/fab
                {:size     "small"
@@ -938,8 +916,7 @@
            ;; Tool select button
            (when (and editing?
                       can-publish?
-                      (#{"LineString" "Polygon"} geom-type)
-                      (not edit-activities-only?))
+                      (#{"LineString" "Polygon"} geom-type))
              [:<>
               [mui/tooltip {:title (tr :actions/select-tool)}
                [mui/fab
@@ -1189,19 +1166,19 @@
 
           (concat
            ;; FIXME: Just reagent elements, maybe :<>
-           (lui/edit-actions-list
+           (misc/edit-actions-list
             {:editing?              editing?
              :editing-allowed?      editing-allowed?
-             :edit-activities-only? edit-activities-only?
+             :edit-activities?      edit-activities?
              :save-in-progress?     save-in-progress?
              :valid?                edits-valid?
              :logged-in?            logged-in?
              :user-can-publish?     can-publish?
              :on-discard            #(==> [::events/discard-edits lipas-id])
              :discard-tooltip       (tr :actions/cancel)
-             :on-edit-start         #(==> [::events/edit-site lipas-id geom-type edit-activities-only?])
+             :on-edit-start         #(==> [::events/edit-site lipas-id geom-type (and (not can-publish?) edit-activities?)])
              :edit-tooltip          (tr :actions/edit)
-             :on-publish            #(==> [::events/save-edits lipas-id edit-activities-only?])
+             :on-publish            #(==> [::events/save-edits lipas-id])
              :publish-tooltip       (tr :actions/save)
              :invalid-message       (tr :error/invalid-form)
              :on-delete             #(==> [::events/delete-site])

@@ -1,6 +1,7 @@
 (ns lipas.ui.swimming-pools.views
   (:require
    [lipas.ui.components :as lui]
+   [lipas.ui.components.misc :as misc]
    [lipas.ui.energy.views :as energy]
    [lipas.ui.mui :as mui]
    [lipas.ui.sports-sites.events :as site-events]
@@ -87,7 +88,7 @@
       :bottom-actions
       ;; FIXME: Just reagent elements, maybe :<>
       (conj
-       (lui/edit-actions-list
+       (misc/edit-actions-list
         {:editing?          editing?
          :valid?            edits-valid?
          :logged-in?        logged-in?

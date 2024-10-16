@@ -1,6 +1,7 @@
 (ns lipas.ui.ice-stadiums.views
   (:require
    [lipas.ui.components :as lui]
+   [lipas.ui.components.misc :as misc]
    [lipas.ui.energy.views :as energy]
    [lipas.ui.ice-stadiums.events :as events]
    [lipas.ui.ice-stadiums.rinks :as rinks]
@@ -118,7 +119,7 @@
       :bottom-actions
       ;; FIXME: Just reagent elements, maybe :<>
       (conj
-       (lui/edit-actions-list
+       (misc/edit-actions-list
         {:editing?          editing?
          :valid?            edits-valid?
          :logged-in?        logged-in?

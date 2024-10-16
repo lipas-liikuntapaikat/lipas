@@ -60,7 +60,6 @@
 (def form-card layouts/card)
 (def expansion-panel layouts/expansion-panel)
 (def icon-text misc/icon-text)
-(def edit-actions-list misc/edit-actions-list)
 (def li misc/li)
 (def sub-heading misc/sub-heading)
 (def switch checkboxes/switch)
