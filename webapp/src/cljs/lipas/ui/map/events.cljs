@@ -417,8 +417,8 @@
 
 (re-frame/reg-event-fx
  ::edit-site
- (fn [{:keys [db]} [_ lipas-id geom-type edit-activities-only?]]
-   (let [sub-mode (if edit-activities-only? :view-only :editing)]
+ (fn [{:keys [db]} [_ lipas-id geom-type can-publish? edit-activities? edit-floorball?]]
+   (let [sub-mode (if (not can-publish?) :view-only :editing)]
      {:dispatch-n
       [[:lipas.ui.sports-sites.events/edit-site lipas-id]
        ;;[::zoom-to-site lipas-id]
@@ -426,9 +426,15 @@
        [::start-editing lipas-id sub-mode geom-type]
        ;; Also jump to activities tab if user doesn't have permission to
        ;; edit the basic site data.
-       (when (and edit-activities-only?
+       (when (and (not can-publish?)
+                  edit-activities?
                   (not= 5 (:selected-sports-site-tab (:map db))))
-         [::select-sports-site-tab 5])]})))
+         [::select-sports-site-tab 5])
+
+       (when (and (not can-publish?)
+                  edit-floorball?
+                  (not= 3 (:selected-sports-site-tab (:map db))))
+         [::select-sports-site-tab 3])]})))
 
 (defn- on-success-default [{:keys [lipas-id]}]
   [[::stop-editing]

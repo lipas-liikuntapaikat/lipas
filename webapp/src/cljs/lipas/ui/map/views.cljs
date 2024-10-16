@@ -613,15 +613,23 @@
         lipas-id     (:lipas-id display-data)
         edit-data    (:edit-data site-data)
 
+        role-site-ctx (roles/site-roles-context display-data)
+
         type-code            (-> display-data :type :type-code)
-        floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context display-data)])
         #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
+
         activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
+        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
         ;; TODO: check :activity/view later, when we have the read view implemented
-        _view-activities?    nil
-        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value (roles/site-roles-context display-data)])
+        view-activities?    edit-activities?
+
+        floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+        floorball-type?      (contains? floorball-types type-code)
+        view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
+        edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
+
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
@@ -632,9 +640,10 @@
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
-        ;; We have two privileges:
+        ;; We have three privileges:
         ;; - can-publish? - :site/create-edit - Edit basic info and properties
-        ;; - edit-activities? - :activity/edit: Edit activity
+        ;; - edit-activities? - :activity/edit - Edit activity
+        ;; - edit-floorball? - :floorball/edit - Edit floorball information
         ;; If either is true, we show the edit button
 
         set-field (partial set-field lipas-id)]
@@ -679,7 +688,6 @@
 
       ;; Tabs
       [mui/grid {:item true :xs 12}
-      ;; [mui/tool-bar {:disableGutters true}]
       [mui/tabs
        {:value       selected-tab
         :on-change   #(==> [::events/select-sports-site-tab %2])
@@ -708,14 +716,13 @@
            :value 2
            :label (tr :lipas.sports-site/accessibility)}])
 
-       (when (and (floorball-types type-code)
-                  (= :floorball floorball-visibility))
+       (when view-floorball?
          [mui/tab
           {:style {:min-width 0}
            :value 3
            :label (tr :lipas.floorball/headline)}])
 
-       (when edit-activities?
+       (when view-activities?
          [mui/tab
           {:style {:min-width 0}
            :value 5
@@ -784,10 +791,8 @@
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]
 
-         3 (condp contains? type-code
-
-             ;; Floorball specific
-             floorball-types
+         3 (cond
+             floorball-type?
              [:<>
               [mui/tabs {:value "floorball" :variant "standard"}
                [mui/tab {:value "floorball" :label "Salibandy"}]]
@@ -795,7 +800,7 @@
                {:tr           tr
                 :lipas-id     lipas-id
                 :type-code    (or (-> edit-data :type :type-code) type-code)
-                :read-only?   (not editing?)
+                :read-only?   (or (not edit-floorball?) (not editing?))
                 :on-change    set-field
                 :display-data display-data
                 :edit-data    edit-data
@@ -1170,13 +1175,14 @@
             {:editing?              editing?
              :editing-allowed?      editing-allowed?
              :edit-activities?      edit-activities?
+             :edit-floorball?       edit-floorball?
              :save-in-progress?     save-in-progress?
              :valid?                edits-valid?
              :logged-in?            logged-in?
              :user-can-publish?     can-publish?
              :on-discard            #(==> [::events/discard-edits lipas-id])
              :discard-tooltip       (tr :actions/cancel)
-             :on-edit-start         #(==> [::events/edit-site lipas-id geom-type (and (not can-publish?) edit-activities?)])
+             :on-edit-start         #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
              :edit-tooltip          (tr :actions/edit)
              :on-publish            #(==> [::events/save-edits lipas-id])
              :publish-tooltip       (tr :actions/save)
@@ -1207,8 +1213,12 @@
                   sub-mode undo redo
                   selected-tab]} (<== [::subs/add-sports-site-view])
 
+          role-site-ctx (roles/site-roles-context data)
+          type-code (-> data :type :type-code)
           floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          floorball-visibility (<== [:lipas.ui.sports-sites.floorball.subs/visibility (roles/site-roles-context data)])
+          floorball-type?      (contains? floorball-types type-code)
+          ;; view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
+          edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
           set-field            set-new-site-field
           geom-type            (:geometry-type type)]
 
@@ -1535,8 +1545,9 @@
               :style     {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
              [mui/tab {:label (tr :lipas.sports-site/properties)}]
-             (when (and (contains? floorball-types (-> data :type :type-code))
-                        (= :floorball floorball-visibility))
+             ;; TODO: This could be view-floorball? but right not it is not useful to
+             ;; show the tab in create-site if user can't edit the data
+             (when edit-floorball?
                [mui/tab {:label "Olosuhteet"}])]
 
             (case selected-tab
@@ -1578,10 +1589,9 @@
                   :edit-data  (:properties data)
                   :geoms      (-> data :location :geometries)
                   :problems?  problems?}]
-              2 (condp contains? (-> data :type :type-code)
-
+              2 (cond
                   ;; Floorball specific
-                  floorball-types
+                  floorball-type?
                   [:<>
                    [mui/tabs
                     {:value "floorball"
@@ -1589,11 +1599,12 @@
                      :indicator-color "secondary"
                      :text-color "inherit"}
                     [mui/tab {:value "floorball" :label "Salibandy"}]]
+                   ;; TODO: Add notification box if user doesn't have permission to edit this tab?
                    [floorball/form
                     {:tr           tr
                      :lipas-id     nil
                      :type-code    (-> data :type :type-code)
-                     :read-only?   false
+                     :read-only?   (not edit-floorball?)
                      :on-change    set-field
                      :display-data data
                      :edit-data    data

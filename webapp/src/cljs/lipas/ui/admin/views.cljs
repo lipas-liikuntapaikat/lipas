@@ -1,5 +1,6 @@
 (ns lipas.ui.admin.views
   (:require
+   ["@mui/material/Autocomplete" :refer [createFilterOptions]]
    ["@mui/material/Button$default" :as Button]
    ["@mui/material/Card$default" :as Card]
    ["@mui/material/CardContent$default" :as CardContent]
@@ -66,6 +67,8 @@
            (or permissions-request
                "-")))))
 
+(def filter-ac (createFilterOptions))
+
 (defui site-select [{:keys [tr required new-role]}]
    (let [sites  (use-subscribe [::subs/sites-list])]
       ($ autocomplete2
@@ -76,7 +79,25 @@
           :value     (to-array (or (:lipas-id new-role) []))
           :onChange  (fn [_e v]
                         (rf/dispatch [::events/set-new-role-context-value :lipas-id (vec v)]))
-          :multiple  true})))
+          :multiple  true
+          :selectOnFocus true
+          :clearOnBlue true
+          :handleHomeEndKeys true
+          :filterOptions (fn [options params]
+                            ;; The options only contains some x first sites in the system,
+                            ;; so the autocomplete doesn't work that well.
+                            ;; Allow inputting paikka-id numbers directly, show "Add x" option when
+                            ;; the input value doesn't match any options.
+                            (let [filtered (filter-ac options params)
+                                  input-value (js/parseInt (.-inputValue params))
+                                  input-value (when (pos? input-value)
+                                                 input-value)
+                                  is-existing (.some options (fn [x] (= input-value (:value x))))]
+                               (js/console.log input-value is-existing)
+                               (when (and input-value (not is-existing))
+                                  (.push filtered {:value input-value
+                                                   :label (str "Paikka-id \"" input-value "\"")}))
+                               filtered))})))
 
 (defui type-code-select [{:keys [tr required new-role]}]
    (let [types  (use-subscribe [::subs/types-list (tr)])]
