@@ -6,6 +6,7 @@
    [lipas.ui.uix.utils :refer [spread-props]]
    [lipas.ui.utils :as utils]
    [reagent.core :as r]
+   [uix.core :as uix]
    [uix.core :refer [$ defui]]))
 
 ;; TODO: Deprecate/replace this, this has bad choices:
@@ -80,21 +81,43 @@
              :value     value
              :required  required})]))
 
+(defn safe-name [x]
+  (if (keyword? x)
+    (name x)
+    x))
+
+(defn safe-value [x]
+  (if (map? x)
+    (:value x)
+    x))
+
 (defui autocomplete2
-  [{:keys [input-props label] :as props}]
-  ($ Autocomplete
-     (spread-props {:renderInput (fn [^js props]
-                                   ($ TextField
-                                      (spread-props {:label label
-                                                     :variant "standard"}
-                                                    props
-                                                    input-props)))
-                    :getOptionKey (fn [item] (:value item))
-                    :getOptionLabel (fn [item]
-                                      ;; This fn is called for both :value and :options
-                                      (if (map? item)
-                                        (:label item)
-                                        (str item)))
-                    :isOptionEqualToValue (fn [option value] (= (:value option)
-                                                                (:value value)))}
-                   (dissoc props :input-props :label))))
+  "Helper for version if autocomplete where:
+
+  :options should be a cljs sequential collection with {:value ... :label ...}"
+  [{:keys [options input-props label] :as props}]
+  (let [value->label (uix/use-memo (fn []
+                                     (into {} (map (juxt (comp safe-name :value) :label)
+                                                   options)))
+                                   [options])
+        js-options (uix/use-memo (fn [] (to-array options))
+                                 [options])]
+    ($ Autocomplete
+       (spread-props {:options js-options
+                      :renderInput (fn [^js props]
+                                     ($ TextField
+                                        (spread-props {:label label
+                                                       :variant "standard"}
+                                                      props
+                                                      input-props)))
+                      :getOptionKey (fn [item] (:value item))
+                      :getOptionLabel (fn [item]
+                                        ;; This fn is called for both :value and :options
+                                        (if (map? item)
+                                          (:label item)
+                                          (or (get value->label item)
+                                              (str item))))
+                      :isOptionEqualToValue (fn [option value]
+                                              (= (safe-name (:value option))
+                                                 value))}
+                     (dissoc props :input-props :label :options)))))

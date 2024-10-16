@@ -52,7 +52,10 @@
 (re-frame/reg-event-db
  ::set-user-to-edit
  (fn [db [_ {:keys [id]}]]
-   (assoc-in db [:admin :editing-user] (get-in db [:admin :users id]))))
+   (assoc-in db
+             [:admin :editing-user]
+             (when id
+               (update-in (get-in db [:admin :users id]) [:permissions :roles] roles/conform-roles)))))
 
 (re-frame/reg-event-db
  ::edit-user
@@ -70,19 +73,19 @@
                                                (dissoc x :role))
                                              (select-keys allowed-keys)))))))
 
-(re-frame/reg-event-db ::set-new-role-context-value
+(re-frame/reg-event-db ::set-role-context-value
   (fn [db [_ k value]]
-    (if value
-      (update-in db [:admin :new-role] assoc k value)
-      (update-in db [:admin :new-role] dissoc k))))
+    (let [idx (:edit-role (:admin db))
+          path (if idx
+                 [:admin :editing-user :permissions :roles idx]
+                 [:admin :new-role])]
+      (if value
+        (update-in db path assoc k value)
+        (update-in db path dissoc k)))))
 
 (re-frame/reg-event-db ::add-new-role
   (fn [db _]
-    (let [v (:new-role (:admin db))
-          role (reduce (fn [acc [k v]]
-                         (assoc acc k (set (map :value v))))
-                       {:role (:value (:role v))}
-                       (dissoc v :role))]
+    (let [role (:new-role (:admin db))]
       (if (s/valid? :lipas.user.permissions.roles/role role)
         (-> db
             (update-in [:admin :editing-user :permissions :roles] conj role)
@@ -95,6 +98,14 @@
                (fn [roles]
                  (into (empty roles)
                        (remove #(= role %) roles))))))
+
+(re-frame/reg-event-db ::edit-role
+  (fn [db [_ idx]]
+    (assoc-in db [:admin :edit-role] idx)))
+
+(re-frame/reg-event-db ::stop-edit
+  (fn [db _]
+    (update db :admin dissoc :edit-role)))
 
 (re-frame/reg-event-db
  ::grant-access-to-activity-types

@@ -75,10 +75,11 @@
  (fn [db _]
    (get-in db [:admin :editing-user])))
 
-(re-frame/reg-sub
- ::new-role
- (fn [db _]
-   (get-in db [:admin :new-role])))
+(re-frame/reg-sub ::edit-role
+  (fn [db _]
+    (if-let [idx (:edit-role (:admin db))]
+      (assoc (get-in db [:admin :editing-user :permissions :roles idx]) :editing? true)
+      (get-in db [:admin :new-role]))))
 
 (defn prettify-timestamp [s]
   (-> s

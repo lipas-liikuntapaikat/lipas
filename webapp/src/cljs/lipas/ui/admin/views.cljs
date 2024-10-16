@@ -21,7 +21,7 @@
    [lipas.ui.admin.events :as events]
    [lipas.ui.admin.subs :as subs]
    [lipas.ui.components :as lui]
-   [lipas.ui.components.autocompletes :refer [autocomplete2]]
+   [lipas.ui.components.autocompletes :as ac]
    [lipas.ui.mui :as mui]
    [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.user.subs :as user-subs]
@@ -69,20 +69,21 @@
 
 (def filter-ac (createFilterOptions))
 
-(defui site-select [{:keys [tr required new-role]}]
-   (let [sites  (use-subscribe [::subs/sites-list])]
-      ($ autocomplete2
-         {:options   (to-array sites)
+(defui site-select [{:keys [tr required data]}]
+   (let [sites (use-subscribe [::subs/sites-list])]
+      ($ ac/autocomplete2
+         {:options   sites
           :label     (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
                           (when required
                              " *"))
-          :value     (to-array (or (:lipas-id new-role) []))
+          :value     (to-array (or (:lipas-id data) []))
           :onChange  (fn [_e v]
-                        (rf/dispatch [::events/set-new-role-context-value :lipas-id (vec v)]))
+                        (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
           :multiple  true
           :selectOnFocus true
           :clearOnBlue true
           :handleHomeEndKeys true
+          :freeSolo true
           :filterOptions (fn [options params]
                             ;; The options only contains some x first sites in the system,
                             ;; so the autocomplete doesn't work that well.
@@ -93,43 +94,42 @@
                                   input-value (when (pos? input-value)
                                                  input-value)
                                   is-existing (.some options (fn [x] (= input-value (:value x))))]
-                               (js/console.log input-value is-existing)
                                (when (and input-value (not is-existing))
                                   (.push filtered {:value input-value
                                                    :label (str "Paikka-id \"" input-value "\"")}))
                                filtered))})))
 
-(defui type-code-select [{:keys [tr required new-role]}]
+(defui type-code-select [{:keys [tr required data]}]
    (let [types  (use-subscribe [::subs/types-list (tr)])]
-      ($ autocomplete2
-         {:options   (to-array types)
+      ($ ac/autocomplete2
+         {:options   types
           :label     (str (tr :lipas.user.permissions/types)
                           (when required
                              " *"))
-          :value     (to-array (or (:type-code new-role) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :type-code (vec v)]))
+          :value     (to-array (or (:type-code data) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
           :multiple  true})))
 
-(defui city-code-select [{:keys [tr required new-role]}]
+(defui city-code-select [{:keys [tr required data]}]
    (let [cities (use-subscribe [::subs/cities-list (tr)])]
-      ($ autocomplete2
-         {:options   (to-array cities)
+      ($ ac/autocomplete2
+         {:options   cities
           :label     (str (tr :lipas.user.permissions/cities)
                           (when required
                              " *"))
-          :value     (to-array (or (:city-code new-role) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :city-code (vec v)]))
+          :value     (to-array (or (:city-code data) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
           :multiple  true})))
 
-(defui activity-select [{:keys [tr required new-role]}]
+(defui activity-select [{:keys [tr required data]}]
    (let [activities (<== [::subs/activities-list (tr)])]
-      ($ autocomplete2
-         {:options   (to-array activities)
+      ($ ac/autocomplete2
+         {:options   activities
           :label     (str (tr :lipas.user.permissions/activities)
                           (when required
                              " *"))
-          :value     (to-array (or (:activity new-role) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role-context-value :activity (vec v)]))
+          :value     (to-array (or (:activity data) []))
+          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
           :multiple  true})))
 
 (defui context-key-edit [{:keys [k] :as props}]
@@ -146,10 +146,11 @@
       :activity
       ($ activity-select props)))
 
-(defui new-role [{:keys [tr]}]
-  (let [new-role (use-subscribe [::subs/new-role])
+(defui role-form [{:keys [tr]}]
+  (let [data (use-subscribe [::subs/edit-role])
+        editing? (:editing? data)
 
-        role (:value (:role new-role))
+        role (:role data)
         required-context-keys (:required-context-keys (get roles/roles role))
         optional-context-keys (:optional-context-keys (get roles/roles role))]
     ($ Stack
@@ -157,40 +158,49 @@
         :sx #js {:gap 1}}
        ($ Typography
           {:variant "h6"}
-          (tr :lipas.user.permissions.roles.new-role/header))
+          (if editing?
+             (tr :lipas.user.permissions.roles.edit-role/edit-header)
+             (tr :lipas.user.permissions.roles.edit-role/new-header)))
 
-       ($ autocomplete2
-          {:options   (to-array (for [[k {:keys [assignable]}] roles/roles
-                                      :when assignable]
-                                  {:value k
-                                   :label (tr (keyword :lipas.user.permissions.roles.role-names k))}))
+       ($ ac/autocomplete2
+          {:options   (for [[k {:keys [assignable]}] roles/roles
+                            :when assignable]
+                         {:value k
+                          :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
+           :readOnly  editing?
            :label     (tr :lipas.user.permissions.roles/role)
-           :value     (:role new-role)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role v]))})
+           :value     (:role data)
+           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))})
 
-       (when-not (:role new-role)
+       (when-not (:role data)
           ($ Typography
-             (tr :lipas.user.permissions.roles.new-role/choose-role)))
+             (tr :lipas.user.permissions.roles.edit-role/choose-role)))
 
        (for [k required-context-keys]
           ($ context-key-edit
              {:key k
               :k k
-              :required true
+              :required data
               :tr tr
-              :new-role new-role}))
+              :data data}))
 
        (for [k optional-context-keys]
           ($ context-key-edit
              {:key k
               :k k
               :tr tr
-              :new-role new-role}))
+              :data data}))
 
-
-       ($ Button
-          {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
-          (tr :lipas.user.permissions.roles.new-role/add)))))
+       ($ Stack
+          {:direction "row"
+           :sx #js {:gap 1}}
+          (if editing?
+             ($ Button
+                {:onClick (fn [_e] (rf/dispatch [::events/stop-edit]))}
+                (tr :lipas.user.permissions.roles.edit-role/stop-editing))
+             ($ Button
+                {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
+                (tr :lipas.user.permissions.roles.edit-role/add)))))))
 
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
@@ -208,7 +218,9 @@
        " " v)))
 
 (defui roles-card [{:keys [tr]}]
-  (let [user (use-subscribe [::subs/editing-user])]
+  (let [user (use-subscribe [::subs/editing-user])
+        data (use-subscribe [::subs/edit-role])
+        editing? (:editing? data)]
     ;; TODO: replace the container grid
     ($ Grid
        {:item true
@@ -226,10 +238,12 @@
 
                 ($ List
                    (for [[i {:keys [role] :as x}]
-                         (map-indexed vector (->> user
-                                               :permissions
-                                               :roles
-                                               (sort-by roles/role-sort-fn)))]
+                         (->> user
+                              :permissions
+                              :roles
+                              ;; Edit uses the roles vector index, so add idx before sort
+                              (map-indexed vector)
+                              (sort-by (comp roles/role-sort-fn second)))]
                      ($ ListItem
                         {:key i}
                         ($ ListItemText
@@ -249,10 +263,15 @@
                                         :tr tr})))))
                         ($ ListItemSecondaryAction
                            ($ IconButton
-                              {:onClick (fn [_e] (rf/dispatch [::events/remove-role x]))}
+                              {:onClick (fn [_e] (rf/dispatch [::events/edit-role i]))}
+                              ($ Icon "edit"))
+                           ($ IconButton
+                              {:onClick (fn [_e] (rf/dispatch [::events/remove-role x]))
+                               ;; Deleting item while editing would break the editing :roles idx numbers
+                               :disabled editing?}
                               ($ Icon "delete"))))))
 
-                ($ new-role
+                ($ role-form
                    {:tr tr})))))))
 
 (defn user-dialog [tr]
