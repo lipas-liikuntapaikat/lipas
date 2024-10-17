@@ -591,7 +591,7 @@
         localize (partial i18n/localize locale)
         ->row    (partial reports/->row fields)]
     (with-open [writer (OutputStreamWriter. out)]
-      (.write writer "{\"type\":\"FeatureCollection\",\"Features\":[")
+      (.write writer "{\"type\":\"FeatureCollection\",\"features\":[")
       (loop [page-num 0]
         (when-let [page (async/<!! in-chan)]
           (let [ms    (-> page :body :hits :hits)
