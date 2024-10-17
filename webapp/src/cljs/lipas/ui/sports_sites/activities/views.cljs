@@ -557,7 +557,6 @@
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
   (let [description-length-error (> (-> @dialog-state :data :description (get locale) count) 255)]
-    (js/console.log  (> (-> @dialog-state :data :description (get locale) count) 255))
     [lui/dialog
      {:title         (if (-> @dialog-state :data :url)
                        (tr :utp/photo)
@@ -854,10 +853,12 @@
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
 (defn route-form
-  [{:keys [locale geom-type lipas-id route-props state read-only? field-sorter]}]
+  [{:keys [locale geom-type lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
-    (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp route-props)]
+    (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
+          :when (or (nil? show)
+                    (show {:type-code type-code}))]
       (when-not (and
                   (contains? route-props :independent-entity)
                   (not (:independent-entity @state))
@@ -877,7 +878,7 @@
           :lipas-id     lipas-id}])))])
 
 (defn single-route
-  [{:keys [read-only? route-props lipas-id _display-data _edit-data
+  [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
            locale geom-type label description set-field activity-k
            route]
     :as   props}]
@@ -896,6 +897,7 @@
           :tr           tr
           :field-sorter field-sorter
           :lipas-id     lipas-id
+          :type-code    type-code
           :read-only?   read-only?
           :geom-type    geom-type
           :route-props  route-props
@@ -905,7 +907,7 @@
       (remove-watch route-form-state :lol))))
 
 (defn multiple-routes
-  [{:keys [read-only? route-props lipas-id _display-data _edit-data
+  [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
            locale geom-type label description set-field activity-k]
     :as   props}]
   (r/with-let [route-form-state (r/atom {})]
@@ -977,6 +979,7 @@
             :tr           tr
             :field-sorter field-sorter
             :lipas-id     lipas-id
+            :type-code    type-code
             :read-only?   read-only?
             :geom-type    geom-type
             :route-props  route-props
@@ -1025,7 +1028,7 @@
 
 (defn routes
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
-           locale geom-type label description set-field activity-k]
+           locale geom-type label description set-field activity-k type-code]
     :as   props}]
   (let [route-view  (<== [::subs/route-view])
         routes      (<== [::subs/routes lipas-id activity-k])
@@ -1069,7 +1072,7 @@
        [mui/form-helper-text description])]))
 
 (defn make-field
-  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k]}]
+  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code]}]
   (case (:type field)
 
     "select" [lui/select
@@ -1186,6 +1189,7 @@
                :route-props (:props field)
                :set-field   (partial set-field prop-k)
                :activity-k  activity-k
+               :type-code   type-code
                :value       (get-in edit-data [prop-k])}]
 
     "duration" [duration
@@ -1297,6 +1301,7 @@
              :display-data (get-in display-data [:activities activity-k])
              :locale       locale
              :activity-k   activity-k
+             :type-code    type-code
              :set-field    set-field
              :geom-type    geom-type
              :lipas-id     lipas-id}])]]

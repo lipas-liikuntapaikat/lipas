@@ -450,12 +450,33 @@
       (assoc-in [:description-short :field :description :en]
                 "Presentation of 1-3 sentences about the route and its specific properties.")))
 
-
 (def common-props-schema
   (collect-schema common-props))
 
 (comment
   (m/schema common-props-schema))
+
+;; This field is added to multiple activities, but under some of them, it
+;; is only displayed for certain type-codes.
+;; :show callback is used to control which type-codes should display this field.
+;; Currently only the route-form component in the UI side uses this :show option.
+;;
+;; outdoor-recreation-routes paitsi 4402 (hiihtolatu)
+;; cycling (kaikki)
+;; paddling paitsi 4452 (vesiretkeilyreitti) ja 5150 (ei routes dataa)
+(def pilgrimage-field
+  {:schema [:boolean {:optional true}]
+   :field
+   {:type "checkbox"
+    :description {:fi "Jos kohde on pyhiinvaellusreitti, aktivoi liukukytkin. HUOM! Pyhiinvaellusreitti on ulkoilureitti, joka tarjoaa mahdollisuuden liikkumiseen, hiljentymiseen ja hengellisyyteen/henkisyyteen.  Reitin varrelle on rakennettu mobiilisti tai maastoon opasteita ja sisältöjä, jotka ohjaavat vaeltajaa."
+                  :se ""
+                  :en ""}
+    :label {:fi "Pyhinvaelluskohde"
+            :se ""
+            :en "Pilgrimage destination"}}})
+
+(def pilgrimage-key-schema
+  [:pilgrimage {:optional true} :boolean])
 
 (def outdoor-recreation-areas
   {:label      {:fi "Retkeily ja ulkoilualueet"
@@ -573,6 +594,7 @@
                  :accessibility-classification
                  :accessibility
                  :accessibility-categorized
+                 :pilgrimage
                  :contacts
                  :additional-info-link
                  :images
@@ -605,7 +627,8 @@
                 [:surface-material {:optional true} surface-material-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
-                [:independent-entity {:optional true} [:boolean]]])]
+                [:independent-entity {:optional true} [:boolean]]
+                pilgrimage-key-schema])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -793,7 +816,10 @@
                         :en "Activate the slider if the route is not a part of any region or a broader entity (e.g. recreational area or national park). The activated slider turns red."}
           :label       {:fi "Itsenäinen kohde"
                         :se "Fristående plats"
-                        :en "Standalone place"}}}})}}}})
+                        :en "Standalone place"}}}
+
+        :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                    (not (#{4402} type-code))))})}}}})
 
 (def outdoor-recreation-routes-schema
   (collect-schema (:props outdoor-recreation-routes)))
@@ -895,13 +921,13 @@
                 :food-and-water
                 :good-to-know
                 :accessibility
+                :pilgrimage
                 :contacts
                 :additional-info-link
                 :images
                 :videos]
    :props
-   {
-    ;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
+   {;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
     ;; kuvailemaan omana kohteenaan. Reittikokonaisuus olisi päätason
     ;; liikuntapaikka (alatasona päiväetapit, jotka ovat ehdotusmaisia
     ;; etappeja).
@@ -927,7 +953,8 @@
                 [:surface-material {:optional true} surface-material-schema]
                 [:unpaved-percentage {:optional true} percentage-schema]
                 [:trail-percentage {:optional true} percentage-schema]
-                [:cyclable-percentage {:optional true} percentage-schema]])]
+                [:cyclable-percentage {:optional true} percentage-schema]
+                pilgrimage-key-schema])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -1087,7 +1114,9 @@
                            :en "Surface material"}
           :description    {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
                            :se "Välj alla underlag som finns på rutten."
-                           :en "Select all the surface materials on the route"}}}})}}}})
+                           :en "Select all the surface materials on the route"}}}
+
+        :pilgrimage pilgrimage-field})}}}})
 
 (def cycling-schema
   (collect-schema (:props cycling)))
@@ -1180,6 +1209,7 @@
                  :rules
                  :safety
                  :accessibility
+                 :pilgrimage
                  :contacts
                  :additional-info-link
                  :images
@@ -1252,7 +1282,8 @@
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                        [:safety {:optional true} localized-string-schema]
                        [:good-to-know {:optional true} localized-string-schema]
-                       [:duration {:optional true} duration-schema]])]
+                       [:duration {:optional true} duration-schema]
+                       pilgrimage-key-schema])]
             :field
             {:type        "routes"
              :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -1373,7 +1404,10 @@
                                :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
                  :label       {:fi "Kulkusuunta"
                                :se "Färdriktning"
-                               :en "Travel direction"}}}})}}})})
+                               :en "Travel direction"}}}
+
+               :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                           (= 4451 type-code)))})}}})})
 
 (def paddling-schema
   (collect-schema (:props paddling)))
