@@ -831,6 +831,43 @@
                                :se "5 - Mycket utmanande"
                                :en "5 - Extremely challenging"}})
 
+;; https://www.bikeland.fi/vaativuusluokitukset
+(def cycling-route-part-difficulty
+  {"1a-easy"                  {:label {:fi "1 - Erittäin helppo (päällystetie)"
+                                       :se ""
+                                       :en "1 - Very easy (paved road)"}}
+   "1b-easy"                  {:label {:fi "1 - Erittäin helppo (sora- tai metsätie)"
+                                       :se ""
+                                       :en "1 - Very easy (gravel or forst road)"}}
+   "2-easy"                   {:label {:fi "2 - Helppo"
+                                       :se ""
+                                       :en "2 - Easy"}
+                               :description {:fi "Maastopyöräilyreitti, joka on yleensä leveä polku tai möykkyisämpi metsätie"
+                                             :se ""
+                                             :en ""}}
+   "3-moderately-challenging" {:label {:fi "3 - Keskivaativa"
+                                       :se "3 - Medelsvår"
+                                       :en "3 - Moderately challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on usein polku tai muu kapeahko maastossa oleva ura"
+                                             :se ""
+                                             :en ""}}
+   "4-challenging"            {:label {:fi "4 - Vaativa"
+                                       :se "4 - Utmanande"
+                                       :en "4 - Challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on kapea polku tai reitti ja siinä on useita vaikeakulkuisia kohtia"
+                                             :se ""
+                                             :en ""}}
+   "5-extremely-challenging"  {:label {:fi "5 - Erittäin vaativa"
+                                       :se "5 - Mycket utmanande"
+                                       :en "5 - Extremely challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on usein kapeaa ja erittäin haastavaa polkua ja siinä on jatkuvasti haastavia osuuksia"
+                                             :se ""
+                                             :en ""}}})
+
+(def cycling-route-part-difficulty-label {:fi "Reittiosan vaativuus"
+                                          :se ""
+                                          :en ""})
+
 (def cycling
   {:label       {:fi "Pyöräily"
                  :se "Cykling"

@@ -424,14 +424,18 @@
        ;;[::zoom-to-site lipas-id]
        [::clear-undo-redo]
        [::start-editing lipas-id sub-mode geom-type]
-       ;; Also jump to activities tab if user doesn't have permission to
+       ;; Also jump to activities/floorball tab if user doesn't have permission to
        ;; edit the basic site data.
+       ;; Currently there is no type-code WITH activities AND floorball
+       ;; Add
        (when (and (not can-publish?)
+                  (not edit-floorball?)
                   edit-activities?
                   (not= 5 (:selected-sports-site-tab (:map db))))
          [::select-sports-site-tab 5])
 
        (when (and (not can-publish?)
+                  (not edit-activities?)
                   edit-floorball?
                   (not= 3 (:selected-sports-site-tab (:map db))))
          [::select-sports-site-tab 3])]})))
@@ -924,24 +928,39 @@
  (fn [db [_ add-mode]]
    (assoc-in db [:map :add-mode] add-mode)))
 
-(re-frame/reg-event-fx
- ::toggle-travel-direction
- (fn [{:keys [db]} [_ lipas-id fid]]
-   (let [geoms (-> db
-                   (get-in [:map :mode :geoms])
-                   (update :features
-                           (fn [fs]
-                             (map (fn [{:keys [id properties] :as f}]
-                                    (if (= id fid)
-                                      (let [curr-direction (get properties :travel-direction)
-                                            new-direction  (case curr-direction
-                                                             nil            "start-to-end"
-                                                             "start-to-end" "end-to-start"
-                                                             "end-to-start" nil)]
-                                        (assoc-in f [:properties :travel-direction] new-direction))
-                                      f))
-                                  fs))))]
-     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+(defn update-feature-properties [features fid f & args]
+  ;; features seems to be LazySeq already
+  (map (fn [{:keys [id] :as feature}]
+         (if (= id fid)
+           (apply update feature :properties f args)
+           feature))
+       features))
+
+(re-frame/reg-event-fx ::toggle-travel-direction
+  (fn [{:keys [db]} [_ lipas-id fid]]
+    (let [geoms (-> db
+                    (get-in [:map :mode :geoms])
+                    (update :features
+                            (fn [fs]
+                              (update-feature-properties fs fid (fn [properties]
+                                                                  (let [curr-direction (:travel-direction properties)
+                                                                        new-direction  (case curr-direction
+                                                                                         nil            "start-to-end"
+                                                                                         "start-to-end" "end-to-start"
+                                                                                         "end-to-start" nil)]
+                                                                    (assoc properties :travel-direction new-direction)))))))]
+      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+(re-frame/reg-event-fx ::set-route-part-difficulty
+  (fn [{:keys [db]} [_ lipas-id fid v]]
+    (let [geoms (-> db
+                    (get-in [:map :mode :geoms])
+                    (update :features
+                            (fn [fs]
+                              (if (seq v)
+                                (update-feature-properties fs fid assoc :route-part-difficulty v)
+                                (update-feature-properties fs fid dissoc :route-part-difficulty)))))]
+      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
 ;; Reverse geocoding
 

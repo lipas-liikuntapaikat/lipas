@@ -1,5 +1,9 @@
 (ns lipas.ui.map.views
   (:require
+   ["@mui/material/MenuItem$default" :as MenuItem]
+   ["@mui/material/Paper$default" :as Paper]
+   ["@mui/material/TextField$default" :as TextField]
+   ["@mui/material/Typography$default" :as Typography]
    ["mdi-material-ui/ContentCut$default" :as ContentCut]
    ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
    ["mdi-material-ui/Eraser$default" :as Eraser]
@@ -8,6 +12,7 @@
    ["react" :as react]
    [clojure.spec.alpha :as s]
    [clojure.string :as string]
+   [lipas.data.activities :as activities-data]
    [lipas.data.sports-sites :as ss]
    [lipas.roles :as roles]
    [lipas.ui.accessibility.views :as accessibility]
@@ -29,9 +34,12 @@
    [lipas.ui.sports-sites.events :as sports-site-events]
    [lipas.ui.sports-sites.floorball.views :as floorball]
    [lipas.ui.sports-sites.views :as sports-sites]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [re-frame.core :as rf]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [uix.core :as uix]
+   [uix.core :refer [$ defui]]))
 
 ;; TODO: Juho later This pattern makes development inconvenient as
 ;; the component might crash and shadow-cljs reloads don't update it.
@@ -535,30 +543,63 @@
         [mui/typography {:paragraph true :variant "caption"}
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
-(defmethod popup-body :route-part-difficulty [popup]
-  (let [{:keys [fid]}   (-> popup :data)]
-    [mui/paper
-     {:sx
-      {:padding "0.5em"
-       :width "200px"}}
-     [mui/typography {:variant "body2"}
-      fid]
-     [mui/select
-      {:fullWidth true}]]))
+(defui route-part-difficulty [{:keys [data]}]
+  (let [{:keys [lipas-id fid]} data
+        tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        properties (use-subscribe [::subs/edit-geom-properties fid])
+        value  (:route-part-difficulty properties)]
+    ($ Paper
+       {:sx
+        #js {:padding 2
+             :width "350px"}}
+       ($ TextField
+          {:label (tr :map/route-part-difficulty)
+           :select true
+           :fullWidth true
+           :value (or value "")
+           :onChange (fn [e]
+                       (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
+          ($ MenuItem
+             {:key "empty"
+              :value ""}
+             "-")
+          (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
+            ($ MenuItem
+               {:key k
+                :value k
+                :sx #js {:flexDirection "column"
+                         :alignItems "flex-start"
+                         :maxWidth "350px"}}
+               ($ Typography
+                  (get label locale))
+               ($ Typography
+                  {:sx #js {:fontSize "body2.fontSize"
+                            :whiteSpace "normal"}}
+                  (get description locale))))))))
 
-(defn popup []
-  (let [{:keys [data anchor-el]
+(defmethod popup-body :route-part-difficulty [popup]
+  ($ route-part-difficulty {:data (:data popup)}))
+
+(defn popup [{:keys [popup-ref]}]
+  (let [{:keys [data placement]
          :as   popup'} (<== [::subs/popup])
-        tr             (<== [:lipas.ui.subs/translator])]
-    (when anchor-el
-      [mui/popper
-       {:open      (boolean (seq data))
-        :placement "top-end"
-        :anchor-el anchor-el
-        :container anchor-el
-        :modifiers [{:name "offset"
-                     :options {:offset [0 10]}}]}
-       [popup-body (assoc popup' :tr tr)]])))
+        tr (<== [:lipas.ui.subs/translator])
+        [anchor-el set-anchor-el] (uix/use-state nil)]
+    [:<>
+     [:div {:ref (fn [el]
+                   (set-anchor-el el)
+                   (set! (.-current popup-ref) el))}]
+     (when (seq data)
+       [mui/popper
+        {:open      (boolean (seq data))
+         :placement (or placement "top-end")
+         ;; FIXME:
+         :anchor-el anchor-el
+         :container anchor-el
+         :modifiers [{:name "offset"
+                      :options {:offset [0 10]}}]}
+        [popup-body (assoc popup' :tr tr)]])]))
 
 (defn set-field
   [lipas-id & args]
@@ -893,7 +934,7 @@
                  :simplifying      (tr :map.tools/simplifying-tooltip)
                  :selecting        (tr :map.tools/selecting-tooltip)
                  :travel-direction (tr :map.tools/travel-direction-tooltip)
-                 :route-part-difficulty (tr :map.tools/route-part-difficulty)
+                 :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
                  :view-only        "-")}
               [mui/fab
                {:size     "small"
@@ -1794,7 +1835,8 @@
         logged-in?   (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
         width        (mui/use-width)
-        drawer-width (<== [::subs/drawer-width width])]
+        drawer-width (<== [::subs/drawer-width width])
+        popup-ref    (uix/use-ref nil)]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
@@ -1882,12 +1924,12 @@
            :padding-left     "0.5em" :padding-right "0.5em"}}
          [layer-switcher {:tr tr}]]]]]
 
-     ;; We use this div to bind Popper to OpenLayers overlay
-     [:div {:id "popup-anchor"}]
-     [popup]
+     [:f> popup
+      {:popup-ref popup-ref}]
 
      ;; The map
-     [ol-map/map-outer]]))
+     [ol-map/map-outer
+      {:popup-ref popup-ref}]]))
 
 (defn main []
   [:f> map-view])

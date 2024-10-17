@@ -11,7 +11,9 @@
    [lipas.ui.map.events :as events]
    [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [==>] :as utils]
+   [re-frame.core :as rf]
+   [re-frame.db :as db]))
 
 (defn clear-edits!
   [{:keys [layers] :as map-ctx}]
@@ -316,7 +318,6 @@
                                (let [f        (first selected)
                                      fid      (.getId f)
                                      lipas-id (.get f "lipas-id")]
-                                 (println "lipas" lipas-id "fid" fid)
                                  (==> [::events/toggle-travel-direction lipas-id fid]))))))
 
     (.addInteraction lmap hover)
@@ -333,40 +334,44 @@
 
 (defn set-route-part-difficulty-edit-mode
   [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
-  (let [^js layer (-> layers :overlays :edits)
+  (let [tr (:translator @db/app-db)
+        ^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
         _         (.clear source)
         features  (-> geoms clj->js map-utils/->ol-features)
-        hover     (Select. #js{:layers    #js [layer]
-                               :condition events-condition/pointerMove
-                               ;; :style     styles/line-direction-hover-style-fn
-                               })
-        select    (Select. #js{:layers #js [layer]
-                               ;; :style  styles/line-direction-hover-style-fn
-                               })
+        hover     (Select. #js {:layers    #js [layer]
+                                :condition events-condition/pointerMove
+                                :style     (fn [feature]
+                                             (styles/route-part-difficulty-style-fn feature tr true false))})
+        select    (Select. #js {:layers #js [layer]
+                                :style  (fn [feature]
+                                          (styles/route-part-difficulty-style-fn feature tr true true))})
 
         popup-overlay (-> map-ctx :overlays :popup)]
 
     (.on select "select" (fn [e]
-                           (let [selected (.-selected e)
-                                 coords   (.. e -mapBrowserEvent -coordinate)]
-                             (when (not-empty selected)
+                           (let [selected (.-selected e)]
+                             (if (seq selected)
                                (let [f        (first selected)
                                      fid      (.getId f)
-                                     lipas-id (.get f "lipas-id")]
-                                 (println "lipas" lipas-id "fid" fid coords popup-overlay)
-                                 ;; (-> selected map-utils/->geoJSON-clj)
+                                     lipas-id (.get f "lipas-id")
+                                     coords   (.. f (getGeometry) (getCoordinateAt 0.5))]
+                                 ;; TODO: Store the pos also to re-frame and control OL popup pos from React
                                  (.setPosition popup-overlay coords)
-                                 (==> [::events/show-popup
-                                       {:anchor-el (js/document.getElementById "popup-anchor")
-                                        :type      :route-part-difficulty
-                                        :data      {:fid fid}}]))))))
+                                 (rf/dispatch [::events/show-popup
+                                               {:type      :route-part-difficulty
+                                                :placement "top"
+                                                :data      {:lipas-id lipas-id
+                                                            :fid fid}}]))
+                               ;; Close popup on clicks outside of the Feature
+                               (rf/dispatch [::events/show-popup nil])))))
 
     (.addInteraction lmap hover)
     (.addInteraction lmap select)
 
     (doseq [f features]
-      (.setStyle f (styles/route-part-difficulty-style-fn f)))
+      (.setStyle f (fn [f]
+                     (styles/route-part-difficulty-style-fn f tr false false))))
 
     (.addFeatures source features)
 
@@ -451,6 +456,9 @@
           (set-editing-mode! mode :continue))
 
       (= :travel-direction (:sub-mode mode))
+      (set-editing-mode! map-ctx mode)
+
+      (= :route-part-difficulty (:sub-mode mode))
       (set-editing-mode! map-ctx mode)
 
       (= (:sub-mode mode) (:sub-mode old-mode))
