@@ -353,7 +353,8 @@
       :description
       {:field
        {:type        "textarea"
-        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."
+        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista. Maksimissaan 255 merkkiä."
+                      ;; TODO:
                       :se "Text som visas för alla i anslutning till bilden om vad som visas i bilden."
                       :en "Text to be displayed for everyone in connection with the image about what is shown in the image."}
         :label       {:fi "Kuvateksti"

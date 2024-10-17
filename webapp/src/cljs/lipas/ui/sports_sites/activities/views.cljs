@@ -556,92 +556,96 @@
 
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
-  [lui/dialog
-   {:title         (if (-> @dialog-state :data :url)
-                     (tr :utp/photo)
-                     (tr :utp/add-photo))
-    :open?         (:open? @dialog-state)
-    :on-save       on-save
-    :on-close      #(swap! dialog-state assoc :open? false)
-    :save-enabled? (and (some-> @dialog-state :data :url str/lower-case (str/starts-with? "http"))
-                        (-> @dialog-state :data :description seq))
-    :save-label    "Ok"
-    :cancel-label  (tr :actions/cancel)}
-   [mui/grid {:container true :spacing 2}
+  (let [description-length-error (> (-> @dialog-state :data :description (get locale) count) 255)]
+    (js/console.log  (> (-> @dialog-state :data :description (get locale) count) 255))
+    [lui/dialog
+     {:title         (if (-> @dialog-state :data :url)
+                       (tr :utp/photo)
+                       (tr :utp/add-photo))
+      :open?         (:open? @dialog-state)
+      :on-save       on-save
+      :on-close      #(swap! dialog-state assoc :open? false)
+      :save-enabled? (and (some-> @dialog-state :data :url str/lower-case (str/starts-with? "http"))
+                          (-> @dialog-state :data :description seq)
+                          (not description-length-error))
+      :save-label    "Ok"
+      :cancel-label  (tr :actions/cancel)}
+     [mui/grid {:container true :spacing 2}
 
-    [mui/grid {:item true :xs 12}
-     [lang-selector {:locale locale}]]
+      [mui/grid {:item true :xs 12}
+       [lang-selector {:locale locale}]]
 
-    ;; Description
-    [mui/grid {:item true :xs 12}
-     [mui/typography {:variant "caption"} helper-text]]
+      ;; Description
+      [mui/grid {:item true :xs 12}
+       [mui/typography {:variant "caption"} helper-text]]
 
-    [mui/grid {:item true :xs 12}
+      [mui/grid {:item true :xs 12}
 
-     [:input
-      {:type      "file"
-       :accept    (str/join "," ["image/png" "image/jpeg" "image/jpg" "image/webp"])
-       :on-change #(==> [::events/upload-utp-image
-                         (-> % .-target .-files)
-                         lipas-id
-                         (fn [{:keys [public-urls] :as cms-meta}]
-                           (let [url (:original public-urls)]
-                             (swap! dialog-state (fn [state]
-                                                   (-> state
-                                                       (assoc-in [:data :url] url)
-                                                       (assoc-in [:data :cms] cms-meta))))))])}]
+       [:input
+        {:type      "file"
+         :accept    (str/join "," ["image/png" "image/jpeg" "image/jpg" "image/webp"])
+         :on-change #(==> [::events/upload-utp-image
+                           (-> % .-target .-files)
+                           lipas-id
+                           (fn [{:keys [public-urls] :as cms-meta}]
+                             (let [url (:original public-urls)]
+                               (swap! dialog-state (fn [state]
+                                                     (-> state
+                                                         (assoc-in [:data :url] url)
+                                                         (assoc-in [:data :cms] cms-meta))))))])}]
 
-     ;; For debug
-     #_[lui/text-field
-       {:value     (-> @dialog-state :data :url)
-        :fullWidth true
-        :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
-        :label     "Url"}]]
+       ;; For debug
+       #_[lui/text-field
+          {:value     (-> @dialog-state :data :url)
+           :fullWidth true
+           :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
+           :label     "Url"}]]
 
-    [mui/grid {:item true :xs 12}
-     (when-let [url (-> @dialog-state :data :url)]
-       [:img
-        {:style {:max-width "100%"}
-         :src   url}])]
+      [mui/grid {:item true :xs 12}
+       (when-let [url (-> @dialog-state :data :url)]
+         [:img
+          {:style {:max-width "100%"}
+           :src   url}])]
 
-    ;; Description
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:fullWidth   true
-       :required    true
-       :value       (-> @dialog-state :data :description locale)
-       :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
-       :label       (get-in image-props [:description :field :label locale])
-       :helper-text (get-in image-props [:description :field :description locale])
-       :multiline   true
-       :rows        5
-       :variant     "outlined"}]]
+      ;; Description
+      [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:fullWidth   true
+         :required    true
+         :value       (-> @dialog-state :data :description locale)
+         :on-change   #(swap! dialog-state assoc-in [:data :description locale] %)
+         :label       (get-in image-props [:description :field :label locale])
+         :helper-text (get-in image-props [:description :field :description locale])
+         :multiline   true
+         :rows        5
+         :variant     "outlined"
+         :error       (boolean description-length-error)}]]
 
-    ;; Alt-text
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:fullWidth   true
-       :required    true
-       :value       (-> @dialog-state :data :alt-text locale)
-       :on-change   #(swap! dialog-state assoc-in [:data :alt-text locale] %)
-       :label       (get-in image-props [:alt-text :field :label locale])
-       :helper-text (get-in image-props [:alt-text :field :description locale])
-       :multiline   true
-       :rows        5
-       :variant     "outlined"}]]
+      ;; Alt-text
+      [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:fullWidth   true
+         :required    true
+         :value       (-> @dialog-state :data :alt-text locale)
+         :on-change   #(swap! dialog-state assoc-in [:data :alt-text locale] %)
+         :label       (get-in image-props [:alt-text :field :label locale])
+         :helper-text (get-in image-props [:alt-text :field :description locale])
+         :multiline   true
+         :rows        5
+         :variant     "outlined"}]]
 
-    ;; Copyright
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
-      {:fullWidth   true
-       :required    true
-       :value       (-> @dialog-state :data :copyright locale)
-       :on-change   #(swap! dialog-state assoc-in [:data :copyright locale] %)
-       :label       (get-in image-props [:copyright :field :label locale])
-       :helper-text (get-in image-props [:copyright :field :description locale])
-       :multiline   true
-       :rows        5
-       :variant     "outlined"}]]]])
+      ;; Copyright
+      [mui/grid {:item true :xs 12}
+       [lui/text-field
+        {:fullWidth   true
+         :required    true
+         :value       (-> @dialog-state :data :copyright locale)
+         :on-change   #(swap! dialog-state assoc-in [:data :copyright locale] %)
+         :label       (get-in image-props [:copyright :field :label locale])
+         :helper-text (get-in image-props [:copyright :field :description locale])
+         :multiline   true
+         :rows        5
+         :variant     "outlined"}]]]]))
 
 (defn images
   [{:keys [value on-change locale label helper-text tr read-only? lipas-id image-props]}]
@@ -1244,16 +1248,16 @@
 (defn view
   [{:keys [type-code display-data edit-data geom-type tr read-only?
            lipas-id]}]
-  (let [activities   (<== [::subs/activity-for-type-code type-code])
-        activity-k   (-> activities :value keyword)
+  (let [activity     (<== [::subs/activity-for-type-code type-code])
+        activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
         locale       (tr)
         set-field    (partial set-field lipas-id :activities activity-k)
         editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
         read-only?   (not editing?)
-        props        (or (some-> (get-in activities [:type->props type-code])
-                                 (->> (select-keys (:props activities))))
-                         (get activities :props))]
+        props        (or (some-> (get-in activity [:type->props type-code])
+                                 (->> (select-keys (:props activity))))
+                         (get activity :props))]
 
     (if read-only?
       [mui/typography (tr :utp/read-only-disclaimer)]
@@ -1301,7 +1305,7 @@
        (when config/debug?
          [mui/grid {:item true :xs 12}
           [lui/expansion-panel {:label "debug"}
-           [:pre (with-out-str (pprint/pprint activities))]]])])))
+           [:pre (with-out-str (pprint/pprint activity))]]])])))
 
 (comment
 
