@@ -443,7 +443,8 @@
      :simplifying              "Yksinkertaistutyökalu valittu"
      :selecting                "Valintatyökalu valittu"
      :simplify                 "Yksinkertaista"
-     :travel-direction-tooltip "Kulkusuuntatyökalu valittu"},
+     :travel-direction-tooltip "Kulkusuuntatyökalu valittu"
+     :route-part-difficulty-tooltip "Reittiosan vaativuus työkalu valittu"},
     :map.tools.simplify
     {:headline "Yksinkertaista geometrioita"}
     :partners           {:headline "Kehittä​misessä mukana"},
@@ -1003,6 +1004,7 @@
      :draw-hole              "Lisää reikä",
      :split-linestring       "Katkaise reittiosa",
      :travel-direction       "Määritä kulkusuunta"
+     :route-part-difficulty  "Määritä reittiosan vaativuus"
      :delete-vertices-hint
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",

@@ -2,14 +2,16 @@
   (:require
    ["ol/geom/MultiPoint$default" :as MultiPoint]
    ["ol/geom/Point$default" :as Point]
+   ["ol/style/Circle$default" :as Circle]
    ["ol/style/Fill$default" :as Fill]
    ["ol/style/Icon$default" :as Icon]
+   ["ol/style/RegularShape$default" :as RegularShape]
    ["ol/style/Stroke$default" :as Stroke]
    ["ol/style/Style$default" :as Style]
-   ["ol/style/Circle$default" :as Circle]
-   ["ol/style/RegularShape$default" :as RegularShape]
+   ["ol/style/Text$default" :as Text]
    [goog.color :as gcolor]
    [goog.color.alpha :as gcolora]
+   [lipas.data.activities :as activities]
    [lipas.data.styles :as styles]
    [lipas.ui.mui :as mui]
    [lipas.ui.svg :as svg]))
@@ -373,6 +375,33 @@
                          ;; to keep going
                          false)))
     styles))
+
+(def route-part-label-style
+  (Style.
+    #js {:text (Text.
+                 #js {:font "16px sans-serif"
+                      :fill (Fill. #js {:color "#000"})
+                      :backgroundFill (Fill. #js {:color "#fff"})
+                      :backgroundStroke (Stroke. #js {:color "blue"
+                                                      :width 4})
+                      :padding #js [5 5 5 5]})}))
+
+(defn route-part-difficulty-style-fn
+  [feature tr hover? _selected?]
+  (let [locale (tr)
+        difficulty (if-let [x (.get feature "route-part-difficulty")]
+                     (get (:label (get activities/cycling-route-part-difficulty x)) locale)
+                     "-")
+        label-style (.clone route-part-label-style)
+        _ (.. label-style
+              (getText)
+              (setText (str (get activities/cycling-route-part-difficulty-label locale) ": " difficulty)))]
+    (when hover?
+      (.. label-style
+          (getText)
+          (setBackgroundStroke hover-stroke)))
+    #js [(if hover? hover-style edit-style)
+         label-style]))
 
 (def population-grid-radius
   "Population grid is 250x250m"

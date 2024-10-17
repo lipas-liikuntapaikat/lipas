@@ -11,7 +11,9 @@
    [lipas.ui.map.events :as events]
    [lipas.ui.map.styles :as styles]
    [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+   [lipas.ui.utils :refer [==>] :as utils]
+   [re-frame.core :as rf]
+   [re-frame.db :as db]))
 
 (defn clear-edits!
   [{:keys [layers] :as map-ctx}]
@@ -316,7 +318,6 @@
                                (let [f        (first selected)
                                      fid      (.getId f)
                                      lipas-id (.get f "lipas-id")]
-                                 (println "lipas" lipas-id "fid" fid)
                                  (==> [::events/toggle-travel-direction lipas-id fid]))))))
 
     (.addInteraction lmap hover)
@@ -330,6 +331,55 @@
     (-> map-ctx
         (assoc-in [:interactions :travel-direction-select] select)
         (assoc-in [:interactions :travel-direction-hover] hover))))
+
+(defn set-route-part-difficulty-edit-mode
+  [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
+  (let [tr (:translator @db/app-db)
+        ^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)
+        hover     (Select. #js {:layers    #js [layer]
+                                :condition events-condition/pointerMove
+                                :style     (fn [feature]
+                                             (styles/route-part-difficulty-style-fn feature tr true false))})
+        select    (Select. #js {:layers #js [layer]
+                                :style  (fn [feature]
+                                          (styles/route-part-difficulty-style-fn feature tr true true))})
+
+        popup-overlay (-> map-ctx :overlays :popup)]
+
+    (.on select "select" (fn [e]
+                           (let [selected (.-selected e)]
+                             (if (seq selected)
+                               (let [f        (first selected)
+                                     fid      (.getId f)
+                                     lipas-id (.get f "lipas-id")
+                                     coords   (.. f (getGeometry) (getCoordinateAt 0.5))]
+                                 ;; TODO: Store the pos also to re-frame and control OL popup pos from React
+                                 (.setPosition popup-overlay coords)
+                                 (rf/dispatch [::events/show-popup
+                                               {:type      :route-part-difficulty
+                                                :placement "top"
+                                                :data      {:lipas-id lipas-id
+                                                            :fid fid}}]))
+                               ;; Close popup on clicks outside of the Feature
+                               (rf/dispatch [::events/show-popup nil])))))
+
+    (.addInteraction lmap hover)
+    (.addInteraction lmap select)
+
+    (doseq [f features]
+      (.setStyle f (fn [f]
+                     (styles/route-part-difficulty-style-fn f tr false false))))
+
+    (.addFeatures source features)
+
+    (-> map-ctx
+        (assoc-in [:interactions :route-part-difficulty-select] select)
+        (assoc-in [:interactions :route-part-difficulty-hover] hover))))
+
+
 
 (defn set-editing-mode!
   ([map-ctx mode]
@@ -375,7 +425,12 @@
        :selecting    (-> map-ctx
                          (enable-highlighting! mode))
        :travel-direction (-> map-ctx
-                             (set-travel-direction-edit-mode! mode))))))
+                             (set-travel-direction-edit-mode! mode))
+       :route-part-difficulty (-> map-ctx
+                                  (set-route-part-difficulty-edit-mode mode))
+       (do
+         (js/console.warn "Unknown sub-mode: " sub-mode)
+         map-ctx)))))
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -401,6 +456,9 @@
           (set-editing-mode! mode :continue))
 
       (= :travel-direction (:sub-mode mode))
+      (set-editing-mode! map-ctx mode)
+
+      (= :route-part-difficulty (:sub-mode mode))
       (set-editing-mode! map-ctx mode)
 
       (= (:sub-mode mode) (:sub-mode old-mode))

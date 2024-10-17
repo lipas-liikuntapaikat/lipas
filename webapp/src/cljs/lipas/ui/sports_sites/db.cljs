@@ -11,6 +11,9 @@
    [lipas.ui.sports-sites.football.db :as football]
    [lipas.ui.utils :as utils]))
 
+;; FIXME: What is the benefit of moving static data to re-frame app-db?
+;; This breaks editing the data ns and getting the result visible right away.
+
 (def default-db
   {:statuses          sports-sites/statuses
    :document-statuses sports-sites/document-statuses ;; unused?
