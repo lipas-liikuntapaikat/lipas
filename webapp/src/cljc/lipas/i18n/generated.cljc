@@ -1130,7 +1130,7 @@
      :add-subroute         "Lägg till delrutt"
      :delete-route-prompt  "Är du säker på att du vill ta bort den här rutten?"
      :custom-rule          "Egna tillstånd, regler, anvisningar"
-     :cusotm-rules         "Egen regler"}
+     :custom-rules         "Egen regler"}
 
     :analysis
     {:headline                   "Analysverktyg (beta)"
@@ -1411,7 +1411,8 @@
      :simplifying              "Förenklingsverktyg valt",
      :selecting                "Valverktyg valt",
      :simplify                 "Förenkla",
-     :travel-direction-tooltip "Reseriktningverktyg valt"}
+     :travel-direction-tooltip "Reseriktningverktyg valt"
+     :route-part-difficulty-tooltip "Verktyg för val av svårighetsgrad för ruttsektion valt"}
     :partners           {:headline "Tillsammans med"},
     :actions
     {:duplicate                "Kopiera",
@@ -1717,7 +1718,28 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :all-types?   "Rättighet till alla typer",
      :cities       "Kommuner",
      :sports-sites "Idrottsanläggning",
-     :types        "Typer"},
+     :types        "Typer"
+     :activities   "Aktiviteter"},
+    :lipas.user.permissions.roles
+    {:roles "Roller"
+     :role "Roll"
+     :context-value-all "Alla"
+     :role-names {:admin "Admin"
+                  :city-manager "Stadsadministratör"
+                  :type-manager "Typadministratör"
+                  :site-manager "Platsadministratör"
+                  :activities-manager "UTP-administratör"
+                  :floorball-manager "Innebandyredigerare"}
+     :context-keys {:city-code "Kommun"
+                    :type-code "Typ"
+                    :activity "Aktivitet"
+                    :lipas-id "Plats"}
+     :edit-role {:edit-header "Redigera"
+                 :new-header "Lägg till roll"
+                 :stop-editing "Avsluta redigering"
+                 :add "Lägg till"
+                 :choose-role "Välj roll först för att välja vilka resurser rollen påverkar."}
+     :permissions-old "(gamla, endast läs)"}
     :help
     {:headline                 "Hjälp",
      :permissions-help
@@ -1862,6 +1884,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :draw-hole              "Lägg till hål",
      :split-linestring       "Klippa ruttdel",
      :travel-direction       "Bestäm riktningen"
+     :route-part-difficulty "Ange svårighetsgrad för ruttsektion"
      :delete-vertices-hint
      "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",
      :calculate-route-length "Räkna ut längden",
@@ -1946,6 +1969,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :permission-to-portal-sites
      "Du har rättighet att uppdatera de här platserna:",
      :permissions-help           "Skriv vad du vill uppdatera i Lipas",
+     :permission-to-activities "Du har behörighet till följande aktiviteter"
      :report-energy-consumption  "Begärda rättigheter",
      :firstname                  "Förnamn",
      :save-search                "Spara söket",
@@ -2294,7 +2318,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :simplifying              "Simplify tool selected",
      :selecting                "Select tool selected",
      :simplify                 "Simplify",
-     :travel-direction-tooltip "Travel direction tool selected"},
+     :travel-direction-tooltip "Travel direction tool selected"
+     :route-part-difficulty-tooltip "Route section difficulty tool selected"},
     :map.tools.simplify
     {:headline "Simplify geometries"}
     :partners         {:headline "In association with"},
@@ -2655,7 +2680,28 @@ The site administrator is responsible for the accuracy of information, safety of
      :all-types?   "Permission to all types",
      :cities       "Access to sports faclities in cities",
      :sports-sites "Access to sports faclities",
-     :types        "Access to sports faclities of type"},
+     :types        "Access to sports faclities of type"
+     :activities   "Activities"},
+    :lipas.user.permissions.roles
+    {:roles "Roles"
+     :role "Role"
+     :context-value-all "All"
+     :role-names {:admin "Admin"
+                  :city-manager "City Manager"
+                  :type-manager "Type Manager"
+                  :site-manager "Site Manager"
+                  :activities-manager "UTP Manager"
+                  :floorball-manager "Floorball Editor"}
+     :context-keys {:city-code "Municipality"
+                    :type-code "Type"
+                    :activity "Activity"
+                    :lipas-id "Site"}
+     :edit-role {:edit-header "Edit"
+                 :new-header "Add Role"
+                 :stop-editing "Stop Editing"
+                 :add "Add"
+                 :choose-role "Choose a role first to select which resources the role affects."}
+     :permissions-old "(old, read-only)"}
     :help
     {:headline                 "Help",
      :permissions-help
@@ -2715,14 +2761,15 @@ The site administrator is responsible for the accuracy of information, safety of
      :water-glycol    "Water-glycol"},
     :user
     {:admin-page-link     "Admin page",
+     :promo1-link "Show TEAviisari targets I can update"
      :front-page-link     "front page",
      :greeting            "Hello {1} {2}!",
      :headline            "Profile",
      :ice-stadiums-link   "Ice stadiums",
-     :promo1-headline     "Important",
      :promo1-topic        "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
      :promo1-text         "View PDF",
      :swimming-pools-link "Swimming pools"
+     :promo-headline      "Current News"
      :data-ownership      "Terms of use "},
     :building-materials
     {:brick      "Brick",
@@ -2800,6 +2847,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :delete-vertices-hint
      "Vertices can be deleted by pressing alt-key and clicking.",
      :travel-direction       "Define travel direction"
+     :route-part-difficulty "Set route section difficulty"
      :calculate-route-length "Calculate route length",
      :calculate-area         "Calculate area",
      :remove-polygon         "Remove area",
@@ -2883,6 +2931,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :permission-to-portal-sites
      "You have permission to following sports facilities:",
      :permissions-help          "Describe what permissions you wish to have",
+     :permission-to-activities "You have permission to the following activities"
      :report-energy-consumption "Report energy consumption",
      :firstname                 "First name",
      :save-search               "Save search",
