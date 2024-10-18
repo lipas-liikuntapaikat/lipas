@@ -571,3 +571,11 @@
  :<- [::address-locator]
  (fn [m]
    (:error m)))
+
+(re-frame/reg-sub ::edit-geom-properties
+  (fn [db [_ fid]]
+    (->> (get-in db [:map :mode :geoms])
+         :features
+         (some (fn [f]
+                 (when (= (:id f) fid)
+                   (:properties f)))))))

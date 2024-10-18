@@ -241,3 +241,21 @@
   (->> localizations2 (map :target-path))
   (localize :fi {:admin "state"
                  :building {:supporting-structures ["concrete"]}}))
+
+(comment
+  (require '[clojure.data :as data]
+           '[clojure.walk :as walk])
+  (def without-values (walk/postwalk (fn [x]
+                                       (if (string? x)
+                                         ""
+                                         x))
+                                     translations/dicts))
+
+  ;; Check for missing translations in se compared to fi
+  (first (data/diff (:fi without-values) (:se without-values)))
+  ;; Missing in fi compared to se
+  (second (data/diff (:fi without-values) (:se without-values)))
+
+  (first (data/diff (:fi without-values) (:en without-values)))
+  (second (data/diff (:fi without-values) (:en without-values)))
+  )
