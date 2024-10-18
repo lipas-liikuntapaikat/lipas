@@ -212,8 +212,25 @@
       [:description {:optional true} localized-string-schema]
       [:value {:optional true} [:string {:min 2}]]]]]])
 
+(def status-opts
+  {:draft {:fi "Luonnos"
+           :se "Utkast"
+           :en "Draft"}
+   :active {:fi "Aktiivinen"
+            :se "Aktiv"
+            :en "Active"}})
+
 (def common-props
-  {:description-short
+  {:status
+   {:schema [:enum "draft" "active"]
+    :field
+    {:type "select"
+     :label   {:fi "UTP tietojen tila"
+               :se "Status för UTP-information"
+               :en "Status of UTP data"}
+     :opts status-opts}}
+
+   :description-short
    {:schema localized-string-schema
     :field
     {:type        "textarea"
@@ -436,6 +453,7 @@
 
 (def common-route-props
   (-> common-props
+      (dissoc :status)
       (assoc-in [:description-long :field :description :fi]
                 "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
       (assoc-in [:description-long :field :description :se]
@@ -451,6 +469,9 @@
 
 (def common-props-schema
   (collect-schema common-props))
+
+(def common-route-props-schema
+  (collect-schema common-route-props))
 
 (comment
   (m/schema common-props-schema))
@@ -483,7 +504,8 @@
                 :en "Outdoor Recreation Areas"}
    :value      "outdoor-recreation-areas"
    :type-codes #{102 103 104 106 107 #_#_#_#_108 109 110 111 112}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :description-long
                 :highlights
                 :rules-structured
@@ -576,7 +598,8 @@
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
    :type-codes  #{4401 4402 4403 4404 4405}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                 :route-name
                  :description-short
                  :description-long
                  :independent-entity
@@ -599,10 +622,12 @@
                  :images
                  :videos]
    :props
-   {:routes
+   {:status (:status common-props)
+
+    :routes
     {:schema [:sequential
               (mu/merge
-               (-> common-props-schema
+               (-> common-route-props-schema
                    (mu/dissoc :accessibility)
                    (mu/dissoc :latest-updates)
                    (mu/dissoc :rules))
@@ -901,7 +926,8 @@
    :value       "cycling"
    :description {:fi ""}
    :type-codes  #{4411 4412}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                :route-name
                 :description-short
                 :route-notes
                 :description-long
@@ -926,14 +952,16 @@
                 :images
                 :videos]
    :props
-   {;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
+   {:status (:status common-props)
+
+    ;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
     ;; kuvailemaan omana kohteenaan. Reittikokonaisuus olisi päätason
     ;; liikuntapaikka (alatasona päiväetapit, jotka ovat ehdotusmaisia
     ;; etappeja).
     :routes
     {:schema [:sequential
               (mu/merge
-               common-props-schema
+               common-route-props-schema
                [:map
                 [:id [:string]]
                 [:geometries route-fcoll-schema]
@@ -1182,13 +1210,14 @@
    :value       "paddling"
    :description {:fi ""}
    :type-codes  #{4451 4452 5150}
-   :type->props {4451 #{:routes}
-                 4452 #{:routes}
+   :type->props {4451 #{:status :routes}
+                 4452 #{:status :routes}
                  5150 (into #{:equipment-rental?
                               :rapid-canoeing-centre?
                               :canoeing-club?
                               :activity-service-company?} (keys common-props))}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                 :route-name
                  :description-short
                  :description-long
                  :highlights
@@ -1215,7 +1244,9 @@
                  :videos]
    :props
    (merge #_common-props {}
-          {:equipment-rental?
+          {:status (:status common-props)
+
+           :equipment-rental?
            {:schema [:boolean]
             :field
             {:type           "lipas-property"
@@ -1266,7 +1297,7 @@
            :routes
            {:schema [:sequential
                      (mu/merge
-                      common-props-schema
+                      common-route-props-schema
                       [:map
                        [:id [:string]]
                        [:geometries route-fcoll-schema]
@@ -1543,7 +1574,8 @@
    :value       "fishing"
    :description {:fi ""}
    :type-codes  #{201 113}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :description-long
                 :highlights
                 :fishing-type
@@ -1710,7 +1742,8 @@
    :value       "outdoor-recreation-facilities"
    :description {:fi ""}
    :type-codes  #{207 205 206 202 301 302 304 #_204}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :rules
                 :arrival
                 :accessibility
