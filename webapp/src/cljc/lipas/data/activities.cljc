@@ -354,9 +354,8 @@
       {:field
        {:type        "textarea"
         :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista. Maksimissaan 255 merkkiä."
-                      ;; TODO:
-                      :se "Text som visas för alla i anslutning till bilden om vad som visas i bilden."
-                      :en "Text to be displayed for everyone in connection with the image about what is shown in the image."}
+                      :se "Text som visas för alla i anslutning till bilden om vad som visas i bilden. Maximalt 255 tecken."
+                      :en "Text to be displayed for everyone in connection with the image about what is shown in the image. A maximum of 255 characters."}
         :label       {:fi "Kuvateksti"
                       :se "Bildtext"
                       :en "Image caption"}}}
@@ -861,39 +860,39 @@
 ;; https://www.bikeland.fi/vaativuusluokitukset
 (def cycling-route-part-difficulty
   {"1a-easy"                  {:label {:fi "1 - Erittäin helppo (päällystetie)"
-                                       :se ""
+                                       :se "1 - Mycket lätt (asfalterad väg)"
                                        :en "1 - Very easy (paved road)"}}
    "1b-easy"                  {:label {:fi "1 - Erittäin helppo (sora- tai metsätie)"
-                                       :se ""
-                                       :en "1 - Very easy (gravel or forst road)"}}
+                                       :se "1 - Mycket lätt (grus- eller skogsväg)"
+                                       :en "1 - Very easy (gravel or forest road)"}}
    "2-easy"                   {:label {:fi "2 - Helppo"
-                                       :se ""
+                                       :se "2 - Lätt"
                                        :en "2 - Easy"}
                                :description {:fi "Maastopyöräilyreitti, joka on yleensä leveä polku tai möykkyisämpi metsätie"
-                                             :se ""
-                                             :en ""}}
+                                             :se "Mountainbikerutt, som vanligtvis är en bred stig eller en gropigare skogsväg"
+                                             :en "Mountain biking trail, which is usually a wide path or a bumpier forest road"}}
    "3-moderately-challenging" {:label {:fi "3 - Keskivaativa"
                                        :se "3 - Medelsvår"
                                        :en "3 - Moderately challenging"}
                                :description {:fi "Maastopyöräilyreitti, joka on usein polku tai muu kapeahko maastossa oleva ura"
-                                             :se ""
-                                             :en ""}}
+                                             :se "Mountainbikerutt, som ofta är en stig eller ett annat smalt spår i terrängen"
+                                             :en "Mountain biking trail, which is often a path or another narrow track in the terrain"}}
    "4-challenging"            {:label {:fi "4 - Vaativa"
                                        :se "4 - Utmanande"
                                        :en "4 - Challenging"}
                                :description {:fi "Maastopyöräilyreitti, joka on kapea polku tai reitti ja siinä on useita vaikeakulkuisia kohtia"
-                                             :se ""
-                                             :en ""}}
+                                             :se "Mountainbikerutt, som är en smal stig eller led och har flera svårframkomliga partier"
+                                             :en "Mountain biking trail, which is a narrow path or route with several difficult sections"}}
    "5-extremely-challenging"  {:label {:fi "5 - Erittäin vaativa"
                                        :se "5 - Mycket utmanande"
                                        :en "5 - Extremely challenging"}
                                :description {:fi "Maastopyöräilyreitti, joka on usein kapeaa ja erittäin haastavaa polkua ja siinä on jatkuvasti haastavia osuuksia"
-                                             :se ""
-                                             :en ""}}})
+                                             :se "Mountainbikerutt, som ofta är smal och mycket utmanande, med ständigt svåra avsnitt"
+                                             :en "Mountain biking trail, which is often narrow and very challenging, with constantly difficult sections"}}})
 
 (def cycling-route-part-difficulty-label {:fi "Reittiosan vaativuus"
-                                          :se ""
-                                          :en ""})
+                                          :se "Avsnittets svårighetsgrad"
+                                          :en "Section difficulty"})
 
 (def cycling
   {:label       {:fi "Pyöräily"
