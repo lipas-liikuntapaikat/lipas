@@ -804,9 +804,9 @@
      :en ""}},
    :curling-lanes-count
    {:name
-    {:fi "Curling-ratojen lkm",
+    {:fi "Curling-ratojen lukumäärä",
      :se "Antal curlingbanor",
-     :en "How many curling lanes"},
+     :en "Count of curling lanes"},
     :data-type "numeric",
     :description
     {:fi "Curling-ratojen lukumäärä",
