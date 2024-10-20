@@ -1,12 +1,14 @@
 (ns lipas.ui.sports-sites.subs
-  (:require ["@turf/helpers" :refer [lineString]]
-            ["@turf/length$default" :as turf-length]
-            [clojure.spec.alpha :as s]
-            [lipas.data.types :as types]
-            [lipas.roles :as roles]
-            [lipas.ui.utils :as utils]
-            [lipas.utils :as cutils]
-            [re-frame.core :as rf]))
+  (:require
+   ["@turf/helpers" :refer [lineString]]
+   ["@turf/length$default" :as turf-length]
+   [clojure.spec.alpha :as s]
+   [lipas.data.prop-types :as prop-types]
+   [lipas.data.types :as types]
+   [lipas.roles :as roles]
+   [lipas.ui.utils :as utils]
+   [lipas.utils :as cutils]
+   [re-frame.core :as rf]))
 
 (rf/reg-sub ::sports-sites
   (fn [db _]
@@ -279,21 +281,23 @@
                                   :distance-km distance-km
                                   :distance-m  (* 1000 distance-km)})))))))))))
 
-(rf/reg-sub ::elevation-stats
-  (fn [[_ lipas-id]]
-    (rf/subscribe [:lipas.ui.sports-sites.subs/elevation lipas-id]))
-  (fn [elevation _]
-    (for [segment elevation]
-      (->> segment
-           (map :elevation-m)
-           (partition 2 1)
-           (reduce (fn [res [prev curr]]
-                     (let [d (- curr prev)]
-                       (cond
-                         (zero? d) res
-                         (pos? d)  (update res :ascend-m + d)
-                         (neg? d)  (update res :descend-m + (Math/abs d)))))
-                   {:ascend-m 0 :descend-m 0})))))
+
+(rf/reg-sub
+ ::elevation-stats
+ (fn [[_ lipas-id]]
+   (rf/subscribe [:lipas.ui.sports-sites.subs/elevation lipas-id]))
+ (fn [elevation _]
+   (for [segment elevation]
+     (->> segment
+          (map :elevation-m)
+          (partition 2 1)
+          (reduce (fn [res [prev curr]]
+                    (let [d (- curr prev)]
+                      (cond
+                        (zero? d) res
+                        (pos? d)  (update res :ascend-m + d)
+                        (neg? d)  (update res :descend-m + (Math/abs d)))))
+                  {:ascend-m 0 :descend-m 0})))))
 
 (rf/reg-sub ::display-site
   (fn [[_ lipas-id] _]
@@ -332,7 +336,16 @@
             city          (get cities (-> latest :location :city :city-code))
             status        (statuses (-> latest :status))
 
-            get-material #(get-in materials [% locale])]
+           get-material    #(get-in materials [% locale])
+           get-travel-mode #(get-in prop-types/all [:travel-modes :opts % :label locale])
+
+           get-parkour-structure #(get-in prop-types/all [:parkour-hall-equipment-and-structures :opts % :label locale])
+
+           get-boating-service-class #(get-in prop-types/all [:boating-service-class :opts % :label locale])
+
+           get-water-point #(get-in prop-types/all [:water-point :opts % :label locale])
+
+           get-sport-specification #(get-in prop-types/all [:sport-specification :opts % :label locale]) ]
 
         (merge
           {:status            (-> status locale)
@@ -356,11 +369,16 @@
            :construction-year (-> latest :construction-year)
            :renovation-years  (-> latest :renovation-years)
 
-           :properties (-> latest
-                           :properties
-                           (update :surface-material #(map get-material %))
-                           (update :running-track-surface-material get-material)
-                           (update :training-spot-surface-material get-material))
+         :properties (-> latest
+                         :properties
+                         (update :surface-material #(map get-material %))
+                         (update :running-track-surface-material get-material)
+                         (update :training-spot-surface-material get-material)
+                         (update :travel-modes #(map get-travel-mode %))
+                         (update :parkour-hall-equipment-and-structures #(map get-parkour-structure %))
+                         (update :boating-service-class get-boating-service-class)
+                         (update :water-point get-water-point)
+                         (update :sport-specification get-sport-specification))
 
            :location
            {:address       (-> latest :location :address)
@@ -411,7 +429,7 @@
                                                (fn [v]
                                                  (get-in audience-stand-access [v locale])))))
              :locker-rooms  (:locker-rooms latest)
-             :audits (:audits latest)})
+             :audits        (:audits latest)})
 
         ;; TODO maybe check activities for type
           (when true
