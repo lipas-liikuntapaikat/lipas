@@ -300,7 +300,7 @@
         :on-change #(on-change :rink-product %)}]}
 
      ;; Kaukalon väri
-     {:label "Kaukalon Väri"
+     {:label "Kaukalon väri"
       :value (-> display-data :rink-color)
       :form-field
       [lui/text-field
@@ -341,7 +341,7 @@
         :on-change #(on-change :standing-area-capacity-person %)}]}
 
      ;; Invapaikat
-     {:label "Invapaikat lukumäärä"
+     {:label "Invapaikkojen lukumäärä"
       :value (-> display-data :accessible-seating-capacity-person)
       :form-field
       [lui/text-field
@@ -373,7 +373,7 @@
 
      ;; Pääseekö kenttätasolle ilman rappusia (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Pääseekö kenttätasolle ilman rappusia"
+       {:label "Kenttätasolle pääsee ilman rappusia"
         :value (-> display-data :field-accessible-without-strairs?)
         :form-field
         [lui/checkbox
@@ -495,7 +495,7 @@
       :on-change #(on-change :separate-referee-locker-room? %)}]}
 
    ;; Dopingtestaustilat, sis WC, odotustila (KYLLÄ/EI)
-   {:label "Dopingtestaustilat, sis WC, odotustila"
+   {:label "Dopingtestaustilat, sis. WC, odotustila"
     :value (-> display-data :doping-test-facilities?)
     :form-field
     [lui/checkbox
@@ -512,7 +512,7 @@
       :value     (-> edit-data :locker-room-quality-comment)
       :on-change #(on-change :locker-room-quality-comment %)}]}
 
-   {:label "Pukuhuoneiden määrä"
+   {:label "Pukuhuoneiden lukumäärä"
     :value (-> display-data :locker-rooms-count)
     :form-field
     [lui/text-field
@@ -537,7 +537,7 @@
       :on-change #(on-change :surface-area-m2 %)}]}
 
    ;; Suihkujen määrä
-   {:label "Suihkujen määrä"
+   {:label "Suihkujen lukumäärä"
     :value (-> display-data :showers-count)
     :form-field
     [lui/text-field
@@ -547,7 +547,7 @@
       :on-change     #(on-change :showers-count %)}]}
 
    ;; WC:iden määrä
-   {:label "Vessojen määrä"
+   {:label "Vessojen lukumäärä"
     :value (-> display-data :toilets-count)
     :form-field
     [lui/text-field
@@ -585,7 +585,7 @@
 (def locker-rooms-table-headers
   [[:surface-area-m2 {:fi "Pinta-ala (m²)"}]
    [:showers-count {:fi "Suihkujen lukumäärä"}]
-   [:toilets-count {:fi "Vessojen määrä"}]])
+   [:toilets-count {:fi "Vessojen lukumäärä"}]])
 
 (defn locker-rooms-table
   [{:keys [tr display-data edit-data read-only? lipas-id]}]
@@ -642,13 +642,13 @@
 (defn audit-form
   [{:keys [_ read-only? on-change display-data edit-data]}]
   [lui/form {:read-only? read-only?}
-   {:label "Katselmus tehty"
+   {:label "Katselmointi tehty"
     :value (-> display-data :audit-date)
     :form-field
     [lui/date-picker
      {:value     (-> edit-data :audit-date)
       :on-change #(on-change :audit-date %)}]}
-   {:label "Katselmuksen teki (sportti-id)"
+   {:label "Katselmoinnin teki (sportti-id)"
     :value (-> display-data :audit-performed-by)
     :form-field
     [lui/text-field
@@ -693,7 +693,7 @@
 
      ;; Pääsarjajoukkueet jotka käyttävät hallia
      (when (= :floorball visibility)
-       {:label "Pääsarjajoukkueet jotka käyttävät hallia"
+       {:label "Pääsarjajoukkueet, jotka käyttävät hallia"
         :value (-> display-data :teams-using)
         :form-field
         [lui/text-field
@@ -714,9 +714,9 @@
         :multiline true
         :rows  5}]}
 
-     ;; Varastotila- ja kapasiteetti
+     ;; Varastotila ja kapasiteetti
      (when (= :floorball visibility)
-       {:label "Varastotila- ja kapasiteetti"
+       {:label "Varastotila ja kapasiteetti"
         :value (-> display-data :storage-capacity)
         :form-field
         [lui/text-field
@@ -800,7 +800,7 @@
 
      ;; Kulmapalojen määrä
      (when (= :floorball visibility)
-       {:label "Kulmapalojen määrä"
+       {:label "Kulmapalojen lukumäärä"
         :value (-> display-data :corner-pieces-count)
         :form-field
         [lui/text-field
@@ -859,7 +859,7 @@
           :on-change #(on-change :first-aid-comment %)}]})
 
      ;; Tulostaulujen määrä hallissa
-     {:label "Tulostaulujen määrä hallissa"
+     {:label "Tulostaulujen lukumäärä hallissa"
       :value (-> display-data :scoreboard-count)
       :form-field
       [lui/text-field
@@ -881,7 +881,7 @@
           :on-change #(on-change :player-entrance %)}]})
 
      ;; Oheisharjoittelu/sisälämmittelytila
-     {:label "Oheisharjoittelu / sisälämmittelytila"
+     {:label "Oheisharjoittelu-/sisälämmittelytila"
       :value (-> display-data :side-training-space?)
       :form-field
       [lui/checkbox
@@ -897,7 +897,7 @@
         :on-change #(on-change :gym? %)}]}
 
      ;; Yleisön WC-tilojen määrä
-     {:label "Yleisön WC-tilojen määrä"
+     {:label "Yleisön WC-tilojen lukumäärä"
       :value (-> display-data :audience-toilets-count)
       :form-field
       [lui/text-field
@@ -928,7 +928,7 @@
 
      ;; Onko lastausovia kenttätasolla (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko lastausovia kenttätasolla"
+       {:label "Lastausovia kenttätasolla"
         :value (-> display-data :field-level-loading-doors?)
         :form-field
         [lui/checkbox
@@ -937,7 +937,7 @@
 
      ;; Onko pumppukärryjä/tms. (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko pumppukärryjä/tms"
+       {:label "Pumppukärryjä tms. saatavilla"
         :value (-> display-data :loading-equipment-available?)
         :form-field
         [lui/checkbox
@@ -946,7 +946,7 @@
 
      ;; Irtotuolien määrä (noin arvio)
      (when (= :floorball visibility)
-       {:label "Irtotuolien määrä (noin arvio)"
+       {:label "Irtotuolien lukumäärä (arvio)"
         :value (-> display-data :detached-chair-quantity)
         :form-field
         [lui/text-field
@@ -957,7 +957,7 @@
 
      ;; Irtopöytien määrä (noin arvio)
      (when (= :floorball visibility)
-       {:label "Irtopyötien määrä (noin arvio)"
+       {:label "Irtopöytien lukumäärä (arvio)"
         :value (-> display-data :detached-tables-quantity)
         :form-field
         [lui/text-field
@@ -990,7 +990,7 @@
 
      ;; Onko kahviossa/ravintolassa yksinoikeudet eri tuotteille (KYLLÄ/EI/EOS)
      (when (= :floorball visibility)
-       {:label "Onko kahviossa/ravintolassa yksinoikeudet eri tuotteille"
+       {:label "Kahviossa/ravintolassa yksinoikeudet eri tuotteille"
         :value (-> display-data :cafe-or-restaurant-has-exclusive-rights-for-products?)
         :form-field
         [lui/checkbox
@@ -999,7 +999,7 @@
 
      ;; Kokoustilojen määrä
      (when (= :floorball visibility)
-       {:label "Kokoustilojen määrä"
+       {:label "Kokoustilojen lukumäärä"
         :value (-> display-data :conference-space-quantity)
         :form-field
         [lui/text-field
@@ -1040,7 +1040,7 @@
           :on-change #(on-change :ticket-sales-operator %)}]})
 
      ;; Pysäköintipaikkojen määrä hallin pihassa
-     {:label "Pysäköintipaikkojen määrä hallin pihassa"
+     {:label "Pysäköintipaikkojen lukumäärä hallin pihassa"
       :value (-> display-data :car-parking-capacity)
       :form-field
       [lui/text-field
@@ -1050,7 +1050,7 @@
         :on-change #(on-change :car-parking-capacity %)}]}
 
      ;; Bussille varattujen pysäköintipaikkojen määrä
-     {:label "Bussille varattujen pysäköintipaikkojen määrä"
+     {:label "Bussille varattujen pysäköintipaikkojen lukumäärä"
       :value (-> display-data :bus-park-capacity)
       :form-field
       [lui/text-field
@@ -1104,7 +1104,7 @@
           :on-change #(on-change :roof-trusses-operation-model %)}]})
 
      ;; Onko kiinteät kaiuttimet katsomoa kohti (KYLLÄ/EI)
-     {:label "Onko kiinteät kaiuttimet katsomoa kohti"
+     {:label "Kiinteät kaiuttimet katsomoa kohti"
       :value (-> display-data :speakers-aligned-towards-stands?)
       :form-field
       [lui/checkbox
@@ -1113,7 +1113,7 @@
 
      ;; Onko mikseri, jolla saa äänentoiston yhdistettyä (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko mikseri, jolla saa äänentoiston yhdistettyä"
+       {:label "Mikseri, jolla saa äänentoiston yhdistettyä"
         :value (-> display-data :audio-mixer-available?)
         :form-field
         [lui/checkbox
@@ -1122,7 +1122,7 @@
 
      ;; Langattominen mikrofonien määrä
      (when (= :floorball visibility)
-       {:label "Langattominen mikrofonien määrä"
+       {:label "Langattominen mikrofonien lukumäärä"
         :value (-> display-data :wireless-microfone-quantity)
         :form-field
         [lui/text-field
@@ -1133,7 +1133,7 @@
 
      ;; Langallisten mikrofonien määrä
      (when (= :floorball visibility)
-       {:label "Langallisten mikrofonien määrä"
+       {:label "Langallisten mikrofonien lukumäärä"
         :value (-> display-data :wired-microfone-quantity)
         :form-field
         [lui/text-field
@@ -1143,7 +1143,7 @@
           :on-change #(on-change :wired-microfone-quantity %)}]})
 
      ;; Onko kameratasanteita (KYLLÄ/EI)
-     {:label "Onko kameratasanteita"
+     {:label "Kameratasanteita hallilla"
       :value (-> display-data :camera-stands?)
       :form-field
       [lui/checkbox
@@ -1151,7 +1151,7 @@
         :on-change #(on-change :camera-stands? %)}]}
 
      ;; Onko hallilla kiinteät kamerat (KYLLÄ/EI)
-     {:label "Onko hallilla kiinteät kamerat"
+     {:label "Kiinteät kamerat hallilla"
       :value (-> display-data :fixed-cameras?)
       :form-field
       [lui/checkbox
@@ -1159,7 +1159,7 @@
         :on-change #(on-change :fixed-cameras? %)}]}
 
      ;; Onko lähetysautolle paikka hallin vieressä (KYLLÄ/EI)
-     {:label "Onko lähetysautolle paikka hallin vieressä"
+     {:label "Lähetysautolle paikka hallin vieressä"
       :value (-> display-data :broadcast-car-park?)
       :form-field
       [lui/checkbox
@@ -1167,7 +1167,7 @@
         :on-change #(on-change :broadcast-car-park? %)}]}
 
      ;; Onko hallilla käytettävissä salasanalla suojattuja/yleisiä langattomia verkkoja (KYLLÄ/EI)
-     {:label "Onko hallilla käytettävissä salasanalla suojattuja/yleisiä langattomia verkkoja"
+     {:label "Hallilla käytettävissä salasanalla suojattuja/yleisiä langattomia verkkoja"
       :value (-> display-data :wifi-available?)
       :form-field
       [lui/checkbox
@@ -1176,7 +1176,7 @@
 
      ;; Riittääkö langattoman verkon kaista esim. striimaukseen (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Riittääkö langattoman verkon kaista esim. striimaukseen"
+       {:label "Langattoman verkon kaista riittää esim. striimaukseen"
         :value (-> display-data :wifi-capacity-sufficient-for-streaming?)
         :form-field
         [lui/checkbox
@@ -1185,7 +1185,7 @@
 
      ;; Onko sähköjen sijainnista saatavilla tieto etukäteen, esim. karttapohja (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko sähköjen sijainnista saatavilla tieto etukäteen, esim. karttapohja"
+       {:label "Sähköjen sijainnista saatavilla tieto etukäteen, esim. karttapohja"
         :value (-> display-data :electrical-plan-available?)
         :form-field
         [lui/checkbox
@@ -1195,7 +1195,7 @@
 
      ;; Onko voimavirtamahdollisuus (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko voimavirtamahdollisuus"
+       {:label "Voimavirtamahdollisuus"
         :value (-> display-data :three-phase-electric-power?)
         :form-field
         [lui/checkbox
@@ -1204,7 +1204,7 @@
 
      ;; Onko LED-näyttöä/screeniä tai LED-pintoja mainoksille (KYLLÄ/EI)
      (when (= :floorball visibility)
-       {:label "Onko LED-näyttöä/screeniä tai LED-pintoja mainoksille"
+       {:label "LED-näyttö/screen tai LED-pintoja mainoksille"
         :value (-> display-data :led-screens-or-surfaces-for-ads?)
         :form-field
         [lui/checkbox
