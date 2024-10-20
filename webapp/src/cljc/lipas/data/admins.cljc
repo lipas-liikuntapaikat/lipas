@@ -37,6 +37,6 @@
 
 (def all
   (-> old
-      (assoc-in ["private-association" :fi] "Yhdistys")
+      (assoc-in ["private-association" :fi] "Rekisteröity yhdistys")
       (assoc-in ["private-company" :fi] "Yritys")
       (assoc-in ["private-foundation" :fi] "Säätiö")))
