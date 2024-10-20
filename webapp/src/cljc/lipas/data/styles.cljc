@@ -126,11 +126,6 @@
     :radius 9,
     :fill {:color "#8fed75"},
     :stroke {:color "#000000"}},
-   1190
-   {:shape "circle",
-    :radius 9,
-    :fill {:color "#ffffff"},
-    :stroke {:color "#000000"}},
    4422
    {:shape "linestring",
     :stroke
@@ -154,10 +149,6 @@
     :radius 9,
     :fill {:color "#73d28b"},
     :stroke {:color "#004800"}},
-   106
-   {:shape "polygon",
-    :fill {:color "#50e76a"},
-    :stroke {:color "#000000", :width 1.5}},
    4610
    {:shape "circle",
     :radius 9,
@@ -217,11 +208,6 @@
     :radius 9,
     :fill {:color "#00c100"},
     :stroke {:color "#ff5500"}},
-   4840
-   {:shape "circle",
-    :radius 9,
-    :fill {:color "#dcc210"},
-    :stroke {:color "#aa0000"}},
    1510
    {:shape "circle",
     :radius 9,
@@ -523,10 +509,6 @@
     :radius 9,
     :fill {:color "#62d53c"},
     :stroke {:color "#000000"}},
-   1650
-   {:shape "polygon",
-    :fill {:color "#62d53c"},
-    :stroke {:color "#000000" :width 1.5}},
    2250
    {:shape "square",
     :radius 9,
@@ -757,18 +739,79 @@
      :line-join "round",
      :line-dash [5 2]},
     :fill {:color "#000000"}}
+   ;; Rullahiihtorata
+   4407
+   {:shape "linestring",
+    :stroke
+    {:color "#f77ec3",
+     :width 3.5,
+     :line-cap "round",
+     :line-join "round",
+     :line-dash [5 2]},
+    :fill {:color "#000000"}}
+   ;; Monikäyttöreitti
+   4406
+   {:shape "linestring",
+    :stroke
+    {:color "#665e8a",
+     :width 3.5,
+     :line-cap "round",
+     :line-join "round",
+     :line-dash [5 2]},
+    :fill {:color "#000000"}}
+   ;; Koiravaljakkoreitti
+   4441
+   {:shape "linestring",
+    :stroke
+    {:color "#80a172",
+     :width 3.5,
+     :line-cap "round",
+     :line-join "round",
+     :line-dash [5 2]},
+    :fill {:color "#000000"}}
+   ;; Ovaalirata
+   6150
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#f0c39e"},
+    :stroke {:color "#000000"}}
+   ;;Pulkkamäki
+   1190
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#f2d3ef"},
+    :stroke {:color "#000000"}}
+   ;; Golfkenttä (alue)
+   1650
+   {:shape "polygon",
+    :fill {:color "#9efa52"},
+    :stroke {:color "#000000" :width 1.5}}
+   ;; Sisäleikki-/aktiviteettipuisto:
    2225
    {:shape "square",
     :radius 9,
-    :fill {:color "#ac6c46"},
+    :fill {:color "#d9936a"},
     :stroke {:color "#000000"}}
+   ;; Biljardisali
    2620
    {:shape "square",
     :radius 9,
-    :fill {:color "#ac6c46"},
+    :fill {:color "#9afcc0"},
     :stroke {:color "#000000"}}
    3250
    {:shape "circle",
     :radius 9,
-    :fill {:color "#aaaaff"},
-    :stroke {:color "#000000"}}})
+    :fill {:color "#6e6d91"},
+    :stroke {:color "#000000"}}
+   ;; Jousiammuntamaastorata
+   4840
+   {:shape "circle",
+    :radius 9,
+    :fill {:color "#948938"},
+    :stroke {:color "#000000"}}
+   ;; Monikäyttöalueet ja virkistysmetsät, joissa on virkistyspalveluita
+   106
+   {:shape "polygon",
+    :fill {:color "#99d18f"},
+    :stroke {:color "#000000" :width 1.5}}
+   })
