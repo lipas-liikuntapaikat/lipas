@@ -3,13 +3,13 @@
    ["ol" :as ol]
    ["ol/events/condition" :as events-condition]
    ["ol/extent" :as extent]
-   ["ol/interaction/Select$default" :as SelectInteraction]
    ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
    ["ol/interaction/DragPan$default" :as DragPan]
-   ["ol/interaction/PinchZoom$default" :as PinchZoom]
    ["ol/interaction/KeyboardPan$default" :as KeyboardPan]
    ["ol/interaction/KeyboardZoom$default" :as KeyboardZoom]
    ["ol/interaction/MouseWheelZoom$default" :as MouseWheelZoom]
+   ["ol/interaction/PinchZoom$default" :as PinchZoom]
+   ["ol/interaction/Select$default" :as SelectInteraction]
    ["ol/layer/Image$default" :as ImageLayer]
    ["ol/layer/Tile$default" :as TileLayer]
    ["ol/layer/Vector$default" :as VectorLayer]
@@ -20,7 +20,7 @@
    ["ol/source/WMTS$default" :as WMTSSource]
    ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
    [goog.object :as gobj]
-   [lipas.ui.analysis.reachability.events :as analysis-events]
+   [lipas.ui.analysis.reachability.events]
    [lipas.ui.map.editing :as editing]
    [lipas.ui.map.events :as events]
    [lipas.ui.map.projection :as proj]
@@ -28,8 +28,8 @@
    [lipas.ui.map.subs :as subs]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [re-frame.core :as re-frame]
+   [lipas.ui.utils :refer [==>] :as utils]
+   [re-frame.core :as rf]
    [reagent.core :as r]))
 
 #_(set! *warn-on-infer* true)
@@ -716,13 +716,13 @@
       :display-name "map-inner"})))
 
 (defn map-outer [{:keys [popup-ref]}]
-  (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
-        lois       (re-frame/subscribe [::subs/loi-geoms])
-        basemap    (re-frame/subscribe [::subs/basemap])
-        overlays   (re-frame/subscribe [::subs/selected-overlays])
-        center     (re-frame/subscribe [::subs/center])
-        zoom       (re-frame/subscribe [::subs/zoom])
-        mode       (re-frame/subscribe [::subs/mode])]
+  (let [geoms-fast (rf/subscribe [::subs/geometries-fast])
+        lois       (rf/subscribe [::subs/loi-geoms])
+        basemap    (rf/subscribe [::subs/basemap])
+        overlays   (rf/subscribe [::subs/selected-overlays])
+        center     (rf/subscribe [::subs/center])
+        zoom       (rf/subscribe [::subs/zoom])
+        mode       (rf/subscribe [::subs/mode])]
     (fn []
       [map-inner
        {:geoms    @geoms-fast

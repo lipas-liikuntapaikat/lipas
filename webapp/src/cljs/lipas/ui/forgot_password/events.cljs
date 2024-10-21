@@ -1,15 +1,14 @@
 (ns lipas.ui.forgot-password.events
-  (:require
-   [ajax.core :as ajax]
-   [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [lipas.ui.utils :as utils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::clear-feedback
  (fn [db _]
    (assoc-in db [:reset-password] nil)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::request-success
  (fn [{:keys [db]} [_ _]]
    (let [tr (:translator db)]
@@ -20,7 +19,7 @@
       :tracker/event! ["user" "reset-password-request"]})))
 
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::request-password-reset
  (fn [{:keys [db]} [_ email]]
    {:http-xhrio
@@ -34,7 +33,7 @@
      :on-failure      [::failure]}
     :dispatch [::clear-feedback]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::reset-success
  (fn [{:keys [db]} [_ _]]
    (let [tr (:translator db)]
@@ -46,7 +45,7 @@
       :tracker/event! ["user" "reset-password-success"]})))
 
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::reset-password
  (fn [{:keys [db]} [_ password token]]
    {:http-xhrio
@@ -60,7 +59,7 @@
      :on-failure      [::failure]}
     :dispatch [::clear-feedback]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr     (:translator db)

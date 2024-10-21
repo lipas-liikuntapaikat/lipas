@@ -1,12 +1,11 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
             [lipas.ui.interceptors :as interceptors]
-            [lipas.ui.utils :as utils :refer [==>]]
+            [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
-            [re-frame.core :as re-frame]
-            [taoensso.timbre :as log]))
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::edit-site
  (fn [{:keys [db]} [_ lipas-id]]
    (let [site (get-in db [:sports-sites lipas-id])
@@ -20,19 +19,19 @@
 (defmulti calc-derived-fields (comp :type-code :type))
 (defmethod calc-derived-fields :default [sports-site] sports-site)
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::calc-derived-fields
  (fn [db [_ lipas-id sports-site]]
    (assoc-in db [:sports-sites lipas-id :editing] (calc-derived-fields sports-site))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::edit-field
  (fn [{:keys [db]} [_ lipas-id path value]]
    (let [new-db (utils/set-field db (into [:sports-sites lipas-id :editing] path) value)]
      {:db       new-db
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::edit-fields
  (fn [{:keys [db]} [_ lipas-id path->value]]
    (let [new-db (-> path->value
@@ -41,14 +40,14 @@
      {:db       new-db
       :dispatch [::calc-derived-fields lipas-id (get-in new-db [:sports-sites lipas-id :editing])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::discard-edits
  (fn [{:keys [db]} [_ lipas-id]]
    {:db (assoc-in db [:sports-sites lipas-id :editing] nil)
     :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/clear]]]}))
 
 ;; Save revision (data). Triggers REST-api call
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::commit-rev
  [interceptors/check-token]
  (fn [{:keys [db]} [_ rev draft? on-success on-failure]]
@@ -66,7 +65,7 @@
        :on-failure      [::save-failure on-failure]}})))
 
 ;; Save by lipas-id. Sets :event-date to current-timestamp.
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-edits
  (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
    (let [rev    (get-in db [:sports-sites lipas-id :editing])
@@ -78,7 +77,7 @@
          draft? false]
      {:dispatch [::commit-rev rev draft? on-success on-failure]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_ on-success result]]
    ;; `on-success` is a function that returns vector of events to be
@@ -102,7 +101,7 @@
                        dispatch-extras)
       :tracker/event! ["sports-site" "save" "lipas-id" lipas-id]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-failure
  (fn [{:keys [db]} [_ on-failure error]]
    (let [tr     (:translator db)]
@@ -116,12 +115,12 @@
                      (when on-failure (on-failure error)))
       :tracker/event! ["error" "save-sports-site-failure"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ sites]]
    {:db (reduce utils/add-to-db db sites)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr (:translator db)]
@@ -130,7 +129,7 @@
                  {:message  (tr :notifications/get-failed)
                   :success? false}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-by-type-code
  (fn [{:keys [db]} [_ type-code]]
    {:http-xhrio
@@ -140,13 +139,13 @@
      :on-success      [::get-success]
      :on-failure      [::get-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-success-single
  (fn [{:keys [db]} [_ on-success site]]
    {:db         (utils/add-to-db db site)
     :dispatch-n (or on-success [])}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get
  (fn [{:keys [db]} [_ lipas-id on-success]]
    {:http-xhrio
@@ -156,7 +155,7 @@
      :on-success      [::get-success-single on-success]
      :on-failure      [::get-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-history
  (fn [{:keys [db]} [_ lipas-id]]
    {:http-xhrio
@@ -166,7 +165,7 @@
      :on-success      [::get-success]
      :on-failure      [::get-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::download-contacts-report
  (fn [{:keys [db]} [_ data headers]]
    (let [tr     (:translator db)
@@ -175,7 +174,7 @@
                  {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::start-adding-new-site
  (fn [{:keys [db]} [_ template]]
    {:db       (-> db
@@ -185,7 +184,7 @@
                  [:lipas.ui.search.events/set-results-view :list]
                  [::clear-name-check]]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::discard-new-site
  (fn [db [_]]
    (-> db
@@ -194,12 +193,12 @@
        (assoc-in [:new-sports-site :data] nil)
        (assoc-in [:new-sports-site :template] nil))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-new-site-type
  (fn [db [_ type-code]]
    (assoc-in db [:new-sports-site :type] type-code)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::init-new-site
  (fn [{:keys [db]} [_ type-code geoms]]
    ;; If city-code is not set yet, We guess it based on user
@@ -219,19 +218,19 @@
               (update-in [:new-sports-site :data] cutils/deep-merge data)
               (update :new-sports-site dissoc :template))})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::calc-new-site-derived-fields
  (fn [db [_  sports-site]]
    (assoc-in db [:new-sports-site :data] (calc-derived-fields sports-site))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::edit-new-site-field
  (fn [{:keys [db]} [_ path value]]
    (let [new-db (utils/set-field db (into [:new-sports-site :data] path) value)]
      {:db new-db
       :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::edit-new-site-fields
  (fn [{:keys [db]} [_ path->value]]
    (let [new-db (-> path->value
@@ -240,22 +239,22 @@
      {:db       new-db
       :dispatch [::calc-new-site-derived-fields (get-in new-db [:new-sports-site :data])]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-delete-dialog
  (fn [db _]
    (update-in db [:sports-sites :delete-dialog :open?] not)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-delete-status
  (fn [db [_ status]]
    (assoc-in db [:sports-sites :delete-dialog :selected-status] status)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-delete-year
  (fn [db [_ year]]
    (assoc-in db [:sports-sites :delete-dialog :selected-year] year)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::delete
  (fn [db [_ data status year draft?]]
    (let [event-date (if (utils/this-year? year)
@@ -270,7 +269,7 @@
                             [::select-delete-year utils/this-year]])]
      {:dispatch [::commit-rev data draft? on-success]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::duplicate
  (fn [{:keys [db]} [_ rev]]
    (let [data (merge
@@ -280,7 +279,7 @@
      {:db (-> db
               (assoc-in [:new-sports-site :data] data))})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::resurrect
  (fn [{:keys [db]} [_ lipas-id on-success on-failure]]
    (let [site  (get-in db [:sports-sites lipas-id])
@@ -290,7 +289,7 @@
          draft false]
      {:dispatch [::commit-rev rev draft on-success on-failure]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::check-sports-site-name
  [interceptors/check-token]
  (fn [{:keys [db]} [_ lipas-id name]]
@@ -304,17 +303,17 @@
        :on-success      [::check-sports-site-name-success]
        :on-failure      [::check-sports-site-name-failure]}})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::check-sports-site-name-success
  (fn [db [_ resp]]
    (assoc-in db [:sports-sites :name-check :response] resp)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::check-sports-site-name-failure
  (fn [db [_ resp]]
    (assoc-in db [:sports-sites :name-check :error] resp)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::clear-name-check
  (fn [db [_ resp]]
    (assoc-in db [:sports-sites :name-check] {})))

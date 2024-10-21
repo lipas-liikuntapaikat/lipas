@@ -1,4 +1,5 @@
 {:clean {:automatically-after-ns-refactor true
          :ns-inner-blocks-indentation :keep
          :sort {:require :lexicographically}}
+ :cljfmt {:extra-indents {#re "^reg-" [[:inner 0]]}}
  :log-path "lsp.log"}

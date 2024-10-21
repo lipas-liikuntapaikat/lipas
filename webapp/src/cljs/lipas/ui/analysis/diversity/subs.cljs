@@ -2,39 +2,39 @@
   (:require
    [clojure.spec.alpha :as s]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::diversity
  (fn [db _]
    (-> db :analysis :diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-analysis-tab
  :<- [::diversity]
  (fn [analysis _]
    (:selected-tab analysis)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::settings
  :<- [::diversity]
  (fn [analysis _]
    (:settings analysis)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::categories
  :<- [::settings]
  (fn [settings _]
    (:categories settings)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::category-presets
  :<- [::diversity]
  (fn [{:keys [category-presets user-category-presets]} _]
    (->> (merge user-category-presets category-presets)
         (map (fn [[k v]] {:label (:name v) :value k})))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::seasonality-enabled?
  :<- [::diversity]
  (fn [diversity [_ s]]
@@ -42,56 +42,56 @@
         :selected-seasonalities
         (contains? s))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-category-preset
  :<- [::diversity]
  (fn [diversity _]
    (:selected-category-preset diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::max-distance-m
  :<- [::settings]
  (fn [settings _]
    (:max-distance-m settings)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::analysis-candidates
  :<- [::diversity]
  (fn [diversity _]
    (diversity :areas)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-export-format
  :<- [::diversity]
  (fn [diversity _]
    (:selected-export-format diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::analysis-candidates-table-rows
  :<- [::analysis-candidates]
  (fn [m _]
    (->> (vals m)
         (map :properties))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::analysis-candidates-table-headers
  :<- [::analysis-candidates-table-rows]
  (fn [candidates _]
    (-> candidates first keys
        (->> (reduce (fn [m k] (assoc m k {:label (name k)})) {})))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::loading?
  (fn [db _]
    (-> db :analysis :diversity :loading?)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::analysis-results
  :<- [::diversity]
  (fn [diversity _]
    (:results diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::chart-data
  :<- [::analysis-candidates]
  :<- [::analysis-results]
@@ -100,7 +100,7 @@
          (for [[k v] results]
            [k (assoc v :area (get areas k))]))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::grid-chart-data
  :<- [::chart-data]
  :<- [::selected-result-areas]
@@ -126,7 +126,7 @@
         {:keys [nimi name namn label]} props]
     (str (some identity (into [nimi name namn label] (conj (vals props) id))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::area-chart-data
  :<- [::chart-data]
  :<- [::selected-result-areas]
@@ -143,7 +143,7 @@
        :pwm                  (-> m :aggs :population-weighted-mean utils/round-safe)})
     (sort-by :population utils/reverse-cmp))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::result-area-options
  :<- [::chart-data]
  (fn [results _]
@@ -153,37 +153,37 @@
                               area-id (:area m))})
     results)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-result-areas
  :<- [::diversity]
  (fn [diversity _]
    (:selected-result-areas diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::any-analysis-done?
  :<- [::analysis-results]
  (fn [results _]
    (some? results)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-analysis-chart-tab
  :<- [::diversity]
  (fn [diversity _]
    (:selected-chart-tab diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::category-save-dialog-open?
  :<- [::diversity]
  (fn [diversity _]
    (:category-save-dialog-open? diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::new-preset-name
  :<- [::diversity]
  (fn [diversity _]
    (:new-preset-name diversity)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::new-preset-name-valid?
  :<- [::new-preset-name]
  (fn [s _]

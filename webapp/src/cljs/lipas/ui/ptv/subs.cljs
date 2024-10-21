@@ -2,70 +2,70 @@
   (:require
    [clojure.string :as str]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::ptv
  (fn [db _]
    (:ptv db)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::dialog-open?
  :<- [::ptv]
  (fn [ptv _]
    (get-in ptv [:dialog :open?])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-tab
  :<- [::ptv]
  (fn [ptv _]
    (:selected-tab ptv)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::loading-from-ptv?
  :<- [::ptv]
  (fn [ptv _]
    (->> ptv :loading-from-ptv vals (some true?))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::loading-from-lipas?
  :<- [::ptv]
  (fn [ptv _]
    (->> ptv :loading-from-lipas vals (some true?))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::generating-descriptions?
  :<- [::ptv]
  (fn [ptv _]
    (->> ptv :loading-from-lipas :descriptions)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::loading?
  :<- [::loading-from-ptv?]
  :<- [::loading-from-lipas?]
  (fn [[loading-from-ptv? loading-from-lipas?] _]
    (or loading-from-ptv? loading-from-lipas? )))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-org
  :<- [::ptv]
  (fn [ptv _]
    (:selected-org ptv)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-org-id
  :<- [::selected-org]
  (fn [org _]
    (:id org)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::org-default-settings
  :<- [::ptv]
  :<- [::selected-org-id]
  (fn [[ptv org-id] _]
    (get-in ptv [:org org-id :default-settings])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::default-settings
  :<- [::ptv]
  :<- [::org-default-settings]
@@ -75,7 +75,7 @@
 (def lang
   {"fi" "fi" "sv" "se" "en" "en"})
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::org-languages
  :<- [::ptv]
  :<- [::selected-org-id]
@@ -89,7 +89,7 @@
    (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
         (keep #(get lang (:language %))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-org-data
  :<- [::ptv]
  :<- [::selected-org-id]
@@ -113,7 +113,7 @@
             ;; TODO rest of the gunk, service hours, descriptions etc.
             }))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::services-by-id
  :<- [::ptv]
  :<- [::selected-org-id]
@@ -123,7 +123,7 @@
 
 (def langs {"sv" "se" "fi" "fi" "en" "en"})
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::services
  :<- [::services-by-id]
  (fn [services _]
@@ -152,13 +152,13 @@
                                (map (fn [m]
                                       (utils/index-by (comp langs :language) :value (:name m)))))}))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::services-filter
  :<- [::ptv]
  (fn [ptv _]
    (:services-filter ptv )))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::services-filtered
  :<- [::services]
  :<- [::services-filter]
@@ -185,7 +185,7 @@
          distinct
          (remove (fn [m] (contains? source-ids (:source-id m)))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::missing-services
  :<- [::selected-org-id]
  :<- [::services-by-id]
@@ -194,14 +194,14 @@
  (fn [[org-id services sports-sites types] _]
    (resolve-missing-services org-id services types sports-sites)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-candidate-descriptions
  :<- [::selected-org-id]
  :<- [::ptv]
  (fn [[org-id ptv] _]
    (get-in ptv [:org org-id :data :service-candidates])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-candidates
  :<- [::missing-services]
  :<- [::service-candidate-descriptions]
@@ -220,7 +220,7 @@
                                              (some-> description :fi count (> 5))
                                              (some-> summary :fi count (> 5))))))))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-channels-by-id
  :<- [::ptv]
  :<- [::selected-org-id]
@@ -228,7 +228,7 @@
    (when org-id
      (get-in ptv [:org org-id :data :service-channels]))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-channels
  :<- [::service-channels-by-id]
  (fn [channels _]
@@ -245,7 +245,7 @@
                 (:value m)))
             (:serviceChannelNames service-channel))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-channels-list
  :<- [::service-channels]
  (fn [channels _]
@@ -272,7 +272,7 @@
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites
  :<- [::ptv]
  :<- [::selected-org-id]
@@ -344,25 +344,25 @@
           :service-channel-integration (or (-> site :ptv :service-channel-integration)
                                            (:service-channel-integration org-defaults))})))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites-count
  :<- [::sports-sites]
  (fn [sports-sites _]
    (count sports-sites)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sync-all-enabled?
  :<- [::sports-sites]
  (fn [sports-sites _]
    (every? true? (map :sync-enabled sports-sites))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::batch-descriptions-generation
  :<- [::ptv]
  (fn [m _]
    (:batch-descriptions-generation m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::batch-descriptions-generation-progress
  :<- [::batch-descriptions-generation]
  (fn [{:keys [processed-lipas-ids size halt? in-progress?]} _]
@@ -378,7 +378,7 @@
                                   (* 100 (- 1 (/ (- size processed-count) size))))
                                 100)})))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-site-setup-done
  :<- [::sports-sites]
  (fn [ms _]
@@ -387,13 +387,13 @@
                  (false? sync-enabled)))
            ms)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites-filter
  :<- [::batch-descriptions-generation]
  (fn [m _]
    (:sports-sites-filter m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites-filtered
  :<- [::sports-sites]
  :<- [::sports-sites-filter]
@@ -416,19 +416,19 @@
                     (or (empty? summary) (empty? description))))
              sites))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites-filtered-count
  :<- [::sports-sites-filtered]
  (fn [sports-sites _]
    (count sports-sites)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-descriptions-generation
  :<- [::ptv]
  (fn [m _]
    (:service-descriptions-generation m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-descriptions-generation-progress
  :<- [::service-descriptions-generation]
  (fn [{:keys [processed-ids size halt? in-progress?]} _]
@@ -444,13 +444,13 @@
                                (* 100 (- 1 (/ (- size processed-count) size))))
                              100)})))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-locations-creation
  :<- [::ptv]
  (fn [m _]
    (:service-location-creation m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::service-location-creation-progress
  :<- [::service-locations-creation]
  (fn [{:keys [processed-lipas-ids size halt? in-progress?]} _]

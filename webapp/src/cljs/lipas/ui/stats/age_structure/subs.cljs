@@ -1,40 +1,40 @@
 (ns lipas.ui.stats.age-structure.subs
   (:require
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 ;;; Age structure ;;;
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-cities
  (fn [db _]
    (-> db :stats :age-structure :selected-cities)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-types
  (fn [db _]
    (-> db :stats :age-structure :selected-types)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::groupings
  (fn [db _]
    (-> db :stats :age-structure :groupings)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-grouping
  (fn [db _]
    (-> db :stats :age-structure :selected-grouping)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-interval
  (fn [db _]
    (-> db :stats :age-structure :selected-interval)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::data*
  (fn [db _]
    (-> db :stats :age-structure :data)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::data
  :<- [::data*]
  (fn [data _]
@@ -52,7 +52,7 @@
           vals
           (sort-by :construction-year)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::labels
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/admins]
@@ -64,7 +64,7 @@
       (into {} (map (juxt first (comp locale second)) owners))
       {:y-axis (tr :stats/sports-sites-count)}))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::headers
  :<- [:lipas.ui.subs/translator]
  :<- [:lipas.ui.sports-sites.subs/admins]
@@ -77,7 +77,7 @@
            (for [[k v] (sort-by (comp locale second) coll)]
              [k (locale v)])))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-view
  (fn [db _]
    (-> db :stats :age-structure :selected-view)))

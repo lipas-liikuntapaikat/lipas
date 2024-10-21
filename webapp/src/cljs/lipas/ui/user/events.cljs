@@ -2,9 +2,9 @@
   (:require
    [ajax.core :as ajax]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
   ::get-users-sports-sites
   (fn [{:keys [db]} _]
     (let [roles (-> db :user :login :permissions :roles)]
@@ -14,13 +14,13 @@
                         (mapv (fn [lipas-id]
                                [:lipas.ui.sports-sites.events/get lipas-id]))) })))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-sports-site
  (fn [_ [_ site]]
    {:dispatch-n
     [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view site]]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::update-user-data-success
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]
@@ -35,7 +35,7 @@
         {:message  (tr :notifications/save-success)
          :success? true}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::update-user-data-failure
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]
@@ -43,7 +43,7 @@
                  {:message  (tr :notifications/save-failed)
                   :success? false}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::update-user-data
  (fn [{:keys [db]} [_ user-data]]
    (let [token (-> db :user :login :token)]
@@ -57,14 +57,14 @@
        :on-success      [::update-user-data-success]
        :on-failure      [::update-user-data-failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-saved-search
  (fn [_ [_ search]]
    {:dispatch-n
     [[:lipas.ui.search.events/select-saved-search search]
      [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-experimental-features
  (fn [db _]
    (update-in db [:user :experimental-features?] not)))

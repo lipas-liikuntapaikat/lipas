@@ -1,19 +1,19 @@
 (ns lipas.ui.stats.events
   (:require
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::navigate
  (fn [_ [_ v]]
    (let [route (keyword :lipas.ui.routes.stats v)]
      {:dispatch [:lipas.ui.events/navigate route]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-tab
  (fn [db [_ v]]
    (assoc-in db [:stats :selected-tab] v)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::report-failure
  (fn [{:keys [db]} [_ _error]]
    (let [tr     (-> db :translator)]

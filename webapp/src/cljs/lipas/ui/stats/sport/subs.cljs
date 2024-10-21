@@ -1,64 +1,63 @@
 (ns lipas.ui.stats.sport.subs
-  (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as rf]))
 
 ;;; Sports stats ;;;
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-stats
  (fn [db _]
    (-> db :stats :sport)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::metrics
  :<- [::sports-stats]
  (fn [m _]
    (:metrics m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-metric
  :<- [::sports-stats]
  (fn [m _]
    (:selected-metric m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::groupings
  :<- [::sports-stats]
  (fn [m _]
    (:groupings m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-grouping
  :<- [::sports-stats]
  (fn [m _]
    (:selected-grouping m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-cities
  :<- [::sports-stats]
  (fn [m _]
    (:selected-cities m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-types
  :<- [::sports-stats]
  (fn [m _]
    (:selected-types m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::population-year
  :<- [::sports-stats]
  (fn [m _]
    (:population-year m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::data*
  :<- [::sports-stats]
  (fn [m _]
    (:data m)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::data
  :<- [::data*]
  :<- [:lipas.ui.subs/translator]
@@ -89,7 +88,7 @@
            [])
           (sort-by (keyword metric) utils/reverse-cmp)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::labels
  :<- [:lipas.ui.subs/translator]
  :<- [::metrics]
@@ -109,7 +108,7 @@
             :length-km-count (tr :stats/length-km-count)}
            (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::headers
  :<- [:lipas.ui.subs/translator]
  :<- [::metrics]
@@ -140,7 +139,7 @@
         [:length-km-max   (tr :stats/length-km-max)]]
        (map (juxt (comp keyword first) (comp locale second)) metrics))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-view
  :<- [::sports-stats]
  (fn [m _]

@@ -2,55 +2,55 @@
   (:require
    [lipas.roles :as roles]
    [lipas.ui.map.utils :as map-utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-sub ::activities
+(rf/reg-sub ::activities
   (fn [db _]
     (->> db :sports-sites :activities)))
 
-(re-frame/reg-sub ::data
+(rf/reg-sub ::data
   :<- [::activities]
   (fn [activities _]
     (:data activities)))
 
-(re-frame/reg-sub ::activity-by-value
+(rf/reg-sub ::activity-by-value
   :<- [::data]
   (fn [activities [_ value]]
     (get activities value)))
 
-(re-frame/reg-sub ::mode
+(rf/reg-sub ::mode
   :<- [::activities]
   (fn [activities _]
     (:mode activities)))
 
-(re-frame/reg-sub ::activities-by-type-code
+(rf/reg-sub ::activities-by-type-code
   :<- [::activities]
   (fn [activities _]
     (:by-type-code activities)))
 
-(re-frame/reg-sub ::activity-for-type-code
+(rf/reg-sub ::activity-for-type-code
   :<- [::activities-by-type-code]
   (fn [activities [_ type-code]]
     (get activities type-code)))
 
-(re-frame/reg-sub ::activity-value-for-type-code
+(rf/reg-sub ::activity-value-for-type-code
   (fn [[_ type-code]]
-    (re-frame/subscribe [::activity-for-type-code type-code]))
+    (rf/subscribe [::activity-for-type-code type-code]))
   (fn [activity _]
     (:value activity)))
 
-(re-frame/reg-sub ::show-activities?
+(rf/reg-sub ::show-activities?
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user [_ activity-value role-context]]
     (and activity-value
          (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
 
-(re-frame/reg-sub ::selected-features
+(rf/reg-sub ::selected-features
   :<- [:lipas.ui.map.subs/selected-features]
   (fn [fs _]
     fs))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::route-view
  :<- [::activities]
  :<- [::routes]
@@ -61,10 +61,10 @@
       :multi
       :single))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::routes
  (fn [[_ lipas-id _]]
-   [(re-frame/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+   [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
     #_(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
  (fn [[edit-data #_display-data] [_ _lipas-id activity-k]]
 
@@ -114,21 +114,21 @@
              (assoc :route-length (map-utils/calculate-length-km fcoll))
              (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::route-count
  (fn [[_ lipas-id activity-k]]
-   [(re-frame/subscribe [::routes lipas-id activity-k])])
+   [(rf/subscribe [::routes lipas-id activity-k])])
  (fn [[routes] _]
    (count routes)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-route-id
  :<- [::activities]
  :<- [::routes]
  (fn [[activities routes] _]
    (:selected-route-id activities)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::lipas-prop-value
  :<- [:lipas.ui.map.subs/selected-sports-site]
  (fn [site-data  [_ prop-k read-only?]]
@@ -136,7 +136,7 @@
      (get-in site-data [:display-data :properties prop-k])
      (get-in site-data [:edit-data :properties prop-k]))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::geoms
  :<- [:lipas.ui.map.subs/selected-sports-site]
  (fn [site-data [_ read-only?]]
@@ -144,14 +144,14 @@
      (get-in site-data [:display-data :location :geometries])
      (get-in site-data [:edit-data :location :geometries]))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::geom-type
  (fn [[_ read-only?]]
-   [(re-frame/subscribe [::geoms read-only?])])
+   [(rf/subscribe [::geoms read-only?])])
  (fn [[geoms] _]
    (-> geoms :features first :geometry :type)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::field-sorter
  :<- [::activities]
  (fn [activities [_ activity-k]]

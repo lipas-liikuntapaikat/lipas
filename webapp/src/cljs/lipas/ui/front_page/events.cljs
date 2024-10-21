@@ -1,9 +1,8 @@
 (ns lipas.ui.front-page.events
-  (:require
-   [ajax.core :as ajax]   
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-newsletter
  (fn [{:keys [db]}]
    {:db (assoc-in db [:front-page :newsletter :in-progress?] true)
@@ -15,21 +14,21 @@
      :on-success      [::get-newsletter-success]
      :on-failure      [::get-newsletter-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-newsletter-success
- (fn [{:keys [db]} [_ resp]]   
+ (fn [{:keys [db]} [_ resp]]
    {:db (-> db
             (assoc-in [:front-page :newsletter :in-progress?] false)
             (assoc-in [:front-page :newsletter :data] resp))}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-newsletter-failure
  (fn [{:keys [db]} [_ resp]]
    {:db (-> db
             (assoc-in [:front-page :newsletter :in-progress?] false)
             (assoc-in [:front-page :newsletter :error] resp))}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::subscribe-newsletter
  (fn [{:keys [db]} [_ params]]
    { :http-xhrio
@@ -41,7 +40,7 @@
      :on-success      [::subscribe-newsletter-success]
      :on-failure      [::subscribe-newsletter-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::subscribe-newsletter-success
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]
@@ -50,7 +49,7 @@
         {:message  (tr :newsletter/subscription-success)
          :success? true}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::subscribe-newsletter-failure
  (fn [{:keys [db ]} [_ resp]]
    (let [tr (-> db :translator)]

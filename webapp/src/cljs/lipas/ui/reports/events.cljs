@@ -4,21 +4,21 @@
    [ajax.protocols :as ajaxp]
    [clojure.set :as cset]
    [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-dialog
  (fn [db _]
    (update-in db [:reports :dialog-open?] not)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-selected-fields
  (fn [db [_ v append?]]
    (if append?
      (update-in db [:reports :selected-fields] (comp set into) v)
      (assoc-in db [:reports :selected-fields] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-selected-format
  (fn [db [_ v]]
    (assoc-in db [:reports :selected-format] v)))
@@ -54,7 +54,7 @@
           [basic
            (sort others)])))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-report
  (fn [{:keys [db]} [_ query fields fmt]]
    (let [fields       (sort-headers fields)
@@ -78,7 +78,7 @@
        :on-failure      [::report-failure]}
       :db (assoc-in db [:reports :downloading?] true)})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::report-success
  (fn [{:keys [db ]} [_ fmt content-type blob]]
    {:lipas.ui.effects/save-as! {:blob         blob
@@ -86,7 +86,7 @@
                                 :content-type content-type}
     :db (assoc-in db [:reports :downloading?] false)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::report-failure
  (fn [{:keys [db]} [_ _error]]
    (let [tr     (-> db :translator)]
@@ -96,7 +96,7 @@
                        {:message  (tr :notifications/get-failed)
                         :success? false}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-current-report
  (fn [{:keys [db]} [_ name]]
    (let [m         {:name name :fields (-> db :reports :selected-fields)}
@@ -110,13 +110,13 @@
        [::toggle-save-dialog]]
       :tracker/event! ["user" "save-my-report"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::open-saved-report
  (fn [_ [_ fields]]
    {:dispatch       [::set-selected-fields fields]
     :tracker/event! ["user" "open-my-report"]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-save-dialog
  (fn [db _]
    (update-in db [:reports :save-dialog-open?] not)))

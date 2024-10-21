@@ -1,12 +1,12 @@
 (ns lipas.ui.search.events
   (:require
    [ajax.core :as ajax]
-   [clojure.string :as string]
+   [clojure.string :as str]
    [lipas.roles :as roles]
    [lipas.ui.search.db :as db]
    [lipas.ui.utils :as utils]
    [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 ;; Zoom level where we start fetching full geoms
 (def full-geoms-threshold 9)
@@ -72,12 +72,12 @@
   (if (empty? s)
     "*"
     (-> s
-        (string/replace "-" " ")
-        (string/replace "/" "")
-        (string/replace #"\s+" " ")
-        (string/split #" ")
+        (str/replace "-" " ")
+        (str/replace "/" "")
+        (str/replace #"\s+" " ")
+        (str/split #" ")
         (->> (map #(str % "*"))
-             (string/join " ")))))
+             (str/join " ")))))
 
 (defn ->bbox-filter
   [{:keys [top-left bottom-right]}]
@@ -270,7 +270,7 @@
          edit-permission? (update-in [:query :function_score :query] (fn [x]
                                                                        (roles/wrap-es-query-site-has-privilege x user :site/create-edit))))))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search
  (fn [{:keys [db]} [_ params fit-view?]]
    {:http-xhrio
@@ -283,7 +283,7 @@
      :on-failure      [::search-failure]}
     :db (assoc-in db [:search :in-progress?] true)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-success
  (fn [{:keys [db]} [_ fit-view? resp]]
    {:db         (-> db
@@ -291,7 +291,7 @@
                     (assoc-in [:search :in-progress?] false))
     :dispatch-n [(when fit-view? [:lipas.ui.map.events/fit-to-current-vectors])]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr (:translator db)]
@@ -302,7 +302,7 @@
                  {:message  (tr :notifications/get-failed)
                   :success? false}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-fast
  (fn [{:keys [db]} [_ params fit-view? terse?]]
    {:http-xhrio
@@ -315,7 +315,7 @@
      :on-failure      [::search-failure]}
     :db (assoc-in db [:search :in-progress?] true)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-success-fast
  (fn [{:keys [db]} [_ fit-view? resp]]
    {:db         (-> db
@@ -323,7 +323,7 @@
                     (assoc-in [:search :in-progress?] false))
     :dispatch-n [(when fit-view? [:lipas.ui.map.events/fit-to-current-vectors])]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::update-search-string
  (fn [db [_ s]]
    (assoc-in db [:search :string] s)))
@@ -353,28 +353,28 @@
                            (/ (max (-> db :map :width)
                                    (-> db :map :height)) 2))))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::submit-search
  (fn [{:keys [db]} [_ fit-view?]]
    (let [params (collect-search-data db)
          terse? (-> db :search :results-view (= :list))]
      {:dispatch [::search-fast params fit-view? terse?]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-with-keyword
  (fn [{:keys [db]} [_ fit-view?]]
    (let [kw (-> db :search :string)]
      {:dispatch        [::submit-search fit-view?]
       :tracker/search! [(or kw "")]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::filters-updated
  (fn [_ [_ fit-view?]]
    {:dispatch-n
     [[::submit-search fit-view?]
      [::change-result-page 0]]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-status-filter
  (fn [{:keys [db]} [_ statuses append?]]
    {:db       (if append?
@@ -382,13 +382,13 @@
                 (assoc-in db [:search :filters :statuses] statuses))
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::remove-status-filter
  (fn [{:keys [db]} [_ status]]
    {:db       (update-in db [:search :filters :statuses] (comp disj set) status)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-type-filter
  (fn [{:keys [db]} [_ type-codes append?]]
    {:db       (if append?
@@ -396,7 +396,7 @@
                 (assoc-in db [:search :filters :type-codes] type-codes))
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-city-filter
  (fn [{:keys [db]} [_ city-codes append?]]
    {:db       (if append?
@@ -404,78 +404,78 @@
                 (assoc-in db [:search :filters :city-codes] city-codes))
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-area-min-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-min] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-area-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :area-max] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-construction-year-min-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :construction-year-min] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-construction-year-max-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :construction-year-max] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-surface-materials-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :surface-materials] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx ::set-retkikartta-filter
+(rf/reg-event-fx ::set-retkikartta-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :retkikartta?] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-harrastuspassi-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :harrastuspassi?] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-school-use-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :school-use?] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-admins-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :admins] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-owners-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :owners] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-bounding-box-filter
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:search :filters :bounding-box?] v)
     :dispatch [::filters-updated :fit-view]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-logged-in-filters
  (fn [{:keys [db]} [_]]
    {:db       (update-in db [:search :filters :statuses] conj "planned")
     :dispatch [::filters-updated]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::clear-filters
  (fn [{:keys [db]} _]
    (let [defaults  (-> (if (:logged-in? db) db/default-db-logged-in db/default-db)
@@ -485,7 +485,7 @@
      {:db       (update db :search merge defaults)
       :dispatch [::filters-updated fit-view?]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-report-from-current-search
  (fn [{:keys [db]} [_ fmt]]
    (let [params (-> db
@@ -502,7 +502,7 @@
          fields (-> db :reports :selected-fields)]
      {:dispatch [:lipas.ui.reports.events/create-report params fields fmt]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::set-results-view
  (fn [{:keys [db]} [_ view]]
    {:db         (assoc-in db [:search :results-view] view)
@@ -510,12 +510,12 @@
                  (when (= :list view) [::change-result-page-size 250])
                  (when (= :table view) [::change-result-page-size 25])]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-results-table-columns
  (fn [db [_ v]]
    (assoc-in db [:search :selected-results-table-columns] v)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::reset-sort-order
  (fn [{:keys [db]} _]
    {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
@@ -528,7 +528,7 @@
     sort
     {:asc? true :sort-fn (sort :sort-fn)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::change-sort-order
  (fn [{:keys [db]} [_ sort]]
    (let [new-sort (resolve-sort-change db sort)]
@@ -536,7 +536,7 @@
       :dispatch [::submit-search]})))
 
 ;; This can be combined with other sort options
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::toggle-sorting-by-distance
  (fn [{:keys [db]} _]
    (let [path [:search :sort]]
@@ -545,13 +545,13 @@
                                       (merge % {:sort-fn :score :asc? false})))
       :dispatch [::submit-search]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::change-result-page
  (fn [{:keys [db]} [_ page]]
    {:db       (assoc-in db [:search :pagination :page] page)
     :dispatch [::submit-search]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::change-result-page-size
  (fn [{:keys [db]} [_ page-size fit-view?]]
    {:db       (assoc-in db [:search :pagination :page-size] page-size)
@@ -561,13 +561,13 @@
          [::set-bounding-box-filter true])]}))
 
 
-(re-frame/reg-event-fx ::set-filters-by-permissions
+(rf/reg-event-fx ::set-filters-by-permissions
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :edit-permission?] v)
      :dispatch [::filters-updated :fit-view]}))
 
 (defn- kw->path [kw]
-  (-> kw name (string/split #"\.") (->> (mapv keyword))))
+  (-> kw name (str/split #"\.") (->> (mapv keyword))))
 
 (def data-keys
   [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
@@ -575,7 +575,7 @@
    :location.postal-office :location.city.city-code])
 
 ;; Used by quick-edit feature in search results table
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-edits
  (fn [{:keys [db]} [_ {:keys [lipas-id] :as data}]]
    ;; TODO maybe this would be better implemented in the backend?
@@ -602,12 +602,12 @@
 
 ;; Save search (for later use) ;;
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-save-dialog
  (fn [db _]
    (update-in db [:search :save-dialog-open?] not)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-current-search
  (fn [{:keys [db]} [_ name]]
    (let [m         {:name    name
@@ -623,7 +623,7 @@
        [::toggle-save-dialog]]
       :tracker/event! ["user" "save-my-search"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-saved-search
  (fn [{:keys [db]} [_ {:keys [string filters]}]]
    {:db             (-> db

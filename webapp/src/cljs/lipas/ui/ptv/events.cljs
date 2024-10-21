@@ -2,10 +2,10 @@
   (:require
    [ajax.core :as ajax]
    [clojure.set :as set]
-   [lipas.ui.utils :as utils]
+   [clojure.string :as str]
    [lipas.data.ptv :as ptv-data]
-   [re-frame.core :as re-frame]
-   [clojure.string :as str]))
+   [lipas.ui.utils :as utils]
+   [re-frame.core :as rf]))
 
 (def ptv-root-url-prod
   "https://api.palvelutietovaranto.suomi.fi")
@@ -13,24 +13,24 @@
 (def ptv-root-url-test
   "https://api.palvelutietovaranto.trn.suomi.fi")
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::open-dialog
  (fn [db [_ _]]
    (assoc-in db [:ptv :dialog :open?] true)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::close-dialog
  (fn [db [_ _]]
    (assoc-in db [:ptv :dialog :open?] false)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-org
  (fn [{:keys [db]} [_ org]]
    {:db (assoc-in db [:ptv :selected-org] org)
     :fx [[:dispatch [::fetch-org-data org]]
          [:dispatch [::fetch-integration-candidates org]]]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-tab
  (fn [db [_ v]]
    (assoc-in db [:ptv :selected-tab] v)))
@@ -42,7 +42,7 @@
     :owners              ["city" "city-main-owner"]
     :supported-languages ["fi" "se" "en"]}})
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-integration-candidates
  (fn [{:keys [db]} [_ org]]
    (when org
@@ -58,14 +58,14 @@
                :on-success      [::fetch-integration-candidates-success (:id org)]
                :on-failure      [::fetch-integration-candidates-failure]}]]}))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-integration-candidates-success
  (fn [{:keys [db]} [_ org-id resp]]
    {:db (-> db
             (assoc-in [:ptv :loading-from-lipas :candidates] false)
             (assoc-in [:ptv :org org-id :data :sports-sites] (utils/index-by :lipas-id resp)))}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-integration-candidates-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -76,7 +76,7 @@
               (assoc-in [:ptv :errors :candidates] resp))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-org-data
  (fn [{:keys [_db]} [_ org]]
    (when org
@@ -86,7 +86,7 @@
            [:dispatch [::fetch-service-channels org]]
            [:dispatch [::fetch-service-collections org]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-org
  (fn [{:keys [db]} [_ org]]
    (when org
@@ -98,14 +98,14 @@
             :on-success      [::fetch-org-success (:id org)]
             :on-failure      [::fetch-org-failure]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-org-success
  (fn [{:keys [db]} [_ org-id resp]]
    {:db (-> db
             (assoc-in [:ptv :loading-from-ptv :org] false)
             (assoc-in [:ptv :org org-id :data :org org-id] resp))}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-org-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -117,7 +117,7 @@
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-services
  (fn [{:keys [db]} [_ org]]
    (let [token (-> db :user :login :token)]
@@ -133,7 +133,7 @@
                :on-success      [::fetch-services-success (:id org)]
                :on-failure      [::fetch-services-failure]}]]}))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-services-success
  (fn [{:keys [db]} [_ org-id resp]]
    (let [services (->> resp :itemList (utils/index-by :id))]
@@ -142,7 +142,7 @@
               (assoc-in [:ptv :org org-id :data :services] services))
       :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-services-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -153,7 +153,7 @@
               (assoc-in [:ptv :errors :services] resp))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-channels
  (fn [{:keys [db]} [_ org]]
    (when org
@@ -168,7 +168,7 @@
             :on-success      [::fetch-service-channels-success (:id org)]
             :on-failure      [::fetch-service-channels-failure]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-channels-success
  (fn [{:keys [db]} [_ org-id resp]]
    (let [service-channels (->> resp :itemList (utils/index-by :id))]
@@ -176,7 +176,7 @@
               (assoc-in [:ptv :loading-from-ptv :service-channels] false)
               (assoc-in [:ptv :org org-id :data :service-channels] service-channels))})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-channels-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -187,7 +187,7 @@
               (assoc-in [:ptv :errors :service-channels] resp))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-collections
  (fn [{:keys [db]} [_ org]]
    (when org
@@ -201,7 +201,7 @@
              :on-success      [::fetch-service-collections-success (:id org)]
              :on-failure      [::fetch-service-collections-failure]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-collections-success
  (fn [{:keys [db]} [_ org-id resp]]
    (let [service-collections (->> resp :itemList (utils/index-by :id))]
@@ -209,7 +209,7 @@
               (assoc-in [:ptv :loading-from-ptv :service-collections] false)
               (assoc-in [:ptv :org org-id :data :service-collections] service-collections))})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-service-collections-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -222,7 +222,7 @@
 
 ;;; Services views and manipulation ;;;
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-services-filter
  (fn [db _]
    (let [current-val (get-in db [:ptv :services-filter])
@@ -231,73 +231,73 @@
 
 ;;; Service locations views and manipulation ;;;
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-sync-enabled
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-services
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-ids] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-service-channels
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-service-integration
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-service-channel-integration
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-descriptions-integration
  (fn [db [_ {:keys [lipas-id]} v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :descriptions-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-service-integration-default
  (fn [db [_ v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :default-settings :service-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-service-channel-integration-default
  (fn [db [_ v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :default-settings :service-channel-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-descriptions-integration-default
  (fn [db [_ v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :default-settings :descriptions-integration] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-integration-interval
  (fn [db [_ v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :default-settings :integration-interval] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-summary
  (fn [db [_ {:keys [lipas-id]} locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :summary locale] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-description
  (fn [db [_ {:keys [lipas-id]} locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -305,7 +305,7 @@
 
 ;;; Service location descriptions generation ;;;
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-descriptions
  (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
    (let [token (-> db :user :login :token)]
@@ -321,7 +321,7 @@
              :on-success      [::generate-descriptions-success lipas-id success-fx]
              :on-failure      [::generate-descriptions-failure lipas-id failure-fx]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-descriptions-success
  (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -330,7 +330,7 @@
               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))
       :fx extra-fx})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-descriptions-failure
  (fn [{:keys [db]} [_ _lipas-id extra-fx resp]]
    (let [tr           (:translator db)
@@ -342,7 +342,7 @@
       :fx (or extra-fx
               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-sync-all
  (fn [db [_ enabled]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -354,7 +354,7 @@
                           ms
                           (keys ms)))))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-all-descriptions*
  (fn [{:keys [db]} [_ org-id lipas-ids]]
    (let [halt?             (get-in db [:ptv :batch-descriptions-generation :halt?] false)
@@ -375,7 +375,7 @@
                          on-single-success
                          on-single-failure]])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-all-descriptions
  (fn [{:keys [db]} [_ sports-sites]]
    (let [org-id    (-> db :ptv :selected-org :id)
@@ -388,20 +388,20 @@
                       :lipas-ids  (set lipas-ids)})
       :fx [[:dispatch [::generate-all-descriptions* org-id lipas-ids]]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::halt-descriptions-generation
  (fn [db _]
    (-> db
        (assoc-in [:ptv :batch-descriptions-generation :halt?] true))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-sports-sites-filter
  (fn [db [_ v]]
    (assoc-in db [:ptv :batch-descriptions-generation :sports-sites-filter] v)))
 
 ;;; Service descriptions generation ;;;
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-service-descriptions
  (fn [{:keys [db]} [_ id success-fx failure-fx]]
    (let [token  (-> db :user :login :token)
@@ -421,7 +421,7 @@
              :on-success      [::generate-service-descriptions-success id success-fx]
              :on-failure      [::generate-service-descriptions-failure id failure-fx]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-service-descriptions-success
  (fn [{:keys [db]} [_ id extra-fx resp]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -430,7 +430,7 @@
               (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
       :fx extra-fx})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-service-descriptions-failure
  (fn [{:keys [db]} [_ _id extra-fx resp]]
    (let [tr           (:translator db)
@@ -442,7 +442,7 @@
       :fx (or extra-fx
               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-all-service-descriptions*
  (fn [{:keys [db]} [_ org-id ids]]
    (let [halt?             (get-in db [:ptv :service-descriptions-generation :halt?] false)
@@ -462,7 +462,7 @@
                          on-single-success
                          on-single-failure]])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::generate-all-service-descriptions
  (fn [{:keys [db]} [_ ms]]
    (let [org-id (-> db :ptv :selected-org :id)
@@ -475,20 +475,20 @@
                       :ids        (set ids)})
       :fx [[:dispatch [::generate-all-service-descriptions* org-id ids]]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::halt-service-descriptions-generation
  (fn [db _]
    (-> db
        (assoc-in [:ptv :service-descriptions-generation :halt?] true))))
 
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-service-candidate-summary
  (fn [db [_ id locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
      (assoc-in db [:ptv :org org-id :data :service-candidates id :summary locale] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-service-candidate-description
  (fn [db [_ id locale v]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -497,7 +497,7 @@
 
 ;;; Create Services in PTV ;;;
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service
  (fn [{:keys [db]} [_ id success-fx failure-fx]]
    (let [token  (-> db :user :login :token)
@@ -514,7 +514,7 @@
              :on-success      [::create-ptv-service-success id success-fx]
              :on-failure      [::create-ptv-service-failure id failure-fx]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service-success
  (fn [{:keys [db]} [_ id extra-fx resp]]
    (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -525,7 +525,7 @@
                          assoc :created-in-ptv true))
       :fx extra-fx})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service-failure
  (fn [{:keys [db]} [_ _id extra-fx resp]]
    (let [tr           (:translator db)
@@ -537,7 +537,7 @@
       :fx (or extra-fx
               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-all-ptv-services*
  (fn [{:keys [db]} [_ org-id ids]]
    (let [halt?             (get-in db [:ptv :services-creation :halt?] false)
@@ -558,7 +558,7 @@
                          on-single-success
                          on-single-failure]])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-all-ptv-services
  (fn [{:keys [db]} [_ ms]]
    (let [org-id (-> db :ptv :selected-org :id)
@@ -572,13 +572,13 @@
                       :ids        (set ids)})
       :fx [[:dispatch [::create-all-ptv-services* org-id ids]]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::halt-services-creation
  (fn [db _]
    (-> db
        (assoc-in [:ptv :services-creation :halt?] true))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::assign-services-to-sports-sites
  (fn [db _]
    (let [org-id   (get-in db [:ptv :selected-org :id])
@@ -603,7 +603,7 @@
 ;;; Create service locations in PTV ;;;
 
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service-location
  (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
    (let [token  (-> db :user :login :token)
@@ -634,7 +634,7 @@
              :on-success      [::create-ptv-service-location-success lipas-id success-fx]
              :on-failure      [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service-location-success
  (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
    (let [org-id   (get-in db [:ptv :selected-org :id])]
@@ -646,7 +646,7 @@
                                                                  (set (conj ids (:id resp))))))
       :fx extra-fx})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-ptv-service-location-failure
  (fn [{:keys [db]} [_ _id extra-fx resp]]
    (let [tr           (:translator db)
@@ -658,7 +658,7 @@
       :fx (or extra-fx
               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-all-ptv-service-locations*
  (fn [{:keys [db]} [_ org-id ids]]
    (let [halt?             (get-in db [:ptv :service-locations-creation :halt?] false)
@@ -678,7 +678,7 @@
                          on-single-success
                          on-single-failure]])]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-all-ptv-service-locations
  (fn [{:keys [db]} [_ sports-sites]]
    (let [org-id (-> db :ptv :selected-org :id)
@@ -704,13 +704,13 @@
       :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]
            [:dispatch [::save-ptv-meta to-save]]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::halt-service-locations-creation
  (fn [db _]
    (-> db
        (assoc-in [:ptv :service-locations-creation :halt?] true))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-ptv-meta
  (fn [{:keys [db]} [_ sports-sites]]
    (let [token  (-> db :user :login :token)
@@ -739,7 +739,7 @@
              :on-success      [::save-ptv-meta-success]
              :on-failure      [::save-ptv-meta-failure]}]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-ptv-meta-success
  (fn [{:keys [db]} _]
    (let [tr           (:translator db)
@@ -748,7 +748,7 @@
      {:db (-> db (assoc-in [:ptv :save-in-progress] false))
       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-ptv-meta-failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr           (:translator db)
@@ -848,6 +848,6 @@
          (map :id)))
 
 
-  (re-frame/dispatch [::fetch-services {:id ptv-data/uta-org-id-test}])
-  (re-frame/dispatch [::select-org nil])
+  (rf/dispatch [::fetch-services {:id ptv-data/uta-org-id-test}])
+  (rf/dispatch [::select-org nil])
   )

@@ -1,63 +1,63 @@
 (ns lipas.ui.stats.city.subs
   (:require
    [lipas.reports :as reports]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 ;;; General ;;;
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-cities
  (fn [db _]
    (-> db :stats :city :selected-cities)))
 
 ;;; City finance ;;;
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-city-services
  (fn [db _]
    (-> db :stats :city :finance :city-services)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-finance-city-service
  (fn [db _]
    (-> db :stats :city :finance :selected-city-service)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-metrics
  (fn [db _]
    (-> db :stats :city :finance :metrics)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-finance-metrics
  (fn [db _]
    (-> db :stats :city :finance :selected-metrics)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-units
  (fn [db _]
    (-> db :stats :city :finance :units)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-finance-unit
  (fn [db _]
    (-> db :stats :city :finance :selected-unit)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-finance-years
  (fn [db _]
    (-> db :stats :city :finance :selected-years)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-data*
  (fn [db _]
    (-> db :stats :city :finance :data)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-finance-view
  (fn [db _]
    (-> db :stats :city :finance :selected-view)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-labels
  (fn [db _]
    (let [tr     (-> db :translator)
@@ -96,7 +96,7 @@
               :year       year
               :population (get-in m [:stats year :population])})))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-data
  :<- [::finance-data*]
  :<- [::selected-cities]
@@ -114,7 +114,7 @@
           (reduce (partial ->entries avgs service years) [])
           (sort-by :year)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::finance-headers
  :<- [:lipas.ui.subs/translator]
  (fn [tr _]

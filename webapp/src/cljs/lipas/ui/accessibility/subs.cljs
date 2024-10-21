@@ -1,7 +1,5 @@
 (ns lipas.ui.accessibility.subs
-  (:require
-   [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as rf]))
 
 (def accessibility-types
   #{1130
@@ -31,17 +29,17 @@
     4220
     2360})
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::accessibility-type?
  (fn [_ [_ type-code]]
    (accessibility-types type-code)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::all-statements
  (fn [db _]
    (get-in db [:accessibility :statements])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::statements
  :<- [::all-statements]
  :<- [:lipas.ui.subs/locale]
@@ -57,7 +55,7 @@
                (assoc res group (mapcat (comp #(map :value %) locale :sentences) coll)))
              {}))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::loading?
  (fn [db _]
    (get-in db [:accessibility :loading?])))

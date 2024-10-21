@@ -1,13 +1,10 @@
 (ns lipas.ui.forgot-password.subs
-  (:require
-   [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as rf]))
 
-(re-frame/reg-sub
- ::error
- (fn [db _]
-   (-> db :reset-password :error)))
+(rf/reg-sub ::error
+  (fn [db _]
+    (-> db :reset-password :error)))
 
-(re-frame/reg-sub
- ::success
- (fn [db _]
-   (-> db :reset-password :success)))
+(rf/reg-sub ::success
+  (fn [db _]
+    (-> db :reset-password :success)))

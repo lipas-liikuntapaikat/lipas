@@ -1,9 +1,8 @@
 (ns lipas.ui.feedback.events
-  (:require
-   [ajax.core :as ajax]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::open-modal
  (fn [db _]
    (let [email (-> db :user :login :email)]
@@ -11,30 +10,30 @@
        true (assoc-in [:feedback :modal-open?] true)
        email (assoc-in [:feedback :form :lipas.feedback/sender] email)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::close-modal
  (fn [db _]
    (assoc-in db [:feedback :modal-open?] false)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-feedback-type
  (fn [db [_ v]]
    (let [v (keyword :feedback.type v)]
      (assoc-in db [:feedback :form :lipas.feedback/type] v))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-sender-email
  (fn [db [_ v]]
    (if v
      (assoc-in db [:feedback :form :lipas.feedback/sender] v)
      (update-in db [:feedback :form] dissoc :lipas.feedback/sender))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-text
  (fn [db [_ v]]
    (assoc-in db [:feedback :form :lipas.feedback/text] v)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::send
  (fn [{:keys [db]} [_ body]]
    {:http-xhrio
@@ -47,7 +46,7 @@
      :on-failure      [::send-failure]}
     :db (assoc-in db [:feedback :in-progress?] true)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::send-failure
  (fn [{:keys [db]} _]
    (let [tr           (:translator db)
@@ -57,7 +56,7 @@
       :dispatch     [:lipas.ui.events/set-active-notification notification]
       :track/event! ["feedback" "send" "status" "failure"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::send-success
  (fn [{:keys [db]} _]
    (let [tr           (:translator db)

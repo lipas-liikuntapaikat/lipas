@@ -5,28 +5,27 @@
    [lipas.ui.db :as db]
    [lipas.ui.local-storage :as local-storage]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]
-   [spec-tools.core :as st]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-field
  (fn [db [_ path value]]
    (let [path (into [:user :login-form] path)]
      (assoc-in db path value))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-login-mode
  (fn [db [_ login-mode]]
    (assoc-in db [:user :login-mode] login-mode)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-comeback-path
  (fn [db [_ path]]
    (if (= "/kirjaudu" path)
      (assoc db :comeback-path "/profiili")
      (assoc db :comeback-path path))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::login-success
  (fn [{:keys [db]} [_ login-type body]]
    (let [;; 15 minutes
@@ -58,18 +57,18 @@
                                                 "user")]
          :tracker/event!         ["user" "login-success"]})))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::login-failure
  (fn [{:keys [db]} [_ result]]
    {:db             (assoc-in db [:user :login-error] result)
     :tracker/event! ["user" "login-failed"]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::clear-errors
  (fn [db [_ _]]
    (update-in db [:user] dissoc :login-error :magic-link-ordered?)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::submit-login-form
  (fn [{:keys [db]} [_ form-data]]
    {:http-xhrio
@@ -82,16 +81,16 @@
      :on-failure      [::login-failure]}
     :dispatch    [::clear-errors]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::login-refresh-failure
  (fn [_ [_ {:keys [status] :as resp}]]
    (if (#{401 403} status)
      {:dispatch [::logout]}
      {})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::refresh-login
- [(re-frame/inject-cofx ::local-storage/get :login-data)]
+ [(rf/inject-cofx ::local-storage/get :login-data)]
  (fn [{local-storage :local-storage db :db} _]
    (let [login-data (:login-data local-storage)]
      (if (or (empty? login-data) (not (:logged-in? db)))
@@ -108,7 +107,7 @@
              :on-success      [::login-success :refresh]
              :on-failure      [::login-refresh-failure]}}))))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::login-with-magic-link
  (fn [{db :db} [_ token]]
    {:http-xhrio
@@ -121,7 +120,7 @@
      :on-failure      [::logout]}
     :tracker/event! ["user" "magic-link-opened"]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::logout
  (fn [{:keys [db]}  _]
    {:db (assoc db/default-db :backend-url (:backend-url db))
@@ -131,7 +130,7 @@
     :dispatch               [:lipas.ui.events/navigate "/kirjaudu"]
     :tracker/set-dimension! ["user-type" "guest"]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::order-magic-link
  (fn [{db :db} [_ {:keys [email]}]]
    {:http-xhrio
@@ -145,13 +144,13 @@
      :on-success      [::order-magic-link-success]
      :on-failure      [::order-magic-link-failed]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::order-magic-link-success
  (fn [{:keys [db]} [_ _result]]
    {:db             (assoc-in db [:user :magic-link-ordered?] true)
     :tracker/event! ["user" "magic-link-order-success"]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::order-magic-link-failed
  (fn [{:keys [db]} [_ result]]
    {:db             (assoc-in db [:user :login-error] result)

@@ -1,11 +1,10 @@
 (ns lipas.ui.loi.events
-  (:require
-   [ajax.core :as ajax]
-   [lipas.roles :as roles]
-   [lipas.ui.utils :as utils :refer [==>]]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [lipas.roles :as roles]
+            [lipas.ui.utils :as utils :refer [==>]]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-loi
  (fn [db [_ loi-id]]
    (let [loi (get-in db [:lois loi-id])]
@@ -14,7 +13,7 @@
          (assoc-in [:loi :editing] loi)
          (assoc-in [:loi :view-mode] :display)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::start-adding-new-loi
  (fn [db _]
    (-> db
@@ -23,26 +22,26 @@
                                   :loi-category "outdoor-recreation-facilities"})
        (assoc-in [:loi :view-mode] :adding))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::start-editing
  (fn [{:keys [db]} _]
    (let [geoms (-> db :loi :selected-loi :geometries)]
      {:db (assoc-in db [:loi :view-mode] :editing)
       :fx [[:dispatch [:lipas.ui.map.events/new-geom-drawn geoms]]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::stop-editing
  (fn [db _]
    (assoc-in db [:loi :view-mode] :display)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::edit-loi-field
  (fn [db [_ & args]]
    (let [path (into [:loi :editing] (butlast args))
          v    (last args)]
      (assoc-in db path v))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::discard-edits
  (fn [{:keys [db]} _]
    (let [tr (-> db :translator)]
@@ -53,7 +52,7 @@
           (==> [:lipas.ui.map.events/discard-drawing])
          (==> [:lipas.ui.loi.events/stop-editing]))]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::delete
  (fn [{:keys [db]} [_ loi status year]]
    (let [event-date (when (= status "out-of-service-permanently")
@@ -65,7 +64,7 @@
                        (:geometries loi)
                        event-date]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save
  (fn [{:keys [db]} [_ loi geoms event-date]]
    (let [token (-> db :user :login :token)
@@ -83,7 +82,7 @@
        :on-success      [::save-success loi]
        :on-failure      [::save-failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-success
  (fn [{:keys [db]} [_  loi _resp]]
    (let [tr (:translator db)]
@@ -96,7 +95,7 @@
            [:dispatch [:lipas.ui.map.events/discard-drawing]]
            [:dispatch [::search]]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-failure
  (fn [{:keys [db]} [_ _resp]]
    (let [tr (:translator db)]
@@ -105,7 +104,7 @@
                         :success? false}]]]
       :tracker/event! ["error" "save-loi-failure"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search
  (fn [{:keys [db]} _]
    ;; Currently users with activities-manager roles should see/edit LOI data
@@ -132,12 +131,12 @@
        :on-failure      [::search-failure]}}
      {})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-success
  (fn [{:keys [db]} [_  data]]
    {:db (assoc-in db [:loi :search-results] (map :_source data))}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::search-failure
  (fn [{:keys [db]} [_ _resp]]
    (let [tr (:translator db)]
@@ -146,7 +145,7 @@
                         :success? false}]]]
       :tracker/event! ["error" "search-loi-failure"]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get
  (fn [{:keys [db]} [_ loi-id on-success]]
    {:http-xhrio
@@ -156,13 +155,13 @@
      :on-success      [::get-success on-success]
      :on-failure      [::get-failure]}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-success
  (fn [{:keys [db]} [_ on-success loi]]
    {:db (assoc-in db [:lois (:id loi)] loi)
     :fx [(when on-success [:dispatch on-success])]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-failure
  (fn [{:keys [db]} [_ error]]
    (let [tr (:translator db)]

@@ -1,26 +1,26 @@
 (ns lipas.ui.user.subs
   (:require
    [lipas.roles :as roles]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 ;; TODO: Likely not very useful now. Checks should mainly be done using
 ;; check-privilege which indirectly also handles if the user is logged in.
-(re-frame/reg-sub ::logged-in?
+(rf/reg-sub ::logged-in?
  (fn [db _]
    (:logged-in? db)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::user
  (fn [db _]
    (:user db)))
 
-(re-frame/reg-sub ::user-data
+(rf/reg-sub ::user-data
   :<- [::user]
   :<- [::dev-overrides]
   (fn [[user overrides] _]
     (assoc (:login user) :dev/overrides overrides)))
 
-(re-frame/reg-sub ::permission-to-cities
+(rf/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
   (fn [[user all-cities] _]
@@ -32,7 +32,7 @@
                                               :site/create-edit))
                      all-cities))))
 
-(re-frame/reg-sub ::permission-to-types
+(rf/reg-sub ::permission-to-types
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [[user all-types] _]
@@ -44,7 +44,7 @@
                                               :site/create-edit))
                      all-types))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::can-add-sports-sites?
  :<- [::check-privilege
       {:type-code ::roles/any
@@ -53,7 +53,7 @@
  (fn [x _]
    x))
 
-(re-frame/reg-sub ::can-add-lois?
+(rf/reg-sub ::can-add-lois?
   :<- [::check-privilege
        ;; Usually given with activities-manager, but should ignore role-context
        {:city-code ::roles/any
@@ -63,16 +63,16 @@
   (fn [x _]
     x))
 
-(re-frame/reg-sub ::can-add-lois-only?
+(rf/reg-sub ::can-add-lois-only?
   :<- [::can-add-sports-sites?]
   :<- [::can-add-lois?]
   (fn [[can-add-sports-sites? can-add-lois?] _]
     (and can-add-lois? (not can-add-sports-sites?))))
 
-(re-frame/reg-sub ::permission-to-publish?
+(rf/reg-sub ::permission-to-publish?
   (fn [[_ lipas-id]]
-    [(re-frame/subscribe [::user-data])
-     (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
+    [(rf/subscribe [::user-data])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
   (fn [[user sports-site] _]
     (when (and user sports-site)
       (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))))
@@ -96,7 +96,7 @@
 ;; This is used in ice-stadiums and swimming-pools views list
 ;; which sites does the user have access to modify to report the
 ;; energy use values.
-(re-frame/reg-sub
+(rf/reg-sub
  ::sports-sites
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  :<- [::user-data]
@@ -109,25 +109,25 @@
           (filter (partial show? user))
           (map (partial ->list-entry locale cities types))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-sports-site
  :<- [::user]
  (fn [user _]
    (-> user :selected-sports-site)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::saved-reports
  :<- [::user-data]
  (fn [user]
    (-> user :user-data :saved-reports)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::saved-searches
  :<- [::user-data]
  (fn [user _]
    (-> user :user-data :saved-searches)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::saved-diversity-settings
  :<- [::user-data]
  (fn [user _]
@@ -135,19 +135,19 @@
 
 ;; Role basic permissions
 
-(re-frame/reg-sub
+(rf/reg-sub
   ::roles
   :<- [::user-data]
   (fn [user _]
     (:roles (:permissions user))))
 
-(re-frame/reg-sub
+(rf/reg-sub
   ::dev-overrides
   (fn [db _]
     ;; This value is only ever set from dev tools
     (:lipas.ui.project-devtools/privilege-override db)))
 
-(re-frame/reg-sub
+(rf/reg-sub
   ::check-privilege
   :<- [::user-data]
   (fn [user [_ role-context k disable-overrides]]
@@ -156,13 +156,13 @@
                  user)]
       (roles/check-privilege user role-context k))))
 
-(re-frame/reg-sub ::context-value-name
+(rf/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]
     (case context-key
-      :city-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/city v])
-      :type-code (re-frame/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
-      :activity (re-frame/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
-      :lipas-id (re-frame/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])))
+      :city-code (rf/subscribe [:lipas.ui.sports-sites.subs/city v])
+      :type-code (rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
+      :activity (rf/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
+      :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])))
   (fn [x [_ context-key _v locale]]
     (case context-key
       :lipas-id (:name x)

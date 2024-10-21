@@ -5,9 +5,9 @@
    [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
    [lipas.ui.utils :refer [==>] :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::init
  (fn [{:keys [db]} _]
    {:db (-> db
@@ -23,12 +23,12 @@
        [:diversity-grid true]
        [:diversity-area true]]]]}))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-analysis-tab
  (fn [db [_ tab]]
    (assoc-in db [:analysis :diversity :selected-tab] tab)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::calc-all-diversity-indices*
  (fn [_ [_ ids]]
    (if (seq ids)
@@ -38,7 +38,7 @@
                  :skip-search]}
      {})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::calc-all-diversity-indices
  (fn [{:keys [db]}]
    (let [ids (keys (get-in db [:analysis :diversity :areas]))]
@@ -47,7 +47,7 @@
        ;; Disable grid because otherwise the map will flicker
        [:lipas.ui.map.events/set-overlay false :diversity-grid]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::calc-diversity-indices
  (fn [{:keys [db]} [_ {:keys [id] :as candidate} cb skip-search]]
    (let [url   (str (:backend-url db) "/actions/calc-diversity-indices")
@@ -78,7 +78,7 @@
            (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
              [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::calc-success
  (fn [db [_ candidate-id cb resp]]
    (when cb (cb))
@@ -87,12 +87,12 @@
        (assoc-in [:analysis :diversity :results candidate-id] resp)
        (update-in [:analysis :diversity :selected-result-areas] (comp set conj) candidate-id))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::clear-results
  (fn [db _]
    (assoc-in db [:analysis :diversity :results] {})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::calc-failure
  (fn [{:keys [db]} [_ _error]]
    (let [tr (-> db :translator)]
@@ -103,7 +103,7 @@
                         :success? false}]})))
 
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::load-geoms-from-file
  (fn [{:keys [db]} [_ files geom-type]]
    (let [file   (aget files 0)
@@ -121,7 +121,7 @@
                          :success? false}])]}
        {}))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-analysis-candidates
  (fn [db [_ geoJSON geom-type]]
    (let [fcoll (js->clj geoJSON :keywordize-keys true)
@@ -281,7 +281,7 @@
        (remove (fn [c] (empty? (:type-codes c))))
        vec))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::toggle-seasonality
  (fn [{:keys [db]} [_ s enable?]]
    (let [op (if enable? conj disj)]
@@ -289,7 +289,7 @@
       :dispatch
       [::select-category-preset (get-in db [:analysis :diversity :selected-category-preset])]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-category-preset
  (fn [db [_ preset-kw]]
    (let [seasonalities (get-in db [:analysis :diversity :selected-seasonalities])
@@ -302,34 +302,34 @@
          (assoc-in [:analysis :diversity :settings :categories] categories)
          (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-category-name
  (fn [db [_ idx name]]
    (assoc-in db [:analysis :diversity :settings :categories idx :name] name)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-category-factor
  (fn [db [_ idx factor]]
    (assoc-in db [:analysis :diversity :settings :categories idx :factor] factor)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-category-type-codes
  (fn [db [_ idx type-codes]]
    (assoc-in db [:analysis :diversity :settings :categories idx :type-codes] type-codes)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::add-new-category
  (fn [db _]
    (let [category {:name "" :type-codes [] :factor 1}]
      (update-in db [:analysis :diversity :settings :categories] #(into [category] %)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::delete-category
  (fn [db [_ idx]]
    (update-in db [:analysis :diversity :settings :categories]
               #(into (subvec % 0 idx) (subvec % (inc idx))))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-category-preset
  (fn [{:keys [db]} [_ name]]
    (let [new-preset {:name       name
@@ -346,12 +346,12 @@
       [[:lipas.ui.user.events/update-user-data user-data]
        [::toggle-category-save-dialog]]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-max-distance-m
  (fn [db [_ n]]
    (assoc-in db [:analysis :diversity :settings :max-distance-m] n)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-export-format
  (fn [db [_ s]]
    (assoc-in db [:analysis :diversity :selected-export-format] s)))
@@ -389,7 +389,7 @@
      {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_areas" "." fmt)}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::export-aggs
  (fn [{:keys [db]} [_ fmt]]
    (condp = fmt
@@ -419,7 +419,7 @@
      {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_grid" "." fmt)}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::export-grid
  (fn [{:keys [db]} [_ fmt]]
    (condp = fmt
@@ -443,7 +443,7 @@
      {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js categories))])
       :filename (str "diversity_report_categories" ".json")}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::export-categories
  (fn [{:keys [db]} [_ fmt]]
    (condp = fmt
@@ -470,7 +470,7 @@
      {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js data))])
       :filename (str "diversity_report_parameters" ".json")}}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::export-settings
  (fn [{:keys [db]} [_ fmt]]
    (condp = fmt
@@ -479,7 +479,7 @@
 
 ;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-postal-code-areas
  (fn [{:keys [db]} [_ city-code]]
    (let [url "https://lipas.fi/tilastokeskus/geoserver/postialue/wfs"]
@@ -499,7 +499,7 @@
        :on-success      [::fetch-postal-code-areas-success]
        :on-failure      [::fetch-postal-code-areas-failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-postal-code-areas-success
  (fn [{:keys [db]} [_ resp]]
    (let [fcoll (update resp :features
@@ -518,7 +518,7 @@
      {:db         (assoc-in db [:analysis :diversity :loading?] false)
       :dispatch-n [[::set-analysis-candidates fcoll "Polygon"]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::fetch-postal-code-areas-failure
  (fn [{:keys [db]} [_ _error]]
    (let [tr (-> db :translator)]
@@ -528,25 +528,25 @@
                        {:message  (tr :notifications/get-failed)
                         :success? false}]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-analysis-chart-areas
  (fn [db [_ v]]
    (assoc-in db [:analysis :diversity :selected-result-areas] v)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-analysis-chart-tab
  (fn [db [_ v]]
    (assoc-in db [:analysis :diversity :selected-chart-tab] v)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-category-save-dialog
  (fn [db [_ _]]
    (update-in db [:analysis :diversity :category-save-dialog-open?] not)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-new-preset-name
  (fn [db [_ s]]
    (assoc-in db [:analysis :diversity :new-preset-name] s)))
 
 (comment
-  (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))
+  (rf/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))

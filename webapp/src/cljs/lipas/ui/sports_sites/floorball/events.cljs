@@ -5,7 +5,7 @@
    [lipas.ui.sports-sites.events :as sports-sites.events]
    [lipas.ui.sports-sites.floorball.db :as floorball]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 (def surface-materials-set (into #{} (keys materials/sports-site-surface-materials)))
 
@@ -54,13 +54,13 @@
                              props
                              prop-k->derive-fn)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-dialog-field
  (fn [db [_ dialog field value]]
    (let [path [:sports-sites :floorball :dialogs dialog :data field]]
      (utils/set-field db path value))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::reset-dialog
  (fn [db [_ dialog]]
    (assoc-in db
@@ -68,7 +68,7 @@
              (-> floorball/default-db
                  :dialogs dialog))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-dialog
  (fn [db [_ dialog data]]
    (let [data (or data (-> db :sports-sites :floorball :dialogs dialog :data)
@@ -77,7 +77,7 @@
          (update-in [:sports-sites :floorball :dialogs dialog :open?] not)
          (assoc-in [:sports-sites :floorball :dialogs dialog :data] data)))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-dialog
  (fn [{:keys [db]} [_ entities-k lipas-id value]]
    (let [path     (if lipas-id
@@ -91,7 +91,7 @@
                    (when-not lipas-id
                      [:lipas.ui.sports-sites.events/edit-new-site-field [entities-k] entities])]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::remove-field
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id
@@ -99,7 +99,7 @@
                 [:new-sports-site :data :fields])]
      (update-in db path dissoc id))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::remove-locker-room
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id
@@ -107,7 +107,7 @@
                 [:new-sports-site :data :locker-rooms])]
      (update-in db path dissoc id))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::remove-audit
  (fn [db [_ lipas-id {:keys [id]}]]
    (let [path (if lipas-id

@@ -10,7 +10,7 @@
    [lipas.ui.routes :as routes]
    [lipas.ui.utils :refer [==>] :as utils]
    [lipas.ui.views :as views]
-   [re-frame.core :as re-frame]
+   [re-frame.core :as rf]
    [reagent.dom :as reagent-dom]))
 
 (def dev-backend-url "http://localhost:8091/api")
@@ -26,7 +26,7 @@
     (==> [::events/show-test-version-disclaimer])))
 
 (defn ^:dev/after-load mount-root []
-  (re-frame/clear-subscription-cache!)
+  (rf/clear-subscription-cache!)
   (project-devtools/start!)
   (routes/init!)
   (reagent-dom/render
@@ -34,7 +34,7 @@
    (.getElementById js/document "app")))
 
 (defn init []
-  (re-frame/dispatch-sync [::events/initialize-db])
+  (rf/dispatch-sync [::events/initialize-db])
   (dev-setup)
   (qa-setup)
   (mount-root)

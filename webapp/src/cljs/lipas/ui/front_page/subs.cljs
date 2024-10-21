@@ -1,20 +1,19 @@
 (ns lipas.ui.front-page.subs
-  (:require
-   [re-frame.core :as re-frame]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::newsletter
  (fn [db _]
    (get-in db [:front-page :newsletter])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::newsletter-in-progress?
  :<- [::newsletter]
  (fn [newsletter _]
    (:in-progress? newsletter)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::newsletter-data
  :<- [::newsletter]
  (fn [newsletter _]
@@ -26,7 +25,7 @@
          (fn [m]
            (update m :send-time utils/->human-date))))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::newsletter-error
  :<- [::newsletter]
  (fn [newsletter _]

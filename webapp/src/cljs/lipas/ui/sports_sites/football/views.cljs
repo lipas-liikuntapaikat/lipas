@@ -1,13 +1,13 @@
 (ns lipas.ui.sports-sites.football.views
   (:require
-   [lipas.ui.mui :as mui]
    [lipas.ui.components :as lui]
+   [lipas.ui.mui :as mui]
+   [lipas.ui.sports-sites.football.events]
+   [lipas.ui.sports-sites.football.subs]
    [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.ui.sports-sites.football.subs :as subs]
-   [lipas.ui.sports-sites.football.events :as events]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::save-pool
  (fn [db [_ lipas-id value]]
    (let [path (if lipas-id
@@ -15,18 +15,18 @@
                 [:new-sports-site :data :fields])]
      (utils/save-entity db path value))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::reset-dialog
  (fn [db [_ dialog]]
    (assoc-in db [:sports-sites :football :dialogs dialog] {})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-dialog-field
  (fn [db [_ dialog field value]]
    (let [path [:sports-sites :football :dialogs dialog :data field]]
      (utils/set-field db path value))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::dialog-open?
  (fn [db _]
    (-> db :sports-sites :football :dialog-open?)))
@@ -34,12 +34,12 @@
 (defn set-field [dialog field value]
   (#(==> [::set-dialog-field dialog field value])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::pool-form
  (fn [db _]
    (-> db :sports-sites :football :dialogs :pool :data)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::toggle-dialog
  (fn [db [_ dialog data]]
    (let [data (or data (-> db :sports-sites :football :dialogs dialog :data))]

@@ -1,28 +1,27 @@
 (ns lipas.ui.admin.events
-  (:require
-   [ajax.core :as ajax]
-   [clojure.spec.alpha :as s]
-   [lipas.roles :as roles]
-   [lipas.ui.utils :as utils]
-   [lipas.schema.core]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [clojure.spec.alpha :as s]
+            [lipas.roles :as roles]
+            [lipas.schema.core]
+            [lipas.ui.utils :as utils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::filter-users
  (fn [db [_ s]]
    (assoc-in db [:admin :users-filter] s)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-status
  (fn [db [_ s]]
    (assoc-in db [:admin :users-status] s)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::get-users-success
  (fn [db [_ users]]
    (assoc-in db [:admin :users] (utils/index-by :id users))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::failure
  (fn [{:keys [db]} [_ resp]]
    (let [tr (:translator db)]
@@ -32,7 +31,7 @@
                                 (tr :error/unknown))
                   :success? false}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::get-users
  (fn [{:keys [db]} [_ _]]
    (let [token (-> db :user :login :token)]
@@ -44,12 +43,12 @@
        :on-success      [::get-users-success]
        :on-failure      [::failure]}})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::display-user
  (fn [db [_ {:keys [id]}]]
    (assoc-in db [:admin :selected-user] id)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::set-user-to-edit
  (fn [db [_ {:keys [id]}]]
    (assoc-in db
@@ -57,12 +56,12 @@
              (when id
                (update-in (get-in db [:admin :users id]) [:permissions :roles] roles/conform-roles)))))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::edit-user
  (fn [db [_ path value]]
    (assoc-in db (into [:admin :editing-user] path) value)))
 
-(re-frame/reg-event-db ::set-new-role
+(rf/reg-event-db ::set-new-role
   (fn [db [_ role]]
     (let [allowed-keys (set (concat [:role]
                                     (:required-context-keys (get roles/roles (:value role)))
@@ -73,7 +72,7 @@
                                                (dissoc x :role))
                                              (select-keys allowed-keys)))))))
 
-(re-frame/reg-event-db ::set-role-context-value
+(rf/reg-event-db ::set-role-context-value
   (fn [db [_ k value]]
     (let [idx (:edit-role (:admin db))
           path (if idx
@@ -83,7 +82,7 @@
         (update-in db path assoc k value)
         (update-in db path dissoc k)))))
 
-(re-frame/reg-event-db ::add-new-role
+(rf/reg-event-db ::add-new-role
   (fn [db _]
     (let [role (:new-role (:admin db))]
       (if (s/valid? :lipas.user.permissions.roles/role role)
@@ -92,22 +91,22 @@
             (update-in [:admin] dissoc :new-role))
         db))))
 
-(re-frame/reg-event-db ::remove-role
+(rf/reg-event-db ::remove-role
   (fn [db [_ role]]
     (update-in db [:admin :editing-user :permissions :roles]
                (fn [roles]
                  (into (empty roles)
                        (remove #(= role %) roles))))))
 
-(re-frame/reg-event-db ::edit-role
+(rf/reg-event-db ::edit-role
   (fn [db [_ idx]]
     (assoc-in db [:admin :edit-role] idx)))
 
-(re-frame/reg-event-db ::stop-edit
+(rf/reg-event-db ::stop-edit
   (fn [db _]
     (update db :admin dissoc :edit-role)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::grant-access-to-activity-types
  (fn [db _]
    (let [activities (-> db :admin :editing-user :permissions :activities)
@@ -120,7 +119,7 @@
                    (->> (mapcat :type-codes)))]
      (assoc-in db [:admin :editing-user :permissions :types] types))))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-user-success
  (fn [{:keys [db]} [_ user _]]
    (let [tr (:translator db)]
@@ -129,7 +128,7 @@
                  {:message  (tr :notifications/save-success)
                   :success? true}]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::save-user
  (fn [{:keys [db]} [_ user]]
    (let [token (-> db :user :login :token)
@@ -146,7 +145,7 @@
        :on-success      [::save-user-success user]
        :on-failure      [::failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::update-user-status
  (fn [{:keys [db]} [_ user status]]
    (let [token (-> db :user :login :token)
@@ -161,7 +160,7 @@
        :on-success      [::save-user-success (assoc user :status status)]
        :on-failure      [::failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::send-magic-link
  (fn [{:keys [db]} [_ user variant]]
    (let [token (-> db :user :login :token)]
@@ -178,32 +177,32 @@
        :on-failure      [::failure]}
       :dispatch [::close-magic-link-dialog]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::open-magic-link-dialog
  (fn [db [_ _]]
    (assoc-in db [:admin :magic-link-dialog-open?] true)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::close-magic-link-dialog
  (fn [db [_ _]]
    (assoc-in db [:admin :magic-link-dialog-open?] false)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-magic-link-variant
  (fn [db [_ v]]
    (assoc-in db [:admin :selected-magic-link-variant] v)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-color
  (fn [db [_ type-code k v]]
    (assoc-in db [:admin :color-picker type-code k] v)))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-tab
  (fn [db [_ v]]
    (assoc-in db [:admin :selected-tab] v)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::download-new-colors-excel
  (fn [{:keys [db]} _]
    (let [headers [[:type-code "type-code"]
@@ -219,7 +218,7 @@
                   {:data (utils/->excel-data headers data)}}]
      {:lipas.ui.effects/download-excel! config})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::gdpr-remove-user
  (fn [{:keys [db]} [_ user]]
    (let [token (-> db :user :login :token)]
@@ -233,7 +232,7 @@
        :on-success      [::gdpr-remove-user-success]
        :on-failure      [::failure]}})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::gdpr-remove-user-success
  (fn [{:keys [db]} [_ user]]
    (let [tr (:translator db)]

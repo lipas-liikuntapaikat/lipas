@@ -1,14 +1,14 @@
 (ns lipas.ui.swimming-pools.subs
   (:require
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::active-tab
  (fn [db _]
    (-> db :swimming-pools :active-tab)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::latest-swimming-pool-revs
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
@@ -16,7 +16,7 @@
      (into {} (filter (comp #{3110 3120 3130} :type-code :type second)))
      not-empty)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::total-counts
  :<- [::latest-swimming-pool-revs]
  (fn [sites _]
@@ -25,17 +25,17 @@
         (group-by (comp :type-code :type))
         (reduce-kv (fn [m k v] (assoc m k (count v))) {}))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::stats-year
  (fn [db _]
    (-> db :swimming-pools :stats-year)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::stats
  (fn [[_ year] _]
-   [(re-frame/subscribe [::total-counts])
-    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3110])
-    (re-frame/subscribe [:lipas.ui.energy.subs/energy-report year 3130])])
+   [(rf/subscribe [::total-counts])
+    (rf/subscribe [:lipas.ui.energy.subs/energy-report year 3110])
+    (rf/subscribe [:lipas.ui.energy.subs/energy-report year 3130])])
  (fn [[total-counts stats-3110 stats-3130] _]
    (let [total-count (+ (get total-counts 3110)
                         (get total-counts 3130))
@@ -65,83 +65,83 @@
                                     (:data-points stats-3130)))
       :hall-of-fame hof})))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sites-to-edit
  :<- [:lipas.ui.user.subs/sports-sites]
  :<- [::latest-swimming-pool-revs]
  (fn [[_ locale] _]
-   [(re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale])
-    (re-frame/subscribe [::latest-ice-stadium-revs])])
+   [(rf/subscribe [:lipas.ui.user.subs/sports-sites locale])
+    (rf/subscribe [::latest-ice-stadium-revs])])
  (fn [[users-sites sites] _]
    (not-empty (select-keys sites (map :lipas-id users-sites)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sites-to-edit-list
  (fn [[_ locale] _]
-   (re-frame/subscribe [:lipas.ui.user.subs/sports-sites locale]))
+   (rf/subscribe [:lipas.ui.user.subs/sports-sites locale]))
  (fn [sites-list _]
    (->> sites-list
         (filter (comp #{3110 3130} :type-code))
         not-empty)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::dialogs
  (fn [db _]
    (-> db :swimming-pools :dialogs)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::pool-form
  (fn [db _]
    (-> db :swimming-pools :dialogs :pool :data)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sauna-form
  (fn [db _]
    (-> db :swimming-pools :dialogs :sauna :data)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::slide-form
  (fn [db _]
    (-> db :swimming-pools :dialogs :slide :data)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::types-by-type-code
  :<- [:lipas.ui.sports-sites.subs/active-types]
  (fn [types _]
    (select-keys types [3110 3120 3130])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::types-list
  :<- [::types-by-type-code]
  (fn [types _ _]
    (vals types)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::accessibility
  (fn [db _]
    (-> db :swimming-pools :accessibility)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::pool-types
  (fn [db _]
    (-> db :swimming-pools :pool-types)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::pool-structures
  (fn [db _]
    (-> db :swimming-pools :pool-structures)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::heat-sources
  (fn [db _]
    (-> db :swimming-pools :heat-sources)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::filtering-methods
  (fn [db _]
    (-> db :swimming-pools :filtering-methods)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sauna-types
  (fn [db _]
    (-> db :swimming-pools :sauna-types)))
@@ -162,7 +162,7 @@
      :owner             (-> owner locale)
      :admin             (-> admin locale)}))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sites-list
  :<- [::latest-swimming-pool-revs]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -177,13 +177,13 @@
                :types  types}]
      (map (partial ->list-entry data) (vals pools)))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::display-site-raw
  (fn [db _]
    (when-let [lipas-id (-> db :swimming-pools :displaying)]
      (get-in db [:sports-sites lipas-id]))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::display-site
  :<- [::display-site-raw]
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -271,7 +271,7 @@
         :energy-consumption (sort-by :year energy-history)
         :properties         (:properties latest)}))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sites-filter
  (fn [db _]
    (-> db :swimming-pools :sites-filter)))

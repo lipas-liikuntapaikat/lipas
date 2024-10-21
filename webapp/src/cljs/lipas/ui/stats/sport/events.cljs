@@ -2,11 +2,11 @@
   (:require
    [ajax.core :as ajax]
    [lipas.ui.utils :as utils]
-   [re-frame.core :as re-frame]))
+   [re-frame.core :as rf]))
 
 ;;; Sports stats ;;;
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-cities
  (fn [{:keys [db]} [_ v append?]]
    (let [ path  [:stats :sport :selected-cities]
@@ -16,7 +16,7 @@
      {:db         new-db
       :dispatch-n [[::create-report]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-types
  (fn [{:keys [db]} [_ v append?]]
    (let [path   [:stats :sport :selected-types]
@@ -26,18 +26,18 @@
      {:db         new-db
       :dispatch-n [[::create-report]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-metric
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:stats :sport :selected-metric] v)}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-grouping
  (fn [{:keys [db]} [_ v]]
    {:db       (assoc-in db [:stats :sport :selected-grouping] v)
     :dispatch [::create-report]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::clear-filters
  (fn [_]
    {:dispatch-n
@@ -45,7 +45,7 @@
      [::select-types []]
      [::create-report]]}))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::select-filters
  (fn [{:keys [db]} [_ {:keys [type-code city-code]} grouping]]
    (let [city-k        "location.city.city-code"
@@ -65,7 +65,7 @@
       :dispatch-n
       [[::create-report]]})))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-report
  (fn [{:keys [db]} _]
    (let [year       (-> db :stats :sport :population-year)
@@ -81,7 +81,7 @@
     city-codes (assoc :city-codes city-codes)
     type-codes (assoc :type-codes type-codes)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::create-report*
  (fn [{:keys [db]} [_ city-codes type-codes grouping year]]
    (let [query (->query city-codes type-codes grouping year)
@@ -95,12 +95,12 @@
        :on-success      [::report-success]
        :on-failure      [:lipas.ui.stats.events/report-failure]}})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::report-success
  (fn [db [_ resp]]
    (assoc-in db [:stats :sport :data] resp)))
 
-(re-frame/reg-event-fx
+(rf/reg-event-fx
  ::download-excel
  (fn [{:keys [db]} [_ data headers]]
    (let [tr     (:translator db)
@@ -110,7 +110,7 @@
      {:lipas.ui.effects/download-excel! config
       :tracker/event!                   ["stats" "download-excel" "sports-stats"]})))
 
-(re-frame/reg-event-db
+(rf/reg-event-db
  ::select-view
  (fn [db [_ v]]
    (assoc-in db [:stats :sport :selected-view] v)))

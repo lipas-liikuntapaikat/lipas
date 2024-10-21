@@ -1,20 +1,19 @@
 (ns lipas.ui.admin.subs
-  (:require
-   [clojure.string :as string]
-   [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+  (:require [clojure.string :as str]
+            [lipas.utils :as cutils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::users
  (fn [db _]
    (-> db :admin :users)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::users-status
  (fn [db _]
    (-> db :admin :users-status)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::users-filter
  (fn [db _]
    (-> db :admin :users-filter)))
@@ -28,9 +27,9 @@
    :roles        (->> user :permissions :roles
                       (map (fn [x]
                              (tr (keyword :lipas.user.permissions.roles.role-names (:role x)))))
-                      (string/join ", "))})
+                      (str/join ", "))})
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::users-list
  :<- [::users]
  :<- [::users-status]
@@ -45,11 +44,11 @@
        (filter
         #(-> %
              str
-             string/lower-case
-             (string/includes? (string/lower-case filter-text))) users)
+             str/lower-case
+             (str/includes? (str/lower-case filter-text))) users)
        users))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::archived-users-list
  :<- [::archived-users]
  :<- [::users-filter]
@@ -61,21 +60,21 @@
        (filter
         #(-> %
              str
-             string/lower-case
-             (string/includes? (string/lower-case filter-text))) users)
+             str/lower-case
+             (str/includes? (str/lower-case filter-text))) users)
        users))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-user
  (fn [db _]
    (get-in db [:admin :users (-> db :admin :selected-user)])))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::editing-user
  (fn [db _]
    (get-in db [:admin :editing-user])))
 
-(re-frame/reg-sub ::edit-role
+(rf/reg-sub ::edit-role
   (fn [db _]
     (if-let [idx (:edit-role (:admin db))]
       (assoc (get-in db [:admin :editing-user :permissions :roles idx]) :editing? true)
@@ -83,11 +82,11 @@
 
 (defn prettify-timestamp [s]
   (-> s
-      (string/replace "T" " ")
-      (string/split ".")
+      (str/replace "T" " ")
+      (str/split ".")
       first))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::user-history
  :<- [::editing-user]
  (fn [user _]
@@ -104,7 +103,7 @@
                (when (not= "active" (:status v))
                  " POISTUNUT"))})
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::types-list
  :<- [:lipas.ui.sports-sites.subs/all-types]
  (fn [types [_ locale]]
@@ -112,7 +111,7 @@
         (map (partial ->list-entry locale))
         (sort-by :label))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::cities-list
  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
  (fn [cities [_ locale]]
@@ -120,7 +119,7 @@
         (map (partial ->list-entry locale))
         (sort-by :label))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::sites-list
  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
  (fn [sites _]
@@ -128,7 +127,7 @@
         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
         (sort-by :label))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::activities-list
  :<- [:lipas.ui.sports-sites.activities.subs/data]
  (fn [activities [_ locale]]
@@ -136,27 +135,27 @@
         (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
         (sort-by :label))))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::magic-link-dialog-open?
  (fn [db _]
    (-> db :admin :magic-link-dialog-open?)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::magic-link-variants
  (fn [db _]
    (-> db :admin :magic-link-variants)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-magic-link-variant
  (fn [db _]
    (-> db :admin :selected-magic-link-variant)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-colors
  (fn [db _]
    (-> db :admin :color-picker)))
 
-(re-frame/reg-sub
+(rf/reg-sub
  ::selected-tab
  (fn [db _]
    (-> db :admin :selected-tab)))
