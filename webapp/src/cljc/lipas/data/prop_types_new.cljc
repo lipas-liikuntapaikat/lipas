@@ -2,8 +2,8 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.types :as types]
-   [lipas.data.prop-types-old :as old]))
+   [lipas.data.prop-types-old :as old]
+   [lipas.data.types :as types]))
 
 (def all
   (-> old/all

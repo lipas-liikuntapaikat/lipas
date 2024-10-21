@@ -3,9 +3,7 @@
    #?(:clj [cheshire.core :as json])
    #?(:clj [clojure.data.csv :as csv])
    [lipas.data.status :as status]
-   [malli.core :as m]
-   [malli.json-schema :as json-schema]
-   [malli.util :as mu]))
+   [malli.json-schema :as json-schema]))
 
 (def statuses status/statuses)
 

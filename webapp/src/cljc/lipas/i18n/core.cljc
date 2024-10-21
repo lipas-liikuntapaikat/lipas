@@ -1,6 +1,5 @@
 (ns lipas.i18n.core
   (:require
-   [clojure.string :as s]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.ice-stadiums :as ice]
@@ -11,7 +10,7 @@
    [lipas.data.swimming-pools :as pools]
    [lipas.data.types :as types]
    [lipas.i18n.generated :as translations]
-   [lipas.reports :as reports]
+   ;; [lipas.reports :as reports]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 

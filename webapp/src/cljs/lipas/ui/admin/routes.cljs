@@ -9,7 +9,7 @@
     :view   views/main
     :controllers
     [{:start
-      (fn [& params]
+      (fn [& _params]
         (==> [:lipas.ui.admin.events/get-users])
         (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
         (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])
