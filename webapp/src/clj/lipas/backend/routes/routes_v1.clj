@@ -1,5 +1,7 @@
 (ns lipas.backend.routes.routes-v1
-  (:require [reitit.ring :as ring]
+  (:require [clojure.set :as set]
+            [lipas.data.types-old :as old]
+            [lipas.schema.core-legacy]
             [reitit.swagger :as swagger]))
 
 
@@ -20,5 +22,12 @@
                :get
                {:handler
                 (fn [_]
-                  {:status 200
-                   :body   {:status "Sports place types here"}})}}]])
+                  {:status     200
+                   :parameters {:query :lipas.api.get-sports-site/query-params}
+                   :body       (->> (vals old/all)
+                                    (map #(->
+                                           %
+                                           (select-keys [:type-code :name :description :geometry-type :sub-category])
+                                           (set/rename-keys {:type-code :typeCode :geometry-type :geometryType :sub-category :subCategory})
+                                           (update :name :fi)
+                                           (update :description :fi))))})}}]])
