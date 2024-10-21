@@ -6,8 +6,7 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::filters
+(rf/reg-sub ::filters
   (fn [db _]
     (-> db :search :filters)))
 
@@ -17,8 +16,7 @@
     (false? x)   nil
     :else        x))
 
-(rf/reg-sub
-  ::filters-active?
+(rf/reg-sub ::filters-active?
   :<- [::filters]
   :<- [::search-string]
   :<- [:lipas.ui.login.subs/logged-in?]
@@ -28,104 +26,84 @@
           (some (comp some? filter-enabled? second) (dissoc filters :statuses))
           (not= (-> default-db :filters :statuses) (:statuses filters))))))
 
-(rf/reg-sub
-  ::statuses
+(rf/reg-sub ::statuses
   :<- [:lipas.ui.sports-sites.subs/statuses]
   (fn [statuses _]
     (dissoc statuses "incorrect-data")))
 
-(rf/reg-sub
-  ::statuses-filter
+(rf/reg-sub ::statuses-filter
   (fn [db _]
     (-> db :search :filters :statuses set)))
 
-(rf/reg-sub
-  ::types-filter
+(rf/reg-sub ::types-filter
   (fn [db _]
     (-> db :search :filters :type-codes set)))
 
-(rf/reg-sub
-  ::cities-filter
+(rf/reg-sub ::cities-filter
   (fn [db _]
     (-> db :search :filters :city-codes set)))
 
-(rf/reg-sub
-  ::admins-filter
+(rf/reg-sub ::admins-filter
   (fn [db _]
     (-> db :search :filters :admins set)))
 
-(rf/reg-sub
-  ::owners-filter
+(rf/reg-sub ::owners-filter
   (fn [db _]
     (-> db :search :filters :owners set)))
 
-(rf/reg-sub
-  ::area-min-filter
+(rf/reg-sub ::area-min-filter
   (fn [db _]
     (-> db :search :filters :area-min)))
 
-(rf/reg-sub
-  ::area-max-filter
+(rf/reg-sub ::area-max-filter
   (fn [db _]
     (-> db :search :filters :area-max)))
 
-(rf/reg-sub
-  ::construction-year-min-filter
+(rf/reg-sub ::construction-year-min-filter
   (fn [db _]
     (-> db :search :filters :construction-year-min)))
 
-(rf/reg-sub
-  ::construction-year-max-filter
+(rf/reg-sub ::construction-year-max-filter
   (fn [db _]
     (-> db :search :filters :construction-year-max)))
 
-(rf/reg-sub
-  ::surface-materials-filter
+(rf/reg-sub ::surface-materials-filter
   (fn [db _]
     (-> db :search :filters :surface-materials)))
 
-(rf/reg-sub
-  ::edit-permission-filter
+(rf/reg-sub ::edit-permission-filter
   (fn [db _]
     (-> db :search :filters :edit-permission?)))
 
-(rf/reg-sub
-  ::retkikartta-filter
+(rf/reg-sub ::retkikartta-filter
   (fn [db _]
     (-> db :search :filters :retkikartta?)))
 
-(rf/reg-sub
-  ::harrastuspassi-filter
+(rf/reg-sub ::harrastuspassi-filter
   (fn [db _]
     (-> db :search :filters :harrastuspassi?)))
 
-(rf/reg-sub
-  ::school-use-filter
+(rf/reg-sub ::school-use-filter
   (fn [db _]
     (-> db :search :filters :school-use?)))
 
-(rf/reg-sub
-  ::bounding-box-filter
+(rf/reg-sub ::bounding-box-filter
   (fn [db _]
     (-> db :search :filters :bounding-box?)))
 
-(rf/reg-sub
-  ::search-string
+(rf/reg-sub ::search-string
   (fn [db _]
     (-> db :search :string)))
 
-(rf/reg-sub
-  ::search-results
+(rf/reg-sub ::search-results
   (fn [db _]
     (-> db :search :results)))
 
-(rf/reg-sub
-  ::search-results-fast
+(rf/reg-sub ::search-results-fast
   (fn [db _]
     (-> db :search :results-fast)))
 
-(rf/reg-sub
-  ::search-results-total-count
+(rf/reg-sub ::search-results-total-count
   :<- [::search-results-fast]
   (fn [results _]
     (if results
@@ -164,8 +142,7 @@
 (defn ->table-entry2 [m hit]
   (->table-entry m (js->clj hit :keywordize-keys true)))
 
-(rf/reg-sub
-  ::search-results-table-data
+(rf/reg-sub ::search-results-table-data
   :<- [::search-results-fast]
   :<- [:lipas.ui.subs/translator]
   :<- [:lipas.ui.sports-sites.subs/active-types]
@@ -201,8 +178,7 @@
      :location.city.city-code city-code
      :location.city.name      (get-in cities [city-code :name locale])}))
 
-(rf/reg-sub
-  ::search-results-list-data
+(rf/reg-sub ::search-results-list-data
   :<- [::search-results-fast]
   :<- [:lipas.ui.subs/translator]
   :<- [:lipas.ui.sports-sites.subs/active-types]
@@ -215,13 +191,11 @@
            (sort-by :score utils/reverse-cmp)
            vec))))
 
-(rf/reg-sub
-  ::search-results-view
+(rf/reg-sub ::search-results-view
   (fn [db _]
     (-> db :search :results-view)))
 
-(rf/reg-sub
-  ::results-table-columns
+(rf/reg-sub ::results-table-columns
   :<- [:lipas.ui.subs/translator]
   (fn [tr _]
     [[:name                   {:label (tr :lipas.sports-site/name)}]
@@ -242,14 +216,12 @@
      [:event-date             {:label (tr :lipas.sports-site/event-date)}]
      [:lipas-id               {:label "Lipas-id"}]]))
 
-(rf/reg-sub
-  ::selected-results-table-columns
+(rf/reg-sub ::selected-results-table-columns
   (fn [db _]
    ;; (conj :score) for debugging search results
     (-> db :search :selected-results-table-columns set)))
 
-(rf/reg-sub
-  ::results-table-specs
+(rf/reg-sub ::results-table-specs
   (fn [_]
     {:email                  {:spec :lipas.sports-site/email}
      :phone-number           {:spec :lipas.sports-site/phone-number}
@@ -262,8 +234,7 @@
      :marketing-name         {:spec :lipas.sports-site/marketing-name}
      :location.address       {:spec :lipas.location/address :required? true}}))
 
-(rf/reg-sub
-  ::results-table-headers
+(rf/reg-sub ::results-table-headers
   :<- [:lipas.ui.subs/translator]
   :<- [::selected-results-table-columns]
   :<- [::results-table-specs]
@@ -324,18 +295,15 @@
                            (assoc-in [:form :props :required] (-> k specs :required?)))]))
         []))))
 
-(rf/reg-sub
-  ::sort-opts
+(rf/reg-sub ::sort-opts
   (fn [db _]
     (-> db :search :sort)))
 
-(rf/reg-sub
-  ::pagination*
+(rf/reg-sub ::pagination*
   (fn [db _]
     (-> db :search :pagination)))
 
-(rf/reg-sub
-  ::pagination
+(rf/reg-sub ::pagination
   :<- [::pagination*]
   :<- [:lipas.ui.subs/logged-in?]
   (fn [[pagination logged-in?] _]
@@ -343,19 +311,16 @@
       (update pagination :page-sizes conj 5000)
       pagination)))
 
-(rf/reg-sub
-  ::in-progress?
+(rf/reg-sub ::in-progress?
   (fn [db _]
     (-> db :search :in-progress?)))
 
-(rf/reg-sub
-  ::allow-changing-bounding-box-filter?
+(rf/reg-sub ::allow-changing-bounding-box-filter?
   :<- [::pagination]
   (fn [{:keys [page-size]}]
    ;;(>= 500 page-size)
     true))
 
-(rf/reg-sub
-  ::save-dialog-open?
+(rf/reg-sub ::save-dialog-open?
   (fn [db _]
     (-> db :search :save-dialog-open?)))

@@ -3,95 +3,80 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::diversity
+(rf/reg-sub ::diversity
   (fn [db _]
     (-> db :analysis :diversity)))
 
-(rf/reg-sub
-  ::selected-analysis-tab
+(rf/reg-sub ::selected-analysis-tab
   :<- [::diversity]
   (fn [analysis _]
     (:selected-tab analysis)))
 
-(rf/reg-sub
-  ::settings
+(rf/reg-sub ::settings
   :<- [::diversity]
   (fn [analysis _]
     (:settings analysis)))
 
-(rf/reg-sub
-  ::categories
+(rf/reg-sub ::categories
   :<- [::settings]
   (fn [settings _]
     (:categories settings)))
 
-(rf/reg-sub
-  ::category-presets
+(rf/reg-sub ::category-presets
   :<- [::diversity]
   (fn [{:keys [category-presets user-category-presets]} _]
     (->> (merge user-category-presets category-presets)
          (map (fn [[k v]] {:label (:name v) :value k})))))
 
-(rf/reg-sub
-  ::seasonality-enabled?
+(rf/reg-sub ::seasonality-enabled?
   :<- [::diversity]
   (fn [diversity [_ s]]
     (->  diversity
          :selected-seasonalities
          (contains? s))))
 
-(rf/reg-sub
-  ::selected-category-preset
+(rf/reg-sub ::selected-category-preset
   :<- [::diversity]
   (fn [diversity _]
     (:selected-category-preset diversity)))
 
-(rf/reg-sub
-  ::max-distance-m
+(rf/reg-sub ::max-distance-m
   :<- [::settings]
   (fn [settings _]
     (:max-distance-m settings)))
 
-(rf/reg-sub
-  ::analysis-candidates
+(rf/reg-sub ::analysis-candidates
   :<- [::diversity]
   (fn [diversity _]
     (diversity :areas)))
 
-(rf/reg-sub
-  ::selected-export-format
+(rf/reg-sub ::selected-export-format
   :<- [::diversity]
   (fn [diversity _]
     (:selected-export-format diversity)))
 
-(rf/reg-sub
-  ::analysis-candidates-table-rows
+(rf/reg-sub ::analysis-candidates-table-rows
   :<- [::analysis-candidates]
   (fn [m _]
     (->> (vals m)
          (map :properties))))
 
-(rf/reg-sub
-  ::analysis-candidates-table-headers
+(rf/reg-sub ::analysis-candidates-table-headers
   :<- [::analysis-candidates-table-rows]
   (fn [candidates _]
     (-> candidates first keys
         (->> (reduce (fn [m k] (assoc m k {:label (name k)})) {})))))
 
-(rf/reg-sub
-  ::loading?
+(rf/reg-sub ::loading?
   (fn [db _]
     (-> db :analysis :diversity :loading?)))
 
-(rf/reg-sub
-  ::analysis-results
+(rf/reg-sub ::analysis-results
   :<- [::diversity]
   (fn [diversity _]
     (:results diversity)))
 
-(rf/reg-sub
-  ::chart-data
+(rf/reg-sub ::chart-data
   :<- [::analysis-candidates]
   :<- [::analysis-results]
   (fn [[areas results] _]
@@ -99,8 +84,7 @@
           (for [[k v] results]
             [k (assoc v :area (get areas k))]))))
 
-(rf/reg-sub
-  ::grid-chart-data
+(rf/reg-sub ::grid-chart-data
   :<- [::chart-data]
   :<- [::selected-result-areas]
   (fn [[chart-data selected-areas]  _]
@@ -125,8 +109,7 @@
         {:keys [nimi name namn label]} props]
     (str (some identity (into [nimi name namn label] (conj (vals props) id))))))
 
-(rf/reg-sub
-  ::area-chart-data
+(rf/reg-sub ::area-chart-data
   :<- [::chart-data]
   :<- [::selected-result-areas]
   (fn [[chart-data selected-areas]  _]
@@ -142,8 +125,7 @@
          :pwm                  (-> m :aggs :population-weighted-mean utils/round-safe)})
       (sort-by :population utils/reverse-cmp))))
 
-(rf/reg-sub
-  ::result-area-options
+(rf/reg-sub ::result-area-options
   :<- [::chart-data]
   (fn [results _]
     (map
@@ -152,38 +134,32 @@
                                  area-id (:area m))})
       results)))
 
-(rf/reg-sub
-  ::selected-result-areas
+(rf/reg-sub ::selected-result-areas
   :<- [::diversity]
   (fn [diversity _]
     (:selected-result-areas diversity)))
 
-(rf/reg-sub
-  ::any-analysis-done?
+(rf/reg-sub ::any-analysis-done?
   :<- [::analysis-results]
   (fn [results _]
     (some? results)))
 
-(rf/reg-sub
-  ::selected-analysis-chart-tab
+(rf/reg-sub ::selected-analysis-chart-tab
   :<- [::diversity]
   (fn [diversity _]
     (:selected-chart-tab diversity)))
 
-(rf/reg-sub
-  ::category-save-dialog-open?
+(rf/reg-sub ::category-save-dialog-open?
   :<- [::diversity]
   (fn [diversity _]
     (:category-save-dialog-open? diversity)))
 
-(rf/reg-sub
-  ::new-preset-name
+(rf/reg-sub ::new-preset-name
   :<- [::diversity]
   (fn [diversity _]
     (:new-preset-name diversity)))
 
-(rf/reg-sub
-  ::new-preset-name-valid?
+(rf/reg-sub ::new-preset-name-valid?
   :<- [::new-preset-name]
   (fn [s _]
     (and (s/valid? :lipas.diversity.settings.categories/name s))))

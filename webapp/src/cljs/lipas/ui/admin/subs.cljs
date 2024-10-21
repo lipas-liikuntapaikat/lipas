@@ -3,18 +3,15 @@
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::users
+(rf/reg-sub ::users
   (fn [db _]
     (-> db :admin :users)))
 
-(rf/reg-sub
-  ::users-status
+(rf/reg-sub ::users-status
   (fn [db _]
     (-> db :admin :users-status)))
 
-(rf/reg-sub
-  ::users-filter
+(rf/reg-sub ::users-filter
   (fn [db _]
     (-> db :admin :users-filter)))
 
@@ -29,8 +26,7 @@
                              (tr (keyword :lipas.user.permissions.roles.role-names (:role x)))))
                       (str/join ", "))})
 
-(rf/reg-sub
-  ::users-list
+(rf/reg-sub ::users-list
   :<- [::users]
   :<- [::users-status]
   :<- [::users-filter]
@@ -48,8 +44,7 @@
                (str/includes? (str/lower-case filter-text))) users)
         users))))
 
-(rf/reg-sub
-  ::archived-users-list
+(rf/reg-sub ::archived-users-list
   :<- [::archived-users]
   :<- [::users-filter]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -64,13 +59,11 @@
                (str/includes? (str/lower-case filter-text))) users)
         users))))
 
-(rf/reg-sub
-  ::selected-user
+(rf/reg-sub ::selected-user
   (fn [db _]
     (get-in db [:admin :users (-> db :admin :selected-user)])))
 
-(rf/reg-sub
-  ::editing-user
+(rf/reg-sub ::editing-user
   (fn [db _]
     (get-in db [:admin :editing-user])))
 
@@ -86,8 +79,7 @@
       (str/split ".")
       first))
 
-(rf/reg-sub
-  ::user-history
+(rf/reg-sub ::user-history
   :<- [::editing-user]
   (fn [user _]
     (->> user :history :events
@@ -103,59 +95,50 @@
                (when (not= "active" (:status v))
                  " POISTUNUT"))})
 
-(rf/reg-sub
-  ::types-list
+(rf/reg-sub ::types-list
   :<- [:lipas.ui.sports-sites.subs/all-types]
   (fn [types [_ locale]]
     (->> types
          (map (partial ->list-entry locale))
          (sort-by :label))))
 
-(rf/reg-sub
-  ::cities-list
+(rf/reg-sub ::cities-list
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
   (fn [cities [_ locale]]
     (->> cities
          (map (partial ->list-entry locale))
          (sort-by :label))))
 
-(rf/reg-sub
-  ::sites-list
+(rf/reg-sub ::sites-list
   :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
   (fn [sites _]
     (->> sites
          (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
          (sort-by :label))))
 
-(rf/reg-sub
-  ::activities-list
+(rf/reg-sub ::activities-list
   :<- [:lipas.ui.sports-sites.activities.subs/data]
   (fn [activities [_ locale]]
     (->> activities
          (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
          (sort-by :label))))
 
-(rf/reg-sub
-  ::magic-link-dialog-open?
+(rf/reg-sub ::magic-link-dialog-open?
   (fn [db _]
     (-> db :admin :magic-link-dialog-open?)))
 
-(rf/reg-sub
-  ::magic-link-variants
+(rf/reg-sub ::magic-link-variants
   (fn [db _]
     (-> db :admin :magic-link-variants)))
 
-(rf/reg-sub
-  ::selected-magic-link-variant
+(rf/reg-sub ::selected-magic-link-variant
   (fn [db _]
     (-> db :admin :selected-magic-link-variant)))
 
-(rf/reg-sub
-  ::selected-colors
+(rf/reg-sub ::selected-colors
   (fn [db _]
     (-> db :admin :color-picker)))
 
-(rf/reg-sub
-  ::selected-tab
+(rf/reg-sub ::selected-tab
   (fn [db _]
     (-> db :admin :selected-tab)))

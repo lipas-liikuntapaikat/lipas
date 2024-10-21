@@ -3,8 +3,7 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-fx
-  ::get-users-sports-sites
+(rf/reg-event-fx ::get-users-sports-sites
   (fn [{:keys [db]} _]
     (let [roles (-> db :user :login :permissions :roles)]
       {:dispatch-n (->> roles
@@ -13,14 +12,12 @@
                         (mapv (fn [lipas-id]
                                 [:lipas.ui.sports-sites.events/get lipas-id])))})))
 
-(rf/reg-event-fx
-  ::select-sports-site
+(rf/reg-event-fx ::select-sports-site
   (fn [_ [_ site]]
     {:dispatch-n
      [[:lipas.ui.events/navigate :lipas.ui.routes.map/details-view site]]}))
 
-(rf/reg-event-fx
-  ::update-user-data-success
+(rf/reg-event-fx ::update-user-data-success
   (fn [{:keys [db]} [_ resp]]
     (let [tr (-> db :translator)]
       {:db (-> db
@@ -34,16 +31,14 @@
          {:message  (tr :notifications/save-success)
           :success? true}]]})))
 
-(rf/reg-event-fx
-  ::update-user-data-failure
+(rf/reg-event-fx ::update-user-data-failure
   (fn [{:keys [db]} [_ resp]]
     (let [tr (-> db :translator)]
       {:dispatch [:lipas.ui.events/set-active-notification
                   {:message  (tr :notifications/save-failed)
                    :success? false}]})))
 
-(rf/reg-event-fx
-  ::update-user-data
+(rf/reg-event-fx ::update-user-data
   (fn [{:keys [db]} [_ user-data]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
@@ -56,14 +51,12 @@
         :on-success      [::update-user-data-success]
         :on-failure      [::update-user-data-failure]}})))
 
-(rf/reg-event-fx
-  ::select-saved-search
+(rf/reg-event-fx ::select-saved-search
   (fn [_ [_ search]]
     {:dispatch-n
      [[:lipas.ui.search.events/select-saved-search search]
       [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]}))
 
-(rf/reg-event-db
-  ::toggle-experimental-features
+(rf/reg-event-db ::toggle-experimental-features
   (fn [db _]
     (update-in db [:user :experimental-features?] not)))

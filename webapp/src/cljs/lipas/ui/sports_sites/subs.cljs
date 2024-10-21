@@ -8,19 +8,16 @@
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::sports-sites
+(rf/reg-sub ::sports-sites
   (fn [db _]
     (->> db :sports-sites)))
 
-(rf/reg-sub
-  ::sports-site
+(rf/reg-sub ::sports-site
   :<- [::sports-sites]
   (fn [sports-sites [_ lipas-id]]
     (get sports-sites lipas-id)))
 
-(rf/reg-sub
-  ::latest-sports-site-revs
+(rf/reg-sub ::latest-sports-site-revs
   :<- [::sports-sites]
   (fn [sites _]
     (not-empty
@@ -32,15 +29,13 @@
         {}
         sites))))
 
-(rf/reg-sub
-  ::latest-rev
+(rf/reg-sub ::latest-rev
   :<- [::sports-sites]
   (fn [sports-sites [_ lipas-id]]
     (let [latest (get-in sports-sites [lipas-id :latest])]
       (get-in sports-sites [lipas-id :history latest]))))
 
-(rf/reg-sub
-  ::editing-rev
+(rf/reg-sub ::editing-rev
   :<- [::sports-sites]
   :<- [:lipas.ui.map.subs/mode*]
   (fn [[sports-sites map-mode] [_ lipas-id]]
@@ -51,8 +46,7 @@
         (assoc-in edit-data [:location :geometries] geoms)
         edit-data))))
 
-(rf/reg-sub
-  ::editing-first-point
+(rf/reg-sub ::editing-first-point
   (fn [[_ lipas-id] _]
     [(rf/subscribe [::editing-rev lipas-id])
      (rf/subscribe [::new-site-data])])
@@ -65,15 +59,13 @@
         "Polygon"    (-> first-geom :coordinates first first)
         nil))))
 
-(rf/reg-sub
-  ::editing?
+(rf/reg-sub ::editing?
   (fn [[_ lipas-id] _]
     (rf/subscribe [::editing-rev lipas-id]))
   (fn [edit-data _]
     (seq edit-data)))
 
-(rf/reg-sub
-  ::editing-allowed?
+(rf/reg-sub ::editing-allowed?
   (fn [[_ lipas-id] _]
     [(rf/subscribe [::latest-rev lipas-id])
      (rf/subscribe [:lipas.ui.user.subs/user-data])])
@@ -84,8 +76,7 @@
                            "planned"
                            "planning"}))))
 
-(rf/reg-sub
-  ::dead?
+(rf/reg-sub ::dead?
   (fn [[_ lipas-id] _]
     (rf/subscribe [::latest-rev lipas-id]))
   (fn [rev _]
@@ -101,49 +92,41 @@
       (do (tap> (with-out-str (s/explain spec $))) $)
       (s/valid? spec $))))
 
-(rf/reg-sub
-  ::edits-valid?
+(rf/reg-sub ::edits-valid?
   (fn [[_ lipas-id] _]
     (rf/subscribe [::editing-rev lipas-id]))
   (fn [edit-data _]
     (valid? edit-data)))
 
-(rf/reg-sub
-  ::save-in-progress?
+(rf/reg-sub ::save-in-progress?
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :save-in-progress?)))
 
 ;; TODO maybe refactor region related subs to other ns
 
-(rf/reg-sub
-  ::cities-by-city-code
+(rf/reg-sub ::cities-by-city-code
   (fn [db _]
     (-> db :cities)))
 
-(rf/reg-sub
-  ::abolished-cities
+(rf/reg-sub ::abolished-cities
   (fn [db _]
     (-> db :abolished-cities)))
 
-(rf/reg-sub
-  ::cities-list
+(rf/reg-sub ::cities-list
   :<- [::cities-by-city-code]
   (fn [cities _]
     (vals cities)))
 
-(rf/reg-sub
-  ::avi-areas
+(rf/reg-sub ::avi-areas
   (fn [db _]
     (-> db :avi-areas)))
 
-(rf/reg-sub
-  ::provinces
+(rf/reg-sub ::provinces
   (fn [db _]
     (-> db :provinces)))
 
-(rf/reg-sub
-  ::regions
+(rf/reg-sub ::regions
   :<- [::cities-by-city-code]
   :<- [::avi-areas]
   :<- [::provinces]
@@ -156,8 +139,7 @@
       (for [[k v] provinces]
         (assoc v :region-id (str "province-" k))))))
 
-(rf/reg-sub
-  ::type-categories
+(rf/reg-sub ::type-categories
   :<- [::active-types]
   (fn [types _]
     (concat
@@ -168,8 +150,7 @@
       (for [[k v] types/sub-categories]
         (assoc v :cat-id (str "sub-cat-" k))))))
 
-(rf/reg-sub
-  ::type-table
+(rf/reg-sub ::type-table
   :<- [::active-types]
   :<- [:lipas.ui.subs/locale]
   (fn [[types locale]]
@@ -182,94 +163,79 @@
        :description   (get-in m [:description locale])
        :tags          (get-in m [:tags locale])})))
 
-(rf/reg-sub
-  ::admins
+(rf/reg-sub ::admins
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :admins)))
 
-(rf/reg-sub
-  ::owners
+(rf/reg-sub ::owners
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :owners)))
 
-(rf/reg-sub
-  ::all-types
+(rf/reg-sub ::all-types
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :types)))
 
-(rf/reg-sub
-  ::active-types
+(rf/reg-sub ::active-types
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :active-types)))
 
-(rf/reg-sub
-  ::type-by-type-code
+(rf/reg-sub ::type-by-type-code
   :<- [::active-types]
   (fn [types [_ type-code]]
     (types type-code)))
 
-(rf/reg-sub
-  ::types-by-geom-type
+(rf/reg-sub ::types-by-geom-type
   :<- [::active-types]
   (fn [types [_ geom-type]]
     (filter (comp #{geom-type} :geometry-type second) types)))
 
-(rf/reg-sub
-  ::allowed-types
+(rf/reg-sub ::allowed-types
   (fn [[_ geom-type] _]
     [(rf/subscribe [::type-by-geom-type geom-type])
      (rf/subscribe [:lipas.ui.user.subs/permission-to-types])])
   (fn [[m1 m2] _]
     (select-keys m2 (keys m1))))
 
-(rf/reg-sub
-  ::types-list
+(rf/reg-sub ::types-list
   :<- [::active-types]
   (fn [types _]
     (vals types)))
 
-(rf/reg-sub
-  ::materials
+(rf/reg-sub ::materials
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :materials)))
 
-(rf/reg-sub
-  ::building-materials
+(rf/reg-sub ::building-materials
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :building-materials)))
 
-(rf/reg-sub
-  ::supporting-structures
+(rf/reg-sub ::supporting-structures
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :supporting-structures)))
 
-(rf/reg-sub
-  ::ceiling-structures
+(rf/reg-sub ::ceiling-structures
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :ceiling-structures)))
 
-(rf/reg-sub
-  ::surface-materials
+(rf/reg-sub ::surface-materials
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :surface-materials)))
 
-(rf/reg-sub
-  ::prop-types
+(rf/reg-sub ::prop-types
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :prop-types)))
 
-(rf/reg-sub
-  ::types-props
+(rf/reg-sub ::types-props
   :<- [::active-types]
   :<- [::prop-types]
   (fn [[types prop-types] [_ type-code]]
@@ -280,21 +246,18 @@
               {}
               props))))
 
-(rf/reg-sub
-  ::prop-type
+(rf/reg-sub ::prop-type
   :<- [::prop-types]
   (fn [prop-types [_ prop-k]]
     (get prop-types prop-k)))
 
-(rf/reg-sub
-  ::geom-type
+(rf/reg-sub ::geom-type
   (fn [[_ lipas-id]]
     (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id]))
   (fn [rev _]
     (-> rev :location :geometries :features first :geometry :type)))
 
-(rf/reg-sub
-  ::elevation
+(rf/reg-sub ::elevation
   (fn [[_ lipas-id]]
     [(rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/geom-type lipas-id])])
@@ -316,8 +279,7 @@
                                   :distance-km distance-km
                                   :distance-m  (* 1000 distance-km)})))))))))))
 
-(rf/reg-sub
-  ::elevation-stats
+(rf/reg-sub ::elevation-stats
   (fn [[_ lipas-id]]
     (rf/subscribe [:lipas.ui.sports-sites.subs/elevation lipas-id]))
   (fn [elevation _]
@@ -333,8 +295,7 @@
                          (neg? d)  (update res :descend-m + (Math/abs d)))))
                    {:ascend-m 0 :descend-m 0})))))
 
-(rf/reg-sub
-  ::display-site
+(rf/reg-sub ::display-site
   (fn [[_ lipas-id] _]
     [(rf/subscribe [:lipas.ui.sports-sites.subs/sports-site lipas-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
@@ -487,8 +448,7 @@
     coll
     (filter (partial cutils/str-matches? s) coll)))
 
-(rf/reg-sub
-  ::sites-list
+(rf/reg-sub ::sites-list
   :<- [::latest-sports-site-revs]
   :<- [::cities-by-city-code]
   :<- [::admins]
@@ -509,55 +469,47 @@
            (map (partial ->list-entry data))
            (filter-matching sites-filter)))))
 
-(rf/reg-sub
-  ::new-sports-site
+(rf/reg-sub ::new-sports-site
   (fn [db _]
     (-> db :new-sports-site)))
 
-(rf/reg-sub
-  ::adding-new-site?
+(rf/reg-sub ::adding-new-site?
   :<- [::new-sports-site]
   (fn [new-sports-site _]
     (-> new-sports-site :adding?)))
 
-(rf/reg-sub
-  ::new-site-data
+(rf/reg-sub ::new-site-data
   :<- [::new-sports-site]
   (fn [new-sports-site _]
     (-> new-sports-site :data)))
 
-(rf/reg-sub
-  ::new-site-type
+(rf/reg-sub ::new-site-type
   :<- [::new-sports-site]
   :<- [::active-types]
   (fn [[new-sports-site types]  _]
     (let [type-code (-> new-sports-site :type)]
       (get types type-code))))
 
-(rf/reg-sub
-  ::new-site-valid?
+(rf/reg-sub ::new-site-valid?
   :<- [::new-sports-site]
   (fn [new-sports-site _]
     (let [data (-> new-sports-site :data utils/make-saveable)]
       (tap> (s/explain :lipas/new-sports-site data))
       (s/valid? :lipas/new-sports-site data))))
 
-(rf/reg-sub
-  ::statuses
+(rf/reg-sub ::statuses
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :statuses)))
 
-(rf/reg-sub
-  ::delete-statuses
+(rf/reg-sub ::delete-statuses
   :<- [::statuses]
   (fn [statuses _]
     (select-keys statuses ["out-of-service-temporarily"
                            "out-of-service-permanently"
                            "incorrect-data"])))
 
-(rf/reg-sub
-  ::resurrect-statuses
+(rf/reg-sub ::resurrect-statuses
   :<- [::statuses]
   (fn [statuses _]
     (select-keys statuses ["out-of-service-temporarily"
@@ -565,38 +517,32 @@
                            "planned"
                            "planning"])))
 
-(rf/reg-sub
-  ::field-types
+(rf/reg-sub ::field-types
   :<- [::sports-sites]
   (fn [sports-sites _]
     (:field-types sports-sites)))
 
-(rf/reg-sub
-  ::delete-dialog-open?
+(rf/reg-sub ::delete-dialog-open?
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :delete-dialog :open?)))
 
-(rf/reg-sub
-  ::selected-delete-status
+(rf/reg-sub ::selected-delete-status
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :delete-dialog :selected-status)))
 
-(rf/reg-sub
-  ::selected-delete-year
+(rf/reg-sub ::selected-delete-year
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :delete-dialog :selected-year)))
 
-(rf/reg-sub
-  ::sports-site-name-conflict?
+(rf/reg-sub ::sports-site-name-conflict?
   :<- [::sports-sites]
   (fn [sports-sites _]
     (-> sports-sites :name-check :response :status (= :conflict))))
 
-(rf/reg-sub
-  ::city
+(rf/reg-sub ::city
   :<- [::cities-by-city-code]
   (fn [cities [_ city-code]]
     (get cities city-code)))

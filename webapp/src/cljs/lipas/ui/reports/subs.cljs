@@ -1,49 +1,41 @@
 (ns lipas.ui.reports.subs
   (:require [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::reports
+(rf/reg-sub ::reports
   (fn [db _]
     (:reports db)))
 
-(rf/reg-sub
-  ::selected-tab
+(rf/reg-sub ::selected-tab
   :<- [::reports]
   (fn [reports _]
     (:selected-tab reports)))
 
-(rf/reg-sub
-  ::dialog-open?
+(rf/reg-sub ::dialog-open?
   :<- [::reports]
   (fn [reports _]
     (:dialog-open? reports)))
 
-(rf/reg-sub
-  ::downloading?
+(rf/reg-sub ::downloading?
   :<- [::reports]
   (fn [reports _]
     (:downloading? reports)))
 
-(rf/reg-sub
-  ::fields
+(rf/reg-sub ::fields
   :<- [::reports]
   (fn [reports _]
     (:fields reports)))
 
-(rf/reg-sub
-  ::selected-fields
+(rf/reg-sub ::selected-fields
   :<- [::reports]
   (fn [reports _]
     (:selected-fields reports)))
 
-(rf/reg-sub
-  ::selected-format
+(rf/reg-sub ::selected-format
   :<- [::reports]
   (fn [reports _]
     (:selected-format reports)))
 
-(rf/reg-sub
-  ::save-dialog-open?
+(rf/reg-sub ::save-dialog-open?
   :<- [::reports]
   (fn [reports _]
     (:save-dialog-open? reports)))
@@ -85,8 +77,7 @@
   {:fields (keys fields)
    :label  (tr :actions/select-all)})
 
-(rf/reg-sub
-  ::quick-selects
+(rf/reg-sub ::quick-selects
   :<- [::fields]
   :<- [:lipas.ui.subs/translator]
   :<- [:lipas.ui.subs/logged-in?]
@@ -98,8 +89,7 @@
 
 ;; Excel generation halts after certain threshold. Not sure why.
 ;; CSV and GeoJSON can be streamed
-(rf/reg-sub
-  ::limits-exceeded?
+(rf/reg-sub ::limits-exceeded?
   :<- [::selected-fields]
   :<- [:lipas.ui.search.subs/search-results-total-count]
   :<- [::selected-format]

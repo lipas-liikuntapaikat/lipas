@@ -6,8 +6,7 @@
 
 ;;; Age structure ;;;
 
-(rf/reg-event-fx
-  ::select-cities
+(rf/reg-event-fx ::select-cities
   (fn [{:keys [db]} [_ v append?]]
     (let [path   [:stats :age-structure :selected-cities]
           new-db (if append?
@@ -16,8 +15,7 @@
       {:db         new-db
        :dispatch-n [[::create-report]]})))
 
-(rf/reg-event-fx
-  ::select-types
+(rf/reg-event-fx ::select-types
   (fn [{:keys [db]} [_ v append?]]
     (let [path   [:stats :age-structure :selected-types]
           new-db (if append?
@@ -26,20 +24,17 @@
       {:db         new-db
        :dispatch-n [[::create-report]]})))
 
-(rf/reg-event-fx
-  ::select-grouping
+(rf/reg-event-fx ::select-grouping
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:stats :age-structure :selected-grouping] v)
      :dispatch [::create-report]}))
 
-(rf/reg-event-fx
-  ::select-interval
+(rf/reg-event-fx ::select-interval
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:stats :age-structure :selected-interval] v)
      :dispatch [::create-report]}))
 
-(rf/reg-event-fx
-  ::clear-filters
+(rf/reg-event-fx ::clear-filters
   (fn [_]
     {:dispatch-n
      [[::select-cities []]
@@ -71,8 +66,7 @@
                      "owner" :owner.keyword
                      "admin" :admin.keyword)}}}]}}}}))
 
-(rf/reg-event-fx
-  ::create-report
+(rf/reg-event-fx ::create-report
   (fn [{:keys [db]} _]
     (let [city-codes (-> db :stats :age-structure :selected-cities)
           type-codes (-> db :stats :age-structure :selected-types)
@@ -81,8 +75,7 @@
       {:dispatch
        [::create-report* city-codes type-codes grouping interval]})))
 
-(rf/reg-event-fx
-  ::create-report*
+(rf/reg-event-fx ::create-report*
   (fn [{:keys [db]} [_ city-codes type-codes grouping interval]]
     (let [query (->query city-codes type-codes grouping interval)]
       {:http-xhrio
@@ -96,14 +89,12 @@
         :on-success      [::report-success]
         :on-failure      [:lipas.ui.stats.events/report-failure]}})))
 
-(rf/reg-event-db
-  ::report-success
+(rf/reg-event-db ::report-success
   (fn [db [_ resp]]
     (let [stats (-> resp :aggregations)]
       (assoc-in db [:stats :age-structure :data] stats))))
 
-(rf/reg-event-fx
-  ::download-excel
+(rf/reg-event-fx ::download-excel
   (fn [{:keys [db]} [_ data headers]]
     (let [tr     (:translator db)
           config {:filename (tr :stats/age-structure-stats)
@@ -112,7 +103,6 @@
       {:lipas.ui.effects/download-excel! config
        :tracker/event!                   ["stats" "download-excel" "age-structure"]})))
 
-(rf/reg-event-db
-  ::select-view
+(rf/reg-event-db ::select-view
   (fn [db [_ v]]
     (assoc-in db [:stats :age-structure :selected-view] v)))

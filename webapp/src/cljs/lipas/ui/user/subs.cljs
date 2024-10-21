@@ -8,8 +8,7 @@
   (fn [db _]
     (:logged-in? db)))
 
-(rf/reg-sub
-  ::user
+(rf/reg-sub ::user
   (fn [db _]
     (:user db)))
 
@@ -43,8 +42,7 @@
                                               :site/create-edit))
                      all-types))))
 
-(rf/reg-sub
-  ::can-add-sports-sites?
+(rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any
         :city-code ::roles/any}
@@ -95,8 +93,7 @@
 ;; This is used in ice-stadiums and swimming-pools views list
 ;; which sites does the user have access to modify to report the
 ;; energy use values.
-(rf/reg-sub
-  ::sports-sites
+(rf/reg-sub ::sports-sites
   :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -108,46 +105,39 @@
            (filter (partial show? user))
            (map (partial ->list-entry locale cities types))))))
 
-(rf/reg-sub
-  ::selected-sports-site
+(rf/reg-sub ::selected-sports-site
   :<- [::user]
   (fn [user _]
     (-> user :selected-sports-site)))
 
-(rf/reg-sub
-  ::saved-reports
+(rf/reg-sub ::saved-reports
   :<- [::user-data]
   (fn [user]
     (-> user :user-data :saved-reports)))
 
-(rf/reg-sub
-  ::saved-searches
+(rf/reg-sub ::saved-searches
   :<- [::user-data]
   (fn [user _]
     (-> user :user-data :saved-searches)))
 
-(rf/reg-sub
-  ::saved-diversity-settings
+(rf/reg-sub ::saved-diversity-settings
   :<- [::user-data]
   (fn [user _]
     (-> user :user-data :saved-diversity-settings)))
 
 ;; Role basic permissions
 
-(rf/reg-sub
-  ::roles
+(rf/reg-sub ::roles
   :<- [::user-data]
   (fn [user _]
     (:roles (:permissions user))))
 
-(rf/reg-sub
-  ::dev-overrides
+(rf/reg-sub ::dev-overrides
   (fn [db _]
     ;; This value is only ever set from dev tools
     (:lipas.ui.project-devtools/privilege-override db)))
 
-(rf/reg-sub
-  ::check-privilege
+(rf/reg-sub ::check-privilege
   :<- [::user-data]
   (fn [user [_ role-context k disable-overrides]]
     (let [user (if disable-overrides

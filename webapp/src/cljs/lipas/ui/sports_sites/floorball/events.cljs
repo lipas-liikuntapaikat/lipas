@@ -53,22 +53,19 @@
                               props
                               prop-k->derive-fn)))))
 
-(rf/reg-event-db
-  ::set-dialog-field
+(rf/reg-event-db ::set-dialog-field
   (fn [db [_ dialog field value]]
     (let [path [:sports-sites :floorball :dialogs dialog :data field]]
       (utils/set-field db path value))))
 
-(rf/reg-event-db
-  ::reset-dialog
+(rf/reg-event-db ::reset-dialog
   (fn [db [_ dialog]]
     (assoc-in db
               [:sports-sites :floorball :dialogs dialog]
               (-> floorball/default-db
                   :dialogs dialog))))
 
-(rf/reg-event-db
-  ::toggle-dialog
+(rf/reg-event-db ::toggle-dialog
   (fn [db [_ dialog data]]
     (let [data (or data (-> db :sports-sites :floorball :dialogs dialog :data)
                    (-> floorball/default-db :dialogs dialog :data))]
@@ -76,8 +73,7 @@
           (update-in [:sports-sites :floorball :dialogs dialog :open?] not)
           (assoc-in [:sports-sites :floorball :dialogs dialog :data] data)))))
 
-(rf/reg-event-fx
-  ::save-dialog
+(rf/reg-event-fx ::save-dialog
   (fn [{:keys [db]} [_ entities-k lipas-id value]]
     (let [path     (if lipas-id
                      [:sports-sites lipas-id :editing entities-k]
@@ -90,24 +86,21 @@
                     (when-not lipas-id
                       [:lipas.ui.sports-sites.events/edit-new-site-field [entities-k] entities])]})))
 
-(rf/reg-event-db
-  ::remove-field
+(rf/reg-event-db ::remove-field
   (fn [db [_ lipas-id {:keys [id]}]]
     (let [path (if lipas-id
                  [:sports-sites lipas-id :editing :fields]
                  [:new-sports-site :data :fields])]
       (update-in db path dissoc id))))
 
-(rf/reg-event-db
-  ::remove-locker-room
+(rf/reg-event-db ::remove-locker-room
   (fn [db [_ lipas-id {:keys [id]}]]
     (let [path (if lipas-id
                  [:sports-sites lipas-id :editing :locker-rooms]
                  [:new-sports-site :data :locker-rooms])]
       (update-in db path dissoc id))))
 
-(rf/reg-event-db
-  ::remove-audit
+(rf/reg-event-db ::remove-audit
   (fn [db [_ lipas-id {:keys [id]}]]
     (let [path (if lipas-id
                  [:sports-sites lipas-id :editing :audits]

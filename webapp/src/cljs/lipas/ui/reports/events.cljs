@@ -5,20 +5,17 @@
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db
-  ::toggle-dialog
+(rf/reg-event-db ::toggle-dialog
   (fn [db _]
     (update-in db [:reports :dialog-open?] not)))
 
-(rf/reg-event-db
-  ::set-selected-fields
+(rf/reg-event-db ::set-selected-fields
   (fn [db [_ v append?]]
     (if append?
       (update-in db [:reports :selected-fields] (comp set into) v)
       (assoc-in db [:reports :selected-fields] v))))
 
-(rf/reg-event-db
-  ::set-selected-format
+(rf/reg-event-db ::set-selected-format
   (fn [db [_ v]]
     (assoc-in db [:reports :selected-format] v)))
 
@@ -53,8 +50,7 @@
           [basic
            (sort others)])))
 
-(rf/reg-event-fx
-  ::create-report
+(rf/reg-event-fx ::create-report
   (fn [{:keys [db]} [_ query fields fmt]]
     (let [fields       (sort-headers fields)
           content-type (condp = fmt
@@ -77,16 +73,14 @@
         :on-failure      [::report-failure]}
        :db (assoc-in db [:reports :downloading?] true)})))
 
-(rf/reg-event-fx
-  ::report-success
+(rf/reg-event-fx ::report-success
   (fn [{:keys [db]} [_ fmt content-type blob]]
     {:lipas.ui.effects/save-as! {:blob         blob
                                  :filename     (str "lipas." fmt)
                                  :content-type content-type}
      :db (assoc-in db [:reports :downloading?] false)}))
 
-(rf/reg-event-fx
-  ::report-failure
+(rf/reg-event-fx ::report-failure
   (fn [{:keys [db]} [_ _error]]
     (let [tr     (-> db :translator)]
       {:db             (assoc-in db [:reports :downloading?] false)
@@ -95,8 +89,7 @@
                         {:message  (tr :notifications/get-failed)
                          :success? false}]})))
 
-(rf/reg-event-fx
-  ::save-current-report
+(rf/reg-event-fx ::save-current-report
   (fn [{:keys [db]} [_ name]]
     (let [m         {:name name :fields (-> db :reports :selected-fields)}
           user-data (-> db
@@ -109,13 +102,11 @@
         [::toggle-save-dialog]]
        :tracker/event! ["user" "save-my-report"]})))
 
-(rf/reg-event-fx
-  ::open-saved-report
+(rf/reg-event-fx ::open-saved-report
   (fn [_ [_ fields]]
     {:dispatch       [::set-selected-fields fields]
      :tracker/event! ["user" "open-my-report"]}))
 
-(rf/reg-event-db
-  ::toggle-save-dialog
+(rf/reg-event-db ::toggle-save-dialog
   (fn [db _]
     (update-in db [:reports :save-dialog-open?] not)))

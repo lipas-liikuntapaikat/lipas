@@ -7,8 +7,7 @@
             [re-frame.core :as rf]
             [reitit.frontend.controllers :as rfc]))
 
-(rf/reg-event-fx
-  ::initialize-db
+(rf/reg-event-fx ::initialize-db
   [(rf/inject-cofx :lipas.ui.local-storage/get :login-data)]
   (fn  [{:keys [local-storage]}]
     (if-let [login-data (:login-data local-storage)]
@@ -24,49 +23,40 @@
       {:db                     db/default-db
        :tracker/set-dimension! [:user-type "guest"]})))
 
-(rf/reg-event-db
-  ::set-backend-url
+(rf/reg-event-db ::set-backend-url
   (fn [db [_ url]]
     (assoc db :backend-url url)))
 
-(rf/reg-event-db
-  ::show-account-menu
+(rf/reg-event-db ::show-account-menu
   (fn [db [_ anchor]]
     (assoc db :account-menu-anchor anchor)))
 
-(rf/reg-event-db
-  ::toggle-drawer
+(rf/reg-event-db ::toggle-drawer
   (fn [db [_ _]]
     (update db :drawer-open? not)))
 
-(rf/reg-event-db
-  ::set-translator
+(rf/reg-event-db ::set-translator
   (fn [db [_ locale]]
     (assoc db :translator (i18n/->tr-fn locale))))
 
-(rf/reg-event-db
-  ::set-active-notification
+(rf/reg-event-db ::set-active-notification
   (fn [db [_ notification]]
     (assoc db :active-notification notification)))
 
-(rf/reg-event-db
-  ::show-test-version-disclaimer
+(rf/reg-event-db ::show-test-version-disclaimer
   (fn [db _]
     (let [tr (:translator db)]
       (assoc db :active-disclaimer (tr :disclaimer/test-version)))))
 
-(rf/reg-event-db
-  ::set-active-disclaimer
+(rf/reg-event-db ::set-active-disclaimer
   (fn [db [_ disclaimer]]
     (assoc db :active-disclaimer disclaimer)))
 
-(rf/reg-event-db
-  ::confirmed
+(rf/reg-event-db ::confirmed
   (fn [db _]
     (assoc db :active-confirmation nil)))
 
-(rf/reg-event-db
-  ::confirm
+(rf/reg-event-db ::confirm
   (fn [db [_ message on-confirm on-decline]]
     (let [tr           (:translator db)
           close        #(==> [:lipas.ui.events/confirmed])
@@ -81,13 +71,11 @@
                         :on-cancel     close}]
       (assoc db :active-confirmation confirmation))))
 
-(rf/reg-event-fx
-  ::navigate
+(rf/reg-event-fx ::navigate
   (fn [_ [_ path & opts]]
     {:lipas.ui.effects/navigate! (into [path] opts)}))
 
-(rf/reg-event-fx
-  ::navigated
+(rf/reg-event-fx ::navigated
   (fn [{:keys [db]} [_ {:keys [path] :as new-match}]]
     (if new-match
       (let [old-match (:current-route db)
@@ -96,8 +84,7 @@
          :tracker/page-view! [path]})
       {})))
 
-(rf/reg-event-fx
-  ::display
+(rf/reg-event-fx ::display
   (fn [{:keys [db]} [_ lipas-id]]
     (let [latest    (get-in db [:sports-sites lipas-id :latest])
           site      (get-in db [:sports-sites lipas-id :history latest])
@@ -108,8 +95,7 @@
                       "liikuntapaikat")]
       {:dispatch [::navigate (str "/#/" path "/" lipas-id)]})))
 
-(rf/reg-event-fx
-  ::report-energy-consumption
+(rf/reg-event-fx ::report-energy-consumption
   (fn [{:keys [db]} [_ lipas-id]]
     (let [latest    (get-in db [:sports-sites lipas-id :latest])
           site      (get-in db [:sports-sites lipas-id :history latest])
@@ -121,7 +107,6 @@
        [[::navigate (str "/#/" path)]
         [:lipas.ui.energy.events/select-energy-consumption-site lipas-id]]})))
 
-(rf/reg-event-db
-  ::set-screen-size
+(rf/reg-event-db ::set-screen-size
   (fn [db [_ screen-size]]
     (assoc db :screen-size screen-size)))

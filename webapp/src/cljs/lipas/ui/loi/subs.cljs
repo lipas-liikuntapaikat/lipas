@@ -3,45 +3,38 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::loi
+(rf/reg-sub ::loi
   (fn [db _]
     (:loi db)))
 
-(rf/reg-sub
-  ::statuses
+(rf/reg-sub ::statuses
   :<- [::loi]
   (fn [loi _]
     (:statuses loi)))
 
-(rf/reg-sub
-  ::delete-statuses
+(rf/reg-sub ::delete-statuses
   :<- [::statuses]
   (fn [statuses _]
     (select-keys statuses ["out-of-service-temporarily"
                            "out-of-service-permanently"
                            "incorrect-data"])))
 
-(rf/reg-sub
-  ::view-mode
+(rf/reg-sub ::view-mode
   :<- [::loi]
   (fn [loi _]
     (:view-mode loi)))
 
-(rf/reg-sub
-  ::selected-loi
+(rf/reg-sub ::selected-loi
   :<- [::loi]
   (fn [loi _]
     (:selected-loi loi)))
 
-(rf/reg-sub
-  ::editing-loi
+(rf/reg-sub ::editing-loi
   :<- [::loi]
   (fn [loi _]
     (:editing loi)))
 
-(rf/reg-sub
-  ::edits-valid?
+(rf/reg-sub ::edits-valid?
   :<- [::editing-loi]
   :<- [::geoms]
   (fn [[loi geoms] _]
@@ -52,26 +45,22 @@
         (and geoms
              (s/valid? :lipas.loi/document data))))))
 
-(rf/reg-sub
-  ::loi-categories
+(rf/reg-sub ::loi-categories
   :<- [::loi]
   (fn [loi _]
     (:categories loi)))
 
-(rf/reg-sub
-  ::props
+(rf/reg-sub ::props
   :<- [::loi-categories]
   (fn [categories [_ loi-category loi-type]]
     (get-in categories [loi-category :types (keyword loi-type) :props])))
 
-(rf/reg-sub
-  ::geoms
+(rf/reg-sub ::geoms
   :<- [:lipas.ui.map.subs/new-geom]
   (fn [geoms _]
     geoms))
 
-(rf/reg-sub
-  ::geom-type
+(rf/reg-sub ::geom-type
   :<- [::loi-categories]
   :<- [::editing-loi]
   (fn [[cats edit-data] _]
@@ -79,14 +68,12 @@
           type     (:loi-type edit-data)]
       (get-in cats [category :types (keyword type) :geom-type] "Point"))))
 
-(rf/reg-sub
-  ::search-results
+(rf/reg-sub ::search-results
   :<- [::loi]
   (fn [loi _]
     (:search-results loi)))
 
-(rf/reg-sub
-  ::popup-localized
+(rf/reg-sub ::popup-localized
   :<- [::loi-categories]
   :<- [:lipas.ui.subs/translator]
   (fn [[cats tr] [_ loi-type loi-category]]

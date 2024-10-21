@@ -4,61 +4,51 @@
 
 ;;; Sports stats ;;;
 
-(rf/reg-sub
-  ::sports-stats
+(rf/reg-sub ::sports-stats
   (fn [db _]
     (-> db :stats :sport)))
 
-(rf/reg-sub
-  ::metrics
+(rf/reg-sub ::metrics
   :<- [::sports-stats]
   (fn [m _]
     (:metrics m)))
 
-(rf/reg-sub
-  ::selected-metric
+(rf/reg-sub ::selected-metric
   :<- [::sports-stats]
   (fn [m _]
     (:selected-metric m)))
 
-(rf/reg-sub
-  ::groupings
+(rf/reg-sub ::groupings
   :<- [::sports-stats]
   (fn [m _]
     (:groupings m)))
 
-(rf/reg-sub
-  ::selected-grouping
+(rf/reg-sub ::selected-grouping
   :<- [::sports-stats]
   (fn [m _]
     (:selected-grouping m)))
 
-(rf/reg-sub
-  ::selected-cities
+(rf/reg-sub ::selected-cities
   :<- [::sports-stats]
   (fn [m _]
     (:selected-cities m)))
 
-(rf/reg-sub
-  ::selected-types
+(rf/reg-sub ::selected-types
   :<- [::sports-stats]
   (fn [m _]
     (:selected-types m)))
 
-(rf/reg-sub
-  ::population-year
+(rf/reg-sub ::population-year
   :<- [::sports-stats]
   (fn [m _]
     (:population-year m)))
 
-(rf/reg-sub
-  ::data*
+(rf/reg-sub ::data*
   :<- [::sports-stats]
   (fn [m _]
     (:data m)))
 
-(rf/reg-sub
-  ::data
+(rf/reg-sub ::data
   :<- [::data*]
   :<- [:lipas.ui.subs/translator]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
@@ -88,8 +78,7 @@
              [])
            (sort-by (keyword metric) utils/reverse-cmp)))))
 
-(rf/reg-sub
-  ::labels
+(rf/reg-sub ::labels
   :<- [:lipas.ui.subs/translator]
   :<- [::metrics]
   :<- [::population-year]
@@ -108,8 +97,7 @@
              :length-km-count (tr :stats/length-km-count)}
             (map (juxt (comp keyword first) (comp locale second)) metrics)))))
 
-(rf/reg-sub
-  ::headers
+(rf/reg-sub ::headers
   :<- [:lipas.ui.subs/translator]
   :<- [::metrics]
   :<- [::selected-grouping]
@@ -139,8 +127,7 @@
            [:length-km-max   (tr :stats/length-km-max)]]
           (map (juxt (comp keyword first) (comp locale second)) metrics))))))
 
-(rf/reg-sub
-  ::selected-view
+(rf/reg-sub ::selected-view
   :<- [::sports-stats]
   (fn [m _]
     (:selected-view m)))

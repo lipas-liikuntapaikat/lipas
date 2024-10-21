@@ -49,8 +49,7 @@
   (fn [fs _]
     fs))
 
-(rf/reg-sub
-  ::route-view
+(rf/reg-sub ::route-view
   :<- [::activities]
   :<- [::routes]
   (fn [[activities routes] _]
@@ -60,8 +59,7 @@
         :multi
         :single))))
 
-(rf/reg-sub
-  ::routes
+(rf/reg-sub ::routes
   (fn [[_ lipas-id _]]
     [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
      #_(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
@@ -113,45 +111,39 @@
               (assoc :route-length (map-utils/calculate-length-km fcoll))
               (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
-(rf/reg-sub
-  ::route-count
+(rf/reg-sub ::route-count
   (fn [[_ lipas-id activity-k]]
     [(rf/subscribe [::routes lipas-id activity-k])])
   (fn [[routes] _]
     (count routes)))
 
-(rf/reg-sub
-  ::selected-route-id
+(rf/reg-sub ::selected-route-id
   :<- [::activities]
   :<- [::routes]
   (fn [[activities routes] _]
     (:selected-route-id activities)))
 
-(rf/reg-sub
-  ::lipas-prop-value
+(rf/reg-sub ::lipas-prop-value
   :<- [:lipas.ui.map.subs/selected-sports-site]
   (fn [site-data  [_ prop-k read-only?]]
     (if read-only?
       (get-in site-data [:display-data :properties prop-k])
       (get-in site-data [:edit-data :properties prop-k]))))
 
-(rf/reg-sub
-  ::geoms
+(rf/reg-sub ::geoms
   :<- [:lipas.ui.map.subs/selected-sports-site]
   (fn [site-data [_ read-only?]]
     (if read-only?
       (get-in site-data [:display-data :location :geometries])
       (get-in site-data [:edit-data :location :geometries]))))
 
-(rf/reg-sub
-  ::geom-type
+(rf/reg-sub ::geom-type
   (fn [[_ read-only?]]
     [(rf/subscribe [::geoms read-only?])])
   (fn [[geoms] _]
     (-> geoms :features first :geometry :type)))
 
-(rf/reg-sub
-  ::field-sorter
+(rf/reg-sub ::field-sorter
   :<- [::activities]
   (fn [activities [_ activity-k]]
     (or (get-in activities [:field-sorters activity-k])

@@ -3,13 +3,11 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db
-  ::clear-feedback
+(rf/reg-event-db ::clear-feedback
   (fn [db _]
     (assoc-in db [:reset-password] nil)))
 
-(rf/reg-event-fx
-  ::request-success
+(rf/reg-event-fx ::request-success
   (fn [{:keys [db]} [_ _]]
     (let [tr (:translator db)]
       {:dispatch       [:lipas.ui.events/set-active-notification
@@ -18,8 +16,7 @@
        :db             (assoc-in db [:reset-password :success] :reset-link-sent)
        :tracker/event! ["user" "reset-password-request"]})))
 
-(rf/reg-event-fx
-  ::request-password-reset
+(rf/reg-event-fx ::request-password-reset
   (fn [{:keys [db]} [_ email]]
     {:http-xhrio
      {:method          :post
@@ -32,8 +29,7 @@
       :on-failure      [::failure]}
      :dispatch [::clear-feedback]}))
 
-(rf/reg-event-fx
-  ::reset-success
+(rf/reg-event-fx ::reset-success
   (fn [{:keys [db]} [_ _]]
     (let [tr (:translator db)]
       {:dispatch-n     [[:lipas.ui.events/set-active-notification
@@ -43,8 +39,7 @@
        :db             (assoc-in db [:reset-password :success] :reset-link-sent)
        :tracker/event! ["user" "reset-password-success"]})))
 
-(rf/reg-event-fx
-  ::reset-password
+(rf/reg-event-fx ::reset-password
   (fn [{:keys [db]} [_ password token]]
     {:http-xhrio
      {:method          :post
@@ -57,8 +52,7 @@
       :on-failure      [::failure]}
      :dispatch [::clear-feedback]}))
 
-(rf/reg-event-fx
-  ::failure
+(rf/reg-event-fx ::failure
   (fn [{:keys [db]} [_ resp]]
     (let [tr     (:translator db)
           error  (or (-> resp :response :type keyword)

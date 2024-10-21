@@ -2,8 +2,7 @@
   (:require [lipas.roles :as roles]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::floorball
+(rf/reg-sub ::floorball
   (fn [db _]
     (-> db :sports-sites :floorball)))
 
@@ -15,56 +14,47 @@
       :floorball
       :public)))
 
-(rf/reg-sub
-  ::type-codes
+(rf/reg-sub ::type-codes
   :<- [::floorball]
   (fn [floorball _]
     (:type-codes floorball)))
 
-(rf/reg-sub
-  ::dialog-open?
+(rf/reg-sub ::dialog-open?
   :<- [::floorball]
   (fn [floorball [_ dialog]]
     (get-in floorball [:dialogs dialog :open?])))
 
-(rf/reg-sub
-  ::dialog-data
+(rf/reg-sub ::dialog-data
   :<- [::floorball]
   (fn [floorball [_ dialog]]
     (get-in floorball [:dialogs dialog :data])))
 
-(rf/reg-sub
-  ::floor-elasticity
+(rf/reg-sub ::floor-elasticity
   :<- [::floorball]
   (fn [floorball _]
     (:floor-elasticity floorball)))
 
-(rf/reg-sub
-  ::player-entrance
+(rf/reg-sub ::player-entrance
   :<- [::floorball]
   (fn [floorball _]
     (:player-entrance floorball)))
 
-(rf/reg-sub
-  ::audience-stand-access
+(rf/reg-sub ::audience-stand-access
   :<- [::floorball]
   (fn [floorball _]
     (:audience-stand-access floorball)))
 
-(rf/reg-sub
-  ::car-parking-economics-model
+(rf/reg-sub ::car-parking-economics-model
   :<- [::floorball]
   (fn [floorball _]
     (:car-parking-economics-model floorball)))
 
-(rf/reg-sub
-  ::roof-trussess-operation-model
+(rf/reg-sub ::roof-trussess-operation-model
   :<- [::floorball]
   (fn [floorball _]
     (:roof-trussess-operation-model floorball)))
 
-(rf/reg-sub
-  ::field-surface-materials
+(rf/reg-sub ::field-surface-materials
   :<- [::floorball]
   (fn [floorball _]
     (:field-surface-materials floorball)))

@@ -4,73 +4,59 @@
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::selected-view
+(rf/reg-sub ::selected-view
   (fn [db _]
     (-> db :stats :finance :selected-view)))
 
-(rf/reg-sub
-  ::selected-cities
+(rf/reg-sub ::selected-cities
   (fn [db _]
     (-> db :stats :finance :selected-cities)))
 
-(rf/reg-sub
-  ::selected-year
+(rf/reg-sub ::selected-year
   (fn [db _]
     (-> db :stats :finance :selected-year)))
 
-(rf/reg-sub
-  ::selected-unit
+(rf/reg-sub ::selected-unit
   (fn [db _]
     (-> db :stats :finance :selected-unit)))
 
-(rf/reg-sub
-  ::selected-city-service
+(rf/reg-sub ::selected-city-service
   (fn [db _]
     (-> db :stats :finance :selected-city-service)))
 
-(rf/reg-sub
-  ::selected-metrics
+(rf/reg-sub ::selected-metrics
   (fn [db _]
     (-> db :stats :finance :selected-metrics)))
 
-(rf/reg-sub
-  ::selected-grouping
+(rf/reg-sub ::selected-grouping
   (fn [db _]
     (-> db :stats :finance :selected-grouping)))
 
-(rf/reg-sub
-  ::selected-ranking-metric
+(rf/reg-sub ::selected-ranking-metric
   (fn [db _]
     (-> db :stats :finance :selected-ranking-metric)))
 
-(rf/reg-sub
-  ::units
+(rf/reg-sub ::units
   (fn [db _]
     (-> db :stats :finance :units)))
 
-(rf/reg-sub
-  ::city-services
+(rf/reg-sub ::city-services
   (fn [db _]
     (-> db :stats :finance :city-services)))
 
-(rf/reg-sub
-  ::metrics
+(rf/reg-sub ::metrics
   (fn [db _]
     (-> db :stats :finance :metrics)))
 
-(rf/reg-sub
-  ::groupings
+(rf/reg-sub ::groupings
   (fn [db _]
     (-> db :stats :finance :groupings)))
 
-(rf/reg-sub
-  ::chart-type
+(rf/reg-sub ::chart-type
   (fn [db _]
     (-> db :stats :finance :chart-type)))
 
-(rf/reg-sub
-  ::data*
+(rf/reg-sub ::data*
   (fn [db _]
     (-> db :stats :finance :data)))
 
@@ -79,8 +65,7 @@
     (js/parseInt x)
     (catch js/Error _ nil)))
 
-(rf/reg-sub
-  ::data
+(rf/reg-sub ::data
   :<- [:lipas.ui.subs/translator]
   :<- [::data*]
   :<- [::selected-grouping]
@@ -131,16 +116,14 @@
              [])
            (sort-by (if (= grouping "avi") :avi-id :province-id))))))
 
-(rf/reg-sub
-  ::ranking-data
+(rf/reg-sub ::ranking-data
   :<- [::data]
   :<- [::selected-ranking-metric]
   (fn [[data metric] _]
     (let [kw (keyword metric)]
       (sort-by #(-> % kw cutils/->number) utils/reverse-cmp data))))
 
-(rf/reg-sub
-  ::headers
+(rf/reg-sub ::headers
   :<- [:lipas.ui.subs/translator]
   :<- [::selected-grouping]
   (fn [[tr grouping] _]
@@ -164,8 +147,7 @@
        [:deficit (tr :stats-metrics/deficit)]]
       (remove nil?))))
 
-(rf/reg-sub
-  ::labels
+(rf/reg-sub ::labels
   (fn [db _]
     (let [tr     (-> db :translator)
           locale (tr)]

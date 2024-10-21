@@ -29,18 +29,15 @@
     4220
     2360})
 
-(rf/reg-sub
-  ::accessibility-type?
+(rf/reg-sub ::accessibility-type?
   (fn [_ [_ type-code]]
     (accessibility-types type-code)))
 
-(rf/reg-sub
-  ::all-statements
+(rf/reg-sub ::all-statements
   (fn [db _]
     (get-in db [:accessibility :statements])))
 
-(rf/reg-sub
-  ::statements
+(rf/reg-sub ::statements
   :<- [::all-statements]
   :<- [:lipas.ui.subs/locale]
   (fn [[statements locale] [_ lipas-id]]
@@ -55,7 +52,6 @@
                  (assoc res group (mapcat (comp #(map :value %) locale :sentences) coll)))
                {}))))))
 
-(rf/reg-sub
-  ::loading?
+(rf/reg-sub ::loading?
   (fn [db _]
     (get-in db [:accessibility :loading?])))

@@ -4,60 +4,49 @@
 
 ;;; General ;;;
 
-(rf/reg-sub
-  ::selected-cities
+(rf/reg-sub ::selected-cities
   (fn [db _]
     (-> db :stats :city :selected-cities)))
 
 ;;; City finance ;;;
 
-(rf/reg-sub
-  ::finance-city-services
+(rf/reg-sub ::finance-city-services
   (fn [db _]
     (-> db :stats :city :finance :city-services)))
 
-(rf/reg-sub
-  ::selected-finance-city-service
+(rf/reg-sub ::selected-finance-city-service
   (fn [db _]
     (-> db :stats :city :finance :selected-city-service)))
 
-(rf/reg-sub
-  ::finance-metrics
+(rf/reg-sub ::finance-metrics
   (fn [db _]
     (-> db :stats :city :finance :metrics)))
 
-(rf/reg-sub
-  ::selected-finance-metrics
+(rf/reg-sub ::selected-finance-metrics
   (fn [db _]
     (-> db :stats :city :finance :selected-metrics)))
 
-(rf/reg-sub
-  ::finance-units
+(rf/reg-sub ::finance-units
   (fn [db _]
     (-> db :stats :city :finance :units)))
 
-(rf/reg-sub
-  ::selected-finance-unit
+(rf/reg-sub ::selected-finance-unit
   (fn [db _]
     (-> db :stats :city :finance :selected-unit)))
 
-(rf/reg-sub
-  ::selected-finance-years
+(rf/reg-sub ::selected-finance-years
   (fn [db _]
     (-> db :stats :city :finance :selected-years)))
 
-(rf/reg-sub
-  ::finance-data*
+(rf/reg-sub ::finance-data*
   (fn [db _]
     (-> db :stats :city :finance :data)))
 
-(rf/reg-sub
-  ::selected-finance-view
+(rf/reg-sub ::selected-finance-view
   (fn [db _]
     (-> db :stats :city :finance :selected-view)))
 
-(rf/reg-sub
-  ::finance-labels
+(rf/reg-sub ::finance-labels
   (fn [db _]
     (let [tr     (-> db :translator)
           locale (tr)]
@@ -95,8 +84,7 @@
                :year       year
                :population (get-in m [:stats year :population])})))))
 
-(rf/reg-sub
-  ::finance-data
+(rf/reg-sub ::finance-data
   :<- [::finance-data*]
   :<- [::selected-cities]
   :<- [::selected-finance-city-service]
@@ -113,8 +101,7 @@
            (reduce (partial ->entries avgs service years) [])
            (sort-by :year)))))
 
-(rf/reg-sub
-  ::finance-headers
+(rf/reg-sub ::finance-headers
   :<- [:lipas.ui.subs/translator]
   (fn [tr _]
     [[:year (tr :time/year)]

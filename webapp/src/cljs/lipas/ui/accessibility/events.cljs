@@ -3,8 +3,7 @@
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-fx
-  ::get-statements
+(rf/reg-event-fx ::get-statements
   (fn [{:keys [db]} [_ lipas-id]]
     {:db (assoc-in db [:accessibility :loading?] true)
      :http-xhrio
@@ -18,8 +17,7 @@
 
 (def index-by-lang (partial cutils/index-by (comp keyword :language) :value))
 
-(rf/reg-event-fx
-  ::get-statements-success
+(rf/reg-event-fx ::get-statements-success
   (fn [{:keys [db]} [_  lipas-id data]]
     (let [data (->> data
                     (map #(update % :sentenceGroups index-by-lang))
@@ -33,14 +31,12 @@
                            (assoc-in [:accessibility :loading?] false))
        :tracker/event! ["accessibility" event "lipas-id" lipas-id]})))
 
-(rf/reg-event-fx
-  ::get-statements-failure
+(rf/reg-event-fx ::get-statements-failure
   (fn [{:keys [db]} [_ _resp]]
     {:db             (assoc-in db [:accessibility :loading?] false)
      :tracker/event! ["error" "get-accessibility-statements-failure"]}))
 
-(rf/reg-event-fx
-  ::get-app-url
+(rf/reg-event-fx ::get-app-url
   (fn [{:keys [db]} [_ lipas-id]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
@@ -53,14 +49,12 @@
         :on-success      [::get-app-url-success lipas-id]
         :on-failure      [::get-app-url-failure]}})))
 
-(rf/reg-event-fx
-  ::get-app-url-success
+(rf/reg-event-fx ::get-app-url-success
   (fn [_ [_ lipas-id data]]
     {:lipas.ui.effects/open-link-in-new-window! (:url data)
 
      :tracker/event! ["accessibility" "app-opened" "lipas-id" lipas-id]}))
 
-(rf/reg-event-fx
-  ::get-app-url-failure
+(rf/reg-event-fx ::get-app-url-failure
   (fn [_ [_ _resp]]
     {:tracker/event! ["error" "get-accessibility-app-url-failure"]}))

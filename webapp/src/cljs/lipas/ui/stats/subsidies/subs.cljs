@@ -4,59 +4,48 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::selected-view
+(rf/reg-sub ::selected-view
   (fn [db _]
     (-> db :stats :subsidies :selected-view)))
 
-(rf/reg-sub
-  ::selected-cities
+(rf/reg-sub ::selected-cities
   (fn [db _]
     (-> db :stats :subsidies :selected-cities)))
 
-(rf/reg-sub
-  ::selected-types
+(rf/reg-sub ::selected-types
   (fn [db _]
     (-> db :stats :subsidies :selected-types)))
 
-(rf/reg-sub
-  ::selected-issuers
+(rf/reg-sub ::selected-issuers
   (fn [db _]
     (-> db :stats :subsidies :selected-issuers)))
 
-(rf/reg-sub
-  ::selected-years
+(rf/reg-sub ::selected-years
   (fn [db _]
     (-> db :stats :subsidies :selected-years)))
 
-(rf/reg-sub
-  ::selected-grouping
+(rf/reg-sub ::selected-grouping
   (fn [db _]
     (-> db :stats :subsidies :selected-grouping)))
 
-(rf/reg-sub
-  ::groupings
+(rf/reg-sub ::groupings
   (fn [db _]
     (-> db :stats :subsidies :groupings)))
 
-(rf/reg-sub
-  ::chart-type
+(rf/reg-sub ::chart-type
   (fn [db _]
     (-> db :stats :subsidies :chart-type)))
 
-(rf/reg-sub
-  ::issuers
+(rf/reg-sub ::issuers
   (fn [db _]
     (-> db :stats :subsidies :issuers)))
 
-(rf/reg-sub
-  ::types
+(rf/reg-sub ::types
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [types _]
     (assoc types (:type-code types/unknown) types/unknown)))
 
-(rf/reg-sub
-  ::grouping-data
+(rf/reg-sub ::grouping-data
   :<- [::selected-grouping]
   :<- [:lipas.ui.sports-sites.subs/avi-areas]
   :<- [:lipas.ui.sports-sites.subs/provinces]
@@ -69,13 +58,11 @@
       "city"     [:city-code cities]
       "type"     [:type-code types])))
 
-(rf/reg-sub
-  ::data*
+(rf/reg-sub ::data*
   (fn [db _]
     (-> db :stats :subsidies :data)))
 
-(rf/reg-sub
-  ::data
+(rf/reg-sub ::data
   :<- [:lipas.ui.subs/translator]
   :<- [::data*]
   :<- [::grouping-data]
@@ -109,14 +96,12 @@
              [])
            (sort-by k)))))
 
-(rf/reg-sub
-  ::ranking-data
+(rf/reg-sub ::ranking-data
   :<- [::data]
   (fn [data _]
     (sort-by :amount utils/reverse-cmp data)))
 
-(rf/reg-sub
-  ::headers
+(rf/reg-sub ::headers
   :<- [:lipas.ui.subs/translator]
   :<- [::selected-grouping]
   (fn [[tr grouping] _]
@@ -133,8 +118,7 @@
        [:count (tr :stats/subsidies-count)]]
       (remove nil?))))
 
-(rf/reg-sub
-  ::labels
+(rf/reg-sub ::labels
   :<- [::headers]
   (fn [headers _]
     (into {} headers)))

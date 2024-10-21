@@ -4,8 +4,7 @@
             [lipas.ui.utils :as utils :refer [==>]]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db
-  ::select-loi
+(rf/reg-event-db ::select-loi
   (fn [db [_ loi-id]]
     (let [loi (get-in db [:lois loi-id])]
       (-> db
@@ -13,8 +12,7 @@
           (assoc-in [:loi :editing] loi)
           (assoc-in [:loi :view-mode] :display)))))
 
-(rf/reg-event-db
-  ::start-adding-new-loi
+(rf/reg-event-db ::start-adding-new-loi
   (fn [db _]
     (-> db
         (assoc-in [:loi :editing] {:id           (str (random-uuid))
@@ -22,27 +20,23 @@
                                    :loi-category "outdoor-recreation-facilities"})
         (assoc-in [:loi :view-mode] :adding))))
 
-(rf/reg-event-fx
-  ::start-editing
+(rf/reg-event-fx ::start-editing
   (fn [{:keys [db]} _]
     (let [geoms (-> db :loi :selected-loi :geometries)]
       {:db (assoc-in db [:loi :view-mode] :editing)
        :fx [[:dispatch [:lipas.ui.map.events/new-geom-drawn geoms]]]})))
 
-(rf/reg-event-db
-  ::stop-editing
+(rf/reg-event-db ::stop-editing
   (fn [db _]
     (assoc-in db [:loi :view-mode] :display)))
 
-(rf/reg-event-db
-  ::edit-loi-field
+(rf/reg-event-db ::edit-loi-field
   (fn [db [_ & args]]
     (let [path (into [:loi :editing] (butlast args))
           v    (last args)]
       (assoc-in db path v))))
 
-(rf/reg-event-fx
-  ::discard-edits
+(rf/reg-event-fx ::discard-edits
   (fn [{:keys [db]} _]
     (let [tr (-> db :translator)]
       {:dispatch
@@ -52,8 +46,7 @@
           (==> [:lipas.ui.map.events/discard-drawing])
           (==> [:lipas.ui.loi.events/stop-editing]))]})))
 
-(rf/reg-event-fx
-  ::delete
+(rf/reg-event-fx ::delete
   (fn [{:keys [db]} [_ loi status year]]
     (let [event-date (when (= status "out-of-service-permanently")
                        (if (utils/this-year? year)
@@ -64,8 +57,7 @@
                         (:geometries loi)
                         event-date]]]})))
 
-(rf/reg-event-fx
-  ::save
+(rf/reg-event-fx ::save
   (fn [{:keys [db]} [_ loi geoms event-date]]
     (let [token (-> db :user :login :token)
           loi   (-> loi
@@ -82,8 +74,7 @@
         :on-success      [::save-success loi]
         :on-failure      [::save-failure]}})))
 
-(rf/reg-event-fx
-  ::save-success
+(rf/reg-event-fx ::save-success
   (fn [{:keys [db]} [_  loi _resp]]
     (let [tr (:translator db)]
       {:db (assoc-in db [:lois (:id loi)] loi)
@@ -95,8 +86,7 @@
             [:dispatch [:lipas.ui.map.events/discard-drawing]]
             [:dispatch [::search]]]})))
 
-(rf/reg-event-fx
-  ::save-failure
+(rf/reg-event-fx ::save-failure
   (fn [{:keys [db]} [_ _resp]]
     (let [tr (:translator db)]
       {:fx [[:dispatch [:lipas.ui.events/set-active-notification
@@ -104,8 +94,7 @@
                          :success? false}]]]
        :tracker/event! ["error" "save-loi-failure"]})))
 
-(rf/reg-event-fx
-  ::search
+(rf/reg-event-fx ::search
   (fn [{:keys [db]} _]
    ;; Currently users with activities-manager roles should see/edit LOI data
    ;; The activitier-manager role has context with activity/type-code etc.
@@ -131,13 +120,11 @@
         :on-failure      [::search-failure]}}
       {})))
 
-(rf/reg-event-fx
-  ::search-success
+(rf/reg-event-fx ::search-success
   (fn [{:keys [db]} [_  data]]
     {:db (assoc-in db [:loi :search-results] (map :_source data))}))
 
-(rf/reg-event-fx
-  ::search-failure
+(rf/reg-event-fx ::search-failure
   (fn [{:keys [db]} [_ _resp]]
     (let [tr (:translator db)]
       {:fx [[:dispatch [:lipas.ui.events/set-active-notification
@@ -145,8 +132,7 @@
                          :success? false}]]]
        :tracker/event! ["error" "search-loi-failure"]})))
 
-(rf/reg-event-fx
-  ::get
+(rf/reg-event-fx ::get
   (fn [{:keys [db]} [_ loi-id on-success]]
     {:http-xhrio
      {:method          :get
@@ -155,14 +141,12 @@
       :on-success      [::get-success on-success]
       :on-failure      [::get-failure]}}))
 
-(rf/reg-event-fx
-  ::get-success
+(rf/reg-event-fx ::get-success
   (fn [{:keys [db]} [_ on-success loi]]
     {:db (assoc-in db [:lois (:id loi)] loi)
      :fx [(when on-success [:dispatch on-success])]}))
 
-(rf/reg-event-fx
-  ::get-failure
+(rf/reg-event-fx ::get-failure
   (fn [{:keys [db]} [_ error]]
     (let [tr (:translator db)]
       {:db       (assoc-in db [:errors :lois (utils/timestamp)] error)

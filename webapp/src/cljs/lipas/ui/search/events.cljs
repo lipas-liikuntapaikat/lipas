@@ -269,8 +269,7 @@
          edit-permission? (update-in [:query :function_score :query] (fn [x]
                                                                        (roles/wrap-es-query-site-has-privilege x user :site/create-edit))))))))
 
-(rf/reg-event-fx
-  ::search
+(rf/reg-event-fx ::search
   (fn [{:keys [db]} [_ params fit-view?]]
     {:http-xhrio
      {:method          :post
@@ -282,16 +281,14 @@
       :on-failure      [::search-failure]}
      :db (assoc-in db [:search :in-progress?] true)}))
 
-(rf/reg-event-fx
-  ::search-success
+(rf/reg-event-fx ::search-success
   (fn [{:keys [db]} [_ fit-view? resp]]
     {:db         (-> db
                      (assoc-in [:search :results] resp)
                      (assoc-in [:search :in-progress?] false))
      :dispatch-n [(when fit-view? [:lipas.ui.map.events/fit-to-current-vectors])]}))
 
-(rf/reg-event-fx
-  ::search-failure
+(rf/reg-event-fx ::search-failure
   (fn [{:keys [db]} [_ error]]
     (let [tr (:translator db)]
       {:db       (-> db
@@ -301,8 +298,7 @@
                   {:message  (tr :notifications/get-failed)
                    :success? false}]})))
 
-(rf/reg-event-fx
-  ::search-fast
+(rf/reg-event-fx ::search-fast
   (fn [{:keys [db]} [_ params fit-view? terse?]]
     {:http-xhrio
      {:method          :post
@@ -314,16 +310,14 @@
       :on-failure      [::search-failure]}
      :db (assoc-in db [:search :in-progress?] true)}))
 
-(rf/reg-event-fx
-  ::search-success-fast
+(rf/reg-event-fx ::search-success-fast
   (fn [{:keys [db]} [_ fit-view? resp]]
     {:db         (-> db
                      (assoc-in [:search :results-fast] (js/JSON.parse resp))
                      (assoc-in [:search :in-progress?] false))
      :dispatch-n [(when fit-view? [:lipas.ui.map.events/fit-to-current-vectors])]}))
 
-(rf/reg-event-db
-  ::update-search-string
+(rf/reg-event-db ::update-search-string
   (fn [db [_ s]]
     (assoc-in db [:search :string] s)))
 
@@ -352,83 +346,71 @@
                            (/ (max (-> db :map :width)
                                    (-> db :map :height)) 2))))))
 
-(rf/reg-event-fx
-  ::submit-search
+(rf/reg-event-fx ::submit-search
   (fn [{:keys [db]} [_ fit-view?]]
     (let [params (collect-search-data db)
           terse? (-> db :search :results-view (= :list))]
       {:dispatch [::search-fast params fit-view? terse?]})))
 
-(rf/reg-event-fx
-  ::search-with-keyword
+(rf/reg-event-fx ::search-with-keyword
   (fn [{:keys [db]} [_ fit-view?]]
     (let [kw (-> db :search :string)]
       {:dispatch        [::submit-search fit-view?]
        :tracker/search! [(or kw "")]})))
 
-(rf/reg-event-fx
-  ::filters-updated
+(rf/reg-event-fx ::filters-updated
   (fn [_ [_ fit-view?]]
     {:dispatch-n
      [[::submit-search fit-view?]
       [::change-result-page 0]]}))
 
-(rf/reg-event-fx
-  ::set-status-filter
+(rf/reg-event-fx ::set-status-filter
   (fn [{:keys [db]} [_ statuses append?]]
     {:db       (if append?
                  (update-in db [:search :filters :statuses] into statuses)
                  (assoc-in db [:search :filters :statuses] statuses))
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::remove-status-filter
+(rf/reg-event-fx ::remove-status-filter
   (fn [{:keys [db]} [_ status]]
     {:db       (update-in db [:search :filters :statuses] (comp disj set) status)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-type-filter
+(rf/reg-event-fx ::set-type-filter
   (fn [{:keys [db]} [_ type-codes append?]]
     {:db       (if append?
                  (update-in db [:search :filters :type-codes] into type-codes)
                  (assoc-in db [:search :filters :type-codes] type-codes))
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-city-filter
+(rf/reg-event-fx ::set-city-filter
   (fn [{:keys [db]} [_ city-codes append?]]
     {:db       (if append?
                  (update-in db [:search :filters :city-codes] into city-codes)
                  (assoc-in db [:search :filters :city-codes] city-codes))
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-area-min-filter
+(rf/reg-event-fx ::set-area-min-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :area-min] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-area-max-filter
+(rf/reg-event-fx ::set-area-max-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :area-max] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-construction-year-min-filter
+(rf/reg-event-fx ::set-construction-year-min-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :construction-year-min] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-construction-year-max-filter
+(rf/reg-event-fx ::set-construction-year-max-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :construction-year-max] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-surface-materials-filter
+(rf/reg-event-fx ::set-surface-materials-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :surface-materials] v)
      :dispatch [::filters-updated :fit-view]}))
@@ -438,44 +420,37 @@
     {:db       (assoc-in db [:search :filters :retkikartta?] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-harrastuspassi-filter
+(rf/reg-event-fx ::set-harrastuspassi-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :harrastuspassi?] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-school-use-filter
+(rf/reg-event-fx ::set-school-use-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :school-use?] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-admins-filter
+(rf/reg-event-fx ::set-admins-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :admins] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-owners-filter
+(rf/reg-event-fx ::set-owners-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :owners] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-bounding-box-filter
+(rf/reg-event-fx ::set-bounding-box-filter
   (fn [{:keys [db]} [_ v]]
     {:db       (assoc-in db [:search :filters :bounding-box?] v)
      :dispatch [::filters-updated :fit-view]}))
 
-(rf/reg-event-fx
-  ::set-logged-in-filters
+(rf/reg-event-fx ::set-logged-in-filters
   (fn [{:keys [db]} [_]]
     {:db       (update-in db [:search :filters :statuses] conj "planned")
      :dispatch [::filters-updated]}))
 
-(rf/reg-event-fx
-  ::clear-filters
+(rf/reg-event-fx ::clear-filters
   (fn [{:keys [db]} _]
     (let [defaults  (-> (if (:logged-in? db) db/default-db-logged-in db/default-db)
                         (select-keys [:filters :sort :string])
@@ -484,8 +459,7 @@
       {:db       (update db :search merge defaults)
        :dispatch [::filters-updated fit-view?]})))
 
-(rf/reg-event-fx
-  ::create-report-from-current-search
+(rf/reg-event-fx ::create-report-from-current-search
   (fn [{:keys [db]} [_ fmt]]
     (let [params (-> db
                      collect-search-data
@@ -501,21 +475,18 @@
           fields (-> db :reports :selected-fields)]
       {:dispatch [:lipas.ui.reports.events/create-report params fields fmt]})))
 
-(rf/reg-event-fx
-  ::set-results-view
+(rf/reg-event-fx ::set-results-view
   (fn [{:keys [db]} [_ view]]
     {:db         (assoc-in db [:search :results-view] view)
      :dispatch-n [(when (= :list view) [::reset-sort-order])
                   (when (= :list view) [::change-result-page-size 250])
                   (when (= :table view) [::change-result-page-size 25])]}))
 
-(rf/reg-event-db
-  ::select-results-table-columns
+(rf/reg-event-db ::select-results-table-columns
   (fn [db [_ v]]
     (assoc-in db [:search :selected-results-table-columns] v)))
 
-(rf/reg-event-fx
-  ::reset-sort-order
+(rf/reg-event-fx ::reset-sort-order
   (fn [{:keys [db]} _]
     {:db       (assoc-in db [:search :sort] {:asc? false :sort-fn :score})
      :dispatch [::submit-search]}))
@@ -527,16 +498,14 @@
     sort
     {:asc? true :sort-fn (sort :sort-fn)}))
 
-(rf/reg-event-fx
-  ::change-sort-order
+(rf/reg-event-fx ::change-sort-order
   (fn [{:keys [db]} [_ sort]]
     (let [new-sort (resolve-sort-change db sort)]
       {:db       (update-in db [:search :sort] merge new-sort)
        :dispatch [::submit-search]})))
 
 ;; This can be combined with other sort options
-(rf/reg-event-fx
-  ::toggle-sorting-by-distance
+(rf/reg-event-fx ::toggle-sorting-by-distance
   (fn [{:keys [db]} _]
     (let [path [:search :sort]]
       {:db       (update-in db path #(if (= (:sort-fn %) :score)
@@ -544,14 +513,12 @@
                                        (merge % {:sort-fn :score :asc? false})))
        :dispatch [::submit-search]})))
 
-(rf/reg-event-fx
-  ::change-result-page
+(rf/reg-event-fx ::change-result-page
   (fn [{:keys [db]} [_ page]]
     {:db       (assoc-in db [:search :pagination :page] page)
      :dispatch [::submit-search]}))
 
-(rf/reg-event-fx
-  ::change-result-page-size
+(rf/reg-event-fx ::change-result-page-size
   (fn [{:keys [db]} [_ page-size fit-view?]]
     {:db       (assoc-in db [:search :pagination :page-size] page-size)
      :dispatch-n
@@ -573,8 +540,7 @@
    :location.postal-office :location.city.city-code])
 
 ;; Used by quick-edit feature in search results table
-(rf/reg-event-fx
-  ::save-edits
+(rf/reg-event-fx ::save-edits
   (fn [{:keys [db]} [_ {:keys [lipas-id] :as data}]]
    ;; TODO maybe this would be better implemented in the backend?
 
@@ -600,13 +566,11 @@
 
 ;; Save search (for later use) ;;
 
-(rf/reg-event-db
-  ::toggle-save-dialog
+(rf/reg-event-db ::toggle-save-dialog
   (fn [db _]
     (update-in db [:search :save-dialog-open?] not)))
 
-(rf/reg-event-fx
-  ::save-current-search
+(rf/reg-event-fx ::save-current-search
   (fn [{:keys [db]} [_ name]]
     (let [m         {:name    name
                      :string  (-> db :search :string)
@@ -621,8 +585,7 @@
         [::toggle-save-dialog]]
        :tracker/event! ["user" "save-my-search"]})))
 
-(rf/reg-event-fx
-  ::select-saved-search
+(rf/reg-event-fx ::select-saved-search
   (fn [{:keys [db]} [_ {:keys [string filters]}]]
     {:db             (-> db
                          (assoc-in [:search :filters] filters)

@@ -1,27 +1,23 @@
 (ns lipas.ui.stats.subs
   (:require [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::selected-tab
+(rf/reg-sub ::selected-tab
   (fn [db _]
     (-> db :stats :selected-tab)))
 
-(rf/reg-sub
-  ::abolished-cities
+(rf/reg-sub ::abolished-cities
   (fn [db _]
     (-> db :abolished-cities)))
 
 ;; Includes also historical cities that no-more exist
-(rf/reg-sub
-  ::cities
+(rf/reg-sub ::cities
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
   :<- [:lipas.ui.stats.subs/abolished-cities]
   (fn [[active abolished] _]
     (merge active abolished)))
 
 ;; Includes also historical cities that no-more exist
-(rf/reg-sub
-  ::regions
+(rf/reg-sub ::regions
   :<- [::cities]
   :<- [:lipas.ui.sports-sites.subs/avi-areas]
   :<- [:lipas.ui.sports-sites.subs/provinces]

@@ -4,26 +4,22 @@
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-sub
-  ::reachability
+(rf/reg-sub ::reachability
   (fn [db _]
     (-> db :analysis :reachability)))
 
-(rf/reg-sub
-  ::loading?
+(rf/reg-sub ::loading?
   :<- [::reachability]
   (fn [analysis _]
     (or (:loading? analysis)
         (->> analysis :runs vals (some :loading?)))))
 
-(rf/reg-sub
-  ::selected-sports-site
+(rf/reg-sub ::selected-sports-site
   :<- [::reachability]
   (fn [analysis _]
     (:selected-sports-site analysis)))
 
-(rf/reg-sub
-  ::sports-sites-with-analysis
+(rf/reg-sub ::sports-sites-with-analysis
   :<- [::reachability]
   (fn [analysis _]
     (->> analysis
@@ -31,34 +27,29 @@
          vals
          (map #(select-keys % [:lipas-id :site-name])))))
 
-(rf/reg-sub
-  ::population-stats
+(rf/reg-sub ::population-stats
   :<- [::reachability]
   :<- [::selected-sports-site]
   (fn [[analysis lipas-id] _]
     (get-in analysis [:runs lipas-id :population :stats])))
 
-(rf/reg-sub
-  ::population-chart-mode
+(rf/reg-sub ::population-chart-mode
   :<- [::reachability]
   (fn [analysis _]
     (-> analysis :population :chart-mode)))
 
-(rf/reg-sub
-  ::schools-data
+(rf/reg-sub ::schools-data
   :<- [::reachability]
   :<- [::selected-sports-site]
   (fn [[analysis lipas-id] _]
     (get-in analysis [:schools :runs lipas-id :data])))
 
-(rf/reg-sub
-  ::schools-chart-mode
+(rf/reg-sub ::schools-chart-mode
   :<- [::reachability]
   (fn [analysis _]
     (-> analysis :schools :chart-mode)))
 
-(rf/reg-sub
-  ::population-labels
+(rf/reg-sub ::population-labels
   :<- [:lipas.ui.subs/translator]
   :<- [::selected-travel-metric]
   :<- [::zones]
@@ -82,14 +73,12 @@
                 [(:id zone) (str (:max zone) (if (= metric :distance) "km" "min"))]))
             (get zones metric)))))
 
-(rf/reg-sub
-  ::selected-travel-profile
+(rf/reg-sub ::selected-travel-profile
   :<- [::reachability]
   (fn [analysis]
     (:selected-travel-profile analysis)))
 
-(rf/reg-sub
-  ::selected-travel-metric
+(rf/reg-sub ::selected-travel-metric
   :<- [::reachability]
   (fn [analysis]
     (:selected-travel-metric analysis)))
@@ -116,8 +105,7 @@
                (when (>= (:max zone) distance-km (:min zone))
                  (:id zone))))))))
 
-(rf/reg-sub
-  ::population-chart-data-v3
+(rf/reg-sub ::population-chart-data-v3
   :<- [::population-stats]
   :<- [::selected-travel-profile]
   :<- [::selected-travel-metric]
@@ -160,15 +148,13 @@
             [[]]
             res))))))
 
-(rf/reg-sub
-  ::schools-data-v2
+(rf/reg-sub ::schools-data-v2
   :<- [::reachability]
   :<- [::selected-sports-site]
   (fn [[analysis lipas-id] _]
     (get-in analysis [:runs lipas-id :schools :data])))
 
-(rf/reg-sub
-  ::schools-chart-data-v2
+(rf/reg-sub ::schools-chart-data-v2
   :<- [::schools-data-v2]
   :<- [::selected-travel-profile]
   :<- [::selected-travel-metric]
@@ -227,21 +213,18 @@
             [[]]
             res))))))
 
-(rf/reg-sub
-  ::selected-analysis-tab
+(rf/reg-sub ::selected-analysis-tab
   :<- [::reachability]
   (fn [analysis _]
     (:selected-tab analysis)))
 
-(rf/reg-sub
-  ::sports-sites-data
+(rf/reg-sub ::sports-sites-data
   :<- [::reachability]
   :<- [::selected-sports-site]
   (fn [[analysis lipas-id] _]
     (get-in analysis [:runs lipas-id :sports-sites :data])))
 
-(rf/reg-sub
-  ::sports-sites-list
+(rf/reg-sub ::sports-sites-list
   :<- [::sports-sites-data]
   :<- [::selected-travel-metric]
   :<- [::selected-travel-profile]
@@ -270,22 +253,19 @@
                         (assoc :display-val t)))))
            (sort-by :metric)))))
 
-(rf/reg-sub
-  ::sports-sites-view
+(rf/reg-sub ::sports-sites-view
   :<- [::reachability]
   (fn [analysis _]
     (-> analysis :sports-sites :view)))
 
-(rf/reg-sub
-  ::zones
+(rf/reg-sub ::zones
   :<- [::reachability]
   (fn [analysis _]
     (:zones analysis)))
 
 (def zone-sorter (juxt :zone1 :zone2 :zone3 :zone4 :zone5 :zone6 :zone7 :zone8 :zone9))
 
-(rf/reg-sub
-  ::sports-sites-chart-data-v2
+(rf/reg-sub ::sports-sites-chart-data-v2
   :<- [::sports-sites-data]
   :<- [::selected-travel-profile]
   :<- [::selected-travel-metric]
@@ -315,8 +295,7 @@
 
          (sort-by zone-sorter utils/reverse-cmp))))
 
-(rf/reg-sub
-  ::schools-list
+(rf/reg-sub ::schools-list
   :<- [::schools-data]
   :<- [::selected-travel-metric]
   :<- [::selected-travel-profile]
@@ -343,33 +322,28 @@
                         (assoc :display-val t)))))
            (sort-by :metric)))))
 
-(rf/reg-sub
-  ::schools-view
+(rf/reg-sub ::schools-view
   :<- [::reachability]
   (fn [analysis _]
     (-> analysis :schools :view)))
 
-(rf/reg-sub
-  ::zones
+(rf/reg-sub ::zones
   :<- [::reachability]
   (fn [analysis _]
     (:zones analysis)))
 
-(rf/reg-sub
-  ::zones-by-selected-metric
+(rf/reg-sub ::zones-by-selected-metric
   :<- [::zones]
   :<- [::selected-travel-metric]
   (fn [[zones metric] _]
     (get zones metric)))
 
-(rf/reg-sub
-  ::zones-count
+(rf/reg-sub ::zones-count
   :<- [::zones]
   (fn [zones [_ metric]]
     (count (get zones metric))))
 
-(rf/reg-sub
-  ::zones-count-max
+(rf/reg-sub ::zones-count-max
   :<- [::zones]
   (fn [zones [_ metric]]
     #_(let [range (get-in zones [:ranges metric])]
@@ -384,8 +358,7 @@
 (def from-color (gcolor/hexToRgb "#C8D4D9"))
 (def to-color (gcolor/hexToRgb "#006190"))
 
-(rf/reg-sub
-  ::zone-colors
+(rf/reg-sub ::zone-colors
   :<- [::zones]
   (fn [zones [_ metric]]
     (into {}
@@ -394,29 +367,25 @@
              (-> (gcolor/blend from-color to-color (/ n (count (get zones metric))))
                  gcolor/rgbArrayToHex)]))))
 
-(rf/reg-sub
-  ::zones-selector-value
+(rf/reg-sub ::zones-selector-value
   :<- [::zones]
   (fn [zones [_ metric]]
     (into [] (comp (mapcat (juxt :min-idx :max-idx)) (distinct)) (get zones metric))))
 
-(rf/reg-sub
-  ::zones-selector-marks
+(rf/reg-sub ::zones-selector-marks
   :<- [::zones]
   (fn [zones [_ metric]]
     (into {}
           (map (juxt first (comp :label second)))
           (get-in zones [:ranges metric]))))
 
-(rf/reg-sub
-  ::zones-selector-max
+(rf/reg-sub ::zones-selector-max
   (fn [[_ metric] _]
     (rf/subscribe [::zones-selector-marks metric]))
   (fn [marks _]
     (apply max (keys marks))))
 
-(rf/reg-sub
-  ::zones-selector-colors
+(rf/reg-sub ::zones-selector-colors
   (fn [[_ metric] _]
     (rf/subscribe [::zone-colors metric]))
   (fn [colors _]
@@ -425,8 +394,7 @@
          (map second)
          (map (fn [color] {:backgroundColor color})))))
 
-(rf/reg-sub
-  ::zones-popup-labels
+(rf/reg-sub ::zones-popup-labels
   :<- [::zones]
   (fn [zones _]
     (into {}

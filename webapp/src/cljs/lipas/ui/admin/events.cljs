@@ -6,23 +6,19 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db
-  ::filter-users
+(rf/reg-event-db ::filter-users
   (fn [db [_ s]]
     (assoc-in db [:admin :users-filter] s)))
 
-(rf/reg-event-db
-  ::select-status
+(rf/reg-event-db ::select-status
   (fn [db [_ s]]
     (assoc-in db [:admin :users-status] s)))
 
-(rf/reg-event-db
-  ::get-users-success
+(rf/reg-event-db ::get-users-success
   (fn [db [_ users]]
     (assoc-in db [:admin :users] (utils/index-by :id users))))
 
-(rf/reg-event-fx
-  ::failure
+(rf/reg-event-fx ::failure
   (fn [{:keys [db]} [_ resp]]
     (let [tr (:translator db)]
       {:dispatch [:lipas.ui.events/set-active-notification
@@ -31,8 +27,7 @@
                                  (tr :error/unknown))
                    :success? false}]})))
 
-(rf/reg-event-fx
-  ::get-users
+(rf/reg-event-fx ::get-users
   (fn [{:keys [db]} [_ _]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
@@ -43,21 +38,18 @@
         :on-success      [::get-users-success]
         :on-failure      [::failure]}})))
 
-(rf/reg-event-db
-  ::display-user
+(rf/reg-event-db ::display-user
   (fn [db [_ {:keys [id]}]]
     (assoc-in db [:admin :selected-user] id)))
 
-(rf/reg-event-db
-  ::set-user-to-edit
+(rf/reg-event-db ::set-user-to-edit
   (fn [db [_ {:keys [id]}]]
     (assoc-in db
               [:admin :editing-user]
               (when id
                 (update-in (get-in db [:admin :users id]) [:permissions :roles] roles/conform-roles)))))
 
-(rf/reg-event-db
-  ::edit-user
+(rf/reg-event-db ::edit-user
   (fn [db [_ path value]]
     (assoc-in db (into [:admin :editing-user] path) value)))
 
@@ -106,8 +98,7 @@
   (fn [db _]
     (update db :admin dissoc :edit-role)))
 
-(rf/reg-event-db
-  ::grant-access-to-activity-types
+(rf/reg-event-db ::grant-access-to-activity-types
   (fn [db _]
     (let [activities (-> db :admin :editing-user :permissions :activities)
           types (-> db
@@ -119,8 +110,7 @@
                     (->> (mapcat :type-codes)))]
       (assoc-in db [:admin :editing-user :permissions :types] types))))
 
-(rf/reg-event-fx
-  ::save-user-success
+(rf/reg-event-fx ::save-user-success
   (fn [{:keys [db]} [_ user _]]
     (let [tr (:translator db)]
       {:db       (assoc-in db [:admin :users (:id user)] user)
@@ -128,8 +118,7 @@
                   {:message  (tr :notifications/save-success)
                    :success? true}]})))
 
-(rf/reg-event-fx
-  ::save-user
+(rf/reg-event-fx ::save-user
   (fn [{:keys [db]} [_ user]]
     (let [token (-> db :user :login :token)
           body  (-> user
@@ -145,8 +134,7 @@
         :on-success      [::save-user-success user]
         :on-failure      [::failure]}})))
 
-(rf/reg-event-fx
-  ::update-user-status
+(rf/reg-event-fx ::update-user-status
   (fn [{:keys [db]} [_ user status]]
     (let [token (-> db :user :login :token)
           body  {:id (:id user) :status status}]
@@ -160,8 +148,7 @@
         :on-success      [::save-user-success (assoc user :status status)]
         :on-failure      [::failure]}})))
 
-(rf/reg-event-fx
-  ::send-magic-link
+(rf/reg-event-fx ::send-magic-link
   (fn [{:keys [db]} [_ user variant]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
@@ -177,33 +164,27 @@
         :on-failure      [::failure]}
        :dispatch [::close-magic-link-dialog]})))
 
-(rf/reg-event-db
-  ::open-magic-link-dialog
+(rf/reg-event-db ::open-magic-link-dialog
   (fn [db [_ _]]
     (assoc-in db [:admin :magic-link-dialog-open?] true)))
 
-(rf/reg-event-db
-  ::close-magic-link-dialog
+(rf/reg-event-db ::close-magic-link-dialog
   (fn [db [_ _]]
     (assoc-in db [:admin :magic-link-dialog-open?] false)))
 
-(rf/reg-event-db
-  ::select-magic-link-variant
+(rf/reg-event-db ::select-magic-link-variant
   (fn [db [_ v]]
     (assoc-in db [:admin :selected-magic-link-variant] v)))
 
-(rf/reg-event-db
-  ::select-color
+(rf/reg-event-db ::select-color
   (fn [db [_ type-code k v]]
     (assoc-in db [:admin :color-picker type-code k] v)))
 
-(rf/reg-event-db
-  ::select-tab
+(rf/reg-event-db ::select-tab
   (fn [db [_ v]]
     (assoc-in db [:admin :selected-tab] v)))
 
-(rf/reg-event-fx
-  ::download-new-colors-excel
+(rf/reg-event-fx ::download-new-colors-excel
   (fn [{:keys [db]} _]
     (let [headers [[:type-code "type-code"]
                    [:symbol "symbol"]
@@ -218,8 +199,7 @@
                    {:data (utils/->excel-data headers data)}}]
       {:lipas.ui.effects/download-excel! config})))
 
-(rf/reg-event-fx
-  ::gdpr-remove-user
+(rf/reg-event-fx ::gdpr-remove-user
   (fn [{:keys [db]} [_ user]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
@@ -232,8 +212,7 @@
         :on-success      [::gdpr-remove-user-success]
         :on-failure      [::failure]}})))
 
-(rf/reg-event-fx
-  ::gdpr-remove-user-success
+(rf/reg-event-fx ::gdpr-remove-user-success
   (fn [{:keys [db]} [_ user]]
     (let [tr (:translator db)]
       {:db (assoc-in db [:admin :users (:id user)] user)
