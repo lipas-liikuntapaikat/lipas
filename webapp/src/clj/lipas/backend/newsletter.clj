@@ -1,7 +1,6 @@
 (ns lipas.backend.newsletter
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
-            [lipas.backend.config :as config]
             [taoensso.timbre :as log]))
 
 (defn retrieve

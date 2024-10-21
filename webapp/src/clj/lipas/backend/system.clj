@@ -68,19 +68,19 @@
 (defmethod ig/init-key :lipas/aws [_ config]
   (assoc config :credentials-provider (DefaultCredentialsProvider/create)))
 
-(defmethod ig/halt-key! :lipas/aws [_ m]
+(defmethod ig/halt-key! :lipas/aws [_ _m]
   )
 
-(defmethod ig/init-key :lipas/open-ai [_ config]
+(defmethod ig/init-key :lipas/open-ai [_ _config]
   )
 
-(defmethod ig/halt-key! :lipas/open-ai [_ m]
+(defmethod ig/halt-key! :lipas/open-ai [_ _m]
   )
 
-(defmethod ig/init-key :lipas/ptv [_ config]
+(defmethod ig/init-key :lipas/ptv [_ _config]
   )
 
-(defmethod ig/halt-key! :lipas/ptv [_ m]
+(defmethod ig/halt-key! :lipas/ptv [_ _m]
   )
 
 

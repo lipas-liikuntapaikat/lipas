@@ -1,9 +1,8 @@
 (ns lipas.backend.email
-  (:require
-   [clojure.string :as str]
-   [clojure.pprint :as pprint]
-   [clojure.java.io :as io]
-   [postal.core :as postal]))
+  (:require [clojure.java.io :as io]
+            [clojure.pprint :as pprint]
+            [clojure.string :as str]
+            [postal.core :as postal]))
 
 (defprotocol Emailer
   (send! [config message]))

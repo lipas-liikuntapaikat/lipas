@@ -128,7 +128,7 @@
         (json/decode keyword))))
 
 (defn update-service
-  [{:keys [service-url token org-id]
+  [{:keys [service-url token _org-id]
     :or   {service-url (:service-url test-config)
            token       (get-token)}}
    service-id
@@ -142,7 +142,7 @@
         (json/decode keyword))))
 
 (defn create-service-location
-  [{:keys [service-location-url token org-id]
+  [{:keys [service-location-url token _org-id]
     :or   {service-location-url (:service-location-url test-config)
            token                (get-token)}}
    service-location]
@@ -155,7 +155,7 @@
         (json/decode keyword))))
 
 (defn update-service-location
-  [{:keys [service-location-url token org-id]
+  [{:keys [service-location-url token _org-id]
     :or   {service-location-url (:service-location-url test-config)
            token                (get-token)}}
    service-location-id

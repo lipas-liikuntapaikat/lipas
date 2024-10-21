@@ -475,7 +475,6 @@
   (point? test-point)
   (point? test-polygon)
 
-  (require '[lipas.backend.osrm :as osrm])
   (map osrm/resolve-sources [test-point test-route test-polygon])
 
   (shortest-distance test-point test-route)
