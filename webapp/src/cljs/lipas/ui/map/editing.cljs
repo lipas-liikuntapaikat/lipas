@@ -6,7 +6,6 @@
             ["ol/interaction/Select$default" :as Select]
             ["ol/interaction/Snap$default" :as Snap]
             ["ol/proj" :as proj]
-            [goog.object :as gobj]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.utils :as map-utils]
@@ -40,8 +39,8 @@
         source    (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
-         (fn [e]
-           (let [selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [selected (.-selected e)]
              (when (not-empty selected)
                (==> [:lipas.ui.map.events/confirm-remove-segment
                      (fn []
@@ -62,9 +61,9 @@
         source    (.getSource layer)]
     (.addInteraction lmap split)
     (.on split "select"
-         (fn [e]
-           (let [selected (gobj/get e "selected")
-                 euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+         (fn [^js e]
+           (let [selected (.-selected e)
+                 euref    (.. e -mapBrowserEvent -coordinate)
                  wgs      (proj/toLonLat euref "EPSG:3067")]
              (when (not-empty selected)
                (doseq [f selected]
@@ -173,8 +172,8 @@
 
     (.addInteraction lmap draw)
     (.on draw "drawend"
-         (fn [e]
-           (let [f     (gobj/get e "feature")
+         (fn [^js e]
+           (let [f     (.-feature e)
                  _     (.setId f (str (random-uuid)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
@@ -313,8 +312,8 @@
         select    (Select. #js {:layers #js [layer]
                                 :style  styles/line-direction-hover-style-fn})]
 
-    (.on select "select" (fn [e]
-                           (let [selected (gobj/get e "selected")]
+    (.on select "select" (fn [^js e]
+                           (let [selected (.-selected e)]
                              (when (not-empty selected)
                                (let [f        (first selected)
                                      fid      (.getId f)
@@ -350,7 +349,7 @@
 
         popup-overlay (-> map-ctx :overlays :popup)]
 
-    (.on select "select" (fn [e]
+    (.on select "select" (fn [^js e]
                            (let [selected (.-selected e)]
                              (if (seq selected)
                                (let [f        (first selected)

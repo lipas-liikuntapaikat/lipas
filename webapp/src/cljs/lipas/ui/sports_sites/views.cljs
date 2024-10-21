@@ -7,7 +7,6 @@
             ["recharts/es6/component/Legend" :refer [Legend]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
-            [goog.object :as gobj]
             [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as autocompletes]
@@ -935,7 +934,7 @@
                            :water-m3        (tr :lipas.energy-stats/water-m3)}
                           (utils/year-labels-map 2000 utils/this-year))
               :on-click (fn [^js e]
-                          (let [year (gobj/get e "activeLabel")]
+                          (let [year (.-activeLabel e)]
                             (reset! selected-year {lipas-id year})))}]]
 
          ;; Table tab
@@ -999,7 +998,7 @@
                            :spectators-count (tr :lipas.visitors/spectators-count)}
                           (utils/year-labels-map 2000 utils/this-year))
               :on-click (fn [^js e]
-                          (let [year (gobj/get e "activeLabel")]
+                          (let [year (.-activeLabel e)]
                             (reset! selected-year {lipas-id year})))}]]
 
          ;; Table tab
@@ -1180,11 +1179,11 @@
           {:data         (nth elevation @selected-segment)
            :layout       "horizontal"
            :baseValue    "dataMin"
-           :onMouseMove  (fn [evt]
+           :onMouseMove  (fn [^js evt]
                            (when-let [payload (some-> evt
-                                                      (gobj/get "activePayload")
+                                                      .-activePayload
                                                       first
-                                                      (gobj/get "payload"))]
+                                                      .-payload)]
                              (==> [:lipas.ui.map.events/show-elevation-marker payload])))
            :onMouseLeave (fn [_]
                            (==> [:lipas.ui.map.events/hide-elevation-marker]))}

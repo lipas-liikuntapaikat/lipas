@@ -104,22 +104,25 @@
            @(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])})))))
 
 (rf/reg-sub ::geometries-fast
+  ;; NOTE: This is JSON.parse result from the ajax call
   :<- [:lipas.ui.search.subs/search-results-fast]
   :<- [::editing-lipas-id]
   (fn [[results lipas-id'] _]
     (when results
-      (let [data (or (gobj/getValueByKeys results "hits" "hits") #js [])]
+      (let [data (or (some-> results .-hits .-hits)
+                     #js [])]
         (->> data
              (keep
-               (fn [obj]
-                 (let [obj              (gobj/get obj "_source")
+               (fn [^js obj]
+                 (let [obj              (.-_source obj)
+                       ;; Hmm, consider cljs-bean here? Should be nearly as fast
                        geoms            (or
-                                       ;; Full geoms
+                                          ;; Full geoms
                                           (gobj/getValueByKeys obj
                                                                "location"
                                                                "geometries"
                                                                "features")
-                                       ;; Simplified geoms
+                                          ;; Simplified geoms
                                           (gobj/getValueByKeys obj
                                                                "search-meta"
                                                                "location"
@@ -137,12 +140,12 @@
                           :features (garray/map
                                       geoms
                                       (fn [geom idx]
-                                        (gobj/set geom "id" (str lipas-id "-" idx))
-                                        (gobj/set geom "properties" #js {:lipas-id         lipas-id
-                                                                         :name             name
-                                                                         :type-code        type-code
-                                                                         :status           status
-                                                                         :travel-direction travel-direction})
+                                        (set! (.-id geom) (str lipas-id "-" idx))
+                                        (set! (.-properties geom) #js {:lipas-id         lipas-id
+                                                                       :name             name
+                                                                       :type-code        type-code
+                                                                       :status           status
+                                                                       :travel-direction travel-direction})
                                         geom))}))))
              not-empty)))))
 

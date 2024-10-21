@@ -26,7 +26,7 @@
             [lipas.ui.map.projection] ;; Loaded for side-effects
             [clojure.reader :refer [read-string]]
             [clojure.spec.alpha :as s]
-            [clojure.string :as string]
+            [clojure.string :as str]
             [goog.array :as garray]
             [goog.object :as gobj]
             [goog.string.path :as gpath]
@@ -104,7 +104,7 @@
   (-> file
       (gobj/get "name" "")
       gpath/extension
-      string/lower-case))
+      str/lower-case))
 
 (comment
   (def pf {:type "Feature"
@@ -211,8 +211,8 @@
     (add-marker! map-ctx f styles/blue-marker-style)))
 
 (defn show-elevation-marker!
-  [map-ctx elevation]
-  (let [f (.readFeature geoJSON (point (gobj/get elevation "coords") elevation))]
+  [map-ctx ^js elevation]
+  (let [f (.readFeature geoJSON (point (.-coords elevation) elevation))]
     (add-marker! map-ctx f styles/blue-marker-style)))
 
 (defn clear-problems! [{:keys [layers] :as map-ctx}]

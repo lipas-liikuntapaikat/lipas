@@ -18,7 +18,6 @@
             ["ol/source/Vector$default" :as VectorSource]
             ["ol/source/WMTS$default" :as WMTSSource]
             ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
-            [goog.object :as gobj]
             [lipas.ui.analysis.reachability.events]
             [lipas.ui.map.editing :as editing]
             [lipas.ui.map.events :as events]
@@ -286,9 +285,9 @@
         lmap (ol/Map. opts)]
 
     (.on vector-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              ;; Uncommenting this would enable selecting all geoms
              ;; attached to Lipas-ID on hover. However this causes
@@ -309,9 +308,9 @@
                      {:data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on loi-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              #_(js/console.log (aget selected 0))
@@ -322,9 +321,9 @@
                                      map-utils/->geoJSON-clj)})]))))
 
     (.on marker-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -332,9 +331,9 @@
                      {:data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on population-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -343,9 +342,9 @@
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on schools-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -354,9 +353,9 @@
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-grid-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -365,9 +364,9 @@
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-area-hover "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)]
 
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
@@ -376,8 +375,8 @@
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-area-select "select"
-         (fn [e]
-           (let [selected (gobj/get e "selected")
+         (fn [^js e]
+           (let [selected (.-selected e)
                  f1       (when (seq selected) (aget selected 0))
                  fid      (when f1 (.get f1 "id"))]
              (when fid
@@ -388,9 +387,9 @@
     ;; working). Therefore we have to detect which layer we're
     ;; selecting from and decide actions accordingly.
     (.on select "select"
-         (fn [e]
-           (let [coords   (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
-                 selected (gobj/get e "selected")
+         (fn [^js e]
+           (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                 selected (.-selected e)
                  f1       (aget selected 0)
                  lipas-id (when f1 (.get f1 "lipas-id"))
                  loi-id   (when f1 (and (.get f1 "loi-type") (.get f1 "loi-id")))]

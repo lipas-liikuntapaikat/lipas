@@ -312,6 +312,10 @@
 
 (rf/reg-event-fx ::search-success-fast
   (fn [{:keys [db]} [_ fit-view? resp]]
+    ;; TODO: Not sure if calling JSON.parse here is any faster than letting ajax lib call it?
+    ;; or well, that probably ALSO does clj conversion which we don't want.
+    ;; What about fetch and .json method?
+    ;; Consider also using cljs-bean. - Juho
     {:db         (-> db
                      (assoc-in [:search :results-fast] (js/JSON.parse resp))
                      (assoc-in [:search :in-progress?] false))

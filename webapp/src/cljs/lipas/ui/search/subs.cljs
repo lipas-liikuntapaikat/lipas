@@ -1,6 +1,5 @@
 (ns lipas.ui.search.subs
-  (:require [goog.object :as gobj]
-            [lipas.roles :as roles]
+  (:require [lipas.roles :as roles]
             [lipas.ui.components :as lui]
             [lipas.ui.search.db :as db]
             [lipas.ui.utils :as utils]
@@ -107,7 +106,7 @@
   :<- [::search-results-fast]
   (fn [results _]
     (if results
-      (gobj/getValueByKeys results "hits" "total" "value")
+      (.. results -hits -total -value)
       0)))
 
 (defn ->table-entry
@@ -158,10 +157,9 @@
                   :admins admins
                   :owners owners
                   :user   user}
-         ;; FIXME: ~never use gobj
-          hits   (gobj/get results "hits")]
+          hits   (.-hits results)]
       (when hits
-        (->> (gobj/get hits "hits")
+        (->> (.-hits hits)
              (map (partial ->table-entry2 data))
              (sort-by :score utils/reverse-cmp))))))
 
