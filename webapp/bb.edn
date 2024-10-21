@@ -1,1 +1,2 @@
-{:tasks {init-lint {:task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}}}
+{:tasks {lint {:task (shell "clj-kondo --lint src")}
+         init-lint {:task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}}}
