@@ -1,11 +1,10 @@
 (ns lipas.ui.swimming-pools.pools
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.swimming-pools.events :as events]
-   [lipas.ui.swimming-pools.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.swimming-pools.events :as events]
+            [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn set-field [dialog field value]
   (#(==> [::events/set-dialog-field dialog field value])))
@@ -30,13 +29,13 @@
 
      ;; Structure
      #_[lui/select
-      {:label     (tr :general/structure)
-       :deselect? true
-       :value     (:structure data)
-       :items     pool-structures
-       :label-fn  (comp locale second)
-       :value-fn  first
-       :on-change #(set-field :structure %)}]
+        {:label     (tr :general/structure)
+         :deselect? true
+         :value     (:structure data)
+         :items     pool-structures
+         :label-fn  (comp locale second)
+         :value-fn  first
+         :on-change #(set-field :structure %)}]
 
      ;; Outdoor pool?
      [lui/checkbox
@@ -100,21 +99,21 @@
 
      ;; Volume m3
      #_[lui/text-field
-      {:type      "number"
-       :label     (tr :dimensions/volume-m3)
-       :adornment (tr :physical-units/m3)
-       :value     (:volume-m3 data)
-       :spec      :lipas.swimming-pool.pool/volume-m3
-       :on-change #(set-field :volume-m3 %)}]
+        {:type      "number"
+         :label     (tr :dimensions/volume-m3)
+         :adornment (tr :physical-units/m3)
+         :value     (:volume-m3 data)
+         :spec      :lipas.swimming-pool.pool/volume-m3
+         :on-change #(set-field :volume-m3 %)}]
 
      ;; Accessibility features
      #_[lui/multi-select
-      {:label     (tr :lipas.swimming-pool.pool/accessibility)
-       :items     accessibility
-       :value     (:accessibility data)
-       :value-fn  first
-       :label-fn  (comp locale second)
-       :on-change #(set-field :accessibility %)}]]))
+        {:label     (tr :lipas.swimming-pool.pool/accessibility)
+         :items     accessibility
+         :value     (:accessibility data)
+         :value-fn  first
+         :label-fn  (comp locale second)
+         :on-change #(set-field :accessibility %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data   (<== [::subs/pool-form])

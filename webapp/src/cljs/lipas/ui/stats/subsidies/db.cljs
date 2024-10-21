@@ -1,6 +1,5 @@
 (ns lipas.ui.stats.subsidies.db
-  (:require
-   [lipas.reports :as reports]))
+  (:require [lipas.reports :as reports]))
 
 (def defaults
   {:selected-view     "chart"

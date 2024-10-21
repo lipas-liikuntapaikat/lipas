@@ -1,6 +1,5 @@
 (ns lipas.ui.login.routes
-  (:require
-   [lipas.ui.login.views :as views]))
+  (:require [lipas.ui.login.views :as views]))
 
 (def routes
   ["kirjaudu"

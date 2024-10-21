@@ -1,7 +1,6 @@
 (ns lipas.ui.forgot-password.routes
-  (:require
-   [lipas.ui.utils :refer [==>]]
-   [lipas.ui.forgot-password.views :as views]))
+  (:require [lipas.ui.forgot-password.views :as views]
+            [lipas.ui.utils :refer [==>]]))
 
 (def routes
   ["passu-hukassa"

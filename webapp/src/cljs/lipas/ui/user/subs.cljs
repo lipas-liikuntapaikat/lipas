@@ -1,18 +1,17 @@
 (ns lipas.ui.user.subs
-  (:require
-   [lipas.roles :as roles]
-   [re-frame.core :as rf]))
+  (:require [lipas.roles :as roles]
+            [re-frame.core :as rf]))
 
 ;; TODO: Likely not very useful now. Checks should mainly be done using
 ;; check-privilege which indirectly also handles if the user is logged in.
 (rf/reg-sub ::logged-in?
- (fn [db _]
-   (:logged-in? db)))
+  (fn [db _]
+    (:logged-in? db)))
 
 (rf/reg-sub
- ::user
- (fn [db _]
-   (:user db)))
+  ::user
+  (fn [db _]
+    (:user db)))
 
 (rf/reg-sub ::user-data
   :<- [::user]
@@ -45,13 +44,13 @@
                      all-types))))
 
 (rf/reg-sub
- ::can-add-sports-sites?
- :<- [::check-privilege
-      {:type-code ::roles/any
-       :city-code ::roles/any}
-      :site/create-edit]
- (fn [x _]
-   x))
+  ::can-add-sports-sites?
+  :<- [::check-privilege
+       {:type-code ::roles/any
+        :city-code ::roles/any}
+       :site/create-edit]
+  (fn [x _]
+    x))
 
 (rf/reg-sub ::can-add-lois?
   :<- [::check-privilege
@@ -97,41 +96,41 @@
 ;; which sites does the user have access to modify to report the
 ;; energy use values.
 (rf/reg-sub
- ::sports-sites
- :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
- :<- [::user-data]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/active-types]
- (fn [[sites user cities types] [_ locale]]
-   (when (and user sites)
-     (->> sites
-          vals
-          (filter (partial show? user))
-          (map (partial ->list-entry locale cities types))))))
+  ::sports-sites
+  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
+  :<- [::user-data]
+  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+  :<- [:lipas.ui.sports-sites.subs/active-types]
+  (fn [[sites user cities types] [_ locale]]
+    (when (and user sites)
+      (->> sites
+           vals
+           (filter (partial show? user))
+           (map (partial ->list-entry locale cities types))))))
 
 (rf/reg-sub
- ::selected-sports-site
- :<- [::user]
- (fn [user _]
-   (-> user :selected-sports-site)))
+  ::selected-sports-site
+  :<- [::user]
+  (fn [user _]
+    (-> user :selected-sports-site)))
 
 (rf/reg-sub
- ::saved-reports
- :<- [::user-data]
- (fn [user]
-   (-> user :user-data :saved-reports)))
+  ::saved-reports
+  :<- [::user-data]
+  (fn [user]
+    (-> user :user-data :saved-reports)))
 
 (rf/reg-sub
- ::saved-searches
- :<- [::user-data]
- (fn [user _]
-   (-> user :user-data :saved-searches)))
+  ::saved-searches
+  :<- [::user-data]
+  (fn [user _]
+    (-> user :user-data :saved-searches)))
 
 (rf/reg-sub
- ::saved-diversity-settings
- :<- [::user-data]
- (fn [user _]
-   (-> user :user-data :saved-diversity-settings)))
+  ::saved-diversity-settings
+  :<- [::user-data]
+  (fn [user _]
+    (-> user :user-data :saved-diversity-settings)))
 
 ;; Role basic permissions
 

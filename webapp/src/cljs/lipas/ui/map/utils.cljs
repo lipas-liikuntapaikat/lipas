@@ -1,39 +1,37 @@
 (ns lipas.ui.map.utils
   "NOTE: make sure `lipas.ui.map.projection` is loaded first for the
   necessary side-effects to take effect.`"
-  (:require
-   ["@mapbox/togeojson" :as toGeoJSON]
-   ["@turf/area$default" :as turf-area]
-   ["@turf/buffer$default" :as turf-buffer]
-   ["@turf/clean-coords$default" :as turf-clean-coords]
-   ["@turf/combine$default" :as turf-combine]
-   ["@turf/helpers" :refer [point convertArea]]
-   ["@turf/kinks$default" :as turf-kinks]
-   ["@turf/length$default" :as turf-length]
-   ["@turf/line-split$default" :as turf-line-split]
-   ["@turf/meta" :as turf-meta]
-   ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
-   ["@turf/simplify$default" :as turf-simplify]
-   ["@turf/truncate$default" :as turf-truncate]
-   ["ol/Feature$default" :as Feature]
-   ["ol/events/condition" :as events-condition]
-   ["ol/extent" :as extent]
-   ["ol/format/GeoJSON$default" :as GeoJSON]
-   ["ol/format/WKT$default" :as WKT]
-   ["ol/geom/Circle$default" :as Circle]
-   ["ol/interaction" :as interaction]
-   ["ol/proj" :as proj]
-   ["shpjs" :as shp]
-   [clojure.reader :refer [read-string]]
-   [clojure.spec.alpha :as spec]
-   [clojure.string :as string]
-   [goog.array :as garray]
-   [goog.object :as gobj]
-   [goog.string.path :as gpath]
-   [lipas.ui.map.projection] ;; Loaded for side-effects
-   [lipas.ui.map.styles :as styles]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [clojure.spec.alpha :as s]))
+  (:require ["@mapbox/togeojson" :as toGeoJSON]
+            ["@turf/area$default" :as turf-area]
+            ["@turf/buffer$default" :as turf-buffer]
+            ["@turf/clean-coords$default" :as turf-clean-coords]
+            ["@turf/combine$default" :as turf-combine]
+            ["@turf/helpers" :refer [convertArea point]]
+            ["@turf/kinks$default" :as turf-kinks]
+            ["@turf/length$default" :as turf-length]
+            ["@turf/line-split$default" :as turf-line-split]
+            ["@turf/meta" :as turf-meta]
+            ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
+            ["@turf/simplify$default" :as turf-simplify]
+            ["@turf/truncate$default" :as turf-truncate]
+            ["ol/Feature$default" :as Feature]
+            ["ol/events/condition" :as events-condition]
+            ["ol/extent" :as extent]
+            ["ol/format/GeoJSON$default" :as GeoJSON]
+            ["ol/format/WKT$default" :as WKT]
+            ["ol/geom/Circle$default" :as Circle]
+            ["ol/interaction" :as interaction]
+            ["ol/proj" :as proj]
+            ["shpjs" :as shp]
+            [lipas.ui.map.projection] ;; Loaded for side-effects
+            [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as string]
+            [goog.array :as garray]
+            [goog.object :as gobj]
+            [goog.string.path :as gpath]
+            [lipas.ui.map.styles :as styles]
+            [lipas.ui.utils :refer [==>] :as utils]))
 
 (def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
                             :featureProjection "EPSG:3067"}))
@@ -123,9 +121,7 @@
   (-> lf
       clj->js
       ->ol-feature
-      ->wkt
-      )
-  )
+      ->wkt))
 
 (defn simplify-scale
   "Scales given (natural) number to a usable simplification tolerance in
@@ -152,12 +148,12 @@
   (->> geom-coll
        :geometries
        (map-indexed
-        (fn [idx g]
-          {:type     "Feature"
-           :geometry g
-           :properties
-           {:id   (str (gensym))
-            :name (str "geom-" (inc idx))}}))))
+         (fn [idx g]
+           {:type     "Feature"
+            :geometry g
+            :properties
+            {:id   (str (gensym))
+             :name (str "geom-" (inc idx))}}))))
 
 (defn normalize-geom-colls
   "Handles a special case where geometries are contained in a
@@ -177,19 +173,19 @@
   (->> multi-geom
        :coordinates
        (map-indexed
-        (fn [idx coords]
-          {:type "Feature"
-           :geometry
-           {:type        geom-type
-            :coordinates coords}
-           :properties
-           (merge
-            props
-            {:id (str (gensym))}
-            (when-let [s (:nimi props)]
-              {:nimi (str s " osa " (inc idx))})
-            (when-let [s (:name props)]
-              {:name (str s " part " (inc idx))}))}))))
+         (fn [idx coords]
+           {:type "Feature"
+            :geometry
+            {:type        geom-type
+             :coordinates coords}
+            :properties
+            (merge
+              props
+              {:id (str (gensym))}
+              (when-let [s (:nimi props)]
+                {:nimi (str s " osa " (inc idx))})
+              (when-let [s (:name props)]
+                {:name (str s " part " (inc idx))}))}))))
 
 (defn normalize-multi-geoms
   "Makes an effort to convert multi-geoms into single geoms."
@@ -400,11 +396,11 @@
    (let [padding (or (-> map-ctx :mode :content-padding) #js [0 0 0 0])]
      (when (and view lmap (some finite? extent))
        (.fit view extent (clj->js
-                          (merge
-                           {:size                (.getSize lmap)
-                            :padding             (clj->js padding)
-                            :constrainResolution true}
-                           opts))))
+                           (merge
+                             {:size                (.getSize lmap)
+                              :padding             (clj->js padding)
+                              :constrainResolution true}
+                             opts))))
      map-ctx)))
 
 (defn fit-to-features! [map-ctx fs opts]
@@ -647,7 +643,6 @@
 
   map-ctx)
 
-
 ;; Below is a WIP attempt to automagically fix badly drawn
 ;; linestrings.
 ;;
@@ -793,7 +788,6 @@
 ;;                                  ->clj)))))
 ;;                  #{}))]
 ;;     (assoc fcoll :features fs)))
-
 
 ;; (defn- split-by-intersections [{:keys [features] :as fcoll}]
 ;;   (if (> 2 (count features))
@@ -1044,7 +1038,6 @@
 
 ;; (turf-truncate (clj->js killer-geom))
 
-
 ;; (-> dying-geom :features count)
 ;; (->> (update dying-geom :features conj killer-feature)
 ;;      (split-by-intersections)
@@ -1113,7 +1106,6 @@
 ;;          [25.749690556547957 62.609852625658625]
 ;;          [25.7484300396036 62.6100707537238]]}}]})
 
-
 ;;   (-> kink clj->js fix-kinks)
 ;;   (merge-line-strings kink)
 
@@ -1146,7 +1138,6 @@
 ;;   {:type "FeatureCollection", :features
 ;;    #{{:type "Feature", :properties {}, :geometry
 ;;       {:type "Point", :coordinates [25.635576 64.930784]}}}})
-
 
 ;; (def ls1 {:type "LineString", :coordinates [[25.635078 64.9308] [25.635324 64.930785] [25.635576 64.930784] [25.635617 64.93085]]})
 

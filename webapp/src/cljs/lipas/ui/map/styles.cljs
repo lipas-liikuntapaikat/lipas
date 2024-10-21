@@ -1,20 +1,19 @@
 (ns lipas.ui.map.styles
-  (:require
-   ["ol/geom/MultiPoint$default" :as MultiPoint]
-   ["ol/geom/Point$default" :as Point]
-   ["ol/style/Circle$default" :as Circle]
-   ["ol/style/Fill$default" :as Fill]
-   ["ol/style/Icon$default" :as Icon]
-   ["ol/style/RegularShape$default" :as RegularShape]
-   ["ol/style/Stroke$default" :as Stroke]
-   ["ol/style/Style$default" :as Style]
-   ["ol/style/Text$default" :as Text]
-   [goog.color :as gcolor]
-   [goog.color.alpha :as gcolora]
-   [lipas.data.activities :as activities]
-   [lipas.data.styles :as styles]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.svg :as svg]))
+  (:require ["ol/geom/MultiPoint$default" :as MultiPoint]
+            ["ol/geom/Point$default" :as Point]
+            ["ol/style/Circle$default" :as Circle]
+            ["ol/style/Fill$default" :as Fill]
+            ["ol/style/Icon$default" :as Icon]
+            ["ol/style/RegularShape$default" :as RegularShape]
+            ["ol/style/Stroke$default" :as Stroke]
+            ["ol/style/Style$default" :as Style]
+            ["ol/style/Text$default" :as Text]
+            [goog.color :as gcolor]
+            [goog.color.alpha :as gcolora]
+            [lipas.data.activities :as activities]
+            [lipas.data.styles :as styles]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.svg :as svg]))
 
 (defn ->marker-style [opts]
   (Style. #js {:image (Icon. #js {:src    (str "data:image/svg+xml;charset=utf-8,"
@@ -401,7 +400,6 @@
                                             :angle  (/ js/Math.PI 4)
                                             :fill   (Fill. #js {:color (->rgba color dens)})
                                             :stroke hover-stroke})})))
-
 
 (def school-colors
   {"Peruskoulut"

@@ -1,6 +1,5 @@
 (ns lipas.ui.sports-sites.activities.db
-  (:require
-   [lipas.data.activities :as data]))
+  (:require [lipas.data.activities :as data]))
 
 (def default-sort-order
   [:route-name
@@ -68,7 +67,7 @@
    :data          data/activities
    :by-type-code  data/by-type-code
    :field-sorters (into
-                   {:default default-field-sorter}
-                   (for [{:keys [sort-order value]} (vals data/activities)
-                         :when                      sort-order]
-                     [(keyword value) (make-field-sorter sort-order)]))})
+                    {:default default-field-sorter}
+                    (for [{:keys [sort-order value]} (vals data/activities)
+                          :when                      sort-order]
+                      [(keyword value) (make-field-sorter sort-order)]))})

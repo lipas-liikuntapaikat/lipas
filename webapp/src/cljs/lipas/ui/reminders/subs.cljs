@@ -1,7 +1,6 @@
 (ns lipas.ui.reminders.subs
-  (:require
-   [clojure.spec.alpha :as s]
-   [re-frame.core :as rf]))
+  (:require [clojure.spec.alpha :as s]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::reminders
   (fn [db _]

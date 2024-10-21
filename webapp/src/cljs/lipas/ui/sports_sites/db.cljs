@@ -1,15 +1,14 @@
 (ns lipas.ui.sports-sites.db
-  (:require
-   [lipas.data.admins :as admins]
-   [lipas.data.materials :as materials]
-   [lipas.data.owners :as owners]
-   [lipas.data.prop-types :as prop-types]
-   [lipas.data.sports-sites :as sports-sites]
-   [lipas.data.types :as types]
-   [lipas.ui.sports-sites.activities.db :as activities]
-   [lipas.ui.sports-sites.floorball.db :as floorball]
-   [lipas.ui.sports-sites.football.db :as football]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.data.admins :as admins]
+            [lipas.data.materials :as materials]
+            [lipas.data.owners :as owners]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.sports-sites :as sports-sites]
+            [lipas.data.types :as types]
+            [lipas.ui.sports-sites.activities.db :as activities]
+            [lipas.ui.sports-sites.floorball.db :as floorball]
+            [lipas.ui.sports-sites.football.db :as football]
+            [lipas.ui.utils :as utils]))
 
 ;; FIXME: What is the benefit of moving static data to re-frame app-db?
 ;; This breaks editing the data ns and getting the result visible right away.

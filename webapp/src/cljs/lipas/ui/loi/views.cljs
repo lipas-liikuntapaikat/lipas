@@ -1,15 +1,14 @@
 (ns lipas.ui.loi.views
-  (:require
-   [clojure.string :as str]
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.buttons :as buttons]
-   [lipas.ui.loi.events :as events]
-   [lipas.ui.loi.subs :as subs]
-   [lipas.ui.map.events :as map-events]
-   [lipas.ui.map.import :as import]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [clojure.string :as str]
+            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.loi.events :as events]
+            [lipas.ui.loi.subs :as subs]
+            [lipas.ui.map.events :as map-events]
+            [lipas.ui.map.import :as import]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn lang-selector
   [{:keys [locale]}]

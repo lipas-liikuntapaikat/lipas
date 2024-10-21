@@ -1,6 +1,5 @@
 (ns lipas.ui.feedback.db
-  (:require
-   [lipas.data.feedback :as feedback]))
+  (:require [lipas.data.feedback :as feedback]))
 
 (def default-db
   {:modal-open? false

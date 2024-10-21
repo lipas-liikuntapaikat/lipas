@@ -1,36 +1,35 @@
 (ns lipas.ui.map.map
-  (:require
-   ["ol" :as ol]
-   ["ol/events/condition" :as events-condition]
-   ["ol/extent" :as extent]
-   ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
-   ["ol/interaction/DragPan$default" :as DragPan]
-   ["ol/interaction/KeyboardPan$default" :as KeyboardPan]
-   ["ol/interaction/KeyboardZoom$default" :as KeyboardZoom]
-   ["ol/interaction/MouseWheelZoom$default" :as MouseWheelZoom]
-   ["ol/interaction/PinchZoom$default" :as PinchZoom]
-   ["ol/interaction/Select$default" :as SelectInteraction]
-   ["ol/layer/Image$default" :as ImageLayer]
-   ["ol/layer/Tile$default" :as TileLayer]
-   ["ol/layer/Vector$default" :as VectorLayer]
-   ["ol/layer/VectorImage$default" :as VectorImageLayer]
-   ["ol/proj" :as ol-proj]
-   ["ol/source/ImageWMS$default" :as ImageWMSSource]
-   ["ol/source/Vector$default" :as VectorSource]
-   ["ol/source/WMTS$default" :as WMTSSource]
-   ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
-   [goog.object :as gobj]
-   [lipas.ui.analysis.reachability.events]
-   [lipas.ui.map.editing :as editing]
-   [lipas.ui.map.events :as events]
-   [lipas.ui.map.projection :as proj]
-   [lipas.ui.map.styles :as styles]
-   [lipas.ui.map.subs :as subs]
-   [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [==>] :as utils]
-   [re-frame.core :as rf]
-   [reagent.core :as r]))
+  (:require ["ol" :as ol]
+            ["ol/events/condition" :as events-condition]
+            ["ol/extent" :as extent]
+            ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
+            ["ol/interaction/DragPan$default" :as DragPan]
+            ["ol/interaction/KeyboardPan$default" :as KeyboardPan]
+            ["ol/interaction/KeyboardZoom$default" :as KeyboardZoom]
+            ["ol/interaction/MouseWheelZoom$default" :as MouseWheelZoom]
+            ["ol/interaction/PinchZoom$default" :as PinchZoom]
+            ["ol/interaction/Select$default" :as SelectInteraction]
+            ["ol/layer/Image$default" :as ImageLayer]
+            ["ol/layer/Tile$default" :as TileLayer]
+            ["ol/layer/Vector$default" :as VectorLayer]
+            ["ol/layer/VectorImage$default" :as VectorImageLayer]
+            ["ol/proj" :as ol-proj]
+            ["ol/source/ImageWMS$default" :as ImageWMSSource]
+            ["ol/source/Vector$default" :as VectorSource]
+            ["ol/source/WMTS$default" :as WMTSSource]
+            ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
+            [goog.object :as gobj]
+            [lipas.ui.analysis.reachability.events]
+            [lipas.ui.map.editing :as editing]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.projection :as proj]
+            [lipas.ui.map.styles :as styles]
+            [lipas.ui.map.subs :as subs]
+            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [==>] :as utils]
+            [re-frame.core :as rf]
+            [reagent.core :as r]))
 
 #_(set! *warn-on-infer* true)
 
@@ -81,12 +80,12 @@
   {:basemaps
    {:taustakartta
     (->wmts
-     {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
+      {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
     :maastokartta
     (->wmts
-     {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
+      {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
     (->wmts
-     {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
+      {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors
     (VectorImageLayer.
@@ -156,34 +155,34 @@
                                          :crossOrigin "anonymous"})})
     :mml-kiinteisto
     (->wmts
-     {:url         (:kiinteisto urls)
+      {:url         (:kiinteisto urls)
       ;; Source (MML WMTS) won't return anything with res 0.25 so we
       ;; limit this layer grid to min resolution of 0.5 but allow
       ;; zooming to 0.25. Limiting the grid has a desired effect that
       ;; WMTS won't try to get the data and it shows geoms of
       ;; the "previous" resolution.
-      :resolutions (.slice mml-resolutions 0 15)
-      :matrix-ids  (.slice mml-matrix-ids 0 15)
-      :min-res     0.25
-      :max-res     8
-      :layer-name  "MML-Kiinteistö"})
+       :resolutions (.slice mml-resolutions 0 15)
+       :matrix-ids  (.slice mml-matrix-ids 0 15)
+       :min-res     0.25
+       :max-res     8
+       :layer-name  "MML-Kiinteistö"})
     :mml-kiinteistotunnukset
     (->wmts
-     {:url         (:kiinteistotunnukset urls)
+      {:url         (:kiinteistotunnukset urls)
       ;; Source (MML WMTS) won't return anything with res 0.25 so we
       ;; limit this layer grid to min resolution of 0.5 but allow
       ;; zooming to 0.25. Limiting the grid has a desired effect that
       ;; WMTS won't try to get the data and it shows geoms of
       ;; the "previous" resolution.
-      :resolutions (.slice mml-resolutions 0 15)
-      :matrix-ids  (.slice mml-matrix-ids 0 15)
-      :min-res     0.25
-      :max-res     8
-      :layer-name  "MML-Kiinteistötunnukset"})
+       :resolutions (.slice mml-resolutions 0 15)
+       :matrix-ids  (.slice mml-matrix-ids 0 15)
+       :min-res     0.25
+       :max-res     8
+       :layer-name  "MML-Kiinteistötunnukset"})
     :mml-kuntarajat
     (->wmts
-     {:url        (:kuntarajat urls)
-      :layer-name "MML-Kuntarajat"})}})
+      {:url        (:kuntarajat urls)
+       :layer-name "MML-Kuntarajat"})}})
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
@@ -198,9 +197,9 @@
                  :enableRotation      false}))
 
 (defn init-overlay [popup-ref]
-    (ol/Overlay.
-        #js {:offset #js [-15 0]
-             :element (.-current popup-ref)}))
+  (ol/Overlay.
+    #js {:offset #js [-15 0]
+         :element (.-current popup-ref)}))
 
 (defn init-map! [{:keys [center zoom popup-ref]}]
   (let [layers        (init-layers)
@@ -209,23 +208,23 @@
 
         opts #js {:target       "map"
                   :layers       #js [(-> layers :basemaps :taustakartta)
-                                (-> layers :basemaps :maastokartta)
-                                (-> layers :basemaps :ortokuva)
-                                (-> layers :overlays :analysis)
-                                (-> layers :overlays :population)
-                                (-> layers :overlays :schools)
-                                (-> layers :overlays :diversity-area)
-                                (-> layers :overlays :diversity-grid)
-                                (-> layers :overlays :vectors)
-                                (-> layers :overlays :lois)
-                                (-> layers :overlays :edits)
-                                (-> layers :overlays :highlights)
-                                (-> layers :overlays :markers)
-                                (-> layers :overlays :light-traffic)
-                                (-> layers :overlays :retkikartta-snowmobile-tracks)
-                                (-> layers :overlays :mml-kiinteisto)
-                                (-> layers :overlays :mml-kiinteistotunnukset)
-                                (-> layers :overlays :mml-kuntarajat)]
+                                     (-> layers :basemaps :maastokartta)
+                                     (-> layers :basemaps :ortokuva)
+                                     (-> layers :overlays :analysis)
+                                     (-> layers :overlays :population)
+                                     (-> layers :overlays :schools)
+                                     (-> layers :overlays :diversity-area)
+                                     (-> layers :overlays :diversity-grid)
+                                     (-> layers :overlays :vectors)
+                                     (-> layers :overlays :lois)
+                                     (-> layers :overlays :edits)
+                                     (-> layers :overlays :highlights)
+                                     (-> layers :overlays :markers)
+                                     (-> layers :overlays :light-traffic)
+                                     (-> layers :overlays :retkikartta-snowmobile-tracks)
+                                     (-> layers :overlays :mml-kiinteisto)
+                                     (-> layers :overlays :mml-kiinteistotunnukset)
+                                     (-> layers :overlays :mml-kuntarajat)]
                   :interactions #js [(MouseWheelZoom.)
                                      (KeyboardZoom.)
                                      (KeyboardPan.)
@@ -418,7 +417,6 @@
              (when (and (> width 0) (> height 0))
                (==> [::events/set-view center lonlat zoom extent width height])))))
 
-
     {:lmap     lmap
      :view     view
      :center   center
@@ -460,7 +458,7 @@
     (when-let [data (:data population)]
       (doseq [m     data
               :let  [f (map-utils/<-wkt (:coords m))
-                    zone-id (get-in m [:zone profile metric])]
+                     zone-id (get-in m [:zone profile metric])]
               :when zone-id]
         (.set f "vaesto" (:vaesto m))
         (.set f "zone" zone-id)
@@ -521,27 +519,27 @@
       map-utils/enable-loi-hover!
       map-utils/enable-select!
       (cond->
-          lipas-id  (map-utils/select-sports-site! lipas-id)
-          address   (map-utils/show-address-marker! address)
-          elevation (-> (map-utils/show-elevation-marker! elevation)
-                        #_(map-utils/highlight-segment! elevation)))))
+        lipas-id  (map-utils/select-sports-site! lipas-id)
+        address   (map-utils/show-address-marker! address)
+        elevation (-> (map-utils/show-elevation-marker! elevation)
+                      #_(map-utils/highlight-segment! elevation)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
    {:keys [lipas-id fit-nonce address elevation]}]
   (let [fit?      (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
-        ^js layer (-> layers :overlays :vectors) ]
+        ^js layer (-> layers :overlays :vectors)]
     (-> map-ctx
         (map-utils/clear-markers!)
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (map-utils/clear-highlights!)
         (cond->
-            lipas-id  (map-utils/select-sports-site! lipas-id)
-            fit?      (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
-            address   (map-utils/show-address-marker! address)
-            elevation (-> (map-utils/show-elevation-marker! elevation)
-                          #_(map-utils/highlight-segment! elevation))))))
+          lipas-id  (map-utils/select-sports-site! lipas-id)
+          fit?      (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
+          address   (map-utils/show-address-marker! address)
+          elevation (-> (map-utils/show-elevation-marker! elevation)
+                        #_(map-utils/highlight-segment! elevation))))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]
@@ -596,8 +594,8 @@
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (cond->
-            lipas-id (map-utils/select-sports-site! lipas-id)
-            fit? (map-utils/fit-to-extent! (-> vectors-layer .getSource .getExtent)))
+          lipas-id (map-utils/select-sports-site! lipas-id)
+          fit? (map-utils/fit-to-extent! (-> vectors-layer .getSource .getExtent)))
         (map-utils/enable-population-hover!)
         (show-population! reachability)
         (show-schools! reachability)
@@ -663,57 +661,57 @@
 
     (r/create-class
 
-     {:reagent-render
-      (fn [] [mui/grid {:id       "map"
+      {:reagent-render
+       (fn [] [mui/grid {:id       "map"
                         ;; Keyboard navigation requires that this element has a tabIndex
                         ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
-                        :tabIndex -1
-                        :item     true
-                        :style    {:height "100%" :width "100%"}
-                        :xs       12}])
+                         :tabIndex -1
+                         :item     true
+                         :style    {:height "100%" :width "100%"}
+                         :xs       12}])
 
-      :component-did-mount
-      (fn [comp]
-        (let [opts     (r/props comp)
-              basemap  (:basemap opts)
-              overlays (:overlays opts)
-              geoms    (:geoms opts)
-              lois     (:lois opts)
-              mode     (-> opts :mode)
+       :component-did-mount
+       (fn [comp]
+         (let [opts     (r/props comp)
+               basemap  (:basemap opts)
+               overlays (:overlays opts)
+               geoms    (:geoms opts)
+               lois     (:lois opts)
+               mode     (-> opts :mode)
 
-              map-ctx (-> (init-map! opts)
-                          (map-utils/update-geoms! geoms)
-                          (map-utils/update-lois! lois)
-                          (map-utils/set-basemap! basemap)
-                          (set-mode! mode))]
+               map-ctx (-> (init-map! opts)
+                           (map-utils/update-geoms! geoms)
+                           (map-utils/update-lois! lois)
+                           (map-utils/set-basemap! basemap)
+                           (set-mode! mode))]
 
-          (reset! map-ctx* map-ctx)))
+           (reset! map-ctx* map-ctx)))
 
-      :component-did-update
-      (fn [comp]
-        (let [opts     (r/props comp)
-              geoms    (-> opts :geoms)
-              lois     (-> opts :lois)
-              basemap  (-> opts :basemap)
-              overlays (-> opts :overlays)
-              center   (-> opts :center)
-              zoom     (-> opts :zoom)
-              mode     (-> opts :mode)
-              lipas-id (:lipas-id mode)]
+       :component-did-update
+       (fn [comp]
+         (let [opts     (r/props comp)
+               geoms    (-> opts :geoms)
+               lois     (-> opts :lois)
+               basemap  (-> opts :basemap)
+               overlays (-> opts :overlays)
+               center   (-> opts :center)
+               zoom     (-> opts :zoom)
+               mode     (-> opts :mode)
+               lipas-id (:lipas-id mode)]
 
-          (cond-> @map-ctx*
-            (not= (:geoms @map-ctx*) geoms)       (map-utils/update-geoms! geoms)
-            (not= (:lois @map-ctx*) lois)         (map-utils/update-lois! lois)
-            (not= (:basemap @map-ctx*) basemap)   (map-utils/set-basemap! basemap)
-            (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
-            (not= (:center @map-ctx*) center)     (map-utils/update-center! center)
-            (not= (:zoom @map-ctx*) zoom)         (map-utils/update-zoom! zoom)
-            (not= (:mode @map-ctx*) mode)         (update-mode! mode)
-            (and (= :default (:name mode))
-                 lipas-id)                        (map-utils/refresh-select! lipas-id)
-            true                                  (as-> $ (reset! map-ctx* $)))))
+           (cond-> @map-ctx*
+             (not= (:geoms @map-ctx*) geoms)       (map-utils/update-geoms! geoms)
+             (not= (:lois @map-ctx*) lois)         (map-utils/update-lois! lois)
+             (not= (:basemap @map-ctx*) basemap)   (map-utils/set-basemap! basemap)
+             (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
+             (not= (:center @map-ctx*) center)     (map-utils/update-center! center)
+             (not= (:zoom @map-ctx*) zoom)         (map-utils/update-zoom! zoom)
+             (not= (:mode @map-ctx*) mode)         (update-mode! mode)
+             (and (= :default (:name mode))
+                  lipas-id)                        (map-utils/refresh-select! lipas-id)
+             true                                  (as-> $ (reset! map-ctx* $)))))
 
-      :display-name "map-inner"})))
+       :display-name "map-inner"})))
 
 (defn map-outer [{:keys [popup-ref]}]
   (let [geoms-fast (rf/subscribe [::subs/geometries-fast])

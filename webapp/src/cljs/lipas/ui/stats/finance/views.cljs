@@ -1,21 +1,19 @@
 (ns lipas.ui.stats.finance.views
-  (:require
-   [goog.object :as gobj]
-   [lipas.ui.charts :as charts]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.stats.common :as common]
-   [lipas.ui.stats.finance.events :as events]
-   [lipas.ui.stats.finance.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.stats.common :as common]
+            [lipas.ui.stats.finance.events :as events]
+            [lipas.ui.stats.finance.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn year-selector
   [{:keys [tr] :as props}]
   [lui/year-selector
    (merge
-    props
-    {:label (tr :actions/select-year)
-     :style common/select-style})])
+     props
+     {:label (tr :actions/select-year)
+      :style common/select-style})])
 
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)

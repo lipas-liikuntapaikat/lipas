@@ -1,7 +1,6 @@
 (ns lipas.ui.ice-stadiums.subs
-  (:require
-   [lipas.ui.utils :as utils]
-   [re-frame.core :as rf]))
+  (:require [lipas.ui.utils :as utils]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::active-tab
   (fn [db _]
@@ -35,8 +34,8 @@
     (let [total-count (+ (get total-counts 2510)
                          (get total-counts 2520))
           hof         (sort-by :name (concat
-                                      (:hall-of-fame stats-2510)
-                                      (:hall-of-fame stats-2520)))]
+                                       (:hall-of-fame stats-2510)
+                                       (:hall-of-fame stats-2520)))]
       {:counts
        {:sites           total-count
         :not-reported    (- total-count (count hof))
@@ -56,8 +55,8 @@
         :water-m3        (+ (-> stats-2510 :water-m3 :count)
                             (-> stats-2520 :water-m3 :count))}
        :data-points  (sort-by :name (concat
-                                     (:data-points stats-2510)
-                                     (:data-points stats-2520)))
+                                      (:data-points stats-2510)
+                                      (:data-points stats-2520)))
        :hall-of-fame hof})))
 
 (rf/reg-sub ::sites-to-edit

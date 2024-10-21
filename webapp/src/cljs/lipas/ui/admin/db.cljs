@@ -1,6 +1,5 @@
 (ns lipas.ui.admin.db
-  (:require
-   [lipas.data.styles :as styles]))
+  (:require [lipas.data.styles :as styles]))
 
 (def default-db
   {:selected-tab                0

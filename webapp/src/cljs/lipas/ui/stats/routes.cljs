@@ -1,8 +1,7 @@
 (ns lipas.ui.stats.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.stats.events :as events]
-   [lipas.ui.stats.views :as views]))
+  (:require [lipas.ui.stats.events :as events]
+            [lipas.ui.stats.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["tilastot"

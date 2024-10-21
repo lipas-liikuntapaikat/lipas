@@ -1,19 +1,18 @@
 (ns lipas.ui.map.editing
-  (:require
-   ["ol-ext/interaction/DrawHole$default" :as DrawHole]
-   ["ol/events/condition" :as events-condition]
-   ["ol/interaction/Draw$default" :as Draw]
-   ["ol/interaction/Modify$default" :as Modify]
-   ["ol/interaction/Select$default" :as Select]
-   ["ol/interaction/Snap$default" :as Snap]
-   ["ol/proj" :as proj]
-   [goog.object :as gobj]
-   [lipas.ui.map.events :as events]
-   [lipas.ui.map.styles :as styles]
-   [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [==>] :as utils]
-   [re-frame.core :as rf]
-   [re-frame.db :as db]))
+  (:require ["ol-ext/interaction/DrawHole$default" :as DrawHole]
+            ["ol/events/condition" :as events-condition]
+            ["ol/interaction/Draw$default" :as Draw]
+            ["ol/interaction/Modify$default" :as Modify]
+            ["ol/interaction/Select$default" :as Select]
+            ["ol/interaction/Snap$default" :as Snap]
+            ["ol/proj" :as proj]
+            [goog.object :as gobj]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.styles :as styles]
+            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.utils :refer [==>] :as utils]
+            [re-frame.core :as rf]
+            [re-frame.db :as db]))
 
 (defn clear-edits!
   [{:keys [layers] :as map-ctx}]
@@ -53,7 +52,7 @@
                        (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))])))))
     (-> map-ctx
         map-utils/enable-edits-hover!
-        (assoc-in[:interactions :delete] delete))))
+        (assoc-in [:interactions :delete] delete))))
 
 (defn enable-splitting!
   [{:keys [^js lmap layers] :as map-ctx} on-modify]
@@ -242,11 +241,11 @@
         old-sm    (-> map-ctx :mode :sub-mode)]
     (case (:sub-mode mode)
       :drawing     (start-drawing! map-ctx geom-type
-                                 (fn [f] (==> [::events/new-geom-drawn f])))
+                                   (fn [f] (==> [::events/new-geom-drawn f])))
       :editing     (-> map-ctx
-                     (cond->
+                       (cond->
                          (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
-                     (start-editing! geoms on-modify))
+                       (start-editing! geoms on-modify))
       :deleting    (enable-delete! map-ctx on-modify)
       :splitting   (enable-splitting! map-ctx on-modify)
       :simplifying (simplify-edits! map-ctx mode)
@@ -381,8 +380,6 @@
         (assoc-in [:interactions :route-part-difficulty-select] select)
         (assoc-in [:interactions :route-part-difficulty-hover] hover))))
 
-
-
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
@@ -400,9 +397,7 @@
                         (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
                           ;;(==> [::events/continue-editing lipas-id :editing geom-type])
-                          )
-                        )]
-
+                          ))]
      (case sub-mode
        :view-only    (set-view-only-edit-mode! map-ctx mode)
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)

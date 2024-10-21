@@ -1,53 +1,52 @@
 (ns lipas.ui.reports.subs
-  (:require
-   [re-frame.core :as rf]))
+  (:require [re-frame.core :as rf]))
 
 (rf/reg-sub
- ::reports
- (fn [db _]
-   (:reports db)))
+  ::reports
+  (fn [db _]
+    (:reports db)))
 
 (rf/reg-sub
- ::selected-tab
- :<- [::reports]
- (fn [reports _]
-   (:selected-tab reports)))
+  ::selected-tab
+  :<- [::reports]
+  (fn [reports _]
+    (:selected-tab reports)))
 
 (rf/reg-sub
- ::dialog-open?
- :<- [::reports]
- (fn [reports _]
-   (:dialog-open? reports)))
+  ::dialog-open?
+  :<- [::reports]
+  (fn [reports _]
+    (:dialog-open? reports)))
 
 (rf/reg-sub
- ::downloading?
- :<- [::reports]
- (fn [reports _]
-   (:downloading? reports)))
+  ::downloading?
+  :<- [::reports]
+  (fn [reports _]
+    (:downloading? reports)))
 
 (rf/reg-sub
- ::fields
- :<- [::reports]
- (fn [reports _]
-   (:fields reports)))
+  ::fields
+  :<- [::reports]
+  (fn [reports _]
+    (:fields reports)))
 
 (rf/reg-sub
- ::selected-fields
- :<- [::reports]
- (fn [reports _]
-   (:selected-fields reports)))
+  ::selected-fields
+  :<- [::reports]
+  (fn [reports _]
+    (:selected-fields reports)))
 
 (rf/reg-sub
- ::selected-format
- :<- [::reports]
- (fn [reports _]
-   (:selected-format reports)))
+  ::selected-format
+  :<- [::reports]
+  (fn [reports _]
+    (:selected-format reports)))
 
 (rf/reg-sub
- ::save-dialog-open?
- :<- [::reports]
- (fn [reports _]
-   (:save-dialog-open? reports)))
+  ::save-dialog-open?
+  :<- [::reports]
+  (fn [reports _]
+    (:save-dialog-open? reports)))
 
 (defn- make-quick-selects
   [tr]
@@ -87,24 +86,24 @@
    :label  (tr :actions/select-all)})
 
 (rf/reg-sub
- ::quick-selects
- :<- [::fields]
- :<- [:lipas.ui.subs/translator]
- :<- [:lipas.ui.subs/logged-in?]
- (fn [[fields tr logged-in?] _]
-   (let [quick-selects (make-quick-selects tr)]
-     (if logged-in?
-       (conj quick-selects (make-select-all fields tr))
-       quick-selects))))
+  ::quick-selects
+  :<- [::fields]
+  :<- [:lipas.ui.subs/translator]
+  :<- [:lipas.ui.subs/logged-in?]
+  (fn [[fields tr logged-in?] _]
+    (let [quick-selects (make-quick-selects tr)]
+      (if logged-in?
+        (conj quick-selects (make-select-all fields tr))
+        quick-selects))))
 
 ;; Excel generation halts after certain threshold. Not sure why.
 ;; CSV and GeoJSON can be streamed
 (rf/reg-sub
- ::limits-exceeded?
- :<- [::selected-fields]
- :<- [:lipas.ui.search.subs/search-results-total-count]
- :<- [::selected-format]
- (fn [[fields results-count fmt] _]
-   (and (#{"xlsx"} fmt)
-        (> results-count 10000)
-        (> (count fields) 20))))
+  ::limits-exceeded?
+  :<- [::selected-fields]
+  :<- [:lipas.ui.search.subs/search-results-total-count]
+  :<- [::selected-format]
+  (fn [[fields results-count fmt] _]
+    (and (#{"xlsx"} fmt)
+         (> results-count 10000)
+         (> (count fields) 20))))

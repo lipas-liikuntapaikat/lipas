@@ -49,8 +49,8 @@
                    (assoc :geometries geoms)
                    (assoc :event-date (utils/timestamp)))]
       (boolean
-       (and geoms
-            (s/valid? :lipas.loi/document data))))))
+        (and geoms
+             (s/valid? :lipas.loi/document data))))))
 
 (rf/reg-sub
   ::loi-categories

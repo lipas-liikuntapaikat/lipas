@@ -1,7 +1,6 @@
 (ns lipas.ui.admin.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.admin.views :as views]))
+  (:require [lipas.ui.admin.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["admin"

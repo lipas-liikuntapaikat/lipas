@@ -1,6 +1,5 @@
 (ns lipas.ui.analysis.reachability.db
-  (:require
-   [goog.color :as gcolor]))
+  (:require [goog.color :as gcolor]))
 
 (def travel-metrics [:travel-time :distance])
 
@@ -18,15 +17,15 @@
 (def distances
   (into {}
         (map-indexed
-         (fn [idx v]
-           [idx {:idx idx :value v :label (str v "km")}]))
+          (fn [idx v]
+            [idx {:idx idx :value v :label (str v "km")}]))
         [0 0.5 1 1.5 2 3 4 5 7.5 10 15 20 30 40 50]))
 
 (def travel-times
   (into {}
         (map-indexed
-         (fn [idx v]
-           [idx {:idx idx :value v :label (str v "min")}]))
+          (fn [idx v]
+            [idx {:idx idx :value v :label (str v "min")}]))
         [0 10 20 30 40 50 60]))
 
 (def default-db
@@ -44,22 +43,22 @@
     :colors zone-colors
     :distance
     (map-indexed
-     (fn [idx [from-idx to-idx]]
-       {:min     (get-in distances [from-idx :value])
-        :min-idx from-idx
-        :max     (get-in distances [to-idx :value])
-        :max-idx to-idx
-        :id      (keyword (str "zone" (inc idx)))})
-     [[0 4] [4 7] [7 9]])
+      (fn [idx [from-idx to-idx]]
+        {:min     (get-in distances [from-idx :value])
+         :min-idx from-idx
+         :max     (get-in distances [to-idx :value])
+         :max-idx to-idx
+         :id      (keyword (str "zone" (inc idx)))})
+      [[0 4] [4 7] [7 9]])
     :travel-time
     (map-indexed
-     (fn [idx [from-idx to-idx]]
-       {:min     (get-in travel-times [from-idx :value])
-        :min-idx from-idx
-        :max     (get-in travel-times [to-idx :value])
-        :max-idx to-idx
-        :id      (keyword (str "zone" (inc idx)))})
-     [[0 1] [1 2] [2 3] [3 4]])}
+      (fn [idx [from-idx to-idx]]
+        {:min     (get-in travel-times [from-idx :value])
+         :min-idx from-idx
+         :max     (get-in travel-times [to-idx :value])
+         :max-idx to-idx
+         :id      (keyword (str "zone" (inc idx)))})
+      [[0 1] [1 2] [2 3] [3 4]])}
    :population
    {:view       "chart"
     :chart-mode "cumulative"}

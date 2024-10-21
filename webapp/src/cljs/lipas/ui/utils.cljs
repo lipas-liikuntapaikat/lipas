@@ -1,18 +1,14 @@
 (ns lipas.ui.utils
-  (:require
-   ;; FIXME: cemerick.url is deprecated
-   [cemerick.url :as url]
-   ;;[clojure.data :as data]
-   [clojure.reader :refer [read-string]]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as str]
-   [clojure.walk :as walk]
-   ;; FIXME: Closure-lib is deprecated
-   [goog.crypt.base64 :as b64]
-   [goog.date :as gdate]
-   [goog.labs.userAgent.browser :as gbrowser]
-   [lipas.utils :as utils]
-   [re-frame.core :as rf]))
+  (:require [cemerick.url :as url] ;;[clojure.data :as data]
+            [clojure.walk :as walk] ;; FIXME: Closure-lib is deprecated
+            [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as str]
+            [goog.crypt.base64 :as b64]
+            [goog.date :as gdate]
+            [goog.labs.userAgent.browser :as gbrowser]
+            [lipas.utils :as utils]
+            [re-frame.core :as rf]))
 
 (def <== (comp deref rf/subscribe))
 (def ==> rf/dispatch)
@@ -168,12 +164,12 @@
   "Removes nil values and empty entries recursively from maps."
   [m]
   (walk/postwalk
-   (fn [x]
-     (cond
-       (map? x) (not-empty (into {} (filter (comp some? val)) x))
-       (and (coll? x) (empty? x)) nil
-       :else x))
-   m))
+    (fn [x]
+      (cond
+        (map? x) (not-empty (into {} (filter (comp some? val)) x))
+        (and (coll? x) (empty? x)) nil
+        :else x))
+    m))
 
 (defn- make-comparable [rev]
   (-> rev
@@ -341,13 +337,13 @@
 
 (defn ->excel-row [headers m]
   (reduce
-   (fn [res [k _]]
-     (let [v (get m k)]
-       (conj res {:value v
-                  :type  (if (number? v)
-                           "number"
-                           "string")})))
-   [] headers))
+    (fn [res [k _]]
+      (let [v (get m k)]
+        (conj res {:value v
+                   :type  (if (number? v)
+                            "number"
+                            "string")})))
+    [] headers))
 
 (defn ->excel-data [headers coll]
   (let [header-row (->excel-row headers (into {} headers))]
@@ -358,7 +354,7 @@
   (->excel-data [[:kissa "Kissa"] [:kana "Kana"]]
                 [{:kissa "koira" :kana 12}])
   (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
-                (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
+               (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
 
 (defn ie? []
   (gbrowser/isIE))
@@ -420,8 +416,8 @@
 (defn link? [x]
   (and (string? x)
        (or
-        (str/starts-with? x "http")
-        (str/starts-with? x "www"))))
+         (str/starts-with? x "http")
+         (str/starts-with? x "www"))))
 
 (defn link-strict? [x]
   (and (string? x) (str/starts-with? x "http")))

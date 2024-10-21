@@ -1,18 +1,17 @@
 (ns lipas.ui.ice-stadiums.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.misc :as misc]
-   [lipas.ui.energy.views :as energy]
-   [lipas.ui.ice-stadiums.events :as events]
-   [lipas.ui.ice-stadiums.rinks :as rinks]
-   [lipas.ui.ice-stadiums.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.sports-sites.events :as site-events]
-   [lipas.ui.sports-sites.subs :as site-subs]
-   [lipas.ui.sports-sites.views :as sports-site]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.energy.views :as energy]
+            [lipas.ui.ice-stadiums.events :as events]
+            [lipas.ui.ice-stadiums.rinks :as rinks]
+            [lipas.ui.ice-stadiums.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.events :as site-events]
+            [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.sports-sites.views :as sports-site]
+            [lipas.ui.user.subs :as user-subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn stats-tab* []
   (let [tr    (<== [:lipas.ui.subs/translator])
@@ -32,7 +31,7 @@
 
      [mui/grid {:item true :xs 12 :style {:padding "1em"}}
       [mui/typography {:variant "h4" :style {:margin "0.5em 0 0 0" :opacity 0.7}}
-       (str(tr :ice/video-description) " - " (str (tr :ice/watch) " " (tr :ice/video)))]]
+       (str (tr :ice/video-description) " - " (str (tr :ice/watch) " " (tr :ice/video)))]]
 
      [mui/grid {:item true :style {:padding "1em"}}
       [:iframe
@@ -119,32 +118,32 @@
       :bottom-actions
       ;; FIXME: Just reagent elements, maybe :<>
       (conj
-       (misc/edit-actions-list
-        {:editing?          editing?
-         :valid?            edits-valid?
-         :logged-in?        logged-in?
-         :user-can-publish? user-can-publish?
-         :editing-allowed?  editing-allowed?
-         :on-discard        #(==> [:lipas.ui.events/confirm
-                                   (tr :confirm/discard-changes?)
-                                   (fn []
-                                     (==> [::site-events/discard-edits lipas-id]))])
-         :discard-tooltip   (tr :actions/discard)
-         :on-edit-start     #(==> [::site-events/edit-site lipas-id])
-         :edit-tooltip      (tr :actions/edit)
-         :on-publish        #(==> [::site-events/save-edits lipas-id])
-         :publish-tooltip   (tr :actions/save)
+        (misc/edit-actions-list
+          {:editing?          editing?
+           :valid?            edits-valid?
+           :logged-in?        logged-in?
+           :user-can-publish? user-can-publish?
+           :editing-allowed?  editing-allowed?
+           :on-discard        #(==> [:lipas.ui.events/confirm
+                                     (tr :confirm/discard-changes?)
+                                     (fn []
+                                       (==> [::site-events/discard-edits lipas-id]))])
+           :discard-tooltip   (tr :actions/discard)
+           :on-edit-start     #(==> [::site-events/edit-site lipas-id])
+           :edit-tooltip      (tr :actions/edit)
+           :on-publish        #(==> [::site-events/save-edits lipas-id])
+           :publish-tooltip   (tr :actions/save)
          ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
          ;;:delete-tooltip     (tr :actions/delete)
-         :invalid-message   (tr :error/invalid-form)})
+           :invalid-message   (tr :error/invalid-form)})
 
-       (when-not editing?
-         [mui/tooltip {:title (tr :map/zoom-to-site)}
-          [mui/fab
-           {:size     "small"
-            :on-click #(show-on-map lipas-id)}
-           [mui/icon {:color "secondary"}
-            "place"]]]))}
+        (when-not editing?
+          [mui/tooltip {:title (tr :map/zoom-to-site)}
+           [mui/fab
+            {:size     "small"
+             :on-click #(show-on-map lipas-id)}
+            [mui/icon {:color "secondary"}
+             "place"]]]))}
 
      [mui/grid {:container true :spacing 1}
 
@@ -167,8 +166,8 @@
          :edit-data    (:properties edit-data)
          :display-data (:properties display-data)
          :type-code    (or
-                        (-> edit-data :type :type-code)
-                        (-> display-data :type :type-code))
+                         (-> edit-data :type :type-code)
+                         (-> display-data :type :type-code))
          :on-change    (partial set-field :properties)
          :read-only?   (not editing?)}]]
 
@@ -392,7 +391,6 @@
              :spec      :lipas.building/total-ice-area-m2
              :adornment (tr :physical-units/m3)
              :on-change #(on-change :total-ice-area-m2 %)}]}
-
 
           {:label (tr :lipas.building/seating-capacity)
            :value (-> display-data :seating-capacity)
@@ -734,8 +732,7 @@
     :types #{2510 2520}}])
 
 (def tabs
-  {
-   0 :lipas.ui.routes.ice-stadiums/front-page
+  {0 :lipas.ui.routes.ice-stadiums/front-page
    1 :lipas.ui.routes.ice-stadiums/report-consumption
    2 :lipas.ui.routes.ice-stadiums/list-view
    3 :lipas.ui.routes.ice-stadiums/visualizations
@@ -759,7 +756,7 @@
 
          ;; 0 Stats tab
          [mui/tab {:label (tr :ice/headline)
-                    :icon  (r/as-element [mui/icon "ac_unit"])}]
+                   :icon  (r/as-element [mui/icon "ac_unit"])}]
 
          ;; 1 Energy form tab
          [mui/tab {:label (tr :lipas.energy-consumption/report)
@@ -803,6 +800,4 @@
     [create-panel tr logged-in?]))
 
 (comment
-  (utils/navigate! "jaahallit")
-
-  )
+  (utils/navigate! "jaahallit"))

@@ -1,11 +1,10 @@
 (ns lipas.ui.register.views
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.register.events :as events]
-   [lipas.ui.register.subs :as subs]
-   [lipas.ui.utils :refer [<== ==> navigate!]]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.register.events :as events]
+            [lipas.ui.register.subs :as subs]
+            [lipas.ui.utils :refer [<== ==> navigate!]]))
 
 (defn set-field [& args]
   (==> [::events/set-registration-form-field (butlast args) (last args)]))

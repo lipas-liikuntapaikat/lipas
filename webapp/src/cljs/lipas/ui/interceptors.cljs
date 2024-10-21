@@ -7,13 +7,13 @@
 
 (def check-token
   (rf/->interceptor
-   :id      ::check-token
-   :before  (fn [context]
-              (let [expired? (some-> (local-storage/ls-get :login-data)
-                                     :token
-                                     utils/jwt-expired?)]
-                (if expired?
-                  (-> context
-                      (assoc :queue []) ;; Delete any further actions in chain
-                      (assoc-in [:effects :dispatch] logout-event))
-                  context)))))
+    :id      ::check-token
+    :before  (fn [context]
+               (let [expired? (some-> (local-storage/ls-get :login-data)
+                                      :token
+                                      utils/jwt-expired?)]
+                 (if expired?
+                   (-> context
+                       (assoc :queue []) ;; Delete any further actions in chain
+                       (assoc-in [:effects :dispatch] logout-event))
+                   context)))))

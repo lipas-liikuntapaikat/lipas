@@ -1,6 +1,5 @@
 (ns lipas.ui.stats.age-structure.db
-  (:require
-   [lipas.reports :as reports]))
+  (:require [lipas.reports :as reports]))
 
 (def default-db
   {:groupings         reports/age-structure-groupings

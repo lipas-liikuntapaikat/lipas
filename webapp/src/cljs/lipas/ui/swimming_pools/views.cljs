@@ -1,20 +1,19 @@
 (ns lipas.ui.swimming-pools.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.misc :as misc]
-   [lipas.ui.energy.views :as energy]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.sports-sites.events :as site-events]
-   [lipas.ui.sports-sites.subs :as site-subs]
-   [lipas.ui.sports-sites.views :as sports-site]
-   [lipas.ui.swimming-pools.events :as events]
-   [lipas.ui.swimming-pools.pools :as pools]
-   [lipas.ui.swimming-pools.saunas :as saunas]
-   [lipas.ui.swimming-pools.slides :as slides]
-   [lipas.ui.swimming-pools.subs :as subs]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.energy.views :as energy]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.events :as site-events]
+            [lipas.ui.sports-sites.subs :as site-subs]
+            [lipas.ui.sports-sites.views :as sports-site]
+            [lipas.ui.swimming-pools.events :as events]
+            [lipas.ui.swimming-pools.pools :as pools]
+            [lipas.ui.swimming-pools.saunas :as saunas]
+            [lipas.ui.swimming-pools.slides :as slides]
+            [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.user.subs :as user-subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn stats-tab []
   (let [tr    (<== [:lipas.ui.subs/translator])
@@ -88,31 +87,31 @@
       :bottom-actions
       ;; FIXME: Just reagent elements, maybe :<>
       (conj
-       (misc/edit-actions-list
-        {:editing?          editing?
-         :valid?            edits-valid?
-         :logged-in?        logged-in?
-         :user-can-publish? user-can-publish?
-         :editing-allowed?  editing-allowed?
-         :on-discard        #(==> [:lipas.ui.events/confirm
-                                   (tr :confirm/discard-changes?)
-                                   (fn []
-                                     (==> [::site-events/discard-edits lipas-id]))])
-         :discard-tooltip   (tr :actions/discard)
-         :on-edit-start     #(==> [::site-events/edit-site lipas-id])
-         :edit-tooltip      (tr :actions/edit)
-         :on-publish        #(==> [::site-events/save-edits lipas-id])
-         :publish-tooltip   (tr :actions/save)
+        (misc/edit-actions-list
+          {:editing?          editing?
+           :valid?            edits-valid?
+           :logged-in?        logged-in?
+           :user-can-publish? user-can-publish?
+           :editing-allowed?  editing-allowed?
+           :on-discard        #(==> [:lipas.ui.events/confirm
+                                     (tr :confirm/discard-changes?)
+                                     (fn []
+                                       (==> [::site-events/discard-edits lipas-id]))])
+           :discard-tooltip   (tr :actions/discard)
+           :on-edit-start     #(==> [::site-events/edit-site lipas-id])
+           :edit-tooltip      (tr :actions/edit)
+           :on-publish        #(==> [::site-events/save-edits lipas-id])
+           :publish-tooltip   (tr :actions/save)
          ;;:on-delete          #(==> [::site-events/toggle-delete-dialog])
          ;;:delete-tooltip     (tr :actions/delete)
-         :invalid-message   (tr :error/invalid-form)})
-       (when-not editing?
-         [mui/tooltip {:title (tr :map/zoom-to-site)}
-          [mui/fab
-           {:size     "small"
-            :on-click #(show-on-map lipas-id)}
-           [mui/icon {:color "secondary"}
-            "place"]]]))}
+           :invalid-message   (tr :error/invalid-form)})
+        (when-not editing?
+          [mui/tooltip {:title (tr :map/zoom-to-site)}
+           [mui/fab
+            {:size     "small"
+             :on-click #(show-on-map lipas-id)}
+            [mui/icon {:color "secondary"}
+             "place"]]]))}
 
      [mui/grid {:container true :spacing 1}
 
@@ -134,8 +133,8 @@
          :edit-data    (:properties edit-data)
          :display-data (:properties display-data)
          :type-code    (or
-                        (-> edit-data :type :type-code)
-                        (-> display-data :type :type-code))
+                         (-> edit-data :type :type-code)
+                         (-> display-data :type :type-code))
          :on-change    (partial set-field :properties)
          :read-only?   (not editing?)}]]
 
