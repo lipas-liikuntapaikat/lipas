@@ -23,6 +23,28 @@
             [ring.middleware.params :as params]
             [ring.util.io :as ring-io]
             [taoensso.timbre :as log]))
+  (:require [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [lipas.backend.core :as core]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.legacy.api :as legacy.api]
+            [lipas.backend.middleware :as mw]
+            [lipas.backend.routes.v1-legacy :as v1-legacy]
+            [lipas.roles :as roles]
+            [lipas.schema.core]
+            [lipas.utils :as utils]
+            [muuntaja.core :as m]
+            [reitit.coercion.spec]
+            [reitit.ring :as ring]
+            [reitit.ring.coercion :as coercion]
+            [reitit.ring.middleware.exception :as exception]
+            [reitit.ring.middleware.multipart :as multipart]
+            [reitit.ring.middleware.muuntaja :as muuntaja]
+            [reitit.swagger :as swagger]
+            [reitit.swagger-ui :as swagger-ui]
+            [ring.middleware.params :as params]
+            [ring.util.io :as ring-io]
+            [taoensso.timbre :as log]))
 
 (defn exception-handler
   ([status type]
@@ -72,7 +94,6 @@
   [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
   (ring/ring-handler
    (ring/router
-
     [["/favicon.ico"
       {:get
        {:no-doc true
@@ -744,6 +765,111 @@
       (ptv-handler/routes ctx)]
 
      (v2/routes ctx)]
+      ;; PTV
+      ["/actions/get-ptv-integration-candidates"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/get-ptv-integration-candidates search body-params)})}}]
+
+      ["/actions/generate-ptv-descriptions"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/generate-ptv-descriptions search body-params)})}}]
+
+      ["/actions/generate-ptv-service-descriptions"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
+
+      ["/actions/save-ptv-service"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/upsert-ptv-service! body-params)})}}]
+
+      ["/actions/fetch-ptv-services"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/fetch-ptv-services body-params)})}}]
+
+      ["/actions/save-ptv-service-location"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
+
+      ["/actions/save-ptv-meta"
+       {:post
+        {:no-doc     false
+         :require-role :ptv/manage
+         :parameters {:body map?}
+         :handler
+         (fn [{:keys [body-params identity]}]
+           {:status 200
+            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]
+
+     ;; legacy routes
+     ["/v1/api"
+      ["/swagger.json"
+       {:get
+        {:no-doc  true
+         :swagger {:id ::legacy
+                   :info {:title "Lipas-API (legacy) v1"}
+                   :securityDefinitions
+                   {:token-auth
+                    {:type "apiKey"
+                     :in   "header"
+                     :name "Authorization"}}}
+         :handler (swagger/create-swagger-handler)}}]
+      ["/sports-place-types"
+       {:swagger {:id ::legacy}
+        :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
+        :get
+        {:handler
+         (fn [req]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :en)]
+             {:status     200
+              :body       (legacy.api/sports-place-types locale)}))}}]
+      ["sports-place-types/:type-code"
+       {:swagger {:id ::legacy}
+        :parameters {:query (s/keys :opt-un [:lipas.api/lang])
+                     :path {:type-code int?}}
+        :get
+        {:handler
+         (fn [req]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :en)
+                 type-code (-> req :parameters :path :type-code)]
+             (println locale type-code)
+             {:status     200
+              :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
@@ -769,4 +895,5 @@
                    mw/privilege-middleware]}})
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
+    (swagger-ui/create-swagger-ui-handler {:path "/v1/api/swagger-ui" :url "/v1/api/swagger.json"})
     (ring/create-default-handler))))
