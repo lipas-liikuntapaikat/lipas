@@ -212,8 +212,25 @@
       [:description {:optional true} localized-string-schema]
       [:value {:optional true} [:string {:min 2}]]]]]])
 
+(def status-opts
+  {"draft" {:fi "Luonnos"
+            :se "Utkast"
+            :en "Draft"}
+   "active" {:fi "Aktiivinen"
+             :se "Aktiv"
+             :en "Active"}})
+
 (def common-props
-  {:description-short
+  {:status
+   {:schema [:enum "draft" "active"]
+    :field
+    {:type "select"
+     :label   {:fi "UTP tietojen tila"
+               :se "Status för UTP-information"
+               :en "Status of UTP data"}
+     :opts status-opts}}
+
+   :description-short
    {:schema localized-string-schema
     :field
     {:type        "textarea"
@@ -353,9 +370,9 @@
       :description
       {:field
        {:type        "textarea"
-        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista."
-                      :se "Text som visas för alla i anslutning till bilden om vad som visas i bilden."
-                      :en "Text to be displayed for everyone in connection with the image about what is shown in the image."}
+        :description {:fi "Kuvan yhteydessä kaikille näytettävä teksti kuvassa esitettävistä asioista. Maksimissaan 255 merkkiä."
+                      :se "Text som visas för alla i anslutning till bilden om vad som visas i bilden. Maximalt 255 tecken."
+                      :en "Text to be displayed for everyone in connection with the image about what is shown in the image. A maximum of 255 characters."}
         :label       {:fi "Kuvateksti"
                       :se "Bildtext"
                       :en "Image caption"}}}
@@ -436,6 +453,7 @@
 
 (def common-route-props
   (-> common-props
+      (dissoc :status)
       (assoc-in [:description-long :field :description :fi]
                 "Tarkempi reitin eri vaiheiden kuvaus. Esim. kuljettavuus, nähtävyydet, taukopaikat ja palvelut. Erota vaiheet omiksi kappaleiksi.")
       (assoc-in [:description-long :field :description :se]
@@ -449,12 +467,36 @@
       (assoc-in [:description-short :field :description :en]
                 "Presentation of 1-3 sentences about the route and its specific properties.")))
 
-
 (def common-props-schema
   (collect-schema common-props))
 
+(def common-route-props-schema
+  (collect-schema common-route-props))
+
 (comment
   (m/schema common-props-schema))
+
+;; This field is added to multiple activities, but under some of them, it
+;; is only displayed for certain type-codes.
+;; :show callback is used to control which type-codes should display this field.
+;; Currently only the route-form component in the UI side uses this :show option.
+;;
+;; outdoor-recreation-routes paitsi 4402 (hiihtolatu)
+;; cycling (kaikki)
+;; paddling paitsi 4452 (vesiretkeilyreitti) ja 5150 (ei routes dataa)
+(def pilgrimage-field
+  {:schema [:boolean {:optional true}]
+   :field
+   {:type "checkbox"
+    :description {:fi "Jos kohde on pyhiinvaellusreitti, aktivoi liukukytkin. HUOM! Pyhiinvaellusreitti on ulkoilureitti, joka tarjoaa mahdollisuuden liikkumiseen, hiljentymiseen ja hengellisyyteen/henkisyyteen.  Reitin varrelle on rakennettu mobiilisti tai maastoon opasteita ja sisältöjä, jotka ohjaavat vaeltajaa."
+                  :se ""
+                  :en ""}
+    :label {:fi "Pyhinvaelluskohde"
+            :se ""
+            :en "Pilgrimage destination"}}})
+
+(def pilgrimage-key-schema
+  [:pilgrimage {:optional true} :boolean])
 
 (def outdoor-recreation-areas
   {:label      {:fi "Retkeily ja ulkoilualueet"
@@ -462,7 +504,8 @@
                 :en "Outdoor Recreation Areas"}
    :value      "outdoor-recreation-areas"
    :type-codes #{102 103 104 106 107 #_#_#_#_108 109 110 111 112}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :description-long
                 :highlights
                 :rules-structured
@@ -555,7 +598,8 @@
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
    :type-codes  #{4401 4402 4403 4404 4405}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                 :route-name
                  :description-short
                  :description-long
                  :independent-entity
@@ -572,15 +616,18 @@
                  :accessibility-classification
                  :accessibility
                  :accessibility-categorized
+                 :pilgrimage
                  :contacts
                  :additional-info-link
                  :images
                  :videos]
    :props
-   {:routes
+   {:status (:status common-props)
+
+    :routes
     {:schema [:sequential
               (mu/merge
-               (-> common-props-schema
+               (-> common-route-props-schema
                    (mu/dissoc :accessibility)
                    (mu/dissoc :latest-updates)
                    (mu/dissoc :rules))
@@ -604,7 +651,8 @@
                 [:surface-material {:optional true} surface-material-schema]
                 [:accessibility-classification
                  (into [:enum] (keys accessibility-classification))]
-                [:independent-entity {:optional true} [:boolean]]])]
+                [:independent-entity {:optional true} [:boolean]]
+                pilgrimage-key-schema])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -792,7 +840,10 @@
                         :en "Activate the slider if the route is not a part of any region or a broader entity (e.g. recreational area or national park). The activated slider turns red."}
           :label       {:fi "Itsenäinen kohde"
                         :se "Fristående plats"
-                        :en "Standalone place"}}}})}}}})
+                        :en "Standalone place"}}}
+
+        :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                    (not (#{4402} type-code))))})}}}})
 
 (def outdoor-recreation-routes-schema
   (collect-schema (:props outdoor-recreation-routes)))
@@ -831,6 +882,43 @@
                                :se "5 - Mycket utmanande"
                                :en "5 - Extremely challenging"}})
 
+;; https://www.bikeland.fi/vaativuusluokitukset
+(def cycling-route-part-difficulty
+  {"1a-easy"                  {:label {:fi "1 - Erittäin helppo (päällystetie)"
+                                       :se "1 - Mycket lätt (asfalterad väg)"
+                                       :en "1 - Very easy (paved road)"}}
+   "1b-easy"                  {:label {:fi "1 - Erittäin helppo (sora- tai metsätie)"
+                                       :se "1 - Mycket lätt (grus- eller skogsväg)"
+                                       :en "1 - Very easy (gravel or forest road)"}}
+   "2-easy"                   {:label {:fi "2 - Helppo"
+                                       :se "2 - Lätt"
+                                       :en "2 - Easy"}
+                               :description {:fi "Maastopyöräilyreitti, joka on yleensä leveä polku tai möykkyisämpi metsätie"
+                                             :se "Mountainbikerutt, som vanligtvis är en bred stig eller en gropigare skogsväg"
+                                             :en "Mountain biking trail, which is usually a wide path or a bumpier forest road"}}
+   "3-moderately-challenging" {:label {:fi "3 - Keskivaativa"
+                                       :se "3 - Medelsvår"
+                                       :en "3 - Moderately challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on usein polku tai muu kapeahko maastossa oleva ura"
+                                             :se "Mountainbikerutt, som ofta är en stig eller ett annat smalt spår i terrängen"
+                                             :en "Mountain biking trail, which is often a path or another narrow track in the terrain"}}
+   "4-challenging"            {:label {:fi "4 - Vaativa"
+                                       :se "4 - Utmanande"
+                                       :en "4 - Challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on kapea polku tai reitti ja siinä on useita vaikeakulkuisia kohtia"
+                                             :se "Mountainbikerutt, som är en smal stig eller led och har flera svårframkomliga partier"
+                                             :en "Mountain biking trail, which is a narrow path or route with several difficult sections"}}
+   "5-extremely-challenging"  {:label {:fi "5 - Erittäin vaativa"
+                                       :se "5 - Mycket utmanande"
+                                       :en "5 - Extremely challenging"}
+                               :description {:fi "Maastopyöräilyreitti, joka on usein kapeaa ja erittäin haastavaa polkua ja siinä on jatkuvasti haastavia osuuksia"
+                                             :se "Mountainbikerutt, som ofta är smal och mycket utmanande, med ständigt svåra avsnitt"
+                                             :en "Mountain biking trail, which is often narrow and very challenging, with constantly difficult sections"}}})
+
+(def cycling-route-part-difficulty-label {:fi "Reittiosan vaativuus"
+                                          :se "Avsnittets svårighetsgrad"
+                                          :en "Section difficulty"})
+
 (def cycling
   {:label       {:fi "Pyöräily"
                  :se "Cykling"
@@ -838,15 +926,17 @@
    :value       "cycling"
    :description {:fi ""}
    :type-codes  #{4411 4412}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                :route-name
                 :description-short
-                :description-long
                 :route-notes
+                :description-long
                 :highlights
                 :cycling-activities
                 :route-length-km
                 :duration
                 :cycling-difficulty
+                :cycling-route-difficulty
                 :surface-material
                 :unpaved-percentage
                 :trail-percentage
@@ -856,12 +946,14 @@
                 :food-and-water
                 :good-to-know
                 :accessibility
+                :pilgrimage
                 :contacts
                 :additional-info-link
                 :images
                 :videos]
    :props
-   {
+   {:status (:status common-props)
+
     ;; Päiväetapit pitää pystyä esittelemään erikseen kartalla ja
     ;; kuvailemaan omana kohteenaan. Reittikokonaisuus olisi päätason
     ;; liikuntapaikka (alatasona päiväetapit, jotka ovat ehdotusmaisia
@@ -869,7 +961,7 @@
     :routes
     {:schema [:sequential
               (mu/merge
-               common-props-schema
+               common-route-props-schema
                [:map
                 [:id [:string]]
                 [:geometries route-fcoll-schema]
@@ -878,6 +970,7 @@
                  [:sequential (into [:enum] (keys cycling-activities))]]
                 [:cycling-difficulty {:optional true}
                  (into [:enum] (keys cycling-difficulty))]
+                [:cycling-route-difficulty {:optional true} localized-string-schema]
                 [:duration {:optional true} duration-schema]
                 [:food-and-water {:optional true} localized-string-schema]
                 [:accommodation {:optional true} localized-string-schema]
@@ -887,7 +980,8 @@
                 [:surface-material {:optional true} surface-material-schema]
                 [:unpaved-percentage {:optional true} percentage-schema]
                 [:trail-percentage {:optional true} percentage-schema]
-                [:cyclable-percentage {:optional true} percentage-schema]])]
+                [:cyclable-percentage {:optional true} percentage-schema]
+                pilgrimage-key-schema])]
      :field
      {:type        "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -898,7 +992,14 @@
                     :en "Route type"}
       :props
       (merge
-       (dissoc common-route-props :rules)
+       (-> (dissoc common-route-props :rules)
+           (update-in [:description-long :field] assoc
+                      :label {:fi "Reittikuvaus"
+                              :se ""
+                              :en ""}
+                      :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erota vaiheet omiksi kappaleiksi."
+                                    :se ""
+                                    :en ""}))
        {:route-name
         {:field
          {:type        "text-field"
@@ -929,6 +1030,16 @@
                         :se "Uppskattad utmaning för rutten"
                         :en "Estimated difficulty of the route"}
           :opts        cycling-difficulty}}
+
+        :cycling-route-difficulty
+        {:field
+         {:type        "textarea"
+          :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
+                        :se ""
+                        :en ""}
+          :label       {:fi "Haastavuus"
+                        :se "Utmaning"
+                        :en "Difficulty"}}}
 
         :duration
         {:field
@@ -973,12 +1084,12 @@
         :route-notes
         {:field
          {:type        "textarea"
-          :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erottele eri vaiheet omiksi kappaleikseen."
-                        :se "En mer detaljerad beskrivning av ruttens olika etapper. T.ex. transportmöjligheter, attraktioner, rastplatser och tjänster. Dela upp stegen i egna stycken."
-                        :en "A more detailed description of the different stages of the route. E.g. passability, attractions, rest areas and services. Split the stages into individual paragraphs."}
-          :label       {:fi "Reittimuistiinpanot"
-                        :se "Anteckningar om rutten"
-                        :en "Route notes"}}}
+          :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista."
+                        :se ""
+                        :en ""}
+          :label       {:fi "Laajennettu yleiskuvaus"
+                        :se ""
+                        :en ""}}}
 
         :unpaved-percentage
         {:field
@@ -1030,7 +1141,9 @@
                            :en "Surface material"}
           :description    {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
                            :se "Välj alla underlag som finns på rutten."
-                           :en "Select all the surface materials on the route"}}}})}}}})
+                           :en "Select all the surface materials on the route"}}}
+
+        :pilgrimage pilgrimage-field})}}}})
 
 (def cycling-schema
   (collect-schema (:props cycling)))
@@ -1097,13 +1210,14 @@
    :value       "paddling"
    :description {:fi ""}
    :type-codes  #{4451 4452 5150}
-   :type->props {4451 #{:routes}
-                 4452 #{:routes}
+   :type->props {4451 #{:status :routes}
+                 4452 #{:status :routes}
                  5150 (into #{:equipment-rental?
                               :rapid-canoeing-centre?
                               :canoeing-club?
                               :activity-service-company?} (keys common-props))}
-   :sort-order  [:route-name
+   :sort-order  [:status
+                 :route-name
                  :description-short
                  :description-long
                  :highlights
@@ -1123,13 +1237,16 @@
                  :rules
                  :safety
                  :accessibility
+                 :pilgrimage
                  :contacts
                  :additional-info-link
                  :images
                  :videos]
    :props
    (merge #_common-props {}
-          {:equipment-rental?
+          {:status (:status common-props)
+
+           :equipment-rental?
            {:schema [:boolean]
             :field
             {:type           "lipas-property"
@@ -1180,7 +1297,7 @@
            :routes
            {:schema [:sequential
                      (mu/merge
-                      common-props-schema
+                      common-route-props-schema
                       [:map
                        [:id [:string]]
                        [:geometries route-fcoll-schema]
@@ -1195,7 +1312,8 @@
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                        [:safety {:optional true} localized-string-schema]
                        [:good-to-know {:optional true} localized-string-schema]
-                       [:duration {:optional true} duration-schema]])]
+                       [:duration {:optional true} duration-schema]
+                       pilgrimage-key-schema])]
             :field
             {:type        "routes"
              :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -1316,7 +1434,10 @@
                                :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
                  :label       {:fi "Kulkusuunta"
                                :se "Färdriktning"
-                               :en "Travel direction"}}}})}}})})
+                               :en "Travel direction"}}}
+
+               :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                           (= 4451 type-code)))})}}})})
 
 (def paddling-schema
   (collect-schema (:props paddling)))
@@ -1453,7 +1574,8 @@
    :value       "fishing"
    :description {:fi ""}
    :type-codes  #{201 113}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :description-long
                 :highlights
                 :fishing-type
@@ -1620,7 +1742,8 @@
    :value       "outdoor-recreation-facilities"
    :description {:fi ""}
    :type-codes  #{207 205 206 202 301 302 304 #_204}
-   :sort-order [:description-short
+   :sort-order [:status
+                :description-short
                 :rules
                 :arrival
                 :accessibility

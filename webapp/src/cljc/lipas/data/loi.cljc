@@ -130,6 +130,30 @@
                  :se "Öppen sjö"
                  :en "Open part of the lake"}})
 
+;; NOTE: The current select input used in loi.views always sorts the options
+(def protected-area-opts
+  {"forbidden" {:fi "Alueella liikkuminen on kielletty kokonaan"
+                :se "Området är helt förbjudet att vistas på"
+                :en "Movement in the area is completely forbidden"}
+   "restricted" {:fi "Alueella liikkumista tai sen käyttöä on rajoitettu"
+                 :se "Vistelse eller användning av området är begränsad"
+                 :en "Movement or use of the area is restricted"}
+   "allowed" {:fi "Alueella liikkuminen on sallittu"
+              :se "Vistelse i området är tillåten"
+              :en "Movement in the area is allowed"}
+   nil {:fi "-"
+        :se "-"
+        :en "-"}})
+
+(def protected-area-fields
+  {:protected-area-specification
+   {:schema (into [:enum] (keys protected-area-opts))
+    :field {:type "select"
+            :label {:fi "Tarkenne"
+                    :se "Specifikation"
+                    :en "Specification"}
+            :opts protected-area-opts}}})
+
 (def categories
   {"water-conditions"
    {:label {:fi "Vesiolosuhteet"}
@@ -414,7 +438,7 @@
      {:label     {:fi "Luonnonsuojelualue" :se "Naturreservat" :en "Nature reserve"}
       :value     "nature-reserve"
       :geom-type "Polygon"
-      :props     (merge common-props)}
+      :props     (merge common-props protected-area-fields)}
 
      :other-area-with-movement-restrictions
      {:label     {:fi "Muu alue, jolla on liikkumisrajoituksia"
@@ -422,7 +446,7 @@
                   :en "Other area with movement restrictions"}
       :value     "other-area-with-movement-restrictions"
       :geom-type "Polygon"
-      :props     (merge common-props)}}}})
+      :props     (merge common-props protected-area-fields)}}}})
 
 (def point-fcoll-schema
   [:map

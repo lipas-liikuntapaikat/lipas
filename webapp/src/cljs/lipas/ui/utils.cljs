@@ -251,6 +251,17 @@
       (update-in [:audits] (comp not-empty remove-ids vals))
       (update-in [:audits] (fn [rooms] (remove empty? rooms)))
 
+      ;; Add status=active to each activity key the site has
+      ;; The form doesn't currently validate this required key is set, so
+      ;; add the default value before save.
+      (cond->
+        (:activities sports-site)
+        (update :activities (fn [activities]
+                              (into (empty activities)
+                                    (map (fn [[k v]]
+                                           [k (merge {:status "active"} v)])
+                                         activities)))))
+
       clean))
 
 (defn make-editable [sports-site]

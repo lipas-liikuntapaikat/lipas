@@ -46,7 +46,8 @@
 (defn text-field-controlled
   [{:keys [value type on-change spec required
            InputProps InputLabelProps
-           adornment multiline read-only? tooltip on-blur]
+           adornment multiline read-only? tooltip on-blur
+           error]
     :or   {tooltip ""}
     :as   props} & children]
   (let [input      (if multiline
@@ -55,7 +56,7 @@
         props      (-> (if (= "number" type) (dissoc props :type) props)
                        (dissoc :read-only? :defer-ms :spec)
                        (assoc
-                         :error (error? spec value required)
+                         :error (or error (error? spec value required))
                          ;; Use MUI prop names as-is
                          :InputLabelProps
                          (merge {:shrink (some? value)}

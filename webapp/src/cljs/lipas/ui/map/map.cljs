@@ -205,15 +205,15 @@
                 :units               "m"
                 :enableRotation      false}))
 
-(defn init-overlay []
-  (ol/Overlay. #js{:offset #js[-15 0]
-                   :element
-                   (js/document.getElementById "popup-anchor")}))
+(defn init-overlay [popup-ref]
+    (ol/Overlay.
+        #js {:offset #js [-15 0]
+             :element (.-current popup-ref)}))
 
-(defn init-map! [{:keys [center zoom]}]
+(defn init-map! [{:keys [center zoom popup-ref]}]
   (let [layers        (init-layers)
         view          (init-view center zoom)
-        popup-overlay (init-overlay)
+        popup-overlay (init-overlay popup-ref)
 
         opts #js {:target       "map"
                   :layers       #js[(-> layers :basemaps :taustakartta)
@@ -315,8 +315,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+                     {:data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on loi-hover "select"
          (fn [e]
@@ -327,8 +326,7 @@
              #_(js/console.log (aget selected 0))
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :type      :loi
+                     {:type      :loi
                       :data      (-> selected
                                      map-utils/->geoJSON-clj)})]))))
 
@@ -340,8 +338,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :data      (-> selected map-utils/->geoJSON-clj)})]))))
+                     {:data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on population-hover "select"
          (fn [e]
@@ -351,8 +348,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :type      :population
+                     {:type      :population
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on schools-hover "select"
@@ -363,8 +359,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :type      :school
+                     {:type      :school
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-grid-hover "select"
@@ -375,8 +370,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :type      :diversity-grid
+                     {:type      :diversity-grid
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-area-hover "select"
@@ -387,8 +381,7 @@
              (.setPosition popup-overlay coords)
              (==> [::events/show-popup
                    (when (not-empty selected)
-                     {:anchor-el (.getElement popup-overlay)
-                      :type      :diversity-area
+                     {:type      :diversity-area
                       :data      (-> selected map-utils/->geoJSON-clj)})]))))
 
     (.on diversity-area-select "select"
@@ -671,7 +664,7 @@
                               (set-analysis-mode! map-ctx mode)))]
     (assoc map-ctx :mode mode)))
 
-(defn map-inner []
+(defn map-inner [opts]
 
   ;; Internal state
   (let [map-ctx* (atom nil)]
@@ -730,7 +723,7 @@
 
       :display-name "map-inner"})))
 
-(defn map-outer []
+(defn map-outer [{:keys [popup-ref]}]
   (let [geoms-fast (re-frame/subscribe [::subs/geometries-fast])
         lois       (re-frame/subscribe [::subs/loi-geoms])
         basemap    (re-frame/subscribe [::subs/basemap])
@@ -746,4 +739,5 @@
         :overlays @overlays
         :center   @center
         :zoom     @zoom
-        :mode     @mode}])))
+        :mode     @mode
+        :popup-ref popup-ref}])))
