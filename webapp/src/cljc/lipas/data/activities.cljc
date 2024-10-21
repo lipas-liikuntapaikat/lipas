@@ -213,12 +213,12 @@
       [:value {:optional true} [:string {:min 2}]]]]]])
 
 (def status-opts
-  {:draft {:fi "Luonnos"
-           :se "Utkast"
-           :en "Draft"}
-   :active {:fi "Aktiivinen"
-            :se "Aktiv"
-            :en "Active"}})
+  {"draft" {:fi "Luonnos"
+            :se "Utkast"
+            :en "Draft"}
+   "active" {:fi "Aktiivinen"
+             :se "Aktiv"
+             :en "Active"}})
 
 (def common-props
   {:status
