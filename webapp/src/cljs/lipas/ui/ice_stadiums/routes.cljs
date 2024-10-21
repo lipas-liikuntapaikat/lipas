@@ -1,8 +1,7 @@
 (ns lipas.ui.ice-stadiums.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.ice-stadiums.events :as events]
-   [lipas.ui.ice-stadiums.views :as views]))
+  (:require [lipas.ui.ice-stadiums.events :as events]
+            [lipas.ui.ice-stadiums.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["jaahallit"

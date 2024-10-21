@@ -1,7 +1,6 @@
 (ns lipas.ui.register.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.register.views :as views]))
+  (:require [lipas.ui.register.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["rekisteroidy"

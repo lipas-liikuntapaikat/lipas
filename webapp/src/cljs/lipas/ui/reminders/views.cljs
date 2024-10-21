@@ -1,10 +1,9 @@
 (ns lipas.ui.reminders.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.reminders.events :as events]
-   [lipas.ui.reminders.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.reminders.events :as events]
+            [lipas.ui.reminders.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn add-button [{:keys [message]}]
   (let [tr (<== [:lipas.ui.subs/translator])]
@@ -39,13 +38,13 @@
       [mui/grid {:item true :xs 12}
 
        (into
-        [mui/grid {:container true :spacing 1}]
-        (for [[k v] preselect-opts]
-          [mui/grid {:item true}
-           [mui/button
-            {:variant  "outlined"
-             :on-click #(==> [::events/select-option v])}
-            (tr (keyword :reminders k))]]))]
+         [mui/grid {:container true :spacing 1}]
+         (for [[k v] preselect-opts]
+           [mui/grid {:item true}
+            [mui/button
+             {:variant  "outlined"
+              :on-click #(==> [::events/select-option v])}
+             (tr (keyword :reminders k))]]))]
 
       [mui/grid {:item true :xs 12}
 

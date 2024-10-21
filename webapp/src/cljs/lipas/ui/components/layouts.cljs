@@ -1,23 +1,22 @@
 (ns lipas.ui.components.layouts
-  (:require
-   [lipas.ui.mui :as mui]
-   [reagent.core :as r]))
+  (:require [lipas.ui.mui :as mui]
+            [reagent.core :as r]))
 
 (defn floating-container
   [{:keys [ref top right bottom left background-color]
     :or   {background-color mui/gray2}} & children]
   (into
-   [:div.no-print
-    {:ref ref
-     :style
-     {:position         "fixed"
-      :z-index          999
-      :background-color background-color
-      :top              top
-      :right            right
-      :bottom           bottom
-      :left             left}}]
-   children))
+    [:div.no-print
+     {:ref ref
+      :style
+      {:position         "fixed"
+       :z-index          999
+       :background-color background-color
+       :top              top
+       :right            right
+       :bottom           bottom
+       :left             left}}]
+    children))
 
 (defn card
   [{:keys [title xs md lg] :or {xs 12 md 6}} & content]

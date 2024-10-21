@@ -1,12 +1,11 @@
 (ns lipas.ui.forgot-password.views
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.forgot-password.events :as events]
-   [lipas.ui.forgot-password.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
+            [lipas.ui.forgot-password.events :as events]
+            [lipas.ui.forgot-password.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn request-reset-link-form [{:keys [tr]}]
   (r/with-let [email (r/atom nil)]

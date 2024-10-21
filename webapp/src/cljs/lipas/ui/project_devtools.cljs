@@ -1,10 +1,10 @@
 (ns lipas.ui.project-devtools
   (:require [lipas.roles :as roles]
             [lipas.ui.user.subs :as user-subs]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [re-frame.db]
-            [reagent-dev-tools.core :as dev-tools]
-            [lipas.ui.utils :as utils]))
+            [reagent-dev-tools.core :as dev-tools]))
 
 (rf/reg-event-db ::set-privilege-override
   (fn [db [_ k value]]

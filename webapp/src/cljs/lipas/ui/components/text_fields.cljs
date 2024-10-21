@@ -1,13 +1,11 @@
 (ns lipas.ui.components.text-fields
-  (:require
-   ["react" :as react]
-   [clojure.reader :refer [read-string]]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as string]
-   [goog.functions :as gfun]
-   [lipas.ui.mui :as mui]
-   [malli.core :as m]
-   [reagent.core :as r]))
+  (:require ["react" :as react]
+            [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as string]
+            [lipas.ui.mui :as mui]
+            [malli.core :as m]
+            [reagent.core :as r]))
 
 (defn error? [spec value required]
   (if (and spec (or value required))
@@ -19,7 +17,7 @@
 (defn ->adornment [s]
   {:endAdornment
    (r/as-element
-    [mui/input-adornment s])})
+     [mui/input-adornment s])})
 
 ;; TODO maybe one magic regexp needed here?
 (defn coerce [type s]
@@ -97,8 +95,8 @@
        :on-close  #(swap! state assoc :dialog-open? false)}
       [mui/dialog-content
        #_[mui/icon-button
-        {:on-click #(swap! state assoc :dialog-open? false)}
-        [mui/icon "open_in_full"]]
+          {:on-click #(swap! state assoc :dialog-open? false)}
+          [mui/icon "open_in_full"]]
        [text-field (assoc props :rows 15) children]]
       [mui/dialog-actions
        [mui/button {:on-click #(swap! state assoc :dialog-open? false)}

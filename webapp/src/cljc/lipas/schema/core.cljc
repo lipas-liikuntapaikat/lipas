@@ -2,7 +2,7 @@
   (:require
    [clojure.spec.alpha :as s]
    [clojure.spec.gen.alpha :as gen]
-   [clojure.string :as string]
+   [clojure.string :as str]
    [hiposfer.geojson.specs :as geojson]
    [lipas.data.activities :as activities]
    [lipas.data.admins :as admins]
@@ -485,9 +485,6 @@
 
 (def type-codes
   (keys sports-site-types/all))
-
-(def old-type-codes
-  )
 
 (s/def :lipas.sports-site.type/type-code*
   (into #{} type-codes))
@@ -2040,13 +2037,13 @@
 
 (s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
 (s/def :lipas.magic-link/login-url
-  (s/or :local #(string/starts-with? % "https://localhost")
-        :dev   #(string/starts-with? % "https://lipas-dev.cc.jyu.fi")
-        :prod1 #(string/starts-with? % "https://uimahallit.lipas.fi")
-        :prod2 #(string/starts-with? % "https://jaahallit.lipas.fi")
-        :prod3 #(string/starts-with? % "https://liikuntapaikat.lipas.fi")
-        :prod4 #(string/starts-with? % "https://www.lipas.fi")
-        :prod5 #(string/starts-with? % "https://lipas.fi")))
+  (s/or :local #(str/starts-with? % "https://localhost")
+        :dev   #(str/starts-with? % "https://lipas-dev.cc.jyu.fi")
+        :prod1 #(str/starts-with? % "https://uimahallit.lipas.fi")
+        :prod2 #(str/starts-with? % "https://jaahallit.lipas.fi")
+        :prod3 #(str/starts-with? % "https://liikuntapaikat.lipas.fi")
+        :prod4 #(str/starts-with? % "https://www.lipas.fi")
+        :prod5 #(str/starts-with? % "https://lipas.fi")))
 
 
 ;;; Diversity index calculation
@@ -2221,7 +2218,6 @@
 
 
 (comment
-  (require '[spec-tools.parse :as stp])
   (stp/parse-spec :lipas.loi/document)
   (stp/parse-spec :lipas/timestamp)
   (stp/parse-spec :lipas.sports-site/lipas-id)

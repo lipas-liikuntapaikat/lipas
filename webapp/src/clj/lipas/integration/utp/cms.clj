@@ -1,7 +1,7 @@
 (ns lipas.integration.utp.cms
-  (:require [cheshire.core :as json]
+  (:require [cemerick.url :as url]
+            [cheshire.core :as json]
             [clj-http.client :as client]
-            [cemerick.url :as url]
             [lipas.backend.config :as config]))
 
 (def api-url (get-in config/default-config [:app :utp :cms-api-url]))

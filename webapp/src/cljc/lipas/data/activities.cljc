@@ -2,8 +2,7 @@
   (:require
    #?(:clj [cheshire.core :as json])
    #?(:clj [clojure.data.csv :as csv])
-   [clojure.string :as str]
-   [clojure.walk :as walk]
+   #?(:clj [clojure.string :as str])
    [lipas.data.materials :as materials]
    [lipas.utils :as utils]
    [malli.core :as m]

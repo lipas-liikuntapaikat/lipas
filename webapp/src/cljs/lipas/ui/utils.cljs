@@ -1,21 +1,17 @@
 (ns lipas.ui.utils
-  (:require
-   ;; FIXME: cemerick.url is deprecated
-   [cemerick.url :as url]
-   ;;[clojure.data :as data]
-   [clojure.reader :refer [read-string]]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as string]
-   [clojure.walk :as walk]
-   ;; FIXME: Closure-lib is deprecated
-   [goog.crypt.base64 :as b64]
-   [goog.labs.userAgent.browser :as gbrowser]
-   [goog.date :as gdate]
-   [lipas.utils :as utils]
-   [re-frame.core :as re-frame]))
+  (:require [cemerick.url :as url] ;;[clojure.data :as data]
+            [clojure.walk :as walk] ;; FIXME: Closure-lib is deprecated
+            [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as str]
+            [goog.crypt.base64 :as b64]
+            [goog.date :as gdate]
+            [goog.labs.userAgent.browser :as gbrowser]
+            [lipas.utils :as utils]
+            [re-frame.core :as rf]))
 
-(def <== (comp deref re-frame/subscribe))
-(def ==> re-frame/dispatch)
+(def <== (comp deref rf/subscribe))
+(def ==> rf/dispatch)
 
 (defn set-field [db path value]
   (if value
@@ -168,12 +164,12 @@
   "Removes nil values and empty entries recursively from maps."
   [m]
   (walk/postwalk
-   (fn [x]
-     (cond
-       (map? x) (not-empty (into {} (filter (comp some? val)) x))
-       (and (coll? x) (empty? x)) nil
-       :else x))
-   m))
+    (fn [x]
+      (cond
+        (map? x) (not-empty (into {} (filter (comp some? val)) x))
+        (and (coll? x) (empty? x)) nil
+        :else x))
+    m))
 
 (defn- make-comparable [rev]
   (-> rev
@@ -201,7 +197,7 @@
 
 (defn decode-jwt-payload [s]
   (-> s
-      (string/split #"\.")
+      (str/split #"\.")
       second
       (b64/decodeString true)
       js/JSON.parse
@@ -215,7 +211,7 @@
     (> now exp)))
 
 (defn join-pretty [coll]
-  (string/join ", " coll))
+  (str/join ", " coll))
 
 (defn remove-ids [m]
   (not-empty (map #(dissoc % :id) m)))
@@ -324,8 +320,8 @@
 
 (defn prod? []
   (let [url (base-url)]
-    (or (string/includes? url "lipas.fi")
-        (string/includes? url "liikuntapaikat.fi"))))
+    (or (str/includes? url "lipas.fi")
+        (str/includes? url "liikuntapaikat.fi"))))
 
 (defn year-labels-map [start end]
   (->> (range start (inc end))
@@ -335,19 +331,19 @@
 (defn truncate-size-category [s]
   (when (string? s)
     (-> s
-        (string/split #"(<|>)")
+        (str/split #"(<|>)")
         first
-        (string/trim))))
+        (str/trim))))
 
 (defn ->excel-row [headers m]
   (reduce
-   (fn [res [k _]]
-     (let [v (get m k)]
-       (conj res {:value v
-                  :type  (if (number? v)
-                           "number"
-                           "string")})))
-   [] headers))
+    (fn [res [k _]]
+      (let [v (get m k)]
+        (conj res {:value v
+                   :type  (if (number? v)
+                            "number"
+                            "string")})))
+    [] headers))
 
 (defn ->excel-data [headers coll]
   (let [header-row (->excel-row headers (into {} headers))]
@@ -358,7 +354,7 @@
   (->excel-data [[:kissa "Kissa"] [:kana "Kana"]]
                 [{:kissa "koira" :kana 12}])
   (->excel-row [[:kissa "Kissa"] [:kana "Kana"]]
-                (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
+               (into {} [[:kissa "Kissa"] [:kana "Kana"]])))
 
 (defn ie? []
   (gbrowser/isIE))
@@ -390,15 +386,15 @@
   (not (js/isNaN (.getTime (js/Date. s)))))
 
 (defn ->short-date [s]
-  (-> s (string/split #"T") first))
+  (-> s (str/split #"T") first))
 
 (defn ->human-date [s]
   (-> s
-      (string/split #"T")
+      (str/split #"T")
       first
-      (string/split "-")
+      (str/split "-")
       reverse
-      (->> (string/join "."))))
+      (->> (str/join "."))))
 
 (defn ->human-date-time-at-user-tz [s]
   (when (iso-date-time-string? s)
@@ -420,11 +416,11 @@
 (defn link? [x]
   (and (string? x)
        (or
-        (string/starts-with? x "http")
-        (string/starts-with? x "www"))))
+         (str/starts-with? x "http")
+         (str/starts-with? x "www"))))
 
 (defn link-strict? [x]
-  (and (string? x) (string/starts-with? x "http")))
+  (and (string? x) (str/starts-with? x "http")))
 
 (defn truncate [s]
   (if (> (count s) 30)
@@ -436,7 +432,7 @@
                                  links? true}}]
   (cond
     (link? v)  (if links? [:a {:href v} (truncate v)] v)
-    (coll? v)  (if (empty? v) empty (string/join ", " v))
+    (coll? v)  (if (empty? v) empty (str/join ", " v))
     (true? v)  check-mark
     (false? v) empty
     (nil? v)   empty

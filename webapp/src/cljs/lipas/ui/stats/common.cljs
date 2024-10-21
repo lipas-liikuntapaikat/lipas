@@ -1,8 +1,7 @@
 (ns lipas.ui.stats.common
-  (:require
-   [lipas.ui.mui :as mui]
-   [lipas.ui.components :as components]
-   [reagent.core :as r]))
+  (:require [lipas.ui.components :as components]
+            [lipas.ui.mui :as mui]
+            [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
 
@@ -29,7 +28,7 @@
     :default-expanded true
     :style            {:margin-bottom "1em" :background-color mui/gray3}}
    (into
-    [mui/card-content]
-    (for [text texts]
-      [mui/typography {:variant "body1" :paragraph true}
-       text]))])
+     [mui/card-content]
+     (for [text texts]
+       [mui/typography {:variant "body1" :paragraph true}
+        text]))])

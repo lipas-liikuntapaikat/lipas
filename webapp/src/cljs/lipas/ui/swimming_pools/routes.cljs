@@ -1,8 +1,7 @@
 (ns lipas.ui.swimming-pools.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.swimming-pools.events :as events]
-   [lipas.ui.swimming-pools.views :as views]))
+  (:require [lipas.ui.swimming-pools.events :as events]
+            [lipas.ui.swimming-pools.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["uimahallit"

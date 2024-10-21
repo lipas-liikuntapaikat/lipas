@@ -1,7 +1,6 @@
 (ns lipas.ui.components.misc
-  (:require
-   [lipas.ui.mui :as mui]
-   [lipas.ui.components.buttons :as buttons]))
+  (:require [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.mui :as mui]))
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
@@ -77,10 +76,10 @@
 
 (defn li [text & children]
   (into
-   [:li
-    [mui/typography {:variant "body2" :color "inherit"}
-     text]]
-   children))
+    [:li
+     [mui/typography {:variant "body2" :color "inherit"}
+      text]]
+    children))
 
 (defn sub-heading [{:keys [label]}]
   [mui/typography

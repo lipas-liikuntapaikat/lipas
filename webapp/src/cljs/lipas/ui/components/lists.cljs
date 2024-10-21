@@ -1,11 +1,10 @@
 (ns lipas.ui.components.lists
-  (:require
-    ["@mui/material/ListItem$default" :as ListItem]
-    ["@mui/material/ListItemText$default" :as ListItemText]
-    ["@mui/material/Stack$default" :as Stack]
-    ["react-use/lib/useMeasure$default" :as useMeasure]
-    ["react-window" :refer [FixedSizeList]]
-    [uix.core :refer [$ defui]]))
+  (:require ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Stack$default" :as Stack]
+            ["react-use/lib/useMeasure$default" :as useMeasure]
+            ["react-window" :refer [FixedSizeList]]
+            [uix.core :refer [$ defui]]))
 
 (defui row-item
   [{:keys [style item list-props]}]

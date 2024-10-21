@@ -1,13 +1,12 @@
 (ns lipas.ui.components.autocompletes
-  (:require
-   ["@mui/material/Autocomplete$default" :as Autocomplete]
-   ["@mui/material/TextField$default" :as TextField]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.uix.utils :refer [spread-props]]
-   [lipas.ui.utils :as utils]
-   [reagent.core :as r]
-   [uix.core :as uix]
-   [uix.core :refer [$ defui]]))
+  (:require ["@mui/material/Autocomplete$default" :as Autocomplete]
+            ["@mui/material/TextField$default" :as TextField]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.uix.utils :refer [spread-props]]
+            [lipas.ui.utils :as utils]
+            [reagent.core :as r]
+            [uix.core :as uix]
+            [uix.core :refer [$ defui]]))
 
 ;; TODO: Deprecate/replace this, this has bad choices:
 ;; 1. :value is going through clj->js
@@ -29,43 +28,43 @@
       [:<>
        [mui/autocomplete
         (merge
-         {:multiple             multi?
-          :value                (if multi?
-                                  (clj->js (map pr-str value))
-                                  (pr-str value))
-          :disabled             disabled
-          :label                label
-          :disableCloseOnSelect multi?
-          :disableClearable     (not deselect?)
-          :on-change            (fn [_evt v]
-                                  (on-change
-                                   (if multi?
-                                     (->> v
-                                          (select-keys items-by-vals)
-                                          vals
-                                          (map value-fn))
-                                     (-> v items-by-vals value-fn))))
-          :on-input-change      (fn [_evt v] (reset! state v))
-          :renderInput          (fn [^js params]
-                                  (set! (.-variant params) variant)
-                                  (set! (.-label params) label)
-                                  (set! (.-required params) (boolean required))
-                                  #_(set! (.-shrink (.-InputLabelProps params))
-                                          (boolean (or (and (coll? value) (seq value))
-                                                       (seq @state))))
-                                  (when required
-                                    (set! (.-required (.-InputLabelProps params)) true))
+          {:multiple             multi?
+           :value                (if multi?
+                                   (clj->js (map pr-str value))
+                                   (pr-str value))
+           :disabled             disabled
+           :label                label
+           :disableCloseOnSelect multi?
+           :disableClearable     (not deselect?)
+           :on-change            (fn [_evt v]
+                                   (on-change
+                                     (if multi?
+                                       (->> v
+                                            (select-keys items-by-vals)
+                                            vals
+                                            (map value-fn))
+                                       (-> v items-by-vals value-fn))))
+           :on-input-change      (fn [_evt v] (reset! state v))
+           :renderInput          (fn [^js params]
+                                   (set! (.-variant params) variant)
+                                   (set! (.-label params) label)
+                                   (set! (.-required params) (boolean required))
+                                   #_(set! (.-shrink (.-InputLabelProps params))
+                                           (boolean (or (and (coll? value) (seq value))
+                                                        (seq @state))))
+                                   (when required
+                                     (set! (.-required (.-InputLabelProps params)) true))
 
-                                  (when (and required (not value))
-                                    (set! (.-error (.-InputLabelProps params)) true))
-                                  (r/create-element TextField params))
-          :getOptionLabel (fn [opt]
-                            (-> opt items-by-vals label-fn str))
-          :options        (->> items
-                               (sort-by sort-fn sort-cmp)
-                               (map (comp pr-str value-fn)))}
-         (when render-option-fn
-           {:renderOption render-option-fn}))]
+                                   (when (and required (not value))
+                                     (set! (.-error (.-InputLabelProps params)) true))
+                                   (r/create-element TextField params))
+           :getOptionLabel (fn [opt]
+                             (-> opt items-by-vals label-fn str))
+           :options        (->> items
+                                (sort-by sort-fn sort-cmp)
+                                (map (comp pr-str value-fn)))}
+          (when render-option-fn
+            {:renderOption render-option-fn}))]
        (when helper-text
          [mui/form-helper-text helper-text])])))
 

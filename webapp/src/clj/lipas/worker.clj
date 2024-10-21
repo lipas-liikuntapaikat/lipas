@@ -1,13 +1,12 @@
 (ns lipas.worker
   "See also `lipas.integrator` namespace."
-  (:require
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.system :as backend]
-   [lipas.reminders :as reminders]
-   [lipas.integration.utp.webhook :as utp-webhook]
-   [taoensso.timbre :as log]
-   [tea-time.core :as tt]))
+  (:require [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.system :as backend]
+            [lipas.integration.utp.webhook :as utp-webhook]
+            [lipas.reminders :as reminders]
+            [taoensso.timbre :as log]
+            [tea-time.core :as tt]))
 
 (defonce tasks (atom {}))
 

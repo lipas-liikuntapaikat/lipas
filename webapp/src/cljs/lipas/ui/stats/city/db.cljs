@@ -1,7 +1,6 @@
 (ns lipas.ui.stats.city.db
-  (:require
-   [lipas.reports :as reports]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.reports :as reports]
+            [lipas.ui.utils :as utils]))
 
 (def default-db
   {:selected-cities #{179}

@@ -9,7 +9,7 @@
    [lipas.roles :as roles]))
 
 (defn basic-auth
-  [db request {:keys [username password]}]
+  [db _request {:keys [username password]}]
   (let [user (core/get-user db username)]
     (if (and user (hashers/check password (:password user)))
       (-> user

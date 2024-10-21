@@ -1,143 +1,131 @@
 (ns lipas.ui.analysis.diversity.events
-  (:require
-   [ajax.core :as ajax]
-   [clojure.string :as str]
-   [goog.string.format]
-   [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [==>] :as utils]
-   [re-frame.core :as re-frame]))
+  (:require [ajax.core :as ajax]
+            [clojure.string :as str]
+            [goog.string.format]
+            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.utils :refer [==>] :as utils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-fx
- ::init
- (fn [{:keys [db]} _]
-   {:db (-> db
-            (assoc-in [:map :mode :name] :analysis)
-            (assoc-in [:map :mode :sub-mode] :diversity))
-    :dispatch-n
-    [[:lipas.ui.search.events/clear-filters]
-     [:lipas.ui.map.events/set-overlays
-      [[:vectors true]
-       [:schools false]
-       [:population false]
-       [:analysis false]
-       [:diversity-grid true]
-       [:diversity-area true]]]]}))
+(rf/reg-event-fx ::init
+  (fn [{:keys [db]} _]
+    {:db (-> db
+             (assoc-in [:map :mode :name] :analysis)
+             (assoc-in [:map :mode :sub-mode] :diversity))
+     :dispatch-n
+     [[:lipas.ui.search.events/clear-filters]
+      [:lipas.ui.map.events/set-overlays
+       [[:vectors true]
+        [:schools false]
+        [:population false]
+        [:analysis false]
+        [:diversity-grid true]
+        [:diversity-area true]]]]}))
 
-(re-frame/reg-event-db
- ::select-analysis-tab
- (fn [db [_ tab]]
-   (assoc-in db [:analysis :diversity :selected-tab] tab)))
+(rf/reg-event-db ::select-analysis-tab
+  (fn [db [_ tab]]
+    (assoc-in db [:analysis :diversity :selected-tab] tab)))
 
-(re-frame/reg-event-fx
- ::calc-all-diversity-indices*
- (fn [_ [_ ids]]
-   (if (seq ids)
-     {:dispatch [::calc-diversity-indices
-                 {:id (first ids)}
-                 #(==> [::calc-all-diversity-indices* (rest ids)])
-                 :skip-search]}
-     {})))
+(rf/reg-event-fx ::calc-all-diversity-indices*
+  (fn [_ [_ ids]]
+    (if (seq ids)
+      {:dispatch [::calc-diversity-indices
+                  {:id (first ids)}
+                  #(==> [::calc-all-diversity-indices* (rest ids)])
+                  :skip-search]}
+      {})))
 
-(re-frame/reg-event-fx
- ::calc-all-diversity-indices
- (fn [{:keys [db]}]
-   (let [ids (keys (get-in db [:analysis :diversity :areas]))]
-     {:dispatch-n
-      [[::calc-all-diversity-indices* ids]
+(rf/reg-event-fx ::calc-all-diversity-indices
+  (fn [{:keys [db]}]
+    (let [ids (keys (get-in db [:analysis :diversity :areas]))]
+      {:dispatch-n
+       [[::calc-all-diversity-indices* ids]
        ;; Disable grid because otherwise the map will flicker
-       [:lipas.ui.map.events/set-overlay false :diversity-grid]]})))
+        [:lipas.ui.map.events/set-overlay false :diversity-grid]]})))
 
-(re-frame/reg-event-fx
- ::calc-diversity-indices
- (fn [{:keys [db]} [_ {:keys [id] :as candidate} cb skip-search]]
-   (let [url   (str (:backend-url db) "/actions/calc-diversity-indices")
-         feat  (get-in db [:analysis :diversity :areas id])
-         fcoll {:type     "FeatureCollection"
-                :features [feat]}]
+(rf/reg-event-fx ::calc-diversity-indices
+  (fn [{:keys [db]} [_ {:keys [id] :as candidate} cb skip-search]]
+    (let [url   (str (:backend-url db) "/actions/calc-diversity-indices")
+          feat  (get-in db [:analysis :diversity :areas id])
+          fcoll {:type     "FeatureCollection"
+                 :features [feat]}]
 
      ;; Flood prevention
-     (if (-> db :analysis :diversity :loading?)
-       {}
-       {:db             (assoc-in db [:analysis :diversity :loading?] true)
-        :http-xhrio
-        {:method          :post
-         :uri             url
-         :params          (-> db
-                              :analysis
-                              :diversity
-                              :settings
-                              (assoc :analysis-area-fcoll fcoll))
-         :format          (ajax/transit-request-format)
-         :response-format (ajax/transit-response-format)
-         :on-success      [::calc-success id cb]
-         :on-failure      [::calc-failure]}
-        :tracker/event! ["analysis" "calculate-analysis" "diversity"]
+      (if (-> db :analysis :diversity :loading?)
+        {}
+        {:db             (assoc-in db [:analysis :diversity :loading?] true)
+         :http-xhrio
+         {:method          :post
+          :uri             url
+          :params          (-> db
+                               :analysis
+                               :diversity
+                               :settings
+                               (assoc :analysis-area-fcoll fcoll))
+          :format          (ajax/transit-request-format)
+          :response-format (ajax/transit-response-format)
+          :on-success      [::calc-success id cb]
+          :on-failure      [::calc-failure]}
+         :tracker/event! ["analysis" "calculate-analysis" "diversity"]
 
-        :dispatch-n
-        [(when-not skip-search
-           (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
-             [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
+         :dispatch-n
+         [(when-not skip-search
+            (let [type-codes (->> db :analysis :diversity :settings :categories (mapcat :type-codes))]
+              [:lipas.ui.search.events/set-type-filter type-codes]))]}))))
 
-(re-frame/reg-event-db
- ::calc-success
- (fn [db [_ candidate-id cb resp]]
-   (when cb (cb))
-   (-> db
-       (assoc-in [:analysis :diversity :loading?] false)
-       (assoc-in [:analysis :diversity :results candidate-id] resp)
-       (update-in [:analysis :diversity :selected-result-areas] (comp set conj) candidate-id))))
+(rf/reg-event-db ::calc-success
+  (fn [db [_ candidate-id cb resp]]
+    (when cb (cb))
+    (-> db
+        (assoc-in [:analysis :diversity :loading?] false)
+        (assoc-in [:analysis :diversity :results candidate-id] resp)
+        (update-in [:analysis :diversity :selected-result-areas] (comp set conj) candidate-id))))
 
-(re-frame/reg-event-db
- ::clear-results
- (fn [db _]
-   (assoc-in db [:analysis :diversity :results] {})))
+(rf/reg-event-db ::clear-results
+  (fn [db _]
+    (assoc-in db [:analysis :diversity :results] {})))
 
-(re-frame/reg-event-fx
- ::calc-failure
- (fn [{:keys [db]} [_ _error]]
-   (let [tr (-> db :translator)]
-     {:db             (assoc-in db [:analysis :diversity :loading?] false)
-      :tracker/event! ["error" "calculate-diversity-indices-failure"]
-      :dispatch       [:lipas.ui.events/set-active-notification
-                       {:message  (tr :notifications/get-failed)
-                        :success? false}]})))
+(rf/reg-event-fx ::calc-failure
+  (fn [{:keys [db]} [_ _error]]
+    (let [tr (-> db :translator)]
+      {:db             (assoc-in db [:analysis :diversity :loading?] false)
+       :tracker/event! ["error" "calculate-diversity-indices-failure"]
+       :dispatch       [:lipas.ui.events/set-active-notification
+                        {:message  (tr :notifications/get-failed)
+                         :success? false}]})))
 
+(rf/reg-event-fx ::load-geoms-from-file
+  (fn [{:keys [db]} [_ files geom-type]]
+    (let [file   (aget files 0)
+          params {:enc  "utf-8"
+                  :file file
+                  :ext  (map-utils/parse-ext file)
+                  :cb   (fn [data]
+                          (==> [::clear-results])
+                          (==> [::set-analysis-candidates data geom-type]))}]
 
-(re-frame/reg-event-fx
- ::load-geoms-from-file
- (fn [{:keys [db]} [_ files geom-type]]
-   (let [file   (aget files 0)
-         params {:enc  "utf-8"
-                 :file file
-                 :ext  (map-utils/parse-ext file)
-                 :cb   (fn [data]
-                         (==> [::clear-results])
-                         (==> [::set-analysis-candidates data geom-type]))}]
+      (if-let [ext (:unknown (map-utils/file->geoJSON params))]
+        {:dispatch-n [(let [tr (-> db :translator)]
+                        [:lipas.ui.events/set-active-notification
+                         {:message  (tr :map.import/unknown-format ext)
+                          :success? false}])]}
+        {}))))
 
-     (if-let [ext (:unknown (map-utils/file->geoJSON params))]
-       {:dispatch-n [(let [tr (-> db :translator)]
-                       [:lipas.ui.events/set-active-notification
-                        {:message  (tr :map.import/unknown-format ext)
-                         :success? false}])]}
-       {}))))
-
-(re-frame/reg-event-db
- ::set-analysis-candidates
- (fn [db [_ geoJSON geom-type]]
-   (let [fcoll (js->clj geoJSON :keywordize-keys true)
-         fs    (->> fcoll
-                    :features
-                    (filter (comp #{geom-type} :type :geometry))
-                    (reduce
-                     (fn [res f]
-                       (let [id (str (gensym))]
-                         (assoc res id (assoc-in f [:properties :id] id))))
-                     {})
-                    (merge (map-utils/normalize-geom-colls fcoll geom-type)
-                           (map-utils/normalize-multi-geoms fcoll geom-type)))]
-     (-> db
-         (assoc-in [:analysis :diversity :areas] fs)
-         (assoc-in [:analysis :diversity :import :batch-id] (str (gensym)))))))
+(rf/reg-event-db ::set-analysis-candidates
+  (fn [db [_ geoJSON geom-type]]
+    (let [fcoll (js->clj geoJSON :keywordize-keys true)
+          fs    (->> fcoll
+                     :features
+                     (filter (comp #{geom-type} :type :geometry))
+                     (reduce
+                       (fn [res f]
+                         (let [id (str (gensym))]
+                           (assoc res id (assoc-in f [:properties :id] id))))
+                       {})
+                     (merge (map-utils/normalize-geom-colls fcoll geom-type)
+                            (map-utils/normalize-multi-geoms fcoll geom-type)))]
+      (-> db
+          (assoc-in [:analysis :diversity :areas] fs)
+          (assoc-in [:analysis :diversity :import :batch-id] (str (gensym)))))))
 
 (def seasonalities
   {1530 "winter",
@@ -281,80 +269,70 @@
        (remove (fn [c] (empty? (:type-codes c))))
        vec))
 
-(re-frame/reg-event-fx
- ::toggle-seasonality
- (fn [{:keys [db]} [_ s enable?]]
-   (let [op (if enable? conj disj)]
-     {:db (update-in db [:analysis :diversity :selected-seasonalities] op s)
-      :dispatch
-      [::select-category-preset (get-in db [:analysis :diversity :selected-category-preset])]})))
+(rf/reg-event-fx ::toggle-seasonality
+  (fn [{:keys [db]} [_ s enable?]]
+    (let [op (if enable? conj disj)]
+      {:db (update-in db [:analysis :diversity :selected-seasonalities] op s)
+       :dispatch
+       [::select-category-preset (get-in db [:analysis :diversity :selected-category-preset])]})))
 
-(re-frame/reg-event-db
- ::select-category-preset
- (fn [db [_ preset-kw]]
-   (let [seasonalities (get-in db [:analysis :diversity :selected-seasonalities])
-         presets       (merge (-> db :analysis :diversity :category-presets)
-                              (-> db :analysis :diversity :user-category-presets))
-         categories    (-> presets
-                           (get-in [preset-kw :categories])
-                           (->seasonal seasonalities))]
-     (-> db
-         (assoc-in [:analysis :diversity :settings :categories] categories)
-         (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
+(rf/reg-event-db ::select-category-preset
+  (fn [db [_ preset-kw]]
+    (let [seasonalities (get-in db [:analysis :diversity :selected-seasonalities])
+          presets       (merge (-> db :analysis :diversity :category-presets)
+                               (-> db :analysis :diversity :user-category-presets))
+          categories    (-> presets
+                            (get-in [preset-kw :categories])
+                            (->seasonal seasonalities))]
+      (-> db
+          (assoc-in [:analysis :diversity :settings :categories] categories)
+          (assoc-in [:analysis :diversity :selected-category-preset] preset-kw)))))
 
-(re-frame/reg-event-db
- ::set-category-name
- (fn [db [_ idx name]]
-   (assoc-in db [:analysis :diversity :settings :categories idx :name] name)))
+(rf/reg-event-db ::set-category-name
+  (fn [db [_ idx name]]
+    (assoc-in db [:analysis :diversity :settings :categories idx :name] name)))
 
-(re-frame/reg-event-db
- ::set-category-factor
- (fn [db [_ idx factor]]
-   (assoc-in db [:analysis :diversity :settings :categories idx :factor] factor)))
+(rf/reg-event-db ::set-category-factor
+  (fn [db [_ idx factor]]
+    (assoc-in db [:analysis :diversity :settings :categories idx :factor] factor)))
 
-(re-frame/reg-event-db
- ::set-category-type-codes
- (fn [db [_ idx type-codes]]
-   (assoc-in db [:analysis :diversity :settings :categories idx :type-codes] type-codes)))
+(rf/reg-event-db ::set-category-type-codes
+  (fn [db [_ idx type-codes]]
+    (assoc-in db [:analysis :diversity :settings :categories idx :type-codes] type-codes)))
 
-(re-frame/reg-event-db
- ::add-new-category
- (fn [db _]
-   (let [category {:name "" :type-codes [] :factor 1}]
-     (update-in db [:analysis :diversity :settings :categories] #(into [category] %)))))
+(rf/reg-event-db ::add-new-category
+  (fn [db _]
+    (let [category {:name "" :type-codes [] :factor 1}]
+      (update-in db [:analysis :diversity :settings :categories] #(into [category] %)))))
 
-(re-frame/reg-event-db
- ::delete-category
- (fn [db [_ idx]]
-   (update-in db [:analysis :diversity :settings :categories]
-              #(into (subvec % 0 idx) (subvec % (inc idx))))))
+(rf/reg-event-db ::delete-category
+  (fn [db [_ idx]]
+    (update-in db [:analysis :diversity :settings :categories]
+               #(into (subvec % 0 idx) (subvec % (inc idx))))))
 
-(re-frame/reg-event-fx
- ::save-category-preset
- (fn [{:keys [db]} [_ name]]
-   (let [new-preset {:name       name
-                     :categories (-> db :analysis :diversity :settings :categories)}
-         presets    (-> (get-in db [:analysis :diversity :user-category-presets])
-                        (assoc name new-preset)
-                        vals)
-         user-data  (-> db
-                        :user
-                        :login
-                        :user-data
-                        (assoc-in [:saved-diversity-settings :category-presets] presets))]
-     {:dispatch-n
-      [[:lipas.ui.user.events/update-user-data user-data]
-       [::toggle-category-save-dialog]]})))
+(rf/reg-event-fx ::save-category-preset
+  (fn [{:keys [db]} [_ name]]
+    (let [new-preset {:name       name
+                      :categories (-> db :analysis :diversity :settings :categories)}
+          presets    (-> (get-in db [:analysis :diversity :user-category-presets])
+                         (assoc name new-preset)
+                         vals)
+          user-data  (-> db
+                         :user
+                         :login
+                         :user-data
+                         (assoc-in [:saved-diversity-settings :category-presets] presets))]
+      {:dispatch-n
+       [[:lipas.ui.user.events/update-user-data user-data]
+        [::toggle-category-save-dialog]]})))
 
-(re-frame/reg-event-db
- ::set-max-distance-m
- (fn [db [_ n]]
-   (assoc-in db [:analysis :diversity :settings :max-distance-m] n)))
+(rf/reg-event-db ::set-max-distance-m
+  (fn [db [_ n]]
+    (assoc-in db [:analysis :diversity :settings :max-distance-m] n)))
 
-(re-frame/reg-event-db
- ::select-export-format
- (fn [db [_ s]]
-   (assoc-in db [:analysis :diversity :selected-export-format] s)))
+(rf/reg-event-db ::select-export-format
+  (fn [db [_ s]]
+    (assoc-in db [:analysis :diversity :selected-export-format] s)))
 
 (defn ->areas-excel-data
   [{:keys [areas results]}]
@@ -362,8 +340,8 @@
         :let [aggs (get-in results [id :aggs])]
         :when aggs]
     (merge
-     (:properties m)
-     (dissoc aggs :diversity-idx-median :diversity-idx-mode))))
+      (:properties m)
+      (dissoc aggs :diversity-idx-median :diversity-idx-mode))))
 
 (defn- export-aggs-excel
   [db fmt]
@@ -386,22 +364,21 @@
                                                                  :diversity-idx-mode
                                                                  :diversity-idx-median)))}]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_areas" "." fmt)}}))
 
-(re-frame/reg-event-fx
- ::export-aggs
- (fn [{:keys [db]} [_ fmt]]
-   (condp = fmt
-     "geojson" (export-aggs-geojson db fmt)
-     "excel" (export-aggs-excel db fmt))))
+(rf/reg-event-fx ::export-aggs
+  (fn [{:keys [db]} [_ fmt]]
+    (condp = fmt
+      "geojson" (export-aggs-geojson db fmt)
+      "excel" (export-aggs-excel db fmt))))
 
 (defn- export-grid-excel
   [db _fmt]
   (let [fcolls (-> db :analysis :diversity :results (->> (map (comp :grid second))))
         data   (->> fcolls
-                  (mapcat :features)
-                  (map (fn [f] (-> f :properties (dissoc :population)))))
+                    (mapcat :features)
+                    (map (fn [f] (-> f :properties (dissoc :population)))))
         headers (-> data first keys (->> (map (juxt identity name)) (sort-by second)))
         config  {:filename "diversity_report_grid"
                  :sheet
@@ -416,15 +393,14 @@
                                 (mapcat :features)
                                 (map (fn [f] (update f :properties dissoc :population))))}]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_grid" "." fmt)}}))
 
-(re-frame/reg-event-fx
- ::export-grid
- (fn [{:keys [db]} [_ fmt]]
-   (condp = fmt
-     "geojson" (export-grid-geojson db fmt)
-     "excel" (export-grid-excel db fmt))))
+(rf/reg-event-fx ::export-grid
+  (fn [{:keys [db]} [_ fmt]]
+    (condp = fmt
+      "geojson" (export-grid-geojson db fmt)
+      "excel" (export-grid-excel db fmt))))
 
 (defn export-categories-excel
   [db _fmt]
@@ -440,15 +416,14 @@
   [db _fmt]
   (let [categories (-> db :analysis :diversity :settings :categories)]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js categories))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js categories))])
       :filename (str "diversity_report_categories" ".json")}}))
 
-(re-frame/reg-event-fx
- ::export-categories
- (fn [{:keys [db]} [_ fmt]]
-   (condp = fmt
-     "geojson" (export-categories-json db fmt)
-     "excel" (export-categories-excel db fmt))))
+(rf/reg-event-fx ::export-categories
+  (fn [{:keys [db]} [_ fmt]]
+    (condp = fmt
+      "geojson" (export-categories-json db fmt)
+      "excel" (export-categories-excel db fmt))))
 
 (defn export-settings-excel
   [db _fmt]
@@ -467,86 +442,78 @@
                                :analysis-radius-km
                                :distance-mode]))]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js data))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js data))])
       :filename (str "diversity_report_parameters" ".json")}}))
 
-(re-frame/reg-event-fx
- ::export-settings
- (fn [{:keys [db]} [_ fmt]]
-   (condp = fmt
-     "geojson" (export-settings-json db fmt)
-     "excel" (export-settings-excel db fmt))))
+(rf/reg-event-fx ::export-settings
+  (fn [{:keys [db]} [_ fmt]]
+    (condp = fmt
+      "geojson" (export-settings-json db fmt)
+      "excel" (export-settings-excel db fmt))))
 
 ;; https://lipas.fi/tilastokeskus/geoserver/postialue/wfs\?service\=wfs\&version\=2.0.0\&request\=GetFeature\&typeNames\=postialue:pno_2022\&cql_filter\=kuntanro\=992\&outputFormat\=json
 
-(re-frame/reg-event-fx
- ::fetch-postal-code-areas
- (fn [{:keys [db]} [_ city-code]]
-   (let [url "https://lipas.fi/tilastokeskus/geoserver/postialue/wfs"]
-     {:db       (assoc-in db [:analysis :diversity :loading?] true)
-      :http-xhrio
-      {:method          :get
-       :uri             url
-       :params          {:service      "wfs"
-                         :version      "2.0.0"
-                         :request      "GetFeature"
-                         :srsName      "EPSG:4326"
-                         :typeNames    "postialue:pno_2024"
-                         :cql_filter   (str "kuntanro=" city-code)
-                         :outputFormat "json"}
-       :format          (ajax/json-request-format)
-       :response-format (ajax/json-response-format {:keywords? true})
-       :on-success      [::fetch-postal-code-areas-success]
-       :on-failure      [::fetch-postal-code-areas-failure]}})))
+(rf/reg-event-fx ::fetch-postal-code-areas
+  (fn [{:keys [db]} [_ city-code]]
+    (let [url "https://lipas.fi/tilastokeskus/geoserver/postialue/wfs"]
+      {:db       (assoc-in db [:analysis :diversity :loading?] true)
+       :http-xhrio
+       {:method          :get
+        :uri             url
+        :params          {:service      "wfs"
+                          :version      "2.0.0"
+                          :request      "GetFeature"
+                          :srsName      "EPSG:4326"
+                          :typeNames    "postialue:pno_2024"
+                          :cql_filter   (str "kuntanro=" city-code)
+                          :outputFormat "json"}
+        :format          (ajax/json-request-format)
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success      [::fetch-postal-code-areas-success]
+        :on-failure      [::fetch-postal-code-areas-failure]}})))
 
-(re-frame/reg-event-fx
- ::fetch-postal-code-areas-success
- (fn [{:keys [db]} [_ resp]]
-   (let [fcoll (update resp :features
-                       (fn [fs]
-                         (map
-                          (fn [f]
-                            (update f :properties dissoc
-                                    :bbox
-                                    :pinta_ala
-                                    :namn
-                                    :kunta
-                                    :kuntanro
-                                    :vuosi
-                                    :objectid))
-                          fs)))]
-     {:db         (assoc-in db [:analysis :diversity :loading?] false)
-      :dispatch-n [[::set-analysis-candidates fcoll "Polygon"]]})))
+(rf/reg-event-fx ::fetch-postal-code-areas-success
+  (fn [{:keys [db]} [_ resp]]
+    (let [fcoll (update resp :features
+                        (fn [fs]
+                          (map
+                            (fn [f]
+                              (update f :properties dissoc
+                                      :bbox
+                                      :pinta_ala
+                                      :namn
+                                      :kunta
+                                      :kuntanro
+                                      :vuosi
+                                      :objectid))
+                            fs)))]
+      {:db         (assoc-in db [:analysis :diversity :loading?] false)
+       :dispatch-n [[::set-analysis-candidates fcoll "Polygon"]]})))
 
-(re-frame/reg-event-fx
- ::fetch-postal-code-areas-failure
- (fn [{:keys [db]} [_ _error]]
-   (let [tr (-> db :translator)]
-     {:db             (assoc-in db [:analysis :diversity :loading?] false)
-      :tracker/event! ["error" "fetch-postal-code-areas-failure"]
-      :dispatch       [:lipas.ui.events/set-active-notification
-                       {:message  (tr :notifications/get-failed)
-                        :success? false}]})))
+(rf/reg-event-fx ::fetch-postal-code-areas-failure
+  (fn [{:keys [db]} [_ _error]]
+    (let [tr (-> db :translator)]
+      {:db             (assoc-in db [:analysis :diversity :loading?] false)
+       :tracker/event! ["error" "fetch-postal-code-areas-failure"]
+       :dispatch       [:lipas.ui.events/set-active-notification
+                        {:message  (tr :notifications/get-failed)
+                         :success? false}]})))
 
-(re-frame/reg-event-db
- ::select-analysis-chart-areas
- (fn [db [_ v]]
-   (assoc-in db [:analysis :diversity :selected-result-areas] v)))
+(rf/reg-event-db ::select-analysis-chart-areas
+  (fn [db [_ v]]
+    (assoc-in db [:analysis :diversity :selected-result-areas] v)))
 
-(re-frame/reg-event-db
- ::select-analysis-chart-tab
- (fn [db [_ v]]
-   (assoc-in db [:analysis :diversity :selected-chart-tab] v)))
+(rf/reg-event-db ::select-analysis-chart-tab
+  (fn [db [_ v]]
+    (assoc-in db [:analysis :diversity :selected-chart-tab] v)))
 
-(re-frame/reg-event-db
- ::toggle-category-save-dialog
- (fn [db [_ _]]
-   (update-in db [:analysis :diversity :category-save-dialog-open?] not)))
+(rf/reg-event-db ::toggle-category-save-dialog
+  (fn [db [_ _]]
+    (update-in db [:analysis :diversity :category-save-dialog-open?] not)))
 
-(re-frame/reg-event-db
- ::set-new-preset-name
- (fn [db [_ s]]
-   (assoc-in db [:analysis :diversity :new-preset-name] s)))
+(rf/reg-event-db ::set-new-preset-name
+  (fn [db [_ s]]
+    (assoc-in db [:analysis :diversity :new-preset-name] s)))
 
 (comment
-  (re-frame/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))
+  (rf/dispatch [:lipas.ui.analysis.diversity.events/fetch-postal-code-areas 992]))

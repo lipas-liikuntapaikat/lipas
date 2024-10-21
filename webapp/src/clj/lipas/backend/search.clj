@@ -182,7 +182,7 @@
 (def partial? "Alias for `more?`" more?)
 
 (defn wrap-es-bulk
-  [es-index es-type id-fn entry]
+  [es-index _es-type id-fn entry]
   [{:index {:_index es-index
             ;;:_type  es-type
             :_id    (id-fn entry)}}

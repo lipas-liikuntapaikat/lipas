@@ -1,23 +1,19 @@
 (ns lipas.ui.admin.subs
-  (:require
-   [clojure.string :as string]
-   [lipas.utils :as cutils]
-   [re-frame.core :as re-frame]))
+  (:require [clojure.string :as str]
+            [lipas.utils :as cutils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-sub
- ::users
- (fn [db _]
-   (-> db :admin :users)))
+(rf/reg-sub ::users
+  (fn [db _]
+    (-> db :admin :users)))
 
-(re-frame/reg-sub
- ::users-status
- (fn [db _]
-   (-> db :admin :users-status)))
+(rf/reg-sub ::users-status
+  (fn [db _]
+    (-> db :admin :users-status)))
 
-(re-frame/reg-sub
- ::users-filter
- (fn [db _]
-   (-> db :admin :users-filter)))
+(rf/reg-sub ::users-filter
+  (fn [db _]
+    (-> db :admin :users-filter)))
 
 (defn ->users-list-entry
   [tr user]
@@ -28,54 +24,50 @@
    :roles        (->> user :permissions :roles
                       (map (fn [x]
                              (tr (keyword :lipas.user.permissions.roles.role-names (:role x)))))
-                      (string/join ", "))})
+                      (str/join ", "))})
 
-(re-frame/reg-sub
- ::users-list
- :<- [::users]
- :<- [::users-status]
- :<- [::users-filter]
- :<- [:lipas.ui.subs/translator]
- (fn [[users status filter-text tr] _]
-   (let [users (->> users
-                    vals
-                    (filter (comp #{status} :status))
-                    (map (partial ->users-list-entry tr)))]
-     (if (seq filter-text)
-       (filter
-        #(-> %
-             str
-             string/lower-case
-             (string/includes? (string/lower-case filter-text))) users)
-       users))))
+(rf/reg-sub ::users-list
+  :<- [::users]
+  :<- [::users-status]
+  :<- [::users-filter]
+  :<- [:lipas.ui.subs/translator]
+  (fn [[users status filter-text tr] _]
+    (let [users (->> users
+                     vals
+                     (filter (comp #{status} :status))
+                     (map (partial ->users-list-entry tr)))]
+      (if (seq filter-text)
+        (filter
+          #(-> %
+               str
+               str/lower-case
+               (str/includes? (str/lower-case filter-text))) users)
+        users))))
 
-(re-frame/reg-sub
- ::archived-users-list
- :<- [::archived-users]
- :<- [::users-filter]
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- :<- [:lipas.ui.sports-sites.subs/active-types]
- (fn [[users filter-text cities types] _]
-   (let [users (->> users (map (partial ->users-list-entry cities types)))]
-     (if (not-empty filter-text)
-       (filter
-        #(-> %
-             str
-             string/lower-case
-             (string/includes? (string/lower-case filter-text))) users)
-       users))))
+(rf/reg-sub ::archived-users-list
+  :<- [::archived-users]
+  :<- [::users-filter]
+  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+  :<- [:lipas.ui.sports-sites.subs/active-types]
+  (fn [[users filter-text cities types] _]
+    (let [users (->> users (map (partial ->users-list-entry cities types)))]
+      (if (not-empty filter-text)
+        (filter
+          #(-> %
+               str
+               str/lower-case
+               (str/includes? (str/lower-case filter-text))) users)
+        users))))
 
-(re-frame/reg-sub
- ::selected-user
- (fn [db _]
-   (get-in db [:admin :users (-> db :admin :selected-user)])))
+(rf/reg-sub ::selected-user
+  (fn [db _]
+    (get-in db [:admin :users (-> db :admin :selected-user)])))
 
-(re-frame/reg-sub
- ::editing-user
- (fn [db _]
-   (get-in db [:admin :editing-user])))
+(rf/reg-sub ::editing-user
+  (fn [db _]
+    (get-in db [:admin :editing-user])))
 
-(re-frame/reg-sub ::edit-role
+(rf/reg-sub ::edit-role
   (fn [db _]
     (if-let [idx (:edit-role (:admin db))]
       (assoc (get-in db [:admin :editing-user :permissions :roles idx]) :editing? true)
@@ -83,17 +75,16 @@
 
 (defn prettify-timestamp [s]
   (-> s
-      (string/replace "T" " ")
-      (string/split ".")
+      (str/replace "T" " ")
+      (str/split ".")
       first))
 
-(re-frame/reg-sub
- ::user-history
- :<- [::editing-user]
- (fn [user _]
-   (->> user :history :events
-        (map #(update % :event-date prettify-timestamp))
-        (sort-by :event-date cutils/reverse-cmp))))
+(rf/reg-sub ::user-history
+  :<- [::editing-user]
+  (fn [user _]
+    (->> user :history :events
+         (map #(update % :event-date prettify-timestamp))
+         (sort-by :event-date cutils/reverse-cmp))))
 
 (defn ->list-entry
   [locale [k v]]
@@ -104,59 +95,50 @@
                (when (not= "active" (:status v))
                  " POISTUNUT"))})
 
-(re-frame/reg-sub
- ::types-list
- :<- [:lipas.ui.sports-sites.subs/all-types]
- (fn [types [_ locale]]
-   (->> types
-        (map (partial ->list-entry locale))
-        (sort-by :label))))
+(rf/reg-sub ::types-list
+  :<- [:lipas.ui.sports-sites.subs/all-types]
+  (fn [types [_ locale]]
+    (->> types
+         (map (partial ->list-entry locale))
+         (sort-by :label))))
 
-(re-frame/reg-sub
- ::cities-list
- :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
- (fn [cities [_ locale]]
-   (->> cities
-        (map (partial ->list-entry locale))
-        (sort-by :label))))
+(rf/reg-sub ::cities-list
+  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
+  (fn [cities [_ locale]]
+    (->> cities
+         (map (partial ->list-entry locale))
+         (sort-by :label))))
 
-(re-frame/reg-sub
- ::sites-list
- :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
- (fn [sites _]
-   (->> sites
-        (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
-        (sort-by :label))))
+(rf/reg-sub ::sites-list
+  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
+  (fn [sites _]
+    (->> sites
+         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
+         (sort-by :label))))
 
-(re-frame/reg-sub
- ::activities-list
- :<- [:lipas.ui.sports-sites.activities.subs/data]
- (fn [activities [_ locale]]
-   (->> activities
-        (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
-        (sort-by :label))))
+(rf/reg-sub ::activities-list
+  :<- [:lipas.ui.sports-sites.activities.subs/data]
+  (fn [activities [_ locale]]
+    (->> activities
+         (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
+         (sort-by :label))))
 
-(re-frame/reg-sub
- ::magic-link-dialog-open?
- (fn [db _]
-   (-> db :admin :magic-link-dialog-open?)))
+(rf/reg-sub ::magic-link-dialog-open?
+  (fn [db _]
+    (-> db :admin :magic-link-dialog-open?)))
 
-(re-frame/reg-sub
- ::magic-link-variants
- (fn [db _]
-   (-> db :admin :magic-link-variants)))
+(rf/reg-sub ::magic-link-variants
+  (fn [db _]
+    (-> db :admin :magic-link-variants)))
 
-(re-frame/reg-sub
- ::selected-magic-link-variant
- (fn [db _]
-   (-> db :admin :selected-magic-link-variant)))
+(rf/reg-sub ::selected-magic-link-variant
+  (fn [db _]
+    (-> db :admin :selected-magic-link-variant)))
 
-(re-frame/reg-sub
- ::selected-colors
- (fn [db _]
-   (-> db :admin :color-picker)))
+(rf/reg-sub ::selected-colors
+  (fn [db _]
+    (-> db :admin :color-picker)))
 
-(re-frame/reg-sub
- ::selected-tab
- (fn [db _]
-   (-> db :admin :selected-tab)))
+(rf/reg-sub ::selected-tab
+  (fn [db _]
+    (-> db :admin :selected-tab)))

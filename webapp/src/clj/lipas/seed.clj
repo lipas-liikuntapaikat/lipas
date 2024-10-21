@@ -212,7 +212,7 @@
   (maintenance/index-city-finance-data! {:db db :search search})
   (log/info "Seeding done!"))
 
-(defn -main [& args]
+(defn -main [& _args]
   (let [config (select-keys config/system-config [:lipas/db :lipas/search])
         system (backend/start-system! config)
         db     (:lipas/db system)

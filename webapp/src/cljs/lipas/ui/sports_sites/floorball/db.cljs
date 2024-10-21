@@ -1,6 +1,5 @@
 (ns lipas.ui.sports-sites.floorball.db
-  (:require
-   [lipas.data.floorball :as floorball]))
+  (:require [lipas.data.floorball :as floorball]))
 
 (def default-db
   ;; salibandyhalli, liikuntasali, liikuntahalli, monitoimihalli

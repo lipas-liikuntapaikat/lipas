@@ -1,33 +1,32 @@
 (ns lipas.ui.admin.views
-  (:require
-   ["@mui/material/Autocomplete" :refer [createFilterOptions]]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardContent$default" :as CardContent]
-   ["@mui/material/CardHeader$default" :as CardHeader]
-   ["@mui/material/FormGroup$default" :as FormGroup]
-   ["@mui/material/Grid$default" :as Grid]
-   ["@mui/material/Icon$default" :as Icon]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Typography$default" :as Typography]
-   [clojure.spec.alpha :as s]
-   [lipas.data.styles :as styles]
-   [lipas.roles :as roles]
-   [lipas.ui.admin.events :as events]
-   [lipas.ui.admin.subs :as subs]
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.autocompletes :as ac]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.uix.hooks :refer [use-subscribe]]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [re-frame.core :as rf]
-   [uix.core :as uix :refer [$ defui]]))
+  (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/Grid$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Typography$default" :as Typography]
+            [clojure.spec.alpha :as s]
+            [lipas.data.styles :as styles]
+            [lipas.roles :as roles]
+            [lipas.ui.admin.events :as events]
+            [lipas.ui.admin.subs :as subs]
+            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as ac]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.user.subs :as user-subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [re-frame.core :as rf]
+            [uix.core :as uix :refer [$ defui]]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open?    (<== [::subs/magic-link-dialog-open?])
@@ -70,81 +69,81 @@
 (def filter-ac (createFilterOptions))
 
 (defui site-select [{:keys [tr required data]}]
-   (let [sites (use-subscribe [::subs/sites-list])]
-      ($ ac/autocomplete2
-         {:options   sites
-          :label     (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-                          (when required
-                             " *"))
-          :value     (to-array (or (:lipas-id data) []))
-          :onChange  (fn [_e v]
-                        (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
-          :multiple  true
-          :selectOnFocus true
-          :clearOnBlue true
-          :handleHomeEndKeys true
-          :freeSolo true
-          :filterOptions (fn [options params]
+  (let [sites (use-subscribe [::subs/sites-list])]
+    ($ ac/autocomplete2
+       {:options   sites
+        :label     (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:lipas-id data) []))
+        :onChange  (fn [_e v]
+                     (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
+        :multiple  true
+        :selectOnFocus true
+        :clearOnBlue true
+        :handleHomeEndKeys true
+        :freeSolo true
+        :filterOptions (fn [options params]
                             ;; The options only contains some x first sites in the system,
                             ;; so the autocomplete doesn't work that well.
                             ;; Allow inputting paikka-id numbers directly, show "Add x" option when
                             ;; the input value doesn't match any options.
-                            (let [filtered (filter-ac options params)
-                                  input-value (js/parseInt (.-inputValue params))
-                                  input-value (when (pos? input-value)
-                                                 input-value)
-                                  is-existing (.some options (fn [x] (= input-value (:value x))))]
-                               (when (and input-value (not is-existing))
-                                  (.push filtered {:value input-value
-                                                   :label (str "Paikka-id \"" input-value "\"")}))
-                               filtered))})))
+                         (let [filtered (filter-ac options params)
+                               input-value (js/parseInt (.-inputValue params))
+                               input-value (when (pos? input-value)
+                                             input-value)
+                               is-existing (.some options (fn [x] (= input-value (:value x))))]
+                           (when (and input-value (not is-existing))
+                             (.push filtered {:value input-value
+                                              :label (str "Paikka-id \"" input-value "\"")}))
+                           filtered))})))
 
 (defui type-code-select [{:keys [tr required data]}]
-   (let [types  (use-subscribe [::subs/types-list (tr)])]
-      ($ ac/autocomplete2
-         {:options   types
-          :label     (str (tr :lipas.user.permissions/types)
-                          (when required
-                             " *"))
-          :value     (to-array (or (:type-code data) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
-          :multiple  true})))
+  (let [types  (use-subscribe [::subs/types-list (tr)])]
+    ($ ac/autocomplete2
+       {:options   types
+        :label     (str (tr :lipas.user.permissions/types)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:type-code data) []))
+        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
+        :multiple  true})))
 
 (defui city-code-select [{:keys [tr required data]}]
-   (let [cities (use-subscribe [::subs/cities-list (tr)])]
-      ($ ac/autocomplete2
-         {:options   cities
-          :label     (str (tr :lipas.user.permissions/cities)
-                          (when required
-                             " *"))
-          :value     (to-array (or (:city-code data) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
-          :multiple  true})))
+  (let [cities (use-subscribe [::subs/cities-list (tr)])]
+    ($ ac/autocomplete2
+       {:options   cities
+        :label     (str (tr :lipas.user.permissions/cities)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:city-code data) []))
+        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
+        :multiple  true})))
 
 (defui activity-select [{:keys [tr required data]}]
-   (let [activities (<== [::subs/activities-list (tr)])]
-      ($ ac/autocomplete2
-         {:options   activities
-          :label     (str (tr :lipas.user.permissions/activities)
-                          (when required
-                             " *"))
-          :value     (to-array (or (:activity data) []))
-          :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
-          :multiple  true})))
+  (let [activities (<== [::subs/activities-list (tr)])]
+    ($ ac/autocomplete2
+       {:options   activities
+        :label     (str (tr :lipas.user.permissions/activities)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:activity data) []))
+        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
+        :multiple  true})))
 
 (defui context-key-edit [{:keys [k] :as props}]
-   (case k
-      :lipas-id
-      ($ site-select props)
+  (case k
+    :lipas-id
+    ($ site-select props)
 
-      :type-code
-      ($ type-code-select props)
+    :type-code
+    ($ type-code-select props)
 
-      :city-code
-      ($ city-code-select props)
+    :city-code
+    ($ city-code-select props)
 
-      :activity
-      ($ activity-select props)))
+    :activity
+    ($ activity-select props)))
 
 (defui role-form [{:keys [tr]}]
   (let [data (use-subscribe [::subs/edit-role])
@@ -159,48 +158,48 @@
        ($ Typography
           {:variant "h6"}
           (if editing?
-             (tr :lipas.user.permissions.roles.edit-role/edit-header)
-             (tr :lipas.user.permissions.roles.edit-role/new-header)))
+            (tr :lipas.user.permissions.roles.edit-role/edit-header)
+            (tr :lipas.user.permissions.roles.edit-role/new-header)))
 
        ($ ac/autocomplete2
           {:options   (for [[k {:keys [assignable]}] roles/roles
                             :when assignable]
-                         {:value k
-                          :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
+                        {:value k
+                         :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
            :readOnly  editing?
            :label     (tr :lipas.user.permissions.roles/role)
            :value     (:role data)
            :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))})
 
        (when-not (:role data)
-          ($ Typography
-             (tr :lipas.user.permissions.roles.edit-role/choose-role)))
+         ($ Typography
+            (tr :lipas.user.permissions.roles.edit-role/choose-role)))
 
        (for [k required-context-keys]
-          ($ context-key-edit
-             {:key k
-              :k k
-              :required data
-              :tr tr
-              :data data}))
+         ($ context-key-edit
+            {:key k
+             :k k
+             :required data
+             :tr tr
+             :data data}))
 
        (for [k optional-context-keys]
-          ($ context-key-edit
-             {:key k
-              :k k
-              :tr tr
-              :data data}))
+         ($ context-key-edit
+            {:key k
+             :k k
+             :tr tr
+             :data data}))
 
        ($ Stack
           {:direction "row"
            :sx #js {:gap 1}}
           (if editing?
-             ($ Button
-                {:onClick (fn [_e] (rf/dispatch [::events/stop-edit]))}
-                (tr :lipas.user.permissions.roles.edit-role/stop-editing))
-             ($ Button
-                {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
-                (tr :lipas.user.permissions.roles.edit-role/add)))))))
+            ($ Button
+               {:onClick (fn [_e] (rf/dispatch [::events/stop-edit]))}
+               (tr :lipas.user.permissions.roles.edit-role/stop-editing))
+            ($ Button
+               {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
+               (tr :lipas.user.permissions.roles.edit-role/add)))))))
 
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
@@ -253,14 +252,14 @@
                                         :fontWeight "bold"}}
                               (tr (keyword :lipas.user.permissions.roles.role-names role)))
                            (for [[context-key vs] (dissoc x :role)]
-                              ($ :<>
-                                 {:key context-key}
-                                 (for [v vs]
-                                    ($ role-context
-                                       {:key v
-                                        :k context-key
-                                        :v v
-                                        :tr tr})))))
+                             ($ :<>
+                                {:key context-key}
+                                (for [v vs]
+                                  ($ role-context
+                                     {:key v
+                                      :k context-key
+                                      :v v
+                                      :tr tr})))))
                         ($ ListItemSecondaryAction
                            ($ IconButton
                               {:onClick (fn [_e] (rf/dispatch [::events/edit-role i]))}
@@ -478,62 +477,62 @@
        [mui/table-cell "New-stroke"]]]
 
      (into
-      [mui/table-body]
-      (for [[type-code type] (sort-by first types)
-            :let             [shape (-> type-code types :geometry-type)
-                              fill (-> type-code styles/symbols :fill :color)
-                              stroke (-> type-code styles/symbols :stroke :color)]]
-        [mui/table-row
-         [mui/table-cell type-code]
-         [mui/table-cell (-> type :name :fi)]
-         [mui/table-cell shape]
+       [mui/table-body]
+       (for [[type-code type] (sort-by first types)
+             :let             [shape (-> type-code types :geometry-type)
+                               fill (-> type-code styles/symbols :fill :color)
+                               stroke (-> type-code styles/symbols :stroke :color)]]
+         [mui/table-row
+          [mui/table-cell type-code]
+          [mui/table-cell (-> type :name :fi)]
+          [mui/table-cell shape]
 
          ;; Old symbol
-         [mui/table-cell (condp = shape
-                           "Point" "Circle"
-                           shape)]
+          [mui/table-cell (condp = shape
+                            "Point" "Circle"
+                            shape)]
 
          ;; New symbol
-         [mui/table-cell (condp = shape
-                           "Point" [lui/select
-                                    {:items     [{:label "Circle" :value "circle"}
-                                                 {:label "Square" :value "square"}]
-                                     :value     (or (-> type-code new-colors :symbol)
-                                                    "circle")
-                                     :on-change (partial pick-color type-code :symbol)}]
-                           shape)]
+          [mui/table-cell (condp = shape
+                            "Point" [lui/select
+                                     {:items     [{:label "Circle" :value "circle"}
+                                                  {:label "Square" :value "square"}]
+                                      :value     (or (-> type-code new-colors :symbol)
+                                                     "circle")
+                                      :on-change (partial pick-color type-code :symbol)}]
+                            shape)]
 
          ;; Old fill
-         [mui/table-cell
-          [color-picker {:value fill :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value fill :on-change #()}]]
 
          ;; New fill
-         [mui/table-cell
-          [mui/grid {:container true :wrap "nowrap"}
-           [mui/grid {:item true}
-            [color-picker
-             {:value     (-> (new-colors type-code) :fill)
-              :on-change (partial pick-color type-code :fill)}]]
-           [mui/grid {:item true}
-            [mui/button
-             {:size :small :on-click #(pick-color type-code :fill fill)}
-             "reset"]]]]
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value     (-> (new-colors type-code) :fill)
+               :on-change (partial pick-color type-code :fill)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :fill fill)}
+              "reset"]]]]
 
          ;; Old stroke
-         [mui/table-cell
-          [color-picker {:value stroke :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value stroke :on-change #()}]]
 
          ;; New stroke
-         [mui/table-cell
-          [mui/grid {:container true :wrap "nowrap"}
-           [mui/grid {:item true}
-            [color-picker
-             {:value     (-> (new-colors type-code) :stroke)
-              :on-change (partial pick-color type-code :stroke)}]]
-           [mui/grid {:item true}
-            [mui/button
-             {:size :small :on-click #(pick-color type-code :stroke stroke)}
-             "reset"]]]]]))]))
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value     (-> (new-colors type-code) :stroke)
+               :on-change (partial pick-color type-code :stroke)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :stroke stroke)}
+              "reset"]]]]]))]))
 
 (defn type-codes-view []
   (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]

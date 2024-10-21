@@ -3,18 +3,17 @@
   definitions through an extra ns.
   This also prevents DCE because all the components are
   being referred here."
-  (:require
-   [lipas.ui.components.selects :as selects]
-   [lipas.ui.components.tables :as tables]
-   [lipas.ui.components.buttons :as buttons]
-   [lipas.ui.components.autocompletes :as autocompletes]
-   [lipas.ui.components.dialogs :as dialogs]
-   [lipas.ui.components.text-fields :as text-fields]
-   [lipas.ui.components.forms :as forms]
-   [lipas.ui.components.checkboxes :as checkboxes]
-   [lipas.ui.components.notifications :as notifications]
-   [lipas.ui.components.layouts :as layouts]
-   [lipas.ui.components.misc :as misc]))
+  (:require [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.forms :as forms]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.notifications :as notifications]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]))
 
 ;;; Components ;;;
 

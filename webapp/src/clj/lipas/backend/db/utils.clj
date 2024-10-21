@@ -30,7 +30,7 @@
 
 (extend-protocol jdbc/IResultSetReadColumn
   org.postgresql.util.PGobject
-  (result-set-read-column [pgobj metadata idx]
+  (result-set-read-column [pgobj _metadata _idx]
     (let [type  (.getType pgobj)
           value (.getValue pgobj)]
       (if (#{"jsonb" "json"} type)

@@ -1,10 +1,9 @@
 (ns lipas.ui.feedback.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.feedback.events :as events]
-   [lipas.ui.feedback.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>]]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.feedback.events :as events]
+            [lipas.ui.feedback.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>]]))
 
 (defn feedback-btn []
   (let [tr          (<== [:lipas.ui.subs/translator])

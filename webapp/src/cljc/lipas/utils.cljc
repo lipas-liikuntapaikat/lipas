@@ -3,7 +3,7 @@
    [camel-snake-kebab.core :as csk]
    [camel-snake-kebab.extras :as csk-extras]
    [clojure.spec.alpha :as s]
-   [clojure.string :as string]
+   [clojure.string :as str]
    [clojure.walk :as walk]
    #?(:cljs [cljs.reader :refer [read-string]])
    #?(:cljs [goog.string :as gstring])
@@ -14,8 +14,8 @@
   (if (nil? s)  
     ""
     (-> s
-        (string/lower-case)
-        (string/replace #"(\"|\(|\))" ""))))
+        (str/lower-case)
+        (str/replace #"(\"|\(|\))" ""))))
 
 (defn index-by
   ([idx-fn coll]
@@ -42,14 +42,14 @@
   "
   [s]
   (when (not-empty s)
-    (-> (take 23 s) string/join (string/replace " " "T") (str "Z"))))
+    (-> (take 23 s) str/join (str/replace " " "T") (str "Z"))))
 
 (defn ->old-lipas-timestamp
   "Converts timestamps from ISO string format to old LIPAS format.
   Example: '2018-12-01T00:00:00.000Z' => '2018-12-01 00:00:00.000'"
   [s]
   (when (not-empty s)
-    (-> s (subs 0 23) (string/replace "T" " "))))
+    (-> s (subs 0 23) (str/replace "T" " "))))
 
 (defn zero-left-pad
   [s len]
@@ -74,8 +74,10 @@
   (try
     (let [x (read-string s)]
       (when (number? x) x))
-    #?(:cljs (catch :default ex)
-       :clj  (catch Exception ex))))
+    #?(:cljs (catch :default _ex
+               nil)
+       :clj  (catch Exception _ex
+               nil))))
 
 (defn ->int [x]
   (cond
@@ -90,13 +92,15 @@
 (defn ->uuid-safe [x]
   (cond
     (uuid? x)   x
-    (string? x) (try (->uuid x) #?(:cljs (catch :default ex)
-                                   :clj  (catch Exception e)))
+    (string? x) (try (->uuid x) #?(:cljs (catch :default _ex
+                                           nil)
+                                   :clj  (catch Exception _e
+                                           nil)))
     :else nil))
 
 (defn ->bool [x]
   #?(:clj (java.lang.Boolean/parseBoolean (str x))
-     :cljs (= "true" (-> x str string/lower-case))))
+     :cljs (= "true" (-> x str str/lower-case))))
 
 (defn gen-uuid []
   #?(:clj (java.util.UUID/randomUUID)
@@ -165,15 +169,15 @@
        (rest csv-data)))
 
 (defn +safe [& args]
-  (if-let [valid-args (not-empty (filter number? args))]
+  (when-let [valid-args (not-empty (filter number? args))]
     (apply + valid-args)))
 
 (defn get-in-path [m s]
-  (let [ks (map keyword (string/split s #"\."))]
+  (let [ks (map keyword (str/split s #"\."))]
     (get-in m ks)))
 
 (defn join [coll]
-  (string/join "," coll))
+  (str/join "," coll))
 
 (def content-type
   {:xlsx "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -189,8 +193,8 @@
 (defn ->snake-case-keywords [m]
   (csk-extras/transform-keys csk/->snake_case m))
 
-(def trim (fnil string/trim ""))
-(def sreplace (fnil string/replace ""))
+(def trim (fnil str/trim ""))
+(def sreplace (fnil str/replace ""))
 
  ;; (prn {:ts1     ts1 :ts2 ts2
  ;;       :update? (> (compare ts1 ts2) 0)})
@@ -208,7 +212,7 @@
   (compare b a))
 
 (defn str-matches? [s x]
-  (-> x str string/lower-case (string/includes? s)))
+  (-> x str str/lower-case (str/includes? s)))
 
 (defn ->prefix-map [m prefix]
   (reduce

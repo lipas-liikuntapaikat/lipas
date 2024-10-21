@@ -1,17 +1,16 @@
 (ns lipas.ui.user.views
-  (:require
-   ["@mui/material/Icon$default" :as Icon]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Typography$default" :as Typography]
-   [lipas.roles :as roles]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.uix.hooks :refer [use-subscribe]]
-   [lipas.ui.user.events :as events]
-   [lipas.ui.user.subs :as subs]
-   [lipas.ui.utils :refer [<== ==> navigate!]]
-   [re-frame.core :as rf]
-   [uix.core :as uix :refer [$ defui]]))
+  (:require ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.roles :as roles]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.user.events :as events]
+            [lipas.ui.user.subs :as subs]
+            [lipas.ui.utils :refer [<== ==> navigate!]]
+            [re-frame.core :as rf]
+            [uix.core :as uix :refer [$ defui]]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -63,8 +62,8 @@
        [mui/list-item
         {:button   true
          :on-click (comp
-                    close
-                    #(==> [:lipas.ui.events/display lipas-id]))}
+                     close
+                     #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
@@ -74,8 +73,8 @@
        [mui/list-item
         {:button   true
          :on-click (comp
-                    close
-                    #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
+                     close
+                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
@@ -86,8 +85,8 @@
        (tr :actions/cancel)]]]))
 
 (def teaviisari-types #{1110, 1120, 1130 1310, 1320, 1330, 1340, 1370,
-1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
-3130, 3210 4401, 4402, 4403, 4404, 4405})
+                        1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
+                        3130, 3210 4401, 4402, 4403, 4404, 4405})
 
 (defui role-context [{:keys [tr k v]}]
   (let [locale (tr)
@@ -181,8 +180,7 @@
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
-
-       ;; Saved searches
+;; Saved searches
        (when saved-searches
          [mui/grid {:item true :xs 12}
           [mui/card card-props
@@ -224,10 +222,8 @@
           ;;   [mui/button {:href  "/uimahalliportaali"
           ;;                :color :secondary}
           ;;    (str "> " (tr :user/swimming-pools-link))])
-
           ]]]
-
-       ;; Promo card
+;; Promo card
        [mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title (tr :user/promo-headline)}]
@@ -241,14 +237,14 @@
            "LIPAS vuosikatsaus 2023 (.pdf)"]
 
           #_[:ul {:dense true}
-           [:li "Liikuntapaikat, kaikki yhteensä"]
-           [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]
-           [:li "Pallokentät (1310, 1320, 1330, 1340, 1370, 1380)"]
-           [:li "Jääurheilualueet (1510, 1520, 1530, 1550)"]
-           [:li "Kuntosalit (2120)"]
-           [:li "Liikuntasalit ja -hallit (2150, 2210, 2220, 2230, 2240)"]
-           [:li "Uimahallit, kylpylät ja maauimalat (3110, 3130, 3210)"]
-           [:li "Polut, ladut ja reitit (4401, 4402, 4403, 4404, 4405)"]]
+             [:li "Liikuntapaikat, kaikki yhteensä"]
+             [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]
+             [:li "Pallokentät (1310, 1320, 1330, 1340, 1370, 1380)"]
+             [:li "Jääurheilualueet (1510, 1520, 1530, 1550)"]
+             [:li "Kuntosalit (2120)"]
+             [:li "Liikuntasalit ja -hallit (2150, 2210, 2220, 2230, 2240)"]
+             [:li "Uimahallit, kylpylät ja maauimalat (3110, 3130, 3210)"]
+             [:li "Polut, ladut ja reitit (4401, 4402, 4403, 4404, 4405)"]]
           #_[mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
              "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
           #_[mui/button
@@ -259,22 +255,15 @@
                           (==> [:lipas.ui.search.events/set-filters-by-permissions])
                           (==> [:lipas.ui.search.events/set-type-filter teaviisari-types])
                           (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
-             (tr :user/promo1-link)]
-
-
-          ]]]
+             (tr :user/promo1-link)]]]]
 
        [mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title (tr :user/data-ownership)}]
          [mui/card-content
-          [mui/typography (tr :disclaimer/data-ownership)]
+          [mui/typography (tr :disclaimer/data-ownership)]]]]]]
 
-
-
-          ]]]]]
-
-     ;; Experimental features
+;; Experimental features
      #_[mui/grid {:item true :xs 12}
         [mui/card card-props
          [mui/card-header {:title "Experimental features"}]
@@ -282,8 +271,7 @@
           [lui/checkbox
            {:label     "Enable experimental features"
             :value     experimental-features?
-            :on-change #(==> [::events/toggle-experimental-features])}]]]]
-     ]))
+            :on-change #(==> [::events/toggle-experimental-features])}]]]]]))
 
 (defn main []
   (let [tr         (<== [:lipas.ui.subs/translator])

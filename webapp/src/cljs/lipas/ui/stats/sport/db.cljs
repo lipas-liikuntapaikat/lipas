@@ -1,6 +1,5 @@
 (ns lipas.ui.stats.sport.db
-  (:require
-   [lipas.reports :as reports]))
+  (:require [lipas.reports :as reports]))
 
 (def default-db
   {:groupings         reports/sports-stats-groupings

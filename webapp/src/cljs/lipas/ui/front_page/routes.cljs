@@ -1,8 +1,7 @@
 (ns lipas.ui.front-page.routes
-  (:require
-   [lipas.ui.front-page.views :as views]
-   [lipas.ui.front-page.events :as events]
-   [lipas.ui.utils :refer [==>] :as utils]))
+  (:require [lipas.ui.front-page.events :as events]
+            [lipas.ui.front-page.views :as views]
+            [lipas.ui.utils :refer [==>] :as utils]))
 
 (def routes
   ["etusivu"

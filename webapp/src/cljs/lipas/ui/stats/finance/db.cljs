@@ -1,7 +1,5 @@
 (ns lipas.ui.stats.finance.db
-  (:require
-   [lipas.reports :as reports]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.reports :as reports]))
 
 (def default-db
   {:selected-view           "chart"

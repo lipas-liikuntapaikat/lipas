@@ -1,7 +1,6 @@
 (ns lipas.ui.map.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.map.views :as views]))
+  (:require [lipas.ui.map.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["liikuntapaikat"

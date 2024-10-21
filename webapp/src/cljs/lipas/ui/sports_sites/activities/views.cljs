@@ -1,18 +1,16 @@
 (ns lipas.ui.sports-sites.activities.views
-  (:require
-   [clojure.pprint :as pprint]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as str]
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.buttons :as lui-btn]
-   [lipas.ui.components.text-fields :as lui-tf]
-   [lipas.ui.config :as config]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.sports-sites.activities.events :as events]
-   [lipas.ui.sports-sites.activities.subs :as subs]
-   [lipas.ui.sports-sites.views :as sports-site-views]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [clojure.pprint :as pprint]
+            [clojure.string :as str]
+            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as lui-btn]
+            [lipas.ui.components.text-fields :as lui-tf]
+            [lipas.ui.config :as config]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.activities.events :as events]
+            [lipas.ui.sports-sites.activities.subs :as subs]
+            [lipas.ui.sports-sites.views :as sports-site-views]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (declare make-field)
 
@@ -24,8 +22,8 @@
   [props children]
   [mui/grid {:container true :spacing 4}
    (doall
-    (for [[idx child] (map vector (range) children)]
-      [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+     (for [[idx child] (map vector (range) children)]
+       [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -118,21 +116,21 @@
       [mui/grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
       (doall
-       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-         [mui/grid
-          {:key prop-k
-           :item true
-           :xs 12}
-          [make-field
-           {:field        field
-            :prop-k       prop-k
-            :edit-data    (:data @dialog-state)
-            :display-data (:data @dialog-state)
-            :locale       locale
-            :set-field    (fn [& args]
-                            (let [path (into [:data] (butlast args))
-                                  v (last args)]
-                              (swap! dialog-state assoc-in path v)))}]]))]]))
+        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+          [mui/grid
+           {:key prop-k
+            :item true
+            :xs 12}
+           [make-field
+            {:field        field
+             :prop-k       prop-k
+             :edit-data    (:data @dialog-state)
+             :display-data (:data @dialog-state)
+             :locale       locale
+             :set-field    (fn [& args]
+                             (let [path (into [:data] (butlast args))
+                                   v (last args)]
+                               (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field
@@ -184,8 +182,8 @@
                                  (map #(assoc % :_role (->> %
                                                             :role
                                                             (map
-                                                             (fn [role]
-                                                               (get-in contact-props [:role :field :opts role locale])))
+                                                              (fn [role]
+                                                                (get-in contact-props [:role :field :opts role locale])))
                                                             (str/join ", ")))))
           :on-add           (fn []
                               (reset! dialog-state {:open? true
@@ -302,20 +300,20 @@
      [lang-selector {:locale locale}]]
 
     #_[mui/grid {:item true :xs 12}
-     [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-      [mui/typography description]]]
+       [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
+        [mui/typography description]]]
 
     [mui/grid {:item true :xs 12}
      [mui/grid {:item true :xs 12}
       ;; FIXME: MUI-v5 input height or paddings are wrong
-       [lui/text-field
-        {:fullWidth   true
-         :required    true
-         :helper-text description
-         :value       (-> @dialog-state :data locale)
-         :on-change   #(swap! dialog-state assoc-in [:data locale] %)
-         :label       (tr :utp/highlight)
-         :variant     "outlined"}]]]]])
+      [lui/text-field
+       {:fullWidth   true
+        :required    true
+        :helper-text description
+        :value       (-> @dialog-state :data locale)
+        :on-change   #(swap! dialog-state assoc-in [:data locale] %)
+        :label       (tr :utp/highlight)
+        :variant     "outlined"}]]]]])
 
 (defn textlist
   [{:keys [locale label description set-field value]}]
@@ -437,46 +435,46 @@
          ;; Halper text
          [mui/grid {:item true :xs 12}
           [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-              [mui/typography description]]]
+           [mui/typography description]]]
 
          (doall
-          (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
-            ^{:key k}
-            [:<>
-             [mui/grid {:item true :xs 12}
-              [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
+           (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
+             ^{:key k}
+             [:<>
+              [mui/grid {:item true :xs 12}
+               [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-             [mui/grid {:item true :xs 12}
-              [lui/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :label locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
-                :label           (tr :general/headline)
-                :variant         "outlined"}]]
+              [mui/grid {:item true :xs 12}
+               [lui/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :label locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
+                 :label           (tr :general/headline)
+                 :variant         "outlined"}]]
 
              ;; Description
-             [mui/grid {:item true :xs 12}
-              [lui/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :description locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
-                :label           (tr :general/description)
-                :variant         "outlined"}]]
+              [mui/grid {:item true :xs 12}
+               [lui/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :description locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
+                 :label           (tr :general/description)
+                 :variant         "outlined"}]]
 
              ;; Delete btn
-             [mui/grid {:item true :style {:text-align "right"}}
-              [lui-btn/confirming-delete-button
-               {:tooltip         (tr :actions/delete)
-                :confirm-tooltip (tr :confirm/press-again-to-delete)
-                :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
+              [mui/grid {:item true :style {:text-align "right"}}
+               [lui-btn/confirming-delete-button
+                {:tooltip         (tr :actions/delete)
+                 :confirm-tooltip (tr :confirm/press-again-to-delete)
+                 :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-             [mui/grid {:item true :xs 12}
-              [mui/divider]]]))
+              [mui/grid {:item true :xs 12}
+               [mui/divider]]]))
 
          ;; Add / edit btn
          [mui/grid {:item true :xs 12}
@@ -819,7 +817,7 @@
         [lui/form-table
          {:key             (str (count (vals @state)))
           :headers         [[:url (tr :utp/link)]
-                            [:_description (tr :general/description)][]]
+                            [:_description (tr :general/description)] []]
           :read-only?      false
           :items           (->> @state
                                 vals
@@ -856,26 +854,26 @@
   [{:keys [locale geom-type lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
-    (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
-          :when (or (nil? show)
-                    (show {:type-code type-code}))]
-      (when-not (and
-                  (contains? route-props :independent-entity)
-                  (not (:independent-entity @state))
-                  (contains? independent-entity-ks prop-k))
-        [make-field
-         {:key prop-k
-          :field        field
-          :prop-k       prop-k
-          :edit-data    @state
-          :display-data @state
-          :locale       locale
-          :set-field    (fn [& args]
-                          (let [path (butlast args)
-                                v (last args)]
-                            (swap! state assoc-in path v)))
-          :geom-type    geom-type
-          :lipas-id     lipas-id}])))])
+     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
+           :when (or (nil? show)
+                     (show {:type-code type-code}))]
+       (when-not (and
+                   (contains? route-props :independent-entity)
+                   (not (:independent-entity @state))
+                   (contains? independent-entity-ks prop-k))
+         [make-field
+          {:key prop-k
+           :field        field
+           :prop-k       prop-k
+           :edit-data    @state
+           :display-data @state
+           :locale       locale
+           :set-field    (fn [& args]
+                           (let [path (butlast args)
+                                 v (last args)]
+                             (swap! state assoc-in path v)))
+           :geom-type    geom-type
+           :lipas-id     lipas-id}])))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
@@ -944,8 +942,6 @@
                :on-select (fn [route]
                             (==> [::events/select-route lipas-id (dissoc route :_route-name)])
                             (reset! route-form-state (dissoc route :fids)))}]])
-
-
 
           (when-not read-only?
             [mui/grid {:item true :xs 12}
@@ -1022,9 +1018,7 @@
          [mui/grid {:item true :xs 12}
           [lui/expansion-panel {:label "debug route props"}
            [mui/grid {:item true :xs 12}
-            [:pre (with-out-str (pprint/pprint props))]]]])
-
-       ])))
+            [:pre (with-out-str (pprint/pprint props))]]]])])))
 
 (defn routes
   [{:keys [read-only? route-props lipas-id _display-data _edit-data
@@ -1058,16 +1052,16 @@
         set-field (partial set-field lipas-id :properties lipas-prop-k)]
     [:<>
      (sports-site-views/make-prop-field
-      {:tr          tr
-       :prop-k      lipas-prop-k
-       :read-only?  read-only?
-       :label       label
-       :description description
-       :value       value
-       :set-field   set-field
-       :problems?   nil
-       :geom-type   geom-type
-       :geoms       geoms})
+       {:tr          tr
+        :prop-k      lipas-prop-k
+        :read-only?  read-only?
+        :label       label
+        :description description
+        :value       value
+        :set-field   set-field
+        :problems?   nil
+        :geom-type   geom-type
+        :geoms       geoms})
      (when description
        [mui/form-helper-text description])]))
 
@@ -1119,17 +1113,17 @@
 
     "percentage" [lui/text-field
                   (merge
-                   {:type        "number"
-                    :adornment   "%"
-                    :disabled    read-only?
-                    :label       (get-in field [:label locale])
-                    :helper-text (get-in field [:description locale])
-                    :fullWidth   true
-                    :spec        [:or
-                                  [:int {:min 0 :max 100}]
-                                  [:double {:min 0.0 :max 100.0}]]
-                    :on-change   #(set-field prop-k %)
-                    :value       (get-in edit-data [prop-k])})]
+                    {:type        "number"
+                     :adornment   "%"
+                     :disabled    read-only?
+                     :label       (get-in field [:label locale])
+                     :helper-text (get-in field [:description locale])
+                     :fullWidth   true
+                     :spec        [:or
+                                   [:int {:min 0 :max 100}]
+                                   [:double {:min 0.0 :max 100.0}]]
+                     :on-change   #(set-field prop-k %)
+                     :value       (get-in edit-data [prop-k])})]
 
     ;; FIXME: MUI-v5, outlined input is missing x-padding
     "textarea" [lui-tf/expandable-text-area
@@ -1271,7 +1265,7 @@
        ;; Header
        #_[mui/grid {:item true :xs 12}
           [mui/typography {:variant "h6"}
-         (get-in activities [:label locale])]]
+           (get-in activities [:label locale])]]
 
        ;; Locale selector
        [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
@@ -1318,5 +1312,4 @@
     (==> [:lipas.ui.map.events/set-zoom 14])
     (==> [:lipas.ui.map.events/set-center 6919553.618920735 445619.43358133035]))
 
-  (==> [:lipas.ui.map.events/show-sports-site 607314])
-  )
+  (==> [:lipas.ui.map.events/show-sports-site 607314]))

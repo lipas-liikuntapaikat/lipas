@@ -1,13 +1,12 @@
 (ns lipas.ui.analysis.views
-  (:require
-   [lipas.ui.analysis.diversity.view :as diversity]
-   [lipas.ui.analysis.events :as events]
-   [lipas.ui.analysis.reachability.views :as reachability]
-   [lipas.ui.analysis.subs :as subs]
-   [lipas.ui.map.events :as map-events]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   ["@mui/material/Tooltip$default" :as Tooltip]))
+  (:require ["@mui/material/Tooltip$default" :as Tooltip]
+            [lipas.ui.analysis.diversity.view :as diversity]
+            [lipas.ui.analysis.events :as events]
+            [lipas.ui.analysis.reachability.views :as reachability]
+            [lipas.ui.analysis.subs :as subs]
+            [lipas.ui.map.events :as map-events]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn view [{:keys [tr]}]
   (let [selected-tool (<== [::subs/selected-tool])]
@@ -35,7 +34,7 @@
        [:> Tooltip
         {:title (tr :analysis/close)}
         [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
-        [mui/icon "close"]]]]]
+         [mui/icon "close"]]]]]
 
      [mui/grid {:item true :xs 12}
       (condp = selected-tool

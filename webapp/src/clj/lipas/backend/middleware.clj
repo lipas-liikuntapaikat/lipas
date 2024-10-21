@@ -4,8 +4,7 @@
    [buddy.auth.middleware :refer [wrap-authentication]]
    [lipas.backend.auth :as auth]
    [lipas.roles :as roles]
-   [ring.util.http-response :as resp]
-   [taoensso.timbre :as log]))
+   [ring.util.http-response :as resp]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not

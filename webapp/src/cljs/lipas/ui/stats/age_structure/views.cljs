@@ -1,12 +1,11 @@
 (ns lipas.ui.stats.age-structure.views
-  (:require
-   [lipas.ui.charts :as charts]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.stats.common :as common]
-   [lipas.ui.stats.age-structure.events :as events]
-   [lipas.ui.stats.age-structure.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.stats.age-structure.events :as events]
+            [lipas.ui.stats.age-structure.subs :as subs]
+            [lipas.ui.stats.common :as common]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)

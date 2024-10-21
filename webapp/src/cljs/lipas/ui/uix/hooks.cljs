@@ -18,28 +18,28 @@
   that adds change listeners to the ref"
   [^js ref]
   (uix/use-callback
-   (fn [listener]
+    (fn [listener]
      ;; Adding an atom holding a set of listeners on a ref
-     (let [listeners (or (.-react-listeners ref) (atom #{}))]
-       (set! (.-react-listeners ref) listeners)
-       (swap! listeners conj listener))
-     (fn []
-       (let [listeners (.-react-listeners ref)]
-         (swap! listeners disj listener)
+      (let [listeners (or (.-react-listeners ref) (atom #{}))]
+        (set! (.-react-listeners ref) listeners)
+        (swap! listeners conj listener))
+      (fn []
+        (let [listeners (.-react-listeners ref)]
+          (swap! listeners disj listener)
          ;; When the last listener was removed,
          ;; remove batched updates listener from the ref
-         (when (empty? @listeners)
-           (cleanup-ref ref)
-           (set! (.-react-listeners ref) nil)))))
-   [ref]))
+          (when (empty? @listeners)
+            (cleanup-ref ref)
+            (set! (.-react-listeners ref) nil)))))
+    [ref]))
 
 (defn- use-sync-external-store [subscribe get-snapshot]
   (useSyncExternalStoreWithSelector
-   subscribe
-   get-snapshot
-   nil ;; getServerSnapshot, only needed for SSR
-   identity ;; selector, not using, just returning the value itself
-   =)) ;; value equality check
+    subscribe
+    get-snapshot
+    nil ;; getServerSnapshot, only needed for SSR
+    identity ;; selector, not using, just returning the value itself
+    =)) ;; value equality check
 
 (defn- run-reaction [^js ref]
   (let [key "__rat"
@@ -48,11 +48,11 @@
                     ;; When the ref is updated, schedule all listeners in a batch
                     (when-let [listeners (.-react-listeners ref)]
                       (scheduler/unstable_scheduleCallback scheduler/unstable_ImmediatePriority
-                        #(doseq [listener @listeners]
-                          (listener)))))]
+                                                           #(doseq [listener @listeners]
+                                                              (listener)))))]
     (if (nil? rat)
       (ratom/run-in-reaction
-       #(-deref ref) ref key on-change {:no-cache true})
+        #(-deref ref) ref key on-change {:no-cache true})
       (._run rat false))))
 
 ;; Public API

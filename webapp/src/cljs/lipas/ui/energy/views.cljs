@@ -1,12 +1,11 @@
 (ns lipas.ui.energy.views
-  (:require
-   [lipas.ui.charts :as charts]
-   [lipas.ui.components :as lui]
-   [lipas.ui.energy.events :as events]
-   [lipas.ui.energy.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
+            [lipas.ui.energy.events :as events]
+            [lipas.ui.energy.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn form [{:keys [tr data on-change disabled? spectators? cold?]}]
   [mui/form-group
@@ -337,9 +336,9 @@
              {:color     "secondary"
               :variant   "body2"
               :href      (utils/->mailto
-                          {:email   "lipasinfo@jyu.fi"
-                           :subject (tr :help/permissions-help-subject)
-                           :body    (tr :help/permissions-help-body)} )}
+                           {:email   "lipasinfo@jyu.fi"
+                            :subject (tr :help/permissions-help-subject)
+                            :body    (tr :help/permissions-help-body)})}
              (tr :general/here)]
 
             [mui/typography {:style {:display "inline"}}
@@ -470,13 +469,13 @@
        (tr :lipas.energy-stats/energy-reported-for year)]
       [:div {:style {:margin-top "1em"}}
        (into
-        [mui/list {:dense true :style {:column-width "300px"}}]
-        (for [m (:hall-of-fame stats)]
-          [mui/list-item {:style {:break-inside :avoid}}
-           [mui/list-item-icon {:style {:margin-right 0 :color mui/gold}}
-            [mui/icon "star"]]
-           [mui/list-item-text {:variant "body2"}
-            (:name m)]]))]]]]])
+         [mui/list {:dense true :style {:column-width "300px"}}]
+         (for [m (:hall-of-fame stats)]
+           [mui/list-item {:style {:break-inside :avoid}}
+            [mui/list-item-icon {:style {:margin-right 0 :color mui/gold}}
+             [mui/icon "star"]]
+            [mui/list-item-text {:variant "body2"}
+             (:name m)]]))]]]]])
 
 (defn localize-months [tr]
   (let [months [:jan :feb :mar :apr :may :jun
@@ -488,11 +487,11 @@
 (defn monthly-chart [{:keys [tr lipas-id year]}]
   (let [data   (<== [::subs/monthly-chart-data lipas-id year])
         labels (merge
-                {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
-                 :heat-mwh        (tr :lipas.energy-stats/heat-mwh)
-                 :cold-mwh        (tr :lipas.energy-stats/cold-mwh)
-                 :water-m3        (tr :lipas.energy-stats/water-m3)}
-                (localize-months tr))]
+                 {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
+                  :heat-mwh        (tr :lipas.energy-stats/heat-mwh)
+                  :cold-mwh        (tr :lipas.energy-stats/cold-mwh)
+                  :water-m3        (tr :lipas.energy-stats/water-m3)}
+                 (localize-months tr))]
     [mui/paper {:style     {:margin-top "1em"}
                 :elevation 0}
      [mui/typography {:variant "h6" :color :secondary}
@@ -508,9 +507,9 @@
 (defn monthly-visitors-chart [{:keys [tr lipas-id year]}]
   (let [data   (<== [::subs/monthly-visitors-chart-data lipas-id year])
         labels (merge
-                {:total-count      (tr :lipas.visitors/total-count)
-                 :spectators-count (tr :lipas.visitors/spectators-count)}
-                (localize-months tr))]
+                 {:total-count      (tr :lipas.visitors/total-count)
+                  :spectators-count (tr :lipas.visitors/spectators-count)}
+                 (localize-months tr))]
     [mui/paper {:style {:margin-top "1em"} :elevation 0}
      [mui/typography {:variant "h6" :color :secondary}
       (tr :lipas.visitors/monthly-visitors-in-year year)]

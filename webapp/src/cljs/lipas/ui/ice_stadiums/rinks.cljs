@@ -1,11 +1,10 @@
 (ns lipas.ui.ice-stadiums.rinks
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.ui.components :as lui]
-   [lipas.ui.ice-stadiums.events :as events]
-   [lipas.ui.ice-stadiums.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>]]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
+            [lipas.ui.ice-stadiums.events :as events]
+            [lipas.ui.ice-stadiums.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>]]))
 
 (defn set-field [dialog field value]
   (#(==> [::events/set-dialog-field dialog field value])))
@@ -63,6 +62,6 @@
 
 (defn read-only-table [{:keys [tr items]}]
   (lui/table
-   {:headers (make-headers tr)
-    :items items
-    :key-fn #(gensym)}))
+    {:headers (make-headers tr)
+     :items items
+     :key-fn #(gensym)}))

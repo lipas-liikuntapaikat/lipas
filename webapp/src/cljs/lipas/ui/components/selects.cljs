@@ -1,16 +1,15 @@
 (ns lipas.ui.components.selects
-  (:require
-   ["@mui/material/Typography$default" :as Typography]
-   [clojure.reader :refer [read-string]]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as string]
-   [lipas.data.cities :as cities]
-   [lipas.data.types :as types]
-   [lipas.ui.components.autocompletes :as autocompletes]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<==] :as utils]
-   [lipas.utils :as cutils]
-   [reagent.core :as r]))
+  (:require ["@mui/material/Typography$default" :as Typography]
+            [clojure.reader :refer [read-string]]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as string]
+            [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<==] :as utils]
+            [lipas.utils :as cutils]
+            [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
 
@@ -114,29 +113,29 @@
     :or   {years (range 2000 utils/this-year)}}]
   [year-selector
    (merge
-    (dissoc props :tr)
-    {:label        (tr :stats/select-years)
-     :multi?       true
-     :render-value (fn [vs]
-                     (let [vs (sort vs)]
-                       (condp = (count vs)
-                         0 "-"
-                         1 (first vs)
-                         2 (str (first vs) ", " (second vs))
-                         (str (first vs) " ... " (last vs)))))
-     :value        value
-     :style        style
-     :years        years
-     :on-change    on-change})])
+     (dissoc props :tr)
+     {:label        (tr :stats/select-years)
+      :multi?       true
+      :render-value (fn [vs]
+                      (let [vs (sort vs)]
+                        (condp = (count vs)
+                          0 "-"
+                          1 (first vs)
+                          2 (str (first vs) ", " (second vs))
+                          (str (first vs) " ... " (last vs)))))
+      :value        value
+      :style        style
+      :years        years
+      :on-change    on-change})])
 
 (defn number-selector [{:keys [unit] :as props}]
   [select
    (merge
-    {:sort-fn   identity
-     :sort-cmp  utils/reverse-cmp
-     :value-fn  identity
-     :label-fn  #(str % unit)}
-    props)])
+     {:sort-fn   identity
+      :sort-cmp  utils/reverse-cmp
+      :value-fn  identity
+      :label-fn  #(str % unit)}
+     props)])
 
 (defn date-picker
   [{:keys [value on-change type required]
@@ -144,20 +143,20 @@
     :as   props}]
   [mui/text-field
    (merge
-    props
-    {:type      type
-     :value     (or value "")
-     :variant   "standard"
-     :Input-label-props
-     {:error  (and required (empty? value))
-      :shrink true} ; This makes the label show actually
-     :on-change (fn [evt] (on-change (-> evt .-target .-value)))})])
+     props
+     {:type      type
+      :value     (or value "")
+      :variant   "standard"
+      :Input-label-props
+      {:error  (and required (empty? value))
+       :shrink true} ; This makes the label show actually
+      :on-change (fn [evt] (on-change (-> evt .-target .-value)))})])
 
 (defn- id-parser [prefix]
   (comp
-   (filter #(string/starts-with? % prefix))
-   (map #(string/replace % prefix ""))
-   (map cutils/->int)))
+    (filter #(string/starts-with? % prefix))
+    (map #(string/replace % prefix ""))
+    (map cutils/->int)))
 
 (def parse-avis (id-parser "avi-"))
 (def parse-provinces (id-parser "province-"))
@@ -200,12 +199,12 @@
       :render-option-fn (fn [props option _]
                           (let [v (-> option read-string regions-by-v :name locale)]
                             (r/as-element
-                             [:r> Typography
-                              props
-                              (cond
-                                (string/includes? option "province-") (strong1 v)
-                                (string/includes? option "avi-")      (strong2 v)
-                                :else                                 v)])))
+                              [:r> Typography
+                               props
+                               (cond
+                                 (string/includes? option "province-") (strong1 v)
+                                 (string/includes? option "avi-")      (strong2 v)
+                                 :else                                 v)])))
       :on-change        (comp on-change (partial ->city-codes avis provinces))}]))
 
 (def parse-main-cats (id-parser "main-cat-"))
@@ -250,18 +249,17 @@
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
-                             [:r> Typography
-                              props
-                              (cond
-                                (string/includes? option "sub-cat")  (strong1 v)
-                                (string/includes? option "main-cat") (strong2 v)
-                                :else                                v)])))
+                              [:r> Typography
+                               props
+                               (cond
+                                 (string/includes? option "sub-cat")  (strong1 v)
+                                 (string/includes? option "main-cat") (strong2 v)
+                                 :else                                v)])))
       :sort-fn          (fn [{:keys [type-code]}]
                           (case type-code
                             (1 2) (* 100 type-code)
                             type-code))
       :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
-
 
 (defn type-selector [{:keys [value on-change]}]
   (let [tr     (<== [:lipas.ui.subs/translator])

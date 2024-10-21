@@ -1,12 +1,10 @@
 (ns lipas.ui.map.import
-  (:require
-   [clojure.string :as string]
-   [lipas.ui.components :as lui]
-   [lipas.ui.map.events :as events]
-   [lipas.ui.map.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [clojure.string :as string]
+            [lipas.ui.components :as lui]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
 (def import-formats-str (string/join " " import-formats))

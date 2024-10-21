@@ -1,20 +1,19 @@
 (ns lipas.ui.stats.subsidies.views
-  (:require
-   [lipas.ui.charts :as charts]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.stats.common :as common]
-   [lipas.ui.stats.subsidies.events :as events]
-   [lipas.ui.stats.subsidies.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.stats.common :as common]
+            [lipas.ui.stats.subsidies.events :as events]
+            [lipas.ui.stats.subsidies.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn years-selector
   [{:keys [tr] :as props}]
   [lui/years-selector
    (merge
-    props
-    {:label (tr :actions/select-years)
-     :style common/select-style})])
+     props
+     {:label (tr :actions/select-years)
+      :style common/select-style})])
 
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)

@@ -18,6 +18,7 @@
    [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.2.4"]
    [com.pitch/uix.core "1.1.1"]
+   [cljs-bean "1.9.0"]
 
    ;;; Backend ;;;
    [metosin/ring-http-response "0.9.0"]
