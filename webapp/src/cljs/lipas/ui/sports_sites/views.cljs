@@ -1213,14 +1213,14 @@
                         props))}]
           [:> XAxis
            {:dataKey       "distance-km" :tick true :unit "km"
-            :domain        #js["dataMin" "dataMax"]
+            :domain        #js ["dataMin" "dataMax"]
             :type          "number"
             :tickFormatter (fn [x] (utils/round-safe x 1))}]
           [:> YAxis
            {:tick          charts/font-styles
             :dataKey       :elevation-m
             :unit          "m"
-            :domain        #js["dataMin" "dataMax"]
+            :domain        #js ["dataMin" "dataMax"]
             :tickFormatter (fn [x] (utils/round-safe x 0))}]
           [:> Area
            {:dataKey :elevation-m

@@ -42,21 +42,21 @@
  (fn [[path]]
    #_(println "Track!" path)
    (when-not config/debug?
-     (.push (.-_paq js/window) #js["trackPageView" (str path)]))))
+     (.push (.-_paq js/window) #js ["trackPageView" (str path)]))))
 
 (re-frame/reg-fx
  :tracker/event!
  (fn [[category action k v]]
    #_(println "Event!" category action k v)
    (when-not config/debug?
-     (.push (.-_paq js/window) #js["trackEvent" category action k v]))))
+     (.push (.-_paq js/window) #js ["trackEvent" category action k v]))))
 
 (re-frame/reg-fx
  :tracker/search!
  (fn [[k category results-count]]
    #_(println "Search!" k category results-count)
    (when-not config/debug?
-     (.push (.-_paq js/window) #js["trackSiteSearch" k category results-count]))))
+     (.push (.-_paq js/window) #js ["trackSiteSearch" k category results-count]))))
 
 (def dimensions
   {"user-type" 1})
@@ -66,7 +66,7 @@
  (fn [[k v]]
    #_(println "Custom dimension!" k v)
    (if-let [id (dimensions (name k))]
-     (.push (.-_paq js/window) #js["setCustomDimension" id v])
+     (.push (.-_paq js/window) #js ["setCustomDimension" id v])
      (println "Unknown dimension" k))))
 
 #_(def variables {})
@@ -76,5 +76,5 @@
  (fn [[k v scope]]
    #_(println "Custom variable!" k v scope)
    (if-let [idx (variables (name k))]
-     (.push (.-_paq js/window) #js["setCustomVariable" idx (name k) (name v) (name scope)])
+     (.push (.-_paq js/window) #js ["setCustomVariable" idx (name k) (name v) (name scope)])
      (println "Unknown variable" k))))

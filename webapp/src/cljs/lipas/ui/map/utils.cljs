@@ -35,11 +35,11 @@
    [lipas.ui.utils :refer [<== ==>] :as utils]
    [clojure.spec.alpha :as s]))
 
-(def geoJSON (GeoJSON. #js{:dataProjection    "EPSG:4326"
-                           :featureProjection "EPSG:3067"}))
+(def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
+                            :featureProjection "EPSG:3067"}))
 
-(def wkt (WKT. #js{:dataProjection    "EPSG:4326"
-                   :featureProjection "EPSG:3067"}))
+(def wkt (WKT. #js {:dataProjection    "EPSG:4326"
+                    :featureProjection "EPSG:3067"}))
 
 (defn ->ol-features [geoJSON-features]
   (.readFeatures geoJSON geoJSON-features))
@@ -59,8 +59,8 @@
   (.writeFeature wkt ol-feature))
 
 (defn <-wkt [s]
-  (.readFeature wkt s #js{:dataProjection    "EPSG:4326"
-                          :featureProjection "EPSG:3067"}))
+  (.readFeature wkt s #js {:dataProjection    "EPSG:4326"
+                           :featureProjection "EPSG:3067"}))
 
 (defn ->geom-coll [fcoll]
   {:type "GeometryCollection"
@@ -143,7 +143,9 @@
   [fcoll tolerance]
   (-> fcoll
       clj->js
-      (turf-simplify #js{:mutate true :tolerance tolerance :highQuality true})
+      (turf-simplify #js {:mutate true
+                          :tolerance tolerance
+                          :highQuality true})
       (->clj)))
 
 (defn geom-coll->features [geom-coll]
@@ -347,10 +349,9 @@
 (defn enable-edits-hover!
   [{:keys [^js lmap layers] :as map-ctx}]
   (let [layer (-> layers :overlays :edits)
-        hover (interaction/Select.
-               #js{:layers    #js[layer]
-                   :style     #js[styles/editing-hover-style styles/vertices-style]
-                   :condition events-condition/pointerMove})]
+        hover (interaction/Select. #js {:layers    #js [layer]
+                                        :style     #js [styles/editing-hover-style styles/vertices-style]
+                                        :condition events-condition/pointerMove})]
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions :edits-hover] hover)))
 
@@ -378,7 +379,7 @@
   [{:keys [layers]} lipas-id]
   (let [^js layer (-> layers :overlays :vectors)
         source    (.getSource layer)
-        res       #js[]]
+        res       #js []]
     (.forEachFeature source
                      (fn [f]
                        (when (-> (.get f "lipas-id")
@@ -396,7 +397,7 @@
   ([map-ctx extent]
    (fit-to-extent! map-ctx extent {}))
   ([{:keys [^js view ^js lmap] :as map-ctx} extent opts]
-   (let [padding (or (-> map-ctx :mode :content-padding) #js[0 0 0 0])]
+   (let [padding (or (-> map-ctx :mode :content-padding) #js [0 0 0 0])]
      (when (and view lmap (some finite? extent))
        (.fit view extent (clj->js
                           (merge
@@ -434,7 +435,7 @@
   ;; By telling OL if the left side panel is open,
   ;; it can correctly take this into account when focusing on coordinates.
   ;; (set! (.-padding view) #js [0 0 0 530])
-  (.setCenter view #js[lon lat])
+  (.setCenter view #js [lon lat])
   (assoc map-ctx :center center))
 
 (defn update-zoom!
@@ -487,7 +488,7 @@
     splitted))
 
 (defn split-at-coords [ol-feature coords]
-  (let [point   #js{:type "Point" :coordinates coords}
+  (let [point   #js {:type "Point" :coordinates coords}
         line    (.writeFeatureObject geoJSON ol-feature)
         nearest (turf-nearest-point-on-line line point)]
     (-> line
@@ -499,11 +500,11 @@
     (if (-> kinks (gobj/get "features") not-empty)
       (-> (split-by-features f kinks)
           (gobj/get "features"))
-      #js[f])))
+      #js [f])))
 
 (defn ->fcoll [fs]
-  #js{:type     "FeatureCollection"
-      :features (clj->js fs)})
+  #js {:type     "FeatureCollection"
+       :features (clj->js fs)})
 
 (defn fix-kinks [fcoll]
   (-> fcoll
@@ -529,7 +530,7 @@
 (defn strip-z [fcoll]
   (-> fcoll
       clj->js
-      (turf-truncate #js{:coordinates 2 :mutate true})
+      (turf-truncate #js {:coordinates 2 :mutate true})
       (gobj/get "features")
       (garray/map clean-coords-safe)
       (garray/filter some?)
@@ -596,7 +597,7 @@
     (-> geoms
         clj->js
         (turf-combine)
-        (turf-buffer distance-km #js{:units "kilometers"})
+        (turf-buffer distance-km #js {:units "kilometers"})
         (js->clj :keywordize-keys true))
 
     nil))
@@ -616,9 +617,8 @@
 
                  "Point"
                  (when (and (:lon center) (:lat center))
-                   (let [center (wgs84->epsg3067 #js[(:lon center) (:lat center)])]
-                     (Feature.
-                      #js{:geometry (Circle. center (* distance-km 1000))})))
+                   (let [center (wgs84->epsg3067 #js [(:lon center) (:lat center)])]
+                     (Feature. #js {:geometry (Circle. center (* distance-km 1000))})))
 
                  ("LineString" "Polygon")
                  (-> buffer-geom :features first clj->js ->ol-feature)

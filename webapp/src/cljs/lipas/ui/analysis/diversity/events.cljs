@@ -386,7 +386,7 @@
                                                                  :diversity-idx-mode
                                                                  :diversity-idx-median)))}]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_areas" "." fmt)}}))
 
 (re-frame/reg-event-fx
@@ -416,7 +416,7 @@
                                 (mapcat :features)
                                 (map (fn [f] (update f :properties dissoc :population))))}]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js fcoll))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js fcoll))])
       :filename (str "diversity_report_grid" "." fmt)}}))
 
 (re-frame/reg-event-fx
@@ -440,7 +440,7 @@
   [db _fmt]
   (let [categories (-> db :analysis :diversity :settings :categories)]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js categories))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js categories))])
       :filename (str "diversity_report_categories" ".json")}}))
 
 (re-frame/reg-event-fx
@@ -467,7 +467,7 @@
                                :analysis-radius-km
                                :distance-mode]))]
     {:lipas.ui.effects/save-as!
-     {:blob     (js/Blob. #js[(js/JSON.stringify (clj->js data))])
+     {:blob     (js/Blob. #js [(js/JSON.stringify (clj->js data))])
       :filename (str "diversity_report_parameters" ".json")}}))
 
 (re-frame/reg-event-fx

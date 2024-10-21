@@ -91,7 +91,7 @@
    {:search-meta.location.geometries
     {:shape
      {:type        "envelope"
-      :coordinates #js[top-left bottom-right]}
+      :coordinates #js [top-left bottom-right]}
      :relation    "intersects"}}})
 
 (defn add-distance-fields [lat lon]

@@ -4,7 +4,6 @@
    ["ol/proj" :as proj]
    ["togpx" :as togpx]
    [ajax.core :as ajax]
-   [goog.object :as gobj]
    [goog.string :as gstring]
    [goog.string.format]
    [lipas.ui.map.utils :as map-utils]
@@ -21,12 +20,10 @@
     (proj/toLonLat wgs84-coords proj)))
 
 (defn top-left [extent]
-  (epsg3067->wgs84-fast
-   #js[(aget extent 0) (aget extent 3)]))
+  (epsg3067->wgs84-fast #js [(aget extent 0) (aget extent 3)]))
 
 (defn bottom-right [extent]
-  (epsg3067->wgs84-fast
-   #js[(aget extent 2) (aget extent 1)]))
+  (epsg3067->wgs84-fast #js [(aget extent 2) (aget extent 1)]))
 
 (re-frame/reg-event-db
  ::toggle-drawer
@@ -349,8 +346,8 @@
  (fn [{:keys [db]} [_ ^js event]]
    (let [fids       (atom #{})
          lmap       (.-map event)
-         opts       #js{:layerFilter  (fn [layer] (= "edits" (.get layer "name")))
-                        :hitTolerance 5}
+         opts       #js {:layerFilter  (fn [layer] (= "edits" (.get layer "name")))
+                         :hitTolerance 5}
          selecting? (= :selecting (-> db :map :mode :sub-mode))]
      #_(js/console.log event)
      #_(js/console.log (.-pixel event))
@@ -546,18 +543,17 @@
 (defn process-imports
   [geoJSON geom-type]
   (let [fcoll (-> geoJSON
-                  (turf-simplify #js{:mutate      true
-                                     :tolerance   (map-utils/simplify-scale 3)
-                                     :highQuality true})
+                  (turf-simplify #js {:mutate      true
+                                      :tolerance   (map-utils/simplify-scale 3)
+                                      :highQuality true})
                   (js->clj :keywordize-keys true))]
     (->> fcoll
          :features
          (filter (comp #{geom-type} :type :geometry))
-         (reduce
-          (fn [res f]
-            (let [id (str (gensym))]
-              (assoc res id (assoc-in f [:properties :id] id))))
-          {})
+         (reduce (fn [res f]
+                   (let [id (str (gensym))]
+                     (assoc res id (assoc-in f [:properties :id] id))))
+                 {})
          (merge (map-utils/normalize-geom-colls fcoll geom-type)
                 (map-utils/normalize-multi-geoms fcoll geom-type)))))
 
@@ -656,8 +652,9 @@
          xml-str (-> site :location :geometries
                      (update :features #(mapv (partial add-gpx-props data) %))
                      clj->js
-                     (togpx #js{:creator "LIPAS"}))]
-     {:lipas.ui.effects/save-as! {:blob (js/Blob. #js[xml-str]) :filename fname}})))
+                     (togpx #js {:creator "LIPAS"}))]
+     {:lipas.ui.effects/save-as! {:blob (js/Blob. #js [xml-str])
+                                  :filename fname}})))
 
 ;; Geom simplification ;;
 
@@ -888,7 +885,7 @@
  ::add-point-from-coords
  (fn [_ [_ {:keys [crs lon lat]}]]
    (let [coords (if (= :epsg3067 crs)
-                  (epsg3067->wgs84-fast #js[lat lon])
+                  (epsg3067->wgs84-fast #js [lat lon])
                   [lon lat])
          fcoll  {:type     "FeatureCollection"
                  :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]

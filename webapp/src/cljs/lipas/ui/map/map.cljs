@@ -35,7 +35,7 @@
 #_(set! *warn-on-infer* true)
 
 (def mml-resolutions
-  #js[8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
+  #js [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
 (def mml-matrix-ids (clj->js (range (count mml-resolutions))))
 
@@ -61,25 +61,21 @@
            min-res     0.25
            resolutions mml-resolutions
            matrix-ids  mml-matrix-ids}}]
-  (TileLayer.
-   #js{:visible       visible?
-       :opacity       1.0
-       :minResolution min-res
-       :maxResolution max-res
-       :source
-       (WMTSSource.
-        #js{:url             url
-            :layer           layer-name
-            :projection      "EPSG:3067"
-            :matrixSet       "mml_grid"
-            :tileGrid        (WMTSTileGrid.
-                              #js{:origin      proj/epsg3067-top-left
-                                  :extent      proj/epsg3067-extent
-                                  :resolutions resolutions
-                                  :matrixIds   matrix-ids})
-            :format          "png"
-            :requestEncoding "REST"
-            :isBaseLayer     base-layer?})}))
+  (TileLayer. #js {:visible       visible?
+                   :opacity       1.0
+                   :minResolution min-res
+                   :maxResolution max-res
+                   :source (WMTSSource. #js {:url             url
+                                             :layer           layer-name
+                                             :projection      "EPSG:3067"
+                                             :matrixSet       "mml_grid"
+                                             :tileGrid        (WMTSTileGrid. #js {:origin      proj/epsg3067-top-left
+                                                                                  :extent      proj/epsg3067-extent
+                                                                                  :resolutions resolutions
+                                                                                  :matrixIds   matrix-ids})
+                                             :format          "png"
+                                             :requestEncoding "REST"
+                                             :isBaseLayer     base-layer?})}))
 
 (defn init-layers []
   {:basemaps
@@ -94,74 +90,70 @@
    :overlays
    {:vectors
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :name   "vectors"
-         :style  styles/feature-style})
+      #js {:source (VectorSource.)
+           :name   "vectors"
+           :style  styles/feature-style})
     :lois
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :name   "lois"
-         :style  styles/loi-style})
+      #js {:source (VectorSource.)
+           :name   "lois"
+           :style  styles/loi-style})
     :edits
     (VectorLayer.
-     #js{:source (VectorSource.)
-         :name   "edits"
-         :zIndex 10
-         :style  #js[styles/edit-style styles/vertices-style]})
+      #js {:source (VectorSource.)
+           :name   "edits"
+           :zIndex 10
+           :style  #js [styles/edit-style styles/vertices-style]})
     :highlights
     (VectorLayer.
-     #js{:source (VectorSource.)
-         :name   "highlights"
-         :style  #js[styles/highlight-style]})
+      #js {:source (VectorSource.)
+           :name   "highlights"
+           :style  #js [styles/highlight-style]})
     :markers
     (VectorLayer.
-     #js{:source (VectorSource.)
-         :name   "markers"
-         :style  styles/blue-marker-style})
+      #js {:source (VectorSource.)
+           :name   "markers"
+           :style  styles/blue-marker-style})
     :analysis
     (VectorLayer.
-     #js{:source (VectorSource.)
-         :style  styles/analysis-style
-         :name   "analysis"})
+      #js {:source (VectorSource.)
+           :style  styles/analysis-style
+           :name   "analysis"})
     :population
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :style  styles/population-style3
-         :name   "population"})
+      #js {:source (VectorSource.)
+           :style  styles/population-style3
+           :name   "population"})
 
     :schools
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :style  styles/school-style
-         :name   "schools"})
+      #js {:source (VectorSource.)
+           :style  styles/school-style
+           :name   "schools"})
     :diversity-grid
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :style  styles/diversity-grid-style
-         :name   "diversity-grid"})
+      #js {:source (VectorSource.)
+           :style  styles/diversity-grid-style
+           :name   "diversity-grid"})
     :diversity-area
     (VectorImageLayer.
-     #js{:source (VectorSource.)
-         :style  styles/diversity-area-style
-         :name   "diversity-area"})
+      #js {:source (VectorSource.)
+           :style  styles/diversity-area-style
+           :name   "diversity-area"})
     :light-traffic
     (ImageLayer.
-     #js{:visible false
-         :source
-         (ImageWMSSource.
-          #js{:url         "/vaylavirasto/vaylatiedot/ows"
-              :params      #js{:LAYERS #_"TL166" "tierekisteri:tl166"}
-              :serverType  "geoserver"
-              :crossOrigin "anonymous"})})
+      #js {:visible false
+           :source (ImageWMSSource. #js {:url         "/vaylavirasto/vaylatiedot/ows"
+                                         :params      #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
+                                         :serverType  "geoserver"
+                                         :crossOrigin "anonymous"})})
     :retkikartta-snowmobile-tracks
     (ImageLayer.
-     #js{:visible false
-         :source
-         (ImageWMSSource.
-          #js{:url         "/geoserver/lipas/wms?"
-              :params      #js{:LAYERS "lipas:metsahallitus_urat2023"}
-              :serverType  "geoserver"
-              :crossOrigin "anonymous"})})
+      #js {:visible false
+           :source (ImageWMSSource. #js {:url         "/geoserver/lipas/wms?"
+                                         :params      #js {:LAYERS "lipas:metsahallitus_urat2023"}
+                                         :serverType  "geoserver"
+                                         :crossOrigin "anonymous"})})
     :mml-kiinteisto
     (->wmts
      {:url         (:kiinteisto urls)
@@ -195,15 +187,15 @@
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
-  (ol/View. #js{:center              #js[(:lon center) (:lat center)]
-                :extent              proj/epsg3067-extent
-                :showFullExtent      true
-                :constrainOnlyCenter true
-                :zoom                zoom
-                :projection          "EPSG:3067"
-                :resolutions         mml-resolutions
-                :units               "m"
-                :enableRotation      false}))
+  (ol/View. #js {:center              #js [(:lon center) (:lat center)]
+                 :extent              proj/epsg3067-extent
+                 :showFullExtent      true
+                 :constrainOnlyCenter true
+                 :zoom                zoom
+                 :projection          "EPSG:3067"
+                 :resolutions         mml-resolutions
+                 :units               "m"
+                 :enableRotation      false}))
 
 (defn init-overlay [popup-ref]
     (ol/Overlay.
@@ -216,7 +208,7 @@
         popup-overlay (init-overlay popup-ref)
 
         opts #js {:target       "map"
-                  :layers       #js[(-> layers :basemaps :taustakartta)
+                  :layers       #js [(-> layers :basemaps :taustakartta)
                                 (-> layers :basemaps :maastokartta)
                                 (-> layers :basemaps :ortokuva)
                                 (-> layers :overlays :analysis)
@@ -234,63 +226,63 @@
                                 (-> layers :overlays :mml-kiinteisto)
                                 (-> layers :overlays :mml-kiinteistotunnukset)
                                 (-> layers :overlays :mml-kuntarajat)]
-                  :interactions #js[(MouseWheelZoom.)
-                                    (KeyboardZoom.)
-                                    (KeyboardPan.)
-                                    (PinchZoom.)
-                                    (DragPan.)
-                                    (DoubleClickZoom.)]
-                  :overlays     #js[popup-overlay]
+                  :interactions #js [(MouseWheelZoom.)
+                                     (KeyboardZoom.)
+                                     (KeyboardPan.)
+                                     (PinchZoom.)
+                                     (DragPan.)
+                                     (DoubleClickZoom.)]
+                  :overlays     #js [popup-overlay]
                   :view         view}
 
         vector-hover (SelectInteraction.
-                      #js{:layers    #js[(-> layers :overlays :vectors)]
-                          :style     styles/feature-style-hover
-                          :multi     true
-                          :condition events-condition/pointerMove})
+                       #js {:layers    #js [(-> layers :overlays :vectors)]
+                            :style     styles/feature-style-hover
+                            :multi     true
+                            :condition events-condition/pointerMove})
 
         loi-hover (SelectInteraction.
-                   #js{:layers    #js[(-> layers :overlays :lois)]
-                       :style     styles/loi-style-hover
-                       :multi     true
-                       :condition events-condition/pointerMove})
+                    #js {:layers    #js [(-> layers :overlays :lois)]
+                         :style     styles/loi-style-hover
+                         :multi     true
+                         :condition events-condition/pointerMove})
 
         marker-hover (SelectInteraction.
-                      #js{:layers    #js[(-> layers :overlays :markers)]
-                          :style     styles/feature-style-hover
-                          :multi     true
-                          :condition events-condition/pointerMove})
+                       #js {:layers    #js [(-> layers :overlays :markers)]
+                            :style     styles/feature-style-hover
+                            :multi     true
+                            :condition events-condition/pointerMove})
 
         population-hover (SelectInteraction.
-                          #js{:layers    #js[(-> layers :overlays :population)]
-                              :style     styles/population-hover-style3
-                              :multi     false
-                              :condition events-condition/pointerMove})
+                           #js {:layers    #js [(-> layers :overlays :population)]
+                                :style     styles/population-hover-style3
+                                :multi     false
+                                :condition events-condition/pointerMove})
 
         schools-hover (SelectInteraction.
-                       #js{:layers    #js[(-> layers :overlays :schools)]
-                           :style     styles/school-hover-style
-                           :multi     false
-                           :condition events-condition/pointerMove})
+                        #js {:layers    #js [(-> layers :overlays :schools)]
+                             :style     styles/school-hover-style
+                             :multi     false
+                             :condition events-condition/pointerMove})
 
         diversity-grid-hover (SelectInteraction.
-                              #js{:layers    #js[(-> layers :overlays :diversity-grid)]
-                                  :style     styles/diversity-grid-hover-style
-                                  :multi     false
-                                  :condition events-condition/pointerMove})
+                               #js {:layers    #js [(-> layers :overlays :diversity-grid)]
+                                    :style     styles/diversity-grid-hover-style
+                                    :multi     false
+                                    :condition events-condition/pointerMove})
 
         diversity-area-hover (SelectInteraction.
-                              #js{:layers    #js[(-> layers :overlays :diversity-area)]
-                                  :style     styles/diversity-area-hover-style
-                                  :multi     false
-                                  :condition events-condition/pointerMove})
+                               #js {:layers    #js [(-> layers :overlays :diversity-area)]
+                                    :style     styles/diversity-area-hover-style
+                                    :multi     false
+                                    :condition events-condition/pointerMove})
 
         diversity-area-select (SelectInteraction.
-                               #js{:layers #js[(-> layers :overlays :diversity-area)]})
+                                #js {:layers #js [(-> layers :overlays :diversity-area)]})
 
-        select (SelectInteraction. #js{:layers #js[(-> layers :overlays :vectors)
-                                                   (-> layers :overlays :lois)]
-                                       :style  styles/feature-style-selected})
+        select (SelectInteraction. #js {:layers #js [(-> layers :overlays :vectors)
+                                                     (-> layers :overlays :lois)]
+                                        :style  styles/feature-style-selected})
 
         lmap (ol/Map. opts)]
 

@@ -411,8 +411,8 @@
                                charts/font-styles)
          :tick          charts/font-styles
          :tickCount     10
-         :domain        #js["dataMin" "dataMax"]
-         :padding       #js{:left 16 :right 16}}]
+         :domain        #js ["dataMin" "dataMax"]
+         :padding       #js {:left 16 :right 16}}]
 
        [:> YAxis
         {:tick  charts/font-styles
@@ -491,7 +491,8 @@
         :type        "number"
         :dataKey     "population"
         :tick        charts/font-styles
-        :padding     #js{:left 16 :right 16}}]
+        :padding     #js {:left 16
+                          :right 16}}]
 
       [:> Bar
        {:xAxisId "population"
@@ -523,7 +524,8 @@
         :type        "number"
         :dataKey     "pwm"
         :tick        charts/font-styles
-        :padding     #js{:left 16 :right 16}}]
+        :padding     #js {:left 16
+                          :right 16}}]
 
       (into
        [:> Bar {:xAxisId "pwm" :dataKey "pwm" :fill (get diversity-colors 8)}]

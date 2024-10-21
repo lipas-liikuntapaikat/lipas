@@ -28,15 +28,16 @@
   [{:keys [^js lmap layers] :as map-ctx}]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
-        snap      (Snap. #js{:source source :pixelTolerance 5})]
+        snap      (Snap. #js {:source source
+                              :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
 (defn enable-delete!
   [{:keys [^js lmap layers] :as map-ctx} on-delete]
   (let [^js layer (-> layers :overlays :edits)
-        delete    (Select. #js{:layers #js[layer]
-                               :style  styles/hover-style})
+        delete    (Select. #js {:layers #js [layer]
+                                :style  styles/hover-style})
         source    (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
@@ -57,8 +58,8 @@
 (defn enable-splitting!
   [{:keys [^js lmap layers] :as map-ctx} on-modify]
   (let [^js layer (-> layers :overlays :edits)
-        split     (Select. #js{:layers #js[layer]
-                               :style  styles/hover-style})
+        split     (Select. #js {:layers #js [layer]
+                                :style  styles/hover-style})
         source    (.getSource layer)]
     (.addInteraction lmap split)
     (.on split "select"
@@ -100,7 +101,7 @@
 (defn start-drawing-hole!
   [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
   (let [^js layer (-> layers :overlays :edits)
-        draw-hole (DrawHole. #js{:layers #js[layer]})
+        draw-hole (DrawHole. #js {:layers #js [layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
@@ -115,18 +116,17 @@
         _         (.clear source)
         features  (-> geoJSON-feature clj->js map-utils/->ol-features)
         _         (.addFeatures source features)
-        modify    (Modify. #js{:source source})
-        hover     (Select.
-                   #js{:layers    #js[layer]
-                       :style     #js[styles/editing-hover-style styles/vertices-style]
-                       :condition (fn [^js evt]
-                                    ;; Without this check modify
-                                    ;; control doesn't work properly
-                                    ;; and linestrings / polygons
-                                    ;; can't be edited
-                                    (if (.-dragging evt)
-                                      false
-                                      (events-condition/pointerMove evt)))})]
+        modify    (Modify. #js {:source source})
+        hover     (Select. #js {:layers    #js [layer]
+                                :style     #js [styles/editing-hover-style styles/vertices-style]
+                                :condition (fn [^js evt]
+                                             ;; Without this check modify
+                                             ;; control doesn't work properly
+                                             ;; and linestrings / polygons
+                                             ;; can't be edited
+                                             (if (.-dragging evt)
+                                               false
+                                               (events-condition/pointerMove evt)))})]
 
     (.addInteraction lmap modify)
     (.addInteraction lmap hover)
@@ -168,7 +168,9 @@
     :as   map-ctx} geom-type on-draw-end]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
-        draw      (Draw. #js{:snapTolerance 0 :source source :type geom-type})]
+        draw      (Draw. #js {:snapTolerance 0
+                              :source source
+                              :type geom-type})]
 
     (.addInteraction lmap draw)
     (.on draw "drawend"
@@ -306,11 +308,11 @@
         source    (.getSource layer)
         _         (.clear source)
         features  (-> geoms clj->js map-utils/->ol-features)
-        hover     (Select. #js{:layers    #js[layer]
-                               :condition events-condition/pointerMove
-                               :style     styles/line-direction-hover-style-fn})
-        select    (Select. #js{:layers #js[layer]
-                               :style  styles/line-direction-hover-style-fn})]
+        hover     (Select. #js {:layers    #js [layer]
+                                :condition events-condition/pointerMove
+                                :style     styles/line-direction-hover-style-fn})
+        select    (Select. #js {:layers #js [layer]
+                                :style  styles/line-direction-hover-style-fn})]
 
     (.on select "select" (fn [e]
                            (let [selected (gobj/get e "selected")]

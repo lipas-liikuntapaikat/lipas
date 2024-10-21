@@ -7,7 +7,7 @@
    ["ol/proj" :as proj]
    ["ol/extent" :as extent]))
 
-(def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
+(def epsg3067-extent #js [-548576.0 6291456.0 1548576.0 8388608.0])
 
 (def epsg3067-defs
   (str "+proj=utm"
