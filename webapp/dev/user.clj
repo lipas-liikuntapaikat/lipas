@@ -60,5 +60,5 @@
   (reset-admin-password! "kissa13")
 
   (require '[migratus.core :as migratus])
-  (migratus/create nil "roles" :edn)
+  (migratus/create nil "activities_status" :sql)
   )
