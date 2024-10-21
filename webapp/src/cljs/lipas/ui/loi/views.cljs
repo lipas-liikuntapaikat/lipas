@@ -356,6 +356,7 @@
 
                     "select" [lui/select
                               {:disabled    read-only?
+                               :deselect?   true
                                :items       (:opts field)
                                :label       (get-in field [:label locale])
                                :helper-text (get-in field [:description locale])

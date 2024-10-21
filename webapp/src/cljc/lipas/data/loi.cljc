@@ -140,10 +140,7 @@
                  :en "Movement or use of the area is restricted"}
    "allowed" {:fi "Alueella liikkuminen on sallittu"
               :se "Vistelse i området är tillåten"
-              :en "Movement in the area is allowed"}
-   nil {:fi "-"
-        :se "-"
-        :en "-"}})
+              :en "Movement in the area is allowed"}})
 
 (def protected-area-fields
   {:protected-area-specification
