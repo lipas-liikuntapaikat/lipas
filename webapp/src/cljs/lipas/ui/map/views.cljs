@@ -21,6 +21,7 @@
             [lipas.ui.loi.views :as loi]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.import :as import]
+            [lipas.ui.map2.map :as map2]
             [lipas.ui.map.map :as ol-map]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -1926,8 +1927,11 @@
       {:popup-ref popup-ref}]
 
      ;; The map
-     [ol-map/map-outer
-      {:popup-ref popup-ref}]]))
+     ; [ol-map/map-outer
+     ;  {:popup-ref popup-ref}]
+
+     ($ map2/map-view)
+     ]))
 
 (defn main []
   [:f> map-view])
