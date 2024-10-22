@@ -29,7 +29,6 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.legacy.api :as legacy.api]
             [lipas.backend.middleware :as mw]
-            [lipas.backend.routes.v1-legacy :as v1-legacy]
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.utils :as utils]
