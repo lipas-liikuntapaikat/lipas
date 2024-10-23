@@ -16,8 +16,8 @@
    :status "active"
    :username "jhdemo"
    :password "jaahalli"
-   :permissions {:roles [{:role :basic-manager
-                          :lipas-id 89839}]}
+   :permissions {:roles [{:role :site-manager
+                          :lipas-id #{89839}}]}
    :user-data
    {:firstname           "Jää"
     :lastname            "Halli"
@@ -28,8 +28,8 @@
    :status   "active"
    :username "sbdemo"
    :password "atk-on-ihanaa"
-   :permissions {:roles [{:role :basic-manager
-                          :type-code 2240}]}
+   :permissions {:roles [{:role :type-manager
+                          :type-code #{2240}}]}
    :user-data
    {:firstname           "Testi"
     :lastname            "Testinen"
@@ -40,8 +40,8 @@
    :status   "active"
    :username "uhdemo"
    :password "uimahalli"
-   :permissions {:roles [{:role :basic-manager
-                          :lipas-id 506032}]}
+   :permissions {:roles [{:role :site-manager
+                          :lipas-id #{506032}}]}
    :user-data
    {:firstname           "Uima"
     :lastname            "Halli"

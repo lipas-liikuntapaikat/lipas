@@ -298,8 +298,8 @@
   (when-not (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
     (let [user (update-in user [:permissions :roles]
                           (fnil conj [])
-                          {:role :basic-manager
-                           :lipas-id lipas-id})]
+                          {:role :site-manager
+                           :lipas-id #{lipas-id}})]
       (db/update-user-permissions! db user))))
 
 (defn upsert-sports-site!

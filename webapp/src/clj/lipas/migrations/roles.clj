@@ -90,13 +90,13 @@
 
   (testing "publish/modify-sports-site implicitly case"
     (is (= [{:role :type-manager
-             :type-code #{101 102}}]
+             :type-code #{101 202}}]
            (permissions->roles {:types [101 202]
                                 :all-cities? true}
                                nil)))
 
     (is (= [{:role :city-manager
-             :city-code #{4 5}}]
+             :city-code #{9 10}}]
            (permissions->roles {:cities [9 10]
                                 :all-types? true}
                                nil)))
@@ -117,16 +117,14 @@
                                  nil)))))
 
   (testing "ignore types if all-types given"
-    (is (= [{:role :basic-manager
-             :city-code 853}]
+    (is (= [{:role :city-manager
+             :city-code #{853}}]
            (permissions->roles {:types [3210 3120 3110 3130], :cities [853], :draft? true, :all-types? true}
                                nil))))
 
   (testing "existing user with access-to-activity"
     (is (= [{:role :activities-manager
-             :activity "outdoor-recreation-facilities"}
-            {:role :activities-manager
-             :activity "fishing"}]
+             :activity #{"outdoor-recreation-facilities" "fishing"}}]
            (permissions->roles {:activities ["outdoor-recreation-facilities"
                                              "fishing"]}
                                nil)))))

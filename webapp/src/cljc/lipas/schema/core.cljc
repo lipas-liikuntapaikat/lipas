@@ -354,9 +354,12 @@
   (s/valid? :lipas.user.permissions/roles
             [{:role :admin}])
   (s/valid? :lipas.user.permissions/roles
-            [{:role :basic-manager :city-id 837 :type-code 205}])
+            [{:role :city-manager
+              :city-code #{837}
+              :type-code #{1110}}])
   (s/valid? :lipas.user.permissions/roles
-            [{:role :activities-manager :activity "fishing"}]))
+            [{:role :activities-manager
+              :activity #{"fishing"}}]))
 
 (s/def :lipas.user/permissions-request (str-in 1 200))
 
