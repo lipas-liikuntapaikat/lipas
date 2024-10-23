@@ -34,6 +34,7 @@
             [lipas.ui.sports-sites.floorball.views :as floorball]
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -683,12 +684,26 @@
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
-        {:keys [types cities admins owners editing? edits-valid?
+        {:keys [types admins owners editing? edits-valid?
                 problems? editing-allowed? delete-dialog-open?
                 can-publish? logged-in?  size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
+
+        create-edit-any-status? can-publish?
+        create-edit-planning? @(rf/subscribe [::user-subs/check-privilege {} :site/create-planning-only])
+        create-edit-planning-only? (and (not create-edit-any-status?) create-edit-planning?)
+        creating-planning? (and (= "Vedos" (:status display-data))
+                                create-edit-planning?)
+
+        can-publish? (or can-publish?
+                         ;; FIXME: How to check properly
+                         creating-planning?)
+
+        _ (js/console.log site-data (tr :status/planning) can-publish?)
+
+        cities @(rf/subscribe [::user-subs/permission-to-cities creating-planning?])
 
         ;; We have three privileges:
         ;; - can-publish? - :site/create-edit - Edit basic info and properties
@@ -804,6 +819,7 @@
                :edit-data       edit-data
                ;; FIXME: Only activities?
                :read-only?      (or (not editing?) (not can-publish?))
+               :status-read-only? create-edit-planning-only?
                :types           (vals types)
                :size-categories size-categories
                :admins          admins
@@ -1263,10 +1279,21 @@
   (r/with-let [geom-tab     (r/atom "draw")]
     (let [locale (tr)
 
-          {:keys [type data save-enabled? admins owners cities
+          {:keys [type data save-enabled? admins owners _cities
                   problems? types size-categories zoomed? geom active-step
                   sub-mode undo redo
                   selected-tab]} (<== [::subs/add-sports-site-view])
+
+          site-role-ctx (roles/site-roles-context data)
+          create-edit-any-status? @(rf/subscribe [::user-subs/check-privilege site-role-ctx :site/create-edit])
+          create-edit-planning? @(rf/subscribe [::user-subs/check-privilege {} :site/create-planning-only])
+          create-edit-planning-only? (and (not create-edit-any-status?) create-edit-planning?)
+          creating-planning? (and (= "planning" (:status data))
+                                  create-edit-planning?)
+
+          ;; Allow all cities if current status is planning and user has permission to create
+          ;; planning sites on any city/type
+          cities (vals @(rf/subscribe [::user-subs/permission-to-cities creating-planning?]))
 
           role-site-ctx (roles/site-roles-context data)
           type-code (-> data :type :type-code)
@@ -1615,6 +1642,7 @@
                    {:tr              tr
                     :edit-data       data
                     :read-only?      false
+                    :status-read-only? create-edit-planning-only?
                     :types           (vals types)
                     :size-categories size-categories
                     :admins          admins
@@ -1626,7 +1654,7 @@
                   [sports-sites/location-form
                    {:tr                        tr
                     :read-only?                false
-                    :cities                    (vals cities)
+                    :cities                    cities
                     :edit-data                 (:location data)
                     :on-change                 (partial set-field :location)
                     :sub-headings?             true

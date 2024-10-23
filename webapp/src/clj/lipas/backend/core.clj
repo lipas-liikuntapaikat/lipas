@@ -294,13 +294,17 @@
 
   Motivation is to ensures that user who creates the sports-site has
   permission to it."
-  [db user {:keys [lipas-id] :as sports-site}]
-  (when-not (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
-    (let [user (update-in user [:permissions :roles]
-                          (fnil conj [])
-                          {:role :site-manager
-                           :lipas-id #{lipas-id}})]
-      (db/update-user-permissions! db user))))
+  [db user {:keys [lipas-id status] :as sports-site}]
+  (let [regular-permission (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
+        is-planning (= "planning" status)
+        planning-permission (and is-planning (roles/check-privilege user {} :site/create-planning-only))]
+    (when (and (not regular-permission)
+               (not planning-permission))
+      (let [user (update-in user [:permissions :roles]
+                            (fnil conj [])
+                            {:role :site-manager
+                             :lipas-id #{lipas-id}})]
+        (db/update-user-permissions! db user)))))
 
 (defn upsert-sports-site!
   ([db user sports-site]

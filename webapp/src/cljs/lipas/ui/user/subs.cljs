@@ -18,37 +18,45 @@
   (fn [[user overrides] _]
     (assoc (:login user) :dev/overrides overrides)))
 
+(defn user-data
+  "Same as ::user-data, but for use in effects"
+  [db]
+  (assoc (:login (:user db)) :dev/overrides (:lipas.ui.project-devtools/privilege-override db)))
+
 (rf/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
-  (fn [[user all-cities] _]
-    (into {} (filter (fn [[city-code _v]]
-                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
-                       (roles/check-privilege user
-                                              {:city-code city-code
-                                               :type-code ::roles/any}
-                                              :site/create-edit))
-                     all-cities))))
+  (fn [[user all-cities] [_ planning?]]
+    (let [create-planning-all (and planning? (roles/check-privilege user {} :site/create-planning-only))]
+      (into {} (filter (fn [[city-code _v]]
+                         (or create-planning-all
+                             (roles/check-privilege user
+                                                    {:city-code city-code
+                                                 :type-code ::roles/any}
+                                                :site/create-edit)))
+                       all-cities)))))
 
 (rf/reg-sub ::permission-to-types
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [[user all-types] _]
-    (into {} (filter (fn [[type-code _v]]
-                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
-                       (roles/check-privilege user
-                                              {:type-code type-code
-                                               :city-code ::roles/any}
-                                              :site/create-edit))
-                     all-types))))
+    (let [create-planning-all (roles/check-privilege user {} :site/create-planning-only)]
+      (into {} (filter (fn [[type-code _v]]
+                         (or create-planning-all
+                             (roles/check-privilege user
+                                                    {:type-code type-code
+                                                     :city-code ::roles/any}
+                                                    :site/create-edit)))
+                       all-types)))))
 
 (rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any
         :city-code ::roles/any}
        :site/create-edit]
-  (fn [x _]
-    x))
+  :<- [::check-privilege {} :site/create-planning-only]
+  (fn [[a b] _]
+    (or a b)))
 
 (rf/reg-sub ::can-add-lois?
   :<- [::check-privilege
