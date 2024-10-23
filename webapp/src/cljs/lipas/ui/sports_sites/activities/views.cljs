@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [lipas.ui.components :as lui]
             [lipas.ui.components.buttons :as lui-btn]
+            [lipas.ui.components.forms :refer [->display-tf]]
             [lipas.ui.components.text-fields :as lui-tf]
             [lipas.ui.config :as config]
             [lipas.ui.mui :as mui]
@@ -1056,22 +1057,29 @@
   (let [tr        (<== [:lipas.ui.subs/translator])
         geoms     (<== [::subs/geoms read-only?])
         geom-type (<== [::subs/geom-type read-only?])
-        ;; FIXME: Need "edit-value" (the original type here)
         value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
         set-field (partial set-field lipas-id :properties lipas-prop-k)]
     (js/console.log lipas-prop-k value)
     [:<>
-     (sports-sites-views/make-prop-field
-       {:tr          tr
-        :prop-k      lipas-prop-k
-        :read-only?  read-only?
-        :label       label
-        :description description
-        :value       value
-        :set-field   set-field
-        :problems?   nil
-        :geom-type   geom-type
-        :geoms       geoms})
+     ;; Because the value (from display-data) is completely different type than
+     ;; edit-data, we need to display it using different component. Same logic as ->field.
+     (if read-only?
+       (->display-tf
+         {:label label
+          :value value}
+         false
+         1)
+       (sports-sites-views/make-prop-field
+         {:tr          tr
+          :prop-k      lipas-prop-k
+          :read-only?  read-only?
+          :label       label
+          :description description
+          :value       value
+          :set-field   set-field
+          :problems?   nil
+          :geom-type   geom-type
+          :geoms       geoms}))
      (when description
        [mui/form-helper-text description])]))
 
