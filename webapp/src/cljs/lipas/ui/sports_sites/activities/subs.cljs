@@ -114,6 +114,8 @@
 (rf/reg-sub ::lipas-prop-value
   :<- [:lipas.ui.map.subs/selected-sports-site]
   (fn [site-data  [_ prop-k read-only?]]
+    ;; NOTE: This returns quite different data for most properties because
+    ;; display and edit data have different schema
     (if read-only?
       (get-in site-data [:display-data :properties prop-k])
       (get-in site-data [:edit-data :properties prop-k]))))
