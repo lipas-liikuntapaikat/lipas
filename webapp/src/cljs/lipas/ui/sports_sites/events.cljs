@@ -186,7 +186,18 @@
     (let [template  (or (-> db :new-sports-site :template) {})
           city-code (or
                       (-> db :new-sports-site :data :location :city :city-code)
-                      (-> db :user :login :permissions :cities first))
+                      (->> db
+                           :user
+                           :login
+                           :permissions
+                           :roles
+                           (some (fn [role]
+                                   ;; Take first city-code from a role that is limited based on city-code.
+                                   ;; FIXME: Not sure if this makes much sense now, this doesn't work
+                                   ;; if user only has roles with type-code etc.
+                                   (when (contains? (:privileges (get roles/roles (:role role))) :site/create-edit)
+                                     (first (:city-code role)))))))
+
           data      (cutils/deep-merge
                       {:status     "active"
                        :event-date (utils/timestamp)
