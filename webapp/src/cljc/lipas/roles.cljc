@@ -5,6 +5,7 @@
 ;; Use namespaced keys for easier searching in the codebase
 (def privileges
   {:site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
+   :site/create-planning-only {:doc "Oikeus luoda paikkoja jotka Vedos tilassa"}
    ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
@@ -91,7 +92,14 @@
     :assignable true
     :privileges #{:floorball/view :floorball/view-extended :floorball/edit}
     :required-context-keys []
-    :optional-context-keys [:type-code]}})
+    :optional-context-keys [:type-code]}
+
+   :analysis-user
+   {:sort 40
+    :assignable true
+    :privileges #{:analysis-tool/use :site/create-planning-only}
+    :required-context-keys []
+    :optional-context-keys []}})
 
 (defn role-sort-fn
   [{:keys [role]}]
