@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
+            [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
             [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
