@@ -1,6 +1,8 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
+            [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
@@ -198,8 +200,16 @@
                                    (when (contains? (:privileges (get roles/roles (:role role))) :site/create-edit)
                                      (first (:city-code role)))))))
 
+          user (user-subs/user-data db)
+          create-any? (roles/check-privilege user
+                                             {:type-code type-code
+                                              :city-code (or city-code ::roles/any)}
+                                             :site/create-edit)
+          only-planning? (and (not create-any?)
+                              (roles/check-privilege user {} :site/create-planning-only))
+
           data      (cutils/deep-merge
-                      {:status     "active"
+                      {:status     (if only-planning? "planning" "active")
                        :event-date (utils/timestamp)
                        :type       {:type-code type-code}
                        :location   {:geometries geoms
