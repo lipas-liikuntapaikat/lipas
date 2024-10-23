@@ -70,7 +70,7 @@
           path (if idx
                  [:admin :editing-user :permissions :roles idx]
                  [:admin :new-role])]
-      (if value
+      (if (seq value)
         (update-in db path assoc k value)
         (update-in db path dissoc k)))))
 
