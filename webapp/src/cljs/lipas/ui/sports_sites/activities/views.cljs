@@ -8,8 +8,10 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
             [lipas.ui.sports-sites.activities.subs :as subs]
-            [lipas.ui.sports-sites.views :as sports-site-views]
+            [lipas.ui.sports-sites.subs :as sports-sites-subs]
+            [lipas.ui.sports-sites.views :as sports-sites-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [re-frame.core :as rf]
             [reagent.core :as r]))
 
 (declare make-field)
@@ -175,7 +177,7 @@
           :headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
                              [:_role (get-in contact-props [:role :field :label locale])]]
           :hide-header-row? false
-          :read-only?       false
+          :read-only?       read-only?
           :items            (->> @state
                                  vals
                                  (map #(assoc % :_organization (get-in % [:organization locale])))
@@ -316,7 +318,7 @@
         :variant     "outlined"}]]]]])
 
 (defn textlist
-  [{:keys [locale label description set-field value]}]
+  [{:keys [read-only? locale label description set-field value]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -356,7 +358,7 @@
          {:key              @state
           :headers          [[locale label]]
           :hide-header-row? true
-          :read-only?       false
+          :read-only?       read-only?
           :items            (->> @state vals)
           :on-dnd-end       (fn [items]
                               (reset! state
@@ -700,7 +702,7 @@
          {:key (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
-          :read-only? false
+          :read-only? read-only?
           :items      (->> @state
                            vals
                            (map #(assoc % :_description (get-in % [:description locale])))
@@ -818,7 +820,7 @@
          {:key             (str (count (vals @state)))
           :headers         [[:url (tr :utp/link)]
                             [:_description (tr :general/description)] []]
-          :read-only?      false
+          :read-only?      read-only?
           :items           (->> @state
                                 vals
                                 (map #(assoc % :_description (get-in % [:description locale]))))
@@ -851,7 +853,7 @@
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
 (defn route-form
-  [{:keys [locale geom-type lipas-id type-code route-props state read-only? field-sorter]}]
+  [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
      (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
@@ -862,7 +864,8 @@
                    (not (:independent-entity @state))
                    (contains? independent-entity-ks prop-k))
          [make-field
-          {:key prop-k
+          {:read-only?   read-only?
+           :key          prop-k
            :field        field
            :prop-k       prop-k
            :edit-data    @state
@@ -872,13 +875,11 @@
                            (let [path (butlast args)
                                  v (last args)]
                              (swap! state assoc-in path v)))
-           :geom-type    geom-type
            :lipas-id     lipas-id}])))])
 
 (defn single-route
-  [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
-           locale geom-type label description set-field activity-k
-           route]
+  [{:keys [read-only? route-props lipas-id type-code route activity-k
+           locale _label _description _set-field]
     :as   props}]
   (r/with-let [route-form-state (r/atom route)
                _ (add-watch route-form-state :lol
@@ -886,33 +887,29 @@
                               (set-field [new-state])))]
 
     (let [tr           (<== [:lipas.ui.subs/translator])
-          field-sorter (<== [::subs/field-sorter activity-k])
-          editing?     (not read-only?)]
+          field-sorter (<== [::subs/field-sorter activity-k])]
 
-      (when editing?
-        [route-form
-         {:locale       locale
-          :tr           tr
-          :field-sorter field-sorter
-          :lipas-id     lipas-id
-          :type-code    type-code
-          :read-only?   read-only?
-          :geom-type    geom-type
-          :route-props  route-props
-          :state        route-form-state}]))
+      [route-form
+       {:locale       locale
+        :tr           tr
+        :field-sorter field-sorter
+        :lipas-id     lipas-id
+        :type-code    type-code
+        :read-only?   read-only?
+        :route-props  route-props
+        :state        route-form-state}])
 
     (finally
       (remove-watch route-form-state :lol))))
 
 (defn multiple-routes
   [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
-           locale geom-type label description set-field activity-k]
+           locale label _description _set-field activity-k routes]
     :as   props}]
   (r/with-let [route-form-state (r/atom {})]
     (let [tr     (<== [:lipas.ui.subs/translator])
           mode   (<== [::subs/mode])
           fids   (<== [::subs/selected-features])
-          routes (<== [::subs/routes lipas-id activity-k])
 
           selected-route-id (<== [::subs/selected-route-id])
 
@@ -977,7 +974,6 @@
             :lipas-id     lipas-id
             :type-code    type-code
             :read-only?   read-only?
-            :geom-type    geom-type
             :route-props  route-props
             :state        route-form-state}]
 
@@ -1021,37 +1017,51 @@
             [:pre (with-out-str (pprint/pprint props))]]]])])))
 
 (defn routes
-  [{:keys [read-only? route-props lipas-id _display-data _edit-data
-           locale geom-type label description set-field activity-k type-code]
+  [{:keys [read-only? _route-props lipas-id activity-k value
+           _locale _label _description _set-field _type-code]
     :as   props}]
-  (let [route-view  (<== [::subs/route-view])
-        routes      (<== [::subs/routes lipas-id activity-k])
-        route-count (<== [::subs/route-count lipas-id activity-k])]
+  (let [routes (if read-only?
+                 value
+                 (<== [::subs/routes lipas-id activity-k]))
+        default-route-view (if (> (count routes) 1)
+                             :multi
+                             :single)
+        selected-route-view (<== [::subs/route-view])
+        route-view (if read-only?
+                     default-route-view
+                     (or selected-route-view
+                         default-route-view))
+        route-count (count routes)]
+
+    (js/console.log value routes)
 
     [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
 
      ;; Hidden until UTP can support multi-tiered routes
 
-     [mui/grid {:item true :xs 12}
-      [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
-                   :value     (= :multi route-view)
-                   :disabled  (> route-count 1)
-                   :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]]
+     (when-not read-only?
+       [mui/grid {:item true :xs 12}
+        [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
+                     :value     (= :multi route-view)
+                     :disabled  (> route-count 1)
+                     :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
 
      [mui/grid {:item true :xs 12}
       (case route-view
         :single [single-route (assoc props :route (first routes))]
-        :multi  [multiple-routes props])]]))
+        :multi  [multiple-routes (assoc props :routes routes)])]]))
 
 (defn lipas-property
   [{:keys [read-only? lipas-id lipas-prop-k label description]}]
   (let [tr        (<== [:lipas.ui.subs/translator])
         geoms     (<== [::subs/geoms read-only?])
         geom-type (<== [::subs/geom-type read-only?])
+        ;; FIXME: Need "edit-value" (the original type here)
         value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
         set-field (partial set-field lipas-id :properties lipas-prop-k)]
+    (js/console.log lipas-prop-k value)
     [:<>
-     (sports-site-views/make-prop-field
+     (sports-sites-views/make-prop-field
        {:tr          tr
         :prop-k      lipas-prop-k
         :read-only?  read-only?
@@ -1244,8 +1254,7 @@
     (println (str "Unknown field type: " (:type field)))))
 
 (defn view
-  [{:keys [type-code display-data edit-data geom-type tr read-only?
-           lipas-id]}]
+  [{:keys [type-code display-data edit-data tr lipas-id]}]
   (let [activity     (<== [::subs/activity-for-type-code type-code])
         activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
@@ -1255,56 +1264,59 @@
         read-only?   (not editing?)
         props        (or (some-> (get-in activity [:type->props type-code])
                                  (->> (select-keys (:props activity))))
-                         (get activity :props))]
+                         (get activity :props))
 
-    (if read-only?
-      [mui/typography (tr :utp/read-only-disclaimer)]
+        edit-data (or edit-data
+                      ;; Should match the logic in ::edit-site which
+                      ;; chooses which rev to base the edit-data on.
+                      @(rf/subscribe [::sports-sites-subs/latest-rev lipas-id]))]
 
-      [:<>
+    (js/console.log edit-data)
 
-       ;; Header
-       #_[mui/grid {:item true :xs 12}
-          [mui/typography {:variant "h6"}
-           (get-in activities [:label locale])]]
+    [:<>
 
-       ;; Locale selector
-       [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
-        #_[lui/select
-           {:value     locale
-            :items     {:fi "Suomi"
-                        :se "Svenska"
-                        :en "English"}
-            :label     "Valitse kieli"
-            :label-fn  second
-            :value-fn  first
-            :on-change #(==> [:lipas.ui.events/set-translator %])}]
+     ;; Header
+     #_[mui/grid {:item true :xs 12}
+        [mui/typography {:variant "h6"}
+         (get-in activities [:label locale])]]
 
-        ;; Language selector
-        [lang-selector {:locale locale}]]
+     ;; Locale selector
+     [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
+      #_[lui/select
+         {:value     locale
+          :items     {:fi "Suomi"
+                      :se "Svenska"
+                      :en "English"}
+          :label     "Valitse kieli"
+          :label-fn  second
+          :value-fn  first
+          :on-change #(==> [:lipas.ui.events/set-translator %])}]
 
-       ;; Form
+      ;; Language selector
+      [lang-selector {:locale locale}]]
+
+     ;; Form
+     [mui/grid {:item true :xs 12}
+      [nice-form {}
+       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
+         [make-field
+          {:key prop-k
+           :field        field
+           :prop-k       prop-k
+           :edit-data    (get-in edit-data [:activities activity-k])
+           :read-only?   read-only?
+           :display-data (get-in display-data [:activities activity-k])
+           :locale       locale
+           :activity-k   activity-k
+           :type-code    type-code
+           :set-field    set-field
+           :lipas-id     lipas-id}])]]
+
+     ;; Debug
+     (when config/debug?
        [mui/grid {:item true :xs 12}
-        [nice-form {}
-         (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
-           [make-field
-            {:key prop-k
-             :field        field
-             :prop-k       prop-k
-             :edit-data    (get-in edit-data [:activities activity-k])
-             :read-only?   read-only?
-             :display-data (get-in display-data [:activities activity-k])
-             :locale       locale
-             :activity-k   activity-k
-             :type-code    type-code
-             :set-field    set-field
-             :geom-type    geom-type
-             :lipas-id     lipas-id}])]]
-
-       ;; Debug
-       (when config/debug?
-         [mui/grid {:item true :xs 12}
-          [lui/expansion-panel {:label "debug"}
-           [:pre (with-out-str (pprint/pprint activity))]]])])))
+        [lui/expansion-panel {:label "debug"}
+         [:pre (with-out-str (pprint/pprint activity))]]])]))
 
 (comment
 

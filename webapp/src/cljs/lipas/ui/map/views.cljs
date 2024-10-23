@@ -1015,12 +1015,10 @@
          5 [mui/grid {:item true :xs 12}
             [activities/view
              {:tr           tr
-              :read-only?   (not editing?)
               :lipas-id     lipas-id
               :type-code    type-code
               :display-data display-data
-              :edit-data    edit-data
-              :geom-type    geom-type}]])]
+              :edit-data    edit-data}]])]
 
      ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]

@@ -51,13 +51,8 @@
 
 (rf/reg-sub ::route-view
   :<- [::activities]
-  :<- [::routes]
-  (fn [[activities routes] _]
-    (or
-      (:route-view activities)
-      (if (> (count routes) 1)
-        :multi
-        :single))))
+  (fn [activities _]
+    (:route-view activities)))
 
 (rf/reg-sub ::routes
   (fn [[_ lipas-id _]]
@@ -111,16 +106,9 @@
               (assoc :route-length (map-utils/calculate-length-km fcoll))
               (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
-(rf/reg-sub ::route-count
-  (fn [[_ lipas-id activity-k]]
-    [(rf/subscribe [::routes lipas-id activity-k])])
-  (fn [[routes] _]
-    (count routes)))
-
 (rf/reg-sub ::selected-route-id
   :<- [::activities]
-  :<- [::routes]
-  (fn [[activities routes] _]
+  (fn [activities _]
     (:selected-route-id activities)))
 
 (rf/reg-sub ::lipas-prop-value
