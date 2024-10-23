@@ -3,8 +3,8 @@
   namespace represents the changes made."
   (:require
    [lipas.data.types :as types]
-   [lipas.data.prop-types-old :as old]
-   [lipas.data.prop-types-new :as new]))
+   [lipas.data.prop-types-new :as new]
+   [lipas.data.prop-types-old :as old]))
 
 (def all old/all)
 

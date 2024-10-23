@@ -1,16 +1,15 @@
 (ns lipas.ui.search.views
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.roles :as roles]
-   [lipas.ui.components :as lui]
-   [lipas.ui.components.lists :as lists]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.reports.views :as reports]
-   [lipas.ui.search.events :as events]
-   [lipas.ui.search.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]
-   [uix.core :refer [$]]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.roles :as roles]
+            [lipas.ui.components :as lui]
+            [lipas.ui.components.lists :as lists]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.reports.views :as reports]
+            [lipas.ui.search.events :as events]
+            [lipas.ui.search.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]
+            [uix.core :refer [$]]))
 
 (defn- filter-layout
   [{:keys [size] :as _props} & children]
@@ -192,47 +191,47 @@
   [{:keys [tr page page-size page-sizes total change-page-size?] :as props}]
   [mui/table-pagination
    (merge
-    {:component             "div"
-     :rows-per-page         page-size
-     :rows-per-page-options #js [page-size]
-     :label-displayed-rows
-     (fn [^js props]
-       (tr :search/pagination (.-from props) (.-to props) (.-count props) (.-page props)))
-     :count                 (or total 0)
-     :on-page-change        #(==> [::events/change-result-page %2])
+     {:component             "div"
+      :rows-per-page         page-size
+      :rows-per-page-options #js [page-size]
+      :label-displayed-rows
+      (fn [^js props]
+        (tr :search/pagination (.-from props) (.-to props) (.-count props) (.-page props)))
+      :count                 (or total 0)
+      :on-page-change        #(==> [::events/change-result-page %2])
 
-     :page page
-     :sx (fn [^js theme]
-           #js {;; Adjust flexbox shrink so that "Näytä kerralla" and "Tuloset x-y"
+      :page page
+      :sx (fn [^js theme]
+            #js {;; Adjust flexbox shrink so that "Näytä kerralla" and "Tuloset x-y"
                 ;; shrink on narrow (mobile screens).
                 ;; Enable text-overflow ellipsis for them.
                 ;; Try responsive reduce margins on small screens to allow text to fit better.
-                ".MuiTablePagination-spacer" #js {:flex "1 1 0%"}
-                ".MuiTablePagination-selectLabel" #js {:flexBasis "auto"
-                                                       :flexShrink 1
-                                                       :white-space "nowrap"
-                                                       :overflow "hidden"
-                                                       :textOverflow "ellipsis"}
-                ".MuiTablePagination-input" (clj->js {:mr 1
-                                                      :ml 0.5
-                                                      (.. theme -breakpoints (up "sm")) #js {:ml 4
-                                                                                            :mr 1}})
-                ".MuiTablePagination-displayedRows" #js {:flexBasis "auto"
-                                                     :flexShrink 1
-                                                     :white-space "nowrap"
-                                                     :overflow "hidden"
+                 ".MuiTablePagination-spacer" #js {:flex "1 1 0%"}
+                 ".MuiTablePagination-selectLabel" #js {:flexBasis "auto"
+                                                        :flexShrink 1
+                                                        :white-space "nowrap"
+                                                        :overflow "hidden"
+                                                        :textOverflow "ellipsis"}
+                 ".MuiTablePagination-input" (clj->js {:mr 1
+                                                       :ml 0.5
+                                                       (.. theme -breakpoints (up "sm")) #js {:ml 4
+                                                                                              :mr 1}})
+                 ".MuiTablePagination-displayedRows" #js {:flexBasis "auto"
+                                                          :flexShrink 1
+                                                          :white-space "nowrap"
+                                                          :overflow "hidden"
                                                      ;; Change right-to-left text to get the ellipsis in the beginning...
                                                      ;; does this have other undesired side-effects?
-                                                     :direction "rtl"
-                                                     :textOverflow "ellipsis"}
-                ".MuiTablePagination-actions" (clj->js {:ml 0.5
-                                                        (.. theme -breakpoints (up "sm")) #js {:ml 2.5}})})}
-    (when change-page-size?
-      {:rows-per-page-options   (clj->js page-sizes)
-       :on-rows-per-page-change #(==> [::events/change-result-page-size
-                                       (-> %1 .-target .-value)])
-       :label-rows-per-page     (tr :search/page-size)})
-    (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
+                                                          :direction "rtl"
+                                                          :textOverflow "ellipsis"}
+                 ".MuiTablePagination-actions" (clj->js {:ml 0.5
+                                                         (.. theme -breakpoints (up "sm")) #js {:ml 2.5}})})}
+     (when change-page-size?
+       {:rows-per-page-options   (clj->js page-sizes)
+        :on-rows-per-page-change #(==> [::events/change-result-page-size
+                                        (-> %1 .-target .-value)])
+        :label-rows-per-page     (tr :search/page-size)})
+     (dissoc props :tr :change-page-size? :total :page-sizes :page-size))])
 
 (defn results-table [{:keys [on-result-click]}]
   (let [tr               (<== [:lipas.ui.subs/translator])
@@ -299,13 +298,13 @@
         :allow-saving?  (fn [item]
                           (->> item
                                (reduce
-                                (fn [res [k v]]
-                                  (if-let [spec (and (or (-> k specs :required?)
-                                                         (some? v))
-                                                     (-> k specs :spec))]
-                                    (conj res (s/valid? spec v))
-                                    (conj res true)))
-                                [])
+                                 (fn [res [k v]]
+                                   (if-let [spec (and (or (-> k specs :required?)
+                                                          (some? v))
+                                                      (-> k specs :spec))]
+                                     (conj res (s/valid? spec v))
+                                     (conj res true)))
+                                 [])
                                (every? true?)))
         :on-item-save   #(==> [::events/save-edits %])
         :on-sort-change #(==> [::events/change-sort-order %])

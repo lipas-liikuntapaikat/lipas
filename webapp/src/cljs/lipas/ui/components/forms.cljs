@@ -1,8 +1,7 @@
 (ns lipas.ui.components.forms
-  (:require
-   [lipas.ui.components.text-fields :as text-fields]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :as utils]))
+  (:require [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :as utils]))
 
 (defn ->display-tf [{:keys [label value]} multiline? rows]
   (let [value (utils/display-value value :empty "-" :links? false)]
@@ -49,8 +48,8 @@
     (cond
       (nil? (first d))  nil
       (= (first d) :<>) (into
-                         [:<>]
-                         (map (partial ->field read-only?) (rest d)))
+                          [:<>]
+                          (map (partial ->field read-only?) (rest d)))
       (vector? d)       d
 
       read-only? (if link?
@@ -60,11 +59,11 @@
 
 (defn form [{:keys [read-only?]} & data]
   (into
-   [mui/grid {:container true :spacing 2}]
-   (for [elem  data
-         :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
-         m     ms
-         :when (some? m)]
-     [mui/grid {:item true :xs 12}
-      [mui/form-control {:full-width true}
-       (->field read-only? m)]])))
+    [mui/grid {:container true :spacing 2}]
+    (for [elem  data
+          :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
+          m     ms
+          :when (some? m)]
+      [mui/grid {:item true :xs 12}
+       [mui/form-control {:full-width true}
+        (->field read-only? m)]])))

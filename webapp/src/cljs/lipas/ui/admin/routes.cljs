@@ -1,7 +1,6 @@
 (ns lipas.ui.admin.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.admin.views :as views]))
+  (:require [lipas.ui.admin.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["admin"
@@ -10,7 +9,7 @@
     :view   views/main
     :controllers
     [{:start
-      (fn [& params]
+      (fn [& _params]
         (==> [:lipas.ui.admin.events/get-users])
         (==> [:lipas.ui.sports-sites.events/get-by-type-code 3110])
         (==> [:lipas.ui.sports-sites.events/get-by-type-code 3130])

@@ -1,51 +1,44 @@
 (ns lipas.ui.sports-sites.football.views
-  (:require
-   [lipas.ui.mui :as mui]
-   [lipas.ui.components :as lui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [lipas.ui.sports-sites.football.subs :as subs]
-   [lipas.ui.sports-sites.football.events :as events]
-   [re-frame.core :as re-frame]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.football.events]
+            [lipas.ui.sports-sites.football.subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [re-frame.core :as rf]))
 
-(re-frame/reg-event-db
- ::save-pool
- (fn [db [_ lipas-id value]]
-   (let [path (if lipas-id
-                [:sports-sites lipas-id :editing :pools]
-                [:new-sports-site :data :fields])]
-     (utils/save-entity db path value))))
+(rf/reg-event-db ::save-pool
+  (fn [db [_ lipas-id value]]
+    (let [path (if lipas-id
+                 [:sports-sites lipas-id :editing :pools]
+                 [:new-sports-site :data :fields])]
+      (utils/save-entity db path value))))
 
-(re-frame/reg-event-db
- ::reset-dialog
- (fn [db [_ dialog]]
-   (assoc-in db [:sports-sites :football :dialogs dialog] {})))
+(rf/reg-event-db ::reset-dialog
+  (fn [db [_ dialog]]
+    (assoc-in db [:sports-sites :football :dialogs dialog] {})))
 
-(re-frame/reg-event-db
- ::set-dialog-field
- (fn [db [_ dialog field value]]
-   (let [path [:sports-sites :football :dialogs dialog :data field]]
-     (utils/set-field db path value))))
+(rf/reg-event-db ::set-dialog-field
+  (fn [db [_ dialog field value]]
+    (let [path [:sports-sites :football :dialogs dialog :data field]]
+      (utils/set-field db path value))))
 
-(re-frame/reg-sub
- ::dialog-open?
- (fn [db _]
-   (-> db :sports-sites :football :dialog-open?)))
+(rf/reg-sub ::dialog-open?
+  (fn [db _]
+    (-> db :sports-sites :football :dialog-open?)))
 
 (defn set-field [dialog field value]
   (#(==> [::set-dialog-field dialog field value])))
 
-(re-frame/reg-sub
- ::pool-form
- (fn [db _]
-   (-> db :sports-sites :football :dialogs :pool :data)))
+(rf/reg-sub ::pool-form
+  (fn [db _]
+    (-> db :sports-sites :football :dialogs :pool :data)))
 
-(re-frame/reg-event-db
- ::toggle-dialog
- (fn [db [_ dialog data]]
-   (let [data (or data (-> db :sports-sites :football :dialogs dialog :data))]
-     (-> db
-         (update-in [:sports-sites :football :dialog-open?] not)
-         (assoc-in [:sports-sites :football :data] data)))))
+(rf/reg-event-db ::toggle-dialog
+  (fn [db [_ dialog data]]
+    (let [data (or data (-> db :sports-sites :football :dialogs dialog :data))]
+      (-> db
+          (update-in [:sports-sites :football :dialog-open?] not)
+          (assoc-in [:sports-sites :football :data] data)))))
 
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :pool)
@@ -74,10 +67,10 @@
          :on-change #(set-field :structure %)}]
 
      ;; Outdoor pool?
-#_     [lui/checkbox
-      {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
-       :value     (:outdoor-pool? data)
-       :on-change #(set-field :outdoor-pool? %)}]
+     #_[lui/checkbox
+        {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
+         :value     (:outdoor-pool? data)
+         :on-change #(set-field :outdoor-pool? %)}]
 
      ;; Length m
      [lui/text-field
@@ -372,8 +365,7 @@
       :value         (-> edit-data :lighting-center-point-lux)
       :on-change     #(on-change :lighting-center-point-lux %)}]}
 
-
-   ;; Valaistus, kulma 2/1
+;; Valaistus, kulma 2/1
    {:label "Valaistus, kulma 2/1 (lux)"
     :value (-> display-data :lighting-corner-2-1-lux)
     :form-field
@@ -766,7 +758,5 @@
       :value         (-> edit-data :led-screens-or-surfaces-for-ads?)
       :on-change     #(on-change :led-screens-or-surfaces-for-ads? %)}]}
 
-
 ;; Muita Lipas-järjestelmässä kysyttyjä tietoja (jotka voisivat olla tässä kiinnostavia)
-
    ])

@@ -1,13 +1,12 @@
 (ns lipas.ui.map.projection
   " Loading this namespace causes side-effects to global OpenLayers
   object (js/ol)."
-  (:require
-   ["proj4" :as proj4]
-   ["ol/proj/proj4" :refer [register]]
-   ["ol/proj" :as proj]
-   ["ol/extent" :as extent]))
+  (:require ["ol/extent" :as extent]
+            ["ol/proj" :as proj]
+            ["ol/proj/proj4" :refer [register]]
+            ["proj4" :as proj4]))
 
-(def epsg3067-extent #js[-548576.0 6291456.0 1548576.0 8388608.0])
+(def epsg3067-extent #js [-548576.0 6291456.0 1548576.0 8388608.0])
 
 (def epsg3067-defs
   (str "+proj=utm"

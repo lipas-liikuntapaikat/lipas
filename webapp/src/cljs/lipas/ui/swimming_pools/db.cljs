@@ -1,7 +1,6 @@
 (ns lipas.ui.swimming-pools.db
-  (:require
-   [lipas.data.materials :as materials]
-   [lipas.data.swimming-pools :as data]))
+  (:require [lipas.data.materials :as materials]
+            [lipas.data.swimming-pools :as data]))
 
 (def default-db
   {:active-tab        0

@@ -1,10 +1,9 @@
 (ns lipas.backend.elevation
-  (:require
-   [clj-http.client :as client]
-   [lipas.backend.config :as config]
-   [clojure.string :as str]
-   [lipas.backend.gis :as gis]
-   [taoensso.timbre :as log]))
+  (:require [clj-http.client :as client]
+            [clojure.string :as str]
+            [lipas.backend.config :as config]
+            [lipas.backend.gis :as gis]
+            [taoensso.timbre :as log]))
 
 ;; MML elevation coverage model consists of 2x2m squares that contain
 ;; the elevation information as meters above/below sea level. We

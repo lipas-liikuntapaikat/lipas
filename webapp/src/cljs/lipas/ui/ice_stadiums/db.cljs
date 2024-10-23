@@ -1,6 +1,5 @@
 (ns lipas.ui.ice-stadiums.db
-  (:require
-   [lipas.data.ice-stadiums :as data]))
+  (:require [lipas.data.ice-stadiums :as data]))
 
 (def default-db
   {:active-tab                0

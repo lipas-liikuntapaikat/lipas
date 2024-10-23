@@ -1,13 +1,12 @@
 (ns lipas.ui.navbar
-  (:require
-   [clojure.string :as string]
-   [lipas.ui.feedback.views :as feedback]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.subs :as subs]
-   [lipas.ui.svg :as svg]
-   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
-   [re-frame.core :as rf]
-   [reitit.frontend.easy :as rfe]))
+  (:require [clojure.string :as string]
+            [lipas.ui.feedback.views :as feedback]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.subs :as subs]
+            [lipas.ui.svg :as svg]
+            [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
+            [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]))
 
 (def links
   {:help           "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
@@ -289,13 +288,13 @@
          :href      "https://www.jyu.fi"
          :sx
          (merge
-          mui/headline-aleo
-          {:font-size       "1em"
-           :color           "#ffffff"
-           :text-transform  "none"
-           :text-decoration "none"
-           :display {:xs "none"
-                     :md "inline"}})}
+           mui/headline-aleo
+           {:font-size       "1em"
+            :color           "#ffffff"
+            :text-transform  "none"
+            :text-decoration "none"
+            :display {:xs "none"
+                      :md "inline"}})}
         (tr :menu/jyu)]
 
        [separator
@@ -309,12 +308,12 @@
          :href      "/etusivu"
          :style
          (merge
-          mui/headline-aleo
-          {:display         "inline"
-           :font-size       "1em"
-           :color           "#ffffff"
-           :text-transform  "none"
-           :text-decoration "none"})}
+           mui/headline-aleo
+           {:display         "inline"
+            :font-size       "1em"
+            :color           "#ffffff"
+            :text-transform  "none"
+            :text-decoration "none"})}
         (tr :menu/headline)]
 
        [separator]
@@ -327,12 +326,12 @@
            :href      (:href sub-page)
            :style
            (merge
-            mui/headline-aleo
-            {:display         "inline"
-             :font-size       "1em"
-             :color           "#ffffff"
-             :text-transform  "none"
-             :text-decoration "none"})}
+             mui/headline-aleo
+             {:display         "inline"
+              :font-size       "1em"
+              :color           "#ffffff"
+              :text-transform  "none"
+              :text-decoration "none"})}
           (:text sub-page)])]
 
       ;; Lang selector

@@ -1,24 +1,22 @@
 (ns lipas.ui.db
-  (:require
-   [lipas.data.cities :as cities]
-   [lipas.i18n.core :as i18n]
-   [lipas.schema.core :as specs]
-   [lipas.ui.admin.db :as admin]
-   [lipas.ui.analysis.db :as analysis]
-   [lipas.ui.energy.db :as energy]
-   [lipas.ui.feedback.db :as feedback]
-   [lipas.ui.front-page.db :as front-page]
-   [lipas.ui.ice-stadiums.db :as ice-stadiums]
-   [lipas.ui.loi.db :as loi]
-   [lipas.ui.map.db :as map]
-   [lipas.ui.reminders.db :as reminders]
-   [lipas.ui.reports.db :as reports]
-   [lipas.ui.search.db :as search]
-   [lipas.ui.sports-sites.db :as sports-sites]
-   [lipas.ui.stats.db :as stats]
-   [lipas.ui.swimming-pools.db :as swimming-pools]
-   [lipas.ui.user.db :as user]
-   [lipas.ui.ptv.db :as ptv]))
+  (:require [lipas.data.cities :as cities]
+            [lipas.i18n.core :as i18n]
+            [lipas.ui.admin.db :as admin]
+            [lipas.ui.analysis.db :as analysis]
+            [lipas.ui.energy.db :as energy]
+            [lipas.ui.feedback.db :as feedback]
+            [lipas.ui.front-page.db :as front-page]
+            [lipas.ui.ice-stadiums.db :as ice-stadiums]
+            [lipas.ui.loi.db :as loi]
+            [lipas.ui.map.db :as map]
+            [lipas.ui.ptv.db :as ptv]
+            [lipas.ui.reminders.db :as reminders]
+            [lipas.ui.reports.db :as reports]
+            [lipas.ui.search.db :as search]
+            [lipas.ui.sports-sites.db :as sports-sites]
+            [lipas.ui.stats.db :as stats]
+            [lipas.ui.swimming-pools.db :as swimming-pools]
+            [lipas.ui.user.db :as user]))
 
 (def default-db
   {;; General

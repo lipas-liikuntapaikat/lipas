@@ -1,13 +1,12 @@
 (ns lipas.ui.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.events :as events]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.navbar :as nav]
-   [lipas.ui.reminders.views :as reminders]
-   [lipas.ui.subs :as subs]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.events :as events]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.navbar :as nav]
+            [lipas.ui.reminders.views :as reminders]
+            [lipas.ui.subs :as subs]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn main-panel []
   (let [logged-in?   (<== [::subs/logged-in?])
@@ -28,7 +27,6 @@
     ;; TODO: Juho later Would be better to just use responsive sx styles everywhere
     ;; app logic (re-frame event handlers) shouldn't care about screen size?
     (==> [::events/set-screen-size width])
-
 
     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
      [mui/css-baseline]

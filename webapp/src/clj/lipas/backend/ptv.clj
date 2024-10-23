@@ -1,8 +1,8 @@
 (ns lipas.backend.ptv
   (:require
-   [lipas.data.types :as types]
    [cheshire.core :as json]
-   [clj-http.client :as client]))
+   [clj-http.client :as client]
+   [lipas.data.types :as types]))
 
 ;; Exploring PTV prod data
 

@@ -1,1 +1,14 @@
-{:tasks {init-lint {:task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}}}
+{:tasks {:requires ([clojure.string :as str])
+
+         lint {:doc "Run clj-kondo"
+               :task (shell "clj-kondo --lint src")}
+         init-lint {:doc "Initialize Clj-kondo cache with library code"
+                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}
+         clean-ns {:doc ""
+                   :task (do
+                           (let [files *command-line-args*]
+                             (shell (str "clojure-lsp clean-ns --filenames=" (str/join ":" files)))))}
+         cljfmt {:doc "Run cljfmt through Clojure-LSP, taking each file to format as argument (so works with shell globs)"
+                 :task (do
+                         (let [files *command-line-args*]
+                           (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}}}

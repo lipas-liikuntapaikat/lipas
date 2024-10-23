@@ -1,15 +1,14 @@
 (ns lipas.ui.analysis.reachability.views
-  (:require
-   ["rc-slider" :as Slider]
-   ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
-   [lipas.ui.analysis.reachability.events :as events]
-   [lipas.ui.analysis.reachability.subs :as subs]
-   [lipas.ui.charts :as charts]
-   [lipas.ui.components :as lui]
-   [lipas.ui.map.events :as map-events]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
+            ["rc-slider" :as Slider]
+            [lipas.ui.analysis.reachability.events :as events]
+            [lipas.ui.analysis.reachability.subs :as subs]
+            [lipas.ui.charts :as charts]
+            [lipas.ui.components :as lui]
+            [lipas.ui.map.events :as map-events]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 #_(def ^js Slider (.-Slider js/rcslider))
 (def ^js RangeSlider (.createSliderWithTooltip Slider (.-Range Slider)))

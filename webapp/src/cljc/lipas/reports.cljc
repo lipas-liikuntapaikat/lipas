@@ -1,7 +1,6 @@
 (ns lipas.reports
-  (:require
-   [lipas.utils :as utils]
-   [lipas.data.prop-types :as prop-types]))
+  (:require [lipas.data.prop-types :as prop-types]
+            [lipas.utils :as utils]))
 
 (defn- all-energy-data-exists? [{:keys [energy-consumption]}]
   (let [{:keys [electricity-mwh heat-mwh water-m3]} energy-consumption]

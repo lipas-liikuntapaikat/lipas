@@ -1,12 +1,11 @@
 (ns lipas.ui.login.views
-  (:require
-   [clojure.spec.alpha :as s]
-   [lipas.ui.components :as lui]
-   [lipas.ui.login.events :as events]
-   [lipas.ui.login.subs :as subs]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
-   [reagent.core :as r]))
+  (:require [clojure.spec.alpha :as s]
+            [lipas.ui.components :as lui]
+            [lipas.ui.login.events :as events]
+            [lipas.ui.login.subs :as subs]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
+            [reagent.core :as r]))
 
 (defn set-field [& args]
   (==> [::events/set-field (butlast args) (last args)]))
@@ -180,8 +179,8 @@
        [mui/card-header
         {:title  (tr :login/headline)
          :action (r/as-element
-                  [register-btn
-                   {:tooltip (tr :register/headline)}])}]
+                   [register-btn
+                    {:tooltip (tr :register/headline)}])}]
        [mui/card-content
         [mui/tabs {:value      login-mode
                    :on-change  #(==> [::events/select-login-mode (keyword %2)])

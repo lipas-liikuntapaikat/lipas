@@ -1,8 +1,7 @@
 (ns lipas.backend.db.city
-  (:require
-   [clojure.set :as cset]
-   [lipas.utils :as utils]
-   [hugsql.core :as hugsql]))
+  (:require [clojure.set :as cset]
+            [hugsql.core :as hugsql]
+            [lipas.utils :as utils]))
 
 (defn marshall [city]
   {:city_code (:city-code city)

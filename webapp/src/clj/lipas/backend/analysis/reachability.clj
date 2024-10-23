@@ -1,12 +1,10 @@
 (ns lipas.backend.analysis.reachability
-  (:require
-   [clojure.set :as set]
-   [clojure.string :as str]
-   [lipas.backend.analysis.common :as common]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.osrm :as osrm]
-   [lipas.data.types :as types]
-   [lipas.utils :as utils]))
+  (:require [clojure.string :as str]
+            [lipas.backend.analysis.common :as common]
+            [lipas.backend.gis :as gis]
+            [lipas.backend.osrm :as osrm]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]))
 
 (defn calc-distances
   [source-fcoll populations]
@@ -144,7 +142,7 @@
     {:population
      (->> pop-data-with-zones
           (map
-           (fn [{:keys [id_nro] :as m}]
+           (fn [{:keys [_id_nro] :as m}]
              (-> m
                  (select-keys [:vaesto :coords :zone])
                  (update :vaesto common/anonymize)))))
@@ -449,8 +447,6 @@
   (-> data :zones :travel-time)
   (require '[clojure.java.io :as io])
   (require '[cognitect.transit :as transit])
-
-  (import [java.io ByteArrayInputStream ByteArrayOutputStream])
 
   (def in (io/input-stream "/tmp/cc.transit"))
   (def reader (transit/reader in :json))

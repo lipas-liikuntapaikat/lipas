@@ -1,7 +1,6 @@
 (ns lipas.ui.user.routes
-  (:require
-   [lipas.ui.utils :as utils :refer [==>]]
-   [lipas.ui.user.views :as views]))
+  (:require [lipas.ui.user.views :as views]
+            [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
   ["profiili"

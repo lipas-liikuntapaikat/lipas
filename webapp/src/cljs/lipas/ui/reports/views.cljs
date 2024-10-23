@@ -1,12 +1,11 @@
 (ns lipas.ui.reports.views
-  (:require
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.reports.events :as events]
-   [lipas.ui.reports.subs :as subs]
-   [lipas.ui.search.events :as search-events]
-   [lipas.ui.utils :refer [<== ==>] :as utils]
-   [reagent.core :as r]))
+  (:require [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.reports.events :as events]
+            [lipas.ui.reports.subs :as subs]
+            [lipas.ui.search.events :as search-events]
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [reagent.core :as r]))
 
 (defn fields-selector
   [{:keys [tr value on-change]}]
@@ -128,13 +127,13 @@
           (tr :reports/shortcuts)]]
 
         (into
-         [:<>]
-         (for [{:keys [fields label]} quick-selects]
-           [mui/grid {:item true}
-            [mui/button
-             {:variant  "outlined"
-              :on-click #(==> [::events/set-selected-fields fields :append])}
-             label]]))
+          [:<>]
+          (for [{:keys [fields label]} quick-selects]
+            [mui/grid {:item true}
+             [mui/button
+              {:variant  "outlined"
+               :on-click #(==> [::events/set-selected-fields fields :append])}
+              label]]))
 
         ;; Fields autocomplete selector
         [mui/grid {:item true :xs 12}

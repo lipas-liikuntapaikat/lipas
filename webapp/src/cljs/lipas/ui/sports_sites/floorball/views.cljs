@@ -1,13 +1,12 @@
 (ns lipas.ui.sports-sites.floorball.views
-  (:require
-   ["mdi-material-ui/Calculator$default" :as Calculator]
-   [lipas.roles :as roles]
-   [lipas.ui.components :as lui]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.sports-sites.floorball.events :as events]
-   [lipas.ui.sports-sites.floorball.subs :as subs]
-   [lipas.ui.utils :as utils :refer [<== ==>]]
-   [reagent.core :as r]))
+  (:require ["mdi-material-ui/Calculator$default" :as Calculator]
+            [lipas.roles :as roles]
+            [lipas.ui.components :as lui]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.sports-sites.floorball.events :as events]
+            [lipas.ui.sports-sites.floorball.subs :as subs]
+            [lipas.ui.utils :as utils :refer [<== ==>]]
+            [reagent.core :as r]))
 
 (defn surface-area-field
   [{:keys [on-change value] :as props}]
@@ -21,15 +20,15 @@
               :InputProps
               {:endAdornment
                (r/as-element
-                [mui/input-adornment
-                 {:position "end"}
-                 [mui/tooltip {:title "Laske pituudesta ja leveydestä"}
-                  [mui/icon-button
-                   {:disabled (not (and (number? width-m) (number? length-m)))
-                    :on-click #(on-change (* width-m length-m))}
-                   [:> Calculator]]]
-                 [mui/typography {:variant "body1" :color "textSecondary"}
-                  "m²"]])}})]]))
+                 [mui/input-adornment
+                  {:position "end"}
+                  [mui/tooltip {:title "Laske pituudesta ja leveydestä"}
+                   [mui/icon-button
+                    {:disabled (not (and (number? width-m) (number? length-m)))
+                     :on-click #(on-change (* width-m length-m))}
+                    [:> Calculator]]]
+                  [mui/typography {:variant "body1" :color "textSecondary"}
+                   "m²"]])}})]]))
 
 (defn field-form
   [{:keys [tr read-only? visibility on-change edit-data display-data]}]
@@ -428,33 +427,33 @@
   [visibility]
   (let [fb? (= :floorball visibility)]
     (->>
-     [[:name {:fi "Nimi"}]
-      [:length-m {:fi "Pituus (m)"}]
-      [:width-m {:fi "Leveys (m)"}]
-      #_[:surface-area-m2 {:fi "Pinta-ala (m²)"}]
-      #_[:minimum-height-m {:fi "Minimikorkeus (m)"}]
-      #_[:surface-material {:fi "Lattiamateriaali"}]
-      #_[:floor-elasticity {:fi "Jousto-ominaisuudet"}]
-      #_[:surface-material-product {:fi "Lattiamateriaalin merkki"}]
-      #_[:surface-material-color {:fi "Lattian väri"}]
-      #_[:rink-product {:fi "Kaukalon merkki"}]
-      #_[:rink-color {:fi "Kaukalon Väri"}]
-      #_(when fb? [:lighting-corner-1-1-lux {:fi "Valaistus kulma 1/1 (lux)"}])
-      #_(when fb? [:lighting-corner-1-2-lux {:fi "Valaistus kulma 1/2 (lux)"}])
-      #_(when fb? [:lighting-corner-2-1-lux {:fi "Valaistus kulma 2/1 (lux)"}])
-      #_(when fb? [:lighting-corner-2-2-lux {:fi "Valaistus kulma 2/2 (lux)"}])
-      #_(when fb? [:lighting-goal-1-lux {:fi "Valaistus, maali 1 (lux)"}])
-      #_(when fb? [:lighting-goal-2-lux {:fi "Valaistus, maali 2 (lux)"}])
-      #_(when fb? [:lighting-center-point-lux {:fi "Valaistus, keskipiste (lux)"}])
-      #_[:lighting-average-lux {:fi "Valaistus, keskiarvo (lux)"}]
-      #_[:stands-total-capacity-person {:fi "Katsomokapasiteetti (yht)"}]
-      #_[:seating-area-capacity-person {:fi "Istumapaikat"}]
-      #_[:standing-area-capacity-person {:fi "Seisomapaikat"}]
-      #_(when fb? [:scoreboard-visible-to-benches? {:fi "Tulostaulu näkyy vaihtopenkeille"}])
-      #_(when fb? [:scoreboard-visible-to-officials? {:fi "Tulostaulu näkyy toimitsijapöydälle"}])
-      #_(when fb? [:audience-stand-access {:fi "Yleisön kulku katsomoon"}])
-      #_(when fb? [:field-accessible-without-strairs? {:fi "Pääseekö kenttätasolle ilman rappusia"}])]
-     (remove nil?))))
+      [[:name {:fi "Nimi"}]
+       [:length-m {:fi "Pituus (m)"}]
+       [:width-m {:fi "Leveys (m)"}]
+       #_[:surface-area-m2 {:fi "Pinta-ala (m²)"}]
+       #_[:minimum-height-m {:fi "Minimikorkeus (m)"}]
+       #_[:surface-material {:fi "Lattiamateriaali"}]
+       #_[:floor-elasticity {:fi "Jousto-ominaisuudet"}]
+       #_[:surface-material-product {:fi "Lattiamateriaalin merkki"}]
+       #_[:surface-material-color {:fi "Lattian väri"}]
+       #_[:rink-product {:fi "Kaukalon merkki"}]
+       #_[:rink-color {:fi "Kaukalon Väri"}]
+       #_(when fb? [:lighting-corner-1-1-lux {:fi "Valaistus kulma 1/1 (lux)"}])
+       #_(when fb? [:lighting-corner-1-2-lux {:fi "Valaistus kulma 1/2 (lux)"}])
+       #_(when fb? [:lighting-corner-2-1-lux {:fi "Valaistus kulma 2/1 (lux)"}])
+       #_(when fb? [:lighting-corner-2-2-lux {:fi "Valaistus kulma 2/2 (lux)"}])
+       #_(when fb? [:lighting-goal-1-lux {:fi "Valaistus, maali 1 (lux)"}])
+       #_(when fb? [:lighting-goal-2-lux {:fi "Valaistus, maali 2 (lux)"}])
+       #_(when fb? [:lighting-center-point-lux {:fi "Valaistus, keskipiste (lux)"}])
+       #_[:lighting-average-lux {:fi "Valaistus, keskiarvo (lux)"}]
+       #_[:stands-total-capacity-person {:fi "Katsomokapasiteetti (yht)"}]
+       #_[:seating-area-capacity-person {:fi "Istumapaikat"}]
+       #_[:standing-area-capacity-person {:fi "Seisomapaikat"}]
+       #_(when fb? [:scoreboard-visible-to-benches? {:fi "Tulostaulu näkyy vaihtopenkeille"}])
+       #_(when fb? [:scoreboard-visible-to-officials? {:fi "Tulostaulu näkyy toimitsijapöydälle"}])
+       #_(when fb? [:audience-stand-access {:fi "Yleisön kulku katsomoon"}])
+       #_(when fb? [:field-accessible-without-strairs? {:fi "Pääseekö kenttätasolle ilman rappusia"}])]
+      (remove nil?))))
 
 (defn fields-table
   [{:keys [tr display-data edit-data read-only? lipas-id visibility]}]
@@ -1215,12 +1214,12 @@
 
      ;; Katselmus tehty
      #_(when (= :floorball visibility)
-       {:label "Katselmus tehty"
-        :value (-> display-data :audit-date)
-        :form-field
-        [lui/date-picker
-         {:value     (-> edit-data :audit-date)
-          :on-change #(on-change :audit-date %)}]})]))
+         {:label "Katselmus tehty"
+          :value (-> display-data :audit-date)
+          :form-field
+          [lui/date-picker
+           {:value     (-> edit-data :audit-date)
+            :on-change #(on-change :audit-date %)}]})]))
 
 (defn form
   [{:keys [tr read-only? on-change display-data edit-data type-code lipas-id]}]

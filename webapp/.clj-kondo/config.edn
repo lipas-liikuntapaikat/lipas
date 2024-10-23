@@ -5,4 +5,5 @@
                                           :sort :case-sensitive}
            :consistent-alias {:aliases {clojure.string str
                                         re-frame.core rf
-                                        reagent.core r}}}}
+                                        reagent.core r}}
+           :discouraged-namespace {goog.object {:message "Prefer JS interop over goog.object"}}}}

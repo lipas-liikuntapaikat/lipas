@@ -1017,7 +1017,6 @@
   (search-fields search2 {:field-types ["floorball-field"]})
 
   (def results (atom []))
-  (require '[cheshire.core :as json])
 
   (async/go
     (let [ch (search/scroll search2 "sports_sites_current" {:query

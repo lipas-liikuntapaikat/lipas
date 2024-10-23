@@ -1,10 +1,9 @@
 (ns lipas.ai.core
-  (:require
-   [lipas.backend.config :as config]
-   [clojure.walk :as walk]
-   [cheshire.core :as json]
-   [clj-http.client :as client]
-   [taoensso.timbre :as log]))
+  (:require [cheshire.core :as json]
+            [clj-http.client :as client]
+            [clojure.walk :as walk]
+            [lipas.backend.config :as config]
+            [taoensso.timbre :as log]))
 
 (def openai-config
   (get-in config/default-config [:open-ai]))
@@ -138,7 +137,7 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
               (format generate-utp-service-descriptions-prompt (json/encode prompt-doc)))))
 
 (defn get-models
-  [{:keys [api-key models-url]}]
+  [{:keys [_api-key models-url]}]
   (let [params {:headers default-headers}]
     (-> (client/get models-url params)
         :body

@@ -1,6 +1,6 @@
 (ns lipas.backend.accessibility
   (:require [clj-http.client :as client]
-            [clojure.string :as string]
+            [clojure.string :as str]
             [lipas.backend.config :as config]
             [lipas.backend.gis :as gis]
             [lipas.data.cities :as cities])
@@ -15,7 +15,7 @@
    (let [hash (MessageDigest/getInstance hash-algo)]
      (. hash update (.getBytes input "UTF-8"))
      (let [digest (.digest hash)]
-       (string/upper-case
+       (str/upper-case
         (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))))))
 
 (defn calc-checksum

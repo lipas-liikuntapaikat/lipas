@@ -1,11 +1,10 @@
 (ns lipas.ui.components.tables
-  (:require
-   ["@hello-pangea/dnd" :refer [DragDropContext Draggable Droppable] :as dnd]
-   [lipas.ui.components.buttons :as buttons]
-   [lipas.ui.components.checkboxes :as checkboxes]
-   [lipas.ui.mui :as mui]
-   [lipas.ui.utils :as utils]
-   [reagent.core :as r]))
+  (:require ["@hello-pangea/dnd" :refer [DragDropContext Draggable Droppable] :as dnd]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.mui :as mui]
+            [lipas.ui.utils :as utils]
+            [reagent.core :as r]))
 
 (defn table
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
@@ -34,15 +33,15 @@
          (into [mui/table-row (when (and on-select (not hide-action-btn?))
                                 [mui/table-cell ""])]
                (doall
-                (for [[key header hidden?] headers]
-                  [mui/table-cell {:style    (when hidden? {:display :none})
-                                   :on-click #(do (reset! sort-fn* key)
-                                                  (on-sort-change*))}
-                   [mui/table-sort-label
-                    {:active    (= key @sort-fn*)
-                     :direction (if @sort-asc? "asc" "desc")
-                     :on-click  #(swap! sort-asc? not)}
-                    header]])))]
+                 (for [[key header hidden?] headers]
+                   [mui/table-cell {:style    (when hidden? {:display :none})
+                                    :on-click #(do (reset! sort-fn* key)
+                                                   (on-sort-change*))}
+                    [mui/table-sort-label
+                     {:active    (= key @sort-fn*)
+                      :direction (if @sort-asc? "asc" "desc")
+                      :on-click  #(swap! sort-asc? not)}
+                     header]])))]
 
         ;; Body
         (when-not in-progress?
@@ -50,37 +49,37 @@
 
            ;; Rows
            (doall
-            (for [item (if @sort-fn*
-                         (sort-by @sort-fn* (if @sort-asc?
-                                              sort-cmp
-                                              utils/reverse-cmp)
-                                  items)
-                         items)
-                  :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
-              [mui/table-row
-               {:key            id
-                :on-click       (when on-select #(on-select item))
-                :hover          true
-                :style          (when on-select {:cursor "pointer"})
-                :on-mouse-enter (when on-mouse-enter #(on-mouse-enter item))
-                :on-mouse-leave (when on-mouse-leave #(on-mouse-leave item))}
+             (for [item (if @sort-fn*
+                          (sort-by @sort-fn* (if @sort-asc?
+                                               sort-cmp
+                                               utils/reverse-cmp)
+                                   items)
+                          items)
+                   :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
+               [mui/table-row
+                {:key            id
+                 :on-click       (when on-select #(on-select item))
+                 :hover          true
+                 :style          (when on-select {:cursor "pointer"})
+                 :on-mouse-enter (when on-mouse-enter #(on-mouse-enter item))
+                 :on-mouse-leave (when on-mouse-leave #(on-mouse-leave item))}
 
-               (when (and on-select (not hide-action-btn?))
-                 [mui/table-cell {:padding "checkbox"}
-                  [mui/icon-button {:on-click #(on-select item)}
-                   [mui/icon {:color "primary"} action-icon]]])
+                (when (and on-select (not hide-action-btn?))
+                  [mui/table-cell {:padding "checkbox"}
+                   [mui/icon-button {:on-click #(on-select item)}
+                    [mui/icon {:color "primary"} action-icon]]])
 
                ;; Cells
-               (doall
-                (for [[k _ hidden?] headers
-                      :let          [v (get item k)]]
-                  [mui/table-cell
-                   {:style (when hidden? {:display :none})
-                    :key   (str id k)}
-                   [mui/typography
-                    {:style   {:font-size "1em"}
-                     :variant "body1" :no-wrap false}
-                    (utils/display-value v)]]))]))])]
+                (doall
+                  (for [[k _ hidden?] headers
+                        :let          [v (get item k)]]
+                    [mui/table-cell
+                     {:style (when hidden? {:display :none})
+                      :key   (str id k)}
+                     [mui/typography
+                      {:style   {:font-size "1em"}
+                       :variant "body1" :no-wrap false}
+                      (utils/display-value v)]]))]))])]
 
        (when in-progress?
          [mui/grid {:container true :direction "column" :align-items "center"}
@@ -109,8 +108,8 @@
 
   (r/with-let [key-fn*         (or key-fn (constantly nil))
                selected        (r/atom (into {} (map
-                                                 (juxt (partial resolve-key key-fn*)
-                                                       (constantly false)))
+                                                  (juxt (partial resolve-key key-fn*)
+                                                        (constantly false)))
                                              items))
                sort-fn*        (r/atom sort-fn)
                sort-asc?       (r/atom sort-asc?)
@@ -148,10 +147,10 @@
                        :on-change (fn []
                                     (let [b (not (->> @selected vals (every? true?)))
                                           m (swap! selected #(reduce-kv
-                                                              (fn [res k _]
-                                                                (assoc res k b))
-                                                              {}
-                                                              %))]
+                                                               (fn [res k _]
+                                                                 (assoc res k b))
+                                                               {}
+                                                               %))]
                                       (on-select (keys m))))}]
                      "")])]
 
@@ -170,99 +169,99 @@
 
          ;; Rows
          (doall
-          (for [item (if @sort-fn*
-                       (sort-by @sort-fn* (if @sort-asc?
-                                            sort-cmp
-                                            utils/reverse-cmp)
-                                items)
-                       items)
-                :let [id (resolve-key key-fn* item)
-                      editing-this? (contains? @editing? id)]]
+           (for [item (if @sort-fn*
+                        (sort-by @sort-fn* (if @sort-asc?
+                                             sort-cmp
+                                             utils/reverse-cmp)
+                                 items)
+                        items)
+                 :let [id (resolve-key key-fn* item)
+                       editing-this? (contains? @editing? id)]]
 
-            [mui/table-row
-             {:key id :hover true :style (when on-select {:cursor "pointer"})}
+             [mui/table-row
+              {:key id :hover true :style (when on-select {:cursor "pointer"})}
 
              ;; First cell
-             (when (or (and on-select (not hide-action-btn?)) any-editable?)
-               [mui/table-cell {:padding "checkbox"}
-                (if editing-this?
-                  [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+              (when (or (and on-select (not hide-action-btn?)) any-editable?)
+                [mui/table-cell {:padding "checkbox"}
+                 (if editing-this?
+                   [mui/grid {:container true :align-items "center" :wrap "nowrap"}
 
-                   [mui/grid {:item true}
-                    [mui/tooltip {:title save-label}
-                     [mui/icon-button {:disabled (not (allow-saving? (@editing? id)))
-                                       :on-click (fn []
-                                                   (on-item-save (@editing? id))
-                                                   (swap! editing? dissoc id))}
-                      [mui/icon "save"]]]]
+                    [mui/grid {:item true}
+                     [mui/tooltip {:title save-label}
+                      [mui/icon-button {:disabled (not (allow-saving? (@editing? id)))
+                                        :on-click (fn []
+                                                    (on-item-save (@editing? id))
+                                                    (swap! editing? dissoc id))}
+                       [mui/icon "save"]]]]
 
-                   [mui/grid {:item true}
-                    [mui/tooltip {:title discard-label}
-                     [mui/icon-button {:on-click #(swap! editing? dissoc id)}
-                      [mui/icon "undo"]]]]]
+                    [mui/grid {:item true}
+                     [mui/tooltip {:title discard-label}
+                      [mui/icon-button {:on-click #(swap! editing? dissoc id)}
+                       [mui/icon "undo"]]]]]
 
-                  [mui/grid {:container true :wrap "nowrap"}
+                   [mui/grid {:container true :wrap "nowrap"}
 
-                   (if multi-select?
+                    (if multi-select?
 
-                     [mui/grid {:item true}
-                      [checkboxes/checkbox
-                       {:value     (@selected id)
-                        :on-change (fn []
-                                     (let [vs (swap! selected update id not)]
-                                       (on-select (reduce
-                                                   (fn [res [k v]]
-                                                     (if v (conj res k) res))
-                                                   #{}
-                                                   vs))))}]]
+                      [mui/grid {:item true}
+                       [checkboxes/checkbox
+                        {:value     (@selected id)
+                         :on-change (fn []
+                                      (let [vs (swap! selected update id not)]
+                                        (on-select (reduce
+                                                     (fn [res [k v]]
+                                                       (if v (conj res k) res))
+                                                     #{}
+                                                     vs))))}]]
 
-                     (when (and on-select (not hide-action-btn?))
-                       [mui/grid {:item true}
-                        [mui/tooltip {:title action-label}
-                         [mui/icon-button
-                          {:on-click #(on-select item)}
-                          [mui/icon action-icon]]]]))
+                      (when (and on-select (not hide-action-btn?))
+                        [mui/grid {:item true}
+                         [mui/tooltip {:title action-label}
+                          [mui/icon-button
+                           {:on-click #(on-select item)}
+                           [mui/icon action-icon]]]]))
 
-                   (when (allow-editing? item)
-                     [mui/grid {:item true}
-                      [mui/tooltip {:title edit-label}
-                       [mui/icon-button
-                        {:on-click (fn []
-                                     (when on-edit-start
-                                       (on-edit-start item))
-                                     (swap! editing? assoc id item))}
-                        [mui/icon "edit"]]]])])])
+                    (when (allow-editing? item)
+                      [mui/grid {:item true}
+                       [mui/tooltip {:title edit-label}
+                        [mui/icon-button
+                         {:on-click (fn []
+                                      (when on-edit-start
+                                        (on-edit-start item))
+                                      (swap! editing? assoc id item))}
+                         [mui/icon "edit"]]]])])])
 
              ;; Remaining Cells
-             (doall
-              (for [[k {:keys [hidden? form]}] headers
-                    :let                       [v (get item k)]]
+              (doall
+                (for [[k {:keys [hidden? form]}] headers
+                      :let                       [v (get item k)]]
 
-                [mui/table-cell
-                 {:style    (when hidden? {:display :none})
-                  :on-click #(when (and on-select (not editing-this?))
-                               (on-select item))
-                  :key      (str id k editing-this?)}
+                  [mui/table-cell
+                   {:style    (when hidden? {:display :none})
+                    :on-click #(when (and on-select (not editing-this?))
+                                 (on-select item))
+                    :key      (str id k editing-this?)}
 
-                 (if (and editing-this? (:component form))
+                   (if (and editing-this? (:component form))
 
                    ;; form field
-                   (let [value-key (or (:value-key form) k)
-                         path      [id value-key]]
-                     [mui/grid {:container true :align-items "center" :wrap "nowrap"}
-                      [mui/grid {:item true}
-                       [(:component form)
-                        (-> form
-                            :props
-                            (assoc :value (get-in @editing? [id value-key])
-                                   :on-change #(swap! editing? assoc-in path %)))]]])
+                     (let [value-key (or (:value-key form) k)
+                           path      [id value-key]]
+                       [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+                        [mui/grid {:item true}
+                         [(:component form)
+                          (-> form
+                              :props
+                              (assoc :value (get-in @editing? [id value-key])
+                                     :on-change #(swap! editing? assoc-in path %)))]]])
 
                    ;; display value
-                   [mui/grid {:container true :align-items "center" :wrap "nowrap"}
-                    [mui/grid {:item true}
-                     [mui/typography
-                      {:style {:font-size "1em"} :variant "body1" :no-wrap false}
-                      (utils/display-value v)]]])]))]))]]])))
+                     [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+                      [mui/grid {:item true}
+                       [mui/typography
+                        {:style {:font-size "1em"} :variant "body1" :no-wrap false}
+                        (utils/display-value v)]]])]))]))]]])))
 
 (defn form-table
   [{:keys [headers items key-fn add-tooltip
@@ -329,51 +328,51 @@
                         [mui/table-cell header]))])
 
              ;; Body
-             [:> Droppable {:droppableId "droppable" }
+             [:> Droppable {:droppableId "droppable"}
               (fn [provided]
                 (let [t-props (.-droppableProps provided)
                       _       (set! (.-ref t-props) (.-innerRef provided))]
 
                   (r/as-element
-                   [mui/table-body (js->clj t-props)
+                    [mui/table-body (js->clj t-props)
 
                     ;; Rows
-                    (doall
-                     (for [[idx item] (sort-by first @idx->item)]
-                       (let [id (or (key-fn item) idx (:id item) (:lipas-id item))]
+                     (doall
+                       (for [[idx item] (sort-by first @idx->item)]
+                         (let [id (or (key-fn item) idx (:id item) (:lipas-id item))]
 
-                         [:> Draggable {:draggableId (str "draggable-" id) :index idx :key id}
-                          (fn [provided]
-                            (let [r-props {:key            id
-                                           :ref            (.-innerRef provided)
-                                           :hover          true
-                                           :on-mouse-enter (when on-custom-hover-in
-                                                             #(on-custom-hover-in % item))
-                                           :on-mouse-leave (when on-custom-hover-out
-                                                             #(on-custom-hover-out % item))}]
-                              (r/as-element
-                               [mui/table-row (merge r-props
-                                                     (js->clj (.-draggableProps provided))
-                                                     (js->clj (.-dragHandleProps provided)))
+                           [:> Draggable {:draggableId (str "draggable-" id) :index idx :key id}
+                            (fn [provided]
+                              (let [r-props {:key            id
+                                             :ref            (.-innerRef provided)
+                                             :hover          true
+                                             :on-mouse-enter (when on-custom-hover-in
+                                                               #(on-custom-hover-in % item))
+                                             :on-mouse-leave (when on-custom-hover-out
+                                                               #(on-custom-hover-out % item))}]
+                                (r/as-element
+                                  [mui/table-row (merge r-props
+                                                        (js->clj (.-draggableProps provided))
+                                                        (js->clj (.-dragHandleProps provided)))
 
-                                [mui/table-cell {:padding "checkbox"}
-                                 [mui/stack {:direction "row" :align-items "center"}
-                                  [mui/icon "drag_indicator"]
-                                  [mui/checkbox
-                                   {:color     "secondary"
-                                    :checked   (= item @selected-item)
-                                    :on-change (fn [_ checked?]
-                                                 (let [v (when checked? item)]
-                                                   (reset! selected-item v)))}]]]
+                                   [mui/table-cell {:padding "checkbox"}
+                                    [mui/stack {:direction "row" :align-items "center"}
+                                     [mui/icon "drag_indicator"]
+                                     [mui/checkbox
+                                      {:color     "secondary"
+                                       :checked   (= item @selected-item)
+                                       :on-change (fn [_ checked?]
+                                                    (let [v (when checked? item)]
+                                                      (reset! selected-item v)))}]]]
 
                                 ;; Cells
-                                (doall
-                                 (for [[k _] headers
-                                       :let  [v (get item k)]]
-                                   [mui/table-cell {:key (str id k) :padding "normal"}
-                                    (utils/display-value v)]))])))])))
+                                   (doall
+                                     (for [[k _] headers
+                                           :let  [v (get item k)]]
+                                       [mui/table-cell {:key (str id k) :padding "normal"}
+                                        (utils/display-value v)]))])))])))
 
-                    (.-placeholder provided)])))]]]]])
+                     (.-placeholder provided)])))]]]]])
 
        ;; Editing tools
        [mui/grid {:item true :xs 10 :class-name :no-print}

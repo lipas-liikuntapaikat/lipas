@@ -58,7 +58,7 @@
 
 (defn- migrate-changed!
   "Migrates modifications from data if they're newer than data in db."
-  [db {:keys [indices client] :as search} user data]
+  [db {:keys [indices client] :as _search} user data]
   (let [;; Get last modification dates from db for all update
         ;; candidates.
         timestamps (->> (db/get-last-modified db (map :sportsPlaceId data))

@@ -1,15 +1,14 @@
 (ns lipas.ui.components.buttons
-  (:require
-   [lipas.ui.mui :as mui]
-   [reagent.core :as r]))
+  (:require [lipas.ui.mui :as mui]
+            [reagent.core :as r]))
 
 (defn email-button [{:keys [on-click label] :as props}]
   [mui/button
    (merge
-    {:color    "secondary"
-     :variant  "contained"
-     :on-click on-click}
-    props)
+     {:color    "secondary"
+      :variant  "contained"
+      :on-click on-click}
+     props)
    [mui/icon {:style {:margin-right "0.25em"}}
     "email"]
    label])
@@ -54,8 +53,8 @@
    [:span
     [mui/fab
      (merge
-      (dissoc props :disabled-tooltip :color)
-      {:disabled disabled :on-click on-click :variant "extended" :color color})
+       (dissoc props :disabled-tooltip :color)
+       {:disabled disabled :on-click on-click :variant "extended" :color color})
      tooltip
      [mui/icon {:style {:margin-left "0.25em"}}
       "save_icon"]]]])
@@ -97,8 +96,8 @@
                       (do
                         (reset! timeout*
                                 (js/setTimeout
-                                 (fn []
-                                   (reset! clicked? false)) timeout))
+                                  (fn []
+                                    (reset! clicked? false)) timeout))
                         (reset! clicked? true)))}
         (if @clicked?
           [mui/icon "delete_forever"]

@@ -1,20 +1,18 @@
 (ns lipas.ui.routes
-  (:require
-   [clojure.string :as string]
-   [lipas.ui.admin.routes :as admin]
-   [lipas.ui.forgot-password.routes :as forgot-password]
-   [lipas.ui.front-page.routes :as front-page]
-   [lipas.ui.ice-stadiums.routes :as ice-stadiums]
-   [lipas.ui.login.routes :as login]
-   [lipas.ui.map.routes :as lmap]
-   [lipas.ui.register.routes :as register]
-   [lipas.ui.stats.routes :as stats]
-   #_[lipas.ui.swimming-pools.routes :as swimming-pools]
-   [lipas.ui.user.routes :as user]
-   [lipas.ui.utils :refer [==>] :as utils]
-   [reitit.coercion.spec :as rss]
-   [reitit.frontend :as rf]
-   [reitit.frontend.easy :as rfe]))
+  (:require [clojure.string :as string]
+            [lipas.ui.admin.routes :as admin]
+            [lipas.ui.forgot-password.routes :as forgot-password]
+            [lipas.ui.front-page.routes :as front-page]
+            [lipas.ui.ice-stadiums.routes :as ice-stadiums]
+            [lipas.ui.login.routes :as login]
+            [lipas.ui.map.routes :as lmap]
+            [lipas.ui.register.routes :as register]
+            [lipas.ui.stats.routes :as stats]
+            [lipas.ui.user.routes :as user]
+            [lipas.ui.utils :refer [==>] :as utils]
+            [reitit.coercion.spec :as rss]
+            [reitit.frontend :as rf]
+            [reitit.frontend.easy :as rfe]))
 
 (defn navigate-async! [url]
   (==> [:lipas.ui.events/navigate url]))
@@ -26,25 +24,25 @@
     [{:start
       (fn [& params]
         (navigate-async!
-         (if (= "liikuntapaikat.lipas.fi" (utils/domain))
-           :lipas.ui.routes.map/map
-           :lipas.ui.routes/front-page)))}]}])
+          (if (= "liikuntapaikat.lipas.fi" (utils/domain))
+            :lipas.ui.routes.map/map
+            :lipas.ui.routes/front-page)))}]}])
 
 (def routes
   (rf/router
-   ["/"
-    root-route
-    front-page/routes
-    login/routes
-    user/routes
-    forgot-password/routes
-    register/routes
-    lmap/routes
-    admin/routes
-    stats/routes
-    ice-stadiums/routes
-    #_swimming-pools/routes]
-   {:data {:coercion rss/coercion}}))
+    ["/"
+     root-route
+     front-page/routes
+     login/routes
+     user/routes
+     forgot-password/routes
+     register/routes
+     lmap/routes
+     admin/routes
+     stats/routes
+     ice-stadiums/routes
+     #_swimming-pools/routes]
+    {:data {:coercion rss/coercion}}))
 
 (defn match-by-path [path]
   (let [path (string/replace path #"/#" "")]
@@ -90,9 +88,9 @@
 
 (defn init! []
   (rfe/start!
-   routes
-   on-navigate
-   {:use-fragment false}))
+    routes
+    on-navigate
+    {:use-fragment false}))
 
 (comment
   (require '[reitit.core :as reitit])

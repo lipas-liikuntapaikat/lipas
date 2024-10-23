@@ -20,8 +20,7 @@
    [lipas.data.types-old :as old-types]
    [lipas.schema.core]
    [lipas.utils :as utils]
-   [taoensso.timbre :as log])
-  (:import java.lang.Math))
+   [taoensso.timbre :as log]))
 
 (defn merge-types
   [db search user type-code-from type-code-to]
@@ -182,7 +181,7 @@
   :type-codes :city-code :year :issuer :target :owner})
 
 (defn add-subsidies-from-csv!
-  [{:keys [db search] :as system} csv-path]
+  [{:keys [db] :as system} csv-path]
 
   (log/info "Reading subsidies from csv" csv-path)
 

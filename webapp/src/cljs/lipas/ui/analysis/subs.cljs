@@ -1,13 +1,11 @@
 (ns lipas.ui.analysis.subs
-  (:require [re-frame.core :as re-frame]))
+  (:require [re-frame.core :as rf]))
 
-(re-frame/reg-sub
- ::analysis
- (fn [db _]
-   (-> db :analysis)))
+(rf/reg-sub ::analysis
+  (fn [db _]
+    (-> db :analysis)))
 
-(re-frame/reg-sub
- ::selected-tool
- :<- [::analysis]
- (fn [analysis _]
-   (:selected-tool analysis)))
+(rf/reg-sub ::selected-tool
+  :<- [::analysis]
+  (fn [analysis _]
+    (:selected-tool analysis)))

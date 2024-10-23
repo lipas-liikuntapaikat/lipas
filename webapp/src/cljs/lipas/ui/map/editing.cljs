@@ -1,19 +1,17 @@
 (ns lipas.ui.map.editing
-  (:require
-   ["ol-ext/interaction/DrawHole$default" :as DrawHole]
-   ["ol/events/condition" :as events-condition]
-   ["ol/interaction/Draw$default" :as Draw]
-   ["ol/interaction/Modify$default" :as Modify]
-   ["ol/interaction/Select$default" :as Select]
-   ["ol/interaction/Snap$default" :as Snap]
-   ["ol/proj" :as proj]
-   [goog.object :as gobj]
-   [lipas.ui.map.events :as events]
-   [lipas.ui.map.styles :as styles]
-   [lipas.ui.map.utils :as map-utils]
-   [lipas.ui.utils :refer [==>] :as utils]
-   [re-frame.core :as rf]
-   [re-frame.db :as db]))
+  (:require ["ol-ext/interaction/DrawHole$default" :as DrawHole]
+            ["ol/events/condition" :as events-condition]
+            ["ol/interaction/Draw$default" :as Draw]
+            ["ol/interaction/Modify$default" :as Modify]
+            ["ol/interaction/Select$default" :as Select]
+            ["ol/interaction/Snap$default" :as Snap]
+            ["ol/proj" :as proj]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.styles :as styles]
+            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.utils :refer [==>] :as utils]
+            [re-frame.core :as rf]
+            [re-frame.db :as db]))
 
 (defn clear-edits!
   [{:keys [layers] :as map-ctx}]
@@ -28,20 +26,21 @@
   [{:keys [^js lmap layers] :as map-ctx}]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
-        snap      (Snap. #js{:source source :pixelTolerance 5})]
+        snap      (Snap. #js {:source source
+                              :pixelTolerance 5})]
     (.addInteraction lmap snap)
     (assoc-in map-ctx [:interactions :snap] snap)))
 
 (defn enable-delete!
   [{:keys [^js lmap layers] :as map-ctx} on-delete]
   (let [^js layer (-> layers :overlays :edits)
-        delete    (Select. #js{:layers #js[layer]
-                               :style  styles/hover-style})
+        delete    (Select. #js {:layers #js [layer]
+                                :style  styles/hover-style})
         source    (.getSource layer)]
     (.addInteraction lmap delete)
     (.on delete "select"
-         (fn [e]
-           (let [selected (gobj/get e "selected")]
+         (fn [^js e]
+           (let [selected (.-selected e)]
              (when (not-empty selected)
                (==> [:lipas.ui.map.events/confirm-remove-segment
                      (fn []
@@ -52,19 +51,19 @@
                        (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))])))))
     (-> map-ctx
         map-utils/enable-edits-hover!
-        (assoc-in[:interactions :delete] delete))))
+        (assoc-in [:interactions :delete] delete))))
 
 (defn enable-splitting!
   [{:keys [^js lmap layers] :as map-ctx} on-modify]
   (let [^js layer (-> layers :overlays :edits)
-        split     (Select. #js{:layers #js[layer]
-                               :style  styles/hover-style})
+        split     (Select. #js {:layers #js [layer]
+                                :style  styles/hover-style})
         source    (.getSource layer)]
     (.addInteraction lmap split)
     (.on split "select"
-         (fn [e]
-           (let [selected (gobj/get e "selected")
-                 euref    (gobj/getValueByKeys e "mapBrowserEvent" "coordinate")
+         (fn [^js e]
+           (let [selected (.-selected e)
+                 euref    (.. e -mapBrowserEvent -coordinate)
                  wgs      (proj/toLonLat euref "EPSG:3067")]
              (when (not-empty selected)
                (doseq [f selected]
@@ -100,7 +99,7 @@
 (defn start-drawing-hole!
   [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
   (let [^js layer (-> layers :overlays :edits)
-        draw-hole (DrawHole. #js{:layers #js[layer]})
+        draw-hole (DrawHole. #js {:layers #js [layer]})
         source    (.getSource layer)]
     (.addInteraction lmap draw-hole)
     (.on draw-hole "drawend"
@@ -115,18 +114,17 @@
         _         (.clear source)
         features  (-> geoJSON-feature clj->js map-utils/->ol-features)
         _         (.addFeatures source features)
-        modify    (Modify. #js{:source source})
-        hover     (Select.
-                   #js{:layers    #js[layer]
-                       :style     #js[styles/editing-hover-style styles/vertices-style]
-                       :condition (fn [^js evt]
-                                    ;; Without this check modify
-                                    ;; control doesn't work properly
-                                    ;; and linestrings / polygons
-                                    ;; can't be edited
-                                    (if (.-dragging evt)
-                                      false
-                                      (events-condition/pointerMove evt)))})]
+        modify    (Modify. #js {:source source})
+        hover     (Select. #js {:layers    #js [layer]
+                                :style     #js [styles/editing-hover-style styles/vertices-style]
+                                :condition (fn [^js evt]
+                                             ;; Without this check modify
+                                             ;; control doesn't work properly
+                                             ;; and linestrings / polygons
+                                             ;; can't be edited
+                                             (if (.-dragging evt)
+                                               false
+                                               (events-condition/pointerMove evt)))})]
 
     (.addInteraction lmap modify)
     (.addInteraction lmap hover)
@@ -168,12 +166,14 @@
     :as   map-ctx} geom-type on-draw-end]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
-        draw      (Draw. #js{:snapTolerance 0 :source source :type geom-type})]
+        draw      (Draw. #js {:snapTolerance 0
+                              :source source
+                              :type geom-type})]
 
     (.addInteraction lmap draw)
     (.on draw "drawend"
-         (fn [e]
-           (let [f     (gobj/get e "feature")
+         (fn [^js e]
+           (let [f     (.-feature e)
                  _     (.setId f (str (random-uuid)))
                  fs    (.getFeatures source)
                  _     (.push fs f)
@@ -240,11 +240,11 @@
         old-sm    (-> map-ctx :mode :sub-mode)]
     (case (:sub-mode mode)
       :drawing     (start-drawing! map-ctx geom-type
-                                 (fn [f] (==> [::events/new-geom-drawn f])))
+                                   (fn [f] (==> [::events/new-geom-drawn f])))
       :editing     (-> map-ctx
-                     (cond->
+                       (cond->
                          (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
-                     (start-editing! geoms on-modify))
+                       (start-editing! geoms on-modify))
       :deleting    (enable-delete! map-ctx on-modify)
       :splitting   (enable-splitting! map-ctx on-modify)
       :simplifying (simplify-edits! map-ctx mode)
@@ -306,14 +306,14 @@
         source    (.getSource layer)
         _         (.clear source)
         features  (-> geoms clj->js map-utils/->ol-features)
-        hover     (Select. #js{:layers    #js[layer]
-                               :condition events-condition/pointerMove
-                               :style     styles/line-direction-hover-style-fn})
-        select    (Select. #js{:layers #js[layer]
-                               :style  styles/line-direction-hover-style-fn})]
+        hover     (Select. #js {:layers    #js [layer]
+                                :condition events-condition/pointerMove
+                                :style     styles/line-direction-hover-style-fn})
+        select    (Select. #js {:layers #js [layer]
+                                :style  styles/line-direction-hover-style-fn})]
 
-    (.on select "select" (fn [e]
-                           (let [selected (gobj/get e "selected")]
+    (.on select "select" (fn [^js e]
+                           (let [selected (.-selected e)]
                              (when (not-empty selected)
                                (let [f        (first selected)
                                      fid      (.getId f)
@@ -349,7 +349,7 @@
 
         popup-overlay (-> map-ctx :overlays :popup)]
 
-    (.on select "select" (fn [e]
+    (.on select "select" (fn [^js e]
                            (let [selected (.-selected e)]
                              (if (seq selected)
                                (let [f        (first selected)
@@ -379,8 +379,6 @@
         (assoc-in [:interactions :route-part-difficulty-select] select)
         (assoc-in [:interactions :route-part-difficulty-hover] hover))))
 
-
-
 (defn set-editing-mode!
   ([map-ctx mode]
    (set-editing-mode! map-ctx mode false))
@@ -398,9 +396,7 @@
                         (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
                           ;; Switch back to editing normal :editing mode
                           ;;(==> [::events/continue-editing lipas-id :editing geom-type])
-                          )
-                        )]
-
+                          ))]
      (case sub-mode
        :view-only    (set-view-only-edit-mode! map-ctx mode)
        :drawing      (start-drawing! map-ctx geom-type on-modifyend)

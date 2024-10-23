@@ -1,14 +1,13 @@
 (ns lipas.ui.stats.views
-  (:require
-   [lipas.ui.mui :as mui]
-   [lipas.ui.stats.age-structure.views :as age-structure-stats]
-   [lipas.ui.stats.city.views :as city-stats]
-   [lipas.ui.stats.events :as events]
-   [lipas.ui.stats.finance.views :as finance-stats]
-   [lipas.ui.stats.sport.views :as sport-stats]
-   [lipas.ui.stats.subs :as subs]
-   [lipas.ui.stats.subsidies.views :as subsidies]
-   [lipas.ui.utils :refer [<== ==>] :as utils]))
+  (:require [lipas.ui.mui :as mui]
+            [lipas.ui.stats.age-structure.views :as age-structure-stats]
+            [lipas.ui.stats.city.views :as city-stats]
+            [lipas.ui.stats.events :as events]
+            [lipas.ui.stats.finance.views :as finance-stats]
+            [lipas.ui.stats.sport.views :as sport-stats]
+            [lipas.ui.stats.subs :as subs]
+            [lipas.ui.stats.subsidies.views :as subsidies]
+            [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn main []
   (let [tr  (<== [:lipas.ui.subs/translator])

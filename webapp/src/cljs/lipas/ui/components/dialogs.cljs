@@ -1,8 +1,6 @@
 (ns lipas.ui.components.dialogs
-  (:require
-   ["@mui/material/Slide$default" :as Slide]
-   [lipas.ui.mui :as mui]
-   [reagent.core :as r]))
+  (:require ["@mui/material/Slide$default" :as Slide]
+            [lipas.ui.mui :as mui]))
 
 (defn dialog
   [{:keys [title on-save on-close save-label save-enabled?
@@ -33,14 +31,14 @@
    ;; Top bar
    [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
     (into
-     [mui/dialog-actions {:style
-                          {:margin           0
-                           :padding-right    "0.5em"
-                           :background-color mui/primary}}
-      [mui/dialog-title {:sx {:flex-grow 1
-                              :color "white"}}
-       (or title "")]]
-     top-actions)]
+      [mui/dialog-actions {:style
+                           {:margin           0
+                            :padding-right    "0.5em"
+                            :background-color mui/primary}}
+       [mui/dialog-title {:sx {:flex-grow 1
+                               :color "white"}}
+        (or title "")]]
+      top-actions)]
 
    ;; Content
    (into [mui/dialog-content {:style {:padding 8}}]
@@ -49,13 +47,13 @@
    ;; Bottom bar
    [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
     (conj
-     (into
-      [mui/dialog-actions
-       {:style {:margin           0
-                :background-color mui/secondary2}}]
-      bottom-actions)
-     [mui/button {:on-click on-close}
-      close-label])]])
+      (into
+        [mui/dialog-actions
+         {:style {:margin           0
+                  :background-color mui/secondary2}}]
+        bottom-actions)
+      [mui/button {:on-click on-close}
+       close-label])]])
 
 (defn confirmation-dialog
   [{:keys [title message on-cancel on-decline decline-label

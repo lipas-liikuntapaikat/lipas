@@ -1,6 +1,5 @@
 (ns lipas.ui.reports.db
-  (:require
-   [lipas.reports :as reports]))
+  (:require [lipas.reports :as reports]))
 
 (def default-db
   {:dialog-open?      false

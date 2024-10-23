@@ -1,17 +1,16 @@
 (ns lipas.backend.analysis.diversity
-  (:require
-   [clojure.data.csv :as csv]
-   [clojure.java.io :as io]
-   [clojure.set :as set]
-   [clojure.string :as str]
-   [clojure.walk :as walk]
-   [taoensso.timbre :as log]
-   [lipas.backend.analysis.common :as common]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.osrm :as osrm]
-   [lipas.backend.search :as search]
-   [lipas.data.types :as types]
-   [lipas.utils :as utils]))
+  (:require [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
+            [clojure.set :as set]
+            [clojure.string :as str]
+            [clojure.walk :as walk]
+            [lipas.backend.analysis.common :as common]
+            [lipas.backend.gis :as gis]
+            [lipas.backend.osrm :as osrm]
+            [lipas.backend.search :as search]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log]))
 
 ;; process:
 
@@ -107,7 +106,7 @@
            site->type-code-fn :type-code
            site->distance-fn  :distance-m
            site->status-fn    (constantly true)}
-    :as   opts}]
+    :as   _opts}]
   (map
    (fn [pop-entry]
      (let [cats (reduce
@@ -267,7 +266,7 @@
 
 (defn calc-diversity-indices-2
   [search
-   {:keys [analysis-area-fcoll categories max-distance-m analysis-radius-km distance-mode]
+   {:keys [analysis-area-fcoll categories max-distance-m analysis-radius-km _distance-mode]
     :or   {max-distance-m 800 analysis-radius-km 5}
     :as   opts}]
   (let [categories (prepare-categories categories)
@@ -390,9 +389,7 @@
           (log/info "Writing batch DONE"))))))
 
 (comment
-  (require '[lipas.backend.search])
   (require '[lipas.backend.config :as config])
-  (require '[lipas.data.types :as types])
   config/default-config
   (def search (lipas.backend.search/create-cli (:search config/default-config)))
   (def point1
