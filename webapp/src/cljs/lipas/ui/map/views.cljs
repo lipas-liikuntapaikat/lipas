@@ -1,5 +1,6 @@
 (ns lipas.ui.map.views
-  (:require ["@mui/material/MenuItem$default" :as MenuItem]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
@@ -796,9 +797,8 @@
         accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
         activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
-        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
-        ;; TODO: check :activity/view later, when we have the read view implemented
-        view-activities?    edit-activities?
+        view-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
+        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
 
         floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
         floorball-type?      (contains? floorball-types type-code)
@@ -882,7 +882,7 @@
        [mui/tabs
         {:value       selected-tab
          :on-change   #(==> [::events/select-sports-site-tab %2])
-         :variant     (if edit-activities?
+         :variant     (if view-activities?
                         "scrollable"
                         "fullWidth")
          #_#_:variant "scrollable"
@@ -937,6 +937,12 @@
          0 [mui/grid {:container true}
 
             [mui/grid {:item true :xs 12}
+
+             (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
+                        (not can-publish?))
+               [:> Alert
+                {:severity "info"}
+                (tr :lipas.sports-site/no-permission-tab)])
 
              ^{:key (str "basic-data-" lipas-id)}
              [sports-sites/form
@@ -1018,7 +1024,8 @@
               :lipas-id     lipas-id
               :type-code    type-code
               :display-data display-data
-              :edit-data    edit-data}]])]
+              :edit-data    edit-data
+              :can-edit?    edit-activities?}]])]
 
      ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]

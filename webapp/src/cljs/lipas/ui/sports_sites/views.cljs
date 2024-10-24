@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.views
-  (:require ["mdi-material-ui/Calculator$default" :as Calculator]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["mdi-material-ui/Calculator$default" :as Calculator]
             ["recharts/es6/cartesian/Area" :refer [Area]]
             ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
             ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
@@ -575,6 +576,13 @@
       [lui/form
        {:key        key
         :read-only? read-only?}
+
+
+       (when (and edit-data
+                  read-only?)
+         [:> Alert
+          {:severity "info"}
+          (tr :lipas.sports-site/no-permission-tab)])
 
       ;; Swimming halls
        (when (#{3110 3130} type-code)
