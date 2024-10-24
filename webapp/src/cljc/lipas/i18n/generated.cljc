@@ -628,7 +628,8 @@
      :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
      :owner               "Omistaja",
      :owner-helper-text   "Kohteessa olevien rakenteiden tai palveluiden omistaja"
-     :marketing-name      "Markkinointinimi"},
+     :marketing-name      "Markkinointinimi"
+     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"},
     :status
     {:active                     "Toiminnassa",
      :planned                    "Suunniteltu"

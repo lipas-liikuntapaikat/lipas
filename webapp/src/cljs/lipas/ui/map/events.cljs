@@ -794,7 +794,7 @@
                   [:lipas.ui.search.events/clear-filters]]}))
 
 (rf/reg-event-fx ::add-analysis-target
-  (fn [{:keys [db]} _]
+  (fn [_ _]
     (let [template {:status "planning"
                     :name   "Analyysikohde"
                     :owner  "unknown"
