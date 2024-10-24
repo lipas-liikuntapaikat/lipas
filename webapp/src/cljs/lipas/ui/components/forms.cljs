@@ -3,15 +3,16 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]))
 
-(defn ->display-tf [{:keys [label value]} multiline? rows]
+(defn ->display-tf [{:keys [label value mui-props]} multiline? rows]
   (let [value (utils/display-value value :empty "-" :links? false)]
     [text-fields/text-field
-     {:label      label
-      :multiline  multiline?
-      :min-rows   rows
-      :value      value
-      :disabled   true
-      :read-only? true}]))
+     (merge {:label      label
+             :multiline  multiline?
+             :min-rows   rows
+             :value      value
+             :disabled   true
+             :read-only? true}
+            mui-props)]))
 
 (defn ->link
   "Layout is similar to text-field but contains a link."
