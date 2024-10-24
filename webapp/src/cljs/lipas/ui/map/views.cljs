@@ -690,6 +690,10 @@
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
+        ;; Allow map tools to be used with either regular or activity privileges
+        can-edit-map? (or can-publish?
+                          edit-activities?)
+
         ;; We have three privileges:
         ;; - can-publish? - :site/create-edit - Edit basic info and properties
         ;; - edit-activities? - :activity/edit - Edit activity
@@ -919,7 +923,7 @@
            ;; Active editing tool
               (when (and editing?
                          (#{"LineString" "Polygon"} geom-type)
-                         can-publish?)
+                         can-edit-map?)
                 [mui/tooltip
                  {:title
                   (case sub-mode
@@ -957,7 +961,7 @@
 
            ;; Tool select button
               (when (and editing?
-                         can-publish?
+                         can-edit-map?
                          (#{"LineString" "Polygon"} geom-type))
                 [:<>
                  [mui/tooltip {:title (tr :actions/select-tool)}

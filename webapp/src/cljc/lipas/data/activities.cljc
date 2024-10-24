@@ -883,12 +883,12 @@
 
 ;; https://www.bikeland.fi/vaativuusluokitukset
 (def cycling-route-part-difficulty
-  {"1a-easy"                  {:label {:fi "1 - Erittäin helppo (päällystetie)"
-                                       :se "1 - Mycket lätt (asfalterad väg)"
-                                       :en "1 - Very easy (paved road)"}}
-   "1b-easy"                  {:label {:fi "1 - Erittäin helppo (sora- tai metsätie)"
-                                       :se "1 - Mycket lätt (grus- eller skogsväg)"
-                                       :en "1 - Very easy (gravel or forest road)"}}
+  {"1a-easy"                  {:label {:fi "1a - Erittäin helppo (päällystetie)"
+                                       :se "1a - Mycket lätt (asfalterad väg)"
+                                       :en "1a - Very easy (paved road)"}}
+   "1b-easy"                  {:label {:fi "1b - Erittäin helppo (sora- tai metsätie)"
+                                       :se "1b - Mycket lätt (grus- eller skogsväg)"
+                                       :en "1b - Very easy (gravel or forest road)"}}
    "2-easy"                   {:label {:fi "2 - Helppo"
                                        :se "2 - Lätt"
                                        :en "2 - Easy"}
