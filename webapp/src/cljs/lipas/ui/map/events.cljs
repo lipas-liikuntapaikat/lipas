@@ -210,6 +210,8 @@
           undo-stack (get-in db [:map :temp lipas-id :undo-stack])]
       {:db (-> db
                (assoc-in [:map :mode :sub-mode] :undo)
+               ;; Remember the previous sub-mode
+               (assoc-in [:map :mode :prev-sub-mode] (-> db :map :mode :sub-mode))
                (assoc-in [:map :mode :undo-geoms] (peek undo-stack))
                (update-in [:map :temp lipas-id :undo-stack] pop)
                (update-in [:map :temp lipas-id :redo-stack] conj curr-geoms))})))
@@ -221,6 +223,7 @@
           redo-stack (get-in db [:map :temp lipas-id :redo-stack])]
       {:db (-> db
                (assoc-in [:map :mode :sub-mode] :undo)
+               (assoc-in [:map :mode :prev-sub-mode] (-> db :map :mode :sub-mode))
                (assoc-in [:map :mode :undo-geoms] (peek redo-stack))
                (update-in [:map :temp lipas-id :redo-stack] pop)
                (update-in [:map :temp lipas-id :undo-stack] conj curr-geoms))})))
@@ -230,7 +233,10 @@
   (fn [{:keys [db]} [_ lipas-id geoms]]
     (let [path [:sports-sites lipas-id :editing :location :geometries]]
       {:db         (cond-> db
-                     true     (update-in [:map :mode] merge {:geoms geoms :sub-mode :editing})
+                     true     (update-in [:map :mode] merge {:geoms geoms
+                                                             ;; Restore the previous sub-mode
+                                                             :sub-mode (or (-> db :map :mode :prev-sub-mode) :editing)
+                                                             :prev-sub-mode nil})
                      lipas-id (assoc-in path geoms))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
