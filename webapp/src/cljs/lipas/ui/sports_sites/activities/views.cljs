@@ -1059,14 +1059,14 @@
         geom-type (<== [::subs/geom-type read-only?])
         value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
         set-field (partial set-field lipas-id :properties lipas-prop-k)]
-    (js/console.log lipas-prop-k value)
     [:<>
      ;; Because the value (from display-data) is completely different type than
      ;; edit-data, we need to display it using different component. Same logic as ->field.
      (if read-only?
        (->display-tf
          {:label label
-          :value value}
+          :value value
+          :mui-props {:fullWidth true}}
          false
          1)
        (sports-sites-views/make-prop-field
