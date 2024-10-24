@@ -104,9 +104,9 @@
 
 (rf/reg-sub ::search-results-total-count
   :<- [::search-results-fast]
-  (fn [results _]
+  (fn [^js results _]
     (if results
-      (.. results -hits -total -value)
+      (some-> results .-hits .-total .-value)
       0)))
 
 (defn ->table-entry

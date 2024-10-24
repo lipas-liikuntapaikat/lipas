@@ -248,6 +248,7 @@ jobs:
           cache: npm
           cache-dependency-path: webapp/package-lock.json
 
+      # TODO: Drop docker compose in CI config
       - name: Run backend tests
         run: docker compose run --rm backend-tests
 

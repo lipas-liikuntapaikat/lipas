@@ -107,7 +107,12 @@ docker and host while developing.
 
 ### Backend
 
-`docker compose run backend-build`
+```
+docker compose run backend-build
+
+# or
+lein uberjar
+```
 
 See [certs/README.md](certs/README.md).
 
@@ -116,6 +121,9 @@ See [certs/README.md](certs/README.md).
 ```bash
 docker compose run frontend-npm-deps
 docker compose run frontend-build
+
+# or without Docker
+lein run -m shadow.cljs.devtools.cli release app
 ```
 
 ### Apple Silicon considerations
