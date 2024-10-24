@@ -48,7 +48,10 @@
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
                   ;; :loi/view
-                  :floorball/view}
+                  ;; Need to separate which floorball fields are viewable
+                  ;; to everyone and which require floorball-manager role (separate privilege?)
+                  ;; :floorball/view
+                  }
     :required-context-keys []
     :optional-context-keys []}
 
@@ -88,7 +91,7 @@
    :floorball-manager
    {:sort 30
     :assignable true
-    :privileges #{:floorball/edit}
+    :privileges #{:floorball/view :floorball/edit}
     :required-context-keys []
     :optional-context-keys [:type-code]}})
 
