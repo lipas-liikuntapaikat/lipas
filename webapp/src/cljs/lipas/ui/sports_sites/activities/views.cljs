@@ -1063,24 +1063,27 @@
      ;; Because the value (from display-data) is completely different type than
      ;; edit-data, we need to display it using different component. Same logic as ->field.
      (if read-only?
-       (->display-tf
-         {:label label
-          :value value
-          :mui-props {:fullWidth true}}
-         false
-         1)
-       (sports-sites-views/make-prop-field
-         {:tr          tr
-          :prop-k      lipas-prop-k
-          :read-only?  read-only?
-          :label       label
-          :description description
-          :value       value
-          :set-field   set-field
-          :problems?   nil
-          :geom-type   geom-type
-          :geoms       geoms}))
-     (when description
+       [->display-tf
+        {:label label
+         :value value
+         :mui-props {:fullWidth true}}
+        false
+        1]
+       [sports-sites-views/make-prop-field
+        {:tr          tr
+         :prop-k      lipas-prop-k
+         :read-only?  read-only?
+         :label       label
+         :description description
+         :value       value
+         :set-field   set-field
+         :problems?   nil
+         :geom-type   geom-type
+         :geoms       geoms}])
+     (when (and description
+                ;; material-field already displays the helper-text, but the read-only field doesn't
+                (or read-only?
+                    (not (sports-sites-views/material-field? lipas-prop-k))))
        [mui/form-helper-text description])]))
 
 (defn make-field
