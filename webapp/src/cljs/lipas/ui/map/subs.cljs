@@ -107,7 +107,7 @@
   ;; NOTE: This is JSON.parse result from the ajax call
   :<- [:lipas.ui.search.subs/search-results-fast]
   :<- [::editing-lipas-id]
-  (fn [[results lipas-id'] _]
+  (fn [[^js results lipas-id'] _]
     (when results
       (let [data (or (some-> results .-hits .-hits)
                      #js [])]

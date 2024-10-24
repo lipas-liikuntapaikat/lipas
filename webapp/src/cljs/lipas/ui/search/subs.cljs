@@ -149,7 +149,7 @@
   :<- [:lipas.ui.sports-sites.subs/admins]
   :<- [:lipas.ui.sports-sites.subs/owners]
   :<- [:lipas.ui.user.subs/user-data]
-  (fn [[results tr types cities admins owners user] _]
+  (fn [[^js results tr types cities admins owners user] _]
     (let [locale (tr)
           data   {:types  types
                   :cities cities

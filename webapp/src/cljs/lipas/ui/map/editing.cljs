@@ -80,10 +80,10 @@
 (defn enable-highlighting!
   [{:keys [lmap layers] :as map-ctx}
    {:keys [selected-features] :as mode}]
-  (let [edits-layer       (-> layers :overlays :edits)
-        edits-source      (.getSource edits-layer)
-        highlights-layer  (-> layers :overlays :highlights)
-        highlights-source (.getSource highlights-layer)]
+  (let [^js edits-layer       (-> layers :overlays :edits)
+        edits-source          (.getSource edits-layer)
+        ^js highlights-layer  (-> layers :overlays :highlights)
+        highlights-source     (.getSource highlights-layer)]
 
     #_(println "ENABLE HIGHLIGHTING")
 
@@ -301,7 +301,7 @@
     map-ctx))
 
 (defn set-travel-direction-edit-mode!
-  [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
+  [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms]}]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
         _         (.clear source)
@@ -323,7 +323,7 @@
     (.addInteraction lmap hover)
     (.addInteraction lmap select)
 
-    (doseq [f features]
+    (doseq [^js f features]
       (.setStyle f (styles/line-direction-style-fn f)))
 
     (.addFeatures source features)
@@ -333,7 +333,7 @@
         (assoc-in [:interactions :travel-direction-hover] hover))))
 
 (defn set-route-part-difficulty-edit-mode
-  [{:keys [layers lmap] :as map-ctx} {:keys [geoms]}]
+  [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms]}]
   (let [tr (:translator @db/app-db)
         ^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
@@ -352,7 +352,7 @@
     (.on select "select" (fn [^js e]
                            (let [selected (.-selected e)]
                              (if (seq selected)
-                               (let [f        (first selected)
+                               (let [^js f    (first selected)
                                      fid      (.getId f)
                                      lipas-id (.get f "lipas-id")
                                      coords   (.. f (getGeometry) (getCoordinateAt 0.5))]
@@ -369,7 +369,7 @@
     (.addInteraction lmap hover)
     (.addInteraction lmap select)
 
-    (doseq [f features]
+    (doseq [^js f features]
       (.setStyle f (fn [f]
                      (styles/route-part-difficulty-style-fn f tr false false))))
 

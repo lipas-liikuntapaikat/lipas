@@ -301,7 +301,7 @@
     styles))
 
 (defn line-direction-hover-style-fn
-  [feature]
+  [^js feature]
   (let [styles           #js [hover-style]
         geometry         (.getGeometry feature)
         travel-direction (.get feature "travel-direction")]
