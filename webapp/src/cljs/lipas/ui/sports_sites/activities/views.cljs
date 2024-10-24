@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.activities.views
-  (:require [clojure.pprint :as pprint]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            [clojure.pprint :as pprint]
             [clojure.string :as str]
             [lipas.ui.components :as lui]
             [lipas.ui.components.buttons :as lui-btn]
@@ -13,7 +14,8 @@
             [lipas.ui.sports-sites.views :as sports-sites-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            ["@mui/material/Typography$default" :as Typography]))
 
 (declare make-field)
 
@@ -1265,13 +1267,13 @@
     (println (str "Unknown field type: " (:type field)))))
 
 (defn view
-  [{:keys [type-code display-data edit-data tr lipas-id]}]
+  [{:keys [type-code display-data edit-data tr lipas-id can-edit?]}]
   (let [activity     (<== [::subs/activity-for-type-code type-code])
         activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
         locale       (tr)
         set-field    (partial set-field lipas-id :activities activity-k)
-        editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
+        editing?     (and can-edit? (<== [:lipas.ui.sports-sites.subs/editing? lipas-id]))
         read-only?   (not editing?)
         props        (or (some-> (get-in activity [:type->props type-code])
                                  (->> (select-keys (:props activity))))
@@ -1282,9 +1284,12 @@
                       ;; chooses which rev to base the edit-data on.
                       @(rf/subscribe [::sports-sites-subs/latest-rev lipas-id]))]
 
-    (js/console.log edit-data)
-
     [:<>
+
+     (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id]) (not can-edit?))
+       [:> Alert
+        {:severity "info"}
+        (tr :lipas.sports-site/no-permission-tab)])
 
      ;; Header
      #_[mui/grid {:item true :xs 12}
