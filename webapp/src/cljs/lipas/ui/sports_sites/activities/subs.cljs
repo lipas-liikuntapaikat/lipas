@@ -42,6 +42,12 @@
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user [_ activity-value role-context]]
     (and activity-value
+         (roles/check-privilege user (assoc role-context :activity activity-value) :activity/view))))
+
+(rf/reg-sub ::edit-activities?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user [_ activity-value role-context]]
+    (and activity-value
          (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
 
 (rf/reg-sub ::selected-features
@@ -51,13 +57,8 @@
 
 (rf/reg-sub ::route-view
   :<- [::activities]
-  :<- [::routes]
-  (fn [[activities routes] _]
-    (or
-      (:route-view activities)
-      (if (> (count routes) 1)
-        :multi
-        :single))))
+  (fn [activities _]
+    (:route-view activities)))
 
 (rf/reg-sub ::routes
   (fn [[_ lipas-id _]]
@@ -111,21 +112,16 @@
               (assoc :route-length (map-utils/calculate-length-km fcoll))
               (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
-(rf/reg-sub ::route-count
-  (fn [[_ lipas-id activity-k]]
-    [(rf/subscribe [::routes lipas-id activity-k])])
-  (fn [[routes] _]
-    (count routes)))
-
 (rf/reg-sub ::selected-route-id
   :<- [::activities]
-  :<- [::routes]
-  (fn [[activities routes] _]
+  (fn [activities _]
     (:selected-route-id activities)))
 
 (rf/reg-sub ::lipas-prop-value
   :<- [:lipas.ui.map.subs/selected-sports-site]
   (fn [site-data  [_ prop-k read-only?]]
+    ;; NOTE: This returns quite different data for most properties because
+    ;; display and edit data have different schema
     (if read-only?
       (get-in site-data [:display-data :properties prop-k])
       (get-in site-data [:edit-data :properties prop-k]))))
