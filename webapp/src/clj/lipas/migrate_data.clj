@@ -166,6 +166,6 @@
   (def search (:search system))
   (def user (core/get-user db "import@lipas.fi"))
   (-main "--old-lipas-since" "2019-01-01T00:00:00.000Z")
-  (-main "--city-data" "/Users/vaotjuha/lipas/raportit/city_stats5.edn")
+  (-main "--city-data" "/var/lipas/lipas/random-files/city_stats5.edn")
   (-main "--old-lipas" "527986")
-  (-main "--old-lipas-edn" "/Users/vaotjuha/lipas/data_migration/missing-ids.edn"))
+  (-main "--old-lipas-edn" "/var/lipas/random-files/missing-ids.edn"))
