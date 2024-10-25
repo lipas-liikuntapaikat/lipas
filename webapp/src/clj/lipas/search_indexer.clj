@@ -188,7 +188,7 @@
                  "--diversity" "diversity"
                  "search")
         config (-> (select-keys config/system-config [:lipas/db :lipas/search])
-                   (assoc-in [:search :create-indices] false))
+                   (assoc-in [:lipas/search :create-indices] false))
         system (backend/start-system! config)
         db     (:lipas/db system)
         search (:lipas/search system)]
