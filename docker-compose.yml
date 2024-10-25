@@ -364,7 +364,7 @@ services:
       - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
 
   legacy-api-base:
-    image: eclipse-temurin:17
+    image: openjdk:11
     logging:
       driver: "gelf"
       options:
