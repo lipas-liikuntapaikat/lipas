@@ -10,18 +10,19 @@
 (rf/reg-event-fx ::initialize-db
   [(rf/inject-cofx :lipas.ui.local-storage/get :login-data)]
   (fn  [{:keys [local-storage]}]
-    (if-let [login-data (:login-data local-storage)]
-      (let [;; login-data (update-in login-data [:permissions :roles] roles/conform-roles)
-           ;; TODO: If no :roles, ignore login-data -> go to login to get a new token with new roles
-            admin? (roles/check-role login-data :admin)]
-        {:db                     (-> db/default-db
-                                     (assoc-in [:user :login] login-data)
-                                     (assoc :logged-in? true)
-                                     (assoc :search search-db/default-db-logged-in))
-         :dispatch               [:lipas.ui.login.events/refresh-login]
-         :tracker/set-dimension! [:user-type (if admin? "admin" "user")]})
-      {:db                     db/default-db
-       :tracker/set-dimension! [:user-type "guest"]})))
+    (let [login-data (:login-data local-storage)
+          ;; data in local-storage is edn and coerced to use keywords and sets after login already
+          new-roles? (some? (:roles (:permissions login-data)))]
+      (if (and login-data new-roles?)
+        (let [admin? (roles/check-role login-data :admin)]
+          {:db                     (-> db/default-db
+                                       (assoc-in [:user :login] login-data)
+                                       (assoc :logged-in? true)
+                                       (assoc :search search-db/default-db-logged-in))
+           :dispatch               [:lipas.ui.login.events/refresh-login]
+           :tracker/set-dimension! [:user-type (if admin? "admin" "user")]})
+        {:db                     db/default-db
+         :tracker/set-dimension! [:user-type "guest"]}))))
 
 (rf/reg-event-db ::set-backend-url
   (fn [db [_ url]]
