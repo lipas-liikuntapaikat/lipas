@@ -144,7 +144,7 @@
                       {:key k}
                       (for [v vs]
                         ($ role-context
-                           {:key k
+                           {:key v
                             :k k
                             :v v
                             :tr tr})))))))))))

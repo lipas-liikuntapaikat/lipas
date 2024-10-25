@@ -205,7 +205,7 @@
   (let [locale (tr)
         localized (use-subscribe [::user-subs/context-value-name k v locale])]
     ($ Typography
-       {:key k
+       {:key (str k "-" v)
         :component "span"
         :sx #js {:mr 1}}
        ;; Role context key name
