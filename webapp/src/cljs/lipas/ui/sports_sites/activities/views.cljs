@@ -254,7 +254,7 @@
            :value     (get-in value [prop-k locale])}])]])])
 
 (defn duration
-  [{:keys [locale label description set-field value]}]
+  [{:keys [read-only? locale label description set-field value]}]
   (let [tr (<== [:lipas.ui.subs/translator])]
     [mui/form-control {:focused true}
      [form-label {:label label}]
@@ -269,18 +269,21 @@
         {:type      "number"
          :value     (:min value)
          :label     "Min"
-         :on-change #(set-field :min %)}]]
+         :on-change #(set-field :min %)
+         :disabled read-only?}]]
 
       [mui/grid {:item true :xs 3}
        [lui/text-field
         {:type      "number"
          :value     (:max value)
          :label     "Max"
-         :on-change #(set-field :max %)}]]
+         :on-change #(set-field :max %)
+         :disabled read-only?}]]
 
       [mui/grid {:item true :xs 6}
        [lui/select
-        {:items     [{:label {:fi "minuuttia" :se "minuter" :en "minutes"}
+        {:disabled read-only?
+         :items     [{:label {:fi "minuuttia" :se "minuter" :en "minutes"}
                       :value "minutes"
                       :sort  1}
                      {:label {:fi "tuntia" :se "timmar" :en "hours"}
@@ -400,7 +403,7 @@
           :add-btn-size     "small"}]]])))
 
 (defn rules
-  [{:keys [locale label description set-field value common-rules]}]
+  [{:keys [read-only? locale label description set-field value common-rules]}]
   (r/with-let [state (r/atom {:common-rules    (:common-rules value)
                               :custom-rules-vs (->> value :custom-rules (map :value))
                               :custom-rules    (or (when-let [coll (:custom-rules value)]
@@ -508,7 +511,8 @@
        ;; Common rules checkboxes
        [mui/grid {:item true :xs 12}
         [checkboxes
-         {:label       label
+         {:read-only?  read-only?
+          :label       label
           :value       (:common-rules @state)
           :helper-text description
           :sort-fn     (comp :fi :label second)
@@ -528,7 +532,8 @@
        ;; Custom rules
        [mui/grid {:item true :xs 12}
         [checkboxes
-         {:label           nil
+         {:read-only?      read-only?
+          :label           nil
           :value           (:custom-rules-vs @state)
           #_#_:helper-text description
           :sort-fn         (comp locale :label second)
@@ -543,26 +548,27 @@
                                                           (select-keys vs)
                                                           vals)))}]]
        ;; Add / modify custom rules btn
-       [mui/grid
-        {:item       true
-         :xs         12
-         :style      {:text-align "right"}
-         :class-name :no-print}
-        [mui/tooltip {:title     (if (seq (:custom-rules @state))
-                                   (tr :actions/edit)
-                                   (tr :actions/add))
-                      :placement "left"}
-         [mui/fab
-          {:style    {:margin-top "1em"}
-           :on-click (fn []
-                       (reset! dialog-state {:open? true
-                                             :mode  :add
-                                             :data  (:custom-rules @state)}))
-           :size     "small"
-           :color    "secondary"}
-          [mui/icon (if (seq (:custom-rules @state))
-                      "edit"
-                      "add")]]]]])))
+       (when-not read-only?
+         [mui/grid
+          {:item       true
+           :xs         12
+           :style      {:text-align "right"}
+           :class-name :no-print}
+          [mui/tooltip {:title     (if (seq (:custom-rules @state))
+                                     (tr :actions/edit)
+                                     (tr :actions/add))
+                        :placement "left"}
+           [mui/fab
+            {:style    {:margin-top "1em"}
+             :on-click (fn []
+                         (reset! dialog-state {:open? true
+                                               :mode  :add
+                                               :data  (:custom-rules @state)}))
+             :size     "small"
+             :color    "secondary"}
+            [mui/icon (if (seq (:custom-rules @state))
+                        "edit"
+                        "add")]]]])])))
 
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
@@ -1045,8 +1051,6 @@
                      (or selected-route-view
                          default-route-view))
         route-count (count routes)]
-
-    (js/console.log value routes)
 
     [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
 
