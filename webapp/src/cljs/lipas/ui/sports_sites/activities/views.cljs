@@ -237,14 +237,21 @@
       [lui/expansion-panel
        {:label            (get-in field [:label locale])
         :default-expanded false}
-       [lui/text-field
-        {:label     (get-in field [:description locale])
-         :multiline true
-         :rows      5
-         :fullWidth true
-         :variant   "outlined"
-         :on-change #(set-field prop-k locale %)
-         :value     (get-in value [prop-k locale])}]]])])
+       (if read-only?
+         [->display-tf
+          {:label     (get-in field [:description locale])
+           :mui-props {:fullWidth true}
+           :value     (get-in value [prop-k locale])}
+          true
+          5]
+         [lui/text-field
+          {:label     (get-in field [:description locale])
+           :multiline true
+           :rows      5
+           :fullWidth true
+           :variant   "outlined"
+           :on-change #(set-field prop-k locale %)
+           :value     (get-in value [prop-k locale])}])]])])
 
 (defn duration
   [{:keys [locale label description set-field value]}]
@@ -958,14 +965,16 @@
          [:<>
 
           [mui/grid {:item true :xs 12}
-           [mui/typography {:variant "body2"} "Valitse reitin osat kartalta"]]
+           [mui/typography
+            {:variant "body2"}
+            (tr :utp/select-route-parts-on-map)]]
 
           [mui/grid {:item true :xs 12}
            [mui/button
             {:variant  "contained"
              :color    "secondary"
              :on-click #(==> [::events/finish-route])}
-            "OK"]]])
+            (tr :utp/add-subroute-ok)]]])
 
        (when (and editing? (= :route-details mode))
          [:<>
@@ -994,7 +1003,7 @@
                                 :id         selected-route-id
                                 :route      @route-form-state
                                 :lipas-id   lipas-id}])}
-             "Reitti valmis"]]
+             (tr :utp/finish-route-details)]]
 
            ;; Delete
            [mui/grid {:item true}
@@ -1023,7 +1032,8 @@
   [{:keys [read-only? _route-props lipas-id activity-k value
            _locale _label _description _set-field _type-code]
     :as   props}]
-  (let [routes (if read-only?
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        routes (if read-only?
                  value
                  (<== [::subs/routes lipas-id activity-k]))
         default-route-view (if (> (count routes) 1)
@@ -1044,7 +1054,7 @@
 
      (when-not read-only?
        [mui/grid {:item true :xs 12}
-        [lui/switch {:label     "Reitti koostuu monesta erillisestä osuudesta"
+        [lui/switch {:label     (tr :utp/route-is-made-of-subroutes)
                      :value     (= :multi route-view)
                      :disabled  (> route-count 1)
                      :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
@@ -1298,17 +1308,6 @@
 
      ;; Locale selector
      [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
-      #_[lui/select
-         {:value     locale
-          :items     {:fi "Suomi"
-                      :se "Svenska"
-                      :en "English"}
-          :label     "Valitse kieli"
-          :label-fn  second
-          :value-fn  first
-          :on-change #(==> [:lipas.ui.events/set-translator %])}]
-
-      ;; Language selector
       [lang-selector {:locale locale}]]
 
      ;; Form

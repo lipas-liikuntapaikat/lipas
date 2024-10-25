@@ -949,7 +949,6 @@
               {:tr              tr
                :display-data    display-data
                :edit-data       edit-data
-               ;; FIXME: Only activities?
                :read-only?      (or (not editing?) (not can-publish?))
                :types           (vals types)
                :size-categories size-categories
@@ -980,6 +979,7 @@
              :on-change    (partial set-field :properties)
              :display-data (:properties display-data)
              :edit-data    (:properties edit-data)
+             :editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
              :geoms        (-> edit-data :location :geometries)
              :geom-type    geom-type
              :problems?    problems?

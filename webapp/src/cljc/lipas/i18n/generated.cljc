@@ -113,7 +113,11 @@
      :add-subroute         "Lisää osareitti"
      :delete-route-prompt  "Haluatko varmasti poistaa tämän reitin?"
      :custom-rule          "Oma lupa, sääntö, ohje"
-     :custom-rules         "Omat säännöt"}
+     :custom-rules         "Omat säännöt"
+     :add-subroute-ok      "OK"
+     :route-is-made-of-subroutes "Reitti koostuu monesta erillisestä osuudesta"
+     :select-route-parts-on-map "Valitse reitin osat kartalta"
+     :finish-route-details "Reitti valmis"}
     :newsletter
     {:subscribe-short      "Tilaa"
      :subscribe            "Tilaa uutiskirje"
@@ -1131,7 +1135,11 @@
      :add-subroute         "Lägg till delrutt"
      :delete-route-prompt  "Är du säker på att du vill ta bort den här rutten?"
      :custom-rule          "Egna tillstånd, regler, anvisningar"
-     :custom-rules         "Egen regler"}
+     :custom-rules         "Egen regler"
+     :add-subroute-ok      "OK"
+     :route-is-made-of-subroutes "Rutten består av flera separata sektioner"
+     :select-route-parts-on-map "Välj ruttdelar på kartan"
+     :finish-route-details "Rutt färdig"}
 
     :analysis
     {:headline                   "Analysverktyg (beta)"
@@ -1551,7 +1559,8 @@
      :add-new           "Lägg till en idrottsanläggning",
      :contact           "Kontaktinformation",
      :owner             "Ägare",
-     :marketing-name    "Varumärkesnamn"},
+     :marketing-name    "Varumärkesnamn"
+     :no-permission-tab "Du har inte behörighet att redigera informationen på denna flik"},
     :status
     {:active                     "Aktiv",
      :planned                    "Planerad"
@@ -2002,7 +2011,11 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :add-subroute         "Add sub-route"
      :delete-route-prompt  "Are you sure you want to delete this route?"
      :custom-rule          "Custom permit, regulation, instruction"
-     :custom-rules         "Custom instructions"}
+     :custom-rules         "Custom instructions"
+     :add-subroute-ok      "OK"
+     :route-is-made-of-subroutes "The route consists of multiple separate sections"
+     :select-route-parts-on-map "Select route parts on the map"
+     :finish-route-details "Route completed"}
     :analysis
     {:headline                   "Analysis Tool (beta)"
      :description                "The analysis tool can be used to evaluate the supply and accessibility of physical activity conditions by comparing the distance and travel times to physical activity facilities in relation to other facilities, population, and educational institutions."
@@ -2491,7 +2504,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :add-new           "Add Sports Facility",
      :contact           "Contact",
      :owner             "Owner",
-     :marketing-name    "Marketing name"},
+     :marketing-name    "Marketing name"
+     :no-permission-tab "You do not have permission to edit the information on this tab"},
     :status
     {:active                     "Active",
      :planned                    "Planned"
