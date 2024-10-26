@@ -825,7 +825,26 @@
 
       ))
 
-(def all all7)
+(def all8
+  (-> all7
+      (update-in [4810 :props] dissoc :free-use?)
+      (update-in [4820 :props] dissoc :free-use?)
+      (assoc-in [5120 :description :fi] "Pysyvästi purjehdusta varten varustettu alue.")
+      (assoc-in [202 :props :free-use?] {:priority 0})
+      (assoc-in [203 :props :free-use?] {:priority 0})
+      (assoc-in [204 :props :free-use?] {:priority 0})
+      (assoc-in [206 :props :free-use?] {:priority 0})
+      (assoc-in [301 :props :free-use?] {:priority 0})
+      (assoc-in [302 :props :free-use?] {:priority 0})
+      (assoc-in [304 :props :free-use?] {:priority 0})
+      (assoc-in [4412 :description :fi] "Pyöräilyreitti, joka kulkee enimmäkseen päällystetyillä teillä tai sorateillä. Reitti voi olla merkitty maastoon tai se on digitaalisesti opastettu.")
+      (assoc-in [5370 :name :fi] "Speedway-/jääspeedwayrata")
+      (assoc-in [6130 :name :fi] "Esteratsastuskenttä/-alue")
+      (assoc-in [3210 :name :fi] "Maauimala/vesipuisto")
+
+      ))
+
+(def all all8)
 
 (def active
   (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
@@ -843,5 +862,9 @@
   (utils/index-by (comp :fi :name) (vals sub-categories)))
 
 (comment
-  (all 2620)
+  (require '[clojure.pprint :as pprint])
+  #?(:clj (spit "/tmp/types.edn" (with-out-str (pprint/pprint all))))
+  #?(:clj (spit "/tmp/sub-cats.edn" (with-out-str (pprint/pprint sub-categories))))
+  #?(:clj (spit "/tmp/main-cats.edn" (with-out-str (pprint/pprint main-categories))))
+
   )
