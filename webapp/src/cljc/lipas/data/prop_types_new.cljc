@@ -163,6 +163,12 @@
                  :se "Länk till tillgänglighetsinformation"
                  :en "Link to accessibility information"})
 
+      ;; Update :accessibility-info description
+      (assoc-in [:accessibility-info :description]
+                {:fi "Syötä linkki verkkosivulle, jossa on kuvattu kohteen esteettömyyteen liittyvät tiedot"
+                 :se "Ange länken till webbplatsen där information om objektets tillgänglighet beskrivs."
+                 :en "Enter the link to the website where the accessibility information of the location is described."})
+
       ;; Update Halfpipe name
       (assoc-in [:halfpipe-count :name]
                 {:fi "Halfpipe lkm"
@@ -615,3 +621,9 @@
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
     (select-keys all used)))
+
+(comment
+  (require '[clojure.pprint :as pprint])
+  #?(:clj (spit "/tmp/prop-types.edn" (with-out-str (pprint/pprint all))))
+
+  )

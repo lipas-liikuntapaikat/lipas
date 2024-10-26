@@ -495,17 +495,18 @@
     [:<>
      [lui/checkbox
       {:label     label
+       :tooltip   tooltip
        :value     @checkbox-state
        :on-change #(reset! checkbox-state %)}]
      (when @checkbox-state
        [lui/text-field
-        {:value     value
-         :label     helper-text
-         :disabled  disabled?
-         :tooltip   tooltip
-         :spec      spec
-         :type      "number"
-         :on-change on-change}])])
+        {:value       value
+         :label       helper-text
+         :disabled    disabled?
+         #_#_:tooltip tooltip
+         :spec        spec
+         :type        "number"
+         :on-change   on-change}])])
   )
 
 (defn make-prop-field

@@ -61,4 +61,15 @@
 
   (require '[migratus.core :as migratus])
   (migratus/create nil "activities_status" :sql)
+  (migratus/create nil "roles" :edn)
+
+  (require '[lipas.maintenance :as maintenance])
+  (require '[lipas.backend.core :as core])
+
+  (def robot (core/get-user (db) "robot@lipas.fi"))
+
+  (maintenance/merge-types (db) (search) robot 4530 4510)
+  (maintenance/merge-types (db) (search) robot 4520 4510)
+  (maintenance/merge-types (db) (search) robot 4310 4320)
+
   )
