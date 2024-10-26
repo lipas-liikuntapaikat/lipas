@@ -12,14 +12,14 @@
     :description
     {:fi "Sisäliikuntatilan korkeus metreinä (matalin kohta)",
      :se "Motionssalens höjd i meter (från lägsta punkten)",
-     :en ""}},
+     :en "Height of the indoor sports facility in meters (lowest point)"}},
    :heating?
    {:name      {:fi "Lämmitys", :se "Uppvärmning", :en "Heating"},
     :data-type "boolean",
     :description
     {:fi "Onko liikuntapaikassa lämmitys",
      :se "Är idrottsplatsen utrustad med uppvärmning",
-     :en ""}},
+     :en "Is there heating in the sports facility"}},
    :field-2-area-m2
    {:name
     {:fi "2. kentän ala m2",
@@ -29,7 +29,7 @@
     :description
     {:fi "2. kentän pinta-ala neliömetreinä",
      :se "Andra planens areal i kvadratmeter",
-     :en ""}},
+     :en "2. field's area in square meters"}},
    :surface-material
    {:name
     {:fi "Pintamateriaali", :se "Ytmaterial", :en "Surface material"},
@@ -38,8 +38,8 @@
     {:fi
      "Liikunta-alueiden pääasiallinen pintamateriaali - tarkempi kuvaus liikuntapaikan eri tilojen pintamateriaalista voidaan antaa pintamateriaalin lisätietokentässä",
      :se
-     "Idrotts områdets ytmaterial. Friidrottsplanens mittplans pålägg.",
-     :en ""}},
+     "Huvudsakligt ytskikt för idrottsområden - en mer detaljerad beskrivning av ytskiktet i olika delar av idrottsanläggningen kan ges i tilläggsinformationsfältet för ytskikt.",
+     :en "Primary surface material of sports areas - a more detailed description of the surface material in different parts of the sports facility can be provided in the additional information field for surface material."}},
    :basketball-fields-count
    {:name
     {:fi "Koripallokentät lkm",
@@ -49,7 +49,7 @@
     :description
     {:fi "Koripallokenttien lukumäärä",
      :se "Antalet korgbollsplaner i salen",
-     :en ""}},
+     :en "The number of basketball courts"}},
    :surface-material-info
    {:name
     {:fi "Pintamateriaali lisätieto",
@@ -59,8 +59,8 @@
     :description
     {:fi
      "Syötä pintamateriaalin tarkempi kuvaus-  esim. tekonurmen yleisnimitys ”esim. Kumirouhetekonurmi”, tuotenimi ja tieto täytemateriaalin laadusta (esim. biohajoava/perinteinen kumirouhe).",
-     :se "Ytterilgare information om ytmaterialen",
-     :en ""}},
+     :se "Ange en mer detaljerad beskrivning av ytskiktet - till exempel den allmänna beteckningen för konstgräs t.ex. gummigranulatkonstgräs, produktnamn och information om fyllnadsmaterialets kvalitet (t.ex. biologiskt nedbrytbart/traditionellt gummigranulat).",
+     :en "Enter a more detailed description of the surface material - for example, the general name for artificial turf “e.g., rubber granulate artificial turf,” product name, and information about the quality of the infill material (e.g., biodegradable/traditional rubber granulate)."}},
    :height-of-basket-or-net-adjustable?
    {:name
     {:fi "Korin tai verkon korkeus säädettävissä",
@@ -86,14 +86,14 @@
     {:fi "Hyppyrimäen tyyppi (harjoitus, pienmäki, normaali, suurmäki)",
      :se
      "Typ av hoppbacke (övningsbacke, liten, normalbacke, storbacke)",
-     :en ""}},
+     :en "Type of ski jump (training hill, small hill, normal hill, large hill)"}},
    :lifts-count
    {:name      {:fi "Hissit lkm", :se "Antalet skidliftar", :en "Lifts"},
     :data-type "numeric",
     :description
     {:fi "Hiihtohissien lukumäärä",
      :se "Antal skidliftar i skidcentrumet",
-     :en ""}},
+     :en "Number of ski lifts"}},
    :field-3-length-m
    {:name
     {:fi "3. kentän pituus m",
@@ -103,17 +103,17 @@
     :description
     {:fi "3. kentän pituus metreinä",
      :se "Tredje planens längd i meter",
-     :en ""}},
+     :en "Length of the third field in meters"}},
    :pool-tracks-count
    {:name
     {:fi "1. altaan radat lkm",
      :se "Första bassängens antal banor",
-     :en "Courses in 1. pool"},
+     :en "Lanes in 1. pool"},
     :data-type "numeric",
     :description
     {:fi "1. altaan ratojen lukumäärä",
      :se "Antal banor i första bassängen",
-     :en ""}},
+     :en "Number of lanes in the first pool"}},
    :field-2-length-m
    {:name
     {:fi "2. kentän pituus m",
@@ -123,7 +123,7 @@
     :description
     {:fi "2. kentän pituus metreinä",
      :se "Andra planens längd i meter",
-     :en ""}},
+     :en "Length of the second field in meters"}},
    :plastic-outrun?
    {:name
     {:fi "Muovitettu alastulo",
@@ -133,7 +133,7 @@
     :description
     {:fi "Muovitettu hyppyrimäen alastulopaikka",
      :se "Hoppbacken har plast-belagd landningsplats",
-     :en ""}},
+     :en "Plastic-coated landing area of the ski jump"}},
    :automated-timing?
    {:name
     {:fi "Automaattinen ajanotto",
@@ -143,28 +143,28 @@
     :description
     {:fi "Varustus automaattiseen ajanottoon",
      :se "Utrustning för automatisk tidtagning",
-     :en ""}},
+     :en "Equipment for automatic timing"}},
    :freestyle-slope?
    {:name      {:fi "Kumparerinne", :se "Puckelpist", :en "Freestyle slope"},
     :data-type "boolean",
     :description
     {:fi "Hiihtokeskuksessa on kumparerinne",
      :se "Skidcentret har en puckelpist",
-     :en ""}},
+     :en "The ski resort has a mogul slope."}},
    :kiosk?
    {:name      {:fi "Kioski", :se "Kiosk", :en "Kiosk"},
     :data-type "boolean",
     :description
     {:fi "Onko liikuntapaikalla kioski tai vastaava",
      :se "Har idrottsplatsen en kiosk eller något liknande",
-     :en ""}},
+     :en "Is there a kiosk or similar facility at the sports venue"}},
    :summer-usage?
    {:name      {:fi "Kesäkäyttö", :se "I sommarbruk", :en "Summer usage"},
     :data-type "boolean",
     :description
     {:fi "Käytössä myös kesäisin",
-     :se "Används också under sommaren",
-     :en ""}},
+     :se "Tillgänglig även på sommaren",
+     :en "Available also in the summer"}},
    :stand-capacity-person
    {:name
     {:fi "Katsomon kapasiteetti hlö",
@@ -174,7 +174,7 @@
     :description
     {:fi "Katsomon koko kapasiteetti, henkilölukumäärä",
      :se "Läktarens hela person kapasitet",
-     :en ""}},
+     :en "Total capacity of the stands, number of people"}},
    :free-use?
    {:name
     {:fi "Kohde on vapaasti käytettävissä",
@@ -295,7 +295,7 @@
     :description
     {:fi "Tenniskenttien lukumäärä",
      :se "Antalet tennisplaner",
-     :en ""}},
+     :en "Number of tennis courts"}},
    :ski-service?
    {:name      {:fi "Suksihuolto", :se "Skidservice", :en "Ski service"},
     :data-type "boolean",
@@ -312,21 +312,21 @@
     :description
     {:fi "1. kentän pituus metreinä",
      :se "Första planens längd i meter",
-     :en ""}},
+     :en "Length of the first field in meters"}},
    :mirror-wall?
    {:name      {:fi "Peiliseinä", :se "Spegelvägg", :en "Mirror wall"},
     :data-type "boolean",
     :description
     {:fi "Liikuntatilassa vähintään yhdellä seinällä on kiinteät peilit",
-     :se "",
-     :en ""}},
+     :se "I idrottsutrymmet finns fasta speglar på minst en vägg.",
+     :en "The sports facility has fixed mirrors on at least one wall."}},
    :finish-line-camera?
    {:name      {:fi "Maalikamera", :se "Målkamera", :en "Finish line camera"},
     :data-type "boolean",
     :description
     {:fi "Liikuntapaikalla on maalikamera",
      :se "Idrottsplatsen har en målkamera",
-     :en ""}},
+     :en "The sports facility has a finish line camera."}},
    :travel-mode-info
    {:name
     {:fi "Kulkutavat, lisätieto",
@@ -344,7 +344,7 @@
     :description
     {:fi "Parkkipaikka käytettävissä",
      :se "Tillgänglig parkeringsplats",
-     :en ""}},
+     :en "Parking available"}},
    :canoeing-club?
    {:name      {:fi "Melontaseura", :se "", :en "Canoeing club"},
     :data-type "boolean",
@@ -373,7 +373,7 @@
     :description
     {:fi "Kiipeilyreittien lukumäärä",
      :se "Antalet klättringsrutter",
-     :en ""}},
+     :en "Number of climbing routes"}},
    :outdoor-exercise-machines?
    {:name
     {:fi "Kuntoilutelineitä",
@@ -383,7 +383,7 @@
     :description
     {:fi "Onko reitin varrella kuntoilulaitteita",
      :se "Finns det gym apparater längs rutten",
-     :en ""}},
+     :en "Are there fitness equipment along the route"}},
    :automated-scoring?
    {:name
     {:fi "Kirjanpitoautomaatti",
@@ -393,7 +393,7 @@
     :description
     {:fi "Keilaradalla on sähköinen pistelasku",
      :se "Bowlingbanan har elektroniskt poängräknings system",
-     :en ""}},
+     :en "The bowling alley has electronic scoring."}},
    :mobile-orienteering?
    {:name
     {:fi "Mobiilisuunnistusmahdollisuus",
@@ -408,14 +408,14 @@
     :description
     {:fi "Juoksuradan, pyöräilyradan tms. leveys metreinä",
      :se "Löpbanan, rundbanan el.dyl. bredd i meter",
-     :en ""}},
+     :en "Width of the running track, cycling track, etc., in meters"}},
    :ice-climbing?
    {:name      {:fi "Jääkiipeily", :se "Isklättring", :en "Ice climbing"},
     :data-type "boolean",
     :description
     {:fi "Onko jääkiipeily mahdollista kiipeilypaikalla",
      :se "Finns det möjlighet för isklättring vid klättringsplatsen",
-     :en ""}},
+     :en "Is ice climbing possible at the climbing site"}},
    :free-use {:name {:fi "Kohde on vapaasti käytettävissä"}},
    :field-length-m
    {:name
@@ -426,7 +426,7 @@
     :description
     {:fi "Kentän/kenttien pituus mahdollisine turva-alueineen metreinä",
      :se "Planens/planernas längd i meter",
-     :en ""}},
+     :en "Length of the field(s) including any safety areas in meters"}},
    :skijump-hill-material
    {:name
     {:fi "Vauhtimäen rakennemateriaali",
@@ -436,7 +436,7 @@
     :description
     {:fi "Vauhtimäen rakennemateriaali",
      :se "Överbackens konstruktionsmaterial (backhoppning)",
-     :en ""}},
+     :en "Construction material of the inrun"}},
    :carom-tables-count
    {:name
     {:fi "Karapöydät lkm",
@@ -453,7 +453,7 @@
     :description
     {:fi "Pisimmän rinteen pituus metreinä",
      :se "Längsta slalombackens längd i meter",
-     :en ""}},
+     :en "Length of the longest slope in meters"}},
    :circular-lanes-count
    {:name
     {:fi "Kiertävät radat lkm",
@@ -463,7 +463,7 @@
     :description
     {:fi "Kiertävien juoksuratojen lukumäärä",
      :se "Antalet cirkulerande löpbanor",
-     :en ""}},
+     :en "Number of circular running tracks"}},
    :boat-launching-spot?
    {:name
     {:fi "Veneen vesillelaskupaikka",
@@ -473,7 +473,7 @@
     :description
     {:fi "Mahdollisuus veneen vesillelaskuun",
      :se "Sjösättningsplats för båtar",
-     :en ""}},
+     :en "Possibility for boat launching"}},
    :parkour-hall-equipment-and-structures
    {:name
     {:fi "Parkour-salin varustelu ja rakenteet",
@@ -529,8 +529,8 @@
        "Område utrustat med gymmaskiner och utrustning för styrketräning."}}},
     :description
     {:fi "Valitse parkour-salissa olevat rakenteet tai varusteet",
-     :se "",
-     :en ""}},
+     :se "Välj de strukturer eller utrustningar som finns i parkourhallen",
+     :en "Select the structures or equipment available in the parkour gym"}},
    :ski-track-traditional?
    {:name
     {:fi "Perinteinen latu",
@@ -540,7 +540,7 @@
     :description
     {:fi "Perinteisen tyylin hiihtomahdollisuus/latu-ura",
      :se "Möjlighet att skida klassisk stil",
-     :en ""}},
+     :en "Classic style skiing track available"}},
    :altitude-difference
    {:name
     {:fi "Korkeusero m",
@@ -550,7 +550,7 @@
     :description
     {:fi "Reitin korkeusero metreinä",
      :se "Ruttens höjdskillnad i meter",
-     :en ""}},
+     :en "Elevation difference of the route in meters"}},
    :climbing-wall-height-m
    {:name
     {:fi "Kiipeilyseinän korkeus m",
@@ -560,7 +560,7 @@
     :description
     {:fi "Kiipeilyseinän korkeus metreinä (max)",
      :se "Klätterväggens höjd i meter (max)",
-     :en ""}},
+     :en "Height of the climbing wall in meters (max)"}},
    :route-width-m
    {:name
     {:fi "Reitin leveys m",
@@ -588,14 +588,14 @@
     :description
     {:fi "Hoidetun rannan pituus metreinä",
      :se "Skötta strandens längd i meter",
-     :en ""}},
+     :en "Length of the maintained beach in meters"}},
    :match-clock?
    {:name      {:fi "Ottelukello", :se "Matchklocka", :en "Match clock"},
     :data-type "boolean",
     :description
     {:fi "Onko liikuntapaikalla ottelukello",
      :se "Finns det en matchklocka vid idrottsplatsen",
-     :en ""}},
+     :en "Is there a match clock at the sports facility"}},
    :sprint-track-length-m
    {:name
     {:fi "Etusuoran pituus m",
@@ -605,7 +605,7 @@
     :description
     {:fi "Juoksuradan etusuoran pituus",
      :se "Längden på löpbanans raksträcka",
-     :en ""}},
+     :en "Length of the home straight of the running track"}},
    :inner-lane-length-m
    {:name
     {:fi "Sisäradan pituus m",
@@ -615,7 +615,7 @@
     :description
     {:fi "Sisäradan pituus kiertävissä radoissa",
      :se "Längden på innerbanan i de cirkulerande banorna",
-     :en ""}},
+     :en "Length of the inside lane in circular tracks"}},
    :discus-throw-places
    {:name
     {:fi "Kiekonheittopaikat lkm",
@@ -625,7 +625,7 @@
     :description
     {:fi "Kiekonheittopaikkojen lukumäärä",
      :se "Antalet diskuskastningsplatser",
-     :en ""}},
+     :en "Number of discus throw areas"}},
    :fields-count
    {:name
     {:fi "Kenttien lkm", :se "Antalet planer", :en "Number of fields"},
@@ -633,7 +633,7 @@
     :description
     {:fi "Montako saman tyypin kenttää liikuntapaikassa on",
      :se "Hur många planer av samma typ har motionsplatsen",
-     :en ""}},
+     :en "How many of the same type of fields are there at the sports facility"}},
    :field-1-width-m
    {:name
     {:fi "1. kentän leveys m",
@@ -643,7 +643,7 @@
     :description
     {:fi "1. kentän leveys metreinä",
      :se "Första planens bredd i meter",
-     :en ""}},
+     :en "Width of the first field in meters"}},
    :field-3-width-m
    {:name
     {:fi "3. kentän leveys m",
@@ -653,7 +653,7 @@
     :description
     {:fi "3. kentän leveys metreinä",
      :se "Tredje planens bredd i meter",
-     :en ""}},
+     :en "Width of the third field in meters"}},
    :field-2-width-m
    {:name
     {:fi "2. kentän leveys m",
@@ -663,7 +663,7 @@
     :description
     {:fi "2. kentän leveys metreinä",
      :se "Andra planens bredd i meter",
-     :en ""}},
+     :en "Width of the second field in meters"}},
    :badminton-courts-count
    {:name
     {:fi "Sulkapallokentät lkm",
@@ -673,7 +673,7 @@
     :description
     {:fi "Sulkapallokenttien lukumäärä salissa",
      :se "Antalet badmintonsplaner i salen",
-     :en ""}},
+     :en "Number of badminton courts in the hall"}},
    :fitness-stairs-length-m
    {:name
     {:fi "Kuntoportaiden pituus m",
@@ -690,8 +690,8 @@
     :description
     {:fi
      "Liikuntapaikka on asiakkaiden käytettävissä esim. kulkukortilla ilman henkilökunnan läsnäoloa. Vapaa asiakaskäyttö voi olla rajattu tiettyihin kellonaikoihin.",
-     :se "",
-     :en ""}},
+     :se "Idrottsanläggningen är tillgänglig för kunder, t.ex. med ett passerkort, utan personal närvarande. Fri kundanvändning kan vara begränsad till vissa tider.",
+     :en "The sports facility is available for customer use, e.g., with an access card, without staff presence. Free customer access may be limited to certain hours."}},
    :hammer-throw-places-count
    {:name
     {:fi "Moukarinheittopaikat lkm",
@@ -701,7 +701,7 @@
     :description
     {:fi "Moukarinheittopaikkojen lukumäärä",
      :se "Antal platser för att släggkastning",
-     :en ""}},
+     :en "Number of hammer throw areas"}},
    :may-be-shown-in-harrastuspassi-fi?
    {:name
     {:fi "Saa julkaista Harrastuspassi.fi-sovelluksessa",
@@ -733,7 +733,7 @@
     :description
     {:fi "1. altaan syvyys matalimmasta päästä metreinä",
      :se "Första bassängens grundaste punkt i meter.",
-     :en ""}},
+     :en "The depth of the shallowest end of the pool in meters."}},
    :padel-courts-count
    {:name
     {:fi "Padelkentät lkm",
@@ -754,7 +754,7 @@
     :description
     {:fi "Kaukaloiden lukumäärä",
      :se "Antalet rinkar (hockey) det finns vid idrottsplatsen",
-     :en ""}},
+     :en "The number of rinks."}},
    :field-1-area-m2
    {:name
     {:fi "1. kentän ala m2",
@@ -764,14 +764,14 @@
     :description
     {:fi "1. kentän pinta-ala neliömetreinä",
      :se "Första planens areal i kvadratmeter",
-     :en ""}},
+     :en "The area of the field in square meters."}},
    :k-point
    {:name      {:fi "K-piste", :se "K-punkt", :en "K point"},
     :data-type "numeric",
     :description
     {:fi "Hyppyrimäen k-piste metreinä",
      :se "Hoppbackens k-punkt i meter",
-     :en ""}},
+     :en "The K-point of the ski jumping hill in meters"}},
    :polevault-places-count
    {:name
     {:fi "Seiväshyppypaikat lkm",
@@ -781,7 +781,7 @@
     :description
     {:fi "Seiväshyppypaikkojen lukumäärä",
      :se "Antalet stavhoppningsplatser",
-     :en ""}},
+     :en "The number of pole vault areas."}},
    :group-exercise-rooms-count
    {:name
     {:fi "Ryhmäliikuntatilat lkm",
@@ -791,7 +791,7 @@
     :description
     {:fi "Liikuntasalien ja ryhmäliikuntatilojen lukumäärä",
      :se "Antalet gymnastiksalar och gruppmotions utrymmen",
-     :en ""}},
+     :en "The number of sports halls and group exercise spaces"}},
    :snowpark-or-street?
    {:name
     {:fi "Parkki", :se "Trick/street pist", :en "Snow park/street"},
@@ -800,7 +800,7 @@
     {:fi
      "Onko rinnehiihtokeskuksessa ns. temppurinne, snowpark tai vastaava",
      :se "Har skidcentrumet en trickbana, snowpark eller något liknande",
-     :en ""}},
+     :en "Is there a so-called adventure slope, snowpark, or similar area in the ski resort"}},
    :field-2-flexible-rink?
    {:name
     {:fi "2. kenttä: onko joustokaukalo?",
@@ -835,7 +835,7 @@
     :description
     {:fi "Suurin korkeusero rinteissä",
      :se "Största höjdskillnaden i slalombackorna",
-     :en ""}},
+     :en "The greatest elevation difference in the slopes"}},
    :bowling-lanes-count
    {:name
     {:fi "Keilaradat lkm",
@@ -853,7 +853,7 @@
     :description
     {:fi "Ilma-aseammuntamahdollisuus",
      :se "Möjlighet för luftgevärsskytte",
-     :en ""}},
+     :en "Availability of air gun shooting"}},
    :gymnastic-routines-count
    {:name
     {:fi "Telinevoimistelusarjat lkm",
@@ -863,14 +863,14 @@
     :description
     {:fi "Telinevoimistelun telinesarjojen lukumäärä",
      :se "Antalet redskap för redskapsgymnastik",
-     :en ""}},
+     :en "The number of apparatus for gymnastics routines"}},
    :toilet?
    {:name      {:fi "Yleisö-wc", :se "Allmän toalett", :en "Toilet"},
     :data-type "boolean",
     :description
     {:fi "Onko kohteessa yleiseen käyttöön tarkoitettuja wc-tiloja?",
      :se "Är allmänna toaletten i användning",
-     :en ""}},
+     :en "Are there public restroom facilities available at the location"}},
    :gymnastics-space?
    {:name
     {:fi "Telinevoimistelutila",
@@ -880,7 +880,7 @@
     :description
     {:fi "Onko liikuntasalissa myös telinevoimistelutila",
      :se "Har motionssalen också område/utrymme för redskapsgymnastik",
-     :en ""}},
+     :en "Is there also a gymnastics area in the sports hall"}},
    :snooker-tables-count
    {:name
     {:fi "Snookerpöydät lkm",
@@ -895,14 +895,14 @@
     {:fi
      "Onko ratsastuskentällä/maneesissa esteratsastukseen soveltuva varustus",
      :se "Har ridplanen/ridhuset utrustning för banhoppning",
-     :en ""}},
+     :en "Is there equipment suitable for show jumping in the riding arena/indoor arena"}},
    :shower?
    {:name      {:fi "Suihku", :se "Dusch", :en "Shower"},
     :data-type "boolean",
     :description
     {:fi "Onko suihku käytettävissä",
      :se "Är duschen i användning",
-     :en ""}},
+     :en "Is there a shower available"}},
    :rest-places-count
    {:name
     {:fi "Taukopaikat lkm",
@@ -912,7 +912,7 @@
     :description
     {:fi "Montako taukopaikkaa reitin varrella on",
      :se "Hur många viloplatser finns det längs med rutten",
-     :en ""}},
+     :en "How many rest areas are there along the route"}},
    :changing-rooms?
    {:name      {:fi "Pukukopit", :se "Omklädningsrum", :en "Changing rooms"},
     :data-type "boolean",
@@ -925,7 +925,7 @@
     :description
     {:fi "Pistooliammuntamahdollisuus",
      :se "Möjlighet för pistolskytte",
-     :en ""}},
+     :en "Availability of pistol shooting"}},
    :halfpipe-count
    {:name
     {:fi "Halfpipe lkm", :se "Antal halfpipe", :en "Halfpipe count"},
@@ -933,7 +933,7 @@
     :description
     {:fi "Halfpipe, superpipe lukumäärät",
      :se "Antal halfpipe",
-     :en ""}},
+     :en "The number of halfpipes and superpipes"}},
    :shooting-positions-count
    {:name
     {:fi "Ampumapaikat lkm",
@@ -943,7 +943,7 @@
     :description
     {:fi "Montako ampumapaikkaa liikuntareitin varrella on",
      :se "Hur många skytteplatser finns det längs motionsrutten",
-     :en ""}},
+     :en "How many shooting spots are there along the exercise route"}},
    :running-track-surface-material
    {:name
     {:fi "Juoksuradan pintamateriaali",
@@ -953,7 +953,7 @@
     :description
     {:fi "Juoksuradan pintamateriaali/päällyste",
      :se "Löpbanans ytmaterial/pålägg",
-     :en ""}},
+     :en "The surface material/overlay of the running track"}},
    :boating-service-class
    {:name
     {:fi "Venesatama- tai laituriluokka",
@@ -1046,7 +1046,7 @@
     :description
     {:fi "Montako kilometriä reitistä on valaistua",
      :se "Hur många km av rutten är uppbelyst",
-     :en ""}},
+     :en "How many kilometers of the route are illuminated"}},
    :area-m2
    {:name
     {:fi "Liikuntapinta-ala m2",
@@ -1056,7 +1056,7 @@
     :description
     {:fi "Liikuntapaikan liikuntapinta-ala, neliömetreinä",
      :se "Idrottsplatsens areal i kvadratmeter",
-     :en ""}},
+     :en "The sports area of the facility in square meters"}},
    :field-width-m
    {:name
     {:fi "Kentän leveys m", :se "Planens bredd m", :en "Width of field"},
@@ -1064,14 +1064,14 @@
     :description
     {:fi "Kentän/kenttien leveys mahdollisine turva-alueineen metreinä",
      :se "Planens/planernas bredd i meter",
-     :en ""}},
+     :en "The width of the field(s), including any safety zones, in meters"}},
    :cosmic-bowling?
    {:name      {:fi "Hohtokeilaus", :se "Discobowling", :en "Cosmic bowling"},
     :data-type "boolean",
     :description
     {:fi "Onko keilaradalla hohtokeilausmahdollisuus",
      :se "Har bowlingsbanan möjlighet för discobowling",
-     :en ""}},
+     :en "Is there an option for glow bowling at the bowling alley"}},
    :travel-modes
    {:name      {:fi "Kulkutavat", :se "Resesätt", :en "Travel Modes"},
     :data-type "enum-coll",
@@ -1126,7 +1126,7 @@
      "Uimaranta, joka täyttää EU-kriteerit uimaveden laadusta ja valvonnasta",
      :se
      "Badstrand, som fyller EU-kriterierna med kvaliteten och övervakningen av badvattnet",
-     :en ""}},
+     :en "A swimming beach that meets EU criteria for bathing water quality and monitoring"}},
    :rifle-shooting?
    {:name
     {:fi "Kivääriammunta", :se "Gevärbana", :en "Rifle shooting places"},
@@ -1134,7 +1134,7 @@
     :description
     {:fi "Kivääriammuntamahdollisuus",
      :se "Möjlighet för gevärskytte",
-     :en ""}},
+     :en "Availability of rifle shooting"}},
    :swimming-pool-count
    {:name
     {:fi "Altaiden lukumäärä",
@@ -1145,7 +1145,7 @@
     {:fi
      "Altaiden lukumäärä yhteensä. Syötä tieto tai laske automaattisesti.",
      :se "Antalet simbassänger, också terapi bassänger",
-     :en ""}},
+     :en "Total number of pools. Enter the information or calculate automatically."}},
    :pool-water-area-m2
    {:name
     {:fi "Vesipinta-ala m2",
@@ -1326,7 +1326,7 @@
     :description
     {:fi "1. altaan/pääaltaan pituus metreinä",
      :se "Första/huvudbassängens längd i meter",
-     :en ""}},
+     :en "The length of the pool/main pool in meters."}},
    :other-pools-count
    {:name
     {:fi "Muut altaat lkm",
@@ -1363,7 +1363,7 @@
     :description
     {:fi "Squash-kenttien lukumäärä",
      :se "Antalet squash-planer",
-     :en ""}},
+     :en "The number of squash courts"}},
    :changing-rooms-m2
    {:name
     {:fi "Pukukoppien kokonaispinta-ala m²",
@@ -1388,14 +1388,14 @@
     :description
     {:fi "Nyrkkeilykehien lukumäärä",
      :se "Antalet boxningsringar",
-     :en ""}},
+     :en "The number of boxing rings"}},
    :ice-reduction?
    {:name      {:fi "Jäätymisenesto", :se "Frostskydd", :en "Ice reduction"},
     :data-type "boolean",
     :description
     {:fi "Jäätymisenestojärjestelmä talviuintipaikassa",
      :se "Har vinterbadplatsen mekanism för frostskydd",
-     :en ""}},
+     :en "Anti-freeze system at the winter swimming location"}},
    :activity-service-company?
    {:name
     {:fi "Ohjelmapalveluyritys", :se "", :en "Activity service company"},
@@ -1418,7 +1418,7 @@
     :description
     {:fi "Miekkailualustojen lukumäärä",
      :se "Antal underlägg avsedda för fäktning",
-     :en ""}},
+     :en "The number of fencing mats"}},
    :weight-lifting-spots-count
    {:name
     {:fi "Painonnostopaikat/nostolavat lkm",
@@ -1441,7 +1441,7 @@
     :description
     {:fi "Alastulomonttujen lukumäärä",
      :se "Antalet landnigsgropar",
-     :en ""}},
+     :en "The number of landing pits"}},
    :bike-orienteering?
    {:name
     {:fi "Pyöräsuunnistus mahdollista",
@@ -1455,14 +1455,14 @@
     :description
     {:fi "Onko rinnehiihtokeskuksessa ohjaskelkkamäki",
      :se "Har skidcentrumet en rodelbana",
-     :en ""}},
+     :en "Is there a guided sledding slope at the ski resort?"}},
    :sauna?
    {:name      {:fi "Sauna", :se "Bastu", :en "Sauna"},
     :data-type "boolean",
     :description
     {:fi "Onko sauna käytettävissä",
      :se "Är bastun i användning",
-     :en ""}},
+     :en "Is there a sauna available"}},
    :jumps-count
    {:name
     {:fi "Hyppyrien lkm",
@@ -1480,7 +1480,7 @@
     :description
     {:fi "Pingis-/pöytätennispöytien lukumäärä",
      :se "Antal bordtennisbord (pingisbord)",
-     :en ""}},
+     :en "The number of table tennis tables"}},
    :pool-max-depth-m
    {:name
     {:fi "1. altaan syvyys max m",
@@ -1490,7 +1490,7 @@
     :description
     {:fi "1. altaan syvyys syvimmästä päästä metreinä",
      :se "Första bassängens djupaste punkt i meter",
-     :en ""}},
+     :en "The depth of the deepest end of the pool in meter"}},
    :loudspeakers?
    {:name      {:fi "Äänentoisto", :se "Ljudåtergivning", :en "Loudspeakers"},
     :data-type "boolean",
@@ -1499,7 +1499,7 @@
      "Onko liikuntapaikalla välineistö ja valmius kenttäkuulutuksiin",
      :se
      "Har motionsplatsen utrustning och färdighet till att göra utrop",
-     :en ""}},
+     :en "Does the sports facility have equipment and readiness for making announcements"}},
    :customer-service-point?
    {:name
     {:fi "Myynti- tai asiakaspalvelupiste",
@@ -1522,7 +1522,7 @@
     :description
     {:fi "Haulikkoammuntamahdollisuus",
      :se "Möjlighet för hagelskytte",
-     :en ""}},
+     :en "Availability of shotgun shooting"}},
    :water-point
    {:name        {:fi "Vesipiste", :en "Water point", :se "Vattenpunkt"},
     :description {:fi "", :se "", :en ""},
@@ -1544,14 +1544,14 @@
     :description
     {:fi "Montako rinnettä on valaistu",
      :se "Hur många belysta slalombackar finns det",
-     :en ""}},
+     :en "How many slopes are illuminated"}},
    :green?
    {:name      {:fi "Puttausviheriö", :se "Puttnings green", :en "Green"},
     :data-type "boolean",
     :description
     {:fi "Onko golfkentällä puttausviheriö",
      :se "Finns det en puttnings green vid golfbanan",
-     :en ""}},
+     :en "Is there a putting green on the golf course"}},
    :free-rifle-shooting?
    {:name
     {:fi "Pienoiskivääriammunta",
@@ -1561,7 +1561,7 @@
     :description
     {:fi "Pienoiskivääriammuntamahdollisuus",
      :se "Möjlighet förminiatyrgevärskytte",
-     :en ""}},
+     :en "Availability of small bore rifle shooting"}},
    :winter-usage?
    {:name      {:fi "Talvikäyttö", :se "Vinterbruk", :en "Winter usage"},
     :data-type "boolean",
@@ -1575,7 +1575,7 @@
     :description
     {:fi "Onko liikuntapaikka valaistu",
      :se "Är idrottsplatsen uppbelyst",
-     :en ""}},
+     :en "Is the sports facility illuminated"}},
    :field-3-area-m2
    {:name
     {:fi "3. kentän ala m2",
@@ -1585,7 +1585,7 @@
     :description
     {:fi "3. kentän pinta-ala neliömetreinä",
      :se "Tredje planens areal i kvadratmeter",
-     :en ""}},
+     :en "The area of the field in square meters"}},
    :accessibility-info
    {:name
     {:fi "Linkki esteettömyystietoon",
@@ -1608,14 +1608,14 @@
     :description
     {:fi "Katetun katsomon henkilömäärä",
      :se "Hur mycket av läktaren är täckt med tak, antalet personer",
-     :en ""}},
+     :en "The seating capacity of the covered grandstand"}},
    :playground?
    {:name      {:fi "Leikkipuisto", :se "Lekpark", :en "Playground"},
     :data-type "boolean",
     :description
     {:fi "Onko liikuntapaikan yhteydessä leikkipuisto",
      :se "Finns det en lekpark i samband med idrottsplatsen",
-     :en ""}},
+     :en "Is there a playground associated with the sports facility"}},
    :handball-fields-count
    {:name
     {:fi "Käsipallokentät lkm",
@@ -1625,14 +1625,14 @@
     :description
     {:fi "Käsipallokenttien lukumäärä salissa",
      :se "Antalet handbollsplaner som ryms i salen/hallen",
-     :en ""}},
+     :en "The number of handball courts in the hall"}},
    :p-point
    {:name      {:fi "P-piste", :se "P-punkt", :en "P point"},
     :data-type "numeric",
     :description
     {:fi "Hyppyrimäen P-piste metreinä",
      :se "Hoppbackens P-punkt i meter",
-     :en ""}},
+     :en "The P-point of the ski jumping hill in meters"}},
    :inruns-material
    {:name
     {:fi "Vauhtimäen latumateriaali",
@@ -1642,7 +1642,7 @@
     :description
     {:fi "Hyppyrimäen vauhtimäen materiaali",
      :se "Hoppbackens spårmaterial vid överbacken",
-     :en ""}},
+     :en "The material of the take-off ramp of the ski jumping hill"}},
    :pyramid-tables-count
    {:name
     {:fi "Pyramidipöydät lkm",
@@ -1661,7 +1661,7 @@
      "Onko liikuntapaikka normaali koripallokenttä, minikoripallokenttä vai yhden korin koripallokenttä",
      :se
      "Har idrottsplaten en normal korgbollsplan, mini-korgbollsplan eller bara en korg",
-     :en ""}},
+     :en "Is the sports facility a standard basketball court, a mini basketball court, or a one-basket basketball court"}},
    :kaisa-tables-count
    {:name
     {:fi "Kaisapöydät lkm",
@@ -1678,7 +1678,7 @@
     :description
     {:fi "Lentopallokenttien lukumäärä",
      :se "Antalet volleybollplaner",
-     :en ""}},
+     :en "The number of volleyball courts"}},
    :boat-places-count
    {:name
     {:fi "Venepaikat lkm", :se "Antalet båtplats", :en "Boat places"},
@@ -1694,7 +1694,7 @@
     :description
     {:fi "1. altaan veden lämpötila celsiusasteina",
      :se "Första bassängens vatten temperatur i celcius",
-     :en ""}},
+     :en "The water temperature of the pool in degrees Celsius"}},
    :climbing-wall?
    {:name      {:fi "Kiipeilyseinä", :se "Klättervägg", :en "Climbing wall"},
     :data-type "boolean",
@@ -1709,14 +1709,14 @@
     :description
     {:fi "Vapaan tyylin latu-ura/luistelu-ura",
      :se "Skidspår för fristil",
-     :en ""}},
+     :en "Free style track/skating track"}},
    :spinning-hall?
    {:name      {:fi "Spinning-sali", :se "Spinning sal", :en "Spinning hall"},
     :data-type "boolean",
     :description
     {:fi "Salissa spinning-varustus",
      :se "Salen har spinning utrustning",
-     :en ""}},
+     :en "Spinning equipment in the hall"}},
    :other-platforms?
    {:name
     {:fi "Muut hyppytelineet",
@@ -1726,7 +1726,7 @@
     :description
     {:fi "Uimahyppytelineet rannalla",
      :se "Hopptornen vid stranden",
-     :en ""}},
+     :en "Diving boards at the beach"}},
    :school-use?
    {:name
     {:fi "Koululiikuntapaikka",
@@ -1736,7 +1736,7 @@
     :description
     {:fi "Liikuntapaikkaa käytetään koulujen liikuntatunneilla",
      :se "Idrottsplatsen används under skolornas gymnastiktimmar",
-     :en ""}},
+     :en "The sports facility is used for school physical education classes"}},
    :highjump-places-count
    {:name
     {:fi "Korkeushyppypaikat lkm",
@@ -1746,7 +1746,7 @@
     :description
     {:fi "Korkeushppypaikkojen lukumäärä",
      :se "Antalet höjdhoppsplatser",
-     :en ""}},
+     :en "The number of high jump areas"}},
    :light-roof?
    {:name
     {:fi "Kevytkate", :se "Lättvikts takläggning", :en "Light roof"},
@@ -1755,7 +1755,7 @@
     {:fi "Kentälle voidaan asentaa kevytkate tai muu tilapäinen katos",
      :se
      "På planen kan installeras en lättvikts takläggning eller något annat tillfälligt tak",
-     :en ""}},
+     :en "A lightweight cover or another temporary canopy can be installed on the field"}},
    :route-length-km
    {:name
     {:fi "Reitin pituus km",
@@ -1765,7 +1765,7 @@
     :description
     {:fi "Reitin pituus kilometreinä",
      :se "Ruttens längd i kilometer",
-     :en ""}},
+     :en "The length of the route in kilometers"}},
    :field-3-flexible-rink?
    {:name
     {:fi "3. kenttä: onko joustokaukalo?",
@@ -1782,11 +1782,11 @@
     :description
     {:fi "Kuntoilulaitteiden lukumäärä",
      :se "Antalet gym apparater",
-     :en ""}},
+     :en "The number of exercise machines"}},
    :track-type
    {:name        {:fi "Ratatyyppi", :se "Typ av bana", :en "Type of track"},
     :data-type   "string",
-    :description {:fi "Radan tyyppi", :se "Banans typ", :en ""}},
+    :description {:fi "Radan tyyppi", :se "Banans typ", :en "The type of the track"}},
    :training-spot-surface-material
    {:name
     {:fi "Suorituspaikan pintamateriaali",
@@ -1796,7 +1796,7 @@
     :description
     {:fi "Esim. keihäänheittopaikan pintamateriaali/päällys",
      :se "T.ex. spjutkastningsplatsens ytmaterial/överläggning",
-     :en ""}},
+     :en "E.g. the surface material/overlay of the javelin throw area."}},
    :range?
    {:name
     {:fi "Harjoitusalue/range", :se "Övningszon/Range", :en "Range"},
@@ -1804,7 +1804,7 @@
     :description
     {:fi "Onko golfin harjoitusalue/range",
      :se "Finns det övningsområde/range för golf",
-     :en ""}},
+     :en "Is there a golf practice area/range"}},
    :track-length-m
    {:name
     {:fi "Radan pituus m",
@@ -1814,7 +1814,7 @@
     :description
     {:fi "Juoksuradan, pyöräilyradan tms. pituus metreinä",
      :se "Löpbanans, rundbanans el.dyl. längd i meter",
-     :en ""}}})
+     :en "The length of the running track, cycling track, etc., in meters"}}})
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]

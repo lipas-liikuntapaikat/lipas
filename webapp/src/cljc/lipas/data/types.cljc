@@ -1766,9 +1766,10 @@
      "Includes bleachers, whose size is specified in properties. Number of fields, heating, changing rooms, etc., specified in properties."},
     :tags          {:fi ["jäähalli"]},
     :additional-type
-    {:small       {:fi "Pieni kilpahalli > 500 hlö", :en nil, :se nil},
-     :competition {:fi "Kilpahalli < 3000 hlö", :en nil, :se nil},
-     :large       {:fi "Suurhalli > 3000 hlö", :en nil, :se nil}},
+    {:small       {:fi "Pieni kilpahalli > 500 hlö", :en "Small competition hall > 500 people", :se "Liten tävlingshall > 500 personer"},
+     :competition {:fi "Kilpahalli < 3000 hlö", :en "Competition hall < 3000 people", :se "Tävlingshall < 3000 personer"},
+     :large       {:fi "Suurhalli > 3000 hlö", :en "Large hall > 3000 people", :se "Större hall > 3000 personer"}}
+,
     :name
     {:fi "Kilpajäähalli",
      :se "Tävlingsishall",
@@ -4309,8 +4310,8 @@
    {:description
     {:fi
      "Melontaan tarkoitettu palvelupaikka, jossa voi olla esim. vuokrauspalveluita. Melontakeskuksesta voi lähteä melontareitti tai sen yhteydessä voi olla melontaratoja.",
-     :se "",
-     :en ""},
+     :se "En paddlingsanläggning med uthyrningstjänster. Från paddlingscentret kan det finnas paddelleder eller paddelbanor i närheten.",
+     :en "A canoeing facility with rental services. From the canoeing center, there may be canoeing routes or paddling tracks nearby."},
     :tags          {:fi ["melonta" "kajakki" "kanootti" "melontakeskus"]},
     :name
     {:fi "Melontakeskus",
