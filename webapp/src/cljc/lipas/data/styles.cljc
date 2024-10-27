@@ -412,7 +412,7 @@
     :stroke {:color "#000000"}},
    103
    {:shape "polygon",
-    :fill {:color "#57fba0"},
+    :fill {:color "#57fbc4"},
     :stroke {:color "#000000", :width 1.5}},
    201
    {:shape "circle",
@@ -743,7 +743,7 @@
    4407
    {:shape "linestring",
     :stroke
-    {:color "#f77ec3",
+    {:color "#827e3b",
      :width 3.5,
      :line-cap "round",
      :line-join "round",
@@ -779,12 +779,12 @@
    1190
    {:shape "circle",
     :radius 9,
-    :fill {:color "#f2d3ef"},
+    :fill {:color "#f0c0eb"},
     :stroke {:color "#000000"}}
    ;; Golfkenttä (alue)
    1650
    {:shape "polygon",
-    :fill {:color "#9efa52"},
+    :fill {:color "#c9ff05"},
     :stroke {:color "#000000" :width 1.5}}
    ;; Sisäleikki-/aktiviteettipuisto:
    2225
@@ -798,16 +798,17 @@
     :radius 9,
     :fill {:color "#9afcc0"},
     :stroke {:color "#000000"}}
+   ;; Vesiurheilukeskus
    3250
    {:shape "circle",
     :radius 9,
-    :fill {:color "#6e6d91"},
+    :fill {:color "#60669c"},
     :stroke {:color "#000000"}}
    ;; Jousiammuntamaastorata
    4840
    {:shape "circle",
     :radius 9,
-    :fill {:color "#948938"},
+    :fill {:color "#dcc210"},
     :stroke {:color "#000000"}}
    ;; Monikäyttöalueet ja virkistysmetsät, joissa on virkistyspalveluita
    106
