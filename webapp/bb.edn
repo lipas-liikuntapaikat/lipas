@@ -11,4 +11,9 @@
          cljfmt {:doc "Run cljfmt through Clojure-LSP, taking each file to format as argument (so works with shell globs)"
                  :task (do
                          (let [files *command-line-args*]
-                           (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}}}
+                           (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}
+
+         dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
+                          :task (do (shell "lein run -m shadow.cljs.devtools.cli release app")
+                                    (shell "scp resources/public/js/compiled/app.js lipas-dev.cc.jyu.fi:/var/tmp/app.js")
+                                    (shell "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js /var/lipas/webapp/resources/public/js/compiled/app.js\""))}}}
