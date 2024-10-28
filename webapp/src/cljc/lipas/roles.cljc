@@ -15,8 +15,9 @@
    :loi/create-edit {:doc "Oikeus luoda ja muokata Muita kohteita"}
    :loi/view {:doc "Oikeus nähdä Muita kohteita"}
 
-   :floorball/view {:doc "Oikeus nähdä Salibandy lisätiedot"}
-   :floorball/edit {:doc "Oikeus muokata Salibandy lisätietoja"}
+   :floorball/view {:doc "Oikeus nähdä Salibandy perus tiedot"}
+   :floorball/view-extended {:doc "Oikeus nähdä Salibandy erityiset lisätiedot"}
+   :floorball/edit {:doc "Oikeus muokata Salibandy lisätietoja (olosuhteet välilehti muokattavissa)"}
 
    :analysis-tool/use {:doc "Oikeus käyttää analyysityökalua"}
 
@@ -48,10 +49,7 @@
                   ;; New feature currently hidden,
                   ;; will later be enabled for everyone.
                   ;; :loi/view
-                  ;; Need to separate which floorball fields are viewable
-                  ;; to everyone and which require floorball-manager role (separate privilege?)
-                  ;; :floorball/view
-                  }
+                  :floorball/view}
     :required-context-keys []
     :optional-context-keys []}
 
@@ -91,7 +89,7 @@
    :floorball-manager
    {:sort 30
     :assignable true
-    :privileges #{:floorball/view :floorball/edit}
+    :privileges #{:floorball/view :floorball/view-extended :floorball/edit}
     :required-context-keys []
     :optional-context-keys [:type-code]}})
 

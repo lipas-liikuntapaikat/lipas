@@ -1679,7 +1679,6 @@
                      :indicator-color "secondary"
                      :text-color "inherit"}
                     [mui/tab {:value "floorball" :label "Salibandy"}]]
-                   ;; TODO: Add notification box if user doesn't have permission to edit this tab?
                    [floorball/form
                     {:tr           tr
                      :lipas-id     nil

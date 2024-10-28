@@ -281,6 +281,8 @@
 
     ;; Table with selectable rows and 'edit' 'delete' and 'add'
     ;; actions
+    ;; NOTE: Component users need to setup React Key to update the table
+    ;; contents when the items update (at least after new items etc.)
     (r/with-let [idx->item (r/atom (into {} (map-indexed vector items)))
                  selected-item (r/atom nil)
                  key-fn (or key-fn (constantly nil))]

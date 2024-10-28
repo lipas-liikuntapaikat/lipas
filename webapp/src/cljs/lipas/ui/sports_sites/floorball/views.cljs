@@ -1,18 +1,19 @@
 (ns lipas.ui.sports-sites.floorball.views
-  (:require ["mdi-material-ui/Calculator$default" :as Calculator]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["mdi-material-ui/Calculator$default" :as Calculator]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.floorball.events :as events]
             [lipas.ui.sports-sites.floorball.subs :as subs]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils :refer [<== ==>]]
+            [re-frame.core :as rf]
             [reagent.core :as r]))
 
 (defn surface-area-field
   [{:keys [on-change value] :as props}]
   (let [{:keys [width-m length-m]} (<== [::subs/dialog-data :field])]
-    [lui/text-field (cond-> (dissoc props :width-m :length-m)
-                      (number? value) (assoc :InputLabelProps {:shrink true}))]
     [mui/form-group
      [lui/text-field
       (merge props
@@ -31,7 +32,7 @@
                    "m²"]])}})]]))
 
 (defn field-form
-  [{:keys [tr read-only? visibility on-change edit-data display-data]}]
+  [{:keys [tr read-only? view-all-fields? on-change edit-data display-data]}]
   (let [locale                (tr)
         field-types           (<== [:lipas.ui.sports-sites.subs/field-types])
         surface-materials     (<== [::subs/field-surface-materials])
@@ -151,7 +152,7 @@
         :on-change #(on-change :surface-material-color %)}]}
 
      ;; Valaistus, kulma 1/1
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, kulma 1/1 (lux)"
         :value (-> display-data :lighting-corner-1-1-lux)
         :form-field
@@ -162,7 +163,7 @@
           :on-change #(on-change :lighting-corner-1-1-lux %)}]})
 
      ;; Valaistus, kulma 1/2
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, kulma 1/2 (lux)"
         :value (-> display-data :lighting-corner-1-2-lux)
         :form-field
@@ -174,7 +175,7 @@
           :on-change #(on-change :lighting-corner-1-2-lux %)}]})
 
      ;; Valaistus, maali 1
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, maali 1 (lux)"
         :value (-> display-data :lighting-goal-1-lux)
         :form-field
@@ -186,7 +187,7 @@
           :on-change #(on-change :lighting-goal-1-lux %)}]})
 
      ;; Valaistus, keskipiste
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, keskipiste (lux)"
         :value (-> display-data :lighting-center-point-lux)
         :form-field
@@ -198,7 +199,7 @@
           :on-change #(on-change :lighting-center-point-lux %)}]})
 
      ;; Valaistus, kulma 2/1
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, kulma 2/1 (lux)"
         :value (-> display-data :lighting-corner-2-1-lux)
         :form-field
@@ -210,7 +211,7 @@
           :on-change #(on-change :lighting-corner-2-1-lux %)}]})
 
      ;; Valaistus, kulma 2/2
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, kulma 2/2 (lux)"
         :value (-> display-data :lighting-corner-2-2-lux)
         :form-field
@@ -222,7 +223,7 @@
           :on-change #(on-change :lighting-corner-2-2-lux %)}]})
 
      ;; Valaistus, maali 2
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Valaistus, maali 2 (lux)"
         :value (-> display-data :lighting-goal-2-lux)
         :form-field
@@ -350,7 +351,7 @@
         :on-change #(on-change :accessible-seating-capacity-person %)}]}
 
      ;; Tulostaulu näkyy vaihtopenkeille
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Tulostaulu näkyy vaihtopenkeille"
         :value (-> display-data :scoreboard-visible-to-benches?)
         :form-field
@@ -359,7 +360,7 @@
           :on-change #(on-change :scoreboard-visible-to-benches? %)}]})
 
      ;; Tulostaulu näkyy toimitsijapöydälle (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Tulostaulu näkyy toimitsijapöydälle"
         :value (-> display-data :scoreboard-visible-to-officials?)
         :form-field
@@ -371,7 +372,7 @@
      ;; => out of scope
 
      ;; Pääseekö kenttätasolle ilman rappusia (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kenttätasolle pääsee ilman rappusia"
         :value (-> display-data :field-accessible-without-strairs?)
         :form-field
@@ -380,7 +381,7 @@
           :on-change #(on-change :field-accessible-without-strairs? %)}]})
 
      ;; Yleisön kulku katsomoon (Kenttätasolta / Yläkautta)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Yleisön kulku katsomoon"
         :value (-> display-data :audience-stand-access)
         :form-field
@@ -392,7 +393,7 @@
           :on-change #(on-change :audience-stand-access %)}]})]))
 
 (defn field-dialog
-  [{:keys [tr lipas-id visibility read-only?]}]
+  [{:keys [tr lipas-id view-all-fields? read-only?]}]
   (let [open?  (<== [::subs/dialog-open? :field])
         data   (<== [::subs/dialog-data :field])
         reset  #(==> [::events/reset-dialog :field])
@@ -418,47 +419,20 @@
       {:tr           tr
        :edit-data    data
        :display-data data
-       :visibility   visibility
+       :view-all-fields? view-all-fields?
        :read-only?   read-only?
        :on-change    (fn [field value]
                        (==> [::events/set-dialog-field :field field value]))}]]))
 
-(defn make-fields-table-headers
-  [visibility]
-  (let [fb? (= :floorball visibility)]
-    (->>
-      [[:name {:fi "Nimi"}]
-       [:length-m {:fi "Pituus (m)"}]
-       [:width-m {:fi "Leveys (m)"}]
-       #_[:surface-area-m2 {:fi "Pinta-ala (m²)"}]
-       #_[:minimum-height-m {:fi "Minimikorkeus (m)"}]
-       #_[:surface-material {:fi "Lattiamateriaali"}]
-       #_[:floor-elasticity {:fi "Jousto-ominaisuudet"}]
-       #_[:surface-material-product {:fi "Lattiamateriaalin merkki"}]
-       #_[:surface-material-color {:fi "Lattian väri"}]
-       #_[:rink-product {:fi "Kaukalon merkki"}]
-       #_[:rink-color {:fi "Kaukalon Väri"}]
-       #_(when fb? [:lighting-corner-1-1-lux {:fi "Valaistus kulma 1/1 (lux)"}])
-       #_(when fb? [:lighting-corner-1-2-lux {:fi "Valaistus kulma 1/2 (lux)"}])
-       #_(when fb? [:lighting-corner-2-1-lux {:fi "Valaistus kulma 2/1 (lux)"}])
-       #_(when fb? [:lighting-corner-2-2-lux {:fi "Valaistus kulma 2/2 (lux)"}])
-       #_(when fb? [:lighting-goal-1-lux {:fi "Valaistus, maali 1 (lux)"}])
-       #_(when fb? [:lighting-goal-2-lux {:fi "Valaistus, maali 2 (lux)"}])
-       #_(when fb? [:lighting-center-point-lux {:fi "Valaistus, keskipiste (lux)"}])
-       #_[:lighting-average-lux {:fi "Valaistus, keskiarvo (lux)"}]
-       #_[:stands-total-capacity-person {:fi "Katsomokapasiteetti (yht)"}]
-       #_[:seating-area-capacity-person {:fi "Istumapaikat"}]
-       #_[:standing-area-capacity-person {:fi "Seisomapaikat"}]
-       #_(when fb? [:scoreboard-visible-to-benches? {:fi "Tulostaulu näkyy vaihtopenkeille"}])
-       #_(when fb? [:scoreboard-visible-to-officials? {:fi "Tulostaulu näkyy toimitsijapöydälle"}])
-       #_(when fb? [:audience-stand-access {:fi "Yleisön kulku katsomoon"}])
-       #_(when fb? [:field-accessible-without-strairs? {:fi "Pääseekö kenttätasolle ilman rappusia"}])]
-      (remove nil?))))
+(def fields-table-headers
+  [[:name {:fi "Nimi"}]
+   [:length-m {:fi "Pituus (m)"}]
+   [:width-m {:fi "Leveys (m)"}]])
 
 (defn fields-table
-  [{:keys [tr display-data edit-data read-only? lipas-id visibility]}]
+  [{:keys [tr display-data edit-data read-only? lipas-id]}]
   (let [locale  (tr)
-        headers (map (juxt first (comp locale second)) (make-fields-table-headers visibility))]
+        headers (map (juxt first (comp locale second)) fields-table-headers)]
     (if read-only?
       (if (empty? display-data)
         [mui/typography "Ei tietoa kentistä"]
@@ -468,7 +442,10 @@
           :hide-action-btn? true
           :items            display-data}])
       [lui/form-table
-       {:read-only?      read-only?
+       {;; FIXME: Doesn't update if values are UPDATED, but
+        ;; at least updated the table if new items are added.
+        :key             (str (count (vals edit-data)))
+        :read-only?      read-only?
         :headers         headers
         :items           (vals edit-data)
         :key-fn          :id
@@ -597,7 +574,8 @@
           :items   display-data}]
         [mui/typography {:style {:margin-bottom "1em"}} "Ei tietoa pukuhuoneista"])
       [lui/form-table
-       {:read-only?      read-only?
+       {:key             (str (count (vals edit-data)))
+        :read-only?      read-only?
         :headers         headers
         :items           (vals edit-data)
         :key-fn          :id
@@ -625,7 +603,8 @@
           :items   display-data}]
         [mui/typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
       [lui/form-table
-       {:read-only?      read-only?
+       {:key             (str (count (vals edit-data)))
+        :read-only?      read-only?
         :headers         headers
         :items           (vals edit-data)
         :key-fn          :id
@@ -682,7 +661,7 @@
                        (==> [::events/set-dialog-field :audits field value]))}]]))
 
 (defn circumstances-form
-  [{:keys [tr read-only? visibility on-change display-data edit-data]}]
+  [{:keys [tr read-only? view-all-fields? on-change display-data edit-data]}]
   (let [locale                        (tr)
         car-parking-economics-model   (<== [::subs/car-parking-economics-model])
         roof-trussess-operation-model (<== [::subs/roof-trussess-operation-model])
@@ -691,7 +670,7 @@
      {:read-only? read-only?}
 
      ;; Pääsarjajoukkueet jotka käyttävät hallia
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Pääsarjajoukkueet, jotka käyttävät hallia"
         :value (-> display-data :teams-using)
         :form-field
@@ -702,19 +681,20 @@
           :on-change #(on-change :teams-using %)}]})
 
      ;; Vapaamuotoinen kuvailu/tarkennus
-     {:label "Vapaamuotoinen kuvailu tai tarkennus"
-      :value (-> display-data :general-information)
-      :form-field
-      [lui/text-field
-       {:type      "text"
-        :spec      :lipas.sports-site.circumstances/general-information
-        :value     (-> edit-data :general-information)
-        :on-change #(on-change :general-information %)
-        :multiline true
-        :rows  5}]}
+     (when view-all-fields?
+       {:label "Vapaamuotoinen kuvailu tai tarkennus"
+        :value (-> display-data :general-information)
+        :form-field
+        [lui/text-field
+         {:type      "text"
+          :spec      :lipas.sports-site.circumstances/general-information
+          :value     (-> edit-data :general-information)
+          :on-change #(on-change :general-information %)
+          :multiline true
+          :rows  5}]})
 
      ;; Varastotila ja kapasiteetti
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Varastotila ja kapasiteetti"
         :value (-> display-data :storage-capacity)
         :form-field
@@ -758,7 +738,7 @@
         :on-change #(on-change :open-floor-space-area-m2 %)}]}
 
      ;; Salibandymaalien lukumäärä hallilla
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Salibandymaalien lukumäärä hallilla"
         :value (-> display-data :available-goals-count)
         :form-field
@@ -769,7 +749,7 @@
           :on-change #(on-change :available-goals-count %)}]})
 
      ;; IFF:n hyväksyntätarrat maaleissa
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "IFF:n hyväksyntätarrat maaleissa"
         :value (-> display-data :iff-certification-stickers-in-goals?)
         :form-field
@@ -778,7 +758,7 @@
           :on-change #(on-change :iff-certification-stickers-in-goals? %)}]})
 
      ;; Maalinpienennyselementit
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Maalinpienennyselementit (lkm)"
         :value (-> display-data :goal-shrinking-elements-count)
         :form-field
@@ -789,7 +769,7 @@
           :on-change #(on-change :goal-shrinking-elements-count %)}]})
 
      ;; IFF:n hyväksyntä kaukalossa
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "IFF:n hyväksyntä kaukalossa"
         :value (-> display-data :iff-certified-rink?)
         :form-field
@@ -798,7 +778,7 @@
           :on-change #(on-change :iff-certified-rink? %)}]})
 
      ;; Kulmapalojen määrä
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kulmapalojen lukumäärä"
         :value (-> display-data :corner-pieces-count)
         :form-field
@@ -808,26 +788,30 @@
           :value     (-> edit-data :corner-pieces-count)
           :on-change #(on-change :corner-pieces-count %)}]})
 
-     ;; Pukuhuoneiden määrä
-     #_{:label "Pukuhuoneiden määrä"
+     ;; This is shown here if user doesn't have privilege to
+     ;; view all the fields. If user has the privilege, this is shown in
+     ;; locker-rooms-form.
+     (when-not view-all-fields?
+       {:label "Pukuhuoneiden lukumäärä"
         :value (-> display-data :locker-rooms-count)
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      int?
+          :spec      :lipas.sports-site.circumstances/locker-rooms-count
           :value     (-> edit-data :locker-rooms-count)
-          :on-change #(on-change :locker-rooms-count %)}]}
+          :on-change #(on-change :locker-rooms-count %)}]})
 
      ;; Saunat
-     {:label "Saunojen lukumäärä"
-      :value (-> display-data :saunas-count)
-      :form-field
-      [lui/text-field
-       {:type          "number"
-        :spec          :lipas.sports-site.circumstances/saunas-count
-        #_#_:adornment "m"
-        :value         (-> edit-data :saunas-count)
-        :on-change     #(on-change :saunas-count %)}]}
+     (when view-all-fields?
+       {:label "Saunojen lukumäärä"
+        :value (-> display-data :saunas-count)
+        :form-field
+        [lui/text-field
+         {:type          "number"
+          :spec          :lipas.sports-site.circumstances/saunas-count
+          #_#_:adornment "m"
+          :value         (-> edit-data :saunas-count)
+          :on-change     #(on-change :saunas-count %)}]})
 
      ;; Defibrillaattori
      {:label "Defibrillaattori"
@@ -838,7 +822,7 @@
         :on-change #(on-change :defibrillator? %)}]}
 
      ;; Paarit
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Paarit"
         :value (-> display-data :stretcher?)
         :form-field
@@ -847,7 +831,7 @@
           :on-change #(on-change :stretcher? %)}]})
 
      ;; Muita huomioita ensiapuvalmiudesta
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Muita huomioita ensiapuvalmiudesta"
         :value (-> display-data :first-aid-comment)
         :form-field
@@ -868,7 +852,7 @@
         :on-change #(on-change :scoreboard-count %)}]}
 
      ;; Pelaajien kulku halliin (Oma sisäänkäynti / Katsojien kanssa samasta)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Pelaajien kulku halliin"
         :value (-> display-data :player-entrance)
         :form-field
@@ -906,7 +890,7 @@
         :on-change #(on-change :audience-toilets-count %)}]}
 
      ;; VIP-tilat (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "VIP-tilat"
         :value (-> display-data :vip-area?)
         :form-field
@@ -915,7 +899,7 @@
           :on-change #(on-change :vip-area? %)}]})
 
      ;; Lisätietoja VIP-tiloista
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Lisätietoja VIP-tiloista"
         :value (-> display-data :vip-area-comment)
         :form-field
@@ -926,7 +910,7 @@
           :on-change #(on-change :vip-area-comment %)}]})
 
      ;; Onko lastausovia kenttätasolla (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Lastausovia kenttätasolla"
         :value (-> display-data :field-level-loading-doors?)
         :form-field
@@ -935,7 +919,7 @@
           :on-change #(on-change :field-level-loading-doors? %)}]})
 
      ;; Onko pumppukärryjä/tms. (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Pumppukärryjä tms. saatavilla"
         :value (-> display-data :loading-equipment-available?)
         :form-field
@@ -944,7 +928,7 @@
           :on-change #(on-change :loading-equipment-available? %)}]})
 
      ;; Irtotuolien määrä (noin arvio)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Irtotuolien lukumäärä (arvio)"
         :value (-> display-data :detached-chair-quantity)
         :form-field
@@ -955,7 +939,7 @@
           :on-change #(on-change :detached-chair-quantity %)}]})
 
      ;; Irtopöytien määrä (noin arvio)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Irtopöytien lukumäärä (arvio)"
         :value (-> display-data :detached-tables-quantity)
         :form-field
@@ -966,7 +950,7 @@
           :on-change #(on-change :detached-tables-quantity %)}]})
 
      ;; Kahvio-/ravintolatilojen asiakaspaikat
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kahvio-/ravintolatilojen asiakaspaikat"
         :value (-> display-data :cafeteria-and-restaurant-capacity-person)
         :form-field
@@ -977,7 +961,7 @@
           :on-change #(on-change :cafeteria-and-restaurant-capacity-person %)}]})
 
      ;; Ravintoloitsijan yhteystiedot
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Ravintoloitsijan yhteystiedot"
         :value (-> display-data :restaurateur-contact-info)
         :form-field
@@ -988,7 +972,7 @@
           :on-change #(on-change :restaurateur-contact-info %)}]})
 
      ;; Onko kahviossa/ravintolassa yksinoikeudet eri tuotteille (KYLLÄ/EI/EOS)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kahviossa/ravintolassa yksinoikeudet eri tuotteille"
         :value (-> display-data :cafe-or-restaurant-has-exclusive-rights-for-products?)
         :form-field
@@ -997,7 +981,7 @@
           :on-change #(on-change :cafe-or-restaurant-has-exclusive-rights-for-products? %)}]})
 
      ;; Kokoustilojen määrä
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kokoustilojen lukumäärä"
         :value (-> display-data :conference-space-quantity)
         :form-field
@@ -1008,7 +992,7 @@
           :on-change #(on-change :conference-space-quantity %)}]})
 
      ;; Kokoustilojen yhteenlaskettu henkilökapasiteetti
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kokoustilojen yhteenlaskettu henkilökapasiteetti"
         :value (-> display-data :conference-space-total-capacity-person)
         :form-field
@@ -1019,7 +1003,7 @@
           :on-change #(on-change :conference-space-total-capacity-person %)}]})
 
      ;; Tila lehdistötilaisuudelle (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Tila lehdistötilaisuudelle"
         :value (-> display-data :press-conference-space?)
         :form-field
@@ -1028,7 +1012,7 @@
           :on-change #(on-change :press-conference-space? %)}]})
 
      ;; Lipunmyyntioperaattori(yksinoikeus)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Lipunmyyntioperaattori (yksinoikeus)"
         :value (-> display-data :ticket-sales-operator)
         :form-field
@@ -1070,7 +1054,7 @@
         :on-change #(on-change :car-parking-economics-model %)}]}
 
      ;; Kattotrussit (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kattotrussit"
         :value (-> display-data :roof-trusses?)
         :form-field
@@ -1079,7 +1063,7 @@
           :on-change #(on-change :roof-trusses? %)}]})
 
      ;; Kattotrussien kantavuus (kg)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kattotrussien kantavuus"
         :value (-> display-data :roof-trusses-capacity-kg)
         :form-field
@@ -1091,7 +1075,7 @@
           :on-change #(on-change :roof-trusses-capacity-kg %)}]})
 
      ;; Kattotrussit (Saa laskettua alas / tarvitsee nostimen)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Kattotrussit..."
         :value (-> display-data :roof-trusses-operation-model)
         :form-field
@@ -1111,7 +1095,7 @@
         :on-change #(on-change :speakers-aligned-towards-stands? %)}]}
 
      ;; Onko mikseri, jolla saa äänentoiston yhdistettyä (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Mikseri, jolla saa äänentoiston yhdistettyä"
         :value (-> display-data :audio-mixer-available?)
         :form-field
@@ -1120,7 +1104,7 @@
           :on-change #(on-change :audio-mixer-available? %)}]})
 
      ;; Langattominen mikrofonien määrä
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Langattominen mikrofonien lukumäärä"
         :value (-> display-data :wireless-microfone-quantity)
         :form-field
@@ -1131,7 +1115,7 @@
           :on-change #(on-change :wireless-microfone-quantity %)}]})
 
      ;; Langallisten mikrofonien määrä
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Langallisten mikrofonien lukumäärä"
         :value (-> display-data :wired-microfone-quantity)
         :form-field
@@ -1174,7 +1158,7 @@
         :on-change #(on-change :wifi-available? %)}]}
 
      ;; Riittääkö langattoman verkon kaista esim. striimaukseen (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Langattoman verkon kaista riittää esim. striimaukseen"
         :value (-> display-data :wifi-capacity-sufficient-for-streaming?)
         :form-field
@@ -1183,7 +1167,7 @@
           :on-change #(on-change :wifi-capacity-sufficient-for-streaming? %)}]})
 
      ;; Onko sähköjen sijainnista saatavilla tieto etukäteen, esim. karttapohja (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Sähköjen sijainnista saatavilla tieto etukäteen, esim. karttapohja"
         :value (-> display-data :electrical-plan-available?)
         :form-field
@@ -1193,7 +1177,7 @@
           :on-change     #(on-change :electrical-plan-available? %)}]})
 
      ;; Onko voimavirtamahdollisuus (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "Voimavirtamahdollisuus"
         :value (-> display-data :three-phase-electric-power?)
         :form-field
@@ -1202,76 +1186,63 @@
           :on-change #(on-change :three-phase-electric-power? %)}]})
 
      ;; Onko LED-näyttöä/screeniä tai LED-pintoja mainoksille (KYLLÄ/EI)
-     (when (= :floorball visibility)
+     (when view-all-fields?
        {:label "LED-näyttö/screen tai LED-pintoja mainoksille"
         :value (-> display-data :led-screens-or-surfaces-for-ads?)
         :form-field
         [lui/checkbox
          {:value     (-> edit-data :led-screens-or-surfaces-for-ads?)
-          :on-change #(on-change :led-screens-or-surfaces-for-ads? %)}]})
-
-     ;; Replaced with `:audits` key on top-level
-
-     ;; Katselmus tehty
-     #_(when (= :floorball visibility)
-         {:label "Katselmus tehty"
-          :value (-> display-data :audit-date)
-          :form-field
-          [lui/date-picker
-           {:value     (-> edit-data :audit-date)
-            :on-change #(on-change :audit-date %)}]})]))
+          :on-change #(on-change :led-screens-or-surfaces-for-ads? %)}]})]))
 
 (defn form
   [{:keys [tr read-only? on-change display-data edit-data type-code lipas-id]}]
-  (let [visibility (<== [::subs/visibility (roles/site-roles-context display-data)])]
+  (let [can-edit?  @(rf/subscribe [::user-subs/check-privilege (roles/site-roles-context display-data) :floorball/edit])
+        view-all-fields? @(rf/subscribe [::user-subs/check-privilege (roles/site-roles-context display-data) :floorball/view-extended])]
     [:<>
+     (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
+                (not can-edit?))
+       [:> Alert
+        {:severity "info"
+         :sx #js {:mt 1}}
+        (tr :lipas.sports-site/no-permission-tab)])
+
+     [lui/sub-heading {:label "Kentät"}]
 
      [field-dialog
       {:tr         tr
        :lipas-id   lipas-id
-       :visibility visibility
+       :view-all-fields? view-all-fields?
        :read-only? read-only?}]
-
-     [locker-room-dialog {:tr tr :lipas-id lipas-id}]
-
-     [lui/sub-heading {:label "Kentät"}]
 
      [fields-table
       {:tr           tr
        :lipas-id     lipas-id
-       :visibility   visibility
        :read-only?   read-only?
        :display-data (:fields display-data)
        :edit-data    (:fields edit-data)}]
 
-     #_[field-form
-        {:tr           tr
-         :read-only?   read-only?
-         :visibility   visibility
-         :edit-data    (-> edit-data :fields first second)
-         :display-data (-> display-data :fields first)
-         :on-change    (fn [field value]
-                         (==> [::events/set-field-field lipas-id field value]))}]
+     (when view-all-fields?
+       [:<>
+        [lui/sub-heading {:label "Pukuhuoneet"}]
 
-     (when (= :floorball visibility)
-       [lui/sub-heading {:label "Pukuhuoneet"}])
+        [locker-room-dialog
+         {:tr tr
+          :lipas-id lipas-id}]
 
-     (when (= :floorball visibility)
-       [locker-rooms-table
-        {:tr           tr
-         :lipas-id     lipas-id
-         :read-only?   read-only?
-         :display-data (-> display-data :locker-rooms)
-         :edit-data    (-> edit-data :locker-rooms)}])
+        [locker-rooms-table
+         {:tr           tr
+          :lipas-id     lipas-id
+          :read-only?   read-only?
+          :display-data (:locker-rooms display-data)
+          :edit-data    (:locker-rooms edit-data)}]
 
-     (when (= :floorball visibility)
-       [locker-rooms-form
-        {:tr           tr
-         :lipas-id     lipas-id
-         :read-only?   read-only?
-         :on-change    (partial on-change :circumstances)
-         :display-data (-> display-data :circumstances)
-         :edit-data    (-> edit-data :circumstances)}])
+        [locker-rooms-form
+         {:tr           tr
+          :lipas-id     lipas-id
+          :read-only?   read-only?
+          :on-change    (partial on-change :circumstances)
+          :display-data (:circumstances display-data)
+          :edit-data    (:circumstances edit-data)}]])
 
      [lui/sub-heading {:label "Yleiset"}]
 
@@ -1279,25 +1250,27 @@
       {:tr           tr
        :lipas-id     lipas-id
        :type-code    type-code
-       :visibility   visibility
+       :view-all-fields? view-all-fields?
        :read-only?   read-only?
        :on-change    (partial on-change :circumstances)
        :display-data (:circumstances display-data)
        :edit-data    (:circumstances edit-data)
        :key          type-code}]
 
-     (when (= :floorball visibility)
-       [lui/sub-heading {:label "Katselmoinnit"}])
+     (when view-all-fields?
+       [:<>
+        [lui/sub-heading {:label "Katselmoinnit"}]
 
-     (when (= :floorball visibility)
-       [audits-dialog {:tr tr :lipas-id lipas-id}])
+        [audits-dialog
+         {:tr tr
+          :lipas-id lipas-id}]
 
-     (when (= :floorball visibility)
-       [audits-table {:tr           tr
-                      :lipas-id     lipas-id
-                      :read-only?   read-only?
-                      :display-data (-> display-data :audits)
-                      :edit-data    (-> edit-data :audits)}])
+        [audits-table
+         {:tr           tr
+          :lipas-id     lipas-id
+          :read-only?   read-only?
+          :display-data (:audits display-data)
+          :edit-data    (:audits edit-data)}]])
 
      ;; "Landing bay" for floating controls
      [:div {:style {:height "2em"}}]]))
