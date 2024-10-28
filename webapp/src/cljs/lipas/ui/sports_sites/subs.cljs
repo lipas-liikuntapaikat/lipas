@@ -282,8 +282,7 @@
                                   :distance-m  (* 1000 distance-km)})))))))))))
 
 
-(rf/reg-sub
- ::elevation-stats
+(rf/reg-sub ::elevation-stats
  (fn [[_ lipas-id]]
    (rf/subscribe [:lipas.ui.sports-sites.subs/elevation lipas-id]))
  (fn [elevation _]
