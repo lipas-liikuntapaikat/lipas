@@ -1108,14 +1108,17 @@
 
     "select" [lui/select
               {:disabled    read-only?
-               :deselect?   true
+               :deselect?   (if (:default field)
+                              false
+                              true)
                :items       (:opts field)
                :label       (get-in field [:label locale])
                :helper-text (get-in field [:description locale])
                :label-fn    (comp locale second)
                :value-fn    first
                :on-change   #(set-field prop-k %)
-               :value       (get-in edit-data [prop-k])}]
+               :value       (or (get-in edit-data [prop-k])
+                                (:default field))}]
 
     "multi-select" [:<>
                     [lui/autocomplete

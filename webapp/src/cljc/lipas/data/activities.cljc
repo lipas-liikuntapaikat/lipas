@@ -224,9 +224,15 @@
    {:schema [:enum "draft" "active"]
     :field
     {:type "select"
+     ;; NOTE: select default value has to be be manually applied into the data during save or somewhere
+     ;; for this field, it is done on lipas.ui.utils/make-saveable
+     :default "active"
      :label   {:fi "UTP tietojen tila"
                :se "Status för UTP-information"
                :en "Status of UTP data"}
+     :description {:fi "Aktiivisia tietoja voidaan siirtaa Lipas-järjestelmästä eteenpäin. Luonnos tilaiset tiedot eivät siirry eteenpäin."
+                   :se "Aktiv data kan överföras vidare från Lipas-systemet. Data med status utkast överförs inte vidare."
+                   :en "Active data can be transferred onward from the Lipas system. Draft status data will not be transferred onward."}
      :opts status-opts}}
 
    :description-short
