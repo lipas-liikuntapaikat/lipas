@@ -6,14 +6,6 @@
   (fn [db _]
     (-> db :sports-sites :floorball)))
 
-(rf/reg-sub ::visibility
-  :<- [:lipas.ui.user.subs/user-data]
-  (fn [user [_ role-context]]
-    ;; FIXME: Everyone has floorball view so check the floorball/edit privilege?
-    (if (roles/check-privilege user role-context :floorball/view)
-      :floorball
-      :public)))
-
 (rf/reg-sub ::type-codes
   :<- [::floorball]
   (fn [floorball _]
