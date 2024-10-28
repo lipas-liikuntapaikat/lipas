@@ -300,7 +300,7 @@
     :stroke {:color "#000000"}},
    109
    {:shape "polygon",
-    :fill {:color "#94d024"},
+    :fill {:color "#1f805f"},
     :stroke {:color "#000000", :width 1.5}},
    5160
    {:shape "square",
@@ -453,7 +453,7 @@
     :stroke {:color "#000000"}},
    107
    {:shape "polygon",
-    :fill {:color "#daab0c"},
+    :fill {:color "#c18bd6"},
     :stroke {:color "#000000", :width 1.5}},
    6110
    {:shape "circle",
@@ -743,7 +743,7 @@
    4407
    {:shape "linestring",
     :stroke
-    {:color "#827e3b",
+    {:color "#b0a92c",
      :width 3.5,
      :line-cap "round",
      :line-join "round",
@@ -784,7 +784,7 @@
    ;; Golfkenttä (alue)
    1650
    {:shape "polygon",
-    :fill {:color "#c9ff05"},
+    :fill {:color "#daab0c"},
     :stroke {:color "#000000" :width 1.5}}
    ;; Sisäleikki-/aktiviteettipuisto:
    2225
