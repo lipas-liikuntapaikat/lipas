@@ -26,7 +26,7 @@
 (rf/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
-  (fn [[user all-cities] [_]]
+  (fn [[user all-cities] _]
     (into {} (filter (fn [[city-code _v]]
                        (roles/check-privilege user
                                               {:city-code city-code
@@ -50,8 +50,8 @@
        {:type-code ::roles/any
         :city-code ::roles/any}
        :site/create-edit]
-  (fn [a _]
-    a))
+  (fn [x _]
+    x))
 
 (rf/reg-sub ::can-add-lois?
   :<- [::check-privilege
