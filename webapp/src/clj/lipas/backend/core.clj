@@ -297,7 +297,7 @@
   [db user {:keys [lipas-id status] :as sports-site}]
   (let [regular-permission (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit)
         is-planning (= "planning" status)
-        planning-permission (and is-planning (roles/check-privilege user {} :site/create-planning-only))]
+        planning-permission (and is-planning (roles/check-privilege user {} :analysis-tool/use))]
     (when (and (not regular-permission)
                (not planning-permission))
       (let [user (update-in user [:permissions :roles]

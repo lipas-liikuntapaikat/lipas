@@ -55,8 +55,6 @@
   (let [locale         (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
 
-    (js/console.log status-read-only?)
-
     [lui/form {:read-only? read-only?}
 
      (when (show-status? tr display-data)

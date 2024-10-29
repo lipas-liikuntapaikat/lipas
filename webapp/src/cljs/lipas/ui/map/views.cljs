@@ -1792,8 +1792,10 @@
           [mui/tooltip {:title (tr :lipas.sports-site/add-new-planning)}
            [mui/fab
             {:color    "secondary"
+             :variant "extended"
              :on-click #(==> [::events/add-analysis-target])}
-            "Vedos"]]])
+            [mui/icon "add"]
+            (tr :lipas.sports-site/planning-site)]]])
 
        ;; Address search btn
        [mui/tooltip {:title (tr :map.address-search/tooltip)}

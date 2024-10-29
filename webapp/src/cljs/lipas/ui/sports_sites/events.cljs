@@ -202,16 +202,8 @@
                                    (when (contains? (:privileges (get roles/roles (:role role))) :site/create-edit)
                                      (first (:city-code role)))))))
 
-          user (user-subs/user-data db)
-          create-any? (roles/check-privilege user
-                                             {:type-code type-code
-                                              :city-code (or city-code ::roles/any)}
-                                             :site/create-edit)
-          only-planning? (and (not create-any?)
-                              (roles/check-privilege user {} :site/create-planning-only))
-
           data      (cutils/deep-merge
-                      {:status     (if only-planning? "planning" "active")
+                      {:status     "active"
                        :event-date (utils/timestamp)
                        :type       {:type-code type-code}
                        :location   {:geometries geoms

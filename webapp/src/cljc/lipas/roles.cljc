@@ -5,7 +5,6 @@
 ;; Use namespaced keys for easier searching in the codebase
 (def privileges
   {:site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
-   :site/create-planning-only {:doc "Oikeus luoda paikkoja jotka Vedos tilassa"}
    ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
@@ -20,7 +19,9 @@
    :floorball/view-extended {:doc "Oikeus nähdä Salibandy erityiset lisätiedot"}
    :floorball/edit {:doc "Oikeus muokata Salibandy lisätietoja (olosuhteet välilehti muokattavissa)"}
 
-   :analysis-tool/use {:doc "Oikeus käyttää analyysityökalua"}
+   :analysis-tool/use {:doc "Oikeus käyttää analyysityökaluja
+
+                            Antaa myös oikeuden luoda paikkoja vedos-tilassa"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
@@ -97,7 +98,7 @@
    :analysis-user
    {:sort 40
     :assignable true
-    :privileges #{:analysis-tool/use :site/create-planning-only}
+    :privileges #{:analysis-tool/use}
     :required-context-keys []
     :optional-context-keys []}})
 

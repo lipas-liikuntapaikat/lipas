@@ -629,6 +629,7 @@
      :email-public        "Sähköposti (julkinen)",
      :add-new             "Lisää liikunta- tai ulkoilupaikka",
      :add-new-planning    "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
+     :planning-site       "Vedos"
      :contact             "Yhteystiedot",
      :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
      :owner               "Omistaja",
