@@ -628,12 +628,14 @@
      :event-date          "Muokattu",
      :email-public        "Sähköposti (julkinen)",
      :add-new             "Lisää liikunta- tai ulkoilupaikka",
+     :add-new-planning    "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
      :contact             "Yhteystiedot",
      :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
      :owner               "Omistaja",
      :owner-helper-text   "Kohteessa olevien rakenteiden tai palveluiden omistaja"
      :marketing-name      "Markkinointinimi"
-     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"},
+     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"
+     :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten."},
     :status
     {:active                     "Toiminnassa",
      :planned                    "Suunniteltu"
@@ -849,7 +851,8 @@
                   :type-manager "Tyyppikäyttäjä"
                   :site-manager "Paikkakäyttäjä"
                   :activities-manager "UTP-käyttäjä"
-                  :floorball-manager "Salibandy muokkaaja"}
+                  :floorball-manager "Salibandy muokkaaja"
+                  :analysis-user "Analyysityökalukäyttäjä"}
      :context-keys {:city-code "Kunta"
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"

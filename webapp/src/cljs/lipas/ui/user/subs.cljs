@@ -26,37 +26,32 @@
 (rf/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
-  (fn [[user all-cities] [_ planning?]]
-    (let [create-planning-all (and planning? (roles/check-privilege user {} :site/create-planning-only))]
-      (into {} (filter (fn [[city-code _v]]
-                         (or create-planning-all
-                             (roles/check-privilege user
-                                                    {:city-code city-code
-                                                 :type-code ::roles/any}
-                                                :site/create-edit)))
-                       all-cities)))))
+  (fn [[user all-cities] [_]]
+    (into {} (filter (fn [[city-code _v]]
+                       (roles/check-privilege user
+                                              {:city-code city-code
+                                               :type-code ::roles/any}
+                                              :site/create-edit))
+                     all-cities))))
 
 (rf/reg-sub ::permission-to-types
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [[user all-types] _]
-    (let [create-planning-all (roles/check-privilege user {} :site/create-planning-only)]
-      (into {} (filter (fn [[type-code _v]]
-                         (or create-planning-all
-                             (roles/check-privilege user
-                                                    {:type-code type-code
-                                                     :city-code ::roles/any}
-                                                    :site/create-edit)))
-                       all-types)))))
+    (into {} (filter (fn [[type-code _v]]
+                       (roles/check-privilege user
+                                              {:type-code type-code
+                                               :city-code ::roles/any}
+                                              :site/create-edit))
+                     all-types))))
 
 (rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any
         :city-code ::roles/any}
        :site/create-edit]
-  :<- [::check-privilege {} :site/create-planning-only]
-  (fn [[a b] _]
-    (or a b)))
+  (fn [a _]
+    a))
 
 (rf/reg-sub ::can-add-lois?
   :<- [::check-privilege

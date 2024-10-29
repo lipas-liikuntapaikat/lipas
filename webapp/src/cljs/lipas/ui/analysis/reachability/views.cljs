@@ -365,7 +365,8 @@
           (tr :map.demographics/helper-text)
           [mui/link
            {:color    "secondary"
-            :on-click #(==> [::map-events/add-analysis-target])}
+            :on-click #(==> [::map-events/add-analysis-target])
+            :sx #js {:cursor "pointer"}}
            (tr :general/here)]
           "."]]
 

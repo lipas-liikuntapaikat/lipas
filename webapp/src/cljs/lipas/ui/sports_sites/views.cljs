@@ -23,7 +23,8 @@
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            ["@mui/material/Typography$default" :as Typography]))
 
 ;; TODO maybe put this into config / app-db instead?
 (def extra-locales [:se :en])
@@ -54,6 +55,8 @@
   (let [locale         (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
 
+    (js/console.log status-read-only?)
+
     [lui/form {:read-only? read-only?}
 
      (when (show-status? tr display-data)
@@ -77,8 +80,7 @@
        {:label      (tr :lipas.sports-site/status)
         :value      (-> display-data :status)
         :form-field [lui/status-selector-single
-                     {:required  true
-                      :value     (-> edit-data :status)
+                     {:value     (-> edit-data :status)
                       :on-change #(on-change :status %)
                       :read-only? status-read-only?}]})
 

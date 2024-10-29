@@ -832,19 +832,7 @@
                                               :can-edit-map? can-edit-map?
                                               :geom-type geom-type}))
 
-        create-edit-any-status? can-publish?
-        create-edit-planning? @(rf/subscribe [::user-subs/check-privilege {} :site/create-planning-only])
-        create-edit-planning-only? (and (not create-edit-any-status?) create-edit-planning?)
-        creating-planning? (and (= "Vedos" (:status display-data))
-                                create-edit-planning?)
-
-        can-publish? (or can-publish?
-                         ;; FIXME: How to check properly
-                         creating-planning?)
-
-        _ (js/console.log site-data (tr :status/planning) can-publish?)
-
-        cities @(rf/subscribe [::user-subs/permission-to-cities creating-planning?])
+        cities @(rf/subscribe [::user-subs/permission-to-cities])
 
         ;; We have three privileges:
         ;; - can-publish? - :site/create-edit - Edit basic info and properties
@@ -965,7 +953,7 @@
                :display-data    display-data
                :edit-data       edit-data
                :read-only?      (or (not editing?) (not can-publish?))
-               :status-read-only? create-edit-planning-only?
+               :status-read-only? false
                :types           (vals types)
                :size-categories size-categories
                :admins          admins
@@ -1304,21 +1292,19 @@
   (r/with-let [geom-tab     (r/atom "draw")]
     (let [locale (tr)
 
-          {:keys [type data save-enabled? admins owners _cities
-                  problems? types size-categories zoomed? geom active-step
+          {:keys [type data is-planning? save-enabled? admins owners
+                  problems? size-categories zoomed? geom active-step
                   sub-mode undo redo
                   selected-tab]} (<== [::subs/add-sports-site-view])
 
-          site-role-ctx (roles/site-roles-context data)
-          create-edit-any-status? @(rf/subscribe [::user-subs/check-privilege site-role-ctx :site/create-edit])
-          create-edit-planning? @(rf/subscribe [::user-subs/check-privilege {} :site/create-planning-only])
-          create-edit-planning-only? (and (not create-edit-any-status?) create-edit-planning?)
-          creating-planning? (and (= "planning" (:status data))
-                                  create-edit-planning?)
+          geom-type (-> geom :features first :geometry :type)
+          types (<== [::subs/new-site-types is-planning? geom-type])
 
           ;; Allow all cities if current status is planning and user has permission to create
           ;; planning sites on any city/type
-          cities (vals @(rf/subscribe [::user-subs/permission-to-cities creating-planning?]))
+          cities (if is-planning?
+                   @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+                   @(rf/subscribe [::user-subs/permission-to-cities]))
 
           role-site-ctx (roles/site-roles-context data)
           type-code (-> data :type :type-code)
@@ -1353,6 +1339,12 @@
 
        ;; Steps
        [mui/grid {:item true :xs 12}
+        (when is-planning?
+          [:> Alert
+           {:severity "info"
+            :sx #js {:mb 2}}
+           (tr :lipas.sports-site/creating-planning-site)])
+
         [mui/stepper
          {:active-step      active-step
           :alternativeLabel true
@@ -1667,7 +1659,7 @@
                    {:tr              tr
                     :edit-data       data
                     :read-only?      false
-                    :status-read-only? create-edit-planning-only?
+                    :status-read-only? is-planning?
                     :types           (vals types)
                     :size-categories size-categories
                     :admins          admins
@@ -1679,11 +1671,13 @@
                   [sports-sites/location-form
                    {:tr                        tr
                     :read-only?                false
-                    :cities                    cities
+                    :cities                    (vals cities)
                     :edit-data                 (:location data)
                     :on-change                 (partial set-field :location)
                     :sub-headings?             true
-                    :address-locator-component [address-locator {:tr tr :cities cities}]
+                    :address-locator-component [address-locator
+                                                {:tr tr
+                                                 :cities (vals cities)}]
                     :address-required?         (not (#{201 2011} (:type-code type)))}]]]
 
               ;; Properties tab
@@ -1792,6 +1786,14 @@
        (when show-create-button?
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
+
+       (when (= :analysis mode-name)
+         [mui/grid {:item true}
+          [mui/tooltip {:title (tr :lipas.sports-site/add-new-planning)}
+           [mui/fab
+            {:color    "secondary"
+             :on-click #(==> [::events/add-analysis-target])}
+            "Vedos"]]])
 
        ;; Address search btn
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
