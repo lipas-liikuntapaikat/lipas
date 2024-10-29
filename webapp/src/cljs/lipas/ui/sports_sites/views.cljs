@@ -8,6 +8,7 @@
             ["recharts/es6/component/Legend" :refer [Legend]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
+            [lipas.roles :as roles]
             [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as autocompletes]
@@ -19,13 +20,17 @@
             [lipas.ui.sports-sites.subs :as subs]
             [lipas.ui.swimming-pools.pools :as pools]
             [lipas.ui.swimming-pools.slides :as slides]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]))
+            [re-frame.core :as rf]
+            [reagent.core :as r]
+            ["@mui/material/Typography$default" :as Typography]))
 
 ;; TODO maybe put this into config / app-db instead?
 (def extra-locales [:se :en])
 
 (defn- allow-editing-status?
+  ;; FIXME: Doesn't work like the docstring, this allows editing always
   "Status field is displayed only if latest saved status is
   'out-of-service-temporarily'. Applies to both display and edit
   views."
@@ -45,7 +50,7 @@
 
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins
-           owners on-change read-only? sub-headings? lipas-id]}]
+           owners on-change read-only? sub-headings? lipas-id status-read-only?]}]
 
   (let [locale         (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
@@ -73,9 +78,9 @@
        {:label      (tr :lipas.sports-site/status)
         :value      (-> display-data :status)
         :form-field [lui/status-selector-single
-                     {:required  true
-                      :value     (-> edit-data :status)
-                      :on-change #(on-change :status %)}]})
+                     {:value     (-> edit-data :status)
+                      :on-change #(on-change :status %)
+                      :read-only? status-read-only?}]})
 
      ;; Type
      {:label      (tr :type/name)

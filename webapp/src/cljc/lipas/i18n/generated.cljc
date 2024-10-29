@@ -633,7 +633,10 @@
      :owner               "Omistaja",
      :owner-helper-text   "Kohteessa olevien rakenteiden tai palveluiden omistaja"
      :marketing-name      "Markkinointinimi"
-     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"},
+     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"
+     :add-new-planning    "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
+     :planning-site       "Vedos"
+     :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten."},
     :status
     {:active                     "Toiminnassa",
      :planned                    "Suunniteltu"
@@ -849,7 +852,8 @@
                   :type-manager "Tyyppikäyttäjä"
                   :site-manager "Paikkakäyttäjä"
                   :activities-manager "UTP-käyttäjä"
-                  :floorball-manager "Salibandy muokkaaja"}
+                  :floorball-manager "Salibandy muokkaaja"
+                  :analysis-user "Analyysityökalukäyttäjä"}
      :context-keys {:city-code "Kunta"
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"
@@ -1560,7 +1564,10 @@
      :contact           "Kontaktinformation",
      :owner             "Ägare",
      :marketing-name    "Varumärkesnamn"
-     :no-permission-tab "Du har inte behörighet att redigera informationen på denna flik"},
+     :no-permission-tab "Du har inte behörighet att redigera informationen på denna flik"
+     :add-new-planning "Lägg till en motions- eller friluftsplats i utkastläge"
+     :planning-site "Utkast"
+     :creating-planning-site "Du håller på att lägga till en plats i utkastläge för analysverktyg."},
     :status
     {:active                     "Aktiv",
      :planned                    "Planerad"
@@ -1739,7 +1746,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
                   :type-manager "Typadministratör"
                   :site-manager "Platsadministratör"
                   :activities-manager "UTP-administratör"
-                  :floorball-manager "Innebandyredigerare"}
+                  :floorball-manager "Innebandyredigerare"
+                  :analysis-user "Analysverktygsanvändare"}
      :context-keys {:city-code "Kommun"
                     :type-code "Typ"
                     :activity "Aktivitet"
@@ -2505,7 +2513,10 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :contact           "Contact",
      :owner             "Owner",
      :marketing-name    "Marketing name"
-     :no-permission-tab "You do not have permission to edit the information on this tab"},
+     :no-permission-tab "You do not have permission to edit the information on this tab"
+     :add-new-planning "Add a sports or outdoor site in draft mode"
+     :planning-site "Draft"
+     :creating-planning-site "You are adding a site in draft mode for analysis tools."},
     :status
     {:active                     "Active",
      :planned                    "Planned"
@@ -2706,7 +2717,8 @@ The site administrator is responsible for the accuracy of information, safety of
                   :type-manager "Type Manager"
                   :site-manager "Site Manager"
                   :activities-manager "UTP Manager"
-                  :floorball-manager "Floorball Editor"}
+                  :floorball-manager "Floorball Editor"
+                  :analysis-user "Analysis tool user"}
      :context-keys {:city-code "Municipality"
                     :type-code "Type"
                     :activity "Activity"

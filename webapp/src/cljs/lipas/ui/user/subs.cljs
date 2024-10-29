@@ -18,12 +18,16 @@
   (fn [[user overrides] _]
     (assoc (:login user) :dev/overrides overrides)))
 
+(defn user-data
+  "Same as ::user-data, but for use in effects"
+  [db]
+  (assoc (:login (:user db)) :dev/overrides (:lipas.ui.project-devtools/privilege-override db)))
+
 (rf/reg-sub ::permission-to-cities
   :<- [::user-data]
   :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
   (fn [[user all-cities] _]
     (into {} (filter (fn [[city-code _v]]
-                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
                        (roles/check-privilege user
                                               {:city-code city-code
                                                :type-code ::roles/any}
@@ -35,7 +39,6 @@
   :<- [:lipas.ui.sports-sites.subs/active-types]
   (fn [[user all-types] _]
     (into {} (filter (fn [[type-code _v]]
-                       ;; NOTE: Calling check-privilege directly skips the UI dev-tools override
                        (roles/check-privilege user
                                               {:type-code type-code
                                                :city-code ::roles/any}

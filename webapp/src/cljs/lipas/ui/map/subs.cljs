@@ -353,8 +353,7 @@
 
 (rf/reg-sub ::sports-site-view
   (fn [[_ lipas-id type-code] _]
-    [(rf/subscribe [:lipas.ui.user.subs/permission-to-cities])
-     (rf/subscribe [:lipas.ui.user.subs/permission-to-types])
+    [(rf/subscribe [:lipas.ui.user.subs/permission-to-types])
      (rf/subscribe [:lipas.ui.sports-sites.subs/geom-type lipas-id])
      (rf/subscribe [:lipas.ui.sports-sites.subs/admins])
      (rf/subscribe [:lipas.ui.sports-sites.subs/owners])
@@ -374,7 +373,7 @@
      (rf/subscribe [::redo lipas-id])
      (rf/subscribe [::more-tools-menu-anchor])
      (rf/subscribe [::selected-sports-site-tab])])
-  (fn [[cities types geom-type admins owners editing?
+  (fn [[types geom-type admins owners editing?
         edits-valid?  editing-allowed? save-in-progress?
         delete-dialog-open? type types-props dead? can-publish?
         logged-in? size-categories mode undo redo
@@ -382,7 +381,6 @@
 
     {:types                  (filter
                                (comp #{geom-type} :geometry-type second) types)
-     :cities                 cities
      :admins                 admins
      :owners                 owners
      :editing?               editing?
@@ -413,12 +411,11 @@
   (fn [_]
     [(rf/subscribe [:lipas.ui.sports-sites.subs/new-site-type])
      (rf/subscribe [:lipas.ui.sports-sites.subs/new-site-data])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/new-site-is-planning])
      (rf/subscribe [:lipas.ui.sports-sites.subs/new-site-valid?])
      (rf/subscribe [:lipas.ui.sports-sites.subs/save-in-progress?])
      (rf/subscribe [:lipas.ui.sports-sites.subs/admins])
      (rf/subscribe [:lipas.ui.sports-sites.subs/owners])
-     (rf/subscribe [:lipas.ui.user.subs/permission-to-cities])
-     (rf/subscribe [:lipas.ui.user.subs/permission-to-types])
      (rf/subscribe [:lipas.ui.sports-sites.subs/prop-types])
      (rf/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
      (rf/subscribe [::zoomed-for-drawing?])
@@ -427,24 +424,18 @@
      (rf/subscribe [::undo "new"])
      (rf/subscribe [::redo "new"])
      (rf/subscribe [::selected-new-sports-site-tab])])
-  (fn [[type data valid? save-in-progress? admins owners cities types
+  (fn [[type data is-planning? valid? save-in-progress? admins owners
         prop-types size-categories zoomed? geom mode undo redo
         selected-tab] _]
-    (let [geom-type (-> geom :features first :geometry :type)
-          sub-mode  (mode :sub-mode)]
+    (let [sub-mode  (mode :sub-mode)]
       {:type            type
        :type-code       (:type-code type)
        :geom-type       (:geometry-type type)
        :data            data
+       :is-planning?    is-planning?
        :save-enabled?   (and valid? (= :finished sub-mode) (not save-in-progress?))
        :admins          admins
        :owners          owners
-       :cities          cities
-       :types           (if geom-type
-                          (->> types
-                               (filter (comp #{geom-type} :geometry-type second))
-                               (into {}))
-                          types)
        :types-props     (reduce (fn [res [k v]]
                                   (let [prop-type (prop-types k)]
                                     (assoc res k (merge prop-type v))))
@@ -462,6 +453,19 @@
        :undo            undo
        :redo            redo
        :selected-tab    selected-tab})))
+
+(rf/reg-sub ::new-site-types
+  (fn [[_ is-planning? _geom-type]]
+    ;; all types are allowed when creating planning site from analysis tool
+    (rf/subscribe (if is-planning?
+                    [:lipas.ui.sports-sites.subs/active-types]
+                    [:lipas.ui.user.subs/permission-to-types])))
+  (fn [types [_ _is-planning? geom-type]]
+    (if geom-type
+      (->> types
+           (filter (comp #{geom-type} :geometry-type second))
+           (into {}))
+      types)))
 
 (rf/reg-sub ::show-create-button?
   :<- [::map]
@@ -484,8 +488,9 @@
 (rf/reg-sub ::selected-add-mode
   :<- [::map]
   :<- [:lipas.ui.user.subs/can-add-lois-only?]
-  (fn [[m can-add-lois-only?] _]
-    (if can-add-lois-only?
+  :<- [:lipas.ui.sports-sites.subs/new-site-is-planning]
+  (fn [[m can-add-lois-only? is-planning?] _]
+    (if (and (not is-planning?) can-add-lois-only?)
       "loi"
       (:add-mode m))))
 

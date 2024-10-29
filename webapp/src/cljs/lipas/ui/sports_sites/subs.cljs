@@ -483,6 +483,11 @@
   (fn [new-sports-site _]
     (-> new-sports-site :data)))
 
+(rf/reg-sub ::new-site-is-planning
+  :<- [::new-sports-site]
+  (fn [new-sports-site _]
+    (-> new-sports-site :adding-planning-site?)))
+
 (rf/reg-sub ::new-site-type
   :<- [::new-sports-site]
   :<- [::active-types]

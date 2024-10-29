@@ -19,7 +19,9 @@
    :floorball/view-extended {:doc "Oikeus nähdä Salibandy erityiset lisätiedot"}
    :floorball/edit {:doc "Oikeus muokata Salibandy lisätietoja (olosuhteet välilehti muokattavissa)"}
 
-   :analysis-tool/use {:doc "Oikeus käyttää analyysityökalua"}
+   :analysis-tool/use {:doc "Oikeus käyttää analyysityökaluja
+
+                            Antaa myös oikeuden luoda paikkoja vedos-tilassa"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
@@ -91,7 +93,14 @@
     :assignable true
     :privileges #{:floorball/view :floorball/view-extended :floorball/edit}
     :required-context-keys []
-    :optional-context-keys [:type-code]}})
+    :optional-context-keys [:type-code]}
+
+   :analysis-user
+   {:sort 40
+    :assignable true
+    :privileges #{:analysis-tool/use}
+    :required-context-keys []
+    :optional-context-keys []}})
 
 (defn role-sort-fn
   [{:keys [role]}]

@@ -437,10 +437,10 @@
                 on-success-default on-failure-default]))]})))
 
 (rf/reg-event-fx ::start-adding-new-site
-  (fn [{:keys [db]} [_ template]]
+  (fn [{:keys [db]} [_ template opts]]
     {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
      :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
-                  [:lipas.ui.sports-sites.events/start-adding-new-site template]
+                  [:lipas.ui.sports-sites.events/start-adding-new-site template opts]
                   [:lipas.ui.loi.events/start-adding-new-loi]]}))
 
 (rf/reg-event-fx ::discard-edits
@@ -803,7 +803,7 @@
                     {:address     "Testikatu 123"
                      :postal-code "12345"}}]
       {:dispatch-n
-       [[::start-adding-new-site template]]})))
+       [[::start-adding-new-site template {:adding-planning-site? true}]]})))
 
 (rf/reg-event-fx ::add-point-from-coords
   (fn [_ [_ {:keys [crs lon lat]}]]

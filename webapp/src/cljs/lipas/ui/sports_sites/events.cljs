@@ -2,6 +2,7 @@
   (:require [ajax.core :as ajax]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
@@ -160,10 +161,11 @@
       {:lipas.ui.effects/download-excel! config})))
 
 (rf/reg-event-fx ::start-adding-new-site
-  (fn [{:keys [db]} [_ template]]
+  (fn [{:keys [db]} [_ template opts]]
     {:db       (-> db
                    (assoc-in [:new-sports-site :adding?] true)
-                   (assoc-in [:new-sports-site :template] template))
+                   (assoc-in [:new-sports-site :template] template)
+                   (update :new-sports-site merge opts))
      :dispatch-n [[:lipas.ui.search.events/clear-filters]
                   [:lipas.ui.search.events/set-results-view :list]
                   [::clear-name-check]]}))
@@ -171,6 +173,7 @@
 (rf/reg-event-db ::discard-new-site
   (fn [db [_]]
     (-> db
+        (update :new-sports-site dissoc :adding-planning-site?)
         (assoc-in [:new-sports-site :adding?] false)
         (assoc-in [:new-sports-site :type] nil)
         (assoc-in [:new-sports-site :data] nil)

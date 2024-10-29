@@ -35,6 +35,7 @@
             [lipas.ui.sports-sites.floorball.views :as floorball]
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -808,7 +809,7 @@
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
-        {:keys [types cities admins owners editing? edits-valid?
+        {:keys [types admins owners editing? edits-valid?
                 problems? editing-allowed? delete-dialog-open?
                 can-publish? logged-in?  size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
@@ -830,6 +831,8 @@
                                               :editing? editing?
                                               :can-edit-map? can-edit-map?
                                               :geom-type geom-type}))
+
+        cities @(rf/subscribe [::user-subs/permission-to-cities])
 
         ;; We have three privileges:
         ;; - can-publish? - :site/create-edit - Edit basic info and properties
@@ -950,6 +953,7 @@
                :display-data    display-data
                :edit-data       edit-data
                :read-only?      (or (not editing?) (not can-publish?))
+               :status-read-only? false
                :types           (vals types)
                :size-categories size-categories
                :admins          admins
@@ -1288,10 +1292,19 @@
   (r/with-let [geom-tab     (r/atom "draw")]
     (let [locale (tr)
 
-          {:keys [type data save-enabled? admins owners cities
-                  problems? types size-categories zoomed? geom active-step
+          {:keys [type data is-planning? save-enabled? admins owners
+                  problems? size-categories zoomed? geom active-step
                   sub-mode undo redo
                   selected-tab]} (<== [::subs/add-sports-site-view])
+
+          geom-type (-> geom :features first :geometry :type)
+          types (<== [::subs/new-site-types is-planning? geom-type])
+
+          ;; Allow all cities if current status is planning and user has permission to create
+          ;; planning sites on any city/type
+          cities (if is-planning?
+                   @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+                   @(rf/subscribe [::user-subs/permission-to-cities]))
 
           role-site-ctx (roles/site-roles-context data)
           type-code (-> data :type :type-code)
@@ -1326,6 +1339,12 @@
 
        ;; Steps
        [mui/grid {:item true :xs 12}
+        (when is-planning?
+          [:> Alert
+           {:severity "info"
+            :sx #js {:mb 2}}
+           (tr :lipas.sports-site/creating-planning-site)])
+
         [mui/stepper
          {:active-step      active-step
           :alternativeLabel true
@@ -1640,6 +1659,7 @@
                    {:tr              tr
                     :edit-data       data
                     :read-only?      false
+                    :status-read-only? is-planning?
                     :types           (vals types)
                     :size-categories size-categories
                     :admins          admins
@@ -1655,7 +1675,9 @@
                     :edit-data                 (:location data)
                     :on-change                 (partial set-field :location)
                     :sub-headings?             true
-                    :address-locator-component [address-locator {:tr tr :cities cities}]
+                    :address-locator-component [address-locator
+                                                {:tr tr
+                                                 :cities (vals cities)}]
                     :address-required?         (not (#{201 2011} (:type-code type)))}]]]
 
               ;; Properties tab
@@ -1764,6 +1786,16 @@
        (when show-create-button?
          [mui/grid {:item true}
           [add-btn {:tr tr}]])
+
+       (when (= :analysis mode-name)
+         [mui/grid {:item true}
+          [mui/tooltip {:title (tr :lipas.sports-site/add-new-planning)}
+           [mui/fab
+            {:color    "secondary"
+             :variant "extended"
+             :on-click #(==> [::events/add-analysis-target])}
+            [mui/icon "add"]
+            (tr :lipas.sports-site/planning-site)]]])
 
        ;; Address search btn
        [mui/tooltip {:title (tr :map.address-search/tooltip)}
