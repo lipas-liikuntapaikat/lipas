@@ -124,7 +124,7 @@
 
     nil))
 
-(defui map-inner [{:keys [map-el center zoom]}]
+(defui map-inner [{:keys [map-el center zoom children]}]
   (let [[_ ^js view]
         (use-object (ol/View. #js {:center              #js [(:lon center) (:lat center)]
                                    :extent              epsg3067-extent
@@ -151,10 +151,7 @@
 
     ($ MapContextProvider
        {:value ctx}
-       ($ WmtsLayer
-          {:url (:taustakartta urls)
-           :layer-name "MML-Taustakartta"
-           :visible? true}))))
+       children)))
 
 (defui map-container [props]
   (let [[map-el set-map-el] (uix/use-state nil)
@@ -167,12 +164,32 @@
        (when map-el
          ($ map-inner (assoc props :map-el map-el))))))
 
+(defui baselayers []
+  (let [basemap (use-subscribe [::subs/basemap])
+        active-baselayer (:layer basemap)]
+    ($ :<>
+       ($ WmtsLayer
+          {:url (:taustakartta urls)
+           :layer-name "MML-Taustakartta"
+           :visible? (= :taustakartta active-baselayer)})
+       ($ WmtsLayer
+          {:url (:maastokartta urls)
+           :layer-name "MML-Maastokartta"
+           :visible? (= :maastokartta active-baselayer)})
+       ($ WmtsLayer
+          {:url (:ortokuva urls)
+           :layer-name "MML-Ortokuva"
+           :visible? (= :ortokuva active-baselayer)}))))
+
 (defui map-view []
   ;; Subscribe to re-frame data here, then just pass to the pure components?
-  (let [geoms  (use-subscribe [::subs2/geometries])
-        center (use-subscribe [::subs/center])
-        zoom   (use-subscribe [::subs/zoom])]
-    (js/console.log geoms)
+  (let [;; geoms   (use-subscribe [::subs2/geometries])
+        center  (use-subscribe [::subs/center])
+        zoom    (use-subscribe [::subs/zoom])]
+    ;; NOTE: Avoid adding Lipas specific props to map-container/map-inner
+    ;; Most of stuff for Lipas map should be handled by children components (like baselayers)
+    ;; Children can just subscribe to specific rf subs they need.
     ($ map-container
        {:center center
-        :zoom zoom})))
+        :zoom zoom}
+       ($ baselayers))))
