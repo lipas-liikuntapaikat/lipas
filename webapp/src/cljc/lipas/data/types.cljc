@@ -1971,7 +1971,7 @@
     :main-category 6000,
     :status        "active",
     :sub-category  6100,
-    :geometry-type "LineString",
+    :geometry-type "Point",
     :props
     {:surface-material                   {:priority 0},
      :surface-material-info              {:priority 0},
