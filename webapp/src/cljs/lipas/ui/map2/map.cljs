@@ -3,9 +3,11 @@
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
             ["ol-new/extent" :as extent]
+            ["ol-new/layer/Image$default" :as ImageLayer]
             ["ol-new/layer/Tile$default" :as TileLayer]
             ["ol-new/proj" :as proj]
             ["ol-new/proj/proj4" :refer [register]]
+            ["ol-new/source/ImageWMS$default" :as ImageWMSSource]
             ["ol-new/source/WMTS$default" :as WMTSSource]
             ["ol-new/tilegrid/WMTS$default" :as WMTSTileGrid]
             ["proj4" :as proj4]
@@ -124,6 +126,26 @@
 
     nil))
 
+(defui ImageLayerWMS
+  "Dynamic props:
+  - visible"
+  [{:keys [visible source-props]}]
+  (let [ol (use-ol)
+        [_ ^js source]
+        (use-object (ImageWMSSource. source-props))
+
+        [_ ^js layer]
+        (use-object (ImageLayer. #js {:source source
+                                      :visible visible}))]
+    (uix/use-effect
+      (fn []
+        (.addLayer ol layer)
+        (fn []
+          (.removeLayer ol layer)))
+      [ol layer])
+    (uix/use-effect (fn [] (.setVisible layer visible)) [layer visible])
+    nil))
+
 (defui map-inner [{:keys [map-el center zoom children]}]
   (let [[_ ^js view]
         (use-object (ol/View. #js {:center              #js [(:lon center) (:lat center)]
@@ -187,6 +209,8 @@
   (let [selected-overlays (use-subscribe [::subs/selected-overlays])]
     (js/console.log selected-overlays)
     ($ :<>
+       ;; TODO: Rest of the overlays are used by search results, edit tools etc.?
+
        ; :vectors
        ; (VectorImageLayer.
        ;   #js {:source (VectorSource.)
@@ -239,20 +263,20 @@
        ;   #js {:source (VectorSource.)
        ;        :style  styles/diversity-area-style
        ;        :name   "diversity-area"})
-       ; :light-traffic
-       ; (ImageLayer.
-       ;   #js {:visible false
-       ;        :source (ImageWMSSource. #js {:url         "/vaylavirasto/vaylatiedot/ows"
-       ;                                      :params      #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
-       ;                                      :serverType  "geoserver"
-       ;                                      :crossOrigin "anonymous"})})
-       ; :retkikartta-snowmobile-tracks
-       ; (ImageLayer.
-       ;   #js {:visible false
-       ;        :source (ImageWMSSource. #js {:url         "/geoserver/lipas/wms?"
-       ;                                      :params      #js {:LAYERS "lipas:metsahallitus_urat2023"}
-       ;                                      :serverType  "geoserver"
-       ;                                      :crossOrigin "anonymous"})})
+
+       ($ ImageLayerWMS
+          {:visible (contains? selected-overlays :light-traffic)
+           :source-props #js {:url         "/vaylavirasto/vaylatiedot/ows"
+                              :params      #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
+                              :serverType  "geoserver"
+                              :crossOrigin "anonymous"}})
+
+       ($ ImageLayerWMS
+          {:visible (contains? selected-overlays :retkikartta-snowmobile-tracks)
+           :source-props #js {:url         "/geoserver/lipas/wms?"
+                              :params      #js {:LAYERS "lipas:metsahallitus_urat2023"}
+                              :serverType  "geoserver"
+                              :crossOrigin "anonymous"}})
 
        ($ WmtsLayer
           {:url         (:kiinteisto urls)
@@ -285,7 +309,7 @@
        ($ WmtsLayer
           {:url        (:kuntarajat urls)
            :layer-name "MML-Kuntarajat"
-           :visible (contains? selected-overlays :mml-kuntarajat)}))))
+           :visible?   (contains? selected-overlays :mml-kuntarajat)}))))
 
 (defui map-view []
   ;; Subscribe to re-frame data here, then just pass to the pure components?
