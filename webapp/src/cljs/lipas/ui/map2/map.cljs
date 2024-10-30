@@ -1,4 +1,5 @@
 (ns lipas.ui.map2.map
+  (:require-macros [lipas.ui.map2.map :refer [use-object]])
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
             ["ol-new/extent" :as extent]
@@ -12,6 +13,15 @@
             [lipas.ui.map2.subs :as subs2]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [uix.core :as uix :refer [$ defui]]))
+
+;; OL component patterns
+;; - Create ref to store the OL object state for the component
+;; - Initialize the OL object in component render if ref.current is empty:
+;;   https://react.dev/reference/react/useRef#avoiding-recreating-the-ref-contents
+;; - OL Map is available in Content through a ref
+;; - Use effect with empty deps (i.e. runs just on component mount and unmount) to add OL object to the Map
+;;   (or what ever is the parent for the OL object)
+;; - Use effect with dynamic properties to update the OL object
 
 (def mml-resolutions
   #js [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
@@ -59,7 +69,13 @@
 (def MapContext (uix/create-context))
 (def MapContextProvider (.-Provider MapContext))
 
+(defn ^js use-ol []
+  (let [ctx (uix/use-context MapContext)]
+    (.-current (:ol-ref ctx))))
+
 (defui WmtsLayer
+  "Dynamic props:
+  - :visible?"
   [{:keys [url layer-name visible? base-layer? min-res max-res
            resolutions matrix-ids]
     :or   {visible?    false
@@ -68,79 +84,88 @@
            min-res     0.25
            resolutions mml-resolutions
            matrix-ids  mml-matrix-ids}}]
-  (let [layer-ref (uix/use-ref)
-        {:keys [ol-ref]} (uix/use-context MapContext)]
-    ;; TODO: Same comments about not using use-effect for the initial initialization as in map component
-    (uix/use-effect (fn []
-                      (let [layer (TileLayer. #js {:visible       visible?
-                                                   :opacity       1.0
-                                                   :minResolution min-res
-                                                   :maxResolution max-res
-                                                   :source (WMTSSource. #js {:url             url
-                                                                             :layer           layer-name
-                                                                             :projection      "EPSG:3067"
-                                                                             :matrixSet       "mml_grid"
-                                                                             :tileGrid        (WMTSTileGrid. #js {:origin      epsg3067-top-left
-                                                                                                                  :extent      epsg3067-extent
-                                                                                                                  :resolutions resolutions
-                                                                                                                  :matrixIds   matrix-ids})
-                                                                             :format          "png"
-                                                                             :requestEncoding "REST"
-                                                                             :isBaseLayer     base-layer?})})
-                            ol (.-current ol-ref)]
-                        ;; (js/console.log "init layer" ol-ref ol)
-                        (set! (.-current layer-ref) layer)
-                        (.addLayer ol layer)
-                        (fn []
-                          (.removeLayer ol layer))))
-                    ^:lint/disable
-                    [])
+  (let [ol (use-ol)
+
+        ;; TODO: Is is it a problem that the fn is created each time? but only called on the init
+        ;; Make this a macro?
+        [_ ^js source]
+        (use-object (WMTSSource. #js {:url             url
+                                      :layer           layer-name
+                                      :projection      "EPSG:3067"
+                                      :matrixSet       "mml_grid"
+                                      :tileGrid        (WMTSTileGrid. #js {:origin      epsg3067-top-left
+                                                                           :extent      epsg3067-extent
+                                                                           :resolutions resolutions
+                                                                           :matrixIds   matrix-ids})
+                                      :format          "png"
+                                      :requestEncoding "REST"
+                                      :isBaseLayer     base-layer?}))
+
+        [_ ^js layer]
+        (use-object (TileLayer. #js {:visible       visible?
+                                     :opacity       1.0
+                                     :minResolution min-res
+                                     :maxResolution max-res
+                                     :source        source}))]
+
+    ;; mount and unmount the layer
+    (uix/use-effect
+      (fn []
+        (.addLayer ol layer)
+        (fn []
+          (.removeLayer ol layer)))
+      [ol layer])
+
+    ;; toggle visible
+    (uix/use-effect
+      (fn []
+        (.setVisible layer visible?))
+      [layer visible?])
+
     nil))
 
-(defui map-container [{:keys [center zoom]}]
-  (let [map-el-ref (uix/use-ref)
-        ol-ref (uix/use-ref)
-        view-ref (uix/use-ref)
-        ctx (uix/use-memo (fn []
-                            {:map-el-ref map-el-ref
-                             :ol-ref ol-ref})
-                          [])]
-    ;; FIXME: This isn't really correct, but
-    ;; regular effect would run AFTER child component effects.
-    ;; Need to consider better way for these interop effects.
-    (uix/use-layout-effect (fn []
-                             (let [view (ol/View. #js {:center              #js [(:lon center) (:lat center)]
-                                                       :extent              epsg3067-extent
-                                                       :showFullExtent      true
-                                                       :constrainOnlyCenter true
-                                                       :zoom                zoom
-                                                       :projection          "EPSG:3067"
-                                                       :resolutions         mml-resolutions
-                                                       :units               "m"
-                                                       :enableRotation      false})
-                                   opts #js {:target (.-current map-el-ref)
-                                             :layers #js []
-                                             :controls #js []
-                                             :overlays #js []
-                                             :view view}
-                                   ol (ol/Map. opts)]
-                               ;; (js/console.log "init ol" ol)
-                               (set! (.-current ol-ref) ol)))
-                           ;; FIXME: This effect just handles the initial setup,
-                           ;; handling the property changes is outside of this effect.
-                           ;; Maybe this shouldn't be an effect at all?
-                           ^:lint/disable
-                           [])
+(defui map-inner [{:keys [map-el center zoom]}]
+  (let [[_ ^js view]
+        (use-object (ol/View. #js {:center              #js [(:lon center) (:lat center)]
+                                   :extent              epsg3067-extent
+                                   :showFullExtent      true
+                                   :constrainOnlyCenter true
+                                   :zoom                zoom
+                                   :projection          "EPSG:3067"
+                                   :resolutions         mml-resolutions
+                                   :units               "m"
+                                   :enableRotation      false}))
+
+        [ol-ref ^js _ol]
+        (use-object (ol/Map. #js {:target map-el
+                                  :layers #js []
+                                  :controls #js []
+                                  :overlays #js []
+                                  :view view}))
+
+        ctx
+        (uix/use-memo (fn []
+                        {:map-el map-el
+                         :ol-ref ol-ref})
+                      [map-el ol-ref])]
+
     ($ MapContextProvider
        {:value ctx}
-       ($ Stack
-          {:ref map-el-ref
-           :sx #js {:flex 1}
-           :tabIndex -1})
        ($ WmtsLayer
           {:url (:taustakartta urls)
            :layer-name "MML-Taustakartta"
            :visible? true}))))
+
+(defui map-container [props]
+  (let [[map-el set-map-el] (uix/use-state nil)
+        map-el-ref-fn (uix/use-callback (fn [el] (set-map-el el)) [])]
+    ($ Stack
+       {:ref map-el-ref-fn
+        :sx #js {:flex 1}
+        :tabIndex -1}
+       ;; Delay the OL component initialization to after the target DOM element is mounted.
+       (when map-el
+         ($ map-inner (assoc props :map-el map-el))))))
 
 (defui map-view []
   ;; Subscribe to re-frame data here, then just pass to the pure components?
