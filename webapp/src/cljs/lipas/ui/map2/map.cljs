@@ -75,9 +75,11 @@
 
 (defui WmtsLayer
   "Dynamic props:
-  - :visible?"
-  [{:keys [url layer-name visible? base-layer? min-res max-res
-           resolutions matrix-ids]
+  - :visible?
+  - :opacity"
+  [{:keys [url layer-name base-layer? min-res max-res
+           resolutions matrix-ids
+           visible? opacity]
     :or   {visible?    false
            base-layer? true
            max-res     8192
@@ -117,10 +119,8 @@
       [ol layer])
 
     ;; toggle visible
-    (uix/use-effect
-      (fn []
-        (.setVisible layer visible?))
-      [layer visible?])
+    (uix/use-effect (fn [] (.setVisible layer visible?)) [layer visible?])
+    (uix/use-effect (fn [] (when opacity (.setOpacity layer opacity))) [layer opacity])
 
     nil))
 
@@ -165,21 +165,127 @@
          ($ map-inner (assoc props :map-el map-el))))))
 
 (defui baselayers []
-  (let [basemap (use-subscribe [::subs/basemap])
-        active-baselayer (:layer basemap)]
+  (let [basemap (use-subscribe [::subs/basemap])]
     ($ :<>
        ($ WmtsLayer
-          {:url (:taustakartta urls)
+          {:url        (:taustakartta urls)
            :layer-name "MML-Taustakartta"
-           :visible? (= :taustakartta active-baselayer)})
+           :visible?   (= :taustakartta (:layer basemap))
+           :opacity    (:opacity basemap)})
        ($ WmtsLayer
-          {:url (:maastokartta urls)
+          {:url        (:maastokartta urls)
            :layer-name "MML-Maastokartta"
-           :visible? (= :maastokartta active-baselayer)})
+           :visible?   (= :maastokartta (:layer basemap))
+           :opacity    (:opacity basemap)})
        ($ WmtsLayer
-          {:url (:ortokuva urls)
+          {:url        (:ortokuva urls)
            :layer-name "MML-Ortokuva"
-           :visible? (= :ortokuva active-baselayer)}))))
+           :visible?   (= :ortokuva (:layer basemap))
+           :opacity    (:opacity basemap)}))))
+
+(defui overlays []
+  (let [selected-overlays (use-subscribe [::subs/selected-overlays])]
+    (js/console.log selected-overlays)
+    ($ :<>
+       ; :vectors
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :name   "vectors"
+       ;        :style  styles/feature-style})
+       ; :lois
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :name   "lois"
+       ;        :style  styles/loi-style})
+       ; :edits
+       ; (VectorLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :name   "edits"
+       ;        :zIndex 10
+       ;        :style  #js [styles/edit-style styles/vertices-style]})
+       ; :highlights
+       ; (VectorLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :name   "highlights"
+       ;        :style  #js [styles/highlight-style]})
+       ; :markers
+       ; (VectorLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :name   "markers"
+       ;        :style  styles/blue-marker-style})
+       ; :analysis
+       ; (VectorLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :style  styles/analysis-style
+       ;        :name   "analysis"})
+       ; :population
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :style  styles/population-style3
+       ;        :name   "population"})
+
+       ; :schools
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :style  styles/school-style
+       ;        :name   "schools"})
+       ; :diversity-grid
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :style  styles/diversity-grid-style
+       ;        :name   "diversity-grid"})
+       ; :diversity-area
+       ; (VectorImageLayer.
+       ;   #js {:source (VectorSource.)
+       ;        :style  styles/diversity-area-style
+       ;        :name   "diversity-area"})
+       ; :light-traffic
+       ; (ImageLayer.
+       ;   #js {:visible false
+       ;        :source (ImageWMSSource. #js {:url         "/vaylavirasto/vaylatiedot/ows"
+       ;                                      :params      #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
+       ;                                      :serverType  "geoserver"
+       ;                                      :crossOrigin "anonymous"})})
+       ; :retkikartta-snowmobile-tracks
+       ; (ImageLayer.
+       ;   #js {:visible false
+       ;        :source (ImageWMSSource. #js {:url         "/geoserver/lipas/wms?"
+       ;                                      :params      #js {:LAYERS "lipas:metsahallitus_urat2023"}
+       ;                                      :serverType  "geoserver"
+       ;                                      :crossOrigin "anonymous"})})
+
+       ($ WmtsLayer
+          {:url         (:kiinteisto urls)
+           ;; Source (MML WMTS) won't return anything with res 0.25 so we
+           ;; limit this layer grid to min resolution of 0.5 but allow
+           ;; zooming to 0.25. Limiting the grid has a desired effect that
+           ;; WMTS won't try to get the data and it shows geoms of
+           ;; the "previous" resolution.
+           :resolutions (.slice mml-resolutions 0 15)
+           :matrix-ids  (.slice mml-matrix-ids 0 15)
+           :min-res     0.25
+           :max-res     8
+           :layer-name  "MML-Kiinteistö"
+           :visible?    (contains? selected-overlays :mml-kiinteisto)})
+
+       ($ WmtsLayer
+          {:url         (:kiinteistotunnukset urls)
+           ;; Source (MML WMTS) won't return anything with res 0.25 so we
+           ;; limit this layer grid to min resolution of 0.5 but allow
+           ;; zooming to 0.25. Limiting the grid has a desired effect that
+           ;; WMTS won't try to get the data and it shows geoms of
+           ;; the "previous" resolution.
+           :resolutions (.slice mml-resolutions 0 15)
+           :matrix-ids  (.slice mml-matrix-ids 0 15)
+           :min-res     0.25
+           :max-res     8
+           :layer-name  "MML-Kiinteistötunnukset"
+           :visible?    (contains? selected-overlays :mml-kiinteistotunnukset)})
+
+       ($ WmtsLayer
+          {:url        (:kuntarajat urls)
+           :layer-name "MML-Kuntarajat"
+           :visible (contains? selected-overlays :mml-kuntarajat)}))))
 
 (defui map-view []
   ;; Subscribe to re-frame data here, then just pass to the pure components?
@@ -192,4 +298,5 @@
     ($ map-container
        {:center center
         :zoom zoom}
-       ($ baselayers))))
+       ($ baselayers)
+       ($ overlays))))
