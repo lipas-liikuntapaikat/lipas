@@ -70,7 +70,7 @@
       :add-tooltip     (tr :lipas.swimming-pool.saunas/add-sauna)
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)
-      :confirm-tooltip (tr :confirm/press-again-to-delete)
+      :confirm-tooltip (tr :confirm/delete-confirm)
       :on-add          #(==> [::events/toggle-dialog :sauna {}])
       :on-edit         #(==> [::events/toggle-dialog :sauna (get items (:id %))])
       :on-delete       #(==> [::events/remove-sauna lipas-id %])}]))

@@ -202,7 +202,7 @@
           :add-tooltip     "Lisää"
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)
-          :confirm-tooltip (tr :confirm/press-again-to-delete)
+          :confirm-tooltip (tr :confirm/delete-confirm)
           :add-btn-size    "small"}]]])))
 
 (defn form

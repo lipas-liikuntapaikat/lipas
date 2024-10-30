@@ -45,11 +45,12 @@
     "Reset"]
    [:table
     [:thead
-     [:th "Privilege"]
-     [:th "User (empty role context)"]
-     [:th "Override On"]
-     [:th "Override Off"]
-     [:th "Effective value"]]
+     [:tr
+      [:th "Privilege"]
+      [:th "User (empty role context)"]
+      [:th "Override On"]
+      [:th "Override Off"]
+      [:th "Effective value"]]]
     [:tbody
      (doall
        (for [[k _x] (sort-by first roles/privileges)]

@@ -206,7 +206,7 @@
           :add-tooltip      (tr :actions/add)
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
-          :confirm-tooltip  (tr :confirm/press-again-to-delete)
+          :confirm-tooltip  (tr :confirm/delete-confirm)
           :add-btn-size     "small"}]]
 
        ;; Debug
@@ -399,7 +399,7 @@
           :add-tooltip      (tr :actions/add)
           :edit-tooltip     (tr :actions/edit)
           :delete-tooltip   (tr :actions/delete)
-          :confirm-tooltip  (tr :confirm/press-again-to-delete)
+          :confirm-tooltip  (tr :confirm/delete-confirm)
           :add-btn-size     "small"}]]])))
 
 (defn rules
@@ -485,7 +485,7 @@
               [mui/grid {:item true :style {:text-align "right"}}
                [lui-btn/confirming-delete-button
                 {:tooltip         (tr :actions/delete)
-                 :confirm-tooltip (tr :confirm/press-again-to-delete)
+                 :confirm-tooltip (tr :confirm/delete-confirm)
                  :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
               [mui/grid {:item true :xs 12}
@@ -752,7 +752,7 @@
           :add-tooltip         (tr :actions/add)
           :edit-tooltip        (tr :actions/edit)
           :delete-tooltip      (tr :actions/delete)
-          :confirm-tooltip     (tr :confirm/press-again-to-delete)
+          :confirm-tooltip     (tr :confirm/delete-confirm)
           :add-btn-size        "small"
           #_#_:key-fn              :url}]]])))
 
@@ -861,7 +861,7 @@
           :add-tooltip     (tr :actions/add)
           :edit-tooltip    (tr :actions/edit)
           :delete-tooltip  (tr :actions/delete)
-          :confirm-tooltip (tr :confirm/press-again-to-delete)
+          :confirm-tooltip (tr :confirm/delete-confirm)
           :add-btn-size    "small"
           :key-fn          :url}]]])))
 

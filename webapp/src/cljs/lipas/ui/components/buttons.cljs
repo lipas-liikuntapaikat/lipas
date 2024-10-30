@@ -78,30 +78,13 @@
      [mui/icon "delete"]]]])
 
 (defn confirming-delete-button [{:keys [on-delete tooltip confirm-tooltip]}]
-  (r/with-let [timeout  10000
-               clicked? (r/atom false)
-               timeout* (r/atom nil)]
-
-    [:<>
-     [mui/tooltip
-      {:title     (or tooltip "")
-       :placement "top"}
-      [:span
-       [mui/icon-button
-        {:on-click #(if @clicked?
-                      (do
-                        (js/clearTimeout @timeout*)
-                        (reset! clicked? false)
-                        (on-delete %))
-                      (do
-                        (reset! timeout*
-                                (js/setTimeout
-                                  (fn []
-                                    (reset! clicked? false)) timeout))
-                        (reset! clicked? true)))}
-        (if @clicked?
-          [mui/icon "delete_forever"]
-          [mui/icon "delete"])]]]
-     (when @clicked?
-       [mui/typography {:style {:display "inline"} :color :error}
-        confirm-tooltip])]))
+  [:<>
+   [mui/tooltip
+    {:title     (or tooltip "")
+     :placement "top"}
+    [:span
+     [mui/icon-button
+      {:on-click (fn [e]
+                   (when (js/confirm confirm-tooltip)
+                     (on-delete e)))}
+      [mui/icon "delete"]]]]])

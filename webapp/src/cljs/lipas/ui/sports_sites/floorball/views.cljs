@@ -453,7 +453,7 @@
         :add-btn-size    "small"
         :edit-tooltip    (tr :actions/edit)
         :delete-tooltip  (tr :actions/delete)
-        :confirm-tooltip (tr :confirm/press-again-to-delete)
+        :confirm-tooltip (tr :confirm/delete-confirm)
         :on-add          #(==> [::events/toggle-dialog :field {:type     "floorball-field"
                                                                :field-id (str (random-uuid))}])
         :on-edit         #(==> [::events/toggle-dialog :field (get edit-data (:id %))])
@@ -583,7 +583,7 @@
         :add-btn-size    "small"
         :edit-tooltip    (tr :actions/edit)
         :delete-tooltip  (tr :actions/delete)
-        :confirm-tooltip (tr :confirm/press-again-to-delete)
+        :confirm-tooltip (tr :confirm/delete-confirm)
         :on-add          #(==> [::events/toggle-dialog :locker-room {}])
         :on-edit         #(==> [::events/toggle-dialog :locker-room (get edit-data (:id %))])
         :on-delete       #(==> [::events/remove-locker-room lipas-id %])}])))
@@ -612,7 +612,7 @@
         :add-btn-size    "small"
         :edit-tooltip    (tr :actions/edit)
         :delete-tooltip  (tr :actions/delete)
-        :confirm-tooltip (tr :confirm/press-again-to-delete)
+        :confirm-tooltip (tr :confirm/delete-confirm)
         :on-add          #(==> [::events/toggle-dialog :audits])
         :on-edit         #(==> [::events/toggle-dialog :audits (get edit-data (:id %))])
         :on-delete       #(==> [::events/remove-audit lipas-id %])}])))

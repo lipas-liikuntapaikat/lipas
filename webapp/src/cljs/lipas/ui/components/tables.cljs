@@ -279,12 +279,11 @@
       [mui/typography (or empty-label "-")]
       [table props])
 
-    ;; Table with selectable rows and 'edit' 'delete' and 'add'
+    ;; Table with 'edit' 'delete' and 'add'
     ;; actions
     ;; NOTE: Component users need to setup React Key to update the table
     ;; contents when the items update (at least after new items etc.)
     (r/with-let [idx->item (r/atom (into {} (map-indexed vector items)))
-                 selected-item (r/atom nil)
                  key-fn (or key-fn (constantly nil))]
       [mui/grid
        {:container       true
@@ -324,13 +323,16 @@
              ;; Headear row
              (when-not hide-header-row?
                [mui/table-head
-                (into [mui/table-row {:hover true}
-                       [mui/table-cell ""]]
-                      (for [[_ header] headers]
-                        [mui/table-cell header]))])
+                [mui/table-row {:hover true}
+                 [mui/table-cell ""]
+                 (for [[k header] headers]
+                   ^{:key k}
+                   [mui/table-cell header])
+                 [mui/table-cell ""]]])
 
              ;; Body
-             [:> Droppable {:droppableId "droppable"}
+             [:> Droppable
+              {:droppableId "droppable"}
               (fn [provided]
                 (let [t-props (.-droppableProps provided)
                       _       (set! (.-ref t-props) (.-innerRef provided))]
@@ -338,12 +340,18 @@
                   (r/as-element
                     [mui/table-body (js->clj t-props)
 
-                    ;; Rows
+                     ;; Rows
                      (doall
                        (for [[idx item] (sort-by first @idx->item)]
-                         (let [id (or (key-fn item) idx (:id item) (:lipas-id item))]
+                         (let [id (or (key-fn item)
+                                      idx
+                                      (:id item)
+                                      (:lipas-id item))]
 
-                           [:> Draggable {:draggableId (str "draggable-" id) :index idx :key id}
+                           [:> Draggable
+                            {:draggableId (str "draggable-" id)
+                             :index idx
+                             :key id}
                             (fn [provided]
                               (let [r-props {:key            id
                                              :ref            (.-innerRef provided)
@@ -357,49 +365,49 @@
                                                         (js->clj (.-draggableProps provided))
                                                         (js->clj (.-dragHandleProps provided)))
 
-                                   [mui/table-cell {:padding "checkbox"}
-                                    [mui/stack {:direction "row" :align-items "center"}
-                                     [mui/icon "drag_indicator"]
-                                     [mui/checkbox
-                                      {:color     "secondary"
-                                       :checked   (= item @selected-item)
-                                       :on-change (fn [_ checked?]
-                                                    (let [v (when checked? item)]
-                                                      (reset! selected-item v)))}]]]
+                                   [mui/table-cell
+                                    {:padding "checkbox"}
+                                    [mui/stack
+                                     {:direction "row"
+                                      :align-items "center"}
+                                     [mui/icon "drag_indicator"]]]
 
-                                ;; Cells
+                                   ;; Cells
                                    (doall
                                      (for [[k _] headers
                                            :let  [v (get item k)]]
-                                       [mui/table-cell {:key (str id k) :padding "normal"}
-                                        (utils/display-value v)]))])))])))
+                                       [mui/table-cell
+                                        {:key k
+                                         :padding "normal"}
+                                        (utils/display-value v)]))
+
+                                   [mui/table-cell
+                                    {:padding "checkbox"
+                                     :class-name :no-print}
+                                    [mui/stack
+                                     {:direction "row"
+                                      :align-items "center"}
+                                     [mui/tooltip
+                                      {:title (or edit-tooltip "")
+                                       :placement "top"}
+                                      [mui/icon-button
+                                       {:on-click #(on-edit item)}
+                                       [mui/icon "edit"]]]
+                                     [buttons/confirming-delete-button
+                                      {:tooltip         delete-tooltip
+                                       :confirm-tooltip confirm-tooltip
+                                       :on-delete       #(on-delete item)}]]]])))])))
 
                      (.-placeholder provided)])))]]]]])
-
-       ;; Editing tools
-       [mui/grid {:item true :xs 10 :class-name :no-print}
-
-        ;; Edit button
-        (when @selected-item
-          [mui/tooltip {:title (or edit-tooltip "") :placement "top"}
-           [mui/icon-button {:on-click #(on-edit @selected-item)}
-            [mui/icon "edit"]]])
-
-        ;; Delete button
-        (when @selected-item
-          [buttons/confirming-delete-button
-           {:tooltip         delete-tooltip
-            :confirm-tooltip confirm-tooltip
-            :on-delete       #(do
-                                (on-delete @selected-item)
-                                (reset! selected-item nil))}])]
 
        ;; Add button
        [mui/grid
         {:item       true :xs 2
          :style      {:text-align "right"}
          :class-name :no-print}
-        [mui/tooltip {:title (or add-tooltip "") :placement "left"}
+        [mui/tooltip
+         {:title (or add-tooltip "")
+          :placement "left"}
          [mui/fab
           {:style    {:margin-top "1em"}
            :on-click on-add

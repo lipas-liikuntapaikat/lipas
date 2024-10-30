@@ -164,7 +164,7 @@
       :add-btn-size    add-btn-size
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)
-      :confirm-tooltip (tr :confirm/press-again-to-delete)
+      :confirm-tooltip (tr :confirm/delete-confirm)
       :on-add          #(==> [::events/toggle-dialog :pool {}])
       :on-edit         #(==> [::events/toggle-dialog :pool (get items (:id %))])
       :on-delete       #(==> [::events/remove-pool lipas-id %])}]))

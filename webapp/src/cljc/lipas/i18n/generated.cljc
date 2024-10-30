@@ -180,7 +180,7 @@
     {:discard-changes?      "Tahdotko kumota tekemäsi muutokset?",
      :headline              "Varmistus",
      :no                    "Ei",
-     :press-again-to-delete "Varmista painamalla uudestaan",
+     :delete-confirm        "Haluatko varmasti poistaa rivin?",
      :resurrect?            "Tahdotko palauttaa liikuntapaikan aktiiviseksi?",
      :save-basic-data?      "Haluatko tallentaa perustiedot?",
      :yes                   "Kyllä"},
@@ -1213,7 +1213,7 @@
     {:discard-changes?      "Vill du förkasta ändringar?",
      :headline              "Bekräftelse",
      :no                    "Nej",
-     :press-again-to-delete "Klicka igen för att radera",
+     :delete-confirm "Vill du verkligen ta bort raden?"
      :resurrect?            "Vill du spara grunddata?",
      :save-basic-data?      "Vill du spara grunddata?",
      :yes                   "Ja"},
@@ -2080,9 +2080,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
     {:discard-changes?      "Do you want to discard all changes?",
      :headline              "Confirmation",
      :no                    "No",
-     :press-again-to-delete "Press again to delete",
-     :resurrect?
-     "Are you sure you want to resurrect this sports facility?",
+     :delete-confirm "Are you sure you want to delete the row?"
+     :resurrect? "Are you sure you want to resurrect this sports facility?",
      :save-basic-data?      "Do you want to save general information?",
      :yes                   "Yes"},
     :lipas.swimming-pool.saunas

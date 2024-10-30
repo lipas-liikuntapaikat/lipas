@@ -58,7 +58,7 @@
     :add-tooltip     (tr :lipas.ice-stadium.rinks/add-rink)
     :edit-tooltip    (tr :actions/edit)
     :delete-tooltip  (tr :actions/delete)
-    :confirm-tooltip (tr :confirm/press-again-to-delete)}])
+    :confirm-tooltip (tr :confirm/delete-confirm)}])
 
 (defn read-only-table [{:keys [tr items]}]
   (lui/table
