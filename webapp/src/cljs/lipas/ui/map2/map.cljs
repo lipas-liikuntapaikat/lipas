@@ -97,6 +97,8 @@
     (js/console.log selected-overlays)
     ($ :<>
        ;; TODO: Rest of the overlays are used by search results, edit tools etc.?
+       ;; Some or most of these will be handled in other components and can be
+       ;; created and removed as needed (for example, if edit mode is active)
 
        ; :vectors
        ; (VectorImageLayer.
