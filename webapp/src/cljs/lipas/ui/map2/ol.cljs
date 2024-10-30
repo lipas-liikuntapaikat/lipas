@@ -1,12 +1,17 @@
-(ns lipas.ui.map2.ol 
+(ns lipas.ui.map2.ol
   (:require ["ol-new/layer/Image$default" :as ImageLayer]
             ["ol-new/layer/Tile$default" :as TileLayer]
+            ["ol-new/layer/VectorImage$default" :as OLVectorImageLayer]
             ["ol-new/source/ImageWMS$default" :as ImageWMSSource]
+            ["ol-new/source/Vector$default" :as VectorSource]
             ["ol-new/source/WMTS$default" :as WMTSSource]
             ["ol-new/tilegrid/WMTS$default" :as WMTSTileGrid]
             [lipas.ui.map2.projection :as projection]
             [lipas.ui.map2.utils :refer [use-object use-ol]]
-            [uix.core :as uix :refer [defui]]))
+            [uix.core :as uix :refer [$ defui]]))
+
+(def SourceContext (uix/create-context))
+(def SourceContextProvider (.-Provider SourceContext))
 
 (defui WmtsLayer
   "Dynamic props:
@@ -76,3 +81,26 @@
       [ol layer])
     (uix/use-effect (fn [] (.setVisible layer visible)) [layer visible])
     nil))
+
+(defui VectorImageLayer [{:keys [name style children]}]
+  (let [ol (use-ol)
+
+        [_ ^js source]
+        (use-object (VectorSource.))
+
+        [_ ^js layer]
+        (use-object (OLVectorImageLayer.
+                      #js {:source source
+                           :name name
+                           :style style}))]
+
+    (uix/use-effect
+      (fn []
+        (.addLayer ol layer)
+        (fn []
+          (.removeLayer ol layer)))
+      [ol layer])
+
+    ($ SourceContextProvider
+       {:value source}
+       children)))

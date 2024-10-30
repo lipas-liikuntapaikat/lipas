@@ -2,15 +2,13 @@
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
             ["ol-new/format/GeoJSON$default" :as GeoJSON]
-            ["ol-new/layer/VectorImage$default" :as VectorImageLayer]
-            ["ol-new/source/Vector$default" :as VectorSource]
             [cljs-bean.core :refer [->js]]
             [lipas.ui.map.subs :as subs]
-            [lipas.ui.map2.ol :refer [ImageLayerWMS WmtsLayer]]
+            [lipas.ui.map2.ol :as x :refer [ImageLayerWMS WmtsLayer]]
             [lipas.ui.map2.projection :as projection]
             [lipas.ui.map2.style :as style]
             [lipas.ui.map2.subs :as subs2]
-            [lipas.ui.map2.utils :refer [MapContextProvider use-object use-ol]]
+            [lipas.ui.map2.utils :refer [MapContextProvider use-object]]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [uix.core :as uix :refer [$ defui]]))
 
@@ -208,9 +206,10 @@
 (def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
                             :featureProjection "EPSG:3067"}))
 
-(defui geojson-result [{:keys [result ^js source]}]
+(defui geojson-result [{:keys [result]}]
   (let [;; TODO: avoid displaying duplicates when editing,
         ;; check and hide if editing site lipas-id is same as this result
+        ^js source (uix/use-context x/SourceContext)
 
         features (uix/use-memo (fn []
                                  (let [geoms            (or
@@ -249,33 +248,13 @@
     nil))
 
 (defui search-results []
-  (let [results (use-subscribe [::subs2/results])
-        ol (use-ol)
-
-        ;; Create VectorSource generic component, store the source to Context
-        ;; and then use the source value from the Context in the geojson-result children?
-
-        [_ ^js source]
-        (use-object (VectorSource.))
-
-        [_ ^js layer]
-        (use-object (VectorImageLayer.
-                      #js {:source source
-                           :name "vectors"
-                           :style style/feature-style}))]
-
-    (uix/use-effect
-      (fn []
-        (.addLayer ol layer)
-        (fn []
-          (.removeLayer ol layer)))
-      [ol layer])
-
-    ($ :<>
+  (let [results (use-subscribe [::subs2/results])]
+    ($ x/VectorImageLayer
+       {:name "vectors"
+        :style style/feature-style}
        (for [result results]
          ($ geojson-result
             {:key (:lipas-id result)
-             :source source
              :result result})))))
 
 (defui map-view []
