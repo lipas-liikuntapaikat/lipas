@@ -1,18 +1,10 @@
 (ns lipas.ui.map2.map
-  (:require-macros [lipas.ui.map2.map :refer [use-object]])
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
-            ["ol-new/extent" :as extent]
-            ["ol-new/layer/Image$default" :as ImageLayer]
-            ["ol-new/layer/Tile$default" :as TileLayer]
-            ["ol-new/proj" :as proj]
-            ["ol-new/proj/proj4" :refer [register]]
-            ["ol-new/source/ImageWMS$default" :as ImageWMSSource]
-            ["ol-new/source/WMTS$default" :as WMTSSource]
-            ["ol-new/tilegrid/WMTS$default" :as WMTSTileGrid]
-            ["proj4" :as proj4]
             [lipas.ui.map.subs :as subs]
-            [lipas.ui.map2.subs :as subs2]
+            [lipas.ui.map2.ol :refer [ImageLayerWMS WmtsLayer]]
+            [lipas.ui.map2.projection :as projection]
+            [lipas.ui.map2.utils :refer [MapContextProvider use-object]]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [uix.core :as uix :refer [$ defui]]))
 
@@ -35,121 +27,10 @@
        layer-name
        "/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png"))
 
-(def urls
-  {:taustakartta        (->wmts-url "mml_taustakartta")
-   :maastokartta        (->wmts-url "mml_maastokartta")
-   :ortokuva            (->wmts-url "mml_ortokuva")
-   :kiinteisto          (->wmts-url "mml_kiinteisto")
-   :kiinteistotunnukset (->wmts-url "mml_kiinteistotunnukset")
-   :kuntarajat          (->wmts-url "mml_kuntarajat")})
-
-(def epsg3067-extent #js [-548576.0 6291456.0 1548576.0 8388608.0])
-
-;; initialize proj
-(def epsg3067-defs
-  (str "+proj=utm"
-       "+zone=35"
-       "+ellps=GRS80"
-       "+towgs84=0,0,0,0,0,0,0"
-       "+units=m"
-       "+no_defs"))
-
-(defn init! []
-  (proj4/defs "EPSG:3067" epsg3067-defs)
-  (register proj4)
-
-  (let [proj (proj/get "EPSG:3067")]
-    (.setExtent proj epsg3067-extent)
-    {:proj4 proj4 :epsg3067 proj}))
-
-(def proj (init!))
-
-(def ^js epsg3067 (:epsg3067 proj))
-(def epsg3067-top-left (extent/getTopLeft (.getExtent epsg3067)))
-
-
-(def MapContext (uix/create-context))
-(def MapContextProvider (.-Provider MapContext))
-
-(defn ^js use-ol []
-  (let [ctx (uix/use-context MapContext)]
-    (.-current (:ol-ref ctx))))
-
-(defui WmtsLayer
-  "Dynamic props:
-  - :visible?
-  - :opacity"
-  [{:keys [url layer-name base-layer? min-res max-res
-           resolutions matrix-ids
-           visible? opacity]
-    :or   {visible?    false
-           base-layer? true
-           max-res     8192
-           min-res     0.25
-           resolutions mml-resolutions
-           matrix-ids  mml-matrix-ids}}]
-  (let [ol (use-ol)
-
-        ;; TODO: Is is it a problem that the fn is created each time? but only called on the init
-        ;; Make this a macro?
-        [_ ^js source]
-        (use-object (WMTSSource. #js {:url             url
-                                      :layer           layer-name
-                                      :projection      "EPSG:3067"
-                                      :matrixSet       "mml_grid"
-                                      :tileGrid        (WMTSTileGrid. #js {:origin      epsg3067-top-left
-                                                                           :extent      epsg3067-extent
-                                                                           :resolutions resolutions
-                                                                           :matrixIds   matrix-ids})
-                                      :format          "png"
-                                      :requestEncoding "REST"
-                                      :isBaseLayer     base-layer?}))
-
-        [_ ^js layer]
-        (use-object (TileLayer. #js {:visible       visible?
-                                     :opacity       1.0
-                                     :minResolution min-res
-                                     :maxResolution max-res
-                                     :source        source}))]
-
-    ;; mount and unmount the layer
-    (uix/use-effect
-      (fn []
-        (.addLayer ol layer)
-        (fn []
-          (.removeLayer ol layer)))
-      [ol layer])
-
-    ;; toggle visible
-    (uix/use-effect (fn [] (.setVisible layer visible?)) [layer visible?])
-    (uix/use-effect (fn [] (when opacity (.setOpacity layer opacity))) [layer opacity])
-
-    nil))
-
-(defui ImageLayerWMS
-  "Dynamic props:
-  - visible"
-  [{:keys [visible source-props]}]
-  (let [ol (use-ol)
-        [_ ^js source]
-        (use-object (ImageWMSSource. source-props))
-
-        [_ ^js layer]
-        (use-object (ImageLayer. #js {:source source
-                                      :visible visible}))]
-    (uix/use-effect
-      (fn []
-        (.addLayer ol layer)
-        (fn []
-          (.removeLayer ol layer)))
-      [ol layer])
-    (uix/use-effect (fn [] (.setVisible layer visible)) [layer visible])
-    nil))
-
 (defui map-inner [{:keys [map-el center zoom children]}]
   (let [[_ ^js view]
         (use-object (ol/View. #js {:center              #js [(:lon center) (:lat center)]
-                                   :extent              epsg3067-extent
+                                   :extent              projection/epsg3067-extent
                                    :showFullExtent      true
                                    :constrainOnlyCenter true
                                    :zoom                zoom
@@ -190,17 +71,23 @@
   (let [basemap (use-subscribe [::subs/basemap])]
     ($ :<>
        ($ WmtsLayer
-          {:url        (:taustakartta urls)
+          {:url        (->wmts-url "mml_taustakartta")
+           :resolutions mml-resolutions
+           :matrix-ids  mml-matrix-ids
            :layer-name "MML-Taustakartta"
            :visible?   (= :taustakartta (:layer basemap))
            :opacity    (:opacity basemap)})
        ($ WmtsLayer
-          {:url        (:maastokartta urls)
+          {:url        (->wmts-url "mml_maastokartta")
+           :resolutions mml-resolutions
+           :matrix-ids  mml-matrix-ids
            :layer-name "MML-Maastokartta"
            :visible?   (= :maastokartta (:layer basemap))
            :opacity    (:opacity basemap)})
        ($ WmtsLayer
-          {:url        (:ortokuva urls)
+          {:url        (->wmts-url "mml_ortokuva")
+           :resolutions mml-resolutions
+           :matrix-ids  mml-matrix-ids
            :layer-name "MML-Ortokuva"
            :visible?   (= :ortokuva (:layer basemap))
            :opacity    (:opacity basemap)}))))
@@ -279,7 +166,7 @@
                               :crossOrigin "anonymous"}})
 
        ($ WmtsLayer
-          {:url         (:kiinteisto urls)
+          {:url         (->wmts-url "mml_kiinteisto")
            ;; Source (MML WMTS) won't return anything with res 0.25 so we
            ;; limit this layer grid to min resolution of 0.5 but allow
            ;; zooming to 0.25. Limiting the grid has a desired effect that
@@ -293,7 +180,7 @@
            :visible?    (contains? selected-overlays :mml-kiinteisto)})
 
        ($ WmtsLayer
-          {:url         (:kiinteistotunnukset urls)
+          {:url         (->wmts-url "mml_kiinteistotunnukset")
            ;; Source (MML WMTS) won't return anything with res 0.25 so we
            ;; limit this layer grid to min resolution of 0.5 but allow
            ;; zooming to 0.25. Limiting the grid has a desired effect that
@@ -304,11 +191,15 @@
            :min-res     0.25
            :max-res     8
            :layer-name  "MML-Kiinteistötunnukset"
+           :is-baselayer? false
            :visible?    (contains? selected-overlays :mml-kiinteistotunnukset)})
 
        ($ WmtsLayer
-          {:url        (:kuntarajat urls)
+          {:url        (->wmts-url "mml_kuntarajat")
+           :resolutions mml-resolutions
+           :matrix-ids  mml-matrix-ids
            :layer-name "MML-Kuntarajat"
+           :is-baselayer? false
            :visible?   (contains? selected-overlays :mml-kuntarajat)}))))
 
 (defui map-view []

@@ -1,4 +1,4 @@
-(ns lipas.ui.map2.map)
+(ns lipas.ui.map2.utils)
 
 (defmacro use-object
   "Executes to body to initialize the ref
