@@ -1,10 +1,16 @@
 (ns lipas.ui.map2.map
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
+            ["ol-new/format/GeoJSON$default" :as GeoJSON]
+            ["ol-new/layer/VectorImage$default" :as VectorImageLayer]
+            ["ol-new/source/Vector$default" :as VectorSource]
+            [cljs-bean.core :refer [->js]]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map2.ol :refer [ImageLayerWMS WmtsLayer]]
             [lipas.ui.map2.projection :as projection]
-            [lipas.ui.map2.utils :refer [MapContextProvider use-object]]
+            [lipas.ui.map2.style :as style]
+            [lipas.ui.map2.subs :as subs2]
+            [lipas.ui.map2.utils :refer [MapContextProvider use-object use-ol]]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [uix.core :as uix :refer [$ defui]]))
 
@@ -100,11 +106,6 @@
        ;; Some or most of these will be handled in other components and can be
        ;; created and removed as needed (for example, if edit mode is active)
 
-       ; :vectors
-       ; (VectorImageLayer.
-       ;   #js {:source (VectorSource.)
-       ;        :name   "vectors"
-       ;        :style  styles/feature-style})
        ; :lois
        ; (VectorImageLayer.
        ;   #js {:source (VectorSource.)
@@ -204,16 +205,90 @@
            :is-baselayer? false
            :visible?   (contains? selected-overlays :mml-kuntarajat)}))))
 
+(def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
+                            :featureProjection "EPSG:3067"}))
+
+(defui geojson-result [{:keys [result ^js source]}]
+  (let [;; TODO: avoid displaying duplicates when editing,
+        ;; check and hide if editing site lipas-id is same as this result
+
+        features (uix/use-memo (fn []
+                                 (let [geoms            (or
+                                                          ;; Full geoms
+                                                          (-> result :location :geometries :features)
+                                                          ;; Simplified geoms
+                                                          (-> result :search-meta :location :simple-geoms :features))
+                                       type-code        (-> result :type :type-code)
+                                       lipas-id         (:lipas-id result)
+                                       feature-name     (:name result)
+                                       status           (:status result)
+                                       travel-direction (:travel-direction result)
+
+                                       ;; Create feature collection from the result features,
+                                       ;; add common props into each feature in the collection.
+                                       x #js {:type     "FeatureCollection"
+                                              :features (->> geoms
+                                                             (map-indexed (fn [idx geom]
+                                                                            (->js (assoc geom
+                                                                                         :id (str lipas-id "-" idx)
+                                                                                         :properties #js {:lipas-id         lipas-id
+                                                                                                          :name             feature-name
+                                                                                                          :type-code        type-code
+                                                                                                          :status           status
+                                                                                                          :travel-direction travel-direction}))))
+                                                             into-array)}]
+                                   (.readFeatures geoJSON x)))
+                               [result])]
+
+    (uix/use-effect (fn []
+                      (.addFeatures source features)
+                      (fn []
+                        (.removeFeatures source features)))
+                    [source features])
+
+    nil))
+
+(defui search-results []
+  (let [results (use-subscribe [::subs2/results])
+        ol (use-ol)
+
+        ;; Create VectorSource generic component, store the source to Context
+        ;; and then use the source value from the Context in the geojson-result children?
+
+        [_ ^js source]
+        (use-object (VectorSource.))
+
+        [_ ^js layer]
+        (use-object (VectorImageLayer.
+                      #js {:source source
+                           :name "vectors"
+                           :style style/feature-style}))]
+
+    (uix/use-effect
+      (fn []
+        (.addLayer ol layer)
+        (fn []
+          (.removeLayer ol layer)))
+      [ol layer])
+
+    ($ :<>
+       (for [result results]
+         ($ geojson-result
+            {:key (:lipas-id result)
+             :source source
+             :result result})))))
+
 (defui map-view []
-  ;; Subscribe to re-frame data here, then just pass to the pure components?
-  (let [;; geoms   (use-subscribe [::subs2/geometries])
-        center  (use-subscribe [::subs/center])
+  (let [center  (use-subscribe [::subs/center])
         zoom    (use-subscribe [::subs/zoom])]
     ;; NOTE: Avoid adding Lipas specific props to map-container/map-inner
     ;; Most of stuff for Lipas map should be handled by children components (like baselayers)
     ;; Children can just subscribe to specific rf subs they need.
+
+    ;; TODO: center and zoom values aren't being followed yet
     ($ map-container
        {:center center
         :zoom zoom}
        ($ baselayers)
-       ($ overlays))))
+       ($ overlays)
+       ($ search-results))))
