@@ -1,6 +1,7 @@
 (ns lipas.ui.map2.ol
   (:require ["ol-new/layer/Image$default" :as ImageLayer]
             ["ol-new/layer/Tile$default" :as TileLayer]
+            ["ol-new/layer/Vector$default" :as OLVectorLayer]
             ["ol-new/layer/VectorImage$default" :as OLVectorImageLayer]
             ["ol-new/source/ImageWMS$default" :as ImageWMSSource]
             ["ol-new/source/Vector$default" :as VectorSource]
@@ -104,3 +105,32 @@
     ($ SourceContextProvider
        {:value source}
        children)))
+
+(defui VectorLayer [{:keys [name style children]}]
+  (let [ol (use-ol)
+
+        [_ ^js source]
+        (use-object (VectorSource.))
+
+        [_ ^js layer]
+        (use-object (OLVectorLayer.
+                      #js {:source source
+                           :name name
+                           :style style}))]
+
+    (uix/use-effect
+      (fn []
+        (.addLayer ol layer)
+        (fn []
+          (.removeLayer ol layer)))
+      [ol layer])
+
+    ($ SourceContextProvider
+       {:value source}
+       children)))
+
+(defui GeoJSONMarker [{:keys [geojson style]}]
+  nil)
+
+(defui SelectInteraction []
+  nil)

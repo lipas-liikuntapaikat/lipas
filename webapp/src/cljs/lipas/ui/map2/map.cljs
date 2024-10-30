@@ -1,15 +1,17 @@
 (ns lipas.ui.map2.map
   (:require ["@mui/material/Stack$default" :as Stack]
             ["ol-new" :as ol]
-            ["ol-new/format/GeoJSON$default" :as GeoJSON]
+            ["ol-new/events/condition" :as events-condition]
             [cljs-bean.core :refer [->js]]
+            [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map2.ol :as x :refer [ImageLayerWMS WmtsLayer]]
             [lipas.ui.map2.projection :as projection]
             [lipas.ui.map2.style :as style]
             [lipas.ui.map2.subs :as subs2]
-            [lipas.ui.map2.utils :refer [MapContextProvider use-object]]
+            [lipas.ui.map2.utils :as utils :refer [MapContextProvider use-object]]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [re-frame.core :as rf]
             [uix.core :as uix :refer [$ defui]]))
 
 ;; OL component patterns
@@ -24,7 +26,7 @@
 (def mml-resolutions
   #js [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25])
 
-(def mml-matrix-ids (clj->js (range (count mml-resolutions))))
+(def mml-matrix-ids (into-array (range (count mml-resolutions))))
 
 (defn ->wmts-url [layer-name]
   (str "/mapproxy/wmts/"
@@ -55,6 +57,14 @@
                         {:map-el map-el
                          :ol-ref ol-ref})
                       [map-el ol-ref])]
+
+    (uix/use-effect (fn []
+                      (.setCenter view #js [(:lon center) (:lat center)]))
+                    [view center])
+
+    (uix/use-effect (fn []
+                      (.setZoom view zoom))
+                    [view zoom])
 
     ($ MapContextProvider
        {:value ctx}
@@ -98,7 +108,6 @@
 
 (defui overlays []
   (let [selected-overlays (use-subscribe [::subs/selected-overlays])]
-    (js/console.log selected-overlays)
     ($ :<>
        ;; TODO: Rest of the overlays are used by search results, edit tools etc.?
        ;; Some or most of these will be handled in other components and can be
@@ -203,9 +212,6 @@
            :is-baselayer? false
            :visible?   (contains? selected-overlays :mml-kuntarajat)}))))
 
-(def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
-                            :featureProjection "EPSG:3067"}))
-
 (defui geojson-result [{:keys [result]}]
   (let [;; TODO: avoid displaying duplicates when editing,
         ;; check and hide if editing site lipas-id is same as this result
@@ -236,7 +242,7 @@
                                                                                                           :status           status
                                                                                                           :travel-direction travel-direction}))))
                                                              into-array)}]
-                                   (.readFeatures geoJSON x)))
+                                   (utils/->ol-features x)))
                                [result])]
 
     (uix/use-effect (fn []
@@ -259,15 +265,81 @@
 
 (defui map-view []
   (let [center  (use-subscribe [::subs/center])
-        zoom    (use-subscribe [::subs/zoom])]
+        zoom    (use-subscribe [::subs/zoom])
+        {mode :name, :keys [lipas-id elevation]}
+        (use-subscribe [::subs/mode*])
+        address (use-subscribe [::subs/address-search-results])
+        elevation nil]
+    (js/console.log mode)
     ;; NOTE: Avoid adding Lipas specific props to map-container/map-inner
     ;; Most of stuff for Lipas map should be handled by children components (like baselayers)
     ;; Children can just subscribe to specific rf subs they need.
-
-    ;; TODO: center and zoom values aren't being followed yet
     ($ map-container
        {:center center
         :zoom zoom}
        ($ baselayers)
        ($ overlays)
-       ($ search-results))))
+       ($ search-results)
+       (case mode
+         :default ($ :<>
+                     ($ x/SelectInteraction
+                        {;; TODO: How to get the layer?
+                         :layers ["vectors"]
+                         :style style/feature-style-hover
+                         :multi true
+                         :condition events-condition/pointerMove
+                         :on-select (fn [^js e]
+                                      (let [coords   (some-> e .-mapBrowserEvent .-coordinate)
+                                            selected (.-selected e)]
+
+                                        ;; Uncommenting this would enable selecting all geoms
+                                        ;; attached to Lipas-ID on hover. However this causes
+                                        ;; terrible flickering and workaround hasn't been found
+                                        ;; yet.
+                                        ;;
+                                        ;; (let [f1       (aget selected 0)
+                                        ;;       lipas-id (when f1 (.get f1 "lipas-id"))
+                                        ;;       fs       (map-utils/find-features-by-lipas-id
+                                        ;;                 {:layers layers} lipas-id)]
+                                        ;;   (doto (.getFeatures vector-hover)
+                                        ;;     (.clear)
+                                        ;;     (.extend fs)))
+
+                                        ; (.setPosition popup-overlay coords)
+                                        (rf/dispatch [::events/show-popup
+                                                      (when (not-empty selected)
+                                                        {:coordinates coords
+                                                         :data      (-> selected utils/->geoJSON-clj)})])))})
+                     ; ($ SelectInteraction
+                     ;    {:layers    #js [(-> layers :overlays :markers)]
+                     ;     :style     style/feature-style-hover
+                     ;     :multi     true
+                     ;     :condition events-condition/pointerMove
+                     ;     :on-select (fn [_e]
+                     ;                  :todo)})
+                     ; ($ SelectInteraction
+                     ;    {:layers    #js [(-> layers :overlays :lois)]
+                     ;     :style     style/loi-style-hover
+                     ;     :multi     true
+                     ;     :condition events-condition/pointerMove
+                     ;     :on-select (fn [^js _e]
+                     ;                  :todo)})
+                     ; (when lipas-id
+                     ;   ($ SelectInteraction
+                     ;      {:layers #js [(-> layers :overlays :vectors)
+                     ;                    (-> layers :overlays :lois)]
+                     ;       :style  style/feature-style-selected
+                     ;       :on-select (fn [^js _e]
+                     ;                    :todo)}))
+                     ($ x/VectorLayer
+                        {:name "markers"
+                         :style style/blue-marker-style}
+                        (when address
+                          ($ x/GeoJSONMarker
+                             {:geojson address
+                              :style style/blue-marker-style}))
+                        (when elevation
+                          ($ x/GeoJSONMarker
+                             {:geojson elevation
+                              :style style/blue-marker-style}))))
+         nil))))

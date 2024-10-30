@@ -82,7 +82,8 @@
       {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
     :maastokartta
     (->wmts
-      {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
+      {:url (:maastokartta urls) :layer-name "MML-Maastokartta"})
+    :ortokuva
     (->wmts
       {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays

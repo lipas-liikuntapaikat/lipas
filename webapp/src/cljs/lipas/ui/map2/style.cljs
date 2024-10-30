@@ -133,6 +133,9 @@
 (def symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v))) {} styleset))
 
+(def hover-symbols
+  (reduce (fn [m [k v]] (assoc m k (->symbol-style v :hover true))) {} styleset))
+
 (def planned-symbols
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planned true))) {} styleset))
 
@@ -155,5 +158,11 @@
                     "planning" (get planning-symbols type-code)
                     "planned"  (get planned-symbols type-code)
                     (get symbols type-code))]
+    (shift-likely-overlapping! type-code (first style) resolution f)
+    style))
+
+(defn feature-style-hover [f resolution]
+  (let [type-code (.get f "type-code")
+        style     (get hover-symbols type-code)]
     (shift-likely-overlapping! type-code (first style) resolution f)
     style))
