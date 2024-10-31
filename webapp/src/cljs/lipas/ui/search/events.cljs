@@ -112,7 +112,7 @@
 
 (defn ->es-search-body
   ([params user]
-   (->es-search-body params false))
+   (->es-search-body params user false))
   ([{:keys [filters string center distance sort decay?
             locale pagination zoom bbox geom]} user terse?]
    (let [string            (resolve-query-string string)
