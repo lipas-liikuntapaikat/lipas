@@ -738,11 +738,14 @@
 
         ;; Travel direction (limited to paddling for now)
         (when (and editing?
-                   edit-activities?
+                   (or can-edit-map? edit-activities?)
                    (#{"LineString"} geom-type)
                    ;; check for activity = paddling?
                    ;; doesn't include 5150 now, but that would be Points
-                   (#{4451 4452} type-code))
+                   (#{;; paddling routes
+                      4451 4452
+                      ;; ski routes
+                      4402} type-code))
           [mui/menu-item
            {:on-click
             #(do
