@@ -745,7 +745,7 @@
                    (#{;; paddling routes
                       4451 4452
                       ;; ski routes
-                      4402} type-code))
+                      4402 4440} type-code))
           [mui/menu-item
            {:on-click
             #(do
