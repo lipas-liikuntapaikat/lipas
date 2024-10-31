@@ -987,7 +987,8 @@
              :geoms        (-> edit-data :location :geometries)
              :geom-type    geom-type
              :problems?    problems?
-             :key          (-> edit-data :type :type-code)}]
+             :key          (-> edit-data :type :type-code)
+             :pools        (:pools edit-data)}]
 
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]

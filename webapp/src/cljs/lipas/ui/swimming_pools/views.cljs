@@ -136,7 +136,8 @@
                          (-> edit-data :type :type-code)
                          (-> display-data :type :type-code))
          :on-change    (partial set-field :properties)
-         :read-only?   (not editing?)}]]
+         :read-only?   (not editing?)
+         :pools        (:pools edit-data)}]]
 
       ;;; Building
       (let [display-data (-> display-data :building)
