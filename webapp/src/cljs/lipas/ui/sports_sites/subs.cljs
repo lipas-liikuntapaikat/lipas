@@ -333,7 +333,7 @@
             city          (get cities (-> latest :location :city :city-code))
             status        (statuses (-> latest :status))
 
-            get-material    #(get-in materials [% locale])
+            get-material #(get-in materials [% locale])
             get-travel-mode #(get-in prop-types/all [:travel-modes :opts % :label locale])
 
             get-parkour-structure #(get-in prop-types/all [:parkour-hall-equipment-and-structures :opts % :label locale])
@@ -426,7 +426,7 @@
                                                (fn [v]
                                                  (get-in audience-stand-access [v locale])))))
              :locker-rooms  (:locker-rooms latest)
-             :audits        (:audits latest)})
+             :audits (:audits latest)})
 
         ;; TODO maybe check activities for type
           (when true
