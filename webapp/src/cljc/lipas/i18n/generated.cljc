@@ -1018,6 +1018,7 @@
      "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",
      :calculate-route-length "Laske reitin pituus automaattisesti",
      :calculate-area         "Laske alueen pinta-ala automaattisesti",
+     :calculate-count        "Laske lukumäärä automaattisesti",
      :remove-polygon         "Poista alue",
      :modify-linestring      "Muokkaa reittiä",
      :download-gpx           "Lataa GPX",
@@ -1907,6 +1908,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",
      :calculate-route-length "Räkna ut längden",
      :calculate-area         "Räkna ytlan"
+     :calculate-count "Beräkna antal automatiskt"
      :remove-polygon         "Ta bort område",
      :modify-linestring      "Modifera rutten",
      :download-gpx           "Ladda ner GPX",
@@ -2876,6 +2878,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :route-part-difficulty "Set route section difficulty"
      :calculate-route-length "Calculate route length",
      :calculate-area         "Calculate area",
+     :calculate-count "Calculate count automatically"
      :remove-polygon         "Remove area",
      :modify-linestring      "Modify route",
      :download-gpx           "Download GPX",

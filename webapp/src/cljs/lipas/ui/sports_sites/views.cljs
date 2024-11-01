@@ -401,6 +401,24 @@
       {:on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
       [:> Calculator]]]]])
 
+;; TODO: This can replace the previous two cases also
+(defn calculate-field
+  [{:keys [on-change calculate-fn calculate-label]}
+   children]
+  [mui/grid
+   {:container true
+    :wrap "nowrap"}
+   [mui/form-group
+    {:sx {:flexGrow 1
+          :justify-content "center"}}
+    children]
+   [mui/grid {:item true}
+    [mui/tooltip {:title calculate-label}
+     [mui/icon-button
+      {:on-click (fn [_e]
+                   (on-change (calculate-fn)))}
+      [:> Calculator]]]]])
+
 (defn show-calc? [k geom-type]
   (and (= :route-length-km k) (#{"LineString"} geom-type)))
 
@@ -489,6 +507,8 @@
          :items        (-> data :edit-data :rinks)
          :lipas-id     (-> data :edit-data :lipas-id)}])]))
 
+;; Used from activities -> lipas-property now
+;; Regular perustiedot uses the properties-form directly, which doesn't use this
 (defn make-prop-field
   [{:keys [tr prop-k read-only? label description value set-field
            problems? geom-type geoms]}]
@@ -571,7 +591,7 @@
 
 (defn properties-form
   [{:keys [tr edit-data editing? display-data type-code on-change read-only?
-           key geoms geom-type problems? width]}]
+           key geoms geom-type problems? width pools]}]
   (let [locale      (tr)
         types-props (<== [::subs/types-props type-code])
         types-props (if false #_(special-case? type-code)
@@ -693,14 +713,43 @@
                                                :disabled    disabled?
                                                :value-fn    first
                                                :label-fn    (comp locale :label second)}]
-               :else                         [lui/text-field
-                                              {:value     value
-                                               :disabled  disabled?
-                                               :tooltip   tooltip
-                                               :spec      spec
-                                               :type      (when (#{"numeric" "integer"} data-type)
-                                                            "number")
-                                               :on-change on-change}])})
+
+               :else
+               (let [el [lui/text-field
+                         {;; form ->field adds the :label, but that doesn't work
+                          ;; for text-field wrapped inside calculate-field.
+                          ;; just add it directly here.
+                          :label     label
+                          :value     value
+                          :disabled  disabled?
+                          :tooltip   tooltip
+                          :spec      spec
+                          :type      (when (#{"numeric" "integer"} data-type)
+                                       "number")
+                          :on-change on-change}]]
+                 ;; Add (wrap the text field) the calculator button for specified cases
+                 (cond
+                   (and ;; false
+                        (#{3110 3130} type-code)
+                        (#{:swimming-pool-count :pool-water-area-m2} k))
+                   [calculate-field
+                    {:on-change on-change
+                     :calculate-label (case k
+                                        :swimming-pool-count (tr :map/calculate-count)
+                                        :pool-water-area-m2 (tr :map/calculate-area))
+                     :calculate-fn (case k
+                                     :swimming-pool-count
+                                     (fn []
+                                       (count pools))
+                                     :pool-water-area-m2
+                                     (fn []
+                                       (->> pools
+                                            vals
+                                            (map :area-m2)
+                                            (reduce + 0))))}
+                    el]
+
+                   :else el)))})
 
           (concat
         ;; Ice stadium special props
