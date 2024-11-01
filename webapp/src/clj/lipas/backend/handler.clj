@@ -64,7 +64,6 @@
    :user-not-found     (exception-handler 404 :user-not-found)
    :email-not-found    (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
-
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
    ;; Return 500 and print stack trace for exceptions that are not
@@ -841,12 +840,7 @@
        {:get
         {:no-doc  true
          :swagger {:id ::legacy
-                   :info {:title "Lipas-API (legacy) v1"}
-                   :securityDefinitions
-                   {:token-auth
-                    {:type "apiKey"
-                     :in   "header"
-                     :name "Authorization"}}}
+                   :info {:title "Lipas-API (legacy) v1"}}
          :handler (swagger/create-swagger-handler)}}]
       ["/sports-place-types"
        {:swagger {:id ::legacy}
@@ -866,7 +860,6 @@
          (fn [req]
            (let [locale  (or (-> req :parameters :query :lang keyword) :en)
                  type-code (-> req :parameters :path :type-code)]
-             (println locale type-code)
              {:status     200
               :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]]]
 
