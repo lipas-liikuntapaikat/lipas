@@ -520,8 +520,7 @@
          #_#_:tooltip tooltip
          :spec        spec
          :type        "number"
-         :on-change   on-change}])])
-  )
+         :on-change   on-change}])]))
 
 ;; Used from activities -> lipas-property now
 ;; Regular perustiedot uses the properties-form directly, which doesn't use this
@@ -610,15 +609,15 @@
                                :label-fn    (comp locale :name second)}]
 
       (= "enum-coll" data-type k) [lui/multi-select
-                                  {:items       (:opts prop-type)
-                                   :deselect?   true
-                                   :value       value
-                                   :helper-text tooltip
-                                   :on-change   on-change
-                                   :label       label
-                                   :disabled    disabled?
-                                   :value-fn    first
-                                   :label-fn    (comp locale :name second)}]
+                                   {:items       (:opts prop-type)
+                                    :deselect?   true
+                                    :value       value
+                                    :helper-text tooltip
+                                    :on-change   on-change
+                                    :label       label
+                                    :disabled    disabled?
+                                    :value-fn    first
+                                    :label-fn    (comp locale :name second)}]
 
       :else [lui/text-field
              {:value     value

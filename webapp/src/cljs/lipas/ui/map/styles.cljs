@@ -108,22 +108,22 @@
                                          :width 1})
 
         stroke-planned (Stroke.
-                        #js{:color    "#b1b7c4"
-                            :lineDash #js[2 20]
-                                        ; :lineDashOffset 1
-                            :width    (case (:shape m)
-                                        ("polygon" "linestring") 7
-                                        ("circle")               5
-                                        ("square")               4)})
+                         #js {:color    "#b1b7c4"
+                              :lineDash #js [2 20]
+                              ; :lineDashOffset 1
+                              :width    (case (:shape m)
+                                          ("polygon" "linestring") 7
+                                          ("circle")               5
+                                          ("square")               4)})
 
         stroke-planning (Stroke.
-                         #js{:color    "#ee00ee"
-                             :lineDash #js[2 20]
-                                        ; :lineDashOffset 1
-                             :width    (case (:shape m)
-                                         ("polygon" "linestring") 7
-                                         ("circle")               5
-                                         ("square")               4)})
+                          #js {:color    "#ee00ee"
+                               :lineDash #js [2 20]
+                               ; :lineDashOffset 1
+                               :width    (case (:shape m)
+                                           ("polygon" "linestring") 7
+                                           ("circle")               5
+                                           ("square")               4)})
 
         stroke         (Stroke. #js {:color    stroke-color
                                      :lineDash (when (or selected? hover?)
