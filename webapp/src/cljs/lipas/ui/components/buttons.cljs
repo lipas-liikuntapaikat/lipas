@@ -1,6 +1,5 @@
 (ns lipas.ui.components.buttons
-  (:require [lipas.ui.mui :as mui]
-            [reagent.core :as r]))
+  (:require [lipas.ui.mui :as mui]))
 
 (defn email-button [{:keys [on-click label] :as props}]
   [mui/button

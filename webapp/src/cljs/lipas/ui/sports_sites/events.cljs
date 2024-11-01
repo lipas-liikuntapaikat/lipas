@@ -2,7 +2,6 @@
   (:require [ajax.core :as ajax]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
-            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))

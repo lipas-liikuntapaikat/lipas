@@ -14,8 +14,7 @@
             [lipas.ui.sports-sites.views :as sports-sites-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            ["@mui/material/Typography$default" :as Typography]))
+            [reagent.core :as r]))
 
 (declare make-field)
 
