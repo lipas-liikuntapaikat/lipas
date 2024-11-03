@@ -733,17 +733,17 @@
 (s/def :lipas.sports-site.properties/ligthing-info string?)
 (s/def :lipas.sports-site.properties/highest-obstacle-m ::real)
 (s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
-(s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 (s/def :lipas.sports-site.properties/free-customer-use? boolean?)
 (s/def :lipas.sports-site.properties/space-divisible ::real)
 (s/def :lipas.sports-site.properties/auxiliary-training-area? boolean?)
 (s/def :lipas.sports-site.properties/sport-specification string?)
-(s/def :lipas.sports-site.properties/width-of-active-space-m ::real)
-(s/def :lipas.sports-site.properties/length-of-active-space-m ::real)
+(s/def :lipas.sports-site.properties/active-space-width-m ::real)
+(s/def :lipas.sports-site.properties/active-space-length-m ::real)
 (s/def :lipas.sports-site.properties/mirror-wall? boolean?)
 (s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures
   (s/coll-of
-   (into #{} (keys (get-in prop-types/all [:parkour-hall-equipment-and-structures :opts])))))
+   (into #{} (keys (get-in prop-types/all [:parkour-hall-equipment-and-structures :opts])))
+   :distinct true))
 (s/def :lipas.sports-site.properties/ringette-boundary-markings? boolean?)
 (s/def :lipas.sports-site.properties/field-1-flexible-rink? boolean?)
 (s/def :lipas.sports-site.properties/field-2-flexible-rink? boolean?)
@@ -756,7 +756,20 @@
 (s/def :lipas.sports-site.properties/total-billiard-tables-count ::real)
 (s/def :lipas.sports-site.properties/boating-service-class
   (s/coll-of
-   (into #{} (keys (get-in prop-types/all [:boating-service-class :opts])))))
+   (into #{} (keys (get-in prop-types/all [:boating-service-class :opts])))
+   :distinct true))
+(s/def :lipas.sports-site.properties/travel-modes
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:travel-modes :opts])))
+   :distinct true))
+(s/def :lipas.sports-site.properties/travel-mode-info string?)
+(s/def :lipas.sports-site.properties/sledding-hill? boolean?)
+(s/def :lipas.sports-site.properties/mobile-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/ski-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/bike-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/hs-point ::real)
+(s/def :lipas.sports-site.properties/lighting-info string?)
+(s/def :lipas.sports-site.properties/year-round-use? boolean?)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -927,8 +940,8 @@
                    :lipas.sports-site.properties/space-divisible
                    :lipas.sports-site.properties/auxiliary-training-area?
                    :lipas.sports-site.properties/sport-specification
-                   :lipas.sports-site.properties/width-of-active-space-m
-                   :lipas.sports-site.properties/length-of-active-space-m
+                   :lipas.sports-site.properties/active-space-width-m
+                   :lipas.sports-site.properties/active-space-length-m
                    :lipas.sports-site.properties/mirror-wall?
                    :lipas.sports-site.properties/parkour-hall-equipment-and-structures
                    :lipas.sports-site.properties/ringette-boundary-markings?
@@ -941,7 +954,18 @@
                    :lipas.sports-site.properties/pyramid-tables-count
                    :lipas.sports-site.properties/carom-tables-count
                    :lipas.sports-site.properties/total-billiard-tables-count
-                   :lipas.sports-site.properties/boating-service-class]))
+                   :lipas.sports-site.properties/boating-service-class
+                   :lipas.sports-site.properties/free-use?
+                   :lipas.sports-site.properties/school-use?
+                   :lipas.sports-site.properties/year-round-use?
+                   :lipas.sports-site.properties/lighting-info
+                   :lipas.sports-site.properties/hs-point
+                   :lipas.sports-site.properties/bike-orienteering?
+                   :lipas.sports-site.properties/ski-orienteering?
+                   :lipas.sports-site.properties/mobile-orienteering?
+                   :lipas.sports-site.properties/sledding-hill?
+                   :lipas.sports-site.properties/travel-mode-info
+                   :lipas.sports-site.properties/travel-modes]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)

@@ -491,7 +491,7 @@
       (assoc-in [:auxiliary-training-area? :description :fi] "Onko kohteessa oheisharjoitteluun soveltuva tila? Oheisharjoittelutila on liikuntapaikan käyttäjille tarkoitettu erillinen pienliikuntatila, jota voidaan käyttää esim. lämmittelyyn tai oheisharjoitteluun. Tilan koko, varustelu ja pintamateriaali ovat oheisharjoitteluun soveltuvia.")
       ;;  Ominaisuuden nimi esim. "Lajitarkenne". Vastaava toiminnallisuus kuin veneilyn palvelupaikoissa - eli lisätiedoissa voidaan tarkentaa, minkä voimistelulajin harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot: a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit mahdollisia d. Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön e. Ei tietoa
       (assoc-in [:sport-specification :description :fi] "Valitse voimistelulaji, johon tila on pääasiassa tarkoitettu.")
-      (assoc-in [:free-use :name :fi] "Kohde on vapaasti käytettävissä")
+      (assoc-in [:free-use? :name :fi] "Kohde on vapaasti käytettävissä")
       (assoc-in [:active-space-width-m :description :fi] "Liikuntakäytössä olevan tilan leveys (m)")
       (assoc-in [:active-space-length-m :description :fi] "Liikuntakäytössä olevan tilan pituus (m)")
       (assoc-in [:mirror-wall? :description :fi] "Liikuntatilassa vähintään yhdellä seinällä on kiinteät peilit")

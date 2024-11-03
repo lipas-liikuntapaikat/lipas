@@ -62,6 +62,7 @@
   (require '[migratus.core :as migratus])
   (migratus/create nil "activities_status" :sql)
   (migratus/create nil "roles" :edn)
+  (migratus/create nil "year_round_use" :sql)
 
   (require '[lipas.maintenance :as maintenance])
   (require '[lipas.backend.core :as core])
@@ -71,5 +72,10 @@
   (maintenance/merge-types (db) (search) robot 4530 4510)
   (maintenance/merge-types (db) (search) robot 4520 4510)
   (maintenance/merge-types (db) (search) robot 4310 4320)
+
+  (require '[lipas.data.prop-types :as prop-types])
+  (require '[lipas.data.prop-types-old :as prop-types-old])
+  (require '[clojure.set :as set])
+  (set/difference (set (keys prop-types/all)) (set (keys prop-types-old/all)))
 
   )
