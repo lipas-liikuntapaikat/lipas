@@ -416,7 +416,6 @@
     {:fi "Onko jääkiipeily mahdollista kiipeilypaikalla",
      :se "Finns det möjlighet för isklättring vid klättringsplatsen",
      :en "Is ice climbing possible at the climbing site"}},
-   :free-use {:name {:fi "Kohde on vapaasti käytettävissä"}},
    :field-length-m
    {:name
     {:fi "Kentän pituus m",
