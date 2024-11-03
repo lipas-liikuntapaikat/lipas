@@ -198,7 +198,44 @@
    :padelCourtsCount             :padel-courts-count
    :rapidCanoeingCentre          :rapid-canoeing-centre?
    :canoeingClub                 :canoeing-club?
-   :activityServiceCompany       :activity-service-company?})
+   :activityServiceCompany       :activity-service-company?
+   :bikeOrienteering?            :bike-orienteering?,
+   :field2FlexibleRink?          :field-2-flexible-rink?,
+   :sportSpecification           :sport-specification,
+   :travelModeInfo               :travel-mode-info,
+   :spaceDivisible               :space-divisible,
+   :auxiliaryTrainingArea?       :auxiliary-training-area?,
+   :pyramidTablesCount           :pyramid-tables-count,
+   :lightingInfo                 :lighting-info,
+   :customerServicePoint?        :customer-service-point?,
+   :parkourHallEquipmentAndStructures
+   :parkour-hall-equipment-and-structures,
+   :waterPoint                   :water-point,
+   :activeSpaceWidthM            :active-space-width-m,
+   :fitnessStairsLengthM         :fitness-stairs-length-m,
+   :mirrorWall?                  :mirror-wall?,
+   :sleddingHill?                :sledding-hill?,
+   :highestObstacleM             :highest-obstacle-m,
+   :skiOrienteering?             :ski-orienteering?,
+   :freeUse                      :free-use,
+   :totalBilliardTablesCount     :total-billiard-tables-count,
+   :boatingServiceClass          :boating-service-class,
+   :kaisaTablesCount             :kaisa-tables-count,
+   :yearRoundUse?                :year-round-use?,
+   :field1FlexibleRink?          :field-1-flexible-rink?,
+   :mobileOrienteering?          :mobile-orienteering?,
+   :field3FlexibleRink?          :field-3-flexible-rink?,
+   :freeCustomerUse?             :free-customer-use?,
+   :travelModes                  :travel-modes,
+   :heightOfBasketOrNetAdjustable?
+   :height-of-basket-or-net-adjustable?,
+   :caromTablesCount             :carom-tables-count,
+   :changingRoomsM2              :changing-rooms-m2,
+   :poolTablesCount              :pool-tables-count,
+   :ringetteBoundaryMarkings?    :ringette-boundary-markings?,
+   :hsPoint                      :hs-point,
+   :snookerTablesCount           :snooker-tables-count,
+   :activeSpaceLengthM           :active-space-length-m})
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 

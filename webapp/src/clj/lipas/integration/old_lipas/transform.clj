@@ -4,7 +4,8 @@
    [clojure.spec.alpha :as spec]
    [lipas.data.types :as types]
    [lipas.integration.old-lipas.sports-site :as old]
-   [lipas.utils :as utils :refer [sreplace trim]]))
+   [lipas.utils :as utils :refer [sreplace trim]]
+   [clojure.string :as str]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
@@ -86,6 +87,10 @@
                                           (comp old/surface-materials first))
                                   (select-keys prop-keys)
                                   (assoc :info-fi (-> m :comment))
+                                  (update :parkour-hall-equipment-and-structures
+                                          (fn [coll] (not-empty (str/join "," coll))))
+                                  (update :travel-modes
+                                          (fn [coll] (not-empty (str/join "," coll))))
                                   (set/rename-keys old/prop-mappings-reverse)))
          old/adapt-geoms
          utils/clean
