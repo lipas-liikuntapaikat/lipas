@@ -30,4 +30,5 @@ webapp/.lsp/.cache
 webapp/out
 webapp/.shadow-cljs
 webapp/.lein-repl-history
-webapp/.user.edn
+.clj-kondo
+.lsp
