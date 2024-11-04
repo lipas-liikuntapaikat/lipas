@@ -73,7 +73,10 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
   [:map
    {:closed true}
    [:description (localized-string-schema nil)]
-   [:summary (localized-string-schema {:max 150})]])
+   ;; Structured Outputs doesn't support maxLength
+   ;; https://platform.openai.com/docs/guides/structured-outputs#some-type-specific-keywords-are-not-yet-supported
+   ;; The prompt mentions summary should be max 150 chars
+   [:summary (localized-string-schema nil #_{:max 150})]])
 
 (def Response
   (json-schema/transform response-schema))
@@ -93,6 +96,10 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
         message-format (or message-format
                            {:type "json_schema"
                             :json_schema {:name "Response"
+                                          ;; This is probably needed? Providing an unsupported Schema,
+                                          ;; like with maxLength, without this doesn't throw an error,
+                                          ;; but with this enabled it does.
+                                          :strict true
                                           :schema Response}})
         body   {:model            model
                 :n                n
