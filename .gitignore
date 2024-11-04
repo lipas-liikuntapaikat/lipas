@@ -23,6 +23,7 @@ webapp/resources/public/js/compiled
 webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
 webapp/.clj-kondo/.cache
+webapp/.clj-kondo/imports
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache
@@ -30,3 +31,5 @@ webapp/out
 webapp/.shadow-cljs
 webapp/.user.edn
 webapp/local-scrap
+.clj-kondo/**/*
+.lsp
