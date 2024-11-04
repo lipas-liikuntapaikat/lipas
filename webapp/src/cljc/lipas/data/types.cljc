@@ -1976,7 +1976,7 @@
     {:surface-material                   {:priority 0},
      :surface-material-info              {:priority 0},
      :track-width-m                      {:priority 0},
-     :free-use                           {:priority 0},
+     :free-use?                          {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
      :toilet?                            {:priority 0},
      :customer-service-point?            {:priority 0},
@@ -2205,7 +2205,7 @@
      :route-length-km       {:priority 0},
      :lit-route-length-km   {:priority 0},
      :route-width-m         {:priority 0},
-     :free-use              {:priority 0},
+     :free-use?             {:priority 0},
      :year-round-use?       {:priority 0}}},
    5160
    {:description
@@ -3231,7 +3231,7 @@
     {:surface-material                   {:priority 0},
      :surface-material-info              {:priority 0},
      :outdoor-exercise-machines?         {:priority 0},
-     :free-use                           {:priority 0},
+     :free-use?                          {:priority 0},
      :route-width-m                      {:priority 0},
      :may-be-shown-in-harrastuspassi-fi? {:priority 0},
      :toilet?                            {:priority 0},
