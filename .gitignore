@@ -27,3 +27,5 @@ webapp/.lsp/.cache
 webapp/out
 webapp/.shadow-cljs
 webapp/.lein-repl-history
+.clj-kondo
+.lsp
