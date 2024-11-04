@@ -71,8 +71,7 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
 
 (def response-schema
   [:map
-   {:json-schema/name "Reponse"
-    :closed true}
+   {:closed true}
    [:description (localized-string-schema nil)]
    [:summary (localized-string-schema {:max 150})]])
 
