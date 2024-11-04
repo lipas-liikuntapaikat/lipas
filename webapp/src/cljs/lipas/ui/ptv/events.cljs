@@ -35,6 +35,11 @@
    {:org-id              ptv-data/uta-org-id-test
     :city-codes          [889]
     :owners              ["city" "city-main-owner"]
+    :supported-languages ["fi" "se" "en"]}
+   ptv-data/liminka-org-id-test
+   {:org-id              ptv-data/liminka-org-id-test
+    :city-codes          [425]
+    :owners              ["city" "city-main-owner"]
     :supported-languages ["fi" "se" "en"]}})
 
 (rf/reg-event-fx ::fetch-integration-candidates

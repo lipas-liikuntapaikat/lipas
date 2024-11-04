@@ -20,6 +20,8 @@
 (def orgs
   [{:name "Utajärven kunta (test)"
     :id ptv-data/uta-org-id-test}
+   {:name "Limingan kunta (test)"
+    :id ptv-data/liminka-org-id-test}
    #_{:name "Utajärven kunta (prod)"
       :id ptv-data/uta-org-id-prod}])
 

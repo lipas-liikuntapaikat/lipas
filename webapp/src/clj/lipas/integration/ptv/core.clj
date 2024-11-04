@@ -19,8 +19,7 @@
     :service-url          "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
     :service-location-url "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
     :creds
-    {:org-id ptv-data/uta-org-id-test
-     :main-user
+    {:main-user
      {:username "paakayttaja41.testi@testi.fi"
       :password "Paatestaaja41-1041*"}
      :maintainer
@@ -38,8 +37,7 @@
    :service-url          "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
    :service-location-url "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
    :creds
-   {:org-id ptv-data/uta-org-id-test
-    :main-user
+   {:main-user
     {:username "paakayttaja35.testi@testi.fi"
      :password "Paatestaaja35-1035*"}
     :maintainer
@@ -49,7 +47,9 @@
     {:username "API14@testi.fi"
      :password "APIinterfaceUser14-1014*"}}})
 
-(def current-token (atom nil))
+;; Org-id => {:token ... :payload ...}
+;; TODO: Move this to IG component state?
+(defonce current-token (atom {}))
 
 (defn unix-time []
   (/ (System/currentTimeMillis) 1000))
@@ -87,15 +87,17 @@
   (-> token (str/split #"\.") second b64/decode (String.) (json/decode keyword)))
 
 (defn get-token
-  []
-  (if (or (not @current-token) (expired? (:payload @current-token)))
-    (let [new-token (authenticate {:token-url (:token-url test-config)
-                                   :username  (get-in test-config [:creds :api :username])
-                                   :password  (get-in test-config [:creds :api :password])
-                                   :org-id    (get-in test-config [:creds :org-id])})]
-      (:token (reset! current-token {:token   new-token
-                                     :payload (parse-payload new-token)})))
-    (:token @current-token)))
+  [org-id]
+  ;; NOTE: deref + swap
+  (let [x (get @current-token org-id)]
+    (if (or (not x) (expired? (:payload x)))
+      (let [new-token (authenticate {:token-url (:token-url test-config)
+                                     :username  (get-in test-config [:creds :api :username])
+                                     :password  (get-in test-config [:creds :api :password])
+                                     :org-id    org-id})]
+        (:token (swap! current-token assoc org-id {:token   new-token
+                                                   :payload (parse-payload new-token)})))
+      (:token x))))
 
 (def ->ptv-service ptv-data/->ptv-service)
 (def ->ptv-service-location ptv-data/->ptv-service-location)
@@ -104,22 +106,34 @@
 ;; return :sourceId (wtf)
 (defn get-org-services
   [{:keys [service-url token]
-    :or   {service-url (:service-url test-config)
-           token       (get-token)}}
+    :or   {service-url (:service-url test-config)}}
    org-id]
-  (let [params {:headers      {:Content-Type  "application/json"
+  (let [token (or token (get-token org-id))
+        params {:headers      {:Content-Type  "application/json"
                                :Authorization (str "bearer " token)}
                 :query-params {:organizationId org-id}}]
     (-> (client/get (str service-url "/list/organization") params)
         :body
         (json/decode keyword))))
 
+(defn get-org-service-channels
+  [{:keys [api-url token]
+    :or   {api-url (:api-url test-config)}}
+   org-id]
+  (let [token (or token (get-token org-id))
+        params {:headers      {:Content-Type  "application/json"
+                               :Authorization (str "bearer " token)}}]
+    (-> (client/get (str api-url "/api/v11/ServiceChannel/organization/" org-id) params)
+        :body
+        (json/decode keyword))))
+
 (defn create-service
-  [{:keys [service-url token]
-    :or   {service-url (:service-url test-config)
-           token       (get-token)}}
+  [{:keys [org-id service-url token]
+    :or   {service-url (:service-url test-config)}
+    :as _config}
    service]
-  (let [params {:headers {:Content-Type  "application/json"
+  (let [token (or token (get-token org-id))
+        params {:headers {:Content-Type  "application/json"
                           :Authorization (str "bearer " token)}
                 :body    (json/encode service)}]
     (log/info "Create PTV service" service)
@@ -128,13 +142,13 @@
         (json/decode keyword))))
 
 (defn update-service
-  [{:keys [service-url token _org-id]
-    :or   {service-url (:service-url test-config)
-           token       (get-token)}}
+  [{:keys [service-url token org-id]
+    :or   {service-url (:service-url test-config)}}
    service-id
    data]
   (log/info "Update PTV service with id " service-id "and data" data)
-  (let [ params {:headers {:Content-Type  "application/json"
+  (let [token  (or token (get-token org-id))
+        params {:headers {:Content-Type  "application/json"
                            :Authorization (str "bearer " token)}
                  :body    (json/encode data)}]
     (-> (client/put (str service-url "/" service-id) params)
@@ -142,11 +156,11 @@
         (json/decode keyword))))
 
 (defn create-service-location
-  [{:keys [service-location-url token _org-id]
-    :or   {service-location-url (:service-location-url test-config)
-           token                (get-token)}}
+  [{:keys [service-location-url token org-id]
+    :or   {service-location-url (:service-location-url test-config)}}
    service-location]
-  (let [params {:headers {:Content-Type  "application/json"
+  (let [token (or token (get-token org-id))
+        params {:headers {:Content-Type  "application/json"
                           :Authorization (str "bearer " token)}
                 :body    (json/encode service-location)}]
     (log/info "Create PTV service location" service-location)
@@ -155,12 +169,12 @@
         (json/decode keyword))))
 
 (defn update-service-location
-  [{:keys [service-location-url token _org-id]
-    :or   {service-location-url (:service-location-url test-config)
-           token                (get-token)}}
+  [{:keys [service-location-url token org-id]
+    :or   {service-location-url (:service-location-url test-config)}}
    service-location-id
    data]
-  (let [params {:headers {:Content-Type  "application/json"
+  (let [token (or token (get-token org-id))
+        params {:headers {:Content-Type  "application/json"
                           :Authorization (str "bearer " token)}
                 :body    (json/encode data)}]
     (-> (client/put (str service-location-url "/" service-location-id) params)
@@ -192,3 +206,7 @@
         :hits
         :hits
         (->> (map :_source)))))
+
+(comment
+  (get-org-services {} ptv-data/liminka-org-id-test)
+  (get-org-service-channels {} ptv-data/liminka-org-id-test))
