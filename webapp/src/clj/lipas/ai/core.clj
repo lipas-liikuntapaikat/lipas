@@ -3,6 +3,7 @@
             [clj-http.client :as client]
             [clojure.walk :as walk]
             [lipas.backend.config :as config]
+            [malli.json-schema :as json-schema]
             [taoensso.timbre :as log]))
 
 (def openai-config
@@ -14,7 +15,7 @@
 
 (def ptv-system-instruction
   "Olet avustaja, joka auttaa käyttäjiä tuottamaan sisältöä
-  Palvelutietovarantoon. Tuotat JSON-muotoista sisältöä. Sinulle
+  Palvelutietovarantoon. Sinulle
   esitetään kysymyksiä, ja käytät ensisijaisesti lähdeaineistoa ja
   toissijaisesti omaa tietoasi antaaksesi vastauksia. Noudata
   vastuksissa seuraavia tyyliohjeita:
@@ -37,17 +38,10 @@
 
 Annat vastaukset englanniksi, suomeksi ja ruotsiksi. Eri kieliversiot
   voivat poiketa kieliasultaan toisistaan. Tärkeää on, että kieliasu
-  on luettavaa ja selkeää.
-
-Vastauksesi sisältö on koodattu
-  JSON-objekteiksi. JSON-sisällön tarkka muoto voidaan antaa
-  kehotteessa. Anna käännetyt versiot kaikista pyydetyistä tiedoista
-  avaimilla \"fi\" suomeksi, \"se\" ruotsiksi ja \"en\"
-  englanniksi. Jos teksti sisältää lainauksia, käytä pakomerkkiä \\
-  ennen lainausmerkkiä, jotta JSON-rakenne pysyy eheänä.")
+  on luettavaa ja selkeää.")
 
 (def ptv-system-instruction-v2
-  "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You generate content in JSON format. You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
+  "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
         •	Use a neutral tone in your responses.
         •	Avoid promotional language.
         •	The texts are not marketing communications.
@@ -63,23 +57,45 @@ Vastauksesi sisältö on koodattu
         •	Present only one topic per paragraph.
         •	Divide the text into paragraphs.
         •	A paragraph should contain a maximum of four sentences.
-Provide answers in English, Finnish, and Swedish. Different language versions can differ in their phrasing. It is important that the language is readable and clear.
-  Your responses are encoded as JSON objects. The exact format of the JSON content can be specified in the prompt. Provide translated versions of all requested information with the keys \"fi\" for Finnish, \"se\" for Swedish, and \"en\" for English. If the text contains quotes, use an escape character \\ before the quotation mark to maintain the integrity of the JSON structure.")
+Provide answers in English, Finnish, and Swedish. Different language versions can differ in their phrasing. It is important that the language is readable and clear.")
 
 (comment
   (println ptv-system-instruction-v2))
 
+(defn localized-string-schema [string-props]
+  [:map
+   {:closed true}
+   [:fi [:string string-props]]
+   [:se [:string string-props]]
+   [:en [:string string-props]]])
+
+(def response-schema
+  [:map
+   {:json-schema/name "Reponse"
+    :closed true}
+   [:description (localized-string-schema nil)]
+   [:summary (localized-string-schema {:max 150})]])
+
+(def Response
+  (json-schema/transform response-schema))
+
 (defn complete
   [{:keys [completions-url model n #_temperature top-p presence-penalty message-format max-tokens]
-    :or   {message-format   {:type "json_object"}
-           n                1
+    :or   {n                1
            #_#_temperature  0
            top-p            0.5
            presence-penalty -2
            max-tokens       4096}}
    system-instruction
    prompt]
-  (let [body   {:model            model
+  (let [;; Response format with JSON Schema should ensure
+        ;; the response is valid JSON and according to the schema,
+        ;; without specfying this in the prompts.
+        message-format (or message-format
+                           {:type "json_schema"
+                            :json_schema {:name "Response"
+                                          :schema Response}})
+        body   {:model            model
                 :n                n
                 :max_tokens       max-tokens
                 #_#_:temperature  temperature
@@ -91,7 +107,7 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
         params {:headers default-headers
                 :body    (json/encode body)}]
 
-    (log/info prompt)
+    (log/infof "AI Prompt: %s" prompt)
 
     (-> (client/post completions-url params)
         :body
@@ -110,6 +126,8 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
 
 (defn ->prompt-doc
   [sports-site]
+  ;; Might include (some) of the UTP data now?
+  ;; Could be a good thing, but might make the prompt data too large?
   (walk/postwalk #(if (map? %)
                     (dissoc % :geoms :geometries :simple-geoms :images :videos :id :fids :event-date)
                     %)
@@ -126,8 +144,7 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
   "Laadi tämän viestin lopussa olevan JSON-rakenteen kuvaamasta
    liikuntapaikasta tiivistelmä (max 150 merkkiä) ja pidempi
    tekstikuvaus, jotka sopivat Palvelutietovarannossa palvelun
-   kuvaukseen. Haluan vastauksen muodossa {\"description\":
-   {...käännökset...}, \"summary\" {...käännökset...}}. %s")
+   kuvaukseen. %s")
 
 (defn generate-ptv-service-descriptions
   [doc]
