@@ -248,6 +248,8 @@
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
+;; FIXME: Break this into parts
+;; Each sports-site should subscribe to its own part of data.
 (rf/reg-sub ::sports-sites
   :<- [::ptv]
   :<- [::selected-org-id]

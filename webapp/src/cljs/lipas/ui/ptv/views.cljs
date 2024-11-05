@@ -10,7 +10,12 @@
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.utils :refer [<== ==>]]
             [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]))
+            [uix.core :as uix :refer [$ defui]]
+            ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Typography$default" :as Typography]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]))
 
 ;; Memo
 ;; - preset service structure with descriptions
@@ -745,6 +750,114 @@
                    :label     (tr :ptv/description)
                    :value     (get-in m [:description @selected-tab])}]]]))]]]]])))
 
+(defui service-location-details
+  [{:keys [tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
+  ($ AccordionDetails
+     {}
+     (r/as-element
+       [mui/stack {:spacing 2}
+
+        [lui/switch
+         {:label     (tr :ptv.actions/export-disclaimer)
+          :value     sync-enabled
+          :on-change #(==> [::events/toggle-sync-enabled site %])}]
+
+        ;; Services selector
+        ($ services-selector
+           {:value     service-ids
+            :value-fn  :service-id
+            :on-change #(==> [::events/select-services site %])
+            :label     (tr :ptv/services)})
+
+        ;; Service channel selector
+
+        [:span (when name-conflict {:style
+                                    {:border  "1px solid rgb(237, 108, 2)"
+                                     :padding "1em"}})
+
+         (when name-conflict
+           [mui/stack
+            [lui/icon-text
+             {:icon       "warning"
+              :icon-color "warning"
+              :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
+
+            [mui/typography
+             {:style   {:padding-left "1em" :margin-bottom "0"}
+              :variant "body2"}
+             (tr :ptv.name-conflict/do-one-of-these)]
+
+            [:ul
+             [:li (tr :ptv.name-conflict/opt1)]
+             [:li (tr :ptv.name-conflict/opt2)]
+             [:li (tr :ptv.name-conflict/opt3)]
+             #_[:li (tr :ptv.name-conflict/opt4)]]])
+
+         (when name-conflict
+           [mui/button
+            {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
+                              [(:service-channel-id name-conflict)]])}
+            (tr :ptv.wizard/attach-to-conflicting-service-channel)])
+
+         ($ service-channel-selector
+            {:value     service-channel-ids
+             :value-fn  :service-channel-id
+             :on-change #(==> [::events/select-service-channels site %])
+             :label     (tr :ptv/service-channel)})]
+
+        [mui/tabs
+         {:value     selected-tab
+          :on-change #(set-selected-tab (keyword %2))}
+         [mui/tab {:value "fi" :label "FI"}]
+         [mui/tab {:value "se" :label "SE"}]
+         [mui/tab {:value "en" :label "EN"}]]
+
+        ;; Summary
+        [lui/text-field
+         {:multiline  true
+          :read-only? (not= "manual" (:descriptions-integration site))
+          :variant    "outlined"
+          :on-change  #(==> [::events/set-summary site selected-tab %])
+          :label      (tr :ptv/summary)
+          :value      (get-in site [:summary selected-tab])}]
+
+        ;; Description
+        [lui/text-field
+         {:variant    "outlined"
+          :read-only? (not= "manual" (:descriptions-integration site))
+          :rows       5
+          :multiline  true
+          :on-change  #(==> [::events/set-description site selected-tab %])
+          :label      (tr :ptv/description)
+          :value      (get-in site [:description selected-tab])}]])))
+
+(defui service-location
+  [{:keys [site sync-enabled name-conflict valid]
+    :as props}]
+  ($ Accordion
+     {:defaultExpanded false
+      :disableGutters true
+      :square true
+      ;; Much faster this way, only render the accordion content for open sites
+      :slotProps #js {:transition #js {:unmountOnExit true}}
+      :sx #js {:mb 2
+               :backgroundColor (when (false? sync-enabled)
+                                  mui/gray3)}}
+     ($ AccordionSummary
+        {:expandIcon ($ Icon "expand_more")}
+        ($ Typography
+           {:sx #js {:mr 1.5}}
+           (cond
+             name-conflict ($ Icon {:color "warning"} "warning")
+             valid         ($ Icon {:color "success"} "done")
+             :else         ($ Icon {:color "disabled"} "done")))
+        ($ Typography
+           {:sx #js {:color "inherit"
+                     :variant "button"}}
+           (:name site)))
+
+     ($ service-location-details props)))
+
 (defn integrate-service-locations
   []
   (let [tr                  (<== [:lipas.ui.subs/translator])
@@ -753,12 +866,15 @@
         sports-sites-count  (<== [::subs/sports-sites-count])
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
-        {:keys                                                                                                                 [in-progress?
-                                                                                                                                processed-lipas-ids
-                                                                                                                                processed-count
-                                                                                                                                total-count
-                                                                                                                                processed-percent
-                                                                                                                                halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
+        [selected-tab set-selected-tab] (uix/use-state :fi)
+
+        {:keys [in-progress?
+                processed-lipas-ids
+                processed-count
+                total-count
+                processed-percent
+                halt?] :as m}
+        (<== [::subs/batch-descriptions-generation-progress])]
 
     [lui/expansion-panel
      {:label      (str "2. " (tr :ptv.wizard/integrate-service-locations))
@@ -853,12 +969,12 @@
           :on-click  #(==> [::events/create-all-ptv-service-locations sports-sites])}
          (tr :ptv.wizard/export-service-locations-to-ptv)]
 
-        (let [{:keys                         [in-progress?
-                                              processed-lipas-ids
-                                              processed-count
-                                              total-count
-                                              processed-percent
-                                              halt?] :as m}
+        (let [{:keys [in-progress?
+                      processed-lipas-ids
+                      processed-count
+                      total-count
+                      processed-percent
+                      halt?] :as m}
               (<== [::subs/service-location-creation-progress])]
 
           (when in-progress?
@@ -869,106 +985,31 @@
           (when halt?
             "Something went wrong, ask engineer."))]]
 
-;; Results
+      ;; Results
 
-      (r/with-let [selected-tab (r/atom :fi)]
-        [mui/grid {:item true :xs 12 :lg 8}
-         [mui/stack {:spacing 4}
+      [mui/grid {:item true :xs 12 :lg 8}
+       [mui/stack {:spacing 4}
 
-          [mui/typography {:variant "h6"}
-           (tr :ptv/sports-sites)]
+        [mui/typography {:variant "h6"}
+         (tr :ptv/sports-sites)]
 
-          [mui/typography {:variant "subtitle1" :style {:margin-top "0px"}}
-           (str sports-sites-count " kpl")]
+        [mui/typography {:variant "subtitle1" :style {:margin-top "0px"}}
+         (str sports-sites-count " kpl")]]
 
-          (doall
-            (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
-              ^{:key lipas-id}
-              [lui/expansion-panel
-               {:label (:name site)
-                :style (merge {:margin-top "1em"}
-                              (when (false? sync-enabled) {:background-color mui/gray3}))
-                :label-icon
-                (cond
-                  name-conflict [mui/icon {:color "warning"} "warning"]
-                  valid         [mui/icon {:color "success"} "done"]
-                  :else         [mui/icon {:color "disabled"} "done"])}
-
-               [mui/stack {:spacing 2}
-
-                [lui/switch
-                 {:label     (tr :ptv.actions/export-disclaimer)
-                  :value     sync-enabled
-                  :on-change #(==> [::events/toggle-sync-enabled site %])}]
-
-               ;; Services selector
-               ($ services-selector
-                  {:value     service-ids
-                   :value-fn  :service-id
-                   :on-change #(==> [::events/select-services site %])
-                   :label     (tr :ptv/services)})
-
-               ;; Service channel selector
-
-                [:span (when name-conflict {:style
-                                            {:border  "1px solid rgb(237, 108, 2)"
-                                             :padding "1em"}})
-
-                 (when name-conflict
-                   [mui/stack
-                    [lui/icon-text
-                     {:icon       "warning"
-                      :icon-color "warning"
-                      :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
-
-                    [mui/typography
-                     {:style   {:padding-left "1em" :margin-bottom "0"}
-                      :variant "body2"}
-                     (tr :ptv.name-conflict/do-one-of-these)]
-
-                    [:ul
-                     [:li (tr :ptv.name-conflict/opt1)]
-                     [:li (tr :ptv.name-conflict/opt2)]
-                     [:li (tr :ptv.name-conflict/opt3)]
-                     #_[:li (tr :ptv.name-conflict/opt4)]]])
-
-                 (when name-conflict
-                   [mui/button
-                    {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
-                                      [(:service-channel-id name-conflict)]])}
-                    (tr :ptv.wizard/attach-to-conflicting-service-channel)])
-
-                 ($ service-channel-selector
-                    {:value     service-channel-ids
-                     :value-fn  :service-channel-id
-                     :on-change #(==> [::events/select-service-channels site %])
-                     :label     (tr :ptv/service-channel)})]
-
-                [mui/tabs
-                 {:value     @selected-tab
-                  :on-change #(reset! selected-tab (keyword %2))}
-                 [mui/tab {:value "fi" :label "FI"}]
-                 [mui/tab {:value "se" :label "SE"}]
-                 [mui/tab {:value "en" :label "EN"}]]
-
-               ;; Summary
-                [lui/text-field
-                 {:multiline  true
-                  :read-only? (not= "manual" (:descriptions-integration site))
-                  :variant    "outlined"
-                  :on-change  #(==> [::events/set-summary site @selected-tab %])
-                  :label      (tr :ptv/summary)
-                  :value      (get-in site [:summary @selected-tab])}]
-
-               ;; Description
-                [lui/text-field
-                 {:variant    "outlined"
-                  :read-only? (not= "manual" (:descriptions-integration site))
-                  :rows       5
-                  :multiline  true
-                  :on-change  #(==> [::events/set-description site @selected-tab %])
-                  :label      (tr :ptv/description)
-                  :value      (get-in site [:description @selected-tab])}]]]))]])]]))
+       [mui/stack
+        (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
+          ($ service-location
+             {:key lipas-id
+              :tr tr
+              :site site
+              :lipas-id lipas-id
+              :name-conflict name-conflict
+              :sync-enabled sync-enabled
+              :valid valid
+              :service-ids service-ids
+              :selected-tab selected-tab
+              :set-selected-tab set-selected-tab
+              :service-channel-ids service-channel-ids}))]]]]))
 
 (defn tools
   []
@@ -1065,7 +1106,7 @@
   []
   [mui/paper
    [create-services]
-   [integrate-service-locations]])
+   [:f> integrate-service-locations]])
 
 (defn dialog
   [{:keys [tr]}]
