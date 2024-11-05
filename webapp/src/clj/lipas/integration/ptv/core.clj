@@ -123,7 +123,7 @@
   (let [token (or token (get-token org-id))
         params {:headers      {:Content-Type  "application/json"
                                :Authorization (str "bearer " token)}}]
-    (-> (client/get (str api-url "/api/v11/ServiceChannel/organization/" org-id) params)
+    (-> (client/get (str api-url "/v11/ServiceChannel/organization/" org-id) params)
         :body
         (json/decode keyword))))
 

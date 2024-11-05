@@ -110,25 +110,24 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
                 :response_format  message-format
                 :messages         [{:role "system" :content system-instruction}
                                    {:role "user" :content prompt}]}
+        _ (log/infof "AI Prompt sent: %s" prompt)
         params {:headers default-headers
-                :body    (json/encode body)}]
-
-    (log/infof "AI Prompt: %s" prompt)
-
-    (-> (client/post completions-url params)
-        :body
-        (json/decode keyword)
-        :choices
-        first
-        (update-in [:message :content] #(json/decode % keyword)))))
+                :body    (json/encode body)}
+        result (-> (client/post completions-url params)
+                   :body
+                   (json/decode keyword)
+                   :choices
+                   first
+                   (update-in [:message :content] #(json/decode % keyword)))]
+    (log/infof "AI Result: %s" result)
+    result))
 
 (def generate-utp-descriptions-prompt
   "Laadi tämän viestin lopussa olevan JSON-rakenteen kuvaamasta
    liikuntapaikasta tiivistelmä (max 150 merkkiä) ja tekstikuvaus, jotka sopivat
    Palvelutietovarannossa palvelupaikan kuvaukseen. Yksityiskohtaiset
    rakennustekniset tiedot ja olosuhdetiedot jätetään kuvauksista
-   pois. Haluan vastauksen muodossa {\"description\":
-   {...käännökset...}, \"summary\" {...käännökset...}}. %s")
+   pois. %s")
 
 (defn ->prompt-doc
   [sports-site]
