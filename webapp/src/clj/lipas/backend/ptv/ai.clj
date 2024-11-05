@@ -1,4 +1,4 @@
-(ns lipas.ai.core
+(ns lipas.backend.ptv.ai
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
             [clojure.walk :as walk]
@@ -167,5 +167,4 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
 
 (comment
   (get-models openai-config)
-  (complete openai-config ptv-system-instruction "Why volcanoes erupt?")
-  )
+  (complete openai-config ptv-system-instruction "Why volcanoes erupt?"))

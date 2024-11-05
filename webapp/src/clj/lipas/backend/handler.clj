@@ -1,25 +1,25 @@
 (ns lipas.backend.handler
-  (:require
-   [clojure.java.io :as io]
-   [clojure.spec.alpha :as s]
-   [lipas.backend.core :as core]
-   [lipas.backend.jwt :as jwt]
-   [lipas.backend.middleware :as mw]
-   [lipas.roles :as roles]
-   [lipas.schema.core]
-   [lipas.utils :as utils]
-   [muuntaja.core :as m]
-   [reitit.coercion.spec]
-   [reitit.ring :as ring]
-   [reitit.ring.coercion :as coercion]
-   [reitit.ring.middleware.exception :as exception]
-   [reitit.ring.middleware.multipart :as multipart]
-   [reitit.ring.middleware.muuntaja :as muuntaja]
-   [reitit.swagger :as swagger]
-   [reitit.swagger-ui :as swagger-ui]
-   [ring.middleware.params :as params]
-   [ring.util.io :as ring-io]
-   [taoensso.timbre :as log]))
+  (:require [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [lipas.backend.core :as core]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.middleware :as mw]
+            [lipas.backend.ptv.handler :as ptv-handler]
+            [lipas.roles :as roles]
+            [lipas.schema.core]
+            [lipas.utils :as utils]
+            [muuntaja.core :as m]
+            [reitit.coercion.spec]
+            [reitit.ring :as ring]
+            [reitit.ring.coercion :as coercion]
+            [reitit.ring.middleware.exception :as exception]
+            [reitit.ring.middleware.multipart :as multipart]
+            [reitit.ring.middleware.muuntaja :as muuntaja]
+            [reitit.swagger :as swagger]
+            [reitit.swagger-ui :as swagger-ui]
+            [ring.middleware.params :as params]
+            [ring.util.io :as ring-io]
+            [taoensso.timbre :as log]))
 
 (defn exception-handler
   ([status type]
@@ -54,7 +54,7 @@
     exception-handlers)))
 
 (defn create-app
-  [{:keys [db emailer search mailchimp aws]}]
+  [{:keys [db emailer search mailchimp aws] :as ctx}]
   (ring/ring-handler
    (ring/router
 
@@ -705,76 +705,7 @@
            {:status 200
             :body   (core/search-lois-with-params search body-params)})}}]
 
-      ;; PTV
-      ["/actions/get-ptv-integration-candidates"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/get-ptv-integration-candidates search body-params)})}}]
-
-      ["/actions/generate-ptv-descriptions"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/generate-ptv-descriptions search body-params)})}}]
-
-      ["/actions/generate-ptv-service-descriptions"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
-
-      ["/actions/save-ptv-service"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/upsert-ptv-service! body-params)})}}]
-
-      ["/actions/fetch-ptv-services"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/fetch-ptv-services body-params)})}}]
-
-      ["/actions/save-ptv-service-location"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
-
-      ["/actions/save-ptv-meta"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]]
+      (ptv-handler/routes ctx)]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

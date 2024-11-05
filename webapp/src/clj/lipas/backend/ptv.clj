@@ -1,8 +1,7 @@
 (ns lipas.backend.ptv
-  (:require
-   [cheshire.core :as json]
-   [clj-http.client :as client]
-   [lipas.data.types :as types]))
+  (:require [cheshire.core :as json]
+            [clj-http.client :as client]
+            [lipas.data.types :as types]))
 
 ;; Exploring PTV prod data
 
@@ -17,8 +16,8 @@
                    :query-params
                    {:uri  class-uri
                     :page page}})
-        :body
-        (json/decode keyword)))
+      :body
+      (json/decode keyword)))
 
 (defn get-services-channels-by-type
   [type page]
@@ -26,8 +25,8 @@
                   {:headers headers
                    :query-params
                    {:page page}})
-        :body
-        (json/decode keyword)))
+      :body
+      (json/decode keyword)))
 
 (comment
 
@@ -40,10 +39,4 @@
    "http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.1"]
 
   (def p1 (get-services-by-class "http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2" 1))
-  (def p2 (get-services-by-class "http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2" 2))
-
-
-
-
-
-  )
+  (def p2 (get-services-by-class "http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2" 2)))
