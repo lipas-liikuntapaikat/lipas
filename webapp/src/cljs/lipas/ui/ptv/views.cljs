@@ -3,11 +3,14 @@
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
             [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.mui :as mui]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
+            [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.utils :refer [<== ==>]]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [uix.core :as uix :refer [$ defui]]))
 
 ;; Memo
 ;; - preset service structure with descriptions
@@ -48,35 +51,44 @@
       :value     selected-org
       :on-change #(==> [::events/select-org %])}]))
 
-(defn services-selector
+(defui services-selector
   [{:keys [value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
-  (let [items (<== [::subs/services])]
-    [lui/autocomplete
-     {:items     items
-      :multi?    true
-      :label     label
-      :label-fn  :label
-      :value-fn  value-fn
-      :value     value
-      :on-change on-change}]))
+  (let [items (use-subscribe [::subs/services])
+        options (uix/use-memo (fn []
+                                (map (fn [x]
+                                       {:value (value-fn x)
+                                        :label (:label x)})
+                                     items))
+                              [items value-fn])]
+    ($ autocomplete2
+       {:options   options
+        :multiple  true
+        :label     label
+        :value     (to-array value)
+        :on-change (fn [_e v]
+                     (on-change (:value v)))})))
 
-(defn service-channel-selector
+(defui service-channel-selector
   [{:keys [value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
-  (let [items (<== [::subs/service-channels-list])]
-    [lui/autocomplete
-     {:items     items
-      :multi?    false
-      :label     label
-      :label-fn  :name
-      :value-fn  value-fn
-      :value     (first value)
-      :on-change (fn [v]
-                   (println v)
-                   (on-change [v]))}]))
+  (let [items (use-subscribe [::subs/service-channels-list])
+        options (uix/use-memo (fn []
+                                (map (fn [x]
+                                       {:value (value-fn x)
+                                        :label (:name x)})
+                                     items))
+                              [items value-fn])]
+    ($ autocomplete2
+      {:options   options
+       :multiple  false
+       :label     label
+       :value     (first value)
+       :on-change (fn [_e v]
+                    (println v)
+                    (on-change [(:value v)]))})))
 
 (defn info-text
   [s]
@@ -247,11 +259,11 @@
          (tr :ptv.integration.service/lipas-managed-helper))
 
        (when (= "manual" (:service-integration site))
-         [services-selector
-          {:value     (:service-ids site)
-           :on-change #(==> [::events/select-services site %])
-           :value-fn  :service-id
-           :label     (tr :ptv.actions/select-service)}])]]
+         ($ services-selector
+            {:value     (:service-ids site)
+             :on-change #(==> [::events/select-services site %])
+             :value-fn  :service-id
+             :label     (tr :ptv.actions/select-service)}))]]
 
      ;; Service channels
      [mui/grid {:item true :xs 12 :lg 4}
@@ -279,11 +291,11 @@
          (tr :ptv.integration.service-channel/lipas-managed-helper))
 
        (when (= "manual" (:service-channel-integration site))
-         [service-channel-selector
-          {:value     (:service-channel-ids site)
-           :value-fn  :id
-           :on-change #(==> [::events/select-service-channels site %])
-           :label     (tr :ptv.actions/select-service-channel)}])]]
+         ($ service-channel-selector
+            {:value     (:service-channel-ids site)
+             :value-fn  :id
+             :on-change #(==> [::events/select-service-channels site %])
+             :label     (tr :ptv.actions/select-service-channel)}))]]
 
      ;; Descriptions
      (r/with-let [selected-tab (r/atom :fi)]
@@ -699,11 +711,11 @@
                    :label-fn  :label
                    :on-change #(==> [::events/set-service-candidate-languages source-id %])}]
 
-                 [services-selector
-                  {:value     (get m :service-ids)
-                   :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
-                   :value-fn  :service-id
-                   :label     (tr :ptv/service)}]
+                 ($ services-selector
+                    {:value     (get m :service-ids)
+                     :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
+                     :value-fn  :service-id
+                     :label     (tr :ptv/service)})
 
                  (let [languages (set languages)]
                    [mui/tabs
@@ -890,11 +902,11 @@
                   :on-change #(==> [::events/toggle-sync-enabled site %])}]
 
                ;; Services selector
-                [services-selector
-                 {:value     service-ids
-                  :value-fn  :service-id
-                  :on-change #(==> [::events/select-services site %])
-                  :label     (tr :ptv/services)}]
+               ($ services-selector
+                  {:value     service-ids
+                   :value-fn  :service-id
+                   :on-change #(==> [::events/select-services site %])
+                   :label     (tr :ptv/services)})
 
                ;; Service channel selector
 
@@ -926,11 +938,11 @@
                                       [(:service-channel-id name-conflict)]])}
                     (tr :ptv.wizard/attach-to-conflicting-service-channel)])
 
-                 [service-channel-selector
-                  {:value     service-channel-ids
-                   :value-fn  :service-channel-id
-                   :on-change #(==> [::events/select-service-channels site %])
-                   :label     (tr :ptv/service-channel)}]]
+                 ($ service-channel-selector
+                    {:value     service-channel-ids
+                     :value-fn  :service-channel-id
+                     :on-change #(==> [::events/select-service-channels site %])
+                     :label     (tr :ptv/service-channel)})]
 
                 [mui/tabs
                  {:value     @selected-tab
