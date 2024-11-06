@@ -344,7 +344,7 @@
 
            (when (= "lipas-managed-ptv-fields" (:descriptions-integration site))
              [mui/button {:disabled loading?
-                          :on-click #(==> [::events/generate-descriptions (:lipas-id site)])}
+                          :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
               (tr :ptv.actions/generate-with-ai)])
 
            (when loading?

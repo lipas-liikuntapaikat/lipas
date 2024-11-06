@@ -133,9 +133,13 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
   [sports-site]
   ;; Might include (some) of the UTP data now?
   ;; Could be a good thing, but might make the prompt data too large?
-  (walk/postwalk #(if (map? %)
-                    (dissoc % :geoms :geometries :simple-geoms :images :videos :id :fids :event-date)
-                    %)
+  (walk/postwalk (fn [x]
+                   (if (map? x)
+                     (dissoc x :geoms :geometries :simple-geoms :images :videos :id :fids :event-date
+                             ;; This includes the already generated summary/description, important that that isn't
+                             ;; passed back into the AI.
+                             :ptv)
+                     x))
                  sports-site))
 
 (defn generate-ptv-descriptions
