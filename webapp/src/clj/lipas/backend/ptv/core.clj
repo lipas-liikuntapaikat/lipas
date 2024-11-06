@@ -8,7 +8,8 @@
             [lipas.backend.search :as search]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.utils :as utils]))
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log]))
 
 (defn get-ptv-integration-candidates
   [search criteria]
@@ -75,24 +76,43 @@
   (let [site     (db/get-sports-site db (:lipas-id sports-site))
         _        (assert (some? site)
                          (str "Sports site " (:lipas-id sports-site) " not found in DB"))
-        ;; FIXME:
-        config   {:org-id (get-in ptv/test-config [:creds :org-id])}
-        id       (first (get-in site [:ptv :service-channel-ids]))
+        ;; NOTE: Is this available always? Where is ptv-meta originally intitialized?
+        config   {:org-id (:org-id ptv-meta)}
+        ;; This is the service-channel-id in Lipas DB (which won't exist for new service-locations)
+        ;; id (first (get-in site [:ptv :service-channel-ids]))
+        ;; This is the ID from UI, possibly updated/set with "Liitä tähän palvelupaikkaan"
+        ;; We probably want to use this always?
+        id (-> sports-site :ptv :service-channel-ids first)
+        ;; _ (log/infof "FOO: %s %s" id (-> sports-site :ptv :service-channel-ids))
         site     (update site :ptv merge ptv-meta)
         data     (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (core/enrich site))
         ptv-resp (if id
                    (ptv/update-service-location config id data)
                    (ptv/create-service-location config data))
-        now      (utils/timestamp)]
+        now      (utils/timestamp)
+        to-persist (-> ptv-meta
+                       (select-keys persisted-ptv-keys)
+                       (assoc :last-sync now
+                              ;; Take the created ID from ptv response and store to Lipas DB right away.
+                              ;; TODO: Is there a case where this could be multiple ids?
+                              :service-channel-ids (set [(:id ptv-resp)])))]
+
+    (log/infof "Upserted (updated: %s) service-location %s: %s" (boolean id) data to-persist)
 
     (core/save-sports-site! db search user
                             (-> site
                                 (assoc :event-date now)
-                                (assoc :ptv (-> ptv-meta
-                                                (select-keys persisted-ptv-keys)
-                                                (assoc :last-sync now)))))
+                                (assoc :ptv to-persist)))
 
-    ptv-resp))
+    {;; Return the updated :ptv meta for sports-site, to for the app-db
+     :ptv-meta to-persist
+     ;; Return :id :name, same as the list endpoint that is used in the UI to show the Palvelupaikka autocomplete
+     :ptv-resp {:id (:id ptv-resp)
+                :name (some (fn [x]
+                              (when (and (= "Name" (:type x))
+                                         (= "fi" (:language x)))
+                                (:value x)))
+                            (:serviceChannelNames ptv-resp))}}))
 
 (defn save-ptv-integration-definitions
   "Saves ptv definitions under key :ptv. Does not notify webhooks,

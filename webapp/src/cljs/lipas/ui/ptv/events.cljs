@@ -577,14 +577,12 @@
               :on-failure      [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-location-success
-  (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
+  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv-meta]}]]
     (let [org-id   (get-in db [:ptv :selected-org :id])]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-channels] false)
-               (assoc-in [:ptv :org org-id :data :service-channels (:id resp)] resp)
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id]
-                          update-in [:ptv :service-channel-ids] (fn [ids]
-                                                                  (set (conj ids (:id resp))))))
+               (assoc-in [:ptv :org org-id :data :service-channels (:id ptv-resp)] ptv-resp)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv-meta))
        :fx extra-fx})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
@@ -649,31 +647,32 @@
 
 (rf/reg-event-fx ::save-ptv-meta
   (fn [{:keys [db]} [_ sports-sites]]
-    (let [token  (-> db :user :login :token)
-          ks [:languages
-              :summary
-              :description
-              :last-sync
-              :org-id
-              :sync-enabled
-              :service-integration
-              :descriptions-integration
-              :service-channel-integration
-              :service-ids
-              :service-channel-ids]]
-      {:db (assoc-in db [:ptv :save-in-progress] true)
-       :fx [[:http-xhrio
-             {:method          :post
-              :headers         {:Authorization (str "Token " token)}
-              :uri             (str (:backend-url db) "/actions/save-ptv-meta")
-              :params          (reduce (fn [m site]
-                                         (assoc m (:lipas-id site) (select-keys site ks)))
-                                       {}
-                                       sports-sites)
-              :format          (ajax/transit-request-format)
-              :response-format (ajax/transit-response-format)
-              :on-success      [::save-ptv-meta-success]
-              :on-failure      [::save-ptv-meta-failure]}]]})))
+    (when (seq sports-sites)
+      (let [token  (-> db :user :login :token)
+            ks [:languages
+                :summary
+                :description
+                :last-sync
+                :org-id
+                :sync-enabled
+                :service-integration
+                :descriptions-integration
+                :service-channel-integration
+                :service-ids
+                :service-channel-ids]]
+        {:db (assoc-in db [:ptv :save-in-progress] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/save-ptv-meta")
+                :params          (reduce (fn [m site]
+                                           (assoc m (:lipas-id site) (select-keys site ks)))
+                                         {}
+                                         sports-sites)
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::save-ptv-meta-success]
+                :on-failure      [::save-ptv-meta-failure]}]]}))))
 
 (rf/reg-event-fx ::save-ptv-meta-success
   (fn [{:keys [db]} _]

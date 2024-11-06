@@ -159,7 +159,8 @@
     (prn location)
 
     {:organizationId      (:org-id ptv)
-     :sourceId            (str "lipas-" (:org-id ptv) "-" lipas-id)
+     ;; FIXME: PTV doesn't allow a new ServiceLocation with a same sourceId as a Deleted one
+     :sourceId            (str "lipas3-" (:org-id ptv) "-" lipas-id)
      :serviceChannelNames (keep identity
                                 (let [fallback (get-in sports-site [:name])]
                                   [(when (contains? languages "fi")
