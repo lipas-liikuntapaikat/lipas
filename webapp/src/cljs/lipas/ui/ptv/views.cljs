@@ -376,7 +376,13 @@
              :multiline  true
              :on-change  #(==> [::events/set-description site @selected-tab %])
              :label      "Kuvaus"
-             :value      (get-in site [:description @selected-tab])}]]]))]))
+             :value      (get-in site [:description @selected-tab])}]
+
+           [mui/button {:disabled loading?
+                        :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+            "Vie PTV"]
+
+           ]]))]))
 
 (defn table []
   (r/with-let [expanded-rows (r/atom {})]
@@ -847,6 +853,7 @@
         {:expandIcon ($ Icon "expand_more")}
         ($ Typography
            {:sx #js {:mr 1.5}}
+           ;; TODO: Should also show if already saved to ptv or not?
            (cond
              name-conflict ($ Icon {:color "warning"} "warning")
              valid         ($ Icon {:color "success"} "done")
@@ -1118,6 +1125,7 @@
 
     [lui/dialog
      {:open?         open?
+      ;; FIXME: This isn't implemented, what should this do?
       :on-save       #(==> [::events/save sites])
       :save-enabled? true
       :save-label    (tr :actions/save)

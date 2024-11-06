@@ -85,7 +85,9 @@
         id (-> sports-site :ptv :service-channel-ids first)
         ;; _ (log/infof "FOO: %s %s" id (-> sports-site :ptv :service-channel-ids))
         site     (update site :ptv merge ptv-meta)
+        _ (log/infof "Site data: %s" site)
         data     (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (core/enrich site))
+        _ (log/infof "Created data: %s" data)
         ptv-resp (if id
                    (ptv/update-service-location config id data)
                    (ptv/create-service-location config data))
@@ -93,11 +95,13 @@
         to-persist (-> ptv-meta
                        (select-keys persisted-ptv-keys)
                        (assoc :last-sync now
+                              ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
+                              :publishing-status (:publishingStatus ptv-resp)
                               ;; Take the created ID from ptv response and store to Lipas DB right away.
                               ;; TODO: Is there a case where this could be multiple ids?
                               :service-channel-ids (set [(:id ptv-resp)])))]
 
-    (log/infof "Upserted (updated: %s) service-location %s: %s" (boolean id) data to-persist)
+    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data to-persist)
 
     (core/save-sports-site! db search user
                             (-> site

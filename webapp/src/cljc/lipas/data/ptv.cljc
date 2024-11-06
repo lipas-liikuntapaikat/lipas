@@ -144,7 +144,7 @@
 (defn ->ptv-service-location
   [org
    coord-transform-fn
-   {:keys [ptv lipas-id location search-meta] :as sports-site}]
+   {:keys [status ptv lipas-id location search-meta] :as sports-site}]
   (let [languages (-> ptv
                       (get :languages default-langs)
                       (->> (map lipas-lang->ptv-lang))
@@ -216,7 +216,10 @@
                      :latitude     lat
                      :longitude    lon})}]
 
-     :publishingStatus "Published" ; Draft | Published
+     :publishingStatus (case status
+                         ("incorrect-data" "out-of-service-permanently") "Deleted"
+                         "Published")
+     ; Draft | Published
 
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)

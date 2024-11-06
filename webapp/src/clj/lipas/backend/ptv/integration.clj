@@ -244,7 +244,9 @@
                   {:bool
                    {:must
                     (remove nil?
-                            [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
+                            [;; Include all statuses - this is also used to remove the sites from PTV
+                             ; {:terms {:status.keyword ["active"
+                             ;                           "out-of-service-temporarily"]}}
                              (when city-codes
                                {:terms {:location.city.city-code city-codes}})
                              (when owners
