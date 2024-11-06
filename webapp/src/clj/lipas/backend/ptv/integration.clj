@@ -159,6 +159,9 @@
   [{:keys [api-url]
     :or   {api-url (:api-url test-config)}}
    org-id]
+  ;; TODO: Solve paginations, if multiple pages, lazy seq and make multiple requests?
+  ;; Or should we handle pagination from FE?
+  ;; 500 should be fine in one response, what if we have 2000-5000 for some city/org?
   (let [params {:url (str api-url "/v11/ServiceChannel/organization/" org-id)
                 :auth-org-id org-id
                 :method       :get}]

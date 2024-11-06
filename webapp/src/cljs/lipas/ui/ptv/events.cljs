@@ -9,6 +9,7 @@
 (def ptv-root-url-prod
   "https://api.palvelutietovaranto.suomi.fi")
 
+;; FIXME: Remove, proxy all through BE
 (def ptv-root-url-test
   "https://api.palvelutietovaranto.trn.suomi.fi")
 
@@ -86,6 +87,7 @@
   (fn [{:keys [db]} [_ org]]
     (when org
       {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
+       ;; FIXME: Load through BE
        :fx [[:http-xhrio
              {:method          :get
               :uri             (str ptv-root-url-test "/api/v11/Organization/" (:id org))
@@ -146,6 +148,7 @@
   (fn [{:keys [db]} [_ org]]
     (when org
       {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
+       ;; FIXME: Load through BE
        :fx [[:http-xhrio
              {:method          :get
               :uri             (str ptv-root-url-test
@@ -177,6 +180,7 @@
   (fn [{:keys [db]} [_ org]]
     (when org
       {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
+       ;; FIXME: Load through BE
        :fx [[:http-xhrio
              {:method          :get
               :uri             (str ptv-root-url-test
