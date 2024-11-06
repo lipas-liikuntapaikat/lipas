@@ -18,7 +18,7 @@
 
 (declare make-field)
 
-(defn set-field
+(defn set-field*
   [lipas-id & args]
   (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
 
@@ -894,7 +894,7 @@
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
-           locale _label _description _set-field]
+           locale _label _description _set-field set-field]
     :as   props}]
   (r/with-let [route-form-state (r/atom route)
                _ (add-watch route-form-state :lol
@@ -1073,7 +1073,7 @@
         geoms     (<== [::subs/geoms read-only?])
         geom-type (<== [::subs/geom-type read-only?])
         value     (<== [::subs/lipas-prop-value lipas-prop-k read-only?])
-        set-field (partial set-field lipas-id :properties lipas-prop-k)]
+        set-field (partial set-field* lipas-id :properties lipas-prop-k)]
     [:<>
      ;; Because the value (from display-data) is completely different type than
      ;; edit-data, we need to display it using different component. Same logic as ->field.
@@ -1288,7 +1288,7 @@
         activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
         locale       (tr)
-        set-field    (partial set-field lipas-id :activities activity-k)
+        set-field    (partial set-field* lipas-id :activities activity-k)
         editing?     (and can-edit? (<== [:lipas.ui.sports-sites.subs/editing? lipas-id]))
         read-only?   (not editing?)
         props        (or (some-> (get-in activity [:type->props type-code])
