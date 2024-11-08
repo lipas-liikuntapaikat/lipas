@@ -553,28 +553,20 @@
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
     (let [token  (-> db :user :login :token)
+          ;; Or per site?
           org-id (-> db :ptv :selected-org :id)
-          site   (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          data   (get-in db [:ptv :service-locations-creation :data lipas-id])
-          ks     [:languages
-                  :summary
-                  :description
-                  :last-sync
-                  :org-id
-                  :sync-enabled
-                  :service-integration
-                  :descriptions-integration
-                  :service-channel-integration
-                  :service-ids
-                  :service-channel-ids]]
+          ptv-data   (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv])
+          ;; What is this?
+          ;; data   (get-in db [:ptv :service-locations-creation :data lipas-id])
+          ]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
        :fx [[:http-xhrio
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
-              :params          {:sports-site site
-                                :ptv-meta    data
-                                :org         (org-id->params org-id)}
+              :params          {:lipas-id lipas-id
+                                :org (org-id->params org-id)
+                                :ptv ptv-data}
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::create-ptv-service-location-success lipas-id success-fx]
@@ -586,6 +578,8 @@
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-channels] false)
                (assoc-in [:ptv :org org-id :data :service-channels (:id ptv-resp)] ptv-resp)
+               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv-meta))
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv-meta))
        :fx extra-fx})))
 

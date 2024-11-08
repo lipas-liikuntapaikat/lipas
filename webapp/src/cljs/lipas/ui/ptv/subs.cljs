@@ -284,11 +284,15 @@
                             (-> site :ptv :description)
 
                             "ptv-managed"
-                            (tr :ptv.integration.description/ptv-managed-helper))]
+                            (tr :ptv.integration.description/ptv-managed-helper))
+
+              last-sync (-> site :ptv :last-sync)]
           {:valid           (boolean (and (some-> description :fi count (> 5))
                                           (some-> summary :fi count (> 5))))
            :lipas-id        (:lipas-id site)
            :name            (:name site)
+           :event-date      (:event-date site)
+           :event-date-human (some-> (:event-date site) utils/->human-date-time-at-user-tz)
            :name-conflict   (detect-name-conflict site (vals service-channels))
            :marketing-name  (:marketing-name site)
            :type            (-> site :search-meta :type :name :fi)
@@ -303,12 +307,15 @@
 
            :descriptions-integration    descriptions-integration
            :sync-enabled                (get-in site [:ptv :sync-enabled] true)
-           :last-sync                   (-> site :ptv :last-sync)
-           :last-sync-human                   (or (some-> site
-                                                          :ptv
-                                                          :last-sync
-                                                          utils/->human-date-time-at-user-tz)
-                                                  "Ei koskaan")
+           :last-sync                   last-sync
+           :last-sync-human             (or (some-> last-sync utils/->human-date-time-at-user-tz)
+                                            "Ei koskaan")
+
+           :sync-status (cond
+                          (not last-sync) :not-synced
+                          (= (:event-date site) last-sync) :ok
+                          :else :out-of-date)
+
            :service-ids                 (-> site :ptv :service-ids)
            :service-name                (-> services (get service-id) :serviceNames
                                             (->> (some #(when (= "fi" (:language %)) (:value %)))))

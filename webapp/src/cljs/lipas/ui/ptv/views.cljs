@@ -1,5 +1,15 @@
 (ns lipas.ui.ptv.views
-  (:require ["@mui/material/Paper$default" :as Paper]
+  (:require ["@mui/icons-material/Sync$default" :as Sync]
+            ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
+            ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
+            ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/Avatar$default" :as Avatar]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Typography$default" :as Typography]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
             [lipas.ui.components :as lui]
@@ -10,12 +20,7 @@
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.utils :refer [<== ==>]]
             [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]
-            ["@mui/material/Accordion$default" :as Accordion]
-            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/Typography$default" :as Typography]
-            ["@mui/material/AccordionDetails$default" :as AccordionDetails]))
+            [uix.core :as uix :refer [$ defui]]))
 
 ;; Memo
 ;; - preset service structure with descriptions
@@ -391,6 +396,7 @@
           sync-all-enabled? (<== [::subs/sync-all-enabled?])
 
           headers [{:key :expand :label "" :padding "checkbox"}
+                   #_
                    {:key     :selected :label (tr :ptv.actions/export)
                     :padding "checkbox"
                     :action-component
@@ -398,6 +404,7 @@
                      {:value     sync-all-enabled?
                       :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
+                   {:key :event-data :label "Tila"}
                    {:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
                    {:key :type :label (tr :general/type)}
@@ -424,59 +431,82 @@
           ;; Body
           [mui/table-body
            (doall
-             (for [{:keys [lipas-id] :as site} (sort-by :type sites)]
+             (for [{:keys [lipas-id sync-status] :as site} (sort-by :type sites)]
 
                [:<> {:key lipas-id}
 
-               ;; Summary row
-                [mui/table-row #_{:on-click (fn [] (swap! expanded-rows update lipas-id not))}
+               [mui/table-row
+                {:sx [{}
+                      ]}
 
                 ;; Expand toggle
-                 [mui/table-cell
-                  [mui/icon-button
-                   {:style    {:zIndex 1}
-                    :size     "small"
-                    :on-click (fn [] (swap! expanded-rows update lipas-id not))}
-                   [mui/icon
-                    (if (get @expanded-rows lipas-id false)
-                      "keyboard_arrow_up_icon"
-                      "keyboard_arrow_down_icon")]]]
+                [mui/table-cell
+                 [mui/icon-button
+                  {:style    {:zIndex 1}
+                   :size     "small"
+                   :on-click (fn [] (swap! expanded-rows update lipas-id not))}
+                  [mui/icon
+                   (if (get @expanded-rows lipas-id false)
+                     "keyboard_arrow_up_icon"
+                     "keyboard_arrow_down_icon")]]]
 
                 ;; Enable sync
-                 [mui/table-cell
-                  [lui/switch
-                   {:value     (:sync-enabled site)
-                    :on-change #(==> [::events/toggle-sync-enabled site %])}]]
+                #_
+                [mui/table-cell
+                 [lui/switch
+                  {:value     (:sync-enabled site)
+                   :on-change #(==> [::events/toggle-sync-enabled site %])}]]
+
+                [mui/table-cell
+                 ($ Stack
+                    {:direction "row"
+                     :alignItems "center"}
+                    ($ Avatar
+                       {:sx #js {:bgcolor (if (:sync-enabled site)
+                                            (case sync-status
+                                              :ok "success.main"
+                                              :not-synced "error.main"
+                                              :out-of-date "warning.main")
+                                            mui/gray3)
+                                 :mr 2}}
+                       (if (:sync-enabled site)
+                         (if (= :ok sync-status)
+                           ($ Sync {:color "white"})
+                           ($ SyncProblem
+                              {:color "white"}))
+                         ($ SyncDisabled {:background "white"})))
+                    #_
+                    (:event-date-human site))]
 
                 ;; Last-sync
-                 [mui/table-cell
-                  (:last-sync-human site)]
+                [mui/table-cell
+                 (:last-sync-human site)]
 
                 ;; Name
-                 [mui/table-cell
-                  (:name site)]
+                [mui/table-cell
+                 (:name site)]
 
                 ;; Type
-                 [mui/table-cell
-                  (:type site)]
+                [mui/table-cell
+                 (:type site)]
 
                 ;; Admin
                 ;;[mui/table-cell]
 
                 ;; Owner
-                 [mui/table-cell
-                  (:owner site)]
+                [mui/table-cell
+                 (:owner site)]
 
                 ;; Service
-                 #_[mui/table-cell
-                    [services-selector]]
+                #_[mui/table-cell
+                   [services-selector]]
 
                 ;; Service channell
-                 #_[mui/table-cell
-                    #_[service-channel-selector]]
+                #_[mui/table-cell
+                   #_[service-channel-selector]]
 
                 ;; Description
-                 #_[mui/table-cell]]
+                #_[mui/table-cell]]
 
                ;; Details row
                 [mui/table-row
@@ -1126,12 +1156,12 @@
     [lui/dialog
      {:open?         open?
       ;; FIXME: This isn't implemented, what should this do?
-      :on-save       #(==> [::events/save sites])
-      :save-enabled? true
-      :save-label    (tr :actions/save)
+      ; :on-save       #(==> [::events/save sites])
+      ; :save-enabled? true
+      ; :save-label    (tr :actions/save)
       :title         (tr :ptv/tooltip)
       :max-width     "xl"
-      :cancel-label  (tr :actions/cancel)
+      :cancel-label  "Sulje" ;; (tr :actions/cancel)
       :on-close      #(==> [::events/close-dialog])}
 
      [mui/stack {:spacing 2}

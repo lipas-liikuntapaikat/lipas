@@ -1,8 +1,40 @@
 (ns lipas.backend.ptv.handler
-  (:require [lipas.backend.ptv.core :as ptv-core]))
+  (:require [lipas.backend.ptv.core :as ptv-core]
+            [reitit.coercion.malli]))
+
+(defn localized-string-schema [string-props]
+  [:map
+   {:closed true}
+   [:fi [:string string-props]]
+   [:se [:string string-props]]
+   [:en [:string string-props]]])
+
+(def integration-enum
+  [:enum "lipas-managed"])
+
+(def ptv-meta
+  [:map
+   ;; TODO: one or many?
+   [:service-channel-id :string]
+   [:service-channel-integration integration-enum]
+   [:sync-enabled :boolean]
+   [:service-integration integration-enum]
+   [:summary (localized-string-schema {:max 150})]
+   [:description (localized-string-schema {})]])
+
+(def create-ptv-service-location
+  [:map
+   {:closed true}
+   [:org :string]
+   [:lipas-id :string]
+   [:ptv ptv-meta]])
 
 (defn routes [{:keys [db search] :as _ctx}]
-  [["/actions/get-ptv-integration-candidates"
+  [""
+   {:coercion reitit.coercion.malli/coercion
+    :tags ["ptv"]}
+
+   ["/actions/get-ptv-integration-candidates"
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
@@ -15,7 +47,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
         {:status 200
@@ -25,7 +57,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
         {:status 200
@@ -35,7 +67,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
         {:status 200
@@ -45,7 +77,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
         {:status 200
@@ -55,7 +87,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body create-ptv-service-location}
       :handler
       (fn [{:keys [body-params identity]}]
         {:status 200
@@ -65,7 +97,7 @@
     {:post
      {:no-doc     false
       :require-privilege :ptv/manage
-      :parameters {:body map?}
+      :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params identity]}]
         {:status 200

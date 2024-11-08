@@ -71,13 +71,10 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!
-  [db search user {:keys [org ptv-meta sports-site] :as _m}]
-  (assert (:lipas-id sports-site))
-  (let [site     (db/get-sports-site db (:lipas-id sports-site))
-        _        (assert (some? site)
-                         (str "Sports site " (:lipas-id sports-site) " not found in DB"))
-        ;; NOTE: Is this available always? Where is ptv-meta originally intitialized?
-        config   {:org-id (:org-id ptv-meta)}
+  [db search user {:keys [org lipas-id ptv-meta sports-site] :as _m}]
+  (let [site     (db/get-sports-site db lipas-id)
+        _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
+        config   {}
         ;; This is the service-channel-id in Lipas DB (which won't exist for new service-locations)
         ;; id (first (get-in site [:ptv :service-channel-ids]))
         ;; This is the ID from UI, possibly updated/set with "Liitä tähän palvelupaikkaan"
@@ -85,31 +82,33 @@
         id (-> sports-site :ptv :service-channel-ids first)
         ;; _ (log/infof "FOO: %s %s" id (-> sports-site :ptv :service-channel-ids))
         site     (update site :ptv merge ptv-meta)
-        _ (log/infof "Site data: %s" site)
+        ;; _ (log/infof "Site data: %s" site)
         data     (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (core/enrich site))
-        _ (log/infof "Created data: %s" data)
+        ;; _ (log/infof "Created data: %s" data)
         ptv-resp (if id
                    (ptv/update-service-location config id data)
                    (ptv/create-service-location config data))
+        ;; Use the same TS for ptv last-sync and site event-date
         now      (utils/timestamp)
-        to-persist (-> ptv-meta
-                       (select-keys persisted-ptv-keys)
-                       (assoc :last-sync now
-                              ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
-                              :publishing-status (:publishingStatus ptv-resp)
-                              ;; Take the created ID from ptv response and store to Lipas DB right away.
-                              ;; TODO: Is there a case where this could be multiple ids?
-                              :service-channel-ids (set [(:id ptv-resp)])))]
+        ;; Store the new PTV info to Lipas DB
+        new-ptv-data (-> ptv-meta
+                         (select-keys persisted-ptv-keys)
+                         (assoc :last-sync now
+                                ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
+                                :publishing-status (:publishingStatus ptv-resp)
+                                ;; Take the created ID from ptv response and store to Lipas DB right away.
+                                ;; TODO: Is there a case where this could be multiple ids?
+                                :service-channel-ids (set [(:id ptv-resp)])))]
 
-    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data to-persist)
+    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
 
     (core/save-sports-site! db search user
                             (-> site
                                 (assoc :event-date now)
-                                (assoc :ptv to-persist)))
+                                (assoc :ptv new-ptv-data)))
 
     {;; Return the updated :ptv meta for sports-site, to for the app-db
-     :ptv-meta to-persist
+     :ptv-meta new-ptv-data
      ;; Return :id :name, same as the list endpoint that is used in the UI to show the Palvelupaikka autocomplete
      :ptv-resp {:id (:id ptv-resp)
                 :name (some (fn [x]

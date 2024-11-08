@@ -19,6 +19,7 @@
     "@emotion/styled": "^11.11.5",
     "@hello-pangea/dnd": "^16.6.0",
     "@mapbox/togeojson": "^0.16.0",
+    "@mui/icons-material": "^5.16.7",
     "@mui/material": "^5.15.19",
     "@turf/area": "^6.5.0",
     "@turf/bbox": "^6.0.1",

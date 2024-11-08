@@ -132,7 +132,7 @@
            (if (and (not retried?)
                     (= 401 (:status d))
                     (= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
-                       (get (:headers d) "rWW-Authenticate")))
+                       (get (:headers d) "WWW-Authenticate")))
              (do
                (log/infof "Invalid token, trying to get a new token and retry")
                (swap! current-token dissoc (:auth-org-id req))
