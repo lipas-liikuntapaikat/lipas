@@ -154,8 +154,8 @@
 (rf/reg-sub ::type-table
   :<- [::active-types]
   :<- [:lipas.ui.subs/locale]
-  (fn [[types locale]]
-    (for [[type-code m] types]
+  (fn [[types locale] [_ types-override]]
+    (for [[type-code m] (or types-override types)]
       {:type-code     type-code
        :name          (get-in m [:name locale])
        :geometry-type (:geometry-type m)
