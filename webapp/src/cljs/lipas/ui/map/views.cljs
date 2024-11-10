@@ -283,9 +283,9 @@
                  (string/includes? (string/lower-case (string/join (% :tags))) lower-case-term))
             table-data)))
 
-(defn type-helper-table [{:keys [tr on-select]}]
+(defn type-helper-table [{:keys [tr on-select types]}]
   (r/with-let [search-term (r/atom "")
-               table-data (<== [:lipas.ui.sports-sites.subs/type-table])]
+               table-data (<== [:lipas.ui.sports-sites.subs/type-table types])]
     (let [filtered-table-data (filter-by-term @search-term table-data)
           sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
       [mui/grid {:container true}
@@ -326,6 +326,7 @@
 
         ;; Apu ankka table
         [type-helper-table {:tr tr
+                            :types types
                             :geom-help-open? geom-help-open?
                             :on-select (fn [element]
                                          (swap! geom-help-open? not)
