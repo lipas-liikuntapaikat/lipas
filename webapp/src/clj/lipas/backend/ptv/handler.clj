@@ -91,7 +91,7 @@
       :handler
       (fn [{:keys [body-params identity]}]
         {:status 200
-         :body   (ptv-core/upsert-ptv-service-location! db search identity body-params)})}}]
+         :body   (ptv-core/upsert-ptv-service-location! db identity body-params)})}}]
 
    ["/actions/save-ptv-meta"
     {:post

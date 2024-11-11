@@ -1,32 +1,39 @@
 (ns lipas.ui.ptv.site-view
-  (:require ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormLabel$default" :as FormLabel]
             ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Tab$default" :as Tab]
-            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Typography$default" :as Typography]
-            [goog.string.format]
             [lipas.ui.components :as lui]
+            [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
-            [lipas.ui.utils :refer [<== ==>]]
+            [re-frame.core :as rf]
             [reagent.core :as r]
             [uix.core :as uix :refer [$ defui]]))
 
-(defui site-view [{:keys [_tr lipas-id can-edit? edit-data]}]
-  (let [[selected-tab set-selected-tab] (uix/use-state "fi")
+(defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
+  (let [[selected-tab set-selected-tab] (uix/use-state :fi)
 
-        editing? (and can-edit? (<== [:lipas.ui.sports-sites.subs/editing? lipas-id]))
+        editing*   (use-subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id])
+        editing?   (and can-edit? editing*)
         read-only? (not editing?)
-        site (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+        site       (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+        ;; default-settings {}
+        enabled    (boolean (:ptv site))
 
-        loading? false]
+        loading?   false]
     (js/console.log site)
     (js/console.log edit-data)
     ($ Stack
        {:direction "column"
         :sx #js {:gap 2}}
+
+       (when (not enabled)
+         ($ Alert
+            {:severity "warning"}
+            "PTV integraatio ei käytössä tälle paikalle, käytä PTV käyttöönotto wizardia PTV palvelun alustamiseen."))
 
        ($ FormControl
           ($ FormLabel
@@ -38,15 +45,27 @@
           ($ FormLabel
              "PTV Tila")
           ($ Typography
-             (:publishing-status (:ptv site))
+             (:publishing-status (:ptv site)))
+          ($ Typography
              (:last-sync (:ptv site))))
 
-       ($ Tabs
-          {:value     selected-tab
-           :on-change (fn [_e v] (set-selected-tab v))}
-          ($ Tab {:value "fi" :label "FI"})
-          ($ Tab {:value "se" :label "SE"})
-          ($ Tab {:value "en" :label "EN"}))
+       #_
+       ($ controls/description-integration
+          {:value (:descriptions-integration (:ptv site))
+           :on-change identity
+           :tr tr})
+
+       (when (= "lipas-managed-ptv-fields" (:descriptions-integration (:ptv site)))
+         ($ Button
+            {:disabled loading?
+             :variant "outlined"
+             :on-click (fn [_e]
+                         (rf/dispatch [::events/generate-descriptions (:lipas-id site) [] []]))}
+            (tr :ptv.actions/generate-with-ai)))
+
+       ($ controls/lang-selector
+          {:value selected-tab
+           :on-change set-selected-tab})
 
        ;; Summary
        (r/as-element
@@ -56,9 +75,11 @@
            :read-only? (or (not= "manual" (:descriptions-integration site))
                            read-only?)
            :variant    "outlined"
-           :on-change  #(==> [::events/set-summary site selected-tab %])
+           :on-change  (fn [v]
+                         (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
            :label      "Tiivistelmä"
-           :value      (get-in site [:ptv :summary selected-tab])}])
+           :value      (or (get-in edit-data [:ptv :summary selected-tab])
+                           (get-in site [:ptv :summary selected-tab]))}])
 
        ;; Description
        (r/as-element
@@ -69,14 +90,18 @@
                            read-only?)
            :rows       5
            :multiline  true
-           :on-change  #(==> [::events/set-description site selected-tab %])
+           :on-change  (fn [v]
+                         (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
            :label      "Kuvaus"
-           :value      (get-in site [:ptv :description selected-tab])}])
+           :value      (or (get-in edit-data [:ptv :description selected-tab])
+                           (get-in site [:ptv :description selected-tab]))}])
 
+       #_
        ($ Button
           {:variant "contained"
            :color "primary"
            :disabled (or (not can-edit?)
                          loading?)
-           :on-click #(==> [::events/create-ptv-service-location lipas-id [] []])}
+           :on-click (fn [_e]
+                       (rf/dispatch [::events/create-ptv-service-location* lipas-id [] []]))}
           "Vie PTV"))))

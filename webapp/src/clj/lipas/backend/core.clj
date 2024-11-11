@@ -522,15 +522,18 @@
 
          (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
 
-       ;; FIXME: This is called from ptv-integration to store :ptv metadata. That should maybe
-       ;; call upsert-sports-site! instead so it doesn't trigger indexing and other stuff?
-       (when (and (#{"out-of-service-permanently"
-                     "incorrect-data"}
-                    (:status resp))
-                  (:ptv resp))
-         (log/infof "Sports-site was archived, shold be removed from PTV?"))
-
-       resp))))
+       ;; Sync the updated site to ptv if the ptv integration is enabled
+       (if (and (not draft?)
+                (:ptv resp)
+                (:sync-enabled (:ptv resp)))
+         (let [new-ptv-data ((resolve 'lipas.backend.ptv.core/upsert-ptv-service-location!)
+                             tx user
+                             {:org (:org-id (:ptv resp))
+                              :lipas-id (:lipas-id resp)
+                              :ptv (:ptv resp)})]
+           (log/infof "Sports site updated and PTV integration enabled")
+           (assoc resp :ptv new-ptv-data))
+         resp)))))
 
 ;;; Cities ;;;
 

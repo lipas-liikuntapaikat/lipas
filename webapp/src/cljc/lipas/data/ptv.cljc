@@ -1,7 +1,8 @@
 (ns lipas.data.ptv
-  (:require
-   [lipas.data.types :as types]
-   [lipas.utils :as utils]))
+  (:require [clojure.string :as str]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log]))
 
 ;; Utajärven jäähalli
 ;; https://api.palvelutietovaranto.suomi.fi/api/v11/ServiceChannel/8604a900-be6b-4f9d-8024-a272e07afba3?showHeader=false
@@ -144,6 +145,7 @@
 (defn ->ptv-service-location
   [org
    coord-transform-fn
+   now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
   (let [languages (-> ptv
                       (get :languages default-langs)
@@ -155,12 +157,17 @@
 
     (println "PTV data")
     (prn ptv)
-    (println "Langauges resolved" languages)
-    (prn location)
+    ; (println "Languages resolved" languages)
+    ; (prn location)
 
     {:organizationId      (:org-id ptv)
-     ;; FIXME: PTV doesn't allow a new ServiceLocation with a same sourceId as a Deleted one
-     :sourceId            (str "lipas3-" (:org-id ptv) "-" lipas-id)
+     ;; Keep using existing sourceId for sites that were already initialized in PTV,
+     ;; generate a new unique ID (with timestamp) for new sites.
+     :sourceId            (or (:sourceId ptv)
+                              (let [ts (str/replace now #":" "-")
+                                    x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
+                                (log/infof "Creating new PTV source-id %s" x)
+                                x))
      :serviceChannelNames (keep identity
                                 (let [fallback (get-in sports-site [:name])]
                                   [(when (contains? languages "fi")
