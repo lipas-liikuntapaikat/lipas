@@ -16,7 +16,7 @@
 (defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (uix/use-state :fi)
 
-        editing*   (use-subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id])
+        editing*   (boolean (use-subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id]))
         editing?   (and can-edit? editing*)
         read-only? (not editing?)
         site       (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
