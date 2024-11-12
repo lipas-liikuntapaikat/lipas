@@ -17,9 +17,11 @@
 
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
-   {:keys [lipas-id]}]
+   lipas-id]
   (let [idx (get-in indices [:sports-site :search])
-        doc (-> (search/fetch-document client idx lipas-id) :body :_source)]
+        doc (-> (search/fetch-document client idx lipas-id)
+                :body
+                :_source)]
     (-> (ai/generate-ptv-descriptions doc)
         :message
         :content)))

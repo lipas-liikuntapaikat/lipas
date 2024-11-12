@@ -22,10 +22,9 @@
         site       (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
         ;; default-settings {}
         enabled    (boolean (:ptv site))
+        descriptions-enabled (not= "manual" (:descriptions-integration (:ptv site)))
 
         loading?   false]
-    (js/console.log site)
-    (js/console.log edit-data)
     ($ Stack
        {:direction "column"
         :sx #js {:gap 2}}
@@ -70,10 +69,10 @@
        ;; Summary
        (r/as-element
          [lui/text-field
-          {:disabled   loading?
-           :multiline  true
-           :read-only? (or (not= "manual" (:descriptions-integration site))
+          {:disabled   (or loading?
+                           (not descriptions-enabled)
                            read-only?)
+           :multiline  true
            :variant    "outlined"
            :on-change  (fn [v]
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
@@ -84,10 +83,10 @@
        ;; Description
        (r/as-element
          [lui/text-field
-          {:disabled   loading?
-           :variant    "outlined"
-           :read-only? (or (not= "manual" (:descriptions-integration site))
+          {:disabled   (or loading?
+                           (not descriptions-enabled)
                            read-only?)
+           :variant    "outlined"
            :rows       5
            :multiline  true
            :on-change  (fn [v]

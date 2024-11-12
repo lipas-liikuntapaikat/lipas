@@ -32,12 +32,12 @@
 (defn routes [{:keys [db search] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
-    :tags ["ptv"]}
+    :tags ["ptv"]
+    :no-doc false}
 
    ["/actions/get-ptv-integration-candidates"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :handler
       (fn [{:keys [body-params]}]
         {:status 200
@@ -45,18 +45,19 @@
 
    ["/actions/generate-ptv-descriptions"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
-      :parameters {:body [:any]}
+     {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:lipas-id :string]]}
       :handler
-      (fn [{:keys [body-params]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/generate-ptv-descriptions search body-params)})}}]
+         :body   (ptv-core/generate-ptv-descriptions
+                   search
+                   (-> req :parameters :body :lipas-id))})}}]
 
    ["/actions/generate-ptv-service-descriptions"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
@@ -65,8 +66,7 @@
 
    ["/actions/save-ptv-service"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
@@ -75,8 +75,7 @@
 
    ["/actions/fetch-ptv-services"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params]}]
@@ -85,8 +84,7 @@
 
    ["/actions/save-ptv-service-location"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :parameters {:body create-ptv-service-location}
       :handler
       (fn [{:keys [body-params identity]}]
@@ -95,8 +93,7 @@
 
    ["/actions/save-ptv-meta"
     {:post
-     {:no-doc     false
-      :require-privilege :ptv/manage
+     {:require-privilege :ptv/manage
       :parameters {:body [:any]}
       :handler
       (fn [{:keys [body-params identity]}]

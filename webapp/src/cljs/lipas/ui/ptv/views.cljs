@@ -248,9 +248,9 @@
 
            ;; Summary
            [lui/text-field
-            {:disabled   loading?
+            {:disabled   (or loading?
+                             (not= "manual" (:descriptions-integration site)))
              :multiline  true
-             :read-only? (not= "manual" (:descriptions-integration site))
              :variant    "outlined"
              :on-change  #(==> [::events/set-summary site @selected-tab %])
              :label      "Tiivistelmä"
@@ -258,9 +258,9 @@
 
            ;; Description
            [lui/text-field
-            {:disabled   loading?
+            {:disabled   (or loading?
+                             (not= "manual" (:descriptions-integration site)))
              :variant    "outlined"
-             :read-only? (not= "manual" (:descriptions-integration site))
              :rows       5
              :multiline  true
              :on-change  #(==> [::events/set-description site @selected-tab %])
