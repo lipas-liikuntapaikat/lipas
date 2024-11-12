@@ -1,6 +1,7 @@
 (ns lipas.backend.ptv.handler
   (:require [lipas.backend.ptv.core :as ptv-core]
-            [reitit.coercion.malli]))
+            [reitit.coercion.malli]
+            [reitit.coercion.spec]))
 
 (defn localized-string-schema [string-props]
   [:map
@@ -54,6 +55,17 @@
          :body   (ptv-core/generate-ptv-descriptions
                    search
                    (-> req :parameters :body :lipas-id))})}}]
+
+   ["/actions/generate-ptv-descriptions-from-data"
+    {:post
+     {:require-privilege :ptv/manage
+      :coercion reitit.coercion.spec/coercion
+      :parameters {:body :lipas/new-or-existing-sports-site}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/generate-ptv-descriptions-from-data
+                   (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-service-descriptions"
     {:post

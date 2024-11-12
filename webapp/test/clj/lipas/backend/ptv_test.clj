@@ -106,6 +106,8 @@
       (let [updated-site (assoc site :ptv (merge default-settings
                                                  {:sync-enabled true
                                                   :org-id org-id
+                                                  ;; TODO: Need to setup the link to services
+                                                  :service-ids []
                                                   :summary {:fi "foobar"
                                                             :se "foobar"
                                                             :en "foobar"}

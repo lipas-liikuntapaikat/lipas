@@ -26,6 +26,13 @@
         :message
         :content)))
 
+(defn generate-ptv-descriptions-from-data
+  [doc]
+  (let [doc (core/enrich doc)]
+    (-> (ai/generate-ptv-descriptions doc)
+        :message
+        :content)))
+
 (defn make-overview
   [sites]
   {:city-name         (->> sites first :search-meta :location :city :name)

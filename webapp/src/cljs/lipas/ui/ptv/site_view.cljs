@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.site-view
   (:require ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormLabel$default" :as FormLabel]
             ["@mui/material/Stack$default" :as Stack]
@@ -8,6 +9,7 @@
             [lipas.ui.components :as lui]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.ptv.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -20,11 +22,12 @@
         editing?   (and can-edit? editing*)
         read-only? (not editing?)
         site       (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+
         ;; default-settings {}
         enabled    (boolean (:ptv site))
         descriptions-enabled (not= "manual" (:descriptions-integration (:ptv site)))
 
-        loading?   false]
+        loading?   (use-subscribe [::subs/generating-descriptions?])]
     ($ Stack
        {:direction "column"
         :sx #js {:gap 2}}
@@ -55,12 +58,24 @@
            :tr tr})
 
        (when (= "lipas-managed-ptv-fields" (:descriptions-integration (:ptv site)))
-         ($ Button
-            {:disabled loading?
-             :variant "outlined"
-             :on-click (fn [_e]
-                         (rf/dispatch [::events/generate-descriptions (:lipas-id site) [] []]))}
-            (tr :ptv.actions/generate-with-ai)))
+          ($ Stack
+             {:sx #js {:position "relative"}}
+             ($ Button
+                {:disabled (or loading?
+                               read-only?)
+                 :variant "outlined"
+                 ;; NOTE: Could use the lipas-id version when not editing? But then we don't have
+                 ;; place to store the results.
+                 :on-click (fn [_e]
+                              (rf/dispatch [::events/generate-descriptions-from-data lipas-id]))}
+                (tr :ptv.actions/generate-with-ai))
+             (when loading?
+                ($ CircularProgress
+                   {:size 24
+                    :sx #js {:position "absolute"
+                             :top "50%"
+                             :left "50%"
+                             :mt "-12px"}}))))
 
        ($ controls/lang-selector
           {:value selected-tab
@@ -93,14 +108,4 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
            :label      "Kuvaus"
            :value      (or (get-in edit-data [:ptv :description selected-tab])
-                           (get-in site [:ptv :description selected-tab]))}])
-
-       #_
-       ($ Button
-          {:variant "contained"
-           :color "primary"
-           :disabled (or (not can-edit?)
-                         loading?)
-           :on-click (fn [_e]
-                       (rf/dispatch [::events/create-ptv-service-location* lipas-id [] []]))}
-          "Vie PTV"))))
+                           (get-in site [:ptv :description selected-tab]))}]))))

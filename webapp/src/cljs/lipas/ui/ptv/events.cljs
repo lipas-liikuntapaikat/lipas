@@ -306,6 +306,36 @@
        :fx (or extra-fx
                [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
+(rf/reg-event-fx ::generate-descriptions-from-data
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [token (-> db :user :login :token)
+          edit-data (-> db :sports-sites (get lipas-id) :editing)]
+      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+       :fx [[:http-xhrio
+             {:method  :post
+              :headers {:Authorization (str "Token " token)}
+              :uri     (str (:backend-url db) "/actions/generate-ptv-descriptions-from-data")
+              :params          (utils/make-saveable edit-data)
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::generate-descriptions-from-data-success lipas-id]
+              :on-failure      [::generate-descriptions-from-data-failure lipas-id]}]]})))
+
+(rf/reg-event-fx ::generate-descriptions-from-data-success
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+             (update-in [:sports-sites lipas-id :editing :ptv] merge resp))}))
+
+(rf/reg-event-fx ::generate-descriptions-from-data-failure
+  (fn [{:keys [db]} [_]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 (rf/reg-event-db ::toggle-sync-all
   (fn [db [_ enabled]]
     (let [org-id (get-in db [:ptv :selected-org :id])]
