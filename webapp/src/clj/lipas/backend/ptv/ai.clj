@@ -1,6 +1,7 @@
 (ns lipas.backend.ptv.ai
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
+            [clojure.string :as str]
             [clojure.walk :as walk]
             [lipas.backend.config :as config]
             [malli.json-schema :as json-schema]
@@ -148,6 +149,28 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
     (complete openai-config
               ptv-system-instruction-v2
               (format generate-utp-descriptions-prompt (json/encode prompt-doc)))))
+
+(def translate-to-other-langs-prompt
+  "Käännä tämän viestin lopussa olevat tiivistelmä (max 150 merkkiä) ja tekstikuvaus, jotka sopivat
+  Palvelutietovarannossa palvelupaikan kuvaukseen, kieleltä %s kielille %s.
+  %s")
+
+(defn translate-to-other-langs
+  [{:keys [from to summary description]}]
+  (complete openai-config
+            ptv-system-instruction-v2
+            (format translate-to-other-langs-prompt
+                    from
+                    (str/join ", " to)
+                    (json/encode {:summary summary
+                                  :description description}))))
+
+(comment
+  (translate-to-other-langs
+    {:from "fi"
+     :to ["en" "se"]
+     :summary "Limingan yleisurheilupyhättö, monipuolinen ulkoilma-alue."
+     :description "Limingan yleisurheilupyhättö on monipuolinen ulkoilma-alue, jossa on useita yleisurheilulajeja varten varustettuja kenttiä."}))
 
 (def generate-utp-service-descriptions-prompt
   "Laadi tämän viestin lopussa olevan JSON-rakenteen kuvaamasta

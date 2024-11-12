@@ -336,6 +336,40 @@
                (assoc-in [:ptv :loading-from-lipas :descriptions] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
+(rf/reg-event-fx ::translate-to-other-langs
+  (fn [{:keys [db]} [_ lipas-id y]]
+    (let [token (-> db :user :login :token)
+          edit-data (-> db :sports-sites (get lipas-id) :editing)
+          ptv (-> edit-data :ptv)
+          data (assoc y
+                      :summary (-> (:summary ptv) (get (keyword (:from y))))
+                      :description (-> (:description ptv) (get (keyword (:from y)))))]
+      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+       :fx [[:http-xhrio
+             {:method  :post
+              :headers {:Authorization (str "Token " token)}
+              :uri     (str (:backend-url db) "/actions/translate-to-other-langs")
+              :params          data
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::translate-to-other-langs-success lipas-id]
+              :on-failure      [::translate-to-other-langs-failure lipas-id]}]]})))
+
+(rf/reg-event-fx ::translate-to-other-langs-success
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+             (update-in [:sports-sites lipas-id :editing :ptv] merge resp))}))
+
+(rf/reg-event-fx ::translate-to-other-langs-failure
+  (fn [{:keys [db]} [_]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 (rf/reg-event-db ::toggle-sync-all
   (fn [db [_ enabled]]
     (let [org-id (get-in db [:ptv :selected-org :id])]

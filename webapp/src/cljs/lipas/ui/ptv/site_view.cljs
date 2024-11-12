@@ -108,4 +108,12 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
            :label      "Kuvaus"
            :value      (or (get-in edit-data [:ptv :description selected-tab])
-                           (get-in site [:ptv :description selected-tab]))}]))))
+                           (get-in site [:ptv :description selected-tab]))}])
+
+       ($ Button
+          {:disabled (or loading?
+                         read-only?)
+           :on-click (fn [_e]
+                        (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
+                                                                                  :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}
+          "Käännä muille kielille"))))

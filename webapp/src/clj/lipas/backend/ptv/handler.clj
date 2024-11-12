@@ -67,6 +67,20 @@
          :body   (ptv-core/generate-ptv-descriptions-from-data
                    (-> req :parameters :body))})}}]
 
+   ["/actions/translate-to-other-langs"
+    {:post
+     {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:from :string]
+                          [:to [:set :string]]
+                          [:summary :string]
+                          [:description :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/translate-to-other-langs
+                   (-> req :parameters :body))})}}]
+
    ["/actions/generate-ptv-service-descriptions"
     {:post
      {:require-privilege :ptv/manage

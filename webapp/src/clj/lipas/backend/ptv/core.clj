@@ -33,6 +33,12 @@
         :message
         :content)))
 
+(defn translate-to-other-langs
+  [doc]
+  (-> (ai/translate-to-other-langs doc)
+      :message
+      :content))
+
 (defn make-overview
   [sites]
   {:city-name         (->> sites first :search-meta :location :city :name)
