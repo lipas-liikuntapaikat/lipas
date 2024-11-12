@@ -37,7 +37,10 @@
   [doc]
   (-> (ai/translate-to-other-langs doc)
       :message
-      :content))
+      :content
+      ;; Ensure the original from texts are kept as-is
+      (assoc-in [:summary (keyword (:from doc))] (:summary doc))
+      (assoc-in [:description (keyword (:from doc))] (:description doc))))
 
 (defn make-overview
   [sites]
