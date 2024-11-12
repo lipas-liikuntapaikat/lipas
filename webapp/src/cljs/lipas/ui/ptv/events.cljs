@@ -147,17 +147,19 @@
 (rf/reg-event-fx ::fetch-service-channels
   (fn [{:keys [db]} [_ org]]
     (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
-       ;; FIXME: Load through BE
-       :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test
-                                    "/api/v11/ServiceChannel/organization/"
-                                    (:id org))
-
-              :response-format (ajax/json-response-format {:keywords? true})
-              :on-success      [::fetch-service-channels-success (:id org)]
-              :on-failure      [::fetch-service-channels-failure]}]]})))
+      (let [token (-> db :user :login :token)]
+        {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-service-channels")
+                :params          {:org-id (:id org)}
+                ; "/api/v11/ServiceChannel/organization/"
+                ; (:id org)
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/json-response-format {:keywords? true})
+                :on-success      [::fetch-service-channels-success (:id org)]
+                :on-failure      [::fetch-service-channels-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-service-channels-success
   (fn [{:keys [db]} [_ org-id resp]]

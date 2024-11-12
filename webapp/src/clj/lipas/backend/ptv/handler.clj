@@ -76,11 +76,22 @@
    ["/actions/fetch-ptv-services"
     {:post
      {:require-privilege :ptv/manage
-      :parameters {:body [:any]}
+      :parameters {:body [:map
+                          [:org-id :string]]}
       :handler
-      (fn [{:keys [body-params]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/fetch-ptv-services body-params)})}}]
+         :body   (ptv-core/fetch-ptv-services (-> req :parameters :body :org-id))})}}]
+
+   ["/actions/fetch-ptv-service-channels"
+    {:post
+     {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:org-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/fetch-ptv-service-channels (-> req :parameters :body :org-id))})}}]
 
    ["/actions/save-ptv-service-location"
     {:post

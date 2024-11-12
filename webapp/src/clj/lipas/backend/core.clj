@@ -526,11 +526,11 @@
        (if (and (not draft?)
                 (:ptv resp)
                 (:sync-enabled (:ptv resp)))
-         (let [new-ptv-data ((resolve 'lipas.backend.ptv.core/upsert-ptv-service-location!)
-                             tx user
-                             {:org (:org-id (:ptv resp))
-                              :lipas-id (:lipas-id resp)
-                              :ptv (:ptv resp)})]
+         (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/upsert-ptv-service-location!)
+                                   tx user
+                                   {:org (:org-id (:ptv resp))
+                                    :lipas-id (:lipas-id resp)
+                                    :ptv (:ptv resp)}))]
            (log/infof "Sports site updated and PTV integration enabled")
            (assoc resp :ptv new-ptv-data))
          resp)))))

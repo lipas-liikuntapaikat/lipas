@@ -318,8 +318,122 @@
                      :service-channel-ids         #{"ssid-1"}})))
 
 
-  (->ptv-service-location nil (constantly [123 456])  uta-jh-with-ptv-meta)
+  (->ptv-service-location nil (constantly [123 456]) nil uta-jh-with-ptv-meta)
 
 
 
   )
+
+(defn ->service-source-id
+  [org-id sub-category-id]
+  (str "lipas-" org-id "-" sub-category-id))
+
+(defn resolve-missing-services
+  "Infer services (sub-categories) that need to be created in PTV and
+  attached to sports-sites."
+  [org-id services _types sports-sites]
+  (let [source-ids (->> services vals (keep :sourceId) set)]
+    (->> sports-sites
+         (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
+         (map (fn [site] {:source-id       (->service-source-id org-id (:sub-category-id site))
+                          :sub-category    (-> site :sub-category)
+                          :sub-category-id (-> site :sub-category-id)}))
+         distinct
+         (remove (fn [m] (contains? source-ids (:source-id m)))))))
+
+(defn parse-summary
+  "Returns first line-delimited paragraph."
+  [s]
+  (when (string? s)
+    (first (str/split s #"\r?\n"))))
+
+(defn resolve-service-channel-name
+  "Sometimes these seem to have the name under undocumented :name
+  property and sometimes under documented :serviceChannelNames
+  array. Wtf."
+  [service-channel]
+  (or (:name service-channel)
+      (some (fn [m]
+              (when (= "fi" (:language m))
+                (:value m)))
+            (:serviceChannelNames service-channel))))
+
+(defn detect-name-conflict
+  [sports-site service-channels]
+  (let [s1                (some-> sports-site :name str/trim str/lower-case)
+        attached-channels (-> sports-site :ptv :service-channel-ids set)]
+    (some (fn [service-channel]
+            (let [ssname (resolve-service-channel-name service-channel)
+                  s2     (some-> ssname str/trim str/lower-case)]
+              (when (and
+                      (not (contains? attached-channels (:id service-channel)))
+                      (= s1 s2))
+                {:service-channel-id (:id service-channel)})))
+          service-channels)))
+
+(defn sports-site->ptv-input [{:keys [tr types org-id org-defaults org-langs]} service-channels services site]
+  (let [service-id               (-> site :ptv :service-ids first)
+        service-channel-id       (-> site :ptv :service-channel-ids first)
+        descriptions-integration (or (-> site :ptv :descriptions-integration)
+                                     (:descriptions-integration org-defaults))
+
+        summary (case descriptions-integration
+                  "lipas-managed-comment-field"
+                  (-> site :comment parse-summary)
+
+                  "lipas-managed-ptv-fields"
+                  (-> site :ptv :summary)
+
+                  "ptv-managed"
+                  ;; FIXME: avoid tr here
+                  (tr :ptv.integration.description/ptv-managed-helper))
+        description (case descriptions-integration
+                      "lipas-managed-comment-field"
+                      (-> site :comment)
+
+                      "lipas-managed-ptv-fields"
+                      (-> site :ptv :description)
+
+                      "ptv-managed"
+                      (tr :ptv.integration.description/ptv-managed-helper))
+
+        last-sync (-> site :ptv :last-sync)]
+    {:valid           (boolean (and (some-> description :fi count (> 5))
+                                    (some-> summary :fi count (> 5))))
+     :lipas-id        (:lipas-id site)
+     :name            (:name site)
+     :event-date      (:event-date site)
+     ;; :event-date-human (some-> (:event-date site) utils/->human-date-time-at-user-tz)
+     :name-conflict   (detect-name-conflict site (vals service-channels))
+     :marketing-name  (:marketing-name site)
+     :type            (-> site :search-meta :type :name :fi)
+     :sub-category    (-> site :search-meta :type :sub-category :name :fi)
+     :sub-category-id (-> site :type :type-code types :sub-category)
+     :org-id          org-id
+     :admin           (-> site :search-meta :admin :name :fi)
+     :owner           (-> site :search-meta :owner :name :fi)
+     :summary         summary
+     :description     description
+     :languages       (or (-> site :ptv :languages) org-langs)
+
+     :descriptions-integration    descriptions-integration
+     :sync-enabled                (get-in site [:ptv :sync-enabled] true)
+     :last-sync                   last-sync
+     ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
+
+     :sync-status (cond
+                    (not last-sync) :not-synced
+                    (= (:event-date site) last-sync) :ok
+                    :else :out-of-date)
+
+     :service-ids                 (-> site :ptv :service-ids)
+     :service-name                (-> services (get service-id) :serviceNames
+                                      (->> (some #(when (= "fi" (:language %)) (:value %)))))
+     :service-integration         (or (-> site :ptv :service-integration)
+                                      (:service-integration org-defaults))
+     :service-channel-id          service-channel-id
+     :service-channel-ids         (-> site :ptv :service-channel-ids)
+     :service-channel-name        (-> (get service-channels service-channel-id)
+                                      (resolve-service-channel-name))
+     :service-channel-integration (or (-> site :ptv :service-channel-integration)
+                                      (:service-channel-integration org-defaults))}))

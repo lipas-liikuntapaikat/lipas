@@ -56,9 +56,12 @@
       (ptv/create-service config data))))
 
 (defn fetch-ptv-services
-  [{:keys [org-id] :as _m}]
-  {:pre [(some? org-id)]}
+  [org-id]
   (ptv/get-org-services {} org-id))
+
+(defn fetch-ptv-service-channels
+  [org-id]
+  (ptv/get-org-service-channels {} org-id))
 
 (def persisted-ptv-keys [:languages
                          :summary
