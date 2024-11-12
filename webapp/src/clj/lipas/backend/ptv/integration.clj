@@ -3,60 +3,36 @@
             [cheshire.core :as json]
             [clj-http.client :as client]
             [clojure.string :as str]
-            [lipas.backend.config :as config]
             [lipas.backend.search :as search]
             [lipas.data.ptv :as ptv-data]
-            [lipas.utils :as utils]
             [taoensso.timbre :as log]))
 
-;; Test creds are OK to "leak" to VCS since they're public anyway
-(def test-config
-  (utils/deep-merge
-    (get config/default-config :ptv)
-    {:api-url              "https://api.palvelutietovaranto.trn.suomi.fi/api"
-     :token-url            "https://palvelutietovaranto.trn.suomi.fi/api/auth/api-login"
-     :service-url          "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
-     :service-location-url "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
-     :creds
-     {:main-user
-      ;; unused?
-      {:username "paakayttaja41.testi@testi.fi"
-       :password "Paatestaaja41-1041*"}
-      :maintainer
-      ;; unused?
-      {:username ""
-       :password ""}
-      ;; FIXME: The current test env needs different credentials per org
-      :api
-      ;; org 10
-      #_{:username "API17@testi.fi"
-         :password "APIinterfaceUser17-1017*"}
-      ;; org 6
-      #_{:username "API9@testi.fi"
-         :password "APIinterfaceUser9-1009*"}
-      ;; org 9
-      {:username "API15@testi.fi"
-       :password "APIinterfaceUser15-1015*"}}}))
+;; ptv component, :lipas/ptv has the config and :tokens atom for org-id -> auth token storage
 
-#_(def test-config
-    {:api-url              "https://api.palvelutietovaranto.trn.suomi.fi/api"
-     :token-url            "https://palvelutietovaranto.trn.suomi.fi/api/auth/api-login"
-     :service-url          "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
-     :service-location-url "https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
-     :creds
-     {:main-user
-      {:username "paakayttaja35.testi@testi.fi"
-       :password "Paatestaaja35-1035*"}
-      :maintainer
-      {:username "yllapitaja35.testi@testi.fi"
-       :password "Yllapitajatestaaja35-1035*"}
-      :api
-      {:username "API14@testi.fi"
-       :password "APIinterfaceUser14-1014*"}}})
+;; In test the credential to create API tokens is dependant on the org-id,
+;; so use this fn to hardcode the credentials.
+;; These keys are public so can be leaked out...
+(defn get-test-credentials [org-id]
+  (case org-id
+    ;; org 6
+    "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
+    {:username "API9@testi.fi"
+     :password "APIinterfaceUser9-1009*"}
 
-;; Org-id => {:token ... :payload ...}
-;; TODO: Move this to IG component state?
-(def current-token (atom {}))
+    ;; org 9
+    "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
+    {:username "API15@testi.fi"
+     :password "APIinterfaceUser15-1015*"}
+
+    ;; org 10
+    "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53"
+    {:username "API17@testi.fi"
+     :password "APIinterfaceUser17-1017*"}
+
+    nil))
+
+(defn make-url [ptv & parts]
+  (apply str (:api-url ptv) parts))
 
 (defn unix-time []
   (/ (System/currentTimeMillis) 1000))
@@ -97,25 +73,27 @@
   (-> token (str/split #"\.") second b64/decode (String.) (json/decode keyword)))
 
 (defn get-token
-  [org-id]
+  [ptv org-id]
   ;; NOTE: deref + swap
-  (let [x (get @current-token org-id)]
+  (let [x (get @(:tokens ptv) org-id)]
     (if (or (not x) (expired? (:payload x)))
-      (let [new-token (authenticate {:token-url (:token-url test-config)
-                                     :username  (get-in test-config [:creds :api :username])
-                                     :password  (get-in test-config [:creds :api :password])
-                                     :org-id    org-id})
+      (let [new-token (authenticate (merge {:token-url (:token-url ptv)
+                                            :username  (get-in ptv [:creds :api :username])
+                                            :password  (get-in ptv [:creds :api :password])
+                                            :org-id    org-id}
+                                           (when (= "test" (:env ptv))
+                                             (get-test-credentials org-id))))
             x {:token   new-token
                :payload (parse-payload new-token)}]
         (log/infof "Create token %s => %s" org-id new-token)
-        (swap! current-token assoc org-id x)
+        (swap! (:tokens ptv) assoc org-id x)
         (:token x))
       (:token x))))
 
 (defn http
-  ([req] (http req false))
-  ([req retried?]
-   (let [token (get-token (:auth-org-id req))
+  ([ptv auth-org-id req] (http ptv auth-org-id req false))
+  ([ptv auth-org-id req retried?]
+   (let [token (get-token ptv auth-org-id)
          req* (-> req
                   (dissoc :auth-org-id)
                   (assoc :accept :json
@@ -135,100 +113,95 @@
                        (get (:headers d) "WWW-Authenticate")))
              (do
                (log/infof "Invalid token, trying to get a new token and retry")
-               (swap! current-token dissoc (:auth-org-id req))
-               (http req true))
+               (swap! (:tokens ptv) dissoc (:auth-org-id req))
+               (http ptv auth-org-id req true))
              (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
                              {:resp d
                               :req req*}
                              nil)))))))))
 
+(defn get-org
+  [ptv org-id]
+  (let [params {:url (make-url ptv "/v11/Organization/" org-id)
+                :method :get}]
+    (-> (http ptv org-id params)
+        :body)))
+
 ;; Need to proxy this with auth because otherwise the API doesn't
 ;; return :sourceId (wtf)
 (defn get-org-services
-  [{:keys [service-url]
-    :or   {service-url (:service-url test-config)}}
-   org-id]
-  (let [params {:url (str service-url "/list/organization")
-                :auth-org-id org-id
+  [ptv org-id]
+  (let [params {:url (make-url ptv "/v11/Service/list/organization")
                 :method :get
                 :query-params {:organizationId org-id}}]
-    (-> (http params)
+    (-> (http ptv org-id params)
+        :body)))
+
+(defn get-org-service-collections
+  [ptv org-id]
+  (let [params {:url (make-url ptv "/v11/ServiceCollection/organization")
+                :method :get
+                :query-params {:organizationId org-id}}]
+    (-> (http ptv org-id params)
         :body)))
 
 (defn get-org-service-channels
-  [{:keys [api-url]
-    :or   {api-url (:api-url test-config)}}
-   org-id]
+  [ptv org-id]
   ;; TODO: Solve paginations, if multiple pages, lazy seq and make multiple requests?
   ;; Or should we handle pagination from FE?
   ;; 500 should be fine in one response, what if we have 2000-5000 for some city/org?
-  (let [params {:url (str api-url "/v11/ServiceChannel/organization/" org-id)
-                :auth-org-id org-id
+  (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
                 :method       :get}]
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn create-service
-  [{:keys [service-url]
-    :or   {service-url (:service-url test-config)}
-    :as _config}
+  [ptv
    {:keys [org-id] :as service}]
-  (let [params {:url service-url
-                :auth-org-id org-id
+  (let [params {:url (make-url ptv "/v11/Service")
                 :method :post
                 :form-params service}]
     (log/infof "Create PTV service %s" service)
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn get-service
-  [{:keys [service-url org-id]
-    :or   {service-url (:service-url test-config)}}
-   service-id]
-  (let [params {:url (str service-url "/" service-id)
-                :auth-org-id org-id
+  [ptv org-id service-id]
+  (let [params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :get}]
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn update-service
-  [{:keys [service-url]
-    :or   {service-url (:service-url test-config)}}
+  [ptv
    service-id
    {:keys [org-id] :as data}]
   (log/info "Update PTV service with id " service-id "and data" data)
-  (let [params {:url (str service-url "/" service-id)
-                :auth-org-id org-id
+  (let [params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn create-service-location
-  [{:keys [service-location-url]
-    :or   {service-location-url (:service-location-url test-config)}}
-   service-location]
+  [ptv service-location]
   (let [org-id (-> service-location :organizationId)
-        params {:url service-location-url
+        params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation")
                 :auth-org-id org-id
                 :method :post
                 :form-params service-location}]
     (log/info "Create PTV service location" service-location)
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn update-service-location
-  [{:keys [service-location-url]
-    :or   {service-location-url (:service-location-url test-config)}}
-   service-location-id
-   data]
+  [ptv service-location-id data]
   (let [org-id (-> data :organization :id)
-        params {:url (str service-location-url "/" service-location-id)
-                :auth-org-id org-id
+        params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation/" service-location-id)
                 :method :put
                 :form-params data}]
     (log/infof "req %s" params)
-    (-> (http params)
+    (-> (http ptv org-id params)
         :body)))
 
 (defn get-eligible-sites
@@ -261,24 +234,31 @@
         (->> (map :_source)))))
 
 (comment
-  (get-org-services {} ptv-data/liminka-org-id-test)
+  (def ptv* (:lipas/ptv integrant.repl.state/system))
+
+  (get-org-services ptv* ptv-data/liminka-org-id-test)
 
   ;; Delete all org services
   (doseq [x (:itemList (get-org-services {} ptv-data/liminka-org-id-test))]
-    (update-service {:org-id ptv-data/liminka-org-id-test}
+    (update-service ptv*
                     (:id x)
-                    {:publishingStatus "Deleted"}))
+                    {:org-id ptv-data/liminka-org-id-test
+                     :publishingStatus "Deleted"}))
 
-  (get-service {}
+  (get-service ptv*
+               ptv-data/liminka-org-id-test
                (-> (get-org-services {} ptv-data/liminka-org-id-test)
                    :itemList
                    first
                    :id))
 
-  (get-org-service-channels {} ptv-data/liminka-org-id-test)
+  (get-org-service-channels ptv* ptv-data/liminka-org-id-test)
 
   ;; Delete all org service locations
-  (doseq [x (:itemList (get-org-service-channels {} ptv-data/liminka-org-id-test))]
+  (doseq [x (:itemList (get-org-service-channels ptv* ptv-data/liminka-org-id-test))]
     (update-service-location {:org-id ptv-data/liminka-org-id-test} (:id x) {:publishingStatus "Deleted"}))
 
-  (update-service-location {:org-id ptv-data/liminka-org-id-test} "fc768bb4-268c-4054-9b88-9ecc9a943452" {:publishingStatus "Deleted"}))
+  (update-service-location ptv*
+                           "fc768bb4-268c-4054-9b88-9ecc9a943452"
+                           {:org-id ptv-data/liminka-org-id-test
+                            :publishingStatus "Deleted"}))

@@ -47,21 +47,28 @@
         :content)))
 
 (defn upsert-ptv-service!
-  [{:keys [id source-id] :as m}]
-  {:pre [(some? source-id)]}
-  (let [config nil
-        data   (ptv-data/->ptv-service (merge config m))]
+  [ptv {:keys [id] :as m}]
+  ;; FIXME: Does ->ptv-service need something from the component config?
+  (let [data (ptv-data/->ptv-service m)]
     (if id
-      (ptv/update-service config id data)
-      (ptv/create-service config data))))
+      (ptv/update-service ptv id data)
+      (ptv/create-service ptv data))))
+
+(defn fetch-ptv-org
+  [ptv org-id]
+  (ptv/get-org ptv org-id))
+
+(defn fetch-ptv-service-collections
+  [ptv org-id]
+  (ptv/get-org-service-collections ptv org-id))
 
 (defn fetch-ptv-services
-  [org-id]
-  (ptv/get-org-services {} org-id))
+  [ptv org-id]
+  (ptv/get-org-services ptv org-id))
 
 (defn fetch-ptv-service-channels
-  [org-id]
-  (ptv/get-org-service-channels {} org-id))
+  [ptv org-id]
+  (ptv/get-org-service-channels ptv org-id))
 
 (def persisted-ptv-keys [:languages
                          :summary
@@ -76,11 +83,10 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!
-  [db user {:keys [org lipas-id ptv] :as _m}]
+  [db ptv-component user {:keys [org lipas-id ptv] :as _m}]
   (jdbc/with-db-transaction [tx db]
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
-          config   nil
 
           id       (-> ptv :service-channel-ids first)
           ;; merge or just replace?
@@ -89,8 +95,8 @@
           now      (utils/timestamp)
           data     (ptv-data/->ptv-service-location org gis/wgs84->tm35fin-no-wrap now (core/enrich site))
           ptv-resp (if id
-                     (ptv/update-service-location config id data)
-                     (ptv/create-service-location config data))
+                     (ptv/update-service-location ptv-component id data)
+                     (ptv/create-service-location ptv-component data))
           ;; Store the new PTV info to Lipas DB
           new-ptv-data (-> ptv
                            (select-keys persisted-ptv-keys)

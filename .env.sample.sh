@@ -100,11 +100,9 @@ export UTP_WEBHOOK_TOKEN_URL="https://login.microsoftonline.com/bdb27328-5c0b-41
 # PTV
 export PTV_API_URL="https://api.palvelutietovaranto.trn.suomi.fi/api"
 export PTV_TOKEN_URL="https://palvelutietovaranto.trn.suomi.fi/api/auth/api-login"
-export PTV_SERVICE_URL="https://api.palvelutietovaranto.trn.suomi.fi/api/v11/Service"
-export PTV_SERVICE_LOCATION_URL="https://api.palvelutietovaranto.trn.suomi.fi/api/v11/ServiceChannel/ServiceLocation"
-export PTV_ORG_ID=***FILL_THIS***
-export PTV_API_USERNAME=***FILL_THIS***
-export PTV_API_PASSWORD=***FILL_THIS***
+# Test env requires API credentials per org-id, so handled in the code
+# export PTV_API_USERNAME=***FILL_THIS***
+# export PTV_API_PASSWORD=***FILL_THIS***
 
 # Open AI
 export OPEN_AI_API_KEY=***FILL_THIS***

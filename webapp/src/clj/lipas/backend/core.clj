@@ -526,6 +526,9 @@
        (if (and (not draft?)
                 (:ptv resp)
                 (:sync-enabled (:ptv resp)))
+         ;; TODO: Currently this will create a new sports-site rev.
+         ;; Make it instead update the sports-site already created in the tx?
+         ;; Otherwise each save-sports-site! will create two sports-site revs.
          (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/upsert-ptv-service-location!)
                                    tx user
                                    {:org (:org-id (:ptv resp))

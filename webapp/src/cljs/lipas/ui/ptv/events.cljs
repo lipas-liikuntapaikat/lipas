@@ -6,13 +6,6 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(def ptv-root-url-prod
-  "https://api.palvelutietovaranto.suomi.fi")
-
-;; FIXME: Remove, proxy all through BE
-(def ptv-root-url-test
-  "https://api.palvelutietovaranto.trn.suomi.fi")
-
 (rf/reg-event-db ::open-dialog
   (fn [db [_ _]]
     (assoc-in db [:ptv :dialog :open?] true)))
@@ -87,11 +80,12 @@
   (fn [{:keys [db]} [_ org]]
     (when org
       {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
-       ;; FIXME: Load through BE
        :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test "/api/v11/Organization/" (:id org))
-              :response-format (ajax/json-response-format {:keywords? true})
+             {:method          :post
+              :uri             (str (:backend-url db) "/actions/fetch-ptv-org")
+              :params          {:org-id (:id org)}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
               :on-success      [::fetch-org-success (:id org)]
               :on-failure      [::fetch-org-failure]}]]})))
 
@@ -154,8 +148,6 @@
                 :headers         {:Authorization (str "Token " token)}
                 :uri             (str (:backend-url db) "/actions/fetch-ptv-service-channels")
                 :params          {:org-id (:id org)}
-                ; "/api/v11/ServiceChannel/organization/"
-                ; (:id org)
                 :format          (ajax/transit-request-format)
                 :response-format (ajax/json-response-format {:keywords? true})
                 :on-success      [::fetch-service-channels-success (:id org)]
@@ -182,12 +174,11 @@
   (fn [{:keys [db]} [_ org]]
     (when org
       {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
-       ;; FIXME: Load through BE
        :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test
-                                    "/api/v11/ServiceCollection/organization"
-                                    "?organizationId=" (:id org))
+             {:method          :post
+              :uri             (str (:backend-url db) "/actions/fetch-ptv-service-collections")
+              :params          {:org-id (:id org)}
+              :format          (ajax/transit-request-format)
               :response-format (ajax/json-response-format {:keywords? true})
               :on-success      [::fetch-service-collections-success (:id org)]
               :on-failure      [::fetch-service-collections-failure]}]]})))
