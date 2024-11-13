@@ -77,15 +77,17 @@
   ;; NOTE: deref + swap
   (let [x (get @(:tokens ptv) org-id)]
     (if (or (not x) (expired? (:payload x)))
-      (let [new-token (authenticate (merge {:token-url (:token-url ptv)
-                                            :username  (get-in ptv [:creds :api :username])
-                                            :password  (get-in ptv [:creds :api :password])
-                                            :org-id    org-id}
-                                           (when (= "test" (:env ptv))
-                                             (get-test-credentials org-id))))
+      (let [token-props (merge {:token-url (:token-url ptv)
+                                :username  (get-in ptv [:creds :api :username])
+                                :password  (get-in ptv [:creds :api :password])
+                                :org-id    org-id}
+                               (when (= "test" (:env ptv))
+                                 (get-test-credentials org-id)))
+            new-token (authenticate token-props)
+            payload   (parse-payload new-token)
             x {:token   new-token
-               :payload (parse-payload new-token)}]
-        (log/infof "Create token %s => %s" org-id new-token)
+               :payload payload}]
+        (log/infof "Create token %s => %s (%s)" org-id new-token payload)
         (swap! (:tokens ptv) assoc org-id x)
         (:token x))
       (:token x))))
@@ -95,7 +97,6 @@
   ([ptv auth-org-id req retried?]
    (let [token (get-token ptv auth-org-id)
          req* (-> req
-                  (dissoc :auth-org-id)
                   (assoc :accept :json
                          :as :json)
                   (assoc-in [:headers :Authorization] (str "bearer " token)))
@@ -157,8 +158,9 @@
 
 (defn create-service
   [ptv
-   {:keys [org-id] :as service}]
-  (let [params {:url (make-url ptv "/v11/Service")
+   service]
+  (let [org-id (:mainResponsibleOrganization service)
+        params {:url (make-url ptv "/v11/Service")
                 :method :post
                 :form-params service}]
     (log/infof "Create PTV service %s" service)
@@ -175,9 +177,10 @@
 (defn update-service
   [ptv
    service-id
-   {:keys [org-id] :as data}]
+   data]
   (log/info "Update PTV service with id " service-id "and data" data)
-  (let [params {:url (make-url ptv "/v11/Service/" service-id)
+  (let [org-id (:mainResponsibleOrganization data)
+        params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)
@@ -196,7 +199,7 @@
 
 (defn update-service-location
   [ptv service-location-id data]
-  (let [org-id (-> data :organization :id)
+  (let [org-id (-> data :organizationId)
         params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation/" service-location-id)
                 :method :put
                 :form-params data}]

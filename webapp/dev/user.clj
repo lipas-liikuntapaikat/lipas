@@ -36,6 +36,11 @@
   (assert-running-system)
   (:lipas/search (current-system)))
 
+(defn ptv
+  []
+  (assert-running-system)
+  (:lipas/ptv (current-system)))
+
 (defn reindex-search!
   []
   ((requiring-resolve 'lipas.backend.search-indexer/main) (db) (search) "search"))
@@ -70,9 +75,9 @@
 
   (def robot (core/get-user (db) "robot@lipas.fi"))
 
-  (maintenance/merge-types (db) (search) robot 4530 4510)
-  (maintenance/merge-types (db) (search) robot 4520 4510)
-  (maintenance/merge-types (db) (search) robot 4310 4320)
+  (maintenance/merge-types (db) (search) (ptv) robot 4530 4510)
+  (maintenance/merge-types (db) (search) (ptv) robot 4520 4510)
+  (maintenance/merge-types (db) (search) (ptv) robot 4310 4320)
 
   (require '[lipas.data.types :as types])
   (require '[lipas.data.types-old :as types-old])

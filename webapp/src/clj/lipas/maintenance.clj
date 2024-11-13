@@ -23,7 +23,7 @@
    [taoensso.timbre :as log]))
 
 (defn merge-types
-  [db search user type-code-from type-code-to]
+  [db search ptv user type-code-from type-code-to]
   (let [types* (merge old-types/all types/all)]
     (assert (contains? types*  type-code-from))
     (assert (contains? types/all type-code-to))
@@ -33,11 +33,11 @@
     (log/info "Migrating" (count sites) "type" type-code-from " -> " type-code-to)
     (doseq [site sites]
       (log/info "Migrating" (:lipas-id site))
-      (core/save-sports-site! db search user (assoc-in site [:type :type-code] type-code-to)))
+      (core/save-sports-site! db search ptv user (assoc-in site [:type :type-code] type-code-to)))
     (log/info "All done!")))
 
 (defn duplicate-point->area-draft
-  [db search user type-code-from type-code-to]
+  [db search ptv user type-code-from type-code-to]
   (let [types* (merge old-types/all types/all)]
     (assert (contains? types*  type-code-from))
     (assert (contains? types/all type-code-to))
@@ -47,7 +47,7 @@
     (log/info "Migrating" (count sites) "type" type-code-from "(Point) ->" type-code-to "(Polygon)")
     (doseq [site sites]
       (log/info "Migrating" (:lipas-id site))
-      (core/save-sports-site! db search user
+      (core/save-sports-site! db search ptv user
                               (-> site
                                   (dissoc :lipas-id)
                                   (assoc :event-date (utils/timestamp))

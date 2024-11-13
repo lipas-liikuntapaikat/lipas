@@ -1,35 +1,34 @@
 (ns lipas.backend.core
-  (:require
-   [buddy.hashers :as hashers]
-   [cheshire.core :as json]
-   [clojure.core.async :as async]
-   [clojure.data.csv :as csv]
-   [clojure.java.jdbc :as jdbc]
-   [clojure.string :as str]
-   [dk.ative.docjure.spreadsheet :as excel]
-   [lipas.backend.accessibility :as accessibility]
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.analysis.reachability :as reachability]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.elevation :as elevation]
-   [lipas.backend.email :as email]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.jwt :as jwt]
-   [lipas.backend.newsletter :as newsletter]
-   [lipas.backend.s3 :as s3]
-   [lipas.backend.search :as search]
-   [lipas.data.admins :as admins]
-   [lipas.data.cities :as cities]
-   [lipas.data.owners :as owners]
-   [lipas.data.types :as types]
-   [lipas.i18n.core :as i18n]
-   [lipas.integration.utp.cms :as utp-cms]
-   [lipas.reports :as reports]
-   [lipas.roles :as roles]
-   [lipas.utils :as utils]
-   [taoensso.timbre :as log])
-  (:import
-   [java.io OutputStreamWriter]))
+  (:require [buddy.hashers :as hashers]
+            [cheshire.core :as json]
+            [clojure.core.async :as async]
+            [clojure.data.csv :as csv]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
+            [dk.ative.docjure.spreadsheet :as excel]
+            [lipas.backend.accessibility :as accessibility]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.analysis.reachability :as reachability]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.elevation :as elevation]
+            [lipas.backend.email :as email]
+            [lipas.backend.gis :as gis]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.newsletter :as newsletter]
+            [lipas.backend.s3 :as s3]
+            [lipas.backend.search :as search]
+            [lipas.data.admins :as admins]
+            [lipas.data.cities :as cities]
+            [lipas.data.owners :as owners]
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
+            [lipas.i18n.core :as i18n]
+            [lipas.integration.utp.cms :as utp-cms]
+            [lipas.reports :as reports]
+            [lipas.roles :as roles]
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log])
+  (:import [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -498,9 +497,9 @@
 (defn save-sports-site!
   "Saves sports-site to db and search and appends it to outbound
   integrations queue."
-  ([db search user sports-site]
-   (save-sports-site! db search user sports-site false))
-  ([db search user sports-site draft?]
+  ([db search ptv user sports-site]
+   (save-sports-site! db search ptv user sports-site false))
+  ([db search ptv user sports-site draft?]
    (jdbc/with-db-transaction [tx db]
      (let [resp   (upsert-sports-site! tx user sports-site draft?)
            route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
@@ -522,16 +521,27 @@
 
          (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
 
-       ;; Sync the updated site to ptv if the ptv integration is enabled
+       ;; Sync the site to PTV if
+       ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+       ;; - it is PTV candidate now
+       ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+       ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+       ;; that doesn't trigger update if sync-enabled is false.
        (if (and (not draft?)
-                (:ptv resp)
-                (:sync-enabled (:ptv resp)))
+                (:sync-enabled (:ptv resp))
+                ;; TODO: Check privilage :ptv/basic or such
+                (or (ptv-data/ptv-candidate? resp)
+                    (ptv-data/is-sent-to-ptv? resp)))
          ;; TODO: Currently this will create a new sports-site rev.
          ;; Make it instead update the sports-site already created in the tx?
          ;; Otherwise each save-sports-site! will create two sports-site revs.
-         (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/upsert-ptv-service-location!)
-                                   tx user
-                                   {:org (:org-id (:ptv resp))
+         ;; TODO: If this fails, store failure to the site-data so it can be shown on the
+         ;; UI and user can try again. We don't know how often PTV causes problems,
+         ;; and the sports-site save should work even if this fails.
+         (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/sync-ptv!)
+                                   tx search ptv user
+                                   {:sports-site resp
+                                    :org-id (:org-id (:ptv resp))
                                     :lipas-id (:lipas-id resp)
                                     :ptv (:ptv resp)}))]
            (log/infof "Sports site updated and PTV integration enabled")

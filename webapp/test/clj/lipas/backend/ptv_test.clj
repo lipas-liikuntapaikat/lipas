@@ -124,5 +124,6 @@
         (is (some? (:last-sync (:ptv body))))
         (is (= "Published" (:publishing-status (:ptv body))))))
 
+    ;; TODO: Archive the site in Lipas and PTV
     ))
 

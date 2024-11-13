@@ -54,7 +54,7 @@
     exception-handlers)))
 
 (defn create-app
-  [{:keys [db emailer search mailchimp aws] :as ctx}]
+  [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
   (ring/ring-handler
    (ring/router
 
@@ -121,7 +121,7 @@
                  valid? (s/valid? spec body-params)]
              (if valid?
                {:status 201
-                :body   (core/save-sports-site! db search identity body-params draft?)}
+                :body   (core/save-sports-site! db search ptv identity body-params draft?)}
                {:status 400
                 :body   (s/explain-data spec body-params)})))}}]
 

@@ -163,7 +163,7 @@
     {:organizationId      (:org-id ptv)
      ;; Keep using existing sourceId for sites that were already initialized in PTV,
      ;; generate a new unique ID (with timestamp) for new sites.
-     :sourceId            (or (:sourceId ptv)
+     :sourceId            (or (:source-id ptv)
                               (let [ts (str/replace now #":" "-")
                                     x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
                                 (log/infof "Creating new PTV source-id %s" x)
@@ -437,3 +437,29 @@
                                       (resolve-service-channel-name))
      :service-channel-integration (or (-> site :ptv :service-channel-integration)
                                       (:service-channel-integration org-defaults))}))
+
+(defn sports-site->service-ids [types source-id->service sports-site]
+  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
+        org-id     (-> sports-site :ptv :org-id)
+        source-id  (str "lipas-" org-id "-" sub-cat-id)]
+    (when-let [service (get source-id->service source-id)]
+      #{(:id service)})))
+
+(defn is-sent-to-ptv?
+  "Check if the :ptv data shows that the site has been sent to PTV previously"
+  [site]
+  (let [{:keys [ptv]} site]
+    (and (-> ptv :service-channel-ids first)
+         (:source-id ptv)
+         (= "Published" (:publishing-status ptv)))))
+
+(defn ptv-candidate?
+  "Does the site look like it should be sent to the ptv?"
+  [site]
+  (let [{:keys [status ptv]} site
+        {:keys [summary description]} ptv
+        type-code (-> site :type :type-code)]
+    (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
+                  (some-> description :fi count (> 5))
+                  (some-> summary :fi count (> 5))
+                  (#{7000} type-code)))))

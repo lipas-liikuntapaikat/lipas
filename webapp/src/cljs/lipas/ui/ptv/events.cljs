@@ -589,21 +589,19 @@
   (fn [db _]
     (let [org-id   (get-in db [:ptv :selected-org :id])
           types    (get-in db [:sports-sites :types])
-          services (->> (get-in db [:ptv :org org-id :data :services])
-                        vals
-                        (utils/index-by :sourceId))]
-      (-> db
-          (update-in [:ptv :org org-id :data :sports-sites]
-                     (fn [m]
-                       (reduce-kv
-                         (fn [m lipas-id sports-site]
-                           (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
-                                 source-id  (str "lipas-" org-id "-" sub-cat-id)]
-                             (if-let [service (get services source-id)]
-                               (update-in m [lipas-id :ptv :service-ids] #(set (conj % (:id service))))
-                               m)))
-                         m
-                         m)))))))
+          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
+                                  vals
+                                  (utils/index-by :sourceId))
+          sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
+          sports-sites (reduce-kv
+                         (fn [sports-sites lipas-id sports-site]
+                           (let [service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                             (if (seq service-ids)
+                               (update-in sports-sites [lipas-id :ptv :service-ids] (fnil into #{}) service-ids)
+                               sports-sites)))
+                         sports-sites
+                         sports-sites)]
+      (assoc-in db [:ptv :org org-id :data :sports-sites] sports-sites))))
 
 ;;; Create service locations in PTV ;;;
 
