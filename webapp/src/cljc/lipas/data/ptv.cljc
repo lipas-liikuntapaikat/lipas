@@ -462,4 +462,4 @@
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
                   (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))
-                  (#{7000} type-code)))))
+                  (not (#{7000} type-code))))))
