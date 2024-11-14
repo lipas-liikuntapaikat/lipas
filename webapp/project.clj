@@ -17,7 +17,7 @@
    [re-frame "1.4.3"]
    [tongue "0.4.4"]
    [day8.re-frame/http-fx "0.2.4"]
-   [com.pitch/uix.core "1.1.1"]
+   [com.pitch/uix.core "1.2.0-rc3"]
    [cljs-bean "1.9.0"]
 
    ;;; Backend ;;;
