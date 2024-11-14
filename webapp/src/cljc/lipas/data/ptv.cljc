@@ -456,10 +456,11 @@
 (defn ptv-candidate?
   "Does the site look like it should be sent to the ptv?"
   [site]
-  (let [{:keys [status ptv]} site
+  (let [{:keys [status ptv owner]} site
         {:keys [summary description]} ptv
         type-code (-> site :type :type-code)]
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
                   (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))
+                  (#{"city" "city-main-owner"} owner)
                   (not (#{7000} type-code))))))
