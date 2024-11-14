@@ -99,7 +99,7 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!
-  [db ptv-component user {:keys [org-id lipas-id ptv] :as _m}]
+  [db ptv-component user {:keys [org-id lipas-id ptv archive?] :as _m}]
   (jdbc/with-db-transaction [tx db]
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
@@ -110,6 +110,8 @@
           ;; Use the same TS for sourceId, ptv last-sync and site event-date
           now      (utils/timestamp)
           data     (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+          data     (cond-> data
+                     archive? (assoc :publishingStatus "Deleted"))
           ptv-resp (if id
                      (ptv/update-service-location ptv-component id data)
                      (ptv/create-service-location ptv-component data))
@@ -125,7 +127,10 @@
                                   :publishing-status (:publishingStatus ptv-resp)
                                   ;; Take the created ID from ptv response and store to Lipas DB right away.
                                   ;; TODO: Is there a case where this could be multiple ids?
-                                  :service-channel-ids (set [(:id ptv-resp)])))]
+                                  :service-channel-ids (set [(:id ptv-resp)]))
+                           (cond->
+                             archive? (dissoc :source-id
+                                              :service-channel-ids)))]
 
       (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
 
@@ -170,7 +175,7 @@
 
         ;; TODO: to-archive
         ;; 1. set PTV status Deleted
-        ;; 2. remove :ptv :source-id, :service-channel-ids
+        ;; 2. remove :ptv :source-id, :service-channel-ids -> if restored, a new service-location is created
 
         type-code-changed? (not= type-code (:previous-type-code ptv))
         ptv  (if type-code-changed?
@@ -226,7 +231,8 @@
                ptv)
         resp (upsert-ptv-service-location! tx ptv-component user {:org-id org-id
                                                                   :ptv ptv
-                                                                  :lipas-id lipas-id})]
+                                                                  :lipas-id lipas-id
+                                                                  :archive? to-archive?})]
     resp))
 
 (defn save-ptv-integration-definitions

@@ -143,7 +143,7 @@
      }))
 
 (defn ->ptv-service-location
-  [org
+  [_org
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
@@ -152,8 +152,8 @@
                       (->> (map lipas-lang->ptv-lang))
                       set)
         type     (get types/all (get-in sports-site [:type :type-code]))
-        sub-cat  (get types/sub-categories (:sub-category type))
-        main-cat (get types/main-categories (:main-category type))]
+        _sub-cat  (get types/sub-categories (:sub-category type))
+        _main-cat (get types/main-categories (:main-category type))]
 
     (println "PTV data")
     (prn ptv)
