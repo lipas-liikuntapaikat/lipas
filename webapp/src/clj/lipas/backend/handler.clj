@@ -851,7 +851,7 @@
            (let [locale  (or (-> req :parameters :query :lang keyword) :en)]
              {:status     200
               :body       (legacy.api/sports-place-types locale)}))}}]
-      ["sports-place-types/:type-code"
+      ["/sports-place-types/:type-code"
        {:swagger {:id ::legacy}
         :parameters {:query (s/keys :opt-un [:lipas.api/lang])
                      :path {:type-code int?}}
@@ -861,7 +861,16 @@
            (let [locale  (or (-> req :parameters :query :lang keyword) :en)
                  type-code (-> req :parameters :path :type-code)]
              {:status     200
-              :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]]]
+              :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]
+      ["/categories"
+       {:swagger {:id ::legacy}
+        :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
+        :get
+        {:handler
+         (fn [req]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :en)]
+             {:status     200
+              :body       (legacy.api/categories locale)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion

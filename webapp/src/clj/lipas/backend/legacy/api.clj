@@ -39,10 +39,30 @@
       (localize lang)
       utils/->camel-case-keywords))
 
-(defn sports-place-types [lang]
+(defn sports-place-types [locale]
   (->>  (vals types/all)
-        (map #(->legacy-api % lang))))
+        (map #(->legacy-api % locale))))
 
-(defn sports-place-by-type-code [lang type-code]
+(defn sports-place-by-type-code [locale type-code]
   (-> (types/all type-code)
-      (->legacy-api-with-properties lang)))
+      (->legacy-api-with-properties locale)))
+
+(defn collect-sport-place-types [sub-category-type-code] 
+  (->> (vals types/all)
+       (filter #(= (% :sub-category) sub-category-type-code))
+       (map :type-code)))
+
+(defn- collect-subcategories [type-code locale] 
+  (->>
+   (vals types/sub-categories)
+   (filter #(= (% :main-category) (str type-code)))
+   (map (fn [x] 
+          {:typeCode (x :type-code)
+           :name (-> x :name locale)
+           :sportsPlaceTypes (collect-sport-place-types (x :type-code))}))))
+
+(defn categories [locale]
+  (mapv (fn [cat] {:name (-> cat :name locale)
+                   :typeCode (cat :type-code)
+                   :subCategories (collect-subcategories (cat :type-code) locale)}) 
+        (vals types/main-categories)))
