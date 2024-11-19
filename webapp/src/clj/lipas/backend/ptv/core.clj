@@ -194,26 +194,14 @@
 
                      _ (log/infof "Missing services? %s" (pr-str missing-services))
 
-                     ;; TODO: Move the check for missing services to UI, so
-                     ;; user can validate the texts.
-                     ;; Go through missing services, create data for them and send to PTV
-                     source-id->service (reduce (fn [acc missing]
-                                                  (let [x (generate-ptv-service-descriptions search
-                                                                                             {:sub-category-id (:sub-category-id missing)
-                                                                                              :city-codes [(:city-code (:city (:location sports-site)))]})
-                                                        service (-> missing
-                                                                    (assoc :org-id org-id
-                                                                           :city-codes [(:city-code (:city (:location sports-site)))]
-                                                                           ;; :languages ["fi" "se" "en"]
-                                                                           :description (:description x)
-                                                                           :summary (:summary x)))
-                                                        _ (log/infof "Missing service, generated descriptions: %s" service)
 
-                                                        ;; Hope this returns data in same format as list services...
-                                                        resp (upsert-ptv-service! ptv-component service)]
-                                                    (assoc acc (:source-id service) resp)))
-                                                source-id->service
-                                                missing-services)
+                     ;; FE doesn't update the :ptv :service-ids, that is still handled here.
+                     ;; This code just presumes the user has created the possibly missing Sercices
+                     ;; in the FE first.
+
+                     _ (when (seq missing-services)
+                         (throw (ex-info "Site needs a PTV Service that doesn't exists"
+                                         {:missing-services missing-services})))
 
                      ;; Remove old service-ids from :ptv data and add the new.
                      ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.

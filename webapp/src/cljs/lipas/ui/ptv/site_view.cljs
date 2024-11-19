@@ -178,6 +178,10 @@
          :else
          ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV"))
 
+       (when-let [e (:error (:ptv x))]
+          ($ Alert {:severity "error"}
+             "Virhe PTV integraatiossa, uusimpia tietoja ei ole viety PTV: " (:message e)))
+
        (when candidate-now?
          (cond
            (seq missing-services)

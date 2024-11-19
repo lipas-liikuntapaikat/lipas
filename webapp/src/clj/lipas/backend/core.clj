@@ -535,17 +535,28 @@
          ;; TODO: Currently this will create a new sports-site rev.
          ;; Make it instead update the sports-site already created in the tx?
          ;; Otherwise each save-sports-site! will create two sports-site revs.
-         ;; TODO: If this fails, store failure to the site-data so it can be shown on the
-         ;; UI and user can try again. We don't know how often PTV causes problems,
-         ;; and the sports-site save should work even if this fails.
-         (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/sync-ptv!)
-                                   tx search ptv user
-                                   {:sports-site resp
-                                    :org-id (:org-id (:ptv resp))
-                                    :lipas-id (:lipas-id resp)
-                                    :ptv (:ptv resp)}))]
-           (log/infof "Sports site updated and PTV integration enabled")
-           (assoc resp :ptv new-ptv-data))
+
+         ;; TODO: Move try-catch to sync-ptv! fn?
+         (try
+           (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/sync-ptv!)
+                                     tx search ptv user
+                                     {:sports-site resp
+                                      :org-id (:org-id (:ptv resp))
+                                      :lipas-id (:lipas-id resp)
+                                      :ptv (:ptv resp)}))]
+             (log/infof "Sports site updated and PTV integration enabled")
+             (assoc resp :ptv new-ptv-data))
+           (catch Exception e
+             (let [new-ptv-data (assoc (:ptv resp)
+                                       :error {:message (.getMessage e)
+                                               :data (ex-data e)})]
+               (log/infof e "Sports site updated but PTV integration had an error")
+               (upsert-sports-site! tx
+                                    user
+                                    (-> resp
+                                        (assoc :event-date (utils/timestamp))
+                                        (assoc :ptv new-ptv-data))
+                                    false))))
          resp)))))
 
 ;;; Cities ;;;
