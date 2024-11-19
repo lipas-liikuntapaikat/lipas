@@ -270,7 +270,8 @@
     (let [site  (get-in db [:sports-sites lipas-id])
           rev   (-> (utils/make-revision site (utils/timestamp))
                     (utils/make-editable)
-                    (assoc :status "active"))
+                    (assoc :status "active")
+                    (utils/make-saveable))
           draft false]
       {:dispatch [::commit-rev rev draft on-success on-failure]})))
 
