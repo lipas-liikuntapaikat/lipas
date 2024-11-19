@@ -78,16 +78,18 @@
 
 (rf/reg-event-fx ::fetch-org
   (fn [{:keys [db]} [_ org]]
-    (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
-       :fx [[:http-xhrio
-             {:method          :post
-              :uri             (str (:backend-url db) "/actions/fetch-ptv-org")
-              :params          {:org-id (:id org)}
-              :format          (ajax/transit-request-format)
-              :response-format (ajax/transit-response-format)
-              :on-success      [::fetch-org-success (:id org)]
-              :on-failure      [::fetch-org-failure]}]]})))
+    (let [token (-> db :user :login :token)]
+      (when org
+        {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-org")
+                :params          {:org-id (:id org)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::fetch-org-success (:id org)]
+                :on-failure      [::fetch-org-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-org-success
   (fn [{:keys [db]} [_ org-id resp]]
@@ -425,9 +427,8 @@
 ;;; Service descriptions generation ;;;
 
 (rf/reg-event-fx ::generate-service-descriptions
-  (fn [{:keys [db]} [_ id success-fx failure-fx]]
-    (let [token  (-> db :user :login :token)
-          org-id (-> db :ptv :selected-org :id)]
+  (fn [{:keys [db]} [_ org-id id overview success-fx failure-fx]]
+    (let [token  (-> db :user :login :token)]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-descriptions] true)
        :fx [[:http-xhrio
              {:method  :post
@@ -437,22 +438,22 @@
               :params          (merge
                                  (org-id->params org-id)
                                  {:sourceId        id
-                                  :sub-category-id (parse-long (last (str/split id #"-")))})
+                                  :sub-category-id (parse-long (last (str/split id #"-")))
+                                  :overview        overview})
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success      [::generate-service-descriptions-success id success-fx]
-              :on-failure      [::generate-service-descriptions-failure id failure-fx]}]]})))
+              :on-success      [::generate-service-descriptions-success org-id id success-fx]
+              :on-failure      [::generate-service-descriptions-failure org-id id failure-fx]}]]})))
 
 (rf/reg-event-fx ::generate-service-descriptions-success
-  (fn [{:keys [db]} [_ id extra-fx resp]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
-      {:db (-> db
-               (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
-               (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
-       :fx extra-fx})))
+  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
+             (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
+     :fx extra-fx}))
 
 (rf/reg-event-fx ::generate-service-descriptions-failure
-  (fn [{:keys [db]} [_ _id extra-fx resp]]
+  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/get-failed)
                         :success? false}]
@@ -477,7 +478,9 @@
                            :halt?         halt?}))
        :fx [(when (and (not halt?) (seq ids))
               [:dispatch [::generate-service-descriptions
+                          org-id
                           (first ids)
+                          nil
                           on-single-success
                           on-single-failure]])]})))
 
@@ -511,33 +514,32 @@
 ;;; Create Services in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service
-  (fn [{:keys [db]} [_ id success-fx failure-fx]]
-    (let [token  (-> db :user :login :token)
-          org-id (-> db :ptv :selected-org :id)
-          data   (-> (get-in db [:ptv :services-creation :data id]))]
+  (fn [{:keys [db]} [_ org-id id data success-fx failure-fx]]
+    (let [token  (-> db :user :login :token)]
       {:db (assoc-in db [:ptv :loading-from-lipas :services] true)
        :fx [[:http-xhrio
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service")
+              ;; FIXME: org-id->params adds some extra keys that aren't used?
+              ;; supported-languages (languages is used instead)
               :params          (merge data (org-id->params org-id))
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success      [::create-ptv-service-success id success-fx]
-              :on-failure      [::create-ptv-service-failure id failure-fx]}]]})))
+              :on-success      [::create-ptv-service-success org-id id success-fx]
+              :on-failure      [::create-ptv-service-failure org-id id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-success
-  (fn [{:keys [db]} [_ id extra-fx resp]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
-      {:db (-> db
-               (assoc-in [:ptv :loading-from-lipas :services] false)
-               (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
-               (update-in [:ptv :org org-id :data :service-candidates id]
-                          assoc :created-in-ptv true))
-       :fx extra-fx})))
+  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :services] false)
+             (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
+             (update-in [:ptv :org org-id :data :service-candidates id]
+                        assoc :created-in-ptv true))
+     :fx extra-fx}))
 
 (rf/reg-event-fx ::create-ptv-service-failure
-  (fn [{:keys [db]} [_ _id extra-fx resp]]
+  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/get-failed)
                         :success? false}]
@@ -563,7 +565,9 @@
                            :halt?         halt?}))
        :fx [(when (and (not halt?) (seq ids))
               [:dispatch [::create-ptv-service
+                          org-id
                           (first ids)
+                          (get-in db [:ptv :services-creation :data (first ids)])
                           on-single-success
                           on-single-failure]])]})))
 

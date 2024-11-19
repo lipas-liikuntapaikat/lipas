@@ -98,7 +98,6 @@
       (is (= []
              (ptv-data/resolve-missing-services org-id
                                                 services
-                                                nil
                                                 ptv-sites)))
 
       ;; Add ptv summary and description to the site, enabling the

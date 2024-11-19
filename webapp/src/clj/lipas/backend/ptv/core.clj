@@ -51,13 +51,14 @@
 
 (defn generate-ptv-service-descriptions
   [search
-   {:keys [_id sub-category-id city-codes]}]
-  (let [type-codes (->> (types/by-sub-category sub-category-id)
-                        (map :type-code))
-        sites      (ptv/get-eligible-sites search {:type-codes type-codes
-                                                   :city-codes city-codes
-                                                   :owners     ["city" "city-main-owner"]})
-        doc        (make-overview sites)]
+   {:keys [_id sub-category-id city-codes overview]}]
+  (let [doc        (or overview
+                       (let [type-codes (->> (types/by-sub-category sub-category-id)
+                                             (map :type-code))
+                             sites      (ptv/get-eligible-sites search {:type-codes type-codes
+                                                                        :city-codes city-codes
+                                                                        :owners     ["city" "city-main-owner"]})]
+                         (make-overview sites)))]
     (-> (ai/generate-ptv-service-descriptions doc)
         :message
         :content)))
@@ -189,7 +190,7 @@
                      missing-services-input [{:service-ids #{}
                                               :sub-category-id (-> sports-site :type :type-code types :sub-category)
                                               :sub-cateogry    (-> sports-site :search-meta :type :sub-category :name :fi)}]
-                     missing-services (ptv-data/resolve-missing-services org-id source-id->service nil missing-services-input)
+                     missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
 
                      _ (log/infof "Missing services? %s" (pr-str missing-services))
 

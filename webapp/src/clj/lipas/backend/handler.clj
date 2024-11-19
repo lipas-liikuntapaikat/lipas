@@ -45,7 +45,12 @@
 
    ;; Return 500 and print stack trace for exceptions that are not
    ;; specifically handled
-   ::exception/default (exception-handler 500 :internal-server-error :print-stack)})
+   ::exception/default (exception-handler 500 :internal-server-error :print-stack)
+
+   :reitit.coercion/request-coercion (let [handler (:reitit.coercion/request-coercion exception/default-handlers)]
+                                       (fn [e x]
+                                         (log/errorf e "Request coercion error")
+                                         (handler e x)))})
 
 (def exceptions-mw
   (exception/create-exception-middleware

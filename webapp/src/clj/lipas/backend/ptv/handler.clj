@@ -84,11 +84,26 @@
    ["/actions/generate-ptv-service-descriptions"
     {:post
      {:require-privilege :ptv/manage
-      :parameters {:body [:any]}
+      :parameters {:body [:map
+                          [:org-id :string]
+                          [:city-codes [:vector :int]]
+                          [:owners [:vector :string]]
+                          [:supported-languages [:vector [:enum "fi" "se" "en"]]]
+                          [:sourceId :string]
+                          [:sub-category-id :int]
+                          [:overview {:optional true
+                                      :description "Use this to replace the AI input with non-saved site information"}
+                           [:maybe
+                            [:map
+                             [:city-name (localized-string-schema nil)]
+                             [:service-name (localized-string-schema nil)]
+                             [:sports-facilties [:vector
+                                                 [:map
+                                                  [:type :string]]]]]]]]}
       :handler
-      (fn [{:keys [body-params]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/generate-ptv-service-descriptions search body-params)})}}]
+         :body   (ptv-core/generate-ptv-service-descriptions search (-> req :parameters :body))})}}]
 
    ["/actions/fetch-ptv-org"
     {:post
@@ -112,9 +127,15 @@
 
    ["/actions/save-ptv-service"
     {:post
-     ;; FIXME: Schema
      {:require-privilege :ptv/manage
-      :parameters {:body [:any]}
+      :parameters {:body [:map
+                          [:org-id :string]
+                          [:city-codes [:vector :int]]
+                          [:source-id :string]
+                          [:sub-category-id :int]
+                          [:languages [:vector [:enum "fi" "se" "en"]]]
+                          [:summary (localized-string-schema {:max 150})]
+                          [:description (localized-string-schema nil)]]}
       :handler
       (fn [{:keys [body-params]}]
         {:status 200

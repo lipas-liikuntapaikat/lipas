@@ -91,7 +91,8 @@
 (defn settings
   []
   (let [tr               (<== [:lipas.ui.subs/translator])
-        default-settings (<== [::subs/default-settings])]
+        org-id           (<== [::subs/selected-org-id])
+        default-settings (<== [::subs/default-settings org-id])]
     [mui/grid {:container true :spacing 4 :style {:margin-left "-32px"}}
 
      [mui/grid {:item true :xs 12}
@@ -276,8 +277,9 @@
 (defn table []
   (r/with-let [expanded-rows (r/atom {})]
     (let [tr                (<== [:lipas.ui.subs/translator])
-          sites             (<== [::subs/sports-sites])
-          sync-all-enabled? (<== [::subs/sync-all-enabled?])
+          org-id            (<== [::subs/selected-org-id])
+          sites             (<== [::subs/sports-sites org-id])
+          sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
 
           headers [{:key :expand :label "" :padding "checkbox"}
                    #_
@@ -405,8 +407,9 @@
 (defn descriptions-generator
   []
   (let [tr                  (<== [:lipas.ui.subs/translator])
-        sports-sites        (<== [::subs/sports-sites-filtered])
-        sports-sites-count  (<== [::subs/sports-sites-filtered-count])
+        org-id              (<== [::subs/selected-org-id])
+        sports-sites        (<== [::subs/sports-sites-filtered org-id])
+        sports-sites-count  (<== [::subs/sports-sites-filtered-count org-id])
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
         {:keys [in-progress?
@@ -529,7 +532,8 @@
   []
   (r/with-let [selected-tab (r/atom :fi)]
     (let [tr                        (<== [:lipas.ui.subs/translator])
-          service-candidates        (<== [::subs/service-candidates])
+          org-id                    (<== [::subs/selected-org-id])
+          service-candidates        (<== [::subs/service-candidates org-id])
           {:keys [in-progress?
                   halt?
                   processed-percent
@@ -787,9 +791,10 @@
 (defn integrate-service-locations
   []
   (let [tr                  (<== [:lipas.ui.subs/translator])
-        sports-sites        (<== [::subs/sports-sites])
-        setup-done?         (<== [::subs/sports-site-setup-done])
-        sports-sites-count  (<== [::subs/sports-sites-count])
+        org-id              (<== [::subs/selected-org-id])
+        sports-sites        (<== [::subs/sports-sites org-id])
+        setup-done?         (<== [::subs/sports-site-setup-done org-id])
+        sports-sites-count  (<== [::subs/sports-sites-count org-id])
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
@@ -1013,7 +1018,8 @@
   []
   (let [tr              (<== [:lipas.ui.subs/translator])
         services-filter (<== [::subs/services-filter])
-        services        (<== [::subs/services-filtered])]
+        org-id          (<== [::subs/selected-org-id])
+        services        (<== [::subs/services-filtered org-id])]
     [mui/paper
 
      ;; Filter checkbox
@@ -1039,8 +1045,9 @@
   (let [open?        (<== [::subs/dialog-open?])
         selected-tab (<== [::subs/selected-tab])
         loading?     (<== [::subs/loading-from-ptv?])
-        org-data     (<== [::subs/selected-org-data])
-        sites        (<== [::subs/sports-sites])]
+        org-id       (<== [::subs/selected-org-id])
+        org-data     (<== [::subs/selected-org-data org-id])
+        sites        (<== [::subs/sports-sites org-id])]
 
     [lui/dialog
      {:open?         open?

@@ -331,7 +331,7 @@
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
   attached to sports-sites."
-  [org-id services _types sports-sites]
+  [org-id services sports-sites]
   (let [source-ids (->> services vals (keep :sourceId) set)]
     (->> sports-sites
          (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
@@ -340,6 +340,9 @@
                           :sub-category-id (-> site :sub-category-id)}))
          distinct
          (remove (fn [m] (contains? source-ids (:source-id m)))))))
+
+(defn sub-category-id->service [org-id source-id->service sub-category-id]
+  (get source-id->service (->service-source-id org-id sub-category-id)))
 
 (defn parse-summary
   "Returns first line-delimited paragraph."
