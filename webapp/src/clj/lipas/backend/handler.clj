@@ -47,10 +47,17 @@
    ;; specifically handled
    ::exception/default (exception-handler 500 :internal-server-error :print-stack)
 
-   :reitit.coercion/request-coercion (let [handler (:reitit.coercion/request-coercion exception/default-handlers)]
-                                       (fn [e x]
-                                         (log/errorf e "Request coercion error")
-                                         (handler e x)))})
+   :reitit.coercion/response-coercion
+   (let [handler (:reitit.coercion/response-coercion exception/default-handlers)]
+     (fn [e x]
+       (log/errorf e "Response coercion error")
+       (handler e x)))
+
+   :reitit.coercion/request-coercion
+   (let [handler (:reitit.coercion/request-coercion exception/default-handlers)]
+     (fn [e x]
+       (log/errorf e "Request coercion error")
+       (handler e x)))})
 
 (def exceptions-mw
   (exception/create-exception-middleware

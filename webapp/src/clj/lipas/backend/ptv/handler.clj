@@ -11,15 +11,20 @@
    [:en [:string string-props]]])
 
 (def integration-enum
-  [:enum "lipas-managed"])
+  [:enum "lipas-managed" "manual"])
 
 (def ptv-meta
   [:map
-   ;; TODO: one or many?
-   [:service-channel-id :string]
-   [:service-channel-integration integration-enum]
+   {:closed true}
+   ;; [:org-id :string]
    [:sync-enabled :boolean]
+   [:service-channel-integration integration-enum]
    [:service-integration integration-enum]
+
+   [:service-channel-ids [:vector :string]]
+   ;; [:service-ids [:vector :string]]
+   ;; [:languages [:vector :string]]
+
    [:summary (localized-string-schema {:max 150})]
    [:description (localized-string-schema {})]])
 
@@ -27,7 +32,7 @@
   [:map
    {:closed true}
    [:org :string]
-   [:lipas-id :string]
+   [:lipas-id :int]
    [:ptv ptv-meta]])
 
 (defn routes [{:keys [db search ptv] :as _ctx}]
@@ -39,10 +44,14 @@
    ["/actions/get-ptv-integration-candidates"
     {:post
      {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:city-codes [:vector :int]]
+                          [:type-codes [:vector :int]]
+                          [:owners [:vector :string]]]}
       :handler
-      (fn [{:keys [body-params]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/get-ptv-integration-candidates search body-params)})}}]
+         :body   (ptv-core/get-ptv-integration-candidates search (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-descriptions"
     {:post
@@ -137,9 +146,9 @@
                           [:summary (localized-string-schema {:max 150})]
                           [:description (localized-string-schema nil)]]}
       :handler
-      (fn [{:keys [body-params]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/upsert-ptv-service! ptv body-params)})}}]
+         :body   (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))})}}]
 
    ["/actions/fetch-ptv-services"
     {:post
@@ -173,8 +182,9 @@
    ["/actions/save-ptv-meta"
     {:post
      {:require-privilege :ptv/manage
-      :parameters {:body [:any]}
+      :coercion reitit.coercion.spec/coercion
+      :parameters {:body :lipas.sports-site/ptv}
       :handler
-      (fn [{:keys [body-params identity]}]
+      (fn [{:keys [identity] :as req}]
         {:status 200
-         :body   (ptv-core/save-ptv-integration-definitions db search identity body-params)})}}]])
+         :body   (ptv-core/save-ptv-integration-definitions db search identity (-> req :parameters :body))})}}]])

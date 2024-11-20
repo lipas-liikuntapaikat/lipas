@@ -40,6 +40,10 @@
 
 (def default-langs ["fi"])
 
+(defn ->service-source-id
+  [org-id sub-category-id]
+  (str "lipas-" org-id "-" sub-category-id))
+
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or   {languages default-langs} :as m}]
@@ -48,7 +52,11 @@
         sub-cat   (get types/sub-categories sub-category-id)
         main-cat  (get types/main-categories (parse-long (:main-category sub-cat)))]
 
-    {:sourceId source-id
+    {:sourceId (or source-id
+                   (let [ts (str/replace (utils/timestamp) #":" "-")
+                         x (str "lipas-" org-id "-" sub-category-id "-" ts)]
+                     (log/infof "Creating new PTV Service source-id %s" x)
+                     x))
 
      #_#_:keywords (let [tags (:tags type)]
                      (for [locale [:fi :se :en]
@@ -166,7 +174,7 @@
      :sourceId            (or (:source-id ptv)
                               (let [ts (str/replace now #":" "-")
                                     x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
-                                (log/infof "Creating new PTV source-id %s" x)
+                                (log/infof "Creating new PTV ServiceLocation source-id %s" x)
                                 x))
      :serviceChannelNames (keep identity
                                 (let [fallback (get-in sports-site [:name])]
@@ -324,15 +332,20 @@
 
   )
 
-(defn ->service-source-id
-  [org-id sub-category-id]
-  (str "lipas-" org-id "-" sub-category-id))
+(defn parse-service-source-id [source-id]
+  ())
+
+(defn index-services [services]
+  )
 
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
   attached to sports-sites."
   [org-id services sports-sites]
-  (let [source-ids (->> services vals (keep :sourceId) set)]
+  (let [source-ids (->> services
+                        vals
+                        (keep :sourceId)
+                        set)]
     (->> sports-sites
          (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
          (map (fn [site] {:source-id       (->service-source-id org-id (:sub-category-id site))
@@ -459,11 +472,15 @@
 (defn ptv-candidate?
   "Does the site look like it should be sent to the ptv?"
   [site]
-  (let [{:keys [status ptv owner]} site
-        {:keys [summary description]} ptv
+  (let [{:keys [status owner]} site
         type-code (-> site :type :type-code)]
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
-                  (some-> description :fi count (> 5))
-                  (some-> summary :fi count (> 5))
                   (#{"city" "city-main-owner"} owner)
                   (not (#{7000} type-code))))))
+
+(defn ptv-ready?
+  [site]
+  (let [{:keys [ptv]} site
+        {:keys [summary description]} ptv]
+    (boolean (and (some-> description :fi count (> 5))
+                  (some-> summary :fi count (> 5))))))

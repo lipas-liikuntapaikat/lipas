@@ -24,6 +24,7 @@
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
 
+;; FIXME: Move this to data ns?
 (def org-id->params
   {ptv-data/uta-org-id-test ;; Utajärvi
    {:org-id              ptv-data/uta-org-id-test
@@ -317,7 +318,8 @@
              {:method  :post
               :headers {:Authorization (str "Token " token)}
               :uri     (str (:backend-url db) "/actions/generate-ptv-descriptions-from-data")
-              :params          (utils/make-saveable edit-data)
+              ;; :ptv data isn't used as AI input, and the data might not we valid spec yet?
+              :params          (utils/make-saveable (dissoc edit-data :ptv))
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::generate-descriptions-from-data-success lipas-id]

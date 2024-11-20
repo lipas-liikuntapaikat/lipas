@@ -16,12 +16,24 @@
                (assoc-in [:sports-sites :name-check] {}))
        :fx [[:dispatch [:lipas.ui.sports-sites.activities.events/init-edit-view lipas-id rev]]]})))
 
-(defmulti calc-derived-fields (comp :type-code :type))
-(defmethod calc-derived-fields :default [sports-site] sports-site)
+(defmulti calc-derived-fields-for-type (comp :type-code :type))
+
+(defmethod calc-derived-fields-for-type :default
+  [sports-site]
+  sports-site)
+
+(defn calc-derived-fields [db sports-site]
+  (-> sports-site
+      (calc-derived-fields-for-type)
+      ;; IF has :ptv key, initialize the default parameters to that map
+      ;; NOTE: Does add extra slowness to any ::edit-field calls...
+      (cond->
+        (:ptv sports-site)
+        (update :ptv #(merge (:default-settings (:ptv db)) %)))))
 
 (rf/reg-event-db ::calc-derived-fields
   (fn [db [_ lipas-id sports-site]]
-    (assoc-in db [:sports-sites lipas-id :editing] (calc-derived-fields sports-site))))
+    (assoc-in db [:sports-sites lipas-id :editing] (calc-derived-fields db sports-site))))
 
 (rf/reg-event-fx ::edit-field
   (fn [{:keys [db]} [_ lipas-id path value]]
@@ -214,7 +226,7 @@
 
 (rf/reg-event-db ::calc-new-site-derived-fields
   (fn [db [_  sports-site]]
-    (assoc-in db [:new-sports-site :data] (calc-derived-fields sports-site))))
+    (assoc-in db [:new-sports-site :data] (calc-derived-fields db sports-site))))
 
 (rf/reg-event-fx ::edit-new-site-field
   (fn [{:keys [db]} [_ path value]]

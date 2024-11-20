@@ -1477,6 +1477,68 @@
                    :field/floorball :lipas.sports-site.fields/floorball)
              :into []))
 
+(s/def :lipas.sports-site.ptv/last-sync string?)
+(s/def :lipas.sports-site.ptv/org-id string?)
+(s/def :lipas.sports-site.ptv/sync-enabled boolean?)
+(s/def :lipas.sports-site.ptv/source-id string?)
+(s/def :lipas.sports-site.ptv/publishing-status string?)
+(s/def :lipas.sports-site.ptv/previous-type-code int?)
+
+(s/def :lipas.ptv.summary/fi (str-in 0 150))
+(s/def :lipas.ptv.summary/se (str-in 0 150))
+(s/def :lipas.ptv.summary/en (str-in 0 150))
+(s/def :lipas.sports-site.ptv/summary
+  (s/keys :opt-un [:lipas.ptv.summary/fi
+                   :lipas.ptv.summary/se
+                   :lipas.ptv.summary/en]))
+
+(s/def :lipas.ptv.description/fi string?)
+(s/def :lipas.ptv.description/se string?)
+(s/def :lipas.ptv.description/en string?)
+(s/def :lipas.sports-site.ptv/description
+  (s/keys :opt-un [:lipas.ptv.description/fi
+                   :lipas.ptv.description/se
+                   :lipas.ptv.description/en]))
+
+(s/def :lipas.sports-site.ptv/service-channel-integration #{"lipas-managed" "manual"})
+(s/def :lipas.sports-site.ptv/service-integration #{"lipas-managed" "manual"})
+(s/def :lipas.sports-site.ptv/descriptions-integration #{"lipas-managed-ptv-fields" "lipas-managed-comment-field" "ptv-managed"})
+
+(s/def :lipas.sports-site.ptv/service-ids (s/coll-of string?))
+(s/def :lipas.sports-site.ptv/service-channel-ids (s/coll-of string?))
+(s/def :lipas.sports-site.ptv/languages (s/coll-of string?))
+
+(s/def :lipas.ptv.error/message string?)
+(s/def :lipas.ptv.error/data map?)
+(s/def :lipas.sports-site.ptv/error
+  (s/keys :req-un [:lipas.ptv.error/message
+                   :lipas.ptv.error/data]))
+
+(s/def :lipas.sports-site/ptv
+  (s/keys :req-un [:lipas.sports-site.ptv/org-id
+                   :lipas.sports-site.ptv/sync-enabled
+
+                   :lipas.sports-site.ptv/summary
+                   :lipas.sports-site.ptv/description
+
+                   :lipas.sports-site.ptv/service-channel-integration
+                   :lipas.sports-site.ptv/service-integration
+                   :lipas.sports-site.ptv/descriptions-integration
+                   ]
+          :opt-un [;; Added on first successful sync
+                   :lipas.sports-site.ptv/last-sync
+                   :lipas.sports-site.ptv/previous-type-code
+                   :lipas.sports-site.ptv/publishing-status
+                   :lipas.sports-site.ptv/service-ids
+                   :lipas.sports-site.ptv/languages
+
+                   ;; Added on sync - removed when archived
+                   :lipas.sports-site.ptv/source-id
+                   :lipas.sports-site.ptv/service-channel-ids
+
+                   ;; Only added on sync error - removed when success
+                   :lipas.sports-site.ptv/error]))
+
 (s/def :lipas/new-sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
                    :lipas.sports-site/status
@@ -1503,7 +1565,8 @@
                    :lipas.sports-site/properties
                    :lipas.sports-site/fields
                    :lipas.sports-site/locker-rooms
-                   :lipas.sports-site/circumstances]))
+                   :lipas.sports-site/circumstances
+                   :lipas.sports-site/ptv]))
 
 (s/def :lipas/sports-site
   (s/merge

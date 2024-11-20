@@ -64,11 +64,11 @@
         :content)))
 
 (defn upsert-ptv-service!
-  [ptv {:keys [id] :as m}]
+  [ptv {:keys [source-id] :as m}]
   ;; FIXME: Does ->ptv-service need something from the component config?
   (let [data (ptv-data/->ptv-service m)]
-    (if id
-      (ptv/update-service ptv id data)
+    (if source-id
+      (ptv/update-service ptv source-id data)
       (ptv/create-service ptv data))))
 
 (defn fetch-ptv-org
@@ -137,9 +137,9 @@
 
       (core/upsert-sports-site! tx
                                 user
-                                (-> site
-                                    (assoc :event-date now)
-                                    (assoc :ptv new-ptv-data))
+                                (assoc site
+                                       :event-date now
+                                       :ptv new-ptv-data)
                                 false)
       ;; No need to re-index for search after ptv change
 
@@ -169,7 +169,8 @@
   (let [type-code (-> sports-site :type :type-code)
 
         previous-sent? (ptv-data/is-sent-to-ptv? sports-site)
-        candidate-now? (ptv-data/ptv-candidate? sports-site)
+        candidate-now? (and (ptv-data/ptv-candidate? sports-site)
+                            (ptv-data/ptv-ready? sports-site))
 
         to-archive? (and previous-sent?
                          (not candidate-now?))

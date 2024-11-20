@@ -12,9 +12,11 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
             [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
+            [lipas.ui.ptv.views :as ptv-views]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.utils :as utils]
             [re-frame.core :as rf]
@@ -23,7 +25,7 @@
 
 (defui new-service-form [{:keys [org-id tr service data]}]
   (let [{:keys [source-id sub-category-id]} service
-        loading? false
+        loading? (use-subscribe [::subs/generating-descriptions?])
         read-only? false
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
@@ -131,20 +133,23 @@
         ;; enabled    (boolean (:ptv site))
         descriptions-enabled (not= "manual" descriptions-integration)
 
-        loading?  (use-subscribe [::subs/generating-descriptions?])
+        loading? (use-subscribe [::subs/generating-descriptions?])
 
         type-code (-> x :type :type-code)
 
         type-code-changed? (not= type-code (:previous-type-code (:ptv x)))
         previous-sent? (ptv-data/is-sent-to-ptv? x)
+        ready? (ptv-data/ptv-ready? x)
         candidate-now? (ptv-data/ptv-candidate? x)
 
         types (use-subscribe [:lipas.ui.sports-sites.subs/all-types])
+        loading-ptv? (use-subscribe [::subs/loading-from-ptv?])
         services (use-subscribe [::subs/services-by-id org-id])
         missing-services-input [{:service-ids #{}
                                  :sub-category-id (-> x :type :type-code types :sub-category)
                                  :sub-category    (-> x :search-meta :type :sub-category :name :fi)}]
-        missing-services (ptv-data/resolve-missing-services org-id services missing-services-input)
+        missing-services (when (and org-id (not loading-ptv?))
+                            (ptv-data/resolve-missing-services org-id services missing-services-input))
 
         source-id->service (utils/index-by :sourceId (vals services))
         new-service (ptv-data/sub-category-id->service org-id source-id->service (-> x :type :type-code types :sub-category))
@@ -163,8 +168,13 @@
        {:direction "column"
         :sx #js {:gap 2}}
 
+       ;; TODO: Spinneri?
+       (when loading-ptv?
+          ($ Alert {:severity "info"}
+             "Ladataan PTV tietoja..."))
+
        (cond
-         (and previous-sent? candidate-now?)
+         (and previous-sent? candidate-now? ready?)
          (if sync-enabled
            ($ Alert {:severity "success"} "PTV integraatio käytössä")
            ($ Alert {:severity "success"} "PTV integraatio käytössä, mutta paikan synkronointi PTV on kytketty pois päältä."))
@@ -172,8 +182,11 @@
          (and previous-sent? (not candidate-now?))
          ($ Alert {:severity "warning"} "Paikka on viety PTV, mutta on muutettu niin että näyttää nyt siltä että sen ei pidä mennä PTV -> PTV palvelu paikka arkistoidaan tallennuksessa.")
 
-         candidate-now?
-         ($ Alert {:sevierty "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
+         (and candidate-now? ready?)
+         ($ Alert {:severity "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
+
+         (not ready?)
+         ($ Alert {:severity "info"} "PTV tiedot ovat vielä puutteelliset, täytä tiedot niin paikka viedään PTV tallennuksen yhteydessä")
 
          :else
          ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV"))
@@ -187,14 +200,20 @@
            (seq missing-services)
            ($ Alert {:severity "warning"} "Lipas tyyppi muuttuu, service puuttuu PTV")
 
-           type-code-changed?
-           ($ Alert {:severity "info"} "Lipas tyyppi muuttuu, uusi service " (:id new-service))))
+           (and previous-sent? type-code-changed?)
+           ($ Alert {:severity "info"} "Lipas tyyppi muuttuu, uusi service " (:id new-service))
+           ))
 
        ; ($ FormControl
        ;    ($ FormLabel
        ;       "Lipas tila")
        ;    ($ Typography
        ;       status))
+
+       (when (not (:org-id (:ptv x)))
+          ($ :<>
+             ($ Alert {:severity "warning"}
+                "Valitse organisaatio:")))
 
        (when (seq missing-services)
          ($ new-service-form
@@ -210,6 +229,21 @@
              publishing-status)
           ($ Typography
              last-sync))
+
+       (let [options (uix/use-memo (fn []
+                                     (->> ptv-views/orgs
+                                          (map (fn [{:keys [name id]}]
+                                                 {:label name
+                                                  :value id}))))
+                                   [])]
+         ($ autocomplete2
+            {:options   options
+             :disabled  (or loading?
+                            read-only?)
+             :label     "Organisaatio"
+             :value     (:org-id (:ptv x))
+             :on-change (fn [_e v]
+                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}))
 
        #_
        ($ controls/description-integration

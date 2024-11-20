@@ -5,7 +5,8 @@
    :loading-from-ptv              {:services            false
                                    :service-channels    false
                                    :service-collections false}
-   :default-settings              {:service-integration         "lipas-managed"
+   :default-settings              {:sync-enabled                true
+                                   :service-integration         "lipas-managed"
                                    :service-channel-integration "lipas-managed"
                                    :descriptions-integration    "lipas-managed-ptv-fields"
                                    :integration-interval        "manual"}

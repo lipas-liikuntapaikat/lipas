@@ -176,11 +176,11 @@
 
 (defn update-service
   [ptv
-   service-id
+   source-id
    data]
-  (log/info "Update PTV service with id " service-id "and data" data)
+  (log/info "Update PTV service with id " source-id "and data" data)
   (let [org-id (:mainResponsibleOrganization data)
-        params {:url (make-url ptv "/v11/Service/" service-id)
+        params {:url (make-url ptv "/v11/Service/SourceId/" source-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)
@@ -235,15 +235,20 @@
         (->> (map :_source)))))
 
 (comment
-  (def ptv* (:lipas/ptv integrant.repl.state/system))
+  (require '[clojure.java.jdbc :as sql]
+           '[integrant.repl.state :as state]
+           '[lipas.backend.core :as core]
+           '[lipas.utils :as utils])
+
+  (def ptv* (:lipas/ptv state/system))
 
   (get-org-services ptv* ptv-data/liminka-org-id-test)
 
   ;; Delete all org services
-  (doseq [x (:itemList (get-org-services {} ptv-data/liminka-org-id-test))]
+  (doseq [x (:itemList (get-org-services ptv* ptv-data/liminka-org-id-test))]
     (update-service ptv*
-                    (:id x)
-                    {:org-id ptv-data/liminka-org-id-test
+                    (:sourceId x)
+                    {:mainResponsibleOrganization ptv-data/liminka-org-id-test
                      :publishingStatus "Deleted"}))
 
   (get-service ptv*
@@ -253,11 +258,24 @@
                    first
                    :id))
 
+  (require 'user)
+
+  (doseq [search-site (get-eligible-sites (user/search)
+                                          {:city-codes [425]
+                                           :owners ["city" "city-main-owner"]})
+          :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
+    (core/upsert-sports-site! (user/db)
+                              user/robot
+                              (-> (dissoc site :ptv)
+                                  (assoc :event-date (utils/timestamp)))
+                              false))
+
   (get-org-service-channels ptv* ptv-data/liminka-org-id-test)
 
   ;; Delete all org service locations
   (doseq [x (:itemList (get-org-service-channels ptv* ptv-data/liminka-org-id-test))]
-    (update-service-location {:org-id ptv-data/liminka-org-id-test} (:id x) {:publishingStatus "Deleted"}))
+    (update-service-location ptv* (:id x) {:organizationId ptv-data/liminka-org-id-test
+                                           :publishingStatus "Deleted"}))
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
