@@ -31,7 +31,7 @@
 (def create-ptv-service-location
   [:map
    {:closed true}
-   [:org :string]
+   [:org-id :string]
    [:lipas-id :int]
    [:ptv ptv-meta]])
 
@@ -46,7 +46,7 @@
      {:require-privilege :ptv/manage
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
-                          [:type-codes [:vector :int]]
+                          [ :type-codes {:optional true} [:vector :int]]
                           [:owners [:vector :string]]]}
       :handler
       (fn [req]
@@ -57,7 +57,7 @@
     {:post
      {:require-privilege :ptv/manage
       :parameters {:body [:map
-                          [:lipas-id :string]]}
+                          [:lipas-id :int]]}
       :handler
       (fn [req]
         {:status 200
@@ -177,7 +177,7 @@
       :handler
       (fn [{:keys [body-params identity]}]
         {:status 200
-         :body   (ptv-core/upsert-ptv-service-location! db ptv identity body-params)})}}]
+         :body   (ptv-core/upsert-ptv-service-location! db ptv search identity body-params)})}}]
 
    ["/actions/save-ptv-meta"
     {:post

@@ -76,7 +76,8 @@
    ;; 'supported languages' so we infer them from org name
    ;; translations. wtf
     (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
-         (keep #(get lang (:language %))))))
+         (keep #(get lang (:language %)))
+         vec)))
 
 (rf/reg-sub ::selected-org-data
   :<- [::ptv]
@@ -155,7 +156,7 @@
 (rf/reg-sub ::missing-services
   (fn [[_ org-id]]
     [(rf/subscribe [::services-by-id org-id])
-     (rf/subscribe [::sports-sites])])
+     (rf/subscribe [::sports-sites org-id])])
   (fn [[services sports-sites] [_ org-id]]
     (ptv-data/resolve-missing-services org-id services sports-sites)))
 

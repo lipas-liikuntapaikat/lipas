@@ -551,12 +551,14 @@
                                        :error {:message (.getMessage e)
                                                :data (ex-data e)})]
                (log/infof e "Sports site updated but PTV integration had an error")
-               (upsert-sports-site! tx
-                                    user
-                                    (-> resp
-                                        (assoc :event-date (utils/timestamp))
-                                        (assoc :ptv new-ptv-data))
-                                    false))))
+               (let [resp (upsert-sports-site! tx
+                                               user
+                                               (-> resp
+                                                   (assoc :event-date (utils/timestamp))
+                                                   (assoc :ptv new-ptv-data))
+                                               false)]
+                 (index! search resp :sync)
+                 resp))))
          resp)))))
 
 ;;; Cities ;;;

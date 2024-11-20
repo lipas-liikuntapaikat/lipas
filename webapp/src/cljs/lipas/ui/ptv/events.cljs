@@ -176,15 +176,17 @@
 (rf/reg-event-fx ::fetch-service-collections
   (fn [{:keys [db]} [_ org]]
     (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
-       :fx [[:http-xhrio
-             {:method          :post
-              :uri             (str (:backend-url db) "/actions/fetch-ptv-service-collections")
-              :params          {:org-id (:id org)}
-              :format          (ajax/transit-request-format)
-              :response-format (ajax/json-response-format {:keywords? true})
-              :on-success      [::fetch-service-collections-success (:id org)]
-              :on-failure      [::fetch-service-collections-failure]}]]})))
+      (let [token (-> db :user :login :token)]
+        {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-service-collections")
+                :params          {:org-id (:id org)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/json-response-format {:keywords? true})
+                :on-success      [::fetch-service-collections-success (:id org)]
+                :on-failure      [::fetch-service-collections-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-service-collections-success
   (fn [{:keys [db]} [_ org-id resp]]
@@ -616,8 +618,27 @@
     (let [token  (-> db :user :login :token)
           ;; Or per site?
           org-id (-> db :ptv :selected-org :id)
-          ptv-data   (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv])
+
+          types    (get-in db [:sports-sites :types])
+          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
+                                  vals
+                                  (utils/index-by :sourceId))
+
+          sports-site  (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+
+          ;; Add default org-id for service-ids linking
+          sports-site  (update sports-site :ptv #(merge {:org-id org-id} %))
+
+          service-ids  (ptv-data/sports-site->service-ids types source-id->service sports-site)
+
+          ;; Add other defaults and merge with summary/description from the UI
+          ptv-data     (merge (:default-settings (:ptv db))
+                              {:service-ids service-ids
+                               :service-channel-ids []}
+                              ;; {:org-id org-id}
+                              (:ptv sports-site))
           ;; What is this?
+          ;; This is the subscription data stored when starting the sync... I rather not use this here.
           ;; data   (get-in db [:ptv :service-locations-creation :data lipas-id])
           ]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
@@ -626,7 +647,7 @@
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
               :params          {:lipas-id lipas-id
-                                :org (org-id->params org-id)
+                                :org-id org-id
                                 :ptv ptv-data}
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
@@ -634,14 +655,14 @@
               :on-failure      [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-location-success
-  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv-meta]}]]
+  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv]}]]
     (let [org-id   (get-in db [:ptv :selected-org :id])]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-channels] false)
                (assoc-in [:ptv :org org-id :data :service-channels (:id ptv-resp)] ptv-resp)
                ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv-meta))
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv-meta))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
        :fx extra-fx})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
@@ -691,7 +712,8 @@
 
       {:db (update-in db [:ptv :service-locations-creation]
                       merge
-                      {:data       (utils/index-by :lipas-id to-sync)
+                      {;; NOTE: This data is unnecessary? Event is just reading the :sports-site raw data
+                       :data       (utils/index-by :lipas-id to-sync)
                        :batch-size (count ids)
                        :halt?      false
                        :size       (count ids)

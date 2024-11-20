@@ -65,11 +65,18 @@
 
 (defn upsert-ptv-service!
   [ptv {:keys [source-id] :as m}]
-  ;; FIXME: Does ->ptv-service need something from the component config?
   (let [data (ptv-data/->ptv-service m)]
-    (if source-id
+    ;; We have the source-id always?
+    ; (if source-id
+    ;   (ptv/update-service ptv source-id data)
+    ;   (ptv/create-service ptv data))
+    ;; PTV update using sourceId gives 404 if the sourceId doesn't exist yet
+    (try
       (ptv/update-service ptv source-id data)
-      (ptv/create-service ptv data))))
+      (catch clojure.lang.ExceptionInfo e
+        (if (= 404 (:status (:resp (ex-data e))))
+          (ptv/create-service ptv data)
+          (throw e))))))
 
 (defn fetch-ptv-org
   [ptv org-id]
@@ -100,7 +107,7 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!
-  [db ptv-component user {:keys [org-id lipas-id ptv archive?] :as _m}]
+  [db ptv-component search user {:keys [org-id lipas-id ptv archive?] :as _m}]
   (jdbc/with-db-transaction [tx db]
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
@@ -128,19 +135,21 @@
                                   :publishing-status (:publishingStatus ptv-resp)
                                   ;; Take the created ID from ptv response and store to Lipas DB right away.
                                   ;; TODO: Is there a case where this could be multiple ids?
-                                  :service-channel-ids (set [(:id ptv-resp)]))
+                                  :service-channel-ids [(:id ptv-resp)])
                            (cond->
                              archive? (dissoc :source-id
                                               :service-channel-ids)))]
 
       (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
 
-      (core/upsert-sports-site! tx
-                                user
-                                (assoc site
-                                       :event-date now
-                                       :ptv new-ptv-data)
-                                false)
+      (let [resp (core/upsert-sports-site! tx
+                                           user
+                                           (assoc site
+                                                  :event-date now
+                                                  :ptv new-ptv-data)
+                                           false)]
+        (core/index! search resp :sync))
+
       ;; No need to re-index for search after ptv change
 
       {;; Return the updated :ptv meta for sports-site, to for the app-db
@@ -219,10 +228,11 @@
                                                  (remove (fn [y] (contains? old-service-ids y)))
                                                  (into new-service-ids)))))
                ptv)
-        resp (upsert-ptv-service-location! tx ptv-component user {:org-id org-id
-                                                                  :ptv ptv
-                                                                  :lipas-id lipas-id
-                                                                  :archive? to-archive?})]
+        resp (upsert-ptv-service-location! tx ptv-component search user
+                                           {:org-id org-id
+                                            :ptv ptv
+                                            :lipas-id lipas-id
+                                            :archive? to-archive?})]
     resp))
 
 (defn save-ptv-integration-definitions

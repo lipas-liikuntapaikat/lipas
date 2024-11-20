@@ -218,7 +218,9 @@
                                                 "search-meta.location.simple-geoms.*"]}
                   :query
                   {:bool
-                   {:must
+                   {;; Remove huoltorakennukset - they aren't PTV candidates
+                    :must_not [{:term {:type.type-code 7000}}]
+                    :must
                     (remove nil?
                             [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
                              (when city-codes
@@ -264,11 +266,18 @@
                                           {:city-codes [425]
                                            :owners ["city" "city-main-owner"]})
           :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
-    (core/upsert-sports-site! (user/db)
-                              user/robot
-                              (-> (dissoc site :ptv)
-                                  (assoc :event-date (utils/timestamp)))
-                              false))
+    (let [resp (core/upsert-sports-site! (user/db)
+                                         user/robot
+                                         (-> (dissoc site :ptv)
+                                             (assoc :event-date (utils/timestamp)))
+                                         false)]
+      (core/index! (user/search) resp :sync)))
+
+  (doseq [search-site (get-eligible-sites (user/search)
+                                          {:city-codes [425]
+                                           :owners ["city" "city-main-owner"]})
+          :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
+    (core/index! (user/search) site :sync))
 
   (get-org-service-channels ptv* ptv-data/liminka-org-id-test)
 
