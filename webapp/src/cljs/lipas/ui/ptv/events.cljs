@@ -584,6 +584,7 @@
                       {:batch-size (count ids)
                        :halt?      false
                        :size       (count ids)
+                       ;; TODO: Is this necessary? Maybe?
                        :data       (utils/index-by :source-id ms)
                        :ids        (set ids)})
        :fx [[:dispatch [::create-all-ptv-services* org-id ids]]]})))
@@ -636,11 +637,7 @@
                               {:service-ids service-ids
                                :service-channel-ids []}
                               ;; {:org-id org-id}
-                              (:ptv sports-site))
-          ;; What is this?
-          ;; This is the subscription data stored when starting the sync... I rather not use this here.
-          ;; data   (get-in db [:ptv :service-locations-creation :data lipas-id])
-          ]
+                              (:ptv sports-site))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
        :fx [[:http-xhrio
              {:method          :post
@@ -712,9 +709,7 @@
 
       {:db (update-in db [:ptv :service-locations-creation]
                       merge
-                      {;; NOTE: This data is unnecessary? Event is just reading the :sports-site raw data
-                       :data       (utils/index-by :lipas-id to-sync)
-                       :batch-size (count ids)
+                      {:batch-size (count ids)
                        :halt?      false
                        :size       (count ids)
                        :ids        (set ids)})
