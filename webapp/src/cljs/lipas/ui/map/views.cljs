@@ -810,6 +810,9 @@
         view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
         edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
+        ;; TODO: Maybe always show the ptv tab if the ptv integration is enabled for the site?
+        view-ptv?            (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage])
+
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
@@ -932,10 +935,11 @@
             :value 4
             :label (tr :sports-site.elevation-profile/headline)}])
 
-        [mui/tab
-         {:style {:min-width 0}
-          :value 6
-          :label "PTV"}]]
+        (when view-ptv?
+          [mui/tab
+           {:style {:min-width 0}
+            :value 6
+            :label "PTV"}])]
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
