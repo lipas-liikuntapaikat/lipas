@@ -250,7 +250,7 @@
            ;; Summary
            [lui/text-field
             {:disabled   (or loading?
-                             (not= "manual" (:descriptions-integration site)))
+                             (= "manual" (:descriptions-integration site)))
              :multiline  true
              :variant    "outlined"
              :on-change  #(==> [::events/set-summary site @selected-tab %])
@@ -260,7 +260,7 @@
            ;; Description
            [lui/text-field
             {:disabled   (or loading?
-                             (not= "manual" (:descriptions-integration site)))
+                             (= "manual" (:descriptions-integration site)))
              :variant    "outlined"
              :rows       5
              :multiline  true

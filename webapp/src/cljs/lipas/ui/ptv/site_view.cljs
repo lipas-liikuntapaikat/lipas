@@ -118,16 +118,17 @@
         read-only? (not editing?)
         sports-site (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
 
-        ;; FIXME: Edit-data and sports-site schema can be a bit different?
-        x (if editing?
-            edit-data
-            sports-site)
+        ;; NOTE: Edit-data and sports-site schema can be a bit different.
+        ;; Shouldn't matter for the :ptv fields we mostly need here.
+        site (if editing?
+               edit-data
+               sports-site)
 
-        _ (js/console.log edit-data sports-site)
+        ;; _ (js/console.log edit-data sports-site)
 
-        {:keys [descriptions-integration org-id sync-enabled last-sync publishing-status]} (:ptv x)
+        {:keys [descriptions-integration org-id sync-enabled last-sync publishing-status]} (:ptv site)
 
-        _ (js/console.log org-id)
+        ;; _ (js/console.log org-id)
 
         ;; default-settings {}
         ;; enabled    (boolean (:ptv site))
@@ -135,24 +136,24 @@
 
         loading? (use-subscribe [::subs/generating-descriptions?])
 
-        type-code (-> x :type :type-code)
+        type-code (-> site :type :type-code)
 
-        type-code-changed? (not= type-code (:previous-type-code (:ptv x)))
-        previous-sent? (ptv-data/is-sent-to-ptv? x)
-        ready? (ptv-data/ptv-ready? x)
-        candidate-now? (ptv-data/ptv-candidate? x)
+        type-code-changed? (not= type-code (:previous-type-code (:ptv site)))
+        previous-sent? (ptv-data/is-sent-to-ptv? site)
+        ready? (ptv-data/ptv-ready? site)
+        candidate-now? (ptv-data/ptv-candidate? site)
 
         types (use-subscribe [:lipas.ui.sports-sites.subs/all-types])
         loading-ptv? (use-subscribe [::subs/loading-from-ptv?])
         services (use-subscribe [::subs/services-by-id org-id])
         missing-services-input [{:service-ids #{}
-                                 :sub-category-id (-> x :type :type-code types :sub-category)
-                                 :sub-category    (-> x :search-meta :type :sub-category :name :fi)}]
+                                 :sub-category-id (-> site :type :type-code types :sub-category)
+                                 :sub-category    (-> site :search-meta :type :sub-category :name :fi)}]
         missing-services (when (and org-id (not loading-ptv?))
                             (ptv-data/resolve-missing-services org-id services missing-services-input))
 
         source-id->service (utils/index-by :sourceId (vals services))
-        new-service (ptv-data/sub-category-id->service org-id source-id->service (-> x :type :type-code types :sub-category))
+        new-service (ptv-data/sub-category-id->service org-id source-id->service (-> site :type :type-code types :sub-category))
 
         to-archive? (and previous-sent?
                          (not candidate-now?))]
@@ -191,7 +192,7 @@
          :else
          ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV"))
 
-       (when-let [e (:error (:ptv x))]
+       (when-let [e (:error (:ptv site))]
           ($ Alert {:severity "error"}
              "Virhe PTV integraatiossa, uusimpia tietoja ei ole viety PTV: " (:message e)))
 
@@ -210,14 +211,14 @@
        ;    ($ Typography
        ;       status))
 
-       (when (not (:org-id (:ptv x)))
+       (when (not (:org-id (:ptv site)))
           ($ :<>
              ($ Alert {:severity "warning"}
                 "Valitse organisaatio:")))
 
        (when (seq missing-services)
          ($ new-service-form
-            {:data x
+            {:data site
              :tr tr
              :org-id org-id
              :service (first missing-services)}))
@@ -241,7 +242,7 @@
              :disabled  (or loading?
                             read-only?)
              :label     "Organisaatio"
-             :value     (:org-id (:ptv x))
+             :value     (:org-id (:ptv site))
              :on-change (fn [_e v]
                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}))
 

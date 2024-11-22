@@ -108,6 +108,9 @@
 
 (defn upsert-ptv-service-location!
   [db ptv-component search user {:keys [org-id lipas-id ptv archive?] :as _m}]
+  ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
+  ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
+  ;; sports site from db etc.?
   (jdbc/with-db-transaction [tx db]
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
@@ -175,65 +178,73 @@
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn sync-ptv! [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id]}]
-  (let [type-code (-> sports-site :type :type-code)
+  (try
+    (let [type-code (-> sports-site :type :type-code)
 
-        previous-sent? (ptv-data/is-sent-to-ptv? sports-site)
-        candidate-now? (and (ptv-data/ptv-candidate? sports-site)
-                            (ptv-data/ptv-ready? sports-site))
+          previous-sent? (ptv-data/is-sent-to-ptv? sports-site)
+          candidate-now? (and (ptv-data/ptv-candidate? sports-site)
+                              (ptv-data/ptv-ready? sports-site))
 
-        to-archive? (and previous-sent?
-                         (not candidate-now?))
+          ;; If it looks like site that was previously sent to PTV is no longer
+          ;; a candidate, mark for it archival.
+          ;; The other function will mark the document Deleted when archive flag is true
+          to-archive? (and previous-sent?
+                           (not candidate-now?))
 
-        ;; TODO: to-archive
-        ;; 1. set PTV status Deleted
-        ;; 2. remove :ptv :source-id, :service-channel-ids -> if restored, a new service-location is created
+          type-code-changed? (not= type-code (:previous-type-code ptv))
+          ptv  (if type-code-changed?
+                 (let [types types/all
+                       ;; Figure out what services are available in PTV for the site organization
+                       services (:itemList (ptv/get-org-services ptv-component org-id))
+                       source-id->service (->> services
+                                               (utils/index-by :sourceId))
 
-        type-code-changed? (not= type-code (:previous-type-code ptv))
-        ptv  (if type-code-changed?
-               (let [types types/all
-                     ;; Figure out what services are available in PTV for the site organization
-                     services (:itemList (ptv/get-org-services ptv-component org-id))
-                     source-id->service (->> services
-                                             (utils/index-by :sourceId))
+                       ;; Check if services for the current/new site type-code exist
+                       missing-services-input [{:service-ids #{}
+                                                :sub-category-id (-> sports-site :type :type-code types :sub-category)
+                                                :sub-cateogry    (-> sports-site :search-meta :type :sub-category :name :fi)}]
+                       missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
 
-                     ;; Check if services for the current/new site type-code exist
-                     missing-services-input [{:service-ids #{}
-                                              :sub-category-id (-> sports-site :type :type-code types :sub-category)
-                                              :sub-cateogry    (-> sports-site :search-meta :type :sub-category :name :fi)}]
-                     missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
+                       ;; FE doesn't update the :ptv :service-ids, that is still handled here.
+                       ;; This code just presumes the user has created the possibly missing Sercices
+                       ;; in the FE first.
 
-                     _ (log/infof "Missing services? %s" (pr-str missing-services))
+                       _ (when (seq missing-services)
+                           (throw (ex-info "Site needs a PTV Service that doesn't exists"
+                                           {:missing-services missing-services})))
 
-
-                     ;; FE doesn't update the :ptv :service-ids, that is still handled here.
-                     ;; This code just presumes the user has created the possibly missing Sercices
-                     ;; in the FE first.
-
-                     _ (when (seq missing-services)
-                         (throw (ex-info "Site needs a PTV Service that doesn't exists"
-                                         {:missing-services missing-services})))
-
-                     ;; Remove old service-ids from :ptv data and add the new.
-                     ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
-                     ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
-                     ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
-                     old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
-                     old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
-                     new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                 (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
-                            (:previous-type-code ptv) type-code
-                            old-service-ids new-service-ids)
-                 (update ptv :service-ids (fn [x]
-                                            (->> x
-                                                 (remove (fn [y] (contains? old-service-ids y)))
-                                                 (into new-service-ids)))))
-               ptv)
-        resp (upsert-ptv-service-location! tx ptv-component search user
-                                           {:org-id org-id
-                                            :ptv ptv
-                                            :lipas-id lipas-id
-                                            :archive? to-archive?})]
-    resp))
+                       ;; Remove old service-ids from :ptv data and add the new.
+                       ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
+                       ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
+                       ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
+                       old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
+                       old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
+                       new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                   (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
+                              (:previous-type-code ptv) type-code
+                              old-service-ids new-service-ids)
+                   (update ptv :service-ids (fn [x]
+                                              (->> x
+                                                   (remove (fn [y] (contains? old-service-ids y)))
+                                                   (into new-service-ids)))))
+                 ptv)]
+      (:ptv (upsert-ptv-service-location! tx ptv-component search user
+                                          {:org-id org-id
+                                           :ptv ptv
+                                           :lipas-id lipas-id
+                                           :archive? to-archive?})))
+    (catch Exception e
+      (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
+                                            :data (ex-data e)})]
+        (log/infof e "Sports site updated but PTV integration had an error")
+        (let [resp (core/upsert-sports-site! tx
+                                             user
+                                             (-> sports-site
+                                                 (assoc :event-date (utils/timestamp))
+                                                 (assoc :ptv new-ptv-data))
+                                             false)]
+          (core/index! search resp :sync)
+          (:ptv resp))))))
 
 (defn save-ptv-integration-definitions
   "Saves ptv definitions under key :ptv. Does not notify webhooks,

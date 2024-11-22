@@ -395,23 +395,23 @@
 
         summary (case descriptions-integration
                   "lipas-managed-comment-field"
-                  (-> site :comment parse-summary)
+                  {:fi (-> site :comment parse-summary)}
 
                   "lipas-managed-ptv-fields"
                   (-> site :ptv :summary)
 
                   "ptv-managed"
                   ;; FIXME: avoid tr here
-                  (tr :ptv.integration.description/ptv-managed-helper))
+                  {:fi (tr :ptv.integration.description/ptv-managed-helper)})
         description (case descriptions-integration
                       "lipas-managed-comment-field"
-                      (-> site :comment)
+                      {:fi (-> site :comment)}
 
                       "lipas-managed-ptv-fields"
                       (-> site :ptv :description)
 
                       "ptv-managed"
-                      (tr :ptv.integration.description/ptv-managed-helper))
+                      {:fi (tr :ptv.integration.description/ptv-managed-helper)})
 
         last-sync (-> site :ptv :last-sync)]
     {:valid           (boolean (and (some-> description :fi count (> 5))

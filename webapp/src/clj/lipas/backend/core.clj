@@ -532,33 +532,17 @@
                 ;; TODO: Check privilage :ptv/basic or such
                 (or (ptv-data/ptv-candidate? resp)
                     (ptv-data/is-sent-to-ptv? resp)))
-         ;; TODO: Currently this will create a new sports-site rev.
+         ;; NOTE:  this will create a new sports-site rev.
          ;; Make it instead update the sports-site already created in the tx?
          ;; Otherwise each save-sports-site! will create two sports-site revs.
-
-         ;; TODO: Move try-catch to sync-ptv! fn?
-         (try
-           (let [new-ptv-data (:ptv ((resolve 'lipas.backend.ptv.core/sync-ptv!)
-                                     tx search ptv user
-                                     {:sports-site resp
-                                      :org-id (:org-id (:ptv resp))
-                                      :lipas-id (:lipas-id resp)
-                                      :ptv (:ptv resp)}))]
-             (log/infof "Sports site updated and PTV integration enabled")
-             (assoc resp :ptv new-ptv-data))
-           (catch Exception e
-             (let [new-ptv-data (assoc (:ptv resp)
-                                       :error {:message (.getMessage e)
-                                               :data (ex-data e)})]
-               (log/infof e "Sports site updated but PTV integration had an error")
-               (let [resp (upsert-sports-site! tx
-                                               user
-                                               (-> resp
-                                                   (assoc :event-date (utils/timestamp))
-                                                   (assoc :ptv new-ptv-data))
-                                               false)]
-                 (index! search resp :sync)
-                 resp))))
+         (let [new-ptv-data ((resolve 'lipas.backend.ptv.core/sync-ptv!)
+                             tx search ptv user
+                             {:sports-site resp
+                              :org-id (:org-id (:ptv resp))
+                              :lipas-id (:lipas-id resp)
+                              :ptv (:ptv resp)})]
+           (log/infof "Sports site updated and PTV integration enabled")
+           (assoc resp :ptv new-ptv-data))
          resp)))))
 
 ;;; Cities ;;;
