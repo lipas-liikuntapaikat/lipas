@@ -27,6 +27,9 @@
 #_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
 #_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
 
+;; TODO: Tulossa 5 kuntaa, muut:
+;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
+
 (def organizations
   [{:name "Utajärven kunta (test)"
     :props {:org-id              uta-org-id-test
@@ -39,6 +42,10 @@
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" "se" "en"]}} ])
 
+;; For adding default params to some requests from the FE
+;; NOTE: This should eventually be replaced with Lipas organizations.
+;; TODO: Not sure if e.g. owners and supported-languages should be
+;; hardcoded to the same values for everyone?
 (def org-id->params
   (reduce (fn [acc x]
             (assoc acc (:org-id (:props x))
@@ -46,14 +53,12 @@
           {}
           organizations))
 
+;; For UI org dropdown
 (def orgs
   (mapv (fn [x]
           {:name (:name x)
            :id (:org-id (:props x))})
         organizations))
-
-;; TODO: Tulossa 5 kuntaa, muut:
-;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
 
 (def lang->locale
   {"fi" :fi, "sv" :se, "en" :en})
