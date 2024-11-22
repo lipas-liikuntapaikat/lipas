@@ -126,13 +126,12 @@
 
         ;; _ (js/console.log edit-data sports-site)
 
-        {:keys [descriptions-integration org-id sync-enabled last-sync publishing-status]} (:ptv site)
+        {:keys [org-id sync-enabled last-sync publishing-status]} (:ptv site)
 
         ;; _ (js/console.log org-id)
 
         ;; default-settings {}
         ;; enabled    (boolean (:ptv site))
-        descriptions-enabled (not= "manual" descriptions-integration)
 
         loading? (use-subscribe [::subs/generating-descriptions?])
 
@@ -255,12 +254,6 @@
              :org-id org-id
              :service (first missing-services)}))
 
-       #_
-       ($ controls/description-integration
-          {:value (:descriptions-integration (:ptv site))
-           :on-change identity
-           :tr tr})
-
        ($ FormControlLabel
           {:label "Sync-enabled"
            :control ($ Switch
@@ -271,25 +264,24 @@
                                      (js/console.log _e v)
                                      (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :sync-enabled] v]))})})
 
-       (when (= "lipas-managed-ptv-fields" descriptions-integration)
-         ($ Stack
-            {:sx #js {:position "relative"}}
-            ($ Button
-               {:disabled (or loading?
-                              read-only?)
-                :variant "outlined"
-                ;; NOTE: Could use the lipas-id version when not editing? But then we don't have
-                ;; place to store the results.
-                :on-click (fn [_e]
-                            (rf/dispatch [::events/generate-descriptions-from-data lipas-id]))}
-               (tr :ptv.actions/generate-with-ai))
-            (when loading?
-              ($ CircularProgress
-                 {:size 24
-                  :sx #js {:position "absolute"
-                           :top "50%"
-                           :left "50%"
-                           :mt "-12px"}}))))
+       ($ Stack
+          {:sx #js {:position "relative"}}
+          ($ Button
+             {:disabled (or loading?
+                            read-only?)
+              :variant "outlined"
+              ;; NOTE: Could use the lipas-id version when not editing? But then we don't have
+              ;; place to store the results.
+              :on-click (fn [_e]
+                          (rf/dispatch [::events/generate-descriptions-from-data lipas-id]))}
+             (tr :ptv.actions/generate-with-ai))
+          (when loading?
+            ($ CircularProgress
+               {:size 24
+                :sx #js {:position "absolute"
+                         :top "50%"
+                         :left "50%"
+                         :mt "-12px"}})))
 
        ($ controls/lang-selector
           {:value selected-tab
@@ -299,7 +291,6 @@
        (r/as-element
          [lui/text-field
           {:disabled   (or loading?
-                           (not descriptions-enabled)
                            read-only?)
            :multiline  true
            :variant    "outlined"
@@ -313,7 +304,6 @@
        (r/as-element
          [lui/text-field
           {:disabled   (or loading?
-                           (not descriptions-enabled)
                            read-only?)
            :variant    "outlined"
            :rows       5

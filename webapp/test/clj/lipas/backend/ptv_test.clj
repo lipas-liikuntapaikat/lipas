@@ -84,8 +84,7 @@
 
           ;; TODO: is this ptv-input data useful? Could everything (the view components) just use raw site data directly?
           ptv-sites (for [site (vals sports-sites)]
-                      (ptv-data/sports-site->ptv-input {:tr (constantly "FOO")
-                                                        :types types
+                      (ptv-data/sports-site->ptv-input {:types types
                                                         :org-id org-id
                                                         :org-defaults default-settings
                                                         :org-langs org-langs}

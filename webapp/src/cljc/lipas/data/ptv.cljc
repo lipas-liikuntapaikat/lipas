@@ -417,31 +417,11 @@
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
-(defn sports-site->ptv-input [{:keys [tr types org-id org-defaults org-langs]} service-channels services site]
+(defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id               (-> site :ptv :service-ids first)
         service-channel-id       (-> site :ptv :service-channel-ids first)
-        descriptions-integration (or (-> site :ptv :descriptions-integration)
-                                     (:descriptions-integration org-defaults))
-
-        summary (case descriptions-integration
-                  "lipas-managed-comment-field"
-                  {:fi (-> site :comment parse-summary)}
-
-                  "lipas-managed-ptv-fields"
-                  (-> site :ptv :summary)
-
-                  "ptv-managed"
-                  ;; FIXME: avoid tr here
-                  {:fi (tr :ptv.integration.description/ptv-managed-helper)})
-        description (case descriptions-integration
-                      "lipas-managed-comment-field"
-                      {:fi (-> site :comment)}
-
-                      "lipas-managed-ptv-fields"
-                      (-> site :ptv :description)
-
-                      "ptv-managed"
-                      {:fi (tr :ptv.integration.description/ptv-managed-helper)})
+        summary (-> site :ptv :summary)
+        description (-> site :ptv :description)
 
         last-sync (-> site :ptv :last-sync)]
     {:valid           (boolean (and (some-> description :fi count (> 5))
@@ -462,7 +442,6 @@
      :description     description
      :languages       (or (-> site :ptv :languages) org-langs)
 
-     :descriptions-integration    descriptions-integration
      :sync-enabled                (get-in site [:ptv :sync-enabled] true)
      :last-sync                   last-sync
      ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
@@ -475,14 +454,10 @@
      :service-ids                 (-> site :ptv :service-ids)
      :service-name                (-> services (get service-id) :serviceNames
                                       (->> (some #(when (= "fi" (:language %)) (:value %)))))
-     :service-integration         (or (-> site :ptv :service-integration)
-                                      (:service-integration org-defaults))
      :service-channel-id          service-channel-id
      :service-channel-ids         (-> site :ptv :service-channel-ids)
      :service-channel-name        (-> (get service-channels service-channel-id)
-                                      (resolve-service-channel-name))
-     :service-channel-integration (or (-> site :ptv :service-channel-integration)
-                                      (:service-channel-integration org-defaults))}))
+                                      (resolve-service-channel-name))}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
   (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)

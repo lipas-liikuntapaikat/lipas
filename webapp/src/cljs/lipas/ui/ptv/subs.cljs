@@ -197,8 +197,9 @@
     (vals channels)))
 
 (rf/reg-sub ::service-channels-list
-  :<- [::service-channels]
-  (fn [channels _]
+  (fn [[_ org-id]]
+    (rf/subscribe [::service-channels org-id]))
+  (fn [channels [_ _org-id]]
     (for [m channels]
       {:service-channel-id (:id m)
        :name               (ptv-data/resolve-service-channel-name m)})))
@@ -209,14 +210,12 @@
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
-     (rf/subscribe [:lipas.ui.subs/translator])
      (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
      (rf/subscribe [::org-languages org-id])])
-  (fn [[ptv services service-channels org-defaults tr types org-langs] [_ org-id]]
+  (fn [[ptv services service-channels org-defaults types org-langs] [_ org-id]]
     (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]
       (for [site (vals lipas-id->site)]
         (ptv-data/sports-site->ptv-input {:org-id org-id
-                                          :tr tr
                                           :types types
                                           :org-defaults org-defaults
                                           :org-langs org-langs}

@@ -56,10 +56,10 @@
       :on-change #(==> [::events/select-org %])}]))
 
 (defui service-channel-selector
-  [{:keys [value on-change label value-fn]
+  [{:keys [org-id value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
-  (let [items (use-subscribe [::subs/service-channels-list])
+  (let [items (use-subscribe [::subs/service-channels-list org-id])
         options (uix/use-memo (fn []
                                 (map (fn [x]
                                        {:value (value-fn x)
@@ -75,97 +75,9 @@
                     (println v)
                     (on-change [(:value v)]))})))
 
-(defn info-text
-  [s]
-  #_[mui/paper {:style {:padding "1em" :background-color mui/gray3}}]
-  [mui/typography {:variant "body1" #_#_:style {:font-size "0.9rem"}} s])
-
-(defn settings
-  []
-  (let [tr               (<== [:lipas.ui.subs/translator])
-        org-id           (<== [::subs/selected-org-id])
-        default-settings (<== [::subs/default-settings org-id])]
-    [mui/grid {:container true :spacing 4 :style {:margin-left "-32px"}}
-
-     [mui/grid {:item true :xs 12}
-      [mui/stack {:spacing 2}
-
-       [mui/typography {:variant "h5"}
-        (tr :ptv.integration.interval/headline)]
-
-       [mui/form-control
-        [mui/form-label (tr :ptv.integration.interval/label)]
-        [mui/radio-group
-         {:on-change #(==> [::events/select-integration-interval %2])
-          :value     (:integration-interval default-settings)}
-         [mui/form-control-label
-          {:value   "immediate"
-           :label   (tr :ptv.integration.interval/immediate)
-           :control (r/as-element [mui/radio])}]
-
-         [mui/form-control-label
-          {:value   "daily"
-           :label   (tr :ptv.integration.interval/daily)
-           :control (r/as-element [mui/radio])}]
-
-         [mui/form-control-label
-          {:value   "manual"
-           :label   (tr :ptv.integration.interval/manual)
-           :control (r/as-element [mui/radio])}]]]]]
-
-     [mui/grid {:item true :xs 12}
-      [mui/typography {:variant "h5"} (tr :ptv.integration.default-settings/headline)]]
-
-     [mui/grid {:item true :xs 12}
-      [info-text (tr :ptv.integration.default-settings/helper)]]
-
-     ;; Service
-     [mui/grid {:item true :xs 12 :lg 4}
-      [mui/stack {:spacing 2}
-       [mui/typography {:variant "h6"}
-        (tr :ptv/services)]
-
-       ;; Integration type
-       [mui/form-control
-        [mui/form-label (tr :ptv.actions/select-integration)]
-        [mui/radio-group
-         {:on-change #(==> [::events/select-service-integration-default %2])
-          :value     (:service-integration default-settings)}
-         [mui/form-control-label
-          {:value   "lipas-managed"
-           :label   (tr :ptv.integration.service/lipas-managed)
-           :control (r/as-element [mui/radio])}]
-
-         [mui/form-control-label
-          {:value   "manual"
-           :label   (tr :ptv.integration/manual)
-           :control (r/as-element [mui/radio])}]]]
-
-       (when (= "lipas-managed" (:service-integration default-settings))
-         [info-text (tr :ptv.integration.service/lipas-managed-helper)])
-
-       (when (= "manual" (:service-integration default-settings))
-         [info-text (tr :ptv.integration.service/manual-helper)])]]
-
-     ;; Service channel
-     [mui/grid {:item true :xs 12 :lg 4}
-      [mui/stack {:spacing 2}
-       ($ controls/service-channel-integration
-          {:tr tr
-           :value     (:service-channel-integration default-settings)
-           :on-change (fn [v] (rf/dispatch [::events/select-service-channel-integration-default v]))})]]
-
-     ;; Descriptions
-     [mui/grid {:item true :xs 12 :lg 4}
-      [mui/stack {:spacing 2}
-       ($ controls/description-integration
-          {:tr tr
-           :value      (:descriptions-integration default-settings)
-           :on-change  (fn [v] (rf/dispatch [::events/select-descriptions-integration-default v]))})]]]))
-
 (defn form
-  [{:keys [tr site]}]
-  (let [locale (tr)]
+  [{:keys [org-id tr site]}]
+  (let [services @(rf/subscribe [::subs/services org-id])]
     [mui/grid
      {:container true
       :spacing   2
@@ -174,12 +86,15 @@
      ;; Service
      [mui/grid {:item true :xs 12 :lg 4}
       [mui/stack {:spacing 2}
-       ($ controls/service-integration
-          {:tr tr
-           :value     (:service-integration site)
-           :on-change (fn [v] (==> [::events/select-service-integration site v]))
-           :service-ids (:service-ids site)
-           :set-service-ids (fn [ids] (rf/dispatch [::events/select-services site ids]))})]]
+       [mui/typography {:variant "h6"}
+        (tr :ptv/services)]
+
+       ($ controls/services-selector
+          {:options   services
+           :value     (:service-ids site)
+           :on-change (fn [ids] (rf/dispatch [::events/select-services site ids]))
+           :value-fn  :service-id
+           :label     (tr :ptv.actions/select-service)})]]
 
      ;; Service channels
      [mui/grid {:item true :xs 12 :lg 4}
@@ -187,47 +102,24 @@
        [mui/typography {:variant "h6"}
         (tr :ptv/service-channels)]
 
-       ;; Integration type
-       [mui/form-control
-        [mui/form-label (tr :ptv.actions/select-integration)]
-        [mui/radio-group
-         {:on-change #(==> [::events/select-service-channel-integration site %2])
-          :value     (:service-channel-integration site)}
-         [mui/form-control-label
-          {:value   "lipas-managed"
-           :label   (tr :ptv.integration.service-channel/lipas-managed)
-           :control (r/as-element [mui/radio])}]
-
-         [mui/form-control-label
-          {:value   "manual"
-           :label   (tr :ptv.integration/manual)
-           :control (r/as-element [mui/radio])}]]]
-
-       (when (= "lipas-managed" (:service-channel-integration site))
-         (tr :ptv.integration.service-channel/lipas-managed-helper))
-
-       (when (= "manual" (:service-channel-integration site))
-         ($ service-channel-selector
-            {:value     (:service-channel-ids site)
-             :value-fn  :id
-             :on-change #(==> [::events/select-service-channels site %])
-             :label     (tr :ptv.actions/select-service-channel)}))]]
+       ($ service-channel-selector
+          {:org-id org-id
+           :value     (:service-channel-ids site)
+           :value-fn  :service-channel-id
+           :on-change #(==> [::events/select-service-channels site %])
+           :label     (tr :ptv.actions/select-service-channel)})]]
 
      ;; Descriptions
      (r/with-let [selected-tab (r/atom :fi)]
        (let [loading? (<== [::subs/generating-descriptions?])]
          [mui/grid {:item true :xs 12 :lg 4}
           [mui/stack {:spacing 2}
+           [mui/typography {:variant "h6"}
+            (tr :ptv/descriptions)]
 
-           ($ controls/description-integration
-              {:tr tr
-               :value     (:descriptions-integration site)
-               :on-change (fn [v] (rf/dispatch [::events/select-descriptions-integration site v]))})
-
-           (when (= "lipas-managed-ptv-fields" (:descriptions-integration site))
-             [mui/button {:disabled loading?
-                          :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
-              (tr :ptv.actions/generate-with-ai)])
+           [mui/button {:disabled loading?
+                        :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
+            (tr :ptv.actions/generate-with-ai)]
 
            (when loading?
              [mui/circular-progress])
@@ -241,8 +133,7 @@
 
            ;; Summary
            [lui/text-field
-            {:disabled   (or loading?
-                             (= "manual" (:descriptions-integration site)))
+            {:disabled   loading?
              :multiline  true
              :variant    "outlined"
              :on-change  #(==> [::events/set-summary site @selected-tab %])
@@ -251,8 +142,7 @@
 
            ;; Description
            [lui/text-field
-            {:disabled   (or loading?
-                             (= "manual" (:descriptions-integration site)))
+            {:disabled   loading?
              :variant    "outlined"
              :rows       5
              :multiline  true
@@ -394,131 +284,9 @@
                   [mui/collapse {:in            (get @expanded-rows lipas-id false)
                                  :timeout       "auto"
                                  :unmountOnExit true}
-                   [form {:tr tr :site site}]]]]]))]]]))))
-
-(defn descriptions-generator
-  []
-  (let [tr                  (<== [:lipas.ui.subs/translator])
-        org-id              (<== [::subs/selected-org-id])
-        sports-sites        (<== [::subs/sports-sites-filtered org-id])
-        sports-sites-count  (<== [::subs/sports-sites-filtered-count org-id])
-        sports-sites-filter (<== [::subs/sports-sites-filter])
-
-        {:keys [in-progress?
-                processed-lipas-ids
-                processed-count
-                total-count
-                processed-percent
-                halt?] :as m} (<== [::subs/batch-descriptions-generation-progress])]
-
-    [lui/expansion-panel {:default-expanded false :label (tr :ptv.tools.ai/headline)}
-     [mui/grid {:container true :spacing 4}
-      [mui/grid {:item true :xs 12 :lg 4}
-
-       ;; Settings
-       [mui/stack {:spacing 4}
-        [mui/typography (tr :ptv.tools.ai/start-helper)]
-
-        [mui/form-control
-         [mui/form-label (tr :ptv.tools.ai.sports-sites-filter/label)]
-         [mui/radio-group
-          {:on-change #(==> [::events/select-sports-sites-filter %2])
-           :value     sports-sites-filter}
-          [mui/form-control-label
-           {:value   "all"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/all)
-            :control (r/as-element [mui/radio])}]
-
-          [mui/form-control-label
-           {:value   "no-existing-description"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/no-existing-description)
-            :control (r/as-element [mui/radio])}]
-
-          [mui/form-control-label
-           {:value   "sync-enabled"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled)
-            :control (r/as-element [mui/radio])}]
-
-          [mui/form-control-label
-           {:value   "sync-enabled-no-existing-description"
-            :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled-no-existing-description)
-            :control (r/as-element [mui/radio])}]
-
-          #_[mui/form-control-label
-             {:value   "manual"
-              :label   (tr :ptv.tools.ai.sports-sites-filter/manual)
-              :control (r/as-element [mui/radio])}]]]
-
-        ;; Start button
-        [mui/button
-         {:variant   "outlined"
-          :disabled  in-progress?
-          :color     "secondary"
-          :startIcon (r/as-element [mui/icon "play_arrow"])
-          :on-click  #(==> [::events/generate-all-descriptions sports-sites])}
-         (tr :ptv.tools.ai/start)]
-
-        ;; Cancel button
-        (when in-progress?
-          [mui/button
-           {:variant   "outlined"
-            :disabled  halt?
-            :color     "secondary"
-            :startIcon (r/as-element [mui/icon "cancel"])
-            :on-click  #(==> [::events/halt-descriptions-generation])}
-           (tr :actions/cancel)])
-
-        (when (and halt? in-progress?)
-          [mui/typography (tr :ptv.tools.ai/canceling)])
-
-        (when in-progress?
-          [mui/stack {:direction "row" :spacing 2 :align-items "center"}
-           [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
-           [mui/typography (str processed-count "/" total-count)]])]]
-
-      ;; Results
-      (r/with-let [selected-tab (r/atom :fi)]
-        [mui/grid {:item true :xs 12 :lg 8}
-         [mui/stack {:spacing 4}
-
-          [mui/typography {:variant "h6"}
-           (tr :ptv/sports-sites)]
-
-          [mui/typography {:variant "subtitle1" :style {:margin-top "0px"}}
-           (str sports-sites-count " kpl")]
-
-          (doall
-            (for [{:keys [lipas-id] :as site} sports-sites]
-              ^{:key lipas-id}
-              [lui/expansion-panel
-               {:label    (:name site)
-                :disabled (not (contains? processed-lipas-ids lipas-id))}
-               [mui/stack {:spacing 2}
-                [mui/tabs
-                 {:value     @selected-tab
-                  :on-change #(reset! selected-tab (keyword %2))}
-                 [mui/tab {:value "fi" :label "FI"}]
-                 [mui/tab {:value "se" :label "SE"}]
-                 [mui/tab {:value "en" :label "EN"}]]
-
-               ;; Summary
-                [lui/text-field
-                 {:multiline  true
-                  :read-only? (not= "manual" (:descriptions-integration site))
-                  :variant    "outlined"
-                  :on-change  #(==> [::events/set-summary site @selected-tab %])
-                  :label      (tr :ptv/summary)
-                  :value      (get-in site [:summary @selected-tab])}]
-
-               ;; Description
-                [lui/text-field
-                 {:variant    "outlined"
-                  :read-only? (not= "manual" (:descriptions-integration site))
-                  :rows       5
-                  :multiline  true
-                  :on-change  #(==> [::events/set-description site @selected-tab %])
-                  :label      (tr :ptv/description)
-                  :value      (get-in site [:description @selected-tab])}]]]))]])]]))
+                   [form {:tr tr
+                          :org-id org-id
+                          :site site}]]]]]))]]]))))
 
 (defn create-services
   []
@@ -532,7 +300,7 @@
                   total-count
                   processed-count]} (<== [::subs/service-descriptions-generation-progress])
 
-          services @(rf/subscribe [::subs/services])]
+          services @(rf/subscribe [::subs/services org-id])]
 
       [lui/expansion-panel
        {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
@@ -607,22 +375,6 @@
                                [mui/icon {:color "success"} "done"]
                                [mui/icon {:color "disabled"} "done"])}
                 [mui/stack {:spacing 2}
-
-                 #_[mui/form-control
-                    [mui/form-label (tr :ptv.integration.interval/label)]
-                    [mui/radio-group
-                     {:on-change #(==> [::events/select-integration-interval %2])
-                      :value     "lipas-managed"}
-                     [mui/form-control-label
-                      {:value   "lipas-managed"
-                       :label   (tr :ptv.integration.service/lipas-managed)
-                       :control (r/as-element [mui/radio])}]
-
-                     [mui/form-control-label
-                      {:value   "manual"
-                       :label   (tr :ptv.integration/manual)
-                       :control (r/as-element [mui/radio])}]]]
-
                  [lui/autocomplete
                   {:label     (tr :ptv.actions/select-languages)
                    :multi?    true
@@ -670,8 +422,8 @@
                    :value     (get-in m [:description @selected-tab])}]]]))]]]]])))
 
 (defui service-location-details
-  [{:keys [tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
-  (let [services (use-subscribe [::subs/services])]
+  [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
+  (let [services (use-subscribe [::subs/services org-id])]
     ($ AccordionDetails
        {}
        (r/as-element
@@ -721,7 +473,8 @@
               (tr :ptv.wizard/attach-to-conflicting-service-channel)])
 
            ($ service-channel-selector
-              {:value     service-channel-ids
+              {:org-id org-id
+               :value     service-channel-ids
                :value-fn  :service-channel-id
                :on-change #(==> [::events/select-service-channels site %])
                :label     (tr :ptv/service-channel)})]
@@ -736,7 +489,6 @@
           ;; Summary
           [lui/text-field
            {:multiline  true
-            :read-only? (not= "manual" (:descriptions-integration site))
             :variant    "outlined"
             :on-change  #(==> [::events/set-summary site selected-tab %])
             :label      (tr :ptv/summary)
@@ -745,7 +497,6 @@
           ;; Description
           [lui/text-field
            {:variant    "outlined"
-            :read-only? (not= "manual" (:descriptions-integration site))
             :rows       5
             :multiline  true
             :on-change  #(==> [::events/set-description site selected-tab %])
@@ -925,6 +676,7 @@
              {:key lipas-id
               :tr tr
               :site site
+              :org-id org-id
               :lipas-id lipas-id
               :name-conflict name-conflict
               :sync-enabled sync-enabled
@@ -933,11 +685,6 @@
               :selected-tab selected-tab
               :set-selected-tab set-selected-tab
               :service-channel-ids service-channel-ids}))]]]]))
-
-(defn tools
-  []
-  [mui/paper
-   [descriptions-generator]])
 
 (defn service-panel
   [{:keys [service]}]
@@ -1071,9 +818,7 @@
 
           [mui/tab {:value "wizard" :label (tr :ptv/wizard)}]
           [mui/tab {:value "services" :label (tr :ptv/services)}]
-          [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}]
-          [mui/tab {:value "ai" :label (tr :ptv/tools)}]
-          [mui/tab {:value "settings" :label (tr :ptv/settings)}]]
+          [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}]]
 
          (when (= selected-tab "wizard")
            [wizard])
@@ -1084,11 +829,7 @@
          (when (= selected-tab "sports-sites")
            [table])
 
-         (when (= selected-tab "settings")
-           [settings])
-
-         (when (= selected-tab "ai")
-           [tools])])]]))
+         ])]]))
 
 ;; Juhan kommentit wizardiin
 ;; - mahdollisuus valita kielet

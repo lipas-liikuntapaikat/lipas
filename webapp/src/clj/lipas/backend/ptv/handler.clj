@@ -18,8 +18,15 @@
    {:closed true}
    ;; [:org-id :string]
    [:sync-enabled :boolean]
-   [:service-channel-integration integration-enum]
-   [:service-integration integration-enum]
+
+   ;; These options aren't used now:
+   ;; TODO: Remove
+   [:service-channel-integration
+    {:optional true}
+    integration-enum]
+   [:service-integration
+    {:optional true}
+    integration-enum]
 
    [:service-channel-ids [:vector :string]]
    ;; [:service-ids [:vector :string]]

@@ -1519,12 +1519,7 @@
                    :lipas.sports-site.ptv/sync-enabled
 
                    :lipas.sports-site.ptv/summary
-                   :lipas.sports-site.ptv/description
-
-                   :lipas.sports-site.ptv/service-channel-integration
-                   :lipas.sports-site.ptv/service-integration
-                   :lipas.sports-site.ptv/descriptions-integration
-                   ]
+                   :lipas.sports-site.ptv/description]
           :opt-un [;; Added on first successful sync
                    :lipas.sports-site.ptv/last-sync
                    :lipas.sports-site.ptv/previous-type-code
@@ -1535,6 +1530,11 @@
                    ;; Added on sync - removed when archived
                    :lipas.sports-site.ptv/source-id
                    :lipas.sports-site.ptv/service-channel-ids
+
+                   ;; Previously used keys, not used now
+                   :lipas.sports-site.ptv/service-channel-integration
+                   :lipas.sports-site.ptv/service-integration
+                   :lipas.sports-site.ptv/descriptions-integration
 
                    ;; Only added on sync error - removed when success
                    :lipas.sports-site.ptv/error]))

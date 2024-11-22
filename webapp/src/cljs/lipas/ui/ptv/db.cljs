@@ -6,6 +6,7 @@
                                    :service-channels    false
                                    :service-collections false}
    :default-settings              {:sync-enabled                true
+                                   ;; TODO: These are not used now, could be removed once made optional in the schemas:
                                    :service-integration         "lipas-managed"
                                    :service-channel-integration "lipas-managed"
                                    :descriptions-integration    "lipas-managed-ptv-fields"
