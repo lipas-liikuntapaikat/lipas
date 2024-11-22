@@ -233,10 +233,11 @@
                    (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
                               (:previous-type-code ptv) type-code
                               old-service-ids new-service-ids)
-                   (update ptv :service-ids (fn [x]
-                                              (->> x
-                                                   (remove (fn [y] (contains? old-service-ids y)))
-                                                   (into new-service-ids)))))
+                   (update ptv :service-ids (fn [ids]
+                                              (let [x (set ids)
+                                                    x (apply disj x old-service-ids)
+                                                    x (into x new-service-ids)]
+                                                (vec x)))))
                  ptv)
 
           [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
@@ -244,6 +245,15 @@
                                                                    :ptv ptv
                                                                    :site sports-site
                                                                    :archive? to-archive?})]
+
+      (let [resp (core/upsert-sports-site! tx
+                                           user
+                                           (assoc sports-site
+                                                  :event-date (:last-sync new-ptv-data)
+                                                  :ptv new-ptv-data)
+                                           false)]
+        (core/index! search resp :sync))
+
       new-ptv-data)
     (catch Exception e
       (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
