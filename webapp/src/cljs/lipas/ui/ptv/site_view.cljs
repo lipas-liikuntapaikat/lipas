@@ -111,6 +111,7 @@
 
 (defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (uix/use-state :fi)
+        locale (tr)
 
         editing*   (boolean (use-subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id]))
         editing?   (and can-edit? editing*)
@@ -154,10 +155,12 @@
         source-id->service (utils/index-by :sourceId (vals services))
         new-service (ptv-data/sub-category-id->service org-id source-id->service (-> site :type :type-code types :sub-category))
 
+        new-service-sub-cat (get types/sub-categories (-> site :type :type-code types :sub-category))
+
         to-archive? (and previous-sent?
                          (not candidate-now?))]
 
-    (js/console.log missing-services new-service)
+    (js/console.log missing-services new-service new-service-sub-cat)
 
     (uix/use-effect (fn []
                       (rf/dispatch [::events/fetch-org {:id org-id}])
@@ -170,39 +173,8 @@
 
        ;; TODO: Spinneri?
        (when loading-ptv?
-          ($ Alert {:severity "info"}
-             "Ladataan PTV tietoja..."))
-
-       (cond
-         (and previous-sent? candidate-now? ready?)
-         (if sync-enabled
-           ($ Alert {:severity "success"} "PTV integraatio käytössä")
-           ($ Alert {:severity "success"} "PTV integraatio käytössä, mutta paikan synkronointi PTV on kytketty pois päältä."))
-
-         (and previous-sent? (not candidate-now?))
-         ($ Alert {:severity "warning"} "Paikka on viety PTV, mutta on muutettu niin että näyttää nyt siltä että sen ei pidä mennä PTV -> PTV palvelu paikka arkistoidaan tallennuksessa.")
-
-         (and candidate-now? ready?)
-         ($ Alert {:severity "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
-
-         (not ready?)
-         ($ Alert {:severity "info"} "PTV tiedot ovat vielä puutteelliset, täytä tiedot niin paikka viedään PTV tallennuksen yhteydessä")
-
-         :else
-         ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV"))
-
-       (when-let [e (:error (:ptv site))]
-          ($ Alert {:severity "error"}
-             "Virhe PTV integraatiossa, uusimpia tietoja ei ole viety PTV: " (:message e)))
-
-       (when candidate-now?
-         (cond
-           (seq missing-services)
-           ($ Alert {:severity "warning"} "Lipas tyyppi muuttuu, service puuttuu PTV")
-
-           (and previous-sent? type-code-changed?)
-           ($ Alert {:severity "info"} "Lipas tyyppi muuttuu, uusi service " (:id new-service))
-           ))
+         ($ Alert {:severity "info"}
+            "Ladataan PTV tietoja..."))
 
        ; ($ FormControl
        ;    ($ FormLabel
@@ -211,24 +183,9 @@
        ;       status))
 
        (when (not (:org-id (:ptv site)))
-          ($ :<>
-             ($ Alert {:severity "warning"}
-                "Valitse organisaatio:")))
-
-       (when (seq missing-services)
-         ($ new-service-form
-            {:data site
-             :tr tr
-             :org-id org-id
-             :service (first missing-services)}))
-
-       ($ FormControl
-          ($ FormLabel
-             "PTV Tila")
-          ($ Typography
-             publishing-status)
-          ($ Typography
-             last-sync))
+         ($ :<>
+            ($ Alert {:severity "warning"}
+               "Valitse organisaatio:")))
 
        (let [options (uix/use-memo (fn []
                                      (->> ptv-data/orgs
@@ -244,6 +201,59 @@
              :value     (:org-id (:ptv site))
              :on-change (fn [_e v]
                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}))
+
+       ($ FormControl
+          ($ FormLabel
+             "PTV Tila")
+          (cond
+            (:error (:ptv site))
+            (let [e (:error (:ptv site))]
+              ($ Alert {:severity "error"}
+                 "Virhe PTV integraatiossa, uusimpia tietoja ei ole viety PTV: " (:message e)))
+
+            (and previous-sent? candidate-now? ready?)
+            (if sync-enabled
+              ($ Alert {:severity "success"} "PTV integraatio käytössä")
+              ($ Alert {:severity "success"} "PTV integraatio käytössä, mutta paikan synkronointi PTV on kytketty pois päältä."))
+
+            (and previous-sent? (not candidate-now?))
+            ($ Alert {:severity "warning"} "Paikka on viety PTV, mutta on muutettu niin että näyttää nyt siltä että sen ei pidä mennä PTV -> PTV palvelu paikka arkistoidaan tallennuksessa.")
+
+            (and candidate-now? ready?)
+            ($ Alert {:severity "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
+
+            (not ready?)
+            ($ Alert {:severity "info"} "PTV tiedot ovat vielä puutteelliset, täytä tiedot niin paikka viedään PTV tallennuksen yhteydessä")
+
+            :else
+            ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV")
+
+            ; ($ Typography
+            ;    publishing-status)
+            ; ($ Typography
+            ;    last-sync)
+            ))
+
+       (when candidate-now?
+         ($ FormControl
+            ($ FormLabel
+               "PTV Palvelu")
+            ($ Typography
+               (get-in new-service-sub-cat [:name locale]))
+            (cond
+              (seq missing-services)
+              ($ Alert {:severity "warning"} "Liikuntapaikkatyyppiä vaihdettu, uusi PTV Palvelu puuttuu")
+
+              (and previous-sent? type-code-changed?)
+              ($ Alert {:severity "info"} "Liikuntapaikkatyyppiä vaihdettu, vaihdetaan PTV Palvelu"))
+            ))
+
+       (when (seq missing-services)
+         ($ new-service-form
+            {:data site
+             :tr tr
+             :org-id org-id
+             :service (first missing-services)}))
 
        #_
        ($ controls/description-integration
