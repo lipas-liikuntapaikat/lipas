@@ -32,14 +32,6 @@
 ;;   - ...anyway, somehow re-using stuff that's already there
 ;; - auto-sync on save
 
-(def orgs
-  [{:name "Utajärven kunta (test)"
-    :id ptv-data/uta-org-id-test}
-   {:name "Limingan kunta (test)"
-    :id ptv-data/liminka-org-id-test}
-   #_{:name "Utajärven kunta (prod)"
-      :id ptv-data/uta-org-id-prod}])
-
 (defn lang-selector
   [{:keys [value on-change opts]}]
   (let [opts (set opts)]
@@ -56,7 +48,7 @@
   [{:keys [label]}]
   (let [selected-org (<== [::subs/selected-org])]
     [lui/select
-     {:items     orgs
+     {:items     ptv-data/orgs
       :label     label
       :label-fn  :name
       :value-fn  identity

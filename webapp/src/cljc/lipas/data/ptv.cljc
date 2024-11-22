@@ -27,6 +27,31 @@
 #_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
 #_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
 
+(def organizations
+  [{:name "Utajärven kunta (test)"
+    :props {:org-id              uta-org-id-test
+            :city-codes          [889]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" "se" "en"]}}
+   {:name "Limingan kunta (test)"
+    :props {:org-id              liminka-org-id-test
+            :city-codes          [425]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" "se" "en"]}} ])
+
+(def org-id->params
+  (reduce (fn [acc x]
+            (assoc acc (:org-id (:props x))
+                   (:props x)))
+          {}
+          organizations))
+
+(def orgs
+  (mapv (fn [x]
+          {:name (:name x)
+           :id (:org-id (:props x))})
+        organizations))
+
 ;; TODO: Tulossa 5 kuntaa, muut:
 ;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
 

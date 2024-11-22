@@ -24,19 +24,6 @@
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
 
-;; FIXME: Move this to data ns?
-(def org-id->params
-  {ptv-data/uta-org-id-test ;; Utajärvi
-   {:org-id              ptv-data/uta-org-id-test
-    :city-codes          [889]
-    :owners              ["city" "city-main-owner"]
-    :supported-languages ["fi" "se" "en"]}
-   ptv-data/liminka-org-id-test
-   {:org-id              ptv-data/liminka-org-id-test
-    :city-codes          [425]
-    :owners              ["city" "city-main-owner"]
-    :supported-languages ["fi" "se" "en"]}})
-
 (rf/reg-event-fx ::fetch-integration-candidates
   (fn [{:keys [db]} [_ org]]
     (when org
@@ -46,7 +33,7 @@
                {:method          :post
                 :headers         {:Authorization (str "Token " token)}
                 :uri             (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-                :params          (get org-id->params (:id org))
+                :params          (get ptv-data/org-id->params (:id org))
                 :format          (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success      [::fetch-integration-candidates-success (:id org)]
@@ -440,7 +427,7 @@
               :uri     (str (:backend-url db) "/actions/generate-ptv-service-descriptions")
 
               :params          (merge
-                                 (org-id->params org-id)
+                                 (ptv-data/org-id->params org-id)
                                  {:sourceId        id
                                   :sub-category-id (parse-long (last (str/split id #"-")))
                                   :overview        overview})
@@ -527,7 +514,7 @@
               :uri             (str (:backend-url db) "/actions/save-ptv-service")
               ;; FIXME: org-id->params adds some extra keys that aren't used?
               ;; supported-languages (languages is used instead)
-              :params          (merge data (org-id->params org-id))
+              :params          (merge data (ptv-data/org-id->params org-id))
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::create-ptv-service-success org-id id success-fx]

@@ -106,8 +106,42 @@
                          :service-ids
                          :service-channel-ids])
 
+(defn upsert-ptv-service-location!*
+  [tx ptv-component search user {:keys [org-id site ptv archive?] :as _m}]
+  (let [id       (-> ptv :service-channel-ids first)
+        ;; merge or just replace?
+        site     (update site :ptv merge ptv)
+        ;; Use the same TS for sourceId, ptv last-sync and site event-date
+        now      (utils/timestamp)
+        data     (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+        data     (cond-> data
+                   archive? (assoc :publishingStatus "Deleted"))
+        ptv-resp (if id
+                   (ptv/update-service-location ptv-component id data)
+                   (ptv/create-service-location ptv-component data))
+        ;; Store the new PTV info to Lipas DB
+        new-ptv-data (-> ptv
+                         (select-keys persisted-ptv-keys)
+                         (assoc :last-sync now
+                                ;; Store the current type-code into ptv data, so this can be
+                                ;; used to comapre if the services need to recalculated on site data update.
+                                :previous-type-code (:type-code (:type site))
+                                :source-id (:sourceId ptv-resp)
+                                ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
+                                :publishing-status (:publishingStatus ptv-resp)
+                                ;; Take the created ID from ptv response and store to Lipas DB right away.
+                                ;; TODO: Is there a case where this could be multiple ids?
+                                :service-channel-ids [(:id ptv-resp)])
+                         (cond->
+                           archive? (dissoc :source-id
+                                            :service-channel-ids)))]
+
+    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
+
+    [ptv-resp new-ptv-data]))
+
 (defn upsert-ptv-service-location!
-  [db ptv-component search user {:keys [org-id lipas-id ptv archive?] :as _m}]
+  [db ptv-component search user {:keys [lipas-id org-id ptv archive?]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
@@ -115,40 +149,16 @@
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
 
-          id       (-> ptv :service-channel-ids first)
-          ;; merge or just replace?
-          site     (update site :ptv merge ptv)
-          ;; Use the same TS for sourceId, ptv last-sync and site event-date
-          now      (utils/timestamp)
-          data     (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-          data     (cond-> data
-                     archive? (assoc :publishingStatus "Deleted"))
-          ptv-resp (if id
-                     (ptv/update-service-location ptv-component id data)
-                     (ptv/create-service-location ptv-component data))
-          ;; Store the new PTV info to Lipas DB
-          new-ptv-data (-> ptv
-                           (select-keys persisted-ptv-keys)
-                           (assoc :last-sync now
-                                  ;; Store the current type-code into ptv data, so this can be
-                                  ;; used to comapre if the services need to recalculated on site data update.
-                                  :previous-type-code (:type-code (:type site))
-                                  :source-id (:sourceId ptv-resp)
-                                  ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
-                                  :publishing-status (:publishingStatus ptv-resp)
-                                  ;; Take the created ID from ptv response and store to Lipas DB right away.
-                                  ;; TODO: Is there a case where this could be multiple ids?
-                                  :service-channel-ids [(:id ptv-resp)])
-                           (cond->
-                             archive? (dissoc :source-id
-                                              :service-channel-ids)))]
-
-      (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
+          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+                                                                 {:org-id org-id
+                                                                  :site site
+                                                                  :ptv ptv
+                                                                  :archive? archive?})]
 
       (let [resp (core/upsert-sports-site! tx
                                            user
                                            (assoc site
-                                                  :event-date now
+                                                  :event-date (:last-sync new-ptv-data)
                                                   :ptv new-ptv-data)
                                            false)]
         (core/index! search resp :sync))
@@ -227,12 +237,14 @@
                                               (->> x
                                                    (remove (fn [y] (contains? old-service-ids y)))
                                                    (into new-service-ids)))))
-                 ptv)]
-      (:ptv (upsert-ptv-service-location! tx ptv-component search user
-                                          {:org-id org-id
-                                           :ptv ptv
-                                           :lipas-id lipas-id
-                                           :archive? to-archive?})))
+                 ptv)
+
+          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+                                                                  {:org-id org-id
+                                                                   :ptv ptv
+                                                                   :site sports-site
+                                                                   :archive? to-archive?})]
+      new-ptv-data)
     (catch Exception e
       (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
                                             :data (ex-data e)})]

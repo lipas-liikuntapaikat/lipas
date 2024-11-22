@@ -492,6 +492,10 @@
   [db {:keys [_lipas-ids _loi-ids] :as m}]
   (db/add-to-webhook-queue! db m))
 
+(defn sync-ptv! [tx search ptv-component user props]
+  (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
+    (f tx search ptv-component user props)))
+
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
 (defn save-sports-site!
@@ -535,12 +539,11 @@
          ;; NOTE:  this will create a new sports-site rev.
          ;; Make it instead update the sports-site already created in the tx?
          ;; Otherwise each save-sports-site! will create two sports-site revs.
-         (let [new-ptv-data ((resolve 'lipas.backend.ptv.core/sync-ptv!)
-                             tx search ptv user
-                             {:sports-site resp
-                              :org-id (:org-id (:ptv resp))
-                              :lipas-id (:lipas-id resp)
-                              :ptv (:ptv resp)})]
+         (let [new-ptv-data (sync-ptv! tx search ptv user
+                                       {:sports-site resp
+                                        :org-id (:org-id (:ptv resp))
+                                        :lipas-id (:lipas-id resp)
+                                        :ptv (:ptv resp)})]
            (log/infof "Sports site updated and PTV integration enabled")
            (assoc resp :ptv new-ptv-data))
          resp)))))

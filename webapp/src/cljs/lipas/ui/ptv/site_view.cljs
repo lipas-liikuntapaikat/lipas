@@ -16,7 +16,6 @@
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
-            [lipas.ui.ptv.views :as ptv-views]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.utils :as utils]
             [re-frame.core :as rf]
@@ -232,7 +231,7 @@
              last-sync))
 
        (let [options (uix/use-memo (fn []
-                                     (->> ptv-views/orgs
+                                     (->> ptv-data/orgs
                                           (map (fn [{:keys [name id]}]
                                                  {:label name
                                                   :value id}))))
