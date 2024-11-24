@@ -1,37 +1,34 @@
 (ns lipas.backend.core
-  (:require
-   [buddy.hashers :as hashers]
-   [cheshire.core :as json]
-   [clojure.core.async :as async]
-   [clojure.data.csv :as csv]
-   [clojure.java.jdbc :as jdbc]
-   [clojure.string :as str]
-   [dk.ative.docjure.spreadsheet :as excel]
-   [lipas.ai.core :as ai]
-   [lipas.backend.accessibility :as accessibility]
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.analysis.reachability :as reachability]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.elevation :as elevation]
-   [lipas.backend.email :as email]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.jwt :as jwt]
-   [lipas.backend.newsletter :as newsletter]
-   [lipas.backend.s3 :as s3]
-   [lipas.backend.search :as search]
-   [lipas.data.admins :as admins]
-   [lipas.data.cities :as cities]
-   [lipas.data.owners :as owners]
-   [lipas.data.types :as types]
-   [lipas.i18n.core :as i18n]
-   [lipas.integration.ptv.core :as ptv]
-   [lipas.integration.utp.cms :as utp-cms]
-   [lipas.reports :as reports]
-   [lipas.roles :as roles]
-   [lipas.utils :as utils]
-   [taoensso.timbre :as log])
-  (:import
-   [java.io OutputStreamWriter]))
+  (:require [buddy.hashers :as hashers]
+            [cheshire.core :as json]
+            [clojure.core.async :as async]
+            [clojure.data.csv :as csv]
+            [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
+            [dk.ative.docjure.spreadsheet :as excel]
+            [lipas.backend.accessibility :as accessibility]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.analysis.reachability :as reachability]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.elevation :as elevation]
+            [lipas.backend.email :as email]
+            [lipas.backend.gis :as gis]
+            [lipas.backend.jwt :as jwt]
+            [lipas.backend.newsletter :as newsletter]
+            [lipas.backend.s3 :as s3]
+            [lipas.backend.search :as search]
+            [lipas.data.admins :as admins]
+            [lipas.data.cities :as cities]
+            [lipas.data.owners :as owners]
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
+            [lipas.i18n.core :as i18n]
+            [lipas.integration.utp.cms :as utp-cms]
+            [lipas.reports :as reports]
+            [lipas.roles :as roles]
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log])
+  (:import [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -495,14 +492,18 @@
   [db {:keys [_lipas-ids _loi-ids] :as m}]
   (db/add-to-webhook-queue! db m))
 
+(defn sync-ptv! [tx search ptv-component user props]
+  (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
+    (f tx search ptv-component user props)))
+
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
 (defn save-sports-site!
   "Saves sports-site to db and search and appends it to outbound
   integrations queue."
-  ([db search user sports-site]
-   (save-sports-site! db search user sports-site false))
-  ([db search user sports-site draft?]
+  ([db search ptv user sports-site]
+   (save-sports-site! db search ptv user sports-site false))
+  ([db search ptv user sports-site draft?]
    (jdbc/with-db-transaction [tx db]
      (let [resp   (upsert-sports-site! tx user sports-site draft?)
            route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
@@ -524,7 +525,28 @@
 
          (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
 
-       resp))))
+       ;; Sync the site to PTV if
+       ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+       ;; - it is PTV candidate now
+       ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+       ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+       ;; that doesn't trigger update if sync-enabled is false.
+       (if (and (not draft?)
+                (:sync-enabled (:ptv resp))
+                ;; TODO: Check privilage :ptv/basic or such
+                (or (ptv-data/ptv-candidate? resp)
+                    (ptv-data/is-sent-to-ptv? resp)))
+         ;; NOTE:  this will create a new sports-site rev.
+         ;; Make it instead update the sports-site already created in the tx?
+         ;; Otherwise each save-sports-site! will create two sports-site revs.
+         (let [new-ptv-data (sync-ptv! tx search ptv user
+                                       {:sports-site resp
+                                        :org-id (:org-id (:ptv resp))
+                                        :lipas-id (:lipas-id resp)
+                                        :ptv (:ptv resp)})]
+           (log/infof "Sports site updated and PTV integration enabled")
+           (assoc resp :ptv new-ptv-data))
+         resp)))))
 
 ;;; Cities ;;;
 
@@ -904,103 +926,6 @@
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]
   (utp-cms/upload-image! params))
-
-;; PTV
-(defn get-ptv-integration-candidates
-  [search criteria]
-  (ptv/get-eligible-sites search criteria))
-
-(defn generate-ptv-descriptions
-  [{:keys [client indices] :as _search}
-   {:keys [lipas-id]}]
-  (let [idx (get-in indices [:sports-site :search])
-        doc (-> (search/fetch-document client idx lipas-id) :body :_source)]
-    (-> (ai/generate-ptv-descriptions doc)
-        :message
-        :content)))
-
-(defn make-overview
-  [sites]
-  {:city-name         (->> sites first :search-meta :location :city :name)
-   :service-name      (->> sites first :search-meta :type :sub-category :name)
-   :sports-facilities (for [site sites]
-                        {:type (-> site :search-meta :type :name :fi)})})
-
-(defn generate-ptv-service-descriptions
-  [search
-   {:keys [_id sub-category-id city-codes]}]
-  (let [type-codes (->> (types/by-sub-category sub-category-id)
-                        (map :type-code))
-        sites      (ptv/get-eligible-sites search {:type-codes type-codes
-                                                   :city-codes city-codes
-                                                   :owners     ["city" "city-main-owner"]})
-        doc        (make-overview sites)]
-    (-> (ai/generate-ptv-service-descriptions doc)
-        :message
-        :content)))
-
-(defn upsert-ptv-service!
-  [{:keys [id source-id] :as m}]
-  {:pre [(some? source-id)]}
-  (let [config {:org-id (get-in ptv/test-config [:creds :org-id])}
-        data   (ptv/->ptv-service (merge config m))]
-    (if id
-      (ptv/update-service config id data)
-      (ptv/create-service config data))))
-
-(defn fetch-ptv-services
-  [{:keys [org-id] :as m}]
-  {:pre [(some? org-id)]}
-  (ptv/get-org-services {} org-id))
-
-(def persisted-ptv-keys [:languages
-                         :summary
-                         :description
-                         :last-sync
-                         :org-id
-                         :sync-enabled
-                         :service-integration
-                         :descriptions-integration
-                         :service-channel-integration
-                         :service-ids
-                         :service-channel-ids])
-
-(defn upsert-ptv-service-location!
-  [db search user {:keys [org ptv-meta sports-site] :as m}]
-  (assert (:lipas-id sports-site))
-  (let [site     (db/get-sports-site db (:lipas-id sports-site))
-        _        (assert (some? site)
-                         (str "Sports site " (:lipas-id sports-site) " not found in DB"))
-        config   {:org-id (get-in ptv/test-config [:creds :org-id])}
-        id       (first (get-in site [:ptv :service-channel-ids]))
-        site     (update site :ptv merge ptv-meta)
-        data     (ptv/->ptv-service-location org gis/wgs84->tm35fin-no-wrap (enrich site))
-        ptv-resp (if id
-                   (ptv/update-service-location config id data)
-                   (ptv/create-service-location config data))
-        now      (utils/timestamp)]
-
-    (save-sports-site! db search user (-> site
-                                          (assoc :event-date now)
-                                          (assoc :ptv (-> ptv-meta
-                                                          (select-keys persisted-ptv-keys)
-                                                          (assoc :last-sync now)))))
-
-    ptv-resp))
-
-(defn save-ptv-integration-definitions
-  "Saves ptv definitions under key :ptv. Does not notify webhooks,
-  integrations or analysis queues since they're not likely interested
-  in this."
-  [db search user lipas-id->ptv-meta]
-  (jdbc/with-db-transaction [tx db]
-    (doseq [[lipas-id ptv] lipas-id->ptv-meta]
-      ;; TODO take when-let -> let and add assert
-      (when-let [site (-> (get-sports-site tx lipas-id)
-                          (assoc :event-date (utils/timestamp))
-                          (assoc :ptv ptv))]
-        (upsert-sports-site! tx user site)
-        (index! search site :sync)))))
 
 (comment
   (require '[lipas.backend.config :as config])

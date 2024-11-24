@@ -1,5 +1,5 @@
 (ns lipas.ui.map.projection
-  " Loading this namespace causes side-effects to global OpenLayers
+  "Loading this namespace causes side-effects to global OpenLayers
   object (js/ol)."
   (:require ["ol/extent" :as extent]
             ["ol/proj" :as proj]

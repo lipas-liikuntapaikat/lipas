@@ -42,7 +42,7 @@
                                  (apply +)
                                  pos))})
 
-(defmethod sports-sites.events/calc-derived-fields 2240
+(defmethod sports-sites.events/calc-derived-fields-for-type 2240
   [sports-site]
   (-> sports-site
       (update :properties (fn [props]
