@@ -364,7 +364,7 @@ services:
       - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
 
   legacy-api-base:
-    image: openjdk:11
+    image: openjdk:23
     logging:
       driver: "gelf"
       options:
