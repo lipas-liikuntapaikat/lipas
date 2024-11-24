@@ -123,8 +123,8 @@
                  :se "Antal hål/fairways"
                  :en "Number of holes/fairways"})
 
-      ;; Add new :ligthing-info prop
-      (assoc :ligthing-info
+      ;; Add new :lighting-info prop
+      (assoc :lighting-info
              {:name      {:fi "Valaistuksen lisätieto"
                           :se "Ytterligare information om belysningen"
                           :en "Additional information about the lighting"}
@@ -133,7 +133,6 @@
               {:fi "Esim. lux-määrä tai muu tarkentava tieto"
                :se "T.ex. lux-mängd eller annan förtydligande information"
                :en "E.g. lux amount or other specifying information"}})
-
 
       ;; Update :weight-lifting-spots-count name and description
       (assoc-in [:weight-lifting-spots-count :name]
@@ -163,6 +162,12 @@
                 {:fi "Linkki esteettömyystietoon"
                  :se "Länk till tillgänglighetsinformation"
                  :en "Link to accessibility information"})
+
+      ;; Update :accessibility-info description
+      (assoc-in [:accessibility-info :description]
+                {:fi "Syötä linkki verkkosivulle, jossa on kuvattu kohteen esteettömyyteen liittyvät tiedot"
+                 :se "Ange länken till webbplatsen där information om objektets tillgänglighet beskrivs."
+                 :en "Enter the link to the website where the accessibility information of the location is described."})
 
       ;; Update Halfpipe name
       (assoc-in [:halfpipe-count :name]
@@ -213,18 +218,26 @@
                :en ""}})
 
       ;; Add new :space-divisible prop
+
+      ;; Toteutus esim: Valinta Kyllä/Ei -> Jos kyllä, täydennettävä
+      ;; kenttä "Tila voidaan jakaa x osaan" (voidaan syöttää lukuarvo
+      ;; esim. 2, joka tarkoittaa että tila voidaan jakaa kahteen
+      ;; osaan).
       (assoc :space-divisible
-             {:name      {:fi "Tila jaettavissa osiin"
-                          :se "Utrymmet kan delas upp"
-                          :en "Space can be divided"}
-              :data-type "boolean"
+             {:name        {:fi "Tila jaettavissa osiin"
+                            :se "Utrymmet kan delas upp"
+                            :en "Space can be divided"}
+              :helper-text {:fi "Syötä numero moneenko osaan tila on jaettavissa"
+                            :se "Ange antalet delar som utrymmet kan delas in i"
+                            :en "Enter the number of sections into which the space can be divided"}
+              :data-type   "number"
               :description
-              {:fi ""
-               :se ""
-               :en ""}})
+              {:fi "Onko tila jaettavissa osiin esim. jakoseinien tai -verhojen avulla"
+               :se "Är utrymmet delbart i sektioner, till exempel med skiljeväggar eller gardiner?"
+               :en "Is the space divisible into sections, for example, with partition walls or curtains?"}})
 
       ;; Add new :auxiliary-training-area prop
-      (assoc :auxiliary-training-area
+      (assoc :auxiliary-training-area?
              {:name      {:fi "Oheisharjoittelutila"
                           :se "Kompletterande träningsområde"
                           :en "Auxiliary training area"}
@@ -235,11 +248,50 @@
                :en ""}})
 
       ;; Add new :sport-specification prop
+
+      ;; Ominaisuuden nimi esim. "Lajitarkenne". Vastaava
+      ;; toiminnallisuus kuin veneilyn palvelupaikoissa - eli
+      ;; lisätiedoissa voidaan tarkentaa, minkä voimistelulajin
+      ;; harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot:
+      ;; a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit
+      ;; mahdollisia d. Pääasiassa cheerleading- tai
+      ;; sirkusharjoittelukäyttöön e. Ei tietoa
       (assoc :sport-specification
              {:name      {:fi "Lajitarkenne"
                           :se "Sportspecifikation"
                           :en "Sport specification"}
-              :data-type "string"
+              :data-type "enum"
+              :opts      {"floor-disciplines"
+                          {:label {:fi "Lattialajit" :en "Floor disciplines" :se "Golvdiscipliner"}
+                           :description
+                           {:fi "Voimistelulajit, jotka suoritetaan pääasiassa lattialla."
+                            :en "Gymnastics disciplines that are primarily performed on the floor."
+                            :se "Gymnastikdiscipliner som huvudsakligen utförs på golvet."}}
+
+                          "apparatus-disciplines"
+                          {:label {:fi "Telinelajit" :en "Apparatus disciplines" :se "Redskapsgrenar"}
+                           :description
+                           {:fi "Voimistelulajit, jotka suoritetaan erilaisilla telineillä."
+                            :en "Gymnastics disciplines that are performed on various apparatus."
+                            :se "Gymnastikdiscipliner som utförs på olika redskap."}}
+
+                          "floor-and-apparatus"
+                          {:label {:fi "Lattia- ja telinelajit mahdollisia" :en "Both floor and apparatus disciplines possible" :se "Både golv- och redskapsgrenar möjliga"}
+                           :description
+                           {:fi "Tilassa voidaan harjoitella sekä lattia- että telinelajeja."
+                            :en "The space allows for practicing both floor and apparatus disciplines."
+                            :se "Utrymmet möjliggör träning av både golv- och redskapsgrenar."}}
+
+                          "cheerleading-circus"
+                          {:label {:fi "Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön" :en "Mainly for cheerleading or circus training" :se "Huvudsakligen för cheerleading- eller cirkusträning"}
+                           :description
+                           {:fi "Tila on ensisijaisesti tarkoitettu cheerleading- tai sirkusharjoitteluun."
+                            :en "The space is primarily intended for cheerleading or circus training."
+                            :se "Utrymmet är främst avsett för cheerleading- eller cirkusträning."}}
+
+                          "no-information"
+                          {:label {:fi "Ei tietoa" :en "No information" :se "Ingen information"}}}
+
               :description
               {:fi ""
                :se ""
@@ -283,7 +335,34 @@
              {:name      {:fi "Parkour-salin varustelu ja rakenteet"
                           :se "Utrustning och strukturer i parkourhallen"
                           :en "Parkour hall equipment and structures"}
-              :data-type "string"
+              :data-type "enum-coll"
+              :opts      {"fixed-obstacles"
+                          {:label {:fi "Kiinteät esteet / rakennelmat" :en "Fixed obstacles / structures" :se "Fasta hinder / strukturer"}
+                           :description
+                           {:fi "Pysyvästi asennetut esteet tai rakennelmat harjoittelua varten."
+                            :en "Permanently installed obstacles or structures for training purposes."
+                            :se "Permanent installerade hinder eller strukturer för träningsändamål."}}
+
+                          "movable-obstacles"
+                          {:label {:fi "Liikkuvat esteet / rakennelmat" :en "Movable obstacles / structures" :se "Flyttbara hinder / strukturer"}
+                           :description
+                           {:fi "Siirrettävät tai muunneltavat esteet ja rakennelmat harjoittelua varten."
+                            :en "Movable or adjustable obstacles and structures for training purposes."
+                            :se "Flyttbara eller justerbara hinder och strukturer för träningsändamål."}}
+
+                          "floor-acrobatics-area"
+                          {:label {:fi "Permanto/akrobatiatila" :en "Floor/acrobatics area" :se "Golv/akrobatikområde"}
+                           :description
+                           {:fi "Avoin tila lattiaharjoittelua ja akrobaattisia liikkeitä varten."
+                            :en "Open space for floor exercises and acrobatic movements."
+                            :se "Öppet utrymme för golvövningar och akrobatiska rörelser."}}
+
+                          "gym-strength-area"
+                          {:label {:fi "Kuntosali-/voimailutila" :en "Gym/strength training area" :se "Gym/styrketräningsområde"}
+                           :description
+                           {:fi "Alue, joka on varustettu kuntosalilaitteilla ja välineillä voimaharjoittelua varten."
+                            :en "Area equipped with gym machines and equipment for strength training."
+                            :se "Område utrustat med gymmaskiner och utrustning för styrketräning."}}}
               :description
               {:fi ""
                :se ""
@@ -412,21 +491,139 @@
       (assoc-in [:auxiliary-training-area? :description :fi] "Onko kohteessa oheisharjoitteluun soveltuva tila? Oheisharjoittelutila on liikuntapaikan käyttäjille tarkoitettu erillinen pienliikuntatila, jota voidaan käyttää esim. lämmittelyyn tai oheisharjoitteluun. Tilan koko, varustelu ja pintamateriaali ovat oheisharjoitteluun soveltuvia.")
       ;;  Ominaisuuden nimi esim. "Lajitarkenne". Vastaava toiminnallisuus kuin veneilyn palvelupaikoissa - eli lisätiedoissa voidaan tarkentaa, minkä voimistelulajin harrastamiseen kohde on pääasiassa tarkoitettu. Vaihtoehdot: a. Lattialajit b. Telinelajit c. Lattia- ja telinelajit mahdollisia d. Pääasiassa cheerleading- tai sirkusharjoittelukäyttöön e. Ei tietoa
       (assoc-in [:sport-specification :description :fi] "Valitse voimistelulaji, johon tila on pääasiassa tarkoitettu.")
-      (assoc-in [:free-use :name :fi] "Kohde on vapaasti käytettävissä")
+      (assoc-in [:free-use? :name :fi] "Kohde on vapaasti käytettävissä")
       (assoc-in [:active-space-width-m :description :fi] "Liikuntakäytössä olevan tilan leveys (m)")
       (assoc-in [:active-space-length-m :description :fi] "Liikuntakäytössä olevan tilan pituus (m)")
       (assoc-in [:mirror-wall? :description :fi] "Liikuntatilassa vähintään yhdellä seinällä on kiinteät peilit")
       (assoc-in [:highest-obstacle-m :description :fi] "Korkeimman esteen korkeus (m)")
       ;;  Pintamateriaalikentän valittavissa seuraavista ne ominaisuudet, jotka saliin sopivat: a) Kiinteät esteet / rakennelmat b) Liikkuvat esteet / rakennelmat c) Permanto/akrobatiatila d) Kuntosali-/voimailutila
       (assoc-in [:parkour-hall-equipment-and-structures :description :fi] "Valitse parkour-salissa olevat rakenteet tai varusteet")
-      (assoc-in [:ringette-boundary-markings :description :fi] "Onko kaukaloissa ringeten rajamerkinnät?")
+      (assoc-in [:ringette-boundary-markings? :description :fi] "Onko kaukaloissa ringeten rajamerkinnät?")
       (assoc-in [:swimming-pool-count :name :fi] "Altaiden lukumäärä")
       ;;  Laskenta mahdollista tehdä automaattisesti syötettyjen altaiden perusteella (lasketaan yksinkertaisesti kaikki altaat yhteen tai luvun voi tarvittaessa korjata käsin, samaan tapaan kuin reittien pituuslaskuri toimii)
       (assoc-in [:swimming-pool-count :description :fi] "Altaiden lukumäärä yhteensä. Syötä tieto tai laske automaattisesti.")
       (assoc-in [:pool-water-area-m2 :description :fi] "Asiakaskäytössä oleva vesipinta-ala yhteensä.")
+
+
+      ;;; Maasto ja loput ;;;
+
+      ;; Add new pulkkamäki prop-type
+      (assoc :sledding-hill?
+             {:name
+              {:fi "Pulkkamäki"
+               :se "Pulkabacke"
+               :en "Sledding hill"}
+              :data-type "boolean"
+              :description
+              {:fi "Kohteessa on pulkkamäki"
+               :se "Det finns en pulkabacke på platsen."
+               :en "There is a sledding hill at the location."}})
+
+
+      ;; Add new kulkutavat prop-type
+      (assoc :travel-modes
+             {:name      {:fi "Kulkutavat"
+                          :se "Resesätt"
+                          :en "Travel Modes"}
+              :data-type "enum-coll"
+              :opts      {"by-foot"
+                          {:label {:fi "Jalan" :en "On Foot" :se "Till fots"}
+                           :description
+                           {:fi "Liikkuminen jalkaisin"
+                            :en "Traveling on foot"
+                            :se "Att resa till fots"}}
+
+                          "snow-shoes"
+                          {:label {:fi "Lumikengillä" :en "With Snowshoes" :se "Med snöskor"}
+                           :description
+                           {:fi "Liikkuminen lumikengillä"
+                            :en "Traveling with snowshoes"
+                            :se "Att resa med snöskor"}}
+
+                          "fat-bike"
+                          {:label {:fi "Läskipyörällä" :en "With Fat Bike" :se "Med fatbike"}
+                           :description
+                           {:fi "Liikkuminen läskipyörällä"
+                            :en "Traveling with a fat bike"
+                            :se "Att resa med fatbike"}}}
+              :description
+              {:fi "Lisää reitille soveltuvat kulkutavat"
+               :se "Lägg till lämpliga resesätt för rutten"
+               :en "Add suitable travel modes for the route"}})
+
+      ;; Add new travel-mode-info prop-type
+      (assoc :travel-mode-info
+             {:name      {:fi "Kulkutavat, lisätieto"
+                          :se "Resesätt, ytterligare information"
+                          :en "Travel Modes, Additional Information"}
+              :data-type "string"
+              :description
+              {:fi "Täsmennä soveltuvia kulkutapoja tarvittaessa"
+               :se "Specificera lämpliga resesätt vid behov"
+               :en "Specify suitable travel modes if necessary"}})
+
+      ;; Add new HS point prop-type
+      (assoc :hs-point
+             {:name      {:fi "HS-piste", :se "HS-punkt", :en "HS Point"}
+              :data-type "numeric"
+              :description
+              {:fi "Hyppyrimäen HS-piste metreinä"
+               :se "HS-punkten i backhoppning i meter"
+               :en "Ski jumping hill HS point in "}})
+
+      ;; Add new mobile-orienteering-available? prop-type
+      (assoc :mobile-orienteering?
+             {:name      {:fi "Mobiilisunnistusmahdollisuus"
+                          :se "Mobilorientering möjlig"
+                          :en "Mobile Orienteering Available"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new bike-orienteering-available? prop-type
+      (assoc :bike-orienteering?
+             {:name      {:fi "Pyöräsuunnistus mahdollista"
+                          :se "Cykelorientering möjlig"
+                          :en "Bike Orienteering Possible"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new ski-orienteering? prop-type
+      (assoc :ski-orienteering?
+             {:name      {:fi "Hiihtosuunnistus mahdollista"
+                          :se "Skidorientering möjlig"
+                          :en "Ski Orienteering Possible"}
+              :data-type "boolean"
+              :description
+              {:fi ""
+               :se ""
+               :en ""}})
+
+      ;; Add new ympärivuotinen käyttö prop-type
+      (assoc :year-round-use?
+             {:name      {:fi "Ympärivuotinen käyttö"
+                          :se "Året runt användning"
+                          :en "Year-round Use"}
+              :data-type "boolean"
+              :description
+              {:fi "Kohde on ympärivuotisessa käytössä"
+               :se "Platsen är i användning året runt"
+               :en "The location is in use year-round"}})
+
 
       ))
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
     (select-keys all used)))
+
+(comment
+  (require '[clojure.pprint :as pprint])
+  #?(:clj (spit "/tmp/prop-types.edn" (with-out-str (pprint/pprint all))))
+
+  )

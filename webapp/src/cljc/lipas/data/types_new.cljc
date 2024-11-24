@@ -9,7 +9,11 @@
   old/main-categories)
 
 (def sub-categories
-  old/sub-categories)
+  (-> old/sub-categories
+      ;; alaluokka "Keilahallit" tulee uudelleennimetä "Keilahallit ja biljardisalit"
+      (assoc-in [2600 :name] {:fi "Keilahallit ja biljardisalit"
+                              :se "Bowlinghallar och biljardsalonger"
+                              :en "Bowling alleys and billiard halls"})))
 
 (def all1
   (-> old/all
@@ -150,8 +154,9 @@
       (assoc-in [1130 :props :fitness-stairs-length-m] {:priority 0})
 
       ;; 1140 Parkour-alue
-      (assoc-in [1140 :props :highest-drop-m] {:priority 0})
+      (assoc-in [1140 :props :highest-obstacle-m] {:priority 0})
       (assoc-in [1140 :props :climbing-wall?] {:priority 0})
+      (assoc-in [1140 :props :lighting-info] {:priority 0})
 
       ;; 1150 skeitti/rullaluistelupaikka
       (assoc-in [1150 :description :fi] "Rullaluistelua, skeittausta, potkulautailua varten varustettu paikka. Ominaisuustiedoissa tarkemmat tiedot kohteesta.")
@@ -335,8 +340,10 @@
                                  true
                                  (update :props dissoc :kiosk?)
 
+                                 ;; There's unfortunate typo in the
+                                 ;; old lighting? prop
                                  (contains? (:props v) :ligthing?)
-                                 (assoc-in [:props :ligthing-info] {:priority 0}))))
+                                 (assoc-in [:props :lighting-info] {:priority 0}))))
                       {}))))
 
 (def all4
@@ -486,7 +493,7 @@
       ;;  Devissä tietokentän nimenä on vielä "Vapaa käyttö" -> Pitäisi olla "Kohde on vapaasti käytettävissä"
       (assoc-in [2510 :props :free-use?] {:priority 0})
       (assoc-in [2520 :description :fi] "Kilpajäähalli on jääurheilun kilpailu- ja ottelutapahtumiin soveltuva jäähalli. Katsomon koko, kenttien lukumäärä ja muut tarkemmat tiedot kuvataan lisätiedoissa.")
-      (assoc-in [2520 :props :ringette-boundary-markings] {:priority 0})
+      (assoc-in [2520 :props :ringette-boundary-markings?] {:priority 0})
       ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
       (assoc-in [2520 :props :field-1-flexible-rink?] {:priority 0})
       ;;  Olisiko kenttien/kaukaloiden tiedonhallintaa mahdollista helpottaa Lipaksessa (mallia esim. uimahallien altaista tai salibandyn ominaisuustiedoista?)
@@ -541,7 +548,303 @@
       (assoc-in [3250 :props :free-use?] {:priority 0})
       (update-in [3220 :props] dissoc :eu-beach?)))
 
-(def all all4)
+(def all5
+  (-> all4
+
+      ;; Add new rullahiihto type. Props added via script
+      (assoc 4407
+             {:name
+              {:fi "Rullahiihtorata"
+               :se "Rullskidbana"
+               :en "Roller Ski Track"}
+              :description
+              {:fi "Asfaltoitu rullahiihtoon lumettomana aikana tarkoitettu reitti. Reitti kulkee maastossa, ja sen käyttöä muilla kulkutavoilla on rajoitettu."
+               :se "En asfalterad bana avsedd för rullskidåkning under snöfria perioder. Banan går genom terrängen och användningen av andra färdsätt är begränsad."
+               :en "An asphalt track intended for roller skiing during snow-free periods. The track runs through terrain, and the use of other modes of travel is restricted."}
+              :geometry-type "LineString"
+              :tags          {:fi ["rullahiihto"] :se ["rullskidåkning"] :en ["roller skiing"]}
+              :main-category 4000
+              :sub-category  4400
+              :status        "active"
+              :type-code     4407
+              :props
+              {}})
+
+      ;; Add new monikäyttöreitti type. Props added via script
+      (assoc 4406
+             {:name
+              {:fi "Monikäyttöreitti"
+               :se "Multianvändningsled"
+               :en "Multi-use Trail"}
+              :description
+              {:fi "Talvisin tai ympärivuotisesti käytössä oleva maastoreitti, joka soveltuu usealle kulkutavalle (esim. jalan, lumikengille, läskipyörälle). Lisätietoihin merkitään, jos reitti on ympärivuotisessa käytössä ja mahdolliset kulkutavat."
+               :se "En terrängled som används på vintern eller året runt och som är lämplig för flera färdsätt (t.ex. till fots, med snöskor, fatbike). Ytterligare information anger om leden är i bruk året runt och möjliga färdsätt."
+               :en "A terrain trail used in winter or year-round, suitable for multiple modes of travel (e.g., on foot, with snowshoes, fat bike). Additional information indicates if the trail is in year-round use and possible modes of travel."}
+              :geometry-type "LineString"
+              :tags          {:fi ["yhteiskäyttöreitti" "talvipolku"] :se ["gemensam led" "vinterstig"] :en ["shared trail" "winter path"]}
+              :main-category 4000
+              :sub-category  4400
+              :status        "active"
+              :type-code     4406
+              :props
+              {}})
+
+      ;; Add new koiravaljakkoreitti type
+      (assoc 4441
+             {:name
+              {:fi "Koiravaljakkoreitti"
+               :se "Hundspannsrutt"
+               :en "Dog Sledding Route"}
+              :description
+              {:fi "Koiravaljakoille ylläpidetty reitti."
+               :se "En rutt underhållen för hundspann."
+               :en "A route maintained for dog sledding."}
+              :geometry-type "LineString"
+              :tags          {:fi ["valjakkoajo" "valjakkoreitti"] :se [] :en []}
+              :main-category 4000
+              :sub-category  4400
+              :status        "active"
+              :type-code     4441
+              :props
+              {}})
+
+      (assoc 6150
+             {:name
+              {:fi "Ovaalirata"
+               :se "Ovalbana"
+               :en "Oval Track"}
+              :description
+              {:fi "Islanninhevosten askellajiratsastukseen varattu rata ulkona."
+               :se "En bana utomhus avsedd för gångartstävlingar med islandshästar."
+               :en "An outdoor track designated for gaited riding competitions with Icelandic horses."}
+              :geometry-type "LineString"
+              :tags          {:fi ["islanninhevosrata" "islanninhevosratsastus" "ovaalibaana" "askellajiratsastus" "askellajirata"]
+                              :se ["islandshästbana" "islandshästridning" "ovalbana" "gångartstävling" "gångartsbana"]
+                              :en ["Icelandic horse track" "Icelandic horse riding" "oval track" "gaited riding" "gaited track"]}
+              :main-category 6000
+              :sub-category  6100
+              :status        "active"
+              :type-code     6150
+              :props
+              {}})))
+
+(def all6
+  (-> all5
+
+      (assoc-in [4110 :description :fi] "Laskettelun suorituspaikka on lasketteluun tai lumilautailuun tarkoitettu liikuntapaikka, esim. laskettelukeskus. Laskettelun suorituspaikassa voi olla laskettelurinteitä, parkkeja tai muita rinnerakenteita ja hiihtohissejä.")
+      (assoc-in [4110 :props :customer-service-point?] {:priority 0})
+      (update-in [4110 :props] clojure.core/dissoc :toboggan-run?)
+      (update-in [4110 :props] clojure.core/dissoc :school-use?)
+      (update-in [4110 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4110 :props :sledding-hill?] {:priority 0})
+      (assoc-in [4210 :name :fi] "Curlingrata/-halli")
+      (assoc-in [4210 :description :fi] "Pysyvästi lajiin varustettu tila, esim. curlingrata tai curlinghalli.")
+      (update-in [4210 :props] clojure.core/dissoc :fields-count)
+      (assoc-in [4210 :props :curling-lanes-count] {:priority 0})
+      (assoc-in [4210 :props :stand-capacity-person] {:priority 0})
+      (assoc-in [4210 :props :changing-rooms?] {:priority 0})
+      (assoc-in [4210 :props :changing-rooms-m2] {:priority 0})
+      (update-in [4210 :props] clojure.core/dissoc :school-use?)
+      (update-in [4210 :props] clojure.core/dissoc :free-use)
+      (update-in [4220 :props] clojure.core/dissoc :school-use?)
+      (update-in [4220 :props] clojure.core/dissoc :free-use)
+      (update-in [4230 :props] clojure.core/dissoc :school-use?)
+      (update-in [4230 :props] clojure.core/dissoc :free-use)
+      (update-in [4240 :props] clojure.core/dissoc :school-use?)
+      (update-in [4240 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4320 :description :fi] "Mäkihyppyyn soveltuva mäki, vauhtimäessä on jää-, keramiikka- tai muovilatu. Mäen koko, materiaalit ja mahdollinen kesäkäyttö kuvataan lisätiedoissa.")
+      (assoc-in [4320 :props :changing-rooms?] {:priority 0})
+      (assoc-in [4320 :props :changing-rooms-m2] {:priority 0})
+      (assoc-in [4320 :props :jumps-count] {:priority 0})
+      (assoc-in [4402 :name :fi] "Hiihtolatu")
+      (assoc-in [4402 :description :fi] "Talvikaudella hiihtoa varten ylläpidetty reitti. Hiihtotyylit kerrotaan ominaisuustiedoissa.")
+      (assoc-in [4407 :description :fi] "Asfaltoitu rullahiihtoon lumettomana aikana tarkoitettu reitti. Reitti kulkee maastossa, ja sen käyttöä muilla kulkutavoilla on rajoitettu.")
+      (assoc-in [4407 :props :surface-material] {:priority 0})
+      (assoc-in [4407 :props :surface-material-info] {:priority 0})
+      (assoc-in [4407 :props :route-length-km] {:priority 0})
+      (assoc-in [4407 :props :lit-route-length-km] {:priority 0})
+      (assoc-in [4407 :props :route-width-m] {:priority 0})
+      (assoc-in [4407 :props :free-use] {:priority 0})
+      (assoc-in [4407 :props :outdoor-exercise-machines?] {:priority 0})
+      (assoc-in [4407 :props :rest-places-count] {:priority 0})
+      (assoc-in [4407 :props :toilet?] {:priority 0})
+      (assoc-in [4407 :props :may-be-shown-in-harrastuspassi-fi?] {:priority 0})
+      (update-in [4403 :props] clojure.core/dissoc :free-use)
+      (update-in [4403 :props] clojure.core/dissoc :school-use?)
+      (update-in [4404 :props] clojure.core/dissoc :free-use)
+      (update-in [4405 :props] clojure.core/dissoc :free-use)
+      (update-in [4405 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [4412 :description :fi] "Pyöräilyreitti, joka kulkee enimmäkseen päällystetyillä teillä tai sorateillä. Reitti voi olla merkitty maastoon tai se on digitaalisesti opastettu")
+      (update-in [4412 :props] clojure.core/dissoc :free-use)
+      (update-in [4412 :props] clojure.core/dissoc :school-use?)
+      (update-in [4421 :props] clojure.core/dissoc :school-use?)
+      (update-in [4422 :props] clojure.core/dissoc :school-use?)
+      (update-in [4451 :props] clojure.core/dissoc :school-use?)
+      (update-in [4451 :props] clojure.core/dissoc :free-use)
+      (update-in [4452 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4452 :props :jumps-count] {:priority 0})
+      (assoc-in [4320 :description :fi] "Mäkihyppyyn soveltuva mäki, vauhtimäessä on jää-, keramiikka- tai muovilatu. Mäen koko, materiaalit ja mahdollinen kesäkäyttö kuvataan lisätiedoissa.")
+      (assoc-in [4320 :props :changing-rooms?] {:priority 0})
+      (update-in [4320 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [4406 :description :fi] "Talvisin tai ympärivuotisesti käytössä oleva maastoreitti, joka soveltuu usealle kulkutavalle (esim. jalan, lumikengille, läskipyörälle). Lisätietoihin merkitään, jos reitti on ympärivuotisessa käytössä ja mahdolliset kulkutavat.")
+      (assoc-in [4406 :props :surface-material] {:priority 0})
+      (assoc-in [4406 :props :surface-material-info] {:priority 0})
+      (assoc-in [4406 :props :route-length-km] {:priority 0})
+      (assoc-in [4406 :props :lit-route-length-km] {:priority 0})
+      (assoc-in [4406 :props :rest-places-count] {:priority 0})
+      (assoc-in [4406 :props :toilet?] {:priority 0})
+      (assoc-in [4406 :props :route-width-m] {:priority 0})
+      (assoc-in [4406 :props :travel-modes] {:priority 0})
+      (assoc-in [4406 :props :travel-mode-info] {:priority 0})
+      (assoc-in [4406 :props :summer-usage?] {:priority 0})
+      (assoc-in [4441 :description :fi] "Koiravaljakoille ylläpidetty reitti.")
+      (assoc-in [4441 :props :surface-material] {:priority 0})
+      (assoc-in [4441 :props :surface-material-info] {:priority 0})
+      (assoc-in [4441 :props :route-length-km] {:priority 0})
+      (assoc-in [4441 :props :lit-route-length-km] {:priority 0})
+      (assoc-in [4441 :props :route-width-m] {:priority 0})
+      (assoc-in [4441 :props :free-use] {:priority 0})
+      (assoc-in [4441 :props :summer-usage?] {:priority 0})
+      (assoc-in [4510 :description :fi] "Suunnistukseen käytetty alue. Lisätietoihin merkitään, jos aluetta käytetään mobo-, pyörä- tai hiihtosuunnistukseen. Suunnistusalueesta on saatavilla kartta ja maankäyttöön on maanomistajan suostumus.")
+      (update-in [4510 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4510 :props :mobile-orienteering?] {:priority 0})
+      (assoc-in [4510 :props :bike-orienteering?] {:priority 0})
+      (assoc-in [4510 :props :ski-orienteering?] {:priority 0})
+      (update-in [4610 :props] clojure.core/dissoc :automated-timing?)
+      (assoc-in [4610 :props :changing-rooms?] {:priority 0})
+      (assoc-in [4610 :props :changing-rooms-m2] {:priority 0})
+      (update-in [4610 :props] clojure.core/dissoc :surface-material)
+      (update-in [4610 :props] clojure.core/dissoc :surface-material-info)
+      (update-in [4610 :props] clojure.core/dissoc :school-use?)
+      (update-in [4620 :props] clojure.core/dissoc :automated-timing?)
+      (update-in [4620 :props] clojure.core/dissoc :surface-material)
+      (update-in [4620 :props] clojure.core/dissoc :surface-material-info)
+      (assoc-in [4620 :props :summer-usage?] {:priority 0})
+      (update-in [4620 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [4630 :name :se] "Maastohiihtokeskus")
+      (update-in [4630 :props] clojure.core/dissoc :automated-timing?)
+      (update-in [4630 :props] clojure.core/dissoc :school-use?)
+      (update-in [4640 :props] clojure.core/dissoc :automated-timing?)
+      (update-in [4720 :props] clojure.core/dissoc :school-use?)
+      (update-in [4720 :props] clojure.core/dissoc :free-use)
+      (update-in [4810 :props] clojure.core/dissoc :track-width-m)
+      (update-in [4810 :props] clojure.core/dissoc :school-use?)
+      (update-in [4810 :props] clojure.core/dissoc :free-use)
+      (update-in [4820 :props] clojure.core/dissoc :track-width-m)
+      (update-in [4820 :props] clojure.core/dissoc :school-use?)
+      (update-in [4820 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4830 :description :fi] "Ulkona tai sisällä sijaitseva jousiammuntarata. Radan käyttö edellyttää erillistä lupaa, seuran jäsenyyttä tai harjoitusvuoroa.  Radan varustus ja soveltuvat lajit kuvataan lisätiedoissa.")
+      (update-in [4830 :props] clojure.core/dissoc :school-use?)
+      (update-in [4830 :props] clojure.core/dissoc :free-use)
+      (assoc-in [4830 :props :free-customer-use?] {:priority 0})
+      (assoc-in [4840 :description :fi] "Maastoon rakennettu jousiammuntarata. Radan käyttö edellyttää erillistä lupaa, seuran jäsenyyttä tai harjoitusvuoroa.  ")
+      (assoc-in [4840 :props :free-customer-use?] {:priority 0})
+      (update-in [4840 :props] clojure.core/dissoc :school-use?)
+      (update-in [4840 :props] clojure.core/dissoc :free-use)
+      (assoc-in [5110 :description :fi] "Soutustadion sisältää pysyvästi soutuun käytettäviä rakenteita. Soutustadionissa on katsomo ja valmius ratamerkintöihin.")
+      (update-in [5110 :props] clojure.core/dissoc :school-use?)
+      (update-in [5120 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5130 :description :fi] "Pysyvä moottorivenekilpailujen rata-alue.")
+      (update-in [5130 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5140 :description :fi] "Rakennettu pysyvästi vesihiihdolle. Vesihiihtoalueella on laituri.")
+      (update-in [5140 :props] clojure.core/dissoc :school-use?)
+      (update-in [5150 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5160 :description :fi] "Soudun ja melonnan sisäharjoittelutila on erityisesti näihin lajeihin pysyvästi tarkoitettu liikuntapaikka.")
+      (update-in [5160 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5210 :description :fi] "Harraste- tai urheiluilmailuun tarkoitettu alue, esim. lentopaikka.")
+      (update-in [5210 :props] clojure.core/dissoc :school-use?)
+      (update-in [5310 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5310 :props :summer-usage?] {:priority 0})
+      (assoc-in [5320 :description :fi] "Pääasiassa moottoripyöräilyä varten rakennettu, luonnonmukainen ei-asfalttipintainen alue (esim. enduroreitit ja trial-harjoittelualueet maastoliikennealueilla).")
+      (update-in [5320 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5320 :props :summer-usage?] {:priority 0})
+      (assoc-in [5330 :description :fi] "Suuri rata-autoiluun tai moottoripyöräilyyn tarkoitettu asfaltoitu moottoriurheilupaikka.")
+      (update-in [5330 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5330 :props :summer-usage?] {:priority 0})
+      (assoc-in [5340 :description :fi] "Pääasiallisesti kartingajoon tai supermotoon käytetty rata.")
+      (update-in [5340 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5340 :props :summer-usage?] {:priority 0})
+      (assoc-in [5350 :description :fi] "Pääasiallisesti kiihdytysautoiluun tai kiihdytysmoottoripyöräilyyn käytetty rata.")
+      (update-in [5350 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5350 :props :summer-usage?] {:priority 0})
+      (assoc-in [5360 :description :fi] "Pääasiallisesti jokamiesajoa, rallicrossia tai moottoripyöräilyä varten.")
+      (update-in [5360 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5360 :props :summer-usage?] {:priority 0})
+      (assoc-in [5370 :name :fi] "Speedway- ja jääspeedwayrata")
+      (update-in [5370 :props] clojure.core/dissoc :school-use?)
+      (assoc-in [5370 :props :summer-usage?] {:priority 0})
+      (update-in [6120 :props] clojure.core/dissoc :ligthing?)
+      (assoc-in [6130 :name :fi] "Esteratsastuskenttä tai -alue")
+      (assoc-in [6130 :description :fi] "Pysyvästi esteratsastukseen varusteltu kenttä tai alue ulkona.")
+      (assoc-in [6150 :description :fi] "Islanninhevosten askellajiratsastukseen varattu rata ulkona.")
+      (assoc-in [6150 :props :customer-service-point?] {:priority 0})
+      (assoc-in [6150 :props :surface-material] {:priority 0})
+      (assoc-in [6150 :props :surface-material-info] {:priority 0})
+      (assoc-in [6150 :props :ligthing?] {:priority 0})
+      (assoc-in [6150 :props :toilet?] {:priority 0})
+      (assoc-in [6150 :props :track-width-m] {:priority 0})
+      (assoc-in [6150 :props :track-length-m] {:priority 0})
+      (assoc-in [6150 :props :may-be-shown-in-harrastuspassi-fi?] {:priority 0})
+      (assoc-in [6150 :props :free-use] {:priority 0})
+      (assoc-in [5360 :props :summer-usage?] {:priority 0})
+      (update-in [6140 :props] clojure.core/dissoc :school-use?)
+      (update-in [6210 :props] clojure.core/dissoc :school-use?)
+      (update-in [6220 :props] clojure.core/dissoc :school-use?)
+
+      )
+  )
+
+(def all7
+  (-> all6
+
+      ;; Remove :winter-use?, summer-use? and add :year-round-use? to
+      ;; replace them
+      (->> (reduce-kv (fn [m k v]
+                        (assoc m k
+                               (cond-> v
+                                 (contains? (:props v) :summer-usage?)
+                                 (assoc-in [:props :year-round-use?] {:priority 0})
+
+                                 (contains? (:props v) :winter-usage?)
+                                 (assoc-in [:props :year-round-use?] {:priority 0})
+
+                                 true (update :props dissoc :winter-usage? :summer-usage?)
+
+                                 )))
+                      {}))
+
+      ;; Deprecate pyörä- and hiihtosuunnistusallue
+      ;; They were merged to "suunnistusalue" 4510
+      (assoc-in [4530 :status] "deprecated")
+      (assoc-in [4520 :status] "deprecated")
+
+      ;; Migrate harjoityshyppyrimäki to hyppyrimäki
+      (assoc-in [4310 :status] "deprecated")
+      (update-in [4320 :props] assoc :hs-point {:priority 0})
+      (update-in [4320 :props] dissoc :p-point)
+
+      ))
+
+(def all8
+  (-> all7
+      (update-in [4810 :props] dissoc :free-use?)
+      (update-in [4820 :props] dissoc :free-use?)
+      (assoc-in [5120 :description :fi] "Pysyvästi purjehdusta varten varustettu alue.")
+      (assoc-in [202 :props :free-use?] {:priority 0})
+      (assoc-in [203 :props :free-use?] {:priority 0})
+      (assoc-in [204 :props :free-use?] {:priority 0})
+      (assoc-in [206 :props :free-use?] {:priority 0})
+      (assoc-in [301 :props :free-use?] {:priority 0})
+      (assoc-in [302 :props :free-use?] {:priority 0})
+      (assoc-in [304 :props :free-use?] {:priority 0})
+      (assoc-in [4412 :description :fi] "Pyöräilyreitti, joka kulkee enimmäkseen päällystetyillä teillä tai sorateillä. Reitti voi olla merkitty maastoon tai se on digitaalisesti opastettu.")
+      (assoc-in [5370 :name :fi] "Speedway-/jääspeedwayrata")
+      (assoc-in [6130 :name :fi] "Esteratsastuskenttä/-alue")
+      (assoc-in [3210 :name :fi] "Maauimala/vesipuisto")
+
+      ))
+
+(def all all8)
 
 (def active
   (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
@@ -559,5 +862,9 @@
   (utils/index-by (comp :fi :name) (vals sub-categories)))
 
 (comment
-  (all 2620)
+  (require '[clojure.pprint :as pprint])
+  #?(:clj (spit "/tmp/types.edn" (with-out-str (pprint/pprint all))))
+  #?(:clj (spit "/tmp/sub-cats.edn" (with-out-str (pprint/pprint sub-categories))))
+  #?(:clj (spit "/tmp/main-cats.edn" (with-out-str (pprint/pprint main-categories))))
+
   )

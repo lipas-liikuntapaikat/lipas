@@ -77,8 +77,8 @@
 (defmethod ig/halt-key! :lipas/open-ai [_ _m]
   )
 
-(defmethod ig/init-key :lipas/ptv [_ _config]
-  )
+(defmethod ig/init-key :lipas/ptv [_ config]
+  (assoc config :tokens (atom {})))
 
 (defmethod ig/halt-key! :lipas/ptv [_ _m]
   )

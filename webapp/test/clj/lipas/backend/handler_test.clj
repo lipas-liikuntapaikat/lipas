@@ -1,176 +1,27 @@
 (ns lipas.backend.handler-test
-  (:require [cheshire.core :as j]
-            [clojure.java.jdbc :as jdbc]
-            [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures] :as t]
-            [cognitect.transit :as transit]
             [dk.ative.docjure.spreadsheet :as excel]
-            [lipas.backend.analysis.diversity :as diversity]
-            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
-            [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
-            [lipas.backend.search :as search]
-            [lipas.backend.system :as system]
             [lipas.data.loi :as loi]
             [lipas.schema.core]
             [lipas.seed :as seed]
-            [lipas.test-utils :as tu]
+            [lipas.test-utils :refer [->transit <-transit <-json ->json app search db] :as tu]
             [lipas.utils :as utils]
-            [migratus.core :as migratus]
-            [ring.mock.request :as mock])
-  (:import [java.io ByteArrayOutputStream]
-           java.util.Base64))
-
-;;; Setup ;;;
-
-(def <-json #(j/parse-string (slurp %) true))
-(def ->json j/generate-string)
-
-(defn ->transit [x]
-  (let [out (ByteArrayOutputStream. 4096)
-        writer (transit/writer out :json)]
-    (transit/write writer x)
-    (.toString out)))
-
-(defn <-transit [in]
-  (let [reader (transit/reader in :json)]
-    (transit/read reader)))
-
-(defn ->base64
-  "Encodes a string as base64."
-  [s]
-  (.encodeToString (Base64/getEncoder) (.getBytes s)))
-
-(defn auth-header
-  "Adds Authorization header to the request
-  with base64 encoded \"Basic user:pass\" value."
-  [req user passwd]
-  (mock/header req "Authorization" (str "Basic " (->base64 (str user ":" passwd)))))
-
-(defn token-header
-  [req token]
-  (mock/header req "Authorization" (str "Token " token)))
-
-(defn- test-suffix [s] (str s "_test"))
-
-(def config (-> config/default-config
-                (select-keys [:db :app :search :mailchimp :aws])
-                (assoc-in [:app :emailer] (email/->TestEmailer))
-                (update-in [:db :dbname] test-suffix)
-                (assoc-in [:db :dev] true) ;; No connection pool
-                (update-in [:search :indices :sports-site :search] test-suffix)
-                (update-in [:search :indices :sports-site :analytics] test-suffix)
-                (update-in [:search :indices :report :subsidies] test-suffix)
-                (update-in [:search :indices :report :city-stats] test-suffix)
-                (update-in [:search :indices :analysis :schools] test-suffix)
-                (update-in [:search :indices :analysis :population] test-suffix)
-                (update-in [:search :indices :analysis :population-high-def] test-suffix)
-                (update-in [:search :indices :analysis :diversity] test-suffix)
-                (update-in [:search :indices :lois :search] test-suffix)))
-
-(defn init-db! []
-  (let [migratus-opts {:store         :database
-                       :migration-dir "migrations"
-                       :db            (:db config)}]
-    (try
-      (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
-                           false
-                           [(str "CREATE DATABASE " (-> config :db :dbname))])
-      (catch Exception e
-        (when-not (= "ERROR: database \"lipas_test\" already exists"
-                     (-> e .getCause .getMessage))
-          (throw e))))
-
-    (jdbc/db-do-commands (:db config)
-                           false
-                           [(str "CREATE EXTENSION IF NOT EXISTS postgis")
-                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                            (str "CREATE EXTENSION IF NOT EXISTS citext")
-                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
-
-    (migratus/init migratus-opts)
-    (migratus/migrate migratus-opts)))
-
-(def tables
-  ["account"
-   "analysis_queue"
-   "city"
-   "elevation_queue"
-   "email_out_queue"
-   "integration_log"
-   "integration_out_queue"
-   "reminder"
-   "sports_site"
-   "subsidy"])
-
-(defn prune-db! []
-  (jdbc/execute! (:db config) [(str "TRUNCATE "
-                                    (str/join "," tables)
-                                    " RESTART IDENTITY CASCADE")]))
-
-(println "Starting test-system!")
-(def system (system/start-system! (config/->system-config config)))
-
-(def db (:lipas/db system))
-(def app (:lipas/app system))
-(def search (:lipas/search system))
-
-(defn prune-es! []
-  (let [client   (:client search)
-        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                  (-> search :indices :analysis :diversity) diversity/mappings
-                  (-> search :indices :lois :search) (:lois search/mappings)}]
-
-    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
-      (try
-        (search/delete-index! client idx-name)
-        (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
-      (when-let [mapping (mappings idx-name)]
-        (search/create-index! client idx-name mapping)))))
-
-(comment
-  (init-db!)
-  (prune-es!)
-  (prune-db!)
-  (ex-data *e)
-  )
-
-(defn gen-user
-  ([]
-   (gen-user {:db? false :admin? false :status "active"}))
-  ([{:keys [db? admin? status]
-     :or   {admin? false status "active"}}]
-   (let [user (-> (gen/generate (s/gen :lipas/user))
-                  (assoc :password (str (gensym)) :status status)
-                  ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
-                  ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
-                  (update :permissions (fn [permissions]
-                                         (cond-> (or permissions {})
-                                           ;; generated result might include admin role, remove if the flag is false
-                                           (not admin?) (update :roles (fn [roles]
-                                                                         (into [] (remove (fn [x] (= :admin (:role x))) roles))))
-                                           admin? (update :roles (fnil conj []) {:role :admin})))))]
-     (if db?
-       (do
-         (core/add-user! db user)
-         (assoc user :id (:id (core/get-user db (:email user)))))
-       user))))
-
-(defn gen-loi! []
-  (-> (gen/generate (s/gen :lipas.loi/document))
-      (assoc :status "active")
-      (assoc :id (str (java.util.UUID/randomUUID)))))
+            [ring.mock.request :as mock]))
 
 ;;; Fixtures ;;;
 
-(use-fixtures :once (fn [f] (init-db!) (f)))
-(use-fixtures :each (fn [f] (prune-db!) (prune-es!) (f)))
+(use-fixtures :once (fn [f]
+                      (tu/init-db!)
+                      (f)))
+
+(use-fixtures :each (fn [f]
+                      (tu/prune-db!)
+                      (tu/prune-es!)
+                      (f)))
 
 ;;; The tests ;;;
 
@@ -179,7 +30,7 @@
 (deftest search-loi-by-type
   (let [loi-type "fishing-pier"
         loi-category "outdoor-recreation-facilities"
-        loi  (-> (gen-loi!)
+        loi  (-> (tu/gen-loi!)
                  (assoc :loi-type loi-type)
                  (assoc :loi-category loi-category))
         _    (core/index-loi! search loi :sync)
@@ -199,7 +50,7 @@
 
 (deftest search-loi-by-category
   (let [loi-category "outdoor-recreation-facilities"
-        loi  (-> (gen-loi!)
+        loi  (-> (tu/gen-loi!)
                  (assoc :loi-category loi-category))
         _    (core/index-loi! search loi :sync)
         resp (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
@@ -208,7 +59,7 @@
     (is (= loi-category (:loi-category response-loi)))))
 
 (deftest get-loi-by-id
-  (let [{:keys [id] :as loi} (gen-loi!)
+  (let [{:keys [id] :as loi} (tu/gen-loi!)
         _    (core/index-loi! search loi :sync)
         resp (app (-> (mock/request :get (str "/api/lois/" id))
                       (mock/content-type "application/json")))
@@ -217,7 +68,7 @@
 
 (deftest search-loi-by-invalid-category
   (let [loi-category "kekkonen-666-category"
-        loi  (-> (gen-loi!)
+        loi  (-> (tu/gen-loi!)
                  (assoc :loi-category loi-category))
         _    (core/index-loi! search loi :sync)
         response (app (-> (mock/request :get (str "/api/lois/category/" loi-category))
@@ -321,14 +172,14 @@
   )
 
 (deftest register-user-test
-  (let [user (gen-user)
+  (let [user (tu/gen-user)
         resp (app (-> (mock/request :post "/api/actions/register")
                       (mock/content-type "application/json")
                       (mock/body (->json user))))]
     (is (= 201 (:status resp)))))
 
 (deftest register-user-conflict-test
-  (let [user (gen-user {:db? true})
+  (let [user (tu/gen-user {:db? true})
         resp (app (-> (mock/request :post "/api/actions/register")
                       (mock/content-type "application/json")
                       (mock/body (->json user))))
@@ -339,25 +190,25 @@
 (deftest login-failure-test
   (let [resp (app (-> (mock/request :post "/api/actions/login")
                       (mock/content-type "application/json")
-                      (auth-header "this" "fails")))]
+                      (tu/auth-header "this" "fails")))]
     (is (= (:status resp) 401))))
 
 (deftest login-test
-  (let [user (gen-user {:db? true})
+  (let [user (tu/gen-user {:db? true})
         resp (app (-> (mock/request :post "/api/actions/login")
                       (mock/content-type "application/json")
-                      (auth-header (:username user) (:password user))))
+                      (tu/auth-header (:username user) (:password user))))
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
     (is (= (:email user) (:email body)))))
 
 (deftest refresh-login-test
-  (let [user   (gen-user {:db? true})
+  (let [user   (tu/gen-user {:db? true})
         token1 (jwt/create-token user :terse? true)
         _      (Thread/sleep 1000) ; to see effect between timestamps
         resp   (app (-> (mock/request :get "/api/actions/refresh-login")
                         (mock/content-type "application/json")
-                        (token-header token1)))
+                        (tu/token-header token1)))
         body   (<-json (:body resp))
         token2 (:token body)
 
@@ -369,7 +220,7 @@
 
 ;; TODO how to test side-effects? (sending email)
 (deftest request-password-reset-test
-  (let [user (gen-user {:db? true})
+  (let [user (tu/gen-user {:db? true})
         resp (app (-> (mock/request :post "/api/actions/request-password-reset")
                       (mock/content-type "application/json")
                       (mock/body (->json (select-keys user [:email])))))]
@@ -384,27 +235,27 @@
     (is (= "email-not-found" (:type body)))))
 
 (deftest reset-password-test
-  (let [user  (gen-user {:db? true})
+  (let [user  (tu/gen-user {:db? true})
         token (jwt/create-token user :terse? true)
         resp  (app (-> (mock/request :post "/api/actions/reset-password")
                        (mock/content-type "application/json")
                        (mock/body (->json {:password "blablaba"}))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 200 (:status resp)))))
 
 (deftest reset-password-expired-token-test
-  (let [user  (gen-user {:db? true})
+  (let [user  (tu/gen-user {:db? true})
         token (jwt/create-token user :terse? true :valid-seconds 0)
         _     (Thread/sleep 100) ; make sure token expires
         resp  (app (-> (mock/request :post "/api/actions/reset-password")
                        (mock/content-type "application/json")
                        (mock/body (->json {:password "blablaba"}))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 401 (:status resp)))))
 
 (deftest send-magic-link-requires-admin-test
-  (let [admin (gen-user {:db? true :admin? false})
-        user  (-> (gen-user {:db? false})
+  (let [admin (tu/gen-user {:db? true :admin? false})
+        user  (-> (tu/gen-user {:db? false})
                   (dissoc :password :id))
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
@@ -412,15 +263,15 @@
                        (mock/body (->json {:user      user
                                            :login-url "https://localhost"
                                            :variant   "lipas"}))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
 (deftest update-user-permissions-test
   ;; Updating permissions has side-effect of publshing drafts the user
   ;; has done earlier to sites where permissions are now being
   ;; granted
-  (let [admin (gen-user {:db? true :admin? true})
-        user  (gen-user {:db? true})
+  (let [admin (tu/gen-user {:db? true :admin? true})
+        user  (tu/gen-user {:db? true})
 
         ;; Add 'draft' which is expected to get publshed as side-effect
         event-date (utils/timestamp)
@@ -438,7 +289,7 @@
                        (mock/body (->json {:id          (:id user)
                                            :permissions perms
                                            :login-url   "https://localhost"}))
-                       (token-header token)))
+                       (tu/token-header token)))
 
         site-log (->> (core/get-sports-site-history db 123)
                       (utils/index-by :event-date))]
@@ -449,7 +300,7 @@
     (is (= "active" (:status (get site-log event-date))))))
 
 (deftest update-user-permissions-requires-admin-test
-  (let [user  (gen-user {:db? true :admin? false})
+  (let [user  (tu/gen-user {:db? true :admin? false})
         token (jwt/create-token user)
         resp  (app (-> (mock/request :post "/api/actions/update-user-permissions")
                        (mock/content-type "application/json")
@@ -457,46 +308,46 @@
                                       (select-keys [:id :permissions])
                                       (assoc :login-url "https://localhost")
                                       ->json))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
 (deftest update-user-data-test
-  (let [user       (gen-user {:db? true})
+  (let [user       (tu/gen-user {:db? true})
         token      (jwt/create-token user :terse? true)
         user-data  (gen/generate (s/gen :lipas.user/user-data))
         resp       (app (-> (mock/request :post "/api/actions/update-user-data")
                             (mock/content-type "application/json")
                             (mock/body (->json user-data))
-                            (token-header token)))
+                            (tu/token-header token)))
         user-data2 (-> resp :body <-json)]
     (is (= 200 (:status resp)))
     (is (= user-data user-data2))))
 
 (deftest update-user-status-test
-  (let [admin (gen-user {:db? true :admin? true})
-        user  (gen-user {:db? true :status "active"})
+  (let [admin (tu/gen-user {:db? true :admin? true})
+        user  (tu/gen-user {:db? true :status "active"})
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/update-user-status")
                        (mock/content-type "application/json")
                        (mock/body (->json {:id (:id user) :status "archived"}))
-                       (token-header token)))
+                       (tu/token-header token)))
         user2 (-> resp :body <-json)]
     (is (= 200 (:status resp)))
     (is (= "archived" (:status user2)))))
 
 (deftest update-user-status-requires-admin-test
-  (let [admin (gen-user {:db? true :admin? false})
-        user  (gen-user {:db? true :status "active"})
+  (let [admin (tu/gen-user {:db? true :admin? false})
+        user  (tu/gen-user {:db? true :status "active"})
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/update-user-status")
                        (mock/content-type "application/json")
                        (mock/body (->json {:id (:id user) :status "archived"}))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
 (deftest send-magic-link-test
-  (let [admin (gen-user {:db? true :admin? true})
-        user  (-> (gen-user {:db? false})
+  (let [admin (tu/gen-user {:db? true :admin? true})
+        user  (-> (tu/gen-user {:db? false})
                   (dissoc :password :id))
         token (jwt/create-token admin)
         resp  (app (-> (mock/request :post "/api/actions/send-magic-link")
@@ -504,11 +355,11 @@
                        (mock/body (->json {:user      user
                                            :login-url "https://localhost"
                                            :variant   "lipas"}))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 200 (:status resp)))))
 
 (deftest order-magic-link-test
-  (let [user  (gen-user {:db? true})
+  (let [user  (tu/gen-user {:db? true})
         resp  (app (-> (mock/request :post "/api/actions/order-magic-link")
                        (mock/content-type "application/json")
                        (mock/body (->json {:email     (:email user)
@@ -525,7 +376,7 @@
     (is (= 400 (:status resp)))))
 
 (deftest upsert-sports-site-draft-test
-  (let [user  (gen-user {:db? true})
+  (let [user  (tu/gen-user {:db? true})
         token (jwt/create-token user)
         site  (-> (tu/gen-sports-site)
                   (assoc :status "active")
@@ -533,11 +384,11 @@
         resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
                        (mock/content-type "application/json")
                        (mock/body (->json site))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 201 (:status resp)))))
 
 (deftest upsert-invalid-sports-site-test
-  (let [user  (gen-user {:db? true})
+  (let [user  (tu/gen-user {:db? true})
         token (jwt/create-token user)
         site  (-> (tu/gen-sports-site)
                   (assoc :status "kebab")
@@ -545,11 +396,11 @@
         resp  (app (-> (mock/request :post "/api/sports-sites?draft=true")
                        (mock/content-type "application/json")
                        (mock/body (->json site))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 400 (:status resp)))))
 
 (deftest upsert-sports-site-no-permissions-test
-  (let [user  (gen-user)
+  (let [user  (tu/gen-user)
         _     (as-> user $
                 (dissoc $ :permissions)
                 (core/add-user! db $))
@@ -560,11 +411,11 @@
         resp  (app (-> (mock/request :post "/api/sports-sites")
                        (mock/content-type "application/json")
                        (mock/body (->json site))
-                       (token-header token)))]
+                       (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
 (deftest get-sports-sites-by-type-code-test
-  (let [user (gen-user {:db? true :admin? true})
+  (let [user (tu/gen-user {:db? true :admin? true})
         site (-> (tu/gen-sports-site)
                  (assoc-in [:type :type-code] 3110)
                  (assoc :status "active"))
@@ -576,7 +427,7 @@
     (is (s/valid? :lipas/sports-sites body))))
 
 (deftest get-sports-sites-by-type-code-localized-test
-  (let [user (gen-user {:db? true :admin? true})
+  (let [user (tu/gen-user {:db? true :admin? true})
         site (-> (tu/gen-sports-site)
                  (assoc-in [:type :type-code] 3110)
                  (assoc-in [:admin] "state")
@@ -593,7 +444,7 @@
                          :admin)))))
 
 (deftest get-sports-site-test
-  (let [user     (gen-user {:db? true :admin? true})
+  (let [user     (tu/gen-user {:db? true :admin? true})
         rev1     (-> (tu/gen-sports-site)
                      (assoc :status "active"))
         _        (core/upsert-sports-site!* db user rev1)
@@ -611,7 +462,7 @@
     (is (= 404 (:status resp)))))
 
 (deftest get-sports-site-history-test
-  (let [user     (gen-user {:db? true :admin? true})
+  (let [user     (tu/gen-user {:db? true :admin? true})
         rev1     (-> (tu/gen-sports-site)
                      (assoc :status "active"))
         rev2     (-> rev1
@@ -684,7 +535,7 @@
 
 (deftest calculate-stats-test
   (let [_    (seed/seed-city-data! db search)
-        user (gen-user {:db? true :admin? true})
+        user (tu/gen-user {:db? true :admin? true})
         site (-> (tu/gen-sports-site)
                  (assoc :status "active")
                  (assoc-in [:location :city :city-code] 275)
@@ -707,30 +558,30 @@
     (is (= 200 (:status resp)))))
 
 (deftest add-reminder-test
-  (let [user     (gen-user {:db? true})
+  (let [user     (tu/gen-user {:db? true})
         token    (jwt/create-token user :terse? true)
         reminder (gen/generate (s/gen :lipas/new-reminder))
         resp     (app (-> (mock/request :post "/api/actions/add-reminder")
                           (mock/content-type "application/json")
                           (mock/body (->json reminder))
-                          (token-header token)))
+                          (tu/token-header token)))
         body     (-> resp :body <-json)]
     (is (= 200 (:status resp)))
     (is (= "pending" (:status body)))))
 
 (deftest update-reminder-status-test
-  (let [user     (gen-user {:db? true})
+  (let [user     (tu/gen-user {:db? true})
         token    (jwt/create-token user :terse? true)
         reminder (gen/generate (s/gen :lipas/new-reminder))
         resp1    (app (-> (mock/request :post "/api/actions/add-reminder")
                           (mock/content-type "application/json")
                           (mock/body (->json reminder))
-                          (token-header token)))
+                          (tu/token-header token)))
         id       (-> resp1 :body <-json :id)
         resp2    (app (-> (mock/request :post "/api/actions/update-reminder-status")
                           (mock/content-type "application/json")
                           (mock/body (->json {:id id :status "canceled"}))
-                          (token-header token)))]
+                          (tu/token-header token)))]
     (is (= 200 (:status resp1)))
     (is (= 200 (:status resp2)))))
 

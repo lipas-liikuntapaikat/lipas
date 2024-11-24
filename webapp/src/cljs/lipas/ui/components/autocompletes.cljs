@@ -91,7 +91,7 @@
     x))
 
 (defui autocomplete2
-  "Helper for version if autocomplete where:
+  "Helper for version of autocomplete where:
 
   :options should be a cljs sequential collection with {:value ... :label ...}"
   [{:keys [options input-props label] :as props}]

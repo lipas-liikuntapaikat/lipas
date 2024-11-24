@@ -13,6 +13,7 @@
    [lipas.data.loi :as loi]
    [lipas.data.materials :as materials]
    [lipas.data.owners :as owners]
+   [lipas.data.prop-types :as prop-types]
    [lipas.data.reminders :as reminders]
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as swimming-pools]
@@ -724,22 +725,25 @@
 (s/def :lipas.sports-site.properties/canoeing-club? boolean?)
 (s/def :lipas.sports-site.properties/activity-service-company? boolean?)
 (s/def :lipas.sports-site.properties/boating-service-class string?)
-(s/def :lipas.sports-site.properties/water-point string?)
+(s/def :lipas.sports-site.properties/water-point
+  (into #{} (keys (get-in prop-types/all [:water-point :opts]))))
 (s/def :lipas.sports-site.properties/customer-service-point? boolean?)
 (s/def :lipas.sports-site.properties/height-of-basket-or-net-adjustable? boolean?)
 (s/def :lipas.sports-site.properties/changing-rooms-m2 ::real)
 (s/def :lipas.sports-site.properties/ligthing-info string?)
 (s/def :lipas.sports-site.properties/highest-obstacle-m ::real)
 (s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
-(s/def :lipas.sports-site.properties/fitness-stairs-length-m ::real)
 (s/def :lipas.sports-site.properties/free-customer-use? boolean?)
-(s/def :lipas.sports-site.properties/space-divisible string?)
+(s/def :lipas.sports-site.properties/space-divisible ::real)
 (s/def :lipas.sports-site.properties/auxiliary-training-area? boolean?)
 (s/def :lipas.sports-site.properties/sport-specification string?)
-(s/def :lipas.sports-site.properties/width-of-active-space-m ::real)
-(s/def :lipas.sports-site.properties/length-of-active-space-m ::real)
+(s/def :lipas.sports-site.properties/active-space-width-m ::real)
+(s/def :lipas.sports-site.properties/active-space-length-m ::real)
 (s/def :lipas.sports-site.properties/mirror-wall? boolean?)
-(s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures string?)
+(s/def :lipas.sports-site.properties/parkour-hall-equipment-and-structures
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:parkour-hall-equipment-and-structures :opts])))
+   :distinct true))
 (s/def :lipas.sports-site.properties/ringette-boundary-markings? boolean?)
 (s/def :lipas.sports-site.properties/field-1-flexible-rink? boolean?)
 (s/def :lipas.sports-site.properties/field-2-flexible-rink? boolean?)
@@ -750,6 +754,22 @@
 (s/def :lipas.sports-site.properties/pyramid-tables-count ::real)
 (s/def :lipas.sports-site.properties/carom-tables-count ::real)
 (s/def :lipas.sports-site.properties/total-billiard-tables-count ::real)
+(s/def :lipas.sports-site.properties/boating-service-class
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:boating-service-class :opts])))
+   :distinct true))
+(s/def :lipas.sports-site.properties/travel-modes
+  (s/coll-of
+   (into #{} (keys (get-in prop-types/all [:travel-modes :opts])))
+   :distinct true))
+(s/def :lipas.sports-site.properties/travel-mode-info string?)
+(s/def :lipas.sports-site.properties/sledding-hill? boolean?)
+(s/def :lipas.sports-site.properties/mobile-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/ski-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/bike-orienteering? boolean?)
+(s/def :lipas.sports-site.properties/hs-point ::real)
+(s/def :lipas.sports-site.properties/lighting-info string?)
+(s/def :lipas.sports-site.properties/year-round-use? boolean?)
 
 (s/def :lipas.sports-site/properties
   (s/keys :opt-un [:lipas.sports-site.properties/height-m
@@ -920,8 +940,8 @@
                    :lipas.sports-site.properties/space-divisible
                    :lipas.sports-site.properties/auxiliary-training-area?
                    :lipas.sports-site.properties/sport-specification
-                   :lipas.sports-site.properties/width-of-active-space-m
-                   :lipas.sports-site.properties/length-of-active-space-m
+                   :lipas.sports-site.properties/active-space-width-m
+                   :lipas.sports-site.properties/active-space-length-m
                    :lipas.sports-site.properties/mirror-wall?
                    :lipas.sports-site.properties/parkour-hall-equipment-and-structures
                    :lipas.sports-site.properties/ringette-boundary-markings?
@@ -934,7 +954,18 @@
                    :lipas.sports-site.properties/pyramid-tables-count
                    :lipas.sports-site.properties/carom-tables-count
                    :lipas.sports-site.properties/total-billiard-tables-count
-                   ]))
+                   :lipas.sports-site.properties/boating-service-class
+                   :lipas.sports-site.properties/free-use?
+                   :lipas.sports-site.properties/school-use?
+                   :lipas.sports-site.properties/year-round-use?
+                   :lipas.sports-site.properties/lighting-info
+                   :lipas.sports-site.properties/hs-point
+                   :lipas.sports-site.properties/bike-orienteering?
+                   :lipas.sports-site.properties/ski-orienteering?
+                   :lipas.sports-site.properties/mobile-orienteering?
+                   :lipas.sports-site.properties/sledding-hill?
+                   :lipas.sports-site.properties/travel-mode-info
+                   :lipas.sports-site.properties/travel-modes]))
 
 (s/def :lipas.sports-site/properties-old
   (s/map-of keyword? (s/or :string? (str-in 1 100)
@@ -1446,6 +1477,68 @@
                    :field/floorball :lipas.sports-site.fields/floorball)
              :into []))
 
+(s/def :lipas.sports-site.ptv/last-sync string?)
+(s/def :lipas.sports-site.ptv/org-id string?)
+(s/def :lipas.sports-site.ptv/sync-enabled boolean?)
+(s/def :lipas.sports-site.ptv/source-id string?)
+(s/def :lipas.sports-site.ptv/publishing-status string?)
+(s/def :lipas.sports-site.ptv/previous-type-code int?)
+
+(s/def :lipas.ptv.summary/fi (str-in 0 150))
+(s/def :lipas.ptv.summary/se (str-in 0 150))
+(s/def :lipas.ptv.summary/en (str-in 0 150))
+(s/def :lipas.sports-site.ptv/summary
+  (s/keys :opt-un [:lipas.ptv.summary/fi
+                   :lipas.ptv.summary/se
+                   :lipas.ptv.summary/en]))
+
+(s/def :lipas.ptv.description/fi string?)
+(s/def :lipas.ptv.description/se string?)
+(s/def :lipas.ptv.description/en string?)
+(s/def :lipas.sports-site.ptv/description
+  (s/keys :opt-un [:lipas.ptv.description/fi
+                   :lipas.ptv.description/se
+                   :lipas.ptv.description/en]))
+
+(s/def :lipas.sports-site.ptv/service-channel-integration #{"lipas-managed" "manual"})
+(s/def :lipas.sports-site.ptv/service-integration #{"lipas-managed" "manual"})
+(s/def :lipas.sports-site.ptv/descriptions-integration #{"lipas-managed-ptv-fields" "lipas-managed-comment-field" "ptv-managed"})
+
+(s/def :lipas.sports-site.ptv/service-ids (s/coll-of string?))
+(s/def :lipas.sports-site.ptv/service-channel-ids (s/coll-of string?))
+(s/def :lipas.sports-site.ptv/languages (s/coll-of string?))
+
+(s/def :lipas.ptv.error/message string?)
+(s/def :lipas.ptv.error/data map?)
+(s/def :lipas.sports-site.ptv/error
+  (s/keys :req-un [:lipas.ptv.error/message
+                   :lipas.ptv.error/data]))
+
+(s/def :lipas.sports-site/ptv
+  (s/keys :req-un [:lipas.sports-site.ptv/org-id
+                   :lipas.sports-site.ptv/sync-enabled
+
+                   :lipas.sports-site.ptv/summary
+                   :lipas.sports-site.ptv/description]
+          :opt-un [;; Added on first successful sync
+                   :lipas.sports-site.ptv/last-sync
+                   :lipas.sports-site.ptv/previous-type-code
+                   :lipas.sports-site.ptv/publishing-status
+                   :lipas.sports-site.ptv/service-ids
+                   :lipas.sports-site.ptv/languages
+
+                   ;; Added on sync - removed when archived
+                   :lipas.sports-site.ptv/source-id
+                   :lipas.sports-site.ptv/service-channel-ids
+
+                   ;; Previously used keys, not used now
+                   :lipas.sports-site.ptv/service-channel-integration
+                   :lipas.sports-site.ptv/service-integration
+                   :lipas.sports-site.ptv/descriptions-integration
+
+                   ;; Only added on sync error - removed when success
+                   :lipas.sports-site.ptv/error]))
+
 (s/def :lipas/new-sports-site
   (s/keys :req-un [:lipas.sports-site/event-date
                    :lipas.sports-site/status
@@ -1472,7 +1565,8 @@
                    :lipas.sports-site/properties
                    :lipas.sports-site/fields
                    :lipas.sports-site/locker-rooms
-                   :lipas.sports-site/circumstances]))
+                   :lipas.sports-site/circumstances
+                   :lipas.sports-site/ptv]))
 
 (s/def :lipas/sports-site
   (s/merge

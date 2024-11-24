@@ -122,6 +122,41 @@
     :translations materials/surface-materials
     :many?        true}
 
+   ;; Proerties->travel-modes
+   {:path         [:properties :travel-modes]
+    :translations (-> prop-types/all
+                      (get-in [:travel-modes :opts])
+                      (update-vals :label))
+    :many?        true}
+
+   ;; Proerties->parkour-hall-equipment-and-structures
+   {:path         [:properties :parkour-hall-equipment-and-structures]
+    :translations (-> prop-types/all
+                      (get-in [:parkour-hall-equipment-and-structures :opts])
+                      (update-vals :label))
+    :many?        true}
+
+   ;; Proerties->boating-service-class
+   {:path         [:properties :boating-service-class]
+    :translations (-> prop-types/all
+                      (get-in [:boating-service-class :opts])
+                      (update-vals :label))
+    :many?        false}
+
+   ;; Properties->water-point
+   {:path         [:properties :water-point]
+    :translations (-> prop-types/all
+                      (get-in [:water-point :opts])
+                      (update-vals :label))
+    :many?        false}
+
+   ;; Properties->sport-specification
+   {:path         [:properties :sport-specification]
+    :translations (-> prop-types/all
+                      (get-in [:sport-specification :opts])
+                      (update-vals :label))
+    :many?        false}
+
    ;; Ice stadiums
    {:path         [:type :size-category]
     :translations ice/size-categories}
@@ -221,7 +256,57 @@
     {:path         [:properties :surface-material]
      :target-path  [:properties :surface-material-localized]
      :translate-fn (fn [locales vs]
-                     (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}]
+                     (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}
+
+    ;; Proerties->travel-modes
+    {:path         [:properties :travel-modes]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:travel-modes :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}
+
+    ;; Proerties->parkour-hall-equipment-and-structures
+    {:path         [:properties :parkour-hall-equipment-and-structures]
+     :target-path  [:properties :parkour-hall-equipment-and-structures-localized]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:parkour-hall-equipment-and-structures :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}
+
+    ;; Proerties->boating-service-class
+    {:path         [:properties :boating-service-class]
+     :target-path  [:properties :boating-service-class-localized]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:boating-service-class :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}
+
+    ;; Properties->water-point
+    {:path         [:properties :water-point]
+     :target-path  [:properties :water-point-localized]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:water-point :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}
+
+    ;; Properties->sport-specification
+    {:path         [:properties :sport-specification]
+     :target-path  [:properties :sport-specification-localized]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:sport-specification :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}]
+
    (map #(update % :translate-fn memoize))))
 
 (defn localize2

@@ -1,7 +1,8 @@
 (ns lipas.data.ptv
-  (:require
-   [lipas.data.types :as types]
-   [lipas.utils :as utils]))
+  (:require [clojure.string :as str]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]
+            [taoensso.timbre :as log]))
 
 ;; Utajärven jäähalli
 ;; https://api.palvelutietovaranto.suomi.fi/api/v11/ServiceChannel/8604a900-be6b-4f9d-8024-a272e07afba3?showHeader=false
@@ -13,13 +14,51 @@
 
 ;; json-patch https://github.com/borgeby/clj-json-pointer
 
+;; org 10
 #_(def uta-org-id-test "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53")
 
 ;; Testiorganisaatio 6 (Kunta)
 (def uta-org-id-test "3d1759a2-e47a-4947-9a31-cab1c1e2512b")
-<
+
+;; org 9
+(def liminka-org-id-test "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+
+;; org 8
 #_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
 #_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
+
+;; TODO: Tulossa 5 kuntaa, muut:
+;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
+
+(def organizations
+  [{:name "Utajärven kunta (test)"
+    :props {:org-id              uta-org-id-test
+            :city-codes          [889]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" "se" "en"]}}
+   {:name "Limingan kunta (test)"
+    :props {:org-id              liminka-org-id-test
+            :city-codes          [425]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" "se" "en"]}} ])
+
+;; For adding default params to some requests from the FE
+;; NOTE: This should eventually be replaced with Lipas organizations.
+;; TODO: Not sure if e.g. owners and supported-languages should be
+;; hardcoded to the same values for everyone?
+(def org-id->params
+  (reduce (fn [acc x]
+            (assoc acc (:org-id (:props x))
+                   (:props x)))
+          {}
+          organizations))
+
+;; For UI org dropdown
+(def orgs
+  (mapv (fn [x]
+          {:name (:name x)
+           :id (:org-id (:props x))})
+        organizations))
 
 (def lang->locale
   {"fi" :fi, "sv" :se, "en" :en})
@@ -31,6 +70,10 @@
 
 (def default-langs ["fi"])
 
+(defn ->service-source-id
+  [org-id sub-category-id]
+  (str "lipas-" org-id "-" sub-category-id))
+
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or   {languages default-langs} :as m}]
@@ -39,7 +82,11 @@
         sub-cat   (get types/sub-categories sub-category-id)
         main-cat  (get types/main-categories (parse-long (:main-category sub-cat)))]
 
-    {:sourceId source-id
+    {:sourceId (or source-id
+                   (let [ts (str/replace (utils/timestamp) #":" "-")
+                         x (str "lipas-" org-id "-" sub-category-id "-" ts)]
+                     (log/infof "Creating new PTV Service source-id %s" x)
+                     x))
 
      #_#_:keywords (let [tags (:tags type)]
                      (for [locale [:fi :se :en]
@@ -134,24 +181,31 @@
      }))
 
 (defn ->ptv-service-location
-  [org
+  [_org
    coord-transform-fn
-   {:keys [ptv lipas-id location search-meta] :as sports-site}]
+   now
+   {:keys [status ptv lipas-id location search-meta] :as sports-site}]
   (let [languages (-> ptv
                       (get :languages default-langs)
                       (->> (map lipas-lang->ptv-lang))
                       set)
         type     (get types/all (get-in sports-site [:type :type-code]))
-        sub-cat  (get types/sub-categories (:sub-category type))
-        main-cat (get types/main-categories (:main-category type))]
+        _sub-cat  (get types/sub-categories (:sub-category type))
+        _main-cat (get types/main-categories (:main-category type))]
 
     (println "PTV data")
     (prn ptv)
-    (println "Langauges resolved" languages)
-    (prn location)
+    ; (println "Languages resolved" languages)
+    ; (prn location)
 
     {:organizationId      (:org-id ptv)
-     :sourceId            (str "lipas-" (:org-id ptv) "-" lipas-id)
+     ;; Keep using existing sourceId for sites that were already initialized in PTV,
+     ;; generate a new unique ID (with timestamp) for new sites.
+     :sourceId            (or (:source-id ptv)
+                              (let [ts (str/replace now #":" "-")
+                                    x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
+                                (log/infof "Creating new PTV ServiceLocation source-id %s" x)
+                                x))
      :serviceChannelNames (keep identity
                                 (let [fallback (get-in sports-site [:name])]
                                   [(when (contains? languages "fi")
@@ -207,7 +261,10 @@
                      :latitude     lat
                      :longitude    lon})}]
 
-     :publishingStatus "Published" ; Draft | Published
+     :publishingStatus (case status
+                         ("incorrect-data" "out-of-service-permanently") "Deleted"
+                         "Published")
+     ; Draft | Published
 
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)
@@ -299,8 +356,136 @@
                      :service-channel-ids         #{"ssid-1"}})))
 
 
-  (->ptv-service-location nil (constantly [123 456])  uta-jh-with-ptv-meta)
+  (->ptv-service-location nil (constantly [123 456]) nil uta-jh-with-ptv-meta)
 
 
 
   )
+
+(defn parse-service-source-id [source-id]
+  ())
+
+(defn index-services [services]
+  )
+
+(defn resolve-missing-services
+  "Infer services (sub-categories) that need to be created in PTV and
+  attached to sports-sites."
+  [org-id services sports-sites]
+  (let [source-ids (->> services
+                        vals
+                        (keep :sourceId)
+                        set)]
+    (->> sports-sites
+         (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
+         (map (fn [site] {:source-id       (->service-source-id org-id (:sub-category-id site))
+                          :sub-category    (-> site :sub-category)
+                          :sub-category-id (-> site :sub-category-id)}))
+         distinct
+         (remove (fn [m] (contains? source-ids (:source-id m)))))))
+
+(defn sub-category-id->service [org-id source-id->service sub-category-id]
+  (get source-id->service (->service-source-id org-id sub-category-id)))
+
+(defn parse-summary
+  "Returns first line-delimited paragraph."
+  [s]
+  (when (string? s)
+    (first (str/split s #"\r?\n"))))
+
+(defn resolve-service-channel-name
+  "Sometimes these seem to have the name under undocumented :name
+  property and sometimes under documented :serviceChannelNames
+  array. Wtf."
+  [service-channel]
+  (or (:name service-channel)
+      (some (fn [m]
+              (when (= "fi" (:language m))
+                (:value m)))
+            (:serviceChannelNames service-channel))))
+
+(defn detect-name-conflict
+  [sports-site service-channels]
+  (let [s1                (some-> sports-site :name str/trim str/lower-case)
+        attached-channels (-> sports-site :ptv :service-channel-ids set)]
+    (some (fn [service-channel]
+            (let [ssname (resolve-service-channel-name service-channel)
+                  s2     (some-> ssname str/trim str/lower-case)]
+              (when (and
+                      (not (contains? attached-channels (:id service-channel)))
+                      (= s1 s2))
+                {:service-channel-id (:id service-channel)})))
+          service-channels)))
+
+(defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
+  (let [service-id               (-> site :ptv :service-ids first)
+        service-channel-id       (-> site :ptv :service-channel-ids first)
+        summary (-> site :ptv :summary)
+        description (-> site :ptv :description)
+
+        last-sync (-> site :ptv :last-sync)]
+    {:valid           (boolean (and (some-> description :fi count (> 5))
+                                    (some-> summary :fi count (> 5))))
+     :lipas-id        (:lipas-id site)
+     :name            (:name site)
+     :event-date      (:event-date site)
+     ;; :event-date-human (some-> (:event-date site) utils/->human-date-time-at-user-tz)
+     :name-conflict   (detect-name-conflict site (vals service-channels))
+     :marketing-name  (:marketing-name site)
+     :type            (-> site :search-meta :type :name :fi)
+     :sub-category    (-> site :search-meta :type :sub-category :name :fi)
+     :sub-category-id (-> site :type :type-code types :sub-category)
+     :org-id          org-id
+     :admin           (-> site :search-meta :admin :name :fi)
+     :owner           (-> site :search-meta :owner :name :fi)
+     :summary         summary
+     :description     description
+     :languages       (or (-> site :ptv :languages) org-langs)
+
+     :sync-enabled                (get-in site [:ptv :sync-enabled] true)
+     :last-sync                   last-sync
+     ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
+
+     :sync-status (cond
+                    (not last-sync) :not-synced
+                    (= (:event-date site) last-sync) :ok
+                    :else :out-of-date)
+
+     :service-ids                 (-> site :ptv :service-ids)
+     :service-name                (-> services (get service-id) :serviceNames
+                                      (->> (some #(when (= "fi" (:language %)) (:value %)))))
+     :service-channel-id          service-channel-id
+     :service-channel-ids         (-> site :ptv :service-channel-ids)
+     :service-channel-name        (-> (get service-channels service-channel-id)
+                                      (resolve-service-channel-name))}))
+
+(defn sports-site->service-ids [types source-id->service sports-site]
+  (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
+        org-id     (-> sports-site :ptv :org-id)
+        source-id  (str "lipas-" org-id "-" sub-cat-id)]
+    (when-let [service (get source-id->service source-id)]
+      #{(:id service)})))
+
+(defn is-sent-to-ptv?
+  "Check if the :ptv data shows that the site has been sent to PTV previously"
+  [site]
+  (let [{:keys [ptv]} site]
+    (and (-> ptv :service-channel-ids first)
+         (:source-id ptv)
+         (= "Published" (:publishing-status ptv)))))
+
+(defn ptv-candidate?
+  "Does the site look like it should be sent to the ptv?"
+  [site]
+  (let [{:keys [status owner]} site
+        type-code (-> site :type :type-code)]
+    (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
+                  (#{"city" "city-main-owner"} owner)
+                  (not (#{7000} type-code))))))
+
+(defn ptv-ready?
+  [site]
+  (let [{:keys [ptv]} site
+        {:keys [summary description]} ptv]
+    (boolean (and (some-> description :fi count (> 5))
+                  (some-> summary :fi count (> 5))))))

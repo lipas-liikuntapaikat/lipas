@@ -58,15 +58,13 @@
     :s3-bucket         (env! :aws-s3-bucket)
     :s3-bucket-prefix  (env! :aws-s3-bucket-prefix)}
    :ptv
-   {:api-url              (env! :ptv-api-url)
-    :token-url            (env! :ptv-token-url)
-    :service-url          (env! :ptv-service-url)
-    :service-location-url (env! :ptv-service-location-url)
-    :creds
-    {:org-id (env! :ptv-org-id)
-     :api
-     {:username (env! :ptv-api-username)
-      :password (env! :ptv-api-password)}}}
+   (let [test-env? (= "test" (:ptv-env e/env "prod"))]
+     {:env                  (:ptv-env e/env "prod")
+      :api-url              (env! :ptv-api-url)
+      :token-url            (env! :ptv-token-url)
+      :creds                (when-not test-env?
+                              {:api {:username (env! :ptv-api-username)
+                                     :password (env! :ptv-api-password)}})})
    :open-ai
    {:api-key         (env! :open-ai-api-key)
     :project         "ptv"
@@ -79,6 +77,7 @@
     :search    (ig/ref :lipas/search)
     :mailchimp (ig/ref :lipas/mailchimp)
     :aws       (ig/ref :lipas/aws)
+    :ptv       (ig/ref :lipas/ptv)
     :utp
     {:cms-api-url                 (env! :utp-cms-api-url)
      :cms-api-user                (env! :utp-cms-api-user)

@@ -11,7 +11,7 @@
             ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
             ["react" :as react]
             [clojure.spec.alpha :as s]
-            [clojure.string :as string]
+            [clojure.string :as str]
             [lipas.data.activities :as activities-data]
             [lipas.data.sports-sites :as ss]
             [lipas.roles :as roles]
@@ -26,6 +26,7 @@
             [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
+            [lipas.ui.ptv.site-view :as ptv-site]
             [lipas.ui.ptv.views :as ptv]
             [lipas.ui.reminders.views :as reminders]
             [lipas.ui.reports.views :as reports]
@@ -39,8 +40,7 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [uix.core :as uix]
-            [uix.core :refer [$ defui]]))
+            [uix.core :as uix :refer [$ defui]]))
 
 ;; TODO: Juho later This pattern makes development inconvenient as
 ;; the component might crash and shadow-cljs reloads don't update it.
@@ -276,11 +276,11 @@
      "my_location"]]])
 
 (defn filter-by-term [term table-data]
-  (let [lower-case-term (string/lower-case term)]
-    (filter #(or (string/includes? (string/lower-case (% :name)) lower-case-term)
-                 (string/includes? (string/lower-case (% :geometry-type)) lower-case-term)
-                 (string/includes? (string/lower-case (% :description)) lower-case-term)
-                 (string/includes? (string/lower-case (string/join (% :tags))) lower-case-term))
+  (let [lower-case-term (str/lower-case term)]
+    (filter #(or (str/includes? (str/lower-case (% :name)) lower-case-term)
+                 (str/includes? (str/lower-case (% :geometry-type)) lower-case-term)
+                 (str/includes? (str/lower-case (% :description)) lower-case-term)
+                 (str/includes? (str/lower-case (str/join (% :tags))) lower-case-term))
             table-data)))
 
 (defn type-helper-table [{:keys [tr on-select types]}]
@@ -533,7 +533,7 @@
              [mui/typography (tr :analysis/mode)]]
             [mui/table-cell
              (when (seq (:diversity-idx-mode data))
-               (string/join "," (:diversity-idx-mode data)))]]]]
+               (str/join "," (:diversity-idx-mode data)))]]]]
 
        ;; No data available
        [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
@@ -810,6 +810,9 @@
         view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
         edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
+        ;; TODO: Maybe always show the ptv tab if the ptv integration is enabled for the site?
+        view-ptv?            (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage])
+
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
@@ -930,7 +933,13 @@
           [mui/tab
            {:style {:min-width 0}
             :value 4
-            :label (tr :sports-site.elevation-profile/headline)}])]
+            :label (tr :sports-site.elevation-profile/headline)}])
+
+        (when view-ptv?
+          [mui/tab
+           {:style {:min-width 0}
+            :value 6
+            :label "PTV"}])]
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
@@ -1034,7 +1043,17 @@
               :type-code    type-code
               :display-data display-data
               :edit-data    edit-data
-              :can-edit?    edit-activities?}]])]
+              :can-edit?    edit-activities?}]]
+
+         6 [mui/grid {:item true :xs 12}
+            ($ ptv-site/site-view
+               {:tr           tr
+                :lipas-id     lipas-id
+                :type-code    type-code
+                ; :display-data display-data
+                :edit-data    edit-data
+                :can-edit?    can-publish?
+                })])]
 
      ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]

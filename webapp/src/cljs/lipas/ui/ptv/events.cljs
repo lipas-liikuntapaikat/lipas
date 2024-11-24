@@ -6,12 +6,6 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(def ptv-root-url-prod
-  "https://api.palvelutietovaranto.suomi.fi")
-
-(def ptv-root-url-test
-  "https://api.palvelutietovaranto.trn.suomi.fi")
-
 (rf/reg-event-db ::open-dialog
   (fn [db [_ _]]
     (assoc-in db [:ptv :dialog :open?] true)))
@@ -30,13 +24,6 @@
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
 
-(def org-id->params
-  {ptv-data/uta-org-id-test ;; Utajärvi
-   {:org-id              ptv-data/uta-org-id-test
-    :city-codes          [889]
-    :owners              ["city" "city-main-owner"]
-    :supported-languages ["fi" "se" "en"]}})
-
 (rf/reg-event-fx ::fetch-integration-candidates
   (fn [{:keys [db]} [_ org]]
     (when org
@@ -46,7 +33,7 @@
                {:method          :post
                 :headers         {:Authorization (str "Token " token)}
                 :uri             (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-                :params          (get org-id->params (:id org))
+                :params          (get ptv-data/org-id->params (:id org))
                 :format          (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success      [::fetch-integration-candidates-success (:id org)]
@@ -79,14 +66,18 @@
 
 (rf/reg-event-fx ::fetch-org
   (fn [{:keys [db]} [_ org]]
-    (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
-       :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test "/api/v11/Organization/" (:id org))
-              :response-format (ajax/json-response-format {:keywords? true})
-              :on-success      [::fetch-org-success (:id org)]
-              :on-failure      [::fetch-org-failure]}]]})))
+    (let [token (-> db :user :login :token)]
+      (when org
+        {:db (assoc-in db [:ptv :loading-from-ptv :org] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-org")
+                :params          {:org-id (:id org)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::fetch-org-success (:id org)]
+                :on-failure      [::fetch-org-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-org-success
   (fn [{:keys [db]} [_ org-id resp]]
@@ -140,16 +131,17 @@
 (rf/reg-event-fx ::fetch-service-channels
   (fn [{:keys [db]} [_ org]]
     (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
-       :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test
-                                    "/api/v11/ServiceChannel/organization/"
-                                    (:id org))
-
-              :response-format (ajax/json-response-format {:keywords? true})
-              :on-success      [::fetch-service-channels-success (:id org)]
-              :on-failure      [::fetch-service-channels-failure]}]]})))
+      (let [token (-> db :user :login :token)]
+        {:db (assoc-in db [:ptv :loading-from-ptv :service-channels] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-service-channels")
+                :params          {:org-id (:id org)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/json-response-format {:keywords? true})
+                :on-success      [::fetch-service-channels-success (:id org)]
+                :on-failure      [::fetch-service-channels-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-service-channels-success
   (fn [{:keys [db]} [_ org-id resp]]
@@ -171,15 +163,17 @@
 (rf/reg-event-fx ::fetch-service-collections
   (fn [{:keys [db]} [_ org]]
     (when org
-      {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
-       :fx [[:http-xhrio
-             {:method          :get
-              :uri             (str ptv-root-url-test
-                                    "/api/v11/ServiceCollection/organization"
-                                    "?organizationId=" (:id org))
-              :response-format (ajax/json-response-format {:keywords? true})
-              :on-success      [::fetch-service-collections-success (:id org)]
-              :on-failure      [::fetch-service-collections-failure]}]]})))
+      (let [token (-> db :user :login :token)]
+        {:db (assoc-in db [:ptv :loading-from-ptv :service-collections] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/fetch-ptv-service-collections")
+                :params          {:org-id (:id org)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/json-response-format {:keywords? true})
+                :on-success      [::fetch-service-collections-success (:id org)]
+                :on-failure      [::fetch-service-collections-failure]}]]}))))
 
 (rf/reg-event-fx ::fetch-service-collections-success
   (fn [{:keys [db]} [_ org-id resp]]
@@ -304,6 +298,71 @@
        :fx (or extra-fx
                [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
+(rf/reg-event-fx ::generate-descriptions-from-data
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [token (-> db :user :login :token)
+          edit-data (-> db :sports-sites (get lipas-id) :editing)]
+      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+       :fx [[:http-xhrio
+             {:method  :post
+              :headers {:Authorization (str "Token " token)}
+              :uri     (str (:backend-url db) "/actions/generate-ptv-descriptions-from-data")
+              ;; :ptv data isn't used as AI input, and the data might not we valid spec yet?
+              :params          (utils/make-saveable (dissoc edit-data :ptv))
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::generate-descriptions-from-data-success lipas-id]
+              :on-failure      [::generate-descriptions-from-data-failure lipas-id]}]]})))
+
+(rf/reg-event-fx ::generate-descriptions-from-data-success
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+             (update-in [:sports-sites lipas-id :editing :ptv] merge resp))}))
+
+(rf/reg-event-fx ::generate-descriptions-from-data-failure
+  (fn [{:keys [db]} [_]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::translate-to-other-langs
+  (fn [{:keys [db]} [_ lipas-id y]]
+    (let [token (-> db :user :login :token)
+          edit-data (-> db :sports-sites (get lipas-id) :editing)
+          ptv (-> edit-data :ptv)
+          data (assoc y
+                      :summary (-> (:summary ptv) (get (keyword (:from y))))
+                      :description (-> (:description ptv) (get (keyword (:from y)))))]
+      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+       :fx [[:http-xhrio
+             {:method  :post
+              :headers {:Authorization (str "Token " token)}
+              :uri     (str (:backend-url db) "/actions/translate-to-other-langs")
+              :params          data
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::translate-to-other-langs-success lipas-id]
+              :on-failure      [::translate-to-other-langs-failure lipas-id]}]]})))
+
+(rf/reg-event-fx ::translate-to-other-langs-success
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+             (update-in [:sports-sites lipas-id :editing :ptv] merge resp))}))
+
+(rf/reg-event-fx ::translate-to-other-langs-failure
+  (fn [{:keys [db]} [_]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 (rf/reg-event-db ::toggle-sync-all
   (fn [db [_ enabled]]
     (let [org-id (get-in db [:ptv :selected-org :id])]
@@ -359,9 +418,8 @@
 ;;; Service descriptions generation ;;;
 
 (rf/reg-event-fx ::generate-service-descriptions
-  (fn [{:keys [db]} [_ id success-fx failure-fx]]
-    (let [token  (-> db :user :login :token)
-          org-id (-> db :ptv :selected-org :id)]
+  (fn [{:keys [db]} [_ org-id id overview success-fx failure-fx]]
+    (let [token  (-> db :user :login :token)]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-descriptions] true)
        :fx [[:http-xhrio
              {:method  :post
@@ -369,24 +427,24 @@
               :uri     (str (:backend-url db) "/actions/generate-ptv-service-descriptions")
 
               :params          (merge
-                                 (org-id->params org-id)
+                                 (ptv-data/org-id->params org-id)
                                  {:sourceId        id
-                                  :sub-category-id (parse-long (last (str/split id #"-")))})
+                                  :sub-category-id (parse-long (last (str/split id #"-")))
+                                  :overview        overview})
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success      [::generate-service-descriptions-success id success-fx]
-              :on-failure      [::generate-service-descriptions-failure id failure-fx]}]]})))
+              :on-success      [::generate-service-descriptions-success org-id id success-fx]
+              :on-failure      [::generate-service-descriptions-failure org-id id failure-fx]}]]})))
 
 (rf/reg-event-fx ::generate-service-descriptions-success
-  (fn [{:keys [db]} [_ id extra-fx resp]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
-      {:db (-> db
-               (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
-               (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
-       :fx extra-fx})))
+  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
+             (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
+     :fx extra-fx}))
 
 (rf/reg-event-fx ::generate-service-descriptions-failure
-  (fn [{:keys [db]} [_ _id extra-fx resp]]
+  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/get-failed)
                         :success? false}]
@@ -411,7 +469,9 @@
                            :halt?         halt?}))
        :fx [(when (and (not halt?) (seq ids))
               [:dispatch [::generate-service-descriptions
+                          org-id
                           (first ids)
+                          nil
                           on-single-success
                           on-single-failure]])]})))
 
@@ -445,33 +505,32 @@
 ;;; Create Services in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service
-  (fn [{:keys [db]} [_ id success-fx failure-fx]]
-    (let [token  (-> db :user :login :token)
-          org-id (-> db :ptv :selected-org :id)
-          data   (-> (get-in db [:ptv :services-creation :data id]))]
+  (fn [{:keys [db]} [_ org-id id data success-fx failure-fx]]
+    (let [token  (-> db :user :login :token)]
       {:db (assoc-in db [:ptv :loading-from-lipas :services] true)
        :fx [[:http-xhrio
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service")
-              :params          (merge data (org-id->params org-id))
+              ;; FIXME: org-id->params adds some extra keys that aren't used?
+              ;; supported-languages (languages is used instead)
+              :params          (merge data (ptv-data/org-id->params org-id))
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success      [::create-ptv-service-success id success-fx]
-              :on-failure      [::create-ptv-service-failure id failure-fx]}]]})))
+              :on-success      [::create-ptv-service-success org-id id success-fx]
+              :on-failure      [::create-ptv-service-failure org-id id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-success
-  (fn [{:keys [db]} [_ id extra-fx resp]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
-      {:db (-> db
-               (assoc-in [:ptv :loading-from-lipas :services] false)
-               (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
-               (update-in [:ptv :org org-id :data :service-candidates id]
-                          assoc :created-in-ptv true))
-       :fx extra-fx})))
+  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
+    {:db (-> db
+             (assoc-in [:ptv :loading-from-lipas :services] false)
+             (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
+             (update-in [:ptv :org org-id :data :service-candidates id]
+                        assoc :created-in-ptv true))
+     :fx extra-fx}))
 
 (rf/reg-event-fx ::create-ptv-service-failure
-  (fn [{:keys [db]} [_ _id extra-fx resp]]
+  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/get-failed)
                         :success? false}]
@@ -497,7 +556,9 @@
                            :halt?         halt?}))
        :fx [(when (and (not halt?) (seq ids))
               [:dispatch [::create-ptv-service
+                          org-id
                           (first ids)
+                          (get-in db [:ptv :services-creation :data (first ids)])
                           on-single-success
                           on-single-failure]])]})))
 
@@ -510,6 +571,7 @@
                       {:batch-size (count ids)
                        :halt?      false
                        :size       (count ids)
+                       ;; TODO: Is this necessary? Maybe?
                        :data       (utils/index-by :source-id ms)
                        :ids        (set ids)})
        :fx [[:dispatch [::create-all-ptv-services* org-id ids]]]})))
@@ -523,63 +585,68 @@
   (fn [db _]
     (let [org-id   (get-in db [:ptv :selected-org :id])
           types    (get-in db [:sports-sites :types])
-          services (->> (get-in db [:ptv :org org-id :data :services])
-                        vals
-                        (utils/index-by :sourceId))]
-      (-> db
-          (update-in [:ptv :org org-id :data :sports-sites]
-                     (fn [m]
-                       (reduce-kv
-                         (fn [m lipas-id sports-site]
-                           (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)
-                                 source-id  (str "lipas-" org-id "-" sub-cat-id)]
-                             (if-let [service (get services source-id)]
-                               (update-in m [lipas-id :ptv :service-ids] #(set (conj % (:id service))))
-                               m)))
-                         m
-                         m)))))))
+          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
+                                  vals
+                                  (utils/index-by :sourceId))
+          sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
+          sports-sites (reduce-kv
+                         (fn [sports-sites lipas-id sports-site]
+                           (let [service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                             (if (seq service-ids)
+                               (update-in sports-sites [lipas-id :ptv :service-ids] (fnil into #{}) service-ids)
+                               sports-sites)))
+                         sports-sites
+                         sports-sites)]
+      (assoc-in db [:ptv :org org-id :data :sports-sites] sports-sites))))
 
 ;;; Create service locations in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
     (let [token  (-> db :user :login :token)
+          ;; Or per site?
           org-id (-> db :ptv :selected-org :id)
-          site   (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-          data   (get-in db [:ptv :service-locations-creation :data lipas-id])
-          ks     [:languages
-                  :summary
-                  :description
-                  :last-sync
-                  :org-id
-                  :sync-enabled
-                  :service-integration
-                  :descriptions-integration
-                  :service-channel-integration
-                  :service-ids
-                  :service-channel-ids]]
+
+          types    (get-in db [:sports-sites :types])
+          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
+                                  vals
+                                  (utils/index-by :sourceId))
+
+          sports-site  (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+
+          ;; Add default org-id for service-ids linking
+          sports-site  (update sports-site :ptv #(merge {:org-id org-id} %))
+
+          service-ids  (ptv-data/sports-site->service-ids types source-id->service sports-site)
+
+          ;; Add other defaults and merge with summary/description from the UI
+          ptv-data     (merge (:default-settings (:ptv db))
+                              {:service-ids service-ids
+                               :service-channel-ids []}
+                              ;; {:org-id org-id}
+                              (:ptv sports-site))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
        :fx [[:http-xhrio
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service-location")
-              :params          {:sports-site site
-                                :ptv-meta    data
-                                :org         (org-id->params org-id)}
+              :params          {:lipas-id lipas-id
+                                :org-id org-id
+                                :ptv ptv-data}
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::create-ptv-service-location-success lipas-id success-fx]
               :on-failure      [::create-ptv-service-location-failure lipas-id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-location-success
-  (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
+  (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv]}]]
     (let [org-id   (get-in db [:ptv :selected-org :id])]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-channels] false)
-               (assoc-in [:ptv :org org-id :data :service-channels (:id resp)] resp)
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id]
-                          update-in [:ptv :service-channel-ids] (fn [ids]
-                                                                  (set (conj ids (:id resp))))))
+               (assoc-in [:ptv :org org-id :data :service-channels (:id ptv-resp)] ptv-resp)
+               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
        :fx extra-fx})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
@@ -629,8 +696,7 @@
 
       {:db (update-in db [:ptv :service-locations-creation]
                       merge
-                      {:data       (utils/index-by :lipas-id to-sync)
-                       :batch-size (count ids)
+                      {:batch-size (count ids)
                        :halt?      false
                        :size       (count ids)
                        :ids        (set ids)})
@@ -644,31 +710,32 @@
 
 (rf/reg-event-fx ::save-ptv-meta
   (fn [{:keys [db]} [_ sports-sites]]
-    (let [token  (-> db :user :login :token)
-          ks [:languages
-              :summary
-              :description
-              :last-sync
-              :org-id
-              :sync-enabled
-              :service-integration
-              :descriptions-integration
-              :service-channel-integration
-              :service-ids
-              :service-channel-ids]]
-      {:db (assoc-in db [:ptv :save-in-progress] true)
-       :fx [[:http-xhrio
-             {:method          :post
-              :headers         {:Authorization (str "Token " token)}
-              :uri             (str (:backend-url db) "/actions/save-ptv-meta")
-              :params          (reduce (fn [m site]
-                                         (assoc m (:lipas-id site) (select-keys site ks)))
-                                       {}
-                                       sports-sites)
-              :format          (ajax/transit-request-format)
-              :response-format (ajax/transit-response-format)
-              :on-success      [::save-ptv-meta-success]
-              :on-failure      [::save-ptv-meta-failure]}]]})))
+    (when (seq sports-sites)
+      (let [token  (-> db :user :login :token)
+            ks [:languages
+                :summary
+                :description
+                :last-sync
+                :org-id
+                :sync-enabled
+                :service-integration
+                :descriptions-integration
+                :service-channel-integration
+                :service-ids
+                :service-channel-ids]]
+        {:db (assoc-in db [:ptv :save-in-progress] true)
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/save-ptv-meta")
+                :params          (reduce (fn [m site]
+                                           (assoc m (:lipas-id site) (select-keys site ks)))
+                                         {}
+                                         sports-sites)
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::save-ptv-meta-success]
+                :on-failure      [::save-ptv-meta-failure]}]]}))))
 
 (rf/reg-event-fx ::save-ptv-meta-success
   (fn [{:keys [db]} _]

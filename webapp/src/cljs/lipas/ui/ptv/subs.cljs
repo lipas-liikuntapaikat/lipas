@@ -1,5 +1,6 @@
 (ns lipas.ui.ptv.subs
   (:require [clojure.string :as str]
+            [lipas.data.ptv :as ptv-data]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -50,23 +51,24 @@
 
 (rf/reg-sub ::org-default-settings
   :<- [::ptv]
-  :<- [::selected-org-id]
-  (fn [[ptv org-id] _]
+  (fn [ptv [_ org-id]]
     (get-in ptv [:org org-id :default-settings])))
 
 (rf/reg-sub ::default-settings
-  :<- [::ptv]
-  :<- [::org-default-settings]
+  (fn [[_ org-id]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::org-default-settings org-id])])
   (fn [[ptv org-defaults] _]
     (merge (:default-settings ptv) org-defaults)))
 
 (def lang
-  {"fi" "fi" "sv" "se" "en" "en"})
+  {"fi" "fi"
+   "sv" "se"
+   "en" "en"})
 
 (rf/reg-sub ::org-languages
   :<- [::ptv]
-  :<- [::selected-org-id]
-  (fn [[ptv org-id] _]
+  (fn [ptv [_ org-id]]
    ;; There are (undocumented) business rules regarding in which lang
    ;; data can be entered. One of the rules seems to be that the org
    ;; must be described with all the desired languages before other
@@ -74,12 +76,12 @@
    ;; 'supported languages' so we infer them from org name
    ;; translations. wtf
     (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
-         (keep #(get lang (:language %))))))
+         (keep #(get lang (:language %)))
+         vec)))
 
 (rf/reg-sub ::selected-org-data
   :<- [::ptv]
-  :<- [::selected-org-id]
-  (fn [[ptv org-id] _]
+  (fn [ptv [_ org-id]]
     (when org-id
       (let [{:keys [services _service-channels]} (get-in ptv [:org org-id :data])]
         (for [s  services
@@ -101,15 +103,15 @@
 
 (rf/reg-sub ::services-by-id
   :<- [::ptv]
-  :<- [::selected-org-id]
-  (fn [[ptv org-id] _]
+  (fn [ptv [_ org-id]]
     (when org-id
       (get-in ptv [:org org-id :data :services]))))
 
 (def langs {"sv" "se" "fi" "fi" "en" "en"})
 
 (rf/reg-sub ::services
-  :<- [::services-by-id]
+  (fn [[_ org-id]]
+    (rf/subscribe [::services-by-id org-id]))
   (fn [services _]
     (for [[id service] services]
       (let [service-name (->> service :serviceNames (some #(when (= "fi" (:language %))
@@ -142,49 +144,32 @@
     (:services-filter ptv)))
 
 (rf/reg-sub ::services-filtered
-  :<- [::services]
-  :<- [::services-filter]
+  (fn [[_ org-id]]
+    [(rf/subscribe [::services org-id])
+     (rf/subscribe [::services-filter])])
   (fn [[services filter'] _]
     (sort-by :label
              (case filter'
                "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
                services))))
 
-(defn ->source-id
-  [org-id sub-category-id]
-  (str "lipas-" org-id "-" sub-category-id))
-
-(defn resolve-missing-services
-  "Infer services (sub-categories) that need to be created in PTV and
-  attached to sports-sites."
-  [org-id services types sports-sites]
-  (let [source-ids (->> services vals (keep :sourceId) set)]
-    (->> sports-sites
-         (filter (fn [{:keys [ptv]}] (empty? (:service-ids ptv))))
-         (map (fn [site] {:source-id       (->source-id org-id (:sub-category-id site))
-                          :sub-category    (-> site :sub-category)
-                          :sub-category-id (-> site :sub-category-id)}))
-         distinct
-         (remove (fn [m] (contains? source-ids (:source-id m)))))))
-
 (rf/reg-sub ::missing-services
-  :<- [::selected-org-id]
-  :<- [::services-by-id]
-  :<- [::sports-sites]
-  :<- [:lipas.ui.sports-sites.subs/all-types]
-  (fn [[org-id services sports-sites types] _]
-    (resolve-missing-services org-id services types sports-sites)))
+  (fn [[_ org-id]]
+    [(rf/subscribe [::services-by-id org-id])
+     (rf/subscribe [::sports-sites org-id])])
+  (fn [[services sports-sites] [_ org-id]]
+    (ptv-data/resolve-missing-services org-id services sports-sites)))
 
 (rf/reg-sub ::service-candidate-descriptions
-  :<- [::selected-org-id]
   :<- [::ptv]
-  (fn [[org-id ptv] _]
+  (fn [ptv [_ org-id]]
     (get-in ptv [:org org-id :data :service-candidates])))
 
 (rf/reg-sub ::service-candidates
-  :<- [::missing-services]
-  :<- [::service-candidate-descriptions]
-  :<- [::org-languages]
+  (fn [[_ org-id]]
+    [(rf/subscribe [::missing-services org-id])
+     (rf/subscribe [::service-candidate-descriptions org-id])
+     (rf/subscribe [::org-languages org-id])])
   (fn [[missing-services descriptions org-langs] _]
     (->> missing-services
          (map (fn [{:keys [source-id] :as m}]
@@ -201,131 +186,52 @@
 
 (rf/reg-sub ::service-channels-by-id
   :<- [::ptv]
-  :<- [::selected-org-id]
-  (fn [[ptv org-id] _]
+  (fn [ptv [_ org-id]]
     (when org-id
       (get-in ptv [:org org-id :data :service-channels]))))
 
 (rf/reg-sub ::service-channels
-  :<- [::service-channels-by-id]
+  (fn [[_ org-id]]
+    (rf/subscribe [::service-channels-by-id org-id]))
   (fn [channels _]
     (vals channels)))
 
-(defn resolve-service-channel-name
-  "Sometimes these seem to have the name under undocumented :name
-  property and sometimes under documented :serviceChannelNames
-  array. Wtf."
-  [service-channel]
-  (or (:name service-channel)
-      (some (fn [m]
-              (when (= "fi" (:language m))
-                (:value m)))
-            (:serviceChannelNames service-channel))))
-
 (rf/reg-sub ::service-channels-list
-  :<- [::service-channels]
-  (fn [channels _]
+  (fn [[_ org-id]]
+    (rf/subscribe [::service-channels org-id]))
+  (fn [channels [_ _org-id]]
     (for [m channels]
       {:service-channel-id (:id m)
-       :name               (resolve-service-channel-name m)})))
-
-(defn parse-summary
-  "Returns first line-delimited paragraph."
-  [s]
-  (when (string? s)
-    (first (str/split s #"\r?\n"))))
-
-(defn detect-name-conflict
-  [sports-site service-channels]
-  (let [s1                (some-> sports-site :name str/trim str/lower-case)
-        attached-channels (-> sports-site :ptv :service-channel-ids set)]
-    (some (fn [service-channel]
-            (let [ssname (resolve-service-channel-name service-channel)
-                  s2     (some-> ssname str/trim str/lower-case)]
-              (when (and
-                      (not (contains? attached-channels (:id service-channel)))
-                      (= s1 s2))
-                {:service-channel-id (:id service-channel)})))
-          service-channels)))
+       :name               (ptv-data/resolve-service-channel-name m)})))
 
 (rf/reg-sub ::sports-sites
-  :<- [::ptv]
-  :<- [::selected-org-id]
-  :<- [::services-by-id]
-  :<- [::service-channels-by-id]
-  :<- [::default-settings]
-  :<- [:lipas.ui.subs/translator]
-  :<- [:lipas.ui.sports-sites.subs/all-types]
-  :<- [::org-languages]
-  (fn [[ptv org-id services service-channels org-defaults tr types org-langs] _]
+  (fn [[_ org-id]]
+    [(rf/subscribe [::ptv])
+     (rf/subscribe [::services-by-id org-id])
+     (rf/subscribe [::service-channels-by-id org-id])
+     (rf/subscribe [::default-settings org-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
+     (rf/subscribe [::org-languages org-id])])
+  (fn [[ptv services service-channels org-defaults types org-langs] [_ org-id]]
     (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]
       (for [site (vals lipas-id->site)]
-        (let [service-id               (-> site :ptv :service-ids first)
-              service-channel-id       (-> site :ptv :service-channel-ids first)
-              descriptions-integration (or (-> site :ptv :descriptions-integration)
-                                           (:descriptions-integration org-defaults))
-
-              summary (case descriptions-integration
-                        "lipas-managed-comment-field"
-                        (-> site :comment parse-summary)
-
-                        "lipas-managed-ptv-fields"
-                        (-> site :ptv :summary)
-
-                        "ptv-managed"
-                        (tr :ptv.integration.description/ptv-managed-helper))
-              description (case descriptions-integration
-                            "lipas-managed-comment-field"
-                            (-> site :comment)
-
-                            "lipas-managed-ptv-fields"
-                            (-> site :ptv :description)
-
-                            "ptv-managed"
-                            (tr :ptv.integration.description/ptv-managed-helper))]
-          {:valid           (boolean (and (some-> description :fi count (> 5))
-                                          (some-> summary :fi count (> 5))))
-           :lipas-id        (:lipas-id site)
-           :name            (:name site)
-           :name-conflict   (detect-name-conflict site (vals service-channels))
-           :marketing-name  (:marketing-name site)
-           :type            (-> site :search-meta :type :name :fi)
-           :sub-category    (-> site :search-meta :type :sub-category :name :fi)
-           :sub-category-id (-> site :type :type-code types :sub-category)
-           :org-id          org-id
-           :admin           (-> site :search-meta :admin :name :fi)
-           :owner           (-> site :search-meta :owner :name :fi)
-           :summary         summary
-           :description     description
-           :languages       (or (-> site :ptv :languages) org-langs)
-
-           :descriptions-integration    descriptions-integration
-           :sync-enabled                (get-in site [:ptv :sync-enabled] true)
-           :last-sync                   (-> site :ptv :last-sync)
-           :last-sync-human                   (or (some-> site
-                                                          :ptv
-                                                          :last-sync
-                                                          utils/->human-date-time-at-user-tz)
-                                                  "Ei koskaan")
-           :service-ids                 (-> site :ptv :service-ids)
-           :service-name                (-> services (get service-id) :serviceNames
-                                            (->> (some #(when (= "fi" (:language %)) (:value %)))))
-           :service-integration         (or (-> site :ptv :service-integration)
-                                            (:service-integration org-defaults))
-           :service-channel-id          service-channel-id
-           :service-channel-ids         (-> site :ptv :service-channel-ids)
-           :service-channel-name        (-> (get service-channels service-channel-id)
-                                            (resolve-service-channel-name))
-           :service-channel-integration (or (-> site :ptv :service-channel-integration)
-                                            (:service-channel-integration org-defaults))})))))
+        (ptv-data/sports-site->ptv-input {:org-id org-id
+                                          :types types
+                                          :org-defaults org-defaults
+                                          :org-langs org-langs}
+                                         service-channels
+                                         services
+                                         site)))))
 
 (rf/reg-sub ::sports-sites-count
-  :<- [::sports-sites]
+  (fn [[_ org-id]]
+    (rf/subscribe [::sports-sites org-id]))
   (fn [sports-sites _]
     (count sports-sites)))
 
 (rf/reg-sub ::sync-all-enabled?
-  :<- [::sports-sites]
+  (fn [[_ org-id]]
+    (rf/subscribe [::sports-sites org-id]))
   (fn [sports-sites _]
     (every? true? (map :sync-enabled sports-sites))))
 
@@ -350,7 +256,8 @@
                               100)})))
 
 (rf/reg-sub ::sports-site-setup-done
-  :<- [::sports-sites]
+  (fn [[_ org-id]]
+    (rf/subscribe [::sports-sites org-id]))
   (fn [ms _]
     (every? (fn [{:keys [last-sync sync-enabled] :as _m}]
               (or (utils/iso-date-time-string? (or last-sync ""))
@@ -363,8 +270,9 @@
     (:sports-sites-filter m)))
 
 (rf/reg-sub ::sports-sites-filtered
-  :<- [::sports-sites]
-  :<- [::sports-sites-filter]
+  (fn [[_ org-id]]
+    [(rf/subscribe [::sports-sites org-id])
+     (rf/subscribe [::sports-sites-filter])])
   (fn [[sites filter*] _]
     (case filter*
       "all"
@@ -385,7 +293,8 @@
               sites))))
 
 (rf/reg-sub ::sports-sites-filtered-count
-  :<- [::sports-sites-filtered]
+  (fn [[_ org-id]]
+    (rf/subscribe [::sports-sites-filtered org-id]))
   (fn [sports-sites _]
     (count sports-sites)))
 
