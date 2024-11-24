@@ -264,7 +264,7 @@
 
 (def arrow-icon
   (str "data:image/svg+xml;charset=utf-8,"
-       (-> {:color "#000000"}
+       (-> {:color "blue"}
            (svg/->arrow-str)
            js/encodeURIComponent)))
 
@@ -275,10 +275,12 @@
            js/encodeURIComponent)))
 
 (defn line-direction-style-fn
-  [feature]
+  [feature resolution]
+  (println resolution)
   (let [styles           #js [edit-style]
         ^js geometry     (.getGeometry feature)
-        travel-direction (.get feature "travel-direction")]
+        travel-direction (.get feature "travel-direction")
+        icon-scale (min 0.75 (/ 1 (min 3 resolution)))]
 
     (when (and geometry travel-direction)
       (.forEachSegment geometry
@@ -292,7 +294,8 @@
                            (.push styles (Style. #js {:geometry  (Point. (case travel-direction
                                                                            "start-to-end" end
                                                                            "end-to-start" start))
-                                                      :image     (Icon. #js {:src      arrow-icon
+                                                      :image     (Icon. #js {:scale icon-scale
+                                                                             :src      arrow-icon
                                                                              :anchor   #js [0.75 0.5]
                                                                              :rotation rot})})))
                          ;; Iteration stops on truthy vals but we want
@@ -301,10 +304,11 @@
     styles))
 
 (defn line-direction-hover-style-fn
-  [^js feature]
+  [^js feature resolution]
   (let [styles           #js [hover-style]
         geometry         (.getGeometry feature)
-        travel-direction (.get feature "travel-direction")]
+        travel-direction (.get feature "travel-direction")
+        icon-scale (min 0.75 (/ 1 (min 3 resolution)))]
 
     (when (and geometry travel-direction)
       (.forEachSegment geometry
@@ -318,7 +322,8 @@
                            (.push styles (Style. #js {:geometry  (Point. (case travel-direction
                                                                            "start-to-end" end
                                                                            "end-to-start" start))
-                                                      :image     (Icon. #js {:src      arrow-hover-icon
+                                                      :image     (Icon. #js {:scale icon-scale
+                                                                             :src      arrow-hover-icon
                                                                              :anchor   #js [0.75 0.5]
                                                                              :rotation rot})})))
                          ;; Iteration stops on truthy vals but we want

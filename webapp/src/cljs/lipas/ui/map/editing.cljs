@@ -324,7 +324,7 @@
     (.addInteraction lmap select)
 
     (doseq [^js f features]
-      (.setStyle f (styles/line-direction-style-fn f)))
+      (.setStyle f styles/line-direction-style-fn))
 
     (.addFeatures source features)
 
