@@ -18,6 +18,12 @@
 (def active
   (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
 
+(def unknown
+  {:name          {:fi "Ei tietoa" :se "Unknown" :en "Unknown"}
+   :type-code     -1
+   :main-category -1
+   :sub-category  -1})
+
 (def by-main-category (group-by :main-category (vals active)))
 (def by-sub-category (group-by :sub-category (vals active)))
 
