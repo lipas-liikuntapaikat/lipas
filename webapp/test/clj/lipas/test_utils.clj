@@ -12,6 +12,7 @@
             [lipas.backend.search :as search]
             [lipas.backend.system :as sy]
             [lipas.schema.core]
+            [lipas.utils :as utils]
             [migratus.core :as migratus]
             [ring.mock.request :as mock])
   (:import [java.io ByteArrayOutputStream]
@@ -20,7 +21,10 @@
 (defn gen-sports-site
   []
   (try
-    (gen/generate (s/gen :lipas/sports-site))
+    ;; FIXME :ptv generators produce difficult values
+    (-> (s/gen :lipas/sports-site)
+        gen/generate
+        (dissoc :ptv))
     (catch Throwable _t (gen-sports-site))))
 
 (def <-json #(j/parse-string (slurp %) true))
@@ -169,3 +173,7 @@
   (-> (gen/generate (s/gen :lipas.loi/document))
       (assoc :status "active")
       (assoc :id (str (java.util.UUID/randomUUID)))))
+
+(comment
+  (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site))
+  )
