@@ -2066,6 +2066,78 @@
    :lipas.sports-site/type
    (s/keys :req-un [:lipas.football.type/type-code])))
 
+;;; Legacy API ;;;
+
+(s/def :lipas.legacy.api/closeToLon (int-in -180 180)#_:lipas.location.coordinates/lon)
+(s/def :lipas.legacy.api/closeToLat (int-in -180 180)#_:lipas.location.coordinates/lat)
+(s/def :lipas.legacy.api/modifiedAfter :lipas/timestamp)
+(def legacy-fields #{"properties"
+                     "schoolUse"
+                     "email"
+                     "type.name"
+                     "reservationsLink"
+                     "location.sportsPlaces"
+                     "renovationYears"
+                     "admin"
+                     "location.coordinates.tm35fin"
+                     "www"
+                     "location.geometries"
+                     "name"
+                     "type.typeCode"
+                     "location.locationId"
+                     "constructionYear"
+                     "freeUse"
+                     "location.city.name"
+                     "lastModified"
+                     "marketingName"
+                     "location.postalCode"
+                     "location.postalOffice"
+                     "location.city.cityCode"
+                     "phoneNumber"
+                     "location.neighborhood"
+                     "owner"
+                     "location.coordinates.wgs84"
+                     "location.address"})
+(s/def :lipas.legacy.api/field* legacy-fields)
+(s/def :lipas.legacy.api/field 
+  (st/spec
+   {:spec         :lipas.legacy.api/field*
+    :swagger/type "string"
+    :swagger/enum legacy-fields}))
+(s/def :lipas.legacy.api/fields
+  (s/coll-of :lipas.legacy.api/field
+             :min-count 0
+             :distinct true
+             :into []))
+(s/def :lipas.legacy.api/retkikartta boolean?)
+(s/def :lipas.legacy.api/closeToMatch #{"start-point" "any-point"})
+(s/def :lipas.legacy.api/page (int-in 0 999999))
+(s/def :lipas.legacy.api/closeToDistanceKm (number-in {:min 0 :max 99999}))
+(s/def :lipas.legacy.api/harrastuspassi boolean?)
+(s/def :lipas.legacy.api/pageSize (int-in 0 1000))
+(s/def :lipas.legacy.api/typeCodes (s/coll-of :lipas.sports-site.type/type-code
+                                              :distinct true
+                                              :min-count 0
+                                              :into []))
+(s/def :lipas.legacy.api/cityCodes [:lipas.location.city/city-code])
+(s/def :lipas.legacy.api/searchString (str-in 3 100))
+(s/def :lipas.legacy.api/since :lipas/timestamp)
+(s/def :lipas.legacy.api/search-params
+  (s/keys :opt-un [:lipas.legacy.api/closeToLon
+                   :lipas.legacy.api/closeToLat
+                   :lipas.api/lang
+                   :lipas.legacy.api/modifiedAfter
+                   :lipas.legacy.api/fields
+                   :lipas.legacy.api/retkikartta
+                   :lipas.legacy.api/closeToMatch
+                   :lipas.legacy.api/page
+                   :lipas.legacy.api/closeToDistanceKm
+                   :lipas.legacy.api/harrastuspassi
+                   :lipas.legacy.api/pageSize
+                   :lipas.legacy.api/typeCodes
+                   :lipas.legacy.api/cityCodes
+                   :lipas.legacy.api/searchString]))
+
 ;;; HTTP-API ;;;
 
 (s/def :lipas.api/revs #{"latest" "yearly"})

@@ -841,14 +841,58 @@
         {:no-doc  true
          :swagger {:id ::legacy
                    :info {:title "Lipas-API (legacy) v1"}}
+         :tags [{:name "sport-places"
+                 :description "Sport places"}
+                {:name "sport-place-types"
+                 :description "Sport place types"}]
          :handler (swagger/create-swagger-handler)}}]
+      ["/sports-places"
+       {:swagger {:id ::legacy}
+        :parameters {:query :lipas.legacy.api/search-params} 
+        :get
+        {:tags ["sport-places"]
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [spec :lipas.legacy.api/search-params
+                 search-params (-> parameters :query)
+                 valid? (s/valid? spec search-params)]
+             (if valid?
+               {:status 200
+                :body   (legacy.api/get-sports-places search-params)} 
+               {:status 400
+                :body   (s/explain-data spec search-params)})))}}]
+      ["/sports-places/:sports-place-id"
+       {:swagger {:id ::legacy}
+        :parameters {:query (s/keys :opt-un [:lipas.api/lang])
+                     :path {:sports-place-id int?}}
+        :get
+        {:tags ["sport-places"]
+         :handler
+         (fn [req]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
+                 sports-place-id (-> req :parameters :path :sports-place-id)]
+             {:status     200
+              :body       (str "hello world" sports-place-id)}))}}]
+      ["/deleted-sports-places"
+       {:swagger {:id ::legacy}
+        :parameters {:query (s/keys :opt-un [:lipas.legacy.api/since])}
+        :get
+        {:tags ["sport-places"]
+         :handler
+         (fn [req]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
+                 since (or (-> req :parameters :query :since) "1984-01-01T00:00:00")]
+             {:status     200
+              :body       (str "hello world" since locale)}))}}]
+      
       ["/sports-place-types"
        {:swagger {:id ::legacy}
         :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
         :get
-        {:handler
+        {:tags ["sport-place-types"]
+         :handler
          (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :en)]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
              {:status     200
               :body       (legacy.api/sports-place-types locale)}))}}]
       ["/sports-place-types/:type-code"
@@ -856,19 +900,21 @@
         :parameters {:query (s/keys :opt-un [:lipas.api/lang])
                      :path {:type-code int?}}
         :get
-        {:handler
+        {:tags ["sport-place-types"]
+         :handler
          (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :en)
+           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
                  type-code (-> req :parameters :path :type-code)]
              {:status     200
               :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]
       ["/categories"
-       {:swagger {:id ::legacy}
+       {:tags ["sport-place-types"]
+        :swagger {:id ::legacy}
         :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
         :get
         {:handler
          (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :en)]
+           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
              {:status     200
               :body       (legacy.api/categories locale)}))}}]]]
 
