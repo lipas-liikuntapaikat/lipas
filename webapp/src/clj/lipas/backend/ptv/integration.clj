@@ -4,7 +4,6 @@
             [clj-http.client :as client]
             [clojure.string :as str]
             [lipas.backend.search :as search]
-            [lipas.data.ptv :as ptv-data]
             [taoensso.timbre :as log]))
 
 ;; ptv component, :lipas/ptv has the config and :tokens atom for org-id -> auth token storage
@@ -244,18 +243,20 @@
 
   (def ptv* (:lipas/ptv state/system))
 
-  (get-org-services ptv* ptv-data/liminka-org-id-test)
+  (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+
+  (get-org-services ptv* org-id*)
 
   ;; Delete all org services
-  (doseq [x (:itemList (get-org-services ptv* ptv-data/liminka-org-id-test))]
+  (doseq [x (:itemList (get-org-services ptv* org-id*))]
     (update-service ptv*
                     (:sourceId x)
-                    {:mainResponsibleOrganization ptv-data/liminka-org-id-test
+                    {:mainResponsibleOrganization org-id*
                      :publishingStatus "Deleted"}))
 
   (get-service ptv*
-               ptv-data/liminka-org-id-test
-               (-> (get-org-services {} ptv-data/liminka-org-id-test)
+               org-id*
+               (-> (get-org-services {} org-id*)
                    :itemList
                    first
                    :id))
@@ -279,14 +280,14 @@
           :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
     (core/index! (user/search) site :sync))
 
-  (get-org-service-channels ptv* ptv-data/liminka-org-id-test)
+  (get-org-service-channels ptv* org-id*)
 
   ;; Delete all org service locations
-  (doseq [x (:itemList (get-org-service-channels ptv* ptv-data/liminka-org-id-test))]
-    (update-service-location ptv* (:id x) {:organizationId ptv-data/liminka-org-id-test
+  (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
+    (update-service-location ptv* (:id x) {:organizationId org-id*
                                            :publishingStatus "Deleted"}))
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
-                           {:org-id ptv-data/liminka-org-id-test
+                           {:org-id org-id*
                             :publishingStatus "Deleted"}))

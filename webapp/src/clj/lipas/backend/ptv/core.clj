@@ -176,9 +176,10 @@
                               (:serviceChannelNames ptv-resp))}})))
 
 (comment
+  (require '[integrant.repl.state :as state])
 
-  (let [ptv-component (:lipas/ptv integrant.repl.state/system)
-        org-id ptv-data/liminka-org-id-test
+  (let [ptv-component (:lipas/ptv state/system)
+        org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
         services (:itemList (ptv/get-org-services ptv-component org-id))]
     (->> services
          (utils/index-by :sourceId)

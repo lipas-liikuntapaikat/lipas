@@ -17,27 +17,29 @@
 ;; org 10
 #_(def uta-org-id-test "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53")
 
-;; Testiorganisaatio 6 (Kunta)
-(def uta-org-id-test "3d1759a2-e47a-4947-9a31-cab1c1e2512b")
-
-;; org 9
-(def liminka-org-id-test "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
-
 ;; org 8
 #_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
 #_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
 
 ;; TODO: Tulossa 5 kuntaa, muut:
 ;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
+;; TODO: Kuinka valita näytetäänkö test vai prod organisaatiot?
 
 (def organizations
   [{:name "Utajärven kunta (test)"
-    :props {:org-id              uta-org-id-test
+    :props {;; Testiorganisaatio 6 (Kunta)
+            :org-id              "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
+            :city-codes          [889]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" "se" "en"]}}
+   {:name "Utajärven kunta (prod)"
+    :props {:org-id              "TODO"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" "se" "en"]}}
    {:name "Limingan kunta (test)"
-    :props {:org-id              liminka-org-id-test
+    :props {;; org 9
+            :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" "se" "en"]}} ])
