@@ -66,3 +66,8 @@
                    :typeCode (cat :type-code)
                    :subCategories (collect-subcategories (cat :type-code) locale)}) 
         (vals types/main-categories)))
+
+(defn get-sports-places [params] 
+  ;; TODO collect params and query ES
+  params)
+
