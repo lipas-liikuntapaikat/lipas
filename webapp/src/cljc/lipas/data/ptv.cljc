@@ -33,7 +33,7 @@
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" "se" "en"]}}
    {:name "Utajärven kunta (prod)"
-    :props {:org-id              "TODO"
+    :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" "se" "en"]}}
