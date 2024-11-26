@@ -1,10 +1,14 @@
-(ns lipas.roles)
+(ns lipas.roles
+  (:require [clojure.set :as set]))
 
 ;; :doc here is just a developer comment, translations are elsewhere (if we even need
 ;; translations for privileges)
 ;; Use namespaced keys for easier searching in the codebase
 (def privileges
-  {:site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
+  {;; Add this to all roles that have ANY edit permission
+   :site/save-api {:doc "Oikeus kutsua save-sports-site rajapintaa, jota käytetään kaikkiin muutoksiin"}
+
+   :site/create-edit {:doc "Oikeus lisätä ja muokata liikuntapaikkoja"}
    ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
@@ -28,6 +32,7 @@
    :ptv/manage {:doc ""}})
 
 (def basic #{:site/create-edit
+             :site/save-api
              :activity/view
              :analysis-tool/use})
 
@@ -82,6 +87,7 @@
     :assignable true
     :privileges #{:activity/view
                   :activity/edit
+                  :site/save-api
 
                   :loi/view ;; Temporarily only enabled here
                   :loi/create-edit}
@@ -91,7 +97,7 @@
    :floorball-manager
    {:sort 30
     :assignable true
-    :privileges #{:floorball/view :floorball/view-extended :floorball/edit}
+    :privileges #{:floorball/view :floorball/view-extended :floorball/edit :site/save-api}
     :required-context-keys []
     :optional-context-keys [:type-code]}
 
@@ -131,9 +137,11 @@
              (or (nil? (:type-code role))
                  (= ::any (:type-code role-context))
                  (contains? (:type-code role) (:type-code role-context)))
+             ;; Check if user has permission to touch any of the activity types
+             ;; the site has (usually just one, but could be many types in theory)
              (or (nil? (:activity role))
                  (= ::any (:activity role-context))
-                 (contains? (:activity role) (:activity role-context)))
+                 (seq (set/intersection (:activity role) (:activity role-context))))
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
                  (contains? (:lipas-id role) (:lipas-id role-context))))
@@ -167,7 +175,11 @@
   [site]
   {:lipas-id  (:lipas-id site)
    :type-code (-> site :type :type-code)
-   :city-code (-> site :location :city :city-code)})
+   :city-code (-> site :location :city :city-code)
+   ;; Sites SHOULD usually just have one activity type
+   :activity (some->> (keys (:activities site))
+                      (map name)
+                      set)})
 
 (defn check-role
   "Check if user has the given role USUALLY
