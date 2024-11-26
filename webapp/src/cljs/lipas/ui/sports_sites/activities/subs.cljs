@@ -42,13 +42,13 @@
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user [_ activity-value role-context]]
     (and activity-value
-         (roles/check-privilege user (assoc role-context :activity activity-value) :activity/view))))
+         (roles/check-privilege user (assoc role-context :activity #{activity-value}) :activity/view))))
 
 (rf/reg-sub ::edit-activities?
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user [_ activity-value role-context]]
     (and activity-value
-         (roles/check-privilege user (assoc role-context :activity activity-value) :activity/edit))))
+         (roles/check-privilege user (assoc role-context :activity #{activity-value}) :activity/edit))))
 
 (rf/reg-sub ::selected-features
   :<- [:lipas.ui.map.subs/selected-features]

@@ -267,7 +267,7 @@
 (defn- check-permissions! [user sports-site draft?]
   (when-not (or draft?
                 (new? sports-site)
-                (roles/check-privilege user (roles/site-roles-context sports-site) :site/create-edit))
+                (roles/check-privilege user (roles/site-roles-context sports-site) :site/save-api))
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
