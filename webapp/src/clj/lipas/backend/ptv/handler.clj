@@ -104,7 +104,6 @@
                           [:org-id :string]
                           [:city-codes [:vector :int]]
                           [:owners [:vector :string]]
-                          [:supported-languages [:vector [:enum "fi" "se" "en"]]]
                           [:sourceId :string]
                           [:sub-category-id :int]
                           [:overview {:optional true

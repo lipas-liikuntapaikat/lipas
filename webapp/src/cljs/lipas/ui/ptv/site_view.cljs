@@ -29,7 +29,7 @@
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
 
-        org-languages (use-subscribe [::subs/org-languages org-id])
+        org-languages (ptv-data/org-id->languages org-id)
         service-candidate-descriptions (use-subscribe [::subs/service-candidate-descriptions org-id])
         {:keys [summary description]} (get service-candidate-descriptions source-id)
 

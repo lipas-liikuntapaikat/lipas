@@ -42,7 +42,7 @@
             :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}} ])
+            :supported-languages ["fi" "se" "en"]}}])
 
 ;; For adding default params to some requests from the FE
 ;; NOTE: This should eventually be replaced with Lipas organizations.
@@ -67,6 +67,9 @@
 
 (def lipas-lang->ptv-lang
   {"fi" "fi", "se" "sv", "en" "en"})
+
+(defn org-id->languages [org-id]
+  (:supported-languages (get org-id->params org-id)))
 
 (def placeholder "TODO: Value missing!")
 
@@ -422,6 +425,7 @@
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id               (-> site :ptv :service-ids first)
         service-channel-id       (-> site :ptv :service-channel-ids first)
+
         summary (-> site :ptv :summary)
         description (-> site :ptv :description)
 

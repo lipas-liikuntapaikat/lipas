@@ -33,7 +33,8 @@
                {:method          :post
                 :headers         {:Authorization (str "Token " token)}
                 :uri             (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-                :params          (get ptv-data/org-id->params (:id org))
+                :params          (-> (get ptv-data/org-id->params (:id org))
+                                     (select-keys [:city-codes :type-codes :owners]))
                 :format          (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success      [::fetch-integration-candidates-success (:id org)]
@@ -426,11 +427,10 @@
               :headers {:Authorization (str "Token " token)}
               :uri     (str (:backend-url db) "/actions/generate-ptv-service-descriptions")
 
-              :params          (merge
-                                 (ptv-data/org-id->params org-id)
-                                 {:sourceId        id
-                                  :sub-category-id (parse-long (last (str/split id #"-")))
-                                  :overview        overview})
+              :params          {:city-codes      (:city-codes (ptv-data/org-id->params org-id))
+                                :sourceId        id
+                                :sub-category-id (parse-long (last (str/split id #"-")))
+                                :overview        overview}
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::generate-service-descriptions-success org-id id success-fx]
@@ -512,9 +512,8 @@
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service")
-              ;; FIXME: org-id->params adds some extra keys that aren't used?
-              ;; supported-languages (languages is used instead)
-              :params          (merge data (ptv-data/org-id->params org-id))
+              :params          (merge (select-keys (ptv-data/org-id->params org-id) [:city-codes])
+                                      data)
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success      [::create-ptv-service-success org-id id success-fx]

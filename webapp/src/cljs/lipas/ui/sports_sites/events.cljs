@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
+            [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
             [lipas.ui.utils :as utils]
@@ -29,7 +30,11 @@
       ;; NOTE: Does add extra slowness to any ::edit-field calls...
       (cond->
         (:ptv sports-site)
-        (update :ptv #(merge (:default-settings (:ptv db)) %)))))
+        (update :ptv (fn [v]
+                       (let [org-langs (ptv-data/org-id->languages (:org-id v))]
+                         (merge (:default-settings (:ptv db))
+                                {:languages org-langs}
+                                v)))))))
 
 (rf/reg-event-db ::calc-derived-fields
   (fn [db [_ lipas-id sports-site]]
