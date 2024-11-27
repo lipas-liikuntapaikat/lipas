@@ -181,9 +181,9 @@
      {:require-privilege :ptv/manage
       :parameters {:body create-ptv-service-location}
       :handler
-      (fn [{:keys [body-params identity]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/upsert-ptv-service-location! db ptv search identity body-params)})}}]
+         :body   (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))})}}]
 
    ["/actions/save-ptv-meta"
     {:post
@@ -191,6 +191,6 @@
       :coercion reitit.coercion.spec/coercion
       :parameters {:body :lipas.sports-site/ptv}
       :handler
-      (fn [{:keys [identity] :as req}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/save-ptv-integration-definitions db search identity (-> req :parameters :body))})}}]])
+         :body   (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))})}}]])

@@ -68,7 +68,8 @@
 
           ($ controls/lang-selector
              {:value selected-tab
-              :on-change set-selected-tab})
+              :on-change set-selected-tab
+              :enabled-languages (set org-languages)})
 
           ;; Summary
           (r/as-element
@@ -127,6 +128,7 @@
         ;; _ (js/console.log edit-data sports-site)
 
         {:keys [org-id sync-enabled last-sync publishing-status]} (:ptv site)
+        org-languages (ptv-data/org-id->languages org-id)
 
         ;; _ (js/console.log org-id)
 
@@ -285,7 +287,9 @@
 
        ($ controls/lang-selector
           {:value selected-tab
-           :on-change set-selected-tab})
+           :on-change set-selected-tab
+           :enabled-languages (set (or (:languages (:ptv site))
+                                       org-languages))})
 
        ;; Summary
        (r/as-element

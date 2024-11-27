@@ -6,6 +6,7 @@
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Avatar$default" :as Avatar]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
@@ -687,17 +688,27 @@
               :service-channel-ids service-channel-ids}))]]]]))
 
 (defn service-panel
-  [{:keys [service]}]
+  [{:keys [org-id service descriptions]}]
   (r/with-let [lang (r/atom "fi")]
-    (let [tr (<== [:lipas.ui.subs/translator])]
+    (let [tr        (<== [:lipas.ui.subs/translator])
+          source-id (:source-id service)
+          loading?  false
+          org-languages (ptv-data/org-id->languages org-id)
+          ;; Turn the PTV Service data structure back to Lipas API call for save!
+          data      {:org-id org-id
+                     :city-codes (->> service
+                                      :areas
+                                      (some (fn [{:keys [type municipalities]}]
+                                              (when (= "Municipality" type)
+                                                municipalities)))
+                                      vals
+                                      (map :code))
+                     :sub-category-id (ptv-data/parse-service-source-id (:source-id service))
+                     :languages org-languages
+                     :summary (:summary descriptions)
+                     :description (:description descriptions)}]
       [lui/expansion-panel {:label (:label service)}
-
        [mui/stack {:spacing 2}
-        [lang-selector
-         {:value     @lang
-          :opts      (:languages service)
-          :on-change #(reset! lang %2)}]
-
         [mui/stack {:direction "row" :spacing 2}
          [mui/stack {:spacing 2 :flex 1}
 
@@ -722,25 +733,35 @@
                  ^{:key label}
                  [mui/chip {:label label :variant "outlined"}])))]
 
+          [lang-selector
+           {:value     @lang
+            :opts      (:languages service)
+            :on-change #(reset! lang %2)}]
+
           ;; Summary
           [mui/typography (tr :ptv/summary)]
-          [mui/typography {:variant "body2"} (get-in service [:summary @lang])]
-          #_[lui/text-field
-             {:disabled  true
-              :on-change #()
-              :multiline true
-              :label     (tr :ptv/summary)
-              :value     (get-in service [:summary @lang])}]
+          [lui/text-field
+           {:disabled  loading?
+            :on-change #(==> [::events/set-service-candidate-summary source-id @lang %])
+            :multiline true
+            :label     (tr :ptv/summary)
+            :value     (get-in data [:summary @lang])}]
 
           ;; Descriptions
           [mui/typography (tr :ptv/description)]
-          [mui/typography {:variant "body2"} (get-in service [:description @lang])]
-          #_[lui/text-field
-             {:disabled  true
-              :on-change #()
-              :multiline true
-              :label     (tr :ptv/description)
-              :value     (get-in service [:description @lang])}]]
+          [lui/text-field
+           {:disabled  loading?
+            :on-change #(==> [::events/set-service-candidate-description source-id @lang %])
+            :multiline true
+            :label     (tr :ptv/description)
+            :value     (get-in data [:description @lang])}]
+
+          ($ Button
+             {:variant "contained"
+              :disabled loading?
+              :on-click (fn [_e]
+                          (rf/dispatch [::events/create-ptv-service org-id source-id data [] []]))}
+             "Tallenna")]
 
          [mui/stack {:spacing 2 :flex 1}
 
@@ -758,7 +779,8 @@
   (let [tr              (<== [:lipas.ui.subs/translator])
         services-filter (<== [::subs/services-filter])
         org-id          (<== [::subs/selected-org-id])
-        services        (<== [::subs/services-filtered org-id])]
+        services        (<== [::subs/services-filtered org-id])
+        descriptions    (<== [::subs/service-candidate-descriptions org-id])]
     [mui/paper
 
      ;; Filter checkbox
@@ -771,7 +793,10 @@
      (doall
        (for [service services]
          ^{:key (:service-id service)}
-         [service-panel {:service service}]))]))
+         [service-panel
+          {:org-id org-id
+           :service service
+           :descriptions (get descriptions (:source-id service))}]))]))
 
 (defn wizard
   []

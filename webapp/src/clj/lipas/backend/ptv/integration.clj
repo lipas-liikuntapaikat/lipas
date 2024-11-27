@@ -4,6 +4,7 @@
             [clj-http.client :as client]
             [clojure.string :as str]
             [lipas.backend.search :as search]
+            [lipas.data.ptv :as ptv-data]
             [taoensso.timbre :as log]))
 
 ;; ptv component, :lipas/ptv has the config and :tokens atom for org-id -> auth token storage
@@ -54,6 +55,9 @@
   In test-env token seems to be valid for 24h."
   [{:keys [token-url username password org-id]}]
   (let [token-key (if (test-env? token-url) :ptvToken :serviceToken) ; wtf
+        ;; Prod needs a different type of ID for apiUserOrganisation value
+        user-org-id    (or (:prod-org-id (get ptv-data/org-id->params org-id))
+                           org-id)
         req       {:url token-url
                    :method :post
                    :as :json
@@ -61,8 +65,8 @@
                    :content-type :json
                    :form-params (merge {:username username
                                         :password password}
-                                       (when org-id
-                                         {:apiUserOrganisation org-id}))}]
+                                       (when user-org-id
+                                         {:apiUserOrganisation user-org-id}))}]
     (-> (client/request req)
         :body
         token-key)))
