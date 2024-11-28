@@ -34,6 +34,10 @@
             :supported-languages ["fi"]}}
    {:name "Utajärven kunta (prod)"
     :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+            ;; Production authentication apiUserOrganisation field uses different
+            ;; "persistent org-id" value. This option is used to map the "version org-id"
+            ;; that is used elsewhere to this version for the auth.
+            :prod-org-id         "9f095753-3ca9-4d89-b7e4-3cdf83bb44b2"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi"]}}
@@ -72,6 +76,12 @@
 
 (def default-langs ["fi"])
 
+;; NOTE: Right now the UI mostly just uses this always.
+;; The languages value is also stored to sports-site :ptv on
+;; sync, but that value isn't used now?
+;; So it is possible to enable new languages by modying the org config.
+;; Summary/description texts are always generated for all languages,
+;; but additional languages aren't shown on the FE or sent to PTV.
 (defn org-id->languages [org-id]
   (or (:supported-languages (get org-id->params org-id))
       default-langs))
