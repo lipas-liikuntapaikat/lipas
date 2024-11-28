@@ -106,7 +106,7 @@
                                       :description description
                                       :languages (vec org-languages)}]
                             (rf/dispatch [::events/create-ptv-service org-id source-id data [] []])))}
-             "Luo Palvelu"))
+             "Luo palvelu"))
        )))
 
 (defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
@@ -173,7 +173,7 @@
        ;; TODO: Spinneri?
        (when loading-ptv?
          ($ Alert {:severity "info"}
-            "Ladataan PTV tietoja..."))
+            "Ladataan PTV-tietoja..."))
 
        ; ($ FormControl
        ;    ($ FormLabel
@@ -203,29 +203,29 @@
 
        ($ FormControl
           ($ FormLabel
-             "PTV Tila")
+             "PTV-tila")
           (cond
             (:error (:ptv site))
             (let [e (:error (:ptv site))]
               ($ Alert {:severity "error"}
-                 "Virhe PTV integraatiossa, uusimpia tietoja ei ole viety PTV: " (:message e)))
+                 "Virhe PTV-integraatiossa, uusimpia tietoja ei ole viety PTV:hen. " (:message e)))
 
             (and previous-sent? candidate-now? ready?)
             (if sync-enabled
-              ($ Alert {:severity "success"} "PTV integraatio käytössä")
-              ($ Alert {:severity "success"} "PTV integraatio käytössä, mutta paikan synkronointi PTV on kytketty pois päältä."))
+              ($ Alert {:severity "success"} "PTV-integraatio on käytössä")
+              ($ Alert {:severity "success"} "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä."))
 
             (and previous-sent? (not candidate-now?))
-            ($ Alert {:severity "warning"} "Paikka on viety PTV, mutta on muutettu niin että näyttää nyt siltä että sen ei pidä mennä PTV -> PTV palvelu paikka arkistoidaan tallennuksessa.")
+            ($ Alert {:severity "warning"} "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä.")
 
             (and candidate-now? ready?)
-            ($ Alert {:severity "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
+            ($ Alert {:severity "info"} "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä.")
 
             (not ready?)
-            ($ Alert {:severity "info"} "PTV tiedot ovat vielä puutteelliset, täytä tiedot niin paikka viedään PTV tallennuksen yhteydessä")
+            ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä")
 
             :else
-            ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV")
+            ($ Alert {:severity "warning"} "Liikuntapaikka ei viedä PTV:hen.")
 
             ; ($ Typography
             ;    publishing-status)
@@ -236,15 +236,15 @@
        (when candidate-now?
          ($ FormControl
             ($ FormLabel
-               "PTV Palvelu")
+               "PTV-palvelu")
             ($ Typography
                (get-in new-service-sub-cat [:name locale]))
             (cond
               (seq missing-services)
-              ($ Alert {:severity "warning"} "Liikuntapaikkatyyppiä vaihdettu, uusi PTV Palvelu puuttuu")
+              ($ Alert {:severity "warning"} "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä.")
 
               (and previous-sent? type-code-changed?)
-              ($ Alert {:severity "info"} "Liikuntapaikkatyyppiä vaihdettu, vaihdetaan PTV Palvelu"))
+              ($ Alert {:severity "info"} "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."))
             ))
 
        (when (seq missing-services)
@@ -255,7 +255,7 @@
              :service (first missing-services)}))
 
        ($ FormControlLabel
-          {:label "Sync-enabled"
+          {:label "Synkronoi PTV:hen"
            :control ($ Switch
                        {:disabled read-only?
                         :value sync-enabled
