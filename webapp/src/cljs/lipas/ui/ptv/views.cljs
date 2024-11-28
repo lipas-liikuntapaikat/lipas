@@ -695,17 +695,12 @@
           org-languages (ptv-data/org-id->languages org-id)
           ;; Turn the PTV Service data structure back to Lipas API call for save!
           data      {:org-id org-id
-                     :city-codes (->> service
-                                      :areas
-                                      (some (fn [{:keys [type municipalities]}]
-                                              (when (= "Municipality" type)
-                                                municipalities)))
-                                      vals
-                                      (map :code))
+                     :source-id source-id
+                     :city-codes (:city-codes service)
                      :sub-category-id (ptv-data/parse-service-source-id (:source-id service))
                      :languages org-languages
-                     :summary (:summary descriptions)
-                     :description (:description descriptions)}]
+                     :summary (or (:summary descriptions) (:summary service))
+                     :description (or (:description descriptions) (:description service))}]
       [lui/expansion-panel {:label (:label service)}
        [mui/stack {:spacing 2}
         [mui/stack {:direction "row" :spacing 2}

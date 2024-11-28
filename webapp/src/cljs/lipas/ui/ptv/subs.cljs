@@ -115,6 +115,13 @@
          :service-name        service-name
          :service-modified    (:modified service)
          :service-channels    (->> service :serviceChannels (map :serviceChannel))
+         :city-codes (->> service
+                          :areas
+                          (mapcat (fn [{:keys [type municipalities]}]
+                                    (when (= "Municipality" type)
+                                      municipalities)))
+                          (map (comp parse-long :code))
+                          vec)
          :ontology-terms      (->> service
                                    :ontologyTerms
                                    (map (fn [m]

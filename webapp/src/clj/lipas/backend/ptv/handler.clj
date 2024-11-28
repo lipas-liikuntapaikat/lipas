@@ -6,9 +6,9 @@
 (defn localized-string-schema [string-props]
   [:map
    {:closed true}
-   [:fi [:string string-props]]
-   [:se [:string string-props]]
-   [:en [:string string-props]]])
+   [:fi {:optional true} [:string string-props]]
+   [:se {:optional true} [:string string-props]]
+   [:en {:optional true} [:string string-props]]])
 
 (def integration-enum
   [:enum "lipas-managed" "manual"])

@@ -193,7 +193,6 @@
   [ptv service-location]
   (let [org-id (-> service-location :organizationId)
         params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation")
-                :auth-org-id org-id
                 :method :post
                 :form-params service-location}]
     (log/info "Create PTV service location" service-location)
@@ -285,6 +284,9 @@
     (core/index! (user/search) site :sync))
 
   (get-org-service-channels ptv* org-id*)
+
+  (http ptv* org-id* {:url (make-url ptv* "/v11/ServiceChannel/b4abd13e-0d36-4ff9-a6c9-94f2f5aee036")
+                      :method :get})
 
   ;; Delete all org service locations
   (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
