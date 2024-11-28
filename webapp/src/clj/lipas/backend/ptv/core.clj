@@ -107,7 +107,7 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!*
-  [tx ptv-component search user {:keys [org-id site ptv archive?] :as _m}]
+  [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id       (-> ptv :service-channel-ids first)
         ;; merge or just replace?
         site     (update site :ptv merge ptv)
@@ -129,6 +129,9 @@
                                 :source-id (:sourceId ptv-resp)
                                 ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
                                 :publishing-status (:publishingStatus ptv-resp)
+                                ;; NOTE: The ptv map might not have this value in some cases...?
+                                ;; but the value merged with data from site should have it always?
+                                :service-ids (:service-ids (:ptv site))
                                 ;; Take the created ID from ptv response and store to Lipas DB right away.
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
@@ -149,7 +152,7 @@
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
 
-          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                  {:org-id org-id
                                                                   :site site
                                                                   :ptv ptv
@@ -241,7 +244,7 @@
                                                 (vec x)))))
                  ptv)
 
-          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                   {:org-id org-id
                                                                    :ptv ptv
                                                                    :site sports-site

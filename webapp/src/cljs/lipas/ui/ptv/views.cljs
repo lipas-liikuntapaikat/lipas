@@ -78,7 +78,8 @@
 
 (defn form
   [{:keys [org-id tr site]}]
-  (let [services @(rf/subscribe [::subs/services org-id])]
+  (let [services @(rf/subscribe [::subs/services org-id])
+        org-languages (ptv-data/org-id->languages org-id)]
     [mui/grid
      {:container true
       :spacing   2
@@ -125,12 +126,10 @@
            (when loading?
              [mui/circular-progress])
 
-           [mui/tabs
-            {:value     @selected-tab
-             :on-change #(reset! selected-tab (keyword %2))}
-            [mui/tab {:value "fi" :label "FI"}]
-            [mui/tab {:value "se" :label "SE"}]
-            [mui/tab {:value "en" :label "EN"}]]
+           ($ controls/lang-selector
+              {:value @selected-tab
+               :on-change #(reset! selected-tab %)
+               :enabled-languages (set org-languages)})
 
            ;; Summary
            [lui/text-field

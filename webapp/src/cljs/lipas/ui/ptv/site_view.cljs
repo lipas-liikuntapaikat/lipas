@@ -116,7 +116,6 @@
 
         editing*   (boolean (use-subscribe [:lipas.ui.sports-sites.subs/editing? lipas-id]))
         editing?   (and can-edit? editing*)
-        read-only? (not editing?)
         sports-site (use-subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
 
         ;; NOTE: Edit-data and sports-site schema can be a bit different.
@@ -144,13 +143,17 @@
         ready? (ptv-data/ptv-ready? site)
         candidate-now? (ptv-data/ptv-candidate? site)
 
+        read-only? (or (not editing?)
+                       (not candidate-now?))
+
         types (use-subscribe [:lipas.ui.sports-sites.subs/all-types])
         loading-ptv? (use-subscribe [::subs/loading-from-ptv?])
+
         services (use-subscribe [::subs/services-by-id org-id])
         missing-services-input [{:service-ids #{}
                                  :sub-category-id (-> site :type :type-code types :sub-category)
                                  :sub-category    (-> site :search-meta :type :sub-category :name :fi)}]
-        missing-services (when (and org-id (not loading-ptv?))
+        missing-services (when (and org-id candidate-now? (not loading-ptv?))
                             (ptv-data/resolve-missing-services org-id services missing-services-input))
 
         source-id->service (utils/index-by :sourceId (vals services))
@@ -170,23 +173,37 @@
 
     ($ Stack
        {:direction "column"
-        :sx #js {:gap 2}}
+        :sx #js {:gap 2
+                 :position "relative"}}
 
-       ;; TODO: Spinneri?
        (when loading-ptv?
-         ($ Alert {:severity "info"}
-            "Ladataan PTV tietoja..."))
+         ($ Stack
+            {:severity "info"
+             :sx #js {:position "absolute"
+                      :background "rgba(255, 255, 255, 0.7)"
+                      :zIndex 2000
+                      :top "0"
+                      :left "0"
+                      :width "100%"
+                      :height "100%"}}
+            ($ Stack
+               {:direction "column"
+                :alignItems "center"
+                :sx #js {:position "absolute"
+                         :top "50%"
+                         :left "50%"
+                         :transform "translateX(-50%) translateY(-50%)"
+                         :gap 2}}
+               ($ CircularProgress)
+               "Ladataan PTV tietoja...")))
 
-       ; ($ FormControl
-       ;    ($ FormLabel
-       ;       "Lipas tila")
-       ;    ($ Typography
-       ;       status))
-
-       (when (not (:org-id (:ptv site)))
+       (when (and candidate-now? (not (:org-id (:ptv site))))
          ($ :<>
             ($ Alert {:severity "warning"}
                "Valitse organisaatio:")))
+
+       (when (not candidate-now?)
+          ($ Alert {:severity "warning"} "Paikkaa ei viedä PTV (Lipas tila, tyyppi, omistaja)"))
 
        (let [options (uix/use-memo (fn []
                                      (->> ptv-data/orgs
@@ -223,11 +240,11 @@
             (and candidate-now? ready?)
             ($ Alert {:severity "info"} "Paikkaa ei viety PTV, mutta palvelu paikka luodaan tallennuksessa")
 
-            (not ready?)
+            (and candidate-now? (not ready?))
             ($ Alert {:severity "info"} "PTV tiedot ovat vielä puutteelliset, täytä tiedot niin paikka viedään PTV tallennuksen yhteydessä")
 
             :else
-            ($ Alert {:severity "warning"} "Paikka näyttää siltä ettei sitä pidä viedä PTV")
+            "-"
 
             ; ($ Typography
             ;    publishing-status)

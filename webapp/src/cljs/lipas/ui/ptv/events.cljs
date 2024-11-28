@@ -619,11 +619,16 @@
           service-ids  (ptv-data/sports-site->service-ids types source-id->service sports-site)
 
           ;; Add other defaults and merge with summary/description from the UI
-          ptv-data     (merge (:default-settings (:ptv db))
-                              {:service-ids service-ids
+          ptv-data     (merge (select-keys (:default-settings (:ptv db))
+                                           [:sync-enabled])
+                              {;; :service-ids service-ids
                                :service-channel-ids []}
                               ;; {:org-id org-id}
-                              (:ptv sports-site))]
+                              (select-keys (:ptv sports-site)
+                                           [:sync-enabled
+                                            :service-channel-ids
+                                            :summary
+                                            :description]))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
        :fx [[:http-xhrio
              {:method          :post

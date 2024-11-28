@@ -31,12 +31,12 @@
             :org-id              "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}}
+            :supported-languages ["fi"]}}
    {:name "Utajärven kunta (prod)"
     :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}}
+            :supported-languages ["fi"]}}
    {:name "Limingan kunta (test)"
     :props {;; org 9
             :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
@@ -68,12 +68,13 @@
 (def lipas-lang->ptv-lang
   {"fi" "fi", "se" "sv", "en" "en"})
 
-(defn org-id->languages [org-id]
-  (:supported-languages (get org-id->params org-id)))
-
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
+
+(defn org-id->languages [org-id]
+  (or (:supported-languages (get org-id->params org-id))
+      default-langs))
 
 (defn ->service-source-id
   [org-id sub-category-id]
