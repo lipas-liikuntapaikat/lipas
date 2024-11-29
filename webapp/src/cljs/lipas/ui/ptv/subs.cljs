@@ -61,24 +61,6 @@
   (fn [[ptv org-defaults] _]
     (merge (:default-settings ptv) org-defaults)))
 
-(def lang
-  {"fi" "fi"
-   "sv" "se"
-   "en" "en"})
-
-(rf/reg-sub ::org-languages
-  :<- [::ptv]
-  (fn [ptv [_ org-id]]
-   ;; There are (undocumented) business rules regarding in which lang
-   ;; data can be entered. One of the rules seems to be that the org
-   ;; must be described with all the desired languages before other
-   ;; data can be entered. AFAIK there's no direct way to get the org
-   ;; 'supported languages' so we infer them from org name
-   ;; translations. wtf
-    (->> (get-in ptv [:org org-id :data :org org-id :organizationNames])
-         (keep #(get lang (:language %)))
-         vec)))
-
 (rf/reg-sub ::selected-org-data
   :<- [::ptv]
   (fn [ptv [_ org-id]]
@@ -133,6 +115,13 @@
          :service-name        service-name
          :service-modified    (:modified service)
          :service-channels    (->> service :serviceChannels (map :serviceChannel))
+         :city-codes (->> service
+                          :areas
+                          (mapcat (fn [{:keys [type municipalities]}]
+                                    (when (= "Municipality" type)
+                                      municipalities)))
+                          (map (comp parse-long :code))
+                          vec)
          :ontology-terms      (->> service
                                    :ontologyTerms
                                    (map (fn [m]
@@ -168,16 +157,15 @@
 (rf/reg-sub ::service-candidates
   (fn [[_ org-id]]
     [(rf/subscribe [::missing-services org-id])
-     (rf/subscribe [::service-candidate-descriptions org-id])
-     (rf/subscribe [::org-languages org-id])])
-  (fn [[missing-services descriptions org-langs] _]
+     (rf/subscribe [::service-candidate-descriptions org-id])])
+  (fn [[missing-services descriptions] [_ org-id]]
     (->> missing-services
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
-                      summary     (get-in descriptions [source-id :summary])]
+                      summary     (get-in descriptions [source-id :summary])
+                      languages   (ptv-data/org-id->languages org-id)]
                   (-> m
-                      (assoc :languages (or (get-in descriptions [source-id :languages])
-                                            org-langs))
+                      (assoc :languages languages)
                       (assoc :description description)
                       (assoc :summary summary)
                       (assoc :valid (boolean (and
@@ -210,11 +198,11 @@
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
-     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
-     (rf/subscribe [::org-languages org-id])])
-  (fn [[ptv services service-channels org-defaults types org-langs] [_ org-id]]
+     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])])
+  (fn [[ptv services service-channels org-defaults types] [_ org-id]]
     (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]
-      (for [site (vals lipas-id->site)]
+      (for [site (vals lipas-id->site)
+            :let [org-langs (ptv-data/org-id->languages org-id)]]
         (ptv-data/sports-site->ptv-input {:org-id org-id
                                           :types types
                                           :org-defaults org-defaults

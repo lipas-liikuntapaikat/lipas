@@ -33,10 +33,13 @@
         :on-change (fn [_e v]
                      (on-change (:value v)))})))
 
-(defui lang-selector [{:keys [value on-change]}]
+(defui lang-selector [{:keys [value on-change enabled-languages]}]
   ($ Tabs
      {:value     value
       :on-change (fn [_e v] (on-change (keyword v)))}
-     ($ Tab {:value "fi" :label "FI"})
-     ($ Tab {:value "se" :label "SE"})
-     ($ Tab {:value "en" :label "EN"})))
+     (when (or (nil? enabled-languages) (contains? enabled-languages "fi"))
+       ($ Tab {:value "fi" :label "FI"}))
+     (when (or (nil? enabled-languages) (contains? enabled-languages "se"))
+       ($ Tab {:value "se" :label "SE"}))
+     (when (or (nil? enabled-languages) (contains? enabled-languages "en"))
+       ($ Tab {:value "en" :label "EN"}))))

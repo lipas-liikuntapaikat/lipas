@@ -38,7 +38,8 @@
         site     body
 
         ;; TODO: Use another id for tests run?
-        org-id ptv-data/liminka-org-id-test
+        ;; Liminka, org 9
+        org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
         org-langs ["fi" "se" "en"]
         ;; re-frame app-db defaults
         types types/all

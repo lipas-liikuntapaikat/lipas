@@ -17,30 +17,36 @@
 ;; org 10
 #_(def uta-org-id-test "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53")
 
-;; Testiorganisaatio 6 (Kunta)
-(def uta-org-id-test "3d1759a2-e47a-4947-9a31-cab1c1e2512b")
-
-;; org 9
-(def liminka-org-id-test "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
-
 ;; org 8
 #_(def uta-org-id-test "92374b0f-7d3c-4017-858e-666ee3ca2761")
 #_(def uta-org-id-prod "7b83257d-06ad-4e3b-985d-16a5c9d3fced")
 
 ;; TODO: Tulossa 5 kuntaa, muut:
 ;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
+;; TODO: Kuinka valita näytetäänkö test vai prod organisaatiot?
 
 (def organizations
   [{:name "Utajärven kunta (test)"
-    :props {:org-id              uta-org-id-test
+    :props {;; Testiorganisaatio 6 (Kunta)
+            :org-id              "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}}
+            :supported-languages ["fi"]}}
+   {:name "Utajärven kunta (prod)"
+    :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+            ;; Production authentication apiUserOrganisation field uses different
+            ;; "persistent org-id" value. This option is used to map the "version org-id"
+            ;; that is used elsewhere to this version for the auth.
+            :prod-org-id         "9f095753-3ca9-4d89-b7e4-3cdf83bb44b2"
+            :city-codes          [889]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi"]}}
    {:name "Limingan kunta (test)"
-    :props {:org-id              liminka-org-id-test
+    :props {;; org 9
+            :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}} ])
+            :supported-languages ["fi" #_#_ "se" "en"]}}])
 
 ;; For adding default params to some requests from the FE
 ;; NOTE: This should eventually be replaced with Lipas organizations.
@@ -69,6 +75,16 @@
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
+
+;; NOTE: Right now the UI mostly just uses this always.
+;; The languages value is also stored to sports-site :ptv on
+;; sync, but that value isn't used now?
+;; So it is possible to enable new languages by modying the org config.
+;; Summary/description texts are always generated for all languages,
+;; but additional languages aren't shown on the FE or sent to PTV.
+(defn org-id->languages [org-id]
+  (or (:supported-languages (get org-id->params org-id))
+      default-langs))
 
 (defn ->service-source-id
   [org-id sub-category-id]
@@ -181,7 +197,7 @@
      }))
 
 (defn ->ptv-service-location
-  [_org
+  [org-id
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
@@ -198,7 +214,7 @@
     ; (println "Languages resolved" languages)
     ; (prn location)
 
-    {:organizationId      (:org-id ptv)
+    {:organizationId      (or (:org-id ptv) org-id)
      ;; Keep using existing sourceId for sites that were already initialized in PTV,
      ;; generate a new unique ID (with timestamp) for new sites.
      :sourceId            (or (:source-id ptv)
@@ -363,7 +379,12 @@
   )
 
 (defn parse-service-source-id [source-id]
-  ())
+  (-> (re-find #"lipas-.*-(\d*)" source-id)
+      second
+      parse-long))
+
+(comment
+  (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
 
 (defn index-services [services]
   )
@@ -420,6 +441,7 @@
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id               (-> site :ptv :service-ids first)
         service-channel-id       (-> site :ptv :service-channel-ids first)
+
         summary (-> site :ptv :summary)
         description (-> site :ptv :description)
 

@@ -55,6 +55,9 @@
   In test-env token seems to be valid for 24h."
   [{:keys [token-url username password org-id]}]
   (let [token-key (if (test-env? token-url) :ptvToken :serviceToken) ; wtf
+        ;; Prod needs a different type of ID for apiUserOrganisation value
+        user-org-id    (or (:prod-org-id (get ptv-data/org-id->params org-id))
+                           org-id)
         req       {:url token-url
                    :method :post
                    :as :json
@@ -62,8 +65,8 @@
                    :content-type :json
                    :form-params (merge {:username username
                                         :password password}
-                                       (when org-id
-                                         {:apiUserOrganisation org-id}))}]
+                                       (when user-org-id
+                                         {:apiUserOrganisation user-org-id}))}]
     (-> (client/request req)
         :body
         token-key)))
@@ -110,11 +113,13 @@
            ;; NOTE: Looks like tokens from yesterday aren't valid the next day even if they haven't "expired" yet?
            (if (and (not retried?)
                     (= 401 (:status d))
+                    ;; Just retry once for every 401
+                    #_
                     (= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
                        (get (:headers d) "WWW-Authenticate")))
              (do
                (log/infof "Invalid token, trying to get a new token and retry")
-               (swap! (:tokens ptv) dissoc (:auth-org-id req))
+               (swap! (:tokens ptv) dissoc auth-org-id)
                (http ptv auth-org-id req true))
              (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
                              {:resp d
@@ -190,7 +195,6 @@
   [ptv service-location]
   (let [org-id (-> service-location :organizationId)
         params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation")
-                :auth-org-id org-id
                 :method :post
                 :form-params service-location}]
     (log/info "Create PTV service location" service-location)
@@ -244,18 +248,20 @@
 
   (def ptv* (:lipas/ptv state/system))
 
-  (get-org-services ptv* ptv-data/liminka-org-id-test)
+  (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+
+  (get-org-services ptv* org-id*)
 
   ;; Delete all org services
-  (doseq [x (:itemList (get-org-services ptv* ptv-data/liminka-org-id-test))]
+  (doseq [x (:itemList (get-org-services ptv* org-id*))]
     (update-service ptv*
                     (:sourceId x)
-                    {:mainResponsibleOrganization ptv-data/liminka-org-id-test
+                    {:mainResponsibleOrganization org-id*
                      :publishingStatus "Deleted"}))
 
   (get-service ptv*
-               ptv-data/liminka-org-id-test
-               (-> (get-org-services {} ptv-data/liminka-org-id-test)
+               org-id*
+               (-> (get-org-services {} org-id*)
                    :itemList
                    first
                    :id))
@@ -279,14 +285,17 @@
           :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
     (core/index! (user/search) site :sync))
 
-  (get-org-service-channels ptv* ptv-data/liminka-org-id-test)
+  (get-org-service-channels ptv* org-id*)
+
+  (http ptv* org-id* {:url (make-url ptv* "/v11/ServiceChannel/b4abd13e-0d36-4ff9-a6c9-94f2f5aee036")
+                      :method :get})
 
   ;; Delete all org service locations
-  (doseq [x (:itemList (get-org-service-channels ptv* ptv-data/liminka-org-id-test))]
-    (update-service-location ptv* (:id x) {:organizationId ptv-data/liminka-org-id-test
+  (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
+    (update-service-location ptv* (:id x) {:organizationId org-id*
                                            :publishingStatus "Deleted"}))
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
-                           {:org-id ptv-data/liminka-org-id-test
+                           {:org-id org-id*
                             :publishingStatus "Deleted"}))

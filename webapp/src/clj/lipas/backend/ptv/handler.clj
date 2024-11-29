@@ -6,9 +6,9 @@
 (defn localized-string-schema [string-props]
   [:map
    {:closed true}
-   [:fi [:string string-props]]
-   [:se [:string string-props]]
-   [:en [:string string-props]]])
+   [:fi {:optional true} [:string string-props]]
+   [:se {:optional true} [:string string-props]]
+   [:en {:optional true} [:string string-props]]])
 
 (def integration-enum
   [:enum "lipas-managed" "manual"])
@@ -16,7 +16,7 @@
 (def ptv-meta
   [:map
    {:closed true}
-   ;; [:org-id :string]
+   [:org-id :string]
    [:sync-enabled :boolean]
 
    ;; These options aren't used now:
@@ -29,7 +29,7 @@
     integration-enum]
 
    [:service-channel-ids [:vector :string]]
-   ;; [:service-ids [:vector :string]]
+   [:service-ids [:vector :string]]
    ;; [:languages [:vector :string]]
 
    [:summary (localized-string-schema {:max 150})]
@@ -53,7 +53,7 @@
      {:require-privilege :ptv/manage
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
-                          [ :type-codes {:optional true} [:vector :int]]
+                          [:type-codes {:optional true} [:vector :int]]
                           [:owners [:vector :string]]]}
       :handler
       (fn [req]
@@ -101,11 +101,7 @@
     {:post
      {:require-privilege :ptv/manage
       :parameters {:body [:map
-                          [:org-id :string]
                           [:city-codes [:vector :int]]
-                          [:owners [:vector :string]]
-                          [:supported-languages [:vector [:enum "fi" "se" "en"]]]
-                          [:sourceId :string]
                           [:sub-category-id :int]
                           [:overview {:optional true
                                       :description "Use this to replace the AI input with non-saved site information"}
@@ -182,9 +178,9 @@
      {:require-privilege :ptv/manage
       :parameters {:body create-ptv-service-location}
       :handler
-      (fn [{:keys [body-params identity]}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/upsert-ptv-service-location! db ptv search identity body-params)})}}]
+         :body   (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))})}}]
 
    ["/actions/save-ptv-meta"
     {:post
@@ -192,6 +188,6 @@
       :coercion reitit.coercion.spec/coercion
       :parameters {:body :lipas.sports-site/ptv}
       :handler
-      (fn [{:keys [identity] :as req}]
+      (fn [req]
         {:status 200
-         :body   (ptv-core/save-ptv-integration-definitions db search identity (-> req :parameters :body))})}}]])
+         :body   (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))})}}]])

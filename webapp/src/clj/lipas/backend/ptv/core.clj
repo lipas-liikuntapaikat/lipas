@@ -51,7 +51,7 @@
 
 (defn generate-ptv-service-descriptions
   [search
-   {:keys [_id sub-category-id city-codes overview]}]
+   {:keys [sub-category-id city-codes overview]}]
   (let [doc        (or overview
                        (let [type-codes (->> (types/by-sub-category sub-category-id)
                                              (map :type-code))
@@ -107,7 +107,7 @@
                          :service-channel-ids])
 
 (defn upsert-ptv-service-location!*
-  [tx ptv-component search user {:keys [org-id site ptv archive?] :as _m}]
+  [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id       (-> ptv :service-channel-ids first)
         ;; merge or just replace?
         site     (update site :ptv merge ptv)
@@ -122,13 +122,18 @@
         ;; Store the new PTV info to Lipas DB
         new-ptv-data (-> ptv
                          (select-keys persisted-ptv-keys)
-                         (assoc :last-sync now
+                         (assoc :org-id (or (:org-id ptv)
+                                            org-id)
+                                :last-sync now
                                 ;; Store the current type-code into ptv data, so this can be
                                 ;; used to comapre if the services need to recalculated on site data update.
                                 :previous-type-code (:type-code (:type site))
                                 :source-id (:sourceId ptv-resp)
                                 ;; Store the PTV status so we can ignore Lipas archived places that we already archived in PTV.
                                 :publishing-status (:publishingStatus ptv-resp)
+                                ;; NOTE: The ptv map might not have this value in some cases...?
+                                ;; but the value merged with data from site should have it always?
+                                :service-ids (:service-ids (:ptv site))
                                 ;; Take the created ID from ptv response and store to Lipas DB right away.
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
@@ -149,7 +154,7 @@
     (let [site     (db/get-sports-site db lipas-id)
           _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
 
-          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+          [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                  {:org-id org-id
                                                                   :site site
                                                                   :ptv ptv
@@ -176,9 +181,10 @@
                               (:serviceChannelNames ptv-resp))}})))
 
 (comment
+  (require '[integrant.repl.state :as state])
 
-  (let [ptv-component (:lipas/ptv integrant.repl.state/system)
-        org-id ptv-data/liminka-org-id-test
+  (let [ptv-component (:lipas/ptv state/system)
+        org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
         services (:itemList (ptv/get-org-services ptv-component org-id))]
     (->> services
          (utils/index-by :sourceId)
@@ -240,7 +246,7 @@
                                                 (vec x)))))
                  ptv)
 
-          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* tx ptv-component search user
+          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                   {:org-id org-id
                                                                    :ptv ptv
                                                                    :site sports-site
