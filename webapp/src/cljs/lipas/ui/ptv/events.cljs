@@ -428,7 +428,6 @@
               :uri     (str (:backend-url db) "/actions/generate-ptv-service-descriptions")
 
               :params          {:city-codes      (:city-codes (ptv-data/org-id->params org-id))
-                                :sourceId        id
                                 :sub-category-id (parse-long (last (str/split id #"-")))
                                 :overview        overview}
               :format          (ajax/transit-request-format)
@@ -512,7 +511,7 @@
              {:method          :post
               :headers         {:Authorization (str "Token " token)}
               :uri             (str (:backend-url db) "/actions/save-ptv-service")
-              :params          (merge (select-keys (ptv-data/org-id->params org-id) [:city-codes])
+              :params          (merge (select-keys (ptv-data/org-id->params org-id) [:org-id :city-codes])
                                       data)
               :format          (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
@@ -616,17 +615,19 @@
           ;; Add default org-id for service-ids linking
           sports-site  (update sports-site :ptv #(merge {:org-id org-id} %))
 
-          service-ids  (ptv-data/sports-site->service-ids types source-id->service sports-site)
+          service-ids  (vec (ptv-data/sports-site->service-ids types source-id->service sports-site))
 
           ;; Add other defaults and merge with summary/description from the UI
           ptv-data     (merge (select-keys (:default-settings (:ptv db))
                                            [:sync-enabled])
-                              {;; :service-ids service-ids
+                              {:service-ids service-ids
                                :service-channel-ids []}
-                              ;; {:org-id org-id}
                               (select-keys (:ptv sports-site)
-                                           [:sync-enabled
+                                           [:org-id
+                                            :sync-enabled
                                             :service-channel-ids
+                                            ;; Use when editing?
+                                            ;; :service-ids
                                             :summary
                                             :description]))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)

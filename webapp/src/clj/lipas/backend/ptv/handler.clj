@@ -16,7 +16,7 @@
 (def ptv-meta
   [:map
    {:closed true}
-   ;; [:org-id :string]
+   [:org-id :string]
    [:sync-enabled :boolean]
 
    ;; These options aren't used now:
@@ -29,7 +29,7 @@
     integration-enum]
 
    [:service-channel-ids [:vector :string]]
-   ;; [:service-ids [:vector :string]]
+   [:service-ids [:vector :string]]
    ;; [:languages [:vector :string]]
 
    [:summary (localized-string-schema {:max 150})]
@@ -53,7 +53,7 @@
      {:require-privilege :ptv/manage
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
-                          [ :type-codes {:optional true} [:vector :int]]
+                          [:type-codes {:optional true} [:vector :int]]
                           [:owners [:vector :string]]]}
       :handler
       (fn [req]
@@ -101,10 +101,7 @@
     {:post
      {:require-privilege :ptv/manage
       :parameters {:body [:map
-                          [:org-id :string]
                           [:city-codes [:vector :int]]
-                          [:owners [:vector :string]]
-                          [:sourceId :string]
                           [:sub-category-id :int]
                           [:overview {:optional true
                                       :description "Use this to replace the AI input with non-saved site information"}

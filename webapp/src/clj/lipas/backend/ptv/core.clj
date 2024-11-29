@@ -51,7 +51,7 @@
 
 (defn generate-ptv-service-descriptions
   [search
-   {:keys [_id sub-category-id city-codes overview]}]
+   {:keys [sub-category-id city-codes overview]}]
   (let [doc        (or overview
                        (let [type-codes (->> (types/by-sub-category sub-category-id)
                                              (map :type-code))
@@ -122,7 +122,9 @@
         ;; Store the new PTV info to Lipas DB
         new-ptv-data (-> ptv
                          (select-keys persisted-ptv-keys)
-                         (assoc :last-sync now
+                         (assoc :org-id (or (:org-id ptv)
+                                            org-id)
+                                :last-sync now
                                 ;; Store the current type-code into ptv data, so this can be
                                 ;; used to comapre if the services need to recalculated on site data update.
                                 :previous-type-code (:type-code (:type site))

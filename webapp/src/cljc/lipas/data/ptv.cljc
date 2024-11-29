@@ -46,7 +46,7 @@
             :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi" "se" "en"]}}])
+            :supported-languages ["fi" #_#_ "se" "en"]}}])
 
 ;; For adding default params to some requests from the FE
 ;; NOTE: This should eventually be replaced with Lipas organizations.
@@ -197,7 +197,7 @@
      }))
 
 (defn ->ptv-service-location
-  [_org
+  [org-id
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
@@ -214,7 +214,7 @@
     ; (println "Languages resolved" languages)
     ; (prn location)
 
-    {:organizationId      (:org-id ptv)
+    {:organizationId      (or (:org-id ptv) org-id)
      ;; Keep using existing sourceId for sites that were already initialized in PTV,
      ;; generate a new unique ID (with timestamp) for new sites.
      :sourceId            (or (:source-id ptv)
