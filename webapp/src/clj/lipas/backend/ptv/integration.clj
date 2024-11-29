@@ -113,11 +113,13 @@
            ;; NOTE: Looks like tokens from yesterday aren't valid the next day even if they haven't "expired" yet?
            (if (and (not retried?)
                     (= 401 (:status d))
+                    ;; Just retry once for every 401
+                    #_
                     (= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
                        (get (:headers d) "WWW-Authenticate")))
              (do
                (log/infof "Invalid token, trying to get a new token and retry")
-               (swap! (:tokens ptv) dissoc (:auth-org-id req))
+               (swap! (:tokens ptv) dissoc auth-org-id)
                (http ptv auth-org-id req true))
              (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
                              {:resp d
