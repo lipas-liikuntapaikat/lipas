@@ -149,6 +149,7 @@ services:
       PTV_ORG_ID:
       PTV_API_USERNAME:
       PTV_API_PASSWORD:
+      PTV_ENV:
       OPEN_AI_API_KEY:
       LEIN_SILENT: 'true'
     volumes:
