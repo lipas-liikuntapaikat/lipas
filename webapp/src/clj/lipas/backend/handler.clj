@@ -27,7 +27,7 @@
             [clojure.spec.alpha :as s]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
-            [lipas.backend.legacy.api :as legacy.api]
+            [lipas.backend.legacy.api :as legacy-api]
             [lipas.backend.middleware :as mw]
             [lipas.roles :as roles]
             [lipas.schema.core]
@@ -858,7 +858,7 @@
                  valid? (s/valid? spec search-params)]
              (if valid?
                {:status 200
-                :body   (legacy.api/get-sports-places search-params)} 
+                :body   (legacy-api/get-sports-places search search-params)} 
                {:status 400
                 :body   (s/explain-data spec search-params)})))}}]
       ["/sports-places/:sports-place-id"
@@ -894,7 +894,7 @@
          (fn [req]
            (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
              {:status     200
-              :body       (legacy.api/sports-place-types locale)}))}}]
+              :body       (legacy-api/sports-place-types locale)}))}}]
       ["/sports-place-types/:type-code"
        {:swagger {:id ::legacy}
         :parameters {:query (s/keys :opt-un [:lipas.api/lang])
@@ -906,7 +906,7 @@
            (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
                  type-code (-> req :parameters :path :type-code)]
              {:status     200
-              :body       (legacy.api/sports-place-by-type-code locale type-code)}))}}]
+              :body       (legacy-api/sports-place-by-type-code locale type-code)}))}}]
       ["/categories"
        {:tags ["sport-place-types"]
         :swagger {:id ::legacy}
@@ -916,7 +916,7 @@
          (fn [req]
            (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
              {:status     200
-              :body       (legacy.api/categories locale)}))}}]]]
+              :body       (legacy-api/categories locale)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
