@@ -18,6 +18,7 @@
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.utils :refer [prod?]]
             [lipas.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -250,11 +251,20 @@
             :else
             "-")
           (when-let [x (first (:service-channel-ids (:ptv site)))]
-             ($ Link
-                {:target "new"
-                 ;; FIXME: Choose test vs prod url
-                 :href (str "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/" x)}
-                "Avaa PTV")))
+             ($ :<>
+                ($ Link
+                   {:target "new"
+                    :href (str (if (prod?)
+                                  "https://palvelutietovaranto.suomi.fi/channels/serviceLocation/"
+                                  "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/")
+                               x)}
+                   "Avaa PTV")
+                (when (prod?)
+                   ($ Link
+                      {:target "new"
+                       :href (str "https://www.suomi.fi/palvelut/palvelupiste/x/" x)}
+                      "Avaa suomi.fi")
+                ))))
 
        (when candidate-now?
          ($ FormControl
