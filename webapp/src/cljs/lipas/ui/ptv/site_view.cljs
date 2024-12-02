@@ -5,6 +5,7 @@
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
             ["@mui/material/FormLabel$default" :as FormLabel]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Switch$default" :as Switch]
@@ -247,13 +248,13 @@
             ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä.")
 
             :else
-            "-"
-
-            ; ($ Typography
-            ;    publishing-status)
-            ; ($ Typography
-            ;    last-sync)
-            ))
+            "-")
+          (when-let [x (first (:service-channel-ids (:ptv site)))]
+             ($ Link
+                {:target "new"
+                 ;; FIXME: Choose test vs prod url
+                 :href (str "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/" x)}
+                "Avaa PTV")))
 
        (when candidate-now?
          ($ FormControl
