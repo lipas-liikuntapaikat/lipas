@@ -515,3 +515,16 @@
         {:keys [summary description]} ptv]
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
+
+(defn ptv-service-channel->texts
+  "Take PTV ServiceChannel response and build Lipas :summary and :description"
+  [data]
+  (reduce (fn [acc {:keys [language value type]}]
+            (if-let [k (case type
+                         "Summary" :summary
+                         "Description" :description
+                         nil)]
+              (update acc k assoc (lang->locale language) value)
+              acc))
+          {}
+          (:serviceChannelDescriptions data)))

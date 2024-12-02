@@ -94,6 +94,10 @@
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
+(defn fetch-ptv-service-channel
+  [ptv org-id service-channel-id]
+  (ptv/get-org-service-channel ptv org-id service-channel-id))
+
 (def persisted-ptv-keys [:languages
                          :summary
                          :description

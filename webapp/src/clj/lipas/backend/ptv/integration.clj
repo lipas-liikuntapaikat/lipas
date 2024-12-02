@@ -161,6 +161,13 @@
     (-> (http ptv org-id params)
         :body)))
 
+(defn get-org-service-channel
+  [ptv auth-org-id service-channel-id]
+  (let [params {:url (make-url ptv "/v11/ServiceChannel/" service-channel-id)
+                :method       :get}]
+    (-> (http ptv auth-org-id params)
+        :body)))
+
 (defn create-service
   [ptv
    service]

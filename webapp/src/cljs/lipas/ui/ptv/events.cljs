@@ -760,6 +760,33 @@
                (assoc-in [:ptv :errors :save] resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
+(rf/reg-event-fx ::load-ptv-texts
+  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id]]
+    (let [token  (-> db :user :login :token)]
+      {;; :db (assoc-in db [:ptv :loading-from-ptv :ptv-text] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/fetch-ptv-service-channel")
+              :params          {:org-id org-id
+                                :service-channel-id service-channel-id}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::load-ptv-texts-success lipas-id org-id]
+              :on-failure      [::load-ptv-texts-failure lipas-id org-id]}]]})))
+
+(rf/reg-event-fx ::load-ptv-texts-success
+  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+    {:db (-> db
+             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+             (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge (ptv-data/ptv-service-channel->texts resp)))}))
+
+(rf/reg-event-fx ::load-ptv-texts-failure
+  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+    {:db (-> db
+             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+             )}))
+
 (comment
 
   (require '[re-frame.db])

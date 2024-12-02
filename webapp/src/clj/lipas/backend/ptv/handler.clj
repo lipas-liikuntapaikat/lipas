@@ -174,6 +174,19 @@
         {:status 200
          :body   (ptv-core/fetch-ptv-service-channels ptv (-> req :parameters :body :org-id))})}}]
 
+   ["/actions/fetch-ptv-service-channel"
+    {:post
+     {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:org-id :string]
+                          [:service-channel-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/fetch-ptv-service-channel ptv
+                                                     (-> req :parameters :body :org-id)
+                                                     (-> req :parameters :body :service-channel-id))})}}]
+
    ["/actions/save-ptv-service-location"
     {:post
      {:require-privilege :ptv/manage

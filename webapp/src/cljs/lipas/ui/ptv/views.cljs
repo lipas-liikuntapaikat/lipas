@@ -477,7 +477,13 @@
                :value     service-channel-ids
                :value-fn  :service-channel-id
                :on-change #(==> [::events/select-service-channels site %])
-               :label     (tr :ptv/service-channel)})]
+               :label     (tr :ptv/service-channel)})
+
+           (when-let [id (first (seq service-channel-ids))]
+             ($ Button
+                {:type "button"
+                 :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
+                "Lataa tekstit PTV:stä"))]
 
           [mui/tabs
            {:value     selected-tab
@@ -561,47 +567,9 @@
 
        ;; Settings
        [mui/stack {:spacing 4}
-
-        #_[mui/button
-           {:on-click #(==> [::events/assign-services-to-sports-sites])
-            :variant  "outlined"
-            :color    "secondary"}
-           (tr :ptv.wizard/assign-services-to-sports-sites)]
-
         [mui/typography {:variant "h6"} (tr :ptv.wizard/generate-descriptions)]
         [mui/typography (tr :ptv.wizard/generate-descriptions-helper2)]
         [mui/typography (tr :ptv.tools.ai/start-helper)]
-
-        #_[mui/form-control
-           [mui/form-label (tr :ptv.tools.ai.sports-sites-filter/label)]
-
-           #_[mui/radio-group
-              {:on-change #(==> [::events/select-sports-sites-filter %2])
-               :value     sports-sites-filter}
-              [mui/form-control-label
-               {:value   "all"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/all)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "no-existing-description"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/no-existing-description)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "sync-enabled"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "sync-enabled-no-existing-description"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled-no-existing-description)
-                :control (r/as-element [mui/radio])}]
-
-              #_[mui/form-control-label
-                 {:value   "manual"
-                  :label   (tr :ptv.tools.ai.sports-sites-filter/manual)
-                  :control (r/as-element [mui/radio])}]]]
 
         ;; Start button
         [mui/button
