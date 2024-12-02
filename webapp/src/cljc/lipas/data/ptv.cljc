@@ -503,7 +503,9 @@
         type-code (-> site :type :type-code)]
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
                   (#{"city" "city-main-owner"} owner)
-                  (not (#{7000} type-code))))))
+                  ;; Huoltorakennus
+                  ;; Opastuspiste
+                  (not (#{7000 207} type-code))))))
 
 (defn ptv-ready?
   [site]

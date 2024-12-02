@@ -222,8 +222,10 @@
                                                 "search-meta.location.simple-geoms.*"]}
                   :query
                   {:bool
-                   {;; Remove huoltorakennukset - they aren't PTV candidates
-                    :must_not [{:term {:type.type-code 7000}}]
+                   {;; Remove these, they aren't PTV candidates
+                    ;; Huoltorakennus
+                    ;; Opastuspiste
+                    :must_not [{:terms {:type.type-code [207 7000]}}]
                     :must
                     (remove nil?
                             [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
