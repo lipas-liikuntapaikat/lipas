@@ -167,8 +167,9 @@
     (js/console.log missing-services new-service new-service-sub-cat)
 
     (uix/use-effect (fn []
-                      (rf/dispatch [::events/fetch-org {:id org-id}])
-                      (rf/dispatch [::events/fetch-services {:id org-id}]))
+                      (when org-id
+                        (rf/dispatch [::events/fetch-org {:id org-id}])
+                        (rf/dispatch [::events/fetch-services {:id org-id}])))
                     [org-id])
 
     ($ Stack
