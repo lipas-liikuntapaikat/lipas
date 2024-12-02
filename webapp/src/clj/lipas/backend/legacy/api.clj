@@ -1,7 +1,9 @@
 (ns lipas.backend.legacy.api
   (:require
+   [lipas.backend.core :as core]
    [lipas.data.prop-types :as prop-types]
    [lipas.data.types :as types]
+   [lipas.schema.core :as schema]
    [lipas.utils :as utils]))
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
@@ -67,7 +69,17 @@
                    :subCategories (collect-subcategories (cat :type-code) locale)}) 
         (vals types/main-categories)))
 
-(defn get-sports-places [params] 
-  ;; TODO collect params and query ES
-  params)
 
+(def query-template {:query
+                     {:simple_query_string
+                      {:query "*"
+                       :analyze_wildcard true,
+                       :fields (vec schema/legacy-fields),
+                       :default_operator "and"}}})
+
+(defn ->es-query [params]
+  ;; TODO: use params
+  query-template)
+
+(defn get-sports-places [search params] 
+  (core/search search (->es-query params)))
