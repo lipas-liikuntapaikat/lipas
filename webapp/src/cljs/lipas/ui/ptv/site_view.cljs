@@ -278,7 +278,6 @@
           {:label "Synkronoi PTV:hen"
            :control ($ Switch
                        {:disabled read-only?
-                        :value sync-enabled
                         :checked sync-enabled
                         :on-change (fn [_e v]
                                      (js/console.log _e v)
