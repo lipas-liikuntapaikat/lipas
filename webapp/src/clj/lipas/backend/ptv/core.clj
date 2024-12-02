@@ -139,7 +139,8 @@
                                 :service-channel-ids [(:id ptv-resp)])
                          (cond->
                            archive? (dissoc :source-id
-                                            :service-channel-ids)))]
+                                            :service-channel-ids
+                                            :delete-existing)))]
 
     (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
 
@@ -205,7 +206,8 @@
           ;; a candidate, mark for it archival.
           ;; The other function will mark the document Deleted when archive flag is true
           to-archive? (and previous-sent?
-                           (not candidate-now?))
+                           (or (not candidate-now?)
+                               (:delete-existing ptv)))
 
           type-code-changed? (not= type-code (:previous-type-code ptv))
           ptv  (if type-code-changed?

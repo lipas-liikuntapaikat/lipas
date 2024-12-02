@@ -18,6 +18,7 @@
    {:closed true}
    [:org-id :string]
    [:sync-enabled :boolean]
+   [:delete-existing {:optional true} :boolean]
 
    ;; These options aren't used now:
    ;; TODO: Remove

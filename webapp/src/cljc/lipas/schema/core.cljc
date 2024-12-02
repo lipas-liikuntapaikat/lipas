@@ -1480,6 +1480,7 @@
 (s/def :lipas.sports-site.ptv/last-sync string?)
 (s/def :lipas.sports-site.ptv/org-id string?)
 (s/def :lipas.sports-site.ptv/sync-enabled boolean?)
+(s/def :lipas.sports-site.ptv/delete-existing boolean?)
 (s/def :lipas.sports-site.ptv/source-id string?)
 (s/def :lipas.sports-site.ptv/publishing-status string?)
 (s/def :lipas.sports-site.ptv/previous-type-code int?)
@@ -1526,6 +1527,8 @@
                    :lipas.sports-site.ptv/publishing-status
                    :lipas.sports-site.ptv/service-ids
                    :lipas.sports-site.ptv/languages
+
+                   :lipas.sports-site.ptv/delete-existing
 
                    ;; Added on sync - removed when archived
                    :lipas.sports-site.ptv/source-id
