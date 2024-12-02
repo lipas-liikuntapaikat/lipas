@@ -379,9 +379,11 @@
   )
 
 (defn parse-service-source-id [source-id]
-  (-> (re-find #"lipas-.*-(\d*)" source-id)
-      second
-      parse-long))
+  ;; No source-id for example for non-Lipas services
+  (when source-id
+    (-> (re-find #"lipas-.*-(\d*)" source-id)
+        second
+        parse-long)))
 
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
