@@ -29,7 +29,7 @@
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
-   :ptv/manage {:doc ""}})
+   :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}})
 
 (def basic #{:site/create-edit
              :site/save-api
@@ -105,6 +105,13 @@
    {:sort 40
     :assignable true
     :privileges #{:analysis-tool/use}
+    :required-context-keys []
+    :optional-context-keys []}
+
+   :ptv-user
+   {:sort 50
+    :assignable true
+    :privileges #{:ptv/manage}
     :required-context-keys []
     :optional-context-keys []}})
 
