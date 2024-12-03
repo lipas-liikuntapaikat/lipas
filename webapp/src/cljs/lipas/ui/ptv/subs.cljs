@@ -309,7 +309,7 @@
 (rf/reg-sub ::service-locations-creation
   :<- [::ptv]
   (fn [m _]
-    (:service-location-creation m)))
+    (:service-locations-creation m)))
 
 (rf/reg-sub ::service-location-creation-progress
   :<- [::service-locations-creation]

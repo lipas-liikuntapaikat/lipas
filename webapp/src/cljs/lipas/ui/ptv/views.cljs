@@ -619,13 +619,14 @@
                       halt?] :as m}
               (<== [::subs/service-location-creation-progress])]
 
-          (when in-progress?
-            [mui/stack {:direction "row" :spacing 2 :align-items "center"}
-             [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
-             [mui/typography (str processed-count "/" total-count)]])
+          [:<>
+           (when in-progress?
+             [mui/stack {:direction "row" :spacing 2 :align-items "center"}
+              [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
+              [mui/typography (str processed-count "/" total-count)]])
 
-          (when halt?
-            "Something went wrong, ask engineer."))]]
+           (when halt?
+             "Something went wrong, ask engineer.")])]]
 
       ;; Results
 
