@@ -6,9 +6,11 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db ::open-dialog
-  (fn [db [_ _]]
-    (assoc-in db [:ptv :dialog :open?] true)))
+(rf/reg-event-fx ::open-dialog
+  (fn [{:keys [db]} [_ _]]
+    {:db (assoc-in db [:ptv :dialog :open?] true)
+     :fx [(when (:selected-org (:ptv db))
+            [:dispatch [::select-org (:selected-org (:ptv db))]])]}))
 
 (rf/reg-event-db ::close-dialog
   (fn [db [_ _]]
