@@ -241,6 +241,7 @@
       :label            (or label (tr :search/search))
       :multi?           true
       :value-fn         :cat-id
+      :key-fn           :cat-id
       :label-fn         (fn [item] (str (:type-code item) " " (-> item :name locale)))
       :render-option-fn (fn [props option _]
                           ;; NOTE: The read-string here is a bad design,
@@ -255,9 +256,15 @@
                                  (string/includes? option "sub-cat")  (strong1 v)
                                  (string/includes? option "main-cat") (strong2 v)
                                  :else                                v)])))
-      :sort-fn          (fn [{:keys [type-code]}]
+      :sort-fn          (fn [{:keys [type-code cat-id]}]
                           (case type-code
                             (1 2) (* 100 type-code)
+                            ;; Special case workaround to sort 7000 codes
+                            ;; main -> sub -> type
+                            7000 (case cat-id
+                                   "main-cat-7000" 7000
+                                   "sub-cat-7000" 7001
+                                   7002)
                             type-code))
       :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
