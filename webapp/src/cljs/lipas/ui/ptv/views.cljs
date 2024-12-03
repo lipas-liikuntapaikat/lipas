@@ -439,7 +439,8 @@
              {:options   services
               :value     service-ids
               :value-fn  :service-id
-              :on-change #(==> [::events/select-services site %])
+              :on-change (fn [v]
+                           (rf/dispatch [::events/select-services site v]))
               :label     (tr :ptv/services)})
 
           ;; Service channel selector
@@ -548,6 +549,8 @@
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
 
+        ;; TODO: Rename this so service-location-generation progress can also be
+        ;; added to this level
         {:keys [in-progress?
                 processed-lipas-ids
                 processed-count

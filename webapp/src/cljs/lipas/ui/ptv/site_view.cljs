@@ -152,6 +152,7 @@
         loading-ptv? (use-subscribe [::subs/loading-from-ptv?])
 
         services (use-subscribe [::subs/services-by-id org-id])
+        services* (use-subscribe [::subs/services org-id])
         missing-services-input [{:service-ids #{}
                                  :sub-category-id (-> site :type :type-code types :sub-category)
                                  :sub-category    (-> site :search-meta :type :sub-category :name :fi)}]
@@ -268,10 +269,16 @@
 
        (when candidate-now?
          ($ FormControl
-            ($ FormLabel
-               "PTV-palvelu")
-            ($ Typography
-               (get-in new-service-sub-cat [:name locale]))
+            ($ controls/services-selector
+               {:disabled   (or loading?
+                                read-only?)
+                :value      (:service-ids (:ptv site))
+                :options    services*
+                :on-change  (fn [ids]
+                              (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :service-ids] ids]))
+                :value-fn   :service-id
+                :label      (tr :ptv.actions/select-service)})
+
             (cond
               (seq missing-services)
               ($ Alert {:severity "warning"} "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä.")

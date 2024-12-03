@@ -16,7 +16,7 @@
      children))
 
 (defui services-selector
-  [{:keys [options value on-change label value-fn]
+  [{:keys [disabled options value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
   (let [options* (uix/use-memo (fn []
@@ -26,12 +26,18 @@
                                       options))
                                [options value-fn])]
     ($ autocomplete2
-       {:options   options*
+       {:disabled  disabled
+        :options   options*
         :multiple  true
         :label     label
         :value     (to-array value)
         :on-change (fn [_e v]
-                     (on-change (:value v)))})))
+                     (js/console.log _e v)
+                     (on-change (vec (map (fn [x]
+                                            (if (map? x)
+                                              (:value x)
+                                              x))
+                                          v))))})))
 
 (defui lang-selector [{:keys [value on-change enabled-languages]}]
   ($ Tabs
