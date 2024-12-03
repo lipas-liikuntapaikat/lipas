@@ -591,9 +591,13 @@
           sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
           sports-sites (reduce-kv
                          (fn [sports-sites lipas-id sports-site]
-                           (let [service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                             (if (seq service-ids)
-                               (update-in sports-sites [lipas-id :ptv :service-ids] (fnil into #{}) service-ids)
+                           (let [;; the next function needs this!
+                                 ;; this is "really" added to the :ptv data later in ::create-ptv-service-location
+                                 sports-site (assoc-in sports-site [:ptv :org-id] org-id)
+                                 lipas-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                             (if (seq lipas-service-ids)
+                               (update-in sports-sites [lipas-id :ptv :service-ids] (fn [x]
+                                                                                      (vec (into (set x) lipas-service-ids))))
                                sports-sites)))
                          sports-sites
                          sports-sites)]
@@ -607,29 +611,20 @@
           ;; Or per site?
           org-id (-> db :ptv :selected-org :id)
 
-          types    (get-in db [:sports-sites :types])
-          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
-                                  vals
-                                  (utils/index-by :sourceId))
-
           sports-site  (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
 
           ;; Add default org-id for service-ids linking
           sports-site  (update sports-site :ptv #(merge {:org-id org-id} %))
 
-          service-ids  (vec (ptv-data/sports-site->service-ids types source-id->service sports-site))
-
           ;; Add other defaults and merge with summary/description from the UI
           ptv-data     (merge (select-keys (:default-settings (:ptv db))
                                            [:sync-enabled])
-                              {:service-ids service-ids
-                               :service-channel-ids []}
+                              {:service-channel-ids []}
                               (select-keys (:ptv sports-site)
                                            [:org-id
                                             :sync-enabled
                                             :service-channel-ids
-                                            ;; Use when editing?
-                                            ;; :service-ids
+                                            :service-ids
                                             :summary
                                             :description]))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
@@ -717,6 +712,7 @@
 
 (rf/reg-event-fx ::save-ptv-meta
   (fn [{:keys [db]} [_ sports-sites]]
+    ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
       (let [token  (-> db :user :login :token)
             ks [:languages
