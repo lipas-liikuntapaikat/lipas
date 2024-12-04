@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.handler
-  (:require [lipas.backend.ptv.core :as ptv-core]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.backend.ptv.core :as ptv-core]
             [reitit.coercion.malli]
             [reitit.coercion.spec]))
 
@@ -200,7 +201,7 @@
     {:post
      {:require-privilege :ptv/manage
       :coercion reitit.coercion.spec/coercion
-      :parameters {:body :lipas.sports-site/ptv}
+      :parameters {:body (s/map-of int? :lipas.sports-site/ptv)}
       :handler
       (fn [req]
         {:status 200

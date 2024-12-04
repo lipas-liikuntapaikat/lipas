@@ -88,6 +88,11 @@
      ;; Service
      [mui/grid {:item true :xs 12 :lg 4}
       [mui/stack {:spacing 2}
+       [lui/switch
+        {:label     (tr :ptv.actions/export-disclaimer)
+         :value     (:sync-enabled site)
+         :on-change #(==> [::events/toggle-sync-enabled site %])}]
+
        [mui/typography {:variant "h6"}
         (tr :ptv/services)]
 
@@ -150,9 +155,13 @@
              :label      "Kuvaus"
              :value      (get-in site [:description @selected-tab])}]
 
-           [mui/button {:disabled loading?
-                        :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-            "Vie PTV"]
+           (if (:sync-enabled site)
+             [mui/button {:disabled loading?
+                          :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+              "Vie PTV"]
+             [mui/button {:disabled loading?
+                          :on-click #(==> [::events/save-ptv-meta [site]])}
+              "Tallenna"])
 
            ]]))]))
 
