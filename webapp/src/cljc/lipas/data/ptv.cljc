@@ -284,6 +284,24 @@
 
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)
+
+     ;; TODO: Yhteystiedot
+     :emails (when-let [e (:email sports-site)]
+               [{:value e
+                 :language "fi"}])
+     :webPages (when-let [v (:www sports-site)]
+                 ;; TODO: Validation / coercion, must start with http[s]
+                 [{:url (str "https://" v)
+                   :language "fi"}])
+
+     :phoneNumbers (when-let [v (:phone-number sports-site)]
+                     ;; TODO: Validation / coercion
+                     [{:number v
+                       ;; PrefixNumber must match the regular expression '^\\+[0-9]{1,4}$'
+                       ;; required if "isFinnishServiceNumber" is not true.
+                       ;; Maybe use +358 always if our value doesn't include +prefix start?
+                       :prefixNumber "+9"
+                       :language "fi"}])
      }))
 
 (comment
