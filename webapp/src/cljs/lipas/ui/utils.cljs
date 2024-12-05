@@ -257,7 +257,10 @@
                               (into (empty activities)
                                     (map (fn [[k v]]
                                            [k (merge {:status "active"} v)])
-                                         activities)))))
+                                         activities))))
+
+        (:ptv sports-site)
+        (update :ptv dissoc :error))
 
       clean))
 

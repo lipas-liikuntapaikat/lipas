@@ -249,6 +249,29 @@
         :hits
         (->> (map :_source)))))
 
+(defn update-service-connections [ptv org-id service-id f]
+  (let [service-resp (:body (http ptv org-id {:url (make-url ptv "/v11/Service/" service-id)
+                                              :method :get}))
+        ;; Map Service data to just set of current service-channel-ids
+        current-services (->> service-resp
+                              :serviceChannels
+                              (map (comp :id :serviceChannel))
+                              set)
+        updated-services (->> (f current-services)
+                              (map (fn [id]
+                                     {:serviceChannelId id}))
+                              vec)]
+    (log/infof "Update service %s connections, %s => %s" service-id current-services updated-services)
+    ;; NOTE: LOL, hopefully there weren't connection changes to this service between
+    ;; the API calls.
+    (http ptv org-id {:url (make-url ptv "/v11/Connection/serviceId/" service-id)
+                      :method :put
+                      ;; TODO: Does this also remove all the extra connectiopn properties
+                      ;; connections created in PTV might have?
+                      :form-params (cond-> {:channelRelations updated-services}
+                                     (empty? updated-services)
+                                     (assoc :deleteAllChannelRelations true))})))
+
 (comment
   (require '[clojure.java.jdbc :as sql]
            '[integrant.repl.state :as state]
@@ -296,7 +319,7 @@
 
   (get-org-service-channels ptv* org-id*)
 
-  (http ptv* org-id* {:url (make-url ptv* "/v11/ServiceChannel/b4abd13e-0d36-4ff9-a6c9-94f2f5aee036")
+  (http ptv* org-id* {:url (make-url ptv* "/v11/ServiceChannel/552605b1-6d17-4b08-b151-2f18fd2cdcc0")
                       :method :get})
 
   ;; Delete all org service locations
@@ -307,4 +330,22 @@
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
                            {:org-id org-id*
-                            :publishingStatus "Deleted"}))
+                            :publishingStatus "Deleted"})
+
+
+
+  ;; Connection kokeilu
+  (let [ketunmaan-koulun-kaukalo "c0ece53a-9f2b-4967-9970-19a416418e62"
+        lahiliikunta-ja-liikuntapuistot "9e9b94cf-223b-41e0-833d-197c460723e2"]
+    (http ptv* org-id* {:url (make-url ptv* "/v11/Connection/serviceId/" lahiliikunta-ja-liikuntapuistot)
+                        :method :put
+                        :form-params {:channelRelations [{:serviceChannelId ketunmaan-koulun-kaukalo}]}}))
+
+  (get-org-service-channel ptv* org-id*  "c0ece53a-9f2b-4967-9970-19a416418e62")
+
+
+  (let [lahiliikunta-ja-liikuntapuistot "9e9b94cf-223b-41e0-833d-197c460723e2"]
+    (http ptv* org-id* {:url (make-url ptv* "/v11/Service/" lahiliikunta-ja-liikuntapuistot)
+                        :method :get}))
+
+  )

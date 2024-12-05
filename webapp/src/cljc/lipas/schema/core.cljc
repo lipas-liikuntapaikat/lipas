@@ -1510,7 +1510,7 @@
 (s/def :lipas.sports-site.ptv/languages (s/coll-of string?))
 
 (s/def :lipas.ptv.error/message string?)
-(s/def :lipas.ptv.error/data map?)
+(s/def :lipas.ptv.error/data (s/? map?))
 (s/def :lipas.sports-site.ptv/error
   (s/keys :req-un [:lipas.ptv.error/message
                    :lipas.ptv.error/data]))
