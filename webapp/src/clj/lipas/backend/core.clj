@@ -532,7 +532,8 @@
        ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
        ;; that doesn't trigger update if sync-enabled is false.
        (if (and (not draft?)
-                (:sync-enabled (:ptv resp))
+                (or (:sync-enabled (:ptv resp))
+                    (:delete-existing (:ptv resp)))
                 ;; TODO: Check privilage :ptv/basic or such
                 (or (ptv-data/ptv-candidate? resp)
                     (ptv-data/is-sent-to-ptv? resp)))

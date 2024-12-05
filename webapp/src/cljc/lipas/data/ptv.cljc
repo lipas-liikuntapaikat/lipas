@@ -284,6 +284,24 @@
 
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)
+
+     ;; TODO: Yhteystiedot
+     :emails (when-let [e (:email sports-site)]
+               [{:value e
+                 :language "fi"}])
+     :webPages (when-let [v (:www sports-site)]
+                 ;; TODO: Validation / coercion, must start with http[s]
+                 [{:url (str "https://" v)
+                   :language "fi"}])
+
+     :phoneNumbers (when-let [v (:phone-number sports-site)]
+                     ;; TODO: Validation / coercion
+                     [{:number v
+                       ;; PrefixNumber must match the regular expression '^\\+[0-9]{1,4}$'
+                       ;; required if "isFinnishServiceNumber" is not true.
+                       ;; Maybe use +358 always if our value doesn't include +prefix start?
+                       :prefixNumber "+9"
+                       :language "fi"}])
      }))
 
 (comment
@@ -379,9 +397,11 @@
   )
 
 (defn parse-service-source-id [source-id]
-  (-> (re-find #"lipas-.*-(\d*)" source-id)
-      second
-      parse-long))
+  ;; No source-id for example for non-Lipas services
+  (when source-id
+    (-> (re-find #"lipas-.*-(\d*)" source-id)
+        second
+        parse-long)))
 
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
@@ -503,7 +523,9 @@
         type-code (-> site :type :type-code)]
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
                   (#{"city" "city-main-owner"} owner)
-                  (not (#{7000} type-code))))))
+                  ;; Huoltorakennus
+                  ;; Opastuspiste
+                  (not (#{7000 207} type-code))))))
 
 (defn ptv-ready?
   [site]
@@ -511,3 +533,16 @@
         {:keys [summary description]} ptv]
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
+
+(defn ptv-service-channel->texts
+  "Take PTV ServiceChannel response and build Lipas :summary and :description"
+  [data]
+  (reduce (fn [acc {:keys [language value type]}]
+            (if-let [k (case type
+                         "Summary" :summary
+                         "Description" :description
+                         nil)]
+              (update acc k assoc (lang->locale language) value)
+              acc))
+          {}
+          (:serviceChannelDescriptions data)))

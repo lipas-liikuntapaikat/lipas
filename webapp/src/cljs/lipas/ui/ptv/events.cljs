@@ -6,9 +6,11 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
-(rf/reg-event-db ::open-dialog
-  (fn [db [_ _]]
-    (assoc-in db [:ptv :dialog :open?] true)))
+(rf/reg-event-fx ::open-dialog
+  (fn [{:keys [db]} [_ _]]
+    {:db (assoc-in db [:ptv :dialog :open?] true)
+     :fx [(when (:selected-org (:ptv db))
+            [:dispatch [::select-org (:selected-org (:ptv db))]])]}))
 
 (rf/reg-event-db ::close-dialog
   (fn [db [_ _]]
@@ -589,9 +591,13 @@
           sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
           sports-sites (reduce-kv
                          (fn [sports-sites lipas-id sports-site]
-                           (let [service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                             (if (seq service-ids)
-                               (update-in sports-sites [lipas-id :ptv :service-ids] (fnil into #{}) service-ids)
+                           (let [;; the next function needs this!
+                                 ;; this is "really" added to the :ptv data later in ::create-ptv-service-location
+                                 sports-site (assoc-in sports-site [:ptv :org-id] org-id)
+                                 lipas-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                             (if (seq lipas-service-ids)
+                               (update-in sports-sites [lipas-id :ptv :service-ids] (fn [x]
+                                                                                      (vec (into (set x) lipas-service-ids))))
                                sports-sites)))
                          sports-sites
                          sports-sites)]
@@ -605,29 +611,20 @@
           ;; Or per site?
           org-id (-> db :ptv :selected-org :id)
 
-          types    (get-in db [:sports-sites :types])
-          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
-                                  vals
-                                  (utils/index-by :sourceId))
-
           sports-site  (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
 
           ;; Add default org-id for service-ids linking
           sports-site  (update sports-site :ptv #(merge {:org-id org-id} %))
 
-          service-ids  (vec (ptv-data/sports-site->service-ids types source-id->service sports-site))
-
           ;; Add other defaults and merge with summary/description from the UI
           ptv-data     (merge (select-keys (:default-settings (:ptv db))
                                            [:sync-enabled])
-                              {:service-ids service-ids
-                               :service-channel-ids []}
+                              {:service-channel-ids []}
                               (select-keys (:ptv sports-site)
                                            [:org-id
                                             :sync-enabled
                                             :service-channel-ids
-                                            ;; Use when editing?
-                                            ;; :service-ids
+                                            :service-ids
                                             :summary
                                             :description]))]
       {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
@@ -715,6 +712,7 @@
 
 (rf/reg-event-fx ::save-ptv-meta
   (fn [{:keys [db]} [_ sports-sites]]
+    ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
       (let [token  (-> db :user :login :token)
             ks [:languages
@@ -759,6 +757,33 @@
                (assoc-in [:ptv :save-in-progress] false)
                (assoc-in [:ptv :errors :save] resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::load-ptv-texts
+  (fn [{:keys [db]} [_ lipas-id org-id service-channel-id]]
+    (let [token  (-> db :user :login :token)]
+      {;; :db (assoc-in db [:ptv :loading-from-ptv :ptv-text] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/fetch-ptv-service-channel")
+              :params          {:org-id org-id
+                                :service-channel-id service-channel-id}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::load-ptv-texts-success lipas-id org-id]
+              :on-failure      [::load-ptv-texts-failure lipas-id org-id]}]]})))
+
+(rf/reg-event-fx ::load-ptv-texts-success
+  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+    {:db (-> db
+             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+             (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge (ptv-data/ptv-service-channel->texts resp)))}))
+
+(rf/reg-event-fx ::load-ptv-texts-failure
+  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+    {:db (-> db
+             ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+             )}))
 
 (comment
 

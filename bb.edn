@@ -1,2 +1,2 @@
 {:tasks {up {:doc "Start dev resource with Compose"
-             :task (shell "docker compose up -d proxy-local")}}}
+             :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}}}

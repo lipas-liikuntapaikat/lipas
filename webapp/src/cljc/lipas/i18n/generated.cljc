@@ -853,7 +853,8 @@
                   :site-manager "Paikkakäyttäjä"
                   :activities-manager "UTP-käyttäjä"
                   :floorball-manager "Salibandy muokkaaja"
-                  :analysis-user "Analyysityökalukäyttäjä"}
+                  :analysis-user "Analyysityökalukäyttäjä"
+                  :ptv-manager "PTV-käyttäjä"}
      :context-keys {:city-code "Kunta"
                     :type-code "Tyyppi"
                     :activity "Aktiviteetti"
@@ -1748,7 +1749,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
                   :site-manager "Platsadministratör"
                   :activities-manager "UTP-administratör"
                   :floorball-manager "Innebandyredigerare"
-                  :analysis-user "Analysverktygsanvändare"}
+                  :analysis-user "Analysverktygsanvändare"
+                  :ptv-user "PTV-administratör"}
      :context-keys {:city-code "Kommun"
                     :type-code "Typ"
                     :activity "Aktivitet"
@@ -2719,7 +2721,8 @@ The site administrator is responsible for the accuracy of information, safety of
                   :site-manager "Site Manager"
                   :activities-manager "UTP Manager"
                   :floorball-manager "Floorball Editor"
-                  :analysis-user "Analysis tool user"}
+                  :analysis-user "Analysis tool user"
+                  :ptv "PTV Manager"}
      :context-keys {:city-code "Municipality"
                     :type-code "Type"
                     :activity "Activity"

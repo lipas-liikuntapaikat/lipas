@@ -1,5 +1,11 @@
 {:tasks {:requires ([clojure.string :as str])
 
+         user-repl {:doc "Start user configured nREPL process"
+                    :task (if-let [cmd (:repl-command (read-string (slurp ".user.edn")))]
+                            (shell "bash -c" (apply str "source ../.env.sh && " cmd))
+                            (do (println "Missing :repl-command in .user.edn")
+                                (System/exit 1)))}
+         cljs-watch {:task (shell "npm run watch")}
          lint {:doc "Run clj-kondo"
                :task (shell "clj-kondo --lint src")}
          init-lint {:doc "Initialize Clj-kondo cache with library code"

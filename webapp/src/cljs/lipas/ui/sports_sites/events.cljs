@@ -34,7 +34,11 @@
                        (let [org-langs (ptv-data/org-id->languages (:org-id v))]
                          (merge (:default-settings (:ptv db))
                                 {:languages org-langs}
-                                v)))))))
+                                v))))
+
+        (and (:sync-enabled (:ptv sports-site))
+             (:delete-existing (:ptv sports-site)))
+        (update :ptv dissoc :delete-existing))))
 
 (rf/reg-event-db ::calc-derived-fields
   (fn [db [_ lipas-id sports-site]]

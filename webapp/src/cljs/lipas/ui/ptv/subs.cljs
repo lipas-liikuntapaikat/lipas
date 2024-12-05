@@ -309,13 +309,13 @@
 (rf/reg-sub ::service-locations-creation
   :<- [::ptv]
   (fn [m _]
-    (:service-location-creation m)))
+    (:service-locations-creation m)))
 
 (rf/reg-sub ::service-location-creation-progress
   :<- [::service-locations-creation]
-  (fn [{:keys [processed-lipas-ids size halt? in-progress?]} _]
-    (let [processed-count (count processed-lipas-ids)]
-      {:processed-lipas-ids (set processed-lipas-ids)
+  (fn [{:keys [processed-ids size halt? in-progress?]} _]
+    (let [processed-count (count processed-ids)]
+      {:processed-lipas-ids (set processed-ids)
        :in-progress?        in-progress?
        :halt?               halt?
        :total-count         size
