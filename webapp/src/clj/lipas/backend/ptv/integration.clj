@@ -269,6 +269,8 @@
                       ;; TODO: Does this also remove all the extra connectiopn properties
                       ;; connections created in PTV might have?
                       :form-params (cond-> {:channelRelations updated-services}
+                                     ;; If channelRelations is empty, the empty list alone isn't enough to
+                                     ;; remove rest of the relations, instead we need this property:
                                      (empty? updated-services)
                                      (assoc :deleteAllChannelRelations true))})))
 
