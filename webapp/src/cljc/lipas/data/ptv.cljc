@@ -26,13 +26,14 @@
 ;; TODO: Kuinka valita näytetäänkö test vai prod organisaatiot?
 
 (def organizations
-  [{:name "Utajärven kunta (test)"
+  [{:name "Utajärven kunta"
     :props {;; Testiorganisaatio 6 (Kunta)
             :org-id              "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi"]}}
-   {:name "Utajärven kunta (prod)"
+   {:name "Utajärven kunta"
+    :prod true
     :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
             ;; Production authentication apiUserOrganisation field uses different
             ;; "persistent org-id" value. This option is used to map the "version org-id"
@@ -41,7 +42,7 @@
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi"]}}
-   {:name "Limingan kunta (test)"
+   {:name "Limingan kunta"
     :props {;; org 9
             :org-id              "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
             :city-codes          [425]
@@ -63,6 +64,7 @@
 (def orgs
   (mapv (fn [x]
           {:name (:name x)
+           :prod (:prod x)
            :id (:org-id (:props x))})
         organizations))
 

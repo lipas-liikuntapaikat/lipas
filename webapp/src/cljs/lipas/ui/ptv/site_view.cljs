@@ -112,6 +112,11 @@
              "Luo palvelu"))
        )))
 
+(def orgs
+  (if (prod?)
+    (filterv :prod ptv-data/orgs)
+    (filterv #(not (:prod %)) ptv-data/orgs)))
+
 (defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (uix/use-state :fi)
         locale (tr)
@@ -210,7 +215,7 @@
           ($ Alert {:severity "warning"} "Paikkaa ei viedä PTV (Lipas tila, tyyppi, omistaja)"))
 
        (let [options (uix/use-memo (fn []
-                                     (->> ptv-data/orgs
+                                     (->> orgs
                                           (map (fn [{:keys [name id]}]
                                                  {:label name
                                                   :value id}))))
