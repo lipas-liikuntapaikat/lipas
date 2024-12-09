@@ -200,19 +200,18 @@
 
 (defn parse-phone-number [n]
   (when n
-    (let [;; Remove spaces
-          n (str/replace n #" " "")
-          ;; match 0600 etc. service prefixes
+    (let [;; match 0600 etc. service prefixes
           ;; https://www.traficom.fi/fi/viestinta/laajakaista-ja-puhelin/mita-ovat-palvelunumerot
           finnish-service (re-find #"^(0[6789]00|116)" n)]
       (if finnish-service
         {:is-finnish-service-number true
-         :number n}
+         :number (str/replace n #" " "")}
         (let [prefix (or (re-find RE-PREFIX n)
                          "+358")
               n (-> n
                     ;; strip prefix
                     (str/replace RE-PREFIX "")
+                    (str/replace #" " "")
                     ;; strip leading zero
                     (str/replace #"^0" ""))]
           {:prefix prefix
