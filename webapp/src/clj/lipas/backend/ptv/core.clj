@@ -164,8 +164,7 @@
                                 :service-ids (:service-ids (:ptv site))
                                 ;; Take the created ID from ptv response and store to Lipas DB right away.
                                 ;; TODO: Is there a case where this could be multiple ids?
-                                :service-channel-ids [(:id ptv-resp)]
-                                :service-channel-version-ids [(:versionId ptv-resp)])
+                                :service-channel-ids [(:id ptv-resp)])
                          (cond->
                            archive? (dissoc :source-id
                                             :service-channel-ids
